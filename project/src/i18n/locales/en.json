@@ -376,7 +376,7 @@
       "subtitle": "Real students, real results. See how MatriculaUSA transformed their educational journey to the United States.",
       "testimonial1": {
         "text": "MatriculaUSA made my dream of studying in America a reality. The scholarship opportunities and support were incredible!",
-        "author": "Maria Silva",
+        "author": "Gustavo Santos",
         "field": "Computer Science"
       },
       "testimonial2": {
@@ -608,6 +608,9 @@
       "allFields": "All Fields",
       "allModes": "All Modes",
       "allPermissions": "All Permissions",
+      "allUniversities": "All Universities",
+      "university": "University",
+      "universityTooltip": "Create an account and pay the Selection Process Fee to filter by university",
       "stem": "STEM",
       "business": "Business",
       "engineering": "Engineering",
@@ -708,7 +711,10 @@
       "expired": "Expired",
       "scholarshipExpired": "Scholarship Expired",
       "noLongerAccepting": "Not Available for application",
-      "canStillView": "You can still view the information, but it will not be possible to apply for this scholarship."
+      "canStillView": "You can still view the information, but it will not be possible to apply for this scholarship.",
+      "universityInternalFees": "University Internal Fees",
+      "internalFeesNote": "Fees paid directly to university. Subject to change.",
+      "days": "days"
     }
   },
   "universitiesPage": {
@@ -1293,6 +1299,7 @@
       }
     },
     "messages": {
+      "invalidDependents": "Please select between 0 and 5 dependents.",
       "checkEmail": "Check your email!",
       "studentVerification": "A confirmation link has been sent to your email. Please check your inbox (and spam folder) to activate your account.",
       "passwordsNotMatch": "Passwords do not match",
@@ -1359,6 +1366,41 @@
       },
       "registrationFailed": "Registration Failed",
       "emailAlreadyRegistered": "This email is already registered. Please sign in or use another email."
+    }
+  },
+  "ssoCallback": {
+    "processing": {
+      "title": "Please wait a moment",
+      "preparing": "We are preparing the environment for you...",
+      "connecting": "Connecting to 323 Network...",
+      "preparingAccount": "Preparing your account...",
+      "creatingSession": "Creating session...",
+      "waitMessage": "This may take a few seconds...",
+      "secureConnection": "Securely connecting to Matrícula USA"
+    },
+    "success": {
+      "title": "All set!",
+      "newUser": "All set! Redirecting you...",
+      "returningUser": "Welcome back! Redirecting...",
+      "redirecting": "Redirecting you now...",
+      "welcomeNew": "Welcome to Matrícula US!",
+      "loginSuccess": "Login successful!"
+    },
+    "error": {
+      "title": "Oops, something went wrong",
+      "authenticationFailed": "Could not complete authentication. You will be redirected to the login page shortly.",
+      "tokenNotProvided": "Token not provided in URL",
+      "tokenValidationError": "Error validating token",
+      "sessionCreationError": "Error creating session",
+      "sessionNotCreated": "Session was not created correctly",
+      "noAuthMethod": "No authentication method available",
+      "tokenNotFoundInMagicLink": "Token or type not found in magic link",
+      "tokensNotFoundInRedirect": "Tokens not found in redirect",
+      "locationHeaderNotFound": "Location header not found in redirect",
+      "tokensNotFoundInResponse": "Tokens not found in response",
+      "supabaseUrlNotConfigured": "VITE_SUPABASE_URL not configured",
+      "tryAgain": "Try Again",
+      "goToLogin": "Go to Login"
     }
   },
   "features": {
@@ -1428,6 +1470,21 @@
     "amount": "Amount",
     "support": "Support"
   },
+  "profileRequiredModal": {
+    "cpfMissing": {
+      "title": "CPF Required",
+      "description": "To pay via Parcelow/PIX, you need to add your CPF (Brazilian tax ID) to your profile.",
+      "details": "CPF is required to process payments via Parcelow. This ensures the security of your transaction and complies with Brazilian regulations.",
+      "buttonGoToProfile": "Go to Profile"
+    },
+    "profileIncomplete": {
+      "title": "Complete Your Profile",
+      "description": "Your profile is incomplete. Please fill in all required information before proceeding with payment.",
+      "details": "We need some additional information to process your payment securely. This only takes a few minutes!",
+      "buttonCompleteProfile": "Complete Profile"
+    },
+    "notNow": "Not Now"
+  },
   "studentDashboard": {
     "title": "Student Dashboard",
     "subtitle": "Manage your scholarship applications",
@@ -1440,7 +1497,7 @@
       "scholarshipFee": "Scholarship Fee",
       "i20ControlFee": "I-20 Control Fee",
       "completed": "Completed!",
-      "payApplicationFee": "Pay the Application Fee to apply for a specific scholarship.",
+      "payApplicationFee": "Pay the Application Fee to guarantee your scholarship.",
       "payScholarshipFee": "Pay the Scholarship Fee to confirm your scholarship application.",
       "payI20Fee": "Pay the I-20 Control Fee to start your I-20 and document validation process.",
       "daysRemaining": "You have 10 days after the scholarship fee."
@@ -1492,6 +1549,13 @@
       "matriculaRewards": "Matricula Rewards",
       "profile": "Profile",
       "supportChat": "Support Chat"
+    },
+    "chat": {
+      "welcomeMessage": {
+        "title": "Welcome to Support Chat!",
+        "body": "Hello! This is your support chat. Our team is available to help you from 9 AM to 5 PM (Arizona Time Zone). You can ask questions about scholarships, documents, and your application progress. Feel free to send messages and attachments at any time!",
+        "hours": "Support hours: 9 AM - 5 PM (Arizona Time Zone)"
+      }
     },
     "profileStatus": {
       "title": "Profile Status",
@@ -1891,6 +1955,25 @@
             "Pay the scholarship fee to complete enrollment",
             "Receive final confirmation",
             "Begin your academic program"
+          ]
+        },
+        "scholarshipFeePaidI20Required": {
+          "title": "Scholarship Fee Paid - Pending Documents",
+          "description": "Great! Your scholarship fee has been confirmed. Now you need to submit the pending document requests requested by the university.",
+          "nextSteps": [
+            "Submit pending document requests",
+            "Wait for university approval of documents",
+            "Pay the I-20 Control Fee to receive your acceptance letter",
+            "Receive the acceptance letter from the university"
+          ]
+        },
+        "allFeesPaidWaitingAcceptanceLetter": {
+          "title": "All Fees Paid - Waiting for Acceptance Letter",
+          "description": "Excellent! All fees have been paid successfully. You are now waiting for the university to send your official acceptance letter.",
+          "nextSteps": [
+            "Wait for the university to send your acceptance letter",
+            "Check the documents section regularly",
+            "Complete your enrollment after receiving the letter"
           ]
         },
         "fullyEnrolled": {
@@ -2316,6 +2399,50 @@
         "rejectionExplanationPlaceholder": "Ex.: The document is cut off. Please send it again in PDF with all pages.",
         "confirm": "Confirm"
       }
+    },
+    "identityVerification": {
+      "title": "Identity Verification",
+      "subtitle": "Verify your identity by uploading a photo with your ID document",
+      "backToDashboard": "Back to Dashboard",
+      "noPhotoFound": {
+        "title": "Identity Verification",
+        "message": "No identity photo found. Please complete the checkout process to upload your identity photo.",
+        "goToDashboard": "Go to Dashboard"
+      },
+      "status": {
+        "approved": {
+          "title": "Identity Photo Approved",
+          "message": "Your identity photo has been approved. You can proceed with your application."
+        },
+        "rejected": {
+          "title": "Identity Photo Rejected",
+          "message": "Your identity photo has been rejected. Please review the reason and upload a new photo.",
+          "rejectionReason": "Rejection Reason"
+        },
+        "pending": {
+          "title": "Identity Photo Under Review",
+          "message": "Your identity photo is currently under review by our administrators."
+        }
+      },
+      "uploadNewPhoto": {
+        "title": "Upload New Identity Photo",
+        "termsTitle": "Terms and Conditions",
+        "termsDescription": "Please read and accept the terms and conditions before uploading a new photo.",
+        "scrollToBottom": "Please scroll to the bottom to continue",
+        "acceptTerms": "I have read and accept the terms and conditions",
+        "termsNotAvailable": "Terms not available",
+        "submitButton": "Submit New Photo",
+        "submitting": "Submitting...",
+        "successMessage": "Identity photo uploaded successfully! It will be reviewed by an administrator."
+      },
+      "errors": {
+        "loadingStatus": "Error loading verification status. Please try again.",
+        "acceptingTerms": "Error accepting terms. Please try again.",
+        "termsRequired": "Please accept the terms first.",
+        "photoRequired": "Please upload your identity photo.",
+        "termAcceptanceNotFound": "Error: Term acceptance record not found.",
+        "submittingPhoto": "Error submitting photo. Please try again."
+      }
     }
   },
   "profileManagement": {
@@ -2340,6 +2467,8 @@
       "academicLevel": "Academic Level",
       "gpa": "GPA",
       "englishProficiency": "English Proficiency",
+      "cpfDocument": "CPF (Brazilian Tax ID)",
+      "cpfHelper": "Used for validation and payments in Brazil (format 000.000.000-00).",
       "placeholders": {
         "enterFullName": "Enter your full name",
         "phoneExample": "Ex: +55 11 99999-8888",
@@ -2397,6 +2526,7 @@
       "profileUpdated": "Profile updated successfully!",
       "uploadError": "Failed to upload avatar. Please try again.",
       "saveError": "Failed to save profile changes. Please try again.",
+      "invalidCPF": "Invalid CPF. Please check and try again.",
       "invalidImageFile": "Please select an image file",
       "fileTooLarge": "File size must be less than 5MB",
       "imageUrlError": "Could not get image URL",
@@ -2446,7 +2576,20 @@
     "step2Title": "They pay the selection process fee",
     "step2Description": "When they use your code and pay the selection process fee, you earn coins",
     "step3Title": "Redeem your rewards",
-    "step3Description": "Use your coins to get tuition discounts at participating universities",
+    "step3Description": "When referred pays the I-20 Control Fee, you earn 180 coins.",
+    "notificationSent": "Notification sent successfully!",
+    "stages": {
+      "selection": "Selection Process",
+      "application": "Application Fee",
+      "scholarship": "Scholarship Fee",
+      "i20": "I-20 Control"
+    },
+    "referralProgress": "Referral Progress",
+    "notifyFriend": "Notify Friend",
+    "inProgress": "In Progress",
+    "completed": "Completed",
+    "invitedOn": "Invited on {{date}}",
+    "nudgeCooldown": "Please wait {{minutes}} min before notifying again",
     "participatingUniversities": "Participating Universities",
     "universitiesDescription": "These universities accept Matricula coins as tuition discounts. Click on a university to see more details.",
     "loadingUniversities": "Loading universities...",
@@ -2568,19 +2711,30 @@
   "paymentSelector": {
     "title": "Choose Payment Method",
     "subtitle": "Select how you would like to pay your {{feeType}} fee",
-    "manualVerification": "Processing may take up to 48 hours",
-    "important": "Important:",
-    "zelleUploadNote": "After making the Zelle payment, you'll need to upload a screenshot of the confirmation showing the confirmation code, date, amount, and recipient.",
+    "amount": "Amount",
     "loading": {
       "message": "Loading payment methods...",
-      "processing": "Processing..."
+      "processing": "Processing payment..."
     },
-    "feeTypes": {
-      "selection_process": "selection process",
-      "application_fee": "application",
-      "enrollment_fee": "enrollment",
-      "scholarship_fee": "scholarship",
-      "i20_control_fee": "I-20 control"
+    "promotionalCoupon": {
+      "label": "Promotional Coupon",
+      "placeholder": "ENTER CODE",
+      "validate": "Validate",
+      "validating": "Validating...",
+      "success": "Coupon applied successfully!",
+      "invalid": "Invalid or expired coupon.",
+      "error": "Error validating coupon.",
+      "validated": "Validated",
+      "remove": "Remove coupon",
+      "original": "original",
+      "withDiscount": "with discount",
+      "discountAmount": "discount",
+      "applied": "Coupon {{code}} applied! ${{amount}} discount applied.",
+      "errors": {
+        "invalid": "Invalid coupon code",
+        "generic": "Error validating coupon. Check your connection and try again.",
+        "cpfRequired": "CPF is required for Parcelow payment. Please update your profile."
+      }
     },
     "methods": {
       "stripe": {
@@ -2591,19 +2745,29 @@
         "title": "PIX",
         "description": "Instant payment system for Brazilian users"
       },
+      "parcelow": {
+        "title": "Parcelow",
+        "description": "Pay with your credit card"
+      },
       "zelle": {
         "title": "Zelle",
         "description": "Pay via Zelle transfer",
-        "descriptionDetailed": "Pay via Zelle and upload the receipt."
+        "descriptionDetailed": "Pay via Zelle and upload the receipt (24-48h)."
       }
     },
+    "feeTypes": {
+      "selection_process": "selection process",
+      "application_fee": "enrollment",
+      "enrollment_fee": "enrollment",
+      "scholarship_fee": "scholarship",
+      "i20_control_fee": "I-20 control fee"
+    },
+    "manualVerification": "Processing may take up to 48 hours",
+    "important": "Important:",
+    "zelleUploadNote": "After making the Zelle payment, you'll need to upload a screenshot of the confirmation showing the confirmation code, date, amount, and recipient.",
     "includesProcessingFees": "* Includes processing fees",
-    "pix": {
-      "baseAmount": "Base amount",
-      "iofFee": "IOF Fee",
-      "totalDue": "Total due",
-      "iofNote": "This is an international purchase. IOF of 3.5% will be added by Stripe."
-    }
+    "parcelowFeesNote": "* Provider and platform processing fees will be applied",
+    "parcelowInstallmentPreview": "or in up to {{count}} installments"
   },
   "preCheckoutModal": {
     "securePayment": "Secure Payment",
@@ -2637,6 +2801,7 @@
     "applyCodeAndContinue": "Apply code and continue",
     "processingPayment": "Processing Payment...",
     "mustAcceptTerms": "You must accept the terms and conditions before continuing",
+    "mustEnterValidCode": "You must enter a valid code before continuing",
     "termsAndConditions": {
       "title": "Terms and Conditions",
       "termsOfUse": "Terms of Use",
@@ -2650,6 +2815,8 @@
     "acceptContractTerms": "I accept the contract terms and conditions",
     "cancel": "Cancel",
     "acceptTerms": "Accept Terms",
+    "loading": "Loading terms...",
+    "noTermsFound": "No active terms found.",
     "promotionalCoupon": {
       "title": "Selection Process Fee",
       "discountedValue": "Discounted Value",
@@ -2710,6 +2877,52 @@
       "subscribe": "Subscribe",
       "subscribed": "Thank you for subscribing!"
     },
+    "unsubscribe": {
+      "invalidLink": {
+        "title": "Invalid Link",
+        "message": "The unsubscribe link is invalid or has expired.",
+        "button": "Back to Home"
+      },
+      "alreadyUnsubscribed": {
+        "title": "Already Unsubscribed",
+        "message": "You are already unsubscribed from MatriculaUSA newsletter emails.",
+        "button": "Back to Home"
+      },
+      "success": {
+        "title": "Successfully Unsubscribed",
+        "message": "You have been successfully removed from our newsletter list. You will no longer receive campaign emails from MatriculaUSA.",
+        "important": "<strong>Important:</strong> You will still receive important emails about your account, applications, and payment confirmations.",
+        "reactivate": "If you change your mind, you can reactivate your subscription by contacting us.",
+        "button": "Back to Home"
+      },
+      "error": {
+        "title": "Error",
+        "message": "An error occurred while processing your request. Please try again later.",
+        "tryAgain": "Try Again",
+        "backToHome": "Back to Home"
+      },
+      "form": {
+        "title": "Unsubscribe from Newsletter",
+        "question": "Are you sure you want to stop receiving campaign emails from MatriculaUSA?",
+        "reasonLabel": "Reason (optional)",
+        "reasonPlaceholder": "Tell us why you're unsubscribing (optional)",
+        "reasonHelp": "Your feedback helps us improve our services",
+        "note": "<strong>Note:</strong> You will still receive important emails about your account, applications, and payment confirmations.",
+        "disclaimer": "By unsubscribing, you will no longer receive campaign emails, but you will continue to receive important emails about your account and applications.",
+        "cancel": "Cancel",
+        "confirm": "Confirm Unsubscribe",
+        "processing": "Processing..."
+      },
+      "errors": {
+        "tokenMissing": "Token or user ID not provided",
+        "configError": "Configuration error: Supabase URL not found",
+        "httpError": "HTTP Error {{status}}",
+        "checkStatusError": "Error checking status ({{status}})",
+        "checkStatusGeneric": "Error checking subscription status. Please try again.",
+        "processError": "Error processing unsubscribe request",
+        "processErrorRetry": "Error processing unsubscribe request. Please try again."
+      }
+    },
     "copyright": "© 2024 Matrícula USA. All rights reserved."
   },
   "matriculaRewardsLanding": {
@@ -2726,7 +2939,7 @@
         },
         "accumulateCoins": {
           "title": "Earn Rewards",
-          "description": "180 coins per successful referral - that's $180 off your tuition"
+          "description": "180 coins per referral that completes the I-20 payment"
         },
         "payLess": {
           "title": "Save Money",
@@ -2784,7 +2997,7 @@
         "step2": {
           "title": "Friends Sign Up",
           "description": "When your friends register using your code, you both earn Matricula Coins",
-          "details": "180 coins for each successful referral"
+          "details": "180 coins after I-20 Control Fee is paid"
         },
         "step3": {
           "title": "Redeem Fee Discount",
@@ -3130,7 +3343,7 @@
       },
       "testimonials": [
         {
-          "name": "Maria Silva",
+          "name": "Gustavo Santos",
           "university": "University of California",
           "course": "Computer Science",
           "text": "I got a 40% scholarship and I'm fulfilling my dream of studying in the USA. The process was much simpler than I imagined.",
@@ -3243,6 +3456,10 @@
         "title": "Zelle",
         "description": "Pay via Zelle transfer",
         "descriptionDetailed": "Pay via Zelle transfer"
+      },
+      "parcelow": {
+        "title": "Parcelow",
+        "description": "Pay with Brazilian card"
       },
       "cancel": "Cancel"
     },

@@ -5,29 +5,36 @@
 @tailwind utilities;
 
 @layer base {
+
   /* Controle de scroll global - CORRIGIDO */
   html {
     height: 100%;
-    overflow-y: auto; /* Permitir scroll normal */
+    overflow-y: auto;
+    /* Permitir scroll normal */
   }
-  
+
   body {
     height: 100%;
-    overflow-y: auto; /* Permitir scroll no body */
-    overflow-x: hidden; /* Prevenir scroll horizontal */
-    position: relative; /* Garantir posicionamento correto */
+    overflow-y: auto;
+    /* Permitir scroll no body */
+    overflow-x: hidden;
+    /* Prevenir scroll horizontal */
+    position: relative;
+    /* Garantir posicionamento correto */
   }
 
   /* Resto do CSS existente */
   h1 {
     font-family: 'Lato', sans-serif;
   }
+
   h2 {
     font-family: 'Lato', sans-serif;
   }
 }
 
 @layer utilities {
+
   /* Garantir que o botão flutuante seja sempre visível */
   .floating-cart-button {
     position: fixed !important;
@@ -37,7 +44,7 @@
     visibility: visible !important;
     opacity: 1 !important;
   }
-  
+
   /* Força a área do botão a sempre estar livre */
   .floating-cart-area {
     position: fixed !important;
@@ -60,18 +67,18 @@
   body.modal-open [style*="position: fixed"][style*="z-index"],
   body.modal-open [title*="Smart Assistant"],
   body.modal-open [title*="Help & Support"],
-body.modal-open [style*="zIndex: 10001"],
-body.modal-open [style*="zIndex: 10002"] {
-  display: none !important;
-  visibility: hidden !important;
-  opacity: 0 !important;
-  pointer-events: none !important;
-}
+  body.modal-open [style*="zIndex: 10001"],
+  body.modal-open [style*="zIndex: 10002"] {
+    display: none !important;
+    visibility: hidden !important;
+    opacity: 0 !important;
+    pointer-events: none !important;
+  }
 
-/* Garantir que o modal de documentos tenha z-index mais alto que todos os botões flutuantes */
-.document-viewer-overlay {
-  z-index: 9999999 !important;
-}
+  /* Garantir que o modal de documentos tenha z-index mais alto que todos os botões flutuantes */
+  .document-viewer-overlay {
+    z-index: 9999999 !important;
+  }
 
 
   /* Garantir que o botão flutuante WhatsApp seja sempre visível */
@@ -83,7 +90,7 @@ body.modal-open [style*="zIndex: 10002"] {
     visibility: visible !important;
     opacity: 1 !important;
   }
-  
+
   /* Força a área do botão WhatsApp a sempre estar livre */
   .floating-whatsapp-area {
     position: fixed !important;
@@ -100,7 +107,7 @@ body.modal-open [style*="zIndex: 10002"] {
     word-break: break-word;
     overflow-wrap: break-word;
   }
-  
+
   /* CSS específico para inputs de arquivo - PREVENIR QUEBRAS DE LAYOUT */
   /* input[type="file"] {
     position: absolute !important;
@@ -108,7 +115,7 @@ body.modal-open [style*="zIndex: 10002"] {
     opacity: 0 !important;
     pointer-events: none !important;
   } */
-  
+
   /* Garantir que labels de arquivo sejam estáveis */
   label[for*="file"],
   label:has(input[type="file"]) {
@@ -122,7 +129,7 @@ body.modal-open [style*="zIndex: 10002"] {
     -moz-user-select: none !important;
     -ms-user-select: none !important;
   }
-  
+
   /* CSS específico para o DocumentViewerModal - garantir overlay completo */
   .document-viewer-overlay {
     position: fixed !important;
@@ -143,16 +150,16 @@ body.modal-open [style*="zIndex: 10002"] {
     -webkit-transform: translateZ(0) !important;
     will-change: transform !important;
   }
-  
+
   /* Garantir que o modal esteja acima de todos os outros elementos */
-  .document-viewer-overlay > div {
+  .document-viewer-overlay>div {
     z-index: 10000 !important;
     position: relative !important;
     /* ✅ CORREÇÃO: Adicionar transform para forçar contexto de empilhamento */
     transform: translateZ(0) !important;
     -webkit-transform: translateZ(0) !important;
   }
-  
+
   /* Forçar o overlay a cobrir toda a viewport */
   .document-viewer-overlay::before {
     content: '';
@@ -169,27 +176,27 @@ body.modal-open [style*="zIndex: 10002"] {
     transform: translateZ(0) !important;
     -webkit-transform: translateZ(0) !important;
   }
-  
+
   /* ✅ NOVO: Forçar contexto de empilhamento no body quando modal estiver aberto */
   body:has(.document-viewer-overlay) {
     overflow: hidden !important;
     position: relative !important;
   }
-  
+
   /* ✅ NOVO: Garantir que containers pais não interfiram com o modal */
   .document-viewer-overlay {
     /* Forçar criação de novo contexto de empilhamento */
     isolation: isolate !important;
     contain: layout style paint !important;
   }
-  
+
   /* Prevenir quebras de layout em containers de arquivo */
   .file-upload-container {
     position: relative !important;
     overflow: hidden !important;
     min-height: 200px !important;
   }
-  
+
   /* CSS para prevenir quebras de layout */
   .stable-layout {
     position: relative !important;
@@ -198,7 +205,7 @@ body.modal-open [style*="zIndex: 10002"] {
     width: 100% !important;
     max-width: 100% !important;
   }
-  
+
   /* Garantir que inputs de arquivo não quebrem o layout */
   .file-input-wrapper {
     position: relative !important;
@@ -206,7 +213,7 @@ body.modal-open [style*="zIndex: 10002"] {
     overflow: hidden !important;
     vertical-align: middle !important;
   }
-  
+
   /* CSS específico para mobile */
   @media (max-width: 640px) {
     .floating-cart-button {
@@ -218,7 +225,7 @@ body.modal-open [style*="zIndex: 10002"] {
       -webkit-transform: translateZ(0) !important;
       will-change: transform !important;
     }
-    
+
     .floating-cart-button button {
       width: 60px !important;
       height: 60px !important;
@@ -238,7 +245,7 @@ body.modal-open [style*="zIndex: 10002"] {
       -webkit-transform: translateZ(0) !important;
       will-change: transform !important;
     }
-    
+
     .floating-whatsapp-button a {
       width: 60px !important;
       height: 60px !important;
@@ -298,8 +305,10 @@ body.modal-open [style*="zIndex: 10002"] {
   overflow-x: auto;
   padding-bottom: 10px;
   gap: 10px;
-  -ms-overflow-style: none;  /* IE and Edge */
-  scrollbar-width: none;  /* Firefox */
+  -ms-overflow-style: none;
+  /* IE and Edge */
+  scrollbar-width: none;
+  /* Firefox */
 }
 
 .actions-container::-webkit-scrollbar {
@@ -396,6 +405,7 @@ body.modal-open [style*="zIndex: 10002"] {
     opacity: 0;
     transform: translateY(-10px);
   }
+
   to {
     opacity: 1;
     transform: translateY(0);

@@ -1,4 +1,4 @@
-import React, { Suspense } from 'react';
+import React, { Suspense, useEffect } from 'react';
 import { BrowserRouter as Router, Routes, Route, useLocation } from 'react-router-dom';
 import { HelmetProvider } from 'react-helmet-async';
 import { QueryClientProvider } from '@tanstack/react-query';
@@ -14,8 +14,10 @@ import Scholarships from './pages/Scholarships';
 import Universities from './pages/Universities';
 import UniversityDetail from './pages/UniversityDetail';
 import HowItWorks from './pages/HowItWorks';
+import ProcessoDetalhado from './pages/ProcessoDetalhado';
 import TermsAndConditions from './pages/TermsAndConditions';
 import StudentTermsAcceptance from './pages/StudentTermsAcceptance';
+import { captureUtmFromUrl } from './utils/utmTracker';
 // ✅ OTIMIZAÇÃO: Lazy loading do SchoolProfileSetup para evitar carregar cities.json (208 MB) no início
 const SchoolProfileSetup = React.lazy(() => import('./pages/SchoolProfileSetup'));
 import { SchoolDashboard } from './pages/SchoolDashboard/index';
@@ -44,6 +46,7 @@ import ForStudents from './pages/ForStudents';
 import EmailOAuthCallback from './pages/EmailOAuthCallback';
 import AuthCallback from './pages/AuthCallback';
 import MicrosoftCallback from './pages/MicrosoftCallback';
+import Auth323NetworkCallback from './pages/Auth323NetworkCallback';
 import { useReferralCodeCapture } from './hooks/useReferralCodeCapture';
 import { ZelleCheckoutPage } from './components/ZelleCheckoutPage';
 import { ZelleWaitingPage } from './components/ZelleWaitingPage';
@@ -53,6 +56,7 @@ import SmartAssistantLayout from './components/SmartAssistantLayout';
 import { Toaster } from 'react-hot-toast';
 
 import EB3JobsLanding from './pages/EB3JobsLanding';
+import UnsubscribeNewsletter from './pages/UnsubscribeNewsletter';
 
 // Componente interno que usa o hook dentro do contexto do Router
 const AppContent = () => {
@@ -85,6 +89,11 @@ const AppContent = () => {
     return () => window.clearTimeout(id);
   }, [location.pathname, location.hash]);
 
+  // Captura parâmetros UTM da URL (especificamente para links da Brant Immigration)
+  useEffect(() => {
+    captureUtmFromUrl();
+  }, [location.pathname, location.search]);
+
   return (
     <Layout>
       <Routes>
@@ -101,6 +110,7 @@ const AppContent = () => {
           <Route path="/schools" element={<Universities />} />
           <Route path="/schools/:slug" element={<UniversityDetail />} />
           <Route path="/how-it-works" element={<HowItWorks />} />
+          <Route path="/processo-detalhado" element={<ProcessoDetalhado />} />
           <Route path="/matricula-rewards" element={<MatriculaRewardsLanding />} />
           {/* Student Routes */}
           <Route path="/student/terms" element={<StudentTermsAcceptance />} />
@@ -143,7 +153,11 @@ const AppContent = () => {
           <Route path="/email-oauth-callback" element={<EmailOAuthCallback />} />
           <Route path="/auth-callback" element={<AuthCallback />} />
           <Route path="/microsoft-email" element={<MicrosoftCallback />} />
+          {/* SSO 323 Network - Suporta ambas as rotas para compatibilidade */}
+          <Route path="/auth/callback" element={<Auth323NetworkCallback />} />
+          <Route path="/auth/323-network/callback" element={<Auth323NetworkCallback />} />
           <Route path="/eb3-jobs" element={<EB3JobsLanding />} />
+          <Route path="/unsubscribe" element={<UnsubscribeNewsletter />} />
           
           <Route path="/checkout/zelle/waiting" element={<ZelleWaitingPage />} />
           <Route path="/checkout/zelle" element={<ZelleCheckoutPage />} />

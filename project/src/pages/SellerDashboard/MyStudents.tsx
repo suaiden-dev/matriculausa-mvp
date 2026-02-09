@@ -19,7 +19,7 @@ import { supabase } from '../../lib/supabase';
 import SellerI20DeadlineTimer from '../../components/SellerI20DeadlineTimer';
 import { useFeeConfig } from '../../hooks/useFeeConfig';
 import { useState as useStateReact, useEffect } from 'react';
-import { getRealPaidAmounts } from '../../utils/paymentConverter';
+import { getDisplayAmounts } from '../../utils/paymentConverter';
 
 interface Student {
   id: string;
@@ -390,7 +390,8 @@ const MyStudents: React.FC<MyStudentsProps> = ({ students, onRefresh, onViewStud
       
       await Promise.allSettled(uniqueUserIds.map(async (userId) => {
         try {
-          const amounts = await getRealPaidAmounts(userId, ['selection_process', 'scholarship', 'i20_control']);
+          // ✅ CORREÇÃO: Usar getDisplayAmounts para exibição (valores "Zelle" sem taxas)
+          const amounts = await getDisplayAmounts(userId, ['selection_process', 'scholarship', 'i20_control']);
           amountsMap[userId] = amounts;
         } catch (error) {
           console.error(`Erro ao buscar valores pagos para user_id ${userId}:`, error);

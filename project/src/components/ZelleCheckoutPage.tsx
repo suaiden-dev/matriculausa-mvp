@@ -3,10 +3,12 @@ import { useNavigate } from 'react-router-dom';
 import { ArrowLeft, CreditCard, Upload, X } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 import { supabase } from '../lib/supabase';
+import { getN8nProxyUrl } from '../utils/storageProxy';
 import { useAuth } from '../hooks/useAuth';
 import { useSearchParams } from 'react-router-dom';
 import { useFeeConfig } from '../hooks/useFeeConfig';
 import { useDynamicFees } from '../hooks/useDynamicFees';
+import { sendTermAcceptanceNotificationAfterPayment } from '../pages/AdminDashboard/PaymentManagement/data/services/notificationsService';
 
 interface ZelleCheckoutPageProps {
   feeType?: string;
@@ -504,6 +506,19 @@ export const ZelleCheckoutPage: React.FC<ZelleCheckoutPageProps> = ({
 
       if (uploadError) throw uploadError;
 
+      // ✅ Enviar documento de aceitação de termos imediatamente após upload do comprovante (apenas para selection_process)
+      // Isso garante que o documento seja enviado independentemente de aprovação automática ou manual
+      if (normalizedFeeType === 'selection_process' && user?.id) {
+        try {
+          console.log('📧 [ZelleCheckout] Enviando documento de aceitação de termos após upload do comprovante...');
+          await sendTermAcceptanceNotificationAfterPayment(user.id, 'selection_process');
+          console.log('✅ [ZelleCheckout] Documento de aceitação de termos enviado com sucesso');
+        } catch (notificationError) {
+          console.error('❌ [ZelleCheckout] Erro ao enviar documento de aceitação de termos:', notificationError);
+          // Não falhar o processo se a notificação falhar
+        }
+      }
+
       // Verificar se já existe um pagamento similar recente (últimos 30 segundos) para evitar duplicação
       console.log('🔍 [ZelleCheckout] Verificando pagamentos duplicados...');
       const thirtySecondsAgo = new Date(Date.now() - 30000).toISOString();
@@ -541,6 +556,7 @@ export const ZelleCheckoutPage: React.FC<ZelleCheckoutPageProps> = ({
 
       // Enviar webhook para n8n
       const imageUrl = `${import.meta.env.VITE_SUPABASE_URL}/storage/v1/object/public/zelle_comprovantes/${uploadData.path}`;
+      const proxiedImageUrl = getN8nProxyUrl(imageUrl);
       
       // Payload padronizado para o webhook
       const webhookId = Math.random().toString(36).substr(2, 9);
@@ -548,7 +564,7 @@ export const ZelleCheckoutPage: React.FC<ZelleCheckoutPageProps> = ({
       
       const webhookPayload: WebhookPayload = {
         user_id: user?.id,
-        image_url: imageUrl,
+        image_url: proxiedImageUrl,
         value: currentFee.amount.toString(), // Apenas o número, sem símbolos (já com desconto aplicado se houver cupom)
         currency: 'USD',
         fee_type: normalizedFeeType,
@@ -648,47 +664,73 @@ export const ZelleCheckoutPage: React.FC<ZelleCheckoutPageProps> = ({
         console.log('⚠️ [ZelleCheckout] Erro ao buscar dados do usuário:', error);
       }
 
-      // Buscar informações dos administradores
-      let adminEmail = 'admin@matriculausa.com';
-      let adminName = 'Admin MatriculaUSA';
-      let adminPhone = '';
+      // Detectar ambiente de desenvolvimento
+      // Apenas filtrar emails em localhost (desenvolvimento local)
+      // Staging e produção recebem notificações normalmente
+      const isDevelopment = (() => {
+        const hostname = window.location.hostname;
+        // Apenas considerar desenvolvimento se for realmente localhost
+        // Staging (staging-matriculausa.netlify.app) e produção não devem filtrar
+        const isLocalhost = hostname === 'localhost' || 
+                           hostname === '127.0.0.1' || 
+                           hostname === '0.0.0.0' ||
+                           hostname.includes('localhost');
+        return isLocalhost;
+      })();
+      
+      // Emails a serem filtrados em ambiente de desenvolvimento
+      const devBlockedEmails = [
+        'luizedmiola@gmail.com',
+        'chimentineto@gmail.com',
+        'fsuaiden@gmail.com',
+        'rayssathefuture@gmail.com'
+      ];
+      
+      // Buscar todos os administradores do sistema
+      let admins: Array<{ email: string; full_name: string; phone: string }> = [];
       
       try {
-        const { data: adminProfile, error: adminProfileError } = await supabase
+        const { data: adminProfiles, error: adminProfileError } = await supabase
           .from('user_profiles')
           .select('email, full_name, phone')
-          .eq('email', 'admin@matriculausa.com')
-          .single();
+          .eq('role', 'admin');
         
-        if (adminProfile && !adminProfileError) {
-          adminEmail = adminProfile.email || 'admin@matriculausa.com';
-          adminName = adminProfile.full_name || 'Admin MatriculaUSA';
-          adminPhone = adminProfile.phone || '';
-          console.log('✅ [ZelleCheckout] Dados do admin encontrados:', { adminEmail, adminName, adminPhone });
+        if (adminProfiles && !adminProfileError && adminProfiles.length > 0) {
+          admins = adminProfiles
+            .filter(admin => admin.email) // Apenas admins com email
+            .map(admin => ({
+              email: admin.email || '',
+              full_name: admin.full_name || 'Admin MatriculaUSA',
+              phone: admin.phone || ''
+            }));
+          
+          // Filtrar emails bloqueados em desenvolvimento
+          if (isDevelopment) {
+            const beforeFilter = admins.length;
+            admins = admins.filter(admin => !devBlockedEmails.includes(admin.email));
+            if (beforeFilter !== admins.length) {
+              console.log(`[ZelleCheckout] Filtrados ${beforeFilter - admins.length} admin(s) em ambiente de desenvolvimento`);
+            }
+          }
+          
+          console.log(`✅ [ZelleCheckout] Encontrados ${admins.length} admin(s)${isDevelopment ? ' (filtrados para dev)' : ''}:`, admins.map(a => a.email));
         } else {
-          console.log('⚠️ [ZelleCheckout] Dados do admin não encontrados, usando valores padrão');
+          // Fallback: usar admin padrão se não encontrar nenhum
+          console.log('⚠️ [ZelleCheckout] Nenhum admin encontrado, usando admin padrão');
+          admins = [{
+            email: 'admin@matriculausa.com',
+            full_name: 'Admin MatriculaUSA',
+            phone: ''
+          }];
         }
       } catch (error) {
-        console.log('⚠️ [ZelleCheckout] Erro ao buscar dados do admin:', error);
+        console.log('⚠️ [ZelleCheckout] Erro ao buscar admins, usando admin padrão:', error);
+        admins = [{
+          email: 'admin@matriculausa.com',
+          full_name: 'Admin MatriculaUSA',
+          phone: ''
+        }];
       }
-
-      // Criar payload de notificação para admin
-      const notificationPayload = {
-        tipo_notf: 'Pagamento Zelle pendente para avaliação',
-        email_admin: adminEmail,
-        nome_admin: adminName,
-        phone_admin: adminPhone,
-        email_aluno: user?.email,
-        nome_aluno: userName,
-        phone_aluno: userPhone,
-        o_que_enviar: `Novo pagamento Zelle de ${currentFee.amount} USD foi enviado para avaliação.`,
-        temp_payment_id: realPaymentId,
-        fee_type: normalizedFeeType,
-        amount: currentFee.amount,
-        uploaded_at: new Date().toISOString()
-      };
-
-      console.log('📧 [ZelleCheckout] Payload de notificação para admin:', notificationPayload);
 
       // Função para enviar webhooks - primeiro apenas o Zelle Validator
       const sendWebhooks = async () => {
@@ -776,65 +818,6 @@ export const ZelleCheckoutPage: React.FC<ZelleCheckoutPageProps> = ({
                 // Verificar se a resposta é especificamente "The proof of payment is valid"
                 const response = responseJson.response.toLowerCase();
                 const isPositiveResponse = response === 'the proof of payment is valid.';
-                
-                if (!isPositiveResponse) {
-                  console.log('❌ [ZelleCheckout] Resposta negativa detectada - enviando notificações para admin e aluno');
-                  
-                  // Enviar notificação para admin apenas se o pagamento for inválido
-                  try {
-                    const adminNotificationResponse = await fetch('https://nwh.suaiden.com/webhook/notfmatriculausa', {
-                      method: 'POST',
-                      headers: {
-                        'Content-Type': 'application/json',
-                      },
-                      body: JSON.stringify(notificationPayload),
-                    });
-                    
-                    if (adminNotificationResponse.ok) {
-                      console.log('✅ [ZelleCheckout] Notificação para admin enviada com sucesso!');
-                    } else {
-                      console.warn('⚠️ [ZelleCheckout] Erro ao enviar notificação para admin:', adminNotificationResponse.status);
-                    }
-                  } catch (error) {
-                    console.error('❌ [ZelleCheckout] Erro ao enviar notificação para admin:', error);
-                  }
-
-                  // Enviar notificação para o aluno sobre o status do pagamento
-                  try {
-                    const studentNotificationPayload = {
-                      tipo_notf: 'Pagamento Zelle em Processamento',
-                      email_aluno: user?.email,
-                      nome_aluno: userName,
-                      email_universidade: user?.email, // Para o aluno, usar o próprio email
-                      o_que_enviar: `Seu pagamento Zelle de ${currentFee.amount} USD para ${currentFee.description.split(' - ')[1]} está sendo processado. Você será notificado assim que o processamento for concluído.`,
-                      temp_payment_id: realPaymentId,
-                      fee_type: normalizedFeeType,
-                      amount: currentFee.amount,
-                      uploaded_at: new Date().toISOString(),
-                      status: 'processing'
-                    };
-
-                    console.log('📧 [ZelleCheckout] Enviando notificação para aluno:', studentNotificationPayload);
-
-                    const studentNotificationResponse = await fetch('https://nwh.suaiden.com/webhook/notfmatriculausa', {
-                      method: 'POST',
-                      headers: {
-                        'Content-Type': 'application/json',
-                      },
-                      body: JSON.stringify(studentNotificationPayload),
-                    });
-                    
-                    if (studentNotificationResponse.ok) {
-                      console.log('✅ [ZelleCheckout] Notificação para aluno enviada com sucesso!');
-                    } else {
-                      console.warn('⚠️ [ZelleCheckout] Erro ao enviar notificação para aluno:', studentNotificationResponse.status);
-                    }
-                  } catch (error) {
-                    console.error('❌ [ZelleCheckout] Erro ao enviar notificação para aluno:', error);
-                  }
-                } else {
-                  console.log('✅ [ZelleCheckout] Resposta positiva específica - pagamento aprovado automaticamente, não enviando notificação para admin');
-                }
                 
                 // ✅ SEMPRE atualizar o pagamento no banco com a imagem e resposta do n8n
                 console.log('💾 [ZelleCheckout] Atualizando pagamento no banco com resultado do n8n...');
@@ -940,6 +923,92 @@ export const ZelleCheckoutPage: React.FC<ZelleCheckoutPageProps> = ({
                     console.error('❌ [ZelleCheckout] Erro ao atualizar pagamento:', updateError);
                   } else {
                     console.log('✅ [ZelleCheckout] Pagamento atualizado com sucesso:', updateResult);
+                    
+                    // ✅ Enviar notificação para TODOS os admins quando o pagamento ficar pendente de aprovação
+                    // Isso acontece quando o status é 'pending_verification' (não foi aprovado automaticamente)
+                    if (!isPositiveResponse && updateResult && updateResult[0]?.status === 'pending_verification') {
+                      console.log(`📧 [ZelleCheckout] Pagamento ficou pendente - enviando notificação para ${admins.length} admin(s)...`);
+                      
+                      // Enviar notificação para todos os admins em paralelo
+                      const adminNotificationPromises = admins.map(async (admin) => {
+                        const adminNotificationPayload = {
+                          tipo_notf: 'Pagamento Zelle pendente para avaliação',
+                          email_admin: admin.email,
+                          nome_admin: admin.full_name,
+                          phone_admin: admin.phone,
+                          email_aluno: user?.email,
+                          nome_aluno: userName,
+                          phone_aluno: userPhone,
+                          o_que_enviar: `Novo pagamento Zelle de ${currentFee.amount} USD foi enviado para avaliação.`,
+                          temp_payment_id: realPaymentId,
+                          fee_type: normalizedFeeType,
+                          amount: currentFee.amount,
+                          uploaded_at: new Date().toISOString()
+                        };
+                        
+                        console.log(`📧 [ZelleCheckout] Enviando notificação para admin ${admin.email}:`, adminNotificationPayload);
+                        
+                        try {
+                          const adminNotificationResponse = await fetch('https://nwh.suaiden.com/webhook/notfmatriculausa', {
+                            method: 'POST',
+                            headers: {
+                              'Content-Type': 'application/json',
+                            },
+                            body: JSON.stringify(adminNotificationPayload),
+                          });
+                          
+                          if (adminNotificationResponse.ok) {
+                            const adminResult = await adminNotificationResponse.text();
+                            console.log(`✅ [ZelleCheckout] Notificação para ADMIN ${admin.email} enviada com sucesso:`, adminResult);
+                          } else {
+                            const adminError = await adminNotificationResponse.text();
+                            console.error(`❌ [ZelleCheckout] Erro ao enviar notificação para ADMIN ${admin.email}:`, adminError);
+                          }
+                        } catch (error) {
+                          console.error(`❌ [ZelleCheckout] Erro ao enviar notificação para ADMIN ${admin.email}:`, error);
+                        }
+                      });
+                      
+                      // Aguardar todas as notificações serem enviadas
+                      await Promise.allSettled(adminNotificationPromises);
+                      console.log(`✅ [ZelleCheckout] Todas as notificações para admins processadas!`);
+
+                      // Enviar notificação para o aluno sobre o status do pagamento
+                      try {
+                        const studentNotificationPayload = {
+                          tipo_notf: 'Pagamento Zelle em Processamento',
+                          email_aluno: user?.email,
+                          nome_aluno: userName,
+                          email_universidade: user?.email,
+                          o_que_enviar: `Seu pagamento Zelle de ${currentFee.amount} USD para ${currentFee.description.split(' - ')[1] || currentFee.description} está sendo processado. Você será notificado assim que o processamento for concluído.`,
+                          temp_payment_id: realPaymentId,
+                          fee_type: normalizedFeeType,
+                          amount: currentFee.amount,
+                          uploaded_at: new Date().toISOString(),
+                          status: 'processing'
+                        };
+
+                        console.log('📧 [ZelleCheckout] Enviando notificação para aluno:', studentNotificationPayload);
+
+                        const studentNotificationResponse = await fetch('https://nwh.suaiden.com/webhook/notfmatriculausa', {
+                          method: 'POST',
+                          headers: {
+                            'Content-Type': 'application/json',
+                          },
+                          body: JSON.stringify(studentNotificationPayload),
+                        });
+                        
+                        if (studentNotificationResponse.ok) {
+                          console.log('✅ [ZelleCheckout] Notificação para aluno enviada com sucesso!');
+                        } else {
+                          console.warn('⚠️ [ZelleCheckout] Erro ao enviar notificação para aluno:', studentNotificationResponse.status);
+                        }
+                      } catch (error) {
+                        console.error('❌ [ZelleCheckout] Erro ao enviar notificação para aluno:', error);
+                      }
+                    } else if (isPositiveResponse) {
+                      console.log('✅ [ZelleCheckout] Pagamento aprovado automaticamente - não enviando notificação para admin');
+                    }
                   }
                 } catch (updateError) {
                   console.error('❌ [ZelleCheckout] Erro ao processar pagamento:', updateError);

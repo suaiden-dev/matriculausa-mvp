@@ -20,6 +20,8 @@ export interface AffiliatePaymentRequest {
   created_at: string;
   approved_by?: string | null;
   approved_at?: string | null;
+  rejected_by?: string | null;
+  rejected_at?: string | null;
   paid_by?: string | null;
   paid_at?: string | null;
   payment_reference?: string | null;

@@ -16,17 +16,8 @@ export const getFilteredAndSortedData = (
   });
 
   let filteredStudents = students.filter((student: any) => {
-    console.log(`🔍 Filtering student: ${student.full_name} (${student.id})`);
-    console.log(`🔍 Student data:`, {
-      referred_by_seller_id: student.referred_by_seller_id,
-      status: student.status,
-      created_at: student.created_at,
-      university_id: student.university_id
-    });
-    
     // Filtro por vendedor
     if (filters.sellerFilter !== 'all' && student.referred_by_seller_id !== filters.sellerFilter) {
-      console.log(`🔍 Student ${student.full_name} filtered out by seller filter: ${student.referred_by_seller_id} !== ${filters.sellerFilter}`);
       return false;
     }
     
@@ -34,7 +25,6 @@ export const getFilteredAndSortedData = (
     if (filters.searchTerm && 
         !student.full_name.toLowerCase().includes(filters.searchTerm.toLowerCase()) && 
         !student.email.toLowerCase().includes(filters.searchTerm.toLowerCase())) {
-      console.log(`🔍 Student ${student.full_name} filtered out by search term: ${filters.searchTerm}`);
       return false;
     }
     
@@ -42,7 +32,6 @@ export const getFilteredAndSortedData = (
     if (filters.universityFilter !== 'all') {
       // Se o filtro não é 'all' e o student.university_id é null/undefined, não filtrar
       if (student.university_id !== null && student.university_id !== undefined && student.university_id !== filters.universityFilter) {
-        console.log(`🔍 Student ${student.full_name} filtered out by university filter: ${student.university_id} !== ${filters.universityFilter}`);
         return false;
       }
     }
@@ -54,22 +43,18 @@ export const getFilteredAndSortedData = (
       const endDate = filters.dateRange.end ? new Date(filters.dateRange.end) : null;
       
       if (startDate && studentDate < startDate) {
-        console.log(`🔍 Student ${student.full_name} filtered out by start date: ${studentDate} < ${startDate}`);
         return false;
       }
       if (endDate && studentDate > endDate) {
-        console.log(`🔍 Student ${student.full_name} filtered out by end date: ${studentDate} > ${endDate}`);
         return false;
       }
     }
     
     // Filtro por status
     if (filters.statusFilter !== 'all' && student.status !== filters.statusFilter) {
-      console.log(`🔍 Student ${student.full_name} filtered out by status filter: ${student.status} !== ${filters.statusFilter}`);
       return false;
     }
     
-    console.log(`🔍 Student ${student.full_name} passed all filters`);
     return true;
   });
 

@@ -54,6 +54,185 @@ function formatAmountWithCurrency(amount, session) {
   const currencyInfo = getCurrencyInfo(session);
   return `${currencyInfo.symbol}${amount.toFixed(2)}`;
 }
+
+/**
+ * Busca todos os administradores do sistema
+ * Retorna array com email, nome e telefone de cada admin
+ * Em ambiente de desenvolvimento (localhost), filtra emails específicos
+ */
+async function getAllAdmins(supabase, isDevelopment: boolean = false): Promise<Array<{
+  user_id: string;
+  email: string;
+  full_name: string;
+  phone: string;
+}>> {
+  // Emails a serem filtrados em ambiente de desenvolvimento
+  const devBlockedEmails = [
+    'luizedmiola@gmail.com',
+    'chimentineto@gmail.com',
+    'fsuaiden@gmail.com',
+    'rayssathefuture@gmail.com',
+    'gui.reis@live.com',
+    'admin@matriculausa.com'
+  ];
+  
+  try {
+    // Buscar todos os admins da tabela user_profiles onde role = 'admin'
+    const { data: adminProfiles, error: profileError } = await supabase
+      .from('user_profiles')
+      .select('user_id, email, full_name, phone')
+      .eq('role', 'admin');
+
+    if (profileError) {
+      console.error('[getAllAdmins] Erro ao buscar admins de user_profiles:', profileError);
+      
+      // Fallback: tentar buscar de auth.users
+      try {
+        const { data: authUsers, error: authError } = await supabase.auth.admin.listUsers();
+        if (!authError && authUsers) {
+          const adminUsers = authUsers.users
+            .filter(user => user.user_metadata?.role === 'admin' || user.email === 'admin@matriculausa.com')
+            .map(user => ({
+              user_id: user.id,
+              email: user.email || '',
+              full_name: user.user_metadata?.full_name || user.user_metadata?.name || 'Admin MatriculaUSA',
+              phone: user.user_metadata?.phone || ''
+            }))
+            .filter(admin => admin.email);
+          
+          if (adminUsers.length > 0) {
+            const filteredAdmins = isDevelopment 
+              ? adminUsers.filter(admin => !devBlockedEmails.includes(admin.email))
+              : adminUsers;
+            console.log(`[getAllAdmins] Encontrados ${filteredAdmins.length} admin(s) via auth.users${isDevelopment ? ' (filtrados para dev)' : ''}:`, filteredAdmins.map(a => a.email));
+            return filteredAdmins.length > 0 ? filteredAdmins : [{
+              user_id: '',
+              email: 'admin@matriculausa.com',
+              full_name: 'Admin MatriculaUSA',
+              phone: ''
+            }];
+          }
+        }
+      } catch (authFallbackError) {
+        console.error('[getAllAdmins] Erro no fallback para auth.users:', authFallbackError);
+      }
+      
+      return [{
+        user_id: '',
+        email: 'admin@matriculausa.com',
+        full_name: 'Admin MatriculaUSA',
+        phone: ''
+      }];
+    }
+
+    if (!adminProfiles || adminProfiles.length === 0) {
+      console.warn('[getAllAdmins] Nenhum admin encontrado em user_profiles, tentando auth.users...');
+      
+      // Fallback: tentar buscar de auth.users
+      try {
+        const { data: authUsers, error: authError } = await supabase.auth.admin.listUsers();
+        if (!authError && authUsers) {
+          const adminUsers = authUsers.users
+            .filter(user => user.user_metadata?.role === 'admin' || user.email === 'admin@matriculausa.com')
+            .map(user => ({
+              email: user.email || '',
+              full_name: user.user_metadata?.full_name || user.user_metadata?.name || 'Admin MatriculaUSA',
+              phone: user.user_metadata?.phone || ''
+            }))
+            .filter(admin => admin.email);
+          
+          if (adminUsers.length > 0) {
+            const filteredAdmins = isDevelopment 
+              ? adminUsers.filter(admin => !devBlockedEmails.includes(admin.email))
+              : adminUsers;
+            console.log(`[getAllAdmins] Encontrados ${filteredAdmins.length} admin(s) via auth.users${isDevelopment ? ' (filtrados para dev)' : ''}:`, filteredAdmins.map(a => a.email));
+            return filteredAdmins.length > 0 ? filteredAdmins : [{
+              email: 'admin@matriculausa.com',
+              full_name: 'Admin MatriculaUSA',
+              phone: ''
+            }];
+          }
+        }
+      } catch (authFallbackError) {
+        console.error('[getAllAdmins] Erro no fallback para auth.users:', authFallbackError);
+      }
+      
+      return [{
+        email: 'admin@matriculausa.com',
+        full_name: 'Admin MatriculaUSA',
+        phone: ''
+      }];
+    }
+
+    // Se algum admin não tem email em user_profiles, buscar de auth.users
+    const adminsWithEmail = await Promise.all(
+      adminProfiles.map(async (profile) => {
+        if (profile.email) {
+          return {
+            user_id: profile.user_id,
+            email: profile.email,
+            full_name: profile.full_name || 'Admin MatriculaUSA',
+            phone: profile.phone || ''
+          };
+        }
+        
+        // Se não tem email em user_profiles, buscar de auth.users
+        try {
+          const { data: authUser } = await supabase.auth.admin.getUserById(profile.user_id);
+          if (authUser?.user?.email) {
+            return {
+              user_id: profile.user_id,
+              email: authUser.user.email,
+              full_name: profile.full_name || authUser.user.user_metadata?.full_name || authUser.user.user_metadata?.name || 'Admin MatriculaUSA',
+              phone: profile.phone || authUser.user.user_metadata?.phone || ''
+            };
+          }
+        } catch (err) {
+          console.error(`[getAllAdmins] Erro ao buscar email de auth.users para user_id ${profile.user_id}:`, err);
+        }
+        
+        return null;
+      })
+    );
+
+    const validAdmins = adminsWithEmail.filter(admin => admin !== null && admin.email) as Array<{
+      user_id: string;
+      email: string;
+      full_name: string;
+      phone: string;
+    }>;
+
+    if (validAdmins.length === 0) {
+      console.warn('[getAllAdmins] Nenhum admin válido encontrado, retornando admin padrão');
+      return [{
+        email: 'admin@matriculausa.com',
+        full_name: 'Admin MatriculaUSA',
+        phone: ''
+      }];
+    }
+
+    // Filtrar emails de desenvolvimento se necessário
+    const filteredAdmins = isDevelopment 
+      ? validAdmins.filter(admin => !devBlockedEmails.includes(admin.email))
+      : validAdmins;
+
+    console.log(`[getAllAdmins] Encontrados ${filteredAdmins.length} admin(s)${isDevelopment ? ' (filtrados para dev)' : ''}:`, filteredAdmins.map(a => a.email));
+    
+    return filteredAdmins.length > 0 ? filteredAdmins : [{
+      email: 'admin@matriculausa.com',
+      full_name: 'Admin MatriculaUSA',
+      phone: ''
+    }];
+  } catch (error) {
+    console.error('[getAllAdmins] Erro geral:', error);
+    return [{
+      email: 'admin@matriculausa.com',
+      full_name: 'Admin MatriculaUSA',
+      phone: ''
+    }];
+  }
+}
+
 Deno.serve(async (req)=>{
   console.log('--- verify-stripe-session-i20-control-fee: Request received ---');
   try {
@@ -351,7 +530,7 @@ Deno.serve(async (req)=>{
       const { error: profileError } = await supabase.from('user_profiles').update({
         has_paid_i20_control_fee: true,
         i20_control_fee_payment_method: paymentMethodForUserProfile, // 'pix' ou 'stripe'
-        i20_control_fee_due_date: new Date().toISOString(),
+        i20_paid_at: new Date().toISOString(),
         i20_control_fee_payment_intent_id: paymentIntentId
       }).eq('user_id', userId);
       if (profileError) throw new Error(`Failed to update user_profiles: ${profileError.message}`);
@@ -588,6 +767,97 @@ Deno.serve(async (req)=>{
         }
       }
       
+      // --- MATRICULA REWARDS - AGORA GERENCIADO POR TRIGGER ---
+      // O trigger handle_i20_payment_rewards() no banco de dados automaticamente:
+      // 1. Credita 180 MatriculaCoins quando has_paid_i20_control_fee muda para true
+      // 2. Atualiza o status do referral para 'i20_paid'
+      // Aqui apenas enviamos a notificação de recompensa para o padrinho
+      try {
+        console.log('[MATRICULA REWARDS] Verificando se usuário usou código de referência para enviar notificação...');
+        
+        // Buscar se o usuário usou algum código de referência
+        const { data: usedCode, error: codeError } = await supabase
+          .from('used_referral_codes')
+          .select('referrer_id, affiliate_code')
+          .eq('user_id', userId)
+          .single();
+          
+        if (!codeError && usedCode) {
+          console.log('[MATRICULA REWARDS] Usuário usou código de referência, enviando notificação para:', usedCode.referrer_id);
+          
+          // Obter nome/email do usuário que pagou (referred)
+          let referredDisplayName = '';
+          try {
+            const { data: referredProfile } = await supabase
+              .from('user_profiles')
+              .select('full_name, email')
+              .eq('user_id', userId)
+              .maybeSingle();
+              
+            if (referredProfile?.full_name) {
+              referredDisplayName = referredProfile.full_name;
+            } else {
+              const { data: authUser } = await supabase.auth.admin.getUserById(userId);
+              referredDisplayName = authUser?.user?.email || userId;
+            }
+          } catch (e) {
+            console.warn('[MATRICULA REWARDS] Could not resolve referred user name, using ID. Error:', e);
+            referredDisplayName = userId;
+          }
+          
+          // --- NOTIFICAÇÃO DE RECOMPENSA PARA O ALUNO (PADRINHO) ---
+          try {
+            console.log('📤 [MATRICULA REWARDS] Enviando notificação de recompensa para o padrinho...');
+            
+            // Buscar dados do padrinho (referrer)
+            const { data: referrerProfile } = await supabase
+              .from('user_profiles')
+              .select('full_name, email')
+              .eq('user_id', usedCode.referrer_id)
+              .single();
+            
+            // Buscar email do aluno indicado (referred)
+            const { data: referredProfileData } = await supabase
+              .from('user_profiles')
+              .select('email')
+              .eq('user_id', userId)
+              .single();
+
+            if (referrerProfile?.email) {
+              const rewardPayload = {
+                tipo_notf: "Recompensa de MatriculaCoins por Indicacao",
+                email_aluno: referrerProfile.email,
+                nome_aluno: referrerProfile.full_name || "Aluno",
+                referred_student_name: referredDisplayName,
+                referred_student_email: referredProfileData?.email || "",
+                payment_method: paymentMethodForUserProfile,
+                fee_type: "I20 Control Fee",
+                reward_type: "MatriculaCoins",
+                o_que_enviar: `Congratulations! Your friend ${referredDisplayName} has completed the I20 payment. 180 MatriculaCoins have been added to your account!`
+              };
+
+              console.log('📤 [MATRICULA REWARDS] Payload de recompensa:', rewardPayload);
+
+              await fetch('https://nwh.suaiden.com/webhook/notfmatriculausa', {
+                method: 'POST',
+                headers: {
+                  'Content-Type': 'application/json',
+                },
+                body: JSON.stringify(rewardPayload),
+              });
+              console.log('✅ [MATRICULA REWARDS] Notificação de recompensa enviada com sucesso!');
+            }
+          } catch (rewardNotifError) {
+            console.error('❌ [MATRICULA REWARDS] Erro ao enviar notificação de recompensa:', rewardNotifError);
+          }
+        } else {
+          console.log('[MATRICULA REWARDS] Usuário não usou código de referência, nenhuma notificação a enviar');
+        }
+      } catch (rewardsError) {
+        console.error('[MATRICULA REWARDS] Erro ao processar notificação de Matricula Rewards:', rewardsError);
+      }
+      // --- FIM MATRICULA REWARDS ---
+      
       // --- NOTIFICAÇÕES VIA WEBHOOK N8N ---
       try {
         // Criar log de "notificações sendo enviadas" ANTES de enviar para evitar duplicação
@@ -710,10 +980,12 @@ Deno.serve(async (req)=>{
         
         console.log(`📤 [verify-stripe-session-i20-control-fee] Iniciando notificações...`);
         // Buscar dados do aluno (incluindo seller_referral_code)
-        const { data: alunoData, error: alunoError } = await supabase.from('user_profiles').select('full_name, email, phone, seller_referral_code').eq('user_id', userId).single();
-        // Buscar telefone do admin
-        const { data: adminProfile, error: adminProfileError } = await supabase.from('user_profiles').select('phone').eq('email', 'admin@matriculausa.com').single();
-        const adminPhone = adminProfile?.phone || "";
+        const { data: alunoData, error: alunoError } = await supabase.from('user_profiles').select('id, full_name, email, phone, seller_referral_code').eq('user_id', userId).single();
+        // Detectar ambiente de desenvolvimento
+        const isDevelopment = config.environment.isTest || config.environment.environment === 'test';
+        // Buscar todos os admins do sistema
+        // Em ambiente de desenvolvimento (test), filtrar emails específicos
+        const admins = await getAllAdmins(supabase, isDevelopment);
         if (alunoError || !alunoData) {
           console.error('[NOTIFICAÇÃO] Erro ao buscar dados do aluno:', alunoError);
           return corsResponse({
@@ -748,6 +1020,32 @@ Deno.serve(async (req)=>{
         });
         const alunoResult = await alunoNotificationResponse.text();
         console.log('[NOTIFICAÇÃO ALUNO] Resposta do n8n (aluno):', alunoNotificationResponse.status, alunoResult);
+
+        // ✅ IN-APP NOTIFICATION FOR STUDENT (I-20 Control Fee)
+        try {
+          if (alunoData?.id) {
+            console.log('[NOTIFICAÇÃO ALUNO] Criando notificação in-app de pagamento I-20...');
+            const { error: inAppError } = await supabase
+              .from('student_notifications')
+              .insert({
+                student_id: alunoData.id,
+                title: 'Payment Confirmed',
+                message: 'Your I-20 Control Fee has been confirmed. Your I-20 document will be processed shortly.',
+                link: applicationId ? `/student/dashboard/application/${applicationId}/chat` : '/student/dashboard/financial',
+                created_at: new Date().toISOString()
+              });
+
+            if (inAppError) {
+              console.error('[NOTIFICAÇÃO ALUNO] Erro ao criar notificação in-app:', inAppError);
+            } else {
+              console.log('[NOTIFICAÇÃO ALUNO] Notificação in-app criada com sucesso!');
+            }
+          } else {
+            console.warn('[NOTIFICAÇÃO ALUNO] Dados do aluno (ID) não encontrados para notificação in-app.');
+          }
+        } catch (inAppEx) {
+            console.error('[NOTIFICAÇÃO ALUNO] Exceção ao criar notificação in-app:', inAppEx);
+        }
         // 2. NOTIFICAÇÃO PARA SELLER/ADMIN/AFFILIATE (se houver código de seller)
         console.log(`📤 [verify-stripe-session-i20-control-fee] DEBUG - alunoData.seller_referral_code:`, alunoData.seller_referral_code);
         console.log(`📤 [verify-stripe-session-i20-control-fee] DEBUG - alunoData completo:`, alunoData);
@@ -776,6 +1074,7 @@ Deno.serve(async (req)=>{
             console.log(`📤 [verify-stripe-session-i20-control-fee] ✅ SELLER ENCONTRADO! Dados:`, sellerData);
             // Buscar dados do affiliate_admin se houver
             let affiliateAdminData = {
+              user_id: "",
               email: "",
               name: "Affiliate Admin"
             };
@@ -786,6 +1085,7 @@ Deno.serve(async (req)=>{
                 const { data: affiliateProfile, error: profileError } = await supabase.from('user_profiles').select('email, full_name').eq('user_id', affiliateData.user_id).single();
                 if (affiliateProfile && !profileError) {
                   affiliateAdminData = {
+                    user_id: affiliateData.user_id,
                     email: affiliateProfile.email || "",
                     name: affiliateProfile.full_name || "Affiliate Admin"
                   };
@@ -794,50 +1094,85 @@ Deno.serve(async (req)=>{
               }
             }
             // NOTIFICAÇÕES SEPARADAS PARA ADMIN, SELLER E AFFILIATE ADMIN
-            // 1. NOTIFICAÇÃO PARA ADMIN
-            const adminNotificationPayload = {
-              tipo_notf: "Pagamento Stripe de I-20 control fee confirmado - Admin",
-              email_admin: "admin@matriculausa.com",
-              nome_admin: "Admin MatriculaUSA",
-              phone_admin: adminPhone,
-              email_seller: sellerData.email,
-              nome_seller: sellerData.name,
-              phone_seller: sellerPhone || "",
-              email_aluno: alunoData.email,
-              nome_aluno: alunoData.full_name,
-              phone_aluno: alunoData.phone || "",
-              email_affiliate_admin: affiliateAdminData.email,
-              nome_affiliate_admin: affiliateAdminData.name,
-              phone_affiliate_admin: (await (async ()=>{ try { const { data: a, error: e } = await supabase.from('user_profiles').select('phone').eq('email', affiliateAdminData.email).single(); return a?.phone || "" } catch { return "" } })()),
-              o_que_enviar: `Pagamento Stripe de I-20 control fee no valor de ${formattedAmount} do aluno ${alunoData.full_name} foi processado com sucesso. Seller responsável: ${sellerData.name} (${sellerData.referral_code}). Affiliate: ${affiliateAdminData.name}`,
-              payment_id: sessionId,
-              fee_type: 'i20_control_fee',
-              amount: amountValue,
-              currency: currencyInfo.currency,
-              currency_symbol: currencyInfo.symbol,
-              formatted_amount: formattedAmount,
-              seller_id: sellerData.user_id,
-              referral_code: sellerData.referral_code,
-              commission_rate: sellerData.commission_rate,
-              payment_method: paymentMethodForUserProfile,
-              notification_type: "admin"
-            };
-            console.log('📧 [verify-stripe-session-i20-control-fee] ✅ ENVIANDO NOTIFICAÇÃO PARA ADMIN:', adminNotificationPayload);
-            const adminNotificationResponse = await fetch('https://nwh.suaiden.com/webhook/notfmatriculausa', {
-              method: 'POST',
-              headers: {
-                'Content-Type': 'application/json',
-                'User-Agent': 'PostmanRuntime/7.36.3'
-              },
-              body: JSON.stringify(adminNotificationPayload)
+            // 1. NOTIFICAÇÃO PARA TODOS OS ADMINS
+            // Buscar telefone do affiliate admin
+            const affiliateAdminPhone = affiliateAdminData.email ? (await (async ()=>{ try { const { data: a, error: e } = await supabase.from('user_profiles').select('phone').eq('email', affiliateAdminData.email).single(); return a?.phone || "" } catch { return "" } })()) : "";
+            console.log(`📧 [verify-stripe-session-i20-control-fee] Enviando notificações para ${admins.length} admin(s)...`);
+            const adminNotificationPromises = admins.map(async (admin) => {
+              // ✅ IN-APP NOTIFICATION FOR ADMIN
+              if (admin.user_id) {
+                try {
+                  await supabase.from('admin_notifications').insert({
+                    user_id: admin.user_id,
+                    title: 'New I-20 Control Fee Payment',
+                    message: `Student ${alunoData.full_name} has paid the I-20 Control Fee (${formattedAmount}).`,
+                    type: 'payment',
+                    link: '/admin/dashboard/payments',
+                    metadata: {
+                       student_id: alunoData.id,
+                       student_name: alunoData.full_name,
+                       amount: amountValue,
+                       fee_type: 'i20_control',
+                       payment_id: sessionId
+                    }
+                  });
+                } catch (adminInAppErr) {
+                   console.error(`[NOTIFICAÇÃO ADMIN] Erro ao criar in-app notification para admin ${admin.email}:`, adminInAppErr);
+                }
+              }
+              const adminNotificationPayload = {
+                tipo_notf: "Pagamento Stripe de I-20 control fee confirmado - Admin",
+                email_admin: admin.email,
+                nome_admin: admin.full_name,
+                phone_admin: admin.phone || "",
+                email_seller: sellerData.email,
+                nome_seller: sellerData.name,
+                phone_seller: sellerPhone || "",
+                email_aluno: alunoData.email,
+                nome_aluno: alunoData.full_name,
+                phone_aluno: alunoData.phone || "",
+                email_affiliate_admin: affiliateAdminData.email,
+                nome_affiliate_admin: affiliateAdminData.name,
+                phone_affiliate_admin: affiliateAdminPhone,
+                o_que_enviar: `Pagamento Stripe de I-20 control fee no valor de ${formattedAmount} do aluno ${alunoData.full_name} foi processado com sucesso. Seller responsável: ${sellerData.name} (${sellerData.referral_code}). Affiliate: ${affiliateAdminData.name}`,
+                payment_id: sessionId,
+                fee_type: 'i20_control_fee',
+                amount: amountValue,
+                currency: currencyInfo.currency,
+                currency_symbol: currencyInfo.symbol,
+                formatted_amount: formattedAmount,
+                seller_id: sellerData.user_id,
+                referral_code: sellerData.referral_code,
+                commission_rate: sellerData.commission_rate,
+                payment_method: paymentMethodForUserProfile,
+                notification_type: "admin"
+              };
+              try {
+                const adminNotificationResponse = await fetch('https://nwh.suaiden.com/webhook/notfmatriculausa', {
+                  method: 'POST',
+                  headers: {
+                    'Content-Type': 'application/json',
+                    'User-Agent': 'PostmanRuntime/7.36.3'
+                  },
+                  body: JSON.stringify(adminNotificationPayload)
+                });
+                if (adminNotificationResponse.ok) {
+                  const adminResult = await adminNotificationResponse.text();
+                  console.log(`📧 [verify-stripe-session-i20-control-fee] Notificação para ADMIN ${admin.email} enviada com sucesso:`, adminResult);
+                  return { success: true, email: admin.email };
+                } else {
+                  const adminError = await adminNotificationResponse.text();
+                  console.error(`📧 [verify-stripe-session-i20-control-fee] Erro ao enviar notificação para ADMIN ${admin.email}:`, adminError);
+                  return { success: false, email: admin.email, error: adminError };
+                }
+              } catch (error) {
+                console.error(`📧 [verify-stripe-session-i20-control-fee] Erro ao enviar notificação para ADMIN ${admin.email}:`, error);
+                return { success: false, email: admin.email, error: String(error) };
+              }
             });
-            if (adminNotificationResponse.ok) {
-              const adminResult = await adminNotificationResponse.text();
-              console.log('📧 [verify-stripe-session-i20-control-fee] Notificação para ADMIN enviada com sucesso:', adminResult);
-            } else {
-              const adminError = await adminNotificationResponse.text();
-              console.error('📧 [verify-stripe-session-i20-control-fee] Erro ao enviar notificação para ADMIN:', adminError);
-            }
+            const adminNotificationResults = await Promise.allSettled(adminNotificationPromises);
+            const successfulAdmins = adminNotificationResults.filter(r => r.status === 'fulfilled' && r.value.success).length;
+            console.log(`📧 [verify-stripe-session-i20-control-fee] Notificações enviadas: ${successfulAdmins}/${admins.length} admin(s) notificados com sucesso`);
             // 2. NOTIFICAÇÃO PARA SELLER
             const sellerNotificationPayload = {
               tipo_notf: "Pagamento Stripe de I-20 control fee confirmado - Seller",
@@ -873,8 +1208,29 @@ Deno.serve(async (req)=>{
               const sellerResult = await sellerNotificationResponse.text();
               console.log('📧 [verify-stripe-session-i20-control-fee] Notificação para SELLER enviada com sucesso:', sellerResult);
             } else {
-              const sellerError = await sellerNotificationResponse.text();
               console.error('📧 [verify-stripe-session-i20-control-fee] Erro ao enviar notificação para SELLER:', sellerError);
+            }
+
+            // ✅ IN-APP NOTIFICATION FOR SELLER
+            if (sellerData.user_id) {
+                try {
+                  await supabase.from('admin_notifications').insert({
+                    user_id: sellerData.user_id,
+                    title: 'New Commission Potential (I-20)',
+                    message: `Your student ${alunoData.full_name} has paid the I-20 Control Fee (${formattedAmount}).`,
+                    type: 'payment',
+                    link: '/admin/dashboard/users',
+                    metadata: {
+                       student_id: alunoData.id,
+                       student_name: alunoData.full_name,
+                       amount: amountValue,
+                       fee_type: 'i20_control_fee',
+                       payment_id: sessionId
+                    }
+                  });
+                } catch (sellerInAppErr) {
+                   console.error(`[NOTIFICAÇÃO SELLER] Erro ao criar in-app notification para seller ${sellerData.email}:`, sellerInAppErr);
+                }
             }
             // 3. NOTIFICAÇÃO PARA AFFILIATE ADMIN (se houver)
             if (affiliateAdminData.email) {
@@ -915,8 +1271,29 @@ Deno.serve(async (req)=>{
                 const affiliateResult = await affiliateNotificationResponse.text();
                 console.log('📧 [verify-stripe-session-i20-control-fee] Notificação para AFFILIATE ADMIN enviada com sucesso:', affiliateResult);
               } else {
-                const affiliateError = await affiliateNotificationResponse.text();
                 console.error('📧 [verify-stripe-session-i20-control-fee] Erro ao enviar notificação para AFFILIATE ADMIN:', affiliateError);
+              }
+
+              // ✅ IN-APP NOTIFICATION FOR AFFILIATE ADMIN
+              if (affiliateAdminData.user_id) {
+                  try {
+                    await supabase.from('admin_notifications').insert({
+                      user_id: affiliateAdminData.user_id,
+                      title: 'Affiliate I-20 Payment',
+                      message: `A student from your network (${alunoData.full_name}) has paid the I-20 Control Fee (${formattedAmount}).`,
+                      type: 'payment',
+                      link: '/admin/dashboard/affiliate-management',
+                      metadata: {
+                         student_id: alunoData.id,
+                         student_name: alunoData.full_name,
+                         amount: amountValue,
+                         fee_type: 'i20_control_fee',
+                         payment_id: sessionId
+                      }
+                    });
+                  } catch (affiliateInAppErr) {
+                     console.error(`[NOTIFICAÇÃO AFFILIATE] Erro ao criar in-app notification para affiliate ${affiliateAdminData.email}:`, affiliateInAppErr);
+                  }
               }
             } else {
               console.log('📧 [verify-stripe-session-i20-control-fee] Não há affiliate admin para notificar');
@@ -925,16 +1302,110 @@ Deno.serve(async (req)=>{
             console.log(`📤 [verify-stripe-session-i20-control-fee] ❌ SELLER NÃO ENCONTRADO para seller_referral_code: ${alunoData.seller_referral_code}`);
             console.log(`📤 [verify-stripe-session-i20-control-fee] ❌ ERRO na busca do seller:`, sellerError);
             
-            // Notificar admin quando seller não é encontrado
+            // Notificar todos os admins quando seller não é encontrado
+            console.log(`📧 [verify-stripe-session-i20-control-fee] Enviando notificações para ${admins.length} admin(s) (seller não encontrado)...`);
+            const adminNotificationPromises = admins.map(async (admin) => {
+              // ✅ IN-APP NOTIFICATION FOR ADMIN
+              if (admin.user_id) {
+                try {
+                  await supabase.from('admin_student_chat_notifications').insert({
+                    recipient_id: admin.user_id,
+                    title: 'New I-20 Control Fee Payment',
+                    message: `Student ${alunoData.full_name} has paid the I-20 Control Fee (${formattedAmount}).`,
+                    notification_type: 'system',
+                    metadata: {
+                       student_id: alunoData.id,
+                       student_name: alunoData.full_name,
+                       amount: amountValue,
+                       fee_type: 'i20_control',
+                       payment_id: sessionId
+                    }
+                  });
+                } catch (adminInAppErr) {
+                   console.error(`[NOTIFICAÇÃO ADMIN] Erro ao criar in-app notification para admin ${admin.email}:`, adminInAppErr);
+                }
+              }
+              const adminNotificationPayload = {
+                tipo_notf: "Pagamento Stripe de I-20 control fee confirmado - Admin",
+                email_admin: admin.email,
+                nome_admin: admin.full_name,
+                phone_admin: admin.phone || "",
+                email_aluno: alunoData.email,
+                nome_aluno: alunoData.full_name,
+                phone_aluno: alunoData.phone || "",
+                o_que_enviar: `Pagamento Stripe de I-20 control fee no valor de ${formattedAmount} do aluno ${alunoData.full_name} foi processado com sucesso. Seller não encontrado para código: ${alunoData.seller_referral_code}`,
+                payment_id: sessionId,
+                fee_type: 'i20_control_fee',
+                amount: amountValue,
+                currency: currencyInfo.currency,
+                currency_symbol: currencyInfo.symbol,
+                formatted_amount: formattedAmount,
+                payment_method: paymentMethodForUserProfile,
+                notification_type: 'admin'
+              };
+              try {
+                const adminNotificationResponse = await fetch('https://nwh.suaiden.com/webhook/notfmatriculausa', {
+                  method: 'POST',
+                  headers: {
+                    'Content-Type': 'application/json',
+                    'User-Agent': 'PostmanRuntime/7.36.3'
+                  },
+                  body: JSON.stringify(adminNotificationPayload)
+                });
+                if (adminNotificationResponse.ok) {
+                  const adminResult = await adminNotificationResponse.text();
+                  console.log(`📧 [verify-stripe-session-i20-control-fee] Notificação para ADMIN ${admin.email} enviada com sucesso:`, adminResult);
+                  return { success: true, email: admin.email };
+                } else {
+                  const adminError = await adminNotificationResponse.text();
+                  console.error(`📧 [verify-stripe-session-i20-control-fee] Erro ao enviar notificação para ADMIN ${admin.email}:`, adminError);
+                  return { success: false, email: admin.email, error: adminError };
+                }
+              } catch (error) {
+                console.error(`📧 [verify-stripe-session-i20-control-fee] Erro ao enviar notificação para ADMIN ${admin.email}:`, error);
+                return { success: false, email: admin.email, error: String(error) };
+              }
+            });
+            const adminNotificationResults = await Promise.allSettled(adminNotificationPromises);
+            const successfulAdmins = adminNotificationResults.filter(r => r.status === 'fulfilled' && r.value.success).length;
+            console.log(`📧 [verify-stripe-session-i20-control-fee] Notificações enviadas: ${successfulAdmins}/${admins.length} admin(s) notificados com sucesso`);
+          }
+        } else {
+          console.log(`📤 [verify-stripe-session-i20-control-fee] ❌ NENHUM SELLER_REFERRAL_CODE encontrado, não há seller para notificar`);
+          
+          // Notificar todos os admins quando não há seller
+          console.log(`📧 [verify-stripe-session-i20-control-fee] Enviando notificações para ${admins.length} admin(s) (sem seller)...`);
+          const adminNotificationPromises = admins.map(async (admin) => {
+            // ✅ IN-APP NOTIFICATION FOR ADMIN
+            if (admin.user_id) {
+              try {
+                await supabase.from('admin_notifications').insert({
+                  user_id: admin.user_id,
+                  title: 'New I-20 Control Fee Payment',
+                  message: `Student ${alunoData.full_name} has paid the I-20 Control Fee (${formattedAmount}).`,
+                  type: 'payment',
+                  link: '/admin/dashboard/payments',
+                  metadata: {
+                     student_id: alunoData.id,
+                     student_name: alunoData.full_name,
+                     amount: amountValue,
+                     fee_type: 'i20_control',
+                     payment_id: sessionId
+                  }
+                });
+              } catch (adminInAppErr) {
+                 console.error(`[NOTIFICAÇÃO ADMIN] Erro ao criar in-app notification para admin ${admin.email}:`, adminInAppErr);
+              }
+            }
             const adminNotificationPayload = {
               tipo_notf: "Pagamento Stripe de I-20 control fee confirmado - Admin",
-              email_admin: "admin@matriculausa.com",
-              nome_admin: "Admin MatriculaUSA",
-              phone_admin: adminPhone,
+              email_admin: admin.email,
+              nome_admin: admin.full_name,
+              phone_admin: admin.phone || "",
               email_aluno: alunoData.email,
               nome_aluno: alunoData.full_name,
               phone_aluno: alunoData.phone || "",
-              o_que_enviar: `Pagamento Stripe de I-20 control fee no valor de ${formattedAmount} do aluno ${alunoData.full_name} foi processado com sucesso. Seller não encontrado para código: ${alunoData.seller_referral_code}`,
+              o_que_enviar: `Pagamento Stripe de I-20 control fee no valor de ${formattedAmount} do aluno ${alunoData.full_name} foi processado com sucesso.`,
               payment_id: sessionId,
               fee_type: 'i20_control_fee',
               amount: amountValue,
@@ -944,61 +1415,32 @@ Deno.serve(async (req)=>{
               payment_method: paymentMethodForUserProfile,
               notification_type: 'admin'
             };
-            console.log('📧 [verify-stripe-session-i20-control-fee] Enviando notificação para admin (seller não encontrado):', adminNotificationPayload);
-            const adminNotificationResponse = await fetch('https://nwh.suaiden.com/webhook/notfmatriculausa', {
-              method: 'POST',
-              headers: {
-                'Content-Type': 'application/json',
-                'User-Agent': 'PostmanRuntime/7.36.3'
-              },
-              body: JSON.stringify(adminNotificationPayload)
-            });
-            if (adminNotificationResponse.ok) {
-              const adminResult = await adminNotificationResponse.text();
-              console.log('📧 [verify-stripe-session-i20-control-fee] Notificação para admin enviada com sucesso:', adminResult);
-            } else {
-              const adminError = await adminNotificationResponse.text();
-              console.error('📧 [verify-stripe-session-i20-control-fee] Erro ao enviar notificação para admin:', adminError);
+            try {
+              const adminNotificationResponse = await fetch('https://nwh.suaiden.com/webhook/notfmatriculausa', {
+                method: 'POST',
+                headers: {
+                  'Content-Type': 'application/json',
+                  'User-Agent': 'PostmanRuntime/7.36.3'
+                },
+                body: JSON.stringify(adminNotificationPayload)
+              });
+              if (adminNotificationResponse.ok) {
+                const adminResult = await adminNotificationResponse.text();
+                console.log(`📧 [verify-stripe-session-i20-control-fee] Notificação para ADMIN ${admin.email} enviada com sucesso:`, adminResult);
+                return { success: true, email: admin.email };
+              } else {
+                const adminError = await adminNotificationResponse.text();
+                console.error(`📧 [verify-stripe-session-i20-control-fee] Erro ao enviar notificação para ADMIN ${admin.email}:`, adminError);
+                return { success: false, email: admin.email, error: adminError };
+              }
+            } catch (error) {
+              console.error(`📧 [verify-stripe-session-i20-control-fee] Erro ao enviar notificação para ADMIN ${admin.email}:`, error);
+              return { success: false, email: admin.email, error: String(error) };
             }
-          }
-        } else {
-          console.log(`📤 [verify-stripe-session-i20-control-fee] ❌ NENHUM SELLER_REFERRAL_CODE encontrado, não há seller para notificar`);
-          
-          // Notificar admin quando não há seller
-          const adminNotificationPayload = {
-            tipo_notf: "Pagamento Stripe de I-20 control fee confirmado - Admin",
-            email_admin: "admin@matriculausa.com",
-            nome_admin: "Admin MatriculaUSA",
-            phone_admin: adminPhone,
-            email_aluno: alunoData.email,
-            nome_aluno: alunoData.full_name,
-            phone_aluno: alunoData.phone || "",
-            o_que_enviar: `Pagamento Stripe de I-20 control fee no valor de ${formattedAmount} do aluno ${alunoData.full_name} foi processado com sucesso.`,
-            payment_id: sessionId,
-            fee_type: 'i20_control_fee',
-            amount: amountValue,
-            currency: currencyInfo.currency,
-            currency_symbol: currencyInfo.symbol,
-            formatted_amount: formattedAmount,
-            payment_method: paymentMethodForUserProfile,
-            notification_type: 'admin'
-          };
-          console.log('📧 [verify-stripe-session-i20-control-fee] Enviando notificação para admin da plataforma (sem seller):', adminNotificationPayload);
-          const adminNotificationResponse = await fetch('https://nwh.suaiden.com/webhook/notfmatriculausa', {
-            method: 'POST',
-            headers: {
-              'Content-Type': 'application/json',
-              'User-Agent': 'PostmanRuntime/7.36.3'
-            },
-            body: JSON.stringify(adminNotificationPayload)
           });
-          if (adminNotificationResponse.ok) {
-            const adminResult = await adminNotificationResponse.text();
-            console.log('📧 [verify-stripe-session-i20-control-fee] Notificação para admin enviada com sucesso:', adminResult);
-          } else {
-            const adminError = await adminNotificationResponse.text();
-            console.error('📧 [verify-stripe-session-i20-control-fee] Erro ao enviar notificação para admin:', adminError);
-          }
+          const adminNotificationResults = await Promise.allSettled(adminNotificationPromises);
+          const successfulAdmins = adminNotificationResults.filter(r => r.status === 'fulfilled' && r.value.success).length;
+          console.log(`📧 [verify-stripe-session-i20-control-fee] Notificações enviadas: ${successfulAdmins}/${admins.length} admin(s) notificados com sucesso`);
         }
       } catch (notifErr) {
         console.error('[NOTIFICAÇÃO] Erro ao notificar I-20 control fee via n8n:', notifErr);

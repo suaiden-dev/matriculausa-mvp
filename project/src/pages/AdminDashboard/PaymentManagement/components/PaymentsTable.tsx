@@ -14,6 +14,7 @@ export interface PaymentsTableProps {
 	sortOrder: 'asc' | 'desc';
 	FEE_TYPES: { value: string; label: string; color?: string }[];
 	handleViewDetails: (payment: any) => void;
+	isLoading?: boolean; // ✅ NOVO: Estado de loading para mostrar skeletons
 }
 
 function PaymentsTableBase(props: PaymentsTableProps) {
@@ -184,7 +185,11 @@ function PaymentsTableBase(props: PaymentsTableProps) {
 										</span>
 									</td>
 									<td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900 font-medium">
-										${formatCentsToDollars(payment.amount)}
+										{props.isLoading ? (
+											<div className="animate-pulse bg-slate-200 h-4 w-16 rounded"></div>
+										) : (
+											`$${formatCentsToDollars(payment.amount)}`
+										)}
 									</td>
 									<td className="px-6 py-4 whitespace-nowrap">
 										{(() => {
@@ -193,6 +198,10 @@ function PaymentsTableBase(props: PaymentsTableProps) {
 												? 'bg-purple-100 text-purple-800'
 												: paymentMethod === 'stripe'
 												? 'bg-blue-100 text-blue-800'
+												: paymentMethod === 'parcelow'
+												? 'bg-emerald-100 text-emerald-800'
+												: paymentMethod === 'pix'
+												? 'bg-cyan-100 text-cyan-800'
 												: 'bg-gray-100 text-gray-800';
 											const label = paymentMethod === 'manual'
 												? 'Outside'

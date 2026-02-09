@@ -11,8 +11,9 @@ import DocumentRequestsCard from '../../components/DocumentRequestsCard';
 import { supabase } from '../../lib/supabase';
 import DocumentViewerModal from '../../components/DocumentViewerModal';
 import { STRIPE_PRODUCTS } from '../../stripe-config';
-import { FileText, UserCircle, GraduationCap, CheckCircle, Building, Award, Home, Info, FileCheck, FolderOpen, MapPin, Phone, Globe, Mail, BookOpen } from 'lucide-react';
+import { FileText, UserCircle, GraduationCap, CheckCircle, Building, Award, Home, Info, FileCheck, FolderOpen, MapPin, Phone, Globe, Mail, BookOpen, DollarSign } from 'lucide-react';
 import { I20ControlFeeModal } from '../../components/I20ControlFeeModal';
+import { ProfileRequiredModal } from '../../components/ProfileRequiredModal';
 import TruncatedText from '../../components/TruncatedText';
 import { ExpandableTabs } from '../../components/ui/expandable-tabs';
 // Remover os imports das imagens
@@ -47,13 +48,15 @@ const ApplicationChatPage: React.FC = () => {
   // Todos os hooks devem vir ANTES de qualquer return condicional
   const [i20Loading, setI20Loading] = useState(false);
   const [i20Error, setI20Error] = useState<string | null>(null);
+  const [showProfileRequiredModal, setShowProfileRequiredModal] = useState(false);
+  const [profileErrorType, setProfileErrorType] = useState<'cpf_missing' | 'profile_incomplete' | null>(null);
   const [applicationDetails, setApplicationDetails] = useState<any>(null);
   const [previewUrl, setPreviewUrl] = useState<string | null>(null);
   const [i20Countdown, setI20Countdown] = useState<string | null>(null);
   const [i20CountdownValues, setI20CountdownValues] = useState<{ days: number; hours: number; minutes: number; seconds: number } | null>(null);
   const [scholarshipFeeDeadline, setScholarshipFeeDeadline] = useState<Date | null>(null);
   const [showI20ControlFeeModal, setShowI20ControlFeeModal] = useState(false);
-  const [selectedPaymentMethod, setSelectedPaymentMethod] = useState<'stripe' | 'zelle' | 'pix' | null>(null);
+  const [selectedPaymentMethod, setSelectedPaymentMethod] = useState<'stripe' | 'zelle' | 'pix' | 'parcelow' | null>(null);
   // Ajustar tipo de activeTab para remover 'chat'
   const [activeTab, setActiveTab] = useState<'welcome' | 'details' | 'i20' | 'documents'>('welcome');
   // Estado para cupom promocional do I-20 Control Fee
@@ -64,6 +67,7 @@ const ApplicationChatPage: React.FC = () => {
   } | null>(null);
   // Estado para valor real pago do I-20 (incluindo descontos)
   const [realI20PaidAmount, setRealI20PaidAmount] = useState<number | null>(null);
+  const [realI20PaymentDate, setRealI20PaymentDate] = useState<string | null>(null);
   
   // Estados para controlar document requests (removidos - não mais utilizados)
 
@@ -72,7 +76,7 @@ const ApplicationChatPage: React.FC = () => {
     if (applicationId) {
       supabase
         .from('scholarship_applications')
-        .select(`*, user_profiles!student_id(*), scholarships(*, universities(*))`)
+        .select(`*, user_profiles!student_id(*), scholarships(*, internal_fees, universities(*))`)
         .eq('id', applicationId)
         .single()
         .then(({ data }) => {
@@ -254,11 +258,13 @@ const ApplicationChatPage: React.FC = () => {
       }
 
       try {
+        // Só considerar pagamentos efetivamente concluídos: Parcelow deve ter parcelow_status = 'paid'
         const { data: payments, error } = await supabase
           .from('individual_fee_payments')
-          .select('amount, gross_amount_usd')
+          .select('amount, gross_amount_usd, payment_date, created_at, payment_method, parcelow_status')
           .eq('user_id', user.id)
           .eq('fee_type', 'i20_control')
+          .or('parcelow_status.is.null,parcelow_status.eq.paid')
           .order('created_at', { ascending: false })
           .limit(1)
           .maybeSingle();
@@ -275,8 +281,10 @@ const ApplicationChatPage: React.FC = () => {
             ? parseFloat(payments.gross_amount_usd.toString())
             : parseFloat(payments.amount.toString());
           setRealI20PaidAmount(displayAmount);
+          setRealI20PaymentDate(payments.payment_date || payments.created_at || null);
         } else {
           setRealI20PaidAmount(null);
+          setRealI20PaymentDate(null);
         }
       } catch (error) {
         console.error('[ApplicationChatPage] Erro inesperado ao buscar valor pago do I-20:', error);
@@ -316,7 +324,7 @@ const ApplicationChatPage: React.FC = () => {
   // Lógica de exibição do card
   const hasPaid = !!(userProfile && (userProfile as any).has_paid_i20_control_fee);
   const dueDate = (userProfile && (userProfile as any).i20_control_fee_due_date) || null;
-  const paymentDate = (userProfile && (userProfile as any).i20_control_fee_due_date) || null;
+  const paymentDate = realI20PaymentDate || (userProfile && (userProfile as any).i20_paid_at) || null;
 
   // Função para iniciar o pagamento do I-20 Control Fee
   const handlePayI20 = async () => {
@@ -338,7 +346,7 @@ const ApplicationChatPage: React.FC = () => {
   const [exchangeRate, setExchangeRate] = useState<number | null>(null);
 
   // Função para lidar com a seleção do método de pagamento
-  const handlePaymentMethodSelect = (method: 'stripe' | 'zelle' | 'pix', exchangeRateParam?: number) => {
+  const handlePaymentMethodSelect = (method: 'stripe' | 'zelle' | 'pix' | 'parcelow', exchangeRateParam?: number) => {
     console.log('🔍 [ApplicationChatPage] Método de pagamento selecionado:', method, 'Taxa de câmbio:', exchangeRateParam);
     setSelectedPaymentMethod(method);
     if (method === 'pix' && exchangeRateParam) {
@@ -472,6 +480,67 @@ const ApplicationChatPage: React.FC = () => {
         }
         
         window.location.href = `/checkout/zelle?${params.toString()}`;
+      } else if (selectedPaymentMethod === 'parcelow') {
+        // Redirecionar para o Parcelow
+        const token = (await supabase.auth.getSession()).data.session?.access_token;
+        const supabaseUrl = import.meta.env.VITE_SUPABASE_URL;
+        const apiUrl = `${supabaseUrl}/functions/v1/parcelow-checkout-i20-control-fee`;
+        
+        // Obter valor final
+        const finalAmount = (window as any).__checkout_final_amount || parseFloat(i20ControlFee?.replace('$', '') || '0');
+        const promotionalCoupon = (window as any).__checkout_promotional_coupon || null;
+        
+        console.log('🔍 [ApplicationChatPage] Iniciando checkout Parcelow para I-20...', { finalAmount, promotionalCoupon });
+        
+        const res = await fetch(apiUrl, {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'Authorization': `Bearer ${token}`,
+          },
+          body: JSON.stringify({
+            amount: finalAmount,
+            fee_type: 'i20_control_fee',
+            metadata: {
+              application_id: applicationId,
+              student_process_type: applicationDetails?.student_process_type,
+              final_amount: finalAmount,
+              promotional_coupon: promotionalCoupon
+            },
+            promotional_coupon: promotionalCoupon,
+            scholarships_ids: applicationDetails?.scholarships?.id ? [applicationDetails.scholarships.id] : []
+          }),
+        });
+        
+        if (!res.ok) {
+          const errorData = await res.json();
+          console.error('🔍 [ApplicationChatPage] Erro Parcelow:', errorData);
+          
+          if (errorData.error === 'document_number_required') {
+            setProfileErrorType('cpf_missing');
+            setShowProfileRequiredModal(true);
+            setI20Loading(false);
+            return;
+          }
+          
+          if (errorData.error === 'User profile not found') {
+            setProfileErrorType('profile_incomplete');
+            setShowProfileRequiredModal(true);
+            setI20Loading(false);
+            return;
+          }
+          
+          throw new Error(errorData.error || 'Erro ao criar sessão Parcelow');
+        }
+
+        const data = await res.json();
+        if (data.checkout_url) {
+          console.log('[Parcelow] Redirecionando para:', data.checkout_url);
+          window.location.href = data.checkout_url;
+          return;
+        } else {
+          throw new Error('URL de checkout Parcelow não encontrada');
+        }
       }
       
       // Se chegou até aqui sem erro, não fechar o modal ainda (redirecionamento está acontecendo)
@@ -585,6 +654,19 @@ const ApplicationChatPage: React.FC = () => {
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [activeTab, applicationDetails?.is_scholarship_fee_paid]);
+
+  // Helper for Application Fee with dependents
+  const getApplicationFeeWithDependents = (base: number): number => {
+    if (!userProfile) return base;
+    const isLegacy = userProfile.system_type === 'legacy';
+    if (isLegacy) return base;
+
+    const dependentsCount = userProfile.dependents 
+      ? (Array.isArray(userProfile.dependents) ? userProfile.dependents.length : Number(userProfile.dependents)) 
+      : 0;
+    
+    return base + (dependentsCount * 100);
+  };
 
   return (
     <div ref={containerRef} className="p-6 md:p-12 flex flex-col items-center min-h-screen h-full">
@@ -1029,50 +1111,92 @@ const ApplicationChatPage: React.FC = () => {
               </div>
 
               {/* Scholarship Information Card */}
-              <div className="group bg-white rounded-3xl shadow-lg hover:shadow-2xl transition-all duration-300 border border-gray-100 hover:border-[#D0151C]/20 overflow-hidden">
-                <div className="bg-gradient-to-br from-[#D0151C] via-red-600 to-red-700 p-6 sm:p-8">
-                  <div className="flex items-center gap-4">
-                    <div className="w-12 h-12 bg-white/10 rounded-2xl flex items-center justify-center backdrop-blur-sm">
-                      <Award className="w-6 h-6 text-white" />
-                    </div>
-                    <h2 className="text-xl sm:text-2xl font-bold text-white">
+              <div className="group bg-white rounded-2xl shadow-sm border border-slate-200 overflow-hidden hover:shadow-md transition-all duration-300">
+                <div className="bg-gradient-to-r from-[#05294E] to-[#08427e] px-6 py-4">
+                  <div className="flex items-center gap-3">
+                    <Award className="w-6 h-6 text-white/90" />
+                    <h2 className="text-lg font-semibold text-white">
                       {t('studentDashboard.applicationChatPage.details.scholarshipDetails.title')}
                     </h2>
                   </div>
                 </div>
-                <div className="p-6 sm:p-8">
-                  <div className="space-y-6">
-                    <div className="bg-red-50 rounded-2xl p-6 hover:bg-red-100 transition-colors duration-200">
-                      <div className="flex items-center gap-3 mb-3">
-                        <div className="w-8 h-8 bg-red-100 rounded-xl flex items-center justify-center">
-                          <Award className="w-5 h-5 text-red-600" />
-                        </div>
-                        <span className="text-sm font-medium text-red-600">{t('studentDashboard.applicationChatPage.details.scholarshipDetails.scholarshipName')}</span>
+                <div className="p-6">
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    {/* Scholarship Name */}
+                    <div className="bg-slate-50 rounded-xl p-4 border border-slate-100 dark:border-slate-800">
+                      <div className="flex items-center gap-2 mb-2">
+                        <Award className="w-4 h-4 text-[#05294E]" />
+                        <span className="text-xs font-bold uppercase tracking-wider text-slate-500">{t('studentDashboard.applicationChatPage.details.scholarshipDetails.scholarshipName')}</span>
                       </div>
-                      <div className="text-lg font-bold text-gray-900">{applicationDetails.scholarships?.title || applicationDetails.scholarships?.name || 'N/A'}</div>
+                      <div className="text-base font-bold text-gray-900 leading-tight">
+                        {applicationDetails.scholarships?.title || applicationDetails.scholarships?.name || 'N/A'}
+                      </div>
                     </div>
                     
+                    {/* Course */}
                     {applicationDetails.scholarships?.course && (
-                      <div className="bg-red-50 rounded-2xl p-6 hover:bg-red-100 transition-colors duration-200">
-                        <div className="flex items-center gap-3 mb-3">
-                          <div className="w-8 h-8 bg-red-100 rounded-xl flex items-center justify-center">
-                            <BookOpen className="w-5 h-5 text-red-600" />
-                          </div>
-                          <span className="text-sm font-medium text-red-600">{t('studentDashboard.applicationChatPage.details.scholarshipDetails.course')}</span>
+                      <div className="bg-slate-50 rounded-xl p-4 border border-slate-100">
+                        <div className="flex items-center gap-2 mb-2">
+                          <BookOpen className="w-4 h-4 text-[#05294E]" />
+                          <span className="text-xs font-bold uppercase tracking-wider text-slate-500">{t('studentDashboard.applicationChatPage.details.scholarshipDetails.course')}</span>
                         </div>
-                        <div className="text-lg font-bold text-gray-900">{applicationDetails.scholarships.course}</div>
+                        <div className="text-base font-bold text-gray-900 leading-tight">{applicationDetails.scholarships.course}</div>
                       </div>
                     )}
                     
+                    {/* Description - Full width */}
                     {applicationDetails.scholarships?.description && (
-                      <div className="bg-red-50 rounded-2xl p-6 hover:bg-red-100 transition-colors duration-200">
-                        <div className="flex items-center gap-3 mb-3">
-                          <div className="w-8 h-8 bg-red-100 rounded-xl flex items-center justify-center">
-                            <FileText className="w-5 h-5 text-red-600" />
-                          </div>
-                          <span className="text-sm font-medium text-red-600">{t('studentDashboard.applicationChatPage.details.scholarshipDetails.description')}</span>
+                      <div className="col-span-1 md:col-span-2 bg-slate-50 rounded-xl p-4 border border-slate-100">
+                        <div className="flex items-center gap-2 mb-2">
+                          <FileText className="w-4 h-4 text-[#05294E]" />
+                          <span className="text-xs font-bold uppercase tracking-wider text-slate-500">{t('studentDashboard.applicationChatPage.details.scholarshipDetails.description')}</span>
                         </div>
-                        <div className="text-base font-medium text-gray-900 leading-relaxed">{applicationDetails.scholarships.description}</div>
+                        <div className="text-sm text-gray-700 leading-relaxed">{applicationDetails.scholarships.description}</div>
+                      </div>
+                    )}
+
+                    {/* Application Fee */}
+                    {userProfile?.has_paid_selection_process_fee && (
+                      <div className="col-span-1 md:col-span-2 bg-slate-50 rounded-xl p-4 border border-slate-100 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
+                        <div className="flex items-start gap-2">
+                          <div className="p-1.5 bg-white rounded-md shadow-sm border border-slate-100 mt-0.5">
+                            <DollarSign className="w-4 h-4 text-[#05294E]" />
+                          </div>
+                          <div>
+                            <span className="text-xs font-bold uppercase tracking-wider text-slate-500 block mb-0.5">{t('scholarshipsPage.scholarshipCard.applicationFee')}</span>
+                            <span className="text-xs text-slate-500">
+                              {applicationDetails.scholarships.application_fee_amount && Number(applicationDetails.scholarships.application_fee_amount) !== 350
+                                ? t('scholarshipsPage.scholarshipCard.customFee') 
+                                : t('scholarshipsPage.scholarshipCard.standardFee')}
+                            </span>
+                          </div>
+                        </div>
+                        <div className="text-lg font-bold text-gray-900 bg-white px-3 py-1.5 rounded-lg border border-slate-200 shadow-sm">
+                           {applicationDetails.scholarships.application_fee_amount 
+                              ? formatFeeAmount(getApplicationFeeWithDependents(Number(applicationDetails.scholarships.application_fee_amount)))
+                              : formatFeeAmount(getApplicationFeeWithDependents(350))}
+                        </div>
+                      </div>
+                    )}
+
+                    {/* University Internal Fees */}
+                    {applicationDetails.scholarships?.internal_fees && Array.isArray(applicationDetails.scholarships.internal_fees) && applicationDetails.scholarships.internal_fees.length > 0 && userProfile?.has_paid_selection_process_fee && (
+                      <div className="col-span-1 md:col-span-2 bg-slate-50 rounded-xl p-4 border border-slate-100">
+                        <div className="flex items-center gap-2 mb-4 pb-2 border-b border-slate-200/60">
+                          <Building className="w-4 h-4 text-[#05294E]" />
+                          <span className="text-xs font-bold uppercase tracking-wider text-slate-500">{t('scholarshipsPage.modal.universityInternalFees')}</span>
+                        </div>
+                        <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                          {applicationDetails.scholarships.internal_fees.map((fee: any, idx: number) => (
+                            <div key={idx} className="flex justify-between items-center p-3 bg-white rounded-lg border border-slate-200 shadow-sm">
+                               <div className="min-w-0 mr-3">
+                                 <p className="text-sm font-semibold text-gray-900 truncate" title={fee.category || fee.name}>{fee.category || fee.name}</p>
+                                 <p className="text-[10px] text-slate-500 uppercase tracking-wide">{fee.details || fee.frequency}</p>
+                               </div>
+                               <span className="font-bold text-gray-900 whitespace-nowrap">${Number(fee.amount).toFixed(2)}</span>
+                            </div>
+                          ))}
+                        </div>
                       </div>
                     )}
                   </div>
@@ -1663,6 +1787,17 @@ const ApplicationChatPage: React.FC = () => {
           onClose={handleCloseI20Modal}
           selectedPaymentMethod={selectedPaymentMethod}
           onPaymentMethodSelect={handlePaymentMethodSelect}
+          isLoading={i20Loading}
+        />
+
+        {/* Profile Required Modal */}
+        <ProfileRequiredModal
+          isOpen={showProfileRequiredModal}
+          onClose={() => {
+            setShowProfileRequiredModal(false);
+            setProfileErrorType(null);
+          }}
+          errorType={profileErrorType}
         />
       </div>
     </div>

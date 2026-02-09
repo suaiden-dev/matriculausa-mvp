@@ -376,7 +376,7 @@
       "subtitle": "Estudantes reais, resultados reais. Veja como o MatriculaUSA transformou sua jornada educacional para os Estados Unidos.",
       "testimonial1": {
         "text": "O MatriculaUSA tornou meu sonho de estudar na América uma realidade. As oportunidades de bolsa e o suporte foram incríveis!",
-        "author": "Maria Silva",
+        "author": "Gustavo Santos",
         "field": "Ciência da Computação"
       },
       "testimonial2": {
@@ -608,6 +608,9 @@
       "allFields": "Todos os Campos",
       "allModes": "Todos os Modos",
       "allPermissions": "Todas as Permissões",
+      "allUniversities": "Todas as Universidades",
+      "university": "Universidade",
+      "universityTooltip": "Crie uma conta e pague a Selection Process Fee para filtrar por universidade",
       "stem": "STEM",
       "business": "Negócios",
       "engineering": "Engenharia",
@@ -648,7 +651,7 @@
       "expired": "Expirada",
       "days": "dias",
       "details": "Detalhes",
-      "applyNow": "Candidatar-se Agora",
+      "applyNow": "Candidatar-se",
       "notAvailable": "Não Disponível para Aplicação"
     },
     "noResults": {
@@ -708,7 +711,10 @@
       "expired": "Expirada",
       "scholarshipExpired": "Bolsa Expirada",
       "noLongerAccepting": "Esta bolsa não está mais aceitando novas aplicações.",
-      "canStillView": "Você ainda pode visualizar as informações, mas não será possível aplicar para esta bolsa."
+      "canStillView": "Você ainda pode visualizar as informações, mas não será possível aplicar para esta bolsa.",
+      "universityInternalFees": "Taxas Internas da Universidade",
+      "internalFeesNote": "Taxas pagas diretamente à universidade. Sujeito a alteração.",
+      "days": "dias"
     }
   },
   "universitiesPage": {
@@ -1292,8 +1298,9 @@
         }
       }
     }
-  },
-  "messages": {
+    ,
+    "messages": {
+      "invalidDependents": "Por favor, selecione entre 0 e 5 dependentes.",
     "checkEmail": "Verifique seu email!",
     "studentVerification": "Um link de confirmação foi enviado para seu email. Verifique sua caixa de entrada (e pasta de spam) para ativar sua conta.",
     "passwordsNotMatch": "As senhas não coincidem",
@@ -1364,6 +1371,42 @@
     "signupDisabled": "Novos registros estão atualmente desabilitados. Entre em contato com o suporte.",
     "registrationFailed": "Falha no Registro",
     "emailAlreadyRegistered": "Este email já está cadastrado. Faça login ou use outro email."
+    }
+  },
+  "ssoCallback": {
+    "processing": {
+      "title": "Aguarde um momento",
+      "preparing": "Estamos preparando o ambiente para você...",
+      "connecting": "Conectando com o 323 Network...",
+      "preparingAccount": "Preparando sua conta...",
+      "creatingSession": "Criando sessão...",
+      "waitMessage": "Isso pode levar alguns segundos...",
+      "secureConnection": "Conectando com segurança ao Matrícula USA"
+    },
+    "success": {
+      "title": "Tudo pronto!",
+      "newUser": "Tudo pronto! Redirecionando você...",
+      "returningUser": "Bem-vindo de volta! Redirecionando...",
+      "redirecting": "Redirecionando você agora...",
+      "welcomeNew": "Bem-vindo ao Matrícula US!",
+      "loginSuccess": "Login realizado com sucesso!"
+    },
+    "error": {
+      "title": "Ops, algo deu errado",
+      "authenticationFailed": "Não foi possível completar a autenticação. Você será redirecionado para a página de login em instantes.",
+      "tokenNotProvided": "Token não fornecido na URL",
+      "tokenValidationError": "Erro ao validar token",
+      "sessionCreationError": "Erro ao criar sessão",
+      "sessionNotCreated": "Sessão não foi criada corretamente",
+      "noAuthMethod": "Nenhum método de autenticação disponível",
+      "tokenNotFoundInMagicLink": "Token ou type não encontrados no magic link",
+      "tokensNotFoundInRedirect": "Tokens não encontrados no redirect",
+      "locationHeaderNotFound": "Location header não encontrado no redirect",
+      "tokensNotFoundInResponse": "Tokens não encontrados na resposta",
+      "supabaseUrlNotConfigured": "VITE_SUPABASE_URL não configurada",
+      "tryAgain": "Tentar Novamente",
+      "goToLogin": "Ir para Login"
+    }
   },
   "features": {
     "whyChoose": "Por Que Escolher MatriculaUSA?",
@@ -1393,7 +1436,7 @@
     "programs": "Programas",
     "website": "Website",
     "viewProfile": "Ver Perfil",
-    "applyNow": "Candidatar-se Agora"
+    "applyNow": "Candidatar-se"
   },
   "common": {
     "loading": "Carregando...",
@@ -1431,6 +1474,21 @@
     "deadline": "Prazo",
     "amount": "Valor"
   },
+  "profileRequiredModal": {
+    "cpfMissing": {
+      "title": "CPF Necessário",
+      "description": "Para pagar via Parcelow/PIX, é necessário cadastrar seu CPF no seu perfil.",
+      "details": "O CPF é obrigatório para processar pagamentos via Parcelow. Isso garante a segurança da sua transação e está de acordo com as regulamentações brasileiras.",
+      "buttonGoToProfile": "Ir para Perfil"
+    },
+    "profileIncomplete": {
+      "title": "Complete seu Perfil",
+      "description": "Seu perfil está incompleto. Por favor, preencha todas as informações necessárias antes de prosseguir com o pagamento.",
+      "details": "Precisamos de algumas informações adicionais para processar seu pagamento com segurança. Isso leva apenas alguns minutos!",
+      "buttonCompleteProfile": "Completar Perfil"
+    },
+    "notNow": "Agora Não"
+  },
   "studentDashboard": {
     "title": "Painel do Estudante",
     "subtitle": "Gerencie suas candidaturas de bolsa",
@@ -1443,7 +1501,7 @@
       "scholarshipFee": "Taxa de Bolsa",
       "i20ControlFee": "Taxa de Controle I-20",
       "completed": "Completo!",
-      "payApplicationFee": "Pague a Taxa de Matrícula para se candidatar a uma bolsa específica.",
+      "payApplicationFee": "Pague a Taxa de Matrícula para garantir a sua bolsa.",
       "payScholarshipFee": "Pague a Taxa de Bolsa para confirmar sua candidatura de bolsa.",
       "payI20Fee": "Pague a Taxa de Controle I-20 para iniciar seu processo de validação I-20 e documentos.",
       "daysRemaining": "Você tem 10 dias após a taxa de bolsa."
@@ -1492,6 +1550,13 @@
       "matriculaRewards": "Recompensas Matrícula",
       "profile": "Perfil",
       "supportChat": "Chat de Suporte"
+    },
+    "chat": {
+      "welcomeMessage": {
+        "title": "Bem-vindo ao Chat de Suporte!",
+        "body": "Olá! Este é o seu chat de suporte. Nossa equipe está disponível para ajudá-lo das 9h às 17h (Fuso Horário do Arizona). Você pode fazer perguntas sobre bolsas, documentos e o progresso da sua aplicação. Sinta-se à vontade para enviar mensagens e anexos a qualquer momento!",
+        "hours": "Horário de atendimento: 9 AM - 5 PM (Fuso Horário do Arizona)"
+      }
     },
     "profileStatus": {
       "title": "Status do Perfil",
@@ -1647,86 +1712,6 @@
       "noScholarshipsSelected": "Nenhuma bolsa selecionada",
       "notSelectedYet": "Você ainda não selecionou nenhuma bolsa. Navegue pelos nossos programas disponíveis e adicione-os à sua seleção.",
       "browseScholarships": "Navegar Bolsas"
-    },
-    "matriculaRewards": {
-      "title": "Recompensas Matrícula",
-      "subtitle": "Ganhe créditos indicando amigos para a MatriculaUSA",
-      "description": "Obtenha benefícios exclusivos indicando amigos e completando marcos",
-      "searchPlaceholder": "Buscar recompensas...",
-      "filterAll": "Todas as Categorias",
-      "filterReferrals": "Indicações",
-      "filterMilestones": "Marcos",
-      "filterDiscounts": "Descontos",
-      "earnedRewards": "Recompensas Ganhas",
-      "availableRewards": "Recompensas Disponíveis",
-      "totalEarned": "Total Ganho",
-      "referralProgram": "Programa de Indicação",
-      "inviteFriends": "Convide Amigos",
-      "referralCode": "Seu Código de Indicação",
-      "shareCode": "Compartilhe seu código com amigos e ganhe recompensas",
-      "copyCode": "Copiar Código",
-      "codeCopied": "Código copiado!",
-      "referFriend": "Indicar um Amigo",
-      "referralBenefits": "Benefícios da Indicação",
-      "friendDiscount": "Seu amigo recebe um desconto",
-      "yourReward": "Você ganha recompensas quando eles se inscreverem",
-      "noRewards": "Nenhuma recompensa disponível",
-      "noRewardsDescription": "Complete ações para começar a ganhar recompensas",
-      "claimReward": "Resgatar Recompensa",
-      "rewardClaimed": "Recompensa Resgatada",
-      "rewardExpired": "Expirada",
-      "points": "Pontos",
-      "discount": "Desconto",
-      "balance": "Saldo",
-      "coins": "moedas",
-      "totalReferrals": "Total de Indicações",
-      "totalEarnings": "Total de Ganhos",
-      "coin": "Moeda",
-      "yourCode": "Seu Código",
-      "copyLink": "Copiar Link",
-      "shareWithFriends": "Compartilhar com Amigos",
-      "facebook": "Facebook",
-      "twitter": "Twitter",
-      "linkedin": "LinkedIn",
-      "whatsapp": "WhatsApp",
-      "email": "Email",
-      "spendYourCoins": "Gaste suas moedas",
-      "visitStoreDescription": "Visite nossa loja e resgate benefícios usando suas MatriculaCoins.",
-      "visitRewardsStore": "Visitar Loja de Recompensas",
-      "recentReferrals": "Indicações Recentes",
-      "noReferralsYet": "Nenhuma indicação ainda",
-      "shareCodeToEarn": "Compartilhe seu código para começar a ganhar.",
-      "recentTransactions": "Transações Recentes",
-      "noTransactionsYet": "Nenhuma transação ainda",
-      "transactionHistory": "Seu histórico de transações aparecerá aqui.",
-      "howItWorks": "Como Funciona",
-      "step1Title": "Compartilhe Seu Código",
-      "step1Description": "Compartilhe seu código de afiliado único com amigos e familiares.",
-      "step2Title": "Amigos Se Inscrevem",
-      "step2Description": "Eles recebem $50 de desconto na taxa do processo seletivo.",
-      "step3Title": "Ganhe Recompensas",
-      "step3Description": "Você ganha 200 MatriculaCoins para cada indicação bem-sucedida.",
-      "participatingUniversities": "Universidades Participantes",
-      "universitiesDescription": "Essas universidades aceitam MatriculaCoins para descontos nas taxas. Se sua universidade não estiver listada, ela pode não ter optado por participar do programa ainda.",
-      "searchUniversities": "Buscar universidades por nome, localização ou tipo...",
-      "importantInformation": "Informações Importantes",
-      "universityNotListed": "Se sua universidade não estiver listada acima, significa que ela ainda não optou por participar do programa Matricula Rewards. Você ainda pode ganhar moedas indicando amigos, mas não poderá resgatá-las para descontos nas taxas da sua universidade até que ela se junte ao programa. Considere entrar em contato com o escritório de admissões da sua universidade para incentivá-los a participar!",
-      "backToRewards": "Voltar para Recompensas",
-      "coinsAvailable": "Matricula Coins Disponíveis",
-      "rewardsStore": "Loja de Recompensas",
-      "redeemDescription": "Resgate suas Matricula Coins por recompensas exclusivas",
-      "store": "Loja",
-      "history": "Histórico",
-      "tuitionDiscount50": "Desconto de $50 nas Taxas",
-      "tuitionDiscount100": "Desconto de $100 nas Taxas",
-      "tuitionDiscount200": "Desconto de $200 nas Taxas",
-      "get50Off": "Receba $50 de desconto nas taxas da sua universidade",
-      "get100Off": "Receba $100 de desconto nas taxas da sua universidade",
-      "get200Off": "Receba $200 de desconto nas taxas da sua universidade",
-      "offTuition": "de desconto nas taxas",
-      "needMoreCoins": "Precisa de {{count}} moedas a mais",
-      "helpSupport": "Ajuda e Suporte",
-      "smartAssistant": "Assistente Inteligente"
     },
     "favorites": {
       "showFavoritesOnly": "Mostrar Apenas Favoritos",
@@ -1971,6 +1956,25 @@
             "Pague a taxa da bolsa para completar a matrícula",
             "Receba a confirmação final",
             "Comece seu programa acadêmico"
+          ]
+        },
+        "scholarshipFeePaidI20Required": {
+          "title": "Taxa da Bolsa Paga - Documentos Pendentes",
+          "description": "Ótimo! Sua taxa da bolsa foi confirmada. Agora você precisa enviar as requisições de documentos pendentes solicitadas pela universidade.",
+          "nextSteps": [
+            "Envie as requisições de documentos pendentes",
+            "Aguarde a aprovação dos documentos pela universidade",
+            "Pague a I-20 Control Fee para poder receber a carta de aceite",
+            "Receba a carta de aceite da universidade"
+          ]
+        },
+        "allFeesPaidWaitingAcceptanceLetter": {
+          "title": "Todas as Taxas Pagas - Aguardando Carta de Aceite",
+          "description": "Excelente! Todas as taxas foram pagas com sucesso. Agora você está aguardando a universidade enviar sua carta de aceite oficial.",
+          "nextSteps": [
+            "Aguarde a universidade enviar sua carta de aceite",
+            "Verifique regularmente a seção de documentos",
+            "Complete sua matrícula após receber a carta"
           ]
         },
         "fullyEnrolled": {
@@ -2396,6 +2400,50 @@
         "rejectionExplanationPlaceholder": "Ex.: O documento está cortado. Envie novamente em PDF com todas as páginas.",
         "confirm": "Confirmar"
       }
+    },
+    "identityVerification": {
+      "title": "Verificação de Identidade",
+      "subtitle": "Verifique sua identidade fazendo upload de uma foto com seu documento de identidade",
+      "backToDashboard": "Voltar ao Painel",
+      "noPhotoFound": {
+        "title": "Verificação de Identidade",
+        "message": "Nenhuma foto de identidade encontrada. Por favor, complete o processo de checkout para fazer upload da sua foto de identidade.",
+        "goToDashboard": "Ir para o Painel"
+      },
+      "status": {
+        "approved": {
+          "title": "Foto de Identidade Aprovada",
+          "message": "Sua foto de identidade foi aprovada. Você pode prosseguir com sua candidatura."
+        },
+        "rejected": {
+          "title": "Foto de Identidade Rejeitada",
+          "message": "Sua foto de identidade foi rejeitada. Por favor, revise o motivo e faça upload de uma nova foto.",
+          "rejectionReason": "Motivo da Rejeição"
+        },
+        "pending": {
+          "title": "Foto de Identidade em Revisão",
+          "message": "Sua foto de identidade está atualmente em revisão por nossos administradores."
+        }
+      },
+      "uploadNewPhoto": {
+        "title": "Fazer Upload de Nova Foto de Identidade",
+        "termsTitle": "Termos e Condições",
+        "termsDescription": "Por favor, leia e aceite os termos e condições antes de fazer upload de uma nova foto.",
+        "scrollToBottom": "Por favor, role até o final para continuar",
+        "acceptTerms": "Li e aceito os termos e condições",
+        "termsNotAvailable": "Termos não disponíveis",
+        "submitButton": "Enviar Nova Foto",
+        "submitting": "Enviando...",
+        "successMessage": "Foto de identidade enviada com sucesso! Será revisada por um administrador."
+      },
+      "errors": {
+        "loadingStatus": "Erro ao carregar status de verificação. Por favor, tente novamente.",
+        "acceptingTerms": "Erro ao aceitar termos. Por favor, tente novamente.",
+        "termsRequired": "Por favor, aceite os termos primeiro.",
+        "photoRequired": "Por favor, faça upload da sua foto de identidade.",
+        "termAcceptanceNotFound": "Erro: Registro de aceitação de termos não encontrado.",
+        "submittingPhoto": "Erro ao enviar foto. Por favor, tente novamente."
+      }
     }
   },
   "profileManagement": {
@@ -2420,6 +2468,8 @@
       "academicLevel": "Nível Acadêmico",
       "gpa": "GPA",
       "englishProficiency": "Proficiência em Inglês",
+      "cpfDocument": "CPF",
+      "cpfHelper": "Usado para validação e pagamentos no Brasil (formato 000.000.000-00).",
       "placeholders": {
         "enterFullName": "Digite seu nome completo",
         "phoneExample": "Ex: +55 11 99999-8888",
@@ -2477,6 +2527,7 @@
       "profileUpdated": "Perfil atualizado com sucesso!",
       "uploadError": "Falha ao fazer upload do avatar. Tente novamente.",
       "saveError": "Falha ao salvar alterações do perfil. Tente novamente.",
+      "invalidCPF": "CPF inválido. Verifique e tente novamente.",
       "invalidImageFile": "Por favor, selecione um arquivo de imagem",
       "fileTooLarge": "O arquivo deve ter menos de 5MB",
       "imageUrlError": "Não foi possível obter a URL da imagem",
@@ -2521,12 +2572,25 @@
     "noTransactionsYet": "Nenhuma transação ainda",
     "transactionHistory": "Seu histórico de transações aparecerá aqui",
     "howItWorks": "Como Funciona",
-    "step1Title": "Compartilhe seu código",
-    "step1Description": "Compartilhe seu código de indicação único com amigos e familiares",
-    "step2Title": "Eles pagam a taxa do processo seletivo",
-    "step2Description": "Quando eles usam seu código e pagam a taxa do processo seletivo, você ganha moedas",
-    "step3Title": "Resgate suas recompensas",
-    "step3Description": "Use suas moedas para obter descontos na mensalidade em universidades participantes",
+    "step1Title": "Compartilhe Seu Código",
+    "step1Description": "Compartilhe seu código de afiliado único com amigos e familiares.",
+    "step2Title": "Amigos Se Inscrevem",
+    "step2Description": "Eles recebem $100 de desconto na taxa do processo seletivo.",
+    "step3Title": "Ganhe Recompensas",
+    "step3Description": "Quando indicado pagar a taxa de Controle I-20, você ganha 180 coins.",
+    "notificationSent": "Notificação enviada com sucesso!",
+    "stages": {
+      "selection": "Processo Seletivo",
+      "application": "Taxa de Matrícula",
+      "scholarship": "Taxa de Bolsa",
+      "i20": "Controle I-20"
+    },
+    "referralProgress": "Progresso da Indicação",
+    "notifyFriend": "Notificar Amigo",
+    "inProgress": "Em Progresso",
+    "completed": "Completo",
+    "invitedOn": "Convidado em {{date}}",
+    "nudgeCooldown": "Aguarde {{minutes}} min para notificar novamente",
     "participatingUniversities": "Universidades Participantes",
     "universitiesDescription": "Estas universidades aceitam moedas Matricula como desconto na mensalidade. Clique em uma universidade para ver mais detalhes.",
     "loadingUniversities": "Carregando universidades...",
@@ -2687,12 +2751,32 @@
     "i20ControlFee": "Taxa de Controle I-20 - Processamento e validação de documentos"
   },
   "paymentSelector": {
-    "title": "Escolher Método de Pagamento",
-    "subtitle": "Selecione como deseja pagar sua {{feeType}}",
+    "title": "Escolha o Método de Pagamento",
+    "subtitle": "Selecione como você deseja pagar sua taxa de {{feeType}}",
     "amount": "Valor",
     "loading": {
       "message": "Carregando métodos de pagamento...",
-      "processing": "Processando..."
+      "processing": "Processando pagamento..."
+    },
+    "promotionalCoupon": {
+      "label": "Cupom Promocional",
+      "placeholder": "INSIRA O CÓDIGO",
+      "validate": "Validar",
+      "validating": "Validando...",
+      "success": "Cupom aplicado com sucesso!",
+      "invalid": "Cupom inválido ou expirado.",
+      "error": "Erro ao validar cupom.",
+      "validated": "Validado",
+      "remove": "Remover cupom",
+      "original": "original",
+      "withDiscount": "com desconto",
+      "discountAmount": "de desconto",
+      "applied": "Cupom {{code}} aplicado! Desconto de ${{amount}} aplicado.",
+      "errors": {
+        "invalid": "Código de cupom inválido",
+        "generic": "Erro ao validar cupom. Verifique sua conexão e tente novamente.",
+        "cpfRequired": "CPF é obrigatório para pagamento via Parcelow. Por favor, atualize seu perfil."
+      }
     },
     "methods": {
       "stripe": {
@@ -2703,23 +2787,29 @@
         "title": "PIX",
         "description": "Sistema de pagamento instantâneo para usuários brasileiros"
       },
+      "parcelow": {
+        "title": "Parcelow",
+        "description": "Parcele no cartão de crédito"
+      },
       "zelle": {
         "title": "Zelle",
         "description": "Pague via Zelle e envie o comprovante.",
-        "descriptionDetailed": "Pague via Zelle e envie o comprovante."
+        "descriptionDetailed": "Pague via Zelle e envie o comprovante (24-48h)"
       }
     },
     "feeTypes": {
-      "selection_process": "taxa de processo de seleção",
-      "application_fee": "taxa de matrícula",
-      "scholarship_fee": "taxa de bolsa",
-      "enrollment_fee": "taxa de matrícula",
+      "selection_process": "processo seletivo",
+      "application_fee": "matrícula",
+      "enrollment_fee": "matrícula",
+      "scholarship_fee": "bolsa",
       "i20_control_fee": "taxa de controle I-20"
     },
     "manualVerification": "Processamento pode levar até 48 horas",
     "important": "Importante:",
     "zelleUploadNote": "Após o pagamento via Zelle, você precisará enviar o comprovante para verificação manual.",
-    "includesProcessingFees": "* Inclui taxas de processamento"
+    "includesProcessingFees": "* Inclui taxas de processamento",
+    "parcelowFeesNote": "* Taxas da operadora e processamento da plataforma serão aplicadas",
+    "parcelowInstallmentPreview": "ou em até {{count}}x"
   },
   "preCheckoutModal": {
     "securePayment": "Pagamento Seguro",
@@ -2748,6 +2838,7 @@
     "applyCodeAndContinue": "Aplicar código e continuar",
     "processingPayment": "Processando Pagamento...",
     "mustAcceptTerms": "Você deve aceitar os termos e condições antes de continuar",
+    "mustEnterValidCode": "Você deve inserir um código válido antes de continuar",
     "termsAndConditions": {
       "title": "Termos e Condições",
       "termsOfUse": "Termos de Uso",
@@ -2761,6 +2852,8 @@
     "acceptContractTerms": "Aceito os termos e condições do contrato",
     "cancel": "Cancelar",
     "acceptTerms": "Aceitar Termos",
+    "loading": "Carregando termos...",
+    "noTermsFound": "Nenhum termo ativo encontrado.",
     "promotionalCoupon": {
       "title": "Taxa de Processo de Seleção",
       "discountedValue": "Valor com Desconto",
@@ -2783,7 +2876,6 @@
       "title": "Para Estudantes",
       "forStudents": "Para Estudantes",
       "scholarships": "Bolsas",
-      "matriculaRewards": "Matricula Rewards",
       "universities": "Universidades",
       "howItWorks": "Como Funciona",
       "support": "Suporte",
@@ -2821,6 +2913,52 @@
       "subscribe": "Inscrever-se",
       "subscribed": "Obrigado por se inscrever!"
     },
+    "unsubscribe": {
+      "invalidLink": {
+        "title": "Link Inválido",
+        "message": "O link de cancelamento de inscrição não é válido ou está expirado.",
+        "button": "Voltar para Home"
+      },
+      "alreadyUnsubscribed": {
+        "title": "Já Removido",
+        "message": "Você já está removido da lista de newsletter do MatriculaUSA.",
+        "button": "Voltar para Home"
+      },
+      "success": {
+        "title": "Inscrição Cancelada com Sucesso",
+        "message": "Você foi removido da lista de newsletter com sucesso. Não receberá mais emails de campanha do MatriculaUSA.",
+        "important": "<strong>Importante:</strong> Você ainda receberá emails importantes sobre sua conta, aplicações e confirmações de pagamento.",
+        "reactivate": "Se mudar de ideia, você pode reativar sua inscrição entrando em contato conosco.",
+        "button": "Voltar para Home"
+      },
+      "error": {
+        "title": "Erro",
+        "message": "Ocorreu um erro ao processar sua solicitação. Por favor, tente novamente mais tarde.",
+        "tryAgain": "Tentar Novamente",
+        "backToHome": "Voltar para Home"
+      },
+      "form": {
+        "title": "Cancelar Inscrição",
+        "question": "Tem certeza que deseja parar de receber emails de campanha do MatriculaUSA?",
+        "reasonLabel": "Motivo (opcional)",
+        "reasonPlaceholder": "Nos conte por que você está cancelando a inscrição (opcional)",
+        "reasonHelp": "Seu feedback nos ajuda a melhorar nossos serviços",
+        "note": "<strong>Nota:</strong> Você ainda receberá emails importantes sobre sua conta, aplicações e confirmações de pagamento.",
+        "disclaimer": "Ao cancelar, você não receberá mais emails de campanha, mas continuará recebendo emails importantes sobre sua conta e aplicações.",
+        "cancel": "Cancelar",
+        "confirm": "Confirmar Cancelamento",
+        "processing": "Processando..."
+      },
+      "errors": {
+        "tokenMissing": "Token ou ID de usuário não fornecido",
+        "configError": "Erro de configuração: URL do Supabase não encontrada",
+        "httpError": "Erro HTTP {{status}}",
+        "checkStatusError": "Erro ao verificar status ({{status}})",
+        "checkStatusGeneric": "Erro ao verificar status de inscrição. Por favor, tente novamente.",
+        "processError": "Erro ao processar cancelamento de inscrição",
+        "processErrorRetry": "Erro ao processar cancelamento de inscrição. Por favor, tente novamente."
+      }
+    },
     "copyright": "© 2024 Matrícula USA. Todos os direitos reservados."
   },
   "matriculaRewardsLanding": {
@@ -2837,7 +2975,7 @@
         },
         "accumulateCoins": {
           "title": "Ganhe Recompensas",
-          "description": "180 coins por indicação bem-sucedida - isso é R$ 180 de desconto na sua mensalidade"
+          "description": "180 coins por indicação que completar o pagamento do I-20"
         },
         "payLess": {
           "title": "Economize Dinheiro",
@@ -2894,8 +3032,8 @@
         },
         "step2": {
           "title": "Amigos Se Inscrevem",
-          "description": "Quando seus amigos se cadastram usando seu código, vocês ganham Matricula Coins",
-          "details": "180 coins por cada indicação bem-sucedida"
+          "description": "Quando seus amigos avançam e pagam o I-20, vocês ganham Matricula Coins",
+          "details": "180 coins depois que a taxa de Controle I-20 for paga"
         },
         "step3": {
           "title": "Resgate Desconto de Mensalidade",
@@ -2949,7 +3087,7 @@
           },
           "referFriends": {
             "title": "Indique Amigos e Multiplique Seus Ganhos",
-            "description": "180 coins por cada amigo que se inscrever usando seu código"
+            "description": "180 coins por cada amigo que pagar a taxa de Controle I-20"
           }
         }
       }
@@ -3241,7 +3379,7 @@
       },
       "testimonials": [
         {
-          "name": "Maria Silva",
+          "name": "Gustavo Santos",
           "university": "University of California",
           "course": "Computer Science",
           "text": "Consegui uma bolsa de 40% e estou realizando meu sonho de estudar nos EUA. O processo foi muito mais simples do que imaginava.",
@@ -3313,6 +3451,10 @@
       "zelle": {
         "title": "Zelle",
         "description": "Pague via transferência Zelle"
+      },
+      "parcelow": {
+        "title": "Parcelow",
+        "description": "Pague com cartão brasileiro em até 21x"
       }
     }
   },
@@ -3354,6 +3496,10 @@
         "title": "Zelle",
         "description": "Pague via transferência Zelle",
         "descriptionDetailed": "Pague via Zelle"
+      },
+      "parcelow": {
+        "title": "Parcelow",
+        "description": "Pague com cartão brasileiro"
       },
       "cancel": "Cancelar"
     },
@@ -3431,7 +3577,7 @@
           "• Todos os salários listados são os <strong>valores mínimos estabelecidos pelo PWD</strong>"
         ]
       },
-      "applyNow": "Candidatar-se Agora",
+      "applyNow": "Candidatar-se",
       "learnMore": "Saiba Mais"
     },
     "whatIsEb3": {
@@ -3599,7 +3745,7 @@
       "badge": "Junte-se a milhares de brasileiros",
       "title": "Pronto para começar sua <span class=\"text-[#D0151C]\">jornada</span>?",
       "subtitle": "Preencha o formulário abaixo e nossa equipe entrará em contato para revisar seu perfil e guiá-lo através do processo.",
-      "applyNow": "Candidatar-se Agora",
+      "applyNow": "Candidatar-se",
       "contactUs": "Entre em Contato",
       "features": [
         "Processo 100% legal",

@@ -43,6 +43,7 @@ export function usePaymentsBackendPagination({
             date_to: filters.dateTo || undefined,
             search_query: filters.search || '',
             status: filters.status || 'all',
+            payment_method: filters.paymentMethod || undefined, // ✅ NOVO: Filtro por método de pagamento
           },
           signal: controller.signal,
         });
@@ -57,7 +58,7 @@ export function usePaymentsBackendPagination({
 
     load();
     return () => controller.abort();
-  }, [activeTab, filters.university, filters.feeType, filters.dateFrom, filters.dateTo, filters.search, filters.status, currentPage, itemsPerPage]);
+  }, [activeTab, filters.university, filters.feeType, filters.dateFrom, filters.dateTo, filters.search, filters.status, filters.paymentMethod, currentPage, itemsPerPage]);
 }
 
 

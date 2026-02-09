@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { TrendingUp, Users, DollarSign, Calendar, Award, Target, Loader2 } from 'lucide-react';
 import { supabase } from '../../lib/supabase';
 import { useFeeConfig } from '../../hooks/useFeeConfig';
-import { getRealPaidAmounts } from '../../utils/paymentConverter';
+import { getDisplayAmounts } from '../../utils/paymentConverter';
 import DateRangeFilter, { DateRange, DateRangePreset } from '../../components/DateRangeFilter';
 
 interface PerformanceProps {
@@ -197,7 +197,8 @@ const Performance: React.FC<PerformanceProps> = ({ sellerProfile, students }) =>
       await Promise.allSettled(uniqueUserIds.map(async (userId) => {
         try {
           // Carregar valores pagos
-          const amounts = await getRealPaidAmounts(userId, ['selection_process', 'scholarship', 'i20_control']);
+          // ✅ CORREÇÃO: Usar getDisplayAmounts para exibição (valores "Zelle" sem taxas)
+          const amounts = await getDisplayAmounts(userId, ['selection_process', 'scholarship', 'i20_control']);
           amountsMap[userId] = amounts;
           
           // Carregar datas de pagamento

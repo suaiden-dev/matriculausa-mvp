@@ -137,8 +137,37 @@ const AuthRedirect: React.FC<{ children: React.ReactNode }> = ({ children }) => 
       window.history.replaceState(null, '', window.location.pathname + window.location.search);
     }
     
-    if (loading || !user) {
-      console.log('[AuthRedirect] ⚠️ Loading ou sem usuário, não executando redirecionamento');
+    // Se ainda está carregando, aguardar
+    if (loading) {
+      console.log('[AuthRedirect] ⚠️ Ainda carregando, aguardando...');
+      return;
+    }
+
+    // Se não há usuário autenticado, verificar se está tentando acessar rota protegida
+    if (!user) {
+      const currentPath = location.pathname;
+      
+      // Rotas protegidas que requerem autenticação
+      const protectedPaths = [
+        '/student/dashboard',
+        '/school/dashboard',
+        '/admin/dashboard',
+        '/affiliate-admin/dashboard',
+        '/seller/dashboard'
+      ];
+      
+      // Verificar se está tentando acessar rota protegida
+      const isProtectedPath = protectedPaths.some(path => currentPath.startsWith(path));
+      
+      if (isProtectedPath) {
+        console.log('[AuthRedirect] 🔒 Usuário não autenticado tentando acessar rota protegida, redirecionando para login');
+        // Salvar a rota original para redirecionar após login
+        const returnUrl = encodeURIComponent(currentPath + location.search);
+        navigate(`/login?redirect=${returnUrl}`, { replace: true });
+        return;
+      }
+      
+      // Se não é rota protegida, permitir acesso
       return;
     }
 
@@ -167,16 +196,26 @@ const AuthRedirect: React.FC<{ children: React.ReactNode }> = ({ children }) => 
       // Whitelist: permitir acesso explícito à página interna de cadastro de estudante
       const isWhitelistedInternalRegister = location.pathname === '/student/register';
       
-      // NÃO redirecionar se há código de referência na URL (usuário veio de link de referência)
-      const hasReferralCode = window.location.search.includes('ref=');
-      if (hasReferralCode) {
-        console.log('[AuthRedirect] ⚠️ Código de referência detectado, não redirecionando');
-        return;
-      }
-      
       // REDIRECIONAMENTO APÓS LOGIN - verificar se usuário está na página de login/auth
       if (currentPath === '/login' || currentPath === '/auth' || currentPath === '/register') {
-        // Redirecionamento baseado no role
+        // Verificar se há parâmetro redirect na URL (quando usuário foi redirecionado de rota protegida)
+        const searchParams = new URLSearchParams(location.search);
+        const redirectParam = searchParams.get('redirect');
+        
+        if (redirectParam) {
+          // Decodificar e redirecionar para a URL original
+          try {
+            const decodedRedirect = decodeURIComponent(redirectParam);
+            console.log('[AuthRedirect] 🔄 Redirecionando para URL original:', decodedRedirect);
+            navigate(decodedRedirect, { replace: true });
+            return;
+          } catch (error) {
+            console.error('[AuthRedirect] ❌ Erro ao decodificar redirect:', error);
+            // Se houver erro, continuar com redirecionamento padrão baseado no role
+          }
+        }
+        
+        // Redirecionamento baseado no role (quando não há redirect param)
         if (user.role === 'admin') {
           navigate('/admin/dashboard', { replace: true });
           return;

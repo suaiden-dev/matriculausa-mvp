@@ -2,26 +2,29 @@ import React, { useEffect, useState, useRef } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
 import CustomLoading from '../../components/CustomLoading';
 import PaymentSuccessOverlay from '../../components/PaymentSuccessOverlay';
-import { useDynamicFees } from '../../hooks/useDynamicFees';
 import { useTranslation } from 'react-i18next';
+import { dispatchCacheInvalidationEvent, CacheInvalidationEvent } from '../../utils/cacheInvalidation';
+import { supabase } from '../../lib/supabase';
+import { useAuth } from '../../hooks/useAuth';
 
 const SelectionProcessFeeSuccess: React.FC = () => {
   const navigate = useNavigate();
   const location = useLocation();
   const params = new URLSearchParams(location.search);
   const sessionId = params.get('session_id');
-  const isPixPayment = params.get('pix_payment') === 'true';
+  const reference = params.get('reference') || params.get('ref'); // Parcelow
+  const paymentMethod = params.get('payment_method') || (params.get('pm') === 'p' ? 'parcelow' : params.get('pm')); // 'parcelow'
+  const isPixPayment = params.get('pix_payment') === 'true' || params.get('pm') === 'pix';
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [showAnimation, setShowAnimation] = useState(false);
   const [animationSuccess, setAnimationSuccess] = useState(true);
   const [isVerifying, setIsVerifying] = useState(false);
   const [hasVerified, setHasVerified] = useState(false);
-  const hasRunRef = useRef(false);
-  const { selectionProcessFeeAmount } = useDynamicFees();
   const { t } = useTranslation();
   const [paidAmount, setPaidAmount] = useState<number | null>(null);
-  const [promotionalCoupon, setPromotionalCoupon] = useState<string | null>(null);
+  const { user } = useAuth();
+  const hasRunRef = useRef(false);
 
   // Função para fazer polling do status do PIX (otimizada para webhook)
   const pollPixPaymentStatus = async () => {
@@ -73,9 +76,6 @@ const SelectionProcessFeeSuccess: React.FC = () => {
         } else if (data.amount_paid) {
           setPaidAmount(data.amount_paid);
         }
-        if (data.promotional_coupon) {
-          setPromotionalCoupon(data.promotional_coupon);
-        }
         
         // Verificar se há erro de sessão não encontrada
         if (data.error && data.error.includes('Session not found')) {
@@ -89,6 +89,8 @@ const SelectionProcessFeeSuccess: React.FC = () => {
         // Se for PIX e estiver completo, mostrar animação de sucesso
         if (data.payment_method === 'pix' && data.status === 'complete') {
           console.log('[PIX] ✅ Webhook processou PIX! Mostrando animação...');
+          // Invalidar cache
+          dispatchCacheInvalidationEvent(CacheInvalidationEvent.PAYMENT_COMPLETED);
           setLoading(false);
           setAnimationSuccess(true);
           setShowAnimation(true);
@@ -155,20 +157,130 @@ const SelectionProcessFeeSuccess: React.FC = () => {
     poll();
   };
 
+  // Função para verificar pagamento Parcelow
+  const verifyParcelowPayment = async () => {
+    if (!user?.id || !reference) {
+      setError('Invalid Parcelow payment reference.');
+      setLoading(false);
+      return;
+    }
+
+    const maxAttempts = 30; // 5 minutos
+    let attempts = 0;
+
+    const poll = async () => {
+      if (hasVerified) {
+        console.log('[Parcelow] Já foi verificado, parando polling');
+        return;
+      }
+
+      attempts++;
+      console.log(`[Parcelow] Tentativa ${attempts}/${maxAttempts} - Verificando status do pagamento...`);
+
+      try {
+        // Buscar pagamento mais recente do usuário para selection_process
+        // Usamos ilike com % para lidar com truncamento de URL pela Parcelow
+        const { data: payment, error: paymentError } = await supabase
+          .from('individual_fee_payments')
+          .select('*')
+          .eq('user_id', user.id) // ✅ Segurança: filtrar pelo usuárioLogado
+          .ilike('parcelow_reference', `${reference}%`) // ✅ Resiliência: lidar com truncamento
+          .eq('payment_method', 'parcelow')
+          .order('created_at', { ascending: false })
+          .limit(1)
+          .maybeSingle();
+
+        if (paymentError) {
+          console.error('[Parcelow] Erro ao buscar pagamento:', paymentError);
+        }
+
+        if (payment) {
+          console.log('[Parcelow] Pagamento encontrado, status:', payment.parcelow_status);
+          setPaidAmount(payment.amount);
+
+          if (payment.parcelow_status === 'paid') {
+            console.log('[Parcelow] ✅ Pagamento confirmado!');
+            dispatchCacheInvalidationEvent(CacheInvalidationEvent.PAYMENT_COMPLETED);
+            setLoading(false);
+            setAnimationSuccess(true);
+            setShowAnimation(true);
+            setHasVerified(true);
+
+            setTimeout(() => {
+              navigate('/student/dashboard/scholarships');
+            }, 6000);
+            return;
+          }
+        }
+
+        if (attempts >= maxAttempts) {
+          console.log('[Parcelow] ⏰ Timeout - Mostrando erro...');
+          setLoading(false);
+          setAnimationSuccess(false);
+          setShowAnimation(true);
+
+          setTimeout(() => {
+            navigate('/student/dashboard/scholarships');
+          }, 6000);
+          return;
+        }
+
+        console.log(`[Parcelow] ⏳ Aguardando webhook processar... (${attempts}/${maxAttempts})`);
+        setTimeout(poll, 10000);
+      } catch (error) {
+        console.error('[Parcelow] ❌ Erro no polling:', error);
+        if (attempts >= maxAttempts) {
+          setLoading(false);
+          setAnimationSuccess(false);
+          setShowAnimation(true);
+
+          setTimeout(() => {
+            navigate('/student/dashboard/scholarships');
+          }, 6000);
+        } else {
+          setTimeout(poll, 10000);
+        }
+      }
+    };
+
+    poll();
+  };
+
   useEffect(() => {
-    // Prevenir múltiplas execuções (React Strict Mode executa useEffect duas vezes em desenvolvimento)
-    if (hasRunRef.current) {
-      console.log('[PIX] Verificação já foi executada, ignorando chamada duplicada do React Strict Mode');
+    // Prevenir múltiplas execuções simultâneas
+    if (isVerifying) {
+      console.log('[Payment] Verificação já em andamento, ignorando chamada duplicada');
       return;
     }
     
-    // Prevenir múltiplas execuções simultâneas
-    if (isVerifying) {
-      console.log('[PIX] Verificação já em andamento, ignorando chamada duplicada');
+    // Aguardar usuário estar carregado
+    if (!user) {
+      console.log('[Payment] Aguardando autenticação do usuário...');
+      return;
+    }
+
+    if (hasRunRef.current) {
+      console.log('[Payment] Verificação já foi executada, ignorando chamada duplicada do React Strict Mode');
       return;
     }
     
     hasRunRef.current = true;
+
+    // Detectar se é pagamento Parcelow ou Stripe
+    // Se houver reference e NÃO houver session_id, é Parcelow
+    // (A Parcelow trunca a URL, então não podemos depender do payment_method)
+    if (reference && !sessionId) {
+      console.log('[Parcelow] Pagamento Parcelow detectado (via reference), iniciando verificação...');
+      verifyParcelowPayment();
+      return;
+    }
+    
+    // Fallback: se tiver payment_method=parcelow explicitamente
+    if (paymentMethod === 'parcelow' && reference) {
+      console.log('[Parcelow] Pagamento Parcelow detectado (via payment_method), iniciando verificação...');
+      verifyParcelowPayment();
+      return;
+    }
     
     const verifySession = async () => {
       if (!sessionId) {
@@ -224,9 +336,6 @@ const SelectionProcessFeeSuccess: React.FC = () => {
           setPaidAmount(data.final_amount);
         } else if (data.amount_paid) {
           setPaidAmount(data.amount_paid);
-        }
-        if (data.promotional_coupon) {
-          setPromotionalCoupon(data.promotional_coupon);
         }
         
         // Verificar se há erro de sessão não encontrada
@@ -287,7 +396,7 @@ const SelectionProcessFeeSuccess: React.FC = () => {
       }
     };
     verifySession();
-  }, [sessionId, isPixPayment]);
+  }, [sessionId, isPixPayment, paymentMethod, reference, user]);
 
   // Debug: Log das mudanças de estado
   useEffect(() => {
@@ -331,7 +440,7 @@ const SelectionProcessFeeSuccess: React.FC = () => {
             : t('successPages.selectionProcessFee.errorTitle')
           }
           message={animationSuccess
-            ? t('successPages.common.paymentProcessedAmount')
+            ? t('successPages.selectionProcessFee.description', { amount: paidAmount ? `$${paidAmount}` : '' })
             : t('successPages.common.paymentError')
           }
         />

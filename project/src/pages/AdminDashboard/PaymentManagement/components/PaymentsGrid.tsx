@@ -6,9 +6,10 @@ export interface PaymentsGridProps {
 	currentPayments: any[];
 	FEE_TYPES: { value: string; label: string; color?: string }[];
 	handleViewDetails: (payment: any) => void;
+	isLoading?: boolean; // ✅ NOVO: Estado de loading para mostrar skeletons
 }
 
-function PaymentsGridBase({ currentPayments, FEE_TYPES, handleViewDetails }: PaymentsGridProps) {
+function PaymentsGridBase({ currentPayments, FEE_TYPES, handleViewDetails, isLoading }: PaymentsGridProps) {
 	return (
 		<div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
 			{currentPayments.map((payment: any) => (
@@ -28,7 +29,11 @@ function PaymentsGridBase({ currentPayments, FEE_TYPES, handleViewDetails }: Pay
 						</div>
 						<div className="flex items-center gap-2 mb-1">
 							<DollarSign className="h-4 w-4 text-green-500" />
-							<span className="font-bold text-green-700">${formatCentsToDollars(payment.amount)}</span>
+							{isLoading ? (
+								<div className="animate-pulse bg-slate-200 h-4 w-16 rounded"></div>
+							) : (
+								<span className="font-bold text-green-700">${formatCentsToDollars(payment.amount)}</span>
+							)}
 						</div>
 						<div className="flex items-center gap-2 mb-1">
 							<Calendar className="h-4 w-4 text-gray-400" />
@@ -36,6 +41,28 @@ function PaymentsGridBase({ currentPayments, FEE_TYPES, handleViewDetails }: Pay
 						</div>
 						<div className="flex items-center gap-2 mb-1">
 							<span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${payment.status === 'paid' ? 'bg-green-100 text-green-800' : payment.status === 'pending' ? 'bg-yellow-100 text-yellow-800' : 'bg-red-100 text-red-800'}`}>{payment.status.charAt(0).toUpperCase() + payment.status.slice(1)}</span>
+							{(() => {
+								const paymentMethod = payment.payment_method || 'manual';
+								const chipClass = paymentMethod === 'zelle'
+									? 'bg-purple-100 text-purple-800'
+									: paymentMethod === 'stripe'
+									? 'bg-blue-100 text-blue-800'
+									: paymentMethod === 'parcelow'
+									? 'bg-emerald-100 text-emerald-800'
+									: paymentMethod === 'pix'
+									? 'bg-cyan-100 text-cyan-800'
+									: 'bg-gray-100 text-gray-800';
+								const label = paymentMethod === 'manual'
+									? 'Outside'
+									: paymentMethod
+										? paymentMethod.charAt(0).toUpperCase() + paymentMethod.slice(1)
+										: 'N/A';
+								return (
+									<span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${chipClass}`}>
+										{label}
+									</span>
+								);
+							})()}
 						</div>
 					</div>
 					<button

@@ -1,7 +1,8 @@
 import React, { useState, useEffect } from 'react';
-import { X, Send, Save, Paperclip, Eye, EyeOff } from 'lucide-react';
+import { X, Send, Paperclip } from 'lucide-react';
 import { supabase } from '../lib/supabase';
 import { Email } from '../types';
+import RichTextEditor from './RichTextEditor/RichTextEditor';
 
 interface ReplyComposerProps {
   originalEmail: Email;
@@ -16,16 +17,15 @@ interface SendResult {
   error?: string;
 }
 
-const ReplyComposer: React.FC<ReplyComposerProps> = ({ 
-  originalEmail, 
-  onSend, 
-  onClose, 
-  isOpen 
+const ReplyComposer: React.FC<ReplyComposerProps> = ({
+  originalEmail,
+  onSend,
+  onClose,
+  isOpen
 }) => {
   const [to, setTo] = useState('');
   const [subject, setSubject] = useState('');
   const [body, setBody] = useState('');
-  const [isHtmlMode, setIsHtmlMode] = useState(false);
   const [isSending, setIsSending] = useState(false);
   const [sendResult, setSendResult] = useState<SendResult | null>(null);
   const [attachments, setAttachments] = useState<File[]>([]);
@@ -41,7 +41,7 @@ const ReplyComposer: React.FC<ReplyComposerProps> = ({
       htmlBodyLength: originalEmail?.htmlBody?.length || 0,
       bodyLength: originalEmail?.body?.length || 0
     });
-    
+
     if (originalEmail) {
       console.log('📧 ReplyComposer: Setting up reply for email:', {
         id: originalEmail.id,
@@ -54,21 +54,21 @@ const ReplyComposer: React.FC<ReplyComposerProps> = ({
         htmlBodyPreview: originalEmail.htmlBody?.substring(0, 100) + '...',
         bodyPreview: originalEmail.body?.substring(0, 100) + '...'
       });
-      
+
       // Set reply fields
       setTo(originalEmail.from || '');
       setSubject(`Re: ${originalEmail.subject || ''}`);
-      
+
       // Prepare reply content
       const originalEmailContent = originalEmail.htmlBody || originalEmail.body || originalEmail.snippet || '';
-      
+
       console.log('📧 ReplyComposer: Content selection:', {
         usingHtmlBody: !!originalEmail.htmlBody,
         usingBody: !originalEmail.htmlBody && !!originalEmail.body,
         usingSnippet: !originalEmail.htmlBody && !originalEmail.body && !!originalEmail.snippet,
         finalContentLength: originalEmailContent.length
       });
-      
+
       console.log('📧 ReplyComposer: Using content for reply:', {
         hasHtmlBody: !!originalEmail.htmlBody,
         hasBody: !!originalEmail.body,
@@ -79,7 +79,7 @@ const ReplyComposer: React.FC<ReplyComposerProps> = ({
         bodyPreview: originalEmail.body?.substring(0, 200) + '...',
         contentPreview: originalEmailContent.substring(0, 200) + '...'
       });
-      
+
       // Se temos HTML, criar um reply HTML formatado
       const hasHtmlContent = originalEmail.htmlBody || (originalEmail.body && originalEmail.body.includes('<'));
       console.log('📧 ReplyComposer: HTML detection:', {
@@ -89,7 +89,7 @@ const ReplyComposer: React.FC<ReplyComposerProps> = ({
         htmlBodyFirstChars: originalEmail.htmlBody?.substring(0, 50) || 'N/A',
         bodyFirstChars: originalEmail.body?.substring(0, 50) || 'N/A'
       });
-      
+
       if (hasHtmlContent) {
         const replyHtml = `
 <div style="border-left: 3px solid #ccc; padding-left: 15px; margin: 20px 0; color: #666;">
@@ -103,14 +103,10 @@ const ReplyComposer: React.FC<ReplyComposerProps> = ({
   </div>
 </div>`;
         setBody(replyHtml);
-        setIsHtmlMode(true);
-        console.log('📧 ReplyComposer: Set HTML mode with formatted reply');
       } else {
         // Se é texto simples
         const replyTemplate = `\n\n--- Original Message ---\nFrom: ${originalEmail.from}\nSubject: ${originalEmail.subject}\nDate: ${new Date().toLocaleString()}\n\n${originalEmailContent}`;
         setBody(replyTemplate);
-        setIsHtmlMode(false);
-        console.log('📧 ReplyComposer: Set text mode with simple reply');
       }
     }
   }, [originalEmail]);
@@ -138,16 +134,15 @@ const ReplyComposer: React.FC<ReplyComposerProps> = ({
     try {
       // Get current user session
       const { data: { session } } = await supabase.auth.getSession();
-      
+
       if (!session) {
         throw new Error('User not authenticated. Please log in again.');
       }
 
       // Prepare email content
-      const emailContent = isHtmlMode ? body : body.replace(/\n/g, '<br>');
-      
+      const emailContent = body;
+
       console.log('📧 ReplyComposer: Preparing email content:', {
-        isHtmlMode,
         bodyLength: body.length,
         emailContentLength: emailContent.length,
         emailContentPreview: emailContent.substring(0, 200) + '...'
@@ -174,7 +169,7 @@ const ReplyComposer: React.FC<ReplyComposerProps> = ({
           to: to,
           subject: subject,
           htmlBody: emailContent,
-          textBody: !isHtmlMode ? body : undefined,
+          textBody: body.replace(/<[^>]*>/g, ''), // Strip HTML for text body
           threadId: originalEmail?.threadId,
           attachments: emailAttachments
         }
@@ -183,16 +178,16 @@ const ReplyComposer: React.FC<ReplyComposerProps> = ({
       if (response.error) {
         throw new Error(response.error.message || 'Failed to send email');
       }
-      
+
       if (response.data?.success) {
         setSendResult({
           success: true,
           messageId: response.data.messageId
         });
-        
+
         // Call onSend callback
         onSend?.(response.data);
-        
+
         // Close composer after successful send
         setTimeout(() => {
           onClose?.();
@@ -278,60 +273,18 @@ const ReplyComposer: React.FC<ReplyComposerProps> = ({
               />
             </div>
 
-            {/* HTML Mode Toggle */}
-            <div className="flex items-center space-x-4">
-              <label className="flex items-center space-x-2">
-                <input
-                  type="checkbox"
-                  checked={isHtmlMode}
-                  onChange={(e) => setIsHtmlMode(e.target.checked)}
-                  className="rounded border-slate-300 text-[#05294E] focus:ring-[#05294E]"
-                />
-                <span className="text-sm font-medium text-slate-700">HTML Mode</span>
-              </label>
-              {isHtmlMode && (
-                <div className="flex items-center space-x-2 text-sm text-slate-600">
-                  {isHtmlMode ? <Eye className="h-4 w-4" /> : <EyeOff className="h-4 w-4" />}
-                  <span>HTML Editor</span>
-                </div>
-              )}
-            </div>
-
-            {/* Message Body */}
             <div>
               <label className="block text-sm font-medium text-slate-700 mb-2">
                 Message
               </label>
-              {isHtmlMode ? (
-                <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
-                  <div>
-                    <textarea
-                      value={body}
-                      onChange={(e) => setBody(e.target.value)}
-                      rows={12}
-                      className="w-full px-4 py-3 border border-slate-300 rounded-xl focus:ring-2 focus:ring-[#05294E] focus:border-transparent resize-none font-mono text-sm"
-                      placeholder="Write your HTML message here...&#10;&#10;Example:&#10;&lt;h1&gt;Hello&lt;/h1&gt;&#10;&lt;p&gt;This is a paragraph.&lt;/p&gt;"
-                      required
-                    />
-                  </div>
-                  <div className="bg-slate-50 p-4 rounded-xl border border-slate-200">
-                    <h4 className="text-sm font-medium text-slate-700 mb-2">Preview</h4>
-                    <div 
-                      className="prose prose-sm max-w-none"
-                      dangerouslySetInnerHTML={{ __html: body }}
-                    />
-                  </div>
-                </div>
-              ) : (
-                <textarea
-                  value={body}
-                  onChange={(e) => setBody(e.target.value)}
-                  rows={12}
-                  className="w-full px-4 py-3 border border-slate-300 rounded-xl focus:ring-2 focus:ring-[#05294E] focus:border-transparent resize-none"
+              <div className="min-h-[500px]">
+                <RichTextEditor
+                  content={body}
+                  onChange={setBody}
                   placeholder="Write your message here..."
-                  required
+                  className="h-full"
                 />
-              )}
+              </div>
             </div>
 
             {/* Attachments */}

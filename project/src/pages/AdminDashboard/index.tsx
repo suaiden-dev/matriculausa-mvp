@@ -27,6 +27,7 @@ import AutoTransferSettings from './AutoTransferSettings';
 import FinancialAnalytics from './FinancialAnalytics';
 import TermsManagement from './TermsManagement';
 import CouponManagement from './CouponManagement';
+import NewsletterManagement from './NewsletterManagement';
 import AffiliateManagement from './AffiliateManagement';
 import AdminChatPage from './AdminChatPage';
 import AdminStudentDetails from './AdminStudentDetails';
@@ -697,6 +698,7 @@ const AdminDashboard: React.FC = () => {
         <Route path="/transfer-settings" element={<AutoTransferSettings />} />
         <Route path="/financial-analytics" element={<FinancialAnalytics />} />
         <Route path="/coupons" element={<CouponManagement />} />
+        <Route path="/newsletter" element={<NewsletterManagement />} />
         <Route path="/terms" element={<TermsManagement />} />
       </Routes>
 

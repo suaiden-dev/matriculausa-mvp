@@ -33,6 +33,184 @@ function formatAmountWithCurrency(amount, session) {
   return `${currencyInfo.symbol}${amount.toFixed(2)}`;
 }
 
+/**
+ * Busca todos os administradores do sistema
+ * Retorna array com email, nome e telefone de cada admin
+ * Em ambiente de desenvolvimento (localhost), filtra emails específicos
+ */
+async function getAllAdmins(supabase, isDevelopment: boolean = false): Promise<Array<{
+  user_id: string;
+  email: string;
+  full_name: string;
+  phone: string;
+}>> {
+  // Emails a serem filtrados em ambiente de desenvolvimento
+  const devBlockedEmails = [
+    'luizedmiola@gmail.com',
+    'chimentineto@gmail.com',
+    'fsuaiden@gmail.com',
+    'rayssathefuture@gmail.com',
+    'gui.reis@live.com',
+    'admin@matriculausa.com'
+  ];
+  
+  try {
+    // Buscar todos os admins da tabela user_profiles onde role = 'admin'
+    const { data: adminProfiles, error: profileError } = await supabase
+      .from('user_profiles')
+      .select('user_id, email, full_name, phone')
+      .eq('role', 'admin');
+
+    if (profileError) {
+      console.error('[getAllAdmins] Erro ao buscar admins de user_profiles:', profileError);
+      
+      // Fallback: tentar buscar de auth.users
+      try {
+        const { data: authUsers, error: authError } = await supabase.auth.admin.listUsers();
+        if (!authError && authUsers) {
+          const adminUsers = authUsers.users
+            .filter(user => user.user_metadata?.role === 'admin' || user.email === 'admin@matriculausa.com')
+            .map(user => ({
+              user_id: user.id,
+              email: user.email || '',
+              full_name: user.user_metadata?.full_name || user.user_metadata?.name || 'Admin MatriculaUSA',
+              phone: user.user_metadata?.phone || ''
+            }))
+            .filter(admin => admin.email);
+          
+          if (adminUsers.length > 0) {
+            const filteredAdmins = isDevelopment 
+              ? adminUsers.filter(admin => !devBlockedEmails.includes(admin.email))
+              : adminUsers;
+            console.log(`[getAllAdmins] Encontrados ${filteredAdmins.length} admin(s) via auth.users${isDevelopment ? ' (filtrados para dev)' : ''}:`, filteredAdmins.map(a => a.email));
+            return filteredAdmins.length > 0 ? filteredAdmins : [{
+              user_id: '',
+              email: 'admin@matriculausa.com',
+              full_name: 'Admin MatriculaUSA',
+              phone: ''
+            }];
+          }
+        }
+      } catch (authFallbackError) {
+        console.error('[getAllAdmins] Erro no fallback para auth.users:', authFallbackError);
+      }
+      
+      return [{
+        user_id: '',
+        email: 'admin@matriculausa.com',
+        full_name: 'Admin MatriculaUSA',
+        phone: ''
+      }];
+    }
+
+    if (!adminProfiles || adminProfiles.length === 0) {
+      console.warn('[getAllAdmins] Nenhum admin encontrado em user_profiles, tentando auth.users...');
+      
+      // Fallback: tentar buscar de auth.users
+      try {
+        const { data: authUsers, error: authError } = await supabase.auth.admin.listUsers();
+        if (!authError && authUsers) {
+          const adminUsers = authUsers.users
+            .filter(user => user.user_metadata?.role === 'admin' || user.email === 'admin@matriculausa.com')
+            .map(user => ({
+              user_id: user.id,
+              email: user.email || '',
+              full_name: user.user_metadata?.full_name || user.user_metadata?.name || 'Admin MatriculaUSA',
+              phone: user.user_metadata?.phone || ''
+            }))
+            .filter(admin => admin.email);
+          
+          if (adminUsers.length > 0) {
+            const filteredAdmins = isDevelopment 
+              ? adminUsers.filter(admin => !devBlockedEmails.includes(admin.email))
+              : adminUsers;
+            console.log(`[getAllAdmins] Encontrados ${filteredAdmins.length} admin(s) via auth.users${isDevelopment ? ' (filtrados para dev)' : ''}:`, filteredAdmins.map(a => a.email));
+            return filteredAdmins.length > 0 ? filteredAdmins : [{
+              user_id: '',
+              email: 'admin@matriculausa.com',
+              full_name: 'Admin MatriculaUSA',
+              phone: ''
+            }];
+          }
+        }
+      } catch (authFallbackError) {
+        console.error('[getAllAdmins] Erro no fallback para auth.users:', authFallbackError);
+      }
+      
+      return [{
+        user_id: '',
+        email: 'admin@matriculausa.com',
+        full_name: 'Admin MatriculaUSA',
+        phone: ''
+      }];
+    }
+
+    // Se algum admin não tem email em user_profiles, buscar de auth.users
+    const adminsWithEmail = await Promise.all(
+      adminProfiles.map(async (profile) => {
+        if (profile.email) {
+          return {
+            user_id: profile.user_id,
+            email: profile.email,
+            full_name: profile.full_name || 'Admin MatriculaUSA',
+            phone: profile.phone || ''
+          };
+        } else {
+          try {
+            const { data: authUser } = await supabase.auth.admin.getUserById(profile.user_id);
+            return {
+              user_id: profile.user_id,
+              email: authUser?.user?.email || '',
+              full_name: profile.full_name || authUser?.user?.user_metadata?.full_name || 'Admin MatriculaUSA',
+              phone: profile.phone || authUser?.user?.user_metadata?.phone || ''
+            };
+          } catch (e) {
+            console.warn(`[getAllAdmins] Erro ao buscar email para user_id ${profile.user_id}:`, e);
+            return null;
+          }
+        }
+      })
+    );
+
+    // Filtrar nulos e admins sem email
+    let admins = adminsWithEmail
+      .filter((admin): admin is { user_id: string; email: string; full_name: string; phone: string } => 
+        admin !== null && !!admin.email
+      );
+
+    // Filtrar emails bloqueados em desenvolvimento
+    if (isDevelopment) {
+      const beforeFilter = admins.length;
+      admins = admins.filter(admin => !devBlockedEmails.includes(admin.email));
+      if (beforeFilter !== admins.length) {
+        console.log(`[getAllAdmins] Filtrados ${beforeFilter - admins.length} admin(s) em ambiente de desenvolvimento`);
+      }
+    }
+
+    if (admins.length === 0) {
+      console.warn('[getAllAdmins] Nenhum admin válido encontrado após processamento, usando admin padrão');
+      return [{
+        user_id: '',
+        email: 'admin@matriculausa.com',
+        full_name: 'Admin MatriculaUSA',
+        phone: ''
+      }];
+    }
+
+    console.log(`[getAllAdmins] Encontrados ${admins.length} admin(s)${isDevelopment ? ' (filtrados para dev)' : ''}:`, admins.map(a => a.email));
+
+    return admins;
+  } catch (error) {
+    console.error('[getAllAdmins] Erro inesperado ao buscar admins:', error);
+    return [{
+      user_id: '',
+      email: 'admin@matriculausa.com',
+      full_name: 'Admin MatriculaUSA',
+      phone: ''
+    }];
+  }
+}
+
 function corsResponse(body, status = 200) {
   const headers = {
     'Access-Control-Allow-Origin': '*',
@@ -77,54 +255,123 @@ Deno.serve(async (req)=>{
     }, 400);
     console.log(`Verifying session ID: ${sessionId}`);
     
-    // Verificar se esta sessão já foi processada para evitar duplicação
-    const { data: existingLog } = await supabase
+    // ✅ VERIFICAÇÃO INICIAL ROBUSTA: Verificar se esta sessão já foi completamente processada
+    const { data: existingLogs } = await supabase
       .from('student_action_logs')
-      .select('id')
+      .select('id, metadata, created_at')
       .eq('action_type', 'fee_payment')
       .eq('metadata->>session_id', sessionId)
-      .single();
+      .order('created_at', { ascending: false })
+      .limit(5);
+    
+    // Se já existe um log com notificações enviadas, retornar imediatamente
+    if (existingLogs && existingLogs.length > 0) {
+      const logsWithNotificationsSent = existingLogs.filter(log => {
+        const metadata = log.metadata || {};
+        return metadata.notifications_sent === true || metadata.notifications_sent === 'true';
+      });
+      
+      if (logsWithNotificationsSent.length > 0) {
+        console.log(`[DUPLICAÇÃO] Session ${sessionId} já foi completamente processada (notificações enviadas), retornando sucesso sem reprocessar.`);
+        // Expandir session apenas para retornar dados do pagamento
+        const session = await stripe.checkout.sessions.retrieve(sessionId, {
+          expand: ['payment_intent']
+        });
+        const amountPaid = session.amount_total ? session.amount_total / 100 : null;
+        const currency = session.currency?.toUpperCase() || 'USD';
+        const promotionalCouponReturn = session.metadata?.promotional_coupon || null;
+        const originalAmountReturn = session.metadata?.original_amount ? parseFloat(session.metadata.original_amount) : null;
+        let finalAmountReturn: number | null = null;
+        if (session.metadata?.final_amount) {
+          const parsed = parseFloat(session.metadata.final_amount);
+          if (!isNaN(parsed) && parsed > 0) {
+            finalAmountReturn = parsed;
+          }
+        }
+        let amountPaidUSD = amountPaid || 0;
+        if (currency === 'BRL' && session.metadata?.exchange_rate && amountPaid) {
+          const exchangeRate = parseFloat(session.metadata.exchange_rate);
+          if (exchangeRate > 0) {
+            amountPaidUSD = amountPaid / exchangeRate;
+          }
+        }
+        return corsResponse({
+          status: 'complete',
+          message: 'Session already processed successfully (notifications already sent).',
+          amount_paid: amountPaidUSD || amountPaid || 0,
+          amount_paid_original: amountPaid || 0,
+          currency: currency,
+          promotional_coupon: promotionalCouponReturn,
+          original_amount: originalAmountReturn,
+          final_amount: finalAmountReturn
+        }, 200);
+      }
+      
+      // Verificar se há múltiplos logs recentes (chamadas simultâneas)
+      const now = new Date();
+      const recentLogs = existingLogs.filter(log => {
+        const logTime = new Date(log.created_at);
+        const secondsDiff = (now.getTime() - logTime.getTime()) / 1000;
+        return secondsDiff < 10; // Log criado há menos de 10 segundos
+      });
+      
+      if (recentLogs.length > 1) {
+        console.log(`[DUPLICAÇÃO] Múltiplos logs recentes detectados (${recentLogs.length}) para session ${sessionId}, aguardando e verificando novamente...`);
+        // Aguardar um pouco para dar tempo da outra chamada processar
+        await new Promise(resolve => setTimeout(resolve, 2000));
+        
+        // Verificar novamente se as notificações foram enviadas
+        const { data: recheckLogs } = await supabase
+          .from('student_action_logs')
+          .select('id, metadata')
+          .eq('action_type', 'fee_payment')
+          .eq('metadata->>session_id', sessionId)
+          .order('created_at', { ascending: false })
+          .limit(1)
+          .maybeSingle();
+        
+        if (recheckLogs?.metadata?.notifications_sent === true || recheckLogs?.metadata?.notifications_sent === 'true') {
+          console.log(`[DUPLICAÇÃO] Após aguardar, notificações já foram enviadas por outra chamada, retornando sucesso.`);
+          const session = await stripe.checkout.sessions.retrieve(sessionId, {
+            expand: ['payment_intent']
+          });
+          const amountPaid = session.amount_total ? session.amount_total / 100 : null;
+          const currency = session.currency?.toUpperCase() || 'USD';
+          const promotionalCouponReturn = session.metadata?.promotional_coupon || null;
+          const originalAmountReturn = session.metadata?.original_amount ? parseFloat(session.metadata.original_amount) : null;
+          let finalAmountReturn: number | null = null;
+          if (session.metadata?.final_amount) {
+            const parsed = parseFloat(session.metadata.final_amount);
+            if (!isNaN(parsed) && parsed > 0) {
+              finalAmountReturn = parsed;
+            }
+          }
+          let amountPaidUSD = amountPaid || 0;
+          if (currency === 'BRL' && session.metadata?.exchange_rate && amountPaid) {
+            const exchangeRate = parseFloat(session.metadata.exchange_rate);
+            if (exchangeRate > 0) {
+              amountPaidUSD = amountPaid / exchangeRate;
+            }
+          }
+          return corsResponse({
+            status: 'complete',
+            message: 'Session already processed successfully (notifications already sent by another call).',
+            amount_paid: amountPaidUSD || amountPaid || 0,
+            amount_paid_original: amountPaid || 0,
+            currency: currency,
+            promotional_coupon: promotionalCouponReturn,
+            original_amount: originalAmountReturn,
+            final_amount: finalAmountReturn
+          }, 200);
+        }
+      }
+    }
     
     // Expandir payment_intent para obter o ID completo
     const session = await stripe.checkout.sessions.retrieve(sessionId, {
       expand: ['payment_intent']
     });
     
-    if (existingLog) {
-      console.log(`[DUPLICAÇÃO] Session ${sessionId} já foi processada, retornando sucesso sem reprocessar.`);
-      // Mesmo sendo duplicação, ainda precisamos retornar os dados do pagamento
-      // Extrair informações do pagamento
-      const amountPaid = session.amount_total ? session.amount_total / 100 : null;
-      const currency = session.currency?.toUpperCase() || 'USD';
-      const promotionalCouponReturn = session.metadata?.promotional_coupon || null;
-      const originalAmountReturn = session.metadata?.original_amount ? parseFloat(session.metadata.original_amount) : null;
-      let finalAmountReturn: number | null = null;
-      if (session.metadata?.final_amount) {
-        const parsed = parseFloat(session.metadata.final_amount);
-        if (!isNaN(parsed) && parsed > 0) {
-          finalAmountReturn = parsed;
-        }
-      }
-      
-      let amountPaidUSD = amountPaid || 0;
-      if (currency === 'BRL' && session.metadata?.exchange_rate && amountPaid) {
-        const exchangeRate = parseFloat(session.metadata.exchange_rate);
-        if (exchangeRate > 0) {
-          amountPaidUSD = amountPaid / exchangeRate;
-        }
-      }
-      
-      return corsResponse({
-        status: 'complete',
-        message: 'Session already processed successfully.',
-        amount_paid: amountPaidUSD || amountPaid || 0,
-        amount_paid_original: amountPaid || 0,
-        currency: currency,
-        promotional_coupon: promotionalCouponReturn,
-        original_amount: originalAmountReturn,
-        final_amount: finalAmountReturn
-      }, 200);
-    }
     console.log(`Session status: ${session.status}, Payment status: ${session.payment_status}`);
     if (session.payment_status === 'paid' && session.status === 'complete') {
       const userId = session.client_reference_id;
@@ -158,9 +405,11 @@ Deno.serve(async (req)=>{
       // Variável para lógica de conversão (usada para detectar PIX)
       const paymentMethod = isPixPayment ? 'pix' : (session.payment_method_types?.[0] || 'stripe');
       
-      // Criar log ANTES de processar para evitar duplicação em chamadas simultâneas
+      // ✅ VERIFICAÇÃO DE DUPLICAÇÃO ATÔMICA: Tentar criar log primeiro (com unique constraint)
+      // Se já existir, retornar imediatamente sem processar
+      let isDuplicate = false;
       try {
-        await supabase.rpc('log_student_action', {
+        const { data: logResult, error: logError } = await supabase.rpc('log_student_action', {
             p_student_id: userProfile.id,
             p_action_type: 'fee_payment',
             p_action_description: `Scholarship Fee payment processing started (${sessionId})`,
@@ -175,9 +424,30 @@ Deno.serve(async (req)=>{
               processing_started: true
             }
         });
-        console.log('[DUPLICAÇÃO] Log de processamento criado para evitar duplicação');
-      } catch (logError) {
-        // Se falhar ao criar log, verificar novamente se já existe (race condition)
+        
+        // Se houver erro, verificar se é porque já existe (duplicação)
+        if (logError) {
+          console.log('[DUPLICAÇÃO] Erro ao criar log, verificando se já existe:', logError);
+          const { data: existingLog } = await supabase
+            .from('student_action_logs')
+            .select('id')
+            .eq('action_type', 'fee_payment')
+            .eq('metadata->>session_id', sessionId)
+            .single();
+          
+          if (existingLog) {
+            console.log(`[DUPLICAÇÃO] Session ${sessionId} já foi processada, retornando sucesso sem reprocessar.`);
+            isDuplicate = true;
+          } else {
+            // Erro real, não duplicação
+            throw logError;
+          }
+        } else {
+          console.log('[DUPLICAÇÃO] Log de processamento criado com sucesso para evitar duplicação');
+        }
+      } catch (logError: any) {
+        // Se falhar, verificar novamente se já existe (race condition)
+        console.log('[DUPLICAÇÃO] Erro ao criar log, verificando duplicação:', logError);
         const { data: recheckLog } = await supabase
           .from('student_action_logs')
           .select('id')
@@ -187,12 +457,44 @@ Deno.serve(async (req)=>{
         
         if (recheckLog) {
           console.log(`[DUPLICAÇÃO] Session ${sessionId} já está sendo processada, retornando sucesso.`);
-          return corsResponse({
-            status: 'complete',
-            message: 'Session already being processed.'
-          }, 200);
+          isDuplicate = true;
+        } else {
+          console.error('[DUPLICAÇÃO] Erro ao criar log, mas continuando processamento:', logError);
         }
-        console.error('[DUPLICAÇÃO] Erro ao criar log, mas continuando processamento:', logError);
+      }
+      
+      // ✅ Se for duplicação, retornar imediatamente com dados do pagamento
+      if (isDuplicate) {
+        const amountPaid = session.amount_total ? session.amount_total / 100 : null;
+        const currency = session.currency?.toUpperCase() || 'USD';
+        const promotionalCouponReturn = session.metadata?.promotional_coupon || null;
+        const originalAmountReturn = session.metadata?.original_amount ? parseFloat(session.metadata.original_amount) : null;
+        let finalAmountReturn: number | null = null;
+        if (session.metadata?.final_amount) {
+          const parsed = parseFloat(session.metadata.final_amount);
+          if (!isNaN(parsed) && parsed > 0) {
+            finalAmountReturn = parsed;
+          }
+        }
+        
+        let amountPaidUSD = amountPaid || 0;
+        if (currency === 'BRL' && session.metadata?.exchange_rate && amountPaid) {
+          const exchangeRate = parseFloat(session.metadata.exchange_rate);
+          if (exchangeRate > 0) {
+            amountPaidUSD = amountPaid / exchangeRate;
+          }
+        }
+        
+        return corsResponse({
+          status: 'complete',
+          message: 'Session already processed successfully.',
+          amount_paid: amountPaidUSD || amountPaid || 0,
+          amount_paid_original: amountPaid || 0,
+          currency: currency,
+          promotional_coupon: promotionalCouponReturn,
+          original_amount: originalAmountReturn,
+          final_amount: finalAmountReturn
+        }, 200);
       }
       
       // Atualiza perfil do usuário para marcar que pagou a scholarship fee (usando userId para user_profiles)
@@ -518,12 +820,156 @@ Deno.serve(async (req)=>{
       
       // --- NOTIFICAÇÕES VIA WEBHOOK N8N (apenas para pagamentos via cartão) ---
       try {
-        console.log(`📤 [verify-stripe-session-scholarship-fee] Iniciando notificações para pagamento via cartão...`);
+        // ✅ VERIFICAÇÃO CRÍTICA: Verificar se as notificações já foram enviadas para evitar duplicação
+        const { data: notificationLogs } = await supabase
+          .from('student_action_logs')
+          .select('id, metadata, created_at')
+          .eq('action_type', 'fee_payment')
+          .eq('metadata->>session_id', sessionId)
+          .order('created_at', { ascending: false })
+          .limit(5);
+        
+        let shouldSendNotifications = true;
+        
+        // Verificar se há um log com notificações já enviadas
+        if (notificationLogs && notificationLogs.length > 0) {
+          const logsWithNotificationsSent = notificationLogs.filter(log => {
+            const metadata = log.metadata || {};
+            return metadata.notifications_sent === true || metadata.notifications_sent === 'true';
+          });
+          
+          if (logsWithNotificationsSent.length > 0) {
+            console.log(`[DUPLICAÇÃO NOTIFICAÇÕES] Notificações para session ${sessionId} já foram enviadas, pulando envio de notificações.`);
+            shouldSendNotifications = false;
+          } else {
+            // Verificar se há múltiplos logs recentes (criados há menos de 5 segundos)
+            // Isso pode indicar chamadas simultâneas
+            const now = new Date();
+            const logsWithTime = notificationLogs.filter(log => {
+              const logTime = new Date(log.created_at);
+              const secondsDiff = (now.getTime() - logTime.getTime()) / 1000;
+              return secondsDiff < 5; // Log criado há menos de 5 segundos
+            });
+            
+            if (logsWithTime.length > 1) {
+              console.log(`[DUPLICAÇÃO NOTIFICAÇÕES] Múltiplos logs recentes detectados para session ${sessionId}, verificando se outro processo já enviou notificações...`);
+              // Aguardar um pouco e verificar novamente
+              await new Promise(resolve => setTimeout(resolve, 1000));
+              
+              const { data: recheckLogs } = await supabase
+                .from('student_action_logs')
+                .select('id, metadata')
+                .eq('action_type', 'fee_payment')
+                .eq('metadata->>session_id', sessionId)
+                .order('created_at', { ascending: false })
+                .limit(1)
+                .single();
+              
+              if (recheckLogs?.metadata?.notifications_sent === true || recheckLogs?.metadata?.notifications_sent === 'true') {
+                console.log(`[DUPLICAÇÃO NOTIFICAÇÕES] Notificações já foram enviadas por outro processo, pulando envio.`);
+                shouldSendNotifications = false;
+              }
+            }
+          }
+        }
+        
+        if (!shouldSendNotifications) {
+          console.log(`[DUPLICAÇÃO NOTIFICAÇÕES] Pulando envio de notificações para session ${sessionId}`);
+          // Continuar normalmente, apenas não enviar notificações
+        } else {
+          console.log(`📤 [verify-stripe-session-scholarship-fee] Iniciando notificações para pagamento via cartão...`);
+          
+          // ✅ MARCAR ANTES DE ENVIAR: Tentar marcar que estamos enviando notificações (atômico)
+          // Se outra chamada já marcou, não enviar
+          let canProceedWithNotifications = false;
+          try {
+            const { data: logToUpdate } = await supabase
+              .from('student_action_logs')
+              .select('id, metadata')
+              .eq('action_type', 'fee_payment')
+              .eq('metadata->>session_id', sessionId)
+              .order('created_at', { ascending: false })
+              .limit(1)
+              .single();
+            
+            if (logToUpdate) {
+              const currentMetadata = logToUpdate.metadata || {};
+              // Se já está marcado como enviado ou enviando, não prosseguir
+              if (currentMetadata.notifications_sent === true || currentMetadata.notifications_sent === 'true' || 
+                  currentMetadata.notifications_sending === true || currentMetadata.notifications_sending === 'true') {
+                console.log(`[DUPLICAÇÃO NOTIFICAÇÕES] Notificações já estão sendo enviadas ou foram enviadas, pulando.`);
+                canProceedWithNotifications = false;
+              } else {
+                // Marcar como "enviando" ANTES de enviar
+                const updatedMetadata = {
+                  ...currentMetadata,
+                  notifications_sending: true, // Flag temporária
+                  notifications_sending_at: new Date().toISOString()
+                };
+                const { error: updateError } = await supabase
+                  .from('student_action_logs')
+                  .update({ metadata: updatedMetadata })
+                  .eq('id', logToUpdate.id);
+                
+                if (updateError) {
+                  console.error(`[DUPLICAÇÃO NOTIFICAÇÕES] Erro ao marcar como enviando:`, updateError);
+                  // Se falhar, verificar se outra chamada já marcou
+                  const { data: recheckLog } = await supabase
+                    .from('student_action_logs')
+                    .select('id, metadata')
+                    .eq('id', logToUpdate.id)
+                    .single();
+                  
+                  if (recheckLog?.metadata?.notifications_sending === true || 
+                      recheckLog?.metadata?.notifications_sent === true) {
+                    console.log(`[DUPLICAÇÃO NOTIFICAÇÕES] Outra chamada já está processando, pulando.`);
+                    canProceedWithNotifications = false;
+                  } else {
+                    // Erro real, mas vamos tentar continuar
+                    canProceedWithNotifications = true;
+                  }
+                } else {
+                  console.log(`[DUPLICAÇÃO NOTIFICAÇÕES] Marcado como "enviando" com sucesso, prosseguindo com envio.`);
+                  canProceedWithNotifications = true;
+                }
+              }
+            } else {
+              // Não encontrou log, pode prosseguir (caso raro)
+              console.warn(`[DUPLICAÇÃO NOTIFICAÇÕES] Log não encontrado para marcar, prosseguindo com cuidado.`);
+              canProceedWithNotifications = true;
+            }
+          } catch (markError) {
+            console.error(`[DUPLICAÇÃO NOTIFICAÇÕES] Erro ao tentar marcar como enviando:`, markError);
+            // Em caso de erro, verificar novamente se já foi enviado
+            const { data: finalCheck } = await supabase
+              .from('student_action_logs')
+              .select('id, metadata')
+              .eq('action_type', 'fee_payment')
+              .eq('metadata->>session_id', sessionId)
+              .order('created_at', { ascending: false })
+              .limit(1)
+              .maybeSingle();
+            
+            if (finalCheck?.metadata?.notifications_sent === true || finalCheck?.metadata?.notifications_sent === 'true') {
+              console.log(`[DUPLICAÇÃO NOTIFICAÇÕES] Após erro, verificação final indica que já foi enviado, pulando.`);
+              canProceedWithNotifications = false;
+            } else {
+              canProceedWithNotifications = true;
+            }
+          }
+          
+          if (!canProceedWithNotifications) {
+            console.log(`[DUPLICAÇÃO NOTIFICAÇÕES] Não foi possível prosseguir com envio de notificações, outra chamada já está processando.`);
+            // Continuar normalmente, apenas não enviar notificações
+          } else {
+        
         // Buscar dados do aluno (incluindo seller_referral_code e phone)
-        const { data: alunoData, error: alunoError } = await supabase.from('user_profiles').select('full_name, email, phone, seller_referral_code').eq('user_id', userId).single();
-        // Buscar telefone do admin
-        const { data: adminProfile, error: adminProfileError } = await supabase.from('user_profiles').select('phone').eq('email', 'admin@matriculausa.com').single();
-        const adminPhone = adminProfile?.phone || "";
+        const { data: alunoData, error: alunoError } = await supabase.from('user_profiles').select('id, full_name, email, phone, seller_referral_code').eq('user_id', userId).single();
+        // Detectar ambiente de desenvolvimento
+        const isDevelopment = config.environment.isTest || config.environment.environment === 'test';
+        // Buscar todos os admins do sistema
+        // Em ambiente de desenvolvimento (test), filtrar emails específicos
+        const admins = await getAllAdmins(supabase, isDevelopment);
         if (alunoError || !alunoData) {
           console.error('[NOTIFICAÇÃO] Erro ao buscar dados do aluno:', alunoError);
           // Mesmo com erro, ainda precisamos retornar os dados do pagamento
@@ -618,7 +1064,87 @@ Deno.serve(async (req)=>{
             final_amount: finalAmountReturn
           }, 200);
         }
-        // Para cada scholarship, enviar notificações
+        
+        // Preparar informações de moeda (fora do loop para reutilizar)
+        const currencyInfo = getCurrencyInfo(session);
+        const amountValue = session.amount_total ? session.amount_total / 100 : 0;
+        const formattedAmount = formatAmountWithCurrency(amountValue, session);
+        
+        // 1. NOTIFICAÇÃO PARA O ALUNO (UMA ÚNICA VEZ, FORA DO LOOP)
+        // Buscar nomes das bolsas para a mensagem
+        const scholarshipNames: string[] = [];
+        for (const scholarshipId of scholarshipIdsArray) {
+          const { data: scholarship } = await supabase.from('scholarships').select('title').eq('id', scholarshipId).single();
+          if (scholarship) {
+            scholarshipNames.push(scholarship.title);
+          }
+        }
+        const bolsasText = scholarshipNames.length > 0 
+          ? scholarshipNames.join(', ') 
+          : 'suas bolsas';
+        const mensagemAluno = `Parabéns! Você pagou a taxa de bolsa para ${bolsasText} e foi aprovado. Agora você pode prosseguir com a matrícula.`;
+        const alunoNotificationPayload = {
+          tipo_notf: 'Pagamento de taxa de bolsa confirmado',
+          email_aluno: alunoData.email,
+          nome_aluno: alunoData.full_name,
+          phone_aluno: alunoData.phone || "",
+          o_que_enviar: mensagemAluno,
+          payment_amount: amountValue,
+          amount: amountValue,
+          currency: currencyInfo.currency,
+          currency_symbol: currencyInfo.symbol,
+          formatted_amount: formattedAmount,
+          payment_method: 'stripe',
+          payment_id: sessionId,
+          fee_type: 'scholarship',
+          notification_target: 'student'
+        };
+        console.log('[NOTIFICAÇÃO ALUNO] Enviando notificação para aluno (UMA ÚNICA VEZ):', alunoNotificationPayload);
+        const alunoNotificationResponse = await fetch('https://nwh.suaiden.com/webhook/notfmatriculausa', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'User-Agent': 'PostmanRuntime/7.36.3'
+          },
+          body: JSON.stringify(alunoNotificationPayload)
+        });
+        const alunoResult = await alunoNotificationResponse.text();
+        console.log('[NOTIFICAÇÃO ALUNO] Resposta do n8n (aluno):', alunoNotificationResponse.status, alunoResult);
+
+        // ✅ IN-APP NOTIFICATION FOR STUDENT (Scholarship Fee)
+        try {
+          if (alunoData?.id) {
+            console.log('[NOTIFICAÇÃO ALUNO] Criando notificação in-app de Scholarship Fee...');
+            const { error: inAppError } = await supabase
+              .from('student_notifications')
+              .insert({
+                student_id: alunoData.id,
+                title: 'Scholarship Fee Confirmed',
+                message: `Your Scholarship Fee payment for ${bolsasText} has been confirmed. You are now approved!`,
+                link: '/student/dashboard/applications',
+                created_at: new Date().toISOString()
+              });
+
+            if (inAppError) {
+              console.error('[NOTIFICAÇÃO ALUNO] Erro ao criar notificação in-app:', inAppError);
+            } else {
+              console.log('[NOTIFICAÇÃO ALUNO] Notificação in-app criada com sucesso!');
+            }
+          } else {
+            console.warn('[NOTIFICAÇÃO ALUNO] Dados do aluno (ID) não encontrados para notificação in-app.');
+          }
+        } catch (inAppEx) {
+            console.error('[NOTIFICAÇÃO ALUNO] Exceção ao criar notificação in-app:', inAppEx);
+        }
+        
+        // Coletar informações de todas as bolsas para notificação consolidada para admin
+        const scholarshipInfoList: Array<{ title: string; university: string }> = [];
+        let sellerDataForAdmin: any = null;
+        let affiliateAdminDataForAdmin: any = null;
+        let sellerPhoneForAdmin = '';
+        
+        // Para cada scholarship, enviar notificações para seller/affiliate (dentro do loop)
+        // Notificações para admin serão enviadas UMA ÚNICA VEZ após o loop
         for (const scholarshipId of scholarshipIdsArray){
           try {
             // Buscar dados da bolsa
@@ -630,49 +1156,18 @@ Deno.serve(async (req)=>{
             const contact = universidade.contact || {};
             const emailUniversidade = contact.admissionsEmail || contact.email || '';
             
-            // Preparar informações de moeda
-            const currencyInfo = getCurrencyInfo(session);
-            const amountValue = session.amount_total ? session.amount_total / 100 : 0;
-            const formattedAmount = formatAmountWithCurrency(amountValue, session);
-            
-            // 1. NOTIFICAÇÃO PARA O ALUNO
-            const mensagemAluno = `Parabéns! Você pagou a taxa de bolsa para "${scholarship.title}" da universidade ${universidade.name} e foi aprovado. Agora você pode prosseguir com a matrícula.`;
-            const alunoNotificationPayload = {
-              tipo_notf: 'Pagamento de taxa de bolsa confirmado',
-              email_aluno: alunoData.email,
-              nome_aluno: alunoData.full_name,
-              phone_aluno: alunoData.phone || "",
-              nome_bolsa: scholarship.title,
-              nome_universidade: universidade.name,
-              email_universidade: emailUniversidade,
-              o_que_enviar: mensagemAluno,
-              payment_amount: amountValue,
-              amount: amountValue,
-              currency: currencyInfo.currency,
-              currency_symbol: currencyInfo.symbol,
-              formatted_amount: formattedAmount,
-              payment_method: 'stripe',
-              payment_id: sessionId,
-              fee_type: 'scholarship',
-              notification_target: 'student'
-            };
-            console.log('[NOTIFICAÇÃO ALUNO] Enviando notificação para aluno:', alunoNotificationPayload);
-            const alunoNotificationResponse = await fetch('https://nwh.suaiden.com/webhook/notfmatriculausa', {
-              method: 'POST',
-              headers: {
-                'Content-Type': 'application/json',
-                'User-Agent': 'PostmanRuntime/7.36.3'
-              },
-              body: JSON.stringify(alunoNotificationPayload)
+            // Coletar informações da bolsa para notificação consolidada
+            scholarshipInfoList.push({
+              title: scholarship.title,
+              university: universidade.name
             });
-            const alunoResult = await alunoNotificationResponse.text();
-            console.log('[NOTIFICAÇÃO ALUNO] Resposta do n8n (aluno):', alunoNotificationResponse.status, alunoResult);
             
             // 2. NOTIFICAÇÃO PARA A UNIVERSIDADE - REMOVIDA
             // Scholarship fee NÃO envia notificação para universidade (apenas application fee faz isso)
             console.log('[NOTIFICAÇÃO UNIVERSIDADE] Scholarship fee não envia notificação para universidade');
             
-            // 3. NOTIFICAÇÃO PARA SELLER/ADMIN/AFFILIATE (se houver código de seller)
+            // 3. NOTIFICAÇÃO PARA SELLER/AFFILIATE (se houver código de seller)
+            // Notificações para admin serão enviadas UMA ÚNICA VEZ após o loop
             console.log(`📤 [verify-stripe-session-scholarship-fee] DEBUG - alunoData.seller_referral_code:`, alunoData.seller_referral_code);
             if (alunoData.seller_referral_code) {
               console.log(`📤 [verify-stripe-session-scholarship-fee] Buscando seller através do seller_referral_code: ${alunoData.seller_referral_code}`);
@@ -692,27 +1187,54 @@ Deno.serve(async (req)=>{
               });
               if (sellerData && !sellerError) {
                 console.log(`📤 [verify-stripe-session-scholarship-fee] Seller encontrado:`, sellerData);
-                // Buscar telefone do seller
+                
+                // Armazenar informações do seller apenas na primeira vez (para notificação consolidada)
+                if (!sellerDataForAdmin) {
+                  // Buscar telefone do seller
+                  const { data: sellerProfile, error: sellerProfileError } = await supabase.from('user_profiles').select('phone').eq('user_id', sellerData.user_id).single();
+                  sellerPhoneForAdmin = sellerProfile?.phone || "";
+                  sellerDataForAdmin = sellerData;
+                  
+                  // Buscar dados do affiliate_admin se houver
+                  if (sellerData.affiliate_admin_id) {
+                    console.log(`📤 [verify-stripe-session-scholarship-fee] Buscando affiliate_admin: ${sellerData.affiliate_admin_id}`);
+                    const { data: affiliateData, error: affiliateError } = await supabase.from('affiliate_admins').select('user_id').eq('id', sellerData.affiliate_admin_id).single();
+                    if (affiliateData && !affiliateError) {
+                      const { data: affiliateProfile, error: profileError } = await supabase.from('user_profiles').select('email, full_name, phone').eq('user_id', affiliateData.user_id).single();
+                      if (affiliateProfile && !profileError) {
+                        affiliateAdminDataForAdmin = {
+                          email: affiliateProfile.email || "",
+                          name: affiliateProfile.full_name || "Affiliate Admin",
+                          phone: affiliateProfile.phone || ""
+                        };
+                        console.log(`📤 [verify-stripe-session-scholarship-fee] Affiliate admin encontrado:`, affiliateAdminDataForAdmin);
+                      }
+                    }
+                  }
+                }
+                
+                // Buscar telefone do seller para notificação individual do seller
                 const { data: sellerProfile, error: sellerProfileError } = await supabase.from('user_profiles').select('phone').eq('user_id', sellerData.user_id).single();
                 const sellerPhone = sellerProfile?.phone || "";
-                // Buscar dados do affiliate_admin se houver
+                
+                // Buscar dados do affiliate_admin para notificação individual
                 let affiliateAdminData = {
+                  user_id: "",
                   email: "",
                   name: "Affiliate Admin",
                   phone: ""
                 };
                 if (sellerData.affiliate_admin_id) {
-                  console.log(`📤 [verify-stripe-session-scholarship-fee] Buscando affiliate_admin: ${sellerData.affiliate_admin_id}`);
                   const { data: affiliateData, error: affiliateError } = await supabase.from('affiliate_admins').select('user_id').eq('id', sellerData.affiliate_admin_id).single();
                   if (affiliateData && !affiliateError) {
                     const { data: affiliateProfile, error: profileError } = await supabase.from('user_profiles').select('email, full_name, phone').eq('user_id', affiliateData.user_id).single();
                     if (affiliateProfile && !profileError) {
                       affiliateAdminData = {
+                        user_id: affiliateData.user_id,
                         email: affiliateProfile.email || "",
                         name: affiliateProfile.full_name || "Affiliate Admin",
                         phone: affiliateProfile.phone || ""
                       };
-                      console.log(`📤 [verify-stripe-session-scholarship-fee] Affiliate admin encontrado:`, affiliateAdminData);
                     }
                   }
                 }
@@ -755,6 +1277,28 @@ Deno.serve(async (req)=>{
                 } else {
                   const sellerError = await sellerNotificationResponse.text();
                   console.error('📧 [verify-stripe-session-scholarship-fee] Erro ao enviar notificação para seller:', sellerError);
+                }
+
+                // ✅ IN-APP NOTIFICATION FOR SELLER
+                if (sellerData.user_id) {
+                    try {
+                      await supabase.from('admin_notifications').insert({
+                        user_id: sellerData.user_id,
+                        title: 'New Commission Potential',
+                        message: `Your student ${alunoData.full_name} has paid the Scholarship Fee for "${scholarship.title}" (${formattedAmount}).`,
+                        type: 'payment',
+                        link: '/admin/dashboard/users',
+                        metadata: {
+                           student_id: alunoData.id,
+                           student_name: alunoData.full_name,
+                           amount: amountValue,
+                           fee_type: 'scholarship',
+                           payment_id: sessionId
+                        }
+                      });
+                    } catch (sellerInAppErr) {
+                       console.error(`[NOTIFICAÇÃO SELLER] Erro ao criar in-app notification para seller ${sellerData.email}:`, sellerInAppErr);
+                    }
                 }
                 // 3.2. NOTIFICAÇÃO PARA O AFFILIATE ADMIN (se existir)
                 if (affiliateAdminData.email) {
@@ -800,63 +1344,172 @@ Deno.serve(async (req)=>{
                     const affiliateError = await affiliateNotificationResponse.text();
                     console.error('📧 [verify-stripe-session-scholarship-fee] Erro ao enviar notificação para affiliate admin:', affiliateError);
                   }
+
+                  // ✅ IN-APP NOTIFICATION FOR AFFILIATE ADMIN
+                  if (affiliateAdminData.user_id) {
+                      try {
+                        await supabase.from('admin_notifications').insert({
+                          user_id: affiliateAdminData.user_id,
+                          title: 'Affiliate Payment',
+                          message: `A student from your network (${alunoData.full_name}) has paid the Scholarship Fee for "${scholarship.title}" (${formattedAmount}).`,
+                          type: 'payment',
+                          link: '/admin/dashboard/affiliate-management',
+                          metadata: {
+                             student_id: alunoData.id,
+                             student_name: alunoData.full_name,
+                             amount: amountValue,
+                             fee_type: 'scholarship',
+                             payment_id: sessionId
+                          }
+                        });
+                      } catch (affiliateInAppErr) {
+                         console.error(`[NOTIFICAÇÃO AFFILIATE] Erro ao criar in-app notification para affiliate ${affiliateAdminData.email}:`, affiliateInAppErr);
+                      }
+                  }
                 }
-                // 3.3. NOTIFICAÇÃO PARA O ADMIN
-                const adminNotificationPayload = {
-                  tipo_notf: "Pagamento Stripe de scholarship fee confirmado - Admin",
-                  email_admin: "admin@matriculausa.com",
-                  nome_admin: "Admin MatriculaUSA",
-                  phone_admin: adminPhone,
-                  email_aluno: alunoData.email,
-                  nome_aluno: alunoData.full_name,
-                  phone_aluno: alunoData.phone || "",
-                  email_seller: sellerData.email,
-                  nome_seller: sellerData.name,
-                  phone_seller: sellerPhone,
-                  email_affiliate_admin: affiliateAdminData.email,
-                  nome_affiliate_admin: affiliateAdminData.name,
-                  phone_affiliate_admin: affiliateAdminData.phone,
-                  nome_bolsa: scholarship.title,
-                  nome_universidade: universidade.name,
-                  o_que_enviar: `Pagamento Stripe de scholarship fee no valor de ${formattedAmount} do aluno ${alunoData.full_name} foi processado com sucesso para a bolsa "${scholarship.title}" da universidade ${universidade.name}. Seller responsável: ${sellerData.name} (${sellerData.referral_code})`,
-                  payment_id: sessionId,
-                  fee_type: 'scholarship',
-                  amount: amountValue,
-                  currency: currencyInfo.currency,
-                  currency_symbol: currencyInfo.symbol,
-                  formatted_amount: formattedAmount,
-                  seller_id: sellerData.user_id,
-                  referral_code: sellerData.referral_code,
-                  commission_rate: sellerData.commission_rate,
-                  payment_method: "stripe",
-                  notification_target: 'admin'
-                };
-                console.log('📧 [verify-stripe-session-scholarship-fee] Enviando notificação para admin:', adminNotificationPayload);
-                const adminNotificationResponse = await fetch('https://nwh.suaiden.com/webhook/notfmatriculausa', {
-                  method: 'POST',
-                  headers: {
-                    'Content-Type': 'application/json',
-                    'User-Agent': 'PostmanRuntime/7.36.3'
-                  },
-                  body: JSON.stringify(adminNotificationPayload)
-                });
-                if (adminNotificationResponse.ok) {
-                  const adminResult = await adminNotificationResponse.text();
-                  console.log('📧 [verify-stripe-session-scholarship-fee] Notificação para admin enviada com sucesso:', adminResult);
-                } else {
-                  const adminError = await adminNotificationResponse.text();
-                  console.error('📧 [verify-stripe-session-scholarship-fee] Erro ao enviar notificação para admin:', adminError);
-                }
+                // Notificações para admin serão enviadas UMA ÚNICA VEZ após o loop (consolidadas)
               } else {
                 console.log(`📤 [verify-stripe-session-scholarship-fee] Seller não encontrado para seller_referral_code: ${alunoData.seller_referral_code}`);
+                // Notificações para admin serão enviadas UMA ÚNICA VEZ após o loop
               }
             } else {
               console.log(`📤 [verify-stripe-session-scholarship-fee] Nenhum seller_referral_code encontrado, não há seller para notificar`);
+              // Notificações para admin serão enviadas UMA ÚNICA VEZ após o loop
             }
           } catch (notifErr) {
             console.error('[NOTIFICAÇÃO] Erro ao notificar scholarship:', scholarshipId, notifErr);
           }
         }
+        
+        // 4. NOTIFICAÇÃO CONSOLIDADA PARA TODOS OS ADMINS (UMA ÚNICA VEZ, APÓS O LOOP)
+        // Consolidar informações de todas as bolsas
+        const bolsasTextAdmin = scholarshipInfoList.length > 0
+          ? scholarshipInfoList.map(s => `"${s.title}" (${s.university})`).join(', ')
+          : 'suas bolsas';
+        
+        const adminNotificationPromises = admins.map(async (admin) => {
+          let oQueEnviar = '';
+          if (sellerDataForAdmin) {
+            oQueEnviar = `Pagamento Stripe de scholarship fee no valor de ${formattedAmount} do aluno ${alunoData.full_name} foi processado com sucesso para ${bolsasTextAdmin}. Seller responsável: ${sellerDataForAdmin.name} (${sellerDataForAdmin.referral_code})`;
+          } else {
+            oQueEnviar = `Pagamento Stripe de scholarship fee no valor de ${formattedAmount} do aluno ${alunoData.full_name} foi processado com sucesso para ${bolsasTextAdmin}.`;
+          }
+          
+          const adminNotificationPayload = {
+            tipo_notf: "Pagamento Stripe de scholarship fee confirmado - Admin",
+            email_admin: admin.email,
+            nome_admin: admin.full_name,
+            phone_admin: admin.phone,
+            email_aluno: alunoData.email,
+            nome_aluno: alunoData.full_name,
+            phone_aluno: alunoData.phone || "",
+            email_seller: sellerDataForAdmin?.email || "",
+            nome_seller: sellerDataForAdmin?.name || "",
+            phone_seller: sellerPhoneForAdmin || "",
+            email_affiliate_admin: affiliateAdminDataForAdmin?.email || "",
+            nome_affiliate_admin: affiliateAdminDataForAdmin?.name || "",
+            phone_affiliate_admin: affiliateAdminDataForAdmin?.phone || "",
+            o_que_enviar: oQueEnviar,
+            payment_id: sessionId,
+            fee_type: 'scholarship',
+            amount: amountValue,
+            currency: currencyInfo.currency,
+            currency_symbol: currencyInfo.symbol,
+            formatted_amount: formattedAmount,
+            seller_id: sellerDataForAdmin?.user_id || "",
+            referral_code: sellerDataForAdmin?.referral_code || "",
+            commission_rate: sellerDataForAdmin?.commission_rate || null,
+            payment_method: "stripe",
+            notification_target: 'admin'
+          };
+          
+          console.log(`📧 [verify-stripe-session-scholarship-fee] ✅ ENVIANDO NOTIFICAÇÃO CONSOLIDADA PARA ADMIN ${admin.email}:`, adminNotificationPayload);
+          const adminNotificationResponse = await fetch('https://nwh.suaiden.com/webhook/notfmatriculausa', {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/json',
+              'User-Agent': 'PostmanRuntime/7.36.3'
+            },
+            body: JSON.stringify(adminNotificationPayload)
+          });
+          
+          if (adminNotificationResponse.ok) {
+            const adminResult = await adminNotificationResponse.text();
+            console.log(`📧 [verify-stripe-session-scholarship-fee] Notificação consolidada para ADMIN ${admin.email} enviada com sucesso:`, adminResult);
+          } else {
+            const adminError = await adminNotificationResponse.text();
+            console.error(`📧 [verify-stripe-session-scholarship-fee] Erro ao enviar notificação consolidada para ADMIN ${admin.email}:`, adminError);
+          }
+
+          // ✅ IN-APP NOTIFICATION FOR ADMIN (Consolidated)
+          if (admin.user_id) {
+            try {
+              const { error: insertError } = await supabase.from('admin_notifications').insert({
+                user_id: admin.user_id,
+                title: 'New Scholarship Fee Payment',
+                message: oQueEnviar,
+                type: 'payment',
+                link: '/admin/dashboard/scholarships',
+                metadata: {
+                   student_id: alunoData.id,
+                   student_name: alunoData.full_name,
+                   amount: amountValue,
+                   fee_type: 'scholarship',
+                   payment_id: sessionId
+                }
+              });
+              
+              if (insertError) {
+                console.error(`[NOTIFICAÇÃO ADMIN] Erro ao criar in-app notification para admin ${admin.email}:`, insertError);
+              } else {
+                console.log(`[NOTIFICAÇÃO ADMIN] ✅ In-app notification criada com sucesso para admin ${admin.email} (ID: ${admin.user_id})`);
+              }
+            } catch (adminInAppErr) {
+               console.error(`[NOTIFICAÇÃO ADMIN] Exceção ao criar in-app notification para admin ${admin.email}:`, adminInAppErr);
+            }
+          } else {
+            console.warn(`[NOTIFICAÇÃO ADMIN] ⚠️ Admin ${admin.email} não possui user_id, pulando in-app notification.`);
+          }
+        });
+        
+        await Promise.allSettled(adminNotificationPromises);
+        console.log(`✅ [verify-stripe-session-scholarship-fee] Todas as notificações consolidadas para admins processadas!`);
+        
+        // ✅ Marcar no log que as notificações foram enviadas para evitar duplicação
+        try {
+          const { data: existingLogForUpdate } = await supabase
+            .from('student_action_logs')
+            .select('id, metadata')
+            .eq('action_type', 'fee_payment')
+            .eq('metadata->>session_id', sessionId)
+            .order('created_at', { ascending: false })
+            .limit(1)
+            .single();
+          
+          if (existingLogForUpdate) {
+            const currentMetadata = existingLogForUpdate.metadata || {};
+            const updatedMetadata = {
+              ...currentMetadata,
+              notifications_sent: true, // ✅ Salvar como boolean
+              notifications_sent_at: new Date().toISOString()
+            };
+            const { error: updateError } = await supabase
+              .from('student_action_logs')
+              .update({ metadata: updatedMetadata })
+              .eq('id', existingLogForUpdate.id);
+            
+            if (updateError) {
+              console.error(`❌ [verify-stripe-session-scholarship-fee] Erro ao atualizar log:`, updateError);
+            } else {
+              console.log(`✅ [verify-stripe-session-scholarship-fee] Log atualizado: notificações marcadas como enviadas`);
+            }
+          }
+        } catch (updateLogError) {
+          console.error('[NOTIFICAÇÃO] Erro ao atualizar log com flag de notificações enviadas:', updateLogError);
+          // Não quebra o fluxo se falhar
+        }
+          } // Fim do else (canProceedWithNotifications)
+        } // Fim do else (shouldSendNotifications)
       } catch (notifErr) {
         console.error('[NOTIFICAÇÃO] Erro geral ao notificar scholarship fee via n8n:', notifErr);
       }
@@ -982,5 +1635,4 @@ Deno.serve(async (req)=>{
       details: error.message
     }, 500);
   }
-});
-  
+}); 

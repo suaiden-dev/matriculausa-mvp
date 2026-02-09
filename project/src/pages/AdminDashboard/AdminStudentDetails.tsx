@@ -732,6 +732,30 @@ const AdminStudentDetails: React.FC = () => {
             
             if (s && s.id) {
               console.log('✅ [PERFORMANCE] Usando RPC consolidada para carregar dados do estudante');
+              
+              // 🔍 LOG: Verificar se é a Stephanie quando vem do RPC
+              const isStephanieRpc = s.email === 'stephaniecriistine25@gmail.com';
+              if (isStephanieRpc) {
+                console.log('🔍 [STEPHANIE DEBUG] ==========================================');
+                console.log('🔍 [STEPHANIE DEBUG] 🚀 DADOS VINDO DO RPC');
+                console.log('🔍 [STEPHANIE DEBUG] Email:', s.email);
+                console.log('🔍 [STEPHANIE DEBUG] Profile ID:', s.id);
+                console.log('🔍 [STEPHANIE DEBUG] Tem scholarship_applications?', !!s.scholarship_applications);
+                console.log('🔍 [STEPHANIE DEBUG] Tipo de scholarship_applications:', typeof s.scholarship_applications);
+                console.log('🔍 [STEPHANIE DEBUG] Número de applications:', Array.isArray(s.scholarship_applications) ? s.scholarship_applications.length : 'NÃO É ARRAY');
+                
+                if (Array.isArray(s.scholarship_applications)) {
+                  console.log('🔍 [STEPHANIE DEBUG] Applications do RPC:', s.scholarship_applications.map((app: any) => ({
+                    id: app.id,
+                    status: app.status,
+                    is_application_fee_paid: app.is_application_fee_paid,
+                    is_scholarship_fee_paid: app.is_scholarship_fee_paid,
+                    payment_status: app.payment_status
+                  })));
+                } else {
+                  console.log('🔍 [STEPHANIE DEBUG] ⚠️ scholarship_applications NÃO É ARRAY:', s.scholarship_applications);
+                }
+              }
             } else {
               console.warn('⚠️ [PERFORMANCE] RPC retornou dados inválidos, usando fallback');
               useRpc = false;
@@ -821,9 +845,27 @@ const AdminStudentDetails: React.FC = () => {
           throw new Error('Failed to load student data');
         }
 
+        // 🔍 LOG INICIAL: Verificar se é a Stephanie ANTES de processar
+        const isStephanie = s.email === 'stephaniecriistine25@gmail.com';
+        if (isStephanie) {
+          console.log('🔍 [STEPHANIE DEBUG] ==========================================');
+          console.log('🔍 [STEPHANIE DEBUG] 🚀 INÍCIO DO PROCESSAMENTO');
+          console.log('🔍 [STEPHANIE DEBUG] Email:', s.email);
+          console.log('🔍 [STEPHANIE DEBUG] Profile ID:', s.id);
+          console.log('🔍 [STEPHANIE DEBUG] Tem scholarship_applications?', !!s.scholarship_applications);
+          console.log('🔍 [STEPHANIE DEBUG] Número de applications:', s.scholarship_applications?.length || 0);
+        }
+
         let lockedApplication = null;
         let activeApplication = null;
         if (s.scholarship_applications && s.scholarship_applications.length > 0) {
+          
+          if (isStephanie) {
+            console.log('🔍 [STEPHANIE DEBUG] ==========================================');
+            console.log('🔍 [STEPHANIE DEBUG] Email:', s.email);
+            console.log('🔍 [STEPHANIE DEBUG] Total applications:', s.scholarship_applications.length);
+          }
+          
           console.log('🔍 [ADMIN STUDENT DETAILS] scholarship_applications:', s.scholarship_applications.map((app: any) => ({
             id: app.id,
             status: app.status,
@@ -831,12 +873,37 @@ const AdminStudentDetails: React.FC = () => {
             is_scholarship_fee_paid: app.is_scholarship_fee_paid,
             scholarship_title: app.scholarships?.title
           })));
-          console.log('🔍 [ADMIN STUDENT DETAILS] Full scholarship_applications data:', JSON.stringify(s.scholarship_applications, null, 2));
+          
+          if (isStephanie) {
+            console.log('🔍 [STEPHANIE DEBUG] Full scholarship_applications data:', JSON.stringify(s.scholarship_applications, null, 2));
+          }
           
           // Priorizar aplicação enrolled, depois approved com application fee pago, depois approved
           const enrolledApp = s.scholarship_applications.find((app: any) => app.status === 'enrolled');
           const approvedWithFeeApp = s.scholarship_applications.find((app: any) => app.status === 'approved' && app.is_application_fee_paid);
           const anyApprovedApp = s.scholarship_applications.find((app: any) => app.status === 'approved');
+          
+          if (isStephanie) {
+            console.log('🔍 [STEPHANIE DEBUG] enrolledApp:', {
+              found: !!enrolledApp,
+              id: enrolledApp?.id,
+              status: enrolledApp?.status,
+              is_application_fee_paid: enrolledApp?.is_application_fee_paid,
+              is_scholarship_fee_paid: enrolledApp?.is_scholarship_fee_paid,
+              payment_status: enrolledApp?.payment_status
+            });
+            console.log('🔍 [STEPHANIE DEBUG] approvedWithFeeApp:', {
+              found: !!approvedWithFeeApp,
+              id: approvedWithFeeApp?.id,
+              status: approvedWithFeeApp?.status,
+              is_application_fee_paid: approvedWithFeeApp?.is_application_fee_paid
+            });
+            console.log('🔍 [STEPHANIE DEBUG] anyApprovedApp:', {
+              found: !!anyApprovedApp,
+              id: anyApprovedApp?.id,
+              status: anyApprovedApp?.status
+            });
+          }
           
           lockedApplication = enrolledApp || approvedWithFeeApp || anyApprovedApp;
           
@@ -846,6 +913,16 @@ const AdminStudentDetails: React.FC = () => {
             anyApprovedApp: anyApprovedApp?.id,
             finalLockedApp: lockedApplication?.id
           });
+          
+          if (isStephanie) {
+            console.log('🔍 [STEPHANIE DEBUG] final lockedApplication:', {
+              id: lockedApplication?.id,
+              status: lockedApplication?.status,
+              is_application_fee_paid: lockedApplication?.is_application_fee_paid,
+              is_scholarship_fee_paid: lockedApplication?.is_scholarship_fee_paid,
+              payment_status: lockedApplication?.payment_status
+            });
+          }
           
           // Se não há aplicação locked, buscar a aplicação mais recente para o student_process_type
           if (!lockedApplication) {
@@ -882,18 +959,66 @@ const AdminStudentDetails: React.FC = () => {
           application_status: lockedApplication?.status || null,
           applied_at: lockedApplication?.applied_at || null,
           is_application_fee_paid: (() => {
+            const isStephanie = s.email === 'stephaniecriistine25@gmail.com';
+            
+            // ✅ CORREÇÃO: Priorizar aplicação enrolled, depois verificar outras
+            if (enrolledApp && enrolledApp.is_application_fee_paid) {
+              if (isStephanie) {
+                console.log('🔍 [STEPHANIE DEBUG] is_application_fee_paid: TRUE (from enrolledApp)');
+              }
+              return true;
+            }
             // Verificar se alguma aplicação tem Application Fee pago
-            return s.scholarship_applications?.some((app: any) => app.is_application_fee_paid) || false;
+            const hasAnyPaid = s.scholarship_applications?.some((app: any) => app.is_application_fee_paid) || false;
+            if (isStephanie) {
+              console.log('🔍 [STEPHANIE DEBUG] is_application_fee_paid:', {
+                enrolledAppHasFee: enrolledApp?.is_application_fee_paid,
+                hasAnyPaid,
+                allApps: s.scholarship_applications?.map((app: any) => ({
+                  id: app.id,
+                  status: app.status,
+                  is_application_fee_paid: app.is_application_fee_paid
+                }))
+              });
+            }
+            return hasAnyPaid;
           })(),
-          is_scholarship_fee_paid: lockedApplication?.is_scholarship_fee_paid || false,
+          is_scholarship_fee_paid: (() => {
+            const isStephanie = s.email === 'stephaniecriistine25@gmail.com';
+            
+            // ✅ CORREÇÃO: Priorizar aplicação enrolled, depois usar lockedApplication
+            if (enrolledApp && enrolledApp.is_scholarship_fee_paid) {
+              if (isStephanie) {
+                console.log('🔍 [STEPHANIE DEBUG] is_scholarship_fee_paid: TRUE (from enrolledApp)');
+              }
+              return true;
+            }
+            const result = lockedApplication?.is_scholarship_fee_paid || false;
+            if (isStephanie) {
+              console.log('🔍 [STEPHANIE DEBUG] is_scholarship_fee_paid:', {
+                enrolledAppHasFee: enrolledApp?.is_scholarship_fee_paid,
+                lockedAppHasFee: lockedApplication?.is_scholarship_fee_paid,
+                lockedAppId: lockedApplication?.id,
+                lockedAppStatus: lockedApplication?.status,
+                finalResult: result,
+                allApps: s.scholarship_applications?.map((app: any) => ({
+                  id: app.id,
+                  status: app.status,
+                  is_scholarship_fee_paid: app.is_scholarship_fee_paid
+                }))
+              });
+            }
+            return result;
+          })(),
           application_fee_payment_method: lockedApplication?.application_fee_payment_method || null,
           scholarship_fee_payment_method: lockedApplication?.scholarship_fee_payment_method || null,
           acceptance_letter_status: lockedApplication?.acceptance_letter_status || null,
           student_process_type: lockedApplication?.student_process_type || activeApplication?.student_process_type || null,
           payment_status: lockedApplication?.payment_status || null,
           scholarship_title: (() => {
-            // Buscar aplicação que teve Application Fee pago
-            const paidApplication = s.scholarship_applications?.find((app: any) => app.is_application_fee_paid);
+            // ✅ CORREÇÃO: Priorizar aplicação enrolled com fee pago
+            const enrolledWithFee = s.scholarship_applications?.find((app: any) => app.status === 'enrolled' && app.is_application_fee_paid);
+            const paidApplication = enrolledWithFee || s.scholarship_applications?.find((app: any) => app.is_application_fee_paid);
             if (paidApplication?.scholarships) {
               const scholarship = Array.isArray(paidApplication.scholarships) 
                 ? paidApplication.scholarships[0] 
@@ -4918,7 +5043,9 @@ const AdminStudentDetails: React.FC = () => {
                     {student.is_application_fee_paid ? (
                       <dd className="text-sm font-semibold text-slate-700 mt-1">
                         {(() => {
-                          const paidApplication = student.all_applications?.find((app: any) => app.is_application_fee_paid);
+                          // ✅ CORREÇÃO: Priorizar aplicação enrolled com fee pago
+                          const enrolledApp = student.all_applications?.find((app: any) => app.status === 'enrolled' && app.is_application_fee_paid);
+                          const paidApplication = enrolledApp || student.all_applications?.find((app: any) => app.is_application_fee_paid);
                           if (paidApplication?.scholarships) {
                             const scholarship = Array.isArray(paidApplication.scholarships)
                               ? paidApplication.scholarships[0]
@@ -5003,8 +5130,9 @@ const AdminStudentDetails: React.FC = () => {
                           <span className="text-sm font-medium text-red-600">Not Paid</span>
                         </div>
                          {isPlatformAdmin && (() => {
-                           // Buscar aplicação aprovada para application fee
-                           const approvedApp = student.all_applications?.find((app: any) => app.status === 'approved');
+                           // ✅ CORREÇÃO: Priorizar aplicação enrolled, depois approved
+                           const enrolledApp = student.all_applications?.find((app: any) => app.status === 'enrolled');
+                           const approvedApp = enrolledApp || student.all_applications?.find((app: any) => app.status === 'approved');
                            return approvedApp && (
                              <button
                                onClick={() => openPaymentModal('application', approvedApp.id)}
@@ -5047,6 +5175,20 @@ const AdminStudentDetails: React.FC = () => {
                     )}
                   </div>
                   <div className="flex flex-col gap-3">
+                    {(() => {
+                      const isStephanie = student.student_email === 'stephaniecriistine25@gmail.com';
+                      if (isStephanie) {
+                        console.log('🔍 [STEPHANIE DEBUG] Rendering Scholarship Fee:', {
+                          student_is_scholarship_fee_paid: student.is_scholarship_fee_paid,
+                          all_applications: student.all_applications?.map((app: any) => ({
+                            id: app.id,
+                            status: app.status,
+                            is_scholarship_fee_paid: app.is_scholarship_fee_paid
+                          }))
+                        });
+                      }
+                      return null;
+                    })()}
                     {student.is_scholarship_fee_paid ? (
                       <div className="flex flex-col gap-3">
                         <div className="flex items-center space-x-2">
@@ -5104,8 +5246,9 @@ const AdminStudentDetails: React.FC = () => {
                           <span className="text-sm font-medium text-red-600">Not Paid</span>
                         </div>
                          {isPlatformAdmin && (() => {
-                           // Buscar aplicação aprovada para scholarship fee
-                           const approvedApp = student.all_applications?.find((app: any) => app.status === 'approved');
+                           // ✅ CORREÇÃO: Priorizar aplicação enrolled, depois approved
+                           const enrolledApp = student.all_applications?.find((app: any) => app.status === 'enrolled');
+                           const approvedApp = enrolledApp || student.all_applications?.find((app: any) => app.status === 'approved');
                            return approvedApp && (
                              <button
                                onClick={() => openPaymentModal('scholarship', approvedApp.id)}

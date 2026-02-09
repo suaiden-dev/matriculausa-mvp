@@ -1,6 +1,7 @@
 import React, { createContext, useContext, useState, useEffect, useCallback, ReactNode } from 'react';
 import { User as SupabaseUser } from '@supabase/supabase-js';
 import { supabase } from '../lib/supabase';
+import { StoredUtmAttribution } from '../types/utm';
 
 interface User {
   id: string;
@@ -17,6 +18,7 @@ interface User {
 export interface UserProfile {
   id: string;
   user_id: string;
+  email: string | null;
   full_name: string | null;
   phone: string | null;
   country: string | null;
@@ -30,7 +32,11 @@ export interface UserProfile {
   updated_at: string | null;
   is_application_fee_paid: boolean;
   has_paid_selection_process_fee: boolean;
-  has_paid_i20_control_fee?: boolean; // adicionada para refletir Overview
+  has_paid_i20_control_fee?: boolean;
+  selection_process_paid_at?: string | null;
+  application_fee_paid_at?: string | null;
+  scholarship_fee_paid_at?: string | null;
+  i20_paid_at?: string | null;
   is_admin: boolean; // legado: mantido por compatibilidade
   role?: 'student' | 'school' | 'admin' | 'affiliate_admin' | 'seller';
   stripe_customer_id: string | null;
@@ -66,7 +72,7 @@ interface AuthContextType {
   userProfile: UserProfile | null;
   login: (email: string, password: string) => Promise<void>;
   logout: () => Promise<void>;
-  register: (email: string, password: string, userData: { full_name: string; role: 'student' | 'school' | 'admin' | 'affiliate_admin' | 'seller'; [key: string]: any }) => Promise<void>;
+  register: (email: string, password: string, userData: { full_name: string; role: 'student' | 'school' | 'admin' | 'affiliate_admin' | 'seller'; [key: string]: any }, options?: SignUpOptions) => Promise<void>;
   switchRole: (newRole: 'student' | 'school' | 'admin' | 'affiliate_admin' | 'seller') => void;
   isAuthenticated: boolean;
   loading: boolean;
@@ -87,6 +93,12 @@ export const useAuth = () => {
 
 interface AuthProviderProps {
   children: ReactNode;
+}
+
+interface SignUpOptions {
+  referralCode?: string;
+  role?: 'student' | 'school' | 'admin' | 'affiliate_admin' | 'seller';
+  utm?: StoredUtmAttribution | null;
 }
 
 export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
@@ -752,6 +764,57 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
     return 'student';
   };
 
+  /**
+   * Persiste atribuição UTM no banco de dados
+   * 
+   * @param userId - ID do usuário (UUID)
+   * @param email - Email do usuário
+   * @param utm - Dados UTM a serem salvos
+   */
+  const persistUtmAttribution = async (
+    userId: string, 
+    email: string, 
+    utm?: StoredUtmAttribution | null
+  ): Promise<void> => {
+    // Se não há UTM, não faz nada
+    if (!utm) return;
+    
+    try {
+      console.log('[Auth] 📊 Persistindo atribuição UTM para usuário:', userId);
+      
+      const { error } = await supabase
+        .from('utm_attributions')
+        .insert({
+          user_id: userId,
+          email,
+          // Converte undefined para null (PostgreSQL não aceita undefined)
+          utm_source: utm.utm_source ?? null,
+          utm_medium: utm.utm_medium ?? null,
+          utm_campaign: utm.utm_campaign ?? null,
+          utm_term: utm.utm_term ?? null,
+          utm_content: utm.utm_content ?? null,
+          landing_page: utm.landing_page ?? null,
+          last_touch_page: utm.last_touch_page ?? null,
+          referrer: utm.referrer ?? null,
+          // ✅ NOVO: Campos de cliente que compartilhou o link
+          client_name: utm.client_name ?? null,
+          client_email: utm.client_email ?? null,
+          // Usa capturedAt do UTM ou timestamp atual
+          captured_at: utm.capturedAt ?? new Date().toISOString(),
+        });
+        
+      if (error) {
+        console.warn('[Auth] ⚠️ Não foi possível salvar atribuição UTM:', error);
+        // Não lança erro - falha silenciosa para não quebrar registro
+      } else {
+        console.log('[Auth] ✅ Atribuição UTM salva com sucesso');
+      }
+    } catch (err) {
+      console.warn('[Auth] ⚠️ Erro inesperado ao salvar atribuição UTM:', err);
+      // Não lança erro - falha silenciosa
+    }
+  };
+
 
 
   const login = async (email: string, password: string) => {
@@ -841,7 +904,7 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
   };
 
   // Função para registrar usuário
-  const register = async (email: string, password: string, userData: { full_name: string; role: 'student' | 'school' | 'admin' | 'affiliate_admin' | 'seller'; [key: string]: any }) => {
+  const register = async (email: string, password: string, userData: { full_name: string; role: 'student' | 'school' | 'admin' | 'affiliate_admin' | 'seller'; [key: string]: any }, options?: SignUpOptions) => {
     console.log('🔍 [USEAUTH] Iniciando função register');
     console.log('🔍 [USEAUTH] userData recebido:', userData);
     
@@ -892,11 +955,25 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
     // Normaliza o e-mail para evitar duplicidade por case/espacos
     const normalizedEmail = (email || '').trim().toLowerCase();
     
+    // Capturar informações de IP e User-Agent para conformidade legal
+    let clientInfo: { registration_ip: string | null; user_agent: string } = { 
+        registration_ip: null, 
+        user_agent: navigator.userAgent 
+    };
+    try {
+      const { getClientInfo } = await import('../utils/clientInfo');
+      clientInfo = await getClientInfo();
+    } catch (e) {
+      console.warn('⚠️ [USEAUTH] Erro ao obter informações do cliente:', e);
+    }
+
     const signUpData = {
       ...cleanUserData,
       name: cleanUserData.full_name, // redundância para garantir compatibilidade
       full_name: cleanUserData.full_name, // Adicionar full_name explicitamente
       email: normalizedEmail, // Adicionar email do aluno ao metadata
+      registration_ip: clientInfo.registration_ip, // Adicionado para o trigger de termos
+      user_agent: clientInfo.user_agent // Adicionado para o trigger de termos
     };
     
     console.log('🔍 [USEAUTH] signUpData final:', signUpData);
@@ -1064,6 +1141,12 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
               // Não falhar, o usuário pode fazer login manualmente depois
             } else {
               console.log('✅ [USEAUTH] Login automático realizado com sucesso', loginData);
+              
+              // ✅ Persistir atribuição UTM após login bem-sucedido (com sessão autenticada)
+              if (data?.user && options?.utm) {
+                await persistUtmAttribution(data.user.id, normalizedEmail, options.utm);
+              }
+              
               // O onAuthStateChange vai detectar a mudança e atualizar o estado
               }
             }
@@ -1113,6 +1196,10 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
         console.warn('⚠️ [USEAUTH] Erro na conversão do pacote:', err);
       }
     }
+
+    // ✅ NOVO: Enviar mensagem automática de boas-vindas no chat para novos alunos (registro por staff)
+    // A mensagem de boas-vindas agora é enviada automaticamente pelo trigger do banco de dados
+    // Não é mais necessário enviar manualmente aqui
   };
 
   // Função para trocar role do usuário (apenas para desenvolvimento/admin)

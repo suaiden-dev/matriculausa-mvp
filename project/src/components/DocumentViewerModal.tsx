@@ -18,39 +18,7 @@ const DocumentViewerModal: React.FC<DocumentViewerModalProps> = ({ documentUrl, 
   const [actualUrl, setActualUrl] = React.useState<string>(documentUrl);
   const [error, setError] = React.useState<string | null>(null);
   const [documentType, setDocumentType] = React.useState<'pdf' | 'image' | 'unknown'>('unknown');
-
-  // Função para tentar gerar signed URL se a URL pública falhar
-  const getSignedUrl = async (originalUrl: string): Promise<string | null> => {
-    try {
-      // Tentar diferentes buckets
-      const buckets = ['document-attachments', 'student-documents', 'zelle_comprovantes'];
-      
-      for (const bucket of buckets) {
-        try {
-          const urlParts = originalUrl.split(`/storage/v1/object/public/${bucket}/`);
-          if (urlParts.length === 2) {
-            const filePath = urlParts[1];
-            
-            const { data, error } = await supabase.storage
-              .from(bucket)
-              .createSignedUrl(filePath, 60 * 60); // 1 hora
-            
-            if (error) {
-              continue;
-            }
-            
-            return data.signedUrl;
-          }
-        } catch (e) {
-          continue;
-        }
-      }
-      
-      return null;
-    } catch (e) {
-      return null;
-    }
-  };
+  const [displayTitle, setDisplayTitle] = React.useState<string>(fileName || 'Document');
 
   // Detectar tipo de documento baseado na URL ou nome do arquivo
   const detectDocumentType = (url: string, name?: string): 'pdf' | 'image' | 'unknown' => {
@@ -91,7 +59,7 @@ const DocumentViewerModal: React.FC<DocumentViewerModalProps> = ({ documentUrl, 
       return 'image';
     }
     
-    // Fallback: verificar palavras-chave
+    // Fallback: verificar palavra-chave
     if (lowerName.includes('image') || lowerName.includes('photo') || lowerName.includes('captura') || lowerName.includes('wordmark')) {
       return 'image';
     }
@@ -105,62 +73,96 @@ const DocumentViewerModal: React.FC<DocumentViewerModalProps> = ({ documentUrl, 
       setLoading(true);
       setError(null);
       
-      // ✅ CORREÇÃO: Garantir que documentUrl seja sempre uma URL completa
-      let finalDocumentUrl = documentUrl;
+      let bucket = 'student-documents'; // Padrão
+      let path = documentUrl;
       
-      // Se documentUrl é um caminho relativo (não começa com http), converter para URL completa
-      if (documentUrl && !documentUrl.startsWith('http')) {
-        // Verificar se é um caminho do storage (começa com 'uploads/' ou similar)
-        if (documentUrl.includes('/') && !documentUrl.startsWith('http')) {
-          // ✅ CORREÇÃO: Tentar primeiro document-attachments (onde são salvos os documentos de new request)
-          // depois zelle_comprovantes (para comprovantes Zelle) e student-documents como fallback
-          const buckets = ['document-attachments', 'zelle_comprovantes', 'student-documents'];
-          
-          for (const bucket of buckets) {
-            const testUrl = `https://fitpynguasqqutuhzifx.supabase.co/storage/v1/object/public/${bucket}/${documentUrl}`;
-            
-            try {
-              const response = await fetch(testUrl, { method: 'HEAD' });
-              if (response.ok) {
-                finalDocumentUrl = testUrl;
-                break;
-              }
-            } catch (e) {
-              // Continuar para o próximo bucket
+      // Tentar extrair um nome de arquivo amigável da URL se fileName for genérico
+      const getFriendlyName = (url: string) => {
+        try {
+          const parts = url.split('/');
+          const lastPart = parts[parts.length - 1].split('?')[0];
+          // Se o nome começar com timestamp (como os nossos), tentar limpar
+          return lastPart.replace(/^\d+_/, '').replace(/%20/g, ' ');
+        } catch (e) {
+          return 'Document';
+        }
+      };
+
+      if (!documentUrl) {
+        setLoading(false);
+        return;
+      }
+
+      // 1. Extrair bucket e path se for uma URL completa do Supabase ou caminho relativo
+      if (documentUrl.startsWith('http')) {
+        if (documentUrl.includes('/storage/v1/object/public/')) {
+          const parts = documentUrl.split('/storage/v1/object/public/');
+          if (parts.length > 1) {
+            const pathParts = parts[1].split('/');
+            if (pathParts.length > 1) {
+              bucket = pathParts[0];
+              path = pathParts.slice(1).join('/');
             }
           }
-          
-          // Se nenhum bucket funcionou, usar document-attachments como padrão
-          if (!finalDocumentUrl.startsWith('http')) {
-            finalDocumentUrl = `https://fitpynguasqqutuhzifx.supabase.co/storage/v1/object/public/document-attachments/${documentUrl}`;
-          }
-        }
-      }
-      
-      // Detectar tipo de documento
-      const type = detectDocumentType(finalDocumentUrl, fileName);
-      setDocumentType(type);
-      
-      try {
-        // Primeiro tenta carregar a URL original
-        const response = await fetch(finalDocumentUrl, { method: 'HEAD' });
-        
-        if (response.ok) {
-          setActualUrl(finalDocumentUrl);
+        } else if (documentUrl.includes('/storage/v1/object/sign/')) {
+          setActualUrl(documentUrl);
+          setDocumentType(detectDocumentType(documentUrl, fileName));
           setLoading(false);
           return;
         }
-      } catch (e) {
-        // Erro ao testar URL original
+      } else {
+        // Se for um path relativo, se contém 'transfer-forms', trocar bucket
+        if (documentUrl.includes('transfer-forms')) {
+          bucket = 'document-attachments';
+        }
       }
       
-      // Se a URL original falhou, tentar signed URL
-      const signedUrl = await getSignedUrl(finalDocumentUrl);
-      if (signedUrl) {
-        setActualUrl(signedUrl);
-        setLoading(false);
+      // Definir o título se for genérico
+      if (!fileName || fileName === 'Document' || fileName === 'document.pdf') {
+        const title = getFriendlyName(documentUrl);
+        setDisplayTitle(title);
       } else {
-        setError('Failed to load document');
+        setDisplayTitle(fileName);
+      }
+
+      // 2. Gerar URL via Proxy (Edge Function)
+      // Usamos fetch com header de Autorização para manter a URL limpa e segura
+      const { data: { session } } = await supabase.auth.getSession();
+      const token = session?.access_token;
+      
+      const functionUrl = `https://fitpynguasqqutuhzifx.functions.supabase.co/document-proxy`;
+      const proxyUrl = `${functionUrl}?bucket=${encodeURIComponent(bucket)}&path=${encodeURIComponent(path)}`;
+      
+      console.log('🔍 [MODAL] Buscando documento via Proxy (Secure Fetch)');
+      
+      try {
+        const response = await fetch(proxyUrl, {
+          headers: {
+            'Authorization': token ? `Bearer ${token}` : '',
+            'apikey': import.meta.env.VITE_SUPABASE_ANON_KEY
+          }
+        });
+
+        if (!response.ok) {
+          if (response.status === 403) throw new Error('Acesso negado. Você não tem permissão para ver este documento.');
+          if (response.status === 404) throw new Error('Documento não encontrado no servidor.');
+          throw new Error(`Erro ao carregar documento: ${response.statusText}`);
+        }
+
+        const blob = await response.blob();
+        const blobUrl = URL.createObjectURL(blob);
+        
+        // Limpar URL anterior se existir
+        if (actualUrl && actualUrl.startsWith('blob:')) {
+          URL.revokeObjectURL(actualUrl);
+        }
+
+        setActualUrl(blobUrl);
+        setDocumentType(detectDocumentType(documentUrl, fileName));
+      } catch (err: any) {
+        console.error('🔍 [MODAL] Error fetching document:', err);
+        setError(err.message || 'Erro inesperado ao carregar o documento.');
+      } finally {
         setLoading(false);
       }
     };
@@ -343,7 +345,7 @@ const DocumentViewerModal: React.FC<DocumentViewerModalProps> = ({ documentUrl, 
         {/* Header com título e botões */}
         <div className="flex items-center justify-between p-4 border-b border-gray-200 bg-gray-50">
           <h3 className="text-lg font-semibold text-gray-800 truncate">
-            {fileName || 'Document'}
+            {displayTitle}
           </h3>
           <div className="flex gap-2">
             {!error && !loading && (

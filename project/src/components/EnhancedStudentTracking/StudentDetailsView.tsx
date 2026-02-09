@@ -745,20 +745,14 @@ const StudentDetailsView: React.FC<StudentDetailsViewProps> = ({
                           </span>
                           <span className="text-xs text-slate-500">
                             {(() => {
-                              // ✅ CORREÇÃO: Usar valor real pago se disponível, senão calcular
-                              if (studentDetails?.has_paid_selection_process_fee && realPaidAmounts?.selection_process !== undefined && realPaidAmounts.selection_process > 0) {
-                                // Usar valor real pago (já com desconto e convertido se PIX)
-                                return formatFeeAmount(realPaidAmounts.selection_process);
-                              } else {
-                                // Fallback: cálculo fixo para dados antigos sem registro
-                                const systemType = (studentDetails as any)?.system_type || 'legacy';
-                                const isSimplified = systemType === 'simplified';
-                                const baseSelectionFee = isSimplified ? 350 : 400;
-                                // ✅ CORREÇÃO: Para simplified, Selection Process Fee é fixo ($350), sem dependentes
-                                // Dependentes só afetam Application Fee ($100 por dependente)
-                                const finalAmount = isSimplified ? baseSelectionFee : baseSelectionFee + (studentDependents * 150);
-                                return formatFeeAmount(finalAmount);
-                              }
+                              // Affiliate admin: mostrar sempre o valor ORIGINAL da taxa (override ou base), não o valor real pago (que pode incluir taxas do gateway)
+                              const systemType = (studentDetails as any)?.system_type || 'legacy';
+                              const isSimplified = systemType === 'simplified';
+                              const baseSelectionFee = isSimplified ? 350 : 400;
+                              const originalAmount = studentDetails?.selection_process_fee_amount != null
+                                ? studentDetails.selection_process_fee_amount
+                                : (isSimplified ? baseSelectionFee : baseSelectionFee + (studentDependents * 150));
+                              return formatFeeAmount(originalAmount);
                             })()}
                           </span>
                         </div>
@@ -769,12 +763,12 @@ const StudentDetailsView: React.FC<StudentDetailsViewProps> = ({
                     <div className="w-full flex items-center justify-between p-3 rounded-lg border border-slate-200">
                       <div className="flex items-center justify-between w-full">
                         <div className="flex items-center space-x-3">
-                          <div className={`w-3 h-3 rounded-full ${scholarshipApplication?.is_application_fee_paid ? 'bg-green-500' : 'bg-red-500'}`}></div>
+                          <div className={`w-3 h-3 rounded-full ${studentDetails?.is_application_fee_paid ? 'bg-green-500' : 'bg-red-500'}`}></div>
                           <span className="text-sm font-medium text-slate-900">Application Fee</span>
                         </div>
                         <div className="flex flex-col items-end">
-                          <span className={`text-sm font-medium ${scholarshipApplication?.is_application_fee_paid ? 'text-green-700' : 'text-red-700'}`}>
-                            {scholarshipApplication?.is_application_fee_paid ? 'Paid' : 'Pending'}
+                          <span className={`text-sm font-medium ${studentDetails?.is_application_fee_paid ? 'text-green-700' : 'text-red-700'}`}>
+                            {studentDetails?.is_application_fee_paid ? 'Paid' : 'Pending'}
                           </span>
                            {scholarshipApplication?.is_application_fee_paid ? (
                              <span className="text-xs text-slate-500">
@@ -808,27 +802,22 @@ const StudentDetailsView: React.FC<StudentDetailsViewProps> = ({
                     <div className="w-full flex items-center justify-between p-3 rounded-lg border border-slate-200">
                       <div className="flex items-center justify-between w-full">
                         <div className="flex items-center space-x-3">
-                          <div className={`w-3 h-3 rounded-full ${scholarshipApplication?.is_scholarship_fee_paid ? 'bg-green-500' : 'bg-red-500'}`}></div>
+                          <div className={`w-3 h-3 rounded-full ${studentDetails?.is_scholarship_fee_paid ? 'bg-green-500' : 'bg-red-500'}`}></div>
                           <span className="text-sm font-medium text-slate-900">Scholarship Fee</span>
                         </div>
                         <div className="flex flex-col items-end">
-                          <span className={`text-sm font-medium ${scholarshipApplication?.is_scholarship_fee_paid ? 'text-green-700' : 'text-red-700'}`}>
-                            {scholarshipApplication?.is_scholarship_fee_paid ? 'Paid' : 'Pending'}
+                          <span className={`text-sm font-medium ${studentDetails?.is_scholarship_fee_paid ? 'text-green-700' : 'text-red-700'}`}>
+                            {studentDetails?.is_scholarship_fee_paid ? 'Paid' : 'Pending'}
                           </span>
                            <span className="text-xs text-slate-500">
                              {(() => {
-                               // ✅ CORREÇÃO: Usar valor real pago se disponível, senão calcular
-                               const hasAnyScholarshipPaid = scholarshipApplication?.is_scholarship_fee_paid || false;
-                               if (hasAnyScholarshipPaid && realPaidAmounts?.scholarship !== undefined && realPaidAmounts.scholarship > 0) {
-                                 // Usar valor real pago (já com desconto e convertido se PIX)
-                                 return formatFeeAmount(realPaidAmounts.scholarship);
-                               } else {
-                                 // Fallback: cálculo fixo para dados antigos sem registro
-                                 const systemType = (studentDetails as any)?.system_type || 'legacy';
-                                 const isSimplified = systemType === 'simplified';
-                                 const scholarshipFee = isSimplified ? 550 : 900;
-                                 return formatFeeAmount(scholarshipFee);
-                               }
+                               // Affiliate admin: mostrar sempre o valor ORIGINAL da taxa (override ou base)
+                               const systemType = (studentDetails as any)?.system_type || 'legacy';
+                               const isSimplified = systemType === 'simplified';
+                               const originalAmount = studentDetails?.scholarship_fee_amount != null
+                                 ? studentDetails.scholarship_fee_amount
+                                 : (isSimplified ? 550 : 900);
+                               return formatFeeAmount(originalAmount);
                              })()}
                            </span>
                         </div>
@@ -848,16 +837,11 @@ const StudentDetailsView: React.FC<StudentDetailsViewProps> = ({
                           </span>
                           <span className="text-xs text-slate-500">
                             {(() => {
-                              // ✅ CORREÇÃO: Usar valor real pago se disponível, senão calcular
-                              const hasAnyScholarshipPaid = scholarshipApplication?.is_scholarship_fee_paid || false;
-                              if (hasAnyScholarshipPaid && studentDetails?.has_paid_i20_control_fee && realPaidAmounts?.i20_control !== undefined && realPaidAmounts.i20_control > 0) {
-                                // Usar valor real pago (já com desconto e convertido se PIX)
-                                return formatFeeAmount(realPaidAmounts.i20_control);
-                              } else {
-                                // Fallback: cálculo fixo para dados antigos sem registro
-                                // I-20 Control Fee - sempre 900 para ambos os sistemas (sem dependentes)
-                                return formatFeeAmount(900);
-                              }
+                              // Affiliate admin: mostrar sempre o valor ORIGINAL da taxa (override ou 900)
+                              const originalAmount = studentDetails?.i20_control_fee_amount != null
+                                ? studentDetails.i20_control_fee_amount
+                                : 900;
+                              return formatFeeAmount(originalAmount);
                             })()}
                           </span>
                         </div>

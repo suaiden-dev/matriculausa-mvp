@@ -29,7 +29,8 @@ export const useProfileForm = ({ university, onSuccess, onError }: UseProfileFor
       admissionsEmail: university?.contact?.admissionsEmail || '',
       fax: university?.contact?.fax || ''
     },
-    programs: university?.programs || []
+    programs: university?.programs || [],
+    university_fees_page_url: university?.university_fees_page_url || ''
   }), [university]);
 
   const [formData, setFormData] = useState<ProfileFormData>(initializeFormData());
@@ -112,6 +113,7 @@ export const useProfileForm = ({ university, onSuccess, onError }: UseProfileFor
         location: currentData.location.trim() || null,
         contact: currentData.contact,
         programs: currentData.programs,
+        university_fees_page_url: currentData.university_fees_page_url?.trim() || null,
         updated_at: new Date().toISOString()
       };
 

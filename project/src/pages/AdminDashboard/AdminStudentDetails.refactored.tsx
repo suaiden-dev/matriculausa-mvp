@@ -1,5 +1,5 @@
-﻿import React, { useState, Suspense, lazy, useCallback } from 'react';
-import { useParams, useNavigate } from 'react-router-dom';
+﻿import React, { useState, Suspense, lazy, useCallback, useEffect } from 'react';
+import { useParams, useNavigate, useSearchParams } from 'react-router-dom';
 import { supabase } from '../../lib/supabase';
 import { useAuth } from '../../hooks/useAuth';
 import { useFeeConfig } from '../../hooks/useFeeConfig';
@@ -16,6 +16,7 @@ import { generateTermAcceptancePDF, StudentTermAcceptanceData } from '../../util
 import { recordIndividualFeePayment } from '../../lib/paymentRecorder';
 import { useStudentLogs } from '../../hooks/useStudentLogs';
 import { getGrossPaidAmounts } from '../../utils/paymentConverter';
+import { handleViewDocument } from '../../components/EnhancedStudentTracking/utils/documentUtils';
 
 // Componentes de UI Base
 import {
@@ -37,6 +38,7 @@ const PaymentStatusCard = lazy(() => import('../../components/AdminDashboard/Stu
 const ApplicationProgressCard = lazy(() => import('../../components/AdminDashboard/StudentDetails/ApplicationProgressCard'));
 const I20DeadlineTimerCard = lazy(() => import('../../components/AdminDashboard/StudentDetails/I20DeadlineTimerCard'));
 const TermAcceptancesCard = lazy(() => import('../../components/AdminDashboard/StudentDetails/TermAcceptancesCard'));
+const IdentityPhotoVerificationCard = lazy(() => import('../../components/AdminDashboard/StudentDetails/IdentityPhotoVerificationCard'));
 
 // Modals
 import PaymentConfirmationModal from '../../components/AdminDashboard/StudentDetails/PaymentConfirmationModal';
@@ -72,7 +74,8 @@ const TabLoadingSkeleton: React.FC = () => (
 const AdminStudentDetails: React.FC = () => {
   const { profileId } = useParams();
   const navigate = useNavigate();
-  const { user } = useAuth();
+  const [searchParams] = useSearchParams();
+  const { user, userProfile } = useAuth();
   const queryClient = useQueryClient();
   
   // React Query Hooks
@@ -83,9 +86,116 @@ const AdminStudentDetails: React.FC = () => {
   // Dados secundários
   const secondaryDataQuery = useStudentSecondaryDataQuery(student?.user_id);
   const pendingZelleQuery = usePendingZellePaymentsQuery(student?.user_id);
+  const [directTermAcceptances, setDirectTermAcceptances] = useState<any[] | null>(null);
   
+  // Forçar refetch de dados secundários se estiverem vazios no mount/local refresh.
+  React.useEffect(() => {
+    if (!student?.user_id) return;
+    try {
+      const hasData = !!secondaryDataQuery.data;
+      const termCount = (secondaryDataQuery.data && Array.isArray(secondaryDataQuery.data.termAcceptances))
+        ? secondaryDataQuery.data.termAcceptances.length
+        : 0;
+
+      if (!hasData || termCount === 0) {
+        console.log('🔁 [AdminStudentDetails] Forçando refetch de secondaryDataQuery (no cliente local)...', { hasData, termCount });
+        secondaryDataQuery.refetch().catch(err => console.error('Erro ao refetch secondaryDataQuery:', err));
+      }
+    } catch (err) {
+      console.error('Erro ao verificar/refetch secondaryDataQuery:', err);
+    }
+  }, [student?.user_id]);
+
+  // Hotfix: se o RPC/cache não trouxer dados, buscar diretamente do banco
+  React.useEffect(() => {
+    let cancelled = false;
+    const loadDirectTermAcceptances = async () => {
+      if (!student?.user_id) return;
+      const hasData = !!secondaryDataQuery.data;
+      const termCount = (secondaryDataQuery.data && Array.isArray(secondaryDataQuery.data.termAcceptances))
+        ? secondaryDataQuery.data.termAcceptances.length
+        : 0;
+
+      if (hasData && termCount > 0) {
+        setDirectTermAcceptances(null);
+        return;
+      }
+
+      try {
+        console.log('🔁 [AdminStudentDetails] Hotfix: tentando RPC get_admin_student_secondary_data...');
+        const { data: rpcData, error: rpcError } = await supabase.rpc('get_admin_student_secondary_data', {
+          target_user_id: student.user_id
+        });
+
+        if (!rpcError && rpcData) {
+          const parsed = typeof rpcData === 'string' ? JSON.parse(rpcData) : rpcData;
+          const termAcceptancesFromRpc = parsed.term_acceptances || [];
+          if (!cancelled) {
+            setDirectTermAcceptances(termAcceptancesFromRpc);
+            console.log('🔁 [AdminStudentDetails] Hotfix: directTermAcceptances loaded from RPC:', termAcceptancesFromRpc.length);
+            return;
+          }
+        } else {
+          console.log('🔁 [AdminStudentDetails] Hotfix: RPC não disponível ou retornou erro, fallback para select simples', rpcError);
+        }
+
+        // Fallback simples: buscar acceptances sem tentar usar relationships no select
+        const { data, error } = await supabase
+          .from('comprehensive_term_acceptance')
+          .select('*')
+          .eq('user_id', student.user_id)
+          .order('accepted_at', { ascending: false });
+
+        if (error) {
+          console.error('🔁 [AdminStudentDetails] Hotfix fetch error (fallback):', error);
+          return;
+        }
+
+        if (cancelled) return;
+
+        const mapped = (data || []).map((acc: any) => ({
+          ...acc,
+          user_email: acc.user_email || null,
+          user_full_name: acc.user_full_name || null,
+          term_title: acc.term_title || 'Term',
+          term_content: acc.term_content || '',
+          identity_photo_path: acc.identity_photo_path || acc.photo_path || null,
+          identity_photo_name: acc.identity_photo_name || null,
+          identity_photo_status: acc.identity_photo_status || null,
+          identity_photo_rejection_reason: acc.identity_photo_rejection_reason || null,
+          identity_photo_reviewed_at: acc.identity_photo_reviewed_at || null,
+          identity_photo_reviewed_by: acc.identity_photo_reviewed_by || null,
+        }));
+
+        setDirectTermAcceptances(mapped);
+        console.log('🔁 [AdminStudentDetails] Hotfix: directTermAcceptances loaded (fallback):', mapped.length);
+      } catch (err) {
+        console.error('🔁 [AdminStudentDetails] Hotfix exception:', err);
+      }
+    };
+
+    loadDirectTermAcceptances();
+    return () => { cancelled = true; };
+  }, [student?.user_id, secondaryDataQuery.data]);
+
   // Extrair dados secundários
   const termAcceptances = secondaryDataQuery.data?.termAcceptances || [];
+  // Debug: log secondary data for admin details
+  console.log('🔍 [AdminStudentDetails] secondaryDataQuery.data:', secondaryDataQuery.data);
+  console.log('🔍 [AdminStudentDetails] termAcceptances:', termAcceptances);
+  
+  // Log específico para status de foto de identidade
+  const identityPhotoAcceptance = termAcceptances.find((acc: any) => 
+    acc.term_type === 'checkout_terms' && (acc.identity_photo_path || acc.identity_photo_status)
+  );
+  if (identityPhotoAcceptance) {
+    console.log('🔍 [AdminStudentDetails] Identity Photo Status:', {
+      id: identityPhotoAcceptance.id,
+      status: identityPhotoAcceptance.identity_photo_status,
+      rejection_reason: identityPhotoAcceptance.identity_photo_rejection_reason,
+      reviewed_at: identityPhotoAcceptance.identity_photo_reviewed_at
+    });
+  }
   const [realPaidAmounts, setRealPaidAmounts] = useState<Record<string, number>>({});
   const [loadingPaidAmounts, setLoadingPaidAmounts] = useState<Record<string, boolean>>({});
   const pendingZellePayments = pendingZelleQuery.data || [];
@@ -114,6 +224,8 @@ const AdminStudentDetails: React.FC = () => {
         secondaryDataQuery.refetch(),
         pendingZelleQuery.refetch(),
       ]);
+      // ✅ Recarregar realPaidAmounts após refresh
+      await reloadRealPaidAmounts();
     } finally {
       setTimeout(() => {
         setIsRefreshing(false);
@@ -122,12 +234,15 @@ const AdminStudentDetails: React.FC = () => {
   };
   
   const { saving, saveProfile, markFeeAsPaid, approveDocument, rejectDocument } = useAdminStudentActions();
-  const { getFeeAmount, formatFeeAmount, hasOverride, userSystemType, userFeeOverrides } = useFeeConfig(student?.user_id);
+  const { getFeeAmount, formatFeeAmount, hasOverride, userSystemType, userFeeOverrides, loadUserFeeOverrides } = useFeeConfig(student?.user_id);
   const { logAction } = useStudentLogs(student?.student_id || '');
 
   /**
    * Valida e normaliza valores pagos usando a mesma lógica do Payment Management
    * Se o valor estiver muito discrepante (provavelmente BRL não convertido), usa valores fixos em dólar
+   * 
+   * ✅ NOVO: Se não há valores em realPaidAmounts MAS a flag de pagamento está marcada,
+   * calcula o valor esperado baseado na configuração de taxas (para pagamentos legados)
    */
   const validateAndNormalizePaidAmounts = React.useCallback((
     realPaidAmounts: Record<string, number>,
@@ -136,7 +251,14 @@ const AdminStudentDetails: React.FC = () => {
     feeAmountFn: (feeType: string) => number,
     dependents: number = 0,
     hasMatriculaRewardsDiscount: boolean = false,
-    studentHasSellerCode: boolean = false
+    studentHasSellerCode: boolean = false,
+    // ✅ NOVO: Receber as flags de pagamento para fallback
+    paymentFlags?: {
+      has_paid_selection: boolean;
+      has_paid_application: boolean;
+      has_paid_scholarship: boolean;
+      has_paid_i20: boolean;
+    }
   ): Record<string, number> => {
     const normalized: Record<string, number> = {};
     
@@ -180,6 +302,22 @@ const AdminStudentDetails: React.FC = () => {
           normalized.selection_process = expectedSelectionProcess + dependentCost;
         }
       }
+    } else if (paymentFlags?.has_paid_selection) {
+      // ✅ NOVO: Fallback para pagamentos legados sem registro em individual_fee_payments
+      console.log(`[AdminStudentDetails] 💡 Pagamento legado detectado para selection_process - calculando valor esperado`);
+      const hasMatrDiscount = hasMatriculaRewardsDiscount || studentHasSellerCode;
+      let expectedSelectionProcess: number;
+      if (hasMatrDiscount) {
+        expectedSelectionProcess = 350; // $400 - $50 desconto
+      } else {
+        expectedSelectionProcess = sysType === 'simplified' ? 350 : 400;
+      }
+      
+      if (feeOverrides?.selection_process_fee !== undefined) {
+        normalized.selection_process = feeOverrides.selection_process_fee;
+      } else {
+        normalized.selection_process = expectedSelectionProcess + dependentCost;
+      }
     }
 
     // Scholarship Fee
@@ -197,6 +335,15 @@ const AdminStudentDetails: React.FC = () => {
           normalized.scholarship = expectedScholarship;
         }
       }
+    } else if (paymentFlags?.has_paid_scholarship) {
+      // ✅ NOVO: Fallback para pagamentos legados
+      console.log(`[AdminStudentDetails] 💡 Pagamento legado detectado para scholarship - calculando valor esperado`);
+      const expectedScholarship = sysType === 'simplified' ? 550 : 900;
+      if (feeOverrides?.scholarship_fee !== undefined) {
+        normalized.scholarship = feeOverrides.scholarship_fee;
+      } else {
+        normalized.scholarship = expectedScholarship;
+      }
     }
 
     // I-20 Control Fee
@@ -213,6 +360,15 @@ const AdminStudentDetails: React.FC = () => {
         } else {
           normalized.i20_control = expectedI20Control;
         }
+      }
+    } else if (paymentFlags?.has_paid_i20) {
+      // ✅ NOVO: Fallback para pagamentos legados
+      console.log(`[AdminStudentDetails] 💡 Pagamento legado detectado para i20_control - calculando valor esperado`);
+      const expectedI20Control = feeAmountFn('i20_control_fee');
+      if (feeOverrides?.i20_control_fee !== undefined) {
+        normalized.i20_control = feeOverrides.i20_control_fee;
+      } else {
+        normalized.i20_control = expectedI20Control;
       }
     }
 
@@ -233,6 +389,14 @@ const AdminStudentDetails: React.FC = () => {
           normalized.application += dependents * 100;
         }
       }
+    } else if (paymentFlags?.has_paid_application) {
+      // ✅ NOVO: Fallback para pagamentos legados
+      console.log(`[AdminStudentDetails] 💡 Pagamento legado detectado para application - calculando valor esperado`);
+      const expectedApplicationFee = feeAmountFn('application_fee');
+      normalized.application = expectedApplicationFee;
+      if (dependents > 0) {
+        normalized.application += dependents * 100;
+      }
     }
 
     return normalized;
@@ -252,7 +416,7 @@ const AdminStudentDetails: React.FC = () => {
     handleUploadTransferForm,
     handleApproveTransferFormUpload,
     handleRejectTransferFormUpload
-  } = useTransferForm(student, isPlatformAdmin, user?.id);
+  } = useTransferForm(student, isPlatformAdmin, user?.id, user?.email, logAction);
   
   // Hooks para Document Requests
   const {
@@ -281,7 +445,7 @@ const AdminStudentDetails: React.FC = () => {
     handleEditNote,
     handleSaveEditNote,
     handleDeleteNote
-  } = useAdminNotes(student, user?.id, setStudent);
+  } = useAdminNotes(student, user?.id, setStudent, logAction, student?.student_id);
   
   // Hooks para Document Request Handlers
   const {
@@ -295,12 +459,20 @@ const AdminStudentDetails: React.FC = () => {
     handleDownloadDocument,
     handleEditTemplate,
     handleDeleteDocumentRequest
-  } = useDocumentRequestHandlers(student, user?.id, setDocumentRequests);
+  } = useDocumentRequestHandlers(student, user?.id, setDocumentRequests, logAction, student?.student_id);
 
   // Outros estados locais
   const [activeTab, setActiveTab] = useState<TabId>('overview');
   const [dependents, setDependents] = useState(0);
   const [isEditing, setIsEditing] = useState(false);
+  
+  // Ler parâmetro 'tab' da URL e definir aba inicial
+  useEffect(() => {
+    const tabParam = searchParams.get('tab');
+    if (tabParam && ['overview', 'documents', 'scholarships', 'logs'].includes(tabParam)) {
+      setActiveTab(tabParam as TabId);
+    }
+  }, [searchParams]);
   const [expandedApps, setExpandedApps] = useState<Record<string, boolean>>({});
   const [isProgressExpanded, setIsProgressExpanded] = useState(false);
   const [i20Deadline, setI20Deadline] = useState<string | null>(null);
@@ -310,6 +482,7 @@ const AdminStudentDetails: React.FC = () => {
   const [uploadingDocs, setUploadingDocs] = useState<Record<string, boolean>>({});
   const [approvingDocs, setApprovingDocs] = useState<Record<string, boolean>>({});
   const [rejectingDocs] = useState<Record<string, boolean>>({});
+  const [processingIdentityPhoto, setProcessingIdentityPhoto] = useState(false);
   
   // Estados de modal
   const [showPaymentModal, setShowPaymentModal] = useState(false);
@@ -329,6 +502,13 @@ const AdminStudentDetails: React.FC = () => {
   // Estados de dados secundários (alguns ainda são locais)
   const [referralInfo, setReferralInfo] = useState<any>(null);
   const [hasMatriculaRewardsDiscount, setHasMatriculaRewardsDiscount] = useState(false);
+  const [matriculaRewardsInfo, setMatriculaRewardsInfo] = useState<{
+    name: string | null;
+    email: string | null;
+    code: string;
+    usedAt: string;
+  } | null>(null);
+  const [loadingMatriculaRewards, setLoadingMatriculaRewards] = useState(false);
   // termAcceptances, realPaidAmounts e pendingZellePayments agora vêm dos React Query hooks (definidos acima)
   
   // Estados de edição
@@ -339,6 +519,8 @@ const AdminStudentDetails: React.FC = () => {
   const [savingFees, setSavingFees] = useState(false);
   const [editingPaymentMethod, setEditingPaymentMethod] = useState<string | null>(null);
   const [savingPaymentMethod, setSavingPaymentMethod] = useState(false);
+  // ✅ Estado para forçar recarregamento de overrides no PaymentStatusCard
+  const [overridesRefreshKey, setOverridesRefreshKey] = useState(0);
 
   // Permissões (isPlatformAdmin já definido acima)
   const canEditProfile = isPlatformAdmin;
@@ -512,9 +694,42 @@ const AdminStudentDetails: React.FC = () => {
       try {
         const amounts = await getGrossPaidAmounts(student.user_id, ['selection_process', 'scholarship', 'i20_control', 'application']);
         
+        // ✅ DEBUG: Log detalhado dos valores ANTES da normalização
+        console.log(`[AdminStudentDetails] 🔍 DEBUG - Valores BRUTOS retornados por getGrossPaidAmounts para ${student.student_email}:`, {
+          user_id: student.user_id,
+          email: student.student_email,
+          amounts_raw: amounts,
+          amounts_raw_keys: Object.keys(amounts),
+          amounts_raw_values: Object.values(amounts),
+          amounts_raw_selection: amounts.selection_process,
+          amounts_raw_application: amounts.application,
+          amounts_raw_scholarship: amounts.scholarship,
+          amounts_raw_i20: amounts.i20_control,
+          has_paid_selection: student.has_paid_selection_process_fee,
+          has_paid_application: student.is_application_fee_paid,
+          has_paid_scholarship: student.is_scholarship_fee_paid,
+          has_paid_i20: student.has_paid_i20_control_fee
+        });
+        
         // ✅ APLICAR VALIDAÇÃO: Usar a mesma lógica do Payment Management
         // Se valores estiverem muito discrepantes (provavelmente BRL não convertido), usar valores fixos em dólar
-        const hasMatrFromSellerCode = student?.seller_referral_code && /^MATR/i.test(student.seller_referral_code);
+        const hasMatrFromSellerCode = !!(student?.seller_referral_code && /^MATR/i.test(student.seller_referral_code));
+        
+        console.log(`[AdminStudentDetails] 🔍 DEBUG - Parâmetros para validateAndNormalizePaidAmounts:`, {
+          amounts,
+          userSystemType,
+          userFeeOverrides,
+          dependents: student?.dependents || 0,
+          hasMatriculaRewardsDiscount,
+          hasMatrFromSellerCode,
+          paymentFlags: {
+            has_paid_selection: student.has_paid_selection_process_fee,
+            has_paid_application: student.is_application_fee_paid,
+            has_paid_scholarship: student.is_scholarship_fee_paid,
+            has_paid_i20: student.has_paid_i20_control_fee
+          }
+        });
+        
         const normalizedAmounts = validateAndNormalizePaidAmounts(
           amounts,
           userSystemType,
@@ -522,8 +737,21 @@ const AdminStudentDetails: React.FC = () => {
           getFeeAmount,
           student?.dependents || 0,
           hasMatriculaRewardsDiscount,
-          !!student?.seller_referral_code && hasMatrFromSellerCode
+          hasMatrFromSellerCode,
+          // ✅ NOVO: Passar flags de pagamento para fallback de pagamentos legados
+          {
+            has_paid_selection: student.has_paid_selection_process_fee,
+            has_paid_application: student.is_application_fee_paid,
+            has_paid_scholarship: student.is_scholarship_fee_paid,
+            has_paid_i20: student.has_paid_i20_control_fee
+          }
         );
+        
+        console.log('[AdminStudentDetails] 🔍 DEBUG - Resultado da normalização:', {
+          input_amounts: amounts,
+          output_normalized: normalizedAmounts,
+          was_empty: Object.keys(normalizedAmounts).length === 0
+        });
         
         setRealPaidAmounts(normalizedAmounts);
         console.log('[AdminStudentDetails] ✅ realPaidAmounts carregado e normalizado:', normalizedAmounts);
@@ -544,7 +772,86 @@ const AdminStudentDetails: React.FC = () => {
     loadRealPaidAmounts();
     // Remover validateAndNormalizePaidAmounts das dependências pois é estável (useCallback com [] vazio)
     // Remover getFeeAmount também, pois pode mudar a cada render mas não afeta a lógica de quando carregar
-  }, [student?.user_id, userSystemType, userFeeOverrides, student?.dependents, hasMatriculaRewardsDiscount, student?.seller_referral_code]);
+  }, [
+    student?.user_id, 
+    userSystemType, 
+    userFeeOverrides, 
+    student?.dependents, 
+    hasMatriculaRewardsDiscount, 
+    student?.seller_referral_code,
+    // ✅ NOVO: Adicionar flags de pagamento para recarregar quando status mudar
+    student?.has_paid_selection_process_fee,
+    student?.is_application_fee_paid,
+    student?.is_scholarship_fee_paid,
+    student?.has_paid_i20_control_fee
+  ]);
+
+  // Função para recarregar realPaidAmounts (força recarregamento mesmo se dependências não mudaram)
+  const reloadRealPaidAmounts = React.useCallback(async () => {
+    if (!student?.user_id) return;
+    
+    // Resetar refs para forçar recarregamento
+    lastLoadedUserIdRef.current = null;
+    lastLoadedDepsRef.current = '';
+    isLoadingRef.current = false;
+    
+    setLoadingPaidAmounts({
+      selection_process: true,
+      scholarship: true,
+      i20_control: true,
+      application: true,
+    });
+    
+    try {
+      const amounts = await getGrossPaidAmounts(student.user_id, ['selection_process', 'scholarship', 'i20_control', 'application']);
+      
+      // ✅ APLICAR VALIDAÇÃO: Usar a mesma lógica do Payment Management
+      const hasMatrFromSellerCode = !!(student?.seller_referral_code && /^MATR/i.test(student.seller_referral_code));
+      const normalizedAmounts = validateAndNormalizePaidAmounts(
+        amounts,
+        userSystemType,
+        userFeeOverrides,
+        getFeeAmount,
+        student?.dependents || 0,
+        hasMatriculaRewardsDiscount,
+        hasMatrFromSellerCode,
+        // ✅ NOVO: Passar flags de pagamento para fallback de pagamentos legados
+        {
+          has_paid_selection: student.has_paid_selection_process_fee,
+          has_paid_application: student.is_application_fee_paid,
+          has_paid_scholarship: student.is_scholarship_fee_paid,
+          has_paid_i20: student.has_paid_i20_control_fee
+        }
+      );
+      
+      setRealPaidAmounts(normalizedAmounts);
+      console.log('[AdminStudentDetails] ✅ realPaidAmounts recarregado após refresh/save:', normalizedAmounts);
+    } catch (error) {
+      console.error('[AdminStudentDetails] Erro ao recarregar valores brutos pagos:', error);
+      setRealPaidAmounts({});
+    } finally {
+      setLoadingPaidAmounts({
+        selection_process: false,
+        scholarship: false,
+        i20_control: false,
+        application: false,
+      });
+    }
+  }, [
+    student?.user_id, 
+    student?.dependents, 
+    student?.seller_referral_code, 
+    userSystemType, 
+    userFeeOverrides, 
+    hasMatriculaRewardsDiscount, 
+    getFeeAmount, 
+    validateAndNormalizePaidAmounts,
+    // ✅ NOVO: Adicionar flags de pagamento
+    student?.has_paid_selection_process_fee,
+    student?.is_application_fee_paid,
+    student?.is_scholarship_fee_paid,
+    student?.has_paid_i20_control_fee
+  ]);
 
   // Carregar referral info quando necessário (ainda é local pois depende de seller_referral_code)
   React.useEffect(() => {
@@ -554,6 +861,56 @@ const AdminStudentDetails: React.FC = () => {
       setReferralInfo(null);
     }
   }, [student?.seller_referral_code]);
+
+  // Carregar informações do Matricula Rewards (quem indicou este aluno usando código MATR)
+  // Usa os dados do secondaryDataQuery que já carrega via RPC (contorna RLS)
+  React.useEffect(() => {
+    // Usar dados do secondaryDataQuery que já carrega matricula_rewards_info via RPC
+    const rewardsInfo = secondaryDataQuery.data?.matriculaRewardsInfo;
+    const isLoading = secondaryDataQuery.isLoading;
+
+    console.log('🔍 [MatriculaRewards] secondaryDataQuery data:', secondaryDataQuery.data);
+    console.log('🔍 [MatriculaRewards] Matricula Rewards info from query:', rewardsInfo);
+    console.log('🔍 [MatriculaRewards] Loading:', isLoading);
+
+    setLoadingMatriculaRewards(isLoading);
+
+    // Se não há informações de Matricula Rewards ou é null, limpar estado
+    if (!rewardsInfo || rewardsInfo === 'null' || (typeof rewardsInfo === 'object' && Object.keys(rewardsInfo).length === 0)) {
+      console.log('ℹ️ [MatriculaRewards] No MATR code found for this student');
+      setMatriculaRewardsInfo(null);
+      return;
+    }
+
+    // Extrair informações do resultado da RPC
+    // A RPC retorna: code, used_at, referrer_id, referrer_name, referrer_email
+    const referrerName = rewardsInfo.referrer_name || null;
+    const referrerEmail = rewardsInfo.referrer_email || null;
+    const code = rewardsInfo.code || null;
+    const usedAt = rewardsInfo.used_at || null; // Campo retornado pela RPC é 'used_at'
+
+    // Se não temos código, não há nada para mostrar
+    if (!code) {
+      console.log('ℹ️ [MatriculaRewards] No code found in rewards info');
+      setMatriculaRewardsInfo(null);
+      return;
+    }
+
+    console.log('✅ [MatriculaRewards] Found Matricula Rewards info:', {
+      code,
+      referrerName,
+      referrerEmail,
+      usedAt
+    });
+
+    setMatriculaRewardsInfo({
+      name: referrerName,
+      email: referrerEmail,
+      code: code,
+      usedAt: usedAt // Usar used_at da RPC
+    });
+    console.log('✅ [MatriculaRewards] Info set successfully');
+  }, [secondaryDataQuery.data?.matriculaRewardsInfo, secondaryDataQuery.isLoading]);
 
   // Pagamentos Zelle pendentes agora vêm do usePendingZellePaymentsQuery hook
 
@@ -585,7 +942,7 @@ const AdminStudentDetails: React.FC = () => {
 
         // ✅ CORREÇÃO: Incluir uploads na query para garantir que apareçam no DocumentsView
         const fields = 'id,title,description,due_date,is_global,university_id,scholarship_application_id,created_at,updated_at,template_url,attachment_url';
-        const fieldsWithUploads = `${fields},document_request_uploads(*,reviewed_by,reviewed_at)`;
+        const fieldsWithUploads = `${fields},document_request_uploads(*)`;
 
         // ✅ OTIMIZAÇÃO: Executar queries em paralelo
         const [specificResult, globalResult] = await Promise.all([
@@ -756,11 +1113,42 @@ const AdminStudentDetails: React.FC = () => {
   };
 
   // Handlers
-  const handleOpenChat = useCallback(() => {
-    if (student) {
-      navigate(`/admin/chat/${student.user_id}`);
+  const handleOpenChat = useCallback(async () => {
+    if (student?.user_id) {
+      // First, try to find existing conversation with this student
+      try {
+        let query = supabase
+          .from('admin_student_conversations')
+          .select('id, admin_id')
+          .eq('student_id', student.user_id);
+
+        // For affiliate admins, only look for their own conversations
+        // For regular admins, look for any existing conversation with this student
+        if (userProfile && userProfile.role === 'affiliate_admin') {
+          query = query.eq('admin_id', user?.id);
+        }
+
+        const { data: existingConversations, error } = await query;
+
+        if (error) {
+          console.error('Error finding existing conversation:', error);
+        }
+
+        if (existingConversations && existingConversations.length > 0) {
+          // Use the first existing conversation (most recent)
+          const existingConversation = existingConversations[0];
+          navigate(`/admin/dashboard/users?tab=messages&conversation=${existingConversation.id}&recipient_id=${student.user_id}`);
+        } else {
+          // Navigate to create new conversation
+          navigate(`/admin/dashboard/users?tab=messages&recipient_id=${student.user_id}`);
+        }
+      } catch (e) {
+        console.error('Error in handleOpenChat:', e);
+        // Fallback to creating new conversation
+        navigate(`/admin/dashboard/users?tab=messages&recipient_id=${student.user_id}`);
+      }
     }
-  }, [student, navigate]);
+  }, [student, user, userProfile, navigate]);
 
   const handleBack = useCallback(() => {
     navigate(-1);
@@ -786,14 +1174,42 @@ const AdminStudentDetails: React.FC = () => {
       setIsEditing(false);
       // Invalidar queries relacionadas
       queryClient.invalidateQueries({ queryKey: queryKeys.students.details(profileId) });
+      
+      // Log da ação
+      try {
+        await logAction(
+          'profile_update',
+          `Student profile updated by platform admin`,
+          user?.id || '',
+          'admin',
+          {
+            updated_fields: {
+              full_name: student.student_name,
+              email: student.student_email,
+              phone: student.phone,
+              country: student.country,
+              field_of_interest: student.field_of_interest,
+              academic_level: student.academic_level,
+              gpa: student.gpa,
+              english_proficiency: student.english_proficiency,
+              dependents: dependents,
+              desired_scholarship_range: student.desired_scholarship_range,
+            },
+            updated_by: user?.email || 'Platform Admin'
+          }
+        );
+      } catch (logError) {
+        console.error('Failed to log profile update:', logError);
+      }
+      
       alert('Profile saved successfully!');
     } else {
       alert('Error saving profile: ' + result.error);
     }
-  }, [student, dependents, saveProfile, profileId, queryClient]);
+  }, [student, dependents, saveProfile, profileId, queryClient, user, logAction]);
 
-  const handleMarkAsPaid = useCallback((feeType: string) => {
-    setPendingPayment({ fee_type: feeType });
+  const handleMarkAsPaid = useCallback((feeType: 'selection_process' | 'application' | 'scholarship' | 'i20_control') => {
+    setPendingPayment({ fee_type: feeType, payment_method: 'manual' });
     setPaymentAmount(getFeeAmount(feeType));
     setShowPaymentModal(true);
   }, [getFeeAmount]);
@@ -984,7 +1400,7 @@ const AdminStudentDetails: React.FC = () => {
         const updatedAmounts = await getGrossPaidAmounts(student.user_id, ['selection_process', 'scholarship', 'i20_control', 'application']);
         
         // ✅ APLICAR VALIDAÇÃO: Usar a mesma lógica do Payment Management
-        const hasMatrFromSellerCode = student?.seller_referral_code && /^MATR/i.test(student.seller_referral_code);
+        const hasMatrFromSellerCode = !!(student?.seller_referral_code && /^MATR/i.test(student.seller_referral_code));
         const normalizedAmounts = validateAndNormalizePaidAmounts(
           updatedAmounts,
           userSystemType,
@@ -992,7 +1408,7 @@ const AdminStudentDetails: React.FC = () => {
           getFeeAmount,
           student?.dependents || 0,
           hasMatriculaRewardsDiscount,
-          !!student?.seller_referral_code && hasMatrFromSellerCode
+          hasMatrFromSellerCode
         );
         
         setRealPaidAmounts(normalizedAmounts);
@@ -1041,6 +1457,23 @@ const AdminStudentDetails: React.FC = () => {
           // Invalidar queries relacionadas
           queryClient.invalidateQueries({ queryKey: queryKeys.students.details(profileId) });
         }
+
+        // Log da ação
+        try {
+          await logAction(
+            'document_approval',
+            `Document ${docType} approved by platform admin`,
+            user?.id || '',
+            'admin',
+            {
+              document_type: docType,
+              application_id: appId,
+              approved_by: user?.email || 'Platform Admin'
+            }
+          );
+        } catch (logError) {
+          console.error('Failed to log document approval:', logError);
+        }
       } else {
         console.error('Error approving document:', result.error);
       }
@@ -1049,7 +1482,7 @@ const AdminStudentDetails: React.FC = () => {
     } finally {
       setApprovingDocs(prev => ({ ...prev, [`${appId}:${docType}`]: false }));
     }
-  }, [approveDocument, student, setStudent]);
+  }, [approveDocument, student, setStudent, user, logAction, profileId, queryClient]);
 
   const handleRejectDocument = useCallback((appId: string, docType: string) => {
     setRejectDocData({ applicationId: appId, docType });
@@ -1086,6 +1519,111 @@ const AdminStudentDetails: React.FC = () => {
           // Invalidar queries relacionadas
           queryClient.invalidateQueries({ queryKey: queryKeys.students.details(profileId) });
         }
+
+        // Log da ação
+        try {
+          await logAction(
+            'document_rejection',
+            `Document ${rejectDocData.docType} rejected by platform admin: ${reason}`,
+            user?.id || '',
+            'admin',
+            {
+              document_type: rejectDocData.docType,
+              application_id: rejectDocData.applicationId,
+              rejection_reason: reason,
+              rejected_by: user?.email || 'Platform Admin'
+            }
+          );
+        } catch (logError) {
+          console.error('Failed to log document rejection:', logError);
+        }
+
+        // ENVIAR NOTIFICAÇÕES PARA O ALUNO
+        console.log('📤 [handleConfirmReject] Enviando notificações de rejeição para o aluno...');
+        
+        // Obter labels amigáveis para os documentos (definir antes do try para estar disponível em ambos os blocos)
+        const docLabels: Record<string, string> = {
+          passport: 'Passport',
+          diploma: 'High School Diploma',
+          funds_proof: 'Proof of Funds',
+        };
+        const docLabel = docLabels[rejectDocData.docType] || rejectDocData.docType;
+        
+        try {
+          // 1. ENVIAR EMAIL VIA WEBHOOK (payload idêntico ao da universidade)
+          const rejectionPayload = {
+            tipo_notf: "Changes Requested",
+            email_aluno: student.student_email,
+            nome_aluno: student.student_name,
+            email_universidade: user?.email,
+            document_type: rejectDocData.docType, // ✅ CORREÇÃO: Adicionar tipo de documento (passport, diploma, funds_proof)
+            document_title: docLabel, // ✅ CORREÇÃO: Adicionar título amigável do documento (Passport, High School Diploma, Proof of Funds)
+            o_que_enviar: `Your document <strong>${docLabel}</strong> has been rejected. Reason: <strong>${reason}</strong>. Please review and upload a corrected version.`
+          };
+
+          console.log('📤 [handleConfirmReject] Payload de rejeição:', rejectionPayload);
+
+          const webhookResponse = await fetch('https://nwh.suaiden.com/webhook/notfmatriculausa', {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/json',
+            },
+            body: JSON.stringify(rejectionPayload),
+          });
+
+          if (webhookResponse.ok) {
+            console.log('✅ [handleConfirmReject] Email de rejeição enviado com sucesso!');
+          } else {
+            console.warn('⚠️ [handleConfirmReject] Erro ao enviar email de rejeição:', webhookResponse.status);
+          }
+        } catch (webhookError) {
+          console.error('❌ [handleConfirmReject] Erro ao enviar webhook de rejeição:', webhookError);
+          // Não falhar o processo se o webhook falhar
+        }
+
+        // 2. ENVIAR NOTIFICAÇÃO IN-APP PARA O ALUNO (SINO)
+        console.log('📤 [handleConfirmReject] Enviando notificação in-app para o aluno...');
+        
+        try {
+          // docLabel já foi calculado acima, reutilizar
+          
+          // Usar Edge Function que tem service role para criar notificação
+          const { data: { session } } = await supabase.auth.getSession();
+          const accessToken = session?.access_token;
+          
+          if (!accessToken) {
+            console.error('❌ [handleConfirmReject] Access token não encontrado');
+          } else {
+            // Preparar payload - usar user_id (UUID) que a Edge Function vai converter para student_id
+            // A Edge Function busca o student_id (user_profiles.id) a partir do user_id
+            const notificationPayload = {
+              user_id: student.user_id, // UUID que referencia auth.users.id
+              title: 'Document Rejected',
+              message: `Your ${docLabel} document has been rejected. Reason: ${reason}. Please review and upload a corrected version.`,
+              link: '/student/dashboard/applications',
+            };
+            
+            const response = await fetch(`${import.meta.env.VITE_SUPABASE_FUNCTIONS_URL}/create-student-notification`, {
+              method: 'POST',
+              headers: {
+                'Content-Type': 'application/json',
+                'Authorization': `Bearer ${accessToken}`,
+              },
+              body: JSON.stringify(notificationPayload),
+            });
+            
+            if (!response.ok) {
+              const errorText = await response.text();
+              console.error('❌ [handleConfirmReject] Erro ao criar notificação:', response.status, errorText);
+            } else {
+              await response.json(); // Result não usado, apenas para consumir a resposta
+              console.log('✅ [handleConfirmReject] Notificação in-app enviada com sucesso!');
+            }
+          }
+        } catch (notificationError) {
+          console.error('❌ [handleConfirmReject] Erro ao enviar notificação in-app:', notificationError);
+          // Não falhar o processo se a notificação in-app falhar
+        }
         
         // Fechar o modal de rejeição
         setShowRejectDocModal(false);
@@ -1096,36 +1634,431 @@ const AdminStudentDetails: React.FC = () => {
     } catch (error) {
       console.error('Error rejecting document:', error);
     }
-  }, [rejectDocData, rejectDocument, student, setStudent]);
+  }, [rejectDocData, rejectDocument, student, setStudent, user, logAction, profileId, queryClient]);
 
-  const handleViewDocument = useCallback((doc: { file_url: string; filename: string }) => {
-    // ✅ Aceitar tanto file_url quanto url (fallback)
-    const fileUrl: string | undefined = doc?.file_url || (doc as any)?.url;
-    if (!doc || !fileUrl) {
-      console.error('Documento ou file_url/url está vazio ou undefined');
+  // Handlers para aprovar/rejeitar foto de identidade
+  const handleApproveIdentityPhoto = useCallback(async (acceptanceId: string) => {
+    if (!student || !user) {
+      console.error('❌ [handleApproveIdentityPhoto] Student ou user não encontrado');
+      alert('Error: Student or user not found');
       return;
     }
-    
+
+    setProcessingIdentityPhoto(true);
+    console.log('🔄 [handleApproveIdentityPhoto] Iniciando aprovação...', { acceptanceId, studentId: student.student_id });
+
     try {
-      // ✅ CORREÇÃO: Se já é uma URL completa do Supabase, usar diretamente
-      if (fileUrl && (fileUrl.startsWith('https://') || fileUrl.startsWith('http://'))) {
-        // Se já é uma URL completa, usar diretamente
-        window.open(fileUrl, '_blank');
-      } else {
-        // Se file_url é um path do storage, converter para URL pública
-        const publicUrl = supabase.storage
-          .from('student-documents')
-          .getPublicUrl(fileUrl)
-          .data.publicUrl;
-        
-        window.open(publicUrl, '_blank');
+      // Atualizar status usando RPC (que tem SECURITY DEFINER e bypass RLS)
+      console.log('📝 [handleApproveIdentityPhoto] Atualizando via RPC update_identity_photo_status...');
+      const { data: rpcResult, error: rpcError } = await supabase.rpc('update_identity_photo_status', {
+        p_acceptance_id: acceptanceId,
+        p_status: 'approved',
+        p_rejection_reason: null,
+        p_reviewed_by: user.id
+      });
+
+      if (rpcError) {
+        console.error('❌ [handleApproveIdentityPhoto] Erro ao atualizar via RPC:', rpcError);
+        throw rpcError;
       }
-    } catch (error) {
-      console.error('Erro ao gerar URL pública:', error);
-      // Fallback: tentar usar a URL original
-      window.open(fileUrl, '_blank');
+
+      if (rpcResult === false || rpcResult === null) {
+        console.error('❌ [handleApproveIdentityPhoto] RPC retornou false - nenhum registro atualizado');
+        throw new Error(`RPC function returned false. Record update failed. ID: ${acceptanceId}`);
+      }
+
+      console.log('✅ [handleApproveIdentityPhoto] Status atualizado via RPC com sucesso:', rpcResult);
+
+      // Log da ação
+      try {
+        await logAction(
+          'identity_photo_approval',
+          `Identity photo approved by platform admin`,
+          user?.id || '',
+          'admin',
+          {
+            acceptance_id: acceptanceId,
+            student_id: student.student_id,
+            student_name: student.student_name || 'N/A',
+            approved_by: user?.email || 'Platform Admin',
+            approved_at: new Date().toISOString()
+          }
+        );
+        console.log('✅ [handleApproveIdentityPhoto] Ação logada com sucesso');
+      } catch (logError) {
+        console.error('⚠️ [handleApproveIdentityPhoto] Erro ao logar ação (não crítico):', logError);
+      }
+
+      // Verificar se a atualização foi persistida
+      console.log('🔍 [handleApproveIdentityPhoto] Verificando se status foi atualizado no banco...');
+      const { data: verifyData, error: verifyError } = await supabase
+        .from('comprehensive_term_acceptance')
+        .select('id, identity_photo_status')
+        .eq('id', acceptanceId)
+        .single();
+
+      if (verifyError) {
+        console.error('⚠️ [handleApproveIdentityPhoto] Erro ao verificar atualização:', verifyError);
+      } else {
+        console.log('✅ [handleApproveIdentityPhoto] Status verificado no banco:', verifyData);
+        if (verifyData.identity_photo_status !== 'approved') {
+          console.error('❌ [handleApproveIdentityPhoto] Status não foi atualizado corretamente! Esperado: approved, Recebido:', verifyData.identity_photo_status);
+        }
+      }
+
+      // Aguardar um pouco para garantir que o banco foi atualizado
+      await new Promise(resolve => setTimeout(resolve, 500));
+
+      // Limpar estado do hotfix para forçar reload
+      setDirectTermAcceptances(null);
+
+      // Invalidar e refetch queries para atualizar UI
+      console.log('🔄 [handleApproveIdentityPhoto] Invalidando e refazendo queries...');
+      
+      // Limpar cache completamente para forçar refetch
+      queryClient.removeQueries({ queryKey: queryKeys.students.secondaryData(student?.user_id) });
+      queryClient.removeQueries({ queryKey: queryKeys.students.details(profileId) });
+      
+      // Refetch forçado
+      await Promise.all([
+        queryClient.refetchQueries({ queryKey: queryKeys.students.secondaryData(student?.user_id), type: 'active' }),
+        queryClient.refetchQueries({ queryKey: queryKeys.students.details(profileId), type: 'active' })
+      ]);
+
+      console.log('✅ [handleApproveIdentityPhoto] Aprovação concluída com sucesso');
+    } catch (err: any) {
+      console.error('❌ [handleApproveIdentityPhoto] Erro ao aprovar foto:', err);
+      alert('Error approving identity photo: ' + (err?.message || String(err)));
+    } finally {
+      setProcessingIdentityPhoto(false);
     }
-  }, []);
+  }, [student, user, logAction, queryClient, profileId]);
+
+  const handleRejectIdentityPhoto = useCallback(async (acceptanceId: string, reason: string) => {
+    if (!student || !user) {
+      console.error('❌ [handleRejectIdentityPhoto] Student ou user não encontrado');
+      alert('Error: Student or user not found');
+      return;
+    }
+
+    if (!reason || reason.trim() === '') {
+      console.error('❌ [handleRejectIdentityPhoto] Motivo de rejeição não fornecido');
+      alert('Error: Rejection reason is required');
+      return;
+    }
+
+    setProcessingIdentityPhoto(true);
+    console.log('🔄 [handleRejectIdentityPhoto] Iniciando rejeição...', { acceptanceId, reason, studentId: student.student_id });
+
+    try {
+      // 1. Verificar se o registro existe primeiro
+      console.log('🔍 [handleRejectIdentityPhoto] Verificando se registro existe...', { acceptanceId });
+      const { data: existingRecord, error: checkError } = await supabase
+        .from('comprehensive_term_acceptance')
+        .select('id, user_id, identity_photo_path, identity_photo_status')
+        .eq('id', acceptanceId)
+        .maybeSingle();
+
+      if (checkError) {
+        console.error('❌ [handleRejectIdentityPhoto] Erro ao verificar registro:', checkError);
+        throw checkError;
+      }
+
+      if (!existingRecord) {
+        console.error('❌ [handleRejectIdentityPhoto] Registro não encontrado com ID:', acceptanceId);
+        throw new Error(`Record not found with ID: ${acceptanceId}`);
+      }
+
+      console.log('✅ [handleRejectIdentityPhoto] Registro encontrado:', existingRecord);
+
+      // 2. Atualizar status no banco usando RPC (que tem SECURITY DEFINER e bypass RLS)
+      console.log('📝 [handleRejectIdentityPhoto] Atualizando via RPC update_identity_photo_status...');
+      const { data: rpcResult, error: rpcError } = await supabase.rpc('update_identity_photo_status', {
+        p_acceptance_id: acceptanceId,
+        p_status: 'rejected',
+        p_rejection_reason: reason,
+        p_reviewed_by: user.id
+      });
+
+      if (rpcError) {
+        console.error('❌ [handleRejectIdentityPhoto] Erro ao atualizar via RPC:', rpcError);
+        console.error('❌ [handleRejectIdentityPhoto] Detalhes do erro:', {
+          code: rpcError.code,
+          message: rpcError.message,
+          details: rpcError.details,
+          hint: rpcError.hint
+        });
+        throw rpcError;
+      }
+
+      if (rpcResult === false || rpcResult === null) {
+        console.error('❌ [handleRejectIdentityPhoto] RPC retornou false - nenhum registro atualizado');
+        console.error('❌ [handleRejectIdentityPhoto] Registro que tentamos atualizar:', existingRecord);
+        console.error('❌ [handleRejectIdentityPhoto] ID usado:', acceptanceId);
+        throw new Error(`RPC function returned false. Record exists but update failed. ID: ${acceptanceId}`);
+      }
+
+      console.log('✅ [handleRejectIdentityPhoto] Status atualizado via RPC com sucesso:', rpcResult);
+
+      // 2. Log da ação
+      try {
+        await logAction(
+          'identity_photo_rejection',
+          `Identity photo rejected by platform admin: ${reason}`,
+          user?.id || '',
+          'admin',
+          {
+            acceptance_id: acceptanceId,
+            student_id: student.student_id,
+            student_name: student.student_name || 'N/A',
+            rejection_reason: reason,
+            rejected_by: user?.email || 'Platform Admin',
+            rejected_at: new Date().toISOString()
+          }
+        );
+        console.log('✅ [handleRejectIdentityPhoto] Ação logada com sucesso');
+      } catch (logError) {
+        console.error('⚠️ [handleRejectIdentityPhoto] Erro ao logar ação (não crítico):', logError);
+      }
+
+      // 3. Enviar notificações (webhook/in-app)
+      try {
+        console.log('📤 [handleRejectIdentityPhoto] Buscando dados do aluno para notificação...');
+        const { data: studentProfile, error: profileError } = await supabase
+          .from('user_profiles')
+          .select('email, full_name')
+          .eq('user_id', student.user_id)
+          .single();
+
+        if (profileError) {
+          console.error('❌ [handleRejectIdentityPhoto] Erro ao buscar perfil do aluno:', profileError);
+        } else {
+          console.log('✅ [handleRejectIdentityPhoto] Perfil do aluno encontrado:', studentProfile);
+        }
+
+        if (studentProfile?.email) {
+          // 3.1. Enviar email via webhook
+          const rejectionPayload = {
+            tipo_notf: 'Identity Photo Rejected',
+            email_aluno: studentProfile.email,
+            nome_aluno: studentProfile.full_name || student.student_name || 'Student',
+            email_universidade: user?.email || '',
+            document_type: 'Identity Photo',
+            document_title: 'Identity Photo',
+            rejection_reason: reason,
+            o_que_enviar: `Your identity photo has been rejected. Reason: <strong>${reason}</strong>. Please review the terms again and upload a corrected version.`
+          };
+
+          console.log('📤 [handleRejectIdentityPhoto] Enviando webhook de rejeição:', rejectionPayload);
+
+          try {
+            const webhookResponse = await fetch('https://nwh.suaiden.com/webhook/notfmatriculausa', {
+              method: 'POST',
+              headers: {
+                'Content-Type': 'application/json',
+              },
+              body: JSON.stringify(rejectionPayload),
+            });
+
+            if (webhookResponse.ok) {
+              console.log('✅ [handleRejectIdentityPhoto] Webhook enviado com sucesso');
+            } else {
+              const errorText = await webhookResponse.text();
+              console.error('❌ [handleRejectIdentityPhoto] Erro ao enviar webhook:', webhookResponse.status, errorText);
+            }
+          } catch (webhookError) {
+            console.error('❌ [handleRejectIdentityPhoto] Erro na requisição do webhook:', webhookError);
+          }
+        } else {
+          console.warn('⚠️ [handleRejectIdentityPhoto] Email do aluno não encontrado, pulando webhook');
+        }
+
+        // 3.2. Enviar notificação in-app (sino)
+        const { data: { session } } = await supabase.auth.getSession();
+        const accessToken = session?.access_token;
+
+        if (accessToken) {
+          const notificationPayload = {
+            user_id: student.user_id,
+            title: 'Identity Photo Rejected',
+            message: `Your identity photo has been rejected. Reason: ${reason}. Please review and upload a corrected version.`,
+            link: '/student/dashboard/identity-verification',
+          };
+
+          console.log('📤 [handleRejectIdentityPhoto] Enviando notificação in-app:', notificationPayload);
+
+          try {
+            const notificationResponse = await fetch(`${import.meta.env.VITE_SUPABASE_FUNCTIONS_URL}/create-student-notification`, {
+              method: 'POST',
+              headers: {
+                'Content-Type': 'application/json',
+                'Authorization': `Bearer ${accessToken}`,
+              },
+              body: JSON.stringify(notificationPayload),
+            });
+
+            if (notificationResponse.ok) {
+              console.log('✅ [handleRejectIdentityPhoto] Notificação in-app criada com sucesso');
+            } else {
+              const errorText = await notificationResponse.text();
+              console.error('❌ [handleRejectIdentityPhoto] Erro ao criar notificação in-app:', notificationResponse.status, errorText);
+            }
+          } catch (notificationError) {
+            console.error('❌ [handleRejectIdentityPhoto] Erro na requisição de notificação in-app:', notificationError);
+          }
+        } else {
+          console.warn('⚠️ [handleRejectIdentityPhoto] Access token não encontrado para notificação in-app');
+        }
+      } catch (notificationError) {
+        console.error('❌ [handleRejectIdentityPhoto] Erro ao enviar notificações:', notificationError);
+        // Não falha a rejeição por causa das notificações
+      }
+
+      // 4. Verificar se a atualização foi persistida (com retry)
+      console.log('🔍 [handleRejectIdentityPhoto] Verificando se status foi atualizado no banco...');
+      let verifyData: any = null;
+      let attempts = 0;
+      const maxAttempts = 5;
+      
+      while (attempts < maxAttempts) {
+        await new Promise(resolve => setTimeout(resolve, 300)); // Aguardar entre tentativas
+        
+        const { data: checkData, error: verifyError } = await supabase
+          .from('comprehensive_term_acceptance')
+          .select('id, identity_photo_status, identity_photo_rejection_reason, identity_photo_reviewed_at')
+          .eq('id', acceptanceId)
+          .single();
+
+        if (verifyError) {
+          console.error(`⚠️ [handleRejectIdentityPhoto] Erro ao verificar atualização (tentativa ${attempts + 1}/${maxAttempts}):`, verifyError);
+          attempts++;
+          continue;
+        }
+
+        verifyData = checkData;
+        console.log(`✅ [handleRejectIdentityPhoto] Status verificado no banco (tentativa ${attempts + 1}/${maxAttempts}):`, verifyData);
+        
+        if (verifyData.identity_photo_status === 'rejected') {
+          console.log('✅ [handleRejectIdentityPhoto] Status confirmado como "rejected" no banco!');
+          break;
+        } else {
+          console.warn(`⚠️ [handleRejectIdentityPhoto] Status ainda não atualizado. Esperado: rejected, Recebido: ${verifyData.identity_photo_status}. Tentando novamente...`);
+          attempts++;
+        }
+      }
+
+      if (!verifyData || verifyData.identity_photo_status !== 'rejected') {
+        console.error('❌ [handleRejectIdentityPhoto] Status não foi atualizado após múltiplas tentativas!', verifyData);
+        // Não lançar erro, apenas logar - pode ser um problema de cache do banco
+      }
+
+      // 6. Limpar estado do hotfix para forçar reload
+      setDirectTermAcceptances(null);
+
+      // 7. Invalidar e refetch queries para atualizar UI
+      console.log('🔄 [handleRejectIdentityPhoto] Invalidando e refazendo queries...');
+      
+      // Limpar cache completamente para forçar refetch
+      queryClient.removeQueries({ queryKey: queryKeys.students.secondaryData(student?.user_id) });
+      queryClient.removeQueries({ queryKey: queryKeys.students.details(profileId) });
+      
+      // Refetch forçado via queryClient
+      await Promise.all([
+        queryClient.refetchQueries({ queryKey: queryKeys.students.secondaryData(student?.user_id), type: 'active' }),
+        queryClient.refetchQueries({ queryKey: queryKeys.students.details(profileId), type: 'active' })
+      ]);
+
+      // Aguardar um pouco e refetch novamente para garantir que os dados foram atualizados
+      await new Promise(resolve => setTimeout(resolve, 1000));
+      await Promise.all([
+        queryClient.refetchQueries({ queryKey: queryKeys.students.secondaryData(student?.user_id), type: 'active' }),
+        queryClient.refetchQueries({ queryKey: queryKeys.students.details(profileId), type: 'active' })
+      ]);
+
+      console.log('✅ [handleRejectIdentityPhoto] Rejeição concluída com sucesso');
+    } catch (err: any) {
+      console.error('❌ [handleRejectIdentityPhoto] Erro ao rejeitar foto:', err);
+      alert('Error rejecting identity photo: ' + (err?.message || String(err)));
+    } finally {
+      setProcessingIdentityPhoto(false);
+    }
+  }, [student, user, logAction, queryClient, profileId]);
+
+  const handleUpdateRejectionReason = useCallback(async (acceptanceId: string, reason: string) => {
+    if (!student || !user) {
+      console.error('❌ [handleUpdateRejectionReason] Student ou user não encontrado');
+      return;
+    }
+
+    if (!reason || reason.trim() === '') {
+      console.error('❌ [handleUpdateRejectionReason] Motivo de rejeição não fornecido');
+      return;
+    }
+
+    setProcessingIdentityPhoto(true);
+    console.log('🔄 [handleUpdateRejectionReason] Atualizando motivo de rejeição...', { acceptanceId, reason });
+
+    try {
+      // Atualizar apenas o motivo usando RPC (mantém status como rejected)
+      const { data: rpcResult, error: rpcError } = await supabase.rpc('update_identity_photo_status', {
+        p_acceptance_id: acceptanceId,
+        p_status: 'rejected', // Manter como rejected
+        p_rejection_reason: reason, // Novo motivo
+        p_reviewed_by: user.id // Manter o mesmo admin
+      });
+
+      if (rpcError) {
+        console.error('❌ [handleUpdateRejectionReason] Erro ao atualizar via RPC:', rpcError);
+        throw rpcError;
+      }
+
+      if (rpcResult === false || rpcResult === null) {
+        console.error('❌ [handleUpdateRejectionReason] RPC retornou false');
+        throw new Error('RPC function returned false');
+      }
+
+      console.log('✅ [handleUpdateRejectionReason] Motivo atualizado via RPC com sucesso');
+
+      // Log da ação
+      try {
+        await logAction(
+          'identity_photo_rejection_reason_updated',
+          `Identity photo rejection reason updated by platform admin: ${reason}`,
+          user?.id || '',
+          'admin',
+          {
+            acceptance_id: acceptanceId,
+            student_id: student.student_id,
+            student_name: student.student_name || 'N/A',
+            new_rejection_reason: reason,
+            updated_by: user?.email || 'Platform Admin',
+            updated_at: new Date().toISOString()
+          }
+        );
+        console.log('✅ [handleUpdateRejectionReason] Ação logada com sucesso');
+      } catch (logError) {
+        console.error('⚠️ [handleUpdateRejectionReason] Erro ao logar ação (não crítico):', logError);
+      }
+
+      // Invalidar e refetch queries
+      queryClient.removeQueries({ queryKey: queryKeys.students.secondaryData(student?.user_id) });
+      await Promise.all([
+        queryClient.refetchQueries({ queryKey: queryKeys.students.secondaryData(student?.user_id), type: 'active' }),
+        queryClient.refetchQueries({ queryKey: queryKeys.students.details(profileId), type: 'active' })
+      ]);
+
+      setDirectTermAcceptances(null); // Limpar hotfix
+
+      console.log('✅ [handleUpdateRejectionReason] Motivo atualizado com sucesso');
+    } catch (err: any) {
+      console.error('❌ [handleUpdateRejectionReason] Erro ao atualizar motivo:', err);
+      alert('Error updating rejection reason: ' + (err?.message || String(err)));
+    } finally {
+      setProcessingIdentityPhoto(false);
+    }
+  }, [student, user, logAction, queryClient, profileId]);
+
+  // handleViewDocument removido daqui pois agora é importado de documentUtils
 
   const handleUploadDocument = useCallback(async (appId: string, docType: string, file: File) => {
     if (!canUniversityManage || !student) return;
@@ -1232,6 +2165,32 @@ const AdminStudentDetails: React.FC = () => {
   const approveApplication = useCallback(async (applicationId: string) => {
     if (!student || !isPlatformAdmin) return;
     
+    // Validar se todos os documentos estão aprovados
+    const currentApp = (student.all_applications || []).find((a: any) => a.id === applicationId);
+    if (!currentApp) {
+      alert('Application not found.');
+      return;
+    }
+
+    const appDocuments = currentApp.documents || [];
+    const requiredTypes = ['passport', 'funds_proof', 'diploma'];
+    
+    // 1. Verificar se os documentos obrigatórios básicos estão presentes
+    const presentTypes = appDocuments.map((d: any) => (d.type || '').toLowerCase());
+    const missingRequired = requiredTypes.filter(type => !presentTypes.includes(type));
+    
+    if (missingRequired.length > 0) {
+      alert(`Cannot approve: Missing required documents (${missingRequired.join(', ')}).`);
+      return;
+    }
+
+    // 2. Verificar se todos os documentos da aplicação estão aprovados
+    const allDocsApproved = appDocuments.length > 0 && appDocuments.every((doc: any) => (doc.status || '').toLowerCase() === 'approved');
+    if (!allDocsApproved) {
+      alert('Cannot approve: All documents in the application must be approved first.');
+      return;
+    }
+
     try {
       setApprovingStudent(true);
       
@@ -1321,6 +2280,26 @@ const AdminStudentDetails: React.FC = () => {
         console.error('Error sending webhook:', error);
       }
 
+      // Log da ação
+      try {
+        await logAction(
+          'application_approval',
+          `Application approved by platform admin`,
+          user?.id || '',
+          'admin',
+          {
+            application_id: applicationId,
+            student_id: student.student_id,
+            student_name: student.student_name || 'N/A',
+            approved_by: user?.email || 'Platform Admin',
+            approved_at: new Date().toISOString()
+          }
+        );
+        console.log('✅ [approveApplication] Ação logada com sucesso');
+      } catch (logError) {
+        console.error('⚠️ [approveApplication] Erro ao logar ação (não crítico):', logError);
+      }
+
       // Atualizar o estado local com os dados atualizados do banco
       if (updatedApp) {
         console.log('🔄 [APPROVE] Atualizando estado local...');
@@ -1369,7 +2348,7 @@ const AdminStudentDetails: React.FC = () => {
     } finally {
       setApprovingStudent(false);
     }
-  }, [student, isPlatformAdmin, user, setStudent, profileId, queryClient]);
+  }, [student, isPlatformAdmin, user, setStudent, profileId, queryClient, logAction, rejectStudentReason]);
 
   const rejectApplication = useCallback(async (applicationId: string) => {
     if (!student || !isPlatformAdmin) return;
@@ -1392,6 +2371,27 @@ const AdminStudentDetails: React.FC = () => {
       setShowRejectStudentModal(false);
       setRejectStudentReason('');
       setPendingRejectAppId(null);
+      
+      // Log da ação
+      try {
+        await logAction(
+          'application_rejection',
+          `Application rejected by platform admin: ${rejectStudentReason || 'No reason provided'}`,
+          user?.id || '',
+          'admin',
+          {
+            application_id: applicationId,
+            student_id: student.student_id,
+            student_name: student.student_name || 'N/A',
+            rejection_reason: rejectStudentReason || null,
+            rejected_by: user?.email || 'Platform Admin',
+            rejected_at: new Date().toISOString()
+          }
+        );
+        console.log('✅ [rejectApplication] Ação logada com sucesso');
+      } catch (logError) {
+        console.error('⚠️ [rejectApplication] Erro ao logar ação (não crítico):', logError);
+      }
       
       // Atualizar o estado local com os dados atualizados do banco
       if (updatedApp) {
@@ -1510,6 +2510,24 @@ const AdminStudentDetails: React.FC = () => {
   // Handler para download de PDF de termos
   const handleDownloadTermPDF = useCallback(async (acceptance: any) => {
     try {
+      // Buscar identity_photo_path e identity_photo_name se não estiverem no acceptance
+      let identityPhotoPath = acceptance.identity_photo_path;
+      let identityPhotoName = acceptance.identity_photo_name;
+      
+      // Se não estiverem no acceptance, buscar do banco
+      if (!identityPhotoPath && acceptance.id) {
+        const { data: termAcceptanceData, error: termError } = await supabase
+          .from('comprehensive_term_acceptance')
+          .select('identity_photo_path, identity_photo_name')
+          .eq('id', acceptance.id)
+          .maybeSingle();
+        
+        if (!termError && termAcceptanceData) {
+          identityPhotoPath = termAcceptanceData.identity_photo_path;
+          identityPhotoName = termAcceptanceData.identity_photo_name;
+        }
+      }
+      
       // Preparar dados para o PDF
       const pdfData: StudentTermAcceptanceData = {
         student_name: acceptance.user_full_name || student?.student_name || 'N/A',
@@ -1520,11 +2538,13 @@ const AdminStudentDetails: React.FC = () => {
         user_agent: acceptance.user_agent || 'N/A',
         country: student?.country || 'N/A',
         affiliate_code: student?.seller_referral_code || undefined,
-        term_content: acceptance.term_content || ''
+        term_content: acceptance.term_content || '',
+        identity_photo_path: identityPhotoPath || undefined,
+        identity_photo_name: identityPhotoName || undefined
       };
       
-      // Gerar e baixar o PDF
-      generateTermAcceptancePDF(pdfData);
+      // Gerar e baixar o PDF (agora é assíncrono)
+      await generateTermAcceptancePDF(pdfData);
     } catch (error) {
       console.error('Error generating PDF:', error);
       alert('Error generating PDF. Please try again.');
@@ -1560,17 +2580,54 @@ const AdminStudentDetails: React.FC = () => {
 
       if (error) throw error;
 
+      console.log('✅ [handleSaveEditFees] Overrides salvos no banco:', {
+        selection_process: editingFees.selection_process,
+        scholarship: editingFees.scholarship,
+        i20_control: editingFees.i20_control
+      });
+
+      // Log da ação
+      try {
+        await logAction(
+          'fee_override_update',
+          `Fee overrides updated by platform admin`,
+          user?.id || '',
+          'admin',
+          {
+            selection_process_fee: editingFees.selection_process,
+            scholarship_fee: editingFees.scholarship,
+            i20_control_fee: editingFees.i20_control,
+            updated_by: user?.email || 'Platform Admin'
+          }
+        );
+      } catch (logError) {
+        console.error('Failed to log fee override update:', logError);
+      }
+
       setEditingFees(null);
       // Invalidar queries relacionadas
       queryClient.invalidateQueries({ queryKey: queryKeys.students.details(profileId) });
       queryClient.invalidateQueries({ queryKey: queryKeys.students.secondaryData(student?.user_id) });
+      
+      // ✅ Aguardar um pouco para garantir que o banco foi atualizado
+      await new Promise(resolve => setTimeout(resolve, 200));
+      
+      // ✅ Recarregar realPaidAmounts E userFeeOverrides após salvar fees
+      // Isso garante que os valores estejam atualizados quando iniciar nova edição
+      await Promise.all([
+        reloadRealPaidAmounts(),
+        loadUserFeeOverrides()
+      ]);
+      
+      // ✅ Forçar recarregamento de overrides no PaymentStatusCard
+      setOverridesRefreshKey(prev => prev + 1);
     } catch (error: any) {
       console.error('Error saving fee overrides:', error);
       alert('Erro ao salvar as taxas personalizadas: ' + error.message);
     } finally {
       setSavingFees(false);
     }
-  }, [editingFees, student]);
+  }, [editingFees, student, user, logAction, profileId, queryClient, reloadRealPaidAmounts]);
 
   // Handler para resetar fees para padrão
   const handleResetFees = useCallback(async () => {
@@ -1587,31 +2644,126 @@ const AdminStudentDetails: React.FC = () => {
 
       if (error) throw error;
 
+      // Log da ação
+      try {
+        await logAction(
+          'fee_override_reset',
+          `Fee overrides reset to default by platform admin`,
+          user?.id || '',
+          'admin',
+          {
+            reset_by: user?.email || 'Platform Admin'
+          }
+        );
+      } catch (logError) {
+        console.error('Failed to log fee override reset:', logError);
+      }
+
       setEditingFees(null);
       // Invalidar queries relacionadas
       queryClient.invalidateQueries({ queryKey: queryKeys.students.details(profileId) });
       queryClient.invalidateQueries({ queryKey: queryKeys.students.secondaryData(student?.user_id) });
+      
+      // ✅ Recarregar realPaidAmounts E userFeeOverrides após resetar fees
+      // Isso garante que os valores estejam atualizados quando iniciar nova edição
+      await Promise.all([
+        reloadRealPaidAmounts(),
+        loadUserFeeOverrides()
+      ]);
+      
+      // ✅ Forçar recarregamento de overrides no PaymentStatusCard
+      setOverridesRefreshKey(prev => prev + 1);
     } catch (error: any) {
       console.error('Error resetting fees:', error);
       alert('Erro ao resetar as taxas: ' + error.message);
     } finally {
       setSavingFees(false);
     }
-  }, [student]);
+  }, [student, user, logAction, profileId, queryClient, reloadRealPaidAmounts]);
 
   // Handler para iniciar edição de fees
-  const handleStartEditFees = useCallback(() => {
+  const handleStartEditFees = useCallback(async () => {
     if (!student) return;
     
-    // Calcular o valor exato que seria exibido para Selection Process Fee
-    let selectionProcessValue: number;
-    const hasCustomOverride = hasOverride('selection_process');
+    // ✅ IMPORTANTE: Recarregar realPaidAmounts antes de iniciar edição
+    await reloadRealPaidAmounts();
     
-    if (hasCustomOverride && userFeeOverrides?.selection_process_fee !== undefined) {
-      // Se tem override, usar o valor do override diretamente
-      selectionProcessValue = userFeeOverrides.selection_process_fee;
+    // ✅ Buscar overrides diretamente do banco para garantir valores atualizados
+    // Isso evita problemas de closure com o estado do hook
+    let currentOverrides: {
+      selection_process_fee?: number;
+      scholarship_fee?: number;
+      i20_control_fee?: number;
+    } | null = null;
+    
+    try {
+      // ✅ Forçar nova query sem cache adicionando timestamp
+      const { data: overrideData, error: overrideError } = await supabase
+        .from('user_fee_overrides')
+        .select('selection_process_fee, scholarship_fee, i20_control_fee, updated_at')
+        .eq('user_id', student.user_id)
+        .maybeSingle();
+      
+      if (overrideError && overrideError.code !== 'PGRST116') {
+        console.error('❌ [handleStartEditFees] Erro ao buscar overrides:', overrideError);
+      }
+      
+      if (!overrideError && overrideData) {
+        currentOverrides = {
+          selection_process_fee: overrideData.selection_process_fee != null ? Number(overrideData.selection_process_fee) : undefined,
+          scholarship_fee: overrideData.scholarship_fee != null ? Number(overrideData.scholarship_fee) : undefined,
+          i20_control_fee: overrideData.i20_control_fee != null ? Number(overrideData.i20_control_fee) : undefined,
+        };
+        console.log('✅ [handleStartEditFees] Overrides encontrados no banco:', currentOverrides);
+      } else {
+        console.log('ℹ️ [handleStartEditFees] Nenhum override encontrado para este usuário');
+      }
+    } catch (error) {
+      console.error('❌ [handleStartEditFees] Erro ao buscar overrides:', error);
+    }
+    
+    // ✅ Buscar affiliate admin email do aluno para verificar se deve aplicar custo de dependentes
+    let studentAffiliateAdminEmail: string | null = null;
+    if (student.seller_referral_code) {
+      try {
+        const { data: result, error } = await supabase.rpc('get_affiliate_admin_email_by_seller_code', {
+          seller_code: student.seller_referral_code
+        });
+        
+        if (!error && result && result.length > 0 && result[0]?.email) {
+          studentAffiliateAdminEmail = result[0].email;
+        }
+      } catch (error) {
+        console.error('Error fetching student affiliate admin email:', error);
+      }
+    }
+    
+    // ✅ Verificar se é do affiliate admin "contato@brantimmigration.com" para aplicar valores fixos
+    const isBrantImmigrationAffiliate = studentAffiliateAdminEmail?.toLowerCase() === 'contato@brantimmigration.com';
+    
+    // ✅ Se a fee já foi paga, usar o valor realmente pago (realPaidAmounts) como padrão
+    // Caso contrário, usar o valor calculado/esperado
+    // Nota: realPaidAmounts foi recarregado acima, então agora está atualizado
+    
+    // Selection Process Fee
+    let selectionProcessValue: number;
+    if (student.has_paid_selection_process_fee && realPaidAmounts?.selection_process !== undefined && realPaidAmounts?.selection_process !== null) {
+      // Se já foi pago, usar o valor realmente pago
+      selectionProcessValue = realPaidAmounts.selection_process;
     } else {
-      // Calcular baseado no system_type, Matricula Rewards e dependents
+      // Se não foi pago, calcular o valor esperado
+      
+      // ✅ PRIORIDADE 1: Verificar override primeiro (antes de Brant)
+      if (currentOverrides?.selection_process_fee !== undefined && currentOverrides?.selection_process_fee !== null) {
+      // Se tem override, usar o valor do override diretamente
+        selectionProcessValue = currentOverrides.selection_process_fee;
+        console.log('✅ [handleStartEditFees] Selection Process usando override:', selectionProcessValue);
+      } else if (isBrantImmigrationAffiliate) {
+        // ✅ PRIORIDADE 2: Se for do affiliate admin "contato@brantimmigration.com", usar valores fixos
+        // Selection Process: $400 base + $150 por dependente
+        selectionProcessValue = 400 + (dependents * 150);
+    } else {
+        // Caso contrário, calcular normalmente
       const hasMatrFromSellerCode = student?.seller_referral_code && /^MATR/i.test(student.seller_referral_code);
       const hasMatrDiscount = hasMatriculaRewardsDiscount || hasMatrFromSellerCode;
       
@@ -1622,16 +2774,68 @@ const AdminStudentDetails: React.FC = () => {
         const systemType = userSystemType || 'legacy';
         base = systemType === 'simplified' ? 350 : 400;
       }
-      selectionProcessValue = base + dependents * 150;
+        
+        // Para legacy, dependentes só se for do Brant (já tratado acima)
+        selectionProcessValue = base;
+      }
     }
     
-    // Para scholarship e i20_control, usar getFeeAmount que já considera overrides
-    setEditingFees({
+    // Scholarship Fee
+    let scholarshipValue: number;
+    if (student.is_scholarship_fee_paid && realPaidAmounts?.scholarship !== undefined && realPaidAmounts?.scholarship !== null) {
+      // Se já foi pago, usar o valor realmente pago
+      scholarshipValue = realPaidAmounts.scholarship;
+    } else {
+      // ✅ PRIORIDADE 1: Verificar override primeiro (antes de Brant)
+      if (currentOverrides?.scholarship_fee !== undefined && currentOverrides?.scholarship_fee !== null) {
+        // Se tem override, usar o valor do override diretamente
+        scholarshipValue = currentOverrides.scholarship_fee;
+        console.log('✅ [handleStartEditFees] Scholarship usando override:', scholarshipValue);
+      } else if (isBrantImmigrationAffiliate) {
+        // ✅ PRIORIDADE 2: Valor fixo para Brant: $900
+        scholarshipValue = 900;
+      } else {
+        // Caso contrário, usar getFeeAmount que já considera overrides
+        scholarshipValue = getFeeAmount('scholarship_fee');
+      }
+    }
+    
+    // I-20 Control Fee
+    let i20ControlValue: number;
+    if (student.has_paid_i20_control_fee && realPaidAmounts?.i20_control !== undefined && realPaidAmounts?.i20_control !== null) {
+      // Se já foi pago, usar o valor realmente pago
+      i20ControlValue = realPaidAmounts.i20_control;
+    } else {
+      // ✅ PRIORIDADE 1: Verificar override primeiro (antes de Brant)
+      if (currentOverrides?.i20_control_fee !== undefined && currentOverrides?.i20_control_fee !== null) {
+        // Se tem override, usar o valor do override diretamente
+        i20ControlValue = currentOverrides.i20_control_fee;
+        console.log('✅ [handleStartEditFees] I-20 Control usando override:', i20ControlValue);
+      } else if (isBrantImmigrationAffiliate) {
+        // ✅ PRIORIDADE 2: Valor fixo para Brant: $900
+        i20ControlValue = 900;
+      } else {
+        // Caso contrário, usar getFeeAmount que já considera overrides
+        i20ControlValue = getFeeAmount('i20_control_fee');
+      }
+    }
+    
+    const finalFees = {
       selection_process: selectionProcessValue,
-      scholarship: getFeeAmount('scholarship_fee'),
-      i20_control: getFeeAmount('i20_control_fee')
-    });
-  }, [student, getFeeAmount, hasOverride, userFeeOverrides, userSystemType, hasMatriculaRewardsDiscount, dependents]);
+      scholarship: scholarshipValue,
+      i20_control: i20ControlValue
+    };
+    
+    console.log('✅ [handleStartEditFees] Valores finais para edição:', finalFees);
+    console.log('✅ [handleStartEditFees] Overrides usados:', currentOverrides);
+    
+    setEditingFees(finalFees);
+    
+    // ✅ Verificar se o estado foi atualizado (usar setTimeout para verificar após o próximo render)
+    setTimeout(() => {
+      console.log('🔍 [handleStartEditFees] Estado editingFees após setEditingFees (verificação):', finalFees);
+    }, 100);
+  }, [student, getFeeAmount, userSystemType, hasMatriculaRewardsDiscount, dependents, realPaidAmounts, reloadRealPaidAmounts]);
 
   // Handler para cancelar edição de fees
   const handleCancelEditFees = useCallback(() => {
@@ -1691,6 +2895,23 @@ const AdminStudentDetails: React.FC = () => {
         if (error) throw error;
       }
       
+      // Log da ação
+      try {
+        await logAction(
+          'payment_method_update',
+          `Payment method for ${feeType} updated to ${method} by platform admin`,
+          user?.id || '',
+          'admin',
+          {
+            fee_type: feeType,
+            payment_method: method,
+            updated_by: user?.email || 'Platform Admin'
+          }
+        );
+      } catch (logError) {
+        console.error('Failed to log payment method update:', logError);
+      }
+
       setEditingPaymentMethod(null);
       // Invalidar queries relacionadas
       queryClient.invalidateQueries({ queryKey: queryKeys.students.details(profileId) });
@@ -1701,7 +2922,7 @@ const AdminStudentDetails: React.FC = () => {
     } finally {
       setSavingPaymentMethod(false);
     }
-  }, [student, isPlatformAdmin, paymentMethod]);
+  }, [student, isPlatformAdmin, paymentMethod, user, logAction, profileId, queryClient]);
 
   // Loading state
   if (loading || !student) {
@@ -1803,24 +3024,124 @@ const AdminStudentDetails: React.FC = () => {
                 onSaveProfile={handleSaveProfile}
                 onCancelEdit={() => setIsEditing(false)}
                 onEditProcessType={() => {
+                  const currentValue = student.student_process_type || 'initial';
+                  // Garantir que o valor é válido (está nas opções do select)
+                  const validValues = ['initial', 'transfer', 'change_of_status', 'enrolled'];
+                  const validValue = validValues.includes(currentValue) ? currentValue : 'initial';
+                  console.log('🔍 [AdminStudentDetails] Editando Process Type:', { currentValue, validValue });
                   setIsEditingProcessType(true);
-                  setEditingProcessType(student.student_process_type || 'initial');
+                  setEditingProcessType(validValue);
                 }}
                 onSaveProcessType={async () => {
                   setSavingProcessType(true);
-                  await saveProfile(student.student_id, { student_process_type: editingProcessType });
-                  setSavingProcessType(false);
-                  setIsEditingProcessType(false);
+                  
+                  try {
+                    // student_process_type está na tabela scholarship_applications, não em user_profiles
+                    // Precisamos atualizar todas as aplicações do estudante ou a aplicação ativa/locked
+                    const applications = student.all_applications || [];
+                    
+                    if (applications.length === 0) {
+                      alert('Error: Student has no applications. Cannot update process type.');
+                      setSavingProcessType(false);
+                      return;
+                    }
+                    
+                    // Atualizar todas as aplicações do estudante com o novo process type
+                    const applicationIds = applications.map((app: any) => app.id).filter(Boolean);
+                    
+                    if (applicationIds.length === 0) {
+                      alert('Error: No valid application IDs found.');
+                      setSavingProcessType(false);
+                      return;
+                    }
+                    
+                    console.log('🔄 [onSaveProcessType] Atualizando student_process_type em aplicações:', applicationIds);
+                    
+                    const { error: updateError } = await supabase
+                      .from('scholarship_applications')
+                      .update({ student_process_type: editingProcessType })
+                      .in('id', applicationIds);
+                    
+                    if (updateError) {
+                      console.error('❌ [onSaveProcessType] Erro ao atualizar:', updateError);
+                      throw updateError;
+                    }
+                    
+                    console.log('✅ [onSaveProcessType] student_process_type atualizado com sucesso');
+                    
+                    // Atualizar estado local imediatamente
+                    setStudent((prev: any) => {
+                      if (!prev) return prev;
+                      // Atualizar todas as aplicações no estado local
+                      const updatedApps = (prev.all_applications || []).map((app: any) => ({
+                        ...app,
+                        student_process_type: editingProcessType
+                      }));
+                      return { 
+                        ...prev, 
+                        student_process_type: editingProcessType,
+                        all_applications: updatedApps
+                      } as any;
+                    });
+                    
+                    // Invalidar queries para garantir sincronização
+                    queryClient.invalidateQueries({ queryKey: queryKeys.students.details(profileId) });
+                    
+                    // Log da ação
+                    try {
+                      await logAction(
+                        'process_type_update',
+                        `Student process type updated by platform admin to: ${editingProcessType}`,
+                        user?.id || '',
+                        'admin',
+                        {
+                          student_id: student.student_id,
+                          student_name: student.student_name || 'N/A',
+                          old_process_type: student.student_process_type || 'N/A',
+                          new_process_type: editingProcessType,
+                          updated_by: user?.email || 'Platform Admin',
+                          updated_at: new Date().toISOString(),
+                          application_ids: applicationIds
+                        }
+                      );
+                      console.log('✅ [onSaveProcessType] Ação logada com sucesso');
+                    } catch (logError) {
+                      console.error('⚠️ [onSaveProcessType] Erro ao logar ação (não crítico):', logError);
+                    }
+                    
+                    setIsEditingProcessType(false);
+                  } catch (error: any) {
+                    console.error('❌ [onSaveProcessType] Erro ao atualizar process type:', error);
+                    alert('Error updating process type: ' + (error?.message || 'Unknown error'));
+                  } finally {
+                    setSavingProcessType(false);
+                  }
                 }}
-                onCancelProcessType={() => setIsEditingProcessType(false)}
-                onProcessTypeChange={setEditingProcessType}
+                onCancelProcessType={() => {
+                  setIsEditingProcessType(false);
+                  setEditingProcessType(student.student_process_type || 'initial');
+                }}
+                onProcessTypeChange={(value) => {
+                  console.log('🔍 [AdminStudentDetails] Process Type mudou para:', value);
+                  setEditingProcessType(value);
+                }}
               />
 
-              {student.seller_referral_code && student.all_applications && (
+              {/* Referral Info Card - mostra seller referral OU Matricula Rewards */}
+              {(student.seller_referral_code || matriculaRewardsInfo?.code) && student.all_applications && (
                 <ReferralInfoCard
-                  referralCode={student.seller_referral_code}
-                  referralInfo={referralInfo}
-                  loading={false}
+                  referralCode={matriculaRewardsInfo?.code || student.seller_referral_code || null}
+                  referralInfo={
+                    matriculaRewardsInfo
+                      ? {
+                          type: 'student',
+                          name: matriculaRewardsInfo.name || 'Unknown',
+                          email: matriculaRewardsInfo.email || 'No email',
+                          isRewards: true, // ✅ Indica que é Matricula Rewards
+                        }
+                      : referralInfo
+                  }
+                  loading={matriculaRewardsInfo ? loadingMatriculaRewards : false}
                 />
               )}
 
@@ -1848,6 +3169,8 @@ const AdminStudentDetails: React.FC = () => {
               />
 
               <StudentDocumentsCard
+                studentId={student.student_id}
+                documentsStatus={student.documents_status}
                 applications={student.all_applications || []}
                 expandedApps={expandedApps}
                 canPlatformAdmin={isPlatformAdmin}
@@ -1917,6 +3240,7 @@ const AdminStudentDetails: React.FC = () => {
                 onPaymentMethodChange={setPaymentMethod}
                 formatFeeAmount={formatFeeAmount}
                 getFeeAmount={getFeeAmount}
+                overridesRefreshKey={overridesRefreshKey}
               />
             </Suspense>
 
@@ -1939,6 +3263,48 @@ const AdminStudentDetails: React.FC = () => {
                 />
               </Suspense>
             )}
+            
+            {/* Identity Photo Verification Card */}
+            {(() => {
+              const combinedTermAcceptances = (termAcceptances && termAcceptances.length > 0)
+                ? termAcceptances
+                : (directTermAcceptances || []);
+
+              const checkoutTermsAcceptances = combinedTermAcceptances.filter((acc: any) => acc.term_type === 'checkout_terms');
+              let identityPhotoAcceptance = checkoutTermsAcceptances.find((acc: any) => {
+                // aceitar caminhos em diferentes chaves ou formatos
+                const path = acc.identity_photo_path || acc.identity_photo || acc.photo_path || null;
+                return path && String(path).trim() !== '';
+              });
+
+              // Fallback: se não encontrar por caminho, usar o primeiro checkout_terms disponível
+              if (!identityPhotoAcceptance && checkoutTermsAcceptances.length > 0) {
+                console.log('ℹ️ [AdminStudentDetails] identityPhotoAcceptance não encontrada por path — usando primeiro checkout_terms como fallback');
+                identityPhotoAcceptance = checkoutTermsAcceptances[0];
+              }
+
+              if (termAcceptances.length > 0 || checkoutTermsAcceptances.length > 0) {
+                // Debug logs (useful during local development)
+                console.log('🔍 [AdminStudentDetails] checkoutTermsAcceptances:', checkoutTermsAcceptances);
+                console.log('🔍 [AdminStudentDetails] identityPhotoAcceptance:', identityPhotoAcceptance);
+                if (identityPhotoAcceptance) {
+                  console.log('🔍 [AdminStudentDetails] identityPhotoAcceptance.status:', identityPhotoAcceptance.identity_photo_status);
+                  console.log('🔍 [AdminStudentDetails] identityPhotoAcceptance.rejection_reason:', identityPhotoAcceptance.identity_photo_rejection_reason);
+                }
+              }
+
+              return identityPhotoAcceptance ? (
+                <Suspense fallback={<div className="animate-pulse bg-slate-100 h-64 rounded-2xl"></div>}>
+                  <IdentityPhotoVerificationCard
+                    termAcceptance={identityPhotoAcceptance}
+                    onApprove={handleApproveIdentityPhoto}
+                    onReject={handleRejectIdentityPhoto}
+                    onUpdateRejectionReason={handleUpdateRejectionReason}
+                    isProcessing={processingIdentityPhoto}
+                  />
+                </Suspense>
+              ) : null;
+            })()}
           </div>
         </div>
       )}

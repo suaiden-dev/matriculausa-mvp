@@ -8,7 +8,6 @@ import {
   Calendar, 
   DollarSign, 
   Building, 
-  Award,
   ArrowRight,
   GraduationCap,
   ChevronDown
@@ -22,8 +21,11 @@ import { supabase } from '../../lib/supabase';
 import { Application, Scholarship } from '../../types';
 import { useCartStore } from '../../stores/applicationStore';
 import { ScholarshipConfirmationModal } from '../../components/ScholarshipConfirmationModal';
-import { formatCentsToDollars, convertCentsToDollars } from '../../utils/currency';
+import { convertCentsToDollars } from '../../utils/currency';
 import TruncatedText from '../../components/TruncatedText';
+import { useStudentApplicationsQuery, useStudentPaidAmountsQuery, usePromotionalCouponQuery } from '../../hooks/useStudentDashboardQueries';
+import { invalidateStudentDashboardApplications, invalidateStudentDashboardFees, invalidateStudentDashboardCoupons } from '../../lib/queryKeys';
+import { useQueryClient } from '@tanstack/react-query';
 // import StudentDashboardLayout from "./StudentDashboardLayout";
 // import CustomLoading from '../../components/CustomLoading';
 
@@ -36,25 +38,18 @@ type ApplicationWithScholarship = Application & {
 
 const MyApplications: React.FC = () => {
   const { t } = useTranslation();
-  const { user, userProfile, refetchUserProfile } = useAuth();
-  const { getFeeAmount, formatFeeAmount } = useFeeConfig(user?.id);
+  const { user, userProfile } = useAuth();
+  const { getFeeAmount } = useFeeConfig(user?.id);
   const { isBlocked, pendingPayment, loading: paymentBlockedLoading } = usePaymentBlocked();
+  const queryClient = useQueryClient();
   
-  // Estado para cupom promocional da Scholarship Fee
-  const [scholarshipFeePromotionalCoupon, setScholarshipFeePromotionalCoupon] = useState<{
-    discountAmount: number;
-    finalAmount: number;
-  } | null>(null);
-  // Estado para cupom promocional da Application Fee
-  const [applicationFeePromotionalCoupon, setApplicationFeePromotionalCoupon] = useState<{
-    discountAmount: number;
-    finalAmount: number;
-  } | null>(null);
-  // Estado para valores reais pagos (incluindo descontos)
-  const [realPaidAmounts, setRealPaidAmounts] = useState<{
-    application?: number;
-    scholarship?: number;
-  }>({});
+  // React Query hooks for cached data
+  // isPending = sem dados no cache ainda (primeira carga)
+  // isFetching = buscando em background (pode ter dados em cache)
+  const { data: applications = [], isPending, error: queryError } = useStudentApplicationsQuery(userProfile?.id);
+  const { data: realPaidAmounts = {} } = useStudentPaidAmountsQuery(user?.id, ['application', 'scholarship']);
+  const { data: scholarshipFeePromotionalCoupon = null } = usePromotionalCouponQuery(user?.id, 'scholarship_fee');
+  const { data: applicationFeePromotionalCoupon = null } = usePromotionalCouponQuery(user?.id, 'application_fee');
   // Helper: calcular Application Fee exibida considerando dependentes (legacy e simplified)
   // O valor vem em centavos do banco, precisa converter para dólares primeiro
   const getApplicationFeeWithDependents = (baseInCents: number): number => {
@@ -64,7 +59,6 @@ const MyApplications: React.FC = () => {
     // ✅ CORREÇÃO: Adicionar $100 por dependente para ambos os sistemas (legacy e simplified)
     return deps > 0 ? baseInDollars + deps * 100 : baseInDollars;
   };
-  const [userProfileId, setUserProfileId] = useState<string | null>(null);
   
   // Labels amigáveis para os documentos principais
   const DOCUMENT_LABELS: Record<string, string> = {
@@ -72,15 +66,13 @@ const MyApplications: React.FC = () => {
     diploma: t('studentDashboard.myApplications.documents.highSchoolDiploma'),
     funds_proof: t('studentDashboard.myApplications.documents.proofOfFunds'),
   };
-  const [applications, setApplications] = useState<ApplicationWithScholarship[]>([]);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
+  
+  // Convert query error to string for compatibility
+  const error = queryError ? 'Erro ao buscar aplicações.' : null;
 
   // const [successMessage, setSuccessMessage] = useState<string | null>(null);
   // const [errorMessage, setErrorMessage] = useState<string | null>(null);
   // const [payingId] = useState<string | null>(null);
-  const [isPolling, setIsPolling] = useState(true);
-  const [isFirstLoad, setIsFirstLoad] = useState(true);
 
   const [selectedFiles, setSelectedFiles] = useState<Record<string, File | null>>({});
   const [uploading, setUploading] = useState<Record<string, boolean>>({});
@@ -148,499 +140,136 @@ const MyApplications: React.FC = () => {
     }
   };
 
-  // Função para buscar valores reais pagos de individual_fee_payments
-  // IMPORTANTE: Não usa valores de pagamentos PIX (que estão em BRL), apenas valores em USD
-  // Usa gross_amount_usd quando disponível, senão usa amount
-  const fetchRealPaidAmounts = React.useCallback(async () => {
-    if (!user?.id) {
-      setRealPaidAmounts({});
-      return;
-    }
+  // Paid amounts are now fetched via useStudentPaidAmountsQuery hook (cached)
 
-    try {
-      const { data: payments, error } = await supabase
-        .from('individual_fee_payments')
-        .select('fee_type, amount, gross_amount_usd, payment_method')
-        .eq('user_id', user.id);
-      
-      if (error) {
-        console.error('Erro ao buscar valores pagos:', error);
-        setRealPaidAmounts({});
-        return;
-      }
-      
-      const amounts: typeof realPaidAmounts = {};
-      payments?.forEach(payment => {
-        // Usar gross_amount_usd quando disponível, senão usar amount
-        const displayAmount = payment.gross_amount_usd 
-          ? Number(payment.gross_amount_usd) 
-          : Number(payment.amount);
-        
-        if (payment.fee_type === 'application') {
-          // Se já existe um valor, usar o maior (mais recente ou com gross_amount_usd)
-          if (!amounts.application || displayAmount > amounts.application) {
-            amounts.application = displayAmount;
-          }
-        } else if (payment.fee_type === 'scholarship') {
-          // Se já existe um valor, usar o maior (mais recente ou com gross_amount_usd)
-          if (!amounts.scholarship || displayAmount > amounts.scholarship) {
-            amounts.scholarship = displayAmount;
-          }
-        }
-      });
-      
-      setRealPaidAmounts(amounts);
-    } catch (error) {
-      console.error('Erro ao buscar valores pagos:', error);
-      setRealPaidAmounts({});
-    }
-  }, [user?.id]);
-
+  // Promotional coupons are now fetched via usePromotionalCouponQuery hooks (cached)
+  // Listen to coupon validation events to invalidate cache
   useEffect(() => {
-    setUserProfileId(userProfile?.id || null);
-    // Mantemos o polling ativo para refletir mudanças de pagamento/edge imediatamente
-    setIsPolling(true);
-    // Buscar valores pagos quando o perfil mudar
-    fetchRealPaidAmounts();
-  }, [userProfile?.id, fetchRealPaidAmounts]);
-
-  // Carregar cupom promocional do banco de dados (promotional_coupon_usage) e ouvir eventos de validação
-  useEffect(() => {
-    // Verificar se o usuário pode usar cupom promocional
-    const hasSellerReferralCode = userProfile?.seller_referral_code && userProfile.seller_referral_code.trim() !== '';
-    const isLegacySystem = userProfile?.system_type === 'legacy';
-    const canUsePromotionalCoupon = hasSellerReferralCode && isLegacySystem;
-    
-    if (!canUsePromotionalCoupon || !user?.id) {
-      setScholarshipFeePromotionalCoupon(null);
-      setApplicationFeePromotionalCoupon(null);
-      return;
-    }
-
-    // Buscar cupom promocional do banco de dados para Scholarship Fee
-    const checkScholarshipFeePromotionalCouponFromDatabase = async () => {
-      try {
-        // Buscar registro de validação do cupom promocional na tabela promotional_coupon_usage
-        const { data: couponUsage, error: couponError } = await supabase
-          .from('promotional_coupon_usage')
-          .select('original_amount, discount_amount, final_amount, coupon_code, created_at, metadata, payment_id')
-          .eq('user_id', user.id)
-          .eq('fee_type', 'scholarship_fee')
-          .gte('created_at', new Date(Date.now() - 24 * 60 * 60 * 1000).toISOString()) // Últimas 24 horas
-          .order('created_at', { ascending: false })
-          .limit(1)
-          .maybeSingle();
-
-        if (!couponError && couponUsage) {
-          // Verificar se é um registro de validação (não pagamento confirmado)
-          const isValidation = couponUsage.metadata?.is_validation === true || 
-                              (couponUsage.payment_id && String(couponUsage.payment_id).startsWith('validation_'));
-          
-          if (isValidation) {
-            const originalAmount = parseFloat(couponUsage.original_amount.toString());
-            const finalAmount = parseFloat(couponUsage.final_amount.toString());
-            const discountAmount = parseFloat(couponUsage.discount_amount.toString());
-            
-            console.log('[MyApplications] Cupom promocional Scholarship Fee encontrado no banco:', {
-              coupon: couponUsage.coupon_code,
-              originalAmount,
-              finalAmount,
-              discountAmount
-            });
-            
-            const newCoupon = {
-              discountAmount,
-              finalAmount
-            };
-            
-            // Só atualizar se o valor mudou para evitar loops
-            setScholarshipFeePromotionalCoupon(prev => {
-              if (prev?.discountAmount === newCoupon.discountAmount && prev?.finalAmount === newCoupon.finalAmount) {
-                return prev;
-              }
-              return newCoupon;
-            });
-            return;
-          }
-        }
-        
-        // Se não encontrou no banco, verificar localStorage como fallback
-        const savedCoupon = localStorage.getItem('__promotional_coupon_scholarship_fee');
-        if (savedCoupon) {
-          const couponData = JSON.parse(savedCoupon);
-          const isExpired = Date.now() - couponData.timestamp > 24 * 60 * 60 * 1000;
-          
-          if (!isExpired && couponData.validation && couponData.validation.isValid) {
-            const newCoupon = {
-              discountAmount: couponData.validation.discountAmount || 0,
-              finalAmount: couponData.validation.finalAmount || 0
-            };
-            
-            setScholarshipFeePromotionalCoupon(prev => {
-              if (prev?.discountAmount === newCoupon.discountAmount && prev?.finalAmount === newCoupon.finalAmount) {
-                return prev;
-              }
-              return newCoupon;
-            });
-            return;
-          } else {
-            localStorage.removeItem('__promotional_coupon_scholarship_fee');
-          }
-        }
-        
-        // Se não encontrou nem no banco nem no localStorage, limpar estado
-        setScholarshipFeePromotionalCoupon(null);
-      } catch (error) {
-        console.error('[MyApplications] Erro ao buscar cupom Scholarship Fee do banco:', error);
-        setScholarshipFeePromotionalCoupon(null);
-      }
-    };
-
-    // Buscar cupom promocional do banco de dados para Application Fee
-    const checkApplicationFeePromotionalCouponFromDatabase = async () => {
-      try {
-        // Normalizar fee_type para corresponder ao banco
-        const normalizedFeeType = 'application_fee';
-        
-        // Buscar registro de validação do cupom promocional na tabela promotional_coupon_usage
-        const { data: couponUsage, error: couponError } = await supabase
-          .from('promotional_coupon_usage')
-          .select('original_amount, discount_amount, final_amount, coupon_code, created_at, metadata, payment_id')
-          .eq('user_id', user.id)
-          .eq('fee_type', normalizedFeeType)
-          .gte('created_at', new Date(Date.now() - 24 * 60 * 60 * 1000).toISOString()) // Últimas 24 horas
-          .order('created_at', { ascending: false })
-          .limit(1)
-          .maybeSingle();
-
-        if (!couponError && couponUsage) {
-          // Verificar se é um registro de validação (não pagamento confirmado)
-          const isValidation = couponUsage.metadata?.is_validation === true || 
-                              (couponUsage.payment_id && String(couponUsage.payment_id).startsWith('validation_'));
-          
-          if (isValidation) {
-            const originalAmount = parseFloat(couponUsage.original_amount.toString());
-            const finalAmount = parseFloat(couponUsage.final_amount.toString());
-            const discountAmount = parseFloat(couponUsage.discount_amount.toString());
-            
-            console.log('[MyApplications] Cupom promocional Application Fee encontrado no banco:', {
-              coupon: couponUsage.coupon_code,
-              originalAmount,
-              finalAmount,
-              discountAmount
-            });
-            
-            const newCoupon = {
-              discountAmount,
-              finalAmount
-            };
-            
-            // Só atualizar se o valor mudou para evitar loops
-            setApplicationFeePromotionalCoupon(prev => {
-              if (prev?.discountAmount === newCoupon.discountAmount && prev?.finalAmount === newCoupon.finalAmount) {
-                return prev;
-              }
-              return newCoupon;
-            });
-            return;
-          }
-        }
-        
-        // Se não encontrou no banco, verificar localStorage como fallback
-        const savedCoupon = localStorage.getItem('__promotional_coupon_application_fee');
-        if (savedCoupon) {
-          const couponData = JSON.parse(savedCoupon);
-          const isExpired = Date.now() - couponData.timestamp > 24 * 60 * 60 * 1000;
-          
-          if (!isExpired && couponData.validation && couponData.validation.isValid) {
-            const newCoupon = {
-              discountAmount: couponData.validation.discountAmount || 0,
-              finalAmount: couponData.validation.finalAmount || 0
-            };
-            
-            setApplicationFeePromotionalCoupon(prev => {
-              if (prev?.discountAmount === newCoupon.discountAmount && prev?.finalAmount === newCoupon.finalAmount) {
-                return prev;
-              }
-              return newCoupon;
-            });
-            return;
-          } else {
-            localStorage.removeItem('__promotional_coupon_application_fee');
-          }
-        }
-        
-        // Se não encontrou nem no banco nem no localStorage, limpar estado
-        setApplicationFeePromotionalCoupon(null);
-      } catch (error) {
-        console.error('[MyApplications] Erro ao buscar cupom Application Fee do banco:', error);
-        setApplicationFeePromotionalCoupon(null);
-      }
-    };
-
-    // Buscar ambos os cupons
-    checkScholarshipFeePromotionalCouponFromDatabase();
-    checkApplicationFeePromotionalCouponFromDatabase();
-    
-    // Verificar periodicamente (aumentar intervalo para reduzir re-renders)
-    const interval = setInterval(() => {
-      checkScholarshipFeePromotionalCouponFromDatabase();
-      checkApplicationFeePromotionalCouponFromDatabase();
-    }, 5000); // 5 segundos
-    
-    // Ouvir eventos de validação de cupom do modal
+    // Listen to coupon validation events from modal
     const handleCouponValidation = (event: CustomEvent) => {
       if (event.detail?.isValid && event.detail?.discountAmount) {
-        const newCoupon = {
-          discountAmount: event.detail.discountAmount,
-          finalAmount: event.detail.finalAmount || 0
-        };
-        
-        // Determinar qual fee_type baseado no contexto (pode vir do event.detail)
+        // Determine which fee_type based on context
         const feeType = event.detail?.fee_type || 'scholarship_fee';
         
+        // Invalidate the appropriate coupon query
         if (feeType === 'application_fee') {
-          // Só atualizar se o valor mudou
-          setApplicationFeePromotionalCoupon(prev => {
-            if (prev?.discountAmount === newCoupon.discountAmount && prev?.finalAmount === newCoupon.finalAmount) {
-              return prev;
-            }
-            return newCoupon;
-          });
+          invalidateStudentDashboardCoupons(queryClient);
         } else {
-          // Só atualizar se o valor mudou
-          setScholarshipFeePromotionalCoupon(prev => {
-            if (prev?.discountAmount === newCoupon.discountAmount && prev?.finalAmount === newCoupon.finalAmount) {
-              return prev;
-            }
-            return newCoupon;
-          });
+          invalidateStudentDashboardCoupons(queryClient);
         }
       } else {
-        // Se o cupom foi removido, verificar novamente no banco
-        checkScholarshipFeePromotionalCouponFromDatabase();
-        checkApplicationFeePromotionalCouponFromDatabase();
+        // If coupon was removed, invalidate both
+        invalidateStudentDashboardCoupons(queryClient);
+        invalidateStudentDashboardCoupons(queryClient);
       }
     };
 
     window.addEventListener('promotionalCouponValidated', handleCouponValidation as EventListener);
     
     return () => {
-      clearInterval(interval);
       window.removeEventListener('promotionalCouponValidated', handleCouponValidation as EventListener);
     };
-  }, [userProfile?.seller_referral_code, userProfile?.system_type, user?.id]);
+  }, [user?.id, queryClient]);
 
+  // Fetch document requests for applications (not cached, supplementary data)
   useEffect(() => {
     let isMounted = true;
-    const fetchApplications = async (showLoading = false) => {
-      if (showLoading && isFirstLoad) setLoading(true);
+    
+    const fetchDocumentRequests = async () => {
+      if (!applications.length || !user?.id) return;
+      
       try {
-        if (!userProfileId) {
-          if (isMounted) setApplications([]);
-          if (showLoading && isFirstLoad) setLoading(false);
-          return;
-        }
-        const { data, error } = await supabase
-          .from('scholarship_applications')
-          .select(`*, scholarships(*, universities!inner(id, name, logo_url, location, is_approved))`)
-          .eq('student_id', userProfileId)
-          .order('created_at', { ascending: false });
-        if (error) {
-          if (isMounted) setError('Erro ao buscar aplicações.');
+        // Verificar e abrir automaticamente checklists de documentos rejeitados
+        applications.forEach((app: ApplicationWithScholarship) => checkAndOpenRejectedDocuments(app));
+        
+        // Buscar uploads de Document Requests do aluno e agrupar por aplicação
+        const apps = applications as any[];
+        const appIds = apps.map(a => a.id);
+        const uniIds = apps.map(a => a.scholarships?.university_id).filter(Boolean);
+        
+        // Buscar requests individuais da aplicação e globais por universidade
+        const { data: reqs } = await supabase
+          .from('document_requests')
+          .select('id,title,scholarship_application_id,university_id,is_global')
+          .or(`scholarship_application_id.in.(${appIds.join(',')}),and(is_global.eq.true,university_id.in.(${uniIds.join(',')}))`);
+        
+        const requestIds = (reqs || []).map(r => r.id);
+        
+        if (requestIds.length) {
+          const { data: uploads } = await supabase
+            .from('document_request_uploads')
+            .select('document_request_id,status,review_notes,rejection_reason,uploaded_at,uploaded_by')
+            .in('document_request_id', requestIds)
+            .eq('uploaded_by', user.id);
+          
+          // Mapear requestId -> {title, appIds[]}
+          const reqMeta: Record<string, { title: string; appIds: string[] }> = {};
+          (reqs || []).forEach((r: any) => {
+            if (r.scholarship_application_id) {
+              reqMeta[r.id] = { title: r.title, appIds: [r.scholarship_application_id] };
+            } else if (r.is_global && r.university_id) {
+              const targetApps = apps.filter(a => a.scholarships?.university_id === r.university_id).map(a => a.id);
+              reqMeta[r.id] = { title: r.title, appIds: targetApps };
+            }
+          });
+          
+          const grouped: Record<string, { title: string; status: string; review_notes?: string; rejection_reason?: string }[]> = {};
+          (uploads || []).forEach((u: any) => {
+            const meta = reqMeta[u.document_request_id];
+            if (!meta) return;
+            meta.appIds.forEach(appId => {
+              if (!grouped[appId]) grouped[appId] = [];
+              grouped[appId].push({ 
+                title: meta.title, 
+                status: (u.status || '').toLowerCase(), 
+                review_notes: u.review_notes || undefined, 
+                rejection_reason: u.rejection_reason || undefined 
+              });
+            });
+          });
+          
+          if (isMounted) setRequestUploadsByApp(grouped);
         } else {
-          if (isMounted) {
-            // Verificar se alguma aplicação teve mudança de status de pagamento
-            const newApplications = data || [];
-            const currentApplications = applications;
-            
-            // Detectar aplicações que tiveram mudanças no status de pagamento
-            newApplications.forEach(newApp => {
-              const currentApp = currentApplications.find(app => app.id === newApp.id);
-              
-              if (currentApp) {
-                // Verificar se Application Fee foi paga agora
-                const applicationFeePaidNow = !!newApp.is_application_fee_paid;
-                const applicationFeePaidBefore = !!currentApp.is_application_fee_paid;
-                
-                if (applicationFeePaidNow && !applicationFeePaidBefore) {
-                  console.log('Detectado pagamento de Application Fee para aplicação:', newApp.id);
-                  notifyUniversityApplicationFeePaid(newApp);
-                }
-                
-                // Verificar se Scholarship Fee foi paga agora
-                const scholarshipFeePaidNow = !!newApp.is_scholarship_fee_paid;
-                const scholarshipFeePaidBefore = !!currentApp.is_scholarship_fee_paid;
-                
-                if (scholarshipFeePaidNow && !scholarshipFeePaidBefore) {
-                  console.log('Detectado pagamento de Scholarship Fee para aplicação:', newApp.id);
-                  notifyUniversityScholarshipFeePaid(newApp);
-                }
-              }
-            });
-            
-            setApplications(newApplications);
-          }
-          // Verificar e abrir automaticamente checklists de documentos rejeitados
-          if (data && data.length) {
-            data.forEach(application => {
-              checkAndOpenRejectedDocuments(application);
-            });
-          }
-          // Buscar uploads de Document Requests do aluno e agrupar por aplicação
-          if (data && data.length && user?.id) {
-            try {
-              const apps = (data as any[]);
-              const appIds = apps.map(a => a.id);
-              const uniIds = apps.map(a => (a as any).scholarships?.university_id).filter(Boolean);
-              // Buscar requests individuais da aplicação e globais por universidade
-              const { data: reqs } = await supabase
-                .from('document_requests')
-                .select('id,title,scholarship_application_id,university_id,is_global')
-                .or(`scholarship_application_id.in.(${appIds.join(',')}),and(is_global.eq.true,university_id.in.(${uniIds.join(',')}))`);
-              const requestIds = (reqs || []).map(r => r.id);
-              if (requestIds.length) {
-                const { data: uploads } = await supabase
-                  .from('document_request_uploads')
-                  .select('document_request_id,status,review_notes,rejection_reason,uploaded_at,uploaded_by')
-                  .in('document_request_id', requestIds)
-                  .eq('uploaded_by', user.id);
-                // Mapear requestId -> {title, appIds[]}
-                const reqMeta: Record<string, { title: string; appIds: string[] }> = {};
-                (reqs || []).forEach((r: any) => {
-                  if (r.scholarship_application_id) {
-                    reqMeta[r.id] = { title: r.title, appIds: [r.scholarship_application_id] };
-                  } else if (r.is_global && r.university_id) {
-                    const targetApps = apps.filter(a => (a as any).scholarships?.university_id === r.university_id).map(a => a.id);
-                    reqMeta[r.id] = { title: r.title, appIds: targetApps };
-                  }
-                });
-                const grouped: Record<string, { title: string; status: string; review_notes?: string; rejection_reason?: string }[]> = {};
-                (uploads || []).forEach((u: any) => {
-                  const meta = reqMeta[u.document_request_id];
-                  if (!meta) return;
-                  meta.appIds.forEach(appId => {
-                    if (!grouped[appId]) grouped[appId] = [];
-                    grouped[appId].push({ title: meta.title, status: (u.status || '').toLowerCase(), review_notes: u.review_notes || undefined, rejection_reason: u.rejection_reason || undefined });
-                  });
-                });
-                if (isMounted) setRequestUploadsByApp(grouped);
-              } else {
-                if (isMounted) setRequestUploadsByApp({});
-              }
-            } catch {}
-          }
+          if (isMounted) setRequestUploadsByApp({});
         }
       } catch (err) {
-        if (isMounted) setError('Erro inesperado ao buscar aplicações.');
+        console.error('Error fetching document requests:', err);
       }
-      if (showLoading && isFirstLoad) setLoading(false);
-      if (isFirstLoad) setIsFirstLoad(false);
     };
-    if (userProfileId) fetchApplications(true);
-
-    // Polling desabilitado para evitar loops infinitos
-    // O polling será feito apenas manualmente quando necessário
+    
+    fetchDocumentRequests();
     
     return () => {
       isMounted = false;
     };
-  }, [userProfileId, refetchUserProfile, isPolling]);
+  }, [applications, user?.id]);
 
-  // Polling manual baseado em eventos específicos (sem loops infinitos)
-  useEffect(() => {
-    if (!isPolling || !userProfileId) return;
-    
-    // Polling apenas quando a página ganha foco (usuário volta para a aba)
-    const handleVisibilityChange = () => {
-      if (!document.hidden && userProfileId) {
-        console.log('🔄 Polling manual - Página ganhou foco');
-        refetchUserProfile();
-        // fetchApplications será chamado pelo useEffect principal
-      }
-    };
-    
-    document.addEventListener('visibilitychange', handleVisibilityChange);
-    
-    return () => {
-      document.removeEventListener('visibilitychange', handleVisibilityChange);
-    };
-  }, [isPolling, userProfileId, refetchUserProfile]);
+  // React Query handles automatic background refetching and window focus refetch
+  // No manual polling needed
 
   // Nenhum fallback de cart: a página lista exclusivamente o que está em scholarship_applications
 
+  // Handle redirect from payment success page
   useEffect(() => {
     const params = new URLSearchParams(location.search);
     if (params.get('from') === 'payment-success') {
-      // Força o refetch dos dados
-      setLoading(true);
-      setError(null);
-      const fetchApplications = async () => {
-        try {
-          if (!userProfile?.id) {
-            setApplications([]);
-            setLoading(false);
-            return;
-          }
-          const { data, error } = await supabase
-            .from('scholarship_applications')
-            .select(`*, scholarships(*, universities!inner(id, name, logo_url, location, is_approved))`)
-            .eq('student_id', userProfile.id)
-            .order('created_at', { ascending: false });
-          if (error) {
-            setError('Erro ao buscar aplicações.');
-          } else {
-            const newApplications = data || [];
-            const currentApplications = applications;
-            
-            // Detectar aplicações que tiveram mudanças no status de pagamento
-            newApplications.forEach(newApp => {
-              const currentApp = currentApplications.find(app => app.id === newApp.id);
-              
-              if (currentApp) {
-                // Verificar se Application Fee foi paga agora
-                const applicationFeePaidNow = !!newApp.is_application_fee_paid;
-                const applicationFeePaidBefore = !!currentApp.is_application_fee_paid;
-                
-                if (applicationFeePaidNow && !applicationFeePaidBefore) {
-                  console.log('Detectado pagamento de Application Fee para aplicação (após retorno do pagamento):', newApp.id);
-                  notifyUniversityApplicationFeePaid(newApp);
-                }
-                
-                // Verificar se Scholarship Fee foi paga agora
-                const scholarshipFeePaidNow = !!newApp.is_scholarship_fee_paid;
-                const scholarshipFeePaidBefore = !!currentApp.is_scholarship_fee_paid;
-                
-                if (scholarshipFeePaidNow && !scholarshipFeePaidBefore) {
-                  console.log('Detectado pagamento de Scholarship Fee para aplicação (após retorno do pagamento):', newApp.id);
-                  notifyUniversityScholarshipFeePaid(newApp);
-                }
-              }
-            });
-            
-            setApplications(newApplications);
-          }
-        } catch (err) {
-          setError('Erro inesperado ao buscar aplicações.');
-        }
-        setLoading(false);
-      };
-      fetchApplications();
-      // Buscar valores pagos atualizados após retorno do pagamento
-      fetchRealPaidAmounts();
-      // Remove o parâmetro da URL para evitar loops
+      // Invalidate queries to force fresh data fetch
+      invalidateStudentDashboardApplications(queryClient);
+      invalidateStudentDashboardFees(queryClient);
+      invalidateStudentDashboardCoupons(queryClient);
+      
+      // Remove parameter from URL to avoid loops
       params.delete('from');
       window.history.replaceState({}, '', `${location.pathname}${params.toString() ? '?' + params.toString() : ''}`);
     }
-  }, [location.search, userProfile, fetchRealPaidAmounts]);
+  }, [location.search, queryClient]);
 
   // Sincronizar cart com banco de dados quando a página carrega
   useEffect(() => {
     if (user?.id) {
       syncCartWithDatabase(user.id);
-      fetchRealPaidAmounts();
     }
-  }, [user?.id, syncCartWithDatabase, fetchRealPaidAmounts]);
+  }, [user?.id, syncCartWithDatabase]);
 
   // Configurar real-time subscription para atualizações de pagamentos
   useEffect(() => {
@@ -657,8 +286,8 @@ const MyApplications: React.FC = () => {
           filter: `user_id=eq.${user.id}`
         },
         () => {
-          // Refetch valores pagos quando houver mudanças
-          fetchRealPaidAmounts();
+          // Invalidate fees query to fetch fresh data
+          invalidateStudentDashboardFees(queryClient);
         }
       )
       .subscribe();
@@ -666,14 +295,14 @@ const MyApplications: React.FC = () => {
     return () => {
       supabase.removeChannel(channel);
     };
-  }, [user?.id, fetchRealPaidAmounts]);
+  }, [user?.id, queryClient]);
 
   // Quando o aluno pagar a taxa de uma bolsa aprovada, escondemos as demais aprovadas não pagas
   const chosenPaidApp = applications.find(
-    (a) => !!(a as any).is_application_fee_paid || !!(a as any).is_scholarship_fee_paid
+    (a: ApplicationWithScholarship) => !!(a as any).is_application_fee_paid || !!(a as any).is_scholarship_fee_paid
   );
   const applicationsToShow = chosenPaidApp
-    ? applications.filter((a) => a.id === chosenPaidApp.id)
+    ? applications.filter((a: ApplicationWithScholarship) => a.id === chosenPaidApp.id)
     : applications;
 
 
@@ -725,6 +354,13 @@ const MyApplications: React.FC = () => {
     return status.replace('_', ' ').toUpperCase();
   };
 
+  // Helper function para garantir que nextSteps seja sempre um array
+  const ensureArray = (value: any): string[] => {
+    if (Array.isArray(value)) return value;
+    if (typeof value === 'string') return [value];
+    return [];
+  };
+
   // Função para gerar mensagens detalhadas sobre o status
   const getStatusDescription = (application: ApplicationWithScholarship) => {
     const status = application.status;
@@ -734,6 +370,11 @@ const MyApplications: React.FC = () => {
     );
     const applicationFeePaid = !!(application as any).is_application_fee_paid;
     const scholarshipFeePaid = !!(application as any).is_scholarship_fee_paid;
+    const i20ControlFeePaid = !!(application as any).is_i20_control_fee_paid;
+    // Verificar se a carta de aceite foi recebida (tem URL ou status 'sent'/'approved')
+    const hasAcceptanceLetter = !!(application as any).acceptance_letter_url || 
+                                 (application as any).acceptance_letter_status === 'sent' || 
+                                 (application as any).acceptance_letter_status === 'approved';
 
     switch (status) {
       case 'approved':
@@ -741,7 +382,7 @@ const MyApplications: React.FC = () => {
           return {
             title: t('studentDashboard.myApplications.statusDescriptions.documentsApprovedByUniversity.title'),
             description: t('studentDashboard.myApplications.statusDescriptions.documentsApprovedByUniversity.description'),
-            nextSteps: t('studentDashboard.myApplications.statusDescriptions.documentsApprovedByUniversity.nextSteps', { returnObjects: true }) as string[],
+            nextSteps: ensureArray(t('studentDashboard.myApplications.statusDescriptions.documentsApprovedByUniversity.nextSteps', { returnObjects: true })),
             icon: '📋',
             color: 'text-blue-700',
             bgColor: 'bg-blue-50',
@@ -751,7 +392,7 @@ const MyApplications: React.FC = () => {
           return {
             title: t('studentDashboard.myApplications.statusDescriptions.applicationApprovedPaymentRequired.title'),
             description: t('studentDashboard.myApplications.statusDescriptions.applicationApprovedPaymentRequired.description'),
-            nextSteps: t('studentDashboard.myApplications.statusDescriptions.applicationApprovedPaymentRequired.nextSteps', { returnObjects: true }) as string[],
+            nextSteps: ensureArray(t('studentDashboard.myApplications.statusDescriptions.applicationApprovedPaymentRequired.nextSteps', { returnObjects: true })),
             icon: '💳',
             color: 'text-green-700',
             bgColor: 'bg-green-50',
@@ -761,17 +402,40 @@ const MyApplications: React.FC = () => {
           return {
             title: t('studentDashboard.myApplications.statusDescriptions.applicationFeePaidScholarshipFeeRequired.title'),
             description: t('studentDashboard.myApplications.statusDescriptions.applicationFeePaidScholarshipFeeRequired.description'),
-            nextSteps: t('studentDashboard.myApplications.statusDescriptions.applicationFeePaidScholarshipFeeRequired.nextSteps', { returnObjects: true }) as string[],
+            nextSteps: ensureArray(t('studentDashboard.myApplications.statusDescriptions.applicationFeePaidScholarshipFeeRequired.nextSteps', { returnObjects: true })),
             icon: '🎓',
             color: 'text-blue-700',
             bgColor: 'bg-blue-50',
             borderColor: 'border-blue-200'
           };
+        } else if (!i20ControlFeePaid) {
+          // Scholarship Fee paga, mas I-20 ainda não foi pago
+          return {
+            title: t('studentDashboard.myApplications.statusDescriptions.scholarshipFeePaidI20Required.title'),
+            description: t('studentDashboard.myApplications.statusDescriptions.scholarshipFeePaidI20Required.description'),
+            nextSteps: ensureArray(t('studentDashboard.myApplications.statusDescriptions.scholarshipFeePaidI20Required.nextSteps', { returnObjects: true })),
+            icon: '📄',
+            color: 'text-blue-700',
+            bgColor: 'bg-blue-50',
+            borderColor: 'border-blue-200'
+          };
+        } else if (!hasAcceptanceLetter) {
+          // Todas as taxas pagas, mas ainda não recebeu a carta de aceite
+          return {
+            title: t('studentDashboard.myApplications.statusDescriptions.allFeesPaidWaitingAcceptanceLetter.title'),
+            description: t('studentDashboard.myApplications.statusDescriptions.allFeesPaidWaitingAcceptanceLetter.description'),
+            nextSteps: ensureArray(t('studentDashboard.myApplications.statusDescriptions.allFeesPaidWaitingAcceptanceLetter.nextSteps', { returnObjects: true })),
+            icon: '📧',
+            color: 'text-blue-700',
+            bgColor: 'bg-blue-50',
+            borderColor: 'border-blue-200'
+          };
         } else {
+          // Todas as taxas pagas E carta de aceite recebida = Fully Enrolled
           return {
             title: t('studentDashboard.myApplications.statusDescriptions.fullyEnrolled.title'),
             description: t('studentDashboard.myApplications.statusDescriptions.fullyEnrolled.description'),
-            nextSteps: t('studentDashboard.myApplications.statusDescriptions.fullyEnrolled.nextSteps', { returnObjects: true }) as string[],
+            nextSteps: ensureArray(t('studentDashboard.myApplications.statusDescriptions.fullyEnrolled.nextSteps', { returnObjects: true })),
             icon: '🎉',
             color: 'text-emerald-700',
             bgColor: 'bg-emerald-50',
@@ -783,7 +447,7 @@ const MyApplications: React.FC = () => {
         return {
           title: t('studentDashboard.myApplications.statusDescriptions.applicationNotSelected.title'),
           description: t('studentDashboard.myApplications.statusDescriptions.applicationNotSelected.description'),
-          nextSteps: t('studentDashboard.myApplications.statusDescriptions.applicationNotSelected.nextSteps', { returnObjects: true }) as string[],
+          nextSteps: ensureArray(t('studentDashboard.myApplications.statusDescriptions.applicationNotSelected.nextSteps', { returnObjects: true })),
           icon: '📝',
           color: 'text-red-700',
           bgColor: 'bg-red-50',
@@ -794,7 +458,7 @@ const MyApplications: React.FC = () => {
         return {
           title: t('studentDashboard.myApplications.statusDescriptions.applicationUnderReview.title'),
           description: t('studentDashboard.myApplications.statusDescriptions.applicationUnderReview.description'),
-          nextSteps: t('studentDashboard.myApplications.statusDescriptions.applicationUnderReview.nextSteps', { returnObjects: true }) as string[],
+          nextSteps: ensureArray(t('studentDashboard.myApplications.statusDescriptions.applicationUnderReview.nextSteps', { returnObjects: true })),
           icon: '🔍',
           color: 'text-amber-700',
           bgColor: 'bg-amber-50',
@@ -805,7 +469,7 @@ const MyApplications: React.FC = () => {
         return {
           title: t('studentDashboard.myApplications.statusDescriptions.applicationFeeConfirmed.title'),
           description: t('studentDashboard.myApplications.statusDescriptions.applicationFeeConfirmed.description'),
-          nextSteps: t('studentDashboard.myApplications.statusDescriptions.applicationFeeConfirmed.nextSteps', { returnObjects: true }) as string[],
+          nextSteps: ensureArray(t('studentDashboard.myApplications.statusDescriptions.applicationFeeConfirmed.nextSteps', { returnObjects: true })),
           icon: '✅',
           color: 'text-blue-700',
           bgColor: 'bg-blue-50',
@@ -818,7 +482,7 @@ const MyApplications: React.FC = () => {
           return {
             title: t('studentDashboard.myApplications.statusDescriptions.documentsUnderUniversityReview.title'),
             description: t('studentDashboard.myApplications.statusDescriptions.documentsUnderUniversityReview.description'),
-            nextSteps: t('studentDashboard.myApplications.statusDescriptions.documentsUnderUniversityReview.nextSteps', { returnObjects: true }) as string[],
+            nextSteps: ensureArray(t('studentDashboard.myApplications.statusDescriptions.documentsUnderUniversityReview.nextSteps', { returnObjects: true })),
             icon: '📋',
             color: 'text-blue-700',
             bgColor: 'bg-blue-50',
@@ -828,7 +492,7 @@ const MyApplications: React.FC = () => {
           return {
             title: t('studentDashboard.myApplications.statusDescriptions.applicationSubmitted.title'),
             description: t('studentDashboard.myApplications.statusDescriptions.applicationSubmitted.description'),
-            nextSteps: t('studentDashboard.myApplications.statusDescriptions.applicationSubmitted.nextSteps', { returnObjects: true }) as string[],
+            nextSteps: ensureArray(t('studentDashboard.myApplications.statusDescriptions.applicationSubmitted.nextSteps', { returnObjects: true })),
             icon: '📤',
             color: 'text-slate-700',
             bgColor: 'bg-slate-50',
@@ -872,7 +536,7 @@ const MyApplications: React.FC = () => {
       await supabase.from('student_documents').insert({ user_id: user.id, type, file_url: publicUrl, status: 'under_review' });
 
       // Atualizar documentos da aplicação
-      const app = applications.find(a => a.id === applicationId);
+      const app = applications.find((a: ApplicationWithScholarship) => a.id === applicationId);
       const currentDocs: any[] = (app as any)?.documents || [];
       const normalized = parseApplicationDocuments(currentDocs);
       const idx = normalized.findIndex(d => d.type === type);
@@ -916,8 +580,9 @@ const MyApplications: React.FC = () => {
         // Não falhar o upload se a notificação falhar
       }
       
-      // Atualiza estado local
-      setApplications(prev => prev.map(a => a.id === applicationId ? ({ ...a, documents: newDocs } as any) : a));
+      // Invalidate applications query to refetch fresh data
+      invalidateStudentDashboardApplications(queryClient);
+      
       // Limpa seleção
       setSelectedFiles(prev => ({ ...prev, [key]: null }));
     } catch (e) {
@@ -956,11 +621,11 @@ const MyApplications: React.FC = () => {
 
   const stats = {
     total: applicationsToShow.length,
-    pending: applicationsToShow.filter(app => app.status === 'pending').length,
-    approved: applicationsToShow.filter(app => app.status === 'approved').length,
-    rejected: applicationsToShow.filter(app => app.status === 'rejected').length,
-    under_review: applicationsToShow.filter(app => app.status === 'under_review').length,
-    pending_scholarship_fee: applicationsToShow.filter(app => app.status === 'pending_scholarship_fee').length,
+    pending: applicationsToShow.filter((app: ApplicationWithScholarship) => app.status === 'pending').length,
+    approved: applicationsToShow.filter((app: ApplicationWithScholarship) => app.status === 'approved').length,
+    rejected: applicationsToShow.filter((app: ApplicationWithScholarship) => app.status === 'rejected').length,
+    under_review: applicationsToShow.filter((app: ApplicationWithScholarship) => app.status === 'under_review').length,
+    pending_scholarship_fee: applicationsToShow.filter((app: ApplicationWithScholarship) => app.status === 'pending_scholarship_fee').length,
   };
 
   // const createOrGetApplication = async (scholarshipId: string, studentProfileId: string) => {
@@ -990,32 +655,34 @@ const MyApplications: React.FC = () => {
   // };
 
   // Garante/recupera a application para uso no checkout
-  const ensureApplication = async (scholarshipId: string): Promise<{ applicationId: string } | undefined> => {
-    if (!userProfileId) return undefined;
-    const { data: existing, error: fetchError } = await supabase
-      .from('scholarship_applications')
-      .select('id')
-      .eq('student_id', userProfileId)
-      .eq('scholarship_id', scholarshipId)
-      .maybeSingle();
-    if (fetchError) return undefined;
-    if (existing) return { applicationId: existing.id };
-    const { data, error } = await supabase
-      .from('scholarship_applications')
-      .insert({
-        student_id: userProfileId,
-        scholarship_id: scholarshipId,
-        status: 'pending',
-        applied_at: new Date().toISOString(),
-        student_process_type: localStorage.getItem('studentProcessType') || null,
-      })
-      .select('id')
-      .single();
-    if (error) return undefined;
-    return { applicationId: data.id };
-  };
+  // DEPRECATED: Esta função não é mais necessária pois usamos React Query
+  // const ensureApplication = async (scholarshipId: string): Promise<{ applicationId: string } | undefined> => {
+  //   if (!userProfile?.id) return undefined;
+  //   const { data: existing, error: fetchError } = await supabase
+  //     .from('scholarship_applications')
+  //     .select('id')
+  //     .eq('student_id', userProfile.id)
+  //     .eq('scholarship_id', scholarshipId)
+  //     .maybeSingle();
+  //   if (fetchError) return undefined;
+  //   if (existing) return { applicationId: existing.id };
+  //   const { data, error } = await supabase
+  //     .from('scholarship_applications')
+  //     .insert({
+  //       student_id: userProfile.id,
+  //       scholarship_id: scholarshipId,
+  //       status: 'pending',
+  //       applied_at: new Date().toISOString(),
+  //       student_process_type: localStorage.getItem('studentProcessType') || null,
+  //     })
+  //     .select('id')
+  //     .single();
+  //   if (error) return undefined;
+  //   return { applicationId: data.id };
+  // };
 
-  if (loading) {
+  // Show loading state only on first load (no cached data yet)
+  if (isPending) {
     return (
       <div className="min-h-screen bg-slate-50 flex items-center justify-center">
         <div className="flex flex-col items-center space-y-4">
@@ -1709,9 +1376,9 @@ const MyApplications: React.FC = () => {
           <div className="space-y-10">
             {/* Approved */}
             {(() => {
-              const approvedList = applicationsToShow.filter(a => a.status === 'approved' || a.status === 'enrolled');
+              const approvedList = applicationsToShow.filter((a: ApplicationWithScholarship) => a.status === 'approved' || a.status === 'enrolled');
               if (approvedList.length === 0) return null;
-              const selectedApp = approvedList.find(a => (a as any).is_scholarship_fee_paid);
+              const selectedApp = approvedList.find((a: ApplicationWithScholarship) => (a as any).is_scholarship_fee_paid);
               const hasSelectedScholarship = !!selectedApp;
               return (
                 <section >
@@ -1732,7 +1399,7 @@ const MyApplications: React.FC = () => {
                     msOverflowStyle: 'none',
                     WebkitOverflowScrolling: 'touch'
                   }}>
-                    {approvedList.map((application) => {
+                    {approvedList.map((application: ApplicationWithScholarship) => {
                       const Icon = getStatusIcon(application.status);
                       const scholarship = application.scholarships;
                       const applicationFeePaid = !!application.is_application_fee_paid;
@@ -2003,7 +1670,7 @@ const MyApplications: React.FC = () => {
 
             {/* Others */}
             {(() => {
-              const otherList = applicationsToShow.filter(a => a.status !== 'approved' && a.status !== 'enrolled');
+              const otherList = applicationsToShow.filter((a: ApplicationWithScholarship) => a.status !== 'approved' && a.status !== 'enrolled');
               if (otherList.length === 0) return null;
               return (
                 <section>
@@ -2016,7 +1683,7 @@ const MyApplications: React.FC = () => {
                     msOverflowStyle: 'none',
                     WebkitOverflowScrolling: 'touch'
                   }}>
-                    {otherList.map((application) => {
+                    {otherList.map((application: ApplicationWithScholarship) => {
                       const Icon = getStatusIcon(application.status);
                       const scholarship = application.scholarships;
                       if (!scholarship) return null;
@@ -2025,7 +1692,7 @@ const MyApplications: React.FC = () => {
                       const statusInfo = getStatusDescription(application);
                       
                       return (
-                        <div key={application.id} className="bg-white rounded-3xl hover:-translate-y-1 transition-all duration-300 border border-slate-100 overflow-hidden group w-full">
+                        <div key={application.id} className="bg-white rounded-3xl hover:-translate-y-1 transition-all duration-300 border border-slate-100 group w-full max-w-full">
                           <div className="p-4 sm:p-6">
                             {/* Compact Mobile Header */}
                             <div className="mb-4">
@@ -2149,13 +1816,13 @@ const MyApplications: React.FC = () => {
                                       <path fillRule="evenodd" d="M5.23 7.21a.75.75 0 011.06.02L10 10.94l3.71-3.71a.75.75 0 111.06 1.06l-4.24 4.24a.75.75 0 01-1.06 0L5.21 8.29a.75.75 0 01.02-1.08z" clipRule="evenodd"/>
                                     </svg>
                                   </button>
-                                  
-                                                                     <div 
-                                     className={`overflow-hidden transition-all duration-300 ease-in-out ${
-                                       openChecklists[application.id] 
-                                         ? 'max-h-[2000px] opacity-100' 
-                                         : 'max-h-0 opacity-0'
-                                     }`}
+
+                                                                     <div
+                                      className={`transition-all duration-300 ease-in-out ${
+                                        openChecklists[application.id]
+                                          ? 'max-h-[5000px] opacity-100'
+                                          : 'max-h-0 opacity-0 overflow-hidden'
+                                      }`}
                                    >
                                      <div className="space-y-3 pt-2">
                                        {/* Required Documents */}
@@ -2167,19 +1834,19 @@ const MyApplications: React.FC = () => {
                                          const isPending = !isApproved && !isRejected && !isUnderReview;
 
                                          return (
-                                           <div key={doc.type} className="bg-white rounded-xl border-2 border-slate-200 p-4 hover:border-slate-300 transition-all duration-200">
-                                             <div className="flex items-start justify-between">
-                                               <div className="flex items-start flex-1">
+                                            <div key={doc.type} className={`bg-white rounded-xl border-2 p-2 sm:p-4 hover:border-slate-300 transition-all duration-200 w-full max-w-full overflow-visible ${isRejected ? 'border-red-500' : 'border-slate-200'}`}>
+                                             <div className="flex items-start justify-between min-w-0 w-full">
+                                               <div className="flex items-start flex-1 min-w-0 w-full">
                                                  {/* Check Icon */}
-                                                 <div className={`flex-shrink-0 w-6 h-6 rounded-full border-2 flex items-center justify-center mr-3 mt-0.5 transition-all duration-200 ${
-                                                   isApproved 
-                                                     ? 'bg-green-100 border-green-400 text-green-600' 
-                                                     : isRejected 
-                                                       ? 'bg-red-100 border-red-400 text-red-600'
-                                                       : isUnderReview
-                                                         ? 'bg-amber-100 border-amber-400 text-amber-600'
-                                                         : 'bg-slate-100 border-slate-300 text-slate-400'
-                                                 }`}>
+                                                  <div className={`flex-shrink-0 w-6 h-6 rounded-full border-2 flex items-center justify-center mr-3 mt-0.5 transition-all duration-200 ${
+                                                    isApproved 
+                                                      ? 'bg-green-100 border-green-400 text-green-600' 
+                                                      : isRejected 
+                                                        ? 'bg-red-100 border-red-400 text-red-600'
+                                                        : isUnderReview
+                                                          ? 'bg-amber-100 border-amber-400 text-amber-600'
+                                                          : 'bg-slate-100 border-slate-300 text-slate-400'
+                                                  }`}>
                                                    {isApproved ? (
                                                      <CheckCircle className="h-4 w-4" />
                                                    ) : isRejected ? (
@@ -2192,18 +1859,19 @@ const MyApplications: React.FC = () => {
                                                  </div>
                                                  
                                                  {/* Document Info */}
-                                                 <div className="flex-1 min-w-0 overflow-hidden">
-                                                   <div className="flex items-center justify-between mb-1">
-                                                     <h5 className="font-semibold text-slate-900 text-sm">
+                                                  <div className="flex-1 min-w-0">
+                                                    <div className="flex flex-col gap-1.5 mb-2">
+                                                     <h5 className="font-semibold text-slate-900 text-sm w-full break-words">
                                                        <TruncatedText
                                                          text={doc.label}
                                                          maxLength={30}
                                                          className="font-semibold text-slate-900 text-sm"
                                                          showTooltip={true}
                                                          tooltipPosition="top"
+                                                         breakWords={true}
                                                        />
                                                      </h5>
-                                                     <span className={`px-2 py-1 rounded-full text-xs font-bold border ${
+                                                      <span className={`px-2 py-1 rounded-full text-xs font-bold border break-words inline-block max-w-full ${
                                                        isApproved 
                                                          ? 'bg-green-50 text-green-700 border-green-200' 
                                                          : isRejected 
@@ -2217,35 +1885,37 @@ const MyApplications: React.FC = () => {
                                                    </div>
                                                    
                                                    {/* Review Notes / Rejection Reason */}
-                                                   {isRejected && (doc.rejection_reason || doc.review_notes) && (
-                                                     <div className="mt-2 p-3 bg-red-50 border border-red-200 rounded-lg">
-                                                       <p className="text-xs text-red-700">
-                                                         <strong className="block mb-1">{t('studentDashboard.myApplications.documents.review')}</strong>
-                                                         <TruncatedText
-                                                           text={doc.rejection_reason || doc.review_notes || ''}
-                                                           maxLength={120}
-                                                           className="text-xs text-red-700 leading-relaxed"
-                                                           showTooltip={true}
-                                                           tooltipPosition="top"
-                                                         />
-                                                       </p>
-                                                     </div>
-                                                   )}
+                                                    {isRejected && (doc.rejection_reason || doc.review_notes) && (
+                                                      <div className="mt-2 p-3 bg-red-50 border border-red-200 rounded-lg w-full max-w-full overflow-hidden">
+                                                        <div className="text-xs text-red-700">
+                                                          <strong className="block mb-1">{t('studentDashboard.myApplications.documents.review')}</strong>
+                                                          <TruncatedText
+                                                            text={doc.rejection_reason || doc.review_notes || ''}
+                                                            maxLength={150}
+                                                            className="text-xs text-red-700 leading-relaxed"
+                                                            showTooltip={true}
+                                                            tooltipPosition="top"
+                                                            breakWords={true}
+                                                          />
+                                                        </div>
+                                                      </div>
+                                                    )}
                                                    
                                                    {/* Upload Action for Rejected Docs */}
                                                    {isRejected && (
                                                      <div className="mt-3 space-y-2">
-                                                       <div className="flex flex-col sm:flex-row gap-2">
+                                                       <div className="flex flex-col gap-2">
                                                          <label className="cursor-pointer bg-gradient-to-r from-blue-50 to-blue-100 text-blue-700 border-2 border-blue-200 hover:from-blue-100 hover:to-blue-200 px-3 py-2 rounded-lg font-semibold transition-all duration-200 flex-1 text-center text-xs hover:shadow-md">
-                                                           <span className="block">
-                                                             <TruncatedText
-                                                               text={`${t('studentDashboard.myApplications.documents.sendNew')} ${doc.label}`}
-                                                               maxLength={40}
-                                                               className="text-xs font-semibold"
-                                                               showTooltip={true}
-                                                               tooltipPosition="top"
-                                                             />
-                                                           </span>
+                                                            <span className="block break-words">
+                                                              <TruncatedText
+                                                                text={`${t('studentDashboard.myApplications.documents.sendNew')} ${doc.label}`}
+                                                                maxLength={50}
+                                                                className="text-xs font-semibold"
+                                                                showTooltip={true}
+                                                                tooltipPosition="top"
+                                                                breakWords={true}
+                                                              />
+                                                            </span>
                                                            <input
                                                              type="file"
                                                              className="sr-only"
@@ -2253,8 +1923,8 @@ const MyApplications: React.FC = () => {
                                                              onChange={(e) => handleSelectDocFile(application.id, doc.type, e.target.files ? e.target.files[0] : null)}
                                                            />
                                                          </label>
-                                                         <button
-                                                           className="flex-1 bg-gradient-to-r from-blue-600 to-blue-700 text-white px-3 py-2 rounded-lg font-semibold disabled:opacity-50 disabled:cursor-not-allowed transition-all duration-200 hover:from-blue-700 hover:to-blue-800 text-xs whitespace-nowrap"
+                                                          <button
+                                                            className="flex-1 bg-gradient-to-r from-blue-600 to-blue-700 text-white px-3 py-2 rounded-lg font-semibold disabled:opacity-50 disabled:cursor-not-allowed transition-all duration-200 hover:from-blue-700 hover:to-blue-800 text-xs break-words"
                                                            disabled={!selectedFiles[docKey(application.id, doc.type)] || uploading[docKey(application.id, doc.type)]}
                                                            onClick={() => handleUploadDoc(application.id, doc.type)}
                                                          >
@@ -2308,8 +1978,8 @@ const MyApplications: React.FC = () => {
                                                
                                                return (
                                                  <div key={idx} className="bg-white rounded-lg border border-slate-200 p-3">
-                                                   <div className="flex items-center justify-between">
-                                                     <div className="flex items-center">
+                                                    <div className="flex flex-col gap-1.5">
+                                                      <div className="flex items-center">
                                                        <div className={`w-4 h-4 rounded-full border flex items-center justify-center mr-2 ${
                                                          isApproved 
                                                            ? 'bg-green-100 border-green-400' 
@@ -2389,6 +2059,7 @@ const MyApplications: React.FC = () => {
           onStripeCheckout={handleStripeCheckout}
           onPixCheckout={handlePixCheckout}
           isProcessing={isProcessingCheckout}
+          applicationId={pendingApplication.id}
         />
       )}
 
@@ -2402,6 +2073,7 @@ const MyApplications: React.FC = () => {
           onPixCheckout={handleScholarshipFeePixCheckout}
           isProcessing={isProcessingScholarshipFeeCheckout}
           feeType="scholarship_fee"
+          applicationId={pendingScholarshipFeeApplication.id}
         />
       )}
       </div>

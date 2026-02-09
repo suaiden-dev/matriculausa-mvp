@@ -3,6 +3,8 @@ import { Routes, Route, useNavigate, useLocation } from 'react-router-dom';
 import { supabase } from '../../lib/supabase';
 import { Scholarship } from '../../types';
 import { useAuth } from '../../hooks/useAuth';
+import { useQueryClient } from '@tanstack/react-query';
+import { setupCacheInvalidationListener } from '../../utils/cacheInvalidation';
 
 import StudentDashboardLayout from './StudentDashboardLayout';
 import Overview from './Overview';
@@ -34,6 +36,7 @@ import ManualReview from './manual-review';
 import { ZelleCheckoutPage } from '../../components/ZelleCheckoutPage';
 import I20ControlFeeSuccess from './I20ControlFeeSuccess';
 import I20ControlFeeError from './I20ControlFeeError';
+import IdentityVerification from './IdentityVerification';
 
 interface StudentProfile {
   id: string;
@@ -45,6 +48,7 @@ interface StudentProfile {
   academic_level?: string;
   gpa?: number;
   english_proficiency?: string;
+  cpf_document?: string;
   created_at: string;
   updated_at: string;
 }
@@ -61,6 +65,7 @@ interface Application {
 
 const StudentDashboard: React.FC = () => {
   const location = useLocation();
+  const queryClient = useQueryClient();
   const [scholarships, setScholarships] = useState<Scholarship[]>([]);
   const [applications, setApplications] = useState<Application[]>([]);
   const [profile, setProfile] = useState<StudentProfile | null>(null);
@@ -71,6 +76,12 @@ const StudentDashboard: React.FC = () => {
   const navigate = useNavigate();
   const [dashboardError, setDashboardError] = useState<string | null>(null);
   const [recentApplications, setRecentApplications] = useState<Application[]>([]);
+  
+  // Setup cache invalidation listener
+  useEffect(() => {
+    const cleanup = setupCacheInvalidationListener(queryClient);
+    return cleanup;
+  }, [queryClient]);
   
 
   
@@ -129,7 +140,8 @@ const StudentDashboard: React.FC = () => {
             scholarship_type,
             work_permissions,
             application_fee_amount,
-            universities (id, name, logo_url, location, is_approved)
+            internal_fees,
+            universities (id, name, logo_url, location, is_approved, university_fees_page_url)
           `);
           // Removido filtro is_active=true - estudantes podem ver bolsas inativas mas não podem aplicar
           
@@ -143,7 +155,7 @@ const StudentDashboard: React.FC = () => {
       // Buscar applications reais do Supabase
       const { data: applicationsData, error: applicationsError } = await supabase
         .from('scholarship_applications')
-        .select(`*,scholarship:scholarships(*,universities!inner(id, name, logo_url, location, is_approved))`)
+        .select(`*,scholarship:scholarships(*,universities!inner(id, name, logo_url, location, is_approved, university_fees_page_url))`)
         .eq('student_id', userProfile.id);
       if (applicationsError) {
         setApplications([]);
@@ -174,6 +186,7 @@ const StudentDashboard: React.FC = () => {
           academic_level: profileData.academic_level || '',
           gpa: profileData.gpa || 0,
           english_proficiency: profileData.english_proficiency || '',
+          cpf_document: profileData.cpf_document || '',
           created_at: profileData.created_at,
           updated_at: profileData.updated_at
         });
@@ -260,6 +273,7 @@ const StudentDashboard: React.FC = () => {
           // Envia null quando vazio; limita a 2 casas decimais para evitar overflow de precisão
           gpa: updatedData.gpa === undefined ? null : updatedData.gpa,
           english_proficiency: updatedData.english_proficiency,
+          cpf_document: (updatedData as any).cpf_document || null,
           updated_at: new Date().toISOString()
         })
         .eq('user_id', user.id);
@@ -436,6 +450,7 @@ const StudentDashboard: React.FC = () => {
           <Route path="rewards/store" element={<RewardsStore />} />
           <Route path="manual-review" element={<ManualReview />} />
           <Route path="zelle-payment" element={<ZelleCheckoutPage />} />
+          <Route path="identity-verification" element={<IdentityVerification />} />
         </Routes>
         
         {/* Fase 5: Modal de Parabéns para Código de Referência */}

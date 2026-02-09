@@ -44,9 +44,25 @@ const LanguageSelector: React.FC<LanguageSelectorProps> = ({
   const detectedLanguageApplied = checkIfDetectedLanguageApplied();
 
   const handleLanguageChange = async (languageCode: string) => {
-    await i18n.changeLanguage(languageCode);
-    setIsOpen(false);
-    window.location.reload();
+    try {
+      // Mudar idioma
+      await i18n.changeLanguage(languageCode);
+      
+      // Garantir que o idioma seja salvo no localStorage antes do reload
+      localStorage.setItem('i18nextLng', languageCode);
+      
+      // Fechar dropdown
+      setIsOpen(false);
+      
+      // Pequeno delay para garantir que tudo seja salvo antes do reload
+      setTimeout(() => {
+        window.location.reload();
+      }, 100);
+    } catch (error) {
+      console.error('Erro ao mudar idioma:', error);
+      // Mesmo em caso de erro, tentar recarregar
+      window.location.reload();
+    }
   };
 
   const handleResetToBrowserLanguage = async () => {

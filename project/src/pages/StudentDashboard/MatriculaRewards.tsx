@@ -9,23 +9,32 @@ import {
   Clock,
   ArrowUpRight,
   Mail,
-  GraduationCap
+  GraduationCap,
+  Bell,
+  Check,
+  ChevronLeft,
+  ChevronRight
 } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 import { useAuth } from '../../hooks/useAuth';
 import { supabase } from '../../lib/supabase';
 import { 
-  AffiliateCode, 
-  AffiliateReferral, 
-  MatriculacoinCredits, 
-  MatriculacoinTransaction,
   AffiliateStats 
 } from '../../types';
 import { Link } from 'react-router-dom';
-import { Card, CardContent, CardHeader, CardTitle } from '../../components/ui/Card';
-import { Separator } from '../../components/ui/Separator';
+import { Card } from '../../components/ui/Card';
 import { Alert, AlertDescription, AlertTitle } from '../../components/ui/Alert';
 import WhatsAppIcon from '../../components/icons/WhatsApp';
+import { 
+  useAffiliateCodeQuery,
+  useMatriculacoinCreditsQuery,
+  useAffiliateReferralsQuery,
+  useMatriculacoinTransactionsQuery,
+  useParticipatingUniversitiesQuery
+} from '../../hooks/useStudentDashboardQueries';
+import { useQueryClient } from '@tanstack/react-query';
+import { invalidateStudentDashboardRewards } from '../../lib/queryKeys';
+import NotificationService from '../../services/NotificationService';
 
 const MatriculaRewards: React.FC = () => {
   const { t } = useTranslation();
@@ -41,213 +50,61 @@ const MatriculaRewards: React.FC = () => {
       <path d="M22.46 6c-.77.35-1.6.58-2.46.69a4.28 4.28 0 0 0 1.88-2.36 8.57 8.57 0 0 1-2.71 1.04 4.27 4.27 0 0 0-7.27 3.89A12.12 12.12 0 0 1 3.15 4.9a4.26 4.26 0 0 0 1.32 5.7c-.65-.02-1.26-.2-1.8-.5v.05a4.27 4.27 0 0 0 3.43 4.18c-.31.08-.64.12-.98.12-.24 0-.48-.02-.7-.07a4.27 4.27 0 0 0 3.98 2.96A8.56 8.56 0 0 1 2 19.54a12.08 12.08 0 0 0 6.56 1.92c7.88 0 12.2-6.53 12.2-12.2v-.56c.84-.61 1.57-1.36 2.14-2.22-.78.35-1.62.58-2.5.68z"/>
     </svg>
   );
-  const LinkedInLogo = () => (
-    <svg viewBox="0 0 24 24" className="h-4 w-4 fill-white" aria-hidden>
-      <path d="M20.45 20.45h-3.55v-5.57c0-1.33-.02-3.04-1.85-3.04-1.85 0-2.13 1.45-2.13 2.95v5.66H9.37V9h3.4v1.56h.05c.47-.9 1.6-1.85 3.29-1.85 3.52 0 4.17 2.32 4.17 5.34v6.4zM5.34 7.43a2.06 2.06 0 1 1 0-4.12 2.06 2.06 0 0 1 0 4.12zM7.12 20.45H3.56V9h3.56v11.45z"/>
-    </svg>
-  );
-  
   const { user } = useAuth();
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
-  const [affiliateCode, setAffiliateCode] = useState<AffiliateCode | null>(null);
-  const [credits, setCredits] = useState<MatriculacoinCredits | null>(null);
-  const [referrals, setReferrals] = useState<AffiliateReferral[]>([]);
-  const [transactions, setTransactions] = useState<MatriculacoinTransaction[]>([]);
-  const [stats, setStats] = useState<AffiliateStats | null>(null);
+  const queryClient = useQueryClient();
+  
+  // React Query hooks com cache
+  const { data: affiliateCode, isPending: affiliateCodeLoading } = useAffiliateCodeQuery(user?.id);
+  const { data: credits, isPending: creditsLoading } = useMatriculacoinCreditsQuery(user?.id);
+  const { data: referrals = [], isPending: referralsLoading } = useAffiliateReferralsQuery(user?.id);
+  const { data: transactions = [], isPending: transactionsLoading } = useMatriculacoinTransactionsQuery(user?.id);
+  const { data: participatingUniversities = [], isPending: universitiesLoading } = useParticipatingUniversitiesQuery();
+  
+  
   const [copied, setCopied] = useState(false);
-  const [participatingUniversities, setParticipatingUniversities] = useState<any[]>([]);
-  const [universitiesLoading, setUniversitiesLoading] = useState(false);
+  const [notificationStatus, setNotificationStatus] = useState<Record<string, 'loading' | 'success' | 'none'>>({});
+  const [cooldownRemaining, setCooldownRemaining] = useState<Record<string, number>>({});
   const [currentPage, setCurrentPage] = useState(1);
   const [universitiesPerPage] = useState(9); // 3x3 grid
   const [searchTerm, setSearchTerm] = useState('');
-  // Removido selectedType
+  const [referralsPage, setReferralsPage] = useState(1);
+  const referralsPerPage = 5;
+  
+  // Computed values
+  const loading = affiliateCodeLoading || creditsLoading || referralsLoading || transactionsLoading;
 
-  useEffect(() => {
-    if (user?.id) {
-      loadAffiliateData();
-      loadParticipatingUniversities();
-    } else {
-      setLoading(false);
-    }
-    // Dispara apenas quando o identificador do usuário mudar,
-    // evitando re-fetch em eventos de refresh de token/visibility
-  }, [user?.id]);
 
   useEffect(() => {
     // Reset to first page when search changes
     setCurrentPage(1);
   }, [searchTerm]);
 
-  const loadParticipatingUniversities = async () => {
-    try {
-      setUniversitiesLoading(true);
-      setCurrentPage(1); // Reset to first page when loading new data
-      const { data, error } = await supabase
-        .from('universities')
-        .select('id, name, location, logo_url, type')
-        .eq('is_approved', true)
-        .eq('participates_in_matricula_rewards', true)
-        .order('name', { ascending: true });
-      
-      if (error) {
-        console.error('Error loading participating universities:', error);
-      } else {
-        setParticipatingUniversities(data || []);
-      }
-    } catch (error) {
-      console.error('Error loading participating universities:', error);
-    } finally {
-      setUniversitiesLoading(false);
-    }
-  };
+  // Efeito para gerenciar os cronômetros de cooldown
+  useEffect(() => {
+    const timer = setInterval(() => {
+      const now = Date.now();
+      const COOLDOWN_MS = 5 * 60 * 1000;
+      const updatedCooldowns: Record<string, number> = {};
+      let hasUpdates = false;
 
-  const loadAffiliateData = async () => {
-    try {
-      setLoading(true);
-      setError(null);
-      
-      if (!user?.id) {
-        setError(t('matriculaRewards.errorLoadingData'));
-        return;
-      }
-
-      console.log('Loading affiliate data for user:', user.id);
-      
-      // Carrega código de afiliado
-      const { data: affiliateCodeData, error: affiliateError } = await supabase
-        .from('affiliate_codes')
-        .select('*')
-        .eq('user_id', user.id)
-        .single();
-
-      console.log('Affiliate code data:', affiliateCodeData, 'Error:', affiliateError);
-
-      if (affiliateError && affiliateError.code !== 'PGRST116') {
-        console.error('Erro ao carregar código de afiliado:', affiliateError);
-      }
-
-      // Se não existe código, cria um
-      if (!affiliateCodeData) {
-        console.log('Creating new affiliate code for user:', user.id);
-        const { data: newCode, error: createError } = await supabase
-          .rpc('create_affiliate_code_for_user', { user_id_param: user.id });
-        
-        console.log('New code result:', newCode, 'Error:', createError);
-        
-        if (createError) {
-          console.error('Erro ao criar código de afiliado:', createError);
-          setError(t('matriculaRewards.errorLoadingData'));
-        } else {
-          // Recarrega o código criado
-          const { data: reloadedCode } = await supabase
-            .from('affiliate_codes')
-            .select('*')
-            .eq('user_id', user.id)
-            .single();
-          setAffiliateCode(reloadedCode);
+      referrals.forEach(ref => {
+        const lastSent = localStorage.getItem(`nudge_cooldown_${ref.id}`);
+        if (lastSent) {
+          const elapsed = now - parseInt(lastSent);
+          if (elapsed < COOLDOWN_MS) {
+            updatedCooldowns[ref.id] = Math.ceil((COOLDOWN_MS - elapsed) / 1000);
+            hasUpdates = true;
+          }
         }
-      } else {
-        setAffiliateCode(affiliateCodeData);
-      }
-
-      // Carrega créditos
-      const { data: creditsData, error: creditsError } = await supabase
-        .from('matriculacoin_credits')
-        .select('*')
-        .eq('user_id', user.id)
-        .single();
-
-      console.log('Credits data:', creditsData, 'Error:', creditsError);
-
-      if (creditsError && creditsError.code !== 'PGRST116') {
-        console.error('Erro ao carregar créditos:', creditsError);
-      }
-
-      if (!creditsData) {
-        // Cria registro de créditos se não existir
-        const { data: newCredits, error: createCreditsError } = await supabase
-          .from('matriculacoin_credits')
-          .insert([
-            { user_id: user.id, balance: 0, total_earned: 0, total_spent: 0 }
-          ])
-          .select()
-          .single();
-
-        if (createCreditsError) {
-          console.error('Erro ao criar créditos:', createCreditsError);
-        } else {
-          setCredits(newCredits);
-        }
-      } else {
-        setCredits(creditsData);
-      }
-
-      // Carrega indicações (onde o usuário atual indicou alguém)
-      const { data: referralsData, error: referralsError } = await supabase
-        .from('affiliate_referrals')
-        .select('*')
-        .eq('referrer_id', user.id)
-        .order('created_at', { ascending: false })
-        .limit(5);
-
-      if (referralsError) {
-        console.error('Erro ao carregar indicações:', referralsError);
-      } else {
-        // Buscar nomes dos usuários indicados separadamente
-        if (referralsData && referralsData.length > 0) {
-          const referredIds = referralsData.map(r => r.referred_id).filter(Boolean);
-          const { data: userProfiles } = await supabase
-            .from('user_profiles')
-            .select('user_id, full_name, email')
-            .in('user_id', referredIds);
-          
-          // Adicionar dados do usuário a cada referral
-          const referralsWithUsers = referralsData.map(referral => ({
-            ...referral,
-            referred_user: userProfiles?.find(up => up.user_id === referral.referred_id)
-          }));
-          
-          setReferrals(referralsWithUsers);
-        } else {
-          setReferrals([]);
-        }
-      }
-
-      // Carrega transações
-      const { data: transactionsData, error: transactionsError } = await supabase
-        .from('matriculacoin_transactions')
-        .select('*')
-        .eq('user_id', user.id)
-        .order('created_at', { ascending: false })
-        .limit(5);
-
-      if (transactionsError) {
-        console.error('Erro ao carregar transações:', transactionsError);
-      } else {
-        setTransactions(transactionsData || []);
-      }
-
-      // Calcula estatísticas
-      const totalReferrals = referralsData?.length || 0;
-      const totalEarnings = creditsData?.total_earned || 0; // Usar total_earned da tabela matriculacoin_credits
-      const currentBalance = creditsData?.balance || 0;
-
-      setStats({
-        totalReferrals,
-        totalEarnings,
-        currentBalance,
-        recentTransactions: transactionsData || [],
-        recentReferrals: referralsData || []
       });
 
-    } catch (error) {
-      console.error('Erro ao carregar dados de afiliado:', error);
-      setError(t('matriculaRewards.errorLoadingData'));
-    } finally {
-      setLoading(false);
-    }
-  };
+      if (hasUpdates || Object.keys(cooldownRemaining).length > 0) {
+        setCooldownRemaining(updatedCooldowns);
+      }
+    }, 1000);
+
+    return () => clearInterval(timer);
+  }, [referrals, cooldownRemaining]);
 
   const copyToClipboard = async (text: string) => {
     try {
@@ -307,6 +164,9 @@ const MatriculaRewards: React.FC = () => {
               shared_at: new Date().toISOString()
             }
           ]);
+        
+        // Invalidar cache de rewards após compartilhamento
+        invalidateStudentDashboardRewards(queryClient);
       }
     } catch (error) {
       console.error('Erro ao compartilhar:', error);
@@ -347,37 +207,191 @@ const MatriculaRewards: React.FC = () => {
     });
   };
 
+  const handleNotifyStudent = async (referral: any) => {
+    if (!referral.referred_id) return;
+
+    try {
+      const studentName = referral.referred_user?.full_name || 'Student';
+      const studentEmail = referral.referred_user?.email;
+
+      if (!studentEmail) {
+        alert(t('common.error'));
+        return;
+      }
+
+      // 🕒 Controle de Cooldown (5 minutos) - Silencioso, pois o botão estará desabilitado
+      const cooldownKey = `nudge_cooldown_${referral.id}`;
+      const lastSent = localStorage.getItem(cooldownKey);
+      const now = Date.now();
+      const COOLDOWN_MS = 5 * 60 * 1000;
+
+      if (lastSent && (now - parseInt(lastSent)) < COOLDOWN_MS) {
+        return;
+      }
+
+      // Payload para a função de notificação do n8n
+      const payload = {
+        tipo_notf: "Nudge to complete enrollment",
+        email_aluno: studentEmail,
+        nome_aluno: studentName,
+        nome_bolsa: "",
+        nome_universidade: "Matrícula USA",
+        email_universidade: "contato@matriculausa.com",
+        o_que_enviar: `Your friend ${(user && user.name) || 'who referred you'} is cheering for you! \n\nYou're almost there! Complete your current pending step in Matrícula USA to move forward in your journey to study in the USA.`,
+        contact_name: (user && user.name) || 'Your Friend',
+        contact_position: "Friend",
+        location: "student/dashboard",
+        website: "matriculausa.com",
+        notification_target: "student",
+        next_step: !referral.selection_process_paid_at ? "Selection Process Fee" :
+                   !referral.application_fee_paid_at ? "Application Fee" :
+                   !referral.scholarship_fee_paid_at ? "Scholarship Fee" : "I-20 Control Fee"
+      };
+
+      setNotificationStatus(prev => ({ ...prev, [referral.id]: 'loading' }));
+
+      const result = await NotificationService.sendUniversityNotification(payload);
+
+      if (!result.success) throw new Error(result.error || 'Failed to send notification');
+
+      // 🕒 Atualizar cooldown apenas em caso de sucesso
+      localStorage.setItem(cooldownKey, Date.now().toString());
+
+      setNotificationStatus(prev => ({ ...prev, [referral.id]: 'success' }));
+      
+      // Voltar ao estado inicial após 3 segundos
+      setTimeout(() => {
+        setNotificationStatus(prev => ({ ...prev, [referral.id]: 'none' }));
+      }, 3000);
+    } catch (err) {
+      console.error('Error sending notification:', err);
+      alert(t('common.error'));
+      setNotificationStatus(prev => ({ ...prev, [referral.id]: 'none' }));
+    }
+  };
+
+  const StepProgress = ({ referral }: { referral: any }) => {
+    const stages = [
+      { id: 'selection_process_paid', label: t('matriculaRewards.stages.selection'), date: referral.selection_process_paid_at },
+      { id: 'application_fee_paid', label: t('matriculaRewards.stages.application'), date: referral.application_fee_paid_at },
+      { id: 'scholarship_fee_paid', label: t('matriculaRewards.stages.scholarship'), date: referral.scholarship_fee_paid_at },
+      { id: 'i20_paid', label: t('matriculaRewards.stages.i20'), date: referral.i20_paid_at },
+    ];
+
+    return (
+      <div className="mt-4 w-full">
+        <div className="flex items-center justify-between mb-2">
+          <span className="text-xs font-semibold text-slate-500 uppercase tracking-wider">{t('matriculaRewards.referralProgress')}</span>
+          {!referral.i20_paid_at && (
+            <button
+              onClick={() => handleNotifyStudent(referral)}
+              disabled={notificationStatus[referral.id] === 'loading' || notificationStatus[referral.id] === 'success' || !!cooldownRemaining[referral.id]}
+              className={`flex items-center gap-1.5 text-xs font-bold px-2 py-1 rounded-md transition-all duration-300 min-w-[100px] justify-center ${
+                cooldownRemaining[referral.id]
+                  ? 'bg-slate-100 text-slate-400 cursor-not-allowed border border-slate-200'
+                  : notificationStatus[referral.id] === 'success' 
+                    ? 'text-green-600 bg-green-50 border border-green-200 shadow-sm' 
+                    : 'text-blue-600 hover:text-blue-700 bg-blue-50 hover:shadow-sm'
+              }`}
+            >
+              {notificationStatus[referral.id] === 'loading' ? (
+                <div className="h-3 w-3 border-2 border-blue-600 border-t-transparent rounded-full animate-spin" />
+              ) : notificationStatus[referral.id] === 'success' ? (
+                <CheckCircle className="h-3 w-3 animate-in zoom-in duration-300" />
+              ) : cooldownRemaining[referral.id] ? (
+                <Clock className="h-3 w-3" />
+              ) : (
+                <Bell className="h-3 w-3" />
+              )}
+              
+              {cooldownRemaining[referral.id] ? (
+                <span>
+                  {Math.floor(cooldownRemaining[referral.id] / 60)}:{(cooldownRemaining[referral.id] % 60).toString().padStart(2, '0')}
+                </span>
+              ) : notificationStatus[referral.id] === 'success' ? (
+                t('matriculaRewards.notificationSent')
+              ) : (
+                t('matriculaRewards.notifyFriend')
+              )}
+            </button>
+          )}
+        </div>
+        <div className="relative flex justify-between">
+          <div className="absolute top-4 left-0 w-full h-0.5 bg-slate-200 -z-10" />
+          {stages.map((stage, idx) => {
+            const isCompleted = !!stage.date;
+            return (
+              <div key={stage.id} className="flex flex-col items-center">
+                <div className={`w-8 h-8 rounded-full flex items-center justify-center border-2 transition-all duration-300 ${isCompleted ? 'bg-green-600 border-green-600 shadow-sm' : 'bg-white border-slate-300'}`}>
+                  {isCompleted ? (
+                    <Check className="h-4 w-4 text-white" />
+                  ) : (
+                    <span className="text-[10px] font-bold text-slate-400">{idx + 1}</span>
+                  )}
+                </div>
+                <div className="mt-2 text-center">
+                  <p className={`text-[10px] font-bold max-w-[60px] leading-tight ${isCompleted ? 'text-green-700' : 'text-slate-400'}`}>
+                    {stage.label}
+                  </p>
+                  {stage.date && (
+                    <p className="text-[8px] text-slate-400 mt-0.5">
+                      {new Date(stage.date).toLocaleDateString()}
+                    </p>
+                  )}
+                </div>
+              </div>
+            );
+          })}
+        </div>
+      </div>
+    );
+  };
+
+  const removeEmailFromDescription = (description: string, referredUserName?: string): string => {
+    if (!description) return description;
+    
+    let cleaned = description;
+    
+    // Se temos o nome do usuário referido, substituir o email pelo nome
+    if (referredUserName) {
+      // Padrão de email
+      const emailPattern = /[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}/g;
+      
+      // Substituir "paid by email@domain.com" por "paid by Nome" (mais específico primeiro)
+      cleaned = cleaned.replace(
+        /\s+paid\s+by\s+[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}/gi,
+        ` paid by ${referredUserName}`
+      );
+      
+      // Substituir (email@domain.com) por (Nome)
+      cleaned = cleaned.replace(
+        /\([a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}\)/g,
+        `(${referredUserName})`
+      );
+      
+      // Substituir qualquer email restante pelo nome
+      cleaned = cleaned.replace(emailPattern, referredUserName);
+    } else {
+      // Se não temos o nome, apenas remove o email
+      cleaned = cleaned
+        .replace(/\s+paid\s+by\s+[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}/gi, '') // Remove "paid by email@domain.com"
+        .replace(/\s*\([^)]*@[^)]+\)/g, '') // Remove (email@domain.com)
+        .replace(/\s+[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}/g, '') // Remove email@domain.com
+        .trim();
+    }
+    
+    // Limpa espaços duplos
+    cleaned = cleaned.replace(/\s+/g, ' ').trim();
+    
+    return cleaned;
+  };
+
   if (loading) {
     return (
       <div className="min-h-screen bg-slate-50 flex items-center justify-center">
         <div className="flex flex-col items-center space-y-4">
           <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600"></div>
         </div>
-      </div>
-    );
-  }
-
-  if (error) {
-    return (
-      <div className="min-h-screen bg-slate-50 flex items-center justify-center p-6">
-        <Card className="w-full max-w-lg">
-          <CardHeader>
-            <CardTitle>{t('matriculaRewards.title')}</CardTitle>
-          </CardHeader>
-          <CardContent>
-            <Alert variant="destructive">
-              <AlertTitle>{t('matriculaRewards.errorLoadingData')}</AlertTitle>
-              <AlertDescription>{error}</AlertDescription>
-            </Alert>
-            <Separator className="my-4" />
-            <button
-              onClick={loadAffiliateData}
-              className="inline-flex items-center justify-center rounded-md bg-blue-600 px-4 py-2 text-white hover:bg-blue-700"
-            >
-              {t('matriculaRewards.tryAgain')}
-            </button>
-          </CardContent>
-        </Card>
       </div>
     );
   }
@@ -450,14 +464,14 @@ const MatriculaRewards: React.FC = () => {
                     <span className="text-sm text-slate-600">{t('matriculaRewards.totalReferrals')}</span>
                     <span className="inline-flex h-8 w-8 items-center justify-center rounded-lg bg-blue-100 text-blue-600"><Users className="h-4 w-4"/></span>
                   </div>
-                  <div className="mt-2 text-2xl font-bold text-slate-900">{stats?.totalReferrals || 0}</div>
+                  <div className="mt-2 text-2xl font-bold text-slate-900">{referrals?.length || 0}</div>
                 </Card>
                 <Card className="p-4 gap-0">
                   <div className="flex items-center justify-between">
                     <span className="text-sm text-slate-600">{t('matriculaRewards.totalEarnings')}</span>
                     <span className="inline-flex h-8 w-8 items-center justify-center rounded-lg bg-purple-100 text-purple-600"><TrendingUp className="h-4 w-4"/></span>
                   </div>
-                  <div className="mt-2 text-2xl font-bold text-slate-900">{formatCoins(stats?.totalEarnings || 0)}</div>
+                  <div className="mt-2 text-2xl font-bold text-slate-900">{formatCoins(credits?.total_earned || 0)}</div>
                 </Card>
               </div>
             </div>
@@ -539,28 +553,67 @@ const MatriculaRewards: React.FC = () => {
           <Card className="p-6">
             <h2 className="text-lg font-semibold text-slate-900 mb-4">{t('matriculaRewards.recentReferrals')}</h2>
             {referrals.length ? (
-              <ul className="space-y-3">
-                {referrals.slice(0,5).map(referral => (
-                  <li key={referral.id} className="flex items-center justify-between rounded-lg border border-slate-100 bg-slate-50 p-3">
-                    <div className="flex items-center gap-3">
-                      <span className="inline-flex h-8 w-8 items-center justify-center rounded-full bg-green-100 text-green-600"><Users className="h-4 w-4"/></span>
-                      <div>
-                        <p className="font-medium text-slate-900">
-                          {referral.referred_user?.full_name 
-                            ? `${referral.referred_user.full_name} (${referral.referred_user.email})`
-                            : t('matriculaRewards.referralNumber', { id: referral.id.slice(0,8) })
-                          }
-                        </p>
-                        <p className="text-xs text-slate-500">{formatDate(referral.created_at)}</p>
+              <div className="space-y-4">
+                {referrals.slice((referralsPage - 1) * referralsPerPage, referralsPage * referralsPerPage).map(referral => (
+                  <div key={referral.id} className="rounded-xl border border-slate-200 bg-white p-4 shadow-sm hover:shadow-md transition-shadow">
+                    <div className="flex items-center justify-between">
+                      <div className="flex items-center gap-3">
+                        <div className="h-10 w-10 rounded-full bg-blue-50 flex items-center justify-center">
+                          <Users className="h-5 w-5 text-blue-600" />
+                        </div>
+                        <div>
+                          <p className="font-bold text-slate-900">
+                            {referral.referred_user?.full_name 
+                              ? referral.referred_user.full_name
+                              : t('matriculaRewards.referralNumber', { id: referral.id.slice(0, 8) })
+                            }
+                          </p>
+                          <p className="text-xs text-slate-500">{t('matriculaRewards.invitedOn', { date: formatDate(referral.created_at) })}</p>
+                        </div>
+                      </div>
+                      <div className="text-right">
+                        <div className={`inline-flex items-center gap-1 px-2 py-1 rounded-full text-[10px] font-bold uppercase tracking-wider ${referral.i20_paid_at ? 'bg-green-100 text-green-700' : 'bg-yellow-100 text-yellow-700'}`}>
+                          {referral.i20_paid_at ? (
+                            <>
+                              <CheckCircle className="h-3 w-3" />
+                              {t('matriculaRewards.completed')} (+180)
+                            </>
+                          ) : (
+                            <>
+                              <Clock className="h-3 w-3" />
+                              {t('matriculaRewards.inProgress')}
+                            </>
+                          )}
+                        </div>
                       </div>
                     </div>
-                    <div className="text-right">
-                      <p className="font-semibold text-green-600">+{formatCoins(referral.credits_earned)}</p>
-                      <p className="text-xs text-slate-500">{referral.status === 'completed' ? t('matriculaRewards.earned') : referral.status === 'cancelled' ? t('matriculaRewards.spent') : t('matriculaRewards.pending')}</p>
-                    </div>
-                  </li>
+                    
+                    <StepProgress referral={referral} />
+                  </div>
                 ))}
-              </ul>
+
+                {referrals.length > referralsPerPage && (
+                  <div className="flex items-center justify-center gap-2 mt-4 pt-4 border-t border-slate-100">
+                    <button
+                      onClick={() => setReferralsPage(p => Math.max(1, p - 1))}
+                      disabled={referralsPage === 1}
+                      className="p-1.5 rounded-lg border border-slate-200 disabled:opacity-30 hover:bg-slate-50 transition-colors"
+                    >
+                      <ChevronLeft className="h-4 w-4 text-slate-600" />
+                    </button>
+                    <span className="text-[12px] font-semibold text-slate-500 uppercase tracking-wider">
+                      {referralsPage} / {Math.ceil(referrals.length / referralsPerPage)}
+                    </span>
+                    <button
+                      onClick={() => setReferralsPage(p => Math.min(Math.ceil(referrals.length / referralsPerPage), p + 1))}
+                      disabled={referralsPage === Math.ceil(referrals.length / referralsPerPage)}
+                      className="p-1.5 rounded-lg border border-slate-200 disabled:opacity-30 hover:bg-slate-50 transition-colors"
+                    >
+                      <ChevronRight className="h-4 w-4 text-slate-600" />
+                    </button>
+                  </div>
+                )}
+              </div>
             ) : (
               <Alert className="py-4">
                 <AlertTitle>{t('matriculaRewards.noReferralsYet')}</AlertTitle>
@@ -579,7 +632,12 @@ const MatriculaRewards: React.FC = () => {
                         {tx.type==='earned'?<TrendingUp className="h-4 w-4"/>:tx.type==='spent'?<DollarSign className="h-4 w-4"/>:<Clock className="h-4 w-4"/>}
                       </span>
                       <div>
-                        <p className="font-medium text-slate-900">{tx.description || (tx.type === 'earned' ? t('matriculaRewards.earned') : tx.type === 'spent' ? t('matriculaRewards.spent') : t('matriculaRewards.pending'))}</p>
+                        <p className="font-medium text-slate-900">
+                          {tx.description 
+                            ? removeEmailFromDescription(tx.description, tx.referred_user_name)
+                            : (tx.type === 'earned' ? t('matriculaRewards.earned') : tx.type === 'spent' ? t('matriculaRewards.spent') : t('matriculaRewards.pending'))
+                          }
+                        </p>
                         <p className="text-xs text-slate-500">{formatDate(tx.created_at)}</p>
                       </div>
                     </div>
