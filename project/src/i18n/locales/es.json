@@ -978,6 +978,7 @@
       "learnMore": "Más Información"
     },
     "modal": {
+      "exclusive": "Exclusivo",
       "exclusiveScholarship": "Beca Exclusiva",
       "anyField": "Cualquier Área",
       "universityHidden": "Universidad Oculta - Desbloquear con el Proceso de Selección",
@@ -997,13 +998,13 @@
       "onlineLearning": "Aprendizaje en Línea",
       "inPerson": "Presencial",
       "hybridMode": "Modalidad Híbrida",
-      "programDuration": "Duración do Programa",
+      "programDuration": "Duración del Programa",
       "language": "Idioma",
       "workAuthorization": "Autorización de Trabajo",
       "programDescription": "Descripción del Programa",
       "applicationDeadline": "Fecha Límite de Aplicación",
       "daysLeft": "días restantes",
-      "deadline": "Fecha Límite:",
+      "deadline": "Fecha Límite",
       "universityInformation": "Información de la Universidad",
       "universityNameAvailable": "Nombre de la Universidad Disponible",
       "ranking": "Ranking:",

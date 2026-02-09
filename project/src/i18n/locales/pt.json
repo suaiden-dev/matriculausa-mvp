@@ -880,6 +880,7 @@
       "learnMore": "Saiba Mais"
     },
     "modal": {
+      "exclusive": "Exclusivo",
       "exclusiveScholarship": "Bolsa Exclusiva",
       "anyField": "Qualquer Campo",
       "universityHidden": "Universidade Oculta - Desbloqueie com o Processo de Seleção",
@@ -905,7 +906,7 @@
       "programDescription": "Descrição do Programa",
       "applicationDeadline": "Prazo de Candidatura",
       "daysLeft": "dias restantes",
-      "deadline": "Prazo:",
+      "deadline": "Prazo",
       "universityInformation": "Informações da Universidade",
       "universityNameAvailable": "Nome da Universidade Disponível",
       "ranking": "Classificação:",
@@ -918,8 +919,12 @@
       "scholarshipExpired": "Bolsa Expirada",
       "noLongerAccepting": "Esta bolsa não está mais aceitando novas aplicações.",
       "canStillView": "Você ainda pode visualizar as informações, mas não será possível aplicar para esta bolsa.",
+      "internalFeesTitle": "Taxas Internas da Universidade",
+      "internalFeesDisclaimer": "Estas taxas são pagas diretamente à universidade, não através de nossa plataforma",
+      "internalFeesAvailable": "Taxas Internas da Universidade Disponíveis",
+      "internalFeesNotice": "Esta bolsa pode ter taxas internas adicionais da universidade. Estas taxas serão visíveis após o pagamento da Taxa do Processo de Seleção.",
       "universityInternalFees": "Taxas Internas da Universidade",
-      "internalFeesNote": "Taxas pagas diretamente à universidade. Sujeito a alteração.",
+      "viewUniversityFeesPage": "Ver Página de Taxas da Universidade",
       "days": "dias"
     }
   },
