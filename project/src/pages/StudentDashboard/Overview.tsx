@@ -1,4 +1,4 @@
-import React, { useEffect, useMemo, useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { 
   Award, 
@@ -27,7 +27,6 @@ import { useReferralCode } from '../../hooks/useReferralCode';
 import { useStepByStepGuide } from '../../hooks/useStepByStepGuide';
 import { supabase } from '../../lib/supabase';
 import { ProgressBar } from '../../components/ProgressBar';
-import StepByStepButton from '../../components/OnboardingTour/StepByStepButton';
 import StepByStepGuide from '../../components/OnboardingTour/StepByStepGuide';
 import ContinueApplicationButton from '../../components/ContinueApplicationButton';
 import { getGrossPaidAmounts } from '../../utils/paymentConverter';
@@ -62,10 +61,10 @@ const Overview: React.FC<OverviewProps> = ({
   const navigate = useNavigate();
   const { user, userProfile, refetchUserProfile } = useAuth();
   const { activeDiscount } = useReferralCode();
-  const { getFeeAmount, userFeeOverrides } = useFeeConfig(user?.id);
-  const { selectionProcessFee, scholarshipFee, i20ControlFee, selectionProcessFeeAmount, scholarshipFeeAmount, i20ControlFeeAmount } = useDynamicFees();
+  const { userFeeOverrides } = useFeeConfig(user?.id);
+  const { selectionProcessFeeAmount, scholarshipFeeAmount, i20ControlFeeAmount } = useDynamicFees();
   const { isGuideOpen, openGuide, closeGuide } = useStepByStepGuide();
-  const { isBlocked, pendingPayment, loading: paymentBlockedLoading } = usePaymentBlocked();
+  const { isBlocked, pendingPayment } = usePaymentBlocked();
   
   // Verificar se há pagamento Zelle pendente do tipo selection_process
   const hasPendingSelectionProcessPayment = isBlocked && pendingPayment && pendingPayment.fee_type === 'selection_process';
