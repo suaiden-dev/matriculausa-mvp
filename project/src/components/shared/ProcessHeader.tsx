@@ -1,8 +1,20 @@
 import { Link } from "react-router-dom";
 
-const Header = () => {
+interface ProcessHeaderProps {
+  title: string;
+  subtitle: string;
+  description: string;
+  gradientClass: string;
+}
+
+const ProcessHeader = ({
+  title,
+  subtitle,
+  description,
+  gradientClass,
+}: ProcessHeaderProps) => {
   return (
-    <header className="gradient-coral-gold py-16 md:py-24 text-primary-foreground relative overflow-hidden">
+    <header className={`${gradientClass} py-16 md:py-24 text-primary-foreground relative overflow-hidden`}>
       {/* Background decoration */}
       <div className="absolute inset-0 opacity-10">
         <div className="absolute top-10 left-10 w-32 h-32 rounded-full bg-white blur-3xl" />
@@ -19,13 +31,13 @@ const Header = () => {
         {/* Title */}
         <div className="text-center max-w-4xl mx-auto">
           <h1 className="text-4xl md:text-6xl font-bold mb-6 animate-fade-up">
-            Processo Initial
+            {title}
           </h1>
           <p className="text-xl md:text-2xl font-light opacity-90 animate-fade-up" style={{ animationDelay: '0.1s' }}>
-            Visto de Estudante F-1 — Aplicação do Exterior
+            {subtitle}
           </p>
           <p className="mt-6 text-lg opacity-80 max-w-2xl mx-auto animate-fade-up" style={{ animationDelay: '0.2s' }}>
-            Guia completo com todas as etapas e valores para obter seu visto de estudante F-1 aplicando de fora dos Estados Unidos
+            {description}
           </p>
         </div>
       </div>
@@ -33,4 +45,4 @@ const Header = () => {
   );
 };
 
-export default Header;
+export default ProcessHeader;

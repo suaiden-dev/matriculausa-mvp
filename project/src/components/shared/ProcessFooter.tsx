@@ -1,8 +1,15 @@
 import { Mail } from "lucide-react";
+import { useTranslation } from "react-i18next";
 
-const Footer = () => {
+interface ProcessFooterProps {
+  gradientClass: string;
+}
+
+const ProcessFooter = ({ gradientClass }: ProcessFooterProps) => {
+  const { t } = useTranslation();
+  
   return (
-    <footer className="gradient-teal-purple py-12 text-primary-foreground">
+    <footer className={`${gradientClass} py-12 text-primary-foreground`}>
       <div className="container mx-auto px-4">
         <div className="text-center">
           {/* Logo */}
@@ -26,7 +33,7 @@ const Footer = () => {
 
           {/* Copyright */}
           <p className="text-sm opacity-70">
-            © {new Date().getFullYear()} The Future. Todos os direitos reservados.
+            © {new Date().getFullYear()} The Future. {t('processPages.common.rights')}
           </p>
         </div>
       </div>
@@ -34,4 +41,4 @@ const Footer = () => {
   );
 };
 
-export default Footer;
+export default ProcessFooter;

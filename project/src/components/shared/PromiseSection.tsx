@@ -6,13 +6,12 @@ interface PromiseSectionProps {
 
 const PromiseSection: React.FC<PromiseSectionProps> = ({ text }) => {
   return (
-    <section className="py-16 md:py-24 bg-muted">
+    <section className="py-16 bg-background">
       <div className="container mx-auto px-4">
-        <div className="max-w-4xl mx-auto text-center">
-          <h2 className="text-2xl md:text-3xl font-bold text-foreground mb-8 leading-relaxed italic animate-fade-up">
-            "{text}"
-          </h2>
-          <div className="w-24 h-1.5 gradient-coral-gold mx-auto rounded-full animate-scale-in" />
+        <div className="max-w-3xl mx-auto text-center">
+          <p className="text-xl md:text-2xl text-slate-500/90 leading-relaxed font-light animate-fade-up">
+            {text}
+          </p>
         </div>
       </div>
     </section>

@@ -1,4 +1,5 @@
 import { ReactNode } from "react";
+import { useTranslation } from "react-i18next";
 
 interface ProcessStepProps {
   step: number;
@@ -23,6 +24,8 @@ const ProcessStep = ({
   icon,
   isOptional = false,
 }: ProcessStepProps) => {
+  const { t } = useTranslation();
+
   return (
     <div 
       className="group bg-card rounded-2xl shadow-lg hover:shadow-2xl transition-all duration-300 overflow-hidden border border-border hover:-translate-y-1"
@@ -40,10 +43,10 @@ const ProcessStep = ({
             </div>
             <div>
               <div className="flex items-center gap-2">
-                <span className="text-sm font-medium opacity-80">Etapa {step}</span>
+                <span className="text-sm font-medium opacity-80">{t('processPages.common.step')} {step}</span>
                 {isOptional && (
                   <span className="text-xs bg-white/20 px-2 py-0.5 rounded-full">
-                    Opcional
+                    {t('processPages.common.optional')}
                   </span>
                 )}
               </div>
