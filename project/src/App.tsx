@@ -168,10 +168,14 @@ const AppContent = () => {
           {/* Smart Assistant Route */}
           <Route path="/smart-assistant" element={<SmartAssistantLayout />} />
 
-          {/* New Visa Process Routes */}
+          {/* New Visa Process Routes (long URLs) */}
           <Route path="/visa-initial" element={<Initial />} />
           <Route path="/visa-transfer" element={<Transfer />} />
           <Route path="/visa-cos" element={<Cos />} />
+          {/* Short URLs for seller referral links (landing pages) */}
+          <Route path="/initial" element={<Initial />} />
+          <Route path="/transfer" element={<Transfer />} />
+          <Route path="/cos" element={<Cos />} />
 
           {/* Catch-all route for 404 */}
           <Route path="*" element={<div className="min-h-screen bg-gray-50 flex items-center justify-center"><div className="text-2xl text-gray-600">Page not found</div></div>} />
