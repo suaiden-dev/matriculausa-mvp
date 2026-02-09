@@ -44,6 +44,212 @@
     "expandImage": "Expandir imagem",
     "previewNotAvailable": "Prévia não disponível"
   },
+  "processPages": {
+    "common": {
+      "selectionProcess": "Processo Seletivo",
+      "applicationFeeI20": "Application Fee + I-20",
+      "scholarshipFee": "Taxa da Bolsa",
+      "controlFee": "Control Fee",
+      "legalFees": "Honorários Jurídicos",
+      "fundsProof": "Comprovação de Fundos",
+      "valuesSummary": "Resumo de Valores",
+      "total": "Total:",
+      "step": "Etapa",
+      "optional": "Opcional",
+      "rights": "Todos os direitos reservados."
+    },
+    "initial": {
+      "header": {
+        "title": "Processo Initial",
+        "subtitle": "Visto de Estudante F-1 — Aplicação do Exterior",
+        "description": "Guia completo com todas as etapas e valores para obter seu visto de estudante F-1 aplicando de fora dos Estados Unidos"
+      },
+      "promise": "Se o seu plano é chegar aos Estados Unidos já com o visto F1 aprovado, nós organizamos o caminho desde a escolha da escola até o agendamento no consulado. Com nosso guia, você entende cada etapa, todos os custos e recebe orientação para montar uma aplicação forte e coerente com o seu projeto de vida.",
+      "steps": {
+        "title": "Etapas do Processo",
+        "description": "Conheça todas as etapas necessárias para obter seu visto de estudante F-1",
+        "list": {
+          "step1": {
+            "description": "Primeira etapa para verificar se você é elegível para o visto de estudante F-1.",
+            "items": [
+              "Passaporte válido (mínimo 1 ano)",
+              "Comprovante de fundos bancários ($22.000 mínimo)",
+              "Endereço completo no país de origem",
+              "Histórico escolar ou diploma",
+              "Pagamento via Zelle para: info@thefutureofenglish.com"
+            ]
+          },
+          "step2": {
+            "description": "Taxa de aplicação e emissão do I-20 para entrevista no consulado.",
+            "items": [
+              "Emissão do formulário I-20",
+              "Processamento da matrícula",
+              "$100 por cada dependente adicional"
+            ]
+          },
+          "step3": {
+            "description": "Taxa referente à bolsa de estudos.",
+            "items": [
+              "Formulário da matrícula na escola",
+              "Demais documentações necessárias"
+            ]
+          },
+          "step4": {
+            "description": "Taxa de controle do I-20 durante todo o processo de visto.",
+            "items": [
+              "Controle ativo do I-20",
+              "Acompanhamento durante todo o processo",
+              "Suporte para dúvidas e orientações",
+              "Pagamento dessa taxa na emissão da carta de aceite pela instituição"
+            ]
+          },
+          "step5": {
+            "description": "Acompanhamento jurídico completo do processo de visto.",
+            "items": [
+              "$1.800 para o aplicante principal",
+              "$100 por cada dependente adicional",
+              "Preparação para entrevista no consulado",
+              "Preparação de toda documentação"
+            ]
+          }
+        }
+      },
+      "funds": {
+        "description": "Requisitos mínimos de comprovação financeira para o visto F-1",
+        "mainApplicant": "Aplicante Principal",
+        "perDependent": "Por Dependente",
+        "minAmount": "$22.000",
+        "dependentAmount": "+$5.000",
+        "minBankAccount": "Valor mínimo em conta bancária",
+        "additionalPerDependent": "Valor adicional por cada dependente",
+        "note": "Os valores devem ser comprovados através de extrato bancário atualizado. O consulado americano exigirá esses documentos durante a entrevista de visto."
+      },
+      "values": {
+        "description": "Todos os custos envolvidos no processo Initial"
+      }
+    },
+    "transfer": {
+      "header": {
+        "title": "Processo de Transfer",
+        "subtitle": "Transferência de Escola — Student Transfer",
+        "description": "Guia completo com todas as etapas e valores para realizar a transferência de escola nos Estados Unidos"
+      },
+      "promise": "Quer transferir seu I-20 sem interromper seus estudos nem correr risco com seu status? Nós mostramos, passo a passo, quando e como fazer a transferência, quais taxas considerar e como manter sua carga horária e datas em ordem, para que você continue estudando com tranquilidade na nova escola.",
+      "steps": {
+        "title": "Etapas do Processo",
+        "description": "Conheça todas as etapas necessárias para realizar a transferência de escola",
+        "list": {
+          "step1": {
+            "description": "Primeira etapa para verificar se você é elegível para o processo de Transfer.",
+            "items": [
+              "Passaporte válido (mínimo 1 ano)",
+              "I-94 válido",
+              "Comprovante de visto ou status atual",
+              "Comprovante de fundos bancários ($22.000 mínimo)",
+              "Endereço completo nos EUA",
+              "Pagamento via Zelle para: info@thefutureofenglish.com"
+            ]
+          },
+          "step2": {
+            "description": "Taxa de aplicação e emissão do I-20.",
+            "items": [
+              "Emissão do formulário I-20",
+              "Processamento da matrícula",
+              "$100 por cada dependente adicional"
+            ]
+          },
+          "step3": {
+            "description": "Taxa referente à bolsa de estudos.",
+            "items": [
+              "Formulário da matrícula na escola",
+              "Demais documentações necessárias"
+            ]
+          },
+          "step4": {
+            "description": "Taxa de controle do I-20 durante todo o processo de Transfer.",
+            "items": [
+              "Controle ativo do I-20",
+              "Acompanhamento durante todo o processo",
+              "Suporte para dúvidas e orientações",
+              "Pagamento dessa taxa na emissão da carta de aceite pela instituição"
+            ]
+          }
+        }
+      },
+      "funds": {
+        "description": "Requisitos mínimos de comprovação financeira para o processo de Transfer",
+        "note": "Os valores devem ser comprovados através de extrato bancário atualizado. Investimentos e aplicações também são aceitos como comprovação de fundos."
+      },
+      "values": {
+        "description": "Todos os custos envolvidos no processo de Transfer"
+      }
+    },
+    "cos": {
+      "header": {
+        "title": "Processo de COS",
+        "subtitle": "Change of Status — Troca de Status",
+        "description": "Guia completo com todas as etapas e valores para realizar a troca do seu status de visto nos Estados Unidos"
+      },
+      "promise": "Trocar seu status dentro dos EUA não precisa ser um labirinto. Aqui você encontra um guia completo com todas as etapas, todos os valores e o suporte necessário para fazer seu COS com segurança, planejamento financeiro e acompanhamento jurídico até a resposta do USCIS.",
+      "steps": {
+        "title": "Etapas do Processo",
+        "description": "Conheça todas as etapas necessárias para realizar a troca do seu status de visto",
+        "list": {
+          "step1": {
+            "description": "Primeira etapa para verificar se você é elegível para o processo de COS.",
+            "items": [
+              "Passaporte válido (mínimo 1 ano)",
+              "I-94 válido",
+              "Comprovante de visto ou status atual",
+              "Comprovante de fundos bancários ($22.000 mínimo)",
+              "Endereço completo nos EUA",
+              "Pagamento via Zelle para: info@thefutureofenglish.com"
+            ]
+          },
+          "step2": {
+            "description": "Taxa de aplicação e emissão do I-20.",
+            "items": [
+              "Emissão do formulário I-20",
+              "Processamento da matrícula",
+              "$100 por cada dependente adicional"
+            ]
+          },
+          "step3": {
+            "description": "Taxa referente à bolsa de estudos.",
+            "items": [
+              "Formulário da matrícula na escola",
+              "Demais documentações necessárias"
+            ]
+          },
+          "step4": {
+            "description": "Taxa de controle do I-20 durante todo o processo de COS.",
+            "items": [
+              "Controle ativo do I-20",
+              "Acompanhamento durante todo o processo",
+              "Suporte para dúvidas e orientações",
+              "Pagamento dessa taxa na emissão da carta de aceite pela instituição"
+            ]
+          },
+          "step5": {
+            "description": "Acompanhamento jurídico completo do processo de COS.",
+            "items": [
+              "$1.800 para o aplicante principal",
+              "$100 por cada dependente adicional",
+              "Acompanhamento jurídico completo",
+              "Preparação de toda documentação"
+            ]
+          }
+        }
+      },
+      "funds": {
+        "description": "Requisitos mínimos de comprovação financeira para o processo de COS",
+        "note": "Os valores devem ser comprovados através de extrato bancário atualizado. Investimentos e aplicações também são aceitos como comprovação de fundos."
+      },
+      "values": {
+        "description": "Todos os custos envolvidos no processo de COS"
+      }
+    }
+  },
   "nav": {
     "home": "Início",
     "howItWorks": "Como Funciona",
@@ -1297,80 +1503,79 @@
           }
         }
       }
-    }
-    ,
+    },
     "messages": {
       "invalidDependents": "Por favor, selecione entre 0 e 5 dependentes.",
-    "checkEmail": "Verifique seu email!",
-    "studentVerification": "Um link de confirmação foi enviado para seu email. Verifique sua caixa de entrada (e pasta de spam) para ativar sua conta.",
-    "passwordsNotMatch": "As senhas não coincidem",
-    "invalidPasswordChars": "A senha contém caracteres inválidos. Apenas letras, números e @ # $ ! são permitidos.",
-    "invalidPhone": "Por favor, digite um número de telefone válido com código do país",
-    "mustAnswerReferralCode": "Por favor, responda se você tem um código de referência para continuar",
-    "preCheckoutModal": {
-      "securePayment": "Pagamento Seguro",
-      "closeModal": "Fechar modal",
-      "closeTerms": "Fechar termos",
-      "totalAmount": "Valor total",
-      "securePaymentGateway": "Gateway de pagamento seguro",
-      "promotionalCoupon": {
-        "title": "Cupom Promocional",
-        "enterCode": "Digite o código",
-        "validate": "Validar",
+      "checkEmail": "Verifique seu email!",
+      "studentVerification": "Um link de confirmação foi enviado para seu email. Verifique sua caixa de entrada (e pasta de spam) para ativar sua conta.",
+      "passwordsNotMatch": "As senhas não coincidem",
+      "invalidPasswordChars": "A senha contém caracteres inválidos. Apenas letras, números e @ # $ ! são permitidos.",
+      "invalidPhone": "Por favor, digite um número de telefone válido com código do país",
+      "mustAnswerReferralCode": "Por favor, responda se você tem um código de referência para continuar",
+      "preCheckoutModal": {
+        "securePayment": "Pagamento Seguro",
+        "closeModal": "Fechar modal",
+        "closeTerms": "Fechar termos",
+        "totalAmount": "Valor total",
+        "securePaymentGateway": "Gateway de pagamento seguro",
+        "promotionalCoupon": {
+          "title": "Cupom Promocional",
+          "enterCode": "Digite o código",
+          "validate": "Validar",
+          "validating": "Validando...",
+          "remove": "Remover cupom",
+          "applied": "de desconto",
+          "discountedValue": "Valor com desconto",
+          "originalValue": "(original)",
+          "enterCodePlease": "Por favor, digite o código do cupom",
+          "successMessage": "Cupom {{code}} aplicado! Desconto de ${{amount}} aplicado."
+        },
+        "referralCode": "Código de Indicação",
+        "codeAlreadyUsed": "Código já utilizado",
+        "discountAlreadyApplied": "Desconto já aplicado em sua conta",
+        "haveReferralCode": "Você tem um código de indicação de amigo?",
+        "placeholder": "Digite o código aqui",
         "validating": "Validando...",
-        "remove": "Remover cupom",
-        "applied": "de desconto",
-        "discountedValue": "Valor com desconto",
-        "originalValue": "(original)",
-        "enterCodePlease": "Por favor, digite o código do cupom",
-        "successMessage": "Cupom {{code}} aplicado! Desconto de ${{amount}} aplicado."
+        "validate": "Validar Código",
+        "acceptContractTerms": "Eu li e aceito os termos e condições do contrato",
+        "processingPayment": "Processando...",
+        "applyCodeAndContinue": "Aplicar Código e Continuar",
+        "goToPayment": "Ir para Pagamento",
+        "termsAndConditions": {
+          "title": "Termos e Condições"
+        },
+        "scrollToBottomFirst": "Role até o final para aceitar",
+        "readingTerms": "Lendo termos...",
+        "acceptTerms": "Aceitar Termos",
+        "cancel": "Cancelar",
+        "loading": "Carregando...",
+        "validCode": "Código de referência válido! Você receberá $50 de desconto na taxa do processo de seleção.",
+        "pleaseEnterCode": "Por favor, digite um código",
+        "sellerReferralCodeBlocked": "Usuários com código de vendedor não podem usar códigos de desconto adicionais.",
+        "errorValidating": "Erro ao validar código. Tente novamente.",
+        "mustAcceptTerms": "Você deve aceitar os termos e condições para continuar."
       },
-      "referralCode": "Código de Indicação",
-      "codeAlreadyUsed": "Código já utilizado",
-      "discountAlreadyApplied": "Desconto já aplicado em sua conta",
-      "haveReferralCode": "Você tem um código de indicação de amigo?",
-      "placeholder": "Digite o código aqui",
-      "validating": "Validando...",
-      "validate": "Validar Código",
-      "acceptContractTerms": "Eu li e aceito os termos e condições do contrato",
-      "processingPayment": "Processando...",
-      "applyCodeAndContinue": "Aplicar Código e Continuar",
-      "goToPayment": "Ir para Pagamento",
-      "termsAndConditions": {
-        "title": "Termos e Condições"
-      },
-      "scrollToBottomFirst": "Role até o final para aceitar",
-      "readingTerms": "Lendo termos...",
-      "acceptTerms": "Aceitar Termos",
-      "cancel": "Cancelar",
-      "loading": "Carregando...",
       "validCode": "Código de referência válido! Você receberá $50 de desconto na taxa do processo de seleção.",
       "pleaseEnterCode": "Por favor, digite um código",
       "sellerReferralCodeBlocked": "Usuários com código de vendedor não podem usar códigos de desconto adicionais.",
       "errorValidating": "Erro ao validar código. Tente novamente.",
-      "mustAcceptTerms": "Você deve aceitar os termos e condições para continuar."
-    },
-    "validCode": "Código de referência válido! Você receberá $50 de desconto na taxa do processo de seleção.",
-    "pleaseEnterCode": "Por favor, digite um código",
-    "sellerReferralCodeBlocked": "Usuários com código de vendedor não podem usar códigos de desconto adicionais.",
-    "errorValidating": "Erro ao validar código. Tente novamente.",
-    "mustAcceptTerms": "Você deve aceitar os termos e condições para continuar.",
-    "errors": {
-      "serverError": "Erro ao conectar com o servidor",
-      "tryAgain": "Tente novamente",
-      "invalidCoupon": "Cupom inválido",
-      "connectionError": "Erro ao validar cupom. Verifique sua conexão e tente novamente."
-    },
-    "authenticationFailed": "Falha na autenticação. Tente novamente.",
-    "invalidCredentials": "Email ou senha inválidos. Verifique suas credenciais e tente novamente.",
-    "emailNotConfirmed": "Verifique seu email e clique no link de confirmação antes de fazer login.",
-    "tooManyRequests": "Muitas tentativas de login. Aguarde alguns minutos antes de tentar novamente.",
-    "userNotFound": "Nenhuma conta encontrada com este endereço de email. Verifique seu email ou crie uma nova conta.",
-    "weakPassword": "A senha é muito fraca. Escolha uma senha mais forte.",
-    "invalidEmail": "Digite um endereço de email válido.",
-    "signupDisabled": "Novos registros estão atualmente desabilitados. Entre em contato com o suporte.",
-    "registrationFailed": "Falha no Registro",
-    "emailAlreadyRegistered": "Este email já está cadastrado. Faça login ou use outro email."
+      "mustAcceptTerms": "Você deve aceitar os termos e condições para continuar.",
+      "errors": {
+        "serverError": "Erro ao conectar com o servidor",
+        "tryAgain": "Tente novamente",
+        "invalidCoupon": "Cupom inválido",
+        "connectionError": "Erro ao validar cupom. Verifique sua conexão e tente novamente."
+      },
+      "authenticationFailed": "Falha na autenticação. Tente novamente.",
+      "invalidCredentials": "Email ou senha inválidos. Verifique suas credenciais e tente novamente.",
+      "emailNotConfirmed": "Verifique seu email e clique no link de confirmação antes de fazer login.",
+      "tooManyRequests": "Muitas tentativas de login. Aguarde alguns minutos antes de tentar novamente.",
+      "userNotFound": "Nenhuma conta encontrada com este endereço de email. Verifique seu email ou crie uma nova conta.",
+      "weakPassword": "A senha é muito fraca. Escolha uma senha mais forte.",
+      "invalidEmail": "Digite um endereço de email válido.",
+      "signupDisabled": "Novos registros estão atualmente desabilitados. Entre em contato com o suporte.",
+      "registrationFailed": "Falha no Registro",
+      "emailAlreadyRegistered": "Este email já está cadastrado. Faça login ou use outro email."
     }
   },
   "ssoCallback": {
