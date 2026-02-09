@@ -1,26 +1,136 @@
-/* eslint-disable */
-/* stylelint-disable */
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
 
-@layer base {
+/* Definition of the design system. All colors, gradients, fonts, etc should be defined here. 
+All colors MUST be HSL.
+*/
 
-  /* Controle de scroll global - CORRIGIDO */
-  html {
-    height: 100%;
-    overflow-y: auto;
-    /* Permitir scroll normal */
+@layer base {
+  :root {
+    --background: 0 0% 100%;
+    --foreground: 220 20% 15%;
+
+    --card: 0 0% 100%;
+    --card-foreground: 220 20% 15%;
+
+    --popover: 0 0% 100%;
+    --popover-foreground: 220 20% 15%;
+
+    --primary: 250 84% 54%;
+    --primary-foreground: 0 0% 100%;
+
+    --secondary: 340 82% 52%;
+    --secondary-foreground: 0 0% 100%;
+
+    --muted: 220 14% 96%;
+    --muted-foreground: 220 10% 40%;
+
+    --accent: 175 84% 32%;
+    --accent-foreground: 0 0% 100%;
+
+    --destructive: 0 84% 60%;
+    --destructive-foreground: 0 0% 100%;
+
+    --border: 220 14% 90%;
+    --input: 220 14% 90%;
+    --ring: 250 84% 54%;
+
+    --radius: 0.75rem;
+
+    /* Custom vibrant colors */
+    --coral: 16 100% 66%;
+    --coral-foreground: 0 0% 100%;
+
+    --teal: 175 84% 32%;
+    --teal-foreground: 0 0% 100%;
+
+    --gold: 45 93% 47%;
+    --gold-foreground: 0 0% 10%;
+
+    --purple: 250 84% 54%;
+    --purple-foreground: 0 0% 100%;
+
+    --sidebar-background: 0 0% 98%;
+    --sidebar-foreground: 240 5.3% 26.1%;
+    --sidebar-primary: 240 5.9% 10%;
+    --sidebar-primary-foreground: 0 0% 98%;
+    --sidebar-accent: 240 4.8% 95.9%;
+    --sidebar-accent-foreground: 240 5.9% 10%;
+    --sidebar-border: 220 13% 91%;
+    --sidebar-ring: 217.2 91.2% 59.8%;
+  }
+
+  .dark {
+    --background: 220 20% 10%;
+    --foreground: 0 0% 98%;
+
+    --card: 220 20% 14%;
+    --card-foreground: 0 0% 98%;
+
+    --popover: 220 20% 14%;
+    --popover-foreground: 0 0% 98%;
+
+    --primary: 250 84% 64%;
+    --primary-foreground: 0 0% 100%;
+
+    --secondary: 340 82% 62%;
+    --secondary-foreground: 0 0% 100%;
+
+    --muted: 220 14% 20%;
+    --muted-foreground: 220 10% 60%;
+
+    --accent: 175 84% 42%;
+    --accent-foreground: 0 0% 100%;
+
+    --destructive: 0 62.8% 30.6%;
+    --destructive-foreground: 0 0% 98%;
+
+    --border: 220 14% 20%;
+    --input: 220 14% 20%;
+    --ring: 250 84% 64%;
+
+    /* Custom vibrant colors dark mode */
+    --coral: 16 100% 66%;
+    --coral-foreground: 0 0% 100%;
+
+    --teal: 175 84% 42%;
+    --teal-foreground: 0 0% 100%;
+
+    --gold: 45 93% 57%;
+    --gold-foreground: 0 0% 10%;
+
+    --purple: 250 84% 64%;
+    --purple-foreground: 0 0% 100%;
+
+    --sidebar-background: 240 5.9% 10%;
+    --sidebar-foreground: 240 4.8% 95.9%;
+    --sidebar-primary: 224.3 76.3% 48%;
+    --sidebar-primary-foreground: 0 0% 100%;
+    --sidebar-accent: 240 3.7% 15.9%;
+    --sidebar-accent-foreground: 240 4.8% 95.9%;
+    --sidebar-border: 240 3.7% 15.9%;
+    --sidebar-ring: 217.2 91.2% 59.8%;
+  }
+}
+
+@layer base {
+  * {
+    @apply border-border;
   }
 
   body {
+    @apply bg-background text-foreground;
     height: 100%;
     overflow-y: auto;
-    /* Permitir scroll no body */
     overflow-x: hidden;
-    /* Prevenir scroll horizontal */
     position: relative;
-    /* Garantir posicionamento correto */
+  }
+
+  html {
+    scroll-behavior: smooth;
+    height: 100%;
+    overflow-y: auto;
   }
 
   /* Resto do CSS existente */
@@ -34,6 +144,40 @@
 }
 
 @layer utilities {
+  .gradient-primary {
+    background: linear-gradient(
+      135deg,
+      hsl(var(--primary)) 0%,
+      hsl(var(--secondary)) 100%
+    );
+  }
+
+  .gradient-teal-purple {
+    background: linear-gradient(
+      135deg,
+      hsl(var(--teal)) 0%,
+      hsl(var(--purple)) 100%
+    );
+  }
+
+  .gradient-coral-gold {
+    background: linear-gradient(
+      135deg,
+      hsl(var(--coral)) 0%,
+      hsl(var(--gold)) 100%
+    );
+  }
+
+  .text-gradient {
+    background: linear-gradient(
+      135deg,
+      hsl(var(--primary)) 0%,
+      hsl(var(--secondary)) 100%
+    );
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    background-clip: text;
+  }
 
   /* Garantir que o botão flutuante seja sempre visível */
   .floating-cart-button {
@@ -80,7 +224,6 @@
     z-index: 9999999 !important;
   }
 
-
   /* Garantir que o botão flutuante WhatsApp seja sempre visível */
   .floating-whatsapp-button {
     position: fixed !important;
@@ -107,14 +250,6 @@
     word-break: break-word;
     overflow-wrap: break-word;
   }
-
-  /* CSS específico para inputs de arquivo - PREVENIR QUEBRAS DE LAYOUT */
-  /* input[type="file"] {
-    position: absolute !important;
-    left: -9999px !important;
-    opacity: 0 !important;
-    pointer-events: none !important;
-  } */
 
   /* Garantir que labels de arquivo sejam estáveis */
   label[for*="file"],
@@ -145,17 +280,15 @@
     padding: 0 !important;
     border: none !important;
     outline: none !important;
-    /* ✅ CORREÇÃO: Garantir que funcione mesmo em containers com overflow */
     transform: translateZ(0) !important;
     -webkit-transform: translateZ(0) !important;
     will-change: transform !important;
   }
 
   /* Garantir que o modal esteja acima de todos os outros elementos */
-  .document-viewer-overlay>div {
+  .document-viewer-overlay > div {
     z-index: 10000 !important;
     position: relative !important;
-    /* ✅ CORREÇÃO: Adicionar transform para forçar contexto de empilhamento */
     transform: translateZ(0) !important;
     -webkit-transform: translateZ(0) !important;
   }
@@ -172,20 +305,18 @@
     height: 100vh !important;
     background-color: rgba(0, 0, 0, 0.75) !important;
     z-index: -1 !important;
-    /* ✅ CORREÇÃO: Adicionar transform para garantir cobertura completa */
     transform: translateZ(0) !important;
     -webkit-transform: translateZ(0) !important;
   }
 
-  /* ✅ NOVO: Forçar contexto de empilhamento no body quando modal estiver aberto */
+  /* Forçar contexto de empilhamento no body quando modal estiver aberto */
   body:has(.document-viewer-overlay) {
     overflow: hidden !important;
     position: relative !important;
   }
 
-  /* ✅ NOVO: Garantir que containers pais não interfiram com o modal */
+  /* Garantir que containers pais não interfiram com o modal */
   .document-viewer-overlay {
-    /* Forçar criação de novo contexto de empilhamento */
     isolation: isolate !important;
     contain: layout style paint !important;
   }
@@ -306,9 +437,7 @@
   padding-bottom: 10px;
   gap: 10px;
   -ms-overflow-style: none;
-  /* IE and Edge */
   scrollbar-width: none;
-  /* Firefox */
 }
 
 .actions-container::-webkit-scrollbar {
@@ -405,7 +534,6 @@
     opacity: 0;
     transform: translateY(-10px);
   }
-
   to {
     opacity: 1;
     transform: translateY(0);

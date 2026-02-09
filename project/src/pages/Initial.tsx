@@ -6,7 +6,7 @@ import ValuesSummary from "@/components/initial/ValuesSummary";
 import ClientsSection from "@/components/shared/ClientsSection";
 import ContactForm from "@/components/shared/ContactForm";
 import Footer from "@/components/initial/Footer";
-import ChatBot from "@/components/shared/Chatbot";
+import Chatbot from "@/components/shared/Chatbot";
 
 const INITIAL_PROMISE = "Se o seu plano é chegar aos Estados Unidos já com o visto F1 aprovado, nós organizamos o caminho desde a escolha da escola até o agendamento no consulado. Com nosso guia, você entende cada etapa, todos os custos e recebe orientação para montar uma aplicação forte e coerente com o seu projeto de vida.";
 
@@ -21,7 +21,6 @@ const Initial = () => {
       <ValuesSummary />
       <ContactForm />
       <Footer />
-      <ChatBot />
     </div>
   );
 };

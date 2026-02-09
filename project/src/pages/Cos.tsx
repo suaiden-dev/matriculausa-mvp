@@ -6,11 +6,11 @@ import ValuesSummary from "@/components/cos/ValuesSummary";
 import ClientsSection from "@/components/shared/ClientsSection";
 import ContactForm from "@/components/shared/ContactForm";
 import Footer from "@/components/cos/Footer";
-import ChatBot from "@/components/shared/Chatbot";
+import Chatbot from "@/components/shared/Chatbot";
 
 const COS_PROMISE = "Trocar seu status dentro dos EUA não precisa ser um labirinto. Aqui você encontra um guia completo com todas as etapas, todos os valores e o suporte necessário para fazer seu COS com segurança, planejamento financeiro e acompanhamento jurídico até a resposta do USCIS.";
 
-const Index = () => {
+const Cos = () => {
   return (
     <div className="min-h-screen bg-background">
       <Header />
@@ -19,12 +19,10 @@ const Index = () => {
       <ProcessSteps />
       <FundsSummary />
       <ValuesSummary />
-      <ClientsSection />
       <ContactForm />
       <Footer />
-      <ChatBot />
     </div>
   );
 };
 
-export default Index;
+export default Cos;
