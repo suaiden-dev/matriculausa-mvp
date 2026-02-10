@@ -1,4 +1,4 @@
-import React, { useEffect, useState, useRef } from 'react';
+import React, { useEffect, useState } from 'react';
 import { Link, useSearchParams } from 'react-router-dom';
 import { 
   Award, 
@@ -59,7 +59,7 @@ const Overview: React.FC<OverviewProps> = ({
   const { t } = useTranslation();
   const navigate = useNavigate();
   const [searchParams, setSearchParams] = useSearchParams();
-  const paymentButtonRef = useRef<HTMLButtonElement>(null);
+
   const { user, userProfile, refetchUserProfile } = useAuth();
   const { activeDiscount } = useReferralCode();
   const { userFeeOverrides } = useFeeConfig(user?.id);
@@ -206,35 +206,24 @@ const Overview: React.FC<OverviewProps> = ({
     return () => clearTimeout(debounce);
   }, [user, userProfile, selectionProcessFeeAmount, scholarshipFeeAmount, i20ControlFeeAmount]);
 
-  // Abertura automática do modal de pagamento via query param ou fallback localStorage
+  // Redirecionamento automático para o onboarding via query param ou fallback localStorage
   useEffect(() => {
     const shouldOpenModal = searchParams.get('openModal') || localStorage.getItem('pending_open_modal');
     
-    if (shouldOpenModal === 'selection_process' && !paymentBlockedLoading && paymentButtonRef.current) {
-      console.log('[Overview] Comando para abrir modal detectado:', searchParams.get('openModal') ? 'Query Param' : 'LocalStorage');
+    if (shouldOpenModal === 'selection_process') {
+      console.log('[Overview] Redirecionando para onboarding:', searchParams.get('openModal') ? 'Query Param' : 'LocalStorage');
       
-      // Aguardar um momento para garantir que o componente está totalmente renderizado
-      const timer = setTimeout(() => {
-        // Simular clique no botão de pagamento
-        paymentButtonRef.current?.click();
-        
-        // Limpar o parâmetro da URL e o localStorage
-        if (searchParams.get('openModal')) {
-          searchParams.delete('openModal');
-          setSearchParams(searchParams, { replace: true });
-        }
-        localStorage.removeItem('pending_open_modal');
-        
-        // Scroll suave até o card de pagamento
-        const paymentCard = document.getElementById('selection-process-payment');
-        if (paymentCard) {
-          paymentCard.scrollIntoView({ behavior: 'smooth', block: 'center' });
-        }
-      }, 800);
+      // Limpar o parâmetro da URL e o localStorage
+      if (searchParams.get('openModal')) {
+        searchParams.delete('openModal');
+        setSearchParams(searchParams, { replace: true });
+      }
+      localStorage.removeItem('pending_open_modal');
       
-      return () => clearTimeout(timer);
+      // Redirecionar para o fluxo de onboarding
+      navigate('/student/onboarding?step=selection_fee');
     }
-  }, [searchParams, setSearchParams, paymentBlockedLoading]);
+  }, [searchParams, setSearchParams, navigate]);
 
   const getStatusColor = (status: string) => {
     switch (status) {
@@ -636,20 +625,9 @@ const Overview: React.FC<OverviewProps> = ({
                   </p>
                 </div>
               ) : (
-                <StripeCheckout 
-                  ref={paymentButtonRef}
-                  productId="selectionProcess"
-                  feeType="selection_process"
-                  paymentType="selection_process"
-                  buttonText={t('studentDashboard.selectionProcess.startButton')}
-                  className="w-full sm:w-auto bg-blue-600 hover:bg-blue-700 text-white font-semibold py-3 sm:py-3 px-4 sm:px-6 rounded-xl shadow-lg hover:shadow-xl transition-all duration-200 transform hover:scale-105 cursor-pointer border-2 border-white text-sm sm:text-base disabled:opacity-50 disabled:cursor-not-allowed"
-                  successUrl={`${window.location.origin}/student/dashboard/selection-process-fee-success?session_id={CHECKOUT_SESSION_ID}`}
-                  cancelUrl={`${window.location.origin}/student/dashboard/selection-process-fee-error`}
-                  disabled={paymentBlockedLoading}
-                />
                 <Link
                   to="/student/onboarding?step=selection_fee"
-                  className="w-full sm:w-auto bg-blue-600 hover:bg-blue-700 text-white font-semibold py-3 sm:py-3 px-4 sm:px-6 rounded-xl shadow-lg hover:shadow-xl transition-all duration-200 transform hover:scale-105 cursor-pointer border-2 border-white text-sm sm:text-base disabled:opacity-50 disabled:cursor-not-allowed text-center inline-block"
+                  className="w-full sm:w-auto bg-blue-600 hover:bg-blue-700 text-white font-semibold py-3 sm:py-3 px-4 sm:px-6 rounded-xl shadow-lg hover:shadow-xl transition-all duration-200 transform hover:scale-105 cursor-pointer border-2 border-white text-sm sm:text-base text-center inline-block"
                 >
                   {t('studentDashboard.selectionProcess.startButton')}
                 </Link>
