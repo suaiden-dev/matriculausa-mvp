@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef, useMemo } from 'react';
-import { Search, DollarSign, Award, Clock, GraduationCap, Star, CheckCircle, Building, Users, ArrowRight, AlertTriangle, Monitor, MapPin, Briefcase, Globe, Eye, Lock } from 'lucide-react';
+import { Search, DollarSign, Award, Clock, GraduationCap, Star, CheckCircle, Building, Users, ArrowRight, Sparkles, AlertTriangle, Monitor, MapPin, Briefcase, Globe, Eye, Lock } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 import { useAuth } from '../hooks/useAuth';
 import { useNavigate, useLocation } from 'react-router-dom';
@@ -9,15 +9,17 @@ import { supabase } from '../lib/supabase';
 
 import SmartChat from '../components/SmartChat';
 import ScholarshipDetailModal from '../components/ScholarshipDetailModal';
+import PaymentRequiredBlocker from '../components/PaymentRequiredBlocker';
 import { ApplicationFeeBlockedMessage } from '../components/ApplicationFeeBlockedMessage';
 import { useApplicationFeeStatus } from '../hooks/useApplicationFeeStatus';
 import { usePackageScholarshipFilter } from '../hooks/usePackageScholarshipFilter';
-import { is3800ScholarshipBlocked, is3800Scholarship, is3800ScholarshipExpired } from '../utils/scholarshipDeadlineValidation';
+import { is3800ScholarshipBlocked, is3800Scholarship } from '../utils/scholarshipDeadlineValidation';
+import { ScholarshipExpiryWarning } from '../components/ScholarshipExpiryWarning';
 import { ScholarshipCountdownTimer } from '../components/ScholarshipCountdownTimer';
 
 const Scholarships: React.FC = () => {
   const { t } = useTranslation();
-  const { isAuthenticated, user, userProfile } = useAuth();
+  const { isAuthenticated, user, userProfile, loading } = useAuth();
   
   // Hook para verificar se usuário já tem application fee paga
   const { 
@@ -29,7 +31,10 @@ const Scholarships: React.FC = () => {
   
   // Hook para filtro automático baseado no pacote do usuário
   const { 
-    minScholarshipValue 
+    minScholarshipValue, 
+    userPackage, 
+    hasPackage, 
+    loading: packageFilterLoading 
   } = usePackageScholarshipFilter();
   
   // Obter faixa de bolsa desejada do perfil do usuário (quando logado)
@@ -44,9 +49,10 @@ const Scholarships: React.FC = () => {
   const [selectedField, setSelectedField] = useState('all');
   const [selectedStudyMode, setSelectedStudyMode] = useState('all');
   const [selectedWorkAuth, setSelectedWorkAuth] = useState('all');
-  const [selectedUniversity, setSelectedUniversity] = useState('all');
-  const [universities, setUniversities] = useState<any[]>([]);
-  const [loadingUniversities, setLoadingUniversities] = useState(false);
+  const [minValue, setMinValue] = useState('');
+  const [maxValue, setMaxValue] = useState('');
+  const [showFilters, setShowFilters] = useState(false);
+  const [selectedScholarship, setSelectedScholarship] = useState<any>(null);
   const [isModalOpen, setIsModalOpen] = useState(false);
   
   const { scholarships, loading: scholarshipsLoading, error } = useScholarships();
@@ -72,39 +78,6 @@ const Scholarships: React.FC = () => {
     setMaxPrice(maxScholarshipValue);
   }, [maxScholarshipValue]);
 
-  // Buscar universidades quando o usuário tiver pago a selection process fee
-  useEffect(() => {
-    const fetchUniversities = async () => {
-      const hasPaid = isAuthenticated && userProfile?.has_paid_selection_process_fee;
-      if (!hasPaid) {
-        setUniversities([]);
-        return;
-      }
-
-      try {
-        setLoadingUniversities(true);
-        const { data, error } = await supabase
-          .from('universities')
-          .select('id, name')
-          .eq('is_approved', true)
-          .order('name', { ascending: true });
-
-        if (!error && data) {
-          setUniversities(data);
-        } else {
-          setUniversities([]);
-        }
-      } catch (error) {
-        console.error('Erro ao buscar universidades:', error);
-        setUniversities([]);
-      } finally {
-        setLoadingUniversities(false);
-      }
-    };
-
-    fetchUniversities();
-  }, [isAuthenticated, userProfile?.has_paid_selection_process_fee]);
-
   // Salvar filtros no localStorage quando mudarem
   useEffect(() => {
     const filters = {
@@ -113,12 +86,11 @@ const Scholarships: React.FC = () => {
       selectedField,
       selectedStudyMode,
       selectedWorkAuth,
-      selectedUniversity,
       minPrice,
       maxPrice
     };
     localStorage.setItem('scholarshipsPageFilters', JSON.stringify(filters));
-  }, [searchTerm, selectedLevel, selectedField, selectedStudyMode, selectedWorkAuth, selectedUniversity, minPrice, maxPrice]);
+  }, [searchTerm, selectedLevel, selectedField, selectedStudyMode, selectedWorkAuth, minPrice, maxPrice]);
 
   // Restaurar filtros do localStorage ao carregar
   useEffect(() => {
@@ -131,7 +103,6 @@ const Scholarships: React.FC = () => {
         if (filters.selectedField) setSelectedField(filters.selectedField);
         if (filters.selectedStudyMode) setSelectedStudyMode(filters.selectedStudyMode);
         if (filters.selectedWorkAuth) setSelectedWorkAuth(filters.selectedWorkAuth);
-        if (filters.selectedUniversity) setSelectedUniversity(filters.selectedUniversity);
         if (filters.minPrice !== undefined) setMinPrice(filters.minPrice);
         // maxPrice será definido pelo useEffect do maxScholarshipValue
       } catch (error) {
@@ -149,7 +120,7 @@ const Scholarships: React.FC = () => {
           .from('scholarships')
           .select(`
             *,
-            universities (id, name, location, logo_url, university_fees_page_url)
+            universities (id, name, location, logo_url)
           `)
           .eq('is_highlighted', true)
           // Removido filtro is_active=true - estudantes podem ver bolsas inativas mas não podem aplicar
@@ -246,19 +217,13 @@ const Scholarships: React.FC = () => {
     const matchesDeliveryMode = selectedStudyMode === 'all' || (scholarship.delivery_mode && scholarship.delivery_mode === selectedStudyMode);
     const matchesWorkPermission = selectedWorkAuth === 'all' || (scholarship.work_permissions && scholarship.work_permissions.includes(selectedWorkAuth));
     
-    // Filtro de universidade (apenas quando usuário pagou selection process fee)
-    // Se não pagou, sempre retorna true (não filtra)
-    const matchesUniversity = !allowUniSearch || selectedUniversity === 'all' || 
-      (String(scholarship.university_id) === selectedUniversity || 
-       String((scholarship as any).universities?.id) === selectedUniversity);
-    
     // Filtro automático baseado na faixa de bolsa desejada (quando logado) ou pacote do usuário
     // Mostrar apenas bolsas com valor >= valor selecionado pelo seller
     const matchesDesiredRange = desiredScholarshipRange !== null 
       ? (value >= desiredScholarshipRange)
       : (minScholarshipValue === null || (value >= minScholarshipValue));
     
-    return matchesSearch && matchesRange && matchesLevel && matchesField && matchesDeliveryMode && matchesWorkPermission && matchesUniversity && matchesDesiredRange;
+    return matchesSearch && matchesRange && matchesLevel && matchesField && matchesDeliveryMode && matchesWorkPermission && matchesDesiredRange;
   });
 
   // Apply the same filter logic to featured scholarships so the featureds respect the page filters
@@ -284,19 +249,13 @@ const Scholarships: React.FC = () => {
     const matchesDeliveryMode = selectedStudyMode === 'all' || (scholarship.delivery_mode && scholarship.delivery_mode === selectedStudyMode);
     const matchesWorkPermission = selectedWorkAuth === 'all' || (scholarship.work_permissions && scholarship.work_permissions.includes(selectedWorkAuth));
     
-    // Filtro de universidade (apenas quando usuário pagou selection process fee)
-    // Se não pagou, sempre retorna true (não filtra)
-    const matchesUniversity = !allowUniSearch || selectedUniversity === 'all' || 
-      (String(scholarship.university_id) === selectedUniversity || 
-       String((scholarship as any).universities?.id) === selectedUniversity);
-    
     // Filtro automático baseado na faixa de bolsa desejada (quando logado) ou pacote do usuário
     // Mostrar apenas bolsas com valor >= valor selecionado pelo seller
     const matchesDesiredRange = desiredScholarshipRange !== null 
       ? (value >= desiredScholarshipRange)
       : (minScholarshipValue === null || (value >= minScholarshipValue));
     
-    return matchesSearch && matchesRange && matchesLevel && matchesField && matchesDeliveryMode && matchesWorkPermission && matchesUniversity && matchesDesiredRange;
+    return matchesSearch && matchesRange && matchesLevel && matchesField && matchesDeliveryMode && matchesWorkPermission && matchesDesiredRange;
   };
 
   const filteredFeaturedScholarships = featuredScholarships.filter(matchesFilters);
@@ -306,9 +265,6 @@ const Scholarships: React.FC = () => {
     ? (user?.role !== 'student' || !!userProfile?.has_paid_selection_process_fee)
     : false;
   const shouldApplyBlur = !canViewSensitive;
-  
-  // Verificar se pode usar filtro de universidade
-  const canUseUniversityFilter = isAuthenticated && userProfile?.has_paid_selection_process_fee;
 
   // Polling para atualizar o perfil do usuário apenas enquanto o pagamento está pendente
   useEffect(() => {
@@ -490,7 +446,7 @@ const Scholarships: React.FC = () => {
   // Reset page when filters change
   useEffect(() => {
     setPage(0);
-  }, [searchTerm, selectedLevel, selectedField, selectedStudyMode, selectedWorkAuth, selectedUniversity, minPrice, maxPrice]);
+  }, [searchTerm, selectedLevel, selectedField, selectedStudyMode, selectedWorkAuth, minPrice, maxPrice]);
 
   // Scroll para a seção de bolsas quando a página mudar
   useEffect(() => {
@@ -601,7 +557,7 @@ const Scholarships: React.FC = () => {
           </div>
 
           {/* Dropdown Filters */}
-          <div className="flex items-center gap-2 flex-wrap">
+          <div className="flex items-center gap-2 min-w-[120px]">
             <select
               value={selectedLevel}
               onChange={(e) => setSelectedLevel(e.target.value)}
@@ -626,82 +582,35 @@ const Scholarships: React.FC = () => {
               <option value="engineering">{t('scholarshipsPage.filters.engineering')}</option>
               <option value="any">{t('scholarshipsPage.filters.anyField')}</option>
             </select>
-            <select
-              value={selectedStudyMode}
-              onChange={(e) => setSelectedStudyMode(e.target.value)}
-              className="px-3 py-2 border border-slate-200 rounded-lg focus:ring-1 focus:ring-[#05294E] focus:border-[#05294E] text-xs bg-slate-50 min-w-[110px]"
-              aria-label={t('scholarshipsPage.scholarshipCard.studyMode')}
-              disabled={scholarshipsLoading}
-            >
-              <option value="all">{t('scholarshipsPage.filters.allModes')}</option>
-              <option value="online">{t('scholarshipsPage.filters.online')}</option>
-              <option value="in_person">{t('scholarshipsPage.filters.inPerson')}</option>
-              <option value="hybrid">{t('scholarshipsPage.filters.hybrid')}</option>
-            </select>
-            <select
-              value={selectedWorkAuth}
-              onChange={(e) => setSelectedWorkAuth(e.target.value)}
-              className="px-3 py-2 border border-slate-200 rounded-lg focus:ring-1 focus:ring-[#05294E] focus:border-[#05294E] text-xs bg-slate-50 min-w-[110px]"
-              aria-label={t('scholarshipsPage.scholarshipCard.workAuthorization')}
-              disabled={scholarshipsLoading}
-            >
-              <option value="all">{t('scholarshipsPage.filters.allPermissions')}</option>
-              <option value="OPT">{t('scholarshipsPage.filters.opt')}</option>
-              <option value="CPT">{t('scholarshipsPage.filters.cpt')}</option>
-              <option value="F1">{t('scholarshipsPage.filters.f1')}</option>
-            </select>
-            {/* University Filter - Always visible, disabled until payment */}
-            <div className="relative group" style={{ minWidth: '150px', maxWidth: '150px' }}>
-              <select
-                value={selectedUniversity}
-                onChange={(e) => setSelectedUniversity(e.target.value)}
-                className={`w-full px-3 py-2 border rounded-lg focus:ring-1 focus:ring-[#05294E] focus:border-[#05294E] text-xs transition-all appearance-none overflow-hidden text-ellipsis ${
-                  canUseUniversityFilter
-                    ? 'bg-slate-50 border-slate-200 text-slate-900 pr-8'
-                    : 'bg-slate-100 border-slate-300 text-slate-500 cursor-not-allowed opacity-75 pr-8'
-                }`}
-                style={{ 
-                  paddingRight: '2rem',
-                  backgroundImage: canUseUniversityFilter 
-                    ? 'url("data:image/svg+xml,%3Csvg xmlns=\'http://www.w3.org/2000/svg\' fill=\'none\' viewBox=\'0 0 24 24\' stroke=\'%23334155\'%3E%3Cpath stroke-linecap=\'round\' stroke-linejoin=\'round\' stroke-width=\'2\' d=\'M19 9l-7 7-7-7\'/%3E%3C/svg%3E")'
-                    : 'none',
-                  backgroundPosition: 'right 0.5rem center',
-                  backgroundRepeat: 'no-repeat',
-                  backgroundSize: '1rem 1rem'
-                }}
-                aria-label={t('scholarshipsPage.filters.university') || 'University'}
-                disabled={scholarshipsLoading || loadingUniversities || !canUseUniversityFilter}
-              >
-                <option value="all">{t('scholarshipsPage.filters.allUniversities') || 'All Universities'}</option>
-                {universities.map((university) => (
-                  <option key={university.id} value={university.id}>
-                    {university.name}
-                  </option>
-                ))}
-              </select>
-              {/* Ícone de lock quando desabilitado */}
-              {!canUseUniversityFilter && (
-                <div className="absolute right-8 top-1/2 -translate-y-1/2 pointer-events-none z-20">
-                  <Lock className="h-3 w-3 text-slate-400" />
-                </div>
-              )}
-              {/* Tooltip ao passar o mouse quando desabilitado */}
-              {!canUseUniversityFilter && (
-                <div className="absolute bottom-full left-1/2 -translate-x-1/2 mb-2 px-3 py-2 bg-slate-900 text-white text-xs rounded-lg shadow-xl opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all duration-200 pointer-events-none z-[100] max-w-xs whitespace-normal">
-                  <div className="flex items-start gap-2">
-                    <Lock className="h-3.5 w-3.5 flex-shrink-0 mt-0.5" />
-                    <span className="leading-relaxed">{t('scholarshipsPage.filters.universityTooltip') || 'Crie uma conta e pague a Selection Process Fee para filtrar por universidade'}</span>
-                  </div>
-                  {/* Tooltip arrow */}
-                  <div className="absolute top-full left-1/2 -translate-x-1/2 border-4 border-transparent border-t-slate-900"></div>
-                </div>
-              )}
-            </div>
+                                                     <select
+                 value={selectedStudyMode}
+                 onChange={(e) => setSelectedStudyMode(e.target.value)}
+                 className="px-3 py-2 border border-slate-200 rounded-lg focus:ring-1 focus:ring-[#05294E] focus:border-[#05294E] text-xs bg-slate-50 min-w-[110px]"
+                 aria-label={t('scholarshipsPage.scholarshipCard.studyMode')}
+                 disabled={scholarshipsLoading}
+               >
+               <option value="all">{t('scholarshipsPage.filters.allModes')}</option>
+               <option value="online">{t('scholarshipsPage.filters.online')}</option>
+               <option value="in_person">{t('scholarshipsPage.filters.inPerson')}</option>
+               <option value="hybrid">{t('scholarshipsPage.filters.hybrid')}</option>
+             </select>
+                                                     <select
+                 value={selectedWorkAuth}
+                 onChange={(e) => setSelectedWorkAuth(e.target.value)}
+                 className="px-3 py-2 border border-slate-200 rounded-lg focus:ring-1 focus:ring-[#05294E] focus:border-[#05294E] text-xs bg-slate-50 min-w-[110px]"
+                 aria-label={t('scholarshipsPage.scholarshipCard.workAuthorization')}
+                 disabled={scholarshipsLoading}
+               >
+               <option value="all">{t('scholarshipsPage.filters.allPermissions')}</option>
+               <option value="OPT">{t('scholarshipsPage.filters.opt')}</option>
+               <option value="CPT">{t('scholarshipsPage.filters.cpt')}</option>
+               <option value="F1">{t('scholarshipsPage.filters.f1')}</option>
+             </select>
           </div>
 
           {/* Results Count */}
-          <div className="flex items-center justify-end flex-shrink-0 ml-auto">
-            <span className="text-xs text-slate-600 bg-slate-100 rounded px-3 py-1 font-medium whitespace-nowrap">
+          <div className="flex items-center justify-end flex-1 min-w-[120px]">
+            <span className="text-xs text-slate-600 bg-slate-100 rounded px-3 py-1 font-medium">
               {scholarshipsLoading ? t('scholarshipsPage.filters.loading') : `${filteredScholarships.length} ${t('scholarshipsPage.filters.scholarshipsFound')}`}
             </span>
           </div>
@@ -775,13 +684,11 @@ const Scholarships: React.FC = () => {
                        <div className="absolute top-4 left-4 flex flex-col gap-2 z-20">
                          {/* Timer para bolsas de $3800 ou Deadline Badge */}
                          {is3800Scholarship(scholarship) ? (
-                           !is3800ScholarshipExpired(scholarship) && (
-                             <ScholarshipCountdownTimer scholarship={scholarship} />
-                           )
+                           <ScholarshipCountdownTimer scholarship={scholarship} />
                          ) : daysLeft > 0 && (
                            <div className={`px-3 py-1.5 rounded-xl text-xs font-bold shadow-lg backdrop-blur-sm border border-white/20 flex items-center gap-1 ${deadlineStatus.bg} ${deadlineStatus.color}`}>
                              <Clock className="h-3 w-3" />
-                             {`${daysLeft} ${t('scholarshipsPage.scholarshipCard.days')}`}
+                             {daysLeft <= 0 ? t('scholarshipsPage.scholarshipCard.expired') : `${daysLeft} ${t('scholarshipsPage.scholarshipCard.days')}`}
                            </div>
                          )}
                          {/* Exclusive Badge */}
@@ -792,22 +699,14 @@ const Scholarships: React.FC = () => {
                            </div>
                          )}
                        </div>
-
-                       {/* Expired Badge - Bottom Overlay */}
-                       {(!scholarship.is_active || daysLeft <= 0 || (is3800Scholarship(scholarship) && is3800ScholarshipExpired(scholarship))) && (
-                         <div className="absolute bottom-4 left-1/2 -translate-x-1/2 z-20 w-[90%]">
-                           <div className="bg-red-500/90 backdrop-blur-md text-white px-4 py-2 rounded-2xl text-[10px] sm:text-xs font-black uppercase tracking-[0.1em] flex items-center justify-center gap-2 shadow-2xl border border-white/30 whitespace-nowrap">
-                             <Lock className="h-3 w-3 sm:h-4 sm:w-4" />
-                             {t('scholarshipDeadline.3800Expired')}
-                           </div>
-                         </div>
-                       )}
                     </div>
                     
                     {/* Card Content */}
                     <div className="p-6 flex-1 flex flex-col">
                       {/* Header Section */}
                       <div className="mb-4 flex-1">
+                        {/* Warning for $3800 scholarships - inline version */}
+                        <ScholarshipExpiryWarning scholarship={scholarship} variant="badge" className="mb-3" />
                         
                         <h3 id={`featured-scholarship-title-${scholarship.id}`} className={`text-xl font-bold text-slate-900 mb-3 leading-tight line-clamp-2 group-hover:text-[#05294E] transition-colors duration-300`}>
                           {scholarship.title}
@@ -871,6 +770,7 @@ const Scholarships: React.FC = () => {
                             </div>
                           )}
                         </div>
+                      </div>
 
                       {/* Financial Impact Section */}
                       <div className="mb-6">
@@ -930,61 +830,58 @@ const Scholarships: React.FC = () => {
 
                     {/* Action Buttons - Agora sempre na parte inferior */}
                     <div className="px-6 pb-6 mt-auto">
-                      {isBlocked ? (
-                        <div className="flex justify-center w-full">
+                      <div className="flex gap-3">
+                        {/* View Details Button */}
+                        <button
+                          onClick={() => openScholarshipModal(scholarship)}
+                          className="w-32 bg-gradient-to-r from-blue-500 to-blue-600 text-white py-3 px-4 rounded-2xl font-bold text-xs sm:text-sm flex items-center justify-center hover:from-blue-600 hover:to-blue-700 transition-all duration-300 shadow-lg hover:shadow-xl transform hover:scale-105"
+                          aria-label={`View details for ${scholarship.title} scholarship`}
+                        >
+                          <Eye className="h-3 w-3 sm:h-4 sm:w-4 mr-2" />
+                          <span>{t('scholarshipsPage.scholarshipCard.details')}</span>
+                        </button>
+                        
+                        {/* Apply Now Button - Maior */}
+                        {isBlocked ? (
                           <button
                             disabled
-                            className="w-full bg-slate-50 text-slate-300 py-4 px-4 rounded-2xl flex items-center justify-center cursor-not-allowed opacity-50 border border-slate-100"
+                            className="flex-1 bg-slate-400 text-white py-3 sm:py-4 px-4 sm:px-6 rounded-2xl font-bold text-xs sm:text-sm uppercase tracking-wide flex items-center justify-center cursor-not-allowed opacity-60 relative overflow-hidden"
+                            aria-label={`Scholarship ${scholarship.title} is no longer accepting applications`}
                           >
-                            <Lock className="h-5 w-5" />
+                            <AlertTriangle className="h-3 w-3 sm:h-4 sm:w-4 mr-2 relative z-10" aria-hidden="true" />
+                            <span className="relative z-10">{t('scholarshipDeadline.3800Expired')}</span>
                           </button>
-                        </div>
-                      ) : (
-                        <div className="flex gap-3">
-                          {/* View Details Button */}
+                        ) : (!isAuthenticated) ? (
                           <button
-                            onClick={() => openScholarshipModal(scholarship)}
-                            className="w-32 bg-gradient-to-r from-blue-500 to-blue-600 text-white py-3 px-4 rounded-2xl font-black text-xs sm:text-sm flex items-center justify-center hover:from-blue-600 hover:to-blue-700 transition-all duration-300 shadow-lg hover:shadow-xl transform hover:scale-105 tracking-wide"
-                            aria-label={`View details for ${scholarship.title} scholarship`}
+                            className="flex-1 bg-gradient-to-r from-[#05294E] via-[#05294E] to-slate-700 text-white py-3 sm:py-4 px-4 sm:px-6 rounded-2xl font-bold text-xs sm:text-sm uppercase tracking-wide flex items-center justify-center group-hover:shadow-2xl transform group-hover:scale-105 transition-all duration-300 hover:from-[#041f3a] hover:to-slate-600 relative overflow-hidden active:scale-95 focus:outline-none focus:ring-2 focus:ring-[#05294E]/50 focus:ring-offset-2"
+                            onClick={() => navigate(`/login${location.search}`)}
+                            aria-label={`Apply for ${scholarship.title} scholarship - Login required`}
                           >
-                            <Eye className="h-3 w-3 sm:h-4 sm:w-4 mr-2" />
-                            <span>{t('scholarshipsPage.scholarshipCard.details')}</span>
+                            <div className="absolute inset-0 bg-gradient-to-r from-white/0 via-white/25 to-white/0 transform -skew-x-12 -translate-x-full group-hover:translate-x-full transition-transform duration-1000"></div>
+                            <Award className="h-3 w-3 sm:h-4 sm:w-4 mr-2 relative z-10 group-hover:scale-110 transition-transform" aria-hidden="true" />
+                            <span className="relative z-10">{t('scholarshipsPage.scholarshipCard.applyNow')}</span>
                           </button>
-                          
-                          {/* Apply Now Button - Maior */}
-                          {!isAuthenticated ? (
-                            <button
-                              className="flex-1 bg-gradient-to-r from-[#05294E] via-[#05294E] to-slate-700 text-white py-3 sm:py-4 px-4 sm:px-6 rounded-2xl font-black text-xs sm:text-sm uppercase tracking-widest flex items-center justify-center group-hover:shadow-2xl transform group-hover:scale-105 transition-all duration-300 hover:from-[#041f3a] hover:to-slate-600 relative overflow-hidden active:scale-95 focus:outline-none focus:ring-2 focus:ring-[#05294E]/50 focus:ring-offset-2"
-                              onClick={() => navigate(`/login${location.search}`)}
-                              aria-label={`Apply for ${scholarship.title} scholarship - Login required`}
-                            >
-                              <div className="absolute inset-0 bg-gradient-to-r from-white/0 via-white/25 to-white/0 transform -skew-x-12 -translate-x-full group-hover:translate-x-full transition-transform duration-1000"></div>
-                              <Award className="h-3 w-3 sm:h-4 sm:w-4 mr-2 relative z-10 group-hover:scale-110 transition-transform" aria-hidden="true" />
-                              <span className="relative z-10">{t('scholarshipsPage.scholarshipCard.applyNow')}</span>
-                            </button>
-                          ) : (
-                            <button
-                              className="flex-1 bg-gradient-to-r from-[#05294E] via-[#05294E] to-slate-700 text-white py-3 sm:py-4 px-4 sm:px-6 rounded-2xl font-black text-xs sm:text-sm uppercase tracking-widest flex items-center justify-center group-hover:shadow-2xl transform group-hover:scale-105 transition-all duration-300 hover:from-[#041f3a] hover:to-slate-600 relative overflow-hidden active:scale-95 focus:outline-none focus:ring-2 focus:ring-[#05294E]/50 focus:ring-offset-2"
-                              onClick={async () => {
-                                if (!userProfile?.has_paid_selection_process_fee) {
-                                  navigate('/student/dashboard');
-                                  return;
-                                }
-                                navigate('/student/dashboard/scholarships');
-                              }}
-                              aria-label={`Apply for ${scholarship.title} scholarship`}
-                            >
-                              <div className="absolute inset-0 bg-gradient-to-r from-white/0 via-white/25 to-white/0 transform -skew-x-12 -translate-x-full group-hover:translate-x-full transition-transform duration-1000"></div>
-                              <Award className="h-3 w-3 sm:h-4 sm:w-4 mr-2 relative z-10 group-hover:scale-110 transition-transform" aria-hidden="true" />
-                              <span className="relative z-10">{t('scholarshipsPage.scholarshipCard.applyNow')}</span>
-                              <ArrowRight className="h-3 w-3 sm:h-4 sm:w-4 ml-2 group-hover:translate-x-1 transition-transform relative z-10" aria-hidden="true" />
-                            </button>
-                          )}
-                        </div>
-                      )}
+                        ) : (
+                          <button
+                            className="flex-1 bg-gradient-to-r from-[#05294E] via-[#05294E] to-slate-700 text-white py-3 sm:py-4 px-4 sm:px-6 rounded-2xl font-bold text-xs sm:text-sm uppercase tracking-wide flex items-center justify-center group-hover:shadow-2xl transform group-hover:scale-105 transition-all duration-300 hover:from-[#041f3a] hover:to-slate-600 relative overflow-hidden active:scale-95 focus:outline-none focus:ring-2 focus:ring-[#05294E]/50 focus:ring-offset-2"
+                            onClick={async () => {
+                              if (!userProfile?.has_paid_selection_process_fee) {
+                                navigate('/student/onboarding?step=selection_fee');
+                                return;
+                              }
+                              navigate('/student/dashboard/scholarships');
+                            }}
+                            aria-label={`Apply for ${scholarship.title} scholarship`}
+                          >
+                            <div className="absolute inset-0 bg-gradient-to-r from-white/0 via-white/25 to-white/0 transform -skew-x-12 -translate-x-full group-hover:translate-x-full transition-transform duration-1000"></div>
+                            <Award className="h-3 w-3 sm:h-4 sm:w-4 mr-2 relative z-10 group-hover:scale-110 transition-transform" aria-hidden="true" />
+                            <span className="relative z-10">{t('scholarshipsPage.scholarshipCard.applyNow')}</span>
+                            <ArrowRight className="h-3 w-3 sm:h-4 sm:w-4 ml-2 group-hover:translate-x-1 transition-transform relative z-10" aria-hidden="true" />
+                          </button>
+                        )}
+                      </div>
                     </div>
-                  </div>
-                </article>
+                  </article>
                 );
               })}
             </div>
@@ -1037,7 +934,6 @@ const Scholarships: React.FC = () => {
                       setSelectedField('all');
                       setSelectedStudyMode('all');
                       setSelectedWorkAuth('all');
-                      setSelectedUniversity('all');
                       setMaxPrice(() => maxScholarshipValue);
                       setMinPrice(0);
                      localStorage.removeItem('scholarshipsPageFilters');
@@ -1060,6 +956,36 @@ const Scholarships: React.FC = () => {
                  
                  return (
                    <article key={scholarship.id} className="group relative bg-white rounded-3xl shadow-lg hover:shadow-2xl transition-all duration-500 overflow-hidden hover:-translate-y-3 hover:border-[#05294E]/20 focus-within:ring-2 focus-within:ring-[#05294E]/50 flex flex-col h-full" role="article" aria-labelledby={`scholarship-title-${scholarship.id}`}>
+                     {/* Overlay de blur quando não autenticado */}
+                     {/* {!isAuthenticated && (
+                       <div className="absolute inset-0 bg-white/80 backdrop-blur-sm z-10 flex items-center justify-center rounded-3xl">
+                         <div className="text-center p-6">
+                           <div className="bg-[#05294E]/10 w-16 h-16 rounded-2xl flex items-center justify-center mx-auto mb-4">
+                             <Lock className="h-8 w-8 text-[#05294E]" />
+                           </div>
+                           <h4 className="text-lg font-bold text-slate-900 mb-2">
+                             {t('home.featuredUniversities.lockedTitle')}
+                           </h4>
+                           <p className="text-sm text-slate-600 mb-4">
+                             {t('home.featuredUniversities.lockedDescription')}
+                           </p>
+                           <button
+                             onClick={() => navigate('/login')}
+                             className="bg-[#05294E] text-white px-4 py-2 rounded-xl text-sm font-semibold hover:bg-[#05294E]/90 transition-colors"
+                           >
+                             {t('home.featuredUniversities.loginToView')}
+                           </button>
+                         </div>
+                       </div>
+                     )} */}
+                     {/* Deadline Urgency Indicator */}
+                     {daysLeft <= 7 && daysLeft > 0 && (
+                       <div className="absolute top-0 left-0 right-0 h-1 bg-gradient-to-r from-orange-500 to-red-500 z-10"></div>
+                     )}
+                     {daysLeft <= 3 && daysLeft > 0 && (
+                       <div className="absolute top-0 left-0 right-0 h-1 bg-gradient-to-r from-red-500 to-red-600 z-10 animate-pulse"></div>
+                     )}
+
                     {/* Scholarship Image */}
                     <div className="relative h-48 w-full overflow-hidden flex items-center justify-center">
                       {scholarship.image_url && canViewSensitive ? (
@@ -1090,37 +1016,27 @@ const Scholarships: React.FC = () => {
 
                        {/* Deadline Badge - Top Left */}
                        <div className="absolute top-4 left-4">
-                        {is3800Scholarship(scholarship) ? (
-                          !is3800ScholarshipExpired(scholarship) && (
-                            <ScholarshipCountdownTimer scholarship={scholarship} />
-                          )
-                        ) : (daysLeft > 0 && (
-                          <div className={`px-3 py-1.5 rounded-xl text-xs font-bold shadow-lg backdrop-blur-sm border border-white/20 flex items-center gap-1 ${deadlineStatus.bg} ${deadlineStatus.color}`}>
-                            <Clock className="h-3 w-3" />
-                            {`${daysLeft} ${t('scholarshipsPage.scholarshipCard.days')}`}
-                          </div>
-                        ))}
-                      </div>
-
-                       {/* Expired Badge - Bottom Overlay */}
-                       {(!scholarship.is_active || daysLeft <= 0 || (is3800Scholarship(scholarship) && is3800ScholarshipExpired(scholarship))) && (
-                         <div className="absolute bottom-4 left-1/2 -translate-x-1/2 z-20 w-[85%]">
-                           <div className="bg-red-500/90 backdrop-blur-md text-white px-4 py-1.5 rounded-xl text-[10px] font-black uppercase tracking-[0.15em] flex items-center justify-center gap-2 shadow-2xl border border-white/30 whitespace-nowrap">
-                             <Lock className="h-3 w-3" />
-                             {t('scholarshipDeadline.3800Expired')}
+                         {is3800Scholarship(scholarship) ? (
+                           <ScholarshipCountdownTimer scholarship={scholarship} />
+                         ) : (
+                                                    <div className={`px-3 py-1.5 rounded-xl text-xs font-bold shadow-lg backdrop-blur-sm border border-white/20 flex items-center gap-1 ${deadlineStatus.bg} ${deadlineStatus.color}`}>
+                             <Clock className="h-3 w-3" />
+                             {daysLeft <= 0 ? t('scholarshipsPage.scholarshipCard.expired') : `${daysLeft} ${t('scholarshipsPage.scholarshipCard.days')}`}
                            </div>
-                         </div>
-                       )}
+                         )}
+                       </div>
                      </div>
                      
                      {/* Card Content */}
                      <div className="p-6 flex-1 flex flex-col">
-                        <div className="mb-4 flex-1">
-                          {/* Expiry Warning removed to avoid duplication/overlapping */}
-                           
-                          <h3 id={`scholarship-title-${scholarship.id}`} className={`text-xl font-bold text-slate-900 mb-3 leading-tight line-clamp-2 group-hover:text-[#05294E] transition-colors duration-300`}>
-                            {scholarship.title}
-                          </h3>
+                       {/* Header Section */}
+                       <div className="mb-4 flex-1">
+                          {/* Warning for $3800 scholarships - inline version */}
+                          <ScholarshipExpiryWarning scholarship={scholarship} variant="badge" className="mb-3" />
+                          
+                         <h3 id={`scholarship-title-${scholarship.id}`} className={`text-xl font-bold text-slate-900 mb-3 leading-tight line-clamp-2 group-hover:text-[#05294E] transition-colors duration-300`}>
+                           {scholarship.title}
+                         </h3>
                          
                          {/* Field and Level Badges */}
                         <div className={`flex flex-wrap items-center gap-2 mb-3`}>
@@ -1179,25 +1095,61 @@ const Scholarships: React.FC = () => {
                              </div>
                            )}
                          </div>
+                       </div>
 
-                       {/* Financial Impact Section - Simplified for Grid */}
+                       {/* Financial Impact Section */}
                        <div className="mb-6">
                          <div className="bg-gradient-to-br from-white to-slate-50 rounded-2xl p-4 border border-slate-200 shadow-sm group-hover:shadow-md transition-shadow duration-300">
-                           <div className="flex items-center justify-between">
-                             <div className="flex flex-col">
-                               <span className="text-[10px] text-slate-500 uppercase tracking-wider font-bold">{t('scholarshipsPage.scholarshipCard.withScholarship')}</span>
-                               <span className="text-xl font-black text-green-700">${formatAmount(scholarshipValue)}</span>
+                           <h4 className="text-sm font-bold text-slate-700 mb-3 flex items-center gap-2">
+                             <DollarSign className="h-4 w-4 text-green-600" />
+                             {t('scholarshipsPage.scholarshipCard.financialOverview')}
+                           </h4>
+                           
+
+                           
+                           <div className="space-y-2">
+                             <div className="flex items-center justify-between text-sm">
+                               <span className="text-slate-600">{t('scholarshipsPage.scholarshipCard.originalPrice')}</span>
+                               <span className={`font-bold ${savingsPercentage > 0 ? 'line-through text-slate-400' : 'text-blue-700'}`}>
+                                 ${formatAmount(originalValue)}
+                               </span>
                              </div>
                              {savingsPercentage > 0 && (
-                               <div className="bg-green-100 text-green-700 px-2 py-1 rounded-lg text-xs font-black">
-                                 {savingsPercentage}% OFF
+                               <div className="flex items-center justify-between text-sm">
+                                 <span className="text-slate-600">{t('scholarshipsPage.scholarshipCard.withScholarship')}</span>
+                                 <span className="font-bold text-green-700">${formatAmount(scholarshipValue)}</span>
                                </div>
                              )}
-                           </div>
-                           
-                           <div className="flex items-center justify-between mt-2 pt-2 border-t border-slate-100">
-                             <span className="text-[10px] text-slate-400 font-medium">Orig: <span className="line-through">${formatAmount(originalValue)}</span></span>
-                             <span className="text-[10px] text-slate-400 font-medium">Fee: <span className="text-purple-600 font-bold">${scholarship.application_fee_amount ? Number(scholarship.application_fee_amount).toFixed(0) : '350'}</span></span>
+                             <div className="flex items-center justify-between text-xs text-slate-500 pt-2 border-t border-slate-200">
+                               <span>{t('scholarshipsPage.scholarshipCard.perCredit')}</span>
+                               <span>${formatAmount(scholarship.original_value_per_credit ?? 0)}</span>
+                             </div>
+                             
+                             {/* Subtle discount indicator */}
+                             {savingsPercentage > 0 && (
+                               <div className="pt-3 border-t border-slate-200">
+                                 <div className="flex items-center justify-between text-xs text-slate-500 mb-2">
+                                   <span>{t('scholarshipsPage.scholarshipCard.scholarshipDiscount')}</span>
+                                   <span className="font-semibold text-green-700">{savingsPercentage}% OFF</span>
+                                 </div>
+                               </div>
+                             )}
+
+                             {/* Application Fee Information */}
+                             <div className="pt-3 border-t border-slate-200">
+                               <div className="flex items-center justify-between text-xs text-slate-500 mb-2">
+                                 <span>{t('scholarshipsPage.scholarshipCard.applicationFee')}</span>
+                                 <span className="font-semibold text-purple-600">
+                                   ${scholarship.application_fee_amount ? Number(scholarship.application_fee_amount).toFixed(2) : '350.00'}
+                                 </span>
+                               </div>
+                               <div className="text-xs text-slate-400 text-center">
+                                 {scholarship.application_fee_amount && Number(scholarship.application_fee_amount) !== 350 ? 
+                                   t('scholarshipsPage.scholarshipCard.customFee') : 
+                                   t('scholarshipsPage.scholarshipCard.standardFee')
+                                 }
+                               </div>
+                             </div>
                            </div>
                          </div>
                        </div>
@@ -1205,62 +1157,78 @@ const Scholarships: React.FC = () => {
 
                      </div>
 
-                    {/* Action Buttons - Agora sempre na parte inferior */}
-                    <div className="px-6 pb-6 mt-auto">
-                      {isBlocked ? (
-                        <div className="flex justify-center w-full">
-                          <button
-                            disabled
-                            className="w-full bg-slate-50 text-slate-300 py-4 px-4 rounded-2xl flex items-center justify-center cursor-not-allowed opacity-50 border border-slate-100"
-                          >
-                            <Lock className="h-5 w-5" />
-                          </button>
-                        </div>
-                      ) : (
-                        <div className="flex gap-3">
-                          {/* View Details Button */}
-                          <button
-                            onClick={() => openScholarshipModal(scholarship)}
-                            className="w-32 bg-gradient-to-r from-blue-500 to-blue-600 text-white py-3 px-4 rounded-2xl font-black text-xs sm:text-sm flex items-center justify-center hover:from-blue-600 hover:to-blue-700 transition-all duration-300 shadow-lg hover:shadow-xl transform hover:scale-105 tracking-wide"
-                            aria-label={`View details for ${scholarship.title} scholarship`}
-                          >
-                            <Eye className="h-3 w-3 sm:h-4 sm:w-4 mr-2" />
-                            <span>{t('scholarshipsPage.scholarshipCard.details')}</span>
-                          </button>
-                          
-                          {/* Apply Now Button - Maior */}
-                          {!isAuthenticated ? (
-                            <button
-                              className="flex-1 bg-gradient-to-r from-[#05294E] via-[#05294E] to-slate-700 text-white py-3 sm:py-4 px-4 sm:px-6 rounded-2xl font-black text-xs sm:text-sm uppercase tracking-widest flex items-center justify-center group-hover:shadow-2xl transform group-hover:scale-105 transition-all duration-300 hover:from-[#041f3a] hover:to-slate-600 relative overflow-hidden active:scale-95 focus:outline-none focus:ring-2 focus:ring-[#05294E]/50 focus:ring-offset-2"
-                              onClick={() => navigate(`/login${location.search}`)}
-                              aria-label={`Apply for ${scholarship.title} scholarship - Login required`}
-                            >
-                              <div className="absolute inset-0 bg-gradient-to-r from-white/0 via-white/25 to-white/0 transform -skew-x-12 -translate-x-full group-hover:translate-x-full transition-transform duration-1000"></div>
-                              <Award className="h-3 w-3 sm:h-4 sm:w-4 mr-2 relative z-10 group-hover:scale-110 transition-transform" aria-hidden="true" />
-                              <span className="relative z-10">{t('scholarshipsPage.scholarshipCard.applyNow')}</span>
-                            </button>
-                          ) : (
-                            <button
-                              className="flex-1 bg-gradient-to-r from-[#05294E] via-[#05294E] to-slate-700 text-white py-3 sm:py-4 px-4 sm:px-6 rounded-2xl font-black text-xs sm:text-sm uppercase tracking-widest flex items-center justify-center group-hover:shadow-2xl transform group-hover:scale-105 transition-all duration-300 hover:from-[#041f3a] hover:to-slate-600 relative overflow-hidden active:scale-95 focus:outline-none focus:ring-2 focus:ring-[#05294E]/50 focus:ring-offset-2"
-                              onClick={async () => {
-                                if (!userProfile?.has_paid_selection_process_fee) {
-                                  navigate('/student/dashboard');
-                                  return;
-                                }
-                                navigate('/student/dashboard/scholarships');
-                              }}
-                              aria-label={`Apply for ${scholarship.title} scholarship`}
-                            >
-                              <div className="absolute inset-0 bg-gradient-to-r from-white/0 via-white/25 to-white/0 transform -skew-x-12 -translate-x-full group-hover:translate-x-full transition-transform duration-1000"></div>
-                              <Award className="h-3 w-3 sm:h-4 sm:w-4 mr-2 relative z-10 group-hover:scale-110 transition-transform" aria-hidden="true" />
-                              <span className="relative z-10">{t('scholarshipsPage.scholarshipCard.applyNow')}</span>
-                              <ArrowRight className="h-3 w-3 sm:h-4 sm:w-4 ml-2 group-hover:translate-x-1 transition-transform relative z-10" aria-hidden="true" />
-                            </button>
-                          )}
-                        </div>
-                      )}
-                    </div>
-                  </div>
+                     {/* Action Buttons - Agora sempre na parte inferior */}
+                     <div className="px-6 pb-6 mt-auto">
+                       <div className="flex gap-3">
+                         {/* View Details Button */}
+                         <button
+                           onClick={() => openScholarshipModal(scholarship)}
+                           className="w-32 bg-gradient-to-r from-blue-500 to-blue-600 text-white py-3 px-4 rounded-2xl font-bold text-xs sm:text-sm flex items-center justify-center hover:from-blue-600 hover:to-blue-700 transition-all duration-300 shadow-lg hover:shadow-xl transform hover:scale-105"
+                           aria-label={`View details for ${scholarship.title} scholarship`}
+                         >
+                           <Eye className="h-3 w-3 sm:h-4 sm:w-4 mr-2" />
+                           <span>{t('scholarshipsPage.scholarshipCard.details')}</span>
+                         </button>
+                         
+                         {/* Badge de bolsa inativa/expirada */}
+                         {!scholarship.is_active && (
+                           <div className="absolute top-4 right-4 bg-red-500 text-white px-3 py-1.5 rounded-full text-xs font-bold flex items-center gap-1.5 shadow-lg z-10">
+                             <AlertTriangle className="h-3 w-3" />
+                             Expirada
+                           </div>
+                         )}
+
+                         {/* Apply Now Button - Maior */}
+                         {!scholarship.is_active || isBlocked ? (
+                           <button
+                             disabled
+                             className="flex-1 bg-slate-400 text-white py-3 sm:py-4 px-4 sm:px-6 rounded-2xl font-bold text-xs sm:text-sm uppercase tracking-wide flex items-center justify-center cursor-not-allowed opacity-60 relative overflow-hidden"
+                             aria-label={`Scholarship ${scholarship.title} is no longer accepting applications`}
+                           >
+                             <AlertTriangle className="h-3 w-3 sm:h-4 sm:w-4 mr-2 relative z-10" aria-hidden="true" />
+                             <span className="relative z-10">
+                               {isBlocked ? t('scholarshipDeadline.3800Expired') : t('scholarshipsPage.scholarshipCard.notAvailable')}
+                             </span>
+                           </button>
+                         ) : (!isAuthenticated) ? (
+                           <button
+                             className="flex-1 bg-gradient-to-r from-[#05294E] via-[#05294E] to-slate-700 text-white py-3 sm:py-4 px-4 sm:px-6 rounded-2xl font-bold text-xs sm:text-sm uppercase tracking-wide flex items-center justify-center group-hover:shadow-2xl transform group-hover:scale-105 transition-all duration-300 hover:from-[#041f3a] hover:to-slate-600 relative overflow-hidden active:scale-95 focus:outline-none focus:ring-2 focus:ring-[#05294E]/50 focus:ring-offset-2"
+                             onClick={() => navigate(`/login${location.search}`)}
+                             aria-label={`Apply for ${scholarship.title} scholarship - Login required`}
+                           >
+                             <div className="absolute inset-0 bg-gradient-to-r from-white/0 via-white/25 to-white/0 transform -skew-x-12 -translate-x-full group-hover:translate-x-full transition-transform duration-1000"></div>
+                             <Award className="h-3 w-3 sm:h-4 sm:w-4 mr-2 relative z-10 group-hover:scale-110 transition-transform" aria-hidden="true" />
+                             <span className="relative z-10">{t('scholarshipsPage.scholarshipCard.applyNow')}</span>
+                           </button>
+                         ) : isBlocked ? (
+                           <button
+                             disabled
+                             className="flex-1 bg-slate-400 text-white py-3 sm:py-4 px-4 sm:px-6 rounded-2xl font-bold text-xs sm:text-sm uppercase tracking-wide flex items-center justify-center cursor-not-allowed opacity-60 relative overflow-hidden"
+                             aria-label={`Scholarship ${scholarship.title} is no longer accepting applications`}
+                           >
+                             <AlertTriangle className="h-3 w-3 sm:h-4 sm:w-4 mr-2 relative z-10" aria-hidden="true" />
+                             <span className="relative z-10">{t('scholarshipDeadline.3800Expired')}</span>
+                           </button>
+                         ) : (
+                           <button
+                             className="flex-1 bg-gradient-to-r from-[#05294E] via-[#05294E] to-slate-700 text-white py-3 sm:py-4 px-4 sm:px-6 rounded-2xl font-bold text-xs sm:text-sm uppercase tracking-wide flex items-center justify-center group-hover:shadow-2xl transform group-hover:scale-105 transition-all duration-300 hover:from-[#041f3a] hover:to-slate-600 relative overflow-hidden active:scale-95 focus:outline-none focus:ring-2 focus:ring-[#05294E]/50 focus:ring-offset-2"
+                             onClick={async () => {
+                               if (!userProfile?.has_paid_selection_process_fee) {
+                                 navigate('/student/onboarding?step=selection_fee');
+                                 return;
+                               }
+                               navigate('/student/dashboard/scholarships');
+                             }}
+                             aria-label={`Apply for ${scholarship.title} scholarship`}
+                           >
+                             <div className="absolute inset-0 bg-gradient-to-r from-white/0 via-white/25 to-white/0 transform -skew-x-12 -translate-x-full group-hover:translate-x-full transition-transform duration-1000"></div>
+                             <Award className="h-3 w-3 sm:h-4 sm:w-4 mr-2 relative z-10 group-hover:scale-110 transition-transform" aria-hidden="true" />
+                             <span className="relative z-10">{t('scholarshipsPage.scholarshipCard.applyNow')}</span>
+                             <ArrowRight className="h-3 w-3 sm:h-4 sm:w-4 ml-2 group-hover:translate-x-1 transition-transform relative z-10" aria-hidden="true" />
+                           </button>
+                         )}
+                       </div>
+                     </div>
                      
                      {/* Enhanced Hover Effect Overlay */}
                      <div className="absolute inset-0 bg-gradient-to-t from-[#05294E]/10 via-transparent to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-500 pointer-events-none"></div>

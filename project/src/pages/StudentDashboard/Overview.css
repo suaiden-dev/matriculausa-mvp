@@ -14,7 +14,10 @@
   border-radius: 1rem;
   border: 1px solid rgb(226 232 240);
   padding: 1rem;
-  transition: box-shadow 200ms ease, transform 200ms ease, border-color 200ms ease;
+  transition:
+    box-shadow 200ms ease,
+    transform 200ms ease,
+    border-color 200ms ease;
 }
 
 .overview-card:hover {
@@ -95,7 +98,7 @@
   transition: box-shadow 0.2s, transform 0.2s;
 }
 .overview-stepbystep-card:active {
-  box-shadow: 0 2px 8px 0 rgba(37,99,235,0.10);
+  box-shadow: 0 2px 8px 0 rgba(37, 99, 235, 0.10);
   transform: scale(0.98);
 }
 .overview-stepbystep-content {
@@ -104,7 +107,7 @@
 .overview-stepbystep-title {
   font-size: 1.1rem;
   font-weight: 600;
-  color: #05294E;
+  color: #05294e;
 }
 .overview-stepbystep-desc {
   font-size: 0.95rem;
@@ -136,4 +139,20 @@
   .overview-stepbystep-card {
     padding: 1rem 0.75rem;
   }
-} 
+}
+
+/* Glass Premium Animations */
+@keyframes bounce-slow {
+  0%, 100% {
+    transform: translateY(-5%);
+    animation-timing-function: cubic-bezier(0.8, 0, 1, 1);
+  }
+  50% {
+    transform: translateY(0);
+    animation-timing-function: cubic-bezier(0, 0, 0.2, 1);
+  }
+}
+
+.animate-bounce-slow {
+  animation: bounce-slow 3s infinite;
+}

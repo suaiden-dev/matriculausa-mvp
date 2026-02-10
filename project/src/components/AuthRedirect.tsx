@@ -41,6 +41,44 @@ const AuthRedirect: React.FC<{ children: React.ReactNode }> = ({ children }) => 
     }
   }, []);
 
+  // Verificar se há pagamento pendente ou rejeitado para selection_process
+  const checkSelectionProcessPayment = useCallback(async (userId: string): Promise<boolean> => {
+    try {
+      const { data: paymentData, error: paymentError } = await supabase.rpc('check_zelle_payments_status', {
+        p_user_id: userId
+      });
+
+      if (paymentError || !paymentData || paymentData.length === 0) {
+        return false;
+      }
+
+      const result = paymentData[0];
+      
+      // Verificar se há pagamento pendente para selection_process
+      if (result.has_pending_payment && 
+          result.pending_payment_id && 
+          result.pending_payment_id !== '00000000-0000-0000-0000-000000000000' &&
+          (result.pending_payment_fee_type === 'selection_process' || !result.pending_payment_fee_type || result.pending_payment_fee_type === '')) {
+        return true;
+      }
+
+      // Verificar se há pagamento rejeitado recente para selection_process (mesmo que não seja o mesmo pagamento)
+      // Se há rejeição recente E não há pagamento pendente, redirecionar para que o aluno veja a rejeição
+      if (result.has_rejected_payment && 
+          result.rejected_payment_id && 
+          result.rejected_payment_id !== '00000000-0000-0000-0000-000000000000' &&
+          (result.rejected_payment_fee_type === 'selection_process' || !result.rejected_payment_fee_type || result.rejected_payment_fee_type === '') &&
+          !result.has_pending_payment) {
+        return true;
+      }
+
+      return false;
+    } catch (error) {
+      console.error('[AuthRedirect] Erro ao verificar pagamento:', error);
+      return false;
+    }
+  }, []);
+
   useEffect(() => {
     console.log('[AuthRedirect] 🔍 useEffect executado - loading:', loading, 'user:', !!user, 'pathname:', location.pathname);
     console.log('[AuthRedirect] 🔍 Timestamp:', new Date().toISOString());
@@ -194,9 +232,17 @@ const AuthRedirect: React.FC<{ children: React.ReactNode }> = ({ children }) => 
         }
         
         if (user.role === 'student') {
-          // Estudantes agora aceitam termos automaticamente durante o registro
-          // Não precisamos mais verificar termos aceitos
-          navigate('/student/dashboard', { replace: true });
+          // Verificar se há pagamento pendente ou rejeitado para selection_process
+          const hasPendingOrRejectedPayment = await checkSelectionProcessPayment(user.id);
+          
+          if (hasPendingOrRejectedPayment) {
+            // Redirecionar para a página de pagamento se houver pagamento pendente/rejeitado
+            navigate('/student/onboarding?step=selection_fee', { replace: true });
+            return;
+          }
+          
+          // Redirecionar para home após registro/login (sem redirecionamento automático para onboarding)
+          navigate('/', { replace: true });
           return;
         }
         
@@ -245,6 +291,15 @@ const AuthRedirect: React.FC<{ children: React.ReactNode }> = ({ children }) => 
 
       // Se usuário é student e está tentando acessar áreas restritas de outros roles
       if (user.role === 'student' && (currentPath.startsWith('/school/') || currentPath.startsWith('/admin') || currentPath.startsWith('/affiliate-admin'))) {
+        // Verificar se há pagamento pendente ou rejeitado antes de redirecionar
+        const hasPendingOrRejectedPayment = await checkSelectionProcessPayment(user.id);
+        
+        if (hasPendingOrRejectedPayment) {
+          navigate('/student/onboarding?step=selection_fee', { replace: true });
+          return;
+        }
+        
+        // Redirecionar para dashboard do aluno (sem verificar onboarding)
         navigate('/student/dashboard', { replace: true });
         return;
       }
@@ -308,7 +363,7 @@ const AuthRedirect: React.FC<{ children: React.ReactNode }> = ({ children }) => 
 
     // Executar imediatamente, sem delay desnecessário
     checkAndRedirect();
-  }, [user?.id, user?.role, loading, location.pathname, navigate, checkUniversityStatus]);
+  }, [user?.id, user?.role, loading, location.pathname, navigate, checkUniversityStatus, checkSelectionProcessPayment]);
 
   // Mostrar loading enquanto verifica universidade
   if (checkingUniversity) {

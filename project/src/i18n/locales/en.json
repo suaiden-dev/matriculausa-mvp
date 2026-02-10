@@ -1748,7 +1748,19 @@
       "payApplicationFee": "Pay the Application Fee to guarantee your scholarship.",
       "payScholarshipFee": "Pay the Scholarship Fee to confirm your scholarship application.",
       "payI20Fee": "Pay the I-20 Control Fee to start your I-20 and document validation process.",
-      "daysRemaining": "You have 10 days after the scholarship fee."
+      "daysRemaining": "You have 10 days after the scholarship fee.",
+      "onboarding": {
+        "payFee": "Pay Selection Fee",
+        "payFeeDesc": "Start your process by paying the selection fee.",
+        "chooseScholarships": "Choose Scholarships",
+        "chooseScholarshipsDesc": "Select the universities and scholarships you are interested in.",
+        "uploadDocuments": "Upload Documents",
+        "uploadDocumentsDesc": "Upload your passport, diploma, and proof of funds.",
+        "underReview": "Under Review",
+        "underReviewDesc": "We are reviewing your documents. 48h timeframe.",
+        "completed": "Selection Process Completed",
+        "completedDesc": "All set! Move to the next step."
+      }
     },
     "stepByStepTour": {
       "title": "Step-by-Step Tour",
@@ -1938,11 +1950,13 @@
         "details": "Details",
         "alreadyApplied": "Already Applied",
         "deselect": "Deselect",
-        "selectScholarship": "Select Scholarship",
+        "selectScholarship": "Select",
         "checking": "Checking...",
         "inPerson": "In Person",
         "mixed": "Mixed",
-        "more": "more"
+        "more": "more",
+        "showMore": "Show More Details",
+        "showLess": "Show Less Details"
       },
       "noResults": {
         "title": "No scholarships found",
@@ -2063,7 +2077,8 @@
       "smartAssistantDescription": "Use the floating button on the corner of the screen to ask questions in real-time.",
       "supportChatHelp": "Support Chat:",
       "supportChatDescription": "Access the team chat right below the 'My Applications' section in the dashboard.",
-      "backToOverview": "Got it, Back to Dashboard"
+      "backToOverview": "Got it, Back to Dashboard",
+      "gotItContinue": "Got it, Continue"
     },
     "manualReview": {
       "title": "Manual Document Review",
@@ -2286,6 +2301,7 @@
         "pendingScholarshipFee": "PENDING SCHOLARSHIP FEE"
       },
       "nextSteps": "Next Steps:",
+      "rejectionReason": "Reason:",
       "scholarshipDetails": {
         "annualScholarshipValue": "Annual Scholarships starting from",
         "applicationDate": "Application Date",

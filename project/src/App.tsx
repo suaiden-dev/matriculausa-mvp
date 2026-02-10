@@ -32,6 +32,7 @@ import ForgotPassword from './pages/ForgotPassword';
 import AdminRegistration from './pages/AdminRegistration';
 import SellerRegistration from './pages/SellerRegistration';
 import SellerStudentRegistration from './pages/SellerStudentRegistration';
+import StudentOnboarding from './pages/StudentOnboarding/StudentOnboarding';
 import SuccessPage from './pages/SuccessPage';
 import ScholarshipFeeSuccess from './pages/StudentDashboard/ScholarshipFeeSuccess';
 import ApplicationFeeCancel from './pages/ApplicationFeeCancel';
@@ -116,6 +117,7 @@ const AppContent = () => {
           <Route path="/matricula-rewards" element={<MatriculaRewardsLanding />} />
           {/* Student Routes */}
           <Route path="/student/terms" element={<StudentTermsAcceptance />} />
+          <Route path="/student/onboarding" element={<StudentOnboarding />} />
           <Route path="/student/dashboard/*" element={<StudentDashboard />} />
           {/* School Routes */}
           <Route path="/school/termsandconditions" element={<TermsAndConditions />} />

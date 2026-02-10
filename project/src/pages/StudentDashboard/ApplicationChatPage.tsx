@@ -53,6 +53,7 @@ const ApplicationChatPage: React.FC = () => {
   const [applicationDetails, setApplicationDetails] = useState<any>(null);
   const [previewUrl, setPreviewUrl] = useState<string | null>(null);
   const [i20Countdown, setI20Countdown] = useState<string | null>(null);
+  const [i20CountdownValues, setI20CountdownValues] = useState<{ days: number; hours: number; minutes: number; seconds: number } | null>(null);
   const [scholarshipFeeDeadline, setScholarshipFeeDeadline] = useState<Date | null>(null);
   const [showI20ControlFeeModal, setShowI20ControlFeeModal] = useState(false);
   const [selectedPaymentMethod, setSelectedPaymentMethod] = useState<'stripe' | 'zelle' | 'pix' | 'parcelow' | null>(null);
@@ -305,6 +306,7 @@ const ApplicationChatPage: React.FC = () => {
       const diff = scholarshipFeeDeadline.getTime() - now.getTime();
       if (diff <= 0) {
         setI20Countdown('Expired');
+        setI20CountdownValues(null);
         return;
       }
       const days = Math.floor(diff / (1000 * 60 * 60 * 24));
@@ -312,6 +314,7 @@ const ApplicationChatPage: React.FC = () => {
       const minutes = Math.floor((diff / (1000 * 60)) % 60);
       const seconds = Math.floor((diff / 1000) % 60);
       setI20Countdown(`${days}d ${hours}h ${minutes}m ${seconds}s`);
+      setI20CountdownValues({ days, hours, minutes, seconds });
     }
     updateCountdown();
     const interval = setInterval(updateCountdown, 1000);

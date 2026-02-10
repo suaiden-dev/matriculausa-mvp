@@ -1751,7 +1751,19 @@
       "payApplicationFee": "Pague a Taxa de Matrícula para garantir a sua bolsa.",
       "payScholarshipFee": "Pague a Taxa de Bolsa para confirmar sua candidatura de bolsa.",
       "payI20Fee": "Pague a Taxa de Controle I-20 para iniciar seu processo de validação I-20 e documentos.",
-      "daysRemaining": "Você tem 10 dias após a taxa de bolsa."
+      "daysRemaining": "Você tem 10 dias após a taxa de bolsa.",
+      "onboarding": {
+        "payFee": "Pagar Taxa de Seleção",
+        "payFeeDesc": "Inicie seu processo pagando a taxa de seleção.",
+        "chooseScholarships": "Escolher Bolsas",
+        "chooseScholarshipsDesc": "Selecione as universidades e bolsas do seu interesse.",
+        "uploadDocuments": "Enviar Documentos",
+        "uploadDocumentsDesc": "Envie seu passaporte, diploma e comprovante de fundos.",
+        "underReview": "Em Revisão",
+        "underReviewDesc": "Estamos analisando seus documentos. Prazo de 48h.",
+        "completed": "Processo de Seleção Concluído",
+        "completedDesc": "Tudo pronto! Siga para a próxima etapa."
+      }
     },
     "stepByStepTour": {
       "title": "Tour Passo a Passo",
@@ -1938,11 +1950,13 @@
         "details": "Detalhes",
         "alreadyApplied": "Já Candidatou",
         "deselect": "Desmarcar",
-        "selectScholarship": "Selecionar Bolsa",
+        "selectScholarship": "Selecionar",
         "checking": "Verificando...",
         "inPerson": "Presencial",
         "mixed": "Misto",
-        "more": "mais"
+        "more": "mais",
+        "showMore": "Mostrar Mais Detalhes",
+        "showLess": "Mostrar Menos Detalhes"
       },
       "noResults": {
         "title": "Nenhuma bolsa encontrada",
@@ -2063,7 +2077,8 @@
       "smartAssistantDescription": "Use o botão flutuante no canto da tela para tirar dúvidas em tempo real.",
       "supportChatHelp": "Chat com Suporte:",
       "supportChatDescription": "Acesse o chat da equipe logo abaixo da seção 'Minhas Candidaturas' no painel.",
-      "backToOverview": "Entendi, Voltar ao Painel"
+      "backToOverview": "Entendi, Voltar ao Painel",
+      "gotItContinue": "Entendi, Continuar"
     },
     "manualReview": {
       "title": "Revisão Manual de Documentos",
@@ -2286,6 +2301,7 @@
         "pendingScholarshipFee": "PENDENTE TAXA DA BOLSA"
       },
       "nextSteps": "Próximos Passos:",
+      "rejectionReason": "Motivo:",
       "scholarshipDetails": {
         "annualScholarshipValue": "Valor Anual da Bolsa",
         "applicationDate": "Data da Aplicação",
