@@ -4,6 +4,7 @@ import { Mail, ArrowLeft, CheckCircle, AlertCircle, Shield, Zap, Lock, Eye, EyeO
 import { supabase } from '../lib/supabase';
 
 const ForgotPassword: React.FC = () => {
+  const location = useLocation();
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
@@ -14,7 +15,6 @@ const ForgotPassword: React.FC = () => {
   const [error, setError] = useState('');
   const [emailSent, setEmailSent] = useState(false);
   const [emailVerified, setEmailVerified] = useState(false);
-  const location = useLocation();
 
   // Detect access_token in URL (Supabase reset link)
   const [showResetForm, setShowResetForm] = useState(false);
@@ -110,7 +110,7 @@ const ForgotPassword: React.FC = () => {
         {/* Back to Login Link */}
         <div className="text-center">
           <Link 
-            to="/login" 
+            to={`/login${location.search}`} 
             className="inline-flex items-center text-sm text-slate-600 hover:text-[#05294E] transition-colors font-medium"
           >
             <ArrowLeft className="h-4 w-4 mr-2" />

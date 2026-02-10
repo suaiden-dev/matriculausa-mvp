@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { Copy, Check, Link2 } from 'lucide-react';
+import { Copy, Check } from 'lucide-react';
 
 interface ReferralToolsProps {
   sellerProfile: any;
@@ -89,6 +89,8 @@ const ReferralTools: React.FC<ReferralToolsProps> = ({ sellerProfile, stats }) =
       </div>
 
 
+
+      {/* Nota: Landing Page Links aparece apenas para sellers com system_type simplified (em SimplifiedAffiliateTools) */}
 
       {/* Simple Tips */}
       <div className="bg-gradient-to-r from-blue-50 to-indigo-50 rounded-xl border border-blue-200 p-6">

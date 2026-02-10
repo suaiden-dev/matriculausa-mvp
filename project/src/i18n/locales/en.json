@@ -44,6 +44,249 @@
     "expandImage": "Expand image",
     "previewNotAvailable": "Preview not available"
   },
+  "processPages": {
+    "common": {
+      "selectionProcess": "Selection Process",
+      "applicationFeeI20": "Application Fee + I-20",
+      "scholarshipFee": "Scholarship Fee",
+      "controlFee": "Control Fee",
+      "legalFees": "Legal Fees",
+      "fundsProof": "Proof of Funds",
+      "valuesSummary": "Values Summary",
+      "total": "Total:",
+      "step": "Step",
+      "optional": "Optional",
+      "rights": "All rights reserved.",
+      "clients": {
+        "title": "Our Clients",
+        "description": "Students who achieved the dream of studying in the United States",
+        "client": "Client"
+      },
+      "conversion": {
+        "title": "Ready to start your process?",
+        "description": "Click the button below to start your journey to the United States with all the necessary support.",
+        "buttonText": "Start Now",
+        "redirectAuthenticated": "You will be directed to the student area to make the payment for the selection process.",
+        "redirectAnonymous": "You will be directed to create your account. It's fast and free!",
+        "referralBadge": "Seller Code Applied",
+        "afterSteps": {
+          "title": "Ready to take the first step?",
+          "description": "Now that you know the steps, start your journey today.",
+          "buttonText": "Start Process"
+        },
+        "afterFunds": {
+          "title": "Meet the financial requirements?",
+          "description": "Secure your spot and start the search for the best scholarships now.",
+          "buttonText": "Secure my Spot"
+        },
+        "benefits": {
+          "transparent": {
+            "title": "Transparent Process",
+            "description": "All costs detailed from the beginning"
+          },
+          "support": {
+            "title": "Complete Support",
+            "description": "Monitoring at all stages"
+          },
+          "secure": {
+            "title": "Secure Payment",
+            "description": "Reliable and protected methods"
+          }
+        }
+      }
+    },
+    "initial": {
+      "header": {
+        "title": "Initial Process",
+        "subtitle": "F-1 Student Visa — Application from Abroad",
+        "description": "Complete guide with all steps and costs to obtain your F-1 student visa applying from outside the United States"
+      },
+      "promise": "If your plan is to arrive in the United States with an approved F1 visa, we organize the path from school selection to consulate appointment. With our guide, you understand each step, all costs, and receive guidance to build a strong application aligned with your life project.",
+      "steps": {
+        "title": "Process Steps",
+        "description": "Learn all the necessary steps to obtain your F-1 student visa",
+        "list": {
+          "step1": {
+            "description": "First step to verify if you are eligible for the F-1 student visa.",
+            "items": [
+              "Valid passport (minimum 1 year)",
+              "Proof of bank funds ($22,000 minimum)",
+              "Full address in country of origin",
+              "School transcripts or diploma",
+              "Payment via Zelle to: info@thefutureofenglish.com"
+            ]
+          },
+          "step2": {
+            "description": "Application and I-20 issuance fee for the consulate interview.",
+            "items": [
+              "I-20 form issuance",
+              "Enrollment processing",
+              "$100 per each additional dependent"
+            ]
+          },
+          "step3": {
+            "description": "Scholarship-related fee.",
+            "items": [
+              "School registration form",
+              "Other necessary documentation"
+            ]
+          },
+          "step4": {
+            "description": "I-20 control fee throughout the entire visa process.",
+            "items": [
+              "Active I-20 control",
+              "Monitoring throughout the process",
+              "Support for questions and guidance",
+              "Payment of this fee upon issuance of the acceptance letter by the institution"
+            ]
+          },
+          "step5": {
+            "description": "Complete legal follow-up of the visa process.",
+            "items": [
+              "$1,800 for the main applicant",
+              "$100 per each additional dependent",
+              "Preparation for consulate interview",
+              "Preparation of all documentation"
+            ]
+          }
+        }
+      },
+      "funds": {
+        "description": "Minimum financial proof requirements for the F-1 visa",
+        "mainApplicant": "Main Applicant",
+        "perDependent": "Per Dependent",
+        "minAmount": "$22,000",
+        "dependentAmount": "+$5,000",
+        "minBankAccount": "Minimum amount in bank account",
+        "additionalPerDependent": "Additional amount per each dependent",
+        "note": "Amounts must be proven through updated bank statement. The American consulate will require these documents during the visa interview."
+      },
+      "values": {
+        "description": "All costs involved in the Initial process"
+      }
+    },
+    "transfer": {
+      "header": {
+        "title": "Transfer Process",
+        "subtitle": "School Transfer — Student Transfer",
+        "description": "Complete guide with all steps and costs to transfer schools in the United States"
+      },
+      "promise": "Want to transfer your I-20 without interrupting your studies or risking your status? We show you, step by step, when and how to make the transfer, which fees to consider, and how to keep your course load and dates in order, so you can continue studying peacefully at your new school.",
+      "steps": {
+        "title": "Process Steps",
+        "description": "Learn all the necessary steps to transfer schools",
+        "list": {
+          "step1": {
+            "description": "First step to verify if you are eligible for the Transfer process.",
+            "items": [
+              "Valid passport (minimum 1 year)",
+              "Valid I-94",
+              "Proof of current visa or status",
+              "Proof of bank funds ($22,000 minimum)",
+              "Full address in the US",
+              "Payment via Zelle to: info@thefutureofenglish.com"
+            ]
+          },
+          "step2": {
+            "description": "Application and I-20 issuance fee.",
+            "items": [
+              "I-20 form issuance",
+              "Enrollment processing",
+              "$100 per each additional dependent"
+            ]
+          },
+          "step3": {
+            "description": "Scholarship-related fee.",
+            "items": [
+              "School registration form",
+              "Other necessary documentation"
+            ]
+          },
+          "step4": {
+            "description": "I-20 control fee throughout the entire Transfer process.",
+            "items": [
+              "Active I-20 control",
+              "Monitoring throughout the process",
+              "Support for questions and guidance",
+              "Payment of this fee upon issuance of the acceptance letter by the institution"
+            ]
+          }
+        }
+      },
+      "funds": {
+        "description": "Minimum financial proof requirements for the Transfer process",
+        "note": "Amounts must be proven through updated bank statement. Investments and applications are also accepted as proof of funds."
+      },
+      "values": {
+        "description": "All costs involved in the Transfer process"
+      }
+    },
+    "cos": {
+      "header": {
+        "title": "COS Process",
+        "subtitle": "Change of Status — Status Change",
+        "description": "Complete guide with all steps and costs to change your visa status in the United States"
+      },
+      "promise": "Changing your status within the US doesn't have to be a maze. Here you find a complete guide with all steps, all costs, and the necessary support to do your COS safely, with financial planning and legal follow-up until the USCIS response.",
+      "steps": {
+        "title": "Process Steps",
+        "description": "Learn all the necessary steps to change your visa status",
+        "list": {
+          "step1": {
+            "description": "First step to verify if you are eligible for the COS process.",
+            "items": [
+              "Valid passport (minimum 1 year)",
+              "Valid I-94",
+              "Proof of current visa or status",
+              "Proof of bank funds ($22,000 minimum)",
+              "Full address in the US",
+              "Payment via Zelle to: info@thefutureofenglish.com"
+            ]
+          },
+          "step2": {
+            "description": "Application and I-20 issuance fee.",
+            "items": [
+              "I-20 form issuance",
+              "Enrollment processing",
+              "$100 per each additional dependent"
+            ]
+          },
+          "step3": {
+            "description": "Scholarship-related fee.",
+            "items": [
+              "School registration form",
+              "Other necessary documentation"
+            ]
+          },
+          "step4": {
+            "description": "I-20 control fee throughout the entire COS process.",
+            "items": [
+              "Active I-20 control",
+              "Monitoring throughout the process",
+              "Support for questions and guidance",
+              "Payment of this fee upon issuance of the acceptance letter by the institution"
+            ]
+          },
+          "step5": {
+            "description": "Complete legal follow-up of the COS process.",
+            "items": [
+              "$1,800 for the main applicant",
+              "$100 per each additional dependent",
+              "Complete legal follow-up",
+              "Preparation of all documentation"
+            ]
+          }
+        }
+      },
+      "funds": {
+        "description": "Minimum financial proof requirements for the COS process",
+        "note": "Amounts must be proven through updated bank statement. Investments and applications are also accepted as proof of funds."
+      },
+      "values": {
+        "description": "All costs involved in the COS process"
+      }
+    }
+  },
   "nav": {
     "home": "Home",
     "howItWorks": "How It Works",
@@ -674,6 +917,7 @@
       "learnMore": "Learn More"
     },
     "modal": {
+      "exclusive": "Exclusive",
       "exclusiveScholarship": "Exclusive Scholarship",
       "anyField": "Any Field",
       "universityHidden": "University Hidden - Unlock with Selection Process",
@@ -699,7 +943,7 @@
       "programDescription": "Program Description",
       "applicationDeadline": "Application Deadline",
       "daysLeft": "days left",
-      "deadline": "Deadline:",
+      "deadline": "Deadline",
       "universityInformation": "University Information",
       "universityNameAvailable": "University Name Available",
       "ranking": "Ranking:",
@@ -712,8 +956,12 @@
       "scholarshipExpired": "Scholarship Expired",
       "noLongerAccepting": "Not Available for application",
       "canStillView": "You can still view the information, but it will not be possible to apply for this scholarship.",
+      "internalFeesTitle": "Internal University Fees",
+      "internalFeesDisclaimer": "These fees are paid directly to the university, not through our platform",
+      "internalFeesAvailable": "University Internal Fees Available",
+      "internalFeesNotice": "This scholarship may have additional internal fees from the university. These fees will be visible after payment of the Selection Process Fee.",
       "universityInternalFees": "University Internal Fees",
-      "internalFeesNote": "Fees paid directly to university. Subject to change.",
+      "viewUniversityFeesPage": "View University Fees Page",
       "days": "days"
     }
   },

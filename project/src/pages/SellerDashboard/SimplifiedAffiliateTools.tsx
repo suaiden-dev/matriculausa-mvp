@@ -1,12 +1,60 @@
 import React, { useState, useEffect } from 'react';
-import { Copy, Check } from 'lucide-react';
+import { Copy, Check, Link2, ExternalLink } from 'lucide-react';
 import { useAuth } from '../../hooks/useAuth';
 import { supabase } from '../../lib/supabase';
+
+// Componente auxiliar para links de landing page (apenas sellers simplified)
+const LandingPageLinkItem: React.FC<{ title: string; url: string; description?: string }> = ({ title, url, description }) => {
+  const [copied, setCopied] = useState(false);
+
+  const copyUrl = async (urlToCopy: string) => {
+    try {
+      await navigator.clipboard.writeText(urlToCopy);
+      setCopied(true);
+      setTimeout(() => setCopied(false), 2000);
+    } catch (error) {
+      alert('Error copying link');
+    }
+  };
+
+  return (
+    <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between p-3 bg-slate-50 rounded-lg hover:bg-slate-100 transition-colors gap-3">
+      <div className="flex-1 min-w-0">
+        <div className="flex items-center gap-2 mb-1">
+          <p className="text-sm font-medium text-slate-900">{title}</p>
+          <ExternalLink className="w-3 h-3 text-slate-400 flex-shrink-0" />
+        </div>
+        {description && (
+          <p className="text-xs text-slate-500 mb-1">{description}</p>
+        )}
+        <p className="text-xs text-slate-500 truncate font-mono">{url}</p>
+      </div>
+      <button
+        onClick={() => copyUrl(url)}
+        className="bg-slate-200 hover:bg-slate-300 text-slate-700 px-3 py-2 rounded transition-colors flex items-center gap-2 text-sm flex-shrink-0"
+        title="Copy link"
+      >
+        {copied ? (
+          <>
+            <Check className="h-4 w-4 text-green-600" />
+            <span className="text-green-600">Copied!</span>
+          </>
+        ) : (
+          <>
+            <Copy className="h-4 w-4" />
+            <span>Copy</span>
+          </>
+        )}
+      </button>
+    </div>
+  );
+};
 
 const SimplifiedAffiliateTools: React.FC = () => {
   const { user } = useAuth();
   const [sellerCode, setSellerCode] = useState<string>('');
   const [copiedText, setCopiedText] = useState<string | null>(null);
+  const origin = typeof window !== 'undefined' ? window.location.origin : '';
 
   useEffect(() => {
     // Get seller code from database
@@ -120,8 +168,38 @@ const SimplifiedAffiliateTools: React.FC = () => {
                     )}
                   </button>
                 </div>
-              </div>
             </div>
+          </div>
+          </div>
+
+          {/* Landing Page Links - apenas para sellers simplified */}
+          <div className="bg-white rounded-xl shadow-sm border border-slate-200 p-6">
+            <div className="flex items-center gap-2 mb-2">
+              <Link2 className="w-5 h-5 text-blue-600" />
+              <h3 className="text-lg font-semibold text-slate-900">Landing Page Links</h3>
+            </div>
+            <p className="text-sm text-slate-600 mb-4">
+              Share these specialized links to guide students through specific processes. Each link automatically applies your referral code.
+            </p>
+            
+            <div className="space-y-3">
+              <LandingPageLinkItem 
+                title="Initial Process (F1 Visa)"
+                description="For students starting from scratch"
+                url={`${origin}/initial?ref=${sellerCode}`}
+              />
+              <LandingPageLinkItem 
+                title="Change of Status (COS)"
+                description="For students already in the USA"
+                url={`${origin}/cos?ref=${sellerCode}`}
+              />
+              <LandingPageLinkItem 
+                title="Transfer"
+                description="For students transferring schools"
+                url={`${origin}/transfer?ref=${sellerCode}`}
+              />
+            </div>
+
           </div>
 
           {/* Simple Instructions */}
