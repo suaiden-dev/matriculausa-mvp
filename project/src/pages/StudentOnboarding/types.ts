@@ -1,12 +1,13 @@
-export type OnboardingStep = 
-  | 'welcome'
-  | 'selection_fee'
-  | 'scholarship_selection'
-  | 'scholarship_review'
-  | 'process_type'
-  | 'documents_upload'
-  | 'waiting_approval'
-  | 'completed';
+export type OnboardingStep =
+  | "welcome"
+  | "selection_fee"
+  | "scholarship_selection"
+  | "scholarship_review"
+  | "process_type"
+  | "documents_upload"
+  | "payment"
+  | "waiting_approval"
+  | "completed";
 
 export interface OnboardingState {
   currentStep: OnboardingStep;
@@ -27,11 +28,10 @@ export interface OnboardingProgress {
   message?: string;
 }
 
-export type ProcessType = 'initial' | 'transfer' | 'change_of_status';
+export type ProcessType = "initial" | "transfer" | "change_of_status";
 
 export interface StepProps {
   onNext: () => void;
   onBack: () => void;
   onComplete?: () => void;
 }
-

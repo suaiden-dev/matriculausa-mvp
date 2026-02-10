@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef, useMemo } from 'react';
-import { Search, DollarSign, Award, Clock, GraduationCap, Star, CheckCircle, Building, Users, ArrowRight, Sparkles, AlertTriangle, Monitor, MapPin, Briefcase, Globe, Eye, Lock } from 'lucide-react';
+import { Search, DollarSign, Award, Clock, GraduationCap, Star, CheckCircle, Building, Users, ArrowRight, AlertTriangle, Monitor, MapPin, Briefcase, Globe } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 import { useAuth } from '../hooks/useAuth';
 import { useNavigate, useLocation } from 'react-router-dom';
@@ -9,7 +9,6 @@ import { supabase } from '../lib/supabase';
 
 import SmartChat from '../components/SmartChat';
 import ScholarshipDetailModal from '../components/ScholarshipDetailModal';
-import PaymentRequiredBlocker from '../components/PaymentRequiredBlocker';
 import { ApplicationFeeBlockedMessage } from '../components/ApplicationFeeBlockedMessage';
 import { useApplicationFeeStatus } from '../hooks/useApplicationFeeStatus';
 import { usePackageScholarshipFilter } from '../hooks/usePackageScholarshipFilter';
@@ -19,7 +18,7 @@ import { ScholarshipCountdownTimer } from '../components/ScholarshipCountdownTim
 
 const Scholarships: React.FC = () => {
   const { t } = useTranslation();
-  const { isAuthenticated, user, userProfile, loading } = useAuth();
+  const { isAuthenticated, user, userProfile } = useAuth();
   
   // Hook para verificar se usuário já tem application fee paga
   const { 
@@ -32,9 +31,6 @@ const Scholarships: React.FC = () => {
   // Hook para filtro automático baseado no pacote do usuário
   const { 
     minScholarshipValue, 
-    userPackage, 
-    hasPackage, 
-    loading: packageFilterLoading 
   } = usePackageScholarshipFilter();
   
   // Obter faixa de bolsa desejada do perfil do usuário (quando logado)
@@ -49,10 +45,6 @@ const Scholarships: React.FC = () => {
   const [selectedField, setSelectedField] = useState('all');
   const [selectedStudyMode, setSelectedStudyMode] = useState('all');
   const [selectedWorkAuth, setSelectedWorkAuth] = useState('all');
-  const [minValue, setMinValue] = useState('');
-  const [maxValue, setMaxValue] = useState('');
-  const [showFilters, setShowFilters] = useState(false);
-  const [selectedScholarship, setSelectedScholarship] = useState<any>(null);
   const [isModalOpen, setIsModalOpen] = useState(false);
   
   const { scholarships, loading: scholarshipsLoading, error } = useScholarships();
@@ -828,16 +820,15 @@ const Scholarships: React.FC = () => {
                       </div>
                     </div>
 
-                    {/* Action Buttons - Agora sempre na parte inferior */}
+                    {/* Action Buttons - Agora sempre na parte inferior e empilhados */}
                     <div className="px-6 pb-6 mt-auto">
-                      <div className="flex gap-3">
+                      <div className="flex flex-col gap-3">
                         {/* View Details Button */}
                         <button
                           onClick={() => openScholarshipModal(scholarship)}
-                          className="w-32 bg-gradient-to-r from-blue-500 to-blue-600 text-white py-3 px-4 rounded-2xl font-bold text-xs sm:text-sm flex items-center justify-center hover:from-blue-600 hover:to-blue-700 transition-all duration-300 shadow-lg hover:shadow-xl transform hover:scale-105"
+                          className="w-full bg-gradient-to-r from-blue-500 to-blue-600 text-white py-3 px-4 rounded-2xl font-bold text-xs sm:text-sm uppercase tracking-wide flex items-center justify-center hover:from-blue-600 hover:to-blue-700 transition-all duration-300 shadow-lg hover:shadow-xl transform hover:scale-105"
                           aria-label={`View details for ${scholarship.title} scholarship`}
                         >
-                          <Eye className="h-3 w-3 sm:h-4 sm:w-4 mr-2" />
                           <span>{t('scholarshipsPage.scholarshipCard.details')}</span>
                         </button>
                         
@@ -845,7 +836,7 @@ const Scholarships: React.FC = () => {
                         {isBlocked ? (
                           <button
                             disabled
-                            className="flex-1 bg-slate-400 text-white py-3 sm:py-4 px-4 sm:px-6 rounded-2xl font-bold text-xs sm:text-sm uppercase tracking-wide flex items-center justify-center cursor-not-allowed opacity-60 relative overflow-hidden"
+                            className="w-full bg-slate-400 text-white py-3 sm:py-4 px-4 sm:px-6 rounded-2xl font-bold text-xs sm:text-sm uppercase tracking-wide flex items-center justify-center cursor-not-allowed opacity-60 relative overflow-hidden"
                             aria-label={`Scholarship ${scholarship.title} is no longer accepting applications`}
                           >
                             <AlertTriangle className="h-3 w-3 sm:h-4 sm:w-4 mr-2 relative z-10" aria-hidden="true" />
@@ -853,7 +844,7 @@ const Scholarships: React.FC = () => {
                           </button>
                         ) : (!isAuthenticated) ? (
                           <button
-                            className="flex-1 bg-gradient-to-r from-[#05294E] via-[#05294E] to-slate-700 text-white py-3 sm:py-4 px-4 sm:px-6 rounded-2xl font-bold text-xs sm:text-sm uppercase tracking-wide flex items-center justify-center group-hover:shadow-2xl transform group-hover:scale-105 transition-all duration-300 hover:from-[#041f3a] hover:to-slate-600 relative overflow-hidden active:scale-95 focus:outline-none focus:ring-2 focus:ring-[#05294E]/50 focus:ring-offset-2"
+                            className="w-full bg-gradient-to-r from-[#05294E] via-[#05294E] to-slate-700 text-white py-3 sm:py-4 px-4 sm:px-6 rounded-2xl font-bold text-xs sm:text-sm uppercase tracking-wide flex items-center justify-center group-hover:shadow-2xl transform group-hover:scale-105 transition-all duration-300 hover:from-[#041f3a] hover:to-slate-600 relative overflow-hidden active:scale-95 focus:outline-none focus:ring-2 focus:ring-[#05294E]/50 focus:ring-offset-2"
                             onClick={() => navigate(`/login${location.search}`)}
                             aria-label={`Apply for ${scholarship.title} scholarship - Login required`}
                           >
@@ -863,7 +854,7 @@ const Scholarships: React.FC = () => {
                           </button>
                         ) : (
                           <button
-                            className="flex-1 bg-gradient-to-r from-[#05294E] via-[#05294E] to-slate-700 text-white py-3 sm:py-4 px-4 sm:px-6 rounded-2xl font-bold text-xs sm:text-sm uppercase tracking-wide flex items-center justify-center group-hover:shadow-2xl transform group-hover:scale-105 transition-all duration-300 hover:from-[#041f3a] hover:to-slate-600 relative overflow-hidden active:scale-95 focus:outline-none focus:ring-2 focus:ring-[#05294E]/50 focus:ring-offset-2"
+                            className="w-full bg-gradient-to-r from-[#05294E] via-[#05294E] to-slate-700 text-white py-3 sm:py-4 px-4 sm:px-6 rounded-2xl font-bold text-xs sm:text-sm uppercase tracking-wide flex items-center justify-center group-hover:shadow-2xl transform group-hover:scale-105 transition-all duration-300 hover:from-[#041f3a] hover:to-slate-600 relative overflow-hidden active:scale-95 focus:outline-none focus:ring-2 focus:ring-[#05294E]/50 focus:ring-offset-2"
                             onClick={async () => {
                               if (!userProfile?.has_paid_selection_process_fee) {
                                 navigate('/student/onboarding?step=selection_fee');
@@ -1157,16 +1148,15 @@ const Scholarships: React.FC = () => {
 
                      </div>
 
-                     {/* Action Buttons - Agora sempre na parte inferior */}
+                     {/* Action Buttons - Agora sempre na parte inferior e empilhados */}
                      <div className="px-6 pb-6 mt-auto">
-                       <div className="flex gap-3">
+                       <div className="flex flex-col gap-3">
                          {/* View Details Button */}
                          <button
                            onClick={() => openScholarshipModal(scholarship)}
-                           className="w-32 bg-gradient-to-r from-blue-500 to-blue-600 text-white py-3 px-4 rounded-2xl font-bold text-xs sm:text-sm flex items-center justify-center hover:from-blue-600 hover:to-blue-700 transition-all duration-300 shadow-lg hover:shadow-xl transform hover:scale-105"
+                           className="w-full bg-gradient-to-r from-blue-500 to-blue-600 text-white py-3 px-4 rounded-2xl font-bold text-xs sm:text-sm uppercase tracking-wide flex items-center justify-center hover:from-blue-600 hover:to-blue-700 transition-all duration-300 shadow-lg hover:shadow-xl transform hover:scale-105"
                            aria-label={`View details for ${scholarship.title} scholarship`}
                          >
-                           <Eye className="h-3 w-3 sm:h-4 sm:w-4 mr-2" />
                            <span>{t('scholarshipsPage.scholarshipCard.details')}</span>
                          </button>
                          
@@ -1182,7 +1172,7 @@ const Scholarships: React.FC = () => {
                          {!scholarship.is_active || isBlocked ? (
                            <button
                              disabled
-                             className="flex-1 bg-slate-400 text-white py-3 sm:py-4 px-4 sm:px-6 rounded-2xl font-bold text-xs sm:text-sm uppercase tracking-wide flex items-center justify-center cursor-not-allowed opacity-60 relative overflow-hidden"
+                             className="w-full bg-slate-400 text-white py-3 sm:py-4 px-4 sm:px-6 rounded-2xl font-bold text-xs sm:text-sm uppercase tracking-wide flex items-center justify-center cursor-not-allowed opacity-60 relative overflow-hidden"
                              aria-label={`Scholarship ${scholarship.title} is no longer accepting applications`}
                            >
                              <AlertTriangle className="h-3 w-3 sm:h-4 sm:w-4 mr-2 relative z-10" aria-hidden="true" />
@@ -1192,7 +1182,7 @@ const Scholarships: React.FC = () => {
                            </button>
                          ) : (!isAuthenticated) ? (
                            <button
-                             className="flex-1 bg-gradient-to-r from-[#05294E] via-[#05294E] to-slate-700 text-white py-3 sm:py-4 px-4 sm:px-6 rounded-2xl font-bold text-xs sm:text-sm uppercase tracking-wide flex items-center justify-center group-hover:shadow-2xl transform group-hover:scale-105 transition-all duration-300 hover:from-[#041f3a] hover:to-slate-600 relative overflow-hidden active:scale-95 focus:outline-none focus:ring-2 focus:ring-[#05294E]/50 focus:ring-offset-2"
+                             className="w-full bg-gradient-to-r from-[#05294E] via-[#05294E] to-slate-700 text-white py-3 sm:py-4 px-4 sm:px-6 rounded-2xl font-bold text-xs sm:text-sm uppercase tracking-wide flex items-center justify-center group-hover:shadow-2xl transform group-hover:scale-105 transition-all duration-300 hover:from-[#041f3a] hover:to-slate-600 relative overflow-hidden active:scale-95 focus:outline-none focus:ring-2 focus:ring-[#05294E]/50 focus:ring-offset-2"
                              onClick={() => navigate(`/login${location.search}`)}
                              aria-label={`Apply for ${scholarship.title} scholarship - Login required`}
                            >
@@ -1203,7 +1193,7 @@ const Scholarships: React.FC = () => {
                          ) : isBlocked ? (
                            <button
                              disabled
-                             className="flex-1 bg-slate-400 text-white py-3 sm:py-4 px-4 sm:px-6 rounded-2xl font-bold text-xs sm:text-sm uppercase tracking-wide flex items-center justify-center cursor-not-allowed opacity-60 relative overflow-hidden"
+                             className="w-full bg-slate-400 text-white py-3 sm:py-4 px-4 sm:px-6 rounded-2xl font-bold text-xs sm:text-sm uppercase tracking-wide flex items-center justify-center cursor-not-allowed opacity-60 relative overflow-hidden"
                              aria-label={`Scholarship ${scholarship.title} is no longer accepting applications`}
                            >
                              <AlertTriangle className="h-3 w-3 sm:h-4 sm:w-4 mr-2 relative z-10" aria-hidden="true" />
@@ -1211,7 +1201,7 @@ const Scholarships: React.FC = () => {
                            </button>
                          ) : (
                            <button
-                             className="flex-1 bg-gradient-to-r from-[#05294E] via-[#05294E] to-slate-700 text-white py-3 sm:py-4 px-4 sm:px-6 rounded-2xl font-bold text-xs sm:text-sm uppercase tracking-wide flex items-center justify-center group-hover:shadow-2xl transform group-hover:scale-105 transition-all duration-300 hover:from-[#041f3a] hover:to-slate-600 relative overflow-hidden active:scale-95 focus:outline-none focus:ring-2 focus:ring-[#05294E]/50 focus:ring-offset-2"
+                             className="w-full bg-gradient-to-r from-[#05294E] via-[#05294E] to-slate-700 text-white py-3 sm:py-4 px-4 sm:px-6 rounded-2xl font-bold text-xs sm:text-sm uppercase tracking-wide flex items-center justify-center group-hover:shadow-2xl transform group-hover:scale-105 transition-all duration-300 hover:from-[#041f3a] hover:to-slate-600 relative overflow-hidden active:scale-95 focus:outline-none focus:ring-2 focus:ring-[#05294E]/50 focus:ring-offset-2"
                              onClick={async () => {
                                if (!userProfile?.has_paid_selection_process_fee) {
                                  navigate('/student/onboarding?step=selection_fee');

@@ -90,15 +90,112 @@ export const ZelleCheckout: React.FC<ZelleCheckoutProps> = ({
     onProcessingChange?.(true);
     
     try {
+      // Em localhost, criar um registro real no banco para persistir o pagamento
+      // E também atualizar as flags relevantes no user_profiles / scholarship_applications
+      // (replicando o que a edge function approve-zelle-payment-automatic faz)
+      if (user?.id) {
+        const mockPaymentId = generateUUID();
+        
+        const { error: insertError } = await supabase
+          .from('zelle_payments')
+          .insert({
+            id: mockPaymentId,
+            user_id: user.id,
+            fee_type: feeType,
+            amount: amount,
+            status: 'approved', // Já aprovado
+            scholarships_ids: scholarshipsIds || [],
+            screenshot_url: 'https://placehold.co/600x400/png?text=Mock+Payment',
+            admin_notes: 'Mock Payment (Localhost)',
+            created_at: new Date().toISOString(),
+            admin_approved_at: new Date().toISOString(),
+            metadata: {
+              ...metadata,
+              is_mock: true
+            }
+          });
+
+        if (insertError) {
+          console.error('Error creating mock payment:', insertError);
+          // Não falhar o mock se o banco der erro, apenas logar
+        } else {
+          console.log('✅ Mock payment created in database:', mockPaymentId);
+          setZellePaymentId(mockPaymentId);
+          zellePaymentIdRef.current = mockPaymentId;
+        }
+
+        // --- ATUALIZAR FLAGS NO BANCO (replicando approve-zelle-payment-automatic) ---
+        if (feeType === 'selection_process') {
+          // Atualizar has_paid_selection_process_fee no user_profiles
+          const { error: profileError } = await supabase
+            .from('user_profiles')
+            .update({ 
+              has_paid_selection_process_fee: true,
+              selection_process_fee_payment_method: 'zelle',
+              updated_at: new Date().toISOString()
+            })
+            .eq('user_id', user.id);
+
+          if (profileError) {
+            console.error('❌ [Mock] Erro ao atualizar has_paid_selection_process_fee:', profileError);
+          } else {
+            console.log('✅ [Mock] has_paid_selection_process_fee marcado como true');
+          }
+        } else if (feeType === 'application_fee' || feeType === 'scholarship_fee') {
+          // Buscar o user_profiles.id correto (student_id nas scholarship_applications)
+          const { data: profileData } = await supabase
+            .from('user_profiles')
+            .select('id')
+            .eq('user_id', user.id)
+            .single();
+
+          if (profileData?.id && scholarshipsIds && scholarshipsIds.length > 0) {
+            const fieldToUpdate = feeType === 'application_fee' 
+              ? 'is_application_fee_paid' 
+              : 'is_scholarship_fee_paid';
+            const methodField = feeType === 'application_fee'
+              ? 'application_fee_payment_method'
+              : 'scholarship_fee_payment_method';
+
+            for (const scholarshipId of scholarshipsIds) {
+              // Atualizar scholarship_applications existentes
+              const { error: appError } = await supabase
+                .from('scholarship_applications')
+                .update({ 
+                  [fieldToUpdate]: true,
+                  [methodField]: 'zelle',
+                  updated_at: new Date().toISOString()
+                })
+                .eq('student_id', profileData.id)
+                .eq('scholarship_id', scholarshipId);
+
+              if (appError) {
+                console.error(`❌ [Mock] Erro ao atualizar ${fieldToUpdate} para scholarship ${scholarshipId}:`, appError);
+              } else {
+                console.log(`✅ [Mock] ${fieldToUpdate} marcado como true para scholarship ${scholarshipId}`);
+              }
+            }
+          }
+        }
+        // --- FIM ATUALIZAÇÃO DE FLAGS ---
+      }
+
       setStep('success');
       setPaymentStatus('approved');
       stepRef.current = 'success';
       paymentStatusRef.current = 'approved';
-      onSuccess?.();
+      
+      // Delay pequeno para garantir que UI atualize antes de chamar onSuccess
+      setTimeout(() => {
+        onSuccess?.();
+      }, 500);
+      
     } catch (err: any) {
       setError(err.message || 'Mock failed');
     } finally {
       setLoading(false);
+      setIsProcessing(false);
+      onProcessingChange?.(false);
     }
   };
 

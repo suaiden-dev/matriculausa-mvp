@@ -11,15 +11,13 @@ import {
   ArrowUpRight,
   Calendar,
   Building,
-  CreditCard,
-  Tag,
   Route,
   XCircle
 } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 import { useFeeConfig } from '../../hooks/useFeeConfig';
 import { useDynamicFees } from '../../hooks/useDynamicFees';
-import { usePaymentBlocked } from '../../hooks/usePaymentBlocked';
+
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../../hooks/useAuth';
 import { useReferralCode } from '../../hooks/useReferralCode';
@@ -65,16 +63,14 @@ const Overview: React.FC<OverviewProps> = ({
   const { userFeeOverrides } = useFeeConfig(user?.id);
   const { selectionProcessFeeAmount, scholarshipFeeAmount, i20ControlFeeAmount } = useDynamicFees();
   const { isGuideOpen, openGuide, closeGuide } = useStepByStepGuide();
-  const { isBlocked, pendingPayment } = usePaymentBlocked();
   
-  // Verificar se há pagamento Zelle pendente do tipo selection_process
-  const hasPendingSelectionProcessPayment = isBlocked && pendingPayment && pendingPayment.fee_type === 'selection_process';
+
   
   // Verificar se há step de onboarding salvo no localStorage
   const savedOnboardingStep = React.useMemo(() => {
     if (typeof window === 'undefined') return null;
     const savedStep = window.localStorage.getItem('onboarding_current_step');
-    const validSteps = ['welcome', 'selection_fee', 'scholarship_selection', 'scholarship_review', 'process_type', 'documents_upload', 'waiting_approval', 'completed'];
+    const validSteps = ['welcome', 'selection_fee', 'scholarship_selection', 'scholarship_review', 'process_type', 'documents_upload', 'payment', 'waiting_approval', 'completed'];
     return savedStep && validSteps.includes(savedStep) ? savedStep : null;
   }, []);
   
@@ -90,6 +86,7 @@ const Overview: React.FC<OverviewProps> = ({
       'scholarship_review': 'Scholarship Review',
       'process_type': 'Process Type',
       'documents_upload': 'Documents Upload',
+      'payment': 'Payment',
       'waiting_approval': 'Waiting Approval',
       'completed': 'Completed'
     };
@@ -97,7 +94,6 @@ const Overview: React.FC<OverviewProps> = ({
   }, [savedOnboardingStep]);
   
   const [visibleApplications, setVisibleApplications] = useState(5); // Mostrar 5 inicialmente
-  const [feesLoading, setFeesLoading] = useState(true);
   const [documentsLoading, setDocumentsLoading] = useState(true);
   const [studentDocuments, setStudentDocuments] = useState<any[]>([]);
   const [realPaidAmounts, setRealPaidAmounts] = useState<Record<string, number>>({});
@@ -189,22 +185,7 @@ const Overview: React.FC<OverviewProps> = ({
     return () => window.removeEventListener('focus', handleFocus);
   }, [user?.id, documentsLoading, refetchUserProfile, fetchStudentDocuments]);
 
-  // Exibir skeleton até os dados de perfil e taxas estarem prontos para evitar flicker
-  useEffect(() => {
-    // Considera carregado quando perfil está resolvido e as taxas do useDynamicFees estão carregadas
-    const debounce = setTimeout(() => {
-      const hasProfileResolved = user !== undefined; // quando hook de auth já rodou
-      const feesLoaded = selectionProcessFeeAmount !== undefined && 
-                        scholarshipFeeAmount !== undefined && 
-                        i20ControlFeeAmount !== undefined;
-      
-      if (hasProfileResolved && feesLoaded) {
-        setFeesLoading(false);
-      }
-    }, 250);
 
-    return () => clearTimeout(debounce);
-  }, [user, userProfile, selectionProcessFeeAmount, scholarshipFeeAmount, i20ControlFeeAmount]);
 
   // Redirecionamento automático para o onboarding via query param ou fallback localStorage
   useEffect(() => {
@@ -454,6 +435,9 @@ const Overview: React.FC<OverviewProps> = ({
     } else if (savedOnboardingStep === 'documents_upload') {
       label = t('studentDashboard.progressBar.onboarding.uploadDocuments');
       description = t('studentDashboard.progressBar.onboarding.uploadDocumentsDesc');
+    } else if (savedOnboardingStep === 'payment') {
+      label = t('studentDashboard.progressBar.applicationFee');
+      description = 'Complete o pagamento das suas matrículas';
     } else if (savedOnboardingStep === 'waiting_approval') {
       label = t('studentDashboard.progressBar.onboarding.underReview');
       description = t('studentDashboard.progressBar.onboarding.underReviewDesc');
@@ -543,7 +527,7 @@ const Overview: React.FC<OverviewProps> = ({
           </div>
           <div className="mb-2 md:mb-4">
             {/* Status do Onboarding acima da trilha - Layout Pílula Integrado */}
-            {hasSavedOnboardingStep && (
+            {!userProfile?.onboarding_completed && (
               <div className="flex items-center justify-center gap-2 md:gap-4 mb-4 animate-fade-in bg-white/5 backdrop-blur-xl border border-white/10 rounded-full py-2 px-4 md:px-6 w-fit mx-auto shadow-[0_10px_30px_rgba(0,0,0,0.2)] ring-1 ring-white/10">
                 <div className="relative flex items-center">
                   <span className="bg-amber-400 text-black text-[9px] md:text-[10px] font-black px-2 md:px-3 py-0.5 rounded-full uppercase tracking-tighter shadow-lg shadow-amber-400/20">
@@ -555,7 +539,7 @@ const Overview: React.FC<OverviewProps> = ({
                 <p className="text-white text-[10px] md:text-sm font-bold tracking-tight opacity-90 drop-shadow-md">
                   {currentStepLabel 
                     ? `Você parou em: ${currentStepLabel}`
-                    : 'Retome sua candidatura agora mesmo'}
+                    : 'Comece sua jornada agora mesmo'}
                 </p>
               </div>
             )}
@@ -570,87 +554,10 @@ const Overview: React.FC<OverviewProps> = ({
             />
           </div>
 
-          {/* Card: Start Selection Process - Mostrar apenas se NÃO começou onboarding ainda */}
-          {userProfile && !userProfile.has_paid_selection_process_fee && !hasSavedOnboardingStep && (
-            <div className="bg-white/10 backdrop-blur-sm border border-white/30 rounded-xl p-4 sm:p-6 mb-4">
-              <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between space-y-3 sm:space-y-0 mb-3 sm:mb-4">
-                <div className="flex items-center">
-                  <CreditCard className="h-4 w-4 sm:h-5 sm:w-5 text-white mr-2 sm:mr-3" />
-                  <div>
-                    <h3 className="text-base sm:text-lg md:text-xl font-bold text-white">{t('studentDashboard.selectionProcess.title')}</h3>
-                    <p className="text-blue-100 text-xs sm:text-sm">{t('studentDashboard.selectionProcess.completeApplicationProcess')}</p>
-                  </div>
-                </div>
-                <div className="text-left sm:text-right">
-                  {feesLoading ? (
-                    <div className="inline-block w-24 h-6 bg-white/30 rounded animate-pulse" />
-                  ) : activeDiscount?.has_discount ? (
-                    <div className="flex flex-col sm:text-center">
-                      <div className="text-lg sm:text-xl md:text-2xl font-bold text-white line-through">${selectionWithDependents}</div>
-                      <div className="text-base sm:text-lg md:text-xl font-bold text-green-300">
-                        ${Math.max(selectionWithDependents - (activeDiscount.discount_amount || 0), 0)}
-                      </div>
-                      <div className="flex items-center sm:justify-center mt-1">
-                        <Tag className="h-3 w-3 text-green-300 mr-1" />
-                        <span className="text-xs text-green-300 font-medium">
-                          {t('studentDashboard.recentApplications.couponApplied')} -${activeDiscount.discount_amount}
-                        </span>
-                      </div>
-                    </div>
-                  ) : (
-                    <div className="text-lg sm:text-xl md:text-2xl font-bold text-white">${selectionWithDependents}</div>
-                  )}
-                </div>
-              </div>
-              <p className="text-blue-100 text-xs sm:text-sm mb-3 sm:mb-4 leading-relaxed">
-                {t('studentDashboard.selectionProcess.description')}
-                {activeDiscount?.has_discount && (
-                  <span className="block mt-1 text-green-300 font-medium">
-                    {t('studentDashboard.selectionProcess.discountApplied')}
-                  </span>
-                )}
-              </p>
-              
-              {/* Botão de pagamento sempre visível */}
-              {hasPendingSelectionProcessPayment ? (
-                <div className="w-full sm:w-auto bg-amber-50 border-2 border-amber-200 rounded-xl p-3 sm:p-4">
-                  <div className="flex items-center justify-center">
-                    <Clock className="h-4 w-4 sm:h-5 sm:w-5 text-amber-600 mr-2 animate-spin" />
-                    <span className="text-xs sm:text-sm font-semibold text-amber-800">
-                      {t('studentDashboard.selectionProcess.processingZellePayment')}
-                    </span>
-                  </div>
-                  <p className="text-xs text-amber-700 mt-1 text-center">
-                    {t('studentDashboard.selectionProcess.pendingPaymentMessage')}
-                  </p>
-                </div>
-              ) : (
-                <Link
-                  to="/student/onboarding?step=selection_fee"
-                  className="w-full sm:w-auto bg-blue-600 hover:bg-blue-700 text-white font-semibold py-3 sm:py-3 px-4 sm:px-6 rounded-xl shadow-lg hover:shadow-xl transition-all duration-200 transform hover:scale-105 cursor-pointer border-2 border-white text-sm sm:text-base text-center inline-block"
-                >
-                  {t('studentDashboard.selectionProcess.startButton')}
-                </Link>
-              )}
-              
-              {/* Aviso para usuários com seller_referral_code */}
-              {/* {userProfile.seller_referral_code && userProfile.seller_referral_code.trim() !== '' && (
-                <div className="mt-3 text-center">
-                  <div className="inline-flex items-center space-x-2 bg-amber-500/20 border border-amber-300/30 rounded-lg px-3 py-2">
-                    <Target className="h-4 w-4 text-amber-300" />
-                    <span className="text-amber-200 text-xs">
-                      {t('studentDashboard.selectionProcess.sellerReferralCodeInfo')}
-                    </span>
-                  </div>
-                </div>
-              )} */}
-            </div>
-          )}
-
-          {/* Botão de Continuar Onboarding - Estilo Vidro Simplificado */}
-          {hasSavedOnboardingStep && (
+          {/* Botão de Continuar/Iniciar Onboarding - Estilo Vidro Simplificado */}
+          {!userProfile?.onboarding_completed && (
             <button
-              onClick={() => navigate(`/student/onboarding?step=${savedOnboardingStep}`)}
+              onClick={() => navigate(`/student/onboarding?step=${savedOnboardingStep || 'welcome'}`)}
               className="max-w-md mx-auto w-full group relative overflow-hidden bg-white/10 backdrop-blur-xl border border-white/20 rounded-2xl p-4 transition-all duration-500 hover:bg-white/20 hover:border-white/40 hover:scale-[1.05] active:scale-[0.95] shadow-[0_20px_40px_rgba(0,0,0,0.2)] flex items-center justify-center text-center"
             >
               {/* Background Glows animadas */}
@@ -658,7 +565,7 @@ const Overview: React.FC<OverviewProps> = ({
               <div className="absolute bottom-0 left-0 -ml-16 -mb-16 w-32 h-32 bg-indigo-500/15 rounded-full blur-[60px] group-hover:bg-indigo-400/25 transition-colors duration-700" />
               
               <h3 className="relative text-lg md:text-xl font-black text-white uppercase tracking-widest leading-tight">
-                Continuar Jornada
+                {hasSavedOnboardingStep ? 'Continuar Jornada' : 'Iniciar Jornada'}
               </h3>
             </button>
           )}

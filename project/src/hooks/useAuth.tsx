@@ -60,6 +60,9 @@ export interface UserProfile {
   // System type inherited from seller
   system_type?: 'legacy' | 'simplified';
 
+  // CPF Document
+  cpf_document?: string;
+
   // Onboarding completion status
   onboarding_completed?: boolean;
 

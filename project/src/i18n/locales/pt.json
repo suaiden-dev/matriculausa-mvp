@@ -4064,6 +4064,12 @@
   "scholarshipDeadline": {
     "3800Expired": "Esta bolsa não está mais aceitando candidaturas",
     "3800Expiring": "Últimas horas para se candidatar! Prazo expira amanhã (6 de novembro)",
-    "3800ExpiringShort": "Prazo expira amanhã"
+    "prazoExpiraAmanha": "Prazo expira amanhã",
+    "parcelowCpfModal": {
+      "title": "CPF Necessário",
+      "description": "Para realizar pagamentos via Parcelow, você precisa ter um CPF registrado em seu perfil. Deseja ir para seu perfil agora para completar seu cadastro?",
+      "confirm": "Ir para o Perfil",
+      "cancel": "Agora não"
+    }
   }
 }

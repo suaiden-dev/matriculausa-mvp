@@ -5,8 +5,8 @@ import { useFeeConfig } from '../../../hooks/useFeeConfig';
 import { supabase } from '../../../lib/supabase';
 import { StepProps } from '../types';
 
-export const ScholarshipFeeStep: React.FC<StepProps> = ({ onNext, onComplete }) => {
-  const { user, userProfile, refetchUserProfile } = useAuth();
+export const ScholarshipFeeStep: React.FC<StepProps> = ({ onComplete }) => {
+  const { user, userProfile } = useAuth();
   const { getFeeAmount, formatFeeAmount } = useFeeConfig(user?.id);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -16,7 +16,7 @@ export const ScholarshipFeeStep: React.FC<StepProps> = ({ onNext, onComplete }) 
     ? formatFeeAmount(scholarshipFeeAmount)
     : '$0.00';
 
-  const hasPaid = userProfile?.is_scholarship_fee_paid || false;
+  const hasPaid = !!userProfile?.scholarship_fee_paid_at;
 
   useEffect(() => {
     // Verificar se já pagou

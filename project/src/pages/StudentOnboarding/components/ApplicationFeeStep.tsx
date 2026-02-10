@@ -6,7 +6,7 @@ import { supabase } from '../../../lib/supabase';
 import { StepProps } from '../types';
 
 export const ApplicationFeeStep: React.FC<StepProps> = ({ onNext }) => {
-  const { user, userProfile, refetchUserProfile } = useAuth();
+  const { user, userProfile } = useAuth();
   const { getFeeAmount, formatFeeAmount } = useFeeConfig(user?.id);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);

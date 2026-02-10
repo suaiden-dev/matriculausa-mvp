@@ -1,6 +1,7 @@
 import React, { useState, useEffect, useRef, useCallback } from 'react';
 import ReactDOM from 'react-dom';
 import { Dialog } from '@headlessui/react';
+import { useNavigate } from 'react-router-dom';
 import { Loader2, CheckCircle, AlertCircle, CreditCard, X, Scroll, ArrowLeft, Shield, Tag } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 import { useAuth } from '../../../hooks/useAuth';
@@ -58,6 +59,16 @@ const StripeIcon = ({ className }: { className?: string }) => (
     <rect x="2" y="4" width="20" height="16" rx="2" fill="#7950F2"/>
     <path d="M6 8h12M6 12h8M6 16h4" stroke="white" strokeWidth="1.5" strokeLinecap="round"/>
   </svg>
+);
+
+const ParcelowIcon = ({ className }: { className?: string }) => (
+  <div className={`${className} flex items-center justify-center bg-white rounded-lg overflow-hidden p-0.5 shadow-sm border border-gray-100`}>
+    <img 
+      src="/parcelow_share.webp" 
+      alt="Parcelow" 
+      className="w-full h-full object-contain scale-110" 
+    />
+  </div>
 );
 
 // Terms view component for mobile drawer
@@ -155,6 +166,7 @@ const MobileTermsView: React.FC<{
 
 export const SelectionFeeStep: React.FC<StepProps> = ({ onNext }) => {
   const { t } = useTranslation();
+  const navigate = useNavigate();
   const { user, userProfile, refetchUserProfile } = useAuth();
   const { getFeeAmount, formatFeeAmount } = useFeeConfig(user?.id);
   const { isBlocked, pendingPayment, loading: paymentBlockedLoading } = usePaymentBlocked();
@@ -164,7 +176,7 @@ export const SelectionFeeStep: React.FC<StepProps> = ({ onNext }) => {
   
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const [selectedMethod, setSelectedMethod] = useState<'stripe' | 'zelle' | 'pix' | null>(null);
+  const [selectedMethod, setSelectedMethod] = useState<'stripe' | 'zelle' | 'pix' | 'parcelow' | null>(null);
   const [showZelleCheckout, setShowZelleCheckout] = useState(false);
   const [zellePaymentSubmitted, setZellePaymentSubmitted] = useState(false);
   const [isZelleProcessing, setIsZelleProcessing] = useState(false);
@@ -198,6 +210,9 @@ export const SelectionFeeStep: React.FC<StepProps> = ({ onNext }) => {
   } | null>(null);
   const [hasReferralCode, setHasReferralCode] = useState(false);
   const [showCodeStep, setShowCodeStep] = useState(false);
+  
+  // CPF validation modal state
+  const [showCpfModal, setShowCpfModal] = useState<boolean>(false);
   const [codeApplied, setCodeApplied] = useState(false);
 
   // Promotional coupon states (admin coupons)
@@ -1164,7 +1179,14 @@ export const SelectionFeeStep: React.FC<StepProps> = ({ onNext }) => {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [zellePaymentSubmitted, user?.id]);
 
-  const handleCheckout = async (paymentMethod: 'stripe' | 'zelle' | 'pix') => {
+  const handleCheckout = async (paymentMethod: 'stripe' | 'zelle' | 'pix' | 'parcelow') => {
+    // Verificar CPF se o método for Parcelow
+    if (paymentMethod === 'parcelow' && !userProfile?.cpf_document) {
+      setShowCpfModal(true);
+      return;
+    }
+
+    setLoading(true);
     if (!user?.id) {
       setError('User not authenticated');
       return;
@@ -1207,7 +1229,7 @@ export const SelectionFeeStep: React.FC<StepProps> = ({ onNext }) => {
         return;
       }
 
-      // Stripe e PIX usam a edge function
+      // Stripe, PIX e Parcelow usam edge functions
       const { data: sessionData } = await supabase.auth.getSession();
       const token = sessionData.session?.access_token;
 
@@ -1215,7 +1237,12 @@ export const SelectionFeeStep: React.FC<StepProps> = ({ onNext }) => {
         throw new Error('User not authenticated');
       }
 
-      const apiUrl = `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/stripe-checkout-selection-process-fee`;
+      // Determinar qual Edge Function chamar
+      let apiUrl = `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/stripe-checkout-selection-process-fee`;
+      
+      if (paymentMethod === 'parcelow') {
+        apiUrl = `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/parcelow-checkout-selection-process`;
+      }
       
       // Determinar código de desconto a ser enviado
       const discountCodeToSend = (() => {
@@ -1283,6 +1310,12 @@ export const SelectionFeeStep: React.FC<StepProps> = ({ onNext }) => {
       name: 'Stripe',
       description: 'Pay securely with your credit or debit card',
       icon: StripeIcon
+    },
+    {
+      id: 'parcelow' as const,
+      name: 'Parcelow',
+      description: 'Pay with Credit Card in up to 12 installments',
+      icon: ParcelowIcon
     },
     {
       id: 'pix' as const,
@@ -1750,6 +1783,16 @@ export const SelectionFeeStep: React.FC<StepProps> = ({ onNext }) => {
                                 ${cardAmountWithFees.toFixed(2)}
                               </span>
                             )}
+                            {method.id === 'parcelow' && computedBasePrice > 0 && (
+                              <div className="flex flex-col items-end">
+                                <span className="bg-blue-100 text-blue-700 text-[10px] font-black px-2 py-0.5 rounded-full border border-blue-200">
+                                  ${computedBasePrice.toFixed(2)}
+                                </span>
+                                <span className="text-[9px] font-bold text-blue-500 mt-0.5 whitespace-nowrap">
+                                  12x ${(computedBasePrice / 12).toFixed(2)}
+                                </span>
+                              </div>
+                            )}
                             {method.id === 'pix' && pixAmountWithFees > 0 && exchangeRate && (
                               <span className="bg-emerald-100 text-emerald-600 text-[10px] font-black px-2 py-0.5 rounded-full border border-emerald-200">
                                 R$ {pixAmountWithFees.toFixed(2)}
@@ -1996,6 +2039,46 @@ export const SelectionFeeStep: React.FC<StepProps> = ({ onNext }) => {
           }
         }
       `}</style>
+      {/* Modal de Aviso de CPF necessário para Parcelow */}
+      <Dialog
+        open={showCpfModal}
+        onClose={() => setShowCpfModal(false)}
+        className="relative z-[100]"
+      >
+        <div className="fixed inset-0 bg-black/60 backdrop-blur-sm" aria-hidden="true" />
+        <div className="fixed inset-0 flex items-center justify-center p-4">
+          <Dialog.Panel className="w-full max-w-sm rounded-2xl bg-white p-6 shadow-2xl">
+            <div className="flex flex-col items-center text-center">
+              <div className="w-16 h-16 bg-amber-100 rounded-full flex items-center justify-center mb-4">
+                <AlertCircle className="w-8 h-8 text-amber-600" />
+              </div>
+              <Dialog.Title className="text-xl font-bold text-gray-900 mb-2">
+                {t('scholarshipDeadline.parcelowCpfModal.title')}
+              </Dialog.Title>
+              <Dialog.Description className="text-gray-600 mb-6">
+                {t('scholarshipDeadline.parcelowCpfModal.description')}
+              </Dialog.Description>
+              <div className="flex flex-col w-full gap-3">
+                <button
+                  onClick={() => {
+                    setShowCpfModal(false);
+                    navigate('/student/dashboard/profile');
+                  }}
+                  className="w-full py-3 px-4 bg-blue-600 text-white rounded-xl font-bold hover:bg-blue-700 transition-colors shadow-lg shadow-blue-500/20"
+                >
+                  {t('scholarshipDeadline.parcelowCpfModal.confirm')}
+                </button>
+                <button
+                  onClick={() => setShowCpfModal(false)}
+                  className="w-full py-3 px-4 bg-gray-100 text-gray-700 rounded-xl font-bold hover:bg-gray-200 transition-colors"
+                >
+                  {t('scholarshipDeadline.parcelowCpfModal.cancel')}
+                </button>
+              </div>
+            </div>
+          </Dialog.Panel>
+        </div>
+      </Dialog>
     </div>
   );
 };

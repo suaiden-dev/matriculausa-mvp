@@ -5,11 +5,8 @@ import {
   DollarSign, 
   CheckCircle,
   AlertTriangle,
-  ChevronDown,
-  ChevronUp,
   Briefcase,
-  Star,
-  ArrowRight
+  Star
 } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 import { 
@@ -48,7 +45,7 @@ const ScholarshipCardFullComponent: React.FC<ScholarshipCardFullProps> = ({
   const { t } = useTranslation();
   const scholarshipId = String(scholarship.id);
   // Se o estado expandido for controlado pelo pai, usar a prop; caso contrário, usar estado local
-  const [isExpandedLocal, setIsExpandedLocal] = useState<boolean>(false);
+  const [isExpandedLocal, setIsExpandedLocal] = useState<boolean>(true);
   const [brokenImage, setBrokenImage] = useState<boolean>(false);
   const isBlocked = is3800ScholarshipBlocked(scholarship);
   
@@ -182,26 +179,7 @@ const ScholarshipCardFullComponent: React.FC<ScholarshipCardFullProps> = ({
         </div>
 
         {/* Expand/Collapse Button */}
-        <button
-          type="button"
-          id={`expand-btn-${scholarship.id}`}
-          onClick={handleToggleExpand}
-          className="flex items-center justify-center gap-1 text-xs text-blue-600 hover:text-blue-700 font-medium mb-2 py-1 transition-colors"
-          aria-expanded={isExpanded}
-          aria-controls={`scholarship-details-${scholarship.id}`}
-        >
-          {isExpanded ? (
-            <>
-              <span>{t('studentDashboard.findScholarships.scholarshipCard.showLess') || 'Show Less'}</span>
-              <ChevronUp className="h-3 w-3" />
-            </>
-          ) : (
-            <>
-              <span>{t('studentDashboard.findScholarships.scholarshipCard.showMore') || 'Show More Details'}</span>
-              <ChevronDown className="h-3 w-3" />
-            </>
-          )}
-        </button>
+
 
         {/* Expanded Content - Renderizar apenas quando expandido */}
         {isExpanded ? (
@@ -308,8 +286,21 @@ const ScholarshipCardFullComponent: React.FC<ScholarshipCardFullProps> = ({
           </div>
         ) : null}
 
-        {/* Action Button */}
-        <div className="mt-auto pt-2 border-t border-slate-100">
+
+
+        {/* Action Buttons Container */}
+        <div className="mt-auto pt-4 space-y-3 border-t border-slate-100">
+          {/* View Details Modal Button */}
+          <button
+            type="button"
+            onClick={handleToggleExpand}
+            className="flex items-center justify-center w-full py-2.5 text-sm font-semibold text-blue-700 bg-white/60 backdrop-blur-md border border-white/50 shadow-sm hover:shadow-md hover:bg-white/80 rounded-xl transition-all duration-300 group-hover:border-blue-200/50"
+          >
+            <span className="relative z-10 flex items-center">
+              {t('scholarshipsPage.scholarshipCard.details') || 'View Full Details'}
+            </span>
+          </button>
+
           {!scholarship.is_active || isBlocked ? (
             <button
               disabled
@@ -323,15 +314,15 @@ const ScholarshipCardFullComponent: React.FC<ScholarshipCardFullProps> = ({
               type="button"
               onClick={onToggle}
               disabled={isLocked}
-              className={`w-full h-9 px-3 rounded-lg font-bold text-xs flex items-center justify-center transition-all duration-300 relative overflow-hidden ${
+              className={`group/btn w-full h-10 px-4 rounded-xl font-bold text-xs sm:text-sm flex items-center justify-center transition-all duration-300 relative overflow-hidden backdrop-blur-md border border-white/20 shadow-lg hover:shadow-xl ${
                 isLocked
-                  ? 'bg-slate-300 text-slate-500 cursor-not-allowed opacity-60'
+                  ? 'bg-slate-300/80 text-slate-500 cursor-not-allowed'
                   : isSelected
-                  ? 'bg-gradient-to-r from-blue-600 to-blue-700 text-white hover:from-blue-700 hover:to-blue-800 shadow-md'
-                  : 'bg-gradient-to-r from-blue-400 to-blue-500 text-white hover:from-blue-500 hover:to-blue-600'
+                  ? 'bg-gradient-to-r from-blue-600/90 to-blue-700/90 text-white hover:from-blue-600 hover:to-blue-700'
+                  : 'bg-gradient-to-r from-blue-500/85 to-indigo-600/85 text-white hover:from-blue-600/90 hover:to-indigo-700/90'
               }`}
             >
-              <div className="absolute inset-0 bg-gradient-to-r from-white/0 via-white/25 to-white/0 transform -skew-x-12 -translate-x-full group-hover:translate-x-full transition-transform duration-1000"></div>
+              <div className="absolute inset-0 bg-gradient-to-r from-white/0 via-white/25 to-white/0 transform -skew-x-12 -translate-x-full group-hover/btn:translate-x-full transition-transform duration-1000"></div>
               <span className="relative z-10">
                 {isLocked 
                   ? 'Já Selecionado'
@@ -339,9 +330,6 @@ const ScholarshipCardFullComponent: React.FC<ScholarshipCardFullProps> = ({
                   ? 'Remove from Selection' 
                   : t('studentDashboard.findScholarships.scholarshipCard.selectScholarship')}
               </span>
-              {!isLocked && !isSelected && (
-                <ArrowRight className="h-3 w-3 ml-1.5 group-hover:translate-x-1 transition-transform relative z-10 text-white" />
-              )}
             </button>
           )}
         </div>

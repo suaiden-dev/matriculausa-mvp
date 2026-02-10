@@ -10,6 +10,7 @@ import { ScholarshipSelectionStep } from './components/ScholarshipSelectionStep'
 import { ScholarshipReviewStep } from './components/ScholarshipReviewStep';
 import { ProcessTypeStep } from './components/ProcessTypeStep';
 import { DocumentsUploadStep } from './components/DocumentsUploadStep';
+import { PaymentStep } from './components/PaymentStep'; // Payment step component
 import { WaitingApprovalStep } from './components/WaitingApprovalStep';
 import { OnboardingStep } from './types';
 import { supabase } from '../../lib/supabase';
@@ -30,7 +31,7 @@ const StudentOnboarding: React.FC = () => {
   useEffect(() => {
     const stepParam = searchParams.get('step');
     if (stepParam) {
-      const validSteps: OnboardingStep[] = ['welcome', 'selection_fee', 'scholarship_selection', 'scholarship_review', 'process_type', 'documents_upload', 'waiting_approval', 'completed'];
+      const validSteps: OnboardingStep[] = ['welcome', 'selection_fee', 'scholarship_selection', 'scholarship_review', 'process_type', 'documents_upload', 'payment', 'waiting_approval', 'completed'];
       if (validSteps.includes(stepParam as OnboardingStep)) {
         window.localStorage.setItem('onboarding_current_step', stepParam);
         if (stepParam === 'welcome') {
@@ -55,7 +56,7 @@ const StudentOnboarding: React.FC = () => {
           let edgeFunctionName = '';
           if (stepParam === 'scholarship_selection') {
             edgeFunctionName = 'verify-stripe-session-selection-process-fee';
-          } else if (stepParam === 'waiting_approval') {
+          } else if (stepParam === 'waiting_approval' || stepParam === 'payment') {
             edgeFunctionName = 'verify-stripe-session-application-fee';
           } else if (stepParam === 'completed') {
             edgeFunctionName = 'verify-stripe-session-scholarship-fee';
@@ -153,6 +154,7 @@ const StudentOnboarding: React.FC = () => {
       'scholarship_review',
       'process_type',
       'documents_upload',
+      'payment',
       'waiting_approval',
       'completed',
     ];
@@ -171,6 +173,7 @@ const StudentOnboarding: React.FC = () => {
       'scholarship_review',
       'process_type',
       'documents_upload',
+      'payment',
       'waiting_approval',
       'completed',
     ];
@@ -208,6 +211,7 @@ const StudentOnboarding: React.FC = () => {
     completedSteps.push('process_type');
   }
   if (state.documentsUploaded) completedSteps.push('documents_upload');
+  if (state.applicationFeePaid) completedSteps.push('payment');
   if (state.documentsApproved) completedSteps.push('waiting_approval');
 
   const renderStep = () => {
@@ -224,6 +228,8 @@ const StudentOnboarding: React.FC = () => {
         return <ProcessTypeStep onNext={handleNext} onBack={handleBack} />;
       case 'documents_upload':
         return <DocumentsUploadStep onNext={handleNext} onBack={handleBack} />;
+      case 'payment':
+        return <PaymentStep onNext={handleNext} onBack={handleBack} />;
       case 'waiting_approval':
         return <WaitingApprovalStep onNext={handleNext} onBack={handleBack} onComplete={handleComplete} />;
       case 'completed':

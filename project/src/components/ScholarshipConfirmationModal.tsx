@@ -1,4 +1,5 @@
 import React, { useState, useEffect, useMemo } from 'react';
+import { config } from '../lib/config';
 import { Dialog } from '@headlessui/react';
 import { 
   Drawer,
@@ -18,7 +19,7 @@ import { useTranslation } from 'react-i18next';
 import { convertCentsToDollars } from '../utils/currency';
 import { calculateCardAmountWithFees, calculatePIXAmountWithFees, getExchangeRate } from '../utils/stripeFeeCalculator';
 import { supabase } from '../lib/supabase';
-import { ZelleCheckout } from './ZelleCheckout';
+// ZelleCheckout removido - redirecionamento para página dedicada
 
 // Componente SVG para o logo do PIX
 const PixIcon = ({ className }: { className?: string }) => (
@@ -29,7 +30,6 @@ const PixIcon = ({ className }: { className?: string }) => (
   </svg>
 );
 
-// Componente SVG para o logo do Zelle
 const ZelleIcon = ({ className }: { className?: string }) => (
   <svg className={className} xmlns="http://www.w3.org/2000/svg" viewBox="0 0 48 48">
     <path fill="#a0f" d="M35,42H13c-3.866,0-7-3.134-7-7V13c0-3.866,3.134-7,7-7h22c3.866,0,7,3.134,7,7v22C42,38.866,38.866,42,35,42z"/>
@@ -41,12 +41,23 @@ const ZelleIcon = ({ className }: { className?: string }) => (
   </svg>
 );
 
+const ParcelowIcon = ({ className }: { className?: string }) => (
+  <div className={`${className} flex items-center justify-center bg-white rounded-lg overflow-hidden p-0.5 shadow-sm border border-gray-100`}>
+    <img 
+      src="/parcelow_share.webp" 
+      alt="Parcelow" 
+      className="w-full h-full object-contain scale-125" 
+    />
+  </div>
+);
+
 interface ScholarshipConfirmationModalProps {
   isOpen: boolean;
   onClose: () => void;
   scholarship: Scholarship;
   onStripeCheckout: (exchangeRate?: number) => void;
   onPixCheckout?: (exchangeRate?: number) => void;
+  onParcelowCheckout?: () => void;
   isProcessing?: boolean;
   feeType?: 'application_fee' | 'scholarship_fee';
   zelleMetadata?: { // Metadados para passar ao ZelleCheckout quando inline
@@ -54,6 +65,7 @@ interface ScholarshipConfirmationModalProps {
     selected_scholarship_id?: string;
     application_fee_amount?: number;
   };
+  applicationId?: string;
 }
 
 export const ScholarshipConfirmationModal: React.FC<ScholarshipConfirmationModalProps> = ({
@@ -62,16 +74,18 @@ export const ScholarshipConfirmationModal: React.FC<ScholarshipConfirmationModal
   scholarship,
   onStripeCheckout,
   onPixCheckout,
-  onZelleCheckout,
-  onZelleSuccess,
+  onParcelowCheckout,
   isProcessing = false,
   feeType = 'application_fee',
-  zelleMetadata
+  // zelleMetadata e applicationId disponíveis mas não usados diretamente no modal
+  // zelleMetadata,
+  // applicationId
 }) => {
   const navigate = useNavigate();
   const { user, userProfile } = useAuth();
   const { getFeeAmount: getFeeAmountFromConfig } = useFeeConfig(user?.id);
-  const [selectedPaymentMethod, setSelectedPaymentMethod] = useState<'stripe' | 'zelle' | 'pix' | null>(null);
+  const [selectedPaymentMethod, setSelectedPaymentMethod] = useState<'stripe' | 'zelle' | 'pix' | 'parcelow' | null>(null);
+  const showParcelow = config.showParcelowPaymentMethod();
   const { t } = useTranslation();
   const [submitting, setSubmitting] = useState<boolean>(false);
   const [spinnerVisible, setSpinnerVisible] = useState<boolean>(false);
@@ -87,6 +101,9 @@ export const ScholarshipConfirmationModal: React.FC<ScholarshipConfirmationModal
   } | null>(null);
   const [isValidatingPromotionalCoupon, setIsValidatingPromotionalCoupon] = useState(false);
   const promotionalCouponInputRef = React.useRef<HTMLInputElement>(null);
+  
+  // Estado para modal de CPF (Parcelow)
+  const [showCpfModal, setShowCpfModal] = useState<boolean>(false);
   
   // Hook para detectar se é mobile
   const [isMobile, setIsMobile] = useState(false);
@@ -168,8 +185,7 @@ export const ScholarshipConfirmationModal: React.FC<ScholarshipConfirmationModal
   }, [feeType, scholarship, getFeeAmountFromConfig, userProfile]);
   
   // Verificar se o usuário pode usar cupom promocional
-  const hasSellerReferralCode = userProfile?.seller_referral_code && userProfile.seller_referral_code.trim() !== '';
-  const isLegacySystem = userProfile?.system_type === 'legacy';
+  // hasSellerReferralCode e isLegacySystem removidos - cupom sempre disponível
   // ✅ SEMPRE permitir uso de cupom promocional (campo sempre visível)
   const canUsePromotionalCoupon = true;
   
@@ -208,7 +224,7 @@ export const ScholarshipConfirmationModal: React.FC<ScholarshipConfirmationModal
     
     const normalizedCode = promotionalCoupon.trim().toUpperCase();
     // ✅ CORREÇÃO: Normalizar feeType para corresponder ao banco (i20_control_fee -> i20_control)
-    const normalizedFeeType = feeType === 'i20_control_fee' ? 'i20_control' : feeType;
+    const normalizedFeeType = (feeType as string) === 'i20_control_fee' ? 'i20_control' : feeType;
     
     console.log('🔍 [ScholarshipConfirmationModal] Validando cupom promocional:', normalizedCode, 'para feeType:', normalizedFeeType);
     setIsValidatingPromotionalCoupon(true);
@@ -467,12 +483,18 @@ export const ScholarshipConfirmationModal: React.FC<ScholarshipConfirmationModal
 
   const modalContent = getModalContent();
 
-  const handlePaymentMethodSelect = (method: 'stripe' | 'zelle' | 'pix') => {
+  const handlePaymentMethodSelect = (method: 'stripe' | 'zelle' | 'pix' | 'parcelow') => {
     setSelectedPaymentMethod(method);
   };
 
   const handleProceed = async () => {
     if (!selectedPaymentMethod) return;
+
+    // Verificar CPF se o método for Parcelow
+    if (selectedPaymentMethod === 'parcelow' && !userProfile?.cpf_document) {
+      setShowCpfModal(true);
+      return;
+    }
 
     try {
       setSubmitting(true);
@@ -488,26 +510,25 @@ export const ScholarshipConfirmationModal: React.FC<ScholarshipConfirmationModal
         } else {
           onStripeCheckout(exchangeRate || undefined);
         }
-      } else if (selectedPaymentMethod === 'zelle') {
-        // Sempre chamar callback para redirecionar (tanto mobile quanto desktop)
-        if (onZelleCheckout) {
-          onZelleCheckout();
-        } else {
-          // Caso contrário, redirecionar para página de checkout Zelle (comportamento padrão)
-          const params = new URLSearchParams({
-            feeType: feeType,
-            amount: feeAmount.toString(),
-            scholarshipsIds: scholarship.id
-          });
-          
-          if (feeType === 'application_fee') {
-            params.append('applicationFeeAmount', feeAmount.toString());
-          } else if (feeType === 'scholarship_fee') {
-            params.append('scholarshipFeeAmount', feeAmount.toString());
-          }
-          
-          navigate(`/checkout/zelle?${params.toString()}`);
+      } else if (selectedPaymentMethod === 'parcelow') {
+        if (onParcelowCheckout) {
+          onParcelowCheckout();
         }
+      } else if (selectedPaymentMethod === 'zelle') {
+        // Redirecionar para página de checkout Zelle
+        const params = new URLSearchParams({
+          feeType: feeType,
+          amount: feeAmount.toString(),
+          scholarshipsIds: scholarship.id
+        });
+        
+        if (feeType === 'application_fee') {
+          params.append('applicationFeeAmount', feeAmount.toString());
+        } else if (feeType === 'scholarship_fee') {
+          params.append('scholarshipFeeAmount', feeAmount.toString());
+        }
+        
+        navigate(`/checkout/zelle?${params.toString()}`);
       }
     } catch (error) {
       console.error('Erro ao processar pagamento:', error);
@@ -516,8 +537,7 @@ export const ScholarshipConfirmationModal: React.FC<ScholarshipConfirmationModal
     }
   };
 
-  // Nunca mostrar Zelle inline - sempre redirecionar para página dedicada
-  const showZelleInline = false;
+  // Zelle sempre redireciona para página dedicada (nunca inline)
 
   const canProceed = selectedPaymentMethod !== null;
 
@@ -530,7 +550,7 @@ export const ScholarshipConfirmationModal: React.FC<ScholarshipConfirmationModal
     } else if (selectedPaymentMethod === 'pix') {
       return pixAmountWithFees;
     } else {
-      return feeAmount; // Zelle
+      return feeAmount; // Zelle / Parcelow
     }
   };
 
@@ -856,6 +876,52 @@ export const ScholarshipConfirmationModal: React.FC<ScholarshipConfirmationModal
                 </div>
               </label>
             )}
+
+            {/* Parcelow Option (if enabled) */}
+            {showParcelow && (
+              <label className="relative flex items-center p-3 border-2 rounded-lg cursor-pointer transition-all hover:border-blue-300 hover:bg-blue-50">
+                <input
+                  type="radio"
+                  name="payment-method"
+                  value="parcelow"
+                  checked={selectedPaymentMethod === 'parcelow'}
+                  onChange={() => handlePaymentMethodSelect('parcelow')}
+                  className="sr-only"
+                />
+                <div className={`w-4 h-4 sm:w-5 sm:h-5 border-2 rounded-full mr-2 sm:mr-3 flex items-center justify-center flex-shrink-0 ${
+                  selectedPaymentMethod === 'parcelow' 
+                    ? 'border-blue-600 bg-blue-600' 
+                    : 'border-gray-300'
+                }`}>
+                  {selectedPaymentMethod === 'parcelow' && (
+                    <div className="w-1.5 h-1.5 sm:w-2 sm:h-2 bg-white rounded-full"></div>
+                  )}
+                </div>
+                
+                <div className="flex items-center justify-between gap-2 sm:gap-3 min-w-0 flex-1">
+                <div className="flex items-center gap-2 sm:gap-3 min-w-0">
+                  <div className="p-1.5 sm:p-2 bg-blue-100 rounded-lg flex-shrink-0">
+                    <ParcelowIcon className="w-4 h-4 sm:w-5 sm:h-5" />
+                  </div>
+                  <div className="min-w-0">
+                    <div className="font-medium text-gray-900 text-sm sm:text-base">{t('scholarshipConfirmationModal.payment.parcelow.title')}</div>
+                    <div className="text-xs sm:text-sm text-gray-600">{t('scholarshipConfirmationModal.payment.parcelow.description')}</div>
+                    <div className="text-xs text-gray-400 mt-0.5">{t('paymentSelector.parcelowFeesNote')}</div>
+                  </div>
+                  </div>
+                  <div className="flex flex-col items-end flex-shrink-0 ml-auto">
+                    <span className="text-sm font-semibold text-blue-700 whitespace-nowrap">
+                      ${feeAmount.toFixed(2)}
+                    </span>
+                    {feeAmount > 0 && (
+                      <span className="text-[10px] font-medium text-blue-600 whitespace-nowrap">
+                        {t('paymentSelector.parcelowInstallmentPreview', { count: 12 })}
+                      </span>
+                    )}
+                  </div>
+                </div>
+              </label>
+            )}
           </div>
         </div>
         </div>
@@ -912,24 +978,66 @@ export const ScholarshipConfirmationModal: React.FC<ScholarshipConfirmationModal
   );
 
   // Usar Drawer em mobile, Dialog em desktop
-  if (isMobile) {
-    return (
-      <Drawer open={isOpen} onOpenChange={onClose}>
-        <DrawerContent className="max-h-[85vh] bg-white flex flex-col">
-          <ModalContent isInDrawer={true} />
-        </DrawerContent>
-      </Drawer>
-    );
-  }
-  
   return (
-    <Dialog open={isOpen} onClose={onClose} className="relative z-50">
-      <div className="fixed inset-0 bg-black/60 backdrop-blur-sm z-30" aria-hidden="true" />
-      <div className="fixed inset-0 flex items-center justify-center p-4 z-30">
-        <Dialog.Panel className="w-full max-w-md bg-white rounded-2xl shadow-2xl overflow-hidden relative border-0 max-h-[90vh] flex flex-col">
-          <ModalContent isInDrawer={false} />
-        </Dialog.Panel>
-      </div>
-    </Dialog>
+    <>
+      {isMobile ? (
+        <Drawer open={isOpen} onOpenChange={onClose}>
+          <DrawerContent className="max-h-[85vh] bg-white flex flex-col">
+            <ModalContent isInDrawer={true} />
+          </DrawerContent>
+        </Drawer>
+      ) : (
+        <Dialog open={isOpen} onClose={onClose} className="relative z-50">
+          <div className="fixed inset-0 bg-black/60 backdrop-blur-sm z-30" aria-hidden="true" />
+          <div className="fixed inset-0 flex items-center justify-center p-4 z-30">
+            <Dialog.Panel className="w-full max-w-md bg-white rounded-2xl shadow-2xl overflow-hidden relative border-0 max-h-[90vh] flex flex-col">
+              <ModalContent isInDrawer={false} />
+            </Dialog.Panel>
+          </div>
+        </Dialog>
+      )}
+
+      {/* Modal de Aviso de CPF necessário para Parcelow */}
+      <Dialog
+        open={showCpfModal}
+        onClose={() => setShowCpfModal(false)}
+        className="relative z-[100]"
+      >
+        <div className="fixed inset-0 bg-black/60 backdrop-blur-sm" aria-hidden="true" />
+        <div className="fixed inset-0 flex items-center justify-center p-4">
+          <Dialog.Panel className="w-full max-w-sm rounded-2xl bg-white p-6 shadow-2xl">
+            <div className="flex flex-col items-center text-center">
+              <div className="w-16 h-16 bg-amber-100 rounded-full flex items-center justify-center mb-4">
+                <AlertCircle className="w-8 h-8 text-amber-600" />
+              </div>
+              <Dialog.Title className="text-xl font-bold text-gray-900 mb-2">
+                {t('scholarshipDeadline.parcelowCpfModal.title')}
+              </Dialog.Title>
+              <Dialog.Description className="text-gray-600 mb-6">
+                {t('scholarshipDeadline.parcelowCpfModal.description')}
+              </Dialog.Description>
+              <div className="flex flex-col w-full gap-3">
+                <button
+                  onClick={() => {
+                    setShowCpfModal(false);
+                    onClose();
+                    navigate('/student/dashboard/profile');
+                  }}
+                  className="w-full py-3 px-4 bg-blue-600 text-white rounded-xl font-bold hover:bg-blue-700 transition-colors shadow-lg shadow-blue-500/20"
+                >
+                  {t('scholarshipDeadline.parcelowCpfModal.confirm')}
+                </button>
+                <button
+                  onClick={() => setShowCpfModal(false)}
+                  className="w-full py-3 px-4 bg-gray-100 text-gray-700 rounded-xl font-bold hover:bg-gray-200 transition-colors"
+                >
+                  {t('scholarshipDeadline.parcelowCpfModal.cancel')}
+                </button>
+              </div>
+            </div>
+          </Dialog.Panel>
+        </div>
+      </Dialog>
+    </>
   );
 };
