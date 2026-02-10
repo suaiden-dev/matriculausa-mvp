@@ -1,3 +1,5 @@
+import { useTranslation } from "react-i18next";
+
 // List of photos from the public directory
 // position: 'top' (padrão) ou 'center' para fotos que precisam de ajuste
 const photos: { src: string; position?: 'top' | 'center' }[] = [
@@ -12,6 +14,8 @@ const photos: { src: string; position?: 'top' | 'center' }[] = [
 ];
 
 const ClientsSection = () => {
+  const { t } = useTranslation();
+
   // Calcula o número de colunas baseado na quantidade de fotos
   const getGridCols = () => {
     const count = photos.length;
@@ -27,10 +31,10 @@ const ClientsSection = () => {
       <div className="container mx-auto px-4">
         <div className="text-center mb-12">
           <h2 className="text-3xl md:text-4xl font-bold text-foreground mb-4">
-            Nossos Clientes
+            {t('processPages.common.clients.title')}
           </h2>
           <p className="text-lg text-muted-foreground max-w-2xl mx-auto">
-            Alunos que realizaram o sonho de estudar nos Estados Unidos
+            {t('processPages.common.clients.description')}
           </p>
         </div>
 
@@ -43,7 +47,7 @@ const ClientsSection = () => {
             >
               <img
                 src={photo.src}
-                alt={`Cliente ${index + 1}`}
+                alt={`${t('processPages.common.clients.client')} ${index + 1}`}
                 className={`w-full h-full object-cover ${photo.position === 'center' ? 'object-center' : 'object-top'}`}
               />
             </div>

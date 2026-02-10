@@ -84,6 +84,13 @@ const Initial = () => {
         title={t('processPages.initial.steps.title')}
         description={t('processPages.initial.steps.description')}
         steps={INITIAL_STEPS}
+        conversionProps={{
+          title: t('processPages.common.conversion.afterSteps.title'),
+          description: t('processPages.common.conversion.afterSteps.description'),
+          buttonText: t('processPages.common.conversion.afterSteps.buttonText'),
+          gradientClass: "gradient-coral-gold",
+          variant: "banner"
+        }}
       />
       <ProcessFundsSummary 
         description={t('processPages.initial.funds.description')}
@@ -91,12 +98,23 @@ const Initial = () => {
         dependentGradient="gradient-primary"
         noteText={t('processPages.initial.funds.note')}
         noteBorderColor="border-coral"
+        conversionProps={{
+          title: t('processPages.common.conversion.afterFunds.title'),
+          description: t('processPages.common.conversion.afterFunds.description'),
+          buttonText: t('processPages.common.conversion.afterFunds.buttonText'),
+          gradientClass: "gradient-coral-gold",
+          variant: "minimal"
+        }}
       />
+
       <ProcessValuesSummary 
         description={t('processPages.initial.values.description')}
         values={INITIAL_VALUES}
       />
-      <ConversionButton showReferralBadge={!!(isValid && referralCode)} />
+      <ConversionButton 
+        showReferralBadge={!!(isValid && referralCode)} 
+        gradientClass="gradient-coral-gold"
+      />
       <ProcessFooter gradientClass="gradient-coral-gold" />
     </div>
   );

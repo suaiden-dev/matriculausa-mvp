@@ -1,4 +1,4 @@
-import { Link } from "react-router-dom";
+
 
 interface ProcessHeaderProps {
   title: string;
@@ -24,8 +24,14 @@ const ProcessHeader = ({
 
       <div className="container mx-auto px-4 relative z-10">
         {/* Navigation */}
-        <nav className="flex items-center justify-center gap-4 md:gap-6 mb-8 flex-wrap">
-          <span className="text-sm font-medium tracking-widest uppercase opacity-80">The Future</span>
+        <nav className="flex items-center justify-center mb-8">
+          <a href="https://thefutureofenglish.com/" className="bg-white p-4 md:p-6 rounded-2xl shadow-xl hover:shadow-2xl transition-all duration-300 hover:scale-105">
+            <img 
+              src="/logo_tfoe.png" 
+              alt="The Future of English" 
+              className="h-12 md:h-20 w-auto animate-fade-in"
+            />
+          </a>
         </nav>
 
         {/* Title */}

@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { Link } from 'react-router-dom';
+import { Link, useLocation } from 'react-router-dom';
 import { Menu, X, User, LogOut, BookOpen, ChevronDown } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 import { useAuth } from '../hooks/useAuth';
@@ -14,6 +14,7 @@ const Header: React.FC = () => {
   const { user, userProfile, logout, isAuthenticated } = useAuth();
   // const navigate = useNavigate();
   const { t } = useTranslation();
+  const location = useLocation();
   const { hasTranslation } = usePageTranslationStatus();
   const [schoolImageUrl, setSchoolImageUrl] = useState<string | null>(null);
 
@@ -217,13 +218,13 @@ const Header: React.FC = () => {
             ) : (
               <>
                 <Link
-                  to="/login"
+                  to={`/login${location.search}`}
                   className="text-slate-700 hover:text-[#05294E] transition-colors font-bold"
                 >
                   {t('nav.login')}
                 </Link>
                 <Link
-                  to="/register"
+                  to={`/register${location.search}`}
                   className="bg-[#D0151C] text-white px-6 py-3 rounded-2xl hover:bg-[#B01218] transition-all duration-300 font-bold shadow-lg hover:shadow-xl transform hover:scale-105"
                 >
                   {t('nav.getStarted')}
@@ -293,8 +294,8 @@ const Header: React.FC = () => {
               </div>
             ) : (
               <div className="border-t border-slate-200 pt-4 mt-4 space-y-2">
-                <Link to="/login" className="block px-4 py-3 text-slate-700 hover:bg-[#05294E]/5 rounded-xl font-medium transition-all duration-200" onClick={() => setIsMenuOpen(false)}>{t('nav.login')}</Link>
-                <Link to="/register" className="block px-4 py-3 bg-[#D0151C] text-white hover:bg-[#B01218] rounded-xl font-bold transition-all duration-200 text-center" onClick={() => setIsMenuOpen(false)}>{t('nav.getStarted')}</Link>
+                <Link to={`/login${location.search}`} className="block px-4 py-3 text-slate-700 hover:bg-[#05294E]/5 rounded-xl font-medium transition-all duration-200" onClick={() => setIsMenuOpen(false)}>{t('nav.login')}</Link>
+                <Link to={`/register${location.search}`} className="block px-4 py-3 bg-[#D0151C] text-white hover:bg-[#B01218] rounded-xl font-bold transition-all duration-200 text-center" onClick={() => setIsMenuOpen(false)}>{t('nav.getStarted')}</Link>
               </div>
             )}
           </div>

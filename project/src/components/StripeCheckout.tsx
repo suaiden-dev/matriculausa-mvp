@@ -32,7 +32,7 @@ interface StripeCheckoutProps {
   exchangeRate?: number; // Taxa de câmbio para PIX (opcional)
 }
 
-export const StripeCheckout: React.FC<StripeCheckoutProps> = ({
+export const StripeCheckout = React.forwardRef<HTMLButtonElement, StripeCheckoutProps>(({
   productId,
   buttonText = 'Checkout',
   className = '',
@@ -48,7 +48,7 @@ export const StripeCheckout: React.FC<StripeCheckoutProps> = ({
   studentProcessType,
   beforeCheckout,
   exchangeRate,
-}) => {
+}, ref) => {
   const [showPreCheckoutModal, setShowPreCheckoutModal] = useState(false);
   const [showScholarshipFeeModal, setShowScholarshipFeeModal] = useState(false);
 
@@ -637,6 +637,7 @@ export const StripeCheckout: React.FC<StripeCheckoutProps> = ({
   return (
     <>
       <button
+        ref={ref}
         onClick={isBlocked && pendingPayment ? undefined : checkActiveDiscount}
         disabled={disabled || loading || paymentBlockedLoading || Boolean(isBlocked && pendingPayment)}
         className={`${className} ${(loading || paymentBlockedLoading || (isBlocked && pendingPayment)) ? 'opacity-50 cursor-not-allowed' : ''}`}
@@ -760,4 +761,4 @@ export const StripeCheckout: React.FC<StripeCheckoutProps> = ({
 
     </>
   );
-};
+});

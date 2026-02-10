@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from 'react';
-import { Link, useNavigate } from 'react-router-dom';
+import { Link, useNavigate, useLocation } from 'react-router-dom';
 import { GraduationCap, Globe, Users, Award, ArrowRight, CheckCircle, Star, BookOpen, Shield, Sparkles, DollarSign, Play, ChevronRight, Heart, Rocket, CreditCard, MapPin, Lock, Gift, Clock } from 'lucide-react';
 import { useTranslationWithFees } from '../hooks/useTranslationWithFees';
 import { useDynamicFees } from '../hooks/useDynamicFees';
@@ -18,6 +18,7 @@ const Home: React.FC = () => {
   const { t } = useTranslationWithFees();
   const { selectionProcessFee, scholarshipFee, i20ControlFee, hasSellerPackage, packageName } = useDynamicFees();
   const navigate = useNavigate();
+  const location = useLocation();
   const { universities } = useUniversities();
   const { isBlocked, pendingPayment, loading: paymentBlockedLoading } = usePaymentBlocked();
   
@@ -110,7 +111,7 @@ const Home: React.FC = () => {
                 
                 <div className="flex flex-col items-center sm:items-stretch sm:flex-row gap-4 mb-6 w-full">
                   <Link
-                    to="/register"
+                    to={`/register${location.search}`}
                     className={`group bg-[#D0151C] hover:bg-[#B01218] text-white px-8 py-4 rounded-2xl text-lg font-bold transition-all duration-300 shadow-xl hover:shadow-2xl flex items-center justify-center border-0 ${isAuthenticated ? 'hidden' : ''}`}
                   >
                     {t('home.hero.cta')}
@@ -293,7 +294,7 @@ const Home: React.FC = () => {
                             if (isAuthenticated) {
                               navigate('/student/dashboard');
                             } else {
-                              navigate('/login');
+                              navigate(`/login${location.search}`);
                             }
                           }}
                           className="bg-[#05294E] text-white px-4 py-2 rounded-xl text-sm font-semibold hover:bg-[#05294E]/90 transition-colors"
@@ -799,7 +800,7 @@ const Home: React.FC = () => {
             
             <div className="flex flex-col sm:flex-row gap-6 justify-center">
               <Link
-                to="/register"
+                to={`/register${location.search}`}
                 className="group bg-[#D0151C] text-white px-10 py-5 rounded-2xl text-xl font-black hover:bg-[#B01218] transition-all duration-300 transform hover:scale-105 shadow-2xl flex items-center justify-center"
               >
                 {t('home.cta.button')}

@@ -56,7 +56,44 @@
       "total": "Total:",
       "step": "Step",
       "optional": "Optional",
-      "rights": "All rights reserved."
+      "rights": "All rights reserved.",
+      "clients": {
+        "title": "Our Clients",
+        "description": "Students who achieved the dream of studying in the United States",
+        "client": "Client"
+      },
+      "conversion": {
+        "title": "Ready to start your process?",
+        "description": "Click the button below to start your journey to the United States with all the necessary support.",
+        "buttonText": "Start Now",
+        "redirectAuthenticated": "You will be directed to the student area to make the payment for the selection process.",
+        "redirectAnonymous": "You will be directed to create your account. It's fast and free!",
+        "referralBadge": "Seller Code Applied",
+        "afterSteps": {
+          "title": "Ready to take the first step?",
+          "description": "Now that you know the steps, start your journey today.",
+          "buttonText": "Start Process"
+        },
+        "afterFunds": {
+          "title": "Meet the financial requirements?",
+          "description": "Secure your spot and start the search for the best scholarships now.",
+          "buttonText": "Secure my Spot"
+        },
+        "benefits": {
+          "transparent": {
+            "title": "Transparent Process",
+            "description": "All costs detailed from the beginning"
+          },
+          "support": {
+            "title": "Complete Support",
+            "description": "Monitoring at all stages"
+          },
+          "secure": {
+            "title": "Secure Payment",
+            "description": "Reliable and protected methods"
+          }
+        }
+      }
     },
     "initial": {
       "header": {

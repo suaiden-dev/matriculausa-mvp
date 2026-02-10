@@ -74,7 +74,34 @@
       "total": "Total:",
       "step": "Paso",
       "optional": "Opcional",
-      "rights": "Todos los derechos reservados."
+      "rights": "Todos los derechos reservados.",
+      "clients": {
+        "title": "Nuestros Clientes",
+        "description": "Estudiantes que realizaron el sueño de estudiar en los Estados Unidos",
+        "client": "Cliente"
+      },
+      "conversion": {
+        "title": "¿Listo para comenzar tu proceso?",
+        "description": "Haz clic en el botón de abajo para iniciar tu viaje a los Estados Unidos con todo el soporte necesario.",
+        "buttonText": "Comenzar Ahora",
+        "redirectAuthenticated": "Serás redirigido al área del estudiante para realizar el pago del proceso de selección.",
+        "redirectAnonymous": "Serás redirigido para crear tu cuenta. ¡Es rápido y gratuito!",
+        "referralBadge": "Código de Vendedor Aplicado",
+        "benefits": {
+          "transparent": {
+            "title": "Proceso Transparente",
+            "description": "Todos los costos detallados desde el principio"
+          },
+          "support": {
+            "title": "Soporte Completo",
+            "description": "Seguimiento en todas las etapas"
+          },
+          "secure": {
+            "title": "Pago Seguro",
+            "description": "Métodos confiables y protegidos"
+          }
+        }
+      }
     },
     "initial": {
       "header": {

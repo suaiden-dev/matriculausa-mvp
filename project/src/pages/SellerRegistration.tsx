@@ -591,7 +591,7 @@ const SellerRegistration: React.FC<SellerRegistrationProps> = () => {
               <div className="text-center">
                 <p className="text-sm text-slate-500">
                   Already have an account?{' '}
-                  <Link to="/login" className="font-bold text-[#D0151C] hover:text-[#B01218] transition-colors">
+                  <Link to={`/login${location.search}`} className="font-bold text-[#D0151C] hover:text-[#B01218] transition-colors">
                     Sign in
                   </Link>
                 </p>
@@ -627,7 +627,7 @@ const SellerRegistration: React.FC<SellerRegistrationProps> = () => {
               <button
                 onClick={() => {
                   setShowVerificationModal(false);
-                  navigate('/login');
+                  navigate(`/login${location.search}`);
                 }}
                 className="w-full bg-gray-200 text-gray-800 py-2 px-4 rounded-lg hover:bg-gray-300 transition-colors"
               >

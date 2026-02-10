@@ -1,5 +1,6 @@
 import { DollarSign, Users, AlertCircle } from "lucide-react";
 import { useTranslation } from "react-i18next";
+import ConversionButton from "./ConversionButton";
 
 interface ProcessFundsSummaryProps {
   description: string;
@@ -7,6 +8,13 @@ interface ProcessFundsSummaryProps {
   dependentGradient: string;
   noteText: string;
   noteBorderColor: string;
+  conversionProps?: {
+    title: string;
+    description: string;
+    buttonText: string;
+    gradientClass: string;
+    variant?: 'full' | 'minimal' | 'banner';
+  };
 }
 
 const ProcessFundsSummary = ({
@@ -15,6 +23,7 @@ const ProcessFundsSummary = ({
   dependentGradient,
   noteText,
   noteBorderColor,
+  conversionProps,
 }: ProcessFundsSummaryProps) => {
   const { t } = useTranslation();
 
@@ -73,6 +82,15 @@ const ProcessFundsSummary = ({
             </p>
           </div>
         </div>
+
+        {conversionProps && (
+          <div className="mt-8">
+            <ConversionButton 
+              {...conversionProps} 
+              variant={conversionProps.variant || 'minimal'} 
+            />
+          </div>
+        )}
       </div>
     </section>
   );

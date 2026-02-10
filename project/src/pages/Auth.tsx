@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { Link, useNavigate, useLocation } from 'react-router-dom';
+import { Link, useLocation } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import { Mail, Lock, User, Building, GraduationCap, CheckCircle, X, Gift, ChevronDown } from 'lucide-react';
 import { useAuth } from '../hooks/useAuth';
@@ -55,7 +55,7 @@ const Auth: React.FC<AuthProps> = ({ mode }) => {
   
   const { login, register } = useAuth();
 
-  const navigate = useNavigate();
+  // const navigate = useNavigate(); (removido por não ser utilizado e causar warning)
 
   // Global scroll-to-top on login/register page load
   useEffect(() => {
@@ -605,7 +605,7 @@ const Auth: React.FC<AuthProps> = ({ mode }) => {
             </p>
             <p className="mt-4 text-sm text-slate-500 px-4">
               {t('authPage.login.noAccount')}{' '}
-              <Link to="/register" className="font-bold text-[#D0151C] hover:text-[#B01218] transition-colors">
+              <Link to={`/register${location.search}`} className="font-bold text-[#D0151C] hover:text-[#B01218] transition-colors">
                 {t('authPage.login.signUpHere')}
               </Link>
             </p>
@@ -713,7 +713,7 @@ const Auth: React.FC<AuthProps> = ({ mode }) => {
           </p>
           <p className="mt-4 text-sm text-slate-500 px-4">
             {t('authPage.register.hasAccount')}{' '}
-            <Link to="/login" className="font-bold text-[#D0151C] hover:text-[#B01218] transition-colors">
+            <Link to={`/login${location.search}`} className="font-bold text-[#D0151C] hover:text-[#B01218] transition-colors">
               {t('authPage.register.signInHere')}
             </Link>
             </p>

@@ -2,7 +2,7 @@ import React, { useState, useEffect, useRef, useMemo } from 'react';
 import { Search, DollarSign, Award, Clock, GraduationCap, Star, CheckCircle, Building, Users, ArrowRight, AlertTriangle, Monitor, MapPin, Briefcase, Globe, Eye, Lock } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 import { useAuth } from '../hooks/useAuth';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, useLocation } from 'react-router-dom';
 import { useScholarships } from '../hooks/useScholarships';
 import type { Scholarship } from '../types';
 import { supabase } from '../lib/supabase';
@@ -209,6 +209,7 @@ const Scholarships: React.FC = () => {
 
   const { refetchUserProfile } = useAuth();
   const navigate = useNavigate();
+  const location = useLocation();
   
   
   // Check if user needs to pay selection process fee (only for students)
@@ -954,7 +955,7 @@ const Scholarships: React.FC = () => {
                           {!isAuthenticated ? (
                             <button
                               className="flex-1 bg-gradient-to-r from-[#05294E] via-[#05294E] to-slate-700 text-white py-3 sm:py-4 px-4 sm:px-6 rounded-2xl font-black text-xs sm:text-sm uppercase tracking-widest flex items-center justify-center group-hover:shadow-2xl transform group-hover:scale-105 transition-all duration-300 hover:from-[#041f3a] hover:to-slate-600 relative overflow-hidden active:scale-95 focus:outline-none focus:ring-2 focus:ring-[#05294E]/50 focus:ring-offset-2"
-                              onClick={() => navigate('/login')}
+                              onClick={() => navigate(`/login${location.search}`)}
                               aria-label={`Apply for ${scholarship.title} scholarship - Login required`}
                             >
                               <div className="absolute inset-0 bg-gradient-to-r from-white/0 via-white/25 to-white/0 transform -skew-x-12 -translate-x-full group-hover:translate-x-full transition-transform duration-1000"></div>
@@ -1231,7 +1232,7 @@ const Scholarships: React.FC = () => {
                           {!isAuthenticated ? (
                             <button
                               className="flex-1 bg-gradient-to-r from-[#05294E] via-[#05294E] to-slate-700 text-white py-3 sm:py-4 px-4 sm:px-6 rounded-2xl font-black text-xs sm:text-sm uppercase tracking-widest flex items-center justify-center group-hover:shadow-2xl transform group-hover:scale-105 transition-all duration-300 hover:from-[#041f3a] hover:to-slate-600 relative overflow-hidden active:scale-95 focus:outline-none focus:ring-2 focus:ring-[#05294E]/50 focus:ring-offset-2"
-                              onClick={() => navigate('/login')}
+                              onClick={() => navigate(`/login${location.search}`)}
                               aria-label={`Apply for ${scholarship.title} scholarship - Login required`}
                             >
                               <div className="absolute inset-0 bg-gradient-to-r from-white/0 via-white/25 to-white/0 transform -skew-x-12 -translate-x-full group-hover:translate-x-full transition-transform duration-1000"></div>

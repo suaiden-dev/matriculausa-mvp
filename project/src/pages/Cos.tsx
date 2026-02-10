@@ -84,6 +84,13 @@ const Cos = () => {
         title={t('processPages.cos.steps.title')}
         description={t('processPages.cos.steps.description')}
         steps={COS_STEPS}
+        conversionProps={{
+          title: t('processPages.common.conversion.afterSteps.title'),
+          description: t('processPages.common.conversion.afterSteps.description'),
+          buttonText: t('processPages.common.conversion.afterSteps.buttonText'),
+          gradientClass: "gradient-primary",
+          variant: "banner"
+        }}
       />
       <ProcessFundsSummary 
         description={t('processPages.cos.funds.description')}
@@ -91,7 +98,15 @@ const Cos = () => {
         dependentGradient="gradient-teal-purple"
         noteText={t('processPages.cos.funds.note')}
         noteBorderColor="border-secondary"
+        conversionProps={{
+          title: t('processPages.common.conversion.afterFunds.title'),
+          description: t('processPages.common.conversion.afterFunds.description'),
+          buttonText: t('processPages.common.conversion.afterFunds.buttonText'),
+          gradientClass: "gradient-primary",
+          variant: "minimal"
+        }}
       />
+
       <ProcessValuesSummary 
         description={t('processPages.cos.values.description')}
         values={COS_VALUES}

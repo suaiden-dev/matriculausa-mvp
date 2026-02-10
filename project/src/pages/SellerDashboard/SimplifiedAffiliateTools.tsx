@@ -194,7 +194,7 @@ const SimplifiedAffiliateTools: React.FC = () => {
                 url={`${origin}/cos?ref=${sellerCode}`}
               />
               <LandingPageLinkItem 
-                title="I-20 Transfer"
+                title="Transfer"
                 description="For students transferring schools"
                 url={`${origin}/transfer?ref=${sellerCode}`}
               />

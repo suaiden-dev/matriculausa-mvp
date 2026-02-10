@@ -56,7 +56,44 @@
       "total": "Total:",
       "step": "Etapa",
       "optional": "Opcional",
-      "rights": "Todos os direitos reservados."
+      "rights": "Todos os direitos reservados.",
+      "clients": {
+        "title": "Nossos Clientes",
+        "description": "Alunos que realizaram o sonho de estudar nos Estados Unidos",
+        "client": "Cliente"
+      },
+      "conversion": {
+        "title": "Pronto para começar seu processo?",
+        "description": "Clique no botão abaixo para iniciar sua jornada rumo aos Estados Unidos com todo o suporte necessário.",
+        "buttonText": "Começar Agora",
+        "redirectAuthenticated": "Você será direcionado para a área do estudante para realizar o pagamento do processo seletivo.",
+        "redirectAnonymous": "Você será direcionado para criar sua conta. É rápido e gratuito!",
+        "referralBadge": "Código de Vendedor Aplicado",
+        "afterSteps": {
+          "title": "Pronto para dar o primeiro passo?",
+          "description": "Agora que você conhece as etapas, inicie sua jornada hoje mesmo.",
+          "buttonText": "Iniciar Processo"
+        },
+        "afterFunds": {
+          "title": "Atende aos requisitos financeiros?",
+          "description": "Garanta sua vaga e comece a busca pelas melhores bolsas agora.",
+          "buttonText": "Garantir minha Vaga"
+        },
+        "benefits": {
+          "transparent": {
+            "title": "Processo Transparente",
+            "description": "Todos os custos detalhados desde o início"
+          },
+          "support": {
+            "title": "Suporte Completo",
+            "description": "Acompanhamento em todas as etapas"
+          },
+          "secure": {
+            "title": "Pagamento Seguro",
+            "description": "Métodos confiáveis e protegidos"
+          }
+        }
+      }
     },
     "initial": {
       "header": {

@@ -1,5 +1,6 @@
 import { ReactNode } from "react";
 import ProcessStep from "./ProcessStep";
+import ConversionButton from "./ConversionButton";
 
 interface Step {
   step: number;
@@ -17,12 +18,20 @@ interface ProcessStepsSectionProps {
   title: string;
   description: string;
   steps: Step[];
+  conversionProps?: {
+    title: string;
+    description: string;
+    buttonText: string;
+    gradientClass: string;
+    variant?: 'full' | 'minimal' | 'banner';
+  };
 }
 
 const ProcessStepsSection = ({
   title,
   description,
   steps,
+  conversionProps,
 }: ProcessStepsSectionProps) => {
   return (
     <section className="py-16 md:py-24 bg-background">
@@ -49,6 +58,15 @@ const ProcessStepsSection = ({
             </div>
           ))}
         </div>
+
+        {conversionProps && (
+          <div className="mt-4">
+            <ConversionButton 
+              {...conversionProps} 
+              variant={conversionProps.variant || 'banner'} 
+            />
+          </div>
+        )}
       </div>
     </section>
   );

@@ -160,7 +160,7 @@ const StudentDashboardLayout: React.FC<StudentDashboardLayoutProps> = ({
   }
 
   const sidebarItems = [
-    { id: 'overview', label: t('studentDashboard.sidebar.overview'), icon: BarChart3, path: '/student/dashboard' },
+    { id: 'overview', label: t('studentDashboard.sidebar.overview'), icon: BarChart3, path: '/student/dashboard/overview' },
     { id: 'scholarships', label: t('studentDashboard.sidebar.browseScholarships'), icon: Award, path: '/student/dashboard/scholarships' },
     { id: 'cart', label: t('studentDashboard.sidebar.selectedScholarships'), icon: GraduationCap, path: '/student/dashboard/cart' },
     { id: 'applications', label: t('studentDashboard.sidebar.myApplications'), icon: FileText, path: '/student/dashboard/applications' },

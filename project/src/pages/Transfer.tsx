@@ -74,6 +74,13 @@ const Transfer = () => {
         title={t('processPages.transfer.steps.title')}
         description={t('processPages.transfer.steps.description')}
         steps={TRANSFER_STEPS}
+        conversionProps={{
+          title: t('processPages.common.conversion.afterSteps.title'),
+          description: t('processPages.common.conversion.afterSteps.description'),
+          buttonText: t('processPages.common.conversion.afterSteps.buttonText'),
+          gradientClass: "gradient-teal-purple",
+          variant: "banner"
+        }}
       />
       <ProcessFundsSummary 
         description={t('processPages.transfer.funds.description')}
@@ -81,12 +88,23 @@ const Transfer = () => {
         dependentGradient="gradient-primary"
         noteText={t('processPages.transfer.funds.note')}
         noteBorderColor="border-teal"
+        conversionProps={{
+          title: t('processPages.common.conversion.afterFunds.title'),
+          description: t('processPages.common.conversion.afterFunds.description'),
+          buttonText: t('processPages.common.conversion.afterFunds.buttonText'),
+          gradientClass: "gradient-teal-purple",
+          variant: "minimal"
+        }}
       />
+
       <ProcessValuesSummary 
         description={t('processPages.transfer.values.description')}
         values={TRANSFER_VALUES}
       />
-      <ConversionButton showReferralBadge={!!(isValid && referralCode)} />
+      <ConversionButton 
+        showReferralBadge={!!(isValid && referralCode)} 
+        gradientClass="gradient-teal-purple"
+      />
       <ProcessFooter gradientClass="gradient-teal-purple" />
     </div>
   );
