@@ -7,7 +7,6 @@ import ProcessFundsSummary from "@/components/shared/ProcessFundsSummary";
 import ProcessValuesSummary from "@/components/shared/ProcessValuesSummary";
 import ClientsSection from "@/components/shared/ClientsSection";
 import ConversionButton from "@/components/shared/ConversionButton";
-import ProcessFooter from "@/components/shared/ProcessFooter";
 import { useReferralCapture } from "@/hooks/useReferralCapture";
 
 const Transfer = () => {
@@ -105,7 +104,6 @@ const Transfer = () => {
         showReferralBadge={!!(isValid && referralCode)} 
         gradientClass="gradient-teal-purple"
       />
-      <ProcessFooter gradientClass="gradient-teal-purple" />
     </div>
   );
 };
