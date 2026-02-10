@@ -1504,7 +1504,19 @@
       "payApplicationFee": "Pague a Taxa de Matrícula para garantir a sua bolsa.",
       "payScholarshipFee": "Pague a Taxa de Bolsa para confirmar sua candidatura de bolsa.",
       "payI20Fee": "Pague a Taxa de Controle I-20 para iniciar seu processo de validação I-20 e documentos.",
-      "daysRemaining": "Você tem 10 dias após a taxa de bolsa."
+      "daysRemaining": "Você tem 10 dias após a taxa de bolsa.",
+      "onboarding": {
+        "payFee": "Pagar Taxa de Seleção",
+        "payFeeDesc": "Inicie seu processo pagando a taxa de seleção.",
+        "chooseScholarships": "Escolher Bolsas",
+        "chooseScholarshipsDesc": "Selecione as universidades e bolsas do seu interesse.",
+        "uploadDocuments": "Enviar Documentos",
+        "uploadDocumentsDesc": "Envie seu passaporte, diploma e comprovante de fundos.",
+        "underReview": "Em Revisão",
+        "underReviewDesc": "Estamos analisando seus documentos. Prazo de 48h.",
+        "completed": "Processo de Seleção Concluído",
+        "completedDesc": "Tudo pronto! Siga para a próxima etapa."
+      }
     },
     "stepByStepTour": {
       "title": "Tour Passo a Passo",

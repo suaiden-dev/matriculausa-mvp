@@ -14,8 +14,7 @@ import {
   CreditCard,
   Tag,
   Route,
-  XCircle,
-  PlayCircle
+  XCircle
 } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 import { useFeeConfig } from '../../hooks/useFeeConfig';
@@ -28,7 +27,7 @@ import { useStepByStepGuide } from '../../hooks/useStepByStepGuide';
 import { supabase } from '../../lib/supabase';
 import { ProgressBar } from '../../components/ProgressBar';
 import StepByStepGuide from '../../components/OnboardingTour/StepByStepGuide';
-import ContinueApplicationButton from '../../components/ContinueApplicationButton';
+
 import { getGrossPaidAmounts } from '../../utils/paymentConverter';
 import './Overview.css'; // Adicionar um arquivo de estilos dedicado para padronização visual
 
@@ -405,147 +404,91 @@ const Overview: React.FC<OverviewProps> = ({
   ];
 
   // Lógica da barra de progresso dinâmica
-  let steps = [];
-  if (!userProfile?.has_paid_selection_process_fee) {
-    // Só pagou (ou está pagando) a Selection Process Fee
-    steps = [
-      {
+  const getStep1State = () => {
+    if (!userProfile?.has_paid_selection_process_fee) {
+      return {
         label: t('studentDashboard.progressBar.selectionProcessFee'),
         description: t('studentDashboard.progressBar.payApplicationFee'),
         completed: false,
-        current: true,
-      },
-      {
-        label: t('studentDashboard.progressBar.applicationFee'),
-        description: t('studentDashboard.progressBar.payApplicationFee'),
-        completed: false,
-        current: false,
-      },
-      {
-        label: t('studentDashboard.progressBar.scholarshipFee'),
-        description: t('studentDashboard.progressBar.payScholarshipFee'),
-        completed: false,
-        current: false,
-      },
-      {
-        label: t('studentDashboard.progressBar.i20ControlFee'),
-        description: t('studentDashboard.progressBar.payI20Fee'),
-        completed: false,
-        current: false,
-      },
-    ];
-  } else if (!hasApplicationFeePaid) {
-    // Pagou só a Selection Process Fee
-    steps = [
-      {
-        label: t('studentDashboard.progressBar.selectionProcessFee'),
+        current: true
+      };
+    }
+    
+    if (userProfile?.onboarding_completed) {
+      return {
+        label: t('studentDashboard.progressBar.onboarding.completed'),
         description: t('studentDashboard.progressBar.completed'),
         completed: true,
-        current: false,
-      },
-      {
-        label: t('studentDashboard.progressBar.applicationFee'),
-        description: t('studentDashboard.progressBar.payApplicationFee'),
-        completed: false,
-        current: true,
-      },
-      {
-        label: t('studentDashboard.progressBar.scholarshipFee'),
-        description: t('studentDashboard.progressBar.payScholarshipFee'),
-        completed: false,
-        current: false,
-      },
-      {
-        label: t('studentDashboard.progressBar.i20ControlFee'),
-        description: t('studentDashboard.progressBar.payI20Fee'),
-        completed: false,
-        current: false,
-      },
-    ];
-  } else if (!hasScholarshipFeePaid) {
-    // Pagou Application Fee
-    steps = [
-      {
-        label: t('studentDashboard.progressBar.selectionProcessFee'),
-        description: t('studentDashboard.progressBar.completed'),
-        completed: true,
-        current: false,
-      },
-      {
-        label: t('studentDashboard.progressBar.applicationFee'),
-        description: t('studentDashboard.progressBar.completed'),
-        completed: true,
-        current: false,
-      },
-      {
-        label: t('studentDashboard.progressBar.scholarshipFee'),
-        description: t('studentDashboard.progressBar.payScholarshipFee'),
-        completed: false,
-        current: true,
-      },
-      {
-        label: t('studentDashboard.progressBar.i20ControlFee'),
-        description: t('studentDashboard.progressBar.payI20Fee'),
-        completed: false,
-        current: false,
-      },
-    ];
-  } else if (!userProfile?.has_paid_i20_control_fee) {
-    // Pagou Scholarship Fee, mas não I-20 Control Fee
-    steps = [
-      {
-        label: t('studentDashboard.progressBar.selectionProcessFee'),
-        description: t('studentDashboard.progressBar.completed'),
-        completed: true,
-        current: false,
-      },
-      {
-        label: t('studentDashboard.progressBar.applicationFee'),
-        description: t('studentDashboard.progressBar.completed'),
-        completed: true,
-        current: false,
-      },
-      {
-        label: t('studentDashboard.progressBar.scholarshipFee'),
-        description: t('studentDashboard.progressBar.completed'),
-        completed: true,
-        current: false,
-      },
-      {
-        label: t('studentDashboard.progressBar.i20ControlFee'),
-        description: t('studentDashboard.progressBar.payI20Fee'),
-        completed: false,
-        current: true,
-      },
-    ];
-  } else {
-    // Pagou tudo
-    steps = [
-      {
-        label: t('studentDashboard.progressBar.selectionProcessFee'),
-        description: t('studentDashboard.progressBar.completed'),
-        completed: true,
-        current: false,
-      },
-      {
-        label: t('studentDashboard.progressBar.applicationFee'),
-        description: t('studentDashboard.progressBar.completed'),
-        completed: true,
-        current: false,
-      },
-      {
-        label: t('studentDashboard.progressBar.scholarshipFee'),
-        description: t('studentDashboard.progressBar.completed'),
-        completed: true,
-        current: false,
-      },
-      {
-        label: t('studentDashboard.progressBar.i20ControlFee'),
-        description: t('studentDashboard.progressBar.completed'),
-        completed: true,
-        current: false,
-      },
-    ];
+        current: false
+      };
+    }
+
+    // Se pagou mas não completou onboarding, verificar step atual
+    let label = t('studentDashboard.progressBar.selectionProcessFee');
+    let description = 'Complete seu onboarding';
+    
+    if (savedOnboardingStep === 'scholarship_selection' || savedOnboardingStep === 'scholarship_review' || savedOnboardingStep === 'process_type') {
+      label = t('studentDashboard.progressBar.onboarding.chooseScholarships');
+      description = t('studentDashboard.progressBar.onboarding.chooseScholarshipsDesc');
+    } else if (savedOnboardingStep === 'documents_upload') {
+      label = t('studentDashboard.progressBar.onboarding.uploadDocuments');
+      description = t('studentDashboard.progressBar.onboarding.uploadDocumentsDesc');
+    } else if (savedOnboardingStep === 'waiting_approval') {
+      label = t('studentDashboard.progressBar.onboarding.underReview');
+      description = t('studentDashboard.progressBar.onboarding.underReviewDesc');
+    }
+
+    return {
+      label,
+      description,
+      completed: false,
+      current: true
+    };
+  };
+
+  const step1 = getStep1State();
+  
+  let steps = [
+    step1,
+    {
+      label: t('studentDashboard.progressBar.applicationFee'),
+      description: t('studentDashboard.progressBar.payApplicationFee'),
+      completed: false,
+      current: false,
+    },
+    {
+      label: t('studentDashboard.progressBar.scholarshipFee'),
+      description: t('studentDashboard.progressBar.payScholarshipFee'),
+      completed: false,
+      current: false,
+    },
+    {
+      label: t('studentDashboard.progressBar.i20ControlFee'),
+      description: t('studentDashboard.progressBar.payI20Fee'),
+      completed: false,
+      current: false,
+    },
+  ];
+
+  // Ajustar status dos passos subsequentes baseado no primeiro
+  if (step1.completed) {
+    if (!hasApplicationFeePaid) {
+      steps[1].current = true;
+    } else if (!hasScholarshipFeePaid) {
+      steps[1].completed = true;
+      steps[2].current = true;
+    } else if (!userProfile?.has_paid_i20_control_fee) {
+      steps[1].completed = true;
+      steps[2].completed = true;
+      steps[3].current = true;
+    } else {
+      steps[1].completed = true;
+      steps[2].completed = true;
+      steps[3].completed = true;
+    }
+  } else if (userProfile?.has_paid_selection_process_fee) {
+    // Se pagou a taxa mas ainda está no onboarding, o passo 1 é atual (já definido no getStep1State)
+    // Mas os outros passos já não podem ser "current"
   }
 
   const allCompleted = steps.every(step => step.completed);
@@ -578,6 +521,23 @@ const Overview: React.FC<OverviewProps> = ({
             {allCompleted ? t('studentDashboard.progressBar.allStepsCompleted') : t('studentDashboard.progressBar.title')}
           </div>
           <div className="mb-2 md:mb-4">
+            {/* Status do Onboarding acima da trilha - Layout Pílula Integrado */}
+            {hasSavedOnboardingStep && (
+              <div className="flex items-center justify-center gap-2 md:gap-4 mb-4 animate-fade-in bg-white/5 backdrop-blur-xl border border-white/10 rounded-full py-2 px-4 md:px-6 w-fit mx-auto shadow-[0_10px_30px_rgba(0,0,0,0.2)] ring-1 ring-white/10">
+                <div className="relative flex items-center">
+                  <span className="bg-amber-400 text-black text-[9px] md:text-[10px] font-black px-2 md:px-3 py-0.5 rounded-full uppercase tracking-tighter shadow-lg shadow-amber-400/20">
+                    Ação Necessária
+                  </span>
+                  <span className="absolute -top-0.5 -right-0.5 w-2.5 h-2.5 bg-amber-400 rounded-full animate-ping opacity-75" />
+                </div>
+                <div className="w-px h-4 bg-white/20 hidden xs:block" />
+                <p className="text-white text-[10px] md:text-sm font-bold tracking-tight opacity-90 drop-shadow-md">
+                  {currentStepLabel 
+                    ? `Você parou em: ${currentStepLabel}`
+                    : 'Retome sua candidatura agora mesmo'}
+                </p>
+              </div>
+            )}
             <ProgressBar 
               steps={steps} 
               feeValues={dynamicFeeValues}
@@ -666,35 +626,20 @@ const Overview: React.FC<OverviewProps> = ({
             </div>
           )}
 
-          {/* Card: Continue Onboarding - Mostrar apenas se já começou onboarding (tem step salvo) */}
+          {/* Botão de Continuar Onboarding - Estilo Vidro Simplificado */}
           {hasSavedOnboardingStep && (
-            <div className="bg-white/10 backdrop-blur-sm border border-white/30 rounded-xl p-4 sm:p-6 mb-4">
-              <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between space-y-3 sm:space-y-0 mb-3 sm:mb-4">
-                <div className="flex items-center">
-                  <PlayCircle className="h-4 w-4 sm:h-5 sm:w-5 text-white mr-2 sm:mr-3" />
-                  <div>
-                    <h3 className="text-base sm:text-lg md:text-xl font-bold text-white">
-                      Continue Onboarding
-                    </h3>
-                    <p className="text-blue-100 text-xs sm:text-sm">
-                      {currentStepLabel 
-                        ? `You were at: ${currentStepLabel}`
-                        : 'Resume your application process'}
-                    </p>
-                  </div>
-                </div>
-              </div>
-              <p className="text-blue-100 text-xs sm:text-sm mb-3 sm:mb-4 leading-relaxed">
-                Pick up where you left off and complete your scholarship application process.
-              </p>
+            <button
+              onClick={() => navigate(`/student/onboarding?step=${savedOnboardingStep}`)}
+              className="max-w-md mx-auto w-full group relative overflow-hidden bg-white/10 backdrop-blur-xl border border-white/20 rounded-2xl p-4 transition-all duration-500 hover:bg-white/20 hover:border-white/40 hover:scale-[1.05] active:scale-[0.95] shadow-[0_20px_40px_rgba(0,0,0,0.2)] flex items-center justify-center text-center"
+            >
+              {/* Background Glows animadas */}
+              <div className="absolute top-0 right-0 -mr-16 -mt-16 w-48 h-48 bg-blue-500/20 rounded-full blur-[80px] group-hover:bg-blue-400/30 transition-colors duration-700" />
+              <div className="absolute bottom-0 left-0 -ml-16 -mb-16 w-32 h-32 bg-indigo-500/15 rounded-full blur-[60px] group-hover:bg-indigo-400/25 transition-colors duration-700" />
               
-              {/* Botão animado para continuar onboarding */}
-              <div className="flex justify-start">
-                <ContinueApplicationButton
-                onClick={() => navigate(`/student/onboarding?step=${savedOnboardingStep}`)}
-                />
-              </div>
-            </div>
+              <h3 className="relative text-lg md:text-xl font-black text-white uppercase tracking-widest leading-tight">
+                Continuar Jornada
+              </h3>
+            </button>
           )}
           {/* Removed three unused mini-cards (Discover/Apply/Track) as requested */}
         </div>

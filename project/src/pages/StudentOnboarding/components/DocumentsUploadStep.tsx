@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { Upload, FileText, CheckCircle, Loader2, X, Clock, Plus, DollarSign, ChevronRight, AlertCircle } from 'lucide-react';
+import { Upload, FileText, CheckCircle, Loader2, X, Clock, Plus, DollarSign, ChevronRight } from 'lucide-react';
 import { useAuth } from '../../../hooks/useAuth';
 import { supabase } from '../../../lib/supabase';
 import { useTranslation } from 'react-i18next';
@@ -16,7 +16,7 @@ const DOCUMENT_TYPES = [
 export const DocumentsUploadStep: React.FC<StepProps> = ({ onNext }) => {
   const { t } = useTranslation();
   const { user, userProfile, refetchUserProfile } = useAuth();
-  const { clearCart, cart, fetchCart } = useCartStore();
+  const { clearCart, fetchCart } = useCartStore();
   const [files, setFiles] = useState<Record<string, File | File[] | null>>({
     passport: null,
     diploma: null,
@@ -30,8 +30,8 @@ export const DocumentsUploadStep: React.FC<StepProps> = ({ onNext }) => {
   const [showManualReviewMessage, setShowManualReviewMessage] = useState(false);
   const [isLocked, setIsLocked] = useState(false);
 
-  // Obter process type do localStorage ou userProfile
-  const processType = userProfile?.process_type || localStorage.getItem('studentProcessType') || 'initial';
+  // Obter process type do localStorage
+  const processType = localStorage.getItem('studentProcessType') || 'initial';
 
   // Verificar se já passou pela review (tem documentos enviados ou aprovados)
   useEffect(() => {
@@ -688,10 +688,10 @@ export const DocumentsUploadStep: React.FC<StepProps> = ({ onNext }) => {
   return (
     <div className="space-y-6 pb-24 sm:pb-6">
       <div className="text-center">
-        <h2 className="text-2xl font-bold text-gray-900 mb-2">
+        <h2 className="text-2xl font-bold text-white mb-2">
           {t('studentDashboard.documentsAndScholarshipChoice.step2Title')}
         </h2>
-        <p className="text-gray-600 mb-4">
+        <p className="text-white/70 mb-4">
           {t('studentDashboard.documentsAndScholarshipChoice.step2Description')}
         </p>
         

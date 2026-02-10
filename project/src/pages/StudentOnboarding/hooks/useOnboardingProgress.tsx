@@ -8,7 +8,7 @@ const ONBOARDING_STEP_KEY = 'onboarding_current_step';
 
 export const useOnboardingProgress = () => {
   const { user, userProfile } = useAuth();
-  const { cart, fetchCart } = useCartStore();
+  const { fetchCart } = useCartStore();
   
   // Função para obter step salvo (apenas localStorage por enquanto)
   const getSavedStep = useCallback((): OnboardingStep | null => {
@@ -80,16 +80,25 @@ export const useOnboardingProgress = () => {
         const { cart: currentCart } = useCartStore.getState();
         const hasCartItems = currentCart.length > 0;
         
-        scholarshipsSelected = hasCartItems || (applications && applications.length > 0);
+        scholarshipsSelected = hasCartItems || (applications && applications.length > 0) || !!userProfile.selected_scholarship_id;
       }
 
-      // 3. Verificar Process Type - só considerar se realmente há aplicações criadas
+      // 3. Verificar Process Type - considerar aplicações OU localStorage (fallback)
+      const storedProcessType = window.localStorage.getItem('studentProcessType');
       const processTypeSelected = 
-        applications && applications.length > 0 && !!applications[0].student_process_type;
+        (applications && applications.length > 0 && !!applications[0].student_process_type) ||
+        (!!storedProcessType && ['initial', 'transfer', 'change_of_status'].includes(storedProcessType)) ||
+        (userProfile.documents_uploaded || false);
 
       // 4. Verificar Documentos
       const documentsUploaded = userProfile.documents_uploaded || false;
       const documentsApproved = userProfile.documents_status === 'approved';
+
+      // Se documentos foram enviados, assumir que as etapas anteriores foram concluídas
+      // Isso evita regressão de estado em caso de falha na leitura de aplicações/carrinho
+      if (documentsUploaded) {
+        scholarshipsSelected = true;
+      }
 
       // 5. Verificar Application Fee
       const { data: appFeeApplications } = await supabase

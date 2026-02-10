@@ -65,7 +65,7 @@ const MobileTermsView: React.FC<{
   activeTerm: Term | null;
   loadingTerms: boolean;
   hasScrolledToBottom: boolean;
-  termsContentRef: React.RefObject<HTMLDivElement | null>;
+  termsContentRef: React.RefObject<HTMLDivElement>;
   handleTermsScroll: () => void;
   checkIfContentNeedsScroll: () => boolean;
   handleTermsAccept: () => void;
@@ -464,11 +464,11 @@ export const SelectionFeeStep: React.FC<StepProps> = ({ onNext }) => {
   }, [user?.id, hasUsedReferralCode, activeDiscount, t]);
 
   // Check if user already used referral code
+  /* 
   const checkReferralCodeUsage = useCallback(async () => {
     if (!user?.id) return;
     
     try {
-      // Se já tem activeDiscount, não bloquear
       if (activeDiscount?.has_discount) {
         return;
       }
@@ -480,13 +480,13 @@ export const SelectionFeeStep: React.FC<StepProps> = ({ onNext }) => {
         .limit(1);
 
       if (!error && data && data.length > 0) {
-        // Usuário já usou código, mas não bloquear se tem activeDiscount
         return;
       }
     } catch (error) {
       console.error('Error checking referral code usage:', error);
     }
   }, [user?.id, activeDiscount]);
+  */
 
   // Verificar se usuário tem seller_referral_code
   const hasSellerReferralCode = userProfile?.seller_referral_code && userProfile.seller_referral_code.trim() !== '';
@@ -1304,64 +1304,71 @@ export const SelectionFeeStep: React.FC<StepProps> = ({ onNext }) => {
 
   if (hasPaid) {
     return (
-      <div className="text-center py-8">
-        <CheckCircle className="w-16 h-16 text-green-500 mx-auto mb-4" />
-        <h3 className="text-xl font-semibold text-gray-900 mb-2">Selection Fee Paid!</h3>
-        <p className="text-gray-600 mb-6">You've already paid the selection process fee.</p>
+      <div className="text-center py-12 bg-white/5 backdrop-blur-xl border border-white/10 rounded-3xl p-8 shadow-2xl">
+        <div className="w-20 h-20 bg-emerald-500/20 rounded-full flex items-center justify-center mx-auto mb-6 border border-emerald-500/30">
+          <CheckCircle className="w-12 h-12 text-emerald-400" />
+        </div>
+        <h3 className="text-3xl font-black text-white mb-3 uppercase tracking-tight">Taxa de Seleção Paga!</h3>
+        <p className="text-white/60 mb-8 font-medium">Você já realizou o pagamento da taxa do processo de seleção.</p>
         <button
           onClick={onNext}
-          className="w-full bg-blue-600 text-white py-3 px-6 rounded-lg hover:bg-blue-700 transition-colors font-medium"
+          className="w-full max-w-xs bg-blue-600 text-white py-4 px-8 rounded-xl hover:bg-blue-700 transition-all font-bold uppercase tracking-widest shadow-lg shadow-blue-500/20 hover:scale-105 active:scale-95"
         >
-          Continue
+          Continuar
         </button>
       </div>
     );
   }
 
   return (
-    <div className="space-y-8 sm:space-y-10">
+    <div className="space-y-8 sm:space-y-10 pb-12">
       {/* Payment Section */}
       <div className="space-y-6">
-        <div>
-          <h2 className="text-2xl sm:text-3xl font-bold text-gray-900 mb-2">
-            Pay Selection Process Fee
+        <div className="text-center md:text-left">
+          <h2 className="text-3xl md:text-5xl font-black text-white mb-3 uppercase tracking-tighter">
+            Pagar Taxa de Seleção
           </h2>
-          <p className="text-base sm:text-lg text-gray-600">
-            Get started by paying the selection process fee
+          <p className="text-lg md:text-xl text-white/60 font-medium">
+            Inicie sua jornada pagando a taxa do processo de seleção
           </p>
         </div>
 
-        <div className="bg-white border-2 border-gray-200 rounded-xl p-6 sm:p-8 shadow-sm">
-          <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between mb-6 space-y-4 sm:space-y-0">
-            <div className="flex items-center space-x-3">
-              <div className="p-3 bg-blue-100 rounded-lg">
-                <CreditCard className="w-6 h-6 sm:w-7 sm:h-7 text-blue-600" />
+        <div className="bg-white border border-gray-100 rounded-[2.5rem] p-6 md:p-10 shadow-2xl relative overflow-hidden">
+          <div className="absolute top-0 right-0 w-64 h-64 bg-blue-500/5 rounded-full blur-[80px] -mr-32 -mt-32 pointer-events-none" />
+          
+          <div className="flex flex-col md:flex-row md:items-center justify-between mb-8 space-y-6 md:space-y-0 relative z-10">
+            <div className="flex items-center space-x-4">
+              <div className="w-16 h-16 bg-blue-500/5 rounded-2xl flex items-center justify-center border border-gray-100 shadow-inner">
+                <CreditCard className="w-8 h-8 text-blue-500" />
               </div>
               <div>
-                <h3 className="text-lg sm:text-xl font-semibold text-gray-900">Selection Process Fee</h3>
-                <p className="text-sm text-gray-500 mt-1">One-time payment</p>
+                <h3 className="text-2xl font-black text-gray-900 uppercase tracking-tight">Taxa de Seleção</h3>
+                <p className="text-xs font-bold text-gray-400 uppercase tracking-widest mt-1">Pagamento Único</p>
               </div>
             </div>
-            <div className="text-left sm:text-right">
+            <div className="text-left md:text-right">
               {computedBasePrice < selectionFeeAmount ? (
-                <div>
-                  <div className="text-lg sm:text-xl line-through text-gray-400">{originalFormattedAmount}</div>
-                  <div className="text-3xl sm:text-4xl font-bold text-green-600">{formattedAmount}</div>
-                  <div className="text-sm text-green-600 font-medium mt-1">
-                    {promotionalCouponValidation?.isValid 
-                      ? `$${promotionalCouponValidation.discountAmount?.toFixed(2)} discount applied!`
-                      : '$50 discount applied!'}
+                <div className="flex flex-col md:items-end">
+                  <div className="text-xl line-through text-gray-300 font-bold">{originalFormattedAmount}</div>
+                  <div className="text-4xl md:text-5xl font-black text-emerald-500 tracking-tighter">{formattedAmount}</div>
+                  <div className="inline-flex items-center bg-emerald-50 border border-emerald-100 px-3 py-1 rounded-full mt-2">
+                    <CheckCircle className="w-3 h-3 text-emerald-500 mr-2" />
+                    <span className="text-[10px] text-emerald-500 font-black uppercase tracking-widest">
+                      {promotionalCouponValidation?.isValid 
+                        ? `Cupom ${promotionalCoupon} Aplicado!`
+                        : 'Desconto de $50 Aplicado!'}
+                    </span>
                   </div>
                 </div>
               ) : (
-                <div className="text-3xl sm:text-4xl font-bold text-gray-900">{formattedAmount}</div>
+                <div className="text-4xl md:text-5xl font-black text-gray-900 tracking-tighter">{formattedAmount}</div>
               )}
             </div>
           </div>
 
-          <div className="bg-gray-50 rounded-lg p-4 mb-6">
-            <p className="text-sm sm:text-base text-gray-700 leading-relaxed">
-              This fee covers the initial processing of your application and allows you to proceed with selecting scholarships from our partner universities.
+          <div className="bg-gray-50 rounded-2xl p-5 mb-8 border border-gray-100">
+            <p className="text-sm md:text-base text-gray-600 leading-relaxed font-medium">
+              Esta taxa cobre o processamento inicial da sua candidatura e permite que você prossiga com a seleção de bolsas de estudo em nossas universidades parceiras.
             </p>
           </div>
 
@@ -1485,35 +1492,43 @@ export const SelectionFeeStep: React.FC<StepProps> = ({ onNext }) => {
             <div className="space-y-3">
               {promotionalCouponValidation?.isValid ? (
                 // Cupom aplicado - mostrar informações e botão remover
-                <div className="bg-green-50 border-2 border-green-300 rounded-xl p-4 space-y-3">
-                  <div className="flex items-center justify-between">
-                    <div className="flex items-center space-x-2">
-                      <CheckCircle className="w-5 h-5 text-green-600" />
-                      <span className="font-semibold text-green-800">{promotionalCoupon}</span>
+                <div className="bg-emerald-500/10 border border-emerald-500/20 rounded-2xl p-6 space-y-4 shadow-inner relative overflow-hidden">
+                  <div className="absolute top-0 right-0 w-32 h-32 bg-emerald-500/5 rounded-full blur-[40px] -mr-16 -mt-16 pointer-events-none" />
+                  
+                  <div className="flex items-center justify-between relative z-10">
+                    <div className="flex items-center space-x-3">
+                      <div className="w-10 h-10 bg-emerald-50 rounded-xl flex items-center justify-center border border-emerald-100">
+                        <CheckCircle className="w-6 h-6 text-emerald-500" />
+                      </div>
+                      <div>
+                        <span className="text-xs font-bold text-gray-400 uppercase tracking-widest block">Cupom Aplicado</span>
+                        <span className="text-lg font-black text-gray-800 uppercase tracking-tight">{promotionalCoupon}</span>
+                      </div>
                     </div>
                     <button
                       onClick={removePromotionalCoupon}
-                      className="text-red-600 hover:text-red-700 text-sm font-medium"
+                      className="px-4 py-2 bg-gray-50 hover:bg-red-50 text-gray-400 hover:text-red-500 rounded-lg text-xs font-black uppercase tracking-widest transition-all border border-gray-100 hover:border-red-100"
                     >
-                      Remove
+                      Remover
                     </button>
                   </div>
-                  <div className="bg-white rounded-lg p-3 space-y-2">
-                    <div className="flex justify-between text-sm">
-                      <span className="text-gray-600">Original Price:</span>
-                      <span className="line-through text-gray-400">
+
+                  <div className="space-y-3 pt-4 border-t border-gray-100 relative z-10">
+                    <div className="flex justify-between text-xs font-bold uppercase tracking-widest text-gray-400">
+                      <span>Preço Original:</span>
+                      <span className="line-through text-gray-300">
                         ${selectionFeeAmount.toFixed(2)}
                       </span>
                     </div>
-                    <div className="flex justify-between text-sm">
-                      <span className="text-gray-600">Discount:</span>
-                      <span className="text-green-600 font-semibold">
+                    <div className="flex justify-between text-xs font-bold uppercase tracking-widest text-gray-400">
+                      <span>Desconto:</span>
+                      <span className="text-emerald-500">
                         -${promotionalCouponValidation.discountAmount?.toFixed(2)}
                       </span>
                     </div>
-                    <div className="flex justify-between text-base font-bold border-t pt-2">
-                      <span className="text-gray-900">Final Price:</span>
-                      <span className="text-green-600">
+                    <div className="flex justify-between text-xl font-black uppercase tracking-tight pt-3 text-gray-900">
+                      <span>Total Final:</span>
+                      <span className="text-emerald-500">
                         ${promotionalCouponValidation.finalAmount?.toFixed(2)}
                       </span>
                     </div>
@@ -1521,71 +1536,67 @@ export const SelectionFeeStep: React.FC<StepProps> = ({ onNext }) => {
                 </div>
               ) : (
                 // Input para validar cupom
-                <>
-                  <div className="flex gap-2">
-                    <input
-                      ref={promotionalCouponInputRef}
-                      type="text"
-                      value={promotionalCoupon}
-                      onChange={(e) => {
-                        const newValue = e.target.value.toUpperCase();
-                        const cursorPosition = e.target.selectionStart;
-                        setPromotionalCoupon(newValue);
-                        requestAnimationFrame(() => {
-                          if (promotionalCouponInputRef.current) {
-                            promotionalCouponInputRef.current.setSelectionRange(cursorPosition, cursorPosition);
-                            promotionalCouponInputRef.current.focus();
-                          }
-                        });
-                      }}
-                      onBlur={(e) => {
-                        const upperValue = e.target.value.toUpperCase();
-                        if (upperValue !== promotionalCoupon) {
-                          setPromotionalCoupon(upperValue);
-                        }
-                      }}
-                      placeholder="Enter code"
-                      className="flex-1 px-4 py-3 border-2 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-all text-center font-mono text-base tracking-wider border-gray-300"
-                      style={{ fontSize: '16px' }}
-                      maxLength={20}
-                      autoComplete="off"
-                    />
+                <div className="space-y-4">
+                  <div className="flex gap-3">
+                    <div className="relative flex-1 group/input">
+                      <input
+                        ref={promotionalCouponInputRef}
+                        type="text"
+                        value={promotionalCoupon}
+                        onChange={(e) => {
+                          const newValue = e.target.value.toUpperCase();
+                          const cursorPosition = e.target.selectionStart;
+                          setPromotionalCoupon(newValue);
+                          requestAnimationFrame(() => {
+                            if (promotionalCouponInputRef.current) {
+                              promotionalCouponInputRef.current.setSelectionRange(cursorPosition, cursorPosition);
+                              promotionalCouponInputRef.current.focus();
+                            }
+                          });
+                        }}
+                        placeholder="CÓDIGO PROMOCIONAL"
+                        className="w-full px-5 py-3.5 bg-gray-50 border border-gray-200 rounded-xl focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500/50 transition-all text-center font-black text-gray-900 text-lg tracking-[0.2em] placeholder:text-gray-300"
+                        maxLength={20}
+                        autoComplete="off"
+                      />
+                      <div className="absolute inset-x-0 bottom-0 h-[2px] bg-gradient-to-r from-transparent via-blue-500/50 to-transparent scale-x-0 group-focus-within/input:scale-x-100 transition-transform duration-500" />
+                    </div>
                     <button
                       onClick={validatePromotionalCoupon}
                       disabled={isValidatingPromotionalCoupon || !promotionalCoupon.trim()}
-                      className={`px-6 py-3 rounded-xl font-semibold transition-all shadow-lg hover:shadow-xl transform whitespace-nowrap ${
+                      className={`px-8 py-3.5 rounded-xl font-black uppercase tracking-widest text-sm transition-all shadow-xl active:scale-95 ${
                         isValidatingPromotionalCoupon || !promotionalCoupon.trim()
-                          ? 'bg-gray-300 text-gray-500 cursor-not-allowed'
-                          : 'bg-blue-600 text-white hover:bg-blue-700'
+                          ? 'bg-gray-100 text-gray-400 border border-gray-200 cursor-not-allowed'
+                          : 'bg-blue-600 text-white hover:bg-blue-700 border border-blue-500/50 shadow-[0_0_20px_rgba(37,99,235,0.2)]'
                       }`}
                     >
                       {isValidatingPromotionalCoupon ? (
                         <div className="flex items-center justify-center space-x-2">
-                          <div className="w-5 h-5 border-2 border-white border-t-transparent rounded-full animate-spin"></div>
-                          <span>Validating...</span>
+                          <Loader2 className="w-5 h-5 animate-spin" />
+                          <span>Validando...</span>
                         </div>
                       ) : (
-                        'Validate'
+                        'Validar'
                       )}
                     </button>
                   </div>
                   
-                  {/* Validation Error */}
                   {promotionalCouponValidation && !promotionalCouponValidation.isValid && (
-                    <div className="bg-red-50 border-2 border-red-300 rounded-xl p-3 flex items-center space-x-2">
-                      <AlertCircle className="w-5 h-5 text-red-600 flex-shrink-0" />
-                      <span className="text-sm text-red-700">{promotionalCouponValidation.message}</span>
+                    <div className="bg-red-500/10 border border-red-500/20 rounded-xl p-4 flex items-center space-x-3 backdrop-blur-md">
+                      <AlertCircle className="w-5 h-5 text-red-500 flex-shrink-0" />
+                      <span className="text-sm text-red-400 font-medium">{promotionalCouponValidation.message}</span>
                     </div>
                   )}
-                </>
+                </div>
               )}
             </div>
           </div>
 
+
           {/* Terms acceptance section */}
-          <div className="mb-6">
-            <div className="flex items-start space-x-3 p-3 sm:p-4 bg-slate-100 rounded-2xl">
-              <label htmlFor="termsAccepted" className={`checkbox-container ${hasAcceptedTermsInDB ? 'cursor-not-allowed opacity-75' : 'cursor-pointer'} flex-shrink-0`}>
+          <div className="mb-8">
+            <div className="flex items-start space-x-4 p-5 bg-gray-50 border border-gray-100 rounded-[1.5rem] group/terms hover:bg-gray-100/50 transition-colors duration-300 shadow-sm">
+              <label htmlFor="termsAccepted" className={`checkbox-container ${hasAcceptedTermsInDB ? 'cursor-not-allowed opacity-75' : 'cursor-pointer'} flex-shrink-0 mt-0.5`}>
                 <input
                   id="termsAccepted"
                   name="termsAccepted"
@@ -1595,10 +1606,10 @@ export const SelectionFeeStep: React.FC<StepProps> = ({ onNext }) => {
                   disabled={hasAcceptedTermsInDB}
                   className="custom-checkbox"
                 />
-                <div className="checkmark" />
+                <div className="checkmark border-gray-300" />
               </label>
-              <label htmlFor="termsAccepted" className={`text-xs sm:text-sm text-slate-700 leading-relaxed flex-1 ${hasAcceptedTermsInDB ? 'cursor-default' : 'cursor-pointer'}`}>
-                {t('preCheckoutModal.acceptContractTerms') || 'I accept the terms and conditions'}
+              <label htmlFor="termsAccepted" className={`text-xs sm:text-sm text-gray-600 leading-relaxed flex-1 ${hasAcceptedTermsInDB ? 'cursor-default' : 'cursor-pointer'} group-hover/terms:text-gray-900 transition-colors`}>
+                {t('preCheckoutModal.acceptContractTerms') || 'Eu aceito os termos e condições do contrato de prestação de serviços.'}
               </label>
             </div>
           </div>
@@ -1610,7 +1621,11 @@ export const SelectionFeeStep: React.FC<StepProps> = ({ onNext }) => {
           )}
 
           {/* Skeleton Loading enquanto verifica pagamentos pendentes */}
+          {/* Condicional Principal: Loading -> Zelle -> Lista de Métodos */}
           {paymentBlockedLoading ? (
+            /* =========================================================================
+               CT01: Skeleton Loading (Verificando bloqueios)
+               ========================================================================= */
             <div className="space-y-4 animate-pulse">
               <div className="h-5 w-48 bg-gray-200 rounded mb-4"></div>
               {[1, 2, 3].map((i) => (
@@ -1618,30 +1633,31 @@ export const SelectionFeeStep: React.FC<StepProps> = ({ onNext }) => {
                   <div className="flex items-center space-x-4">
                     <div className="w-12 h-12 bg-gray-200 rounded"></div>
                     <div className="flex-1 space-y-2">
-                      <div className="h-5 w-32 bg-gray-200 rounded"></div>
-                      <div className="h-4 w-48 bg-gray-200 rounded"></div>
+                       <div className="h-5 w-32 bg-gray-200 rounded"></div>
+                       <div className="h-4 w-48 bg-gray-200 rounded"></div>
                     </div>
                   </div>
                 </div>
               ))}
             </div>
-          ) : (
-            <>
-              {/* Zelle Checkout Inline */}
-              {showZelleCheckout ? (
-            <div className="space-y-4">
-              <div className="flex items-center justify-between mb-4">
-                <h3 className="text-lg font-semibold text-gray-900">Zelle Payment</h3>
-                {/* Só mostrar botão X se não estiver processando */}
+          ) : showZelleCheckout ? (
+            /* =========================================================================
+               CT02: Zelle Checkout (Ativo)
+               ========================================================================= */
+            <div className="space-y-6 bg-white border border-gray-100 rounded-3xl p-6 shadow-xl relative overflow-hidden">
+              <div className="absolute top-0 right-0 w-32 h-32 bg-blue-500/5 rounded-full blur-[40px] -mr-16 -mt-16 pointer-events-none" />
+              <div className="flex items-center justify-between mb-2 relative z-10">
+                <h3 className="text-xl font-black text-gray-900 uppercase tracking-tight">Pagamento Zelle</h3>
+                
                 {!isZelleProcessing && (
                   <button
                     onClick={() => {
                       setShowZelleCheckout(false);
                       setSelectedMethod(null);
                     }}
-                    className="p-2 hover:bg-gray-100 rounded-full transition-colors"
+                    className="p-2 hover:bg-gray-100 rounded-full transition-colors text-gray-400 hover:text-gray-900"
                   >
-                    <X className="w-5 h-5 text-gray-500" />
+                    <X className="w-5 h-5" />
                   </button>
                 )}
               </div>
@@ -1659,12 +1675,11 @@ export const SelectionFeeStep: React.FC<StepProps> = ({ onNext }) => {
                   promotional_coupon: (window as any).__checkout_promotional_coupon || null
                 }}
                 onSuccess={() => {
-                  // Pagamento aprovado - avançar para próxima step
                   console.log('✅ [SelectionFeeStep] Pagamento Zelle aprovado - avançando para próxima step');
                   setZellePaymentSubmitted(false);
                   setShowZelleCheckout(false);
                   setIsZelleProcessing(false);
-                  onNext(); // Avançar para próxima step do onboarding
+                  onNext(); 
                 }}
                 onError={(error) => {
                   setError(error);
@@ -1677,97 +1692,93 @@ export const SelectionFeeStep: React.FC<StepProps> = ({ onNext }) => {
               />
             </div>
           ) : (
-            /* Payment Methods */
-            <div className="space-y-4">
-              {isBlocked && pendingPayment && (
-                <div className="bg-amber-50 border border-amber-200 rounded-lg p-3 sm:p-4 mb-4">
-                  <div className="flex items-start gap-2">
-                    <AlertCircle className="w-5 h-5 text-amber-500 flex-shrink-0 mt-0.5" />
+            /* =========================================================================
+               CT03: Lista de Métodos de Pagamento
+               ========================================================================= */
+            <div className="space-y-4 relative z-10">
+              {!!isBlocked && !!pendingPayment && (
+                <div className="bg-amber-500/10 border border-amber-500/20 rounded-2xl p-4 mb-6 backdrop-blur-md">
+                  <div className="flex items-start gap-3">
+                    <AlertCircle className="w-6 h-6 text-amber-500 flex-shrink-0 mt-0.5" />
                     <div>
-                      <p className="text-sm font-medium text-amber-800 mb-1">
-                        Payment Already Processing
+                      <p className="text-sm font-black text-amber-500 uppercase tracking-tight mb-1">
+                        Pagamento em Processamento
                       </p>
-                      <p className="text-xs sm:text-sm text-amber-700">
-                        You have a Zelle payment currently being processed. Please wait for it to be reviewed before selecting another payment method.
+                      <p className="text-xs text-white/60 font-medium">
+                        Você já tem um pagamento via Zelle sendo processado. Por favor, aguarde a revisão antes de tentar outro método.
                       </p>
                     </div>
                   </div>
                 </div>
               )}
-              
-              <p className="text-sm font-medium text-gray-700 mb-4">Select your payment method:</p>
-              
+               
+              <p className="text-xs font-black text-gray-400 uppercase tracking-[0.2em] mb-4 px-2">Selecione o método de pagamento:</p>
+               
               {paymentMethods.map((method) => {
                 const Icon = method.icon;
                 const isSelected = selectedMethod === method.id;
                 const isProcessing = loading && isSelected;
-                // Desabilitar outros métodos se há pagamento pendente, se termos não foram aceitos, ou se código não foi validado
-                const isDisabled = loading || 
+                const isDisabled = !!loading || 
                   !termsAccepted || 
                   (hasReferralCode && !(validationResult?.isValid) && !activeDiscount?.has_discount) ||
-                  (isBlocked && pendingPayment && method.id !== 'zelle');
+                  (!!isBlocked && !!pendingPayment && method.id !== 'zelle'); // Bloqueio se já tem Zelle pendente (exceto Zelle)
                 
                 return (
                   <button
                     key={method.id}
                     onClick={() => handleCheckout(method.id)}
                     disabled={isDisabled}
-                    className={`w-full p-4 rounded-xl border-2 transition-all duration-200 text-left ${
+                    className={`w-full p-6 rounded-2xl border-2 transition-all duration-300 text-left relative overflow-hidden group/method ${
                       isSelected
-                        ? 'border-blue-500 bg-blue-50 shadow-md'
-                        : 'border-gray-200 hover:border-gray-300 hover:bg-gray-50'
-                    } ${isDisabled ? 'opacity-50 cursor-not-allowed' : 'cursor-pointer'}`}
+                        ? 'border-blue-500 bg-blue-50 shadow-[0_0_30px_rgba(59,130,246,0.1)]'
+                        : 'border-gray-100 bg-gray-50 hover:border-gray-200 hover:bg-white'
+                    } ${isDisabled ? 'opacity-40 cursor-not-allowed grayscale' : 'cursor-pointer hover:scale-[1.01] active:scale-[0.99]'}`}
                   >
-                    <div className="flex items-center space-x-4">
-                      <div className="flex-shrink-0 w-12 h-12 flex items-center justify-center">
-                        <Icon className="w-12 h-12" />
+                    <div className="flex items-center space-x-5 relative z-10">
+                      <div className={`flex-shrink-0 w-14 h-14 flex items-center justify-center rounded-xl bg-white border border-gray-100 transition-transform duration-500 group-hover/method:scale-110 shadow-sm`}>
+                        <Icon className="w-10 h-10 text-gray-700" />
                       </div>
                       
                       <div className="flex-1 min-w-0">
                         <div className="flex items-center justify-between">
-                          <div className="flex items-center gap-2">
-                            <h4 className="text-base font-semibold text-gray-900">
+                          <div className="flex items-center gap-3">
+                            <h4 className="text-lg font-black text-gray-900 uppercase tracking-tight">
                               {method.name}
                             </h4>
-                            {/* Exibir valor ao lado de cada opção */}
                             {method.id === 'stripe' && cardAmountWithFees > 0 && (
-                              <span className="text-sm font-semibold text-blue-700 whitespace-nowrap">
+                              <span className="bg-blue-100 text-blue-600 text-[10px] font-black px-2 py-0.5 rounded-full border border-blue-200">
                                 ${cardAmountWithFees.toFixed(2)}
                               </span>
                             )}
                             {method.id === 'pix' && pixAmountWithFees > 0 && exchangeRate && (
-                              <span className="text-sm font-semibold text-blue-700 whitespace-nowrap">
+                              <span className="bg-emerald-100 text-emerald-600 text-[10px] font-black px-2 py-0.5 rounded-full border border-emerald-200">
                                 R$ {pixAmountWithFees.toFixed(2)}
                               </span>
                             )}
                             {method.id === 'zelle' && computedBasePrice > 0 && (
-                              <span className="text-sm font-semibold text-blue-700 whitespace-nowrap">
+                              <span className="bg-indigo-100 text-indigo-600 text-[10px] font-black px-2 py-0.5 rounded-full border border-indigo-200">
                                 ${computedBasePrice.toFixed(2)}
                               </span>
                             )}
                           </div>
                           {isProcessing && (
-                            <Loader2 className="w-5 h-5 text-blue-600 animate-spin flex-shrink-0" />
+                            <Loader2 className="w-5 h-5 text-blue-500 animate-spin flex-shrink-0" />
                           )}
                           {isSelected && !loading && (
-                            <CheckCircle className="w-5 h-5 text-blue-600 flex-shrink-0" />
+                            <div className="bg-blue-500 rounded-full p-1 shadow-[0_0_15px_rgba(59,130,246,0.3)]">
+                              <CheckCircle className="w-4 h-4 text-white" />
+                            </div>
                           )}
                         </div>
-                        <p className="text-sm text-gray-600 mt-1">
+                        <p className="text-xs text-gray-500 font-bold uppercase tracking-widest mt-1.5 opacity-80 group-hover/method:opacity-100 transition-opacity">
                           {method.description}
                         </p>
-                        {/* Tag "inclui taxa de processamento" para Stripe e PIX */}
-                        {(method.id === 'stripe' || method.id === 'pix') && (
-                          <p className="text-xs text-gray-400 mt-1">
-                            Includes processing fees
-                          </p>
-                        )}
                         
-                        {isDisabled && isBlocked && pendingPayment && method.id !== 'zelle' && (
-                          <div className="mt-2 flex items-center space-x-1">
-                            <AlertCircle className="w-4 h-4 text-amber-500" />
-                            <span className="text-xs text-amber-700">
-                              Unavailable - Zelle payment processing
+                        {isDisabled && !!isBlocked && !!pendingPayment && method.id !== 'zelle' && (
+                          <div className="mt-3 flex items-center space-x-2 bg-amber-50 border border-amber-100 w-fit px-2 py-1 rounded-lg">
+                            <AlertCircle className="w-3 h-3 text-amber-600" />
+                            <span className="text-[10px] text-amber-600 font-bold uppercase tracking-tight">
+                              Indisponível - Zelle em processamento
                             </span>
                           </div>
                         )}
@@ -1777,8 +1788,6 @@ export const SelectionFeeStep: React.FC<StepProps> = ({ onNext }) => {
                 );
               })}
             </div>
-          )}
-            </>
           )}
         </div>
       </div>
@@ -1803,7 +1812,7 @@ export const SelectionFeeStep: React.FC<StepProps> = ({ onNext }) => {
                       <Shield className="w-5 h-5 sm:w-6 sm:h-6" />
                     </div>
                     <Dialog.Title className="text-xl sm:text-2xl font-bold">
-                      {activeTerm ? activeTerm.title : t('preCheckoutModal.termsAndConditions.title')}
+                      {activeTerm?.title ? activeTerm.title : t('preCheckoutModal.termsAndConditions.title')}
                     </Dialog.Title>
                   </div>
                 </div>
@@ -1822,7 +1831,7 @@ export const SelectionFeeStep: React.FC<StepProps> = ({ onNext }) => {
                         ref={termsContentRef}
                         onScroll={handleTermsScroll}
                         className="prose prose-sm max-w-none prose-headings:text-gray-900 prose-p:text-gray-600"
-                        dangerouslySetInnerHTML={{ __html: activeTerm.content }}
+                        dangerouslySetInnerHTML={{ __html: activeTerm?.content || '' }}
                       />
                       
                       {!hasScrolledToBottom && checkIfContentNeedsScroll() && (

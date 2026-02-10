@@ -86,11 +86,16 @@ const ScholarshipCardFullComponent: React.FC<ScholarshipCardFullProps> = ({
       id={`scholarship-card-wrapper-${scholarship.id}`}
       data-scholarship-id={scholarship.id}
       data-card-expanded={isExpanded ? 'true' : 'false'}
-      className={`group relative bg-white rounded-2xl sm:rounded-3xl shadow-lg hover:shadow-xl transition-all duration-300 overflow-hidden border ${
+      className={`group relative bg-white rounded-2xl sm:rounded-3xl shadow-md hover:shadow-xl transition-all duration-300 overflow-hidden border ${
         isSelected 
           ? 'border-blue-500 bg-blue-50/30' 
-          : 'border-slate-200 hover:border-slate-300'
-      } flex flex-col h-full hover:-translate-y-1`}
+          : 'border-slate-200/60 hover:border-slate-300'
+      } flex flex-col h-full hover:-translate-y-1 transform-gpu`}
+      style={{ 
+        backfaceVisibility: 'hidden', 
+        WebkitBackfaceVisibility: 'hidden',
+        isolation: 'isolate' 
+      }}
     >
       {/* Scholarship Image */}
       <div className="relative h-32 overflow-hidden flex-shrink-0">

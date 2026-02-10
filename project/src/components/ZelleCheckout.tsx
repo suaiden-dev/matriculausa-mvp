@@ -4,6 +4,7 @@ import { useAuth } from '../hooks/useAuth';
 import { usePaymentBlocked } from '../hooks/usePaymentBlocked';
 import { supabase } from '../lib/supabase';
 import { generateUUID } from '../utils/uuid';
+import { config } from '../lib/config';
 
 interface ZelleCheckoutProps {
   feeType: 'selection_process' | 'application_fee' | 'enrollment_fee' | 'scholarship_fee';
@@ -31,17 +32,21 @@ export const ZelleCheckout: React.FC<ZelleCheckoutProps> = ({
   metadata = {},
   onProcessingChange
 }) => {
-  const { user } = useAuth();
+  const { user, supabaseUser } = useAuth();
   const { isBlocked, pendingPayment: blockedPendingPayment, rejectedPayment: blockedRejectedPayment, approvedPayment: blockedApprovedPayment, loading: paymentBlockedLoading } = usePaymentBlocked();
+  
+  // Localhost Test Mode
+  const isLocalhost = config.isDevelopment();
+
   const [loading, setLoading] = useState(false);
   const [step, setStep] = useState<'instructions' | 'analyzing' | 'success' | 'under_review' | 'rejected'>('instructions');
+
   const [comprovanteFile, setComprovanteFile] = useState<File | null>(null);
   const [comprovantePreview, setComprovantePreview] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [zellePaymentId, setZellePaymentId] = useState<string | null>(null);
   const [paymentStatus, setPaymentStatus] = useState<'analyzing' | 'approved' | 'under_review' | 'rejected'>('analyzing');
   const [rejectionReason, setRejectionReason] = useState<string | null>(null);
-  const [timeElapsed, setTimeElapsed] = useState(0);
   const [isProcessing, setIsProcessing] = useState(false);
   const [showUploadModal, setShowUploadModal] = useState(false);
   const [uploadStep, setUploadStep] = useState<'uploading' | 'sending' | 'analyzing'>('uploading');
@@ -77,6 +82,25 @@ export const ZelleCheckout: React.FC<ZelleCheckoutProps> = ({
   useEffect(() => {
     isProcessingRef.current = isProcessing;
   }, [isProcessing]);
+
+  const handleMockSuccess = async () => {
+    setLoading(true);
+    setError(null);
+    setIsProcessing(true);
+    onProcessingChange?.(true);
+    
+    try {
+      setStep('success');
+      setPaymentStatus('approved');
+      stepRef.current = 'success';
+      paymentStatusRef.current = 'approved';
+      onSuccess?.();
+    } catch (err: any) {
+      setError(err.message || 'Mock failed');
+    } finally {
+      setLoading(false);
+    }
+  };
 
   // Função helper para determinar o estado do pagamento baseado nos dados do banco
   const determinePaymentState = (
@@ -246,7 +270,7 @@ export const ZelleCheckout: React.FC<ZelleCheckoutProps> = ({
 
     // Se não há pagamento pendente ou rejeitado, e não está em estado final, mostrar instruções
     // MAS apenas se realmente não há nenhum pagamento relacionado
-    if (currentStep !== 'rejected' && currentStep !== 'success' && !currentZellePaymentId) {
+    if (!currentZellePaymentId) {
       return {
         step: 'instructions',
         paymentStatus: 'analyzing',
@@ -259,7 +283,7 @@ export const ZelleCheckout: React.FC<ZelleCheckoutProps> = ({
     // Manter estado atual se não há mudanças
     return {
       step: currentStep,
-      paymentStatus: currentStep === 'rejected' ? 'rejected' : currentStep === 'success' ? 'approved' : currentStep === 'under_review' ? 'under_review' : 'analyzing',
+      paymentStatus: currentStep === 'under_review' ? 'under_review' : 'analyzing',
       zellePaymentId: currentZellePaymentId,
       rejectionReason: currentRejectionReason,
       isProcessing: currentStep === 'analyzing' || currentStep === 'under_review'
@@ -408,14 +432,6 @@ export const ZelleCheckout: React.FC<ZelleCheckoutProps> = ({
     if (newState.isProcessing !== isProcessingRef.current) {
       setIsProcessing(newState.isProcessing);
       onProcessingChange?.(newState.isProcessing);
-    }
-
-    // Calcular tempo decorrido se há pagamento pendente
-    if (blockedPendingPayment && blockedPendingPayment.fee_type === feeType) {
-      const createdAt = new Date(blockedPendingPayment.created_at);
-      const now = new Date();
-      const elapsed = Math.floor((now.getTime() - createdAt.getTime()) / 1000);
-      setTimeElapsed(elapsed);
     }
 
     // Se status mudou para approved, chamar onSuccess (apenas uma vez)
@@ -802,16 +818,19 @@ export const ZelleCheckout: React.FC<ZelleCheckoutProps> = ({
 
   const sendToN8n = async (comprovanteUrl: string, paymentId: string) => {
     try {
-      // Payload para o n8n (igual ao fluxo padrão do ZelleCheckoutPage)
       const webhookPayload = {
-        user_id: user?.id,
-        image_url: comprovanteUrl,
-        value: amount.toString(),
-        currency: 'USD',
+        tipo_notf: 'Novo pagamento Zelle - Validação Automática',
+        email_aluno: user?.email,
+        nome_aluno: (supabaseUser?.user_metadata as any)?.full_name || user?.name || user?.email || 'Unknown',
         fee_type: feeType,
+        amount: amount,
+        currency: 'USD',
+        comprovante_url: comprovanteUrl,
+        payment_id: paymentId,
+        user_id: user?.id,
         timestamp: new Date().toISOString(),
-        payment_id: paymentId, // Usar payment_id como no fluxo padrão
         scholarships_ids: scholarshipsIds || [],
+        validation_required: true,
         metadata: {
           ...metadata,
           payment_method: 'zelle',
@@ -906,7 +925,7 @@ export const ZelleCheckout: React.FC<ZelleCheckoutProps> = ({
       const imageUrl = comprovanteUrl; // comprovanteUrl já é a URL pública completa
       
       // Enviar para n8n e aguardar resposta (igual ao fluxo padrão)
-      const { tempPaymentId, n8nResponse } = await sendToN8n(comprovanteUrl, realPaymentId);
+      const { n8nResponse } = await sendToN8n(comprovanteUrl, realPaymentId);
       
       clearInterval(sendProgressInterval);
       setUploadProgress(100);
@@ -918,7 +937,6 @@ export const ZelleCheckout: React.FC<ZelleCheckoutProps> = ({
       // Fechar modal e iniciar processamento
       setShowUploadModal(false);
       setIsProcessing(true);
-      setTimeElapsed(0);
       onProcessingChange?.(true);
       
       // Processar resposta do n8n (igual ao fluxo padrão)
@@ -1069,13 +1087,6 @@ export const ZelleCheckout: React.FC<ZelleCheckoutProps> = ({
     }
   };
 
-  const resetForm = () => {
-    setComprovanteFile(null);
-    setComprovantePreview(null);
-    setError(null);
-    setStep('instructions');
-  };
-
   // Modal de Upload com Animação
   const UploadModal = () => {
     // Não mostrar modal em estados finais
@@ -1199,28 +1210,32 @@ export const ZelleCheckout: React.FC<ZelleCheckoutProps> = ({
     return (
       <div className={`bg-gradient-to-br from-blue-50 to-indigo-50 border-2 border-blue-200 rounded-2xl p-6 sm:p-8 text-center shadow-lg ${className}`}>
           <div className="relative mb-6">
-            {/* Animated Background Circle */}
             <div className="absolute inset-0 flex items-center justify-center">
               <div className="w-24 h-24 bg-blue-200/30 rounded-full animate-ping"></div>
             </div>
-            {/* Main Icon */}
             <div className="relative w-20 h-20 bg-gradient-to-br from-blue-500 to-indigo-600 rounded-2xl flex items-center justify-center shadow-xl mx-auto">
               <Sparkles className="w-10 h-10 text-white animate-pulse" />
-              {/* Rotating Ring */}
               <div className="absolute inset-0 rounded-2xl border-4 border-blue-300 animate-spin" style={{ borderTopColor: 'transparent' }}></div>
             </div>
           </div>
           <h3 className="text-xl sm:text-2xl font-bold text-blue-900 mb-3">
-          Analyzing Payment...
-        </h3>
+            Analyzing Payment...
+          </h3>
           <p className="text-sm sm:text-base text-blue-700 mb-4">
             Your payment confirmation is being automatically validated by our AI system.
-        </p>
-          <div className="flex justify-center space-x-2 mt-4">
-            <div className="w-2 h-2 bg-blue-500 rounded-full animate-bounce" style={{ animationDelay: '0s' }}></div>
-            <div className="w-2 h-2 bg-blue-500 rounded-full animate-bounce" style={{ animationDelay: '0.2s' }}></div>
-            <div className="w-2 h-2 bg-blue-500 rounded-full animate-bounce" style={{ animationDelay: '0.4s' }}></div>
-          </div>
+          </p>
+
+          {isLocalhost && (
+            <div className="mt-6 p-4 bg-amber-50 border border-amber-200 rounded-lg">
+              <p className="text-xs font-bold text-amber-800 uppercase mb-2">Test Mode (Localhost Only)</p>
+              <button
+                onClick={handleMockSuccess}
+                className="w-full bg-amber-600 text-white py-2 px-4 rounded-lg hover:bg-amber-700 transition-colors font-medium text-xs uppercase"
+              >
+                Skip to Success (Mock)
+              </button>
+            </div>
+          )}
       </div>
     );
   }
@@ -1312,6 +1327,18 @@ export const ZelleCheckout: React.FC<ZelleCheckoutProps> = ({
               </p>
             </div>
           </div>
+
+          {isLocalhost && (
+            <div className="p-4 bg-amber-50 border border-amber-200 rounded-lg mt-4">
+              <p className="text-xs font-bold text-amber-800 uppercase mb-2">Test Mode (Localhost Only)</p>
+              <button
+                onClick={handleMockSuccess}
+                className="w-full bg-amber-600 text-white py-2 px-4 rounded-lg hover:bg-amber-700 transition-colors font-medium text-xs uppercase"
+              >
+                Skip to Success (Mock)
+              </button>
+            </div>
+          )}
         </div>
       </div>
     );
@@ -1422,6 +1449,18 @@ export const ZelleCheckout: React.FC<ZelleCheckoutProps> = ({
           <p className="text-xs sm:text-sm text-center text-gray-600">
             Click the button above to upload a new payment confirmation screenshot
           </p>
+
+          {isLocalhost && (
+            <div className="mt-6 p-4 bg-amber-50 border border-amber-200 rounded-lg">
+              <p className="text-xs font-bold text-amber-800 uppercase mb-2">Test Mode (Localhost Only)</p>
+              <button
+                onClick={handleMockSuccess}
+                className="w-full bg-amber-600 text-white py-2 px-4 rounded-lg hover:bg-amber-700 transition-colors font-medium text-xs uppercase"
+              >
+                Skip to Success (Mock)
+              </button>
+            </div>
+          )}
         </div>
       </div>
     );
@@ -1635,6 +1674,18 @@ export const ZelleCheckout: React.FC<ZelleCheckoutProps> = ({
           >
             {loading ? 'Processing...' : (isBlocked && blockedPendingPayment) ? 'Payment Processing...' : 'Submit Payment'}
           </button>
+
+          {isLocalhost && (
+            <div className="mt-4 p-4 bg-amber-50 border border-amber-200 rounded-lg">
+              <p className="text-xs font-bold text-amber-800 uppercase mb-2">Test Mode (Localhost Only)</p>
+              <button
+                onClick={handleMockSuccess}
+                className="w-full bg-amber-600 text-white py-2 px-4 rounded-lg hover:bg-amber-700 transition-colors font-medium text-xs uppercase"
+              >
+                Skip to Success (Mock)
+              </button>
+            </div>
+          )}
         </div>
       )}
 

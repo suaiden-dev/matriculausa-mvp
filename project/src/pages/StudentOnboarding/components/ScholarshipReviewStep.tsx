@@ -3,7 +3,7 @@ import { useCartStore } from '../../../stores/applicationStore';
 import { GraduationCap, Loader2, AlertTriangle, X, ArrowRight, CheckCircle } from 'lucide-react';
 import { useAuth } from '../../../hooks/useAuth';
 import { useTranslation } from 'react-i18next';
-import { is3800ScholarshipBlocked, is3800Scholarship } from '../../../utils/scholarshipDeadlineValidation';
+import { is3800ScholarshipBlocked } from '../../../utils/scholarshipDeadlineValidation';
 import { StepProps } from '../types';
 import { formatAmount } from '../../../utils/scholarshipHelpers';
 import { supabase } from '../../../lib/supabase';
@@ -212,8 +212,8 @@ export const ScholarshipReviewStep: React.FC<StepProps> = ({ onNext, onBack }) =
   return (
     <div className="w-full h-full flex flex-col">
       <div className="max-w-2xl mx-auto w-full px-4">
-        <h1 className="text-2xl sm:text-3xl font-bold mb-4 flex items-center gap-2">
-          <GraduationCap className="h-6 w-6 sm:h-7 sm:w-7 text-[#05294E]" />
+        <h1 className="text-2xl sm:text-3xl font-bold mb-4 flex items-center gap-2 text-white">
+          <GraduationCap className="h-6 w-6 sm:h-7 sm:w-7 text-blue-400" />
           <span>{t('studentDashboard.selectedScholarships.title') || 'Review Your Selected Scholarships'}</span>
         </h1>
         

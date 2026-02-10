@@ -1,6 +1,6 @@
 import React from 'react';
 import { useNavigate } from 'react-router-dom';
-import { CheckCircle, DollarSign, Award, FileText, ArrowRight, Lock, Clock } from 'lucide-react';
+import { CheckCircle, DollarSign, Award, FileText, Lock, Clock, Sparkles } from 'lucide-react';
 import { useFeeConfig } from '../hooks/useFeeConfig';
 import { useAuth } from '../hooks/useAuth';
 import { useDynamicFees } from '../hooks/useDynamicFees';
@@ -16,34 +16,33 @@ interface ProgressBarProps {
   steps: Step[];
   feeValues?: (string | React.ReactNode)[];
   applicationId?: string | null;
-  // Cada taxa só é clicável quando a anterior foi paga
-  isSelectionProcessUnlocked?: boolean; // Selection Process Fee - sempre liberada
-  isApplicationFeeUnlocked?: boolean; // Application Fee - liberada quando Selection Process Fee foi pago
-  isScholarshipFeeUnlocked?: boolean; // Scholarship Fee - liberada quando Application Fee foi pago
-  isI20Unlocked?: boolean; // I-20 Control Fee - liberada quando Scholarship Fee foi pago
+  isSelectionProcessUnlocked?: boolean;
+  isApplicationFeeUnlocked?: boolean;
+  isScholarshipFeeUnlocked?: boolean;
+  isI20Unlocked?: boolean;
 }
 
 const getStepColor = (completed: boolean, current: boolean) => {
-  if (completed) return 'from-green-400 to-green-600 border-green-500 text-white shadow-green-200';
-  if (current) return 'from-yellow-300 to-yellow-500 border-yellow-400 text-white shadow-yellow-200 animate-pulse';
-  return 'from-slate-200 to-slate-300 border-slate-300 text-slate-400';
+  if (completed) return 'bg-gradient-to-br from-emerald-400 to-emerald-600 border-emerald-300 shadow-[0_0_15px_rgba(52,211,153,0.4)]';
+  if (current) return 'bg-gradient-to-br from-amber-300 to-amber-500 border-amber-200 shadow-[0_0_20px_rgba(251,191,36,0.5)] animate-pulse';
+  return 'bg-white/10 backdrop-blur-md border-white/20 text-white/40';
 };
 
 const getStepIcon = (idx: number, completed: boolean, current: boolean) => {
-  if (completed) return <CheckCircle className="h-7 w-7 text-white" />;
+  if (completed) return <CheckCircle className="h-6 w-6 md:h-7 md:w-7 text-white" />;
   if (current) {
-    if (idx === 1) return <DollarSign className="h-7 w-7 text-white" />;
-    if (idx === 2) return <Award className="h-7 w-7 text-white" />;
-    if (idx === 3) return <FileText className="h-7 w-7 text-white" />;
-    return <Clock className="h-7 w-7 text-white" />;
+    if (idx === 0) return <Sparkles className="h-6 w-6 md:h-7 md:w-7 text-white animate-spin-slow" />;
+    if (idx === 1) return <DollarSign className="h-6 w-6 md:h-7 md:w-7 text-white" />;
+    if (idx === 2) return <Award className="h-6 w-6 md:h-7 md:w-7 text-white" />;
+    if (idx === 3) return <FileText className="h-6 w-6 md:h-7 md:w-7 text-white" />;
+    return <Clock className="h-6 w-6 md:h-7 md:w-7 text-white" />;
   }
-  return <Lock className="h-7 w-7 text-slate-400" />;
+  return <Lock className="h-6 w-6 md:h-7 md:w-7 text-white/30" />;
 };
 
-// Componente de skeleton para valores de taxa
 const FeeSkeleton = () => (
   <div className="animate-pulse">
-    <div className="h-4 bg-gray-300 rounded w-16"></div>
+    <div className="h-3 md:h-4 bg-white/20 rounded w-12 md:w-16"></div>
   </div>
 );
 
@@ -51,7 +50,7 @@ export const ProgressBar: React.FC<ProgressBarProps> = ({
   steps, 
   feeValues: customFeeValues,
   applicationId,
-  isSelectionProcessUnlocked = true, // Sempre liberada
+  isSelectionProcessUnlocked = true,
   isApplicationFeeUnlocked = false,
   isScholarshipFeeUnlocked = false,
   isI20Unlocked = false
@@ -60,204 +59,186 @@ export const ProgressBar: React.FC<ProgressBarProps> = ({
   const { user } = useAuth();
   const { getFeeAmount } = useFeeConfig(user?.id);
   const { selectionProcessFee, scholarshipFee, i20ControlFee } = useDynamicFees();
-  const currentIdx = steps.findIndex(step => step.current);
 
-  // Função para determinar a rota baseada no índice do step
+
   const getStepRoute = (idx: number): string | null => {
-    // Selection Process Fee (índice 0) -> onboarding
-    if (idx === 0) return '/student/onboarding?step=selection_fee';
-    // Application Fee (índice 1) -> browse scholarships (escolher bolsas)
+    if (idx === 0) {
+      const savedStep = localStorage.getItem('onboarding_current_step');
+      return savedStep ? `/student/onboarding?step=${savedStep}` : '/student/onboarding';
+    }
     if (idx === 1) return '/student/dashboard/scholarships';
-    // Scholarship Fee (índice 2) -> my application
     if (idx === 2) return '/student/dashboard/applications';
-    // I-20 Control Fee (índice 3) -> application details com aba i20
     if (idx === 3) {
       if (applicationId && isI20Unlocked) {
         return `/student/dashboard/applications/${applicationId}?tab=i20`;
       }
-      return null; // Não está liberado ou não tem applicationId
+      return null;
     }
     return null;
   };
 
-  // Função para verificar se um step é clicável
   const isStepClickable = (idx: number, step: Step): boolean => {
-    // Steps completos são sempre clicáveis (para navegação)
-    if (step.completed) {
-      const route = getStepRoute(idx);
-      return route !== null;
-    }
+    if (step.completed) return getStepRoute(idx) !== null;
     
-    // Verificar se a taxa está liberada baseado no índice
     let isUnlocked = false;
-    if (idx === 0) {
-      // Selection Process Fee - sempre liberada
-      isUnlocked = isSelectionProcessUnlocked;
-    } else if (idx === 1) {
-      // Application Fee - liberada quando Selection Process Fee foi pago
-      isUnlocked = isApplicationFeeUnlocked;
-    } else if (idx === 2) {
-      // Scholarship Fee - liberada quando Application Fee foi pago
-      isUnlocked = isScholarshipFeeUnlocked;
-    } else if (idx === 3) {
-      // I-20 Control Fee - liberada quando Scholarship Fee foi pago e tem applicationId
-      isUnlocked = isI20Unlocked && applicationId !== null;
-    }
+    if (idx === 0) isUnlocked = isSelectionProcessUnlocked;
+    else if (idx === 1) isUnlocked = isApplicationFeeUnlocked;
+    else if (idx === 2) isUnlocked = isScholarshipFeeUnlocked;
+    else if (idx === 3) isUnlocked = isI20Unlocked && applicationId !== null;
     
-    // Só é clicável se estiver liberado e tiver uma rota
-    if (!isUnlocked) {
-      return false;
-    }
-    
-    const route = getStepRoute(idx);
-    return route !== null;
+    return isUnlocked && getStepRoute(idx) !== null;
   };
 
-  // Função para lidar com o clique no step
   const handleStepClick = (idx: number, step: Step) => {
     if (isStepClickable(idx, step)) {
       const route = getStepRoute(idx);
-      if (route) {
-        navigate(route);
-      }
+      if (route) navigate(route);
     }
   };
   
-  // Verificar se as taxas estão carregando
   const isFeesLoading = !selectionProcessFee || !scholarshipFee || !i20ControlFee;
   
-  // Valores padrão das taxas usando useDynamicFees (usados quando não há valores customizados)
   const defaultFeeValues = [
-    selectionProcessFee || `$${getFeeAmount('selection_process')}`, // Selection Process Fee
-    'As per university', // Application Fee (sempre variável)
-    scholarshipFee || `$${getFeeAmount('scholarship_fee')}`, // Scholarship Fee
-    i20ControlFee || `$${getFeeAmount('i20_control_fee')}`, // I-20 Control Fee
+    selectionProcessFee || `$${getFeeAmount('selection_process')}`,
+    'As per university',
+    scholarshipFee || `$${getFeeAmount('scholarship_fee')}`,
+    i20ControlFee || `$${getFeeAmount('i20_control_fee')}`,
   ];
   
-  // Debug para loida4121@uorak.com
-  if (user?.email === 'loida4121@uorak.com') {
-    console.log('🔍 [ProgressBar] Debug valores:', {
-      customFeeValues,
-      defaultFeeValues,
-      selectionProcessFee,
-      isFeesLoading
-    });
-  }
-  
-  // Usar valores customizados se fornecidos, senão usar os padrão
   const feeValues = customFeeValues || defaultFeeValues;
-  
-  // Debug qual array está sendo usado
-  if (user?.email === 'loida4121@uorak.com') {
-    console.log('🔍 [ProgressBar] Array sendo usado:', {
-      usingCustom: !!customFeeValues,
-      feeValues,
-      'customFeeValues[0]': customFeeValues?.[0],
-      'defaultFeeValues[0]': defaultFeeValues?.[0]
-    });
-  }
-  
-  // Para a application fee (índice 1), usar mensagem genérica se não houver valor específico
   const displayFeeValues = feeValues.map((value, index) => {
-    if (index === 1 && value === '$350.00') {
-      return 'As per university'; // Mensagem genérica para application fee
-    }
+    if (index === 1 && value === '$350.00') return 'As per university';
     return value;
   });
-  
-  // Debug final para loida4121@uorak.com
-  if (user?.email === 'loida4121@uorak.com') {
-    console.log('🔍 [ProgressBar] Valores finais displayFeeValues:', displayFeeValues);
-  }
+
   return (
-    <div className="w-full flex flex-col items-center pb-8 md:pb-16 mb-4 md:mb-8">
-      {/* Desktop: horizontal, Mobile: vertical */}
-      <div className="w-full">
-        <div className="hidden md:flex relative w-full max-w-2xl mx-auto overflow-x-auto scrollbar-thin scrollbar-thumb-blue-200 scrollbar-track-blue-50">
-          <div className="flex items-center w-full justify-between px-2 gap-4 md:gap-6 lg:gap-8 py-4">
-            {/* Linha de conexão */}
-            <div className="absolute top-1/2 left-0 right-0 z-0 h-2 flex items-center pointer-events-none select-none">
-              <div className="w-full h-2 rounded-full bg-gradient-to-r from-green-400 via-yellow-300 to-slate-300 opacity-60" />
-            </div>
-            {steps.map((step, idx) => {
-              const isClickable = isStepClickable(idx, step);
-              return (
-                <React.Fragment key={idx}>
-                  {/* Seta animada antes da etapa atual */}
-                  {idx === currentIdx && idx !== 0 && (
-                    <span className="z-10 mx-2 flex items-center animate-bounce" aria-label="Next step">
-                      <svg width="32" height="32" viewBox="0 0 32 32" fill="none" xmlns="http://www.w3.org/2000/svg">
-                        <path d="M8 16H24" stroke="#FACC15" strokeWidth="3" strokeLinecap="round"/>
-                        <path d="M18 10L24 16L18 22" stroke="#FACC15" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round"/>
-                      </svg>
-                    </span>
-                  )}
-                  <div 
-                    className={`flex flex-col items-center min-w-[80px] md:min-w-[90px] z-10 ${isClickable ? 'cursor-pointer' : ''}`}
-                    onClick={() => handleStepClick(idx, step)}
-                  >
-                    <div className={`w-10 h-10 md:w-12 md:h-12 flex items-center justify-center rounded-full border-4 font-bold text-lg mb-1 transition-all duration-300 shadow-xl bg-gradient-to-br ${getStepColor(step.completed, step.current)} ${isClickable ? 'hover:scale-110 hover:shadow-2xl' : ''}`}
-                      style={{ boxShadow: step.current ? '0 0 0 4px #fde68a55' : undefined }}>
-                      {getStepIcon(idx, step.completed, step.current)}
-                    </div>
-                  </div>
-                </React.Fragment>
-              );
-            })}
-          </div>
-        </div>
-        {/* Mobile: vertical/empilhado */}
-        <div className="flex flex-col gap-3 md:hidden w-full">
+    <div className="w-full relative pt-0 pb-6 md:pt-0 md:pb-10">
+      {/* Desktop Version */}
+      <div className="hidden md:block w-full max-w-4xl mx-auto px-4">
+        <div className="relative h-40 md:h-56 flex items-center justify-between">
+          {/* Sinuous SVG Path - Refatorado para visibilidade e precisão */}
+          <svg 
+            viewBox="0 0 1000 150" 
+            className="absolute top-1/2 left-0 w-full h-48 -translate-y-1/2 z-0 pointer-events-none overflow-visible" 
+            preserveAspectRatio="none"
+          >
+            <defs>
+              <linearGradient id="lineGradient" x1="0%" y1="0%" x2="100%" y2="0%">
+                <stop offset="0%" stopColor="#34D399" />
+                <stop offset="50%" stopColor="#FBBF24" />
+                <stop offset="100%" stopColor="#6366F1" />
+              </linearGradient>
+              <filter id="glow" x="-20%" y="-20%" width="140%" height="140%">
+                <feGaussianBlur stdDeviation="2" result="blur" />
+                <feComposite in="SourceGraphic" in2="blur" operator="over" />
+              </filter>
+            </defs>
+            {/* Linha de fundo (rastro) - Y central é 75 agora (metade de 150) */}
+            <path 
+              d="M 50 75 C 125 50, 275 50, 350 75 S 575 100, 650 75 S 875 50, 950 75" 
+              fill="none" 
+              stroke="white" 
+              strokeOpacity="0.05" 
+              strokeWidth="10" 
+              strokeLinecap="round"
+            />
+            {/* Linha animada principal - Amplitude +/- 25px */}
+            <path 
+              d="M 50 75 C 125 50, 275 50, 350 75 S 575 100, 650 75 S 875 50, 950 75" 
+              fill="none" 
+              stroke="url(#lineGradient)" 
+              strokeWidth="5" 
+              strokeLinecap="round" 
+              className="opacity-90 animate-dash"
+              filter="url(#glow)"
+            />
+          </svg>
+
           {steps.map((step, idx) => {
             const isClickable = isStepClickable(idx, step);
             return (
               <div 
                 key={idx} 
+                className={`group relative flex flex-col items-center z-10 transition-all duration-500 ${isClickable ? 'cursor-pointer' : ''}`}
                 onClick={() => handleStepClick(idx, step)}
-                className={`flex items-center gap-3 rounded-xl p-3 shadow-md border-2 ${step.completed ? 'bg-green-500/90 border-green-400' : step.current ? 'bg-yellow-400/90 border-yellow-300 animate-pulse' : 'bg-slate-200/80 border-slate-300'} transition-all ${isClickable ? 'cursor-pointer hover:shadow-lg hover:scale-[1.02] active:scale-[0.98]' : ''}`}
               >
-                <div className={`w-11 h-11 flex items-center justify-center rounded-full border-4 font-bold text-lg ${step.completed ? 'border-green-400 bg-green-500' : step.current ? 'border-yellow-300 bg-yellow-400' : 'border-slate-300 bg-slate-200'}`}>
+                {/* Step Circle with Glassmorphism */}
+                <div className={`w-14 h-14 md:w-16 md:h-16 flex items-center justify-center rounded-2xl border-2 transition-all duration-500 shadow-lg ${getStepColor(step.completed, step.current)} ${isClickable ? 'hover:scale-110 hover:-translate-y-1' : ''}`}>
                   {getStepIcon(idx, step.completed, step.current)}
                 </div>
-                <div className="flex flex-col flex-1">
-                  <div className="text-sm font-bold text-[#05294E]">{step.label}</div>
-                  <div className="text-xs font-bold text-blue-700">
+
+                {/* Labels Visible on Bottom */}
+                <div className="absolute top-full mt-3 flex flex-col items-center w-32 md:w-40 text-center pointer-events-none">
+                  <span className={`text-[10px] md:text-xs font-black uppercase tracking-widest mt-1 ${step.completed ? 'text-emerald-400' : step.current ? 'text-amber-300' : 'text-white/30'}`}>
+                    {step.label}
+                  </span>
+                  <span className="text-[9px] md:text-[11px] font-bold text-white/50 mt-0.5">
                     {isFeesLoading && idx !== 1 ? <FeeSkeleton /> : displayFeeValues[idx]}
-                  </div>
-                  <div className="text-xs text-slate-700 leading-tight">{step.description}</div>
+                  </span>
                 </div>
               </div>
             );
           })}
         </div>
       </div>
-      {/* Linha de textos das etapas, centralizada e alinhada com os círculos (desktop) */}
-      <div className="hidden md:flex w-full max-w-2xl mx-auto justify-between px-2 gap-4 md:gap-6 lg:gap-8 mt-4">
+
+      {/* Mobile Version: Vertical Connection */}
+      <div className="md:hidden w-full flex flex-col gap-8 px-4 relative">
+        {/* Vertical Line for Mobile */}
+        <div className="absolute left-10 top-10 bottom-10 w-[2px] bg-gradient-to-b from-emerald-500 via-amber-400 to-indigo-500 opacity-20 z-0" />
+        
         {steps.map((step, idx) => {
           const isClickable = isStepClickable(idx, step);
           return (
             <div 
-              key={idx} 
+              key={idx}
               onClick={() => handleStepClick(idx, step)}
-              className={`flex flex-col items-center min-w-[80px] md:min-w-[90px] text-center ${isClickable ? 'cursor-pointer hover:scale-105 transition-transform duration-200' : ''}`}
+              className={`relative flex items-center gap-4 p-4 rounded-3xl border transition-all duration-300 z-10 ${step.current ? 'bg-amber-500/10 border-amber-500/40' : 'bg-white/5 border-white/10 backdrop-blur-md'} ${isClickable ? 'active:scale-95' : ''}`}
             >
-              <div className="flex flex-col items-center w-full">
-                <div className="text-xs md:text-sm font-bold mb-0.5 text-white whitespace-nowrap drop-shadow-sm tracking-wide">
-                  {step.label}
-                </div>
-                <div className="text-[11px] md:text-sm font-bold text-yellow-300 mb-0.5">
-                  {isFeesLoading && idx !== 1 ? <FeeSkeleton /> : displayFeeValues[idx]}
-                </div>
-                <div className="text-[10px] md:text-xs text-blue-100 max-w-[90px] md:max-w-[120px] leading-tight mb-1 font-medium">
-                  {step.description}
-                </div>
+              <div className={`w-12 h-12 flex-shrink-0 flex items-center justify-center rounded-2xl border-2 ${getStepColor(step.completed, step.current)}`}>
+                {getStepIcon(idx, step.completed, step.current)}
               </div>
+              
+              <div className="flex flex-col">
+                <span className={`text-xs font-black uppercase tracking-wider ${step.completed ? 'text-emerald-400' : step.current ? 'text-amber-400' : 'text-white/30'}`}>
+                  {step.label}
+                </span>
+                <span className="text-[10px] font-bold text-white/50">
+                  {isFeesLoading && idx !== 1 ? '---' : displayFeeValues[idx]}
+                </span>
+                <p className="text-[11px] text-white/70 leading-relaxed mt-1">{step.description}</p>
+              </div>
+
+              {step.current && (
+                <div className="ml-auto">
+                  <div className="w-2 h-2 rounded-full bg-amber-400 animate-ping" />
+                </div>
+              )}
             </div>
           );
         })}
       </div>
+
+      <style>{`
+        @keyframes dash {
+          to {
+            stroke-dashoffset: -1000;
+          }
+        }
+        .animate-dash {
+          stroke-dasharray: 12;
+          animation: dash 60s linear infinite;
+        }
+        .animate-spin-slow {
+          animation: spin 3s linear infinite;
+        }
+        @keyframes spin {
+          from { transform: rotate(0deg); }
+          to { transform: rotate(360deg); }
+        }
+      `}</style>
     </div>
   );
 };
 
-export default ProgressBar; 
+export default ProgressBar;

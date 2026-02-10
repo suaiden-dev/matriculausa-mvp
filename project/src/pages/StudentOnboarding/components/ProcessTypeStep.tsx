@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { CheckCircle, Loader2, AlertCircle } from 'lucide-react';
+import { CheckCircle, Loader2 } from 'lucide-react';
 import { useAuth } from '../../../hooks/useAuth';
 import { supabase } from '../../../lib/supabase';
 import { StepProps, ProcessType } from '../types';
@@ -138,8 +138,8 @@ export const ProcessTypeStep: React.FC<StepProps> = ({ onNext }) => {
   return (
     <div className="space-y-6">
       <div className="text-center">
-        <h2 className="text-2xl font-bold text-gray-900 mb-2">What's your visa situation?</h2>
-        <p className="text-gray-600">
+        <h2 className="text-2xl font-bold text-white mb-2">What's your visa situation?</h2>
+        <p className="text-white/70">
           Select the option that best describes your current status
         </p>
       </div>
@@ -158,25 +158,31 @@ export const ProcessTypeStep: React.FC<StepProps> = ({ onNext }) => {
             <div
               key={option.value}
               onClick={() => !isLocked && handleSelect(option.value)}
-              className={`p-4 border-2 rounded-lg transition-all ${
+              className={`p-4 border-2 rounded-xl transition-all ${
                 isLocked
-                  ? 'border-gray-200 bg-gray-50 cursor-not-allowed opacity-60'
+                  ? 'border-white/10 bg-white/5 cursor-not-allowed opacity-40'
                   : isSelected
-                  ? 'border-blue-600 bg-blue-50 cursor-pointer'
-                  : 'border-gray-200 hover:border-gray-300 cursor-pointer'
+                  ? 'border-blue-500 bg-blue-50 shadow-lg shadow-blue-500/20 cursor-pointer transform scale-[1.02]'
+                  : 'border-white/10 bg-white/10 hover:bg-white/15 hover:border-white/20 cursor-pointer'
               }`}
             >
-              <div className="flex items-start space-x-3">
+              <div className="flex items-start space-x-4">
                 <div className="mt-1">
                   {isSelected ? (
-                    <CheckCircle className="w-6 h-6 text-blue-600" />
+                    <div className="w-6 h-6 bg-blue-600 rounded-full flex items-center justify-center">
+                      <CheckCircle className="w-5 h-5 text-white" />
+                    </div>
                   ) : (
-                    <div className="w-6 h-6 border-2 border-gray-300 rounded-full" />
+                    <div className="w-6 h-6 border-2 border-white/30 rounded-full" />
                   )}
                 </div>
                 <div className="flex-1">
-                  <h3 className="font-semibold text-gray-900 mb-1">{option.label}</h3>
-                  <p className="text-sm text-gray-600">{option.description}</p>
+                  <h3 className={`font-bold mb-1 ${isSelected ? 'text-blue-900' : 'text-white'}`}>
+                    {option.label}
+                  </h3>
+                  <p className={`text-sm ${isSelected ? 'text-blue-700' : 'text-white/60'}`}>
+                    {option.description}
+                  </p>
                 </div>
               </div>
             </div>
@@ -184,7 +190,7 @@ export const ProcessTypeStep: React.FC<StepProps> = ({ onNext }) => {
         })}
       </div>
 
-      <div className="pt-4 border-t">
+      <div className="pt-4 border-t border-white/10">
         <button
           onClick={handleContinue}
           disabled={!selectedType || saving}

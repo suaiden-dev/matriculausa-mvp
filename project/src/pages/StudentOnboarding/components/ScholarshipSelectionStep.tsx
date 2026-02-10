@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useMemo, useCallback } from 'react';
-import { Award, Loader2, Building, DollarSign, X, AlertCircle, CheckCircle2, ArrowRight, Info, Search, GraduationCap, BookOpen, Monitor, Briefcase, Calendar, ChevronDown, ChevronUp, Filter } from 'lucide-react';
+import { Award, Building, DollarSign, X, AlertCircle, CheckCircle2, ArrowRight, Info, Search, GraduationCap, BookOpen, Monitor, Briefcase, Calendar, ChevronDown, ChevronUp, Filter } from 'lucide-react';
 import { useAuth } from '../../../hooks/useAuth';
 import { useCartStore } from '../../../stores/applicationStore';
 import { useScholarships } from '../../../hooks/useScholarships';
@@ -67,7 +67,7 @@ export const ScholarshipSelectionStep: React.FC<StepProps> = ({ onNext }) => {
         // Não usar localStorage para evitar dados antigos
         const hasProcessType = applications && applications.length > 0 && !!applications[0].student_process_type;
         
-        setIsLocked(hasProcessType);
+        setIsLocked(hasProcessType ? true : false);
       } catch (error) {
         console.error('Error checking if locked:', error);
         setIsLocked(false);
@@ -512,16 +512,19 @@ export const ScholarshipSelectionStep: React.FC<StepProps> = ({ onNext }) => {
       {/* Header Section */}
       <div>
         <div className="text-center mb-4">
-          <h2 className="text-2xl sm:text-3xl font-bold text-gray-900 mb-2">
+          <h2 className="text-2xl sm:text-3xl font-bold text-white mb-2">
             Choose Your Scholarships
           </h2>
-          <p className="text-base sm:text-lg text-gray-700 font-medium mb-4">
+          <p className="text-base sm:text-lg text-white/70 font-medium mb-4">
             Click on the scholarship cards below to select them. You need at least one to proceed.
           </p>
         </div>
 
         {/* Instructions Box - Sem background azul */}
-        <div className="bg-white rounded-lg p-4 border border-slate-200 shadow-sm">
+        <div 
+          className="bg-white rounded-lg p-4 border border-slate-200 shadow-sm transform-gpu"
+          style={{ backfaceVisibility: 'hidden', isolation: 'isolate' }}
+        >
           <div className="flex items-start space-x-3">
             <Info className="w-5 h-5 text-blue-600 flex-shrink-0 mt-0.5" />
             <div className="flex-1">
@@ -559,7 +562,10 @@ export const ScholarshipSelectionStep: React.FC<StepProps> = ({ onNext }) => {
       )}
 
       {/* Advanced Filters - Collapsible */}
-      <div className="bg-white rounded-lg border-2 border-slate-300 shadow-sm">
+      <div 
+        className="bg-white rounded-lg border-2 border-slate-300 shadow-sm transform-gpu"
+        style={{ backfaceVisibility: 'hidden', isolation: 'isolate' }}
+      >
         {/* Filter Header - Always Visible */}
         <div 
           className="p-4 cursor-pointer flex items-center justify-between hover:bg-slate-50 transition-colors"
@@ -783,10 +789,10 @@ export const ScholarshipSelectionStep: React.FC<StepProps> = ({ onNext }) => {
       {/* Scholarships Grid */}
       <div>
         <div className="mb-4 flex items-center justify-between">
-          <h3 className="text-lg font-semibold text-gray-900">
+          <h3 className="text-lg font-semibold text-white">
             Available Scholarships
             {sortedScholarships.length > 0 && (
-              <span className="text-sm font-normal text-gray-600 ml-2">
+              <span className="text-sm font-normal text-white/70 ml-2">
                 ({sortedScholarships.length} {sortedScholarships.length === 1 ? 'option' : 'options'})
               </span>
             )}
@@ -850,7 +856,7 @@ export const ScholarshipSelectionStep: React.FC<StepProps> = ({ onNext }) => {
           >
             Previous
           </button>
-          <span className="px-4 py-2 text-sm text-slate-600">
+          <span className="px-4 py-2 text-sm text-white/70">
             Page {currentPage} of {totalPages}
           </span>
           <button
