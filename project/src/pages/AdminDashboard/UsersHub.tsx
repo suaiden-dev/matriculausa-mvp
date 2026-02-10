@@ -7,7 +7,12 @@ import FeeManagement from '../../components/AdminDashboard/FeeManagement';
 import AdminChatPage from './AdminChatPage';
 import { useUnreadMessagesCount } from '../../hooks/useUnreadMessagesCount';
 
-const UsersHub: React.FC = () => {
+interface UsersHubProps {
+  users?: any[];
+  loading?: boolean;
+}
+
+const UsersHub: React.FC<UsersHubProps> = ({ loading = false }) => {
   const [searchParams] = useSearchParams();
   const [activeTab, setActiveTab] = useState<'applications' | 'completed' | 'feeManagement' | 'messages'>('applications');
   const [selectedConversationId, setSelectedConversationId] = useState<string | null>(null);
@@ -103,7 +108,19 @@ const UsersHub: React.FC = () => {
         </nav>
       </div>
 
-      {activeTab === 'applications' ? (
+      {loading ? (
+        <div className="space-y-4">
+          {[1, 2, 3].map((i) => (
+            <div key={i} className="animate-pulse bg-white p-6 rounded-2xl border border-slate-100 shadow-sm">
+              <div className="h-6 bg-slate-200 rounded w-1/4 mb-4"></div>
+              <div className="space-y-3">
+                <div className="h-4 bg-slate-100 rounded"></div>
+                <div className="h-4 bg-slate-100 rounded w-5/6"></div>
+              </div>
+            </div>
+          ))}
+        </div>
+      ) : activeTab === 'applications' ? (
         <StudentApplicationsView />
       ) : activeTab === 'completed' ? (
         <CompletedApplicationsView />

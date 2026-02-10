@@ -56,6 +56,14 @@ const FeeManagement: React.FC = () => {
   const [itemsPerPage] = useState(20);
   const { getFeeAmount } = useFeeConfig();
   
+// Definir novos valores fixos conforme o sistema (Selection Process variável, outros fixos)
+const STANDARD_SELECTION_FEE = 400;
+const SIMPLIFIED_SELECTION_FEE = 350;
+const STANDARD_SCHOLARSHIP_FEE = 900;
+const SIMPLIFIED_SCHOLARSHIP_FEE = 550;
+const I20_CONTROL_FEE = 900;
+const LEGACY_DEPENDENT_FEE = 150; // $150 por dependente no Selection Process (legacy)
+const APPLICATION_DEPENDENT_FEE = 100; // $100 por dependente no Application Fee
 
   useEffect(() => {
     fetchStudents();
@@ -91,14 +99,14 @@ const FeeManagement: React.FC = () => {
         // ✅ CORREÇÃO: Para simplified, Selection Process Fee é fixo ($350), sem dependentes
         // Dependentes só afetam Application Fee ($100 por dependente)
         const systemType = student.system_type || 'legacy';
-        const dependentsExtra = systemType === 'simplified' ? 0 : (dependents * 150); // $150 por dependente apenas no Selection Process (legacy)
+        const dependentsExtra = systemType === 'simplified' ? 0 : (dependents * LEGACY_DEPENDENT_FEE);
         
         // Determinar valores base baseado no system_type do estudante
-        const baseSelectionFee = systemType === 'simplified' ? 350 : 400;
-        const baseScholarshipFee = systemType === 'simplified' ? 550 : 900;
-        const baseI20Fee = 900; // Sempre 900 para ambos os sistemas
+        const baseSelectionFee = systemType === 'simplified' ? SIMPLIFIED_SELECTION_FEE : STANDARD_SELECTION_FEE;
+        const baseScholarshipFee = systemType === 'simplified' ? SIMPLIFIED_SCHOLARSHIP_FEE : STANDARD_SCHOLARSHIP_FEE;
+        const baseI20Fee = I20_CONTROL_FEE;
         const baseApplicationFee = Number(getFeeAmount('application_fee')) || 0;
-        const applicationDependentsExtra = dependents > 0 ? dependents * 100 : 0; // $100 por dependente para ambos os sistemas
+        const applicationDependentsExtra = dependents > 0 ? dependents * APPLICATION_DEPENDENT_FEE : 0;
 
         return {
           ...student,
@@ -223,10 +231,10 @@ const FeeManagement: React.FC = () => {
             ...student,
             feeOverrides: editingFees,
             calculatedFees: {
-              selection_process: editingFees.selection_process_fee || selectionProcessFee,
+              selection_process: editingFees.selection_process_fee || STANDARD_SELECTION_FEE,
               application: 0, // Application fee é variável por universidade
-              scholarship: editingFees.scholarship_fee || scholarshipFee,
-              i20_control: editingFees.i20_control_fee || i20ControlFee
+              scholarship: editingFees.scholarship_fee || STANDARD_SCHOLARSHIP_FEE,
+              i20_control: editingFees.i20_control_fee || I20_CONTROL_FEE
             }
           };
         }
@@ -264,10 +272,10 @@ const FeeManagement: React.FC = () => {
             ...student,
             feeOverrides: undefined,
             calculatedFees: {
-              selection_process: selectionProcessFee + dependentsExtra,
+              selection_process: (student.system_type === 'simplified' ? SIMPLIFIED_SELECTION_FEE : STANDARD_SELECTION_FEE) + dependentsExtra,
               application: 0, // Application fee é variável por universidade
-              scholarship: scholarshipFee,
-              i20_control: i20ControlFee
+              scholarship: student.system_type === 'simplified' ? SIMPLIFIED_SCHOLARSHIP_FEE : STANDARD_SCHOLARSHIP_FEE,
+              i20_control: I20_CONTROL_FEE
             }
           };
         }

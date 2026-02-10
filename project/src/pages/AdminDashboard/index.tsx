@@ -7,7 +7,6 @@ import AdminDashboardLayout from './AdminDashboardLayout';
 import Overview from './Overview';
 import UniversityManagement from './UniversityManagement';
 import UniversityDetails from './UniversityDetails';
-import UniversityFinancialManagement from './UniversityFinancialManagement';
 import UsersHub from './UsersHub';
 import ScholarshipManagement from './ScholarshipManagement';
 import AdminScholarshipEdit from './AdminScholarshipEdit';
@@ -29,8 +28,6 @@ import TermsManagement from './TermsManagement';
 import CouponManagement from './CouponManagement';
 import NewsletterManagement from './NewsletterManagement';
 import AffiliateManagement from './AffiliateManagement';
-import AdminChatPage from './AdminChatPage';
-import AdminStudentDetails from './AdminStudentDetails';
 import AdminStudentDetailsRefactored from './AdminStudentDetails.refactored';
 import SystemSettings from './SystemSettings';
 import { Dialog } from '@headlessui/react';
@@ -92,10 +89,10 @@ const AdminDashboard: React.FC = () => {
     const currentPath = location.pathname;
     return {
       isPaymentsRoute: currentPath.includes('/payments'),
-      isOverviewRoute: currentPath.endsWith('/admin/dashboard') || currentPath.endsWith('/admin/dashboard/'),
+      isOverviewRoute: currentPath === '/admin/dashboard' || currentPath === '/admin/dashboard/',
       isUniversitiesRoute: currentPath.includes('/universities'),
-      isScholarshipsRoute: currentPath.includes('/scholarships'),
       isUsersRoute: currentPath.includes('/users'),
+      isScholarshipsRoute: currentPath.includes('/scholarships'),
       isSettingsRoute: currentPath.includes('/settings'),
     };
   }, [location.pathname]);
@@ -129,8 +126,9 @@ const AdminDashboard: React.FC = () => {
     totalScholarships: 0,
     totalApplications: 0,
     totalFunding: 0,
-    monthlyGrowth: 12.5
+    monthlyGrowth: 0
   });
+  const [loadedSections, setLoadedSections] = useState<Set<string>>(new Set());
 
   useEffect(() => {
     if (user && user.role === 'admin') {
@@ -177,255 +175,131 @@ const AdminDashboard: React.FC = () => {
 
   const loadAdminData = async () => {
     try {
-      // CACHE INTELIGENTE: Só mostrar loading se não temos dados ainda
+      const { isOverviewRoute, isUniversitiesRoute, isScholarshipsRoute, isUsersRoute } = routeInfo;
+      const sectionKey = isOverviewRoute ? 'overview' : 
+                         isUniversitiesRoute ? 'universities' : 
+                         isUsersRoute ? 'users' : 
+                         isScholarshipsRoute ? 'scholarships' : 'general';
+
+      // ⚡ ESCALA C: Se já carregamos esta seção nesta sessão, não recarregar (Simples cache)
+      if (loadedSections.has(sectionKey) && hasLoadedData) {
+        return;
+      }
+
       if (!hasLoadedData) {
         setLoading(true);
       }
       setError(null);
 
-      // Load universities first
-      const { data: universitiesData, error: universitiesError } = await supabase
-        .from('universities')
-        .select('*')
-        .order('created_at', { ascending: false });
+      const hostname = window.location.hostname;
+      const shouldFilterProd = hostname === 'matriculausa.com' ||
+        hostname.includes('matriculausa.com') ||
+        hostname.includes('staging-matriculausa');
 
-      if (universitiesError) {
-        console.error('Error loading universities:', universitiesError);
-        throw new Error(`Failed to load universities: ${universitiesError.message}`);
+      // 🔥 ESTRATÉGIA A: Stats consolidados
+      const { data: statsData, error: statsError } = await supabase.rpc('get_admin_dashboard_stats', {
+        filter_test_data: shouldFilterProd
+      });
+
+      if (!statsError && statsData) {
+        setStats(statsData);
       }
 
-      // Load user profiles separately
-      let userProfiles: { [key: string]: any } = {};
-      let userEmails: { [key: string]: string } = {};
+      // 🔥 ESTRATÉGIA B & C & D: Carregamento seletivo + Query Optimization
       
-      try {
-        const { data: profilesData, error: profilesError } = await supabase
-          .from('user_profiles')
-          .select('user_id, full_name, phone, status');
+      // 1. CARREGAR UNIVERSIDADES (Campos essenciais)
+      if (isOverviewRoute || isUniversitiesRoute) {
+        let univQuery = supabase.from('universities')
+          .select('id, name, location, logo_url, is_approved, created_at, user_id');
         
-        if (!profilesError && profilesData) {
-          userProfiles = profilesData.reduce((acc: { [key: string]: any }, profile: any) => {
-            acc[profile.user_id] = {
-              full_name: profile.full_name,
-              phone: profile.phone,
-              status: profile.status
-            };
-            return acc;
-          }, {});
+        if (isOverviewRoute) {
+          univQuery = univQuery.eq('is_approved', false).limit(10); // Limite ainda menor no overview
         }
-      } catch (profileError) {
-        console.warn('Could not load user profiles:', profileError);
+        
+        const { data: univData, error: univError } = await univQuery.order('created_at', { ascending: false });
+        if (!univError && univData) {
+          setUniversities(univData as any[]);
+        }
       }
 
-      // Load user emails using the admin function
-      try {
+      // 2. CARREGAR USUÁRIOS
+      if (isUsersRoute || isSettingsRoute) {
         const { data: adminUsersData, error: adminUsersError } = await supabase.rpc('get_admin_users_data');
         if (!adminUsersError && adminUsersData) {
-          userEmails = adminUsersData.reduce((acc: { [key: string]: string }, user: any) => {
-            acc[user.id] = user.email;
-            return acc;
-          }, {});
-        }
-      } catch (emailError) {
-        console.warn('Could not load user emails:', emailError);
-      }
-
-      // Try to load users using the admin function
-      let usersData: any[] = [];
-      try {
-        const { data: adminUsersData, error: adminUsersError } = await supabase.rpc('get_admin_users_data');
-        
-        if (adminUsersError) {
-          console.error('Error loading admin users data:', adminUsersError);
-          
-          // Fallback to user_profiles only if the function fails
-          const { data: profilesData, error: profilesError } = await supabase
-            .from('user_profiles')
-            .select('*')
-            .order('created_at', { ascending: false });
-          
-          if (profilesError) {
-            console.error('Error loading user profiles:', profilesError);
-            throw new Error(`Failed to load user data: ${profilesError.message}`);
-          }
-          
-          usersData = (profilesData || []).map((profile: any) => ({
-            id: profile.id,
-            user_id: profile.user_id,
-            full_name: profile.full_name || 'Unknown User',
-            email: 'Email not available',
-            role: 'student',
-            country: profile.country,
-            field_of_interest: profile.field_of_interest,
-            status: profile.status || 'active',
-            applications_count: 0,
-            created_at: profile.created_at,
-            last_active: profile.last_active || profile.created_at
-          }));
-        } else {
-          usersData = (adminUsersData || []).map((u: any) => ({
+          setUsers(adminUsersData.map((u: any) => ({
             id: u.id,
             user_id: u.id,
-            full_name: u.full_name || 'Unknown User',
-            email: u.email || 'Email not available',
-            role: u.role || u.raw_user_meta_data?.role || 'student',
-            country: u.country,
-            field_of_interest: u.field_of_interest,
+            full_name: u.full_name,
+            email: u.email,
+            role: u.role || 'student',
             status: u.status || 'active',
-            applications_count: 0,
-            created_at: u.created_at,
-            last_active: u.last_active || u.created_at
-          }));
+            created_at: u.created_at
+          })));
         }
-      } catch (userError) {
-        console.error('Error in user data loading:', userError);
-        usersData = [];
-        setError('Could not load user data. Some admin functions may be limited.');
       }
 
-      // Load scholarships
-      const { data: scholarshipsData, error: scholarshipsError } = await supabase
-        .from('scholarships')
-        .select(`
-          *,
-          universities!inner (
-            name
-          )
-        `)
-        .order('created_at', { ascending: false });
-
-      if (scholarshipsError) {
-        console.error('Error loading scholarships:', scholarshipsError);
-      }
-
-      // Load application counts and cart counts (views) for scholarships
-      let applicationCounts: Record<string, number> = {};
-      let cartCounts: Record<string, number> = {};
-      
-      if (scholarshipsData && scholarshipsData.length > 0) {
-        const scholarshipIds = scholarshipsData.map(s => s.id);
-        
-        // Count applications per scholarship - apenas com documentos aprovados
-        // Buscar aplicações com user_profiles para verificar documents_status
-        const { data: applicationCountsData } = await supabase
-          .from('scholarship_applications')
+      // 3. CARREGAR BOLSAS (Campos essenciais)
+      if (isScholarshipsRoute) {
+        const { data: scholarshipsData, error: sError } = await supabase
+          .from('scholarships')
           .select(`
-            scholarship_id,
-            documents,
-            student_id,
-            user_profiles!student_id (
-              documents_status
-            )
+            id, 
+            title, 
+            amount, 
+            university_id, 
+            is_active, 
+            created_at, 
+            field_of_study, 
+            level, 
+            deadline, 
+            annual_value_with_scholarship, 
+            description,
+            delivery_mode,
+            internal_fees,
+            requirements,
+            universities(name)
           `)
-          .in('scholarship_id', scholarshipIds);
-        
-        if (applicationCountsData) {
-          applicationCountsData.forEach(app => {
-            const profile = Array.isArray((app as any).user_profiles) 
-              ? (app as any).user_profiles[0] 
-              : (app as any).user_profiles;
-            const documents = app.documents || [];
-            
-            // Verificar se documents_status está aprovado OU se todos os documentos estão aprovados
-            const isDocumentsApproved = profile?.documents_status === 'approved' ||
-              // Verificar se todos os documentos requeridos estão aprovados
-              (Array.isArray(documents) && 
-               ['passport', 'diploma', 'funds_proof'].every((docType) => {
-                 const doc = documents.find((d: any) => d?.type === docType);
-                 return doc && (doc.status || '').toLowerCase() === 'approved';
-               }));
-            
-            if (isDocumentsApproved) {
-              applicationCounts[app.scholarship_id] = (applicationCounts[app.scholarship_id] || 0) + 1;
-            }
-          });
-        }
-        
-        // Count cart entries (views/interests) per scholarship
-        // Cart representa estudantes que selecionaram a bolsa antes de pagar application fee
-        const { data: cartData } = await supabase
-          .from('user_cart')
-          .select('scholarship_id')
-          .in('scholarship_id', scholarshipIds);
-        
-        if (cartData) {
-          cartData.forEach(cart => {
-            cartCounts[cart.scholarship_id] = (cartCounts[cart.scholarship_id] || 0) + 1;
-          });
+          .order('created_at', { ascending: false });
+
+        if (!sError && scholarshipsData) {
+          setScholarships(scholarshipsData as any[]);
         }
       }
 
-      // Load applications
-      const { data: applicationsData, error: applicationsError } = await supabase
-        .from('scholarship_applications')
-        .select(`
-          *,
-          scholarships!inner (
-            title,
-            amount,
-            universities!inner (
-              name
-            )
-          )
-        `)
-        .order('created_at', { ascending: false });
+      // 4. CARREGAR APLICAÇÕES
+      if (isOverviewRoute || location.pathname.includes('application-monitoring')) {
+        let appQuery = supabase.from('scholarship_applications')
+          .select(`id, status, applied_at, scholarships(title, amount, universities(name))`);
 
-      if (applicationsError) {
-        console.error('Error loading applications:', applicationsError);
+        if (isOverviewRoute) {
+          appQuery = appQuery.limit(10);
+        }
+
+        const { data: applicationsData, error: aError } = await appQuery.order('created_at', { ascending: false });
+
+        if (!aError && applicationsData) {
+          setApplications(applicationsData.map((app: any) => ({
+            id: app.id,
+            student_name: 'Student User', // Placeholder since it's not in the optimized fetch
+            student_email: '',
+            scholarship_title: app.scholarships?.title || 'Unknown',
+            university_name: app.scholarships?.universities?.name || 'Unknown',
+            amount: app.scholarships?.amount || 0,
+            status: app.status,
+            applied_at: app.applied_at
+          })) as any[]);
+        }
       }
-
-      // Process data
-      const processedUniversities = (universitiesData || []).map((university: any) => ({
-        ...university,
-        user_email: userEmails[university.user_id] || null,
-        user_profile: userProfiles[university.user_id] || null
-      }));
-      const processedScholarships = (scholarshipsData || []).map((scholarship: any) => ({
-        ...scholarship,
-        application_count: applicationCounts[scholarship.id] || 0,
-        cart_count: cartCounts[scholarship.id] || 0
-      }));
-      const processedApplications = (applicationsData || []).map((app: any) => ({
-        id: app.id,
-        student_name: 'Student User',
-        student_email: '',
-        scholarship_title: app.scholarships?.title || 'Unknown Scholarship',
-        university_name: app.scholarships?.universities?.name || 'Unknown University',
-        amount: app.scholarships?.amount || 0,
-        status: app.status,
-        applied_at: app.applied_at,
-        reviewed_at: app.reviewed_at,
-        notes: app.notes
-      }));
-
-      setUniversities(processedUniversities);
-      setUsers(usersData);
-      setScholarships(processedScholarships);
-      setApplications(processedApplications);
-
-      // Calculate statistics
-      const newStats: AdminStats = {
-        totalUniversities: processedUniversities.length,
-        pendingUniversities: processedUniversities.filter(u => !u.is_approved).length,
-        approvedUniversities: processedUniversities.filter(u => u.is_approved).length,
-        totalStudents: usersData.filter(u => u.role === 'student').length,
-        totalScholarships: processedScholarships.length,
-        totalApplications: processedApplications.length,
-        totalFunding: processedScholarships.reduce((sum, s) => sum + Number(s.amount), 0),
-        monthlyGrowth: 12.5
-      };
-
-      setStats(newStats);
       
-      // Marcar que já carregamos dados uma vez
+      setLoadedSections(prev => new Set(prev).add(sectionKey));
       setHasLoadedData(true);
     } catch (error: any) {
-      console.error('Error loading admin data:', error);
-      setError(`Failed to load admin data: ${error.message}`);
+      setError(`Failed to load data: ${error.message}`);
     } finally {
       setLoading(false);
     }
   };
+
 
   const handleApproveUniversity = async (universityId: string) => {
     const university = universities.find(u => u.id === universityId);
@@ -479,16 +353,6 @@ const AdminDashboard: React.FC = () => {
     );
   };
 
-  const handleRejectUniversity = async (universityId: string) => {
-    const university = universities.find(u => u.id === universityId);
-    if (!university) return;
-
-    setRejectionModal({
-      isOpen: true,
-      universityId,
-      universityName: university.name
-    });
-  };
 
   const confirmRejectUniversity = async () => {
     if (!rejectionModal) return;
@@ -624,7 +488,7 @@ const AdminDashboard: React.FC = () => {
               applications={applications}
               error={error}
               onApprove={handleApproveUniversity}
-              onReject={handleRejectUniversity}
+              loading={loading}
             />
           } 
         />
@@ -634,8 +498,8 @@ const AdminDashboard: React.FC = () => {
             <UniversityManagement 
               universities={universities}
               stats={componentStats.universities}
+              loading={loading}
               onApprove={handleApproveUniversity}
-              onReject={handleRejectUniversity}
             />
           } 
         />
@@ -646,7 +510,9 @@ const AdminDashboard: React.FC = () => {
         <Route 
           path="users" 
           element={
-            <UsersHub />
+            <UsersHub 
+              loading={loading}
+            />
           } 
         />
         <Route 
@@ -655,6 +521,7 @@ const AdminDashboard: React.FC = () => {
             <ScholarshipManagement 
               scholarships={scholarships}
               stats={componentStats.scholarships}
+              loading={loading}
               onRefresh={loadAdminData}
             />
           } 

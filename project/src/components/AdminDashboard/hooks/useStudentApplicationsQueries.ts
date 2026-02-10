@@ -29,6 +29,7 @@ interface StudentRecord {
   is_locked: boolean;
   total_applications: number;
   all_applications: any[];
+  system_type?: string;
   most_recent_activity?: Date;
 }
 
@@ -53,6 +54,7 @@ export function useStudentsQuery() {
           has_paid_i20_control_fee,
           role,
           seller_referral_code,
+          system_type,
           scholarship_applications (
             id,
             scholarship_id,
@@ -90,11 +92,13 @@ export function useStudentsQuery() {
         
         if (student.scholarship_applications && student.scholarship_applications.length > 0) {
           // Priorizar aplicação que teve Application Fee pago, depois enrolled, depois approved
+          // Se não houver nenhuma "travada", pegar a mais recente
           lockedApplication = student.scholarship_applications.find((app: any) => app.is_application_fee_paid) ||
                              student.scholarship_applications.find((app: any) => app.status === 'enrolled') ||
-                             student.scholarship_applications.find((app: any) => app.status === 'approved');
+                             student.scholarship_applications.find((app: any) => app.status === 'approved') ||
+                             student.scholarship_applications[0]; // Fallback para a mais recente (assumindo que a query já ordenou ou pegamos a primeira)
           
-          // Se há uma aplicação locked, mostrar informações dela no campo scholarship
+          // Se há uma aplicação (locked ou fallback), mostrar informações dela no campo scholarship
           if (lockedApplication) {
             scholarshipInfo = {
               title: lockedApplication.scholarships?.title || 'N/A',
@@ -157,6 +161,7 @@ export function useStudentsQuery() {
           total_applications: student.scholarship_applications ? student.scholarship_applications.length : 0,
           // Guardar todas as aplicações para o modal
           all_applications: student.scholarship_applications || [],
+          system_type: student.system_type || 'legacy',
           // Campo para ordenação por atividade recente
           most_recent_activity: mostRecentActivity
         };
