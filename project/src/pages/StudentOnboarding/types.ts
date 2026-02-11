@@ -2,10 +2,11 @@ export type OnboardingStep =
   | "welcome"
   | "selection_fee"
   | "scholarship_selection"
-  | "scholarship_review"
   | "process_type"
   | "documents_upload"
   | "payment"
+  | "scholarship_fee"
+  | "university_documents"
   | "waiting_approval"
   | "completed";
 
@@ -18,6 +19,7 @@ export interface OnboardingState {
   documentsApproved: boolean;
   applicationFeePaid: boolean;
   scholarshipFeePaid: boolean;
+  universityDocumentsUploaded: boolean;
   onboardingCompleted: boolean;
 }
 

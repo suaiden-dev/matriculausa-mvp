@@ -14,7 +14,7 @@ export const useOnboardingProgress = () => {
   const getSavedStep = useCallback((): OnboardingStep | null => {
     // Usar apenas localStorage por enquanto (campo no banco não existe ainda)
     const savedStep = window.localStorage.getItem(ONBOARDING_STEP_KEY);
-    const validSteps: OnboardingStep[] = ['welcome', 'selection_fee', 'scholarship_selection', 'scholarship_review', 'process_type', 'documents_upload', 'payment', 'waiting_approval', 'completed'];
+    const validSteps: OnboardingStep[] = ['welcome', 'selection_fee', 'scholarship_selection', 'process_type', 'documents_upload', 'payment', 'scholarship_fee', 'university_documents', 'waiting_approval', 'completed'];
     if (savedStep && validSteps.includes(savedStep as OnboardingStep)) {
       return savedStep as OnboardingStep;
     }
@@ -30,7 +30,7 @@ export const useOnboardingProgress = () => {
   const [state, setState] = useState<OnboardingState>(() => {
     // Inicializar com step do localStorage se existir (síncrono)
     const savedStep = window.localStorage.getItem(ONBOARDING_STEP_KEY);
-    const validSteps: OnboardingStep[] = ['welcome', 'selection_fee', 'scholarship_selection', 'scholarship_review', 'process_type', 'documents_upload', 'payment', 'waiting_approval', 'completed'];
+    const validSteps: OnboardingStep[] = ['welcome', 'selection_fee', 'scholarship_selection', 'process_type', 'documents_upload', 'payment', 'scholarship_fee', 'university_documents', 'waiting_approval', 'completed'];
     const initialStep = savedStep && validSteps.includes(savedStep as OnboardingStep) ? savedStep as OnboardingStep : 'welcome';
     
     return {
@@ -42,6 +42,7 @@ export const useOnboardingProgress = () => {
       documentsApproved: false,
       applicationFeePaid: false,
       scholarshipFeePaid: false,
+      universityDocumentsUploaded: false,
       onboardingCompleted: false,
     };
   });
@@ -55,6 +56,9 @@ export const useOnboardingProgress = () => {
 
     try {
       setLoading(true);
+      const selAppId = window.localStorage.getItem('selected_application_id');
+      const savedStepLog = window.localStorage.getItem(ONBOARDING_STEP_KEY);
+      console.log('[OnboardingDebug] Starting checkProgress. LocalStorage - selAppId:', selAppId, 'savedStep:', savedStepLog);
 
       // 1. Verificar Selection Fee
       let selectionFeePaid = userProfile.has_paid_selection_process_fee || false;
@@ -116,8 +120,8 @@ export const useOnboardingProgress = () => {
       const storedProcessType = window.localStorage.getItem('studentProcessType');
       const processTypeSelected = 
         (applications && applications.length > 0 && !!applications[0].student_process_type) ||
-        (!!storedProcessType && ['initial', 'transfer', 'change_of_status'].includes(storedProcessType)) ||
-        (userProfile.documents_uploaded || false);
+        (userProfile.documents_uploaded || false) ||
+        (scholarshipsSelected && !!storedProcessType && ['initial', 'transfer', 'change_of_status'].includes(storedProcessType));
 
       // 4. Verificar Documentos
       const documentsUploaded = userProfile.documents_uploaded || false;
@@ -177,10 +181,61 @@ export const useOnboardingProgress = () => {
         if (zelleScholarship && zelleScholarship.length > 0) {
             scholarshipFeePaid = true;
         }
+        if (zelleScholarship && zelleScholarship.length > 0) {
+            scholarshipFeePaid = true;
+        }
       }
 
-      // 7. Verificar se onboarding foi completado
-      const onboardingCompleted = userProfile.onboarding_completed || false;
+      // 7. Verificar Documentos da Universidade (University Documents)
+      const isOnboardingCompleted = userProfile.onboarding_completed || false;
+      let universityDocumentsUploaded = false;
+
+      if (isOnboardingCompleted) {
+        universityDocumentsUploaded = true;
+      } else {
+        // Buscar aplicação ativa para saber se existem requests
+        const { data: activeApps } = await supabase
+          .from('scholarship_applications')
+          .select('id, scholarship_id, scholarships(university_id)')
+          .eq('student_id', userProfile.id)
+          .order('created_at', { ascending: false })
+          .limit(1);
+        
+        const activeApp = activeApps?.[0];
+        const universityId = (activeApp?.scholarships as any)?.university_id;
+
+        if (activeApp) {
+          let reqQuery = supabase
+            .from('document_requests')
+            .select('id', { count: 'exact', head: true });
+          
+          if (universityId) {
+            reqQuery = reqQuery.or(`scholarship_application_id.eq.${activeApp.id},and(university_id.eq.${universityId},is_global.eq.true)`);
+          } else {
+            reqQuery = reqQuery.eq('scholarship_application_id', activeApp.id);
+          }
+
+          const { count: requestsCount } = await reqQuery;
+
+          if ((requestsCount || 0) === 0) {
+            // Se não há requests, considera "concluído" para não travar o fluxo
+            universityDocumentsUploaded = true;
+          } else {
+            // Se há requests, verifica se há pelo menos um upload para marcar como "em progresso/feito"
+            const { count: uploadsCount } = await supabase
+              .from('document_request_uploads')
+              .select('id', { count: 'exact', head: true })
+              .eq('uploaded_by', userProfile.user_id);
+            
+            universityDocumentsUploaded = (uploadsCount || 0) > 0;
+          }
+        } else {
+          universityDocumentsUploaded = true;
+        }
+      }
+
+      // 8. Verificar se onboarding foi completado
+      const onboardingCompleted = isOnboardingCompleted;
 
       // Verificar se é um novo usuário (sem nenhum progresso E sem step salvo)
       // Se há step salvo, significa que o usuário já interagiu com o onboarding
@@ -206,10 +261,13 @@ export const useOnboardingProgress = () => {
           'welcome',
           'selection_fee',
           'scholarship_selection',
-          'scholarship_review',
           'process_type',
           'documents_upload',
           'payment',
+          'documents_upload',
+          'payment',
+          'scholarship_fee',
+          'university_documents',
           'waiting_approval',
           'completed',
         ];
@@ -223,21 +281,31 @@ export const useOnboardingProgress = () => {
         } else if (!scholarshipsSelected) {
           calculatedStep = 'scholarship_selection';
           minRequiredStep = 'scholarship_selection';
-        } else if (scholarshipsSelected && !processTypeSelected) {
-          calculatedStep = 'scholarship_review';
-          minRequiredStep = 'scholarship_selection';
         } else if (!processTypeSelected) {
           calculatedStep = 'process_type';
           minRequiredStep = 'process_type';
-        } else if (!documentsUploaded) {
+        } else if (!documentsUploaded || !documentsApproved) {
           calculatedStep = 'documents_upload';
           minRequiredStep = 'documents_upload';
         } else if (!applicationFeePaid) {
-          calculatedStep = 'payment';
+          // Só avançar para payment se houver uma aplicação selecionada no localStorage
+          // Isso garante que o usuário passe pela tela de seleção no documents_upload
+          const selectedAppId = window.localStorage.getItem('selected_application_id');
+          
+          if (selectedAppId) {
+            calculatedStep = 'payment';
+            minRequiredStep = 'documents_upload';
+          } else {
+            // Se não tem ID selecionado, o próximo passo OBRIGATÓRIO é a seleção (dentro de documents_upload)
+            calculatedStep = 'documents_upload';
+            minRequiredStep = 'documents_upload';
+          }
+        } else if (!scholarshipFeePaid) {
+          calculatedStep = 'scholarship_fee';
           minRequiredStep = 'payment';
-        } else if (!documentsApproved) {
-          calculatedStep = 'waiting_approval';
-          minRequiredStep = 'waiting_approval';
+        } else if (!universityDocumentsUploaded) {
+          calculatedStep = 'university_documents';
+          minRequiredStep = 'scholarship_fee';
         } else {
           calculatedStep = 'waiting_approval';
           minRequiredStep = 'waiting_approval';
@@ -264,19 +332,24 @@ export const useOnboardingProgress = () => {
           currentStep = 'selection_fee';
         } else if (!scholarshipsSelected) {
           currentStep = 'scholarship_selection';
-        } else if (scholarshipsSelected && !processTypeSelected) {
-          // Se tem bolsas selecionadas, ir para scholarship_review antes de process_type
-          currentStep = 'scholarship_review';
         } else if (!processTypeSelected) {
           currentStep = 'process_type';
-        } else if (!documentsUploaded) {
+        } else if (!documentsUploaded || !documentsApproved) {
           currentStep = 'documents_upload';
         } else if (!applicationFeePaid) {
-          currentStep = 'payment';
-        } else if (!documentsApproved) {
-          currentStep = 'waiting_approval';
+          // No cálculo automático (sem step salvo), só ir para payment se houver seleção
+          const selectedAppId = window.localStorage.getItem('selected_application_id');
+          if (selectedAppId) {
+            currentStep = 'payment';
+          } else {
+            currentStep = 'documents_upload';
+          }
+        } else if (!scholarshipFeePaid) {
+          currentStep = 'scholarship_fee';
+        } else if (!universityDocumentsUploaded) {
+          currentStep = 'university_documents';
         } else {
-          // Se documentos estão aprovados, ficar em waiting_approval para pagar fees
+          // Se documentos estão aprovados e taxas pagas, ficar em waiting_approval
           currentStep = 'waiting_approval';
         }
       }
@@ -290,6 +363,7 @@ export const useOnboardingProgress = () => {
         documentsApproved,
         applicationFeePaid,
         scholarshipFeePaid,
+        universityDocumentsUploaded,
         onboardingCompleted,
       });
       
@@ -332,6 +406,12 @@ export const useOnboardingProgress = () => {
           break;
         case 'payment':
           updates.applicationFeePaid = true;
+          break;
+        case 'scholarship_fee':
+          updates.scholarshipFeePaid = true;
+          break;
+        case 'university_documents':
+          updates.universityDocumentsUploaded = true;
           break;
         case 'waiting_approval':
           updates.documentsApproved = true;

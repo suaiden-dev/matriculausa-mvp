@@ -8,14 +8,19 @@ import {
   Clock, 
   DollarSign, 
   AlertCircle,
-  ArrowRight,
   Info,
-  RefreshCw
+  RefreshCw,
+  Building,
+  GraduationCap,
+  Calendar,
+  ArrowRight
 } from 'lucide-react';
 import { useAuth } from '../../../hooks/useAuth';
 import { supabase } from '../../../lib/supabase';
 import { useTranslation } from 'react-i18next';
 import { StepProps } from '../types';
+import { useCartStore } from '../../../stores/applicationStore';
+import { getN8nProxyUrl } from '../../../utils/storageProxy';
 
 import { PencilLoader } from '../../../components/PencilLoader';
 
@@ -28,7 +33,7 @@ const DOCUMENT_TYPES = [
 export const DocumentsUploadStep: React.FC<StepProps> = ({ onNext }) => {
   const { t } = useTranslation();
   const { user, userProfile, refetchUserProfile } = useAuth();
-// const { clearCart, fetchCart } = useCartStore(); // Removed unused variable
+  const { clearCart } = useCartStore();
   const [files, setFiles] = useState<Record<string, File | File[] | null>>({
     passport: null,
     diploma: null,
@@ -41,20 +46,62 @@ export const DocumentsUploadStep: React.FC<StepProps> = ({ onNext }) => {
   const [fieldErrors, setFieldErrors] = useState<Record<string, string>>({});
   const [showManualReviewMessage, setShowManualReviewMessage] = useState(false);
   const [isLocked, setIsLocked] = useState(false);
+  const [applications, setApplications] = useState<any[]>([]);
+  const [loadingApplications, setLoadingApplications] = useState(false);
+  const [selectedAppId, setSelectedAppId] = useState<string | null>(localStorage.getItem('selected_application_id'));
+  const [showAppSelection, setShowAppSelection] = useState(false);
+  const [isTransitioning, setIsTransitioning] = useState(false);
 
   // Obter process type do localStorage
   const processType = localStorage.getItem('studentProcessType') || 'initial';
 
   // Verificar se já passou pela review (tem documentos enviados ou aprovados)
   useEffect(() => {
-    const checkIfLocked = () => {
+    console.log('[DocumentsUploadStep] Component mounted. Cleaning selection ID to prevent jump.');
+    window.localStorage.removeItem('selected_application_id');
+    
+    const checkIfLocked = async () => {
       if (!userProfile) return;
       const documentsUploaded = userProfile.documents_uploaded || false;
       const documentsApproved = userProfile.documents_status === 'approved';
       setIsLocked(documentsUploaded || documentsApproved);
+
+      if (documentsUploaded || documentsApproved) {
+        // Se já foi aprovado e o usuário já clicou em continuar anteriormente, restaurar a visualização
+        if (documentsApproved && localStorage.getItem('has_viewed_applications') === 'true') {
+           setShowAppSelection(true); 
+        }
+
+        setLoadingApplications(true);
+        try {
+          const { data, error } = await supabase
+            .from('scholarship_applications')
+            .select('*, scholarships(*, universities(id, name, logo_url))')
+            .eq('student_id', userProfile.id)
+            .order('created_at', { ascending: false });
+          
+          if (!error && data) {
+            setApplications(data);
+            
+            // Auto-select if there's only one approved application
+            const approvedApps = data.filter(a => a.status === 'approved' || a.status === 'enrolled');
+            if (approvedApps.length === 1) {
+              setSelectedAppId(approvedApps[0].id);
+            }
+          }
+        } catch (err) {
+          console.error('Error fetching applications:', err);
+        } finally {
+          setLoadingApplications(false);
+        }
+      }
     };
     checkIfLocked();
-  }, [userProfile?.documents_uploaded, userProfile?.documents_status]);
+
+    return () => {
+      console.log('[DocumentsUploadStep] Component UNMOUNTING.');
+    };
+  }, [userProfile?.id, userProfile?.documents_uploaded, userProfile?.documents_status]);
 
   const getDocumentLimit = (): number => {
     switch (processType) {
@@ -93,12 +140,12 @@ export const DocumentsUploadStep: React.FC<StepProps> = ({ onNext }) => {
           'Content-Type': 'application/json',
           'Authorization': `Bearer ${accessToken}`,
         },
-        body: JSON.stringify({ filePaths, studentId: user?.id })
+        body: JSON.stringify({ file_paths: filePaths, user_id: user?.id })
       });
 
       if (!mergeResponse.ok) throw new Error('Failed to merge documents');
-      const { mergedFilePath } = await mergeResponse.json();
-      return mergedFilePath;
+      const { merged_file_path } = await mergeResponse.json();
+      return merged_file_path;
     } catch (error) {
       console.error('Error merging documents:', error);
       throw error;
@@ -179,27 +226,105 @@ export const DocumentsUploadStep: React.FC<StepProps> = ({ onNext }) => {
       const mergedFilePath = await mergeFundsDocuments(uploadedFundsPaths);
       uploadedPaths.funds_proof = mergedFilePath;
 
-      // Analysis via Supabase Function
+      // Obter URLs públicas para salvar no banco e enviar para análise
+      const getUrl = (path: string) => supabase.storage.from('student-documents').getPublicUrl(path).data.publicUrl;
+      const passportUrl = getUrl(uploadedPaths.passport);
+      const diplomaUrl = getUrl(uploadedPaths.diploma);
+      const fundsUrl = getUrl(uploadedPaths.funds_proof);
+
+      // 1. Inserir no histórico de documentos (student_documents)
+      const docInserts = [
+        { user_id: user.id, type: 'passport', file_url: passportUrl, status: 'pending' },
+        { user_id: user.id, type: 'diploma', file_url: diplomaUrl, status: 'pending' },
+        { user_id: user.id, type: 'funds_proof', file_url: fundsUrl, status: 'pending' }
+      ];
+      await supabase.from('student_documents').insert(docInserts);
+
+      // 2. Criar Candidaturas para itens no carrinho se não existirem
+      const { data: cartItems } = await supabase.from('user_cart').select('scholarship_id').eq('user_id', user.id);
+      const scholarshipIds = (cartItems?.map(item => item.scholarship_id) || []);
+      if (scholarshipIds.length === 0 && userProfile?.selected_scholarship_id) {
+        scholarshipIds.push(userProfile.selected_scholarship_id);
+      }
+
+      if (scholarshipIds.length > 0) {
+        for (const scholarshipId of scholarshipIds) {
+          // Verificar se já existe aplicação
+          const { data: existingApp } = await supabase
+            .from('scholarship_applications')
+            .select('id')
+            .eq('student_id', userProfile?.id || '')
+            .eq('scholarship_id', scholarshipId)
+            .maybeSingle();
+
+          let applicationId = existingApp?.id;
+
+          if (!applicationId && userProfile?.id) {
+            const { data: newApp } = await supabase
+              .from('scholarship_applications')
+              .insert({
+                student_id: userProfile.id,
+                scholarship_id: scholarshipId,
+                status: 'pending',
+                student_process_type: localStorage.getItem('studentProcessType') || 'initial'
+              })
+              .select('id')
+              .single();
+            applicationId = newApp?.id;
+          }
+
+          if (applicationId) {
+            // Anexar documentos à aplicação
+            const appDocs = [
+              { type: 'passport', url: passportUrl, status: 'under_review', uploaded_at: new Date().toISOString() },
+              { type: 'diploma', url: diplomaUrl, status: 'under_review', uploaded_at: new Date().toISOString() },
+              { type: 'funds_proof', url: fundsUrl, status: 'under_review', uploaded_at: new Date().toISOString() }
+            ];
+            await supabase.from('scholarship_applications').update({ documents: appDocs }).eq('id', applicationId);
+          }
+        }
+      }
+
+      // 3. Atualizar Perfil do Usuário
+      if (userProfile?.id) {
+        await supabase.from('user_profiles').update({
+          documents_uploaded: true,
+          documents_status: 'under_review'
+        }).eq('id', userProfile.id);
+      }
+
+      // 4. Limpar Carrinho
+      await supabase.from('user_cart').delete().eq('user_id', user.id);
+      clearCart(user.id);
+
+      // 5. Chamada de Análise (Webhook n8n via Edge Function)
       setAnalyzing(true);
       const SUPABASE_FUNCTIONS_URL = import.meta.env.VITE_SUPABASE_FUNCTIONS_URL || 'https://fitpynguasqqutuhzifx.supabase.co/functions/v1';
       const { data: { session } } = await supabase.auth.getSession();
+      
+      const webhookBody = {
+        user_id: user.id,
+        student_name: userProfile?.full_name || user.email || '',
+        passport_url: getN8nProxyUrl(passportUrl),
+        diploma_url: getN8nProxyUrl(diplomaUrl),
+        funds_proof_url: getN8nProxyUrl(fundsUrl),
+      };
+
       const response = await fetch(`${SUPABASE_FUNCTIONS_URL}/analyze-student-documents`, {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${session?.access_token}` },
-        body: JSON.stringify({ studentId: user.id, documentPaths: uploadedPaths })
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${session?.access_token}`
+        },
+        body: JSON.stringify(webhookBody)
       });
 
       if (!response.ok) {
-        const errorData = await response.json();
-        if (errorData.type === 'MANUAL_REVIEW_REQUIRED') {
-          setShowManualReviewMessage(true);
-        } else {
-          throw new Error(errorData.error || 'Failed to analyze documents');
-        }
-      } else {
-        await refetchUserProfile();
-        onNext();
+        // Log error but we already saved to DB, so we don't throw to not confuse the user
+        console.error('Document analysis webhook failed but records were saved.');
       }
+      
+      await refetchUserProfile();
     } catch (err: any) {
       console.error('Error in document upload/analysis:', err);
       setError(err.message || 'An error occurred during document processing.');
@@ -212,19 +337,308 @@ export const DocumentsUploadStep: React.FC<StepProps> = ({ onNext }) => {
   const allFilesSelected = files.passport && files.diploma && (files.funds_proof as File[]).length > 0;
 
   if (isLocked) {
+    const isApproved = userProfile?.documents_status === 'approved';
+    const approvedApps = applications.filter(app => app.status === 'approved' || app.status === 'enrolled');
+    const hasMultipleApproved = approvedApps.length > 1;
+
+    const handleContinueToApps = () => {
+      console.log('[DocumentsUploadStep] handleContinueToApps clicked. Transitioning...');
+      localStorage.setItem('has_viewed_applications', 'true');
+      setIsTransitioning(true);
+      setTimeout(() => {
+        console.log('[DocumentsUploadStep] Timeout reached. Setting showAppSelection to true.');
+        setShowAppSelection(true);
+        // Pequeno delay para garantir que o DOM atualizou antes de remover o blur
+        setTimeout(() => {
+          console.log('[DocumentsUploadStep] Finalizing transition.');
+          setIsTransitioning(false);
+        }, 50);
+      }, 500);
+    };
+
+    const handleFinalContinue = () => {
+      if (selectedAppId) {
+        localStorage.setItem('selected_application_id', selectedAppId);
+      } else {
+        localStorage.removeItem('selected_application_id');
+      }
+      onNext();
+    };
+
     return (
-      <div className="space-y-6 max-w-4xl mx-auto">
-        <div className="bg-white rounded-[2.5rem] p-8 sm:p-12 border border-gray-100 shadow-2xl text-center">
-          <div className="mb-6 w-20 h-20 bg-emerald-50 rounded-full flex items-center justify-center mx-auto border border-emerald-100">
-            <CheckCircle className="w-12 h-12 text-emerald-600" />
+      <div className={`transition-all duration-700 ease-in-out transform ${
+        isTransitioning 
+          ? 'opacity-0 scale-95 blur-2xl rotate-1' 
+          : 'opacity-100 scale-100 blur-0 rotate-0'
+      }`}>
+        {!showAppSelection ? (
+          <div className="space-y-10 max-w-4xl mx-auto pb-12 px-4">
+            {/* Header */}
+            <div className="text-center md:text-left space-y-4">
+              <h2 className="text-3xl md:text-5xl font-black text-white uppercase tracking-tighter leading-none">
+                {isApproved ? 'Documentos Aprovados' : 'Upload de Documentos'}
+              </h2>
+              <p className="text-lg md:text-xl text-white/60 font-medium max-w-2xl mt-2">
+                {isApproved 
+                  ? 'Seus documentos foram verificados com sucesso.' 
+                  : 'Seus documentos estão sendo revisados pela nossa equipe.'}
+              </p>
+            </div>
+
+            {/* Main White Container */}
+            <div className={`bg-white border rounded-[2.5rem] p-6 md:p-10 shadow-2xl relative overflow-hidden transition-all duration-500 ${
+              isApproved 
+                ? 'border-emerald-500/30 ring-1 ring-emerald-500/20' 
+                : 'border-gray-100'
+            }`}>
+              <div className="absolute top-0 right-0 w-64 h-64 bg-blue-500/5 rounded-full blur-[80px] -mr-32 -mt-32 pointer-events-none" />
+              
+              <div className="relative z-10 text-center py-6">
+                <div className={`mb-6 w-20 h-20 ${isApproved ? 'bg-emerald-500/20' : 'bg-blue-500/5'} rounded-full flex items-center justify-center mx-auto border ${isApproved ? 'border-emerald-500/30' : 'border-gray-100'}`}>
+                  {isApproved ? (
+                    <CheckCircle className="w-12 h-12 text-emerald-400" />
+                  ) : (
+                    <Clock className="w-12 h-12 text-blue-600 animate-pulse" />
+                  )}
+                </div>
+                <h3 className="text-3xl font-black text-gray-900 mb-3 uppercase tracking-tight">
+                  {isApproved ? 'Tudo Certo!' : 'Aguardando Aprovação'}
+                </h3>
+                <p className="text-base sm:text-lg text-gray-500 mb-8 font-medium max-w-lg mx-auto">
+                  {isApproved 
+                    ? 'Você já pode visualizar suas candidaturas e prosseguir para o pagamento.' 
+                    : 'Este processo geralmente leva de 24 a 48 horas úteis. Você será notificado quando seus documentos forem revisados.'}
+                </p>
+
+                {!isApproved && (
+                  <div className="bg-blue-50 border border-blue-100 rounded-2xl p-6 text-left mb-8 max-w-lg mx-auto">
+                    <div className="flex gap-4">
+                      <Info className="w-6 h-6 text-blue-500 flex-shrink-0" />
+                      <p className="text-sm font-bold text-blue-800 uppercase tracking-tight leading-relaxed">
+                        Você não pode prosseguir para a próxima etapa até que pelo menos uma de suas solicitações de bolsa seja aprovada por um administrador.
+                      </p>
+                    </div>
+                  </div>
+                )}
+
+                {isApproved && (
+                  <button 
+                    onClick={handleContinueToApps} 
+                    className="w-full max-w-xs bg-blue-600 text-white py-4 px-8 rounded-xl hover:bg-blue-700 transition-all font-bold uppercase tracking-widest shadow-lg shadow-blue-500/20 hover:scale-105 active:scale-95 mx-auto"
+                  >
+                    Continuar
+                  </button>
+                )}
+              </div>
+            </div>
           </div>
-          <h2 className="text-3xl font-black text-gray-900 mb-3 uppercase tracking-tight">Step Completed</h2>
-          <p className="text-base sm:text-lg text-gray-500 mb-8 font-medium">Your documents have been uploaded and are being reviewed.</p>
-          <button onClick={onNext} className="bg-blue-600 text-white px-8 py-4 rounded-xl font-bold uppercase tracking-widest hover:bg-blue-700 transition-all shadow-lg hover:scale-105 active:scale-95 flex items-center justify-center space-x-2 mx-auto">
-            <span>Continue</span>
-            <ArrowRight className="w-5 h-5" />
-          </button>
-        </div>
+        ) : (
+          <div className="space-y-10 max-w-5xl mx-auto pb-12 px-4">
+            {/* Header Outside Container */}
+            <div className="text-center space-y-4 animate-in fade-in slide-in-from-top-10 duration-1000">
+              <h2 className="text-3xl md:text-5xl font-black text-white uppercase tracking-tighter leading-none">
+                {hasMultipleApproved && !selectedAppId ? 'Escolha sua Universidade' : 'Minhas Candidaturas'}
+              </h2>
+              <p className="text-lg md:text-xl text-white/60 font-medium max-w-2xl mx-auto">
+                {hasMultipleApproved && !selectedAppId 
+                  ? 'Parabéns! Você foi aceito. Selecione abaixo a universidade para seguir com o pagamento.'
+                  : 'Confira o status das suas solicitações de bolsa e finalize seu processo.'}
+              </p>
+            </div>
+
+            {/* Main Standard White Container */}
+            <div className="bg-white border border-gray-100 rounded-[2.5rem] p-6 md:p-12 shadow-2xl relative overflow-hidden animate-in fade-in zoom-in-95 duration-700">
+              {/* Background Decoration */}
+              <div className="absolute top-0 right-0 w-80 h-80 bg-blue-500/5 rounded-full blur-[100px] -mr-40 -mt-40 pointer-events-none" />
+              
+              <div className="relative z-10 space-y-10">
+                <div className="flex items-center justify-between border-b border-gray-50 pb-6">
+                  <h3 className="text-2xl font-black text-gray-900 uppercase tracking-tight flex items-center gap-3">
+                    <GraduationCap className="w-8 h-8 text-blue-600" />
+                    Suas Bolsas
+                  </h3>
+                  <span className="bg-blue-50 text-blue-600 px-5 py-2 rounded-2xl text-[10px] font-black uppercase tracking-widest border border-blue-100">
+                    {applications.length} Candidaturas
+                  </span>
+                </div>
+
+                {loadingApplications ? (
+                  <div className="flex justify-center py-24">
+                    <Loader2 className="w-12 h-12 text-blue-500 animate-spin" />
+                  </div>
+                ) : (
+                  <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
+                    {applications.map((app) => {
+                      const isAppApproved = app.status === 'approved' || app.status === 'enrolled';
+                      const isSelected = selectedAppId === app.id;
+                      const scholarship = app.scholarships;
+                      
+                      return (
+                        <div 
+                          key={app.id} 
+                          onClick={() => {
+                            if (!isAppApproved) return;
+                            setSelectedAppId(selectedAppId === app.id ? null : app.id);
+                          }}
+                          className={`group relative bg-white rounded-2xl sm:rounded-3xl shadow-md hover:shadow-xl transition-all duration-300 overflow-hidden border-2 flex flex-col h-full hover:-translate-y-1 transform-gpu ${
+                            isSelected ? 'border-blue-500 bg-blue-50/30 shadow-blue-500/20' : 
+                            isAppApproved ? 'border-slate-200/60 hover:border-blue-300 cursor-pointer' : 
+                            'border-slate-200/60 opacity-70 grayscale-[0.3] cursor-default'
+                          }`}
+                        >
+                          {/* Selected Check Badge */}
+                          {isSelected && (
+                            <div className="absolute top-3 right-3 z-20 bg-blue-600 rounded-full p-1.5 shadow-lg animate-in zoom-in duration-300">
+                              <CheckCircle className="w-5 h-5 text-white" />
+                            </div>
+                          )}
+
+                          {/* Status Badge */}
+                          <div className="absolute top-3 left-3 z-20">
+                            <span className={`px-3 py-1 rounded-full text-[10px] font-black uppercase tracking-widest border shadow-sm ${
+                              app.status === 'approved' ? 'bg-emerald-50 text-emerald-700 border-emerald-200' :
+                              app.status === 'enrolled' ? 'bg-emerald-50 text-emerald-700 border-emerald-200' :
+                              app.status === 'rejected' ? 'bg-red-50 text-red-700 border-red-200' :
+                              'bg-blue-50 text-blue-700 border-blue-200'
+                            }`}>
+                              {app.status === 'rejected' ? 'Rejeitado' : 
+                               app.status === 'approved' ? 'Aprovado' : 
+                               app.status === 'enrolled' ? 'Matriculado' : 
+                               'Em Revisão'}
+                            </span>
+                          </div>
+
+                          {/* Scholarship Image */}
+                          <div className="relative h-32 overflow-hidden flex-shrink-0">
+                            {scholarship?.image_url ? (
+                              <img
+                                src={scholarship.image_url}
+                                alt={scholarship.title}
+                                className="w-full h-full object-contain group-hover:scale-105 transition-transform duration-300"
+                                onError={(e) => { (e.target as HTMLImageElement).style.display = 'none'; }}
+                              />
+                            ) : (
+                              <div className="flex items-center justify-center w-full h-full text-slate-400 bg-gradient-to-br from-[#05294E]/5 to-slate-100">
+                                <Building className="h-12 w-12 text-[#05294E]/30" />
+                              </div>
+                            )}
+                          </div>
+
+                          {/* Card Content */}
+                          <div className="p-4 sm:p-5 flex-1 flex flex-col">
+                            {/* Title */}
+                            <h4 className="text-base sm:text-lg font-bold text-slate-900 mb-2 leading-tight line-clamp-2 group-hover:text-[#05294E] transition-colors">
+                              {scholarship?.title}
+                            </h4>
+
+                            {/* Field of Study Badge */}
+                            {scholarship?.field_of_study && (
+                              <div className="flex items-center mb-2">
+                                <span className="px-2 py-0.5 rounded-md text-[10px] font-semibold text-slate-600 bg-slate-100 border border-slate-200">
+                                  {scholarship.field_of_study}
+                                </span>
+                              </div>
+                            )}
+
+                            {/* University */}
+                            <div className="flex items-center text-slate-600 mb-3">
+                              {scholarship?.universities?.logo_url ? (
+                                <img 
+                                  src={scholarship.universities.logo_url} 
+                                  alt={scholarship.universities.name}
+                                  className="w-5 h-5 rounded-full object-cover mr-2 border border-slate-200"
+                                  onError={(e) => { (e.target as HTMLImageElement).style.display = 'none'; }}
+                                />
+                              ) : (
+                                <Building className="h-4 w-4 mr-2 text-[#05294E]" />
+                              )}
+                              <span className="text-xs sm:text-sm font-medium truncate">
+                                {scholarship?.universities?.name || 'Universidade'}
+                              </span>
+                            </div>
+
+                            {/* Financial Info */}
+                            <div className="mb-3 p-3 bg-slate-50 rounded-xl border border-slate-200">
+                              <div className="flex items-center justify-between">
+                                <div className="flex items-center">
+                                  <DollarSign className="h-4 w-4 mr-1.5 text-green-600" />
+                                  <span className="font-bold text-green-700 text-sm">
+                                    ${scholarship?.annual_value_with_scholarship 
+                                      ? Number(scholarship.annual_value_with_scholarship).toLocaleString('en-US') 
+                                      : scholarship?.amount 
+                                        ? Number(scholarship.amount).toLocaleString('en-US') 
+                                        : 'N/A'}
+                                  </span>
+                                </div>
+                                {scholarship?.level && (
+                                  <span className="text-[10px] font-semibold text-slate-500 uppercase tracking-wider">
+                                    {scholarship.level}
+                                  </span>
+                                )}
+                              </div>
+                              {scholarship?.original_annual_value && (
+                                <div className="flex items-center justify-between mt-1.5 pt-1.5 border-t border-slate-200">
+                                  <span className="text-[10px] text-slate-500">Valor original</span>
+                                  <span className="text-[10px] font-semibold text-slate-500 line-through">
+                                    ${Number(scholarship.original_annual_value).toLocaleString('en-US')}
+                                  </span>
+                                </div>
+                              )}
+                            </div>
+
+                            {/* Rejection Notes */}
+                            {app.status === 'rejected' && app.notes && (
+                              <div className="mb-3 p-3 bg-red-50 border border-red-100 rounded-xl">
+                                <p className="text-[10px] text-red-600 font-bold uppercase tracking-tight leading-relaxed">
+                                  <span className="text-red-400 block mb-0.5">Motivo:</span>
+                                  {app.notes}
+                                </p>
+                              </div>
+                            )}
+
+                            {/* Date */}
+                            <div className="mt-auto pt-3 border-t border-slate-100">
+                              <div className="flex items-center justify-between">
+                                <div className="flex items-center text-slate-400 text-[10px] font-bold uppercase tracking-widest">
+                                  <Calendar className="w-3 h-3 mr-1.5" />
+                                  {new Date(app.applied_at).toLocaleDateString('pt-BR', { month: 'short', day: 'numeric', year: 'numeric' })}
+                                </div>
+                              </div>
+                            </div>
+
+                            {/* Select Button */}
+                            {isAppApproved && (
+                              <div className="mt-3">
+                                <div className={`w-full text-center py-2.5 rounded-xl text-xs font-black uppercase tracking-widest transition-all duration-300 ${
+                                  isSelected 
+                                    ? 'bg-blue-600 text-white shadow-lg shadow-blue-500/20' 
+                                    : 'bg-slate-100 text-slate-400 group-hover:bg-blue-50 group-hover:text-blue-600'
+                                }`}>
+                                  {isSelected ? '✓ Selecionado' : 'Clique para selecionar'}
+                                </div>
+                              </div>
+                            )}
+                          </div>
+                        </div>
+                      );
+                    })}
+                  </div>
+                )}
+
+                <div className="pt-8 border-t border-gray-50 flex justify-center">
+                  <button 
+                    onClick={handleFinalContinue} 
+                    disabled={approvedApps.length > 0 && !selectedAppId}
+                    className="w-full max-w-md bg-blue-600 text-white px-10 py-6 rounded-[2rem] font-black uppercase tracking-[0.3em] text-sm hover:bg-blue-700 transition-all shadow-2xl shadow-blue-500/40 hover:scale-105 active:scale-95 flex items-center justify-center space-x-4 disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:scale-100 group"
+                  >
+                    <span className="relative z-10">{approvedApps.length > 0 && !selectedAppId ? 'Selecione uma Bolsa' : 'Seguir para Pagamento'}</span>
+                    <ArrowRight className="w-6 h-6 group-hover:translate-x-2 transition-transform relative z-10" />
+                  </button>
+                </div>
+              </div>
+            </div>
+          </div>
+        )}
       </div>
     );
   }
@@ -386,9 +800,15 @@ export const DocumentsUploadStep: React.FC<StepProps> = ({ onNext }) => {
 
       {/* Analysis Overlay */}
       {analyzing && (
-        <div className="fixed inset-0 z-[100] flex flex-col items-center justify-center p-4 bg-black/80 backdrop-blur-xl animate-in fade-in duration-500">
-          <div className="bg-white rounded-[4rem] p-12 max-w-sm w-full shadow-2xl text-center space-y-10 border border-white/20">
-            <PencilLoader title={t('studentDashboard.documentsAndScholarshipChoice.analyzingOverlayTitle')} description={t('studentDashboard.documentsAndScholarshipChoice.analyzingOverlayDescription')} />
+        <div 
+          className="fixed top-0 left-0 w-screen h-screen z-[9999] flex flex-col items-center justify-center p-4 bg-black/40 backdrop-blur-md animate-in fade-in duration-500"
+          style={{ margin: 0, padding: 0 }}
+        >
+          <div className="bg-white rounded-[2.5rem] p-12 max-w-sm w-full shadow-2xl text-center space-y-10 border border-white/20 relative mx-auto my-auto">
+            <PencilLoader 
+              title={t('studentDashboard.documentsAndScholarshipChoice.analyzingOverlayTitle')} 
+              description={t('studentDashboard.documentsAndScholarshipChoice.analyzingOverlayDescription')} 
+            />
           </div>
         </div>
       )}

@@ -123,7 +123,17 @@ export const PaymentStep: React.FC<StepProps> = ({ onNext, onBack }) => {
         .order('created_at', { ascending: false });
 
       if (error) throw error;
-      setApplications((data || []) as ApplicationWithScholarship[]);
+      
+      const allApps = (data || []) as ApplicationWithScholarship[];
+      const selectedId = localStorage.getItem('selected_application_id');
+      
+      // Se houver uma selecionada, filtramos para mostrar apenas ela, 
+      // A MENOS QUE existam outras já pagas (para não sumir com o histórico de pagamento imediato)
+      const filteredApps = selectedId 
+        ? allApps.filter(app => app.id === selectedId || app.is_application_fee_paid)
+        : allApps;
+
+      setApplications(filteredApps);
     } catch (err: any) {
       console.error('Error fetching applications:', err);
       // setError(err.message);
@@ -286,7 +296,11 @@ export const PaymentStep: React.FC<StepProps> = ({ onNext, onBack }) => {
         )}
       </div>
 
-      <div className="bg-white rounded-[2.5rem] p-6 md:p-10 shadow-2xl border border-white/10 relative overflow-hidden">
+      <div className={`bg-white rounded-[2.5rem] p-6 md:p-10 shadow-2xl border relative overflow-hidden transition-all duration-500 ${
+        allPaid 
+          ? 'border-emerald-500/30 ring-1 ring-emerald-500/20' 
+          : 'border-gray-100'
+      }`}>
         <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 items-start relative z-10">
           {/* Main List */}
           <div className="lg:col-span-8 space-y-6">

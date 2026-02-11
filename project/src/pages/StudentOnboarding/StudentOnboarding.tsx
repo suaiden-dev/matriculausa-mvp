@@ -1,22 +1,24 @@
 import React, { useEffect, useState } from 'react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
-import { ArrowLeft } from 'lucide-react';
+import { ArrowLeft, CheckCircle, Trash2 } from 'lucide-react';
 import { useAuth } from '../../hooks/useAuth';
 import { useOnboardingProgress } from './hooks/useOnboardingProgress';
 import { StepIndicator } from './components/StepIndicator';
 import { WelcomeStep } from './components/WelcomeStep';
 import { SelectionFeeStep } from './components/SelectionFeeStep';
 import { ScholarshipSelectionStep } from './components/ScholarshipSelectionStep';
-import { ScholarshipReviewStep } from './components/ScholarshipReviewStep';
 import { ProcessTypeStep } from './components/ProcessTypeStep';
 import { DocumentsUploadStep } from './components/DocumentsUploadStep';
 import { PaymentStep } from './components/PaymentStep'; // Payment step component
+import { ScholarshipFeeStep } from './components/ScholarshipFeeStep';
+import { UniversityDocumentsStep } from './components/UniversityDocumentsStep';
 import { WaitingApprovalStep } from './components/WaitingApprovalStep';
 import { OnboardingStep } from './types';
 import { supabase } from '../../lib/supabase';
 import PaymentSuccessOverlay from '../../components/PaymentSuccessOverlay';
 import CustomLoading from '../../components/CustomLoading';
 import { useTranslation } from 'react-i18next';
+import LanguageSelector from '../../components/LanguageSelector';
 
 const StudentOnboarding: React.FC = () => {
   const { user, userProfile, loading: authLoading } = useAuth();
@@ -31,7 +33,7 @@ const StudentOnboarding: React.FC = () => {
   useEffect(() => {
     const stepParam = searchParams.get('step');
     if (stepParam) {
-      const validSteps: OnboardingStep[] = ['welcome', 'selection_fee', 'scholarship_selection', 'scholarship_review', 'process_type', 'documents_upload', 'payment', 'waiting_approval', 'completed'];
+      const validSteps: OnboardingStep[] = ['welcome', 'selection_fee', 'scholarship_selection', 'process_type', 'documents_upload', 'payment', 'scholarship_fee', 'university_documents', 'waiting_approval', 'completed'];
       if (validSteps.includes(stepParam as OnboardingStep)) {
         window.localStorage.setItem('onboarding_current_step', stepParam);
         if (stepParam === 'welcome') {
@@ -44,6 +46,11 @@ const StudentOnboarding: React.FC = () => {
       }
     }
   }, [searchParams, goToStep]);
+
+  // Scroll to top when step changes
+  useEffect(() => {
+    window.scrollTo({ top: 0, behavior: 'smooth' });
+  }, [state.currentStep]);
 
   useEffect(() => {
     const paymentSuccess = searchParams.get('payment');
@@ -58,7 +65,7 @@ const StudentOnboarding: React.FC = () => {
             edgeFunctionName = 'verify-stripe-session-selection-process-fee';
           } else if (stepParam === 'waiting_approval' || stepParam === 'payment') {
             edgeFunctionName = 'verify-stripe-session-application-fee';
-          } else if (stepParam === 'completed') {
+          } else if (stepParam === 'scholarship_fee' || stepParam === 'completed') {
             edgeFunctionName = 'verify-stripe-session-scholarship-fee';
           }
 
@@ -151,10 +158,11 @@ const StudentOnboarding: React.FC = () => {
       'welcome',
       'selection_fee',
       'scholarship_selection',
-      'scholarship_review',
       'process_type',
       'documents_upload',
       'payment',
+      'scholarship_fee',
+      'university_documents',
       'waiting_approval',
       'completed',
     ];
@@ -170,10 +178,11 @@ const StudentOnboarding: React.FC = () => {
       'welcome',
       'selection_fee',
       'scholarship_selection',
-      'scholarship_review',
       'process_type',
       'documents_upload',
       'payment',
+      'scholarship_fee',
+      'university_documents',
       'waiting_approval',
       'completed',
     ];
@@ -200,18 +209,57 @@ const StudentOnboarding: React.FC = () => {
     }
   };
 
+  const handleReset = async () => {
+    if (!userProfile?.id) return;
+    
+    if (!confirm('DESEJA REALMENTE RESETAR TODO O SEU ONBOARDING? Isso apagará aplicações, carrinho e documentos.')) return;
+
+    try {
+      // 1. Limpar localStorage
+      window.localStorage.removeItem('onboarding_current_step');
+      window.localStorage.removeItem('selected_application_id');
+      window.localStorage.removeItem('studentProcessType');
+      
+      // 2. Apagar aplicações
+      await supabase.from('scholarship_applications').delete().eq('student_id', userProfile.id);
+      
+      // 3. Apagar carrinho
+      await supabase.from('scholarship_cart').delete().eq('user_id', userProfile.id);
+      
+      // 4. Apagar pagamentos Zelle
+      await supabase.from('zelle_payments').delete().eq('user_id', userProfile.id);
+      
+      // 5. Resetar perfil
+      await supabase.from('user_profiles').update({
+        has_paid_selection_process_fee: false,
+        documents_uploaded: false,
+        documents_status: null,
+        is_application_fee_paid: false,
+        onboarding_completed: false,
+        selected_scholarship_id: null
+      }).eq('id', userProfile.id);
+
+      // 6. Recarregar a página para aplicar as mudanças
+      window.location.href = '/onboarding?step=welcome';
+    } catch (error) {
+      console.error('Error resetting onboarding:', error);
+      alert('Erro ao resetar onboarding. Verifique o console.');
+    }
+  };
+
   const completedSteps: OnboardingStep[] = [];
   if (state.currentStep !== 'welcome') completedSteps.push('welcome');
   if (state.selectionFeePaid) completedSteps.push('selection_fee');
   if (state.currentStep !== 'scholarship_selection' && state.scholarshipsSelected) {
     completedSteps.push('scholarship_selection');
   }
-  if (state.processTypeSelected) {
-    completedSteps.push('scholarship_review');
+  if (state.currentStep !== 'process_type' && state.processTypeSelected) {
     completedSteps.push('process_type');
   }
   if (state.documentsUploaded) completedSteps.push('documents_upload');
   if (state.applicationFeePaid) completedSteps.push('payment');
+  if (state.scholarshipFeePaid) completedSteps.push('scholarship_fee');
+  if (state.universityDocumentsUploaded) completedSteps.push('university_documents');
   if (state.documentsApproved) completedSteps.push('waiting_approval');
 
   const renderStep = () => {
@@ -222,27 +270,45 @@ const StudentOnboarding: React.FC = () => {
         return <SelectionFeeStep onNext={handleNext} onBack={handleBack} />;
       case 'scholarship_selection':
         return <ScholarshipSelectionStep onNext={handleNext} onBack={handleBack} />;
-      case 'scholarship_review':
-        return <ScholarshipReviewStep onNext={handleNext} onBack={handleBack} />;
       case 'process_type':
         return <ProcessTypeStep onNext={handleNext} onBack={handleBack} />;
       case 'documents_upload':
         return <DocumentsUploadStep onNext={handleNext} onBack={handleBack} />;
       case 'payment':
         return <PaymentStep onNext={handleNext} onBack={handleBack} />;
+      case 'scholarship_fee':
+        return <ScholarshipFeeStep onNext={handleNext} onBack={handleBack} />;
+      case 'university_documents':
+        return <UniversityDocumentsStep onNext={handleNext} onBack={handleBack} />;
       case 'waiting_approval':
         return <WaitingApprovalStep onNext={handleNext} onBack={handleBack} onComplete={handleComplete} />;
       case 'completed':
         return (
-          <div className="text-center py-12 bg-white/5 backdrop-blur-xl border border-white/10 rounded-3xl p-8">
-            <h2 className="text-3xl font-black text-white mb-4 uppercase tracking-tight">Onboarding concluído!</h2>
-            <p className="text-white/60 mb-8">Você completou todas as etapas necessárias.</p>
-            <button
-              onClick={() => navigate('/student/dashboard')}
-              className="bg-blue-600 text-white py-4 px-8 rounded-xl hover:bg-blue-700 transition-all font-bold uppercase tracking-widest shadow-lg shadow-blue-500/20"
-            >
-              Ir para o Painel
-            </button>
+          <div className="space-y-10 pb-12 max-w-4xl mx-auto px-4">
+            {/* Header */}
+            <div className="text-center md:text-left space-y-4">
+              <h2 className="text-3xl md:text-5xl font-black text-white uppercase tracking-tighter leading-none">Onboarding Concluído</h2>
+              <p className="text-lg md:text-xl text-white/60 font-medium max-w-2xl mt-2">Você completou todas as etapas necessárias.</p>
+            </div>
+
+            {/* Main White Container */}
+            <div className="bg-white border border-emerald-500/30 ring-1 ring-emerald-500/20 rounded-[2.5rem] p-6 md:p-10 shadow-2xl relative overflow-hidden">
+              <div className="absolute top-0 right-0 w-64 h-64 bg-blue-500/5 rounded-full blur-[80px] -mr-32 -mt-32 pointer-events-none" />
+              
+              <div className="relative z-10 text-center py-6">
+                <div className="w-20 h-20 bg-emerald-500/20 rounded-full flex items-center justify-center mx-auto mb-6 border border-emerald-500/30">
+                  <CheckCircle className="w-12 h-12 text-emerald-400" />
+                </div>
+                <h3 className="text-3xl font-black text-gray-900 mb-3 uppercase tracking-tight">Tudo Pronto!</h3>
+                <p className="text-gray-500 mb-8 font-medium">Parabéns! Você completou todas as etapas do onboarding com sucesso.</p>
+                <button
+                  onClick={() => navigate('/student/dashboard')}
+                  className="w-full max-w-xs bg-blue-600 text-white py-4 px-8 rounded-xl hover:bg-blue-700 transition-all font-bold uppercase tracking-widest shadow-lg shadow-blue-500/20 hover:scale-105 active:scale-95 mx-auto"
+                >
+                  Ir para o Painel
+                </button>
+              </div>
+            </div>
           </div>
         );
       default:
@@ -363,12 +429,15 @@ const StudentOnboarding: React.FC = () => {
               <span className="font-medium">Voltar</span>
             </button>
 
-            <button
-              onClick={() => navigate('/student/dashboard')}
-              className="flex items-center space-x-2 text-gray-600 hover:text-gray-900 transition-colors bg-white hover:bg-gray-50 px-4 py-2 rounded-xl shadow-sm border border-gray-100"
-            >
-              <span className="font-medium">Dashboard</span>
-            </button>
+            <div className="flex items-center gap-3">
+              <LanguageSelector variant="dashboard" showLabel={true} />
+              <button
+                onClick={() => navigate('/student/dashboard')}
+                className="flex items-center space-x-2 text-gray-600 hover:text-gray-900 transition-colors bg-white hover:bg-gray-50 px-4 py-2 rounded-xl shadow-sm border border-gray-100 h-[42px]"
+              >
+                <span className="font-medium">Dashboard</span>
+              </button>
+            </div>
           </div>
         )}
 
@@ -381,6 +450,20 @@ const StudentOnboarding: React.FC = () => {
         <div className="w-full flex-1 flex flex-col">
           {renderStep()}
         </div>
+      </div>
+
+      {/* Botão de Reset Temporário para Testes */}
+      <div className="fixed bottom-4 right-4 z-[100]">
+        <button
+          onClick={handleReset}
+          className="bg-red-600/20 hover:bg-red-600 text-red-500 hover:text-white p-3 rounded-full shadow-lg backdrop-blur-md border border-red-500/30 transition-all duration-300 group flex items-center gap-2"
+          title="Reset Onboarding (Debug)"
+        >
+          <Trash2 className="w-5 h-5" />
+          <span className="max-w-0 overflow-hidden group-hover:max-w-xs transition-all duration-500 ease-in-out whitespace-nowrap font-bold uppercase text-xs tracking-widest">
+            Reset Onboarding
+          </span>
+        </button>
       </div>
     </div>
   );

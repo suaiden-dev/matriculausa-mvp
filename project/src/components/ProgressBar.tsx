@@ -1,6 +1,5 @@
 import React from 'react';
-import { useNavigate } from 'react-router-dom';
-import { CheckCircle, DollarSign, Award, FileText, Lock, Clock, Sparkles } from 'lucide-react';
+import { CheckCircle, DollarSign, FileText, Lock, Clock, Sparkles } from 'lucide-react';
 import { useFeeConfig } from '../hooks/useFeeConfig';
 import { useAuth } from '../hooks/useAuth';
 import { useDynamicFees } from '../hooks/useDynamicFees';
@@ -20,6 +19,7 @@ interface ProgressBarProps {
   isApplicationFeeUnlocked?: boolean;
   isScholarshipFeeUnlocked?: boolean;
   isI20Unlocked?: boolean;
+  progress?: number; // 0 to steps.length-1
 }
 
 const getStepColor = (completed: boolean, current: boolean) => {
@@ -31,9 +31,9 @@ const getStepColor = (completed: boolean, current: boolean) => {
 const getStepIcon = (idx: number, completed: boolean, current: boolean) => {
   if (completed) return <CheckCircle className="h-6 w-6 md:h-7 md:w-7 text-white" />;
   if (current) {
-    if (idx === 0) return <Sparkles className="h-6 w-6 md:h-7 md:w-7 text-white animate-spin-slow" />;
+    if (idx === 0) return <DollarSign className="h-6 w-6 md:h-7 md:w-7 text-white" />;
     if (idx === 1) return <DollarSign className="h-6 w-6 md:h-7 md:w-7 text-white" />;
-    if (idx === 2) return <Award className="h-6 w-6 md:h-7 md:w-7 text-white" />;
+    if (idx === 2) return <DollarSign className="h-6 w-6 md:h-7 md:w-7 text-white" />;
     if (idx === 3) return <FileText className="h-6 w-6 md:h-7 md:w-7 text-white" />;
     return <Clock className="h-6 w-6 md:h-7 md:w-7 text-white" />;
   }
@@ -46,56 +46,34 @@ const FeeSkeleton = () => (
   </div>
 );
 
+// Imports removidos: useNavigate
+
 export const ProgressBar: React.FC<ProgressBarProps> = ({ 
   steps, 
   feeValues: customFeeValues,
-  applicationId,
-  isSelectionProcessUnlocked = true,
-  isApplicationFeeUnlocked = false,
-  isScholarshipFeeUnlocked = false,
-  isI20Unlocked = false
+  progress: customProgress
 }) => {
-  const navigate = useNavigate();
   const { user } = useAuth();
   const { getFeeAmount } = useFeeConfig(user?.id);
   const { selectionProcessFee, scholarshipFee, i20ControlFee } = useDynamicFees();
+  const pathRef = React.useRef<SVGPathElement>(null);
+  const [ready, setReady] = React.useState(false);
+  const [pathLength, setPathLength] = React.useState(0);
 
-
-  const getStepRoute = (idx: number): string | null => {
-    if (idx === 0) {
-      const savedStep = localStorage.getItem('onboarding_current_step');
-      return savedStep ? `/student/onboarding?step=${savedStep}` : '/student/onboarding';
+  React.useEffect(() => {
+    if (pathRef.current) {
+      setPathLength(pathRef.current.getTotalLength());
+      // Delay pequeno mas suficiente para garantir que o navegador processe o posicionamento inicial
+      // sem a classe de transição ativa.
+      const timer = setTimeout(() => {
+        setReady(true);
+      }, 100);
+      return () => clearTimeout(timer);
     }
-    if (idx === 1) return '/student/dashboard/scholarships';
-    if (idx === 2) return '/student/dashboard/applications';
-    if (idx === 3) {
-      if (applicationId && isI20Unlocked) {
-        return `/student/dashboard/applications/${applicationId}?tab=i20`;
-      }
-      return null;
-    }
-    return null;
-  };
+  }, []);
 
-  const isStepClickable = (idx: number, step: Step): boolean => {
-    if (step.completed) return getStepRoute(idx) !== null;
-    
-    let isUnlocked = false;
-    if (idx === 0) isUnlocked = isSelectionProcessUnlocked;
-    else if (idx === 1) isUnlocked = isApplicationFeeUnlocked;
-    else if (idx === 2) isUnlocked = isScholarshipFeeUnlocked;
-    else if (idx === 3) isUnlocked = isI20Unlocked && applicationId !== null;
-    
-    return isUnlocked && getStepRoute(idx) !== null;
-  };
+  // Funções de navegação removidas
 
-  const handleStepClick = (idx: number, step: Step) => {
-    if (isStepClickable(idx, step)) {
-      const route = getStepRoute(idx);
-      if (route) navigate(route);
-    }
-  };
-  
   const isFeesLoading = !selectionProcessFee || !scholarshipFee || !i20ControlFee;
   
   const defaultFeeValues = [
@@ -110,6 +88,34 @@ export const ProgressBar: React.FC<ProgressBarProps> = ({
     if (index === 1 && value === '$350.00') return 'As per university';
     return value;
   });
+
+  // Calculate generic progress based on steps if not provided
+  const calculateProgress = () => {
+    if (customProgress !== undefined) return customProgress;
+    
+    const lastCompletedIdx = [...steps].reverse().findIndex(s => s.completed);
+    if (lastCompletedIdx !== -1) {
+      const idx = steps.length - 1 - lastCompletedIdx;
+      // If next step is current, maybe we are at that index
+      if (idx + 1 < steps.length && steps[idx+1].current) return idx + 0.5;
+      return idx;
+    }
+    
+    const currentIdx = steps.findIndex(s => s.current);
+    return currentIdx !== -1 ? currentIdx : 0;
+  };
+
+  const progress = calculateProgress();
+  const progressRatio = progress / (steps.length - 1);
+  
+  // Get point on path for the sparkle
+  const getPointAtProgress = () => {
+    if (!pathRef.current || pathLength === 0) return { x: 50, y: 75 };
+    const point = pathRef.current.getPointAtLength(pathLength * progressRatio);
+    return { x: point.x, y: point.y };
+  };
+
+  const sparklePos = getPointAtProgress();
 
   return (
     <div className="w-full relative pt-0 pb-6 md:pt-0 md:pb-10">
@@ -132,8 +138,23 @@ export const ProgressBar: React.FC<ProgressBarProps> = ({
                 <feGaussianBlur stdDeviation="2" result="blur" />
                 <feComposite in="SourceGraphic" in2="blur" operator="over" />
               </filter>
+              
+              {/* Máscara para preenchimento progressivo */}
+              <mask id="progressMask">
+                <path 
+                  d="M 50 75 C 125 50, 275 50, 350 75 S 575 100, 650 75 S 875 50, 950 75" 
+                  fill="none" 
+                  stroke="white" 
+                  strokeWidth="10" 
+                  strokeLinecap="round"
+                  strokeDasharray={pathLength || 1000}
+                  strokeDashoffset={(pathLength || 1000) * (1 - progressRatio)}
+                  className={ready ? "transition-all duration-1000 ease-in-out" : ""}
+                />
+              </mask>
             </defs>
-            {/* Linha de fundo (rastro) - Y central é 75 agora (metade de 150) */}
+
+            {/* Linha de fundo (rastro) */}
             <path 
               d="M 50 75 C 125 50, 275 50, 350 75 S 575 100, 650 75 S 875 50, 950 75" 
               fill="none" 
@@ -142,28 +163,52 @@ export const ProgressBar: React.FC<ProgressBarProps> = ({
               strokeWidth="10" 
               strokeLinecap="round"
             />
-            {/* Linha animada principal - Amplitude +/- 25px */}
+            
+            {/* Linha animada principal com efeito pontilhado e máscara de progresso */}
             <path 
+              ref={pathRef}
               d="M 50 75 C 125 50, 275 50, 350 75 S 575 100, 650 75 S 875 50, 950 75" 
               fill="none" 
               stroke="url(#lineGradient)" 
               strokeWidth="5" 
               strokeLinecap="round" 
-              className="opacity-90 animate-dash"
+              mask="url(#progressMask)"
+              className={`opacity-90 animate-dash ${ready ? "visible" : "invisible"}`}
               filter="url(#glow)"
             />
+            
           </svg>
 
+          {/* Marcador animado fora do SVG para evitar distorção de aspecto */}
+          <div 
+            className={`absolute z-20 pointer-events-none flex items-center justify-center transition-all duration-1000 ease-in-out ${
+              ready && (progress % 1 !== 0) ? "opacity-100 scale-100" : "opacity-0 scale-50"
+            }`}
+            style={{ 
+              left: `${(sparklePos.x / 1000) * 100}%`, 
+              top: `calc(${(sparklePos.y / 150) * 100}% + 4px)`,
+              transform: 'translate(-50%, -50%)',
+              willChange: 'left, top'
+            }}
+          >
+             <div className="relative flex items-center justify-center w-10 h-10">
+                <div className="absolute inset-0 rounded-full bg-amber-400 animate-ping opacity-20" />
+                <div className="relative text-amber-400 drop-shadow-[0_0_10px_rgba(251,191,36,0.8)]">
+                   <Sparkles className="w-7 h-7 animate-spin-slower" />
+                </div>
+             </div>
+          </div>
+
+
+
           {steps.map((step, idx) => {
-            const isClickable = isStepClickable(idx, step);
             return (
               <div 
                 key={idx} 
-                className={`group relative flex flex-col items-center z-10 transition-all duration-500 ${isClickable ? 'cursor-pointer' : ''}`}
-                onClick={() => handleStepClick(idx, step)}
+                className={`group relative flex flex-col items-center z-10 transition-all duration-500`}
               >
                 {/* Step Circle with Glassmorphism */}
-                <div className={`w-14 h-14 md:w-16 md:h-16 flex items-center justify-center rounded-2xl border-2 transition-all duration-500 shadow-lg ${getStepColor(step.completed, step.current)} ${isClickable ? 'hover:scale-110 hover:-translate-y-1' : ''}`}>
+                <div className={`w-14 h-14 md:w-16 md:h-16 flex items-center justify-center rounded-2xl border-2 transition-all duration-500 shadow-lg ${getStepColor(step.completed, step.current)}`}>
                   {getStepIcon(idx, step.completed, step.current)}
                 </div>
 
@@ -185,15 +230,17 @@ export const ProgressBar: React.FC<ProgressBarProps> = ({
       {/* Mobile Version: Vertical Connection */}
       <div className="md:hidden w-full flex flex-col gap-8 px-4 relative">
         {/* Vertical Line for Mobile */}
-        <div className="absolute left-10 top-10 bottom-10 w-[2px] bg-gradient-to-b from-emerald-500 via-amber-400 to-indigo-500 opacity-20 z-0" />
+        <div className="absolute left-10 top-10 bottom-10 w-[2px] bg-white/5 opacity-20 z-0" />
+        <div 
+          className={`absolute left-10 top-10 w-[2px] bg-gradient-to-b from-emerald-500 via-amber-400 to-indigo-500 z-0 ${ready ? "transition-all duration-1000 ease-in-out opacity-100" : "opacity-0"}`} 
+          style={{ height: `calc(${progressRatio * 100}% - 20px)` }}
+        />
         
         {steps.map((step, idx) => {
-          const isClickable = isStepClickable(idx, step);
           return (
             <div 
               key={idx}
-              onClick={() => handleStepClick(idx, step)}
-              className={`relative flex items-center gap-4 p-4 rounded-3xl border transition-all duration-300 z-10 ${step.current ? 'bg-amber-500/10 border-amber-500/40' : 'bg-white/5 border-white/10 backdrop-blur-md'} ${isClickable ? 'active:scale-95' : ''}`}
+              className={`relative flex items-center gap-4 p-4 rounded-3xl border transition-all duration-300 z-10 ${step.current ? 'bg-amber-500/10 border-amber-500/40' : 'bg-white/5 border-white/10 backdrop-blur-md'}`}
             >
               <div className={`w-12 h-12 flex-shrink-0 flex items-center justify-center rounded-2xl border-2 ${getStepColor(step.completed, step.current)}`}>
                 {getStepIcon(idx, step.completed, step.current)}
@@ -231,6 +278,9 @@ export const ProgressBar: React.FC<ProgressBarProps> = ({
         }
         .animate-spin-slow {
           animation: spin 3s linear infinite;
+        }
+        .animate-spin-slower {
+          animation: spin 6s linear infinite;
         }
         @keyframes spin {
           from { transform: rotate(0deg); }

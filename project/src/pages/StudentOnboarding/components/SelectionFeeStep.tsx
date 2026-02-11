@@ -1337,18 +1337,31 @@ export const SelectionFeeStep: React.FC<StepProps> = ({ onNext }) => {
 
   if (hasPaid) {
     return (
-      <div className="text-center py-12 bg-white/5 backdrop-blur-xl border border-white/10 rounded-3xl p-8 shadow-2xl">
-        <div className="w-20 h-20 bg-emerald-500/20 rounded-full flex items-center justify-center mx-auto mb-6 border border-emerald-500/30">
-          <CheckCircle className="w-12 h-12 text-emerald-400" />
+      <div className="space-y-10 pb-12 max-w-4xl mx-auto px-4">
+        {/* Header */}
+        <div className="text-center md:text-left space-y-4">
+          <h2 className="text-3xl md:text-5xl font-black text-white uppercase tracking-tighter leading-none">Taxa de Seleção</h2>
+          <p className="text-lg md:text-xl text-white/60 font-medium max-w-2xl mt-2">Pagamento do processo de seleção concluído.</p>
         </div>
-        <h3 className="text-3xl font-black text-white mb-3 uppercase tracking-tight">Taxa de Seleção Paga!</h3>
-        <p className="text-white/60 mb-8 font-medium">Você já realizou o pagamento da taxa do processo de seleção.</p>
-        <button
-          onClick={onNext}
-          className="w-full max-w-xs bg-blue-600 text-white py-4 px-8 rounded-xl hover:bg-blue-700 transition-all font-bold uppercase tracking-widest shadow-lg shadow-blue-500/20 hover:scale-105 active:scale-95"
-        >
-          Continuar
-        </button>
+
+        {/* Main White Container */}
+        <div className="bg-white border border-emerald-500/30 ring-1 ring-emerald-500/20 rounded-[2.5rem] p-6 md:p-10 shadow-2xl relative overflow-hidden">
+          <div className="absolute top-0 right-0 w-64 h-64 bg-blue-500/5 rounded-full blur-[80px] -mr-32 -mt-32 pointer-events-none" />
+          
+          <div className="relative z-10 text-center py-6">
+            <div className="w-20 h-20 bg-emerald-500/20 rounded-full flex items-center justify-center mx-auto mb-6 border border-emerald-500/30">
+              <CheckCircle className="w-12 h-12 text-emerald-400" />
+            </div>
+            <h3 className="text-3xl font-black text-gray-900 mb-3 uppercase tracking-tight">Taxa de Seleção Paga!</h3>
+            <p className="text-gray-500 mb-8 font-medium">Você já realizou o pagamento da taxa do processo de seleção.</p>
+            <button
+              onClick={onNext}
+              className="w-full max-w-xs bg-blue-600 text-white py-4 px-8 rounded-xl hover:bg-blue-700 transition-all font-bold uppercase tracking-widest shadow-lg shadow-blue-500/20 hover:scale-105 active:scale-95 mx-auto"
+            >
+              Continuar
+            </button>
+          </div>
+        </div>
       </div>
     );
   }
@@ -1841,73 +1854,80 @@ export const SelectionFeeStep: React.FC<StepProps> = ({ onNext }) => {
           <Dialog open={showTermsModal} onClose={() => setShowTermsModal(false)} className="relative z-[10021]">
             <div className="fixed inset-0 bg-black/60 backdrop-blur-sm z-[10020]" aria-hidden="true" />
             <div className="fixed inset-0 flex items-center justify-center p-2 sm:p-4 z-[10020]">
-              <Dialog.Panel className="w-full max-w-2xl bg-white rounded-2xl shadow-2xl overflow-hidden relative border-0 max-h-[95dvh] flex flex-col">
-                <div className="relative bg-gradient-to-r from-blue-600 to-blue-800 text-white p-4 sm:p-6 flex-shrink-0">
+              <Dialog.Panel className="w-full max-w-4xl bg-white/90 backdrop-blur-xl rounded-[2.5rem] shadow-[0_32px_64px_-16px_rgba(0,0,0,0.3)] overflow-hidden relative border border-white/20 max-h-[90dvh] flex flex-col">
+                <div className="relative bg-gradient-to-br from-blue-600/90 via-blue-700/90 to-indigo-800/90 text-white p-6 sm:p-8 flex-shrink-0 border-b border-white/10">
+                  <div className="absolute top-0 right-0 w-64 h-64 bg-white/10 rounded-full blur-[80px] -mr-32 -mt-32 pointer-events-none" />
+                  
                   <button
                     onClick={() => setShowTermsModal(false)}
-                    className="absolute top-2 right-2 sm:top-4 sm:right-4 p-2 hover:bg-white/10 rounded-full transition-colors"
+                    className="absolute top-4 right-4 p-2.5 hover:bg-white/20 rounded-2xl transition-all duration-300 group/close"
                     title={t('preCheckoutModal.closeTerms') || 'Close'}
                   >
-                    <X className="w-5 h-5 sm:w-6 sm:h-6" />
+                    <X className="w-6 h-6 group-hover/close:rotate-90 transition-transform duration-500" />
                   </button>
-                  <div className="flex items-center gap-3 mb-2 sm:mb-4 pr-12">
-                    <div className="p-2 bg-white/20 rounded-lg">
-                      <Shield className="w-5 h-5 sm:w-6 sm:h-6" />
+                  
+                  <div className="flex items-center gap-4 relative z-10">
+                    <div className="w-14 h-14 bg-white/20 backdrop-blur-md rounded-2xl flex items-center justify-center border border-white/20 shadow-inner">
+                      <Shield className="w-7 h-7 text-white" />
                     </div>
-                    <Dialog.Title className="text-xl sm:text-2xl font-bold">
-                      {activeTerm?.title ? activeTerm.title : t('preCheckoutModal.termsAndConditions.title')}
-                    </Dialog.Title>
+                    <div>
+                      <Dialog.Title className="text-2xl sm:text-3xl font-black uppercase tracking-tighter">
+                        {activeTerm?.title ? activeTerm.title : t('preCheckoutModal.termsAndConditions.title')}
+                      </Dialog.Title>
+                      <p className="text-blue-100/60 text-xs font-bold uppercase tracking-widest mt-1">Contrato de Prestação de Serviços</p>
+                    </div>
                   </div>
                 </div>
 
-                <div className="flex-1 overflow-y-auto p-4 sm:p-6">
+                <div className="flex-1 overflow-y-auto p-6 sm:p-10 scrollbar-thin scrollbar-thumb-gray-200 scrollbar-track-transparent">
                   {loadingTerms ? (
-                    <div className="flex items-center justify-center p-6">
-                      <div className="text-center">
-                        <div className="w-12 h-12 border-4 border-blue-200 border-t-blue-600 rounded-full animate-spin mx-auto mb-4"></div>
-                        <p className="text-slate-600 text-sm">{t('preCheckoutModal.loading')}</p>
-                      </div>
+                    <div className="flex flex-col items-center justify-center py-20">
+                      <div className="w-16 h-16 border-4 border-blue-500/20 border-t-blue-600 rounded-full animate-spin mb-4"></div>
+                      <p className="text-gray-400 font-bold uppercase tracking-widest text-xs">{t('preCheckoutModal.loading')}</p>
                     </div>
                   ) : activeTerm ? (
                     <>
                       <div 
                         ref={termsContentRef}
                         onScroll={handleTermsScroll}
-                        className="prose prose-sm max-w-none prose-headings:text-gray-900 prose-p:text-gray-600"
+                        className="prose prose-blue max-w-none prose-headings:font-black prose-headings:uppercase prose-headings:tracking-tight prose-p:text-gray-600 prose-p:leading-relaxed prose-strong:text-gray-900"
                         dangerouslySetInnerHTML={{ __html: activeTerm?.content || '' }}
                       />
                       
                       {!hasScrolledToBottom && checkIfContentNeedsScroll() && (
-                        <div className="flex items-center justify-center p-3 bg-amber-50 border border-amber-200 rounded-lg mt-4">
-                          <Scroll className="h-4 w-4 text-amber-600 mr-2" />
-                          <span className="text-amber-800 text-sm font-medium">
-                            {t('preCheckoutModal.scrollToBottomFirst')}
-                          </span>
+                        <div className="sticky bottom-0 left-0 right-0 flex items-center justify-center p-4 mt-8 bg-gradient-to-t from-white via-white/95 to-transparent">
+                          <div className="flex items-center gap-3 bg-amber-50 border border-amber-200 px-6 py-3 rounded-2xl shadow-sm animate-bounce">
+                            <Scroll className="h-5 w-5 text-amber-600" />
+                            <span className="text-amber-800 text-sm font-black uppercase tracking-tight">
+                              {t('preCheckoutModal.scrollToBottomFirst')}
+                            </span>
+                          </div>
                         </div>
                       )}
                     </>
                   ) : (
-                    <div className="flex items-center justify-center p-6">
-                      <p className="text-slate-600 text-sm">{t('preCheckoutModal.noTermsFound')}</p>
+                    <div className="flex flex-col items-center justify-center py-20 text-gray-400">
+                      <AlertCircle className="w-12 h-12 mb-4 opacity-20" />
+                      <p className="font-bold uppercase tracking-widest text-xs">{t('preCheckoutModal.noTermsFound')}</p>
                     </div>
                   )}
                 </div>
 
-                <div className="border-t border-gray-200 bg-gray-50 p-4 sm:p-6 -mx-4 sm:-mx-6 -mb-4 sm:-mb-6 rounded-b-2xl">
-                  <div className="flex gap-3">
+                <div className="border-t border-gray-100 bg-gray-50/80 backdrop-blur-md p-6 sm:p-8 flex-shrink-0">
+                  <div className="flex flex-col sm:flex-row gap-4 max-w-2xl mx-auto">
                     <button
                       onClick={() => setShowTermsModal(false)}
-                      className="flex-1 px-4 py-3 bg-gray-200 text-gray-700 rounded-xl font-semibold hover:bg-gray-300 transition-colors"
+                      className="px-8 py-4 bg-gray-200/50 text-gray-600 rounded-2xl font-black uppercase tracking-widest text-sm hover:bg-gray-200 transition-all active:scale-95"
                     >
-                      {t('preCheckoutModal.closeTerms') || 'Close'}
+                      {t('preCheckoutModal.closeTerms') || 'Fechar'}
                     </button>
                     <button
                       onClick={handleTermsAccept}
                       disabled={!hasScrolledToBottom}
-                      className={`flex-1 px-4 py-3 rounded-xl font-semibold transition-all ${
+                      className={`flex-1 px-10 py-4 rounded-2xl font-black uppercase tracking-widest text-sm transition-all shadow-xl active:scale-95 ${
                         hasScrolledToBottom
-                          ? 'bg-blue-600 text-white hover:bg-blue-700 shadow-lg'
-                          : 'bg-slate-300 text-slate-500 cursor-not-allowed'
+                          ? 'bg-blue-600 text-white hover:bg-blue-500 shadow-blue-500/25 hover:shadow-blue-500/40'
+                          : 'bg-gray-200 text-gray-400 cursor-not-allowed border border-gray-100'
                       }`}
                     >
                       {hasScrolledToBottom 

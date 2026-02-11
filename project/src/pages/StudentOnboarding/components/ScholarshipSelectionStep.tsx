@@ -7,8 +7,13 @@ import { usePackageScholarshipFilter } from '../../../hooks/usePackageScholarshi
 import { StepProps } from '../types';
 import { ScholarshipCardFull } from './ScholarshipCardFull';
 import { supabase } from '../../../lib/supabase';
+import { useTranslation } from 'react-i18next';
+import { is3800ScholarshipBlocked } from '../../../utils/scholarshipDeadlineValidation';
+import { formatAmount } from '../../../utils/scholarshipHelpers';
+import { AlertTriangle, Loader2 } from 'lucide-react';
 
-export const ScholarshipSelectionStep: React.FC<StepProps> = ({ onNext }) => {
+export const ScholarshipSelectionStep: React.FC<StepProps> = ({ onNext, onBack: _onBack }) => {
+  const { t } = useTranslation();
   const { user, userProfile } = useAuth();
   const { cart, addToCart, removeFromCart, fetchCart } = useCartStore();
   const { scholarships: allScholarships, loading: scholarshipsLoading, error: scholarshipsError } = useScholarships();
@@ -30,6 +35,9 @@ export const ScholarshipSelectionStep: React.FC<StepProps> = ({ onNext }) => {
   const [maxValue, setMaxValue] = useState<string>('');
   const [deadlineDays, setDeadlineDays] = useState<string>('');
   const [filtersExpanded, setFiltersExpanded] = useState<boolean>(false);
+  const [isReviewing, setIsReviewing] = useState(false);
+  const [isTransitioning, setIsTransitioning] = useState(false);
+  const [removingScholarshipId, setRemovingScholarshipId] = useState<string | null>(null);
 
   const ITEMS_PER_PAGE = 12;
 
@@ -380,6 +388,37 @@ export const ScholarshipSelectionStep: React.FC<StepProps> = ({ onNext }) => {
     setDeadlineDays('');
   };
 
+  // Verificar se há bolsas bloqueadas no carrinho (para a revisão)
+  const hasBlockedScholarships = useMemo(() => {
+    return cart.some(item => {
+      const scholarship = item.scholarships;
+      // Verificar se está inativa ou se é bolsa de $3800 bloqueada
+      return !scholarship.is_active || is3800ScholarshipBlocked(scholarship);
+    });
+  }, [cart]);
+
+  const handleRemoveScholarship = async (scholarshipId: string) => {
+    if (!user?.id || removingScholarshipId) return;
+    
+    setRemovingScholarshipId(scholarshipId);
+    try {
+      // Atualização otimista
+      setSelectedIds(prev => {
+        const next = new Set(prev);
+        next.delete(scholarshipId);
+        return next;
+      });
+      await removeFromCart(scholarshipId, user.id);
+    } catch (error) {
+      console.error('Error removing scholarship from cart:', error);
+      // Reverter sincronizando com o cart
+      const cartIds = new Set(cart.map(item => item.scholarships.id));
+      setSelectedIds(cartIds);
+    } finally {
+      setRemovingScholarshipId(null);
+    }
+  };
+
   const loading = scholarshipsLoading || packageFilterLoading;
   const displayError = error || (scholarshipsError ? 'Erro ao carregar bolsas. Tente novamente.' : null);
 
@@ -452,8 +491,28 @@ export const ScholarshipSelectionStep: React.FC<StepProps> = ({ onNext }) => {
       setError('Please select at least one scholarship to continue. Click on the scholarship cards above to add them to your selection.');
       return;
     }
+    
     setError(null);
-    onNext();
+
+    // Se já estiver na revisão, chamar onNext para ir para a próxima etapa (process_type)
+    if (isReviewing) {
+      // Validar se há bolsas bloqueadas antes de prosseguir
+      const blockedScholarship = cart.find(item => {
+        const scholarship = item.scholarships;
+        return !scholarship.is_active || is3800ScholarshipBlocked(scholarship);
+      });
+
+      if (blockedScholarship) return;
+      onNext();
+    } else {
+      // Iniciar transição para a revisão
+      setIsTransitioning(true);
+      setTimeout(() => {
+        setIsReviewing(true);
+        // Pequeno delay para garantir que o DOM atualizou antes de remover o blur
+        setTimeout(() => setIsTransitioning(false), 50);
+      }, 800);
+    }
   };
 
   // Loading skeleton
@@ -480,24 +539,145 @@ export const ScholarshipSelectionStep: React.FC<StepProps> = ({ onNext }) => {
     );
   }
 
+  const renderReviewStep = () => {
+    return (
+      <div className="w-full h-full flex flex-col">
+        <div className="max-w-4xl mx-auto w-full px-4">
+          <h1 className="text-2xl sm:text-4xl font-black mb-4 flex items-center gap-3 text-white uppercase tracking-tighter">
+            <GraduationCap className="h-8 w-8 sm:h-10 sm:w-10 text-white" />
+            <span>{t('studentDashboard.selectedScholarships.title') || 'Review Your Selected Scholarships'}</span>
+          </h1>
+          
+          {/* Description */}
+          <div className="bg-amber-50 border-l-4 border-amber-400 p-6 mb-8 rounded-2xl shadow-sm">
+            <div className="flex">
+              <AlertTriangle className="h-6 w-6 text-amber-600 flex-shrink-0 mt-0.5" />
+              <div className="ml-4">
+                <p className="text-base font-black text-amber-900 mb-1 uppercase tracking-tight">
+                  Importante: Esta é uma escolha definitiva
+                </p>
+                <p className="text-sm text-amber-800 font-medium leading-relaxed">
+                  Por favor, revise cuidadosamente as bolsas selecionadas abaixo. Assim que você clicar em "Continuar", não poderá mais voltar para selecionar outras bolsas. Estas serão as bolsas para as quais você se candidatará.
+                </p>
+              </div>
+            </div>
+          </div>
+
+          {/* Cart Contents */}
+          <div className="bg-white rounded-[2.5rem] shadow-2xl border border-slate-200 p-6 sm:p-10 relative overflow-hidden">
+            <div className="absolute top-0 right-0 w-64 h-64 bg-blue-500/5 rounded-full blur-[80px] -mr-32 -mt-32 pointer-events-none" />
+            
+            <div className="relative z-10">
+              <ul className="divide-y divide-slate-100 mb-8 font-medium">
+                {cart.map((item) => {
+                  const scholarship = item.scholarships;
+                  const isBlocked = !scholarship.is_active || is3800ScholarshipBlocked(scholarship);
+                  const isRemoving = removingScholarshipId === scholarship.id;
+                  
+                  return (
+                    <li key={scholarship.id} className="py-6 first:pt-0 last:pb-0">
+                      <div className="flex items-start justify-between gap-6">
+                        <div className="flex-1 min-w-0">
+                          <div className="flex items-start gap-4">
+                            <div className="w-12 h-12 bg-slate-50 rounded-xl flex items-center justify-center flex-shrink-0 border border-slate-100">
+                              <GraduationCap className="w-6 h-6 text-blue-600" />
+                            </div>
+                            <div className="flex-1">
+                              <div className="font-black text-slate-900 text-lg uppercase tracking-tight mb-1">{scholarship.title}</div>
+                              <div className="text-slate-500 text-sm mb-2 flex items-center">
+                                <Building className="w-4 h-4 mr-1.5" />
+                                {scholarship.universities?.name || scholarship.university_name || 'Unknown University'}
+                              </div>
+                              <div className="text-lg font-black text-green-600">
+                                ${formatAmount(scholarship.annual_value_with_scholarship || scholarship.amount || 'N/A')}
+                              </div>
+                            </div>
+                            {!isRemoving && !isBlocked && !isLocked && (
+                              <button
+                                onClick={() => handleRemoveScholarship(scholarship.id)}
+                                className="flex-shrink-0 p-2.5 rounded-xl hover:bg-red-50 text-slate-400 hover:text-red-500 transition-all border border-transparent hover:border-red-100"
+                                title={t('studentDashboard.cartPage.removeFromCart') || 'Remove from selection'}
+                              >
+                                <X className="h-5 h-5" />
+                              </button>
+                            )}
+                            {isRemoving && (
+                              <Loader2 className="w-5 h-5 animate-spin text-blue-600" />
+                            )}
+                          </div>
+                        </div>
+                      </div>
+                    </li>
+                  );
+                })}
+              </ul>
+
+              {hasBlockedScholarships && (
+                <div className="mb-6 p-5 bg-red-50 border border-red-100 rounded-2xl flex items-start gap-4">
+                  <AlertTriangle className="h-6 w-6 text-red-600 flex-shrink-0 mt-0.5" />
+                  <div>
+                    <p className="text-sm font-black text-red-800 mb-1 uppercase tracking-tight">
+                      {t('studentDashboard.cartPage.cannotProceed') || 'Não é possível prosseguir'}
+                    </p>
+                    <p className="text-sm text-red-700 font-medium">
+                      {t('studentDashboard.cartPage.removeBlockedScholarships') || 'Por favor, remova bolsas expiradas ou indisponíveis para continuar.'}
+                    </p>
+                  </div>
+                </div>
+              )}
+
+              <div className="flex flex-col sm:flex-row items-center gap-4">
+                <button
+                  onClick={() => {
+                    setIsTransitioning(true);
+                    setTimeout(() => {
+                      setIsReviewing(false);
+                      setTimeout(() => setIsTransitioning(false), 50);
+                    }, 500);
+                  }}
+                  className="w-full sm:w-auto px-8 py-4 rounded-xl font-bold text-slate-500 hover:bg-slate-50 transition-all uppercase tracking-widest text-sm"
+                >
+                  Voltar para Seleção
+                </button>
+                <button
+                  onClick={handleContinue}
+                  disabled={hasBlockedScholarships || cart.length === 0}
+                  className="flex-1 w-full bg-blue-600 text-white py-5 rounded-2xl font-black uppercase tracking-[0.2em] text-sm hover:bg-blue-700 transition-all shadow-xl shadow-blue-500/20 hover:scale-105 active:scale-95 disabled:bg-slate-300 disabled:cursor-not-allowed flex items-center justify-center space-x-3"
+                >
+                  <span>Finalizar Revisão</span>
+                  <ArrowRight className="w-6 h-6" />
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    );
+  };
+
   // Se já passou pela review, mostrar tela de etapa concluída
   if (isLocked) {
     return (
-      <div className="space-y-6 pb-24 sm:pb-6">
-        <div className="bg-gradient-to-br from-green-50 via-emerald-50 to-teal-50 rounded-xl p-8 sm:p-12 border-2 border-green-200 shadow-sm">
-          <div className="text-center">
-            <div className="mb-6">
-              <CheckCircle2 className="w-20 h-20 text-green-600 mx-auto" />
+      <div className="space-y-10 pb-12 max-w-4xl mx-auto px-4">
+        {/* Header */}
+        <div className="text-center md:text-left space-y-4">
+          <h2 className="text-3xl md:text-5xl font-black text-white uppercase tracking-tighter leading-none">Escolha de Bolsas</h2>
+          <p className="text-lg md:text-xl text-white/60 font-medium max-w-2xl mt-2">Seleção de bolsas concluída com sucesso.</p>
+        </div>
+
+        {/* Main White Container */}
+        <div className="bg-white border border-emerald-500/30 ring-1 ring-emerald-500/20 rounded-[2.5rem] p-6 md:p-10 shadow-2xl relative overflow-hidden">
+          <div className="absolute top-0 right-0 w-64 h-64 bg-blue-500/5 rounded-full blur-[80px] -mr-32 -mt-32 pointer-events-none" />
+          
+          <div className="relative z-10 text-center py-6">
+            <div className="w-20 h-20 bg-emerald-500/20 rounded-full flex items-center justify-center mx-auto mb-6 border border-emerald-500/30">
+              <CheckCircle2 className="w-12 h-12 text-emerald-400" />
             </div>
-            <h2 className="text-2xl sm:text-3xl font-bold text-gray-900 mb-3">
-              Etapa Concluída
-            </h2>
-            <p className="text-base sm:text-lg text-gray-700 mb-6">
-              Você já selecionou suas bolsas e passou pela revisão. Esta etapa está completa.
-            </p>
+            <h3 className="text-3xl font-black text-gray-900 mb-3 uppercase tracking-tight">Etapa Concluída</h3>
+            <p className="text-gray-500 mb-8 font-medium">Você já selecionou suas bolsas e passou pela revisão. Esta etapa está completa.</p>
             <button
               onClick={handleContinue}
-              className="bg-blue-600 text-white px-8 py-3 rounded-xl font-bold hover:bg-blue-700 transition-all shadow-md hover:shadow-lg"
+              className="w-full max-w-xs bg-blue-600 text-white py-4 px-8 rounded-xl hover:bg-blue-700 transition-all font-bold uppercase tracking-widest shadow-lg shadow-blue-500/20 hover:scale-105 active:scale-95 mx-auto"
             >
               Continuar
             </button>
@@ -508,392 +688,406 @@ export const ScholarshipSelectionStep: React.FC<StepProps> = ({ onNext }) => {
   }
 
   return (
-    <div className="space-y-6 pb-24 sm:pb-6">
-      {/* Header Section */}
-      <div>
-        <div className="text-center mb-4">
-          <h2 className="text-2xl sm:text-3xl font-bold text-white mb-2">
-            Choose Your Scholarships
-          </h2>
-          <p className="text-base sm:text-lg text-white/70 font-medium mb-4">
-            Click on the scholarship cards below to select them. You need at least one to proceed.
-          </p>
-        </div>
+    <div className={`transition-all duration-500 ease-in-out transform ${
+      isTransitioning 
+        ? 'opacity-60 scale-[0.99] blur-md select-none pointer-events-none' 
+        : 'opacity-100 scale-100 blur-0'
+    }`}>
+      {isReviewing ? (
+        renderReviewStep()
+      ) : (
+        <div className="space-y-6 pb-24 sm:pb-6">
+          {/* Header Section */}
+          <div>
+            <div className="text-center mb-4">
+              <h2 className="text-2xl sm:text-3xl font-bold text-white mb-2">
+                Choose Your Scholarships
+              </h2>
+              <p className="text-base sm:text-lg text-white/70 font-medium mb-4">
+                Click on the scholarship cards below to select them. You need at least one to proceed.
+              </p>
+            </div>
 
-        {/* Instructions Box - Sem background azul */}
-        <div 
-          className="bg-white rounded-lg p-4 border border-slate-200 shadow-sm transform-gpu"
-          style={{ backfaceVisibility: 'hidden', isolation: 'isolate' }}
-        >
-          <div className="flex items-start space-x-3">
-            <Info className="w-5 h-5 text-blue-600 flex-shrink-0 mt-0.5" />
-            <div className="flex-1">
-              <h3 className="font-semibold text-gray-900 mb-2 text-sm sm:text-base">
-                Quick guide:
-              </h3>
-              <ul className="space-y-2 text-sm text-gray-700">
-                <li className="flex items-start space-x-2">
-                  <CheckCircle2 className="w-4 h-4 text-green-600 flex-shrink-0 mt-0.5" />
-                  <span><strong>Click any scholarship card</strong> to add it to your selection</span>
-                </li>
-                <li className="flex items-start space-x-2">
-                  <CheckCircle2 className="w-4 h-4 text-green-600 flex-shrink-0 mt-0.5" />
-                  <span><strong>Select as many as you want</strong> - you can choose multiple options</span>
-                </li>
-                <li className="flex items-start space-x-2">
-                  <CheckCircle2 className="w-4 h-4 text-green-600 flex-shrink-0 mt-0.5" />
-                  <span><strong>Use filters</strong> to search by university or scholarship value</span>
-                </li>
-                <li className="flex items-start space-x-2">
-                  <CheckCircle2 className="w-4 h-4 text-green-600 flex-shrink-0 mt-0.5" />
-                  <span><strong>Click "Continue"</strong> once you've selected at least one scholarship</span>
-                </li>
-              </ul>
+            {/* Instructions Box - Sem background azul */}
+            <div 
+              className="bg-white rounded-lg p-4 border border-slate-200 shadow-sm transform-gpu"
+              style={{ backfaceVisibility: 'hidden', isolation: 'isolate' }}
+            >
+              <div className="flex items-start space-x-3">
+                <Info className="w-5 h-5 text-blue-600 flex-shrink-0 mt-0.5" />
+                <div className="flex-1">
+                  <h3 className="font-semibold text-gray-900 mb-2 text-sm sm:text-base">
+                    Quick guide:
+                  </h3>
+                  <ul className="space-y-2 text-sm text-gray-700">
+                    <li className="flex items-start space-x-2">
+                      <CheckCircle2 className="w-4 h-4 text-green-600 flex-shrink-0 mt-0.5" />
+                      <span><strong>Click any scholarship card</strong> to add it to your selection</span>
+                    </li>
+                    <li className="flex items-start space-x-2">
+                      <CheckCircle2 className="w-4 h-4 text-green-600 flex-shrink-0 mt-0.5" />
+                      <span><strong>Select as many as you want</strong> - you can choose multiple options</span>
+                    </li>
+                    <li className="flex items-start space-x-2">
+                      <CheckCircle2 className="w-4 h-4 text-green-600 flex-shrink-0 mt-0.5" />
+                      <span><strong>Use filters</strong> to search by university or scholarship value</span>
+                    </li>
+                    <li className="flex items-start space-x-2">
+                      <CheckCircle2 className="w-4 h-4 text-green-600 flex-shrink-0 mt-0.5" />
+                      <span><strong>Click "Continue"</strong> once you've selected at least one scholarship</span>
+                    </li>
+                  </ul>
+                </div>
+              </div>
             </div>
           </div>
-        </div>
-      </div>
 
-      {displayError && (
-        <div className="p-4 bg-red-50 border-2 border-red-300 rounded-lg flex items-center space-x-2">
-          <AlertCircle className="w-5 h-5 text-red-600 flex-shrink-0" />
-          <p className="text-sm font-medium text-red-700">{displayError}</p>
-        </div>
-      )}
+          {displayError && (
+            <div className="p-4 bg-red-50 border-2 border-red-300 rounded-lg flex items-center space-x-2">
+              <AlertCircle className="w-5 h-5 text-red-600 flex-shrink-0" />
+              <p className="text-sm font-medium text-red-700">{displayError}</p>
+            </div>
+          )}
 
-      {/* Advanced Filters - Collapsible */}
-      <div 
-        className="bg-white rounded-lg border-2 border-slate-300 shadow-sm transform-gpu"
-        style={{ backfaceVisibility: 'hidden', isolation: 'isolate' }}
-      >
-        {/* Filter Header - Always Visible */}
-        <div 
-          className="p-4 cursor-pointer flex items-center justify-between hover:bg-slate-50 transition-colors"
-          onClick={() => setFiltersExpanded(!filtersExpanded)}
-        >
-          <div className="flex items-center space-x-2">
-            <Filter className="w-4 h-4 text-slate-600" />
-            <h3 className="text-sm font-semibold text-gray-900">
-              Filter Scholarships
-            </h3>
-            {hasActiveFilters && (
-              <span className="px-2 py-0.5 bg-blue-100 text-blue-700 text-xs font-medium rounded-full">
-                Active
-              </span>
-            )}
-          </div>
-          <div className="flex items-center space-x-2">
-            {hasActiveFilters && (
-              <button
-                type="button"
-                onClick={(e) => {
-                  e.stopPropagation();
-                  clearFilters();
-                }}
-                className="flex items-center space-x-1 px-2 py-1 text-xs font-medium text-slate-600 hover:text-slate-800 hover:bg-slate-100 rounded-lg transition-colors"
-                title="Clear all filters"
-              >
-                <X className="h-3 w-3" />
-                <span>Clear</span>
-              </button>
-            )}
-            {filtersExpanded ? (
-              <ChevronUp className="w-4 h-4 text-slate-600" />
-            ) : (
-              <ChevronDown className="w-4 h-4 text-slate-600" />
-            )}
-          </div>
-        </div>
-
-        {/* Filter Content - Collapsible */}
-        {filtersExpanded && (
-          <div className="px-4 pb-4 border-t border-slate-200">
-            {/* Search */}
-            <div className="mb-4 pt-4">
-              <div className="relative">
-                <Search className="absolute left-3 top-3 h-4 w-4 text-slate-400" />
-                <input
-                  type="text"
-                  placeholder="Search by title, description, or university..."
-                  value={searchTerm}
-                  onChange={(e) => setSearchTerm(e.target.value)}
-                  className="w-full pl-10 pr-4 py-2.5 bg-slate-50 border border-slate-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-600 focus:border-blue-600 text-sm"
-                />
+          {/* Advanced Filters - Collapsible */}
+          <div 
+            className="bg-white rounded-lg border-2 border-slate-300 shadow-sm transform-gpu"
+            style={{ backfaceVisibility: 'hidden', isolation: 'isolate' }}
+          >
+            {/* Filter Header - Always Visible */}
+            <div 
+              className="p-4 cursor-pointer flex items-center justify-between hover:bg-slate-50 transition-colors"
+              onClick={() => setFiltersExpanded(!filtersExpanded)}
+            >
+              <div className="flex items-center space-x-2">
+                <Filter className="w-4 h-4 text-slate-600" />
+                <h3 className="text-sm font-semibold text-gray-900">
+                  Filter Scholarships
+                </h3>
+                {hasActiveFilters && (
+                  <span className="px-2 py-0.5 bg-blue-100 text-blue-700 text-xs font-medium rounded-full">
+                    Active
+                  </span>
+                )}
+              </div>
+              <div className="flex items-center space-x-2">
+                {hasActiveFilters && (
+                  <button
+                    type="button"
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      clearFilters();
+                    }}
+                    className="flex items-center space-x-1 px-2 py-1 text-xs font-medium text-slate-600 hover:text-slate-800 hover:bg-slate-100 rounded-lg transition-colors"
+                    title="Clear all filters"
+                  >
+                    <X className="w-3 h-3" />
+                    <span>Clear</span>
+                  </button>
+                )}
+                {filtersExpanded ? <ChevronUp className="w-4 h-4 text-slate-400" /> : <ChevronDown className="w-4 h-4 text-slate-400" />}
               </div>
             </div>
 
-            {/* Filter Grid */}
-            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-3">
-          {/* Level Filter */}
-          <div>
-            <label htmlFor="level-filter" className="block text-xs font-medium text-slate-700 mb-1.5">
-              <GraduationCap className="h-3 w-3 inline mr-1" />
-              Academic Level
-            </label>
-            <select
-              id="level-filter"
-              value={selectedLevel}
-              onChange={(e) => setSelectedLevel(e.target.value)}
-              className="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-600 focus:border-blue-600 text-sm"
-            >
-              <option value="all">All Levels</option>
-              {uniqueLevels.map((lvl) => (
-                <option key={lvl} value={lvl}>{lvl}</option>
-              ))}
-            </select>
-          </div>
+            {/* Filter Content - Animatable */}
+            {filtersExpanded && (
+              <div className="p-4 border-t border-slate-100 animate-in slide-in-from-top-2 duration-200">
+                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                  {/* Search Bar */}
+                  <div className="md:col-span-2 lg:col-span-1">
+                    <label htmlFor="search" className="block text-xs font-medium text-slate-700 mb-1.5">
+                      <Search className="h-3 w-3 inline mr-1" />
+                      Search Keyword
+                    </label>
+                    <div className="relative">
+                      <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-400" />
+                      <input
+                        id="search"
+                        type="search"
+                        placeholder="Search by name..."
+                        value={searchTerm}
+                        onChange={(e) => setSearchTerm(e.target.value)}
+                        className="w-full pl-10 pr-4 py-2 bg-slate-50 border border-slate-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-600 focus:border-blue-600 text-sm"
+                      />
+                    </div>
+                  </div>
 
-          {/* Field Filter */}
-          <div>
-            <label htmlFor="field-filter" className="block text-xs font-medium text-slate-700 mb-1.5">
-              <BookOpen className="h-3 w-3 inline mr-1" />
-              Field of Study
-            </label>
-            <select
-              id="field-filter"
-              value={selectedField}
-              onChange={(e) => setSelectedField(e.target.value)}
-              className="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-600 focus:border-blue-600 text-sm"
-            >
-              <option value="all">All Fields</option>
-              {uniqueFields.map((fld) => (
-                <option key={fld} value={fld}>{fld}</option>
-              ))}
-            </select>
-          </div>
+                  {/* University Selection */}
+                  <div>
+                    <label htmlFor="university" className="block text-xs font-medium text-slate-700 mb-1.5">
+                      <Building className="h-3 w-3 inline mr-1" />
+                      University
+                    </label>
+                    <select
+                      id="university"
+                      value={selectedUniversity}
+                      onChange={(e) => setSelectedUniversity(e.target.value)}
+                      className="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-600 focus:border-blue-600 text-sm"
+                    >
+                      <option value="all">All Universities</option>
+                      {uniqueUniversities.map((uni: any) => (
+                        <option key={uni.id} value={uni.id}>{uni.name}</option>
+                      ))}
+                    </select>
+                  </div>
 
-          {/* Delivery Mode Filter */}
-          <div>
-            <label htmlFor="delivery-mode-filter" className="block text-xs font-medium text-slate-700 mb-1.5">
-              <Monitor className="h-3 w-3 inline mr-1" />
-              Study Mode
-            </label>
-            <select
-              id="delivery-mode-filter"
-              value={selectedDeliveryMode}
-              onChange={(e) => setSelectedDeliveryMode(e.target.value)}
-              className="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-600 focus:border-blue-600 text-sm"
-            >
-              <option value="all">All Modes</option>
-              {uniqueDeliveryModes.map((dm) => (
-                <option key={dm} value={dm}>{getDeliveryModeLabel(dm)}</option>
-              ))}
-            </select>
-          </div>
+                  {/* Academic Level */}
+                  <div>
+                    <label htmlFor="level" className="block text-xs font-medium text-slate-700 mb-1.5">
+                      <GraduationCap className="h-3 w-3 inline mr-1" />
+                      Study Level
+                    </label>
+                    <select
+                      id="level"
+                      value={selectedLevel}
+                      onChange={(e) => setSelectedLevel(e.target.value)}
+                      className="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-600 focus:border-blue-600 text-sm"
+                    >
+                      <option value="all">All Levels</option>
+                      {uniqueLevels.map((lvl) => (
+                        <option key={lvl} value={lvl}>{lvl}</option>
+                      ))}
+                    </select>
+                  </div>
 
-          {/* Work Permission Filter */}
-          <div>
-            <label htmlFor="work-permission-filter" className="block text-xs font-medium text-slate-700 mb-1.5">
-              <Briefcase className="h-3 w-3 inline mr-1" />
-              Work Authorization
-            </label>
-            <select
-              id="work-permission-filter"
-              value={selectedWorkPermission}
-              onChange={(e) => setSelectedWorkPermission(e.target.value)}
-              className="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-600 focus:border-blue-600 text-sm"
-            >
-              <option value="all">All Permissions</option>
-              {uniqueWorkPermissions.map((wp) => (
-                <option key={wp} value={wp}>{wp}</option>
-              ))}
-            </select>
-          </div>
+                  {/* Field of Study */}
+                  <div>
+                    <label htmlFor="field" className="block text-xs font-medium text-slate-700 mb-1.5">
+                      <BookOpen className="h-3 w-3 inline mr-1" />
+                      Field of Study
+                    </label>
+                    <select
+                      id="field"
+                      value={selectedField}
+                      onChange={(e) => setSelectedField(e.target.value)}
+                      className="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-600 focus:border-blue-600 text-sm"
+                    >
+                      <option value="all">All Fields</option>
+                      {uniqueFields.map((field) => (
+                        <option key={field} value={field}>{field}</option>
+                      ))}
+                    </select>
+                  </div>
 
-          {/* University Filter */}
-          <div>
-            <label htmlFor="university-filter" className="block text-xs font-medium text-slate-700 mb-1.5">
-              <Building className="h-3 w-3 inline mr-1" />
-              University
-            </label>
-            <select
-              id="university-filter"
-              value={selectedUniversity}
-              onChange={(e) => setSelectedUniversity(e.target.value)}
-              className="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-600 focus:border-blue-600 text-sm"
-            >
-              <option value="all">All Universities</option>
-              {uniqueUniversities.map((u) => (
-                <option key={u.id} value={String(u.id)}>{u.name}</option>
-              ))}
-            </select>
-          </div>
+                  {/* Delivery Mode */}
+                  <div>
+                    <label htmlFor="delivery" className="block text-xs font-medium text-slate-700 mb-1.5">
+                      <Monitor className="h-3 w-3 inline mr-1" />
+                      Learning Mode
+                    </label>
+                    <select
+                      id="delivery"
+                      value={selectedDeliveryMode}
+                      onChange={(e) => setSelectedDeliveryMode(e.target.value)}
+                      className="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-600 focus:border-blue-600 text-sm"
+                    >
+                      <option value="all">All Modes</option>
+                      {uniqueDeliveryModes.map((mode) => (
+                        <option key={mode} value={mode}>{getDeliveryModeLabel(mode)}</option>
+                      ))}
+                    </select>
+                  </div>
 
-          {/* Min Value Filter */}
-          <div>
-            <label htmlFor="min-value" className="block text-xs font-medium text-slate-700 mb-1.5">
-              <DollarSign className="h-3 w-3 inline mr-1" />
-              Min Value
-            </label>
-            <input
-              id="min-value"
-              type="number"
-              placeholder="Min"
-              value={minValue}
-              onChange={(e) => {
-                const value = e.target.value;
-                if (value === '' || (Number(value) >= 0)) {
-                  setMinValue(value);
-                }
-              }}
-              className="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-600 focus:border-blue-600 text-sm"
-            />
-          </div>
+                  {/* Work Permission */}
+                  <div>
+                    <label htmlFor="work" className="block text-xs font-medium text-slate-700 mb-1.5">
+                      <Briefcase className="h-3 w-3 inline mr-1" />
+                      Work Options
+                    </label>
+                    <select
+                      id="work"
+                      value={selectedWorkPermission}
+                      onChange={(e) => setSelectedWorkPermission(e.target.value)}
+                      className="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-600 focus:border-blue-600 text-sm"
+                    >
+                      <option value="all">Any Work Permission</option>
+                      {uniqueWorkPermissions.map((wp) => (
+                        <option key={wp} value={wp}>{wp}</option>
+                      ))}
+                    </select>
+                  </div>
 
-          {/* Max Value Filter */}
-          <div>
-            <label htmlFor="max-value" className="block text-xs font-medium text-slate-700 mb-1.5">
-              <DollarSign className="h-3 w-3 inline mr-1" />
-              Max Value
-            </label>
-              <input
-                id="max-value"
-                type="number"
-                placeholder="Max"
-                value={maxValue}
-                onChange={(e) => {
-                  const value = e.target.value;
-                  if (value === '' || (Number(value) >= 0)) {
-                    setMaxValue(value);
-                  }
-                }}
-              className="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-600 focus:border-blue-600 text-sm"
-              />
+                  {/* Min Value Filter */}
+                  <div>
+                    <label htmlFor="min-value" className="block text-xs font-medium text-slate-700 mb-1.5">
+                      <DollarSign className="h-3 w-3 inline mr-1" />
+                      Min Value
+                    </label>
+                    <input
+                      id="min-value"
+                      type="number"
+                      placeholder="Min"
+                      value={minValue}
+                      onChange={(e) => {
+                        const value = e.target.value;
+                        if (value === '' || (Number(value) >= 0)) {
+                          setMinValue(value);
+                        }
+                      }}
+                      className="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-600 focus:border-blue-600 text-sm"
+                    />
+                  </div>
+
+                  {/* Max Value Filter */}
+                  <div>
+                  <label htmlFor="max-value" className="block text-xs font-medium text-slate-700 mb-1.5">
+                    <DollarSign className="h-3 w-3 inline mr-1" />
+                    Max Value
+                  </label>
+                    <input
+                      id="max-value"
+                      type="number"
+                      placeholder="Max"
+                      value={maxValue}
+                      onChange={(e) => {
+                        const value = e.target.value;
+                        if (value === '' || (Number(value) >= 0)) {
+                          setMaxValue(value);
+                        }
+                      }}
+                    className="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-600 focus:border-blue-600 text-sm"
+                    />
+                  </div>
+
+                {/* Deadline Filter */}
+                <div>
+                  <label htmlFor="deadline-days" className="block text-xs font-medium text-slate-700 mb-1.5">
+                    <Calendar className="h-3 w-3 inline mr-1" />
+                    Deadline (days)
+                  </label>
+                  <input
+                    id="deadline-days"
+                    type="number"
+                    placeholder="Min days left"
+                    value={deadlineDays}
+                    onChange={(e) => {
+                      const value = e.target.value;
+                      if (value === '' || (Number(value) >= 0)) {
+                        setDeadlineDays(value);
+                      }
+                    }}
+                    className="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-600 focus:border-blue-600 text-sm"
+                  />
+                </div>
+              </div>
+                </div>
+              )}
             </div>
 
-          {/* Deadline Filter */}
+          {/* Scholarships Grid */}
           <div>
-            <label htmlFor="deadline-days" className="block text-xs font-medium text-slate-700 mb-1.5">
-              <Calendar className="h-3 w-3 inline mr-1" />
-              Deadline (days)
-            </label>
-            <input
-              id="deadline-days"
-              type="number"
-              placeholder="Min days left"
-              value={deadlineDays}
-              onChange={(e) => {
-                const value = e.target.value;
-                if (value === '' || (Number(value) >= 0)) {
-                  setDeadlineDays(value);
-                }
-              }}
-              className="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-600 focus:border-blue-600 text-sm"
-            />
+            <div className="mb-4 flex items-center justify-between">
+              <h3 className="text-lg font-semibold text-white">
+                Available Scholarships
+                {sortedScholarships.length > 0 && (
+                  <span className="text-sm font-normal text-white/70 ml-2">
+                    ({sortedScholarships.length} {sortedScholarships.length === 1 ? 'option' : 'options'})
+                  </span>
+                )}
+              </h3>
+            </div>
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 sm:gap-6">
+            {paginatedScholarships.map((scholarship) => {
+              const scholarshipIdStr = String(scholarship.id);
+              const isExpanded = expandedCardIds.has(scholarshipIdStr);
+              
+              return (
+                <ScholarshipCardFull
+                  key={`scholarship-${scholarship.id}`}
+                  scholarship={scholarship}
+                  isSelected={selectedIds.has(scholarship.id)}
+                  onToggle={() => toggleSelection(scholarship)}
+                  userProfile={userProfile}
+                  isLocked={isLocked}
+                  isExpanded={isExpanded}
+                  onToggleExpand={(id: string) => {
+                    setExpandedCardIds(prev => {
+                      const newSet = new Set(prev);
+                      if (newSet.has(id)) {
+                        newSet.delete(id);
+                      } else {
+                        newSet.add(id);
+                      }
+                      return newSet;
+                    });
+                  }}
+                />
+              );
+            })}
+            </div>
           </div>
-        </div>
-          </div>
-        )}
-      </div>
 
-      {/* Scholarships Grid */}
-      <div>
-        <div className="mb-4 flex items-center justify-between">
-          <h3 className="text-lg font-semibold text-white">
-            Available Scholarships
-            {sortedScholarships.length > 0 && (
-              <span className="text-sm font-normal text-white/70 ml-2">
-                ({sortedScholarships.length} {sortedScholarships.length === 1 ? 'option' : 'options'})
-              </span>
-            )}
-          </h3>
-        </div>
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 sm:gap-6">
-        {paginatedScholarships.map((scholarship) => {
-          const scholarshipIdStr = String(scholarship.id);
-          const isExpanded = expandedCardIds.has(scholarshipIdStr);
-          
-          return (
-            <ScholarshipCardFull
-              key={`scholarship-${scholarship.id}`}
-              scholarship={scholarship}
-              isSelected={selectedIds.has(scholarship.id)}
-              onToggle={() => toggleSelection(scholarship)}
-              userProfile={userProfile}
-              isLocked={isLocked}
-              isExpanded={isExpanded}
-              onToggleExpand={(id: string) => {
-                setExpandedCardIds(prev => {
-                  const newSet = new Set(prev);
-                  if (newSet.has(id)) {
-                    newSet.delete(id);
-                  } else {
-                    newSet.add(id);
-                  }
-                  return newSet;
-                });
-              }}
-            />
-          );
-        })}
-        </div>
-      </div>
-
-      {sortedScholarships.length === 0 && !loading && (
-        <div className="text-center py-12 bg-gray-50 rounded-lg border-2 border-dashed border-gray-300">
-          <Award className="w-16 h-16 mx-auto mb-4 text-gray-400" />
-          <h3 className="text-lg font-semibold text-gray-900 mb-2">No scholarships found</h3>
-          <p className="text-gray-600 mb-4">Try adjusting your filters to see more options.</p>
-          {hasActiveFilters && (
-            <button
-              onClick={clearFilters}
-              className="text-blue-600 hover:text-blue-700 font-medium text-sm underline"
-            >
-              Clear all filters
-            </button>
+          {sortedScholarships.length === 0 && !loading && (
+            <div className="text-center py-12 bg-gray-50 rounded-lg border-2 border-dashed border-gray-300">
+              <Award className="w-16 h-16 mx-auto mb-4 text-gray-400" />
+              <h3 className="text-lg font-semibold text-gray-900 mb-2">No scholarships found</h3>
+              <p className="text-gray-600 mb-4">Try adjusting your filters to see more options.</p>
+              {hasActiveFilters && (
+                <button
+                  onClick={clearFilters}
+                  className="text-blue-600 hover:text-blue-700 font-medium text-sm underline"
+                >
+                  Clear all filters
+                </button>
+              )}
+            </div>
           )}
+
+          {/* Pagination */}
+          {totalPages > 1 && (
+            <div className="flex items-center justify-center gap-2 pb-4">
+              <button
+                type="button"
+                onClick={() => setCurrentPage(prev => Math.max(1, prev - 1))}
+                disabled={currentPage === 1}
+                className="px-4 py-2 rounded-lg font-medium transition-all bg-white border border-slate-300 text-slate-700 hover:bg-slate-50 disabled:opacity-50 disabled:cursor-not-allowed"
+              >
+                Previous
+              </button>
+              <span className="px-4 py-2 text-sm text-white/70">
+                Page {currentPage} of {totalPages}
+              </span>
+              <button
+                type="button"
+                onClick={() => setCurrentPage(prev => Math.min(totalPages, prev + 1))}
+                disabled={currentPage === totalPages}
+                className="px-4 py-2 rounded-lg font-medium transition-all bg-white border border-slate-300 text-slate-700 hover:bg-slate-50 disabled:opacity-50 disabled:cursor-not-allowed"
+              >
+                Next
+              </button>
+            </div>
+          )}
+
+          {/* Fixed Continue Button - Mobile */}
+          <div className="fixed bottom-0 left-0 right-0 bg-white border-t-2 border-slate-300 shadow-xl z-50 p-4 sm:hidden">
+            <button
+              onClick={handleContinue}
+              disabled={selectedIds.size === 0}
+              className="w-full bg-blue-600 text-white py-4 px-6 rounded-lg hover:bg-blue-700 transition-all font-bold text-base disabled:opacity-50 disabled:cursor-not-allowed shadow-lg flex items-center justify-center space-x-2 disabled:bg-gray-400"
+            >
+              <span>Continue ({selectedIds.size} selected)</span>
+              {selectedIds.size > 0 && <ArrowRight className="w-5 h-5" />}
+            </button>
+          </div>
+
+          {/* Continue Button - Desktop */}
+          <div className="hidden sm:block pt-4 border-t-2 border-slate-300">
+            <button
+              onClick={handleContinue}
+              disabled={selectedIds.size === 0}
+              className="w-full bg-blue-600 text-white py-3.5 px-6 rounded-lg hover:bg-blue-700 transition-all font-bold text-base disabled:opacity-50 disabled:cursor-not-allowed shadow-md flex items-center justify-center space-x-2 disabled:bg-gray-400"
+            >
+              <span>Continue ({selectedIds.size} selected)</span>
+              {selectedIds.size > 0 && <ArrowRight className="w-5 h-5" />}
+            </button>
+          </div>
         </div>
       )}
 
-      {/* Pagination */}
-      {totalPages > 1 && (
-        <div className="flex items-center justify-center gap-2 pb-4">
-          <button
-            type="button"
-            onClick={() => setCurrentPage(prev => Math.max(1, prev - 1))}
-            disabled={currentPage === 1}
-            className="px-4 py-2 rounded-lg font-medium transition-all bg-white border border-slate-300 text-slate-700 hover:bg-slate-50 disabled:opacity-50 disabled:cursor-not-allowed"
-          >
-            Previous
-          </button>
-          <span className="px-4 py-2 text-sm text-white/70">
-            Page {currentPage} of {totalPages}
-          </span>
-          <button
-            type="button"
-            onClick={() => setCurrentPage(prev => Math.min(totalPages, prev + 1))}
-            disabled={currentPage === totalPages}
-            className="px-4 py-2 rounded-lg font-medium transition-all bg-white border border-slate-300 text-slate-700 hover:bg-slate-50 disabled:opacity-50 disabled:cursor-not-allowed"
-          >
-            Next
-          </button>
-        </div>
+      {/* Transition Overlay - Just Blur */}
+      {isTransitioning && (
+        <div className="fixed inset-0 z-[100] bg-slate-950/20 backdrop-blur-md animate-in fade-in duration-500 pointer-events-none" />
       )}
-
-      {/* Fixed Continue Button - Mobile */}
-      <div className="fixed bottom-0 left-0 right-0 bg-white border-t-2 border-slate-300 shadow-xl z-50 p-4 sm:hidden">
-        <button
-          onClick={handleContinue}
-          disabled={selectedIds.size === 0}
-          className="w-full bg-blue-600 text-white py-4 px-6 rounded-lg hover:bg-blue-700 transition-all font-bold text-base disabled:opacity-50 disabled:cursor-not-allowed shadow-lg flex items-center justify-center space-x-2 disabled:bg-gray-400"
-        >
-          <span>Continue ({selectedIds.size} selected)</span>
-          {selectedIds.size > 0 && <ArrowRight className="w-5 h-5" />}
-        </button>
-      </div>
-
-      {/* Continue Button - Desktop */}
-      <div className="hidden sm:block pt-4 border-t-2 border-slate-300">
-        <button
-          onClick={handleContinue}
-          disabled={selectedIds.size === 0}
-          className="w-full bg-blue-600 text-white py-3.5 px-6 rounded-lg hover:bg-blue-700 transition-all font-bold text-base disabled:opacity-50 disabled:cursor-not-allowed shadow-md flex items-center justify-center space-x-2 disabled:bg-gray-400"
-        >
-          <span>Continue ({selectedIds.size} selected)</span>
-          {selectedIds.size > 0 && <ArrowRight className="w-5 h-5" />}
-        </button>
-      </div>
     </div>
   );
 };
-

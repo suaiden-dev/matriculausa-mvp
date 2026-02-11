@@ -7,7 +7,7 @@ import { generateUUID } from '../utils/uuid';
 import { config } from '../lib/config';
 
 interface ZelleCheckoutProps {
-  feeType: 'selection_process' | 'application_fee' | 'enrollment_fee' | 'scholarship_fee';
+  feeType: 'selection_process' | 'application_fee' | 'enrollment_fee' | 'scholarship_fee' | 'i20_control_fee';
   amount: number;
   scholarshipsIds?: string[];
   onSuccess?: () => void;
@@ -175,6 +175,22 @@ export const ZelleCheckout: React.FC<ZelleCheckoutProps> = ({
                 console.log(`✅ [Mock] ${fieldToUpdate} marcado como true para scholarship ${scholarshipId}`);
               }
             }
+          }
+        } else if (feeType === 'i20_control_fee') {
+          // Atualizar has_paid_i20_control_fee no user_profiles
+          const { error: profileError } = await supabase
+            .from('user_profiles')
+            .update({ 
+              has_paid_i20_control_fee: true,
+              i20_control_fee_payment_method: 'zelle',
+              updated_at: new Date().toISOString()
+            })
+            .eq('user_id', user.id);
+
+          if (profileError) {
+            console.error('❌ [Mock] Erro ao atualizar has_paid_i20_control_fee:', profileError);
+          } else {
+            console.log('✅ [Mock] has_paid_i20_control_fee marcado como true');
           }
         }
         // --- FIM ATUALIZAÇÃO DE FLAGS ---

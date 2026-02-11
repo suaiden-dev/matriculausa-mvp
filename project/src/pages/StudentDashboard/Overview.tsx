@@ -70,25 +70,27 @@ const Overview: React.FC<OverviewProps> = ({
   const savedOnboardingStep = React.useMemo(() => {
     if (typeof window === 'undefined') return null;
     const savedStep = window.localStorage.getItem('onboarding_current_step');
-    const validSteps = ['welcome', 'selection_fee', 'scholarship_selection', 'scholarship_review', 'process_type', 'documents_upload', 'payment', 'waiting_approval', 'completed'];
+    const validSteps = ['welcome', 'selection_fee', 'scholarship_selection', 'process_type', 'documents_upload', 'payment', 'scholarship_fee', 'university_documents', 'waiting_approval', 'completed'];
     return savedStep && validSteps.includes(savedStep) ? savedStep : null;
   }, []);
   
   const hasSavedOnboardingStep = savedOnboardingStep !== null;
+  const isOnboardingStarted = hasSavedOnboardingStep && savedOnboardingStep !== 'welcome';
   
   // Mapear step para label amigável
   const currentStepLabel = React.useMemo(() => {
     if (!savedOnboardingStep) return null;
     const stepLabels: Record<string, string> = {
-      'welcome': 'Welcome',
-      'selection_fee': 'Selection Fee',
-      'scholarship_selection': 'Scholarship Selection',
-      'scholarship_review': 'Scholarship Review',
-      'process_type': 'Process Type',
-      'documents_upload': 'Documents Upload',
-      'payment': 'Payment',
-      'waiting_approval': 'Waiting Approval',
-      'completed': 'Completed'
+      'welcome': 'Boas-vindas',
+      'selection_fee': 'Taxa de Seleção',
+      'scholarship_selection': 'Seleção de Bolsas',
+      'process_type': 'Tipo de Processo',
+      'documents_upload': 'Upload de Documentos',
+      'payment': 'Taxa de Aplicação',
+      'scholarship_fee': 'Taxa da Bolsa',
+      'university_documents': 'Documentos da Faculdade',
+      'waiting_approval': 'Aguardando Aprovação',
+      'completed': 'Concluído'
     };
     return stepLabels[savedOnboardingStep] || savedOnboardingStep;
   }, [savedOnboardingStep]);
@@ -407,47 +409,22 @@ const Overview: React.FC<OverviewProps> = ({
 
   // Lógica da barra de progresso dinâmica
   const getStep1State = () => {
-    if (!userProfile?.has_paid_selection_process_fee) {
-      return {
-        label: t('studentDashboard.progressBar.selectionProcessFee'),
-        description: t('studentDashboard.progressBar.payApplicationFee'),
-        completed: false,
-        current: true
-      };
-    }
-    
+    // Se onboarding concluído
     if (userProfile?.onboarding_completed) {
       return {
-        label: t('studentDashboard.progressBar.onboarding.completed'),
+        label: t('studentDashboard.progressBar.selectionProcessFee'),
         description: t('studentDashboard.progressBar.completed'),
         completed: true,
         current: false
       };
     }
 
-    // Se pagou mas não completou onboarding, verificar step atual
-    let label = t('studentDashboard.progressBar.selectionProcessFee');
-    let description = 'Complete seu onboarding';
-    
-    if (savedOnboardingStep === 'scholarship_selection' || savedOnboardingStep === 'scholarship_review' || savedOnboardingStep === 'process_type') {
-      label = t('studentDashboard.progressBar.onboarding.chooseScholarships');
-      description = t('studentDashboard.progressBar.onboarding.chooseScholarshipsDesc');
-    } else if (savedOnboardingStep === 'documents_upload') {
-      label = t('studentDashboard.progressBar.onboarding.uploadDocuments');
-      description = t('studentDashboard.progressBar.onboarding.uploadDocumentsDesc');
-    } else if (savedOnboardingStep === 'payment') {
-      label = t('studentDashboard.progressBar.applicationFee');
-      description = 'Complete o pagamento das suas matrículas';
-    } else if (savedOnboardingStep === 'waiting_approval') {
-      label = t('studentDashboard.progressBar.onboarding.underReview');
-      description = t('studentDashboard.progressBar.onboarding.underReviewDesc');
-    }
-
+    // Se ainda está no onboarding ou não pagou
     return {
-      label,
-      description,
-      completed: false,
-      current: true
+      label: t('studentDashboard.progressBar.selectionProcessFee'),
+      description: t('studentDashboard.progressBar.payApplicationFee'),
+      completed: !!userProfile?.has_paid_selection_process_fee,
+      current: !userProfile?.has_paid_selection_process_fee || !userProfile?.onboarding_completed
     };
   };
 
@@ -498,6 +475,38 @@ const Overview: React.FC<OverviewProps> = ({
 
   const allCompleted = steps.every(step => step.completed);
 
+  // Cálculo do progresso visual para a trilha animada
+  const calculateVisualProgress = () => {
+    // 1. Prioridade para pagamentos confirmados (posições fixas nos nós)
+    if (userProfile?.has_paid_i20_control_fee) return 3;
+    if (hasScholarshipFeePaid) return 3; // Se pagou a bolsa, o próximo passo é o I-20 (nó 3)
+    if (hasApplicationFeePaid) return 2; // Se pagou a aplicação, o próximo passo é a bolsa (nó 2)
+
+    // 2. Se o onboarding foi concluído mas ainda não pagou a taxa de aplicação
+    if (userProfile?.onboarding_completed) return 1;
+
+    // 3. Se ainda não pagou nem a primeira taxa (Taxa de Seleção)
+    if (!userProfile?.has_paid_selection_process_fee) return 0;
+
+    // 4. Progresso granular durante o onboarding (entre o nó 0 e nó 1)
+    const onboardingProgressMap: Record<string, number> = {
+      'welcome': 0,
+      'selection_fee': 0,
+      'scholarship_selection': 0.2,
+      'process_type': 0.4,
+      'documents_upload': 0.6,
+      'payment': 1, // 'payment' no onboarding é a Taxa de Aplicação (nó 1)
+      'scholarship_fee': 1.25,
+      'university_documents': 1.5,
+      'waiting_approval': 1.75, // Quase chegando na liberação da taxa da bolsa
+      'completed': 2
+    };
+
+    return onboardingProgressMap[savedOnboardingStep || ''] || 0.5;
+  };
+
+  const visualProgress = calculateVisualProgress();
+
   return (
     <div className="overview-dashboard-container pt-2">
 
@@ -537,7 +546,7 @@ const Overview: React.FC<OverviewProps> = ({
                 </div>
                 <div className="w-px h-4 bg-white/20 hidden xs:block" />
                 <p className="text-white text-[10px] md:text-sm font-bold tracking-tight opacity-90 drop-shadow-md">
-                  {currentStepLabel 
+                  {isOnboardingStarted 
                     ? `Você parou em: ${currentStepLabel}`
                     : 'Comece sua jornada agora mesmo'}
                 </p>
@@ -551,6 +560,7 @@ const Overview: React.FC<OverviewProps> = ({
               isApplicationFeeUnlocked={userProfile?.has_paid_selection_process_fee || false}
               isScholarshipFeeUnlocked={hasApplicationFeePaid}
               isI20Unlocked={hasScholarshipFeePaid}
+              progress={visualProgress}
             />
           </div>
 
@@ -565,7 +575,7 @@ const Overview: React.FC<OverviewProps> = ({
               <div className="absolute bottom-0 left-0 -ml-16 -mb-16 w-32 h-32 bg-indigo-500/15 rounded-full blur-[60px] group-hover:bg-indigo-400/25 transition-colors duration-700" />
               
               <h3 className="relative text-lg md:text-xl font-black text-white uppercase tracking-widest leading-tight">
-                {hasSavedOnboardingStep ? 'Continuar Jornada' : 'Iniciar Jornada'}
+                {isOnboardingStarted ? 'Continuar Jornada' : 'Iniciar Jornada'}
               </h3>
             </button>
           )}

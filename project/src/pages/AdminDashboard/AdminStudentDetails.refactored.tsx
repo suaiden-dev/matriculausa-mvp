@@ -2220,6 +2220,29 @@ const AdminStudentDetails: React.FC = () => {
         console.error('Erro ao atualizar documents_status:', profileUpdateError);
       }
 
+      // Marcar todos os documentos individuais como aprovados para limpar o overview de admins
+      try {
+        await Promise.all([
+          supabase
+            .from('student_documents')
+            .update({ status: 'approved', approved_at: new Date().toISOString() })
+            .eq('user_id', student.user_id)
+            .eq('status', 'pending'),
+          supabase
+            .from('document_request_uploads')
+            .update({ 
+               status: 'approved', 
+               reviewed_at: new Date().toISOString(),
+               reviewed_by: user?.id
+            })
+            .eq('uploaded_by', student.user_id)
+            .in('status', ['pending', 'under_review'])
+        ]);
+        console.log('✅ [APPROVE] Documentos individuais marcados como aprovados');
+      } catch (docUpdateError) {
+        console.error('⚠️ [APPROVE] Erro ao atualizar documentos individuais:', docUpdateError);
+      }
+
       // Webhook e notificação
       try {
         const { data: userData } = await supabase
