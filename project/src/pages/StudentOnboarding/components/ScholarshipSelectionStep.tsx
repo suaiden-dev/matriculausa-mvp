@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useMemo, useCallback } from 'react';
-import { Award, Building, DollarSign, X, AlertCircle, CheckCircle2, ArrowRight, Info, Search, GraduationCap, BookOpen, Monitor, Briefcase, Calendar, ChevronDown, ChevronUp, Filter } from 'lucide-react';
+import { Award, Building, DollarSign, X, CheckCircle2, ArrowRight, Info, Search, GraduationCap, BookOpen, Monitor, Briefcase, Calendar, ChevronDown, ChevronUp, Filter } from 'lucide-react';
 import { useAuth } from '../../../hooks/useAuth';
 import { useCartStore } from '../../../stores/applicationStore';
 import { useScholarships } from '../../../hooks/useScholarships';
@@ -11,7 +11,9 @@ import { supabase } from '../../../lib/supabase';
 import { useTranslation } from 'react-i18next';
 import { is3800ScholarshipBlocked } from '../../../utils/scholarshipDeadlineValidation';
 import { formatAmount } from '../../../utils/scholarshipHelpers';
-import { AlertTriangle, Loader2 } from 'lucide-react';
+import { AlertTriangle, Loader2, AlertCircle as AlertCircleIcon } from 'lucide-react';
+import { Dialog, Transition } from '@headlessui/react';
+import { Fragment } from 'react';
 
 export const ScholarshipSelectionStep: React.FC<StepProps> = ({ onNext, onBack: _onBack }) => {
   const { t } = useTranslation();
@@ -39,6 +41,7 @@ export const ScholarshipSelectionStep: React.FC<StepProps> = ({ onNext, onBack: 
   const [isReviewing, setIsReviewing] = useState(false);
   const [isTransitioning, setIsTransitioning] = useState(false);
   const [removingScholarshipId, setRemovingScholarshipId] = useState<string | null>(null);
+  const [showConfirmModal, setShowConfirmModal] = useState(false);
 
   const ITEMS_PER_PAGE = 12;
 
@@ -504,7 +507,7 @@ export const ScholarshipSelectionStep: React.FC<StepProps> = ({ onNext, onBack: 
       });
 
       if (blockedScholarship) return;
-      onNext();
+      setShowConfirmModal(true);
     } else {
       // Iniciar transição para a revisão
       setIsTransitioning(true);
@@ -745,7 +748,7 @@ export const ScholarshipSelectionStep: React.FC<StepProps> = ({ onNext, onBack: 
 
           {displayError && (
             <div className="p-4 bg-red-50 border-2 border-red-300 rounded-lg flex items-center space-x-2">
-              <AlertCircle className="w-5 h-5 text-red-600 flex-shrink-0" />
+              <AlertCircleIcon className="w-5 h-5 text-red-600 flex-shrink-0" />
               <p className="text-sm font-medium text-red-700">{displayError}</p>
             </div>
           )}
@@ -1086,6 +1089,80 @@ export const ScholarshipSelectionStep: React.FC<StepProps> = ({ onNext, onBack: 
           userRole={user?.role}
         />
       )}
+
+      {/* Confirmation Modal */}
+      <Transition appear show={showConfirmModal} as={Fragment}>
+        <Dialog as="div" className="relative z-[200]" onClose={() => setShowConfirmModal(false)}>
+          <Transition.Child
+            as={Fragment}
+            enter="ease-out duration-300"
+            enterFrom="opacity-0"
+            enterTo="opacity-100"
+            leave="ease-in duration-200"
+            leaveFrom="opacity-100"
+            leaveTo="opacity-0"
+          >
+            <div className="fixed inset-0 bg-slate-950/80 backdrop-blur-sm" />
+          </Transition.Child>
+
+          <div className="fixed inset-0 overflow-y-auto">
+            <div className="flex min-h-full items-center justify-center p-4 text-center">
+              <Transition.Child
+                as={Fragment}
+                enter="ease-out duration-300"
+                enterFrom="opacity-0 scale-95"
+                enterTo="opacity-100 scale-100"
+                leave="ease-in duration-200"
+                leaveFrom="opacity-100 scale-100"
+                leaveTo="opacity-0 scale-95"
+              >
+                <Dialog.Panel className="w-full max-w-md transform overflow-hidden rounded-[2.5rem] bg-white p-8 text-left align-middle shadow-2xl transition-all border border-slate-200 relative">
+                  <div className="absolute top-0 right-0 w-32 h-32 bg-blue-500/5 rounded-full blur-3xl -mr-16 -mt-16 pointer-events-none" />
+                  
+                  <div className="flex flex-col items-center text-center space-y-6">
+                    <div className="w-20 h-20 bg-amber-100 rounded-full flex items-center justify-center border-4 border-white shadow-lg shadow-amber-200/50">
+                      <AlertCircleIcon className="w-10 h-10 text-amber-600" />
+                    </div>
+                    
+                    <div>
+                      <Dialog.Title
+                        as="h3"
+                        className="text-2xl font-black text-slate-900 uppercase tracking-tight mb-3"
+                      >
+                        {t('scholarshipSelection.confirmationModal.title')}
+                      </Dialog.Title>
+                      <p className="text-slate-600 font-medium leading-relaxed">
+                        {t('scholarshipSelection.confirmationModal.description', { count: selectedIds.size })}
+                      </p>
+                    </div>
+
+                    <div className="flex flex-col w-full gap-3 pt-4">
+                      <button
+                        type="button"
+                        className="w-full bg-blue-600 text-white py-4 rounded-2xl font-black uppercase tracking-widest text-sm hover:bg-blue-700 transition-all shadow-xl shadow-blue-500/20 hover:scale-[1.02] active:scale-[0.98]"
+                        onClick={() => {
+                          setShowConfirmModal(false);
+                          onNext();
+                        }}
+                      >
+                        {t('scholarshipSelection.confirmationModal.confirm')}
+                      </button>
+                      <button
+                        type="button"
+                        className="w-full py-4 rounded-xl font-bold text-slate-500 hover:bg-slate-50 transition-all uppercase tracking-widest text-xs"
+                        onClick={() => setShowConfirmModal(false)}
+                      >
+                        {t('scholarshipSelection.confirmationModal.cancel')}
+                      </button>
+                    </div>
+                  </div>
+                </Dialog.Panel>
+              </Transition.Child>
+            </div>
+          </div>
+        </Dialog>
+      </Transition>
     </div>
+
   );
 };

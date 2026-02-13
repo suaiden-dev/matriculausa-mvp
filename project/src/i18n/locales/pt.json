@@ -2342,6 +2342,7 @@
         "applicationInProgress": "Sua aplicação para {{universityName}} está em andamento.",
         "scholarship": "Bolsa:",
         "howToProceed": "Como Proceder",
+        "description": "Utilize o chat abaixo para se comunicar diretamente com a universidade sobre documentos pendentes e próximos passos.",
         "documentRequests": {
           "title": "Verificar Solicitações de Documentos",
           "description": "Faça upload dos documentos solicitados pela universidade para continuar seu processo.",
@@ -4072,6 +4073,14 @@
       "description": "Para realizar pagamentos via Parcelow, você precisa ter um CPF registrado em seu perfil. Deseja ir para seu perfil agora para completar seu cadastro?",
       "confirm": "Ir para o Perfil",
       "cancel": "Agora não"
+    }
+  },
+  "scholarshipSelection": {
+    "confirmationModal": {
+      "title": "Confirmar Seleção",
+      "description": "Você selecionou {{count}} bolsas. Esta escolha é definitiva e, após confirmar, você não poderá mais alterar sua seleção para este processo seletivo.",
+      "confirm": "Confirmar e Prosseguir",
+      "cancel": "Revisar Novamente"
     }
   }
 }

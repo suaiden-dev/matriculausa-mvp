@@ -1,6 +1,6 @@
 import React, { useEffect, useState } from 'react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
-import { ArrowLeft, CheckCircle, Trash2 } from 'lucide-react';
+import { ArrowLeft, CheckCircle } from 'lucide-react';
 import { useAuth } from '../../hooks/useAuth';
 import { useOnboardingProgress } from './hooks/useOnboardingProgress';
 import { StepIndicator } from './components/StepIndicator';
@@ -25,7 +25,6 @@ const StudentOnboarding: React.FC = () => {
   const [searchParams] = useSearchParams();
   const { state, loading, goToStep } = useOnboardingProgress();
   const { t } = useTranslation();
-  
   const [showPaymentAnimation, setShowPaymentAnimation] = useState(false);
   const [isVerifyingPayment, setIsVerifyingPayment] = useState(false);
 
@@ -206,45 +205,6 @@ const StudentOnboarding: React.FC = () => {
       }
     }
   };
-
-  const handleReset = async () => {
-    if (!userProfile?.id) return;
-    
-    if (!confirm('DESEJA REALMENTE RESETAR TODO O SEU ONBOARDING? Isso apagará aplicações, carrinho e documentos.')) return;
-
-    try {
-      // 1. Limpar localStorage
-      window.localStorage.removeItem('onboarding_current_step');
-      window.localStorage.removeItem('selected_application_id');
-      window.localStorage.removeItem('studentProcessType');
-      
-      // 2. Apagar aplicações
-      await supabase.from('scholarship_applications').delete().eq('student_id', userProfile.id);
-      
-      // 3. Apagar carrinho
-      await supabase.from('scholarship_cart').delete().eq('user_id', userProfile.id);
-      
-      // 4. Apagar pagamentos Zelle
-      await supabase.from('zelle_payments').delete().eq('user_id', userProfile.id);
-      
-      // 5. Resetar perfil
-      await supabase.from('user_profiles').update({
-        has_paid_selection_process_fee: false,
-        documents_uploaded: false,
-        documents_status: null,
-        is_application_fee_paid: false,
-        onboarding_completed: false,
-        selected_scholarship_id: null
-      }).eq('id', userProfile.id);
-
-      // 6. Recarregar a página para aplicar as mudanças
-      window.location.href = '/onboarding?step=welcome';
-    } catch (error) {
-      console.error('Error resetting onboarding:', error);
-      alert('Erro ao resetar onboarding. Verifique o console.');
-    }
-  };
-
   const allSteps: OnboardingStep[] = [
     'welcome',
     'selection_fee',
@@ -455,20 +415,6 @@ const StudentOnboarding: React.FC = () => {
         <div className="w-full flex-1 flex flex-col">
           {renderStep()}
         </div>
-      </div>
-
-      {/* Botão de Reset Temporário para Testes */}
-      <div className="fixed bottom-5 right-5 z-[100]">
-        <button
-          onClick={handleReset}
-          className="bg-red-600/20 hover:bg-red-600 text-red-500 hover:text-white p-3 rounded-full shadow-lg backdrop-blur-md border border-red-500/30 transition-all duration-300 group flex items-center gap-2"
-          title="Reset Onboarding (Debug)"
-        >
-          <Trash2 className="w-5 h-5" />
-          <span className="max-w-0 overflow-hidden group-hover:max-w-xs transition-all duration-500 ease-in-out whitespace-nowrap font-bold uppercase text-xs tracking-widest">
-            Reset Onboarding
-          </span>
-        </button>
       </div>
     </div>
   );

@@ -64,7 +64,14 @@ const ScholarshipCardFullComponent: React.FC<ScholarshipCardFullProps> = ({
         isSelected 
           ? 'border-blue-600 border-[3px] bg-blue-50/50 shadow-lg shadow-blue-100/50' 
           : 'border-slate-200/60 hover:border-slate-300'
-      } flex flex-col h-full hover:-translate-y-1 transform-gpu`}
+      } flex flex-col h-full hover:-translate-y-1 transform-gpu ${
+        !scholarship.is_active || isBlocked || isLocked ? 'cursor-not-allowed' : 'cursor-pointer' // Fix: Ensure cursor is pointer when clickable
+      }`}
+      onClick={() => {
+        // Fix: Make entire card clickable
+        if (!scholarship.is_active || isBlocked || isLocked) return;
+        onToggle();
+      }}
       style={{ 
         backfaceVisibility: 'hidden', 
         WebkitBackfaceVisibility: 'hidden',
@@ -275,7 +282,10 @@ const ScholarshipCardFullComponent: React.FC<ScholarshipCardFullProps> = ({
           ) : (
             <button
               type="button"
-              onClick={onToggle}
+              onClick={(e) => {
+                e.stopPropagation();
+                onToggle();
+              }}
               disabled={isLocked}
               className={`group/btn w-full h-10 px-4 rounded-xl font-bold text-xs sm:text-sm flex items-center justify-center transition-all duration-300 relative overflow-hidden backdrop-blur-md border border-white/20 shadow-lg hover:shadow-xl ${
                 isLocked

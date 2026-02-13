@@ -16,7 +16,7 @@ import {
   ArrowRight,
   ShieldCheck,
   LayoutDashboard,
-  MessageSquare,
+
   FileSearch,
   CheckCircle2,
   ExternalLink,
@@ -30,7 +30,8 @@ import {
   FileCheck,
   Star,
   Monitor,
-  Calendar
+  Calendar,
+  X
 } from 'lucide-react';
 import { useAuth } from '../../../hooks/useAuth';
 import { supabase } from '../../../lib/supabase';
@@ -41,7 +42,9 @@ import { useStudentLogs } from '../../../hooks/useStudentLogs';
 import DocumentRequestsCard from '../../../components/DocumentRequestsCard';
 import DocumentViewerModal from '../../../components/DocumentViewerModal';
 import { I20ControlFeeModal } from '../../../components/I20ControlFeeModal';
+import { STRIPE_PRODUCTS } from '../../../stripe-config';
 import { ProfileRequiredModal } from '../../../components/ProfileRequiredModal';
+import { ZelleCheckout } from '../../../components/ZelleCheckout';
 import { ExpandableTabs } from '../../../components/ui/expandable-tabs';
 import { motion, AnimatePresence } from 'framer-motion';
 
@@ -61,29 +64,36 @@ export const UniversityDocumentsStep: React.FC<StepProps> = ({ onNext, onBack })
   const [showProfileRequiredModal, setShowProfileRequiredModal] = useState(false);
   const [profileErrorType, setProfileErrorType] = useState<'cpf_missing' | 'profile_incomplete' | null>(null);
   const [realI20PaidAmount, setRealI20PaidAmount] = useState<number | null>(null);
+  const [showZelleCheckout, setShowZelleCheckout] = useState(false);
   const [realI20PaymentDate, setRealI20PaymentDate] = useState<string | null>(null);
   const [scholarshipFeeDeadline, setScholarshipFeeDeadline] = useState<Date | null>(null);
   const [i20Countdown, setI20Countdown] = useState<string | null>(null);
   const [i20CountdownValues, setI20CountdownValues] = useState<{ days: number, hours: number, minutes: number, seconds: number } | null>(null);
-
   useEffect(() => {
     fetchApplicationDetails();
   }, [userProfile?.id]);
 
-  const fetchApplicationDetails = async () => {
+  const fetchApplicationDetails = async (isRefresh = false) => {
     if (!userProfile?.id) return;
     
     try {
-      setLoading(true);
+      if (!isRefresh) setLoading(true);
       
-      // 1. Buscar a aplicação ativa (a mais recente)
-      const { data, error } = await supabase
+      const selectedId = localStorage.getItem('selected_application_id');
+      
+      let query = supabase
         .from('scholarship_applications')
         .select(`*, user_profiles!student_id(*), scholarships(*, internal_fees, universities(*))`)
-        .eq('student_id', userProfile.id)
-        .order('created_at', { ascending: false })
-        .limit(1)
-        .single();
+        .eq('student_id', userProfile.id);
+
+      if (selectedId) {
+        query = query.eq('id', selectedId);
+      } else {
+        // 1. Fallback para a aplicação ativa (a mais recente) se não houver seleção explícita
+        query = query.order('created_at', { ascending: false }).limit(1);
+      }
+
+      const { data, error } = await query.single();
 
       if (error) throw error;
 
@@ -116,7 +126,7 @@ export const UniversityDocumentsStep: React.FC<StepProps> = ({ onNext, onBack })
     } catch (err: any) {
       console.error('Error fetching university documents details:', err);
     } finally {
-      setLoading(false);
+      if (!isRefresh) setLoading(false);
     }
   };
 
@@ -181,15 +191,20 @@ export const UniversityDocumentsStep: React.FC<StepProps> = ({ onNext, onBack })
   }, [scholarshipFeeDeadline]);
 
   const handlePayI20 = () => {
-    if (!userProfile?.cpf_document) {
+    setSelectedPaymentMethod(null);
+    setProfileErrorType(null);
+    setShowI20ControlFeeModal(true);
+  };
+
+  const handlePaymentMethodSelect = async (method: 'stripe' | 'zelle' | 'pix' | 'parcelow', exchangeRateParam?: number) => {
+    // Verificar CPF apenas para Parcelow
+    if (method === 'parcelow' && !userProfile?.cpf_document) {
+      setShowI20ControlFeeModal(false);
       setProfileErrorType('cpf_missing');
       setShowProfileRequiredModal(true);
       return;
     }
-    setShowI20ControlFeeModal(true);
-  };
 
-  const handlePaymentMethodSelect = async (method: 'stripe' | 'zelle' | 'pix' | 'parcelow') => {
     setSelectedPaymentMethod(method);
     setI20Loading(true);
 
@@ -197,28 +212,85 @@ export const UniversityDocumentsStep: React.FC<StepProps> = ({ onNext, onBack })
       const { data: { session }, error: authError } = await supabase.auth.getSession();
       if (authError || !session) throw new Error('Not authenticated');
 
-      const { data, error } = await supabase.functions.invoke('create-checkout-session-i20-control-fee', {
-        body: {
-          applicationId: applicationDetails.id,
-          payment_method: method,
-          success_url: `${window.location.origin}/student/onboarding?step=university_documents&payment=success`,
-          cancel_url: `${window.location.origin}/student/onboarding?step=university_documents&payment=cancelled`,
-        }
-      });
+      const token = session.access_token;
+      const supabaseUrl = import.meta.env.VITE_SUPABASE_URL;
+      
+      const successUrl = `${window.location.origin}/student/onboarding?step=university_documents&payment=success&session_id={CHECKOUT_SESSION_ID}`;
+      const cancelUrl = `${window.location.origin}/student/onboarding?step=university_documents&payment=cancelled`;
+      
+      const amount = getFeeAmount('i20_control_fee');
+      const promotionalCoupon = (window as any).__checkout_promotional_coupon || null;
+      const finalAmount = (window as any).__checkout_final_amount || amount;
 
-      if (error) throw error;
+      if (method === 'stripe' || method === 'pix') {
+         const apiUrl = `${supabaseUrl}/functions/v1/stripe-checkout-i20-control-fee`;
+         
+         const res = await fetch(apiUrl, {
+            method: 'POST',
+            headers: {
+               'Content-Type': 'application/json',
+               'Authorization': `Bearer ${token}`,
+            },
+            body: JSON.stringify({
+               payment_method: method,
+               price_id: STRIPE_PRODUCTS.controlFee.priceId,
+               amount: finalAmount,
+               success_url: successUrl,
+               cancel_url: cancelUrl,
+               promotional_coupon: promotionalCoupon,
+               metadata: method === 'pix' ? { exchange_rate: exchangeRateParam } : {}
+            })
+         });
 
-      if (data?.url) {
-        window.location.href = data.url;
-      } else if (data?.success) {
-        // Zelle or Pix flow
-        await fetchApplicationDetails();
+         const data = await res.json();
+         if (!res.ok) throw new Error(data.error || 'Erro na requisição de pagamento');
+
+         if (data.session_url) {
+            window.location.href = data.session_url;
+         } else {
+            throw new Error('Sessão de pagamento não criada');
+         }
+
+      } else if (method === 'parcelow') {
+         const apiUrl = `${supabaseUrl}/functions/v1/parcelow-checkout-i20-control-fee`;
+         
+         const res = await fetch(apiUrl, {
+            method: 'POST',
+            headers: {
+               'Content-Type': 'application/json',
+               'Authorization': `Bearer ${token}`,
+            },
+            body: JSON.stringify({
+               amount: finalAmount,
+               fee_type: 'i20_control_fee',
+               promotional_coupon: promotionalCoupon,
+               scholarships_ids: applicationDetails?.scholarships?.id ? [applicationDetails.scholarships.id] : [],
+               metadata: {
+                  application_id: applicationDetails?.id,
+                  final_amount: finalAmount,
+                  promotional_coupon: promotionalCoupon
+               }
+            })
+         });
+
+         const data = await res.json();
+         if (!res.ok) throw new Error(data.error || 'Erro ao processar Parcelow');
+         
+         if (data.checkout_url) {
+            window.location.href = data.checkout_url;
+         } else {
+            throw new Error('URL de checkout Parcelow não encontrada');
+         }
+
+      } else if (method === 'zelle') {
+        setShowZelleCheckout(true);
         setShowI20ControlFeeModal(false);
+        setI20Loading(false);
       }
+
     } catch (err: any) {
       console.error('Payment error:', err);
       alert(err.message || 'Error processing payment');
-    } finally {
       setI20Loading(false);
     }
   };
@@ -290,11 +362,9 @@ export const UniversityDocumentsStep: React.FC<StepProps> = ({ onNext, onBack })
             <div className="px-3 py-1 bg-blue-500/20 border border-blue-500/30 rounded-full">
               <span className="text-[10px] font-black text-blue-400 uppercase tracking-widest">Passo Final</span>
             </div>
-            <div className="h-px w-8 bg-blue-500/30" />
-            <span className="text-xs font-bold text-white/40 uppercase tracking-widest">Gestão de Candidatura</span>
           </div>
           <h2 className="text-4xl md:text-6xl font-black text-white uppercase tracking-tighter leading-none">
-            Portal da <span className="text-blue-400">Universidade</span>
+            Portal da <span className="text-blue-400">Candidatura</span>
           </h2>
           <p className="text-lg text-white/60 font-medium max-w-2xl">
             Gerencie seus documentos, visualize detalhes da aceitação e finalize seu processo de matrícula.
@@ -344,7 +414,7 @@ export const UniversityDocumentsStep: React.FC<StepProps> = ({ onNext, onBack })
             <div className="grid grid-cols-1 md:grid-cols-12 gap-6">
               {/* Main Welcome Card */}
               <div className="md:col-span-8 space-y-6">
-                <div className="bg-white rounded-[2.5rem] p-8 md:p-12 shadow-2xl relative overflow-hidden border border-gray-100">
+                <div className="bg-white rounded-[2.5rem] p-8 md:p-12 shadow-2xl relative overflow-hidden border border-slate-200">
                   <div className="absolute top-0 right-0 w-64 h-64 bg-blue-500/5 rounded-full blur-[80px] -mr-32 -mt-32 pointer-events-none" />
                   
                   <div className="relative z-10">
@@ -368,7 +438,7 @@ export const UniversityDocumentsStep: React.FC<StepProps> = ({ onNext, onBack })
                       <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                         <button 
                           onClick={() => setActiveTab('documents')}
-                          className="flex items-center gap-4 p-5 bg-slate-50 hover:bg-blue-50 rounded-2xl border border-slate-100 hover:border-blue-200 transition-all text-left group"
+                          className="flex items-center gap-4 p-5 bg-slate-50 hover:bg-white rounded-2xl border border-slate-200 hover:border-blue-300 hover:shadow-lg hover:shadow-blue-500/5 transition-all text-left group"
                         >
                           <div className="w-12 h-12 bg-white rounded-xl shadow-sm flex items-center justify-center group-hover:scale-110 transition-transform">
                             <FileSearch className="w-6 h-6 text-slate-600 group-hover:text-blue-600 transition-colors" />
@@ -381,7 +451,7 @@ export const UniversityDocumentsStep: React.FC<StepProps> = ({ onNext, onBack })
 
                         <button 
                           onClick={() => setActiveTab('details')}
-                          className="flex items-center gap-4 p-5 bg-slate-50 hover:bg-blue-50 rounded-2xl border border-slate-100 hover:border-blue-200 transition-all text-left group"
+                          className="flex items-center gap-4 p-5 bg-slate-50 hover:bg-white rounded-2xl border border-slate-200 hover:border-blue-300 hover:shadow-lg hover:shadow-blue-500/5 transition-all text-left group"
                         >
                           <div className="w-12 h-12 bg-white rounded-xl shadow-sm flex items-center justify-center group-hover:scale-110 transition-transform">
                             <Info className="w-6 h-6 text-slate-600 group-hover:text-blue-600 transition-colors" />
@@ -397,9 +467,9 @@ export const UniversityDocumentsStep: React.FC<StepProps> = ({ onNext, onBack })
                 </div>
 
                 {/* Timeline simplified */}
-                <div className="bg-white/5 backdrop-blur-sm rounded-[2.5rem] p-8 border border-white/10">
-                   <h4 className="text-lg font-black text-white uppercase tracking-widest mb-6 flex items-center gap-2">
-                     <History className="w-5 h-5 text-blue-400" />
+                <div className="bg-white rounded-[2.5rem] p-8 border border-slate-200 shadow-2xl shadow-blue-900/5">
+                   <h4 className="text-lg font-black text-gray-900 uppercase tracking-widest mb-6 flex items-center gap-2">
+                     <History className="w-5 h-5 text-blue-600" />
                      Próximas Etapas
                    </h4>
                    <div className="space-y-4">
@@ -416,20 +486,20 @@ export const UniversityDocumentsStep: React.FC<StepProps> = ({ onNext, onBack })
                            onClick={() => isClickable && setActiveTab((step as any).tab)}
                            className={`flex items-center justify-between p-4 rounded-xl border transition-all ${
                              step.active 
-                               ? 'bg-white/10 border-white/20' 
-                                : 'bg-transparent border-white/5 opacity-50'
-                           } ${isClickable ? 'cursor-pointer hover:bg-white/20 hover:scale-[1.02] border-blue-500/30' : ''}`}
+                               ? 'bg-slate-50 border-slate-200' 
+                               : 'bg-transparent border-slate-100 opacity-50'
+                           } ${isClickable ? 'cursor-pointer hover:bg-white hover:border-blue-300 hover:shadow-lg hover:shadow-blue-500/5 hover:scale-[1.02]' : ''}`}
                          >
                            <div className="flex items-center gap-3">
-                             <div className={`w-8 h-8 rounded-lg flex items-center justify-center ${step.active ? 'bg-blue-500/20 text-blue-400' : 'bg-white/5 text-white/20'}`}>
+                             <div className={`w-8 h-8 rounded-lg flex items-center justify-center ${step.active ? 'bg-blue-500/10 text-blue-600' : 'bg-slate-50 text-slate-300'}`}>
                                <span className="text-xs font-bold">{i + 1}</span>
                              </div>
                              <div className="flex flex-col">
-                               <span className="text-sm font-bold text-white uppercase tracking-tight">{step.title}</span>
-                               {isClickable && <span className="text-[8px] text-blue-400/60 font-black uppercase tracking-widest mt-0.5">Clique para ir</span>}
+                               <span className="text-sm font-bold text-gray-900 uppercase tracking-tight">{step.title}</span>
+                               {isClickable && <span className="text-[8px] text-blue-600/60 font-black uppercase tracking-widest mt-0.5">Clique para ir</span>}
                              </div>
                            </div>
-                           <span className={`text-[10px] font-black uppercase tracking-widest ${step.active ? 'text-blue-400' : 'text-white/20'}`}>{step.status}</span>
+                           <span className={`text-[10px] font-black uppercase tracking-widest ${step.active ? 'text-blue-600' : 'text-slate-400'}`}>{step.status}</span>
                          </div>
                        );
                      })}
@@ -447,15 +517,7 @@ export const UniversityDocumentsStep: React.FC<StepProps> = ({ onNext, onBack })
                     <p className="text-blue-100/80 text-sm font-medium leading-relaxed mb-8">
                       Estamos validando cada detalhe da sua aplicação para garantir que sua jornada nos EUA seja perfeita.
                     </p>
-                    <div className="mt-auto pt-6 border-t border-white/10">
-                      <p className="text-[10px] font-black uppercase tracking-widest text-blue-200/50 mb-2">Suporte Prioritário</p>
-                      <div className="flex items-center gap-2">
-                        <div className="w-8 h-8 rounded-full bg-white/20 flex items-center justify-center">
-                          <MessageSquare className="w-4 h-4 text-white" />
-                        </div>
-                        <span className="text-xs font-bold">chat.suporte@matriculausa.com</span>
-                      </div>
-                    </div>
+
                   </div>
                 </div>
               </div>
@@ -613,10 +675,9 @@ export const UniversityDocumentsStep: React.FC<StepProps> = ({ onNext, onBack })
                            </h4>
                            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                               {[
-                                { key: 'transcript', label: 'Histórico Escolar' },
-                                { key: 'diploma', label: 'Diploma' },
-                                { key: 'passport', label: 'Passaporte' },
-                                { key: 'bank_balance', label: 'Extrato Bancário' }
+                                { key: 'diploma', label: 'Diploma / Certificado (High School)' },
+                                { key: 'passport', label: 'Passaporte (Cópia Colorida)' },
+                                { key: 'funds_proof', label: 'Extrato Bancário (Financial Statement)' }
                               ].map((doc) => {
                                 const docData = (applicationDetails.documents || []).find((d: any) => d.type === doc.key) || 
                                                 (applicationDetails.user_profiles?.documents || []).find((d: any) => d.type === doc.key);
@@ -650,13 +711,7 @@ export const UniversityDocumentsStep: React.FC<StepProps> = ({ onNext, onBack })
                                 );
                               })}
                            </div>
-                           <button 
-                             onClick={() => setActiveTab('documents')}
-                             className="w-full py-3 bg-slate-50 hover:bg-slate-100 rounded-xl text-[10px] font-black text-slate-400 uppercase tracking-[0.2em] transition-all flex items-center justify-center gap-2 group"
-                           >
-                             Gerenciar Todos os Documentos
-                             <ArrowRight className="w-3 h-3 group-hover:translate-x-1 transition-transform" />
-                           </button>
+
                         </section>
 
                         {/* Internal Fees */}
@@ -1045,7 +1100,7 @@ export const UniversityDocumentsStep: React.FC<StepProps> = ({ onNext, onBack })
                           }
                         );
                       }
-                      fetchApplicationDetails();
+                      await fetchApplicationDetails(true);
                     } catch (e) {
                       console.error('Failed to log document upload action:', e);
                     }
@@ -1162,6 +1217,45 @@ export const UniversityDocumentsStep: React.FC<StepProps> = ({ onNext, onBack })
       {/* Legacy/Modals support */}
       {previewUrl && (
         <DocumentViewerModal documentUrl={previewUrl || ''} onClose={() => setPreviewUrl(null)} />
+      )}
+
+      {showZelleCheckout && (
+        <div className="fixed inset-0 z-[60] flex items-center justify-center p-4 bg-black/80 backdrop-blur-sm animate-in fade-in duration-300">
+          <div className="bg-white rounded-[2.5rem] w-full max-w-xl max-h-[90vh] overflow-y-auto relative shadow-2xl border border-white/20 animate-in zoom-in-95 duration-300 custom-scrollbar">
+            <button 
+              onClick={() => setShowZelleCheckout(false)} 
+              className="absolute top-6 right-6 p-2 rounded-full bg-gray-100/50 hover:bg-gray-100 text-gray-400 hover:text-gray-600 transition-all z-10"
+            >
+              <X className="w-5 h-5" />
+            </button>
+            <div className="p-8 md:p-10">
+              <div className="flex items-center gap-4 mb-8 pb-8 border-b border-gray-100">
+                <div className="w-14 h-14 rounded-2xl bg-purple-50 flex items-center justify-center text-purple-600 shadow-sm border border-purple-100">
+                  <DollarSign className="w-7 h-7" />
+                </div>
+                <div>
+                  <h3 className="text-xl font-black uppercase tracking-tight text-gray-900">Pagamento via Zelle</h3>
+                  <p className="text-xs text-gray-500 font-medium mt-1">Siga as instruções para realizar a transferência</p>
+                </div>
+              </div>
+              
+              <ZelleCheckout
+                feeType="i20_control_fee"
+                amount={getFeeAmount('i20_control_fee')}
+                scholarshipsIds={applicationDetails?.scholarships?.id ? [applicationDetails.scholarships.id] : []}
+                metadata={{
+                  application_id: applicationDetails?.id,
+                  selected_scholarship_id: applicationDetails?.scholarships?.id
+                }}
+                onSuccess={() => {
+                  setShowZelleCheckout(false);
+                  fetchApplicationDetails();
+                }}
+                className="w-full"
+              />
+            </div>
+          </div>
+        </div>
       )}
 
       <I20ControlFeeModal

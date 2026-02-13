@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { 
   Upload, 
   FileText, 
@@ -15,8 +15,12 @@ import {
   Calendar,
   ArrowRight,
   ChevronDown,
-  XCircle
+  XCircle,
+  AlertTriangle,
+  Globe,
+  Briefcase
 } from 'lucide-react';
+import { getDeliveryModeColor, getDeliveryModeLabel } from '../../../utils/scholarshipHelpers';
 import { useAuth } from '../../../hooks/useAuth';
 import { supabase } from '../../../lib/supabase';
 import { useTranslation } from 'react-i18next';
@@ -47,16 +51,25 @@ export const DocumentsUploadStep: React.FC<StepProps> = ({ onNext }) => {
   const [mergingPdfs, setMergingPdfs] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [fieldErrors, setFieldErrors] = useState<Record<string, string>>({});
-  const [showManualReviewMessage, setShowManualReviewMessage] = useState(false);
   const [isLocked, setIsLocked] = useState(false);
   const [applications, setApplications] = useState<any[]>([]);
   const [loadingApplications, setLoadingApplications] = useState(false);
   const [selectedAppId, setSelectedAppId] = useState<string | null>(localStorage.getItem('selected_application_id'));
-  const [showAppSelection, setShowAppSelection] = useState(false);
-  const [isTransitioning, setIsTransitioning] = useState(false);
   const [selectedFiles, setSelectedFiles] = useState<Record<string, File | null>>({});
   const [uploadingFiles, setUploadingFiles] = useState<Record<string, boolean>>({});
   const [openChecklists, setOpenChecklists] = useState<Record<string, boolean>>({});
+  const [showConfirmModal, setShowConfirmModal] = useState(false);
+  const topRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    if (showConfirmModal) {
+      // Pequeno delay para garantir que o modal renderizou
+      setTimeout(() => {
+        topRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+        window.scrollTo({ top: 0, behavior: 'smooth' });
+      }, 10);
+    }
+  }, [showConfirmModal]);
 
   const DOCUMENT_LABELS: Record<string, string> = {
     passport: t('studentDashboard.myApplications.documents.passport') || 'Passport',
@@ -70,8 +83,8 @@ export const DocumentsUploadStep: React.FC<StepProps> = ({ onNext }) => {
 
   // Verificar se já passou pela review (tem documentos enviados ou aprovados)
   useEffect(() => {
-    console.log('[DocumentsUploadStep] Component mounted. Cleaning selection ID to prevent jump.');
-    window.localStorage.removeItem('selected_application_id');
+    console.log('[DocumentsUploadStep] Component mounted.');
+    // window.localStorage.removeItem('selected_application_id'); // Remoção removida para manter persistência
     
     const checkIfLocked = async () => {
       if (!userProfile) return;
@@ -81,9 +94,7 @@ export const DocumentsUploadStep: React.FC<StepProps> = ({ onNext }) => {
 
       if (documentsUploaded || documentsApproved) {
         // Se já foi aprovado e o usuário já clicou em continuar anteriormente, restaurar a visualização
-        if (documentsApproved && localStorage.getItem('has_viewed_applications') === 'true') {
-           setShowAppSelection(true); 
-        }
+        
 
         setLoadingApplications(true);
         try {
@@ -484,110 +495,41 @@ export const DocumentsUploadStep: React.FC<StepProps> = ({ onNext }) => {
   if (isLocked) {
     const isApproved = userProfile?.documents_status === 'approved';
     const approvedApps = applications.filter(app => app.status === 'approved' || app.status === 'enrolled');
-    const hasMultipleApproved = approvedApps.length > 1;
 
-    const handleContinueToApps = () => {
-      console.log('[DocumentsUploadStep] handleContinueToApps clicked. Transitioning...');
-      localStorage.setItem('has_viewed_applications', 'true');
-      setIsTransitioning(true);
-      setTimeout(() => {
-        console.log('[DocumentsUploadStep] Timeout reached. Setting showAppSelection to true.');
-        setShowAppSelection(true);
-        // Pequeno delay para garantir que o DOM atualizou antes de remover o blur
-        setTimeout(() => {
-          console.log('[DocumentsUploadStep] Finalizing transition.');
-          setIsTransitioning(false);
-        }, 50);
-      }, 500);
-    };
-
-    const handleFinalContinue = () => {
+    const handleConfirmSelection = () => {
       if (selectedAppId) {
         localStorage.setItem('selected_application_id', selectedAppId);
       } else {
         localStorage.removeItem('selected_application_id');
       }
+      setShowConfirmModal(false);
       onNext();
     };
 
+    const handleFinalContinue = () => {
+      if (selectedAppId) {
+        setShowConfirmModal(true);
+      } else {
+        handleConfirmSelection();
+      }
+    };
+
     return (
-      <div className={`transition-all duration-700 ease-in-out transform ${
-        isTransitioning 
-          ? 'opacity-0 scale-95 blur-2xl rotate-1' 
-          : 'opacity-100 scale-100 blur-0 rotate-0'
-      }`}>
-        {!showAppSelection ? (
-          <div className="space-y-10 max-w-4xl mx-auto pb-12 px-4">
-            {/* Header */}
-            <div className="text-center md:text-left space-y-4">
-              <h2 className="text-3xl md:text-5xl font-black text-white uppercase tracking-tighter leading-none">
-                {isApproved ? 'Documentos Aprovados' : 'Upload de Documentos'}
-              </h2>
-              <p className="text-lg md:text-xl text-white/60 font-medium max-w-2xl mt-2">
-                {isApproved 
-                  ? 'Seus documentos foram verificados com sucesso.' 
-                  : 'Seus documentos estão sendo revisados pela nossa equipe.'}
-              </p>
-            </div>
-
-            {/* Main White Container */}
-            <div className={`bg-white border rounded-[2.5rem] p-6 md:p-10 shadow-2xl relative overflow-hidden transition-all duration-500 ${
-              isApproved 
-                ? 'border-emerald-500/30 ring-1 ring-emerald-500/20' 
-                : 'border-gray-100'
-            }`}>
-              <div className="absolute top-0 right-0 w-64 h-64 bg-blue-500/5 rounded-full blur-[80px] -mr-32 -mt-32 pointer-events-none" />
-              
-              <div className="relative z-10 text-center py-6">
-                <div className={`mb-6 w-20 h-20 ${isApproved ? 'bg-emerald-500/20' : 'bg-blue-500/5'} rounded-full flex items-center justify-center mx-auto border ${isApproved ? 'border-emerald-500/30' : 'border-gray-100'}`}>
-                  {isApproved ? (
-                    <CheckCircle className="w-12 h-12 text-emerald-400" />
-                  ) : (
-                    <Clock className="w-12 h-12 text-blue-600 animate-pulse" />
-                  )}
-                </div>
-                <h3 className="text-3xl font-black text-gray-900 mb-3 uppercase tracking-tight">
-                  {isApproved ? 'Tudo Certo!' : 'Aguardando Aprovação'}
-                </h3>
-                <p className="text-base sm:text-lg text-gray-500 mb-8 font-medium max-w-lg mx-auto">
-                  {isApproved 
-                    ? 'Você já pode visualizar suas candidaturas e prosseguir para o pagamento.' 
-                    : 'Este processo geralmente leva de 24 a 48 horas úteis. Você será notificado quando seus documentos forem revisados.'}
-                </p>
-
-                {!isApproved && (
-                  <div className="bg-blue-50 border border-blue-100 rounded-2xl p-6 text-left mb-8 max-w-lg mx-auto">
-                    <div className="flex gap-4">
-                      <Info className="w-6 h-6 text-blue-500 flex-shrink-0" />
-                      <p className="text-sm font-bold text-blue-800 uppercase tracking-tight leading-relaxed">
-                        Você não pode prosseguir para a próxima etapa até que pelo menos uma de suas solicitações de bolsa seja aprovada por um administrador.
-                      </p>
-                    </div>
-                  </div>
-                )}
-
-                {isApproved && (
-                  <button 
-                    onClick={handleContinueToApps} 
-                    className="w-full max-w-xs bg-blue-600 text-white py-4 px-8 rounded-xl hover:bg-blue-700 transition-all font-bold uppercase tracking-widest shadow-lg shadow-blue-500/20 hover:scale-105 active:scale-95 mx-auto"
-                  >
-                    Continuar
-                  </button>
-                )}
-              </div>
-            </div>
-          </div>
-        ) : (
+      <>
+        <div 
+          ref={topRef}
+          className="transition-all duration-700 ease-in-out transform opacity-100 scale-100 blur-0 rotate-0"
+        >
           <div className="space-y-10 max-w-5xl mx-auto pb-12 px-4">
             {/* Header Outside Container */}
             <div className="text-center space-y-4 animate-in fade-in slide-in-from-top-10 duration-1000">
               <h2 className="text-3xl md:text-5xl font-black text-white uppercase tracking-tighter leading-none">
-                {hasMultipleApproved && !selectedAppId ? 'Escolha sua Universidade' : 'Minhas Candidaturas'}
+                {isApproved ? 'Escolha sua Universidade' : 'Candidaturas em Análise'}
               </h2>
               <p className="text-lg md:text-xl text-white/60 font-medium max-w-2xl mx-auto">
-                {hasMultipleApproved && !selectedAppId 
-                  ? 'Parabéns! Você foi aceito. Selecione abaixo a universidade para seguir com o pagamento.'
-                  : 'Confira o status das suas solicitações de bolsa e finalize seu processo.'}
+                {isApproved 
+                  ? 'Parabéns! Você foi aceito. Selecione abaixo a universidade para seguir com o pagamento.' 
+                  : 'Seus documentos estão sendo revisados. Você pode acompanhar o status de cada bolsa abaixo.'}
               </p>
             </div>
 
@@ -626,9 +568,9 @@ export const DocumentsUploadStep: React.FC<StepProps> = ({ onNext }) => {
                             setSelectedAppId(selectedAppId === app.id ? null : app.id);
                           }}
                           className={`group relative bg-white rounded-2xl sm:rounded-3xl shadow-md hover:shadow-xl transition-all duration-300 overflow-hidden border-2 flex flex-col hover:-translate-y-1 transform-gpu ${
-                            isSelected ? 'border-blue-500 bg-blue-50/30 shadow-blue-500/20' : 
+                            isSelected ? 'border-blue-500 bg-blue-50/30 shadow-blue-500/20 cursor-pointer' : 
                             isAppApproved ? 'border-slate-200/60 hover:border-blue-300 cursor-pointer' : 
-                            'border-slate-200/60 opacity-70 grayscale-[0.3] cursor-default'
+                            'border-slate-200/60 cursor-default'
                           }`}
                         >
                           {/* Selected Check Badge */}
@@ -680,6 +622,40 @@ export const DocumentsUploadStep: React.FC<StepProps> = ({ onNext }) => {
                                 </span>
                               </div>
                             )}
+
+                            {/* Modality & Work Auth */}
+                            <div className="space-y-2 mb-3">
+                              {scholarship?.delivery_mode && (
+                                <div className="flex items-center justify-between p-2.5 bg-slate-50 rounded-xl border border-slate-100">
+                                  <div className="flex items-center gap-1.5 text-slate-500">
+                                    <Globe className="h-3.5 w-3.5" />
+                                    <span className="text-[11px] font-bold uppercase tracking-tight">Modalidade</span>
+                                  </div>
+                                  <span className={`px-2 py-0.5 rounded-md text-[10px] font-black uppercase tracking-tight ${getDeliveryModeColor(scholarship.delivery_mode)}`}>
+                                    {getDeliveryModeLabel(scholarship.delivery_mode, t)}
+                                  </span>
+                                </div>
+                              )}
+
+                              {scholarship?.work_permissions && scholarship.work_permissions.length > 0 && (
+                                <div className="p-2.5 bg-slate-50 rounded-xl border border-slate-100">
+                                  <div className="flex items-center gap-1.5 text-slate-500 mb-2">
+                                    <Briefcase className="h-3.5 w-3.5" />
+                                    <span className="text-[11px] font-bold uppercase tracking-tight">Trabalho</span>
+                                  </div>
+                                  <div className="flex flex-wrap gap-1.5">
+                                    {scholarship.work_permissions.slice(0, 3).map((permission: string, index: number) => (
+                                      <span
+                                        key={index}
+                                        className="px-2 py-0.5 bg-emerald-50 text-emerald-700 rounded-md text-[10px] font-black uppercase border border-emerald-100"
+                                      >
+                                        {permission}
+                                      </span>
+                                    ))}
+                                  </div>
+                                </div>
+                              )}
+                            </div>
 
                             {/* University */}
                             <div className="flex items-center text-slate-600 mb-3">
@@ -871,21 +847,54 @@ export const DocumentsUploadStep: React.FC<StepProps> = ({ onNext }) => {
                   </div>
                 )}
 
-                <div className="pt-8 border-t border-gray-50 flex justify-center">
-                  <button 
-                    onClick={handleFinalContinue} 
-                    disabled={approvedApps.length > 0 && !selectedAppId}
-                    className="w-full max-w-md bg-blue-600 text-white px-10 py-6 rounded-[2rem] font-black uppercase tracking-[0.3em] text-sm hover:bg-blue-700 transition-all shadow-2xl shadow-blue-500/40 hover:scale-105 active:scale-95 flex items-center justify-center space-x-4 disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:scale-100 group"
-                  >
-                    <span className="relative z-10">{approvedApps.length > 0 && !selectedAppId ? 'Selecione uma Bolsa' : 'Seguir para Pagamento'}</span>
-                    <ArrowRight className="w-6 h-6 group-hover:translate-x-2 transition-transform relative z-10" />
-                  </button>
-                </div>
+                {approvedApps.length > 0 && (
+                  <div className="pt-8 border-t border-gray-50 flex justify-center">
+                    <button 
+                      onClick={handleFinalContinue} 
+                      disabled={!selectedAppId}
+                      className="w-full max-w-md bg-blue-600 text-white px-10 py-6 rounded-[2rem] font-black uppercase tracking-[0.3em] text-sm hover:bg-blue-700 transition-all shadow-2xl shadow-blue-500/40 hover:scale-105 active:scale-95 flex items-center justify-center space-x-4 disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:scale-100 group"
+                    >
+                      <span className="relative z-10">{!selectedAppId ? 'Selecione uma Bolsa' : 'Confirmar Bolsa'}</span>
+                      <ArrowRight className="w-6 h-6 group-hover:translate-x-2 transition-transform relative z-10" />
+                    </button>
+                  </div>
+                )}
+              </div>
+            </div>
+          </div>
+        </div>
+
+        {/* Confirmation Modal */}
+        {showConfirmModal && (
+          <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-transparent backdrop-blur-xl animate-in fade-in duration-300">
+            <div className="bg-white rounded-[3rem] p-10 max-w-lg w-full shadow-2xl border border-gray-100 text-center space-y-8 animate-in zoom-in-95 duration-300">
+              <div className="w-24 h-24 bg-red-50 rounded-full flex items-center justify-center mx-auto border border-red-100 shadow-inner">
+                <AlertTriangle className="w-12 h-12 text-red-600" />
+              </div>
+              <div className="space-y-4">
+                <h2 className="text-3xl font-black text-gray-900 uppercase tracking-tight">Confirmar Bolsa</h2>
+                <p className="text-gray-500 font-medium text-lg leading-relaxed">
+                  Essa decisão é final e que não tem como mudar.
+                </p>
+              </div>
+              <div className="flex gap-4">
+                <button 
+                  onClick={() => setShowConfirmModal(false)} 
+                  className="flex-1 bg-gray-100 text-gray-500 py-5 rounded-2xl font-black uppercase tracking-widest text-sm hover:bg-gray-200 transition-all"
+                >
+                  Cancelar
+                </button>
+                <button 
+                  onClick={handleConfirmSelection} 
+                  className="flex-1 bg-blue-600 text-white py-5 rounded-2xl font-black uppercase tracking-widest text-sm hover:bg-blue-700 transition-all shadow-xl shadow-blue-500/20 hover:scale-105"
+                >
+                  Confirmar
+                </button>
               </div>
             </div>
           </div>
         )}
-      </div>
+      </>
     );
   }
 
@@ -1026,23 +1035,9 @@ export const DocumentsUploadStep: React.FC<StepProps> = ({ onNext }) => {
         </div>
       </div>
 
-      {/* Manual Review Message Modal */}
-      {showManualReviewMessage && (
-        <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-black/60 backdrop-blur-md animate-in fade-in duration-300">
-          <div className="bg-white rounded-[3rem] p-10 max-w-lg w-full shadow-2xl border border-gray-100 text-center space-y-8 animate-in zoom-in-95 duration-300">
-            <div className="w-24 h-24 bg-blue-50 rounded-full flex items-center justify-center mx-auto border border-blue-100 shadow-inner">
-              <Clock className="w-12 h-12 text-blue-600" />
-            </div>
-            <div className="space-y-4">
-              <h2 className="text-3xl font-black text-gray-900 uppercase tracking-tight">{t('studentDashboard.documentsAndScholarshipChoice.manualReviewTitle')}</h2>
-              <p className="text-gray-500 font-medium text-lg leading-relaxed">{t('studentDashboard.documentsAndScholarshipChoice.manualReviewTimeframe')}</p>
-            </div>
-            <button onClick={() => { setShowManualReviewMessage(false); onNext(); }} className="w-full bg-blue-600 text-white py-5 rounded-2xl font-black uppercase tracking-widest text-sm hover:bg-blue-700 transition-all shadow-xl shadow-blue-500/20 hover:scale-105">
-              {t('studentDashboard.documentsAndScholarshipChoice.gotItContinue') || 'Got it, Continue'}
-            </button>
-          </div>
-        </div>
-      )}
+      {/* Manual Review Message Modal - Removed as per user request */}
+
+
 
       {/* Analysis Overlay */}
       {analyzing && (

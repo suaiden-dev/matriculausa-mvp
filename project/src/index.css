@@ -135,11 +135,11 @@ All colors MUST be HSL.
 
   /* Resto do CSS existente */
   h1 {
-    font-family: 'Lato', sans-serif;
+    font-family: "Lato", sans-serif;
   }
 
   h2 {
-    font-family: 'Lato', sans-serif;
+    font-family: "Lato", sans-serif;
   }
 }
 
@@ -295,7 +295,7 @@ All colors MUST be HSL.
 
   /* Forçar o overlay a cobrir toda a viewport */
   .document-viewer-overlay::before {
-    content: '';
+    content: "";
     position: fixed !important;
     top: 0 !important;
     left: 0 !important;
@@ -395,7 +395,7 @@ All colors MUST be HSL.
 }
 
 .tab-scroll-container::after {
-  content: '';
+  content: "";
   position: absolute;
   right: 0;
   top: 0;
@@ -457,13 +457,17 @@ All colors MUST be HSL.
 
 /* Sombra esquerda - degradê da esquerda para a direita */
 .horizontal-scroll-fade::before {
-  content: '';
+  content: "";
   position: absolute;
   top: 0;
   left: 0;
   bottom: 0;
   width: 50px;
-  background: linear-gradient(to right, #FFFFFF 20%, rgba(255, 255, 255, 0) 100%);
+  background: linear-gradient(
+    to right,
+    #ffffff 20%,
+    rgba(255, 255, 255, 0) 100%
+  );
   pointer-events: none;
   z-index: 5;
   opacity: 0;
@@ -472,13 +476,17 @@ All colors MUST be HSL.
 
 /* Sombra direita - degradê da direita para a esquerda */
 .horizontal-scroll-fade::after {
-  content: '';
+  content: "";
   position: absolute;
   top: 0;
   right: 0;
   bottom: 0;
   width: 50px;
-  background: linear-gradient(to left, #FFFFFF 20%, rgba(255, 255, 255, 0) 100%);
+  background: linear-gradient(
+    to left,
+    #ffffff 20%,
+    rgba(255, 255, 255, 0) 100%
+  );
   pointer-events: none;
   z-index: 5;
   opacity: 1;
@@ -503,29 +511,53 @@ All colors MUST be HSL.
 /* Ajustes para diferentes fundos */
 .horizontal-scroll-fade.bg-gray-50::before,
 .horizontal-scroll-fade.bg-gray-50::after {
-  background: linear-gradient(to right, #f9fafb 20%, rgba(249, 250, 251, 0) 100%);
+  background: linear-gradient(
+    to right,
+    #f9fafb 20%,
+    rgba(249, 250, 251, 0) 100%
+  );
 }
 
 .horizontal-scroll-fade.bg-gray-50::after {
-  background: linear-gradient(to left, #f9fafb 20%, rgba(249, 250, 251, 0) 100%);
+  background: linear-gradient(
+    to left,
+    #f9fafb 20%,
+    rgba(249, 250, 251, 0) 100%
+  );
 }
 
 .horizontal-scroll-fade.bg-gray-100::before,
 .horizontal-scroll-fade.bg-gray-100::after {
-  background: linear-gradient(to right, #f3f4f6 20%, rgba(243, 244, 246, 0) 100%);
+  background: linear-gradient(
+    to right,
+    #f3f4f6 20%,
+    rgba(243, 244, 246, 0) 100%
+  );
 }
 
 .horizontal-scroll-fade.bg-gray-100::after {
-  background: linear-gradient(to left, #f3f4f6 20%, rgba(243, 244, 246, 0) 100%);
+  background: linear-gradient(
+    to left,
+    #f3f4f6 20%,
+    rgba(243, 244, 246, 0) 100%
+  );
 }
 
 .horizontal-scroll-fade.bg-white::before,
 .horizontal-scroll-fade.bg-white::after {
-  background: linear-gradient(to right, #FFFFFF 20%, rgba(255, 255, 255, 0) 100%);
+  background: linear-gradient(
+    to right,
+    #ffffff 20%,
+    rgba(255, 255, 255, 0) 100%
+  );
 }
 
 .horizontal-scroll-fade.bg-white::after {
-  background: linear-gradient(to left, #FFFFFF 20%, rgba(255, 255, 255, 0) 100%);
+  background: linear-gradient(
+    to left,
+    #ffffff 20%,
+    rgba(255, 255, 255, 0) 100%
+  );
 }
 
 /* Animação para notificações customizadas */
@@ -570,4 +602,23 @@ All colors MUST be HSL.
 [id^="scholarship-card-wrapper-"] [id^="scholarship-details-"] {
   position: relative;
   z-index: 1;
+}
+
+/* Custom Scrollbar for better UI integration */
+.custom-scrollbar::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
+}
+
+.custom-scrollbar::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+.custom-scrollbar::-webkit-scrollbar-thumb {
+  background-color: rgba(156, 163, 175, 0.3);
+  border-radius: 20px;
+}
+
+.custom-scrollbar::-webkit-scrollbar-thumb:hover {
+  background-color: rgba(107, 114, 128, 0.5);
 }

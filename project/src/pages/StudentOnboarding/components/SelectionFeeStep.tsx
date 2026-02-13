@@ -1888,40 +1888,44 @@ export const SelectionFeeStep: React.FC<StepProps> = ({ onNext }) => {
                             <h4 className="text-lg font-black text-gray-900 uppercase tracking-tight">
                               {method.name}
                             </h4>
+                          </div>
+
+                          <div className="flex items-center gap-3">
                             {method.id === 'stripe' && cardAmountWithFees > 0 && (
-                              <span className="bg-blue-100 text-blue-600 text-[10px] font-black px-2 py-0.5 rounded-full border border-blue-200">
+                              <span className="bg-blue-100 text-blue-600 text-sm font-black px-3 py-1.5 rounded-full border border-blue-200">
                                 ${cardAmountWithFees.toFixed(2)}
                               </span>
                             )}
                             {method.id === 'parcelow' && computedBasePrice > 0 && (
                               <div className="flex flex-col items-end">
-                                <span className="bg-blue-100 text-blue-700 text-[10px] font-black px-2 py-0.5 rounded-full border border-blue-200">
+                                <span className="bg-blue-100 text-blue-700 text-sm font-black px-3 py-1.5 rounded-full border border-blue-200">
                                   ${computedBasePrice.toFixed(2)}
                                 </span>
-                                <span className="text-[9px] font-bold text-blue-500 mt-0.5 whitespace-nowrap">
+                                <span className="text-xs font-bold text-blue-500 mt-1 whitespace-nowrap">
                                   12x ${(computedBasePrice / 12).toFixed(2)}
                                 </span>
                               </div>
                             )}
                             {method.id === 'pix' && pixAmountWithFees > 0 && exchangeRate && (
-                              <span className="bg-emerald-100 text-emerald-600 text-[10px] font-black px-2 py-0.5 rounded-full border border-emerald-200">
+                              <span className="bg-emerald-100 text-emerald-600 text-sm font-black px-3 py-1.5 rounded-full border border-emerald-200">
                                 R$ {pixAmountWithFees.toFixed(2)}
                               </span>
                             )}
                             {method.id === 'zelle' && computedBasePrice > 0 && (
-                              <span className="bg-indigo-100 text-indigo-600 text-[10px] font-black px-2 py-0.5 rounded-full border border-indigo-200">
+                              <span className="bg-indigo-100 text-indigo-600 text-sm font-black px-3 py-1.5 rounded-full border border-indigo-200">
                                 ${computedBasePrice.toFixed(2)}
                               </span>
                             )}
+                            
+                            {isProcessing && (
+                              <Loader2 className="w-5 h-5 text-blue-500 animate-spin flex-shrink-0" />
+                            )}
+                            {isSelected && !loading && (
+                              <div className="bg-blue-500 rounded-full p-1 shadow-[0_0_15px_rgba(59,130,246,0.3)]">
+                                <CheckCircle className="w-4 h-4 text-white" />
+                              </div>
+                            )}
                           </div>
-                          {isProcessing && (
-                            <Loader2 className="w-5 h-5 text-blue-500 animate-spin flex-shrink-0" />
-                          )}
-                          {isSelected && !loading && (
-                            <div className="bg-blue-500 rounded-full p-1 shadow-[0_0_15px_rgba(59,130,246,0.3)]">
-                              <CheckCircle className="w-4 h-4 text-white" />
-                            </div>
-                          )}
                         </div>
                         <p className="text-xs text-gray-500 font-bold uppercase tracking-widest mt-1.5 opacity-80 group-hover/method:opacity-100 transition-opacity">
                           {method.description}

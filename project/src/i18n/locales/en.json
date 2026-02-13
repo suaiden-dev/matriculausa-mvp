@@ -2340,6 +2340,7 @@
         "applicationInProgress": "Your application to {{universityName}} is in progress.",
         "scholarship": "Scholarship:",
         "howToProceed": "How to Proceed",
+        "description": "Use the chat below to communicate directly with the university regarding pending documents and next steps.",
         "documentRequests": {
           "title": "Check Document Requests",
           "description": "Upload the documents requested by the university to continue your process.",
