@@ -139,10 +139,12 @@ const SmartChat: React.FC<SmartChatProps> = ({ isStudentPage = false }) => {
     const handleClickOutside = (event: MouseEvent) => {
       const modal = document.getElementById('smart-assistant-modal');
       const toggleBtn = document.getElementById('smart-assistant-toggle');
+      const whatsappBtn = document.getElementById('whatsapp-toggle');
 
       if (isChatOpen &&
         modal && !modal.contains(event.target as Node) &&
-        toggleBtn && !toggleBtn.contains(event.target as Node)) {
+        toggleBtn && !toggleBtn.contains(event.target as Node) &&
+        whatsappBtn && !whatsappBtn.contains(event.target as Node)) {
         closeChat();
       }
     };
@@ -200,10 +202,14 @@ const SmartChat: React.FC<SmartChatProps> = ({ isStudentPage = false }) => {
         </div>
       </div>
 
-      {/* WhatsApp Button - Com animação de dropdown */}
       <div
+        id="whatsapp-toggle"
         className={`fixed rounded-full bg-[#25D366] text-white flex items-center justify-center cursor-pointer shadow-[0_0_0_0,0_6px_20px_rgba(10,20,40,0.6)] z-[1000] font-['Montserrat',Arial,sans-serif] transition-all duration-500 ease-out border-[3px] border-white group relative ${isChatOpen ? 'opacity-100 scale-100' : 'opacity-0 scale-50 pointer-events-none'
           }`}
+        onClick={(e) => {
+          e.stopPropagation();
+          window.open('https://wa.me/12136762544', '_blank');
+        }}
         style={{
           position: 'fixed',
           bottom: isChatOpen
@@ -224,24 +230,14 @@ const SmartChat: React.FC<SmartChatProps> = ({ isStudentPage = false }) => {
         }}
         title="Contact us via WhatsApp"
       >
-        <a
-          href="https://wa.me/12136762544"
-          target="_blank"
-          rel="noopener noreferrer"
+        <div
           className="w-full h-full flex items-center justify-center"
           aria-label="Contact us via WhatsApp"
-          style={{
-            // Melhorias para iOS
-            WebkitTapHighlightColor: 'transparent',
-            WebkitTouchCallout: 'none',
-            WebkitUserSelect: 'none',
-            userSelect: 'none'
-          }}
         >
           <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 32 32" width="30" height="30" fill="white">
             <path d="M16.001 3.2c-7.11 0-12.8 5.689-12.8 12.8 0 2.226.584 4.344 1.696 6.24L3.2 28.8l6.832-1.744c1.824.96 3.872 1.472 5.969 1.472 7.11 0 12.8-5.689 12.8-12.8s-5.69-12.8-12.8-12.8zm0 23.2c-1.761 0-3.481-.455-5.024-1.328l-.36-.2-4.063 1.04 1.072-3.952-.208-.376c-1.016-1.808-1.552-3.856-1.552-5.936 0-6.065 4.935-11 11-11s11 4.935 11 11-4.936 11-11 11zm6.225-8.145c-.339-.17-2.004-.988-2.316-1.104-.311-.113-.536-.17-.76.17-.226.339-.87 1.104-1.068 1.33-.197.226-.394.254-.733.085s-1.429-.526-2.723-1.678c-1.006-.896-1.684-2.003-1.881-2.343-.197-.34-.021-.522.149-.691.154-.152.339-.395.509-.593.17-.198.226-.34.339-.566.113-.226.057-.425-.028-.593-.084-.17-.76-1.833-1.04-2.512-.273-.654-.55-.566-.76-.577l-.648-.011c-.226 0-.593.085-.903.425s-1.184 1.155-1.184 2.82 1.211 3.267 1.379 3.494c.17.226 2.379 3.632 5.767 5.088.807.348 1.438.557 1.929.713.81.258 1.548.221 2.131.134.65-.097 2.004-.818 2.288-1.608.283-.79.283-1.47.198-1.609-.085-.14-.311-.226-.65-.396z" />
           </svg>
-        </a>
+        </div>
       </div>
 
       {/* Modal do Smart Assistant - APENAS para Desktop */}

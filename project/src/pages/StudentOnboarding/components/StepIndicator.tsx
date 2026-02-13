@@ -8,14 +8,12 @@ interface StepIndicatorProps {
 }
 
 const STEPS: { key: OnboardingStep; label: string }[] = [
-  { key: 'selection_fee', label: 'Taxa de Seleção' },
+  { key: 'selection_fee', label: 'Taxa de Aplicação' },
   { key: 'scholarship_selection', label: 'Escolha de Bolsas' },
   { key: 'process_type', label: 'Tipo de Processo' },
   { key: 'documents_upload', label: 'Documentos' },
-  { key: 'payment', label: 'Taxa de Aplicação' },
+  { key: 'payment', label: 'Taxa de Matrícula' },
   { key: 'scholarship_fee', label: 'Taxa da Bolsa' },
-  { key: 'university_documents', label: 'Docs. Faculdade' },
-  { key: 'waiting_approval', label: 'Carta de Aceitação & I-20' },
 ];
 
 export const StepIndicator: React.FC<StepIndicatorProps> = ({ currentStep, completedSteps }) => {

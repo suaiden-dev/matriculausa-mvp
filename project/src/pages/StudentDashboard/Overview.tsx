@@ -70,7 +70,7 @@ const Overview: React.FC<OverviewProps> = ({
   const savedOnboardingStep = React.useMemo(() => {
     if (typeof window === 'undefined') return null;
     const savedStep = window.localStorage.getItem('onboarding_current_step');
-    const validSteps = ['welcome', 'selection_fee', 'scholarship_selection', 'process_type', 'documents_upload', 'payment', 'scholarship_fee', 'university_documents', 'waiting_approval', 'completed'];
+    const validSteps = ['welcome', 'selection_fee', 'scholarship_selection', 'process_type', 'documents_upload', 'payment', 'scholarship_fee', 'university_documents', 'completed'];
     return savedStep && validSteps.includes(savedStep) ? savedStep : null;
   }, []);
   
@@ -565,9 +565,12 @@ const Overview: React.FC<OverviewProps> = ({
           </div>
 
           {/* Botão de Continuar/Iniciar Onboarding - Estilo Vidro Simplificado */}
-          {!userProfile?.onboarding_completed && (
+          {(!userProfile?.onboarding_completed || recentApplications.length > 0) && (
             <button
-              onClick={() => navigate(`/student/onboarding?step=${savedOnboardingStep || 'welcome'}`)}
+              onClick={() => {
+                const targetStep = userProfile?.onboarding_completed ? 'university_documents' : (savedOnboardingStep || 'welcome');
+                navigate(`/student/onboarding?step=${targetStep}`);
+              }}
               className="max-w-md mx-auto w-full group relative overflow-hidden bg-white/10 backdrop-blur-xl border border-white/20 rounded-2xl p-4 transition-all duration-500 hover:bg-white/20 hover:border-white/40 hover:scale-[1.05] active:scale-[0.95] shadow-[0_20px_40px_rgba(0,0,0,0.2)] flex items-center justify-center text-center"
             >
               {/* Background Glows animadas */}
@@ -575,7 +578,9 @@ const Overview: React.FC<OverviewProps> = ({
               <div className="absolute bottom-0 left-0 -ml-16 -mb-16 w-32 h-32 bg-indigo-500/15 rounded-full blur-[60px] group-hover:bg-indigo-400/25 transition-colors duration-700" />
               
               <h3 className="relative text-lg md:text-xl font-black text-white uppercase tracking-widest leading-tight">
-                {isOnboardingStarted ? 'Continuar Jornada' : 'Iniciar Jornada'}
+                {userProfile?.onboarding_completed 
+                  ? 'Portal de Documentos' 
+                  : (isOnboardingStarted ? 'Continuar Jornada' : 'Iniciar Jornada')}
               </h3>
             </button>
           )}

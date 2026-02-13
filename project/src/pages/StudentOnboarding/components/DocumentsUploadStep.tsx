@@ -13,7 +13,9 @@ import {
   Building,
   GraduationCap,
   Calendar,
-  ArrowRight
+  ArrowRight,
+  ChevronDown,
+  XCircle
 } from 'lucide-react';
 import { useAuth } from '../../../hooks/useAuth';
 import { supabase } from '../../../lib/supabase';
@@ -21,6 +23,7 @@ import { useTranslation } from 'react-i18next';
 import { StepProps } from '../types';
 import { useCartStore } from '../../../stores/applicationStore';
 import { getN8nProxyUrl } from '../../../utils/storageProxy';
+import TruncatedText from '../../../components/TruncatedText';
 
 import { PencilLoader } from '../../../components/PencilLoader';
 
@@ -51,9 +54,19 @@ export const DocumentsUploadStep: React.FC<StepProps> = ({ onNext }) => {
   const [selectedAppId, setSelectedAppId] = useState<string | null>(localStorage.getItem('selected_application_id'));
   const [showAppSelection, setShowAppSelection] = useState(false);
   const [isTransitioning, setIsTransitioning] = useState(false);
+  const [selectedFiles, setSelectedFiles] = useState<Record<string, File | null>>({});
+  const [uploadingFiles, setUploadingFiles] = useState<Record<string, boolean>>({});
+  const [openChecklists, setOpenChecklists] = useState<Record<string, boolean>>({});
 
-  // Obter process type do localStorage
-  const processType = localStorage.getItem('studentProcessType') || 'initial';
+  const DOCUMENT_LABELS: Record<string, string> = {
+    passport: t('studentDashboard.myApplications.documents.passport') || 'Passport',
+    diploma: t('studentDashboard.myApplications.documents.highSchoolDiploma') || 'High School Diploma',
+    funds_proof: t('studentDashboard.myApplications.documents.proofOfFunds') || 'Proof of Funds',
+  };
+
+  // Obter process type do localStorage (escopado pref.)
+  const userProcessTypeKey = userProfile?.id ? `studentProcessType_${userProfile.id}` : 'studentProcessType';
+  const processType = (window.localStorage.getItem(userProcessTypeKey) || window.localStorage.getItem('studentProcessType')) || 'initial';
 
   // Verificar se já passou pela review (tem documentos enviados ou aprovados)
   useEffect(() => {
@@ -266,7 +279,7 @@ export const DocumentsUploadStep: React.FC<StepProps> = ({ onNext }) => {
                 student_id: userProfile.id,
                 scholarship_id: scholarshipId,
                 status: 'pending',
-                student_process_type: localStorage.getItem('studentProcessType') || 'initial'
+                student_process_type: (userProfile?.id ? (window.localStorage.getItem(`studentProcessType_${userProfile.id}`) || window.localStorage.getItem('studentProcessType')) : window.localStorage.getItem('studentProcessType')) || 'initial'
               })
               .select('id')
               .single();
@@ -332,6 +345,138 @@ export const DocumentsUploadStep: React.FC<StepProps> = ({ onNext }) => {
       setUploading(false);
       setAnalyzing(false);
     }
+  };
+
+  const docKey = (applicationId: string, type: string) => `${applicationId}:${type}`;
+
+  const handleSelectAppDocFile = (applicationId: string, type: string, file: File | null) => {
+    setSelectedFiles(prev => ({ ...prev, [docKey(applicationId, type)]: file }));
+  };
+
+  const handleUploadAppDoc = async (applicationId: string, type: string) => {
+    const key = docKey(applicationId, type);
+    const file = selectedFiles[key];
+    if (!user?.id || !file) return;
+    
+    setUploadingFiles(prev => ({ ...prev, [key]: true }));
+    try {
+      const path = `${user.id}/${applicationId}-${type}-${Date.now()}-${file.name}`;
+      const { data, error: upErr } = await supabase.storage
+        .from('student-documents')
+        .upload(path, file, { upsert: true });
+      
+      if (upErr) throw upErr;
+      
+      const publicUrl = supabase.storage.from('student-documents').getPublicUrl(data?.path || path).data.publicUrl;
+      if (!publicUrl) throw new Error('Failed to get file URL');
+      
+      // Log no histórico do aluno
+      await supabase.from('student_documents').insert({ 
+        user_id: user.id, 
+        type, 
+        file_url: publicUrl, 
+        status: 'under_review' 
+      });
+
+      // Atualizar documentos da aplicação
+      const app = applications.find((a: any) => a.id === applicationId);
+      if (!app) throw new Error('Application not found');
+
+      const currentDocs: any[] = app.documents || [];
+      const normalized = parseApplicationDocuments(currentDocs);
+      const idx = normalized.findIndex(d => d.type === type);
+      
+      const newDoc = { 
+        type, 
+        url: publicUrl, 
+        status: 'under_review', 
+        uploaded_at: new Date().toISOString() 
+      };
+      
+      let newDocs: any[];
+      if (idx >= 0) {
+        newDocs = currentDocs.map((d: any) => d.type === type ? { ...d, ...newDoc } : d);
+      } else {
+        newDocs = [...currentDocs, newDoc];
+      }
+      
+      const { error: updateError } = await supabase
+        .from('scholarship_applications')
+        .update({ documents: newDocs })
+        .eq('id', applicationId);
+      
+      if (updateError) throw updateError;
+      
+      // Notificar universidade
+      try {
+        const { data: { session } } = await supabase.auth.getSession();
+        if (session?.access_token && app.scholarships?.university_id) {
+          const notificationPayload = {
+            user_id: user.id,
+            application_id: applicationId,
+            document_type: type,
+            document_label: DOCUMENT_LABELS[type] || type,
+            university_id: app.scholarships.university_id,
+            scholarship_title: app.scholarships.title,
+            is_reupload: true
+          };
+          
+          await fetch(`${import.meta.env.VITE_SUPABASE_FUNCTIONS_URL}/notify-university-document-reupload`, {
+            method: 'POST',
+            headers: { 
+              'Content-Type': 'application/json', 
+              'Authorization': `Bearer ${session.access_token}` 
+            },
+            body: JSON.stringify(notificationPayload),
+          });
+        }
+      } catch (notifErr) {
+        console.error('Error notifying university:', notifErr);
+      }
+      
+      // Atualizar lista local
+      const { data: refreshedApps } = await supabase
+        .from('scholarship_applications')
+        .select('*, scholarships(*, universities(id, name, logo_url))')
+        .eq('student_id', userProfile?.id)
+        .order('created_at', { ascending: false });
+      
+      if (refreshedApps) setApplications(refreshedApps);
+      
+      // Limpar seleção
+      setSelectedFiles(prev => {
+        const next = { ...prev };
+        delete next[key];
+        return next;
+      });
+    } catch (err: any) {
+      console.error('Error uploading document:', err);
+      setError(err.message || 'Error uploading document.');
+    } finally {
+      setUploadingFiles(prev => ({ ...prev, [key]: false }));
+    }
+  };
+
+  const toggleChecklist = (applicationId: string) => {
+    setOpenChecklists(prev => {
+      // Se já estiver aberto, fecha. Se estiver fechado, abre apenas este e fecha os outros.
+      const isCurrentlyOpen = !!prev[applicationId];
+      return isCurrentlyOpen ? {} : { [applicationId]: true };
+    });
+  };
+
+  const parseApplicationDocuments = (documents: any): { type: string; status?: string; review_notes?: string; rejection_reason?: string }[] => {
+    if (!Array.isArray(documents)) return [];
+    if (documents.length === 0) return [];
+    if (typeof documents[0] === 'string') {
+      return (documents as string[]).map((t) => ({ type: t }));
+    }
+    return (documents as any[]).map((d) => ({ 
+      type: d.type, 
+      status: d.status, 
+      review_notes: d.review_notes,
+      rejection_reason: d.rejection_reason
+    }));
   };
 
   const allFilesSelected = files.passport && files.diploma && (files.funds_proof as File[]).length > 0;
@@ -467,7 +612,7 @@ export const DocumentsUploadStep: React.FC<StepProps> = ({ onNext }) => {
                     <Loader2 className="w-12 h-12 text-blue-500 animate-spin" />
                   </div>
                 ) : (
-                  <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
+                  <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6 items-start">
                     {applications.map((app) => {
                       const isAppApproved = app.status === 'approved' || app.status === 'enrolled';
                       const isSelected = selectedAppId === app.id;
@@ -480,7 +625,7 @@ export const DocumentsUploadStep: React.FC<StepProps> = ({ onNext }) => {
                             if (!isAppApproved) return;
                             setSelectedAppId(selectedAppId === app.id ? null : app.id);
                           }}
-                          className={`group relative bg-white rounded-2xl sm:rounded-3xl shadow-md hover:shadow-xl transition-all duration-300 overflow-hidden border-2 flex flex-col h-full hover:-translate-y-1 transform-gpu ${
+                          className={`group relative bg-white rounded-2xl sm:rounded-3xl shadow-md hover:shadow-xl transition-all duration-300 overflow-hidden border-2 flex flex-col hover:-translate-y-1 transform-gpu ${
                             isSelected ? 'border-blue-500 bg-blue-50/30 shadow-blue-500/20' : 
                             isAppApproved ? 'border-slate-200/60 hover:border-blue-300 cursor-pointer' : 
                             'border-slate-200/60 opacity-70 grayscale-[0.3] cursor-default'
@@ -488,24 +633,20 @@ export const DocumentsUploadStep: React.FC<StepProps> = ({ onNext }) => {
                         >
                           {/* Selected Check Badge */}
                           {isSelected && (
-                            <div className="absolute top-3 right-3 z-20 bg-blue-600 rounded-full p-1.5 shadow-lg animate-in zoom-in duration-300">
-                              <CheckCircle className="w-5 h-5 text-white" />
+                            <div className="absolute top-4 right-4 z-20 bg-blue-600 text-white p-1.5 rounded-full shadow-lg animate-in zoom-in duration-300">
+                              <CheckCircle className="w-5 h-5" />
                             </div>
                           )}
 
                           {/* Status Badge */}
-                          <div className="absolute top-3 left-3 z-20">
-                            <span className={`px-3 py-1 rounded-full text-[10px] font-black uppercase tracking-widest border shadow-sm ${
-                              app.status === 'approved' ? 'bg-emerald-50 text-emerald-700 border-emerald-200' :
-                              app.status === 'enrolled' ? 'bg-emerald-50 text-emerald-700 border-emerald-200' :
-                              app.status === 'rejected' ? 'bg-red-50 text-red-700 border-red-200' :
-                              'bg-blue-50 text-blue-700 border-blue-200'
+                          <div className="absolute top-4 left-4 z-10">
+                            <div className={`px-3 py-1.5 rounded-xl text-[10px] font-black uppercase tracking-widest shadow-sm backdrop-blur-md border ${
+                              isAppApproved ? 'bg-emerald-500/90 text-white border-emerald-400' :
+                              app.status === 'rejected' ? 'bg-red-500/90 text-white border-red-400' :
+                              'bg-amber-500/90 text-white border-amber-400'
                             }`}>
-                              {app.status === 'rejected' ? 'Rejeitado' : 
-                               app.status === 'approved' ? 'Aprovado' : 
-                               app.status === 'enrolled' ? 'Matriculado' : 
-                               'Em Revisão'}
-                            </span>
+                              {isAppApproved ? 'Aprovada' : app.status === 'rejected' ? 'Reprovada' : 'Em Análise'}
+                            </div>
                           </div>
 
                           {/* Scholarship Image */}
@@ -593,6 +734,111 @@ export const DocumentsUploadStep: React.FC<StepProps> = ({ onNext }) => {
                                   <span className="text-red-400 block mb-0.5">Motivo:</span>
                                   {app.notes}
                                 </p>
+                              </div>
+                            )}
+
+                            {/* Documents Checklist for Non-Approved Applications */}
+                            {!isAppApproved && (
+                              <div className="mb-4">
+                                <button
+                                  onClick={(e) => { 
+                                    e.stopPropagation(); 
+                                    if (app.id) toggleChecklist(app.id); 
+                                  }}
+                                  className="w-full flex items-center justify-between p-3 bg-slate-50 hover:bg-slate-100 rounded-xl transition-all border border-slate-200 group/btn"
+                                >
+                                  <div className="flex items-center gap-2">
+                                    <FileText className="w-4 h-4 text-blue-600" />
+                                    <span className="text-xs font-bold text-slate-700 uppercase tracking-tight">Verificar Documentos</span>
+                                  </div>
+                                  <ChevronDown className={`w-4 h-4 text-slate-400 transition-transform ${app.id && openChecklists[app.id] ? 'rotate-180' : ''}`} />
+                                </button>
+
+                                {app.id && openChecklists[app.id] && (
+                                  <div className="mt-3 space-y-3 animate-in fade-in slide-in-from-top-2 duration-300">
+                                    {[
+                                      { type: 'passport', label: DOCUMENT_LABELS.passport },
+                                      { type: 'diploma', label: DOCUMENT_LABELS.diploma },
+                                      { type: 'funds_proof', label: DOCUMENT_LABELS.funds_proof }
+                                    ].map(docInfo => {
+                                      const docs = parseApplicationDocuments(app.documents);
+                                      const docData = docs.find(d => d.type === docInfo.type);                                          const status = (docData?.status || 'pending').toLowerCase();
+                                          const isRejectedStatus = status === 'changes_requested' || status === 'rejected';
+                                          const isApprovedStatus = status === 'approved';
+                                          const isUnderReviewStatus = status === 'under_review';
+                                          const key = docKey(app.id, docInfo.type);
+                                          const selectedFile = selectedFiles[key];
+                                          const isUploading = uploadingFiles[key];
+
+                                          return (
+                                            <div key={docInfo.type} className={`p-3 rounded-xl border-2 transition-all ${isRejectedStatus ? 'border-red-100 bg-red-50/30' : 'border-slate-50 bg-white'}`}>
+                                              <div className="flex items-start justify-between gap-3">
+                                                <div className="flex-1 min-w-0">
+                                                  <div className="flex items-center gap-2 mb-1">
+                                                    <div className={`w-5 h-5 rounded-full flex-shrink-0 flex items-center justify-center border ${isApprovedStatus ? 'bg-emerald-100 border-emerald-400 text-emerald-600' : isRejectedStatus ? 'bg-red-100 border-red-400 text-red-600' : 'bg-slate-100 border-slate-300 text-slate-400'}`}>
+                                                      {isApprovedStatus ? <CheckCircle className="w-3 h-3" /> : isRejectedStatus ? <XCircle className="w-3 h-3" /> : <Clock className="w-3 h-3" />}
+                                                    </div>
+                                                    <h5 className="text-xs font-bold text-slate-900 truncate">{docInfo.label}</h5>
+                                                  </div>
+                                                  <span className={`inline-block px-2 py-0.5 rounded-full text-[9px] font-black uppercase tracking-widest ${isApprovedStatus ? 'bg-emerald-100 text-emerald-700' : isRejectedStatus ? 'bg-red-100 text-red-700' : 'bg-slate-100 text-slate-500'}`}>
+                                                    {isApprovedStatus ? 'Aprovado' : isRejectedStatus ? 'Pendência' : isUnderReviewStatus ? 'Em Revisão' : 'Pendente'}
+                                                  </span>
+                                                  
+                                                  {isRejectedStatus && (docData?.rejection_reason || docData?.review_notes) && (
+                                                    <div className="mt-2">
+                                                      <TruncatedText
+                                                        text={docData.rejection_reason || docData.review_notes || ''}
+                                                        maxLength={100}
+                                                        className="text-[10px] text-red-600 font-medium leading-relaxed italic"
+                                                        showTooltip={true}
+                                                      />
+                                                    </div>
+                                                  )}
+                                                </div>
+                                              </div>
+
+                                              {isRejectedStatus && (
+                                                <div className="mt-3 space-y-2" onClick={(e) => e.stopPropagation()}>
+                                                  {!selectedFile ? (
+                                                    <label className="block w-full cursor-pointer bg-white border-2 border-dashed border-blue-200 hover:border-blue-400 hover:bg-blue-50 p-2 rounded-lg text-center transition-all group/upload">
+                                                      <span className="text-[10px] font-black text-blue-600 uppercase tracking-widest flex items-center justify-center gap-2">
+                                                        <Upload className="w-3 h-3 group-hover/upload:scale-110 transition-transform" />
+                                                        Selecionar Novo Arquivo
+                                                      </span>
+                                                      <input
+                                                        type="file"
+                                                        className="hidden"
+                                                        accept="application/pdf,image/*"
+                                                        onChange={(e) => handleSelectAppDocFile(app.id, docInfo.type, e.target.files?.[0] || null)}
+                                                      />
+                                                    </label>
+                                                  ) : (
+                                                    <div className="flex items-center gap-2">
+                                                      <div className="flex-1 bg-blue-50 border border-blue-200 rounded-lg p-2 flex items-center justify-between min-w-0">
+                                                        <span className="text-[10px] font-bold text-blue-700 truncate mr-2">{selectedFile.name}</span>
+                                                        <button 
+                                                          onClick={() => handleSelectAppDocFile(app.id, docInfo.type, null)}
+                                                          className="text-blue-400 hover:text-red-500 transition-colors"
+                                                        >
+                                                          <X className="w-3 h-3" />
+                                                        </button>
+                                                      </div>
+                                                      <button
+                                                        onClick={() => handleUploadAppDoc(app.id, docInfo.type)}
+                                                        disabled={isUploading}
+                                                        className="bg-blue-600 text-white p-2 rounded-lg hover:bg-blue-700 disabled:opacity-50 transition-all shadow-md shadow-blue-500/20 flex items-center justify-center min-w-[32px] min-h-[32px]"
+                                                      >
+                                                        {isUploading ? <Loader2 className="w-3 h-3 animate-spin" /> : <RefreshCw className="w-3 h-3" />}
+                                                      </button>
+                                                    </div>
+                                                  )}
+                                                </div>
+                                              )}
+                                            </div>
+                                          );
+                                    })}
+                                  </div>
+                                )}
                               </div>
                             )}
 

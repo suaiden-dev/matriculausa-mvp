@@ -7,7 +7,6 @@ export type OnboardingStep =
   | "payment"
   | "scholarship_fee"
   | "university_documents"
-  | "waiting_approval"
   | "completed";
 
 export interface OnboardingState {

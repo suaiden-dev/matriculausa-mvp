@@ -14,6 +14,8 @@ import { supabase } from '../../../lib/supabase';
 import { calculateCardAmountWithFees, calculatePIXAmountWithFees, getExchangeRate } from '../../../utils/stripeFeeCalculator';
 import { StepProps } from '../types';
 import { ZelleCheckout } from '../../../components/ZelleCheckout';
+import { IdentityPhotoUpload } from '../../../components/IdentityPhotoUpload';
+import { useStudentLogs } from '../../../hooks/useStudentLogs';
 import {
   Drawer,
   DrawerContent,
@@ -81,6 +83,12 @@ const MobileTermsView: React.FC<{
   checkIfContentNeedsScroll: () => boolean;
   handleTermsAccept: () => void;
   setShowTermsInDrawer: (value: boolean) => void;
+  identityPhotoPath: string | null;
+  setIdentityPhotoPath: (path: string | null) => void;
+  setIdentityPhotoName: (name: string | null) => void;
+  userId: string | undefined;
+  studentId: string | undefined;
+  logAction: any;
   t: any;
 }> = ({
   activeTerm,
@@ -91,6 +99,12 @@ const MobileTermsView: React.FC<{
   checkIfContentNeedsScroll,
   handleTermsAccept,
   setShowTermsInDrawer,
+  identityPhotoPath,
+  setIdentityPhotoPath,
+  setIdentityPhotoName,
+  userId,
+  studentId,
+  logAction,
   t
 }) => (
   <div className="space-y-4 bg-white min-h-full flex flex-col">
@@ -120,12 +134,12 @@ const MobileTermsView: React.FC<{
         <div 
           ref={termsContentRef}
           onScroll={handleTermsScroll}
-          className="flex-1 overflow-y-auto prose prose-sm max-w-none prose-headings:text-gray-900 prose-p:text-gray-600"
+          className="flex-1 overflow-y-auto prose prose-sm max-w-none prose-headings:text-gray-900 prose-p:text-gray-600 mb-6"
           dangerouslySetInnerHTML={{ __html: activeTerm.content }}
         />
         
         {!hasScrolledToBottom && checkIfContentNeedsScroll() && (
-          <div className="flex items-center justify-center p-3 bg-amber-50 border border-amber-200 rounded-lg mt-4">
+          <div className="flex items-center justify-center p-3 bg-amber-50 border border-amber-200 rounded-lg mt-4 mb-6">
             <Scroll className="h-4 w-4 text-amber-600 mr-2" />
             <span className="text-amber-800 text-sm font-medium">
               {t('preCheckoutModal.scrollToBottomFirst')}
@@ -133,19 +147,67 @@ const MobileTermsView: React.FC<{
           </div>
         )}
 
+        {/* Identity Photo Upload Section */}
+        {hasScrolledToBottom && (
+          <div className="border-t border-gray-100 pt-6 mt-2 mb-4">
+            <h4 className="text-base font-semibold text-gray-900 mb-2">
+              Verificação de Identidade
+            </h4>
+            <p className="text-sm text-gray-600 mb-4">
+              Para aceitar os termos, por favor tire uma selfie segurando seu documento de identidade.
+            </p>
+            
+            <IdentityPhotoUpload
+              initialPhotoPath={identityPhotoPath || undefined}
+              onUploadSuccess={async (filePath, fileName) => {
+                setIdentityPhotoPath(filePath);
+                setIdentityPhotoName(fileName);
+                
+                // Log da ação
+                if (logAction && studentId && userId) {
+                  try {
+                    await logAction(
+                      'identity_photo_upload',
+                      `Identity photo uploaded by student during terms acceptance`,
+                      userId,
+                      'student',
+                      {
+                        student_id: studentId,
+                        file_path: filePath,
+                        file_name: fileName,
+                        uploaded_at: new Date().toISOString(),
+                        term_id: activeTerm.id
+                      }
+                    );
+                  } catch (logError) {
+                    console.error('⚠️ [SelectionFeeStep] Erro ao logar upload de foto:', logError);
+                  }
+                }
+              }}
+              onUploadError={(error) => {
+                console.error('Erro ao fazer upload:', error);
+              }}
+              onRemove={() => {
+                setIdentityPhotoPath(null);
+                setIdentityPhotoName(null);
+              }}
+            />
+          </div>
+        )}
+
         {/* Footer com botão de aceitar */}
         <div className="border-t border-gray-200 bg-gray-50 p-4 -mx-4 -mb-4 rounded-b-2xl mt-4">
           <button
             onClick={handleTermsAccept}
-            disabled={!hasScrolledToBottom}
+            disabled={!hasScrolledToBottom || !identityPhotoPath}
             className={`w-full py-3 px-4 rounded-xl font-semibold transition-all text-sm ${
-              hasScrolledToBottom
+              hasScrolledToBottom && identityPhotoPath
                 ? 'bg-blue-600 text-white hover:bg-blue-700 shadow-lg'
                 : 'bg-slate-300 text-slate-500 cursor-not-allowed'
             }`}
           >
             {hasScrolledToBottom 
-              ? t('preCheckoutModal.acceptTerms') 
+              ? t('preCheckoutModal.acceptTerms')
               : (checkIfContentNeedsScroll() 
                   ? t('preCheckoutModal.scrollToBottomFirst') 
                   : t('preCheckoutModal.readingTerms')
@@ -173,6 +235,7 @@ export const SelectionFeeStep: React.FC<StepProps> = ({ onNext }) => {
   const { recordTermAcceptance, checkTermAcceptance } = useTermsAcceptance();
   const { recordAffiliateTermAcceptance, checkIfUserHasAffiliate } = useAffiliateTermsAcceptance();
   const { activeDiscount, hasUsedReferralCode } = useReferralCode();
+  const { logAction } = useStudentLogs(userProfile?.id || '');
   
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -192,6 +255,10 @@ export const SelectionFeeStep: React.FC<StepProps> = ({ onNext }) => {
   const [loadingTerms, setLoadingTerms] = useState(false);
   const [userClickedCheckbox, setUserClickedCheckbox] = useState(false);
   const termsContentRef = useRef<HTMLDivElement>(null);
+
+  // Identity Photo States
+  const [identityPhotoPath, setIdentityPhotoPath] = useState<string | null>(null);
+  const [identityPhotoName, setIdentityPhotoName] = useState<string | null>(null);
 
   // Mobile detection
   const [isMobile, setIsMobile] = useState(false);
@@ -343,6 +410,12 @@ export const SelectionFeeStep: React.FC<StepProps> = ({ onNext }) => {
   // Handle terms acceptance
   const handleTermsAccept = async () => {
     if (hasScrolledToBottom) {
+      // Validate identity photo
+      if (!identityPhotoPath) {
+        alert(t('preCheckoutModal.uploadPhotoRequired') || 'Por favor, envie uma selfie com seu documento para continuar.');
+        return;
+      }
+
       try {
         if (activeTerm) {
           const affiliateAdminId = await checkIfUserHasAffiliate();
@@ -352,10 +425,34 @@ export const SelectionFeeStep: React.FC<StepProps> = ({ onNext }) => {
           } else {
             await recordTermAcceptance(activeTerm.id, 'checkout_terms');
           }
+
+          // Save identity photo to the acceptance record
+          const { data: termAcceptance } = await supabase
+            .from('comprehensive_term_acceptance')
+            .select('id')
+            .eq('user_id', user?.id)
+            .eq('term_id', activeTerm.id)
+            .eq('term_type', 'checkout_terms')
+            .order('accepted_at', { ascending: false })
+            .limit(1)
+            .maybeSingle();
+
+          if (termAcceptance) {
+            await supabase
+              .from('comprehensive_term_acceptance')
+              .update({
+                identity_photo_path: identityPhotoPath,
+                identity_photo_name: identityPhotoName,
+                identity_photo_status: 'pending'
+              })
+              .eq('id', termAcceptance.id);
+          }
+
+          // Log the action is handled by the upload component
         }
         
         setTermsAccepted(true);
-        setHasAcceptedTermsInDB(true); // Marcar que foi aceito no banco
+        setHasAcceptedTermsInDB(true); // Mark as accepted in DB
         
         if (isMobile) {
           setShowTermsInDrawer(false);
@@ -1340,8 +1437,8 @@ export const SelectionFeeStep: React.FC<StepProps> = ({ onNext }) => {
       <div className="space-y-10 pb-12 max-w-4xl mx-auto px-4">
         {/* Header */}
         <div className="text-center md:text-left space-y-4">
-          <h2 className="text-3xl md:text-5xl font-black text-white uppercase tracking-tighter leading-none">Taxa de Seleção</h2>
-          <p className="text-lg md:text-xl text-white/60 font-medium max-w-2xl mt-2">Pagamento do processo de seleção concluído.</p>
+          <h2 className="text-3xl md:text-5xl font-black text-white uppercase tracking-tighter leading-none">Taxa de Aplicação</h2>
+          <p className="text-lg md:text-xl text-white/60 font-medium max-w-2xl mt-2">Pagamento do processo de aplicação concluído.</p>
         </div>
 
         {/* Main White Container */}
@@ -1352,8 +1449,8 @@ export const SelectionFeeStep: React.FC<StepProps> = ({ onNext }) => {
             <div className="w-20 h-20 bg-emerald-500/20 rounded-full flex items-center justify-center mx-auto mb-6 border border-emerald-500/30">
               <CheckCircle className="w-12 h-12 text-emerald-400" />
             </div>
-            <h3 className="text-3xl font-black text-gray-900 mb-3 uppercase tracking-tight">Taxa de Seleção Paga!</h3>
-            <p className="text-gray-500 mb-8 font-medium">Você já realizou o pagamento da taxa do processo de seleção.</p>
+            <h3 className="text-3xl font-black text-gray-900 mb-3 uppercase tracking-tight">Taxa de Aplicação Paga!</h3>
+            <p className="text-gray-500 mb-8 font-medium">Você já realizou o pagamento da taxa do processo de aplicação.</p>
             <button
               onClick={onNext}
               className="w-full max-w-xs bg-blue-600 text-white py-4 px-8 rounded-xl hover:bg-blue-700 transition-all font-bold uppercase tracking-widest shadow-lg shadow-blue-500/20 hover:scale-105 active:scale-95 mx-auto"
@@ -1372,10 +1469,10 @@ export const SelectionFeeStep: React.FC<StepProps> = ({ onNext }) => {
       <div className="space-y-6">
         <div className="text-center md:text-left">
           <h2 className="text-3xl md:text-5xl font-black text-white mb-3 uppercase tracking-tighter">
-            Pagar Taxa de Seleção
+            Pagar Taxa de Aplicação
           </h2>
           <p className="text-lg md:text-xl text-white/60 font-medium">
-            Inicie sua jornada pagando a taxa do processo de seleção
+            Inicie sua jornada pagando a taxa do processo de aplicação
           </p>
         </div>
 
@@ -1427,7 +1524,7 @@ export const SelectionFeeStep: React.FC<StepProps> = ({ onNext }) => {
                   {t('preCheckoutModal.referralCode') || 'Matricula Rewards'}
                 </h3>
                 <p className="text-sm text-gray-600">
-                  Have a referral code? Get $50 off your selection process fee!
+                  Have a referral code? Get $50 off your application process fee!
                 </p>
               </div>
 
@@ -1895,12 +1992,66 @@ export const SelectionFeeStep: React.FC<StepProps> = ({ onNext }) => {
                       />
                       
                       {!hasScrolledToBottom && checkIfContentNeedsScroll() && (
-                        <div className="sticky bottom-0 left-0 right-0 flex items-center justify-center p-4 mt-8 bg-gradient-to-t from-white via-white/95 to-transparent">
+                        <div className="sticky bottom-0 left-0 right-0 flex items-center justify-center p-4 mt-8 bg-gradient-to-t from-white via-white/95 to-transparent z-10">
                           <div className="flex items-center gap-3 bg-amber-50 border border-amber-200 px-6 py-3 rounded-2xl shadow-sm animate-bounce">
                             <Scroll className="h-5 w-5 text-amber-600" />
                             <span className="text-amber-800 text-sm font-black uppercase tracking-tight">
                               {t('preCheckoutModal.scrollToBottomFirst')}
                             </span>
+                          </div>
+                        </div>
+                      )}
+
+                      {/* Identity Photo Upload Section for Desktop */}
+                      {hasScrolledToBottom && (
+                        <div className="mt-8 border-t border-gray-100 pt-8">
+                          <div className="text-center mb-6">
+                            <h4 className="text-xl font-black text-gray-900 mb-2 uppercase tracking-tight">
+                              Verificação de Identidade
+                            </h4>
+                            <p className="text-gray-600 font-medium">
+                              Para finalizar a aceitação dos termos, precisamos verificar sua identidade.
+                              <br/>
+                              Por favor, envie uma selfie segurando seu documento de identidade.
+                            </p>
+                          </div>
+                          
+                          <div className="max-w-md mx-auto bg-gray-50 rounded-2xl p-6 border border-gray-100">
+                            <IdentityPhotoUpload
+                              initialPhotoPath={identityPhotoPath || undefined}
+                              onUploadSuccess={async (filePath, fileName) => {
+                                setIdentityPhotoPath(filePath);
+                                setIdentityPhotoName(fileName);
+                                
+                                // Log da ação
+                                if (logAction && userProfile?.id && user?.id) {
+                                  try {
+                                    await logAction(
+                                      'identity_photo_upload',
+                                      `Identity photo uploaded by student during terms acceptance (desktop)`,
+                                      user.id,
+                                      'student',
+                                      {
+                                        student_id: userProfile.id,
+                                        file_path: filePath,
+                                        file_name: fileName,
+                                        uploaded_at: new Date().toISOString(),
+                                        term_id: activeTerm.id
+                                      }
+                                    );
+                                  } catch (logError) {
+                                    console.error('⚠️ [SelectionFeeStep] Erro ao logar upload de foto:', logError);
+                                  }
+                                }
+                              }}
+                              onUploadError={(error) => {
+                                console.error('Erro ao fazer upload:', error);
+                              }}
+                              onRemove={() => {
+                                setIdentityPhotoPath(null);
+                                setIdentityPhotoName(null);
+                              }}
+                            />
                           </div>
                         </div>
                       )}
@@ -1923,15 +2074,15 @@ export const SelectionFeeStep: React.FC<StepProps> = ({ onNext }) => {
                     </button>
                     <button
                       onClick={handleTermsAccept}
-                      disabled={!hasScrolledToBottom}
+                      disabled={!hasScrolledToBottom || !identityPhotoPath}
                       className={`flex-1 px-10 py-4 rounded-2xl font-black uppercase tracking-widest text-sm transition-all shadow-xl active:scale-95 ${
-                        hasScrolledToBottom
+                        hasScrolledToBottom && identityPhotoPath
                           ? 'bg-blue-600 text-white hover:bg-blue-500 shadow-blue-500/25 hover:shadow-blue-500/40'
                           : 'bg-gray-200 text-gray-400 cursor-not-allowed border border-gray-100'
                       }`}
                     >
                       {hasScrolledToBottom 
-                        ? t('preCheckoutModal.acceptTerms') 
+                        ? t('preCheckoutModal.acceptTerms')
                         : (checkIfContentNeedsScroll() 
                             ? t('preCheckoutModal.scrollToBottomFirst') 
                             : t('preCheckoutModal.readingTerms')
@@ -1964,6 +2115,7 @@ export const SelectionFeeStep: React.FC<StepProps> = ({ onNext }) => {
             
             <div className="flex-1 overflow-y-auto p-4 bg-white">
               <MobileTermsView
+                setShowTermsInDrawer={setShowTermsInDrawer}
                 activeTerm={activeTerm}
                 loadingTerms={loadingTerms}
                 hasScrolledToBottom={hasScrolledToBottom}
@@ -1971,7 +2123,12 @@ export const SelectionFeeStep: React.FC<StepProps> = ({ onNext }) => {
                 handleTermsScroll={handleTermsScroll}
                 checkIfContentNeedsScroll={checkIfContentNeedsScroll}
                 handleTermsAccept={handleTermsAccept}
-                setShowTermsInDrawer={setShowTermsInDrawer}
+                identityPhotoPath={identityPhotoPath}
+                setIdentityPhotoPath={setIdentityPhotoPath}
+                setIdentityPhotoName={setIdentityPhotoName}
+                userId={user?.id}
+                studentId={userProfile?.id}
+                logAction={logAction}
                 t={t}
               />
             </div>

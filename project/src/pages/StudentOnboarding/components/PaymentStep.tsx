@@ -275,11 +275,11 @@ export const PaymentStep: React.FC<StepProps> = ({ onNext, onBack }) => {
             <span className="text-[10px] font-black text-blue-400 uppercase tracking-widest">Pagamento Seguro & Criptografado</span>
           </div>
           <h2 className="text-4xl md:text-6xl font-black text-white uppercase tracking-tighter leading-none">
-            Taxas de Aplicação
+            Taxas de Matrícula
           </h2>
           <p className="text-lg md:text-xl text-white/60 font-medium max-w-2xl">
             {allPaid 
-              ? 'Todas as taxas de aplicação foram processadas. Clique no botão abaixo para concluir seu onboarding.' 
+              ? 'Todas as taxas de matrícula foram processadas. Clique no botão abaixo para concluir seu onboarding.' 
               : 'Pague as taxas das bolsas selecionadas para que as universidades iniciem a análise oficial do seu perfil.'}
           </p>
         </div>
@@ -354,7 +354,7 @@ export const PaymentStep: React.FC<StepProps> = ({ onNext, onBack }) => {
 
                       <div className="flex flex-col md:items-end">
                         <div className="flex items-center gap-3 mb-1">
-                          <span className="text-[10px] font-black text-gray-400 uppercase tracking-[0.2em]">Application Fee</span>
+                          <span className="text-[10px] font-black text-gray-400 uppercase tracking-[0.2em]">Enrollment Fee</span>
                         </div>
                         <div className="text-4xl font-black text-gray-900 tracking-tighter">
                           {formatFeeAmount(baseAmount)}

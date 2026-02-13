@@ -12,7 +12,6 @@ import { DocumentsUploadStep } from './components/DocumentsUploadStep';
 import { PaymentStep } from './components/PaymentStep'; // Payment step component
 import { ScholarshipFeeStep } from './components/ScholarshipFeeStep';
 import { UniversityDocumentsStep } from './components/UniversityDocumentsStep';
-import { WaitingApprovalStep } from './components/WaitingApprovalStep';
 import { OnboardingStep } from './types';
 import { supabase } from '../../lib/supabase';
 import PaymentSuccessOverlay from '../../components/PaymentSuccessOverlay';
@@ -33,7 +32,7 @@ const StudentOnboarding: React.FC = () => {
   useEffect(() => {
     const stepParam = searchParams.get('step');
     if (stepParam) {
-      const validSteps: OnboardingStep[] = ['welcome', 'selection_fee', 'scholarship_selection', 'process_type', 'documents_upload', 'payment', 'scholarship_fee', 'university_documents', 'waiting_approval', 'completed'];
+      const validSteps: OnboardingStep[] = ['welcome', 'selection_fee', 'scholarship_selection', 'process_type', 'documents_upload', 'payment', 'scholarship_fee', 'university_documents', 'completed'];
       if (validSteps.includes(stepParam as OnboardingStep)) {
         window.localStorage.setItem('onboarding_current_step', stepParam);
         if (stepParam === 'welcome') {
@@ -63,7 +62,7 @@ const StudentOnboarding: React.FC = () => {
           let edgeFunctionName = '';
           if (stepParam === 'scholarship_selection') {
             edgeFunctionName = 'verify-stripe-session-selection-process-fee';
-          } else if (stepParam === 'waiting_approval' || stepParam === 'payment') {
+          } else if (stepParam === 'payment') {
             edgeFunctionName = 'verify-stripe-session-application-fee';
           } else if (stepParam === 'scholarship_fee' || stepParam === 'completed') {
             edgeFunctionName = 'verify-stripe-session-scholarship-fee';
@@ -136,10 +135,11 @@ const StudentOnboarding: React.FC = () => {
   }, [user, authLoading, navigate]);
 
   useEffect(() => {
-    if (!loading && state.onboardingCompleted) {
+    const stepParam = searchParams.get('step');
+    if (!loading && state.onboardingCompleted && stepParam !== 'university_documents') {
       navigate('/student/dashboard');
     }
-  }, [loading, state.onboardingCompleted, navigate]);
+  }, [loading, state.onboardingCompleted, searchParams, navigate]);
 
   if (authLoading || loading) {
     return (
@@ -163,7 +163,6 @@ const StudentOnboarding: React.FC = () => {
       'payment',
       'scholarship_fee',
       'university_documents',
-      'waiting_approval',
       'completed',
     ];
 
@@ -183,7 +182,6 @@ const StudentOnboarding: React.FC = () => {
       'payment',
       'scholarship_fee',
       'university_documents',
-      'waiting_approval',
       'completed',
     ];
 
@@ -247,20 +245,29 @@ const StudentOnboarding: React.FC = () => {
     }
   };
 
+  const allSteps: OnboardingStep[] = [
+    'welcome',
+    'selection_fee',
+    'scholarship_selection',
+    'process_type',
+    'documents_upload',
+    'payment',
+    'scholarship_fee',
+    'university_documents',
+    'completed',
+  ];
+
+  const currentIdx = allSteps.indexOf(state.currentStep);
+
   const completedSteps: OnboardingStep[] = [];
-  if (state.currentStep !== 'welcome') completedSteps.push('welcome');
-  if (state.selectionFeePaid) completedSteps.push('selection_fee');
-  if (state.currentStep !== 'scholarship_selection' && state.scholarshipsSelected) {
-    completedSteps.push('scholarship_selection');
-  }
-  if (state.currentStep !== 'process_type' && state.processTypeSelected) {
-    completedSteps.push('process_type');
-  }
-  if (state.documentsUploaded) completedSteps.push('documents_upload');
-  if (state.applicationFeePaid) completedSteps.push('payment');
-  if (state.scholarshipFeePaid) completedSteps.push('scholarship_fee');
-  if (state.universityDocumentsUploaded) completedSteps.push('university_documents');
-  if (state.documentsApproved) completedSteps.push('waiting_approval');
+  if (currentIdx > allSteps.indexOf('welcome')) completedSteps.push('welcome');
+  if (state.selectionFeePaid && currentIdx > allSteps.indexOf('selection_fee')) completedSteps.push('selection_fee');
+  if (state.scholarshipsSelected && currentIdx > allSteps.indexOf('scholarship_selection')) completedSteps.push('scholarship_selection');
+  if (state.processTypeSelected && currentIdx > allSteps.indexOf('process_type')) completedSteps.push('process_type');
+  if (state.documentsUploaded && currentIdx > allSteps.indexOf('documents_upload')) completedSteps.push('documents_upload');
+  if (state.applicationFeePaid && currentIdx > allSteps.indexOf('payment')) completedSteps.push('payment');
+  if (state.scholarshipFeePaid && currentIdx > allSteps.indexOf('scholarship_fee')) completedSteps.push('scholarship_fee');
+  if (state.universityDocumentsUploaded && currentIdx > allSteps.indexOf('university_documents')) completedSteps.push('university_documents');
 
   const renderStep = () => {
     switch (state.currentStep) {
@@ -280,8 +287,6 @@ const StudentOnboarding: React.FC = () => {
         return <ScholarshipFeeStep onNext={handleNext} onBack={handleBack} />;
       case 'university_documents':
         return <UniversityDocumentsStep onNext={handleNext} onBack={handleBack} />;
-      case 'waiting_approval':
-        return <WaitingApprovalStep onNext={handleNext} onBack={handleBack} onComplete={handleComplete} />;
       case 'completed':
         return (
           <div className="space-y-10 pb-12 max-w-4xl mx-auto px-4">
@@ -302,7 +307,7 @@ const StudentOnboarding: React.FC = () => {
                 <h3 className="text-3xl font-black text-gray-900 mb-3 uppercase tracking-tight">Tudo Pronto!</h3>
                 <p className="text-gray-500 mb-8 font-medium">Parabéns! Você completou todas as etapas do onboarding com sucesso.</p>
                 <button
-                  onClick={() => navigate('/student/dashboard')}
+                  onClick={handleComplete}
                   className="w-full max-w-xs bg-blue-600 text-white py-4 px-8 rounded-xl hover:bg-blue-700 transition-all font-bold uppercase tracking-widest shadow-lg shadow-blue-500/20 hover:scale-105 active:scale-95 mx-auto"
                 >
                   Ir para o Painel
@@ -441,7 +446,7 @@ const StudentOnboarding: React.FC = () => {
           </div>
         )}
 
-        {state.currentStep !== 'welcome' && (
+        {state.currentStep !== 'welcome' && state.currentStep !== 'university_documents' && (
           <div className="mb-6 sm:mb-8">
             <StepIndicator currentStep={state.currentStep} completedSteps={completedSteps} />
           </div>
@@ -453,7 +458,7 @@ const StudentOnboarding: React.FC = () => {
       </div>
 
       {/* Botão de Reset Temporário para Testes */}
-      <div className="fixed bottom-4 right-4 z-[100]">
+      <div className="fixed bottom-5 right-5 z-[100]">
         <button
           onClick={handleReset}
           className="bg-red-600/20 hover:bg-red-600 text-red-500 hover:text-white p-3 rounded-full shadow-lg backdrop-blur-md border border-red-500/30 transition-all duration-300 group flex items-center gap-2"

@@ -14,7 +14,7 @@ export const useOnboardingProgress = () => {
   const getSavedStep = useCallback((): OnboardingStep | null => {
     // Usar apenas localStorage por enquanto (campo no banco não existe ainda)
     const savedStep = window.localStorage.getItem(ONBOARDING_STEP_KEY);
-    const validSteps: OnboardingStep[] = ['welcome', 'selection_fee', 'scholarship_selection', 'process_type', 'documents_upload', 'payment', 'scholarship_fee', 'university_documents', 'waiting_approval', 'completed'];
+    const validSteps: OnboardingStep[] = ['welcome', 'selection_fee', 'scholarship_selection', 'process_type', 'documents_upload', 'payment', 'scholarship_fee', 'university_documents', 'completed'];
     if (savedStep && validSteps.includes(savedStep as OnboardingStep)) {
       return savedStep as OnboardingStep;
     }
@@ -30,7 +30,7 @@ export const useOnboardingProgress = () => {
   const [state, setState] = useState<OnboardingState>(() => {
     // Inicializar com step do localStorage se existir (síncrono)
     const savedStep = window.localStorage.getItem(ONBOARDING_STEP_KEY);
-    const validSteps: OnboardingStep[] = ['welcome', 'selection_fee', 'scholarship_selection', 'process_type', 'documents_upload', 'payment', 'scholarship_fee', 'university_documents', 'waiting_approval', 'completed'];
+    const validSteps: OnboardingStep[] = ['welcome', 'selection_fee', 'scholarship_selection', 'process_type', 'documents_upload', 'payment', 'scholarship_fee', 'university_documents', 'completed'];
     const initialStep = savedStep && validSteps.includes(savedStep as OnboardingStep) ? savedStep as OnboardingStep : 'welcome';
     
     return {
@@ -58,6 +58,7 @@ export const useOnboardingProgress = () => {
       setLoading(true);
       const selAppId = window.localStorage.getItem('selected_application_id');
       const savedStepLog = window.localStorage.getItem(ONBOARDING_STEP_KEY);
+      const savedStep = getSavedStep();
       console.log('[OnboardingDebug] Starting checkProgress. LocalStorage - selAppId:', selAppId, 'savedStep:', savedStepLog);
 
       // 1. Verificar Selection Fee
@@ -117,11 +118,13 @@ export const useOnboardingProgress = () => {
       }
 
       // 3. Verificar Process Type - considerar aplicações OU localStorage (fallback)
-      const storedProcessType = window.localStorage.getItem('studentProcessType');
+      const userProcessTypeKey = `studentProcessType_${userProfile.id}`;
+      const storedProcessType = window.localStorage.getItem(userProcessTypeKey) || window.localStorage.getItem('studentProcessType');
+      
       const processTypeSelected = 
         (applications && applications.length > 0 && !!applications[0].student_process_type) ||
         (userProfile.documents_uploaded || false) ||
-        (scholarshipsSelected && !!storedProcessType && ['initial', 'transfer', 'change_of_status'].includes(storedProcessType));
+        (!!storedProcessType && ['initial', 'transfer', 'change_of_status'].includes(storedProcessType) && selectionFeePaid && scholarshipsSelected && savedStep !== 'scholarship_selection' && savedStep !== 'selection_fee');
 
       // 4. Verificar Documentos
       const documentsUploaded = userProfile.documents_uploaded || false;
@@ -239,15 +242,19 @@ export const useOnboardingProgress = () => {
 
       // Verificar se é um novo usuário (sem nenhum progresso E sem step salvo)
       // Se há step salvo, significa que o usuário já interagiu com o onboarding
-      const savedStep = getSavedStep();
       const isNewUser = !selectionFeePaid && !scholarshipsSelected && !processTypeSelected && !documentsUploaded && !savedStep;
       
       let currentStep: OnboardingStep;
+      
+      const urlParams = new URLSearchParams(window.location.search);
+      const isForcingPortal = urlParams.get('step') === 'university_documents';
 
-      if (onboardingCompleted) {
+      if (onboardingCompleted && !isForcingPortal) {
         currentStep = 'completed';
         // Limpar step salvo quando completado
         window.localStorage.removeItem(ONBOARDING_STEP_KEY);
+      } else if (onboardingCompleted && isForcingPortal) {
+        currentStep = 'university_documents';
       } else if (isNewUser) {
         // Novo usuário (sem progresso E sem step salvo) sempre começa na página de welcome
         currentStep = 'welcome';
@@ -256,76 +263,33 @@ export const useOnboardingProgress = () => {
         // Isso permite que o usuário veja a página de welcome quando acessa via URL
         currentStep = 'welcome';
       } else if (savedStep && savedStep !== 'completed') {
-        // Se há um step salvo e não está completado, usar ele
-        const steps: OnboardingStep[] = [
-          'welcome',
-          'selection_fee',
-          'scholarship_selection',
-          'process_type',
-          'documents_upload',
-          'payment',
-          'documents_upload',
-          'payment',
-          'scholarship_fee',
-          'university_documents',
-          'waiting_approval',
-          'completed',
-        ];
-
-        let calculatedStep: OnboardingStep = 'welcome';
-        let minRequiredStep: OnboardingStep = 'welcome'; // Step mínimo necessário baseado no progresso
+        // Se há um step salvo e não está completado, calcular o máximo permitido
+        let maxAllowedStep: OnboardingStep = 'welcome';
         
         if (!selectionFeePaid) {
-          calculatedStep = 'selection_fee';
-          minRequiredStep = 'selection_fee';
+          maxAllowedStep = 'selection_fee';
         } else if (!scholarshipsSelected) {
-          calculatedStep = 'scholarship_selection';
-          minRequiredStep = 'scholarship_selection';
+          maxAllowedStep = 'scholarship_selection';
         } else if (!processTypeSelected) {
-          calculatedStep = 'process_type';
-          minRequiredStep = 'process_type';
+          maxAllowedStep = 'process_type';
         } else if (!documentsUploaded || !documentsApproved) {
-          calculatedStep = 'documents_upload';
-          minRequiredStep = 'documents_upload';
+          maxAllowedStep = 'documents_upload';
         } else if (!applicationFeePaid) {
-          // Só avançar para payment se houver uma aplicação selecionada no localStorage
-          // Isso garante que o usuário passe pela tela de seleção no documents_upload
           const selectedAppId = window.localStorage.getItem('selected_application_id');
-          
-          if (selectedAppId) {
-            calculatedStep = 'payment';
-            minRequiredStep = 'documents_upload';
-          } else {
-            // Se não tem ID selecionado, o próximo passo OBRIGATÓRIO é a seleção (dentro de documents_upload)
-            calculatedStep = 'documents_upload';
-            minRequiredStep = 'documents_upload';
-          }
+          maxAllowedStep = selectedAppId ? 'payment' : 'documents_upload';
         } else if (!scholarshipFeePaid) {
-          calculatedStep = 'scholarship_fee';
-          minRequiredStep = 'payment';
-        } else if (!universityDocumentsUploaded) {
-          calculatedStep = 'university_documents';
-          minRequiredStep = 'scholarship_fee';
+          maxAllowedStep = 'scholarship_fee';
         } else {
-          calculatedStep = 'waiting_approval';
-          minRequiredStep = 'waiting_approval';
+          maxAllowedStep = 'university_documents';
         }
+
+        // Se o step salvo é mais avançado que o permitido, usar o permitido
+        // Caso contrário, respeitar o desejo do usuário (permitir voltar)
+        const allSteps: OnboardingStep[] = ['welcome', 'selection_fee', 'scholarship_selection', 'process_type', 'documents_upload', 'payment', 'scholarship_fee', 'university_documents', 'completed'];
+        const savedIdx = allSteps.indexOf(savedStep);
+        const maxIdx = allSteps.indexOf(maxAllowedStep);
         
-        const savedStepIndex = steps.indexOf(savedStep);
-        const calculatedStepIndex = steps.indexOf(calculatedStep);
-        const minRequiredStepIndex = steps.indexOf(minRequiredStep);
-        
-        // Se o step salvo está entre o mínimo necessário e o calculado (ou além), usar o salvo
-        // Isso permite que o usuário volte para o step onde estava, mesmo que já tenha feito progresso
-        if (savedStepIndex >= minRequiredStepIndex && savedStepIndex <= calculatedStepIndex) {
-          currentStep = savedStep;
-        } else if (savedStepIndex > calculatedStepIndex) {
-          // Se o step salvo está mais avançado que o calculado, usar o calculado (não pode pular etapas)
-          currentStep = calculatedStep;
-        } else {
-          // Se o step salvo está antes do mínimo necessário, usar o mínimo necessário
-          currentStep = minRequiredStep;
-        }
+        currentStep = savedIdx > maxIdx ? maxAllowedStep : savedStep;
       } else {
         // Se não há step salvo e não é novo usuário, calcular baseado no progresso
         if (!selectionFeePaid) {
@@ -346,11 +310,11 @@ export const useOnboardingProgress = () => {
           }
         } else if (!scholarshipFeePaid) {
           currentStep = 'scholarship_fee';
-        } else if (!universityDocumentsUploaded) {
+        } else if (!onboardingCompleted) {
+          // Sempre passar pelo university_documents antes de reach completed
           currentStep = 'university_documents';
         } else {
-          // Se documentos estão aprovados e taxas pagas, ficar em waiting_approval
-          currentStep = 'waiting_approval';
+          currentStep = 'completed';
         }
       }
 
@@ -412,9 +376,6 @@ export const useOnboardingProgress = () => {
           break;
         case 'university_documents':
           updates.universityDocumentsUploaded = true;
-          break;
-        case 'waiting_approval':
-          updates.documentsApproved = true;
           break;
         case 'completed':
           updates.onboardingCompleted = true;

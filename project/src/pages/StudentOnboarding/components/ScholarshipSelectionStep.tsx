@@ -6,6 +6,7 @@ import { useScholarships } from '../../../hooks/useScholarships';
 import { usePackageScholarshipFilter } from '../../../hooks/usePackageScholarshipFilter';
 import { StepProps } from '../types';
 import { ScholarshipCardFull } from './ScholarshipCardFull';
+import ScholarshipDetailModal from '../../../components/ScholarshipDetailModal';
 import { supabase } from '../../../lib/supabase';
 import { useTranslation } from 'react-i18next';
 import { is3800ScholarshipBlocked } from '../../../utils/scholarshipDeadlineValidation';
@@ -24,7 +25,7 @@ export const ScholarshipSelectionStep: React.FC<StepProps> = ({ onNext, onBack: 
   const isManuallyUpdatingRef = React.useRef(false);
   const lastCartRef = React.useRef<string>('');
   const [isLocked, setIsLocked] = useState(false);
-  const [expandedCardIds, setExpandedCardIds] = useState<Set<string>>(new Set());
+  const [selectedScholarshipForModal, setSelectedScholarshipForModal] = useState<any | null>(null);
   const [searchTerm, setSearchTerm] = useState<string>('');
   const [selectedLevel, setSelectedLevel] = useState<string>('all');
   const [selectedField, setSelectedField] = useState<string>('all');
@@ -557,7 +558,7 @@ export const ScholarshipSelectionStep: React.FC<StepProps> = ({ onNext, onBack: 
                   Importante: Esta é uma escolha definitiva
                 </p>
                 <p className="text-sm text-amber-800 font-medium leading-relaxed">
-                  Por favor, revise cuidadosamente as bolsas selecionadas abaixo. Assim que você clicar em "Continuar", não poderá mais voltar para selecionar outras bolsas. Estas serão as bolsas para as quais você se candidatará.
+                  Por favor, revise cuidadosamente as bolsas selecionadas abaixo. Assim que você clicar em "Confirmar", não poderá mais voltar para selecionar outras bolsas. Estas serão as bolsas para as quais você se candidatará.
                 </p>
               </div>
             </div>
@@ -644,7 +645,7 @@ export const ScholarshipSelectionStep: React.FC<StepProps> = ({ onNext, onBack: 
                   disabled={hasBlockedScholarships || cart.length === 0}
                   className="flex-1 w-full bg-blue-600 text-white py-5 rounded-2xl font-black uppercase tracking-[0.2em] text-sm hover:bg-blue-700 transition-all shadow-xl shadow-blue-500/20 hover:scale-105 active:scale-95 disabled:bg-slate-300 disabled:cursor-not-allowed flex items-center justify-center space-x-3"
                 >
-                  <span>Finalizar Revisão</span>
+                  <span>Confirmar</span>
                   <ArrowRight className="w-6 h-6" />
                 </button>
               </div>
@@ -988,29 +989,16 @@ export const ScholarshipSelectionStep: React.FC<StepProps> = ({ onNext, onBack: 
             </div>
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 sm:gap-6">
             {paginatedScholarships.map((scholarship) => {
-              const scholarshipIdStr = String(scholarship.id);
-              const isExpanded = expandedCardIds.has(scholarshipIdStr);
               
               return (
                 <ScholarshipCardFull
                   key={`scholarship-${scholarship.id}`}
                   scholarship={scholarship}
-                  isSelected={selectedIds.has(scholarship.id)}
+                  isSelected={selectedIds.has(String(scholarship.id))}
                   onToggle={() => toggleSelection(scholarship)}
                   userProfile={userProfile}
                   isLocked={isLocked}
-                  isExpanded={isExpanded}
-                  onToggleExpand={(id: string) => {
-                    setExpandedCardIds(prev => {
-                      const newSet = new Set(prev);
-                      if (newSet.has(id)) {
-                        newSet.delete(id);
-                      } else {
-                        newSet.add(id);
-                      }
-                      return newSet;
-                    });
-                  }}
+                  onViewDetails={() => setSelectedScholarshipForModal(scholarship)}
                 />
               );
             })}
@@ -1087,6 +1075,16 @@ export const ScholarshipSelectionStep: React.FC<StepProps> = ({ onNext, onBack: 
       {/* Transition Overlay - Just Blur */}
       {isTransitioning && (
         <div className="fixed inset-0 z-[100] bg-slate-950/20 backdrop-blur-md animate-in fade-in duration-500 pointer-events-none" />
+      )}
+
+      {selectedScholarshipForModal && (
+        <ScholarshipDetailModal
+          scholarship={selectedScholarshipForModal}
+          isOpen={!!selectedScholarshipForModal}
+          onClose={() => setSelectedScholarshipForModal(null)}
+          userProfile={userProfile}
+          userRole={user?.role}
+        />
       )}
     </div>
   );

@@ -1669,7 +1669,7 @@ export const ZelleCheckout: React.FC<ZelleCheckoutProps> = ({
                     Recipient Email
                   </label>
                   <div className="bg-gray-50 border border-gray-200 rounded-lg p-2 sm:p-3">
-                    <code className="text-xs sm:text-sm font-mono text-gray-900 break-all">info@thefutureofenglish.com</code>
+                    <code className="text-xs sm:text-sm font-mono text-gray-900 break-all">pay@matriculausa.com</code>
                   </div>
                 </div>
                 
@@ -1701,7 +1701,7 @@ export const ZelleCheckout: React.FC<ZelleCheckoutProps> = ({
                   <div className="min-w-0 flex-1">
                     <p className="text-xs sm:text-sm text-gray-800 font-medium mb-1">Important</p>
                     <p className="text-xs sm:text-sm text-gray-700">
-                      Make sure to send the exact amount of <strong>${amount.toFixed(2)} USD</strong> to <strong className="break-all">info@thefutureofenglish.com</strong> via Zelle. Any discrepancy will delay your payment processing.
+                      Make sure to send the exact amount of <strong>${amount.toFixed(2)} USD</strong> to <strong className="break-all">pay@matriculausa.com</strong> via Zelle. Any discrepancy will delay your payment processing.
                     </p>
                   </div>
                 </div>

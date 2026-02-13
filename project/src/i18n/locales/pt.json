@@ -113,7 +113,7 @@
               "Comprovante de fundos bancários ($22.000 mínimo)",
               "Endereço completo no país de origem",
               "Histórico escolar ou diploma",
-              "Pagamento via Zelle para: info@thefutureofenglish.com"
+              "Pagamento via Zelle para: pay@matriculausa.com"
             ]
           },
           "step2": {
@@ -184,7 +184,7 @@
               "Comprovante de visto ou status atual",
               "Comprovante de fundos bancários ($22.000 mínimo)",
               "Endereço completo nos EUA",
-              "Pagamento via Zelle para: info@thefutureofenglish.com"
+              "Pagamento via Zelle para: pay@matriculausa.com"
             ]
           },
           "step2": {
@@ -240,7 +240,7 @@
               "Comprovante de visto ou status atual",
               "Comprovante de fundos bancários ($22.000 mínimo)",
               "Endereço completo nos EUA",
-              "Pagamento via Zelle para: info@thefutureofenglish.com"
+              "Pagamento via Zelle para: pay@matriculausa.com"
             ]
           },
           "step2": {
@@ -1944,6 +1944,8 @@
         "level": "Nível",
         "deadline": "Prazo",
         "daysLeft": "dias restantes",
+        "days": "dias",
+        "scholarshipDiscount": "Desconto da Bolsa",
         "showDetails": "Mostrar Detalhes",
         "show": "Mostrar",
         "view": "Ver",
