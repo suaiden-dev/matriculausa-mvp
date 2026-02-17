@@ -1437,8 +1437,8 @@ export const SelectionFeeStep: React.FC<StepProps> = ({ onNext }) => {
       <div className="space-y-10 pb-12 max-w-4xl mx-auto px-4">
         {/* Header */}
         <div className="text-center md:text-left space-y-4">
-          <h2 className="text-3xl md:text-5xl font-black text-white uppercase tracking-tighter leading-none">Taxa de Aplicação</h2>
-          <p className="text-lg md:text-xl text-white/60 font-medium max-w-2xl mt-2">Pagamento do processo de aplicação concluído.</p>
+          <h2 className="text-3xl md:text-5xl font-black text-white uppercase tracking-tighter leading-none">Taxa do Processo Seletivo</h2>
+          <p className="text-lg md:text-xl text-white/60 font-medium max-w-2xl mt-2">Pagamento do processo seletivo concluído.</p>
         </div>
 
         {/* Main White Container */}
@@ -1449,8 +1449,8 @@ export const SelectionFeeStep: React.FC<StepProps> = ({ onNext }) => {
             <div className="w-20 h-20 bg-emerald-500/20 rounded-full flex items-center justify-center mx-auto mb-6 border border-emerald-500/30">
               <CheckCircle className="w-12 h-12 text-emerald-400" />
             </div>
-            <h3 className="text-3xl font-black text-gray-900 mb-3 uppercase tracking-tight">Taxa de Aplicação Paga!</h3>
-            <p className="text-gray-500 mb-8 font-medium">Você já realizou o pagamento da taxa do processo de aplicação.</p>
+            <h3 className="text-3xl font-black text-gray-900 mb-3 uppercase tracking-tight">Taxa do Processo Seletivo Paga!</h3>
+            <p className="text-gray-500 mb-8 font-medium">Você já realizou o pagamento da taxa do processo seletivo.</p>
             <button
               onClick={onNext}
               className="w-full max-w-xs bg-blue-600 text-white py-4 px-8 rounded-xl hover:bg-blue-700 transition-all font-bold uppercase tracking-widest shadow-lg shadow-blue-500/20 hover:scale-105 active:scale-95 mx-auto"
@@ -1469,10 +1469,10 @@ export const SelectionFeeStep: React.FC<StepProps> = ({ onNext }) => {
       <div className="space-y-6">
         <div className="text-center md:text-left">
           <h2 className="text-3xl md:text-5xl font-black text-white mb-3 uppercase tracking-tighter">
-            Pagar Taxa de Aplicação
+            Pagar Taxa do Processo Seletivo
           </h2>
           <p className="text-lg md:text-xl text-white/60 font-medium">
-            Inicie sua jornada pagando a taxa do processo de aplicação
+            Inicie sua jornada pagando a taxa do processo seletivo
           </p>
         </div>
 

@@ -296,7 +296,7 @@ export const PaymentStep: React.FC<StepProps> = ({ onNext, onBack }) => {
         )}
       </div>
 
-      <div className={`bg-white rounded-[2.5rem] p-6 md:p-10 shadow-2xl border relative overflow-hidden transition-all duration-500 ${
+      <div className={`bg-white rounded-[2.5rem] p-6 md:p-10 shadow-2xl border relative overflow-hidden ${
         allPaid 
           ? 'border-emerald-500/30 ring-1 ring-emerald-500/20' 
           : 'border-gray-100'
@@ -312,7 +312,7 @@ export const PaymentStep: React.FC<StepProps> = ({ onNext, onBack }) => {
               return (
                 <div 
                   key={app.id}
-                  className={`group relative bg-gray-50 border rounded-[2rem] p-8 transition-all duration-500 ${
+                  className={`group relative bg-gray-50 border rounded-[2rem] p-8 transition-colors ${
                     app.is_application_fee_paid 
                       ? 'border-emerald-500/30 ring-1 ring-emerald-500/20 bg-emerald-50/50' 
                       : 'border-gray-200 hover:border-gray-300 hover:bg-white hover:shadow-xl'
@@ -354,7 +354,7 @@ export const PaymentStep: React.FC<StepProps> = ({ onNext, onBack }) => {
 
                       <div className="flex flex-col md:items-end">
                         <div className="flex items-center gap-3 mb-1">
-                          <span className="text-[10px] font-black text-gray-400 uppercase tracking-[0.2em]">Enrollment Fee</span>
+                          <span className="text-[10px] font-black text-gray-400 uppercase tracking-[0.2em]">Application Fee</span>
                         </div>
                         <div className="text-4xl font-black text-gray-900 tracking-tighter">
                           {formatFeeAmount(baseAmount)}
@@ -362,24 +362,32 @@ export const PaymentStep: React.FC<StepProps> = ({ onNext, onBack }) => {
                       </div>
                     </div>
 
-                    {/* Payment Options Grid */}
+                    {/* Payment Options List */}
                     {!app.is_application_fee_paid && (
-                      <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-4 gap-4 mt-2">
+                      <div className="flex flex-col gap-4 mt-4">
                         {/* Stripe Option */}
                         <button
                           onClick={() => processCheckout(app, 'stripe')}
                           disabled={!!isProcessingCheckout}
-                          className="group/btn relative bg-white border border-gray-200 p-5 rounded-3xl text-left hover:scale-[1.02] active:scale-95 transition-all shadow-sm hover:shadow-xl disabled:opacity-50 hover:border-blue-200"
+                          className="group/btn relative bg-white border border-gray-200 p-5 rounded-[2rem] text-left hover:scale-[1.01] active:scale-95 transition-all shadow-sm hover:shadow-md disabled:opacity-50 hover:border-blue-200 flex items-center justify-between"
                         >
-                          <div className="flex items-center justify-between mb-3">
-                            <StripeIcon className="w-8 h-8" />
-                            <ChevronRight className="w-4 h-4 text-gray-300 group-hover/btn:translate-x-1 transition-transform" />
+                          <div className="flex items-center gap-5">
+                            <div className="w-14 h-14 flex items-center justify-center bg-blue-50/50 rounded-2xl group-hover/btn:bg-blue-50 transition-colors">
+                              <StripeIcon className="w-9 h-9" />
+                            </div>
+                            <div className="font-black text-gray-900 text-base uppercase tracking-tight">Cartão de Crédito</div>
                           </div>
-                          <div className="font-black text-gray-900 text-xs uppercase tracking-tight mb-1">Cartão de Crédito</div>
-                          <div className="text-[10px] font-bold text-gray-400 uppercase tracking-widest">{formatFeeAmount(cardAmount)} total</div>
+                          <div className="flex items-center gap-5">
+                            <div className="text-right">
+                              <div className="bg-blue-100 text-blue-600 text-sm font-black px-3 py-1.5 rounded-full border border-blue-200 uppercase tracking-tight">
+                                {formatFeeAmount(cardAmount)}
+                              </div>
+                            </div>
+                            <ChevronRight className="w-6 h-6 text-gray-300 group-hover/btn:translate-x-1 transition-transform" />
+                          </div>
                           {isProcessingCheckout === `${app.id}_stripe` && (
-                            <div className="absolute inset-0 bg-white/80 backdrop-blur-sm rounded-3xl flex items-center justify-center">
-                              <RefreshCw className="w-6 h-6 text-blue-600 animate-spin" />
+                            <div className="absolute inset-0 bg-white/80 backdrop-blur-sm rounded-[2rem] flex items-center justify-center z-10">
+                              <RefreshCw className="w-8 h-8 text-blue-600 animate-spin" />
                             </div>
                           )}
                         </button>
@@ -388,17 +396,25 @@ export const PaymentStep: React.FC<StepProps> = ({ onNext, onBack }) => {
                         <button
                           onClick={() => processCheckout(app, 'pix')}
                           disabled={!!isProcessingCheckout}
-                          className="group/btn relative bg-white border border-gray-200 p-5 rounded-3xl text-left hover:scale-[1.02] active:scale-95 transition-all shadow-sm hover:shadow-xl disabled:opacity-50 hover:border-emerald-200"
+                          className="group/btn relative bg-white border border-gray-200 p-5 rounded-[2rem] text-left hover:scale-[1.01] active:scale-95 transition-all shadow-sm hover:shadow-md disabled:opacity-50 hover:border-emerald-200 flex items-center justify-between"
                         >
-                          <div className="flex items-center justify-between mb-3">
-                            <PixIcon className="w-8 h-8" />
-                            <ChevronRight className="w-4 h-4 text-gray-300 group-hover/btn:translate-x-1 transition-transform" />
+                          <div className="flex items-center gap-5">
+                            <div className="w-14 h-14 flex items-center justify-center bg-emerald-50/50 rounded-2xl group-hover/btn:bg-emerald-50 transition-colors">
+                              <PixIcon className="w-9 h-9" />
+                            </div>
+                            <div className="font-black text-gray-900 text-base uppercase tracking-tight">PIX</div>
                           </div>
-                          <div className="font-black text-gray-900 text-xs uppercase tracking-tight mb-1">PIX</div>
-                          <div className="text-[10px] font-bold text-emerald-500 uppercase tracking-widest">R$ {pixInfo.totalWithIOF.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}</div>
+                          <div className="flex items-center gap-5">
+                            <div className="text-right">
+                              <div className="bg-emerald-100 text-emerald-600 text-sm font-black px-3 py-1.5 rounded-full border border-emerald-200 uppercase tracking-tight">
+                                R$ {pixInfo.totalWithIOF.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
+                              </div>
+                            </div>
+                            <ChevronRight className="w-6 h-6 text-gray-300 group-hover/btn:translate-x-1 transition-transform" />
+                          </div>
                           {isProcessingCheckout === `${app.id}_pix` && (
-                            <div className="absolute inset-0 bg-white/80 backdrop-blur-sm rounded-3xl flex items-center justify-center">
-                              <RefreshCw className="w-6 h-6 text-[#4db6ac] animate-spin" />
+                            <div className="absolute inset-0 bg-white/80 backdrop-blur-sm rounded-[2rem] flex items-center justify-center z-10">
+                              <RefreshCw className="w-8 h-8 text-[#4db6ac] animate-spin" />
                             </div>
                           )}
                         </button>
@@ -407,17 +423,26 @@ export const PaymentStep: React.FC<StepProps> = ({ onNext, onBack }) => {
                         <button
                           onClick={() => processCheckout(app, 'parcelow')}
                           disabled={!!isProcessingCheckout}
-                          className="group/btn relative bg-white border border-gray-200 p-5 rounded-3xl text-left hover:scale-[1.02] active:scale-95 transition-all shadow-sm hover:shadow-xl disabled:opacity-50 hover:border-orange-200"
+                          className="group/btn relative bg-white border border-gray-200 p-5 rounded-[2rem] text-left hover:scale-[1.01] active:scale-95 transition-all shadow-sm hover:shadow-md disabled:opacity-50 hover:border-orange-200 flex items-center justify-between"
                         >
-                          <div className="flex items-center justify-between mb-3">
-                            <ParcelowIcon className="w-12 h-8" />
-                            <ChevronRight className="w-4 h-4 text-gray-300 group-hover/btn:translate-x-1 transition-transform" />
+                          <div className="flex items-center gap-5">
+                            <div className="w-14 h-14 flex items-center justify-center bg-orange-50/50 rounded-2xl group-hover/btn:bg-orange-50 transition-colors px-2">
+                              <ParcelowIcon className="w-full h-10" />
+                            </div>
+                            <div className="font-black text-gray-900 text-base uppercase tracking-tight">Parcelow</div>
                           </div>
-                          <div className="font-black text-gray-900 text-xs uppercase tracking-tight mb-1">Parcelow</div>
-                          <div className="text-[10px] font-bold text-gray-400 uppercase tracking-widest">Até 12x no cartão</div>
+                          <div className="flex items-center gap-5">
+                            <div className="text-right flex flex-col items-end">
+                              <div className="bg-blue-100 text-blue-700 text-sm font-black px-3 py-1.5 rounded-full border border-blue-200 uppercase tracking-tight">
+                                {formatFeeAmount(cardAmount)}
+                              </div>
+                              <span className="text-[10px] font-bold text-blue-500 mt-1 uppercase tracking-widest">Até 12x no cartão</span>
+                            </div>
+                            <ChevronRight className="w-6 h-6 text-gray-300 group-hover/btn:translate-x-1 transition-transform" />
+                          </div>
                           {isProcessingCheckout === `${app.id}_parcelow` && (
-                            <div className="absolute inset-0 bg-white/80 backdrop-blur-sm rounded-3xl flex items-center justify-center">
-                              <RefreshCw className="w-6 h-6 text-orange-500 animate-spin" />
+                            <div className="absolute inset-0 bg-white/80 backdrop-blur-sm rounded-[2rem] flex items-center justify-center z-10">
+                              <RefreshCw className="w-8 h-8 text-orange-500 animate-spin" />
                             </div>
                           )}
                         </button>
@@ -426,14 +451,23 @@ export const PaymentStep: React.FC<StepProps> = ({ onNext, onBack }) => {
                         <button
                           onClick={() => handleZelleClick(app)}
                           disabled={!!isProcessingCheckout}
-                          className="group/btn relative bg-white border border-gray-200 p-5 rounded-3xl text-left hover:scale-[1.02] active:scale-95 transition-all shadow-sm hover:shadow-xl disabled:opacity-50 hover:border-purple-200"
+                          className="group/btn relative bg-white border border-gray-200 p-5 rounded-[2rem] text-left hover:scale-[1.01] active:scale-95 transition-all shadow-sm hover:shadow-md disabled:opacity-50 hover:border-purple-200 flex items-center justify-between"
                         >
-                          <div className="flex items-center justify-between mb-3">
-                            <ZelleIcon className="w-8 h-8" />
-                            <ChevronRight className="w-4 h-4 text-gray-300 group-hover/btn:translate-x-1 transition-transform" />
+                          <div className="flex items-center gap-5">
+                            <div className="w-14 h-14 flex items-center justify-center bg-purple-50/50 rounded-2xl group-hover/btn:bg-purple-50 transition-colors">
+                              <ZelleIcon className="w-9 h-9" />
+                            </div>
+                            <div className="font-black text-gray-900 text-base uppercase tracking-tight">Zelle</div>
                           </div>
-                          <div className="font-black text-gray-900 text-xs uppercase tracking-tight mb-1">Zelle</div>
-                          <div className="text-[10px] font-bold text-purple-600 uppercase tracking-widest">{formatFeeAmount(baseAmount)} (Sem Taxas)</div>
+                          <div className="flex items-center gap-5">
+                            <div className="text-right">
+                              <div className="bg-indigo-100 text-indigo-600 text-sm font-black px-3 py-1.5 rounded-full border border-indigo-200 uppercase tracking-tight">
+                                {formatFeeAmount(baseAmount)}
+                              </div>
+                              <span className="text-[10px] font-bold text-indigo-400 mt-1 block uppercase tracking-widest">Sem Taxas</span>
+                            </div>
+                            <ChevronRight className="w-6 h-6 text-gray-300 group-hover/btn:translate-x-1 transition-transform" />
+                          </div>
                         </button>
                       </div>
                     )}
@@ -479,35 +513,7 @@ export const PaymentStep: React.FC<StepProps> = ({ onNext, onBack }) => {
               <div className="absolute bottom-0 left-0 w-32 h-32 bg-black/10 rounded-full blur-[60px] -ml-16 -mb-16 pointer-events-none" />
               
               <div className="relative z-10 space-y-10">
-                <div>
-                  <h3 className="text-white/60 font-black uppercase tracking-[0.2em] text-[10px] mb-2 text-center md:text-left">Status do Checkout</h3>
-                  <div className="h-1 w-full bg-white/10 rounded-full overflow-hidden mb-8">
-                    <div 
-                      className="h-full bg-white transition-all duration-1000" 
-                      style={{ width: `${(applications.filter(a => a.is_application_fee_paid).length / (applications.length || 1)) * 100}%` }}
-                    />
-                  </div>
-                </div>
-                
-                <div className="space-y-6">
-                  <div className="flex justify-between items-center text-white/70">
-                    <span className="text-[10px] font-black uppercase tracking-widest">Aplicações Totais</span>
-                    <span className="text-xl font-black tracking-tight">{applications.length}</span>
-                  </div>
-                  <div className="flex justify-between items-center text-white/70">
-                    <span className="text-[10px] font-black uppercase tracking-widest">Pendentes de Pagamento</span>
-                    <span className="text-xl font-black tracking-tight">{unpaidApplications.length}</span>
-                  </div>
-                  <div className="h-px bg-white/20 my-2" />
-                  <div className="flex flex-col md:flex-row md:items-end justify-between gap-2">
-                    <span className="text-[10px] font-black uppercase tracking-widest text-white/70 mb-1">Valor Total Pendente</span>
-                    <span className="text-5xl font-black text-white tracking-tighter leading-none">
-                      {formatFeeAmount(unpaidApplications.reduce((acc, app) => 
-                        acc + getFeeAmount('application_fee', app.scholarships?.application_fee_amount || undefined), 0
-                      ))}
-                    </span>
-                  </div>
-                </div>
+
 
                 <div className="space-y-4 pt-4">
                   <button
@@ -519,15 +525,11 @@ export const PaymentStep: React.FC<StepProps> = ({ onNext, onBack }) => {
                         : 'bg-white/10 text-white/30 cursor-not-allowed border border-white/5'
                     }`}
                   >
-                    <span className="relative z-10 transition-transform duration-500 group-hover/btn:-translate-x-1">Concluir & Continuar</span>
+                    <span className="relative z-10 transition-transform duration-500 group-hover/btn:-translate-x-1 text-center leading-tight">
+                      Concluir &<br />Continuar
+                    </span>
                     <ArrowRight className={`w-4 h-4 relative z-10 transition-transform duration-500 ${allPaid ? 'group-hover/btn:translate-x-1' : ''}`} />
                   </button>
-                  
-                  {!allPaid && (
-                    <p className="text-[10px] text-white/40 text-center font-bold uppercase tracking-widest animate-pulse">
-                      Pague todas as taxas para prosseguir
-                    </p>
-                  )}
                 </div>
               </div>
             </div>

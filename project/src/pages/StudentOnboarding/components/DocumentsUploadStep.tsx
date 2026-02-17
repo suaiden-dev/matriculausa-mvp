@@ -12,13 +12,10 @@ import {
   RefreshCw,
   Building,
   GraduationCap,
-  Calendar,
   ArrowRight,
   ChevronDown,
   XCircle,
-  AlertTriangle,
-  Globe,
-  Briefcase
+  AlertTriangle
 } from 'lucide-react';
 import { getDeliveryModeColor, getDeliveryModeLabel } from '../../../utils/scholarshipHelpers';
 import { useAuth } from '../../../hooks/useAuth';
@@ -554,11 +551,15 @@ export const DocumentsUploadStep: React.FC<StepProps> = ({ onNext }) => {
                     <Loader2 className="w-12 h-12 text-blue-500 animate-spin" />
                   </div>
                 ) : (
-                  <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6 items-start">
+                  <div className="flex flex-col gap-4">
                     {applications.map((app) => {
                       const isAppApproved = app.status === 'approved' || app.status === 'enrolled';
                       const isSelected = selectedAppId === app.id;
                       const scholarship = app.scholarships;
+                      const appDocs = parseApplicationDocuments(app.documents);
+                      const hasDocumentIssues = app.status !== 'rejected' && appDocs.some(d => 
+                        ['rejected', 'changes_requested'].includes(d.status?.toLowerCase() || '')
+                      );
                       
                       return (
                         <div 
@@ -567,10 +568,11 @@ export const DocumentsUploadStep: React.FC<StepProps> = ({ onNext }) => {
                             if (!isAppApproved) return;
                             setSelectedAppId(selectedAppId === app.id ? null : app.id);
                           }}
-                          className={`group relative bg-white rounded-2xl sm:rounded-3xl shadow-md hover:shadow-xl transition-all duration-300 overflow-hidden border-2 flex flex-col hover:-translate-y-1 transform-gpu ${
-                            isSelected ? 'border-blue-500 bg-blue-50/30 shadow-blue-500/20 cursor-pointer' : 
-                            isAppApproved ? 'border-slate-200/60 hover:border-blue-300 cursor-pointer' : 
-                            'border-slate-200/60 cursor-default'
+                          className={`group relative bg-white rounded-2xl sm:rounded-3xl shadow-sm hover:shadow-md transition-all duration-300 overflow-hidden border-2 hover:-translate-y-0.5 transform-gpu ${
+                            isSelected ? 'border-blue-500 bg-blue-50/10 shadow-blue-500/10 cursor-pointer' : 
+                            app.status === 'rejected' ? 'border-red-500 bg-red-50/30' :
+                            isAppApproved ? 'border-slate-300 hover:border-blue-300 cursor-pointer' : 
+                            'border-slate-300 cursor-default opacity-80'
                           }`}
                         >
                           {/* Selected Check Badge */}
@@ -581,8 +583,9 @@ export const DocumentsUploadStep: React.FC<StepProps> = ({ onNext }) => {
                           )}
 
                           {/* Status Badge */}
-                          <div className="absolute top-4 left-4 z-10">
-                            <div className={`px-3 py-1.5 rounded-xl text-[10px] font-black uppercase tracking-widest shadow-sm backdrop-blur-md border ${
+                          {/* Status Badge */}
+                          <div className="absolute top-4 right-14 z-10">
+                            <div className={`px-3 py-1.5 rounded-xl text-xs font-black uppercase tracking-widest shadow-sm backdrop-blur-md border ${
                               isAppApproved ? 'bg-emerald-500/90 text-white border-emerald-400' :
                               app.status === 'rejected' ? 'bg-red-500/90 text-white border-red-400' :
                               'bg-amber-500/90 text-white border-amber-400'
@@ -591,127 +594,82 @@ export const DocumentsUploadStep: React.FC<StepProps> = ({ onNext }) => {
                             </div>
                           </div>
 
-                          {/* Scholarship Image */}
-                          <div className="relative h-32 overflow-hidden flex-shrink-0">
-                            {scholarship?.image_url ? (
-                              <img
-                                src={scholarship.image_url}
-                                alt={scholarship.title}
-                                className="w-full h-full object-contain group-hover:scale-105 transition-transform duration-300"
-                                onError={(e) => { (e.target as HTMLImageElement).style.display = 'none'; }}
-                              />
-                            ) : (
-                              <div className="flex items-center justify-center w-full h-full text-slate-400 bg-gradient-to-br from-[#05294E]/5 to-slate-100">
-                                <Building className="h-12 w-12 text-[#05294E]/30" />
-                              </div>
-                            )}
-                          </div>
+
 
                           {/* Card Content */}
                           <div className="p-4 sm:p-5 flex-1 flex flex-col">
-                            {/* Title */}
-                            <h4 className="text-base sm:text-lg font-bold text-slate-900 mb-2 leading-tight line-clamp-2 group-hover:text-[#05294E] transition-colors">
-                              {scholarship?.title}
-                            </h4>
+                            <div className="flex gap-5 items-center mb-5">
+                              {scholarship?.universities?.logo_url ? (
+                                <div className="w-20 h-20 bg-white rounded-2xl flex items-center justify-center border border-slate-200 overflow-hidden shadow-sm p-2 flex-shrink-0">
+                                  <img 
+                                    src={scholarship.universities.logo_url} 
+                                    alt="" 
+                                    className="w-full h-full object-contain"
+                                    onError={(e) => { (e.target as HTMLImageElement).parentElement!.style.display = 'none'; }}
+                                  />
+                                </div>
+                              ) : (
+                                <div className="w-20 h-20 bg-slate-50 rounded-2xl flex items-center justify-center border border-slate-100 flex-shrink-0">
+                                  <Building className="w-10 h-10 text-slate-400" />
+                                </div>
+                              )}
+                              
+                              <div className="flex-1 min-w-0">
+                                {/* Title */}
+                                <h4 className="text-lg sm:text-xl font-bold text-slate-900 mb-1 leading-tight group-hover:text-[#05294E] transition-colors pr-24">
+                                  {scholarship?.title}
+                                </h4>
+                                
+                                {/* University Name */}
+                                <p className="text-sm sm:text-base font-medium text-slate-500 truncate">
+                                  {scholarship?.universities?.name || 'Universidade'}
+                                </p>
+                              </div>
+                            </div>
 
                             {/* Field of Study Badge */}
                             {scholarship?.field_of_study && (
-                              <div className="flex items-center mb-2">
-                                <span className="px-2 py-0.5 rounded-md text-[10px] font-semibold text-slate-600 bg-slate-100 border border-slate-200">
+                              <div className="flex items-center mb-3">
+                                <span className="px-2 py-0.5 rounded-md text-xs font-semibold text-slate-600 bg-slate-100 border border-slate-200">
                                   {scholarship.field_of_study}
                                 </span>
                               </div>
                             )}
 
-                            {/* Modality & Work Auth */}
-                            <div className="space-y-2 mb-3">
-                              {scholarship?.delivery_mode && (
-                                <div className="flex items-center justify-between p-2.5 bg-slate-50 rounded-xl border border-slate-100">
-                                  <div className="flex items-center gap-1.5 text-slate-500">
-                                    <Globe className="h-3.5 w-3.5" />
-                                    <span className="text-[11px] font-bold uppercase tracking-tight">Modalidade</span>
-                                  </div>
-                                  <span className={`px-2 py-0.5 rounded-md text-[10px] font-black uppercase tracking-tight ${getDeliveryModeColor(scholarship.delivery_mode)}`}>
-                                    {getDeliveryModeLabel(scholarship.delivery_mode, t)}
-                                  </span>
-                                </div>
-                              )}
+                             {/* Financial Info */}
+                             <div className="mb-3 p-3 bg-slate-50 rounded-xl border border-slate-200">
+                               {scholarship?.original_annual_value && (
+                                 <div className="flex items-center justify-between mb-1.5 pb-1.5 border-b border-slate-200">
+                                   <span className="text-xs text-slate-500 font-medium">Valor original</span>
+                                   <span className="text-xs font-semibold text-slate-500 line-through">
+                                     ${Number(scholarship.original_annual_value).toLocaleString('en-US')}
+                                   </span>
+                                 </div>
+                               )}
+                               <div className="flex items-center justify-between">
+                                 <span className="text-xs text-slate-500 font-medium">Com Bolsa</span>
+                                 <div className="flex items-center">
+                                   <span className="font-bold text-green-700 text-base sm:text-lg">
+                                     ${scholarship?.annual_value_with_scholarship 
+                                       ? Number(scholarship.annual_value_with_scholarship).toLocaleString('en-US') 
+                                       : scholarship?.amount 
+                                         ? Number(scholarship.amount).toLocaleString('en-US') 
+                                         : 'N/A'}
+                                   </span>
+                                   <span className="text-[10px] text-green-600 font-semibold ml-1">/ ano</span>
+                                 </div>
+                               </div>
+                             </div>
 
-                              {scholarship?.work_permissions && scholarship.work_permissions.length > 0 && (
-                                <div className="p-2.5 bg-slate-50 rounded-xl border border-slate-100">
-                                  <div className="flex items-center gap-1.5 text-slate-500 mb-2">
-                                    <Briefcase className="h-3.5 w-3.5" />
-                                    <span className="text-[11px] font-bold uppercase tracking-tight">Trabalho</span>
-                                  </div>
-                                  <div className="flex flex-wrap gap-1.5">
-                                    {scholarship.work_permissions.slice(0, 3).map((permission: string, index: number) => (
-                                      <span
-                                        key={index}
-                                        className="px-2 py-0.5 bg-emerald-50 text-emerald-700 rounded-md text-[10px] font-black uppercase border border-emerald-100"
-                                      >
-                                        {permission}
-                                      </span>
-                                    ))}
-                                  </div>
-                                </div>
-                              )}
-                            </div>
-
-                            {/* University */}
-                            <div className="flex items-center text-slate-600 mb-3">
-                              {scholarship?.universities?.logo_url ? (
-                                <img 
-                                  src={scholarship.universities.logo_url} 
-                                  alt={scholarship.universities.name}
-                                  className="w-5 h-5 rounded-full object-cover mr-2 border border-slate-200"
-                                  onError={(e) => { (e.target as HTMLImageElement).style.display = 'none'; }}
-                                />
-                              ) : (
-                                <Building className="h-4 w-4 mr-2 text-[#05294E]" />
-                              )}
-                              <span className="text-xs sm:text-sm font-medium truncate">
-                                {scholarship?.universities?.name || 'Universidade'}
-                              </span>
-                            </div>
-
-                            {/* Financial Info */}
-                            <div className="mb-3 p-3 bg-slate-50 rounded-xl border border-slate-200">
-                              <div className="flex items-center justify-between">
-                                <div className="flex items-center">
-                                  <DollarSign className="h-4 w-4 mr-1.5 text-green-600" />
-                                  <span className="font-bold text-green-700 text-sm">
-                                    ${scholarship?.annual_value_with_scholarship 
-                                      ? Number(scholarship.annual_value_with_scholarship).toLocaleString('en-US') 
-                                      : scholarship?.amount 
-                                        ? Number(scholarship.amount).toLocaleString('en-US') 
-                                        : 'N/A'}
-                                  </span>
-                                </div>
-                                {scholarship?.level && (
-                                  <span className="text-[10px] font-semibold text-slate-500 uppercase tracking-wider">
-                                    {scholarship.level}
-                                  </span>
-                                )}
-                              </div>
-                              {scholarship?.original_annual_value && (
-                                <div className="flex items-center justify-between mt-1.5 pt-1.5 border-t border-slate-200">
-                                  <span className="text-[10px] text-slate-500">Valor original</span>
-                                  <span className="text-[10px] font-semibold text-slate-500 line-through">
-                                    ${Number(scholarship.original_annual_value).toLocaleString('en-US')}
-                                  </span>
-                                </div>
-                              )}
-                            </div>
-
-                            {/* Rejection Notes */}
-                            {app.status === 'rejected' && app.notes && (
-                              <div className="mb-3 p-3 bg-red-50 border border-red-100 rounded-xl">
-                                <p className="text-[10px] text-red-600 font-bold uppercase tracking-tight leading-relaxed">
-                                  <span className="text-red-400 block mb-0.5">Motivo:</span>
-                                  {app.notes}
-                                </p>
-                              </div>
-                            )}
+                             {/* Rejection Notes */}
+                             {app.status === 'rejected' && app.notes && (
+                               <div className="mb-3 p-3 bg-red-50 border border-red-100 rounded-xl">
+                                 <p className="text-xs text-red-600 font-bold uppercase tracking-tight leading-relaxed">
+                                   <span className="text-red-400 block mb-0.5">Motivo:</span>
+                                   {app.notes}
+                                 </p>
+                               </div>
+                             )}
 
                             {/* Documents Checklist for Non-Approved Applications */}
                             {!isAppApproved && (
@@ -721,13 +679,27 @@ export const DocumentsUploadStep: React.FC<StepProps> = ({ onNext }) => {
                                     e.stopPropagation(); 
                                     if (app.id) toggleChecklist(app.id); 
                                   }}
-                                  className="w-full flex items-center justify-between p-3 bg-slate-50 hover:bg-slate-100 rounded-xl transition-all border border-slate-200 group/btn"
+                                  className={`w-full flex items-center justify-between p-3 rounded-xl transition-all border group/btn ${
+                                    hasDocumentIssues 
+                                      ? 'bg-amber-50 border-amber-200 hover:bg-amber-100 shadow-sm shadow-amber-100' 
+                                      : 'bg-slate-50 border-slate-200 hover:bg-slate-100'
+                                  }`}
                                 >
-                                  <div className="flex items-center gap-2">
-                                    <FileText className="w-4 h-4 text-blue-600" />
-                                    <span className="text-xs font-bold text-slate-700 uppercase tracking-tight">Verificar Documentos</span>
-                                  </div>
-                                  <ChevronDown className={`w-4 h-4 text-slate-400 transition-transform ${app.id && openChecklists[app.id] ? 'rotate-180' : ''}`} />
+                                   <div className="flex items-center gap-2">
+                                     <div className="relative">
+                                       <FileText className={`w-4 h-4 ${hasDocumentIssues ? 'text-amber-600' : 'text-blue-600'}`} />
+                                       {hasDocumentIssues && (
+                                         <span className="absolute -top-1 -right-1 w-2 h-2 bg-orange-500 rounded-full border border-white animate-pulse" />
+                                       )}
+                                     </div>
+                                     <span className={`text-sm font-bold uppercase tracking-tight ${hasDocumentIssues ? 'text-amber-900' : 'text-slate-700'}`}>
+                                       Verificar Documentos
+                                     </span>
+                                     {hasDocumentIssues && (
+                                       <span className="flex h-2 w-2 rounded-full bg-orange-500 ml-1 shadow-sm shadow-orange-200" />
+                                     )}
+                                   </div>
+                                  <ChevronDown className={`w-4 h-4 transition-transform ${hasDocumentIssues ? 'text-amber-400' : 'text-slate-400'} ${app.id && openChecklists[app.id] ? 'rotate-180' : ''}`} />
                                 </button>
 
                                 {app.id && openChecklists[app.id] && (
@@ -737,8 +709,7 @@ export const DocumentsUploadStep: React.FC<StepProps> = ({ onNext }) => {
                                       { type: 'diploma', label: DOCUMENT_LABELS.diploma },
                                       { type: 'funds_proof', label: DOCUMENT_LABELS.funds_proof }
                                     ].map(docInfo => {
-                                      const docs = parseApplicationDocuments(app.documents);
-                                      const docData = docs.find(d => d.type === docInfo.type);                                          const status = (docData?.status || 'pending').toLowerCase();
+                                      const docData = appDocs.find(d => d.type === docInfo.type);                                          const status = (docData?.status || 'pending').toLowerCase();
                                           const isRejectedStatus = status === 'changes_requested' || status === 'rejected';
                                           const isApprovedStatus = status === 'approved';
                                           const isUnderReviewStatus = status === 'under_review';
@@ -821,8 +792,7 @@ export const DocumentsUploadStep: React.FC<StepProps> = ({ onNext }) => {
                             {/* Date */}
                             <div className="mt-auto pt-3 border-t border-slate-100">
                               <div className="flex items-center justify-between">
-                                <div className="flex items-center text-slate-400 text-[10px] font-bold uppercase tracking-widest">
-                                  <Calendar className="w-3 h-3 mr-1.5" />
+                                 <div className="flex items-center text-slate-400 text-xs font-bold uppercase tracking-widest">
                                   {new Date(app.applied_at).toLocaleDateString('pt-BR', { month: 'short', day: 'numeric', year: 'numeric' })}
                                 </div>
                               </div>
@@ -831,13 +801,13 @@ export const DocumentsUploadStep: React.FC<StepProps> = ({ onNext }) => {
                             {/* Select Button */}
                             {isAppApproved && (
                               <div className="mt-3">
-                                <div className={`w-full text-center py-2.5 rounded-xl text-xs font-black uppercase tracking-widest transition-all duration-300 ${
-                                  isSelected 
-                                    ? 'bg-blue-600 text-white shadow-lg shadow-blue-500/20' 
-                                    : 'bg-slate-100 text-slate-400 group-hover:bg-blue-50 group-hover:text-blue-600'
-                                }`}>
-                                  {isSelected ? '✓ Selecionado' : 'Clique para selecionar'}
-                                </div>
+                                 <div className={`w-full text-center py-2.5 rounded-xl text-sm font-black uppercase tracking-widest transition-all duration-300 ${
+                                   isSelected 
+                                     ? 'bg-blue-600 text-white shadow-lg shadow-blue-500/20' 
+                                     : 'bg-slate-100 text-slate-400 group-hover:bg-blue-50 group-hover:text-blue-600'
+                                 }`}>
+                                   {isSelected ? '✓ Selecionado' : 'Clique para selecionar'}
+                                 </div>
                               </div>
                             )}
                           </div>

@@ -318,7 +318,7 @@
       "title": "Conteúdo Bloqueado",
       "description": "Para acessar este conteúdo, você precisa completar o processo de seleção inicial. Esta é a primeira etapa da sua jornada para estudar nos Estados Unidos."
     },
-    "selectionProcessFee": "Taxa de Processo de Seleção",
+    "selectionProcessFee": "Taxa do Processo Seletivo",
     "completeApplicationJourney": "Complete sua jornada de candidatura",
     "goToDashboardAndPayFee": "Ir ao Painel e Pagar Taxa",
     "learnHowItWorks": "Aprender Como Funciona",
@@ -811,7 +811,7 @@
     }
   },
   "fees": {
-    "selectionProcess": "Taxa de Processo de Seleção",
+    "selectionProcess": "Taxa do Processo Seletivo",
     "application": "Taxa de Matrícula",
     "scholarship": "Taxa de Bolsa",
     "i20Control": "Taxa de Controle I-20",
@@ -1743,7 +1743,7 @@
     "progressBar": {
       "title": "Esta é sua barra de progresso de taxas de candidatura. Complete cada etapa para avançar.",
       "allStepsCompleted": "Todos os Passos Completados! 🎉",
-      "selectionProcessFee": "Taxa de Processo de Seleção",
+      "selectionProcessFee": "Taxa do Processo Seletivo",
       "applicationFee": "Taxa de Matrícula",
       "scholarshipFee": "Taxa de Bolsa",
       "i20ControlFee": "Taxa de Controle I-20",
@@ -2495,9 +2495,9 @@
           "title": "Taxa de Controle I-20 Paga com Sucesso!",
           "description": "Seu pagamento da Taxa de Controle I-20 foi processado com sucesso. A universidade agora processará sua carta de aceitação.",
           "nextSteps": "Próximos passos:",
-          "nextStepsList": [
+            "nextStepsList": [
             "Aguarde a universidade processar sua carta de aceitação",
-            "Sua carta de aceitação aparecerá na aba Documentos quando estiver pronta",
+            "Sua carta de aceitação aparecerá na aba Carta de Aceite quando estiver pronta",
             "Entre em contato com o chat de suporte se tiver dúvidas sobre o processo"
           ]
         },
@@ -2996,7 +2996,7 @@
   },
   "productNames": {
     "selectionProcess": "Processo de Seleção",
-    "selectionProcessFee": "Taxa de Processo de Seleção",
+    "selectionProcessFee": "Taxa do Processo Seletivo",
     "applicationFee": "Taxa de Matrícula",
     "scholarshipFee": "Taxa de Bolsa",
     "enrollmentFee": "Taxa de Matrícula",
