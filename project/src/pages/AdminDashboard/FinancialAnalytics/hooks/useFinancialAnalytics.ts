@@ -172,63 +172,63 @@ export function useFinancialAnalytics() {
                                          record.fee_type === 'scholarship' ? 'scholarship' :
                                          record.fee_type === 'i20_control_fee' ? 'i20_control' : record.fee_type;
           
-          // Buscar todos os pagamentos deste usuário com fee_type correspondente
-          const allPayments = individualFeePaymentsList.filter((p: any) => {
-            // Match por user_id
-            if (p.user_id !== userId) return false;
-            
-            // Normalizar fee_type do payment
-            const normalizedPaymentFeeType = p.fee_type?.replace('_fee', '') || p.fee_type;
-            
-            // Match por fee_type normalizado (várias variações)
-            const feeTypeMatch = 
-              normalizedPaymentFeeType === normalizedRecordFeeType ||
-              p.fee_type === record.fee_type ||
-              p.fee_type === `${normalizedRecordFeeType}_fee` ||
-              (p.fee_type === 'selection_process_fee' && normalizedRecordFeeType === 'selection_process') ||
-              (p.fee_type === 'application_fee' && normalizedRecordFeeType === 'application') ||
-              (p.fee_type === 'scholarship_fee' && normalizedRecordFeeType === 'scholarship') ||
-              (p.fee_type === 'i20_control_fee' && normalizedRecordFeeType === 'i20_control');
-            
-            return feeTypeMatch;
-          });
-          
-          if (allPayments.length > 0) {
-            // Se houver múltiplos, escolher o mais próximo da data do record
-            const recordDateStr = record.payment_date || record.created_at;
-            const recordDate = recordDateStr ? new Date(recordDateStr).getTime() : 0;
-            
-            if (recordDate > 0) {
-              individualPayment = allPayments.reduce((closest, current) => {
-                const currentDate = new Date(current.payment_date).getTime();
-                const closestDate = new Date(closest.payment_date).getTime();
-                const currentDiff = Math.abs(currentDate - recordDate);
-                const closestDiff = Math.abs(closestDate - recordDate);
-                return currentDiff < closestDiff ? current : closest;
-              });
-            } else {
-              // Se não temos data no record, usar o primeiro match que tenha gross_amount_usd
-              individualPayment = allPayments.find((p: any) => p.gross_amount_usd != null) || allPayments[0];
+          // 1. Tentar match exato por payment_intent_id (mais confiável para Stripe)
+          if (record.payment_intent_id) {
+            individualPayment = individualFeePaymentsByIntentId.get(record.payment_intent_id);
+            if (individualPayment && import.meta.env.DEV) {
+              console.log(`[DEBUG-FIN] ✅ Match por IntentID: ${record.payment_intent_id} para ${userId}`);
             }
           }
-          
-          // Se ainda não encontrou, tentar match por payment_intent_id se disponível
-          if (!individualPayment && record.payment_intent_id) {
-            individualPayment = individualFeePaymentsByIntentId.get(record.payment_intent_id);
+
+          // 2. Se não encontrou, buscar por User ID e Fee Type usando o Map (Performance)
+          if (!individualPayment) {
+            const key1 = `${userId}_${normalizedRecordFeeType}`;
+            const key2 = `${userId}_${record.fee_type}`;
+            individualPayment = individualFeePaymentsMap.get(key1) || individualFeePaymentsMap.get(key2);
+            if (individualPayment && import.meta.env.DEV) {
+              console.log(`[DEBUG-FIN] ✅ Match por Map Key: ${key1} para ${userId}`);
+            }
           }
-          
-          // DEBUG TEMPORÁRIO - remover depois
-          if (record.payment_method === 'stripe' && !individualPayment) {
-            const userPayments = individualFeePaymentsList.filter((p: any) => p.user_id === userId);
-            const recordDateStr = record.payment_date || record.created_at;
-            console.log('[DEBUG] Stripe payment sem match:', {
-              userId,
-              recordFeeType: record.fee_type,
-              normalizedFeeType: normalizedRecordFeeType,
-              recordDate: recordDateStr,
-              userPaymentsCount: userPayments.length,
-              userPaymentsFeeTypes: userPayments.map((p: any) => p.fee_type),
-              allPaymentsCount: allPayments.length
+
+          // 3. Fallback: Busca manual com lógica de proximidade de data
+          if (!individualPayment) {
+            const allPayments = individualFeePaymentsList.filter((p: any) => {
+              if (p.user_id !== userId) return false;
+              const normalizedPaymentFeeType = p.fee_type?.replace('_fee', '') || p.fee_type;
+              return normalizedPaymentFeeType === normalizedRecordFeeType || 
+                     p.fee_type === record.fee_type ||
+                     p.fee_type === `${normalizedRecordFeeType}_fee`;
+            });
+
+            if (allPayments.length > 0) {
+              if (allPayments.length === 1) {
+                individualPayment = allPayments[0];
+                if (import.meta.env.DEV) console.log(`[DEBUG-FIN] ✅ Match Único: ${userId} - ${normalizedRecordFeeType}`);
+              } else {
+                const recordDateStr = record.payment_date || record.created_at;
+                const recordDate = recordDateStr ? new Date(recordDateStr).getTime() : 0;
+                
+                if (recordDate > 0) {
+                  individualPayment = allPayments.reduce((closest, current) => {
+                    const currentDiff = Math.abs(new Date(current.payment_date).getTime() - recordDate);
+                    const closestDiff = Math.abs(new Date(closest.payment_date).getTime() - recordDate);
+                    return currentDiff < closestDiff ? current : closest;
+                  });
+                  if (import.meta.env.DEV) console.log(`[DEBUG-FIN] ✅ Match por Proximidade: ${userId} - ${normalizedRecordFeeType}`);
+                } else {
+                  individualPayment = allPayments.find((p: any) => p.gross_amount_usd != null) || allPayments[0];
+                }
+              }
+            }
+          }
+
+          // LOG DE FALHA CRÍTICA
+          if (!individualPayment && record.payment_method === 'stripe') {
+            console.warn(`[DEBUG-FIN] ❌ FALHA NO MATCH: User: ${userId} | Fee: ${record.fee_type} | Date: ${record.payment_date || record.created_at}`);
+            console.log(`[DEBUG-FIN] Detalhes do record:`, { 
+              intentId: record.payment_intent_id, 
+              normalizedType: normalizedRecordFeeType,
+              allAvailablePaymentsForUser: individualFeePaymentsList.filter((p: any) => p.user_id === userId).map((p: any) => p.fee_type)
             });
           }
         }

@@ -1,7 +1,6 @@
 import { supabase } from '../../../../../lib/supabase';
 import type { DateRange, LoadedFinancialData } from '../types';
 import { getPreviousPeriodRange } from '../../utils/dateRange';
-import { getGrossPaidAmounts } from '../../../../../utils/paymentConverter';
 import { getPaymentDatesForUsersLoaderOptimized } from '@/pages/AdminDashboard/PaymentManagement/data/loaders/paymentDatesLoaderOptimized';
 
 /**
@@ -267,40 +266,7 @@ async function loadUserSystemTypes(userIds: string[]): Promise<Map<string, strin
   return userSystemTypesMap;
 }
 
-/**
- * Busca valores reais de pagamento da tabela affiliate_referrals
- */
-async function loadRealPaymentAmounts(userIds: string[]): Promise<Map<string, number>> {
-  const realPaymentAmounts = new Map<string, number>();
-  
-  if (userIds.length === 0) return realPaymentAmounts;
 
-  const batchSize = 50;
-  let allAffiliateReferrals: any[] = [];
-  
-  for (let i = 0; i < userIds.length; i += batchSize) {
-    const batch = userIds.slice(i, i + batchSize);
-    
-    const { data: batchData, error: batchError } = await supabase
-      .from('affiliate_referrals')
-      .select('referred_id, payment_amount')
-      .in('referred_id', batch);
-
-    if (batchError) {
-      console.warn(`⚠️ Erro ao buscar lote ${Math.floor(i/batchSize) + 1}:`, batchError);
-    } else {
-      if (batchData) {
-        allAffiliateReferrals = allAffiliateReferrals.concat(batchData);
-      }
-    }
-  }
-
-  allAffiliateReferrals?.forEach(ar => {
-    realPaymentAmounts.set(ar.referred_id, ar.payment_amount);
-  });
-
-  return realPaymentAmounts;
-}
 
 /**
  * Busca requisições de pagamento universitário
@@ -401,13 +367,12 @@ async function loadAffiliateRequests(currentRange: DateRange): Promise<any[]> {
 /**
  * Busca pagamentos da tabela individual_fee_payments (Stripe e outros)
  */
-async function loadIndividualFeePayments(currentRange: DateRange): Promise<any[]> {
-  // First, get the payments
+async function loadIndividualFeePayments(): Promise<any[]> {
+  // First, get the payments - REMOVIDO filtro de data para garantir match com histórico dos alunos
   const { data: payments, error: paymentsError } = await supabase
     .from('individual_fee_payments')
-    .select('id, user_id, fee_type, amount, gross_amount_usd, fee_amount_usd, payment_date, payment_method, payment_intent_id')
-    .gte('payment_date', currentRange.start.toISOString())
-    .lte('payment_date', currentRange.end.toISOString());
+    .select('id, user_id, fee_type, amount, gross_amount_usd, fee_amount_usd, payment_date, payment_method, payment_intent_id, parcelow_status')
+    .order('payment_date', { ascending: false });
 
   if (paymentsError) {
     console.error('❌ [FinancialAnalytics] Erro ao carregar pagamentos individuais:', paymentsError);
@@ -617,7 +582,7 @@ export async function loadFinancialData(
     loadApplications(),
     loadZellePayments(currentRange),
     loadAllStudents(),
-    loadIndividualFeePayments(currentRange)
+    loadIndividualFeePayments()
   ]);
 
   // Filtrar dados em produção/staging: excluir usuários com email @uorak.com
@@ -682,45 +647,40 @@ export async function loadFinancialData(
     loadUserSystemTypes(uniqueUserIds)
   ]);
   
-  // ✅ CORREÇÃO: Carregar valores reais pagos (COM taxas do Stripe) usando getGrossPaidAmounts
-  // Mesma lógica do PaymentManagement para garantir valores consistentes
+  // ✅ CORREÇÃO: Gerar realPaymentAmounts a partir de individualFeePayments carregados
+  // Isso evita N chamadas extras ao banco e garante que o Transformer use exatamente os mesmos dados
   const realPaymentAmounts = new Map<string, { selection_process?: number; scholarship?: number; i20_control?: number; application?: number }>();
   
-  // Processar em batches para evitar sobrecarga
-  const batchSize = 10;
-  const batches: string[][] = [];
-  for (let i = 0; i < uniqueUserIds.length; i += batchSize) {
-    batches.push(uniqueUserIds.slice(i, i + batchSize));
-  }
-  
-  // Processar batches em paralelo
-  const batchPromises = batches.map(async (batch) => {
-    const batchResults = await Promise.allSettled(
-      batch.map(async (userId) => {
-        try {
-          const amounts = await getGrossPaidAmounts(userId, ['selection_process', 'scholarship', 'i20_control', 'application']);
-          return { userId, amounts };
-        } catch (error) {
-          console.error(`Erro ao buscar valores brutos pagos para user_id ${userId}:`, error);
-          return { userId, amounts: {} };
-        }
-      })
-    );
+  // Como individualFeePayments já vem ordenado por payment_date DESC, o primeiro de cada tipo é o mais recente
+  individualFeePayments.forEach((payment: any) => {
+    // Ignorar pagamentos Parcelow que não estão com status 'paid'
+    if (payment.payment_method === 'parcelow' && payment.parcelow_status && payment.parcelow_status !== 'paid') return;
     
-    batchResults.forEach((result) => {
-      if (result.status === 'fulfilled' && result.value) {
-        const { userId, amounts } = result.value;
-        realPaymentAmounts.set(userId, {
-          selection_process: amounts.selection_process,
-          scholarship: amounts.scholarship,
-          i20_control: amounts.i20_control,
-          application: amounts.application,
-        });
+    // Valor bruto (gross)
+    const amountUSD = payment.gross_amount_usd 
+      ? Number(payment.gross_amount_usd) 
+      : Number(payment.amount);
+      
+    const userId = payment.user_id;
+    if (!realPaymentAmounts.has(userId)) {
+      realPaymentAmounts.set(userId, {});
+    }
+    
+    const userAmounts = realPaymentAmounts.get(userId)!;
+    
+    // Normalizar fee_type
+    const feeTypeKey = payment.fee_type === 'selection_process' || payment.fee_type === 'selection_process_fee' ? 'selection_process' :
+                      payment.fee_type === 'scholarship' || payment.fee_type === 'scholarship_fee' ? 'scholarship' :
+                      payment.fee_type === 'i20_control' || payment.fee_type === 'i20_control_fee' ? 'i20_control' :
+                      payment.fee_type === 'application' || payment.fee_type === 'application_fee' ? 'application' : null;
+
+    if (feeTypeKey && (userAmounts as any)[feeTypeKey] === undefined) {
+      (userAmounts as any)[feeTypeKey] = amountUSD;
+      if (import.meta.env.DEV && userId === '35ebf05b-2981-4721-9c0f-2bc5f5f02537') {
+         console.log(`[DEBUG-LOAD] ✅ Atribuído realPaymentAmount para Ágnis: ${feeTypeKey} = ${amountUSD}`);
       }
-    });
+    }
   });
-  
-  await Promise.allSettled(batchPromises);
 
   // Carregar requisições de pagamento
   const [universityRequests, affiliateRequests] = await Promise.all([
