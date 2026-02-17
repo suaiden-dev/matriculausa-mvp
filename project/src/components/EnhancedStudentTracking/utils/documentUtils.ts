@@ -12,13 +12,19 @@ export const handleViewDocument = async (doc: any) => {
     return;
   }
   
-  // Se for uma URL completa externa (não Supabase), abrir diretamente
-  if (fileUrl.startsWith('http') && !fileUrl.includes('supabase.co')) {
-    window.open(fileUrl, '_blank');
-    return;
+  // Se for uma URL completa externa (não Supabase) ou já for um link assinado/temporário, abrir diretamente
+  if (fileUrl.startsWith('http')) {
+    const isSupabasePublic = fileUrl.includes('/storage/v1/object/public/');
+    const isSupabaseSigned = fileUrl.includes('/storage/v1/object/sign/') || fileUrl.includes('token=');
+    
+    if (!isSupabasePublic || isSupabaseSigned) {
+      console.log('🔍 [UTILS] URL já é externa ou assinada. Abrindo diretamente.');
+      window.open(fileUrl, '_blank');
+      return;
+    }
   }
 
-  // Extrair o bucket e o path se for uma URL completa do Supabase
+  // Extrair o bucket e o path se for uma URL completa do Supabase (Pública)
   let path = fileUrl;
   if (fileUrl.includes('/storage/v1/object/public/')) {
     const parts = fileUrl.split('/storage/v1/object/public/');
@@ -36,48 +42,26 @@ export const handleViewDocument = async (doc: any) => {
     bucket = 'document-attachments';
   }
 
-  // Obter token de sessão para autenticação no Proxy
-  const { data: { session } } = await supabase.auth.getSession();
-  const token = session?.access_token;
-  
-  if (!token) {
-    console.warn('🔍 [UTILS] Alerta: Nenhum token de sessão encontrado!');
-  } else {
-    console.log(`🔍 [UTILS] Token encontrado: ${token.substring(0, 10)}...`);
-  }
-
-  // Gerar URL via Proxy (Edge Function)
-  const functionUrl = `https://fitpynguasqqutuhzifx.functions.supabase.co/document-proxy`;
-  const proxyUrl = `${functionUrl}?bucket=${encodeURIComponent(bucket)}&path=${encodeURIComponent(path)}`;
-  
-  console.log('🔍 [UTILS] Buscando documento via Proxy (Secure Fetch)');
-  
-  const headers = {
-    'Authorization': token ? `Bearer ${token}` : '',
-    'apikey': import.meta.env.VITE_SUPABASE_ANON_KEY
-  };
-  
-  console.log('🔍 [UTILS] Headers sendo enviados:', {
-    hasAuth: !!headers.Authorization,
-    hasApikey: !!headers.apikey,
-    apikeyLength: headers.apikey?.length
-  });
-  
   try {
-    const response = await fetch(proxyUrl, { headers });
+    // ✅ SOLUÇÃO DEFINITIVA E SEGURA: Usar Signed URL oficial do Supabase
+    // Isso evita problemas de Proxy 404, Blobs e CORS
+    const { data: signedData, error: signedError } = await supabase.storage
+      .from(bucket)
+      .createSignedUrl(path, 3600);
 
-    if (!response.ok) {
-      throw new Error(`Erro ao buscar documento: ${response.statusText}`);
+    if (signedError) {
+      console.error('🔍 [UTILS] Erro Supabase:', signedError);
+      throw new Error(`Erro ao acessar arquivo: ${signedError.message}`);
     }
 
-    const blob = await response.blob();
-    const blobUrl = URL.createObjectURL(blob);
-    
-    // Abrir o Blob URL em uma nova aba
-    // Isso é seguro porque Blob URLs não são compartilháveis entre sessões/navegadores
-    window.open(blobUrl, '_blank');
+    if (signedData?.signedUrl) {
+      console.log('🔍 [UTILS] URL Assinada gerada com sucesso. Abrindo em nova aba...');
+      window.open(signedData.signedUrl, '_blank');
+    } else {
+      throw new Error('Não foi possível gerar o link de acesso seguro.');
+    }
   } catch (err: any) {
-    console.error('🔍 [UTILS] Error opening document:', err);
+    console.error('🔍 [UTILS] Erro ao abrir documento:', err);
     alert('Erro ao carregar o documento com segurança. Verifique se você está logado.');
   }
 };
@@ -85,7 +69,7 @@ export const handleViewDocument = async (doc: any) => {
 export const handleDownloadDocument = async (doc: any) => {
   // ✅ Aceitar tanto file_url quanto url (fallback)
   const fileUrl: string | undefined = doc?.file_url || doc?.url;
-  const bucket: string = doc?.bucket_id || 'student-documents';
+  let bucket: string = doc?.bucket_id || 'student-documents';
 
   if (!fileUrl) return;
   
@@ -94,53 +78,60 @@ export const handleDownloadDocument = async (doc: any) => {
     
     // Extrair o path se for uma URL completa do Supabase
     let path = fileUrl;
-    if (fileUrl.includes('/storage/v1/object/public/')) {
-      const parts = fileUrl.split('/storage/v1/object/public/');
-      if (parts.length > 1) {
-        path = parts[1].split('/').slice(1).join('/');
+    if (fileUrl.startsWith('http')) {
+      const isSupabasePublic = fileUrl.includes('/storage/v1/object/public/');
+      const isSupabaseSigned = fileUrl.includes('/storage/v1/object/sign/') || fileUrl.includes('token=');
+
+      if (!isSupabasePublic || isSupabaseSigned) {
+        // Se for externo ou já assinado, baixar direto
+        console.log('🔍 [UTILS] URL já é externa ou assinada para download. Baixando diretamente.');
+        const link = document.createElement('a');
+        link.href = fileUrl;
+        link.download = doc.filename || 'document';
+        document.body.appendChild(link);
+        link.click();
+        document.body.removeChild(link);
+        return;
       }
-    } else if (fileUrl.startsWith('http') && !fileUrl.includes('supabase.co')) {
-      // Se for externo, baixar direto
-      const response = await fetch(fileUrl);
-      const blob = await response.blob();
-      const url = URL.createObjectURL(blob);
+
+      if (isSupabasePublic) {
+        const parts = fileUrl.split('/storage/v1/object/public/');
+        if (parts.length > 1) {
+          const pathParts = parts[1].split('/');
+          bucket = pathParts[0];
+          path = pathParts.slice(1).join('/');
+        }
+      }
+    }
+
+    // Se o path contém 'transfer-forms' ou começa com 'uploads/', deve usar o bucket 'document-attachments'
+    if (path.includes('transfer-forms') || path.startsWith('uploads/')) {
+      bucket = 'document-attachments';
+    }
+
+    // ✅ SOLUÇÃO DEFINITIVA E SEGURA: Usar Signed URL com download forçado
+    const { data: signedData, error: signedError } = await supabase.storage
+      .from(bucket)
+      .createSignedUrl(path, 3600, {
+        download: doc.filename || `${doc.type || 'document'}.pdf`
+      });
+
+    if (signedError) {
+      console.error('🔍 [UTILS] Erro Supabase no Download:', signedError);
+      throw new Error(`Erro ao acessar arquivo para download: ${signedError.message}`);
+    }
+
+    if (signedData?.signedUrl) {
+      console.log('🔍 [UTILS] URL de Download gerada com sucesso');
       const link = document.createElement('a');
-      link.href = url;
-      link.download = doc.filename || 'document';
+      link.href = signedData.signedUrl;
+      link.download = doc.filename || 'document.pdf';
+      document.body.appendChild(link);
       link.click();
-      URL.revokeObjectURL(url);
-      return;
+      document.body.removeChild(link);
+    } else {
+      throw new Error('Não foi possível gerar o link de download seguro.');
     }
-
-    // Obter token de sessão
-    const { data: { session } } = await supabase.auth.getSession();
-    const token = session?.access_token;
-
-    // Gerar URL via Proxy
-    const functionUrl = `https://fitpynguasqqutuhzifx.functions.supabase.co/document-proxy`;
-    const proxyUrl = `${functionUrl}?bucket=${encodeURIComponent(bucket)}&path=${encodeURIComponent(path)}`;
-    
-    console.log('Iniciando download via Proxy:', proxyUrl);
-    
-    const response = await fetch(proxyUrl, {
-      headers: {
-        'Authorization': token ? `Bearer ${token}` : ''
-      }
-    });
-
-    if (!response.ok) {
-      throw new Error('Failed to download document: ' + response.statusText);
-    }
-    
-    const blob = await response.blob();
-    const url = URL.createObjectURL(blob);
-    const link = document.createElement('a');
-    link.href = url;
-    link.download = doc.filename || `${doc.type || 'document'}.pdf`;
-    document.body.appendChild(link);
-    link.click();
-    document.body.removeChild(link);
-    URL.revokeObjectURL(url);
   } catch (err: any) {
     console.error('Erro no download:', err);
     alert(`Failed to download document: ${err.message}`);
