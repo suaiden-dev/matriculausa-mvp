@@ -13,6 +13,7 @@ import DocumentViewerModal from '../../components/DocumentViewerModal';
 import { STRIPE_PRODUCTS } from '../../stripe-config';
 import { FileText, UserCircle, GraduationCap, CheckCircle, Building, Award, Home, Info, FileCheck, FolderOpen, MapPin, Phone, Globe, Mail, BookOpen, DollarSign } from 'lucide-react';
 import { I20ControlFeeModal } from '../../components/I20ControlFeeModal';
+import { ProfileRequiredModal } from '../../components/ProfileRequiredModal';
 import TruncatedText from '../../components/TruncatedText';
 import { ExpandableTabs } from '../../components/ui/expandable-tabs';
 // Remover os imports das imagens
@@ -47,12 +48,14 @@ const ApplicationChatPage: React.FC = () => {
   // Todos os hooks devem vir ANTES de qualquer return condicional
   const [i20Loading, setI20Loading] = useState(false);
   const [i20Error, setI20Error] = useState<string | null>(null);
+  const [showProfileRequiredModal, setShowProfileRequiredModal] = useState(false);
+  const [profileErrorType, setProfileErrorType] = useState<'cpf_missing' | 'profile_incomplete' | null>(null);
   const [applicationDetails, setApplicationDetails] = useState<any>(null);
   const [previewUrl, setPreviewUrl] = useState<string | null>(null);
   const [i20Countdown, setI20Countdown] = useState<string | null>(null);
   const [scholarshipFeeDeadline, setScholarshipFeeDeadline] = useState<Date | null>(null);
   const [showI20ControlFeeModal, setShowI20ControlFeeModal] = useState(false);
-  const [selectedPaymentMethod, setSelectedPaymentMethod] = useState<'stripe' | 'zelle' | 'pix' | null>(null);
+  const [selectedPaymentMethod, setSelectedPaymentMethod] = useState<'stripe' | 'zelle' | 'pix' | 'parcelow' | null>(null);
   // Ajustar tipo de activeTab para remover 'chat'
   const [activeTab, setActiveTab] = useState<'welcome' | 'details' | 'i20' | 'documents'>('welcome');
   // Estado para cupom promocional do I-20 Control Fee
@@ -63,6 +66,7 @@ const ApplicationChatPage: React.FC = () => {
   } | null>(null);
   // Estado para valor real pago do I-20 (incluindo descontos)
   const [realI20PaidAmount, setRealI20PaidAmount] = useState<number | null>(null);
+  const [realI20PaymentDate, setRealI20PaymentDate] = useState<string | null>(null);
   
   // Estados para controlar document requests (removidos - não mais utilizados)
 
@@ -253,11 +257,13 @@ const ApplicationChatPage: React.FC = () => {
       }
 
       try {
+        // Só considerar pagamentos efetivamente concluídos: Parcelow deve ter parcelow_status = 'paid'
         const { data: payments, error } = await supabase
           .from('individual_fee_payments')
-          .select('amount, gross_amount_usd')
+          .select('amount, gross_amount_usd, payment_date, created_at, payment_method, parcelow_status')
           .eq('user_id', user.id)
           .eq('fee_type', 'i20_control')
+          .or('parcelow_status.is.null,parcelow_status.eq.paid')
           .order('created_at', { ascending: false })
           .limit(1)
           .maybeSingle();
@@ -274,8 +280,10 @@ const ApplicationChatPage: React.FC = () => {
             ? parseFloat(payments.gross_amount_usd.toString())
             : parseFloat(payments.amount.toString());
           setRealI20PaidAmount(displayAmount);
+          setRealI20PaymentDate(payments.payment_date || payments.created_at || null);
         } else {
           setRealI20PaidAmount(null);
+          setRealI20PaymentDate(null);
         }
       } catch (error) {
         console.error('[ApplicationChatPage] Erro inesperado ao buscar valor pago do I-20:', error);
@@ -313,7 +321,7 @@ const ApplicationChatPage: React.FC = () => {
   // Lógica de exibição do card
   const hasPaid = !!(userProfile && (userProfile as any).has_paid_i20_control_fee);
   const dueDate = (userProfile && (userProfile as any).i20_control_fee_due_date) || null;
-  const paymentDate = (userProfile && (userProfile as any).i20_control_fee_due_date) || null;
+  const paymentDate = realI20PaymentDate || (userProfile && (userProfile as any).i20_paid_at) || null;
 
   // Função para iniciar o pagamento do I-20 Control Fee
   const handlePayI20 = async () => {
@@ -335,7 +343,7 @@ const ApplicationChatPage: React.FC = () => {
   const [exchangeRate, setExchangeRate] = useState<number | null>(null);
 
   // Função para lidar com a seleção do método de pagamento
-  const handlePaymentMethodSelect = (method: 'stripe' | 'zelle' | 'pix', exchangeRateParam?: number) => {
+  const handlePaymentMethodSelect = (method: 'stripe' | 'zelle' | 'pix' | 'parcelow', exchangeRateParam?: number) => {
     console.log('🔍 [ApplicationChatPage] Método de pagamento selecionado:', method, 'Taxa de câmbio:', exchangeRateParam);
     setSelectedPaymentMethod(method);
     if (method === 'pix' && exchangeRateParam) {
@@ -469,6 +477,67 @@ const ApplicationChatPage: React.FC = () => {
         }
         
         window.location.href = `/checkout/zelle?${params.toString()}`;
+      } else if (selectedPaymentMethod === 'parcelow') {
+        // Redirecionar para o Parcelow
+        const token = (await supabase.auth.getSession()).data.session?.access_token;
+        const supabaseUrl = import.meta.env.VITE_SUPABASE_URL;
+        const apiUrl = `${supabaseUrl}/functions/v1/parcelow-checkout-i20-control-fee`;
+        
+        // Obter valor final
+        const finalAmount = (window as any).__checkout_final_amount || parseFloat(i20ControlFee?.replace('$', '') || '0');
+        const promotionalCoupon = (window as any).__checkout_promotional_coupon || null;
+        
+        console.log('🔍 [ApplicationChatPage] Iniciando checkout Parcelow para I-20...', { finalAmount, promotionalCoupon });
+        
+        const res = await fetch(apiUrl, {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'Authorization': `Bearer ${token}`,
+          },
+          body: JSON.stringify({
+            amount: finalAmount,
+            fee_type: 'i20_control_fee',
+            metadata: {
+              application_id: applicationId,
+              student_process_type: applicationDetails?.student_process_type,
+              final_amount: finalAmount,
+              promotional_coupon: promotionalCoupon
+            },
+            promotional_coupon: promotionalCoupon,
+            scholarships_ids: applicationDetails?.scholarships?.id ? [applicationDetails.scholarships.id] : []
+          }),
+        });
+        
+        if (!res.ok) {
+          const errorData = await res.json();
+          console.error('🔍 [ApplicationChatPage] Erro Parcelow:', errorData);
+          
+          if (errorData.error === 'document_number_required') {
+            setProfileErrorType('cpf_missing');
+            setShowProfileRequiredModal(true);
+            setI20Loading(false);
+            return;
+          }
+          
+          if (errorData.error === 'User profile not found') {
+            setProfileErrorType('profile_incomplete');
+            setShowProfileRequiredModal(true);
+            setI20Loading(false);
+            return;
+          }
+          
+          throw new Error(errorData.error || 'Erro ao criar sessão Parcelow');
+        }
+
+        const data = await res.json();
+        if (data.checkout_url) {
+          console.log('[Parcelow] Redirecionando para:', data.checkout_url);
+          window.location.href = data.checkout_url;
+          return;
+        } else {
+          throw new Error('URL de checkout Parcelow não encontrada');
+        }
       }
       
       // Se chegou até aqui sem erro, não fechar o modal ainda (redirecionamento está acontecendo)
@@ -1715,6 +1784,17 @@ const ApplicationChatPage: React.FC = () => {
           onClose={handleCloseI20Modal}
           selectedPaymentMethod={selectedPaymentMethod}
           onPaymentMethodSelect={handlePaymentMethodSelect}
+          isLoading={i20Loading}
+        />
+
+        {/* Profile Required Modal */}
+        <ProfileRequiredModal
+          isOpen={showProfileRequiredModal}
+          onClose={() => {
+            setShowProfileRequiredModal(false);
+            setProfileErrorType(null);
+          }}
+          errorType={profileErrorType}
         />
       </div>
     </div>

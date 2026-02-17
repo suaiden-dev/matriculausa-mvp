@@ -1,5 +1,5 @@
-import React, { useEffect, useState } from 'react';
-import { Link } from 'react-router-dom';
+import React, { useEffect, useState, useRef } from 'react';
+import { Link, useSearchParams } from 'react-router-dom';
 import { 
   Award, 
   FileText, 
@@ -64,6 +64,8 @@ const Overview: React.FC<OverviewProps> = ({
 }) => {
   const { t } = useTranslation();
   const queryClient = useQueryClient();
+  const [searchParams, setSearchParams] = useSearchParams();
+  const paymentButtonRef = useRef<HTMLButtonElement>(null);
 
   const { user, userProfile, refetchUserProfile } = useAuth();
   const { activeDiscount } = useReferralCode();
@@ -162,6 +164,36 @@ const Overview: React.FC<OverviewProps> = ({
       window.removeEventListener('promotionalCouponRemoved', handleCouponRemoved);
     };
   }, [queryClient]);
+
+  // Abertura automática do modal de pagamento via query param ou fallback localStorage
+  useEffect(() => {
+    const shouldOpenModal = searchParams.get('openModal') || localStorage.getItem('pending_open_modal');
+    
+    if (shouldOpenModal === 'selection_process' && !paymentBlockedLoading && paymentButtonRef.current) {
+      console.log('[Overview] Comando para abrir modal detectado:', searchParams.get('openModal') ? 'Query Param' : 'LocalStorage');
+      
+      // Aguardar um momento para garantir que o componente está totalmente renderizado
+      const timer = setTimeout(() => {
+        // Simular clique no botão de pagamento
+        paymentButtonRef.current?.click();
+        
+        // Limpar o parâmetro da URL e o localStorage
+        if (searchParams.get('openModal')) {
+          searchParams.delete('openModal');
+          setSearchParams(searchParams, { replace: true });
+        }
+        localStorage.removeItem('pending_open_modal');
+        
+        // Scroll suave até o card de pagamento
+        const paymentCard = document.getElementById('selection-process-payment');
+        if (paymentCard) {
+          paymentCard.scrollIntoView({ behavior: 'smooth', block: 'center' });
+        }
+      }, 800);
+      
+      return () => clearTimeout(timer);
+    }
+  }, [searchParams, setSearchParams, paymentBlockedLoading]);
 
   const getStatusColor = (status: string) => {
     switch (status) {
@@ -351,10 +383,10 @@ const Overview: React.FC<OverviewProps> = ({
   };
 
   const dynamicFeeValues = [
-    isFeesLoading ? <FeeSkeleton /> : getSelectionProcessFeeDisplay(), // Selection Process Fee (valor real pago ou esperado)
+    isFeesLoading ? '...' : String(getSelectionProcessFeeDisplay()), // Selection Process Fee (valor real pago ou esperado)
     t('feeValues.asPerUniversity'), // Application Fee (variável - não mostra valor específico)
-    isFeesLoading ? <FeeSkeleton /> : getScholarshipFeeDisplay(), // Scholarship Fee (valor real pago ou esperado)
-    isFeesLoading ? <FeeSkeleton /> : getI20ControlFeeDisplay(), // I-20 Control Fee (valor real pago ou esperado)
+    isFeesLoading ? '...' : String(getScholarshipFeeDisplay()), // Scholarship Fee (valor real pago ou esperado)
+    isFeesLoading ? '...' : String(getI20ControlFeeDisplay()), // I-20 Control Fee (valor real pago ou esperado)
   ];
 
   // Lógica da barra de progresso dinâmica
@@ -627,6 +659,7 @@ const Overview: React.FC<OverviewProps> = ({
                 </div>
               ) : (
                 <StripeCheckout 
+                  ref={paymentButtonRef}
                   productId="selectionProcess"
                   feeType="selection_process"
                   paymentType="selection_process"

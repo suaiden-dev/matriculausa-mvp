@@ -1,24 +1,8 @@
 import React, { useState, useEffect } from 'react';
 import { Pencil, Trash2, X, CheckCircle, Eye, EyeOff, History, Users, Calendar, Globe, FileText, Download } from 'lucide-react';
-import { CKEditor } from '@ckeditor/ckeditor5-react';
 import { supabase } from '../../lib/supabase';
-import { ckEditorConfig, ckEditorStyles } from '../../config/ckeditor';
 import { generateTermAcceptancePDF, StudentTermAcceptanceData } from '../../utils/pdfGenerator';
-
-// Importar Editor dinamicamente - usando build decoupled-document para melhor suporte HTML
-let DecoupledDocumentEditor: any = null;
-const loadEditor = async () => {
-  if (!DecoupledDocumentEditor) {
-    try {
-      const { default: Editor } = await import('@ckeditor/ckeditor5-build-decoupled-document');
-      DecoupledDocumentEditor = Editor;
-    } catch (error) {
-      console.error('Erro ao carregar CKEditor:', error);
-      throw error;
-    }
-  }
-  return DecoupledDocumentEditor;
-};
+import RichTextEditor from '../../components/RichTextEditor/RichTextEditor';
 
 
 // Estilos adicionais para o conteúdo
@@ -147,29 +131,26 @@ const TermsManagement: React.FC<TermsManagementProps> = ({ defaultTab = 'terms' 
   const [editingTerm, setEditingTerm] = useState<Term | null>(null);
   const [viewingTerm, setViewingTerm] = useState<Term | null>(null);
   const [showRawContent, setShowRawContent] = useState(false);
-  
+
   // Acceptance history states
   const [activeTab, setActiveTab] = useState<'terms' | 'history'>(defaultTab);
   const [acceptanceHistory, setAcceptanceHistory] = useState<TermAcceptance[]>([]);
   const [acceptanceHistoryLoading, setAcceptanceHistoryLoading] = useState(false);
   const [selectedTermForHistory, setSelectedTermForHistory] = useState<Term | null>(null);
   const [historySearchTerm, setHistorySearchTerm] = useState('');
-  
+
   // Pagination states
   const [currentPage, setCurrentPage] = useState(1);
   const [itemsPerPage, setItemsPerPage] = useState(10);
   const [totalItems, setTotalItems] = useState(0);
 
-  // Configuração do CKEditor
+  // Configuração do Editor
   const [originalHtml, setOriginalHtml] = useState<string>('');
-  const [editMode, setEditMode] = useState<'wysiwyg' | 'html'>('wysiwyg');
-  const [ckEditorInstance, setCkEditorInstance] = useState<any>(null);
-  const [editorReady, setEditorReady] = useState(false);
 
   // Função para limpar HTML para comparação
   const cleanHtmlForComparison = (html: string) => {
     if (!html) return '';
-    
+
     return html
       .replace(/\s+/g, ' ') // Normalizar espaços
       .replace(/>\s+</g, '><') // Remover espaços entre tags
@@ -183,12 +164,12 @@ const TermsManagement: React.FC<TermsManagementProps> = ({ defaultTab = 'terms' 
   // Função para preservar HTML original com GHS
   const preserveHtmlWithGHS = (html: string) => {
     if (!html) return '';
-    
+
     // Armazenar HTML original apenas uma vez
     if (!originalHtml && html) {
       setOriginalHtml(html);
     }
-    
+
     return html;
   };
 
@@ -199,20 +180,6 @@ const TermsManagement: React.FC<TermsManagementProps> = ({ defaultTab = 'terms' 
     }
   };
 
-  // Função para alternar modo de edição
-  const toggleEditMode = () => {
-    if (ckEditorInstance) {
-      if (editMode === 'wysiwyg') {
-        // Alternar para modo de edição de fonte
-        ckEditorInstance.execute('sourceEditing');
-        setEditMode('html');
-      } else {
-        // Alternar para modo WYSIWYG
-        ckEditorInstance.execute('sourceEditing');
-        setEditMode('wysiwyg');
-      }
-    }
-  };
 
 
 
@@ -226,7 +193,7 @@ const TermsManagement: React.FC<TermsManagementProps> = ({ defaultTab = 'terms' 
         .order('created_at', { ascending: false });
 
       if (error) throw error;
-      
+
       setTerms(data || []);
     } catch (err: any) {
       console.error('❌ Erro ao carregar termos:', err);
@@ -240,7 +207,7 @@ const TermsManagement: React.FC<TermsManagementProps> = ({ defaultTab = 'terms' 
   const loadAcceptanceHistory = async (termId?: string) => {
     try {
       setAcceptanceHistoryLoading(true);
-      
+
       // Buscar todas as aceitações (sem paginação no servidor)
       let query = supabase
         .from('comprehensive_term_acceptance')
@@ -309,7 +276,6 @@ const TermsManagement: React.FC<TermsManagementProps> = ({ defaultTab = 'terms' 
 
   useEffect(() => {
     loadTerms();
-    loadEditor().then(() => setEditorReady(true));
   }, []);
 
   // Update active tab when defaultTab prop changes
@@ -345,23 +311,23 @@ const TermsManagement: React.FC<TermsManagementProps> = ({ defaultTab = 'terms' 
           .eq('term_type', editingTerm.term_type)
           .neq('id', editingTerm.id);
       }
-      
+
       // Preparar dados para atualização
       // Implementar merge inteligente: preservar edições válidas, restaurar apenas se truncado
       let contentToSave = editingTerm.content;
-      
+
       // Verificar se o usuário fez edições válidas (comparando HTML limpo)
       const cleanedOriginal = cleanHtmlForComparison(originalHtml);
       const cleanedEdited = cleanHtmlForComparison(editingTerm.content);
       const hasValidEdits = cleanedEdited !== cleanedOriginal;
       const lengthDiff = Math.abs(editingTerm.content.length - originalHtml.length);
       const lengthRatio = lengthDiff / originalHtml.length;
-      
+
       // Critérios para restaurar HTML original:
       // 1. HTML foi significativamente truncado (>50% de diferença)
       // 2. E não há edições válidas do usuário
       const shouldRestore = lengthRatio > 0.5 && !hasValidEdits;
-      
+
       if (shouldRestore) {
         contentToSave = originalHtml;
       } else if (hasValidEdits) {
@@ -397,13 +363,11 @@ const TermsManagement: React.FC<TermsManagementProps> = ({ defaultTab = 'terms' 
       if (!updateResult || updateResult.length === 0) {
         throw new Error('Nenhuma linha foi atualizada. Verifique permissões ou RLS.');
       }
-      
+
       // Recarregar termos para refletir as mudanças
       await loadTerms();
       setEditingTerm(null);
       setOriginalHtml(''); // Limpar HTML original
-      setEditMode('wysiwyg'); // Resetar modo de edição
-      setCkEditorInstance(null); // Limpar instância do CKEditor
     } catch (err: any) {
       console.error('❌ Erro ao atualizar termo:', err);
       setError(err.message);
@@ -422,7 +386,7 @@ const TermsManagement: React.FC<TermsManagementProps> = ({ defaultTab = 'terms' 
         .eq('id', id);
 
       if (error) throw error;
-      
+
       // Recarregar termos para refletir as mudanças
       await loadTerms();
     } catch (err: any) {
@@ -471,14 +435,12 @@ const TermsManagement: React.FC<TermsManagementProps> = ({ defaultTab = 'terms' 
 
   return (
     <>
-      {/* Estilos personalizados para o CKEditor */}
-      <style>{ckEditorStyles}</style>
       <style>{additionalStyles}</style>
-      
+
       <div className="space-y-8 px-4 sm:px-6 lg:px-8">
-      
-      {/* Abas de navegação */}
-      {/* <div className="flex items-center justify-between mb-6">
+
+        {/* Abas de navegação */}
+        {/* <div className="flex items-center justify-between mb-6">
         <div className="flex space-x-1 bg-slate-100 p-1 rounded-lg">
           <button
             onClick={() => setActiveTab('terms')}
@@ -508,507 +470,467 @@ const TermsManagement: React.FC<TermsManagementProps> = ({ defaultTab = 'terms' 
         
       </div> */}
 
-      {/* Error Message */}
-      {error && (
-        <div className="bg-red-50 text-red-600 p-4 rounded-lg">
-          {error}
-        </div>
-      )}
-
-
-      {/* Conteúdo baseado na aba ativa */}
-      {activeTab === 'terms' && (
-        <>
-          {/* Terms List */}
-          <div className="space-y-6">
-            {terms.map((term) => (
-          <div
-            key={term.id}
-            className={`bg-white rounded-xl shadow-sm border p-6 cursor-pointer transition-all duration-200 hover:shadow-md ${
-              term.is_active ? 'border-blue-200 bg-blue-50' : 'border-slate-200'
-            }`}
-            onClick={() => setViewingTerm(term)}
-          >
-            {editingTerm?.id === term.id ? (
-              // Edit Mode
-              <div className="space-y-4" onClick={(e) => e.stopPropagation()}>
-                <div>
-                  <label className="block text-sm font-medium text-slate-700 mb-2">
-                    Title
-                  </label>
-                  <input
-                    type="text"
-                    value={editingTerm.title}
-                    onChange={(e) => setEditingTerm({ ...editingTerm, title: e.target.value })}
-                    className="w-full px-4 py-2 border border-slate-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
-                  />
-                </div>
-                <div>
-                  <div className="flex items-center justify-between mb-2">
-                    <label className="block text-sm font-medium text-slate-700">
-                    Content
-                  </label>
-                    <div className="flex items-center space-x-2">
-                      <button
-                        onClick={toggleEditMode}
-                        className="text-xs px-3 py-1 bg-orange-100 text-orange-700 rounded hover:bg-orange-200 transition-colors"
-                        title="Alternar entre modo visual e edição de HTML"
-                      >
-                        {editMode === 'wysiwyg' ? 'Switch to HTML' : 'Switch to Visual'}
-                      </button>
-                    </div>
-                  </div>
-                  
-                  {editorReady && DecoupledDocumentEditor ? (
-                    <div className="ck-editor-container">
-                      <div className="ck-toolbar-container"></div>
-                      <CKEditor
-                        editor={DecoupledDocumentEditor}
-                        data={preserveHtmlWithGHS(editingTerm.content || '')}
-                        config={ckEditorConfig as any}
-                        onReady={(editor) => {
-                          // Para o build decoupled-document, precisamos inserir a toolbar manualmente
-                          const toolbarContainer = document.querySelector('.ck-toolbar-container');
-                          if (toolbarContainer && editor.ui.view.toolbar && editor.ui.view.toolbar.element) {
-                            toolbarContainer.appendChild(editor.ui.view.toolbar.element);
-                          }
-                          setCkEditorInstance(editor);
-                        }}
-                        onChange={(_event, editor) => {
-                          const data = editor.getData();
-                          const newEditingTerm = { ...editingTerm, content: data };
-                          setEditingTerm(newEditingTerm);
-                        }}
-                      />
-                    </div>
-                  ) : (
-                    <div className="w-full h-96 border border-slate-300 rounded-lg flex items-center justify-center bg-slate-50">
-                      <div className="text-center">
-                        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600 mx-auto mb-2"></div>
-                        <p className="text-slate-600 text-sm">Carregando editor...</p>
-                      </div>
-                    </div>
-                  )}
-                </div>
-                <div className="flex items-center space-x-3">
-                  <label className="relative inline-flex items-center cursor-pointer">
-                    <input
-                      type="checkbox"
-                      className="sr-only peer"
-                      checked={editingTerm.is_active}
-                      onChange={(e) => setEditingTerm({ ...editingTerm, is_active: e.target.checked })}
-                    />
-                    <div className="w-11 h-6 bg-gray-200 rounded-full peer peer-checked:after:translate-x-full rtl:peer-checked:after:-translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:start-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-blue-600"></div>
-                  </label>
-                  <span className="text-sm font-medium text-slate-700">
-                    Active term (will deactivate others)
-                  </span>
-                </div>
-                <div className="flex justify-between items-center">
-                  <div className="flex space-x-2">
-                    <button
-                      onClick={restoreOriginalHtml}
-                      className="px-3 py-1 text-sm text-orange-600 hover:text-orange-800 hover:bg-orange-50 rounded transition-colors"
-                      title="Restaurar HTML original"
-                    >
-                      Restaurar Original
-                    </button>
-                  </div>
-                  <div className="flex space-x-4">
-                    <button
-                      onClick={() => {
-                        setEditingTerm(null);
-                        setOriginalHtml(''); // Limpar HTML original
-                        setEditMode('wysiwyg'); // Resetar modo de edição
-                        setCkEditorInstance(null); // Limpar instância do CKEditor
-                      }}
-                    className="px-4 py-2 text-slate-600 hover:text-slate-800"
-                  >
-                    Cancel
-                  </button>
-                  <button
-                    onClick={handleUpdateTerm}
-                    disabled={!editingTerm.title || !editingTerm.content}
-                    className="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-lg font-medium transition-colors duration-200 disabled:opacity-50 disabled:cursor-not-allowed"
-                  >
-                    Save Changes
-                  </button>
-                  </div>
-                </div>
-              </div>
-            ) : (
-              // View Mode
-              <>
-                <div className="flex justify-between items-start mb-4">
-                  <div className="flex items-center space-x-3">
-                    <h3 className="text-xl font-bold text-slate-900">{term.title}</h3>
-                    {term.is_active && (
-                      <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-blue-100 text-blue-800">
-                        Active
-                      </span>
-                    )}
-                    <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-gray-100 text-gray-800 capitalize">
-                      {term.term_type?.replace(/_/g, ' ') || 'N/A'}
-                    </span>
-                  </div>
-                  <div className="flex items-center gap-2" onClick={(e) => e.stopPropagation()}>
-                    <button
-                      onClick={() => {
-                        setSelectedTermForHistory(term);
-                        setActiveTab('history');
-                        setCurrentPage(1); // Reset to first page
-                        loadAcceptanceHistory(term.id);
-                      }}
-                      className="p-2 text-green-400 hover:text-green-600 hover:bg-green-50 rounded-lg transition-colors"
-                      title="Ver histórico de aceitações"
-                    >
-                      <History className="h-4 w-4" />
-                    </button>
-                    <button
-                      onClick={() => setViewingTerm(term)}
-                      className="p-2 text-slate-400 hover:text-slate-600 hover:bg-slate-100 rounded-lg transition-colors"
-                      title="Ver detalhes"
-                    >
-                      <Eye className="h-4 w-4" />
-                    </button>
-                    <button
-                      onClick={() => {
-                        setEditingTerm(term);
-                        // Limpar HTML original para permitir novo armazenamento
-                        setOriginalHtml('');
-                      }}
-                      className="p-2 text-slate-400 hover:text-slate-600 hover:bg-slate-100 rounded-lg transition-colors"
-                      title="Editar termo"
-                    >
-                      <Pencil className="h-4 w-4" />
-                    </button>
-                    <button
-                      onClick={() => handleDeleteTerm(term.id)}
-                      className="p-2 text-red-400 hover:text-red-600 hover:bg-red-50 rounded-lg transition-colors"
-                      title="Excluir termo"
-                    >
-                      <Trash2 className="h-4 w-4" />
-                    </button>
-                  </div>
-                </div>
-                <div className="prose prose-slate max-w-none">
-                  <div 
-                    className="text-slate-600 line-clamp-3"
-                    dangerouslySetInnerHTML={{ __html: term.content }}
-                  />
-                </div>
-                <div className="mt-4 flex items-center space-x-4 text-sm text-slate-500">
-                  <span>Created: {new Date(term.created_at).toLocaleDateString('pt-BR')}</span>
-                  {term.updated_at && (
-                    <span>• Updated: {new Date(term.updated_at).toLocaleDateString('pt-BR')}</span>
-                  )}
-                  <span>• Click to view full content</span>
-                </div>
-              </>
-            )}
-          </div>
-        ))}
-
-        {terms.length === 0 && (
-          <div className="text-center py-12 bg-white rounded-xl shadow-sm border border-slate-200">
-            <div className="w-20 h-20 bg-slate-100 rounded-2xl flex items-center justify-center mx-auto mb-6">
-              <CheckCircle className="h-10 w-10 text-slate-400" />
-            </div>
-            <h3 className="text-lg font-medium text-slate-900 mb-2">No Terms Found</h3>
-            <p className="text-slate-600 mb-6">
-              The system manages two specific terms: University Partnership Agreement and Student Checkout Terms.
-            </p>
+        {/* Error Message */}
+        {error && (
+          <div className="bg-red-50 text-red-600 p-4 rounded-lg">
+            {error}
           </div>
         )}
-          </div>
-        </>
-      )}
 
-      {/* Aba de Histórico de Aceitações */}
-      {activeTab === 'history' && (
-        <div className="bg-white shadow rounded-lg overflow-hidden">
-          <div className="p-6">
-            <div className="flex items-center justify-between mb-6">
-              {/* <h3 className="text-lg font-medium text-gray-900">
+
+        {/* Conteúdo baseado na aba ativa */}
+        {activeTab === 'terms' && (
+          <>
+            {/* Terms List */}
+            <div className="space-y-6">
+              {terms.map((term) => (
+                <div
+                  key={term.id}
+                  className={`bg-white rounded-xl shadow-sm border p-6 cursor-pointer transition-all duration-200 hover:shadow-md ${term.is_active ? 'border-blue-200 bg-blue-50' : 'border-slate-200'
+                    }`}
+                  onClick={() => setViewingTerm(term)}
+                >
+                  {editingTerm?.id === term.id ? (
+                    // Edit Mode
+                    <div className="space-y-4" onClick={(e) => e.stopPropagation()}>
+                      <div>
+                        <label className="block text-sm font-medium text-slate-700 mb-2">
+                          Title
+                        </label>
+                        <input
+                          type="text"
+                          value={editingTerm.title}
+                          onChange={(e) => setEditingTerm({ ...editingTerm, title: e.target.value })}
+                          className="w-full px-4 py-2 border border-slate-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+                        />
+                      </div>
+                      <div>
+                        <div className="flex items-center justify-between mb-2">
+                          <label className="block text-sm font-medium text-slate-700">
+                            Content
+                          </label>
+                        </div>
+
+                        <RichTextEditor
+                          content={editingTerm.content || ''}
+                          onChange={(html) => setEditingTerm({ ...editingTerm, content: html })}
+                          placeholder="Start typing your terms here..."
+                        />
+                      </div>
+                      <div className="flex items-center space-x-3">
+                        <label className="relative inline-flex items-center cursor-pointer">
+                          <input
+                            type="checkbox"
+                            className="sr-only peer"
+                            checked={editingTerm.is_active}
+                            onChange={(e) => setEditingTerm({ ...editingTerm, is_active: e.target.checked })}
+                          />
+                          <div className="w-11 h-6 bg-gray-200 rounded-full peer peer-checked:after:translate-x-full rtl:peer-checked:after:-translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:start-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-blue-600"></div>
+                        </label>
+                        <span className="text-sm font-medium text-slate-700">
+                          Active term (will deactivate others)
+                        </span>
+                      </div>
+                      <div className="flex justify-between items-center">
+                        <div className="flex space-x-2">
+                          <button
+                            onClick={restoreOriginalHtml}
+                            className="px-3 py-1 text-sm text-orange-600 hover:text-orange-800 hover:bg-orange-50 rounded transition-colors"
+                            title="Restore original HTML"
+                          >
+                            Restore Original
+                          </button>
+                        </div>
+                        <div className="flex space-x-4">
+                          <button
+                            onClick={() => {
+                              setEditingTerm(null);
+                              setOriginalHtml(''); // Limpar HTML original
+                            }}
+                            className="px-4 py-2 text-slate-600 hover:text-slate-800"
+                          >
+                            Cancel
+                          </button>
+                          <button
+                            onClick={handleUpdateTerm}
+                            disabled={!editingTerm.title || !editingTerm.content}
+                            className="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-lg font-medium transition-colors duration-200 disabled:opacity-50 disabled:cursor-not-allowed"
+                          >
+                            Save Changes
+                          </button>
+                        </div>
+                      </div>
+                    </div>
+                  ) : (
+                    // View Mode
+                    <>
+                      <div className="flex justify-between items-start mb-4">
+                        <div className="flex items-center space-x-3">
+                          <h3 className="text-xl font-bold text-slate-900">{term.title}</h3>
+                          {term.is_active && (
+                            <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-blue-100 text-blue-800">
+                              Active
+                            </span>
+                          )}
+                          <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-gray-100 text-gray-800 capitalize">
+                            {term.term_type?.replace(/_/g, ' ') || 'N/A'}
+                          </span>
+                        </div>
+                        <div className="flex items-center gap-2" onClick={(e) => e.stopPropagation()}>
+                          <button
+                            onClick={() => {
+                              setSelectedTermForHistory(term);
+                              setActiveTab('history');
+                              setCurrentPage(1); // Reset to first page
+                              loadAcceptanceHistory(term.id);
+                            }}
+                            className="p-2 text-green-400 hover:text-green-600 hover:bg-green-50 rounded-lg transition-colors"
+                            title="View acceptance history"
+                          >
+                            <History className="h-4 w-4" />
+                          </button>
+                          <button
+                            onClick={() => setViewingTerm(term)}
+                            className="p-2 text-slate-400 hover:text-slate-600 hover:bg-slate-100 rounded-lg transition-colors"
+                            title="View details"
+                          >
+                            <Eye className="h-4 w-4" />
+                          </button>
+                          <button
+                            onClick={() => {
+                              setEditingTerm(term);
+                              // Limpar HTML original para permitir novo armazenamento
+                              setOriginalHtml('');
+                            }}
+                            className="p-2 text-slate-400 hover:text-slate-600 hover:bg-slate-100 rounded-lg transition-colors"
+                            title="Edit term"
+                          >
+                            <Pencil className="h-4 w-4" />
+                          </button>
+                          <button
+                            onClick={() => handleDeleteTerm(term.id)}
+                            className="p-2 text-red-400 hover:text-red-600 hover:bg-red-50 rounded-lg transition-colors"
+                            title="Delete term"
+                          >
+                            <Trash2 className="h-4 w-4" />
+                          </button>
+                        </div>
+                      </div>
+                      <div className="prose prose-slate max-w-none">
+                        <div
+                          className="text-slate-600 line-clamp-3"
+                          dangerouslySetInnerHTML={{ __html: term.content }}
+                        />
+                      </div>
+                      <div className="mt-4 flex items-center space-x-4 text-sm text-slate-500">
+                        <span>Created: {new Date(term.created_at).toLocaleDateString('pt-BR')}</span>
+                        {term.updated_at && (
+                          <span>• Updated: {new Date(term.updated_at).toLocaleDateString('pt-BR')}</span>
+                        )}
+                        <span>• Click to view full content</span>
+                      </div>
+                    </>
+                  )}
+                </div>
+              ))}
+
+              {terms.length === 0 && (
+                <div className="text-center py-12 bg-white rounded-xl shadow-sm border border-slate-200">
+                  <div className="w-20 h-20 bg-slate-100 rounded-2xl flex items-center justify-center mx-auto mb-6">
+                    <CheckCircle className="h-10 w-10 text-slate-400" />
+                  </div>
+                  <h3 className="text-lg font-medium text-slate-900 mb-2">No Terms Found</h3>
+                  <p className="text-slate-600 mb-6">
+                    The system manages two specific terms: University Partnership Agreement and Student Checkout Terms.
+                  </p>
+                </div>
+              )}
+            </div>
+          </>
+        )}
+
+        {/* Aba de Histórico de Aceitações */}
+        {activeTab === 'history' && (
+          <div className="bg-white shadow rounded-lg overflow-hidden">
+            <div className="p-6">
+              <div className="flex items-center justify-between mb-6">
+                {/* <h3 className="text-lg font-medium text-gray-900">
                 {selectedTermForHistory 
                   ? `Acceptance History - ${selectedTermForHistory.title}`
                   : 'General Terms Acceptance History'
                 }
               </h3> */}
-              <div className="flex items-center gap-3">
-                {selectedTermForHistory && (
-                  <button
-                    onClick={() => {
-                      setSelectedTermForHistory(null);
-                      setCurrentPage(1); // Reset to first page
-                    loadAcceptanceHistory(undefined);
-                    }}
-                    className="text-sm text-blue-600 hover:text-blue-800 font-medium"
-                  >
-                    View All Terms
-                  </button>
-                )}
-                <div className="relative">
-                  <input
-                    type="text"
-                    value={historySearchTerm}
-                    onChange={(e) => setHistorySearchTerm(e.target.value)}
-                    placeholder="Search by user, email, term or IP"
-                    className="w-64 pl-3 pr-3 py-2 text-sm border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
-                  />
+                <div className="flex items-center gap-3">
+                  {selectedTermForHistory && (
+                    <button
+                      onClick={() => {
+                        setSelectedTermForHistory(null);
+                        setCurrentPage(1); // Reset to first page
+                        loadAcceptanceHistory(undefined);
+                      }}
+                      className="text-sm text-blue-600 hover:text-blue-800 font-medium"
+                    >
+                      View All Terms
+                    </button>
+                  )}
+                  <div className="relative">
+                    <input
+                      type="text"
+                      value={historySearchTerm}
+                      onChange={(e) => setHistorySearchTerm(e.target.value)}
+                      placeholder="Search by user, email, term or IP"
+                      className="w-64 pl-3 pr-3 py-2 text-sm border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                    />
+                  </div>
                 </div>
               </div>
-            </div>
 
-            {acceptanceHistoryLoading ? (
-              <div className="flex items-center justify-center p-8">
-                <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600"></div>
-              </div>
-            ) : acceptanceHistory.length === 0 ? (
-              <div className="text-center py-8 text-gray-500">
-                <History className="w-16 h-16 mx-auto mb-4 text-gray-300" />
-                <p className="text-lg">Nenhum registro de aceitação encontrado</p>
-                <p className="text-sm text-gray-400 mt-2">
-                  {selectedTermForHistory 
-                    ? 'Este termo ainda não foi aceito por nenhum usuário.'
-                    : 'Ainda não há registros de aceitação de termos.'
-                  }
-                </p>
-              </div>
-            ) : (
-              <>
-                <div className="overflow-x-auto">
-                  <table className="min-w-full divide-y divide-gray-200">
-                    <thead className="bg-gray-50">
-                      <tr>
-                        <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                          Usuário
-                        </th>
-                        <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                          Termo
-                        </th>
-                        <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                          Aceito Em
-                        </th>
-                        <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                          Endereço IP
-                        </th>
-                        <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                          Navegador/Dispositivo
-                        </th>
-                        <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                          Ações
-                        </th>
-                      </tr>
-                    </thead>
-                    <tbody className="bg-white divide-y divide-gray-200">
-                      {paginatedAcceptanceHistory.map((acceptance) => (
-                        <tr key={acceptance.id} className="hover:bg-gray-50">
-                          <td className="px-4 py-4 whitespace-nowrap">
-                            <div className="flex items-center">
-                              <div className="flex-shrink-0 h-8 w-8">
-                                <div className="h-8 w-8 rounded-full bg-blue-100 flex items-center justify-center">
-                                  <Users className="w-4 h-4 text-blue-600" />
-                                </div>
-                              </div>
-                              <div className="ml-3">
-                                <div className="text-sm font-medium text-gray-900">
-                                  {acceptance.user_full_name || 'N/A'}
-                                </div>
-                                <div className="text-sm text-gray-500">
-                                  {acceptance.user_email || 'N/A'}
-                                </div>
-                              </div>
-                            </div>
-                          </td>
-                          <td className="px-4 py-4 whitespace-nowrap">
-                            <div className="flex items-center">
-                              <div className="flex-shrink-0 h-8 w-8">
-                                <div className="h-8 w-8 rounded-full bg-green-100 flex items-center justify-center">
-                                  <FileText className="w-4 h-4 text-green-600" />
-                                </div>
-                              </div>
-                              <div className="ml-3">
-                                <div className="text-sm font-medium text-gray-900">
-                                  {acceptance.term_title || 'N/A'}
-                                </div>
-                                <div className="text-sm text-gray-500 capitalize">
-                                  {acceptance.term_type.replace(/_/g, ' ')}
-                                </div>
-                              </div>
-                            </div>
-                          </td>
-                          <td className="px-4 py-4 whitespace-nowrap text-sm text-gray-900">
-                            <div className="flex items-center">
-                              <Calendar className="w-4 h-4 mr-2 text-gray-400" />
-                              {new Date(acceptance.accepted_at).toLocaleString('pt-BR')}
-                            </div>
-                          </td>
-                          <td className="px-4 py-4 whitespace-nowrap text-sm text-gray-500">
-                            {acceptance.ip_address || 'N/A'}
-                          </td>
-                          <td className="px-4 py-4 whitespace-nowrap text-sm text-gray-500 max-w-xs truncate">
-                            <div className="flex items-center">
-                              <Globe className="w-4 h-4 mr-2 text-gray-400" />
-                              <span title={acceptance.user_agent || 'N/A'}>
-                                {acceptance.user_agent ? 
-                                  acceptance.user_agent.substring(0, 50) + (acceptance.user_agent.length > 50 ? '...' : '') 
-                                  : 'N/A'
-                                }
-                              </span>
-                            </div>
-                          </td>
-                          <td className="px-4 py-4 whitespace-nowrap text-sm text-gray-500">
-                            <button
-                              onClick={() => {
-                                const pdfData: StudentTermAcceptanceData = {
-                                  student_name: acceptance.user_full_name || 'N/A',
-                                  student_email: acceptance.user_email || 'N/A',
-                                  term_title: acceptance.term_title || 'N/A',
-                                  accepted_at: new Date(acceptance.accepted_at).toLocaleString('en-US'),
-                                  ip_address: acceptance.ip_address || 'N/A',
-                                  user_agent: acceptance.user_agent || 'N/A',
-                                  country: 'N/A',
-                                  affiliate_code: undefined,
-                                  term_content: acceptance.term_content || ''
-                                };
-                                generateTermAcceptancePDF(pdfData);
-                              }}
-                              className="inline-flex items-center px-3 py-1 rounded-md text-xs font-medium bg-blue-600 text-white hover:bg-blue-700 transition-colors"
-                              title="Baixar documento (PDF)"
-                            >
-                              <Download className="h-3 w-3 mr-1" />
-                              PDF
-                            </button>
-                          </td>
+              {acceptanceHistoryLoading ? (
+                <div className="flex items-center justify-center p-8">
+                  <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600"></div>
+                </div>
+              ) : acceptanceHistory.length === 0 ? (
+                <div className="text-center py-8 text-gray-500">
+                  <History className="w-16 h-16 mx-auto mb-4 text-gray-300" />
+                  <p className="text-lg">Nenhum registro de aceitação encontrado</p>
+                  <p className="text-sm text-gray-400 mt-2">
+                    {selectedTermForHistory
+                      ? 'Este termo ainda não foi aceito por nenhum usuário.'
+                      : 'Ainda não há registros de aceitação de termos.'
+                    }
+                  </p>
+                </div>
+              ) : (
+                <>
+                  <div className="overflow-x-auto">
+                    <table className="min-w-full divide-y divide-gray-200">
+                      <thead className="bg-gray-50">
+                        <tr>
+                          <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                            Usuário
+                          </th>
+                          <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                            Termo
+                          </th>
+                          <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                            Aceito Em
+                          </th>
+                          <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                            Endereço IP
+                          </th>
+                          <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                            Navegador/Dispositivo
+                          </th>
+                          <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                            Ações
+                          </th>
                         </tr>
-                      ))}
-                    </tbody>
-                  </table>
-                </div>
-
-                {/* Paginação */}
-                <div className="mt-6 flex items-center justify-between">
-                  {/* Informações da página e seletor de itens por página */}
-                  <div className="flex items-center space-x-4">
-                    <div className="text-sm text-gray-700">
-                      Mostrando <span className="font-medium">{startItem}</span> a <span className="font-medium">{endItem}</span> de{' '}
-                      <span className="font-medium">{totalItems}</span> resultados
-                    </div>
-                    
-                    {/* Seletor de itens por página */}
-                    <div className="flex items-center space-x-2">
-                      <label className="text-sm text-gray-600">Itens por página:</label>
-                      <select
-                        value={itemsPerPage}
-                        onChange={(e) => handleItemsPerPageChange(Number(e.target.value))}
-                        className="px-2 py-1 text-sm border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
-                      >
-                        <option value={5}>5</option>
-                        <option value={10}>10</option>
-                        <option value={25}>25</option>
-                        <option value={50}>50</option>
-                      </select>
-                    </div>
+                      </thead>
+                      <tbody className="bg-white divide-y divide-gray-200">
+                        {paginatedAcceptanceHistory.map((acceptance) => (
+                          <tr key={acceptance.id} className="hover:bg-gray-50">
+                            <td className="px-4 py-4 whitespace-nowrap">
+                              <div className="flex items-center">
+                                <div className="flex-shrink-0 h-8 w-8">
+                                  <div className="h-8 w-8 rounded-full bg-blue-100 flex items-center justify-center">
+                                    <Users className="w-4 h-4 text-blue-600" />
+                                  </div>
+                                </div>
+                                <div className="ml-3">
+                                  <div className="text-sm font-medium text-gray-900">
+                                    {acceptance.user_full_name || 'N/A'}
+                                  </div>
+                                  <div className="text-sm text-gray-500">
+                                    {acceptance.user_email || 'N/A'}
+                                  </div>
+                                </div>
+                              </div>
+                            </td>
+                            <td className="px-4 py-4 whitespace-nowrap">
+                              <div className="flex items-center">
+                                <div className="flex-shrink-0 h-8 w-8">
+                                  <div className="h-8 w-8 rounded-full bg-green-100 flex items-center justify-center">
+                                    <FileText className="w-4 h-4 text-green-600" />
+                                  </div>
+                                </div>
+                                <div className="ml-3">
+                                  <div className="text-sm font-medium text-gray-900">
+                                    {acceptance.term_title || 'N/A'}
+                                  </div>
+                                  <div className="text-sm text-gray-500 capitalize">
+                                    {acceptance.term_type.replace(/_/g, ' ')}
+                                  </div>
+                                </div>
+                              </div>
+                            </td>
+                            <td className="px-4 py-4 whitespace-nowrap text-sm text-gray-900">
+                              <div className="flex items-center">
+                                <Calendar className="w-4 h-4 mr-2 text-gray-400" />
+                                {new Date(acceptance.accepted_at).toLocaleString('pt-BR')}
+                              </div>
+                            </td>
+                            <td className="px-4 py-4 whitespace-nowrap text-sm text-gray-500">
+                              {acceptance.ip_address || 'N/A'}
+                            </td>
+                            <td className="px-4 py-4 whitespace-nowrap text-sm text-gray-500 max-w-xs truncate">
+                              <div className="flex items-center">
+                                <Globe className="w-4 h-4 mr-2 text-gray-400" />
+                                <span title={acceptance.user_agent || 'N/A'}>
+                                  {acceptance.user_agent ?
+                                    acceptance.user_agent.substring(0, 50) + (acceptance.user_agent.length > 50 ? '...' : '')
+                                    : 'N/A'
+                                  }
+                                </span>
+                              </div>
+                            </td>
+                            <td className="px-4 py-4 whitespace-nowrap text-sm text-gray-500">
+                              <button
+                                onClick={() => {
+                                  const pdfData: StudentTermAcceptanceData = {
+                                    student_name: acceptance.user_full_name || 'N/A',
+                                    student_email: acceptance.user_email || 'N/A',
+                                    term_title: acceptance.term_title || 'N/A',
+                                    accepted_at: new Date(acceptance.accepted_at).toLocaleString('en-US'),
+                                    ip_address: acceptance.ip_address || 'N/A',
+                                    user_agent: acceptance.user_agent || 'N/A',
+                                    country: 'N/A',
+                                    affiliate_code: undefined,
+                                    term_content: acceptance.term_content || ''
+                                  };
+                                  generateTermAcceptancePDF(pdfData);
+                                }}
+                                className="inline-flex items-center px-3 py-1 rounded-md text-xs font-medium bg-blue-600 text-white hover:bg-blue-700 transition-colors"
+                                title="Baixar documento (PDF)"
+                              >
+                                <Download className="h-3 w-3 mr-1" />
+                                PDF
+                              </button>
+                            </td>
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
                   </div>
 
-                  {/* Controles de navegação - só aparecem se houver mais de uma página */}
-                  {totalPages > 1 && (
-                    <div className="flex items-center space-x-2">
-                      {/* Botão Anterior */}
-                      <button
-                        onClick={() => handlePageChange(currentPage - 1)}
-                        disabled={currentPage === 1}
-                        className={`px-3 py-2 text-sm font-medium rounded-md transition-colors ${
-                          currentPage === 1
-                            ? 'bg-gray-100 text-gray-400 cursor-not-allowed'
-                            : 'bg-white text-gray-700 hover:bg-gray-50 border border-gray-300'
-                        }`}
-                      >
-                        Anterior
-                      </button>
-
-                      {/* Números das páginas */}
-                      <div className="flex items-center space-x-1">
-                        {(() => {
-                          const pages: number[] = [];
-                          const windowSize = 5;
-                          let start = Math.max(1, currentPage - Math.floor(windowSize / 2));
-                          let end = start + windowSize - 1;
-                          if (end > totalPages) {
-                            end = totalPages;
-                            start = Math.max(1, end - windowSize + 1);
-                          }
-                          for (let p = start; p <= end; p++) pages.push(p);
-
-                          return (
-                            <>
-                              {start > 1 && (
-                                <>
-                                  <button
-                                    onClick={() => handlePageChange(1)}
-                                    className="px-3 py-2 text-sm font-medium text-gray-700 hover:bg-gray-50 rounded-md transition-colors"
-                                  >
-                                    1
-                                  </button>
-                                  {start > 2 && (
-                                    <span className="px-2 text-gray-400">...</span>
-                                  )}
-                                </>
-                              )}
-
-                              {pages.map((pageNum) => (
-                                <button
-                                  key={pageNum}
-                                  onClick={() => handlePageChange(pageNum)}
-                                  className={`px-3 py-2 text-sm font-medium rounded-md transition-colors ${
-                                    pageNum === currentPage
-                                      ? 'bg-blue-600 text-white'
-                                      : 'text-gray-700 hover:bg-gray-50'
-                                  }`}
-                                >
-                                  {pageNum}
-                                </button>
-                              ))}
-
-                              {end < totalPages && (
-                                <>
-                                  {end < totalPages - 1 && (
-                                    <span className="px-2 text-gray-400">...</span>
-                                  )}
-                                  <button
-                                    onClick={() => handlePageChange(totalPages)}
-                                    className="px-3 py-2 text-sm font-medium text-gray-700 hover:bg-gray-50 rounded-md transition-colors"
-                                  >
-                                    {totalPages}
-                                  </button>
-                                </>
-                              )}
-                            </>
-                          );
-                        })()}
+                  {/* Paginação */}
+                  <div className="mt-6 flex items-center justify-between">
+                    {/* Informações da página e seletor de itens por página */}
+                    <div className="flex items-center space-x-4">
+                      <div className="text-sm text-gray-700">
+                        Mostrando <span className="font-medium">{startItem}</span> a <span className="font-medium">{endItem}</span> de{' '}
+                        <span className="font-medium">{totalItems}</span> resultados
                       </div>
 
-                      {/* Botão Próximo */}
-                      <button
-                        onClick={() => handlePageChange(currentPage + 1)}
-                        disabled={currentPage === totalPages}
-                        className={`px-3 py-2 text-sm font-medium rounded-md transition-colors ${
-                          currentPage === totalPages
+                      {/* Seletor de itens por página */}
+                      <div className="flex items-center space-x-2">
+                        <label className="text-sm text-gray-600">Itens por página:</label>
+                        <select
+                          value={itemsPerPage}
+                          onChange={(e) => handleItemsPerPageChange(Number(e.target.value))}
+                          className="px-2 py-1 text-sm border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                        >
+                          <option value={5}>5</option>
+                          <option value={10}>10</option>
+                          <option value={25}>25</option>
+                          <option value={50}>50</option>
+                        </select>
+                      </div>
+                    </div>
+
+                    {/* Controles de navegação - só aparecem se houver mais de uma página */}
+                    {totalPages > 1 && (
+                      <div className="flex items-center space-x-2">
+                        {/* Botão Anterior */}
+                        <button
+                          onClick={() => handlePageChange(currentPage - 1)}
+                          disabled={currentPage === 1}
+                          className={`px-3 py-2 text-sm font-medium rounded-md transition-colors ${currentPage === 1
                             ? 'bg-gray-100 text-gray-400 cursor-not-allowed'
                             : 'bg-white text-gray-700 hover:bg-gray-50 border border-gray-300'
-                        }`}
-                      >
-                        Próximo
-                      </button>
-                    </div>
-                  )}
-                </div>
-              </>
-            )}
+                            }`}
+                        >
+                          Anterior
+                        </button>
+
+                        {/* Números das páginas */}
+                        <div className="flex items-center space-x-1">
+                          {(() => {
+                            const pages: number[] = [];
+                            const windowSize = 5;
+                            let start = Math.max(1, currentPage - Math.floor(windowSize / 2));
+                            let end = start + windowSize - 1;
+                            if (end > totalPages) {
+                              end = totalPages;
+                              start = Math.max(1, end - windowSize + 1);
+                            }
+                            for (let p = start; p <= end; p++) pages.push(p);
+
+                            return (
+                              <>
+                                {start > 1 && (
+                                  <>
+                                    <button
+                                      onClick={() => handlePageChange(1)}
+                                      className="px-3 py-2 text-sm font-medium text-gray-700 hover:bg-gray-50 rounded-md transition-colors"
+                                    >
+                                      1
+                                    </button>
+                                    {start > 2 && (
+                                      <span className="px-2 text-gray-400">...</span>
+                                    )}
+                                  </>
+                                )}
+
+                                {pages.map((pageNum) => (
+                                  <button
+                                    key={pageNum}
+                                    onClick={() => handlePageChange(pageNum)}
+                                    className={`px-3 py-2 text-sm font-medium rounded-md transition-colors ${pageNum === currentPage
+                                      ? 'bg-blue-600 text-white'
+                                      : 'text-gray-700 hover:bg-gray-50'
+                                      }`}
+                                  >
+                                    {pageNum}
+                                  </button>
+                                ))}
+
+                                {end < totalPages && (
+                                  <>
+                                    {end < totalPages - 1 && (
+                                      <span className="px-2 text-gray-400">...</span>
+                                    )}
+                                    <button
+                                      onClick={() => handlePageChange(totalPages)}
+                                      className="px-3 py-2 text-sm font-medium text-gray-700 hover:bg-gray-50 rounded-md transition-colors"
+                                    >
+                                      {totalPages}
+                                    </button>
+                                  </>
+                                )}
+                              </>
+                            );
+                          })()}
+                        </div>
+
+                        {/* Botão Próximo */}
+                        <button
+                          onClick={() => handlePageChange(currentPage + 1)}
+                          disabled={currentPage === totalPages}
+                          className={`px-3 py-2 text-sm font-medium rounded-md transition-colors ${currentPage === totalPages
+                            ? 'bg-gray-100 text-gray-400 cursor-not-allowed'
+                            : 'bg-white text-gray-700 hover:bg-gray-50 border border-gray-300'
+                            }`}
+                        >
+                          Próximo
+                        </button>
+                      </div>
+                    )}
+                  </div>
+                </>
+              )}
+            </div>
           </div>
-        </div>
-      )}
+        )}
 
       </div>
 
@@ -1044,7 +966,7 @@ const TermsManagement: React.FC<TermsManagementProps> = ({ defaultTab = 'terms' 
                 </button>
               </div>
             </div>
-            
+
             <div className="p-6 overflow-y-auto max-h-[calc(90vh-120px)]">
               {showRawContent ? (
                 <div className="space-y-4">
@@ -1074,13 +996,13 @@ const TermsManagement: React.FC<TermsManagementProps> = ({ defaultTab = 'terms' 
                 </div>
               ) : (
                 <div className="prose prose-slate max-w-none">
-                  <div 
+                  <div
                     className="text-slate-600 leading-relaxed"
                     dangerouslySetInnerHTML={{ __html: viewingTerm.content }}
                   />
                 </div>
               )}
-              
+
               <div className="mt-6 pt-4 border-t border-slate-200">
                 <div className="flex items-center justify-between text-sm text-slate-500">
                   <div className="flex items-center space-x-4">

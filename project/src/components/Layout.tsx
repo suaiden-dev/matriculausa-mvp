@@ -12,29 +12,28 @@ interface LayoutProps {
 const LayoutContent: React.FC<LayoutProps> = ({ children }) => {
   const location = useLocation();
   const { isModalOpen } = useModal();
-  
+
   console.log('[Layout] 🔍 Layout renderizado - pathname:', location.pathname, 'Timestamp:', new Date().toISOString());
-  
+
   const hideHeader = location.pathname.startsWith('/school') ||
-                     location.pathname.startsWith('/admin') ||
-                     (location.pathname.startsWith('/student') && location.pathname !== '/student/register') ||
-                     location.pathname.startsWith('/affiliate-admin') ||
-                     location.pathname.startsWith('/seller') ||
-                     location.pathname === '/smart-assistant';
+    location.pathname.startsWith('/admin') ||
+    (location.pathname.startsWith('/student') && location.pathname !== '/student/register') ||
+    location.pathname.startsWith('/affiliate-admin') ||
+    location.pathname.startsWith('/seller') ||
+    location.pathname === '/smart-assistant';
   const hideFooter = hideHeader || location.pathname.startsWith('/checkout/zelle');
   const isDashboard = hideHeader;
   const isAdmin = location.pathname.startsWith('/admin');
   const isStudentChatPage = location.pathname.startsWith('/student/dashboard/chat');
-  
+
   // Esconder SmartChat apenas na página do inbox OU quando modal está aberto
-  const hideSmartChat = location.pathname.includes('/microsoft-inbox') || 
-                       location.pathname.includes('/microsoft') ||
-                       location.pathname.includes('/email/inbox') ||
-                       location.pathname.includes('/inbox') ||
-                       location.pathname === '/smart-assistant' ||
-                       location.pathname.includes('/applications') ||
-                       isModalOpen; // 🎯 NOVA CONDIÇÃO: esconder quando modal está aberto
-  
+  const hideSmartChat = location.pathname.includes('/microsoft-inbox') ||
+    location.pathname.includes('/microsoft') ||
+    location.pathname.includes('/email/inbox') ||
+    location.pathname.includes('/inbox') ||
+    location.pathname === '/smart-assistant' ||
+    isModalOpen; // 🎯 NOVA CONDIÇÃO: esconder quando modal está aberto
+
   // Debug log
   console.log('🔍 Layout Debug:', {
     pathname: location.pathname,

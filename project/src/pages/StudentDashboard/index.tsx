@@ -11,8 +11,6 @@ import Overview from './Overview';
 import ScholarshipBrowser from './ScholarshipBrowser';
 import MyApplications from './MyApplications';
 import ProfileManagement from './ProfileManagement';
-import { mockScholarships } from '../../data/mockData';
-import { Link } from 'react-router-dom';
 import { GraduationCap } from 'lucide-react';
 import { useCartStore } from '../../stores/applicationStore';
 import DocumentsAndScholarshipChoice from './DocumentsAndScholarshipChoice';
@@ -27,7 +25,6 @@ import ApplicationFeeError from './ApplicationFeeError';
 import ApplicationChatPage from './ApplicationChatPage';
 import StudentChatPage from './StudentChatPage';
 import ApplicationFeePage from './ApplicationFeePage';
-import Layout from '../../components/Layout';
 import MatriculaRewards from './MatriculaRewards';
 import RewardsStore from './RewardsStore';
 import ReferralCongratulationsModal from '../../components/ReferralCongratulationsModal';
@@ -48,6 +45,7 @@ interface StudentProfile {
   academic_level?: string;
   gpa?: number;
   english_proficiency?: string;
+  cpf_document?: string;
   created_at: string;
   updated_at: string;
 }
@@ -86,7 +84,6 @@ const StudentDashboard: React.FC = () => {
   
   // Fase 5: Referral Code System
   const { 
-    activeDiscount, 
     hasUsedReferralCode, 
     applyReferralCodeFromURL,
     loading: referralLoading 
@@ -148,7 +145,12 @@ const StudentDashboard: React.FC = () => {
           setScholarships([]);
           setDashboardError('Error fetching scholarships.');
         } else {
-          setScholarships(realScholarships || []);
+          // Ajustar formato casando com o tipo Scholarship (universities no plural para objeto singular)
+          const formattedScholarships = (realScholarships || []).map((s: any) => ({
+            ...s,
+            universities: Array.isArray(s.universities) ? s.universities[0] : s.universities
+          })) as Scholarship[];
+          setScholarships(formattedScholarships);
         }
       }
       // Buscar applications reais do Supabase
@@ -185,6 +187,7 @@ const StudentDashboard: React.FC = () => {
           academic_level: profileData.academic_level || '',
           gpa: profileData.gpa || 0,
           english_proficiency: profileData.english_proficiency || '',
+          cpf_document: profileData.cpf_document || '',
           created_at: profileData.created_at,
           updated_at: profileData.updated_at
         });
@@ -271,6 +274,7 @@ const StudentDashboard: React.FC = () => {
           // Envia null quando vazio; limita a 2 casas decimais para evitar overflow de precisão
           gpa: updatedData.gpa === undefined ? null : updatedData.gpa,
           english_proficiency: updatedData.english_proficiency,
+          cpf_document: (updatedData as any).cpf_document || null,
           updated_at: new Date().toISOString()
         })
         .eq('user_id', user.id);
@@ -394,6 +398,28 @@ const StudentDashboard: React.FC = () => {
               )
             } 
           />
+          <Route 
+            path="overview" 
+            element={
+              dashboardLoading ? (
+                <div className="p-8 text-center text-lg text-slate-500">Loading dashboard...</div>
+              ) : dashboardError ? (
+                <div className="p-8 text-center text-red-500">{dashboardError}</div>
+              ) : (
+                <>
+                  {console.log('🔍 [StudentDashboard] Renderizando Overview (path) com stats:', stats)}
+                  <Overview 
+                    profile={profile}
+                    scholarships={scholarships}
+                    applications={applications}
+                    stats={stats}
+                    onApplyScholarship={handleApplyScholarship}
+                    recentApplications={recentApplications}
+                  />
+                </>
+              )
+            } 
+          />
           <Route path="cart" element={<CartPage />} />
           <Route 
             path="scholarships" 
@@ -401,7 +427,6 @@ const StudentDashboard: React.FC = () => {
               <ScholarshipBrowser 
                 scholarships={scholarships}
                 applications={applications}
-                onApplyScholarship={handleApplyScholarship}
               />
             } 
           />

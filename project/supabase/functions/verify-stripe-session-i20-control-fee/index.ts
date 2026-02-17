@@ -530,7 +530,7 @@ Deno.serve(async (req)=>{
       const { error: profileError } = await supabase.from('user_profiles').update({
         has_paid_i20_control_fee: true,
         i20_control_fee_payment_method: paymentMethodForUserProfile, // 'pix' ou 'stripe'
-        i20_control_fee_due_date: new Date().toISOString(),
+        i20_paid_at: new Date().toISOString(),
         i20_control_fee_payment_intent_id: paymentIntentId
       }).eq('user_id', userId);
       if (profileError) throw new Error(`Failed to update user_profiles: ${profileError.message}`);
@@ -766,6 +766,97 @@ Deno.serve(async (req)=>{
           applicationId = applications[0].id;
         }
       }
+      
+      // --- MATRICULA REWARDS - AGORA GERENCIADO POR TRIGGER ---
+      // O trigger handle_i20_payment_rewards() no banco de dados automaticamente:
+      // 1. Credita 180 MatriculaCoins quando has_paid_i20_control_fee muda para true
+      // 2. Atualiza o status do referral para 'i20_paid'
+      // Aqui apenas enviamos a notificação de recompensa para o padrinho
+      try {
+        console.log('[MATRICULA REWARDS] Verificando se usuário usou código de referência para enviar notificação...');
+        
+        // Buscar se o usuário usou algum código de referência
+        const { data: usedCode, error: codeError } = await supabase
+          .from('used_referral_codes')
+          .select('referrer_id, affiliate_code')
+          .eq('user_id', userId)
+          .single();
+          
+        if (!codeError && usedCode) {
+          console.log('[MATRICULA REWARDS] Usuário usou código de referência, enviando notificação para:', usedCode.referrer_id);
+          
+          // Obter nome/email do usuário que pagou (referred)
+          let referredDisplayName = '';
+          try {
+            const { data: referredProfile } = await supabase
+              .from('user_profiles')
+              .select('full_name, email')
+              .eq('user_id', userId)
+              .maybeSingle();
+              
+            if (referredProfile?.full_name) {
+              referredDisplayName = referredProfile.full_name;
+            } else {
+              const { data: authUser } = await supabase.auth.admin.getUserById(userId);
+              referredDisplayName = authUser?.user?.email || userId;
+            }
+          } catch (e) {
+            console.warn('[MATRICULA REWARDS] Could not resolve referred user name, using ID. Error:', e);
+            referredDisplayName = userId;
+          }
+          
+          // --- NOTIFICAÇÃO DE RECOMPENSA PARA O ALUNO (PADRINHO) ---
+          try {
+            console.log('📤 [MATRICULA REWARDS] Enviando notificação de recompensa para o padrinho...');
+            
+            // Buscar dados do padrinho (referrer)
+            const { data: referrerProfile } = await supabase
+              .from('user_profiles')
+              .select('full_name, email')
+              .eq('user_id', usedCode.referrer_id)
+              .single();
+            
+            // Buscar email do aluno indicado (referred)
+            const { data: referredProfileData } = await supabase
+              .from('user_profiles')
+              .select('email')
+              .eq('user_id', userId)
+              .single();
+
+            if (referrerProfile?.email) {
+              const rewardPayload = {
+                tipo_notf: "Recompensa de MatriculaCoins por Indicacao",
+                email_aluno: referrerProfile.email,
+                nome_aluno: referrerProfile.full_name || "Aluno",
+                referred_student_name: referredDisplayName,
+                referred_student_email: referredProfileData?.email || "",
+                payment_method: paymentMethodForUserProfile,
+                fee_type: "I20 Control Fee",
+                reward_type: "MatriculaCoins",
+                o_que_enviar: `Congratulations! Your friend ${referredDisplayName} has completed the I20 payment. 180 MatriculaCoins have been added to your account!`
+              };
+
+              console.log('📤 [MATRICULA REWARDS] Payload de recompensa:', rewardPayload);
+
+              await fetch('https://nwh.suaiden.com/webhook/notfmatriculausa', {
+                method: 'POST',
+                headers: {
+                  'Content-Type': 'application/json',
+                },
+                body: JSON.stringify(rewardPayload),
+              });
+              console.log('✅ [MATRICULA REWARDS] Notificação de recompensa enviada com sucesso!');
+            }
+          } catch (rewardNotifError) {
+            console.error('❌ [MATRICULA REWARDS] Erro ao enviar notificação de recompensa:', rewardNotifError);
+          }
+        } else {
+          console.log('[MATRICULA REWARDS] Usuário não usou código de referência, nenhuma notificação a enviar');
+        }
+      } catch (rewardsError) {
+        console.error('[MATRICULA REWARDS] Erro ao processar notificação de Matricula Rewards:', rewardsError);
+      }
+      // --- FIM MATRICULA REWARDS ---
       
       // --- NOTIFICAÇÕES VIA WEBHOOK N8N ---
       try {

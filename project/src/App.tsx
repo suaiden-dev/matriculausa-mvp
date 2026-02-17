@@ -18,6 +18,9 @@ import ProcessoDetalhado from './pages/ProcessoDetalhado';
 import TermsAndConditions from './pages/TermsAndConditions';
 import StudentTermsAcceptance from './pages/StudentTermsAcceptance';
 import { captureUtmFromUrl } from './utils/utmTracker';
+import Initial from './pages/Initial';
+import Transfer from './pages/Transfer';
+import Cos from './pages/Cos';
 // ✅ OTIMIZAÇÃO: Lazy loading do SchoolProfileSetup para evitar carregar cities.json (208 MB) no início
 const SchoolProfileSetup = React.lazy(() => import('./pages/SchoolProfileSetup'));
 import { SchoolDashboard } from './pages/SchoolDashboard/index';
@@ -45,6 +48,7 @@ import ForStudents from './pages/ForStudents';
 import EmailOAuthCallback from './pages/EmailOAuthCallback';
 import AuthCallback from './pages/AuthCallback';
 import MicrosoftCallback from './pages/MicrosoftCallback';
+import Auth323NetworkCallback from './pages/Auth323NetworkCallback';
 import { useReferralCodeCapture } from './hooks/useReferralCodeCapture';
 import { ZelleCheckoutPage } from './components/ZelleCheckoutPage';
 import { ZelleWaitingPage } from './components/ZelleWaitingPage';
@@ -150,6 +154,9 @@ const AppContent = () => {
           <Route path="/email-oauth-callback" element={<EmailOAuthCallback />} />
           <Route path="/auth-callback" element={<AuthCallback />} />
           <Route path="/microsoft-email" element={<MicrosoftCallback />} />
+          {/* SSO 323 Network - Suporta ambas as rotas para compatibilidade */}
+          <Route path="/auth/callback" element={<Auth323NetworkCallback />} />
+          <Route path="/auth/323-network/callback" element={<Auth323NetworkCallback />} />
           <Route path="/eb3-jobs" element={<EB3JobsLanding />} />
           <Route path="/unsubscribe" element={<UnsubscribeNewsletter />} />
           
@@ -160,6 +167,15 @@ const AppContent = () => {
           
           {/* Smart Assistant Route */}
           <Route path="/smart-assistant" element={<SmartAssistantLayout />} />
+
+          {/* New Visa Process Routes (long URLs) */}
+          <Route path="/visa-initial" element={<Initial />} />
+          <Route path="/visa-transfer" element={<Transfer />} />
+          <Route path="/visa-cos" element={<Cos />} />
+          {/* Short URLs for seller referral links (landing pages) */}
+          <Route path="/initial" element={<Initial />} />
+          <Route path="/transfer" element={<Transfer />} />
+          <Route path="/cos" element={<Cos />} />
 
           {/* Catch-all route for 404 */}
           <Route path="*" element={<div className="min-h-screen bg-gray-50 flex items-center justify-center"><div className="text-2xl text-gray-600">Page not found</div></div>} />

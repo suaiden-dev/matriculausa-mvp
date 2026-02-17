@@ -338,6 +338,39 @@ export const PreCheckoutModal: React.FC<PreCheckoutModalProps> = ({
   }, [computedBasePrice, feeType, checkPromotionalCouponFromDatabase]);
 
 
+  // Buscar foto de identidade existente
+  const fetchExistingPhoto = async () => {
+    if (!user?.id) return;
+    
+    try {
+      console.log('🔍 [PreCheckoutModal] Buscando foto de identidade existente para o usuário:', user.id);
+      
+      const { data, error } = await supabase
+        .from('comprehensive_term_acceptance')
+        .select('identity_photo_path, identity_photo_name')
+        .eq('user_id', user.id)
+        .not('identity_photo_path', 'is', null) // ✅ Apenas registros com foto
+        .order('accepted_at', { ascending: false }) // ✅ Mais recente primeiro
+        .limit(1)
+        .maybeSingle();
+
+      if (error) {
+        console.error('🔍 [PreCheckoutModal] Erro ao buscar foto existente:', error);
+        return;
+      }
+
+      if (data && data.identity_photo_path) {
+        console.log('🔍 [PreCheckoutModal] ✅ Foto de identidade existente encontrada:', data.identity_photo_path);
+        setIdentityPhotoPath(data.identity_photo_path);
+        setIdentityPhotoName(data.identity_photo_name);
+      } else {
+        console.log('🔍 [PreCheckoutModal] ℹ️ Nenhuma foto de identidade encontrada para este usuário');
+      }
+    } catch (err) {
+      console.error('🔍 [PreCheckoutModal] Erro inesperado ao buscar foto:', err);
+    }
+  };
+
   useEffect(() => {
     
     if (isOpen) {
@@ -352,8 +385,27 @@ export const PreCheckoutModal: React.FC<PreCheckoutModalProps> = ({
       setActiveTerm(null); // Reset active term
       setUserClickedCheckbox(false); // Reset user interaction flag
       setShowPhotoUploadStep(false); // Reset photo upload step
-      setIdentityPhotoPath(null); // Reset photo path
-      setIdentityPhotoName(null); // Reset photo name
+      
+      // ✅ LOGICA DE FOTO AUTOMÁTICA (Comentado para permitir testes reais com foto no localhost)
+      /*
+      const isLocalhost = window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1';
+      if (isLocalhost) {
+        console.log('🔍 [PreCheckoutModal] Ambiente localhost detectado. Usando foto mock.');
+        setIdentityPhotoPath('mock_localhost_photo.png');
+        setIdentityPhotoName('mock_localhost_photo.png');
+      } else {
+        // Se não for localhost, tentar buscar foto existente no bucket
+        setIdentityPhotoPath(null);
+        setIdentityPhotoName(null);
+        fetchExistingPhoto();
+      }
+      */
+      
+      // Fluxo normal: tentar buscar foto existente no bucket
+      setIdentityPhotoPath(null);
+      setIdentityPhotoName(null);
+      fetchExistingPhoto();
+
       // ✅ CORREÇÃO: Se não tem seller_referral_code, mostrar campo diretamente (sem checkbox)
       // Não resetar hasReferralCode e showCodeStep se não tem seller_referral_code
       if (!hasSellerReferralCode) {
@@ -404,16 +456,10 @@ export const PreCheckoutModal: React.FC<PreCheckoutModalProps> = ({
   useEffect(() => {
     if (isOpen) {
       openModal();
-    } else {
-      closeModal();
-    }
-    
-    // Cleanup quando componente desmonta
-    return () => {
-      if (isOpen) {
+      return () => {
         closeModal();
-      }
-    };
+      };
+    }
   }, [isOpen, openModal, closeModal]);
 
   // Preencher automaticamente o campo de referral code se o usuário já tem affiliate_code

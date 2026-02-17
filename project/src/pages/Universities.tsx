@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { Link, useNavigate } from 'react-router-dom';
+import { Link, useNavigate, useLocation } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import { Search, MapPin, Sparkles, Building, GraduationCap, ArrowRight, Star, Lock } from 'lucide-react';
 import { supabase } from '../lib/supabase';
@@ -15,6 +15,7 @@ const PAGE_SIZE = 20;
 const Universities: React.FC = () => {
   const { t } = useTranslation();
   const navigate = useNavigate();
+  const location = useLocation();
   const { isAuthenticated, user, userProfile, loading } = useAuth();
   
   // TODOS OS HOOKS DEVEM VIR ANTES DE QUALQUER LÓGICA CONDICIONAL
@@ -164,7 +165,6 @@ const Universities: React.FC = () => {
   };
 
   // Verificar se deve aplicar blur (usuário não logado)
-  const shouldApplyBlur = !isAuthenticated;
 
   const filteredSchools = filterUniversities(realUniversities);
   const filteredFeaturedUniversities = filterUniversities(featuredUniversities);
@@ -291,7 +291,7 @@ const Universities: React.FC = () => {
                           {t('home.featuredUniversities.lockedDescription')}
                         </p>
                         <button
-                          onClick={() => navigate('/login')}
+                          onClick={() => navigate(`/login${location.search}`)}
                           className="bg-[#05294E] text-white px-4 py-2 rounded-xl text-sm font-semibold hover:bg-[#05294E]/90 transition-colors"
                         >
                           {t('home.featuredUniversities.loginToView')}
@@ -419,7 +419,7 @@ const Universities: React.FC = () => {
                       {t('home.featuredUniversities.lockedDescription')}
                     </p>
                     <button
-                      onClick={() => navigate('/login')}
+                      onClick={() => navigate(`/login${location.search}`)}
                       className="bg-[#05294E] text-white px-4 py-2 rounded-xl text-sm font-semibold hover:bg-[#05294E]/90 transition-colors"
                     >
                       {t('home.featuredUniversities.loginToView')}

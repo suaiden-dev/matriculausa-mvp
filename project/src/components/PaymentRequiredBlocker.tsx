@@ -1,5 +1,5 @@
 import React from 'react';
-import { Link, useNavigate } from 'react-router-dom';
+import { Link, useNavigate, useLocation } from 'react-router-dom';
 import { Lock, CreditCard, ArrowRight, Sparkles } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 import { useAuth } from '../hooks/useAuth';
@@ -19,6 +19,7 @@ const PaymentRequiredBlocker: React.FC<PaymentRequiredBlockerProps> = ({
   const { isAuthenticated } = useAuth();
   const { getFeeAmount } = useFeeConfig();
   const navigate = useNavigate();
+  const location = useLocation();
 
   const getPageContent = () => {
     switch (pageType) {
@@ -52,7 +53,7 @@ const PaymentRequiredBlocker: React.FC<PaymentRequiredBlockerProps> = ({
     if (isAuthenticated) {
       navigate('/student/dashboard');
     } else {
-      navigate('/login');
+      navigate(`/login${location.search}`);
     }
   };
 

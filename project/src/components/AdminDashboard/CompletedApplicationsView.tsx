@@ -16,6 +16,8 @@ import { LocalizationProvider } from '@mui/x-date-pickers/LocalizationProvider';
 import { AdapterDayjs } from '@mui/x-date-pickers/AdapterDayjs';
 import { DatePicker } from '@mui/x-date-pickers/DatePicker';
 import dayjs from 'dayjs';
+import { toast } from 'react-hot-toast';
+import BulkDocumentActionsBar from './BulkDocumentActionsBar';
 
 interface StudentRecord {
   student_id: string;
@@ -65,6 +67,11 @@ const CompletedApplicationsView: React.FC = () => {
   const [onlyBlackCouponUsers, setOnlyBlackCouponUsers] = useState(false);
   const [showCurrentStudents, setShowCurrentStudents] = useState(false);
   const [blackCouponUsers, setBlackCouponUsers] = useState<Set<string>>(new Set());
+
+  // Estados para geração em massa de documentos
+  const [selectedStudents, setSelectedStudents] = useState<Set<string>>(new Set());
+  const [selectAll, setSelectAll] = useState(false);
+  const [isGeneratingDocuments, setIsGeneratingDocuments] = useState(false);
 
   // React Query Hooks
   const studentsQuery = useStudentsQuery();
@@ -329,6 +336,96 @@ const CompletedApplicationsView: React.FC = () => {
   const totalPages = Math.ceil(filteredStudents.length / itemsPerPage);
   const startIndex = (currentPage - 1) * itemsPerPage;
   const currentStudents = filteredStudents.slice(startIndex, startIndex + itemsPerPage);
+
+  // Handlers para seleção em massa de documentos
+  const handleSelectStudent = (studentId: string) => {
+    setSelectedStudents(prev => {
+      const newSet = new Set(prev);
+      if (newSet.has(studentId)) {
+        newSet.delete(studentId);
+      } else {
+        newSet.add(studentId);
+      }
+      return newSet;
+    });
+  };
+
+  const handleSelectAll = () => {
+    if (selectAll) {
+      setSelectedStudents(new Set());
+    } else {
+      const ids = currentStudents.map(s => s.student_id);
+      setSelectedStudents(new Set(ids));
+    }
+    setSelectAll(!selectAll);
+  };
+
+  const handleClearSelection = () => {
+    setSelectedStudents(new Set());
+    setSelectAll(false);
+  };
+
+  const handleBulkGenerateDocuments = async () => {
+    setIsGeneratingDocuments(true);
+    
+    const selectedRecords = currentStudents.filter(s => 
+      selectedStudents.has(s.student_id)
+    );
+    
+    // Extrair apenas os user_ids
+    const user_ids = selectedRecords.map(s => s.user_id);
+    
+    try {
+      // Chamar Edge Function para processamento em massa
+      const { data, error } = await supabase.functions.invoke(
+        'bulk-generate-legal-documents',
+        {
+          body: {
+            user_ids
+          }
+        }
+      );
+      
+      if (error) {
+        console.error('Erro ao gerar documentos em massa:', error);
+        toast.error(
+          `Erro ao processar documentos: ${error.message}`,
+          { duration: 5000 }
+        );
+        setIsGeneratingDocuments(false);
+        return;
+      }
+      
+      // Exibir toast com resumo
+      const { success_count, skipped_count, error_count, total } = data;
+      const totalDocs = success_count + skipped_count;
+      
+      if (error_count > 0) {
+        toast.error(
+          `Processamento concluído com erros: ${totalDocs} processados (${success_count} gerados, ${skipped_count} pulados, ${error_count} erros)`,
+          { duration: 6000 }
+        );
+      } else {
+        toast.success(
+          `Documents processed: ${totalDocs} total (${success_count} generated, ${skipped_count} skipped)`,
+          { duration: 5000 }
+        );
+      }
+      
+    } catch (error: any) {
+      console.error('Erro ao chamar Edge Function:', error);
+      toast.error(
+        `Erro ao processar documentos: ${error.message || 'Erro desconhecido'}`,
+        { duration: 5000 }
+      );
+    } finally {
+      setIsGeneratingDocuments(false);
+      
+      // Limpar seleção
+      setSelectedStudents(new Set());
+      setSelectAll(false);
+    }
+  };
 
   if (loading) {
     return (
@@ -644,12 +741,31 @@ const CompletedApplicationsView: React.FC = () => {
         </div>
       </div>
 
+      {/* Bulk Actions Bar - aparece quando há estudantes selecionados */}
+      {selectedStudents.size > 0 && (
+        <BulkDocumentActionsBar
+          selectedCount={selectedStudents.size}
+          onGenerateDocuments={handleBulkGenerateDocuments}
+          onClearSelection={handleClearSelection}
+          isGenerating={isGeneratingDocuments}
+        />
+      )}
+
       {/* Completed Students List */}
       <div className="bg-white rounded-xl shadow-sm border border-gray-200">
         <div className="overflow-x-auto">
           <table className="min-w-full divide-y divide-gray-200">
             <thead className="bg-green-50">
               <tr>
+                <th className="px-6 py-3 text-left text-xs font-medium text-gray-700 uppercase tracking-wider w-12">
+                  <input
+                    type="checkbox"
+                    checked={selectAll}
+                    onChange={handleSelectAll}
+                    className="rounded border-gray-300 text-blue-600 focus:ring-blue-500"
+                    title="Select all students"
+                  />
+                </th>
                 <th className="px-6 py-3 text-left text-xs font-medium text-gray-700 uppercase tracking-wider">
                   Student
                 </th>
@@ -670,7 +786,7 @@ const CompletedApplicationsView: React.FC = () => {
             <tbody className="bg-white divide-y divide-gray-200">
               {currentStudents.length === 0 ? (
                 <tr>
-                  <td colSpan={5} className="px-6 py-12 text-center">
+                  <td colSpan={6} className="px-6 py-12 text-center">
                     <div className="flex flex-col items-center justify-center text-gray-500">
                       <CheckCircle className="h-12 w-12 mb-3 text-gray-300" />
                       <p className="text-lg font-medium">No completed enrollments found</p>
@@ -685,6 +801,14 @@ const CompletedApplicationsView: React.FC = () => {
                     className="hover:bg-green-50 cursor-pointer transition-colors"
                     onClick={() => { window.location.href = `/admin/dashboard/students/${student.student_id}`; }}
                   >
+                    <td className="px-6 py-4" onClick={(e) => e.stopPropagation()}>
+                      <input
+                        type="checkbox"
+                        checked={selectedStudents.has(student.student_id)}
+                        onChange={() => handleSelectStudent(student.student_id)}
+                        className="rounded border-gray-300 text-blue-600 focus:ring-blue-500"
+                      />
+                    </td>
                     <td className="px-6 py-4 whitespace-nowrap">
                       <div className="flex items-center">
                         <div className="flex-shrink-0 h-10 w-10">

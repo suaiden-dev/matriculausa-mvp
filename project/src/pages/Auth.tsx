@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { Link, useNavigate, useLocation } from 'react-router-dom';
+import { Link, useLocation } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import { Mail, Lock, User, Building, GraduationCap, CheckCircle, X, Gift, ChevronDown } from 'lucide-react';
 import { useAuth } from '../hooks/useAuth';
@@ -55,7 +55,7 @@ const Auth: React.FC<AuthProps> = ({ mode }) => {
   
   const { login, register } = useAuth();
 
-  const navigate = useNavigate();
+  // const navigate = useNavigate(); (removido por não ser utilizado e causar warning)
 
   // Global scroll-to-top on login/register page load
   useEffect(() => {
@@ -178,34 +178,41 @@ const Auth: React.FC<AuthProps> = ({ mode }) => {
     // Detectar tipo se não fornecido
     let detectedType = type;
     if (!detectedType) {
-      const directSalesCodes = ['SUAIDEN', 'BRANT'];
-      const codeUpper = code.toUpperCase();
-      const isDirectSalesCode = directSalesCodes.includes(codeUpper);
-      
-      // Verificar se é seller (incluindo Direct Sales)
-      let isSeller = isDirectSalesCode || code.startsWith('SELLER_') || code.length > 8;
-      
-      // Se não for claramente um seller, verificar na tabela sellers
-      if (!isSeller && !code.startsWith('MATR')) {
-        try {
-          const { data: sellerCheck } = await supabase
-            .from('sellers')
-            .select('id')
-            .eq('referral_code', codeUpper)
-            .eq('is_active', true)
-            .maybeSingle();
-          
-          if (sellerCheck) {
-            isSeller = true;
+      // ✅ NOVO: Priorizar tipo seller se vier do localStorage de landing page
+      const fromLandingPage = localStorage.getItem('pending_seller_referral_code');
+      if (fromLandingPage === code.toUpperCase()) {
+        console.log('[AUTH] Código detectado do localStorage de landing page, definindo como seller');
+        detectedType = 'seller';
+      } else {
+        const directSalesCodes = ['SUAIDEN', 'BRANT'];
+        const codeUpper = code.toUpperCase();
+        const isDirectSalesCode = directSalesCodes.includes(codeUpper);
+        
+        // Verificar se é seller (incluindo Direct Sales)
+        let isSeller = isDirectSalesCode || code.startsWith('SELLER_') || code.length > 8;
+        
+        // Se não for claramente um seller, verificar na tabela sellers
+        if (!isSeller && !code.startsWith('MATR')) {
+          try {
+            const { data: sellerCheck } = await supabase
+              .from('sellers')
+              .select('id')
+              .eq('referral_code', codeUpper)
+              .eq('is_active', true)
+              .maybeSingle();
+            
+            if (sellerCheck) {
+              isSeller = true;
+            }
+          } catch (err) {
+            // Ignorar erro, continuar com detecção padrão
           }
-        } catch (err) {
-          // Ignorar erro, continuar com detecção padrão
         }
+        
+        const isRewards = !isDirectSalesCode && !isSeller && (code.startsWith('MATR') || (code.length <= 8 && /^[A-Z0-9]+$/.test(code)));
+        
+        detectedType = isSeller ? 'seller' : isRewards ? 'rewards' : null;
       }
-      
-      const isRewards = !isDirectSalesCode && !isSeller && (code.startsWith('MATR') || (code.length <= 8 && /^[A-Z0-9]+$/.test(code)));
-      
-      detectedType = isSeller ? 'seller' : isRewards ? 'rewards' : null;
     }
 
     setFormData(prev => ({ ...prev, referralCode: code }));
@@ -451,7 +458,7 @@ const Auth: React.FC<AuthProps> = ({ mode }) => {
          
           // Validar dependents para todos os estudantes (deve ser entre 0 e 5)
           if (activeTab === 'student' && (formData.dependents < 0 || formData.dependents > 5)) {
-            setError('Please select between 0 and 5 dependents.');
+            setError(t('authPage.messages.invalidDependents'));
             setLoading(false);
             return;
           }
@@ -598,7 +605,7 @@ const Auth: React.FC<AuthProps> = ({ mode }) => {
             </p>
             <p className="mt-4 text-sm text-slate-500 px-4">
               {t('authPage.login.noAccount')}{' '}
-              <Link to="/register" className="font-bold text-[#D0151C] hover:text-[#B01218] transition-colors">
+              <Link to={`/register${location.search}`} className="font-bold text-[#D0151C] hover:text-[#B01218] transition-colors">
                 {t('authPage.login.signUpHere')}
               </Link>
             </p>
@@ -706,7 +713,7 @@ const Auth: React.FC<AuthProps> = ({ mode }) => {
           </p>
           <p className="mt-4 text-sm text-slate-500 px-4">
             {t('authPage.register.hasAccount')}{' '}
-            <Link to="/login" className="font-bold text-[#D0151C] hover:text-[#B01218] transition-colors">
+            <Link to={`/login${location.search}`} className="font-bold text-[#D0151C] hover:text-[#B01218] transition-colors">
               {t('authPage.register.signInHere')}
             </Link>
             </p>

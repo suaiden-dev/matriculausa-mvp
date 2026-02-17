@@ -1,9 +1,10 @@
 import React from 'react';
 import { useNavigate } from 'react-router-dom';
-import { CheckCircle, DollarSign, Award, FileText, ArrowRight, Lock, Clock } from 'lucide-react';
+import { CheckCircle, DollarSign, Award, FileText, Lock, Clock } from 'lucide-react';
 import { useFeeConfig } from '../hooks/useFeeConfig';
 import { useAuth } from '../hooks/useAuth';
 import { useDynamicFees } from '../hooks/useDynamicFees';
+import { useTranslation } from 'react-i18next';
 import { supabase } from '../lib/supabase';
 
 interface Step {
@@ -43,6 +44,7 @@ const FeeSkeleton = () => (
 );
 
 export const ProgressBar: React.FC<ProgressBarProps> = ({ steps, feeValues: customFeeValues }) => {
+  const { t } = useTranslation();
   const navigate = useNavigate();
   const { user, userProfile } = useAuth();
   const { getFeeAmount } = useFeeConfig(user?.id);
@@ -120,7 +122,7 @@ export const ProgressBar: React.FC<ProgressBarProps> = ({ steps, feeValues: cust
   // Valores padrão das taxas usando useDynamicFees (usados quando não há valores customizados)
   const defaultFeeValues = [
     selectionProcessFee || `$${getFeeAmount('selection_process')}`, // Selection Process Fee
-    'As per university', // Application Fee (sempre variável)
+    t('feeValues.asPerUniversity'), // Application Fee (sempre variável)
     scholarshipFee || `$${getFeeAmount('scholarship_fee')}`, // Scholarship Fee
     i20ControlFee || `$${getFeeAmount('i20_control_fee')}`, // I-20 Control Fee
   ];
@@ -151,7 +153,7 @@ export const ProgressBar: React.FC<ProgressBarProps> = ({ steps, feeValues: cust
   // Para a application fee (índice 1), usar mensagem genérica se não houver valor específico
   const displayFeeValues = feeValues.map((value, index) => {
     if (index === 1 && value === '$350.00') {
-      return 'As per university'; // Mensagem genérica para application fee
+      return t('feeValues.asPerUniversity'); // Mensagem genérica para application fee
     }
     return value;
   });

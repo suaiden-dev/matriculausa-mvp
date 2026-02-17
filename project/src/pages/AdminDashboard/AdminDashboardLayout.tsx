@@ -1,12 +1,12 @@
 import React, { useState } from 'react';
 import AdminDashboardSkeleton from '../../components/AdminDashboardSkeleton';
 import { Link, useLocation, useNavigate } from 'react-router-dom';
-import { 
-  Crown, 
+import {
+  Crown,
   Building,
-  Users, 
-  Award, 
-  Settings, 
+  Users,
+  Award,
+  Settings,
   BarChart3,
   Search,
   Menu,
@@ -48,7 +48,7 @@ const AdminDashboardLayout: React.FC<AdminDashboardLayoutProps> = ({
   const { unreadCount: serverUnreadCount } = useAdminStudentChatNotifications();
   const { unreadCount: contextUnreadCount, updateUnreadCount } = useUnreadMessages();
   const { unreadCount: messagesFallbackUnreadCount } = useUnreadMessagesCount();
-  
+
   // Use context count if it's been updated, otherwise use server count
   const displayUnreadCount =
     contextUnreadCount > 0
@@ -56,7 +56,7 @@ const AdminDashboardLayout: React.FC<AdminDashboardLayoutProps> = ({
       : serverUnreadCount > 0
         ? serverUnreadCount
         : messagesFallbackUnreadCount;
-  
+
   const getActiveTab = () => {
     const path = location.pathname;
     if (path.includes('/admin/dashboard/students')) return 'users';
@@ -123,16 +123,15 @@ const AdminDashboardLayout: React.FC<AdminDashboardLayoutProps> = ({
   return (
     <div className="min-h-screen bg-slate-50 flex">
       {/* Sidebar */}
-      <div className={`fixed inset-y-0 left-0 z-50 w-72 bg-white shadow-xl transform transition-transform duration-300 ease-in-out lg:translate-x-0 lg:static lg:inset-0 ${
-        sidebarOpen ? 'translate-x-0' : '-translate-x-full'
-      }`}>
+      <div className={`fixed inset-y-0 left-0 z-50 w-72 bg-white shadow-xl transform transition-transform duration-300 ease-in-out lg:translate-x-0 lg:fixed lg:inset-y-0 lg:border-r lg:border-slate-200 ${sidebarOpen ? 'translate-x-0' : '-translate-x-full'
+        }`}>
         <div className="flex flex-col h-full">
           {/* Logo */}
           <div className="flex items-center justify-between h-20 px-6 border-b border-slate-200">
             <Link to="/" className="flex items-center justify-center w-full">
-              <img 
-                src="/logo.png.png" 
-                alt="Matrícula USA" 
+              <img
+                src="/logo.png.png"
+                alt="Matrícula USA"
                 className="h-12 w-auto"
               />
             </Link>
@@ -156,7 +155,7 @@ const AdminDashboardLayout: React.FC<AdminDashboardLayoutProps> = ({
                 <p className="text-sm text-slate-500 truncate">System Administrator</p>
               </div>
             </div>
-            
+
             <div className="flex items-center justify-center mt-3">
               <span className="inline-flex items-center px-3 py-1 rounded-full text-xs font-medium bg-blue-100 text-[#05294E]">
                 <Shield className="h-3 w-3 mr-1" />
@@ -170,26 +169,24 @@ const AdminDashboardLayout: React.FC<AdminDashboardLayoutProps> = ({
             {sidebarItems.map((item) => {
               const Icon = item.icon;
               const isActive = activeTab === item.id;
-              
+
               return (
                 <Link
                   key={item.id}
                   to={item.path}
-                  className={`group flex items-center justify-between px-4 py-3 rounded-xl font-medium transition-all duration-200 ${
-                    isActive
-                      ? 'bg-[#05294E] text-white shadow-lg'
-                      : 'text-slate-600 hover:text-slate-900 hover:bg-slate-100'
-                  }`}
+                  className={`group flex items-center justify-between px-4 py-3 rounded-xl font-medium transition-all duration-200 ${isActive
+                    ? 'bg-[#05294E] text-white shadow-lg'
+                    : 'text-slate-600 hover:text-slate-900 hover:bg-slate-100'
+                    }`}
                 >
                   <div className="flex items-center space-x-3">
                     <div className="relative">
                       <Icon className={`h-5 w-5 ${isActive ? 'text-white' : 'text-slate-500'}`} />
                       {item.id === 'users' && displayUnreadCount > 0 && (
-                        <div className={`absolute -top-1 -right-1 w-3 h-3 rounded-full animate-pulse ${
-                          isActive 
-                            ? 'bg-white ' 
-                            : 'bg-blue-500'
-                        }`}></div>
+                        <div className={`absolute -top-1 -right-1 w-3 h-3 rounded-full animate-pulse ${isActive
+                          ? 'bg-white '
+                          : 'bg-blue-500'
+                          }`}></div>
                       )}
                     </div>
                     <span className="text-sm">{item.label}</span>
@@ -223,14 +220,14 @@ const AdminDashboardLayout: React.FC<AdminDashboardLayoutProps> = ({
 
       {/* Overlay for mobile */}
       {sidebarOpen && (
-        <div 
+        <div
           className="fixed inset-0 bg-black bg-opacity-50 z-40 lg:hidden"
           onClick={() => { setSidebarOpen(false); setUserMenuOpen(false); }}
         />
       )}
 
       {/* Main Content */}
-      <div className="flex-1 flex flex-col min-w-0">
+      <div className="flex-1 flex flex-col min-w-0 lg:pl-72 transition-all duration-300">
         {/* Top Header */}
         <header className="bg-white shadow-sm border-b border-slate-200">
           <div className="flex items-center justify-between px-6 py-4">
@@ -242,7 +239,7 @@ const AdminDashboardLayout: React.FC<AdminDashboardLayoutProps> = ({
               >
                 <Menu className="h-5 w-5" />
               </button>
-              
+
               <div className="hidden md:block">
                 <h1 className="text-2xl font-bold text-slate-900">
                   {activeTab === 'overview' && 'Dashboard Overview'}
@@ -277,7 +274,7 @@ const AdminDashboardLayout: React.FC<AdminDashboardLayoutProps> = ({
             <div className="flex items-center space-x-4">
 
               {/* Notifications */}
-              <AdminStudentChatNotifications 
+              <AdminStudentChatNotifications
                 onNotificationClick={(notification) => {
                   // Navegar para a aba de mensagens quando clicar em uma notificação
                   if (notification.conversation_id) {
@@ -311,7 +308,7 @@ const AdminDashboardLayout: React.FC<AdminDashboardLayoutProps> = ({
                       <p className="font-semibold text-slate-900">{user?.name}</p>
                       <p className="text-sm text-slate-500">{user?.email}</p>
                     </div>
-                    
+
                     <Link
                       to="/admin/dashboard/settings"
                       className="flex items-center px-4 py-3 text-sm text-slate-700 hover:bg-slate-50 transition-colors"
@@ -323,9 +320,9 @@ const AdminDashboardLayout: React.FC<AdminDashboardLayoutProps> = ({
                       <Settings className="h-4 w-4 mr-3 text-slate-400" />
                       System Settings
                     </Link>
-                    
+
                     <div className="border-t border-slate-200 my-2"></div>
-                    
+
                     <button
                       onClick={handleLogout}
                       className="flex items-center w-full px-4 py-3 text-sm text-red-600 hover:bg-red-50 transition-colors"

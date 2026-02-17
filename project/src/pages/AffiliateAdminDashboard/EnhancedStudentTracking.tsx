@@ -21,7 +21,6 @@ import {
 import { supabase } from '../../lib/supabase';
 import { getDocumentStatusDisplay } from '../../utils/documentStatusMapper';
 import { useFeeConfig } from '../../hooks/useFeeConfig';
-import { getDisplayAmounts } from '../../utils/paymentConverter';
 
 interface StudentInfo {
   student_id: string;
@@ -355,7 +354,11 @@ const EnhancedStudentTracking: React.FC<{ userId?: string }> = ({ userId }) => {
                   referral_code_used: student.referral_code_used,
                   total_paid: realRevenue, // Usar receita real calculada
                   created_at: student.created_at,
-                  status: student.status
+                  status: student.status,
+                  has_paid_selection_process_fee: student.has_paid_selection_process_fee,
+                  has_paid_i20_control_fee: student.has_paid_i20_control_fee,
+                  is_scholarship_fee_paid: student.is_scholarship_fee_paid,
+                  is_application_fee_paid: student.is_application_fee_paid
                 };
               })
             );
@@ -493,7 +496,11 @@ const EnhancedStudentTracking: React.FC<{ userId?: string }> = ({ userId }) => {
               referral_code_used: studentProfile.seller_referral_code || '',
               total_paid: realRevenue, // Usar receita real calculada
               created_at: studentProfile.created_at || new Date().toISOString(),
-              status: studentProfile.status || 'active'
+              status: studentProfile.status || 'active',
+              has_paid_selection_process_fee: studentProfile.has_paid_selection_process_fee,
+              has_paid_i20_control_fee: studentProfile.has_paid_i20_control_fee,
+              is_scholarship_fee_paid: studentProfile.is_scholarship_fee_paid,
+              is_application_fee_paid: studentProfile.is_application_fee_paid
             };
           })
       );
@@ -817,6 +824,9 @@ const EnhancedStudentTracking: React.FC<{ userId?: string }> = ({ userId }) => {
         
         console.log('🔍 Found user_id for student:', profileData.user_id);
         
+        // Segundo, buscar a aplicação de bolsa usando o profile_id (que é o id na tabela user_profiles)
+        const profileId = studentId.length > 30 ? studentId : studentData.profile_id;
+        
         const { data: applicationData, error: applicationError } = await supabase
           .from('scholarship_applications')
           .select(`
@@ -832,10 +842,10 @@ const EnhancedStudentTracking: React.FC<{ userId?: string }> = ({ userId }) => {
               )
             )
           `)
-          .eq('student_id', profileData.user_id)
+          .eq('student_id', studentId.length > 30 && studentId === profileData.user_id ? studentData.profile_id : studentId)
           .order('created_at', { ascending: false })
           .limit(1)
-          .single();
+          .maybeSingle();
 
         console.log('🔍 Application Data Debug:', {
           applicationData,
@@ -1190,106 +1200,53 @@ const EnhancedStudentTracking: React.FC<{ userId?: string }> = ({ userId }) => {
         return totalRevenue; // Retornar apenas os pagamentos Zelle (sem application_fee)
       }
       
-      // Se não há pagamentos Zelle, usar valores reais pagos de individual_fee_payments
-      console.log('🔍 No Zelle payments found, using real paid amounts from individual_fee_payments');
+      // Se não há pagamentos Zelle: usar valor ORIGINAL da taxa (override ou pacote/base), não valor real pago (que pode incluir taxas do gateway)
+      console.log('🔍 No Zelle payments found, using original fee amounts (override or package/base)');
       
-      // ✅ CORREÇÃO: Usar getDisplayAmounts para exibição (valores "Zelle" sem taxas)
-      const realPaidAmounts = await getDisplayAmounts(studentId, ['selection_process', 'scholarship', 'i20_control']);
-      
-      console.log('🔍 [EnhancedStudentTracking] Real paid amounts for student:', {
-        studentId,
-        profileId,
-        realPaidAmounts
-      });
-      
-      // Adicionar valores reais pagos (prioriza valores reais que já incluem base_amount)
-      if (realPaidAmounts.selection_process !== undefined && realPaidAmounts.selection_process > 0) {
-        totalRevenue += realPaidAmounts.selection_process;
-        console.log(`🔍 [EnhancedStudentTracking] Selection process fee (real paid with base_amount): $${realPaidAmounts.selection_process}`);
-      }
-      
-      if (realPaidAmounts.scholarship !== undefined && realPaidAmounts.scholarship > 0) {
-        totalRevenue += realPaidAmounts.scholarship;
-        console.log(`🔍 [EnhancedStudentTracking] Scholarship fee (real paid with base_amount): $${realPaidAmounts.scholarship}`);
-      }
-      
-      if (realPaidAmounts.i20_control !== undefined && realPaidAmounts.i20_control > 0) {
-        totalRevenue += realPaidAmounts.i20_control;
-        console.log(`🔍 [EnhancedStudentTracking] I-20 control fee (real paid with base_amount): $${realPaidAmounts.i20_control}`);
-      }
-      
-      // Se não houver valores reais pagos, usar fallback para cálculo tradicional
-      if (totalRevenue === 0) {
-        console.log('🔍 No real paid amounts found, using fallback calculation');
-        
-        // Buscar aplicação de bolsa do estudante
-        const { data: applicationData } = await supabase
-          .from('scholarship_applications')
-          .select(`
-            id,
-            is_application_fee_paid,
-            is_scholarship_fee_paid,
-            scholarships (
-              application_fee_amount
-            )
-          `)
-          .eq('student_id', profileId)
-          .order('created_at', { ascending: false })
-          .limit(1)
-          .single();
+      const { data: profileData, error: profileError } = await supabase
+        .from('user_profiles')
+        .select('dependents, system_type, has_paid_selection_process_fee, has_paid_i20_control_fee')
+        .eq('id', profileId)
+        .single();
 
-        if (applicationData) {
-          // Scholarship Fee (dinâmica baseada no pacote)
-          if (applicationData.is_scholarship_fee_paid) {
-            // Buscar taxas do pacote do estudante
-            const { data: packageFees } = await supabase.rpc('get_user_package_fees', {
-              user_id_param: studentId
-            });
-            const scholarshipFee = packageFees && packageFees.length > 0 
-              ? packageFees[0].scholarship_fee 
-              : getDefaultFeeAmount('scholarship_fee');
-            totalRevenue += scholarshipFee;
-            console.log(`🔍 Scholarship fee (fallback): $${scholarshipFee}`);
-          }
-        }
-        
-        // Buscar perfil do usuário para taxas fixas
-        const { data: profileData, error: profileError } = await supabase
-          .from('user_profiles')
-          .select(`
-            has_paid_selection_process_fee,
-            has_paid_i20_control_fee
-          `)
-          .eq('id', profileId)
-          .single();
+      const { data: overrides } = await supabase.rpc('get_user_fee_overrides', { target_user_id: studentId });
+      const { data: packageFees } = await supabase.rpc('get_user_package_fees', { user_id_param: studentId });
+      const { data: applicationData } = await supabase
+        .from('scholarship_applications')
+        .select('is_scholarship_fee_paid')
+        .eq('student_id', profileId)
+        .order('created_at', { ascending: false })
+        .limit(1)
+        .single();
 
-        if (!profileError && profileData) {
-          // Selection Process Fee (dinâmica baseada no pacote)
-          if (profileData.has_paid_selection_process_fee) {
-            // Buscar taxas do pacote do estudante
-            const { data: packageFees } = await supabase.rpc('get_user_package_fees', {
-              user_id_param: studentId
-            });
-            const selectionFee = packageFees && packageFees.length > 0 
-              ? packageFees[0].selection_process_fee 
-              : getDefaultFeeAmount('selection_process');
-            totalRevenue += selectionFee;
-            console.log(`🔍 Selection process fee (fallback): $${selectionFee}`);
-          }
-          
-          // I-20 Control Fee (dinâmica baseada no pacote)
-          if (profileData.has_paid_i20_control_fee) {
-            // Buscar taxas do pacote do estudante
-            const { data: packageFees } = await supabase.rpc('get_user_package_fees', {
-              user_id_param: studentId
-            });
-            const i20Fee = packageFees && packageFees.length > 0 
-              ? packageFees[0].i20_control_fee 
-              : getDefaultFeeAmount('i-20_control_fee');
-            totalRevenue += i20Fee;
-            console.log(`🔍 I-20 control fee (fallback): $${i20Fee}`);
-          }
-        }
+      const dependents = Number(profileData?.dependents) || 0;
+      const systemType = profileData?.system_type || 'legacy';
+      const isSimplified = systemType === 'simplified';
+      const ov = overrides ?? {};
+      const pkg = packageFees?.[0];
+
+      const baseSelection = isSimplified ? 350 : 400;
+      const selectionOriginal = ov.selection_process_fee != null
+        ? Number(ov.selection_process_fee)
+        : (pkg?.selection_process_fee ?? (isSimplified ? baseSelection : baseSelection + dependents * 150));
+      const scholarshipOriginal = ov.scholarship_fee != null
+        ? Number(ov.scholarship_fee)
+        : (pkg?.scholarship_fee ?? (isSimplified ? 550 : 900));
+      const i20Original = ov.i20_control_fee != null
+        ? Number(ov.i20_control_fee)
+        : (pkg?.i20_control_fee ?? 900);
+
+      if (profileData?.has_paid_selection_process_fee) {
+        totalRevenue += selectionOriginal;
+        console.log(`🔍 [EnhancedStudentTracking] Selection process fee (original): $${selectionOriginal}`);
+      }
+      if (applicationData?.is_scholarship_fee_paid) {
+        totalRevenue += scholarshipOriginal;
+        console.log(`🔍 [EnhancedStudentTracking] Scholarship fee (original): $${scholarshipOriginal}`);
+      }
+      if (profileData?.has_paid_i20_control_fee) {
+        totalRevenue += i20Original;
+        console.log(`🔍 [EnhancedStudentTracking] I-20 control fee (original): $${i20Original}`);
       }
       
       console.log(`🔍 Total revenue calculated for student ${studentId}: $${totalRevenue}`);

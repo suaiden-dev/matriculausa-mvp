@@ -10,6 +10,7 @@ import { supabase } from '../lib/supabase';
 import { PreCheckoutModal } from './PreCheckoutModal';
 import { PaymentMethodSelector } from './PaymentMethodSelector';
 import { PaymentMethodSelectorDrawer } from './PaymentMethodSelectorDrawer';
+import { ProfileRequiredModal } from './ProfileRequiredModal';
 import { getTranslatedProductNameByProductId } from '../lib/productNameUtils';
 import { getExchangeRate } from '../utils/stripeFeeCalculator';
 
@@ -31,7 +32,7 @@ interface StripeCheckoutProps {
   exchangeRate?: number; // Taxa de câmbio para PIX (opcional)
 }
 
-export const StripeCheckout: React.FC<StripeCheckoutProps> = ({
+export const StripeCheckout = React.forwardRef<HTMLButtonElement, StripeCheckoutProps>(({
   productId,
   buttonText = 'Checkout',
   className = '',
@@ -47,7 +48,7 @@ export const StripeCheckout: React.FC<StripeCheckoutProps> = ({
   studentProcessType,
   beforeCheckout,
   exchangeRate,
-}) => {
+}, ref) => {
   const [showPreCheckoutModal, setShowPreCheckoutModal] = useState(false);
   const [showScholarshipFeeModal, setShowScholarshipFeeModal] = useState(false);
 
@@ -67,7 +68,9 @@ export const StripeCheckout: React.FC<StripeCheckoutProps> = ({
     };
   }, [showPreCheckoutModal, showScholarshipFeeModal, showI20ControlFeeModal]);
   const [showPaymentMethodSelector, setShowPaymentMethodSelector] = useState(false);
-  const [selectedPaymentMethod, setSelectedPaymentMethod] = useState<'stripe' | 'zelle' | 'pix' | null>(null);
+  const [selectedPaymentMethod, setSelectedPaymentMethod] = useState<'stripe' | 'zelle' | 'pix' | 'parcelow' | null>(null);
+  const [showProfileRequiredModal, setShowProfileRequiredModal] = useState(false);
+  const [profileErrorType, setProfileErrorType] = useState<'cpf_missing' | 'profile_incomplete' | null>(null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
@@ -182,7 +185,7 @@ export const StripeCheckout: React.FC<StripeCheckoutProps> = ({
   const handlePaymentMethodSelect = async (method: string, exchangeRate?: number) => {
     console.log('🔍 [StripeCheckout] handlePaymentMethodSelect chamado com método:', method, 'exchangeRate:', exchangeRate);
     console.log('🔍 [StripeCheckout] Estado anterior - selectedPaymentMethod:', selectedPaymentMethod);
-    setSelectedPaymentMethod(method as 'stripe' | 'zelle' | 'pix');
+    setSelectedPaymentMethod(method as 'stripe' | 'zelle' | 'pix' | 'parcelow');
     
     // Salvar taxa de câmbio se for PIX
     if (method === 'pix' && exchangeRate) {
@@ -273,6 +276,9 @@ export const StripeCheckout: React.FC<StripeCheckoutProps> = ({
       
       console.log('🔍 [StripeCheckout] Navegando para Zelle com valor:', amountToUse);
       window.location.href = `/checkout/zelle?${params.toString()}`;
+    } else if (method === 'parcelow') {
+      console.log('🔍 [StripeCheckout] 📦 Parcelow selecionado, iniciando checkout Parcelow...');
+      handleCheckout('parcelow');
     }
     // Para Zelle, o usuário será redirecionado para a página de checkout
   };
@@ -448,6 +454,83 @@ export const StripeCheckout: React.FC<StripeCheckoutProps> = ({
       }
       
       console.log('[StripeCheckout] 📤 Enviando requestBody (metadata):', JSON.stringify(requestBody.metadata, null, 2));
+      
+      // ✅ Caso especial Parcelow
+      if (paymentMethod === 'parcelow') {
+        console.log('🔍 [StripeCheckout] Iniciando checkout Parcelow...');
+        
+        let parcelowUrl = `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/parcelow-checkout-application-fee`;
+        
+        if (feeType === 'selection_process') {
+          parcelowUrl = `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/parcelow-checkout-selection-process`;
+        } else if (feeType === 'scholarship_fee') {
+          parcelowUrl = `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/parcelow-checkout-scholarship-fee`;
+        } else if (feeType === 'i20_control_fee') {
+          parcelowUrl = `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/parcelow-checkout-i20-control-fee`;
+        }
+        
+        const response = await fetch(parcelowUrl, {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'Authorization': `Bearer ${token}`
+          },
+          body: JSON.stringify({
+            amount: finalAmount,
+            fee_type: feeType,
+            metadata: {
+              ...metadata,
+              application_id: applicationId,
+              student_process_type: studentProcessType,
+              final_amount: finalAmount,
+              promotional_coupon: promotionalCoupon
+            },
+            promotional_coupon: promotionalCoupon,
+            scholarships_ids: scholarshipsIds
+          })
+        });
+
+        if (!response.ok) {
+          let errorData: { error?: string; message?: string } = {};
+          try {
+            errorData = await response.json();
+          } catch {
+            setError(t('errors.genericPaymentError', 'Unable to start checkout. Please try again.'));
+            setLoading(false);
+            return;
+          }
+          setShowPaymentMethodSelector(false);
+          if (errorData.error === 'document_number_required') {
+            setProfileErrorType('cpf_missing');
+            setShowProfileRequiredModal(true);
+            setLoading(false);
+            return;
+          }
+          if (errorData.error === 'User profile not found') {
+            setProfileErrorType('profile_incomplete');
+            setShowProfileRequiredModal(true);
+            setLoading(false);
+            return;
+          }
+          if (errorData.error === 'parcelow_client_email_exists' || errorData.error === 'parcelow_order_rejected') {
+            setError(errorData.message || errorData.error || 'Parcelow recusou o pedido. Tente novamente ou use outro método.');
+            setLoading(false);
+            return;
+          }
+          setError(errorData.message || errorData.error || 'Erro ao criar sessão Parcelow');
+          setLoading(false);
+          return;
+        }
+
+        const data = await response.json();
+        if (data.checkout_url) {
+          console.log('[Parcelow] Redirecionando para:', data.checkout_url);
+          window.location.href = data.checkout_url;
+          return;
+        } else {
+          throw new Error('URL de checkout Parcelow não encontrada');
+        }
+      }
 
 
       const response = await fetch(apiUrl, {
@@ -554,6 +637,7 @@ export const StripeCheckout: React.FC<StripeCheckoutProps> = ({
   return (
     <>
       <button
+        ref={ref}
         onClick={isBlocked && pendingPayment ? undefined : checkActiveDiscount}
         disabled={disabled || loading || paymentBlockedLoading || Boolean(isBlocked && pendingPayment)}
         className={`${className} ${(loading || paymentBlockedLoading || (isBlocked && pendingPayment)) ? 'opacity-50 cursor-not-allowed' : ''}`}
@@ -635,7 +719,7 @@ export const StripeCheckout: React.FC<StripeCheckoutProps> = ({
       )}
 
       {/* Seleção de Método de Pagamento - Responsive Drawer/Dialog */}
-      {showPaymentMethodSelector && !selectedPaymentMethod && (
+      {showPaymentMethodSelector && (
         <PaymentMethodSelectorDrawer
           isOpen={showPaymentMethodSelector}
           onClose={() => {
@@ -653,10 +737,21 @@ export const StripeCheckout: React.FC<StripeCheckoutProps> = ({
             : feeType === 'i20_control_fee'
             ? (i20ControlFee ? parseFloat(i20ControlFee.replace('$', '')) : 0)
             : getFinalApplicationFee())}
+          isLoading={loading}
         />
       )}
 
       {/* Checkout Zelle - Removido, agora redireciona para página separada */}
+
+      {/* Profile Required Modal */}
+      <ProfileRequiredModal
+        isOpen={showProfileRequiredModal}
+        onClose={() => {
+          setShowProfileRequiredModal(false);
+          setProfileErrorType(null);
+        }}
+        errorType={profileErrorType}
+      />
 
       {error && (
         <div className="mt-2 text-red-600 text-sm">
@@ -666,4 +761,4 @@ export const StripeCheckout: React.FC<StripeCheckoutProps> = ({
 
     </>
   );
-};
+});

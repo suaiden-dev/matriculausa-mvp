@@ -1,12 +1,15 @@
-import { serve } from "https://deno.land/std@0.168.0/http/server.ts"
-import { createClient } from 'https://esm.sh/@supabase/supabase-js@2'
+import 'jsr:@supabase/functions-js/edge-runtime.d.ts'
+import { createClient } from 'npm:@supabase/supabase-js@2.49.1'
+
+// @ts-ignore
+declare const Deno: any;
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
   'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
 }
 
-serve(async (req) => {
+Deno.serve(async (req: Request) => {
   // Handle CORS preflight requests
   if (req.method === 'OPTIONS') {
     return new Response('ok', { headers: corsHeaders })
@@ -234,7 +237,7 @@ serve(async (req) => {
         console.error('Failed to log payment action:', logError);
       }
 
-      // --- MATRICULA REWARDS - ADICIONAR COINS ---
+      // --- MATRICULA REWARDS - TRACKING DE STATUS ---
       try {
         console.log('🎁 [approve-zelle-payment-automatic] Processando Matricula Rewards para Selection Process Fee...')
         
@@ -246,7 +249,7 @@ serve(async (req) => {
           .single();
 
         if (!codeError && usedCode) {
-          console.log('🎁 [approve-zelle-payment-automatic] Usuário usou código de referência, adicionando 180 coins para:', usedCode.referrer_id);
+          console.log('🎁 [approve-zelle-payment-automatic] Usuário usou código de referência, atualizando status para:', usedCode.referrer_id);
           
           // Buscar nome do usuário que pagou
           const { data: referredUserProfile } = await supabaseClient
@@ -257,21 +260,57 @@ serve(async (req) => {
           
           const referredDisplayName = referredUserProfile?.full_name || referredUserProfile?.email || user_id;
           
-          // Adicionar 180 coins para o usuário que fez a indicação
-          const { data: coinsResult, error: coinsError } = await supabaseClient
-            .rpc('add_coins_to_user_matricula', {
-              user_id_param: usedCode.referrer_id,
-              coins_to_add: 180,
-              reason: `Referral reward: Selection Process Fee paid by ${referredDisplayName}`
+          // ✅ NOVO: Atualizar status ao invés de creditar coins
+          try {
+            await supabaseClient.rpc('update_referral_status', {
+              p_referred_user_id: user_id,
+              p_new_status: 'selection_process_paid',
+              p_timestamp: new Date().toISOString()
             });
+            console.log('✅ [approve-zelle-payment-automatic] Status atualizado para selection_process_paid');
+            
+            // --- NOTIFICAÇÃO DE PROGRESSO PARA O ALUNO (PADRINHO) ---
+            try {
+              console.log('📤 [approve-zelle-payment-automatic] Enviando notificação de progresso para o padrinho...');
+              
+              // Buscar dados do padrinho (referrer)
+              const { data: referrerProfile } = await supabaseClient
+                .from('user_profiles')
+                .select('full_name, email')
+                .eq('user_id', usedCode.referrer_id)
+                .single();
+              
+              if (referrerProfile?.email) {
+                const progressPayload = {
+                  tipo_notf: "Progresso de Indicacao - Selection Process Fee Pago",
+                  email_aluno: referrerProfile.email,
+                  nome_aluno: referrerProfile.full_name || "Aluno",
+                  referred_student_name: referredDisplayName,
+                  referred_student_email: referredUserProfile?.email || "",
+                  payment_method: "Zelle",
+                  fee_type: "Selection Process Fee",
+                  o_que_enviar: `Good news! Your friend ${referredDisplayName} has paid the Selection Process Fee. You'll receive 180 MatriculaCoins when they complete the I20 payment!`
+                };
 
-          if (coinsError) {
-            console.error('❌ [approve-zelle-payment-automatic] Erro ao adicionar coins:', coinsError);
-          } else {
-            console.log('✅ [approve-zelle-payment-automatic] 180 coins adicionados com sucesso:', coinsResult);
+                console.log('📤 [approve-zelle-payment-automatic] Payload de progresso:', progressPayload);
+
+                await fetch('https://nwh.suaiden.com/webhook/notfmatriculausa', {
+                  method: 'POST',
+                  headers: {
+                    'Content-Type': 'application/json',
+                  },
+                  body: JSON.stringify(progressPayload),
+                });
+                console.log('✅ [approve-zelle-payment-automatic] Notificação de progresso enviada com sucesso!');
+              }
+            } catch (progressNotifError) {
+              console.error('❌ [approve-zelle-payment-automatic] Erro ao enviar notificação de progresso:', progressNotifError);
+            }
+          } catch (statusError) {
+            console.error('❌ [approve-zelle-payment-automatic] Erro ao atualizar status:', statusError);
           }
         } else {
-          console.log('ℹ️ [approve-zelle-payment-automatic] Usuário não usou código de referência, não há coins para adicionar');
+          console.log('ℹ️ [approve-zelle-payment-automatic] Usuário não usou código de referência, nenhum tracking necessário');
         }
       } catch (rewardsError) {
         console.error('❌ [approve-zelle-payment-automatic] Erro ao processar Matricula Rewards:', rewardsError);
@@ -355,6 +394,79 @@ serve(async (req) => {
         console.error('Failed to log payment action:', logError);
       }
 
+      // --- MATRICULA REWARDS - AGORA GERENCIADO POR TRIGGER ---
+      // O trigger handle_i20_payment_rewards() no banco de dados automaticamente:
+      // 1. Credita 180 MatriculaCoins quando has_paid_i20_control_fee muda para true
+      // 2. Atualiza o status do referral para 'i20_paid'
+      // Aqui apenas enviamos a notificação de recompensa para o padrinho
+      try {
+        console.log('🎁 [approve-zelle-payment-automatic] Verificando se usuário usou código de referência para enviar notificação...')
+        
+        // Buscar se o usuário usou algum código de referência
+        const { data: usedCode, error: codeError } = await supabaseClient
+          .from('used_referral_codes')
+          .select('referrer_id, affiliate_code')
+          .eq('user_id', user_id)
+          .single();
+
+        if (!codeError && usedCode) {
+          console.log('🎁 [approve-zelle-payment-automatic] Usuário usou código de referência, enviando notificação para:', usedCode.referrer_id);
+          
+          // Buscar nome do usuário que pagou
+          const { data: referredUserProfile } = await supabaseClient
+            .from('user_profiles')
+            .select('full_name, email')
+            .eq('user_id', user_id)
+            .single();
+          
+          const referredDisplayName = referredUserProfile?.full_name || referredUserProfile?.email || user_id;
+          
+          // --- NOTIFICAÇÃO DE RECOMPENSA PARA O ALUNO (PADRINHO) ---
+          try {
+            console.log('📤 [approve-zelle-payment-automatic] Enviando notificação de recompensa para o padrinho...');
+            
+            // Buscar dados do padrinho (referrer)
+            const { data: referrerProfile } = await supabaseClient
+              .from('user_profiles')
+              .select('full_name, email')
+              .eq('user_id', usedCode.referrer_id)
+              .single();
+            
+            if (referrerProfile?.email) {
+              const rewardPayload = {
+                tipo_notf: "Recompensa de MatriculaCoins por Indicacao",
+                email_aluno: referrerProfile.email,
+                nome_aluno: referrerProfile.full_name || "Aluno",
+                referred_student_name: referredDisplayName,
+                referred_student_email: referredUserProfile?.email || "",
+                payment_method: "Zelle",
+                fee_type: "I20 Control Fee",
+                reward_type: "MatriculaCoins",
+                o_que_enviar: `Congratulations! Your friend ${referredDisplayName} has completed the I20 payment. 180 MatriculaCoins have been added to your account!`
+              };
+
+              console.log('📤 [approve-zelle-payment-automatic] Payload de recompensa:', rewardPayload);
+
+              await fetch('https://nwh.suaiden.com/webhook/notfmatriculausa', {
+                method: 'POST',
+                headers: {
+                  'Content-Type': 'application/json',
+                },
+                body: JSON.stringify(rewardPayload),
+              });
+              console.log('✅ [approve-zelle-payment-automatic] Notificação de recompensa enviada com sucesso!');
+            }
+          } catch (rewardNotifError) {
+            console.error('❌ [approve-zelle-payment-automatic] Erro ao enviar notificação de recompensa:', rewardNotifError);
+          }
+        } else {
+          console.log('ℹ️ [approve-zelle-payment-automatic] Usuário não usou código de referência, nenhuma notificação a enviar');
+        }
+      } catch (rewardsError) {
+        console.error('❌ [approve-zelle-payment-automatic] Erro ao processar notificação de Matricula Rewards:', rewardsError);
+      }
+      // --- FIM MATRICULA REWARDS ---
+
     } else if (normalizedFeeTypeGlobal === 'application_fee' || normalizedFeeTypeGlobal === 'scholarship_fee') {
       console.log('🎯 [approve-zelle-payment-automatic] Atualizando scholarship_applications...')
       
@@ -365,7 +477,7 @@ serve(async (req) => {
       // Converter scholarship_ids para array se for string
       const scholarshipIdsArray = Array.isArray(scholarship_ids) 
         ? scholarship_ids 
-        : scholarship_ids.split(',').map(id => id.trim())
+        : scholarship_ids.split(',').map((id: string) => id.trim())
 
       console.log('🔍 [approve-zelle-payment-automatic] scholarship_ids processados:', scholarshipIdsArray)
 
@@ -679,19 +791,46 @@ serve(async (req) => {
         const { data: sellerProfile, error: sellerProfileError } = await supabaseClient.from('user_profiles').select('phone').eq('user_id', sellerData.user_id).single();
         const sellerPhone = sellerProfile?.phone;
 
+        // Helper logic to safely extract Affiliate Admin data (handling array/object ambiguity)
+        const affiliateAdminRaw = Array.isArray(sellerData.affiliate_admin) 
+          ? sellerData.affiliate_admin[0] 
+          : (sellerData.affiliate_admin as any);
+        
+        const affiliateUserInfo = affiliateAdminRaw?.user_profiles 
+          ? (Array.isArray(affiliateAdminRaw.user_profiles) 
+              ? affiliateAdminRaw.user_profiles[0] 
+              : affiliateAdminRaw.user_profiles)
+          : null;
+            
+        const affiliateAdminEmail = affiliateUserInfo?.email || "";
+        const affiliateAdminName = affiliateUserInfo?.full_name || "Affiliate Admin";
+        const affiliateAdminId = affiliateAdminRaw?.user_id;
+        
+        // Define userProfile here to ensure it's available in all scopes if previously defined in if blocks
+        let userProfileData = null;
+        if (normalizedFeeTypeGlobal === 'application_fee' || normalizedFeeTypeGlobal === 'scholarship_fee') {
+             // It was processed in the loop above, but we need fresh data for notifications if it wasn't fetched in step 3
+             const { data: userData } = await supabaseClient.from('user_profiles').select('full_name, email, phone').eq('user_id', user_id).single();
+             userProfileData = userData;
+        } else {
+             // Try to use the one from step 3 if available
+             const { data: userData } = await supabaseClient.from('user_profiles').select('full_name, email, phone').eq('user_id', user_id).single();
+             userProfileData = userData;
+        }
+
         // NOTIFICAÇÃO PARA ADMIN
         try {
           const adminNotificationPayload = {
             tipo_notf: "Pagamento de aluno aprovado automaticamente",
             email_admin: "admin@matriculausa.com",
             nome_admin: "Admin MatriculaUSA",
-            email_aluno: userProfile?.email || "",
-            nome_aluno: userProfile?.full_name || "Aluno",
+            email_aluno: userProfileData?.email || "",
+            nome_aluno: userProfileData?.full_name || "Aluno",
             email_seller: sellerData.email,
             nome_seller: sellerData.name,
-            email_affiliate_admin: sellerData.affiliate_admin?.user_profiles?.email || "",
-            nome_affiliate_admin: sellerData.affiliate_admin?.user_profiles?.full_name || "Affiliate Admin",
-            o_que_enviar: `Pagamento de ${normalizedFeeTypeGlobal} no valor de ${paymentAmount} do aluno ${userProfile?.full_name || "Aluno"} foi aprovado automaticamente pelo sistema. Seller responsável: ${sellerData.name} (${sellerData.referral_code})`,
+            email_affiliate_admin: affiliateAdminEmail,
+            nome_affiliate_admin: affiliateAdminName,
+            o_que_enviar: `Pagamento de ${normalizedFeeTypeGlobal} no valor de ${paymentAmount} do aluno ${userProfileData?.full_name || "Aluno"} foi aprovado automaticamente pelo sistema. Seller responsável: ${sellerData.name} (${sellerData.referral_code})`,
             payment_id: paymentId,
             fee_type: normalizedFeeTypeGlobal,
             amount: paymentAmount,
@@ -721,24 +860,27 @@ serve(async (req) => {
         }
 
         // NOTIFICAÇÃO PARA AFFILIATE ADMIN
-        if (sellerData.affiliate_admin?.user_profiles?.email) {
+        if (affiliateAdminEmail) {
           try {
             // Buscar telefone do affiliate admin
-            const { data: affiliateAdminProfile, error: affiliateAdminProfileError } = await supabaseClient.from('user_profiles').select('phone').eq('user_id', sellerData.affiliate_admin.user_id).single();
-            const affiliateAdminPhone = affiliateAdminProfile?.phone || "";
+            let affiliateAdminPhone = "";
+            if (affiliateAdminId) {
+                const { data: affiliateAdminProfile } = await supabaseClient.from('user_profiles').select('phone').eq('user_id', affiliateAdminId).single();
+                affiliateAdminPhone = affiliateAdminProfile?.phone || "";
+            }
             
             const affiliateAdminNotificationPayload = {
               tipo_notf: "Pagamento de aluno do seu seller aprovado automaticamente",
-              email_affiliate_admin: sellerData.affiliate_admin.user_profiles.email,
-              nome_affiliate_admin: sellerData.affiliate_admin.user_profiles.full_name || "Affiliate Admin",
+              email_affiliate_admin: affiliateAdminEmail,
+              nome_affiliate_admin: affiliateAdminName,
               phone_affiliate_admin: affiliateAdminPhone,
-              email_aluno: userProfile?.email || "",
-              nome_aluno: userProfile?.full_name || "Aluno",
-              phone_aluno: userProfile?.phone || "",
+              email_aluno: userProfileData?.email || "",
+              nome_aluno: userProfileData?.full_name || "Aluno",
+              phone_aluno: userProfileData?.phone || "",
               email_seller: sellerData.email,
               nome_seller: sellerData.name,
               phone_seller: sellerPhone || "",
-              o_que_enviar: `Pagamento de ${normalizedFeeTypeGlobal} no valor de ${paymentAmount} do aluno ${userProfile?.full_name || "Aluno"} foi aprovado automaticamente pelo sistema. Seller responsável: ${sellerData.name} (${sellerData.referral_code})`,
+              o_que_enviar: `Pagamento de ${normalizedFeeTypeGlobal} no valor de ${paymentAmount} do aluno ${userProfileData?.full_name || "Aluno"} foi aprovado automaticamente pelo sistema. Seller responsável: ${sellerData.name} (${sellerData.referral_code})`,
               payment_id: paymentId,
               fee_type: normalizedFeeTypeGlobal,
               amount: paymentAmount,
@@ -775,10 +917,10 @@ serve(async (req) => {
             email_seller: sellerData.email,
             nome_seller: sellerData.name,
             phone_seller: sellerPhone || "",
-            email_aluno: userProfile?.email || "",
-            nome_aluno: userProfile?.full_name || "Aluno",
-            phone_aluno: userProfile?.phone || "",
-            o_que_enviar: `Parabéns! O pagamento de ${normalizedFeeTypeGlobal} no valor de ${paymentAmount} do seu aluno ${userProfile?.full_name || "Aluno"} foi aprovado automaticamente pelo sistema. Você ganhará comissão sobre este pagamento!`,
+            email_aluno: userProfileData?.email || "",
+            nome_aluno: userProfileData?.full_name || "Aluno",
+            phone_aluno: userProfileData?.phone || "",
+            o_que_enviar: `Parabéns! O pagamento de ${normalizedFeeTypeGlobal} no valor de ${paymentAmount} do seu aluno ${userProfileData?.full_name || "Aluno"} foi aprovado automaticamente pelo sistema. Você ganhará comissão sobre este pagamento!`,
             payment_id: paymentId,
             fee_type: normalizedFeeTypeGlobal,
             amount: paymentAmount,
@@ -831,7 +973,7 @@ serve(async (req) => {
       }
     )
 
-  } catch (error) {
+  } catch (error: any) {
     console.error('❌ [approve-zelle-payment-automatic] Erro:', error)
     
     return new Response(

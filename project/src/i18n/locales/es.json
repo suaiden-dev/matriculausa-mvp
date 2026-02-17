@@ -62,6 +62,239 @@
     "processingZellePayment": "Pago Zelle en verificación",
     "zellePaymentPending": "Por favor, espere la verificación de su pago Zelle antes de iniciar un nuevo proceso."
   },
+  "processPages": {
+    "common": {
+      "selectionProcess": "Proceso Selectivo",
+      "applicationFeeI20": "Application Fee + I-20",
+      "scholarshipFee": "Tarifa de Beca",
+      "controlFee": "Control Fee",
+      "legalFees": "Honorarios Jurídicos",
+      "fundsProof": "Comprobación de Fondos",
+      "valuesSummary": "Resumen de Valores",
+      "total": "Total:",
+      "step": "Paso",
+      "optional": "Opcional",
+      "rights": "Todos los derechos reservados.",
+      "clients": {
+        "title": "Nuestros Clientes",
+        "description": "Estudiantes que realizaron el sueño de estudiar en los Estados Unidos",
+        "client": "Cliente"
+      },
+      "conversion": {
+        "title": "¿Listo para comenzar tu proceso?",
+        "description": "Haz clic en el botón de abajo para iniciar tu viaje a los Estados Unidos con todo el soporte necesario.",
+        "buttonText": "Comenzar Ahora",
+        "redirectAuthenticated": "Serás redirigido al área del estudiante para realizar el pago del proceso de selección.",
+        "redirectAnonymous": "Serás redirigido para crear tu cuenta. ¡Es rápido y gratuito!",
+        "referralBadge": "Código de Vendedor Aplicado",
+        "benefits": {
+          "transparent": {
+            "title": "Proceso Transparente",
+            "description": "Todos los costos detallados desde el principio"
+          },
+          "support": {
+            "title": "Soporte Completo",
+            "description": "Seguimiento en todas las etapas"
+          },
+          "secure": {
+            "title": "Pago Seguro",
+            "description": "Métodos confiables y protegidos"
+          }
+        }
+      }
+    },
+    "initial": {
+      "header": {
+        "title": "Proceso Initial",
+        "subtitle": "Visa de Estudiante F-1 — Aplicación desde el Exterior",
+        "description": "Guía completa con todas las etapas y valores para obtener su visa de estudiante F-1 aplicando desde fuera de los Estados Unidos"
+      },
+      "promise": "Si su plan es llegar a los Estados Unidos con la visa F1 ya aprobada, organizamos el camino desde la elección de la escuela hasta la programación en el consulado. Con nuestra guía, usted entiende cada etapa, todos los costos y recibe orientación para armar una aplicación sólida y coherente con su proyecto de vida.",
+      "steps": {
+        "title": "Etapas del Proceso",
+        "description": "Conozca todas las etapas necesarias para obtener su visa de estudiante F-1",
+        "list": {
+          "step1": {
+            "description": "Primera etapa para verificar si es elegible para la visa de estudiante F-1.",
+            "items": [
+              "Pasaporte vigente (mínimo 1 año)",
+              "Comprobante de fondos bancarios ($22.000 mínimo)",
+              "Dirección completa en el país de origen",
+              "Historial escolar o diploma",
+              "Pago vía Zelle a: info@thefutureofenglish.com"
+            ]
+          },
+          "step2": {
+            "description": "Tarifa de solicitud y emisión del I-20 para la entrevista en el consulado.",
+            "items": [
+              "Emisión del formulario I-20",
+              "Procesamiento de la matrícula",
+              "$100 por cada dependiente adicional"
+            ]
+          },
+          "step3": {
+            "description": "Tarifa referente a la beca de estudios.",
+            "items": [
+              "Formulario de matrícula en la escuela",
+              "Demás documentación necesaria"
+            ]
+          },
+          "step4": {
+            "description": "Tarifa de control del I-20 durante todo el proceso de visa.",
+            "items": [
+              "Control activo del I-20",
+              "Seguimiento durante todo el proceso",
+              "Soporte para dudas y orientaciones",
+              "Pago de esta tarifa al emitirse la carta de aceptación por la institución"
+            ]
+          },
+          "step5": {
+            "description": "Seguimiento jurídico completo del proceso de visa.",
+            "items": [
+              "$1.800 para el solicitante principal",
+              "$100 por cada dependente adicional",
+              "Preparación para la entrevista en el consulado",
+              "Preparación de toda la documentación"
+            ]
+          }
+        }
+      },
+      "funds": {
+        "description": "Requisitos mínimos de comprobación financiera para la visa F-1",
+        "mainApplicant": "Solicitante Principal",
+        "minAmount": "$22.000",
+        "minBankAccount": "Valor mínimo en cuenta bancaria",
+        "perDependent": "Por Dependiente",
+        "dependentAmount": "+$5.000",
+        "additionalPerDependent": "Valor adicional por cada dependiente",
+        "note": "Los valores deben ser comprobados a través de extracto bancario actualizado. El consulado americano exigirá estos documentos durante la entrevista de visa."
+      },
+      "values": {
+        "description": "Todos los costos involucrados en el proceso Initial"
+      }
+    },
+    "transfer": {
+      "header": {
+        "title": "Proceso de Transfer",
+        "subtitle": "Transferencia de Escuela — Student Transfer",
+        "description": "Guía completa con todas las etapas y valores para realizar la transferencia de escuela en los Estados Unidos"
+      },
+      "promise": "¿Quiere transferir su I-20 sin interrumpir sus estudios ni correr riesgo con su estatus? Mostramos, paso a paso, cuándo y cómo hacer la transferencia, qué tarifas considerar y cómo mantener su carga horaria y fechas en orden, para que continúe estudiando con tranquilidad en la nueva escuela.",
+      "steps": {
+        "title": "Etapas del Proceso",
+        "description": "Conozca todas las etapas necesarias para realizar la transferencia de escuela",
+        "list": {
+          "step1": {
+            "description": "Primera etapa para verificar si es elegible para el proceso de Transfer.",
+            "items": [
+              "Pasaporte vigente (mínimo 1 año)",
+              "I-94 vigente",
+              "Comprobante de visa o estatus actual",
+              "Comprobante de fondos bancários ($22.000 mínimo)",
+              "Dirección completa en EE. UU.",
+              "Pago vía Zelle a: info@thefutureofenglish.com"
+            ]
+          },
+          "step2": {
+            "description": "Tarifa de solicitud y emisión del I-20.",
+            "items": [
+              "Emisión del formulario I-20",
+              "Procesamiento de la matrícula",
+              "$100 por cada dependiente adicional"
+            ]
+          },
+          "step3": {
+            "description": "Tarifa referente a la beca de estudios.",
+            "items": [
+              "Formulario de matrícula en la escuela",
+              "Demás documentación necesaria"
+            ]
+          },
+          "step4": {
+            "description": "Tarifa de control del I-20 durante todo el proceso de Transfer.",
+            "items": [
+              "Control activo del I-20",
+              "Seguimiento durante todo el proceso",
+              "Soporte para dudas y orientaciones",
+              "Pago de esta tarifa al emitirse la carta de aceptación por la institución"
+            ]
+          }
+        }
+      },
+      "funds": {
+        "description": "Requisitos mínimos de comprobación financiera para el proceso de Transfer",
+        "note": "Los valores deben ser comprobados a través de extracto bancario actualizado. Inversiones y aplicaciones también son aceptadas como comprobación de fondos."
+      },
+      "values": {
+        "description": "Todos los costos involucrados en el proceso de Transfer"
+      }
+    },
+    "cos": {
+      "header": {
+        "title": "Proceso de COS",
+        "subtitle": "Change of Status — Cambio de Estatus",
+        "description": "Guía completa con todas las etapas y valores para realizar el cambio de su estatus de visa en los Estados Unidos"
+      },
+      "promise": "Cambiar su estatus dentro de EE. UU. no necesita ser un labirinto. Aquí encuentra una guía completa con todas las etapas, todos los valores y el soporte necesario para hacer su COS con seguridad, planificación financiera y acompañamiento jurídico hasta la respuesta del USCIS.",
+      "steps": {
+        "title": "Etapas del Proceso",
+        "description": "Conozca todas las etapas necesarias para realizar el cambio de su estatus de visa",
+        "list": {
+          "step1": {
+            "description": "Primera etapa para verificar si es elegible para el proceso de COS.",
+            "items": [
+              "Pasaporte vigente (mínimo 1 año)",
+              "I-94 vigente",
+              "Comprobante de visa o estatus actual",
+              "Comprobante de fondos bancários ($22.000 mínimo)",
+              "Dirección completa en EE. UU.",
+              "Pago vía Zelle a: info@thefutureofenglish.com"
+            ]
+          },
+          "step2": {
+            "description": "Tarifa de solicitud y emisión del I-20.",
+            "items": [
+              "Emisión del formulario I-20",
+              "Procesamiento de la matrícula",
+              "$100 por cada dependiente adicional"
+            ]
+          },
+          "step3": {
+            "description": "Tarifa referente a la beca de estudios.",
+            "items": [
+              "Formulario de matrícula en la escuela",
+              "Demás documentación necesaria"
+            ]
+          },
+          "step4": {
+            "description": "Tarifa de control del I-20 durante todo el proceso de COS.",
+            "items": [
+              "Control activo del I-20",
+              "Seguimiento durante todo el proceso",
+              "Soporte para dudas y orientaciones",
+              "Pago de esta tarifa al emitirse la carta de aceptación por la institución"
+            ]
+          },
+          "step5": {
+            "description": "Seguimiento jurídico completo del proceso de COS.",
+            "items": [
+              "$1.800 para el solicitante principal",
+              "$100 por cada dependente adicional",
+              "Seguimiento jurídico completo",
+              "Preparación de toda la documentación"
+            ]
+          }
+        }
+      },
+      "funds": {
+        "description": "Requisitos mínimos de comprobación financiera para el proceso de COS",
+        "note": "Los valores deben ser comprobados a través de extracto bancario actualizado. Inversiones y aplicaciones también son aceptadas como comprobación de fondos."
+      },
+      "values": {
+        "description": "Todos los costos involucrados en el proceso de COS"
+      }
+    }
+  },
   "paymentBlocker": {
     "scholarships": {
       "title": "Scholarships Locked",
@@ -376,7 +609,7 @@
       "subtitle": "Real students, real results. See how MatriculaUSA transformed their educational journey to the United States.",
       "testimonial1": {
         "text": "MatriculaUSA made my dream of studying in America a reality. The scholarship opportunities and support were incredible!",
-        "author": "Maria Silva",
+        "author": "Gustavo Santos",
         "field": "Computer Science"
       },
       "testimonial2": {
@@ -687,129 +920,136 @@
   },
   "scholarshipsPage": {
     "loginRequired": {
-      "title": "Login Required",
-      "message": "Please log in to view scholarship details and access all features"
+      "title": "Inicio de Sesión Requerido",
+      "message": "Por favor, inicie sesión para ver los detalles de las becas y acceder a todas las funciones"
     },
     "featuredSection": {
-      "title": "Featured Scholarships",
-      "subtitle": "Weekly Highlights",
-      "description": "Scholarships selected by our experts for you"
+      "title": "Becas Destacadas",
+      "subtitle": "Lo Más Destacado de la Semana",
+      "description": "Becas seleccionadas por nuestros expertos para usted"
     },
     "allScholarships": {
-      "title": "All Scholarships",
-      "description": "Explore all available scholarship opportunities for international students"
+      "title": "Todas las Becas",
+      "description": "Explore todas las oportunidades de becas disponibles para estudiantes internacionales"
     },
     "filters": {
-      "min": "Min",
-      "max": "Max",
-      "allLevels": "All Levels",
-      "allFields": "All Fields",
-      "allModes": "All Modes",
-      "allPermissions": "All Permissions",
+      "min": "Mín",
+      "max": "Máx",
+      "allLevels": "Todos los Niveles",
+      "allFields": "Todas las Áreas",
+      "allModes": "Todas las Modalidades",
+      "allPermissions": "Todos los Permisos",
       "allUniversities": "Todas las Universidades",
       "university": "Universidad",
       "universityTooltip": "Crea una cuenta y paga la Selection Process Fee para filtrar por universidad",
       "stem": "STEM",
-      "business": "Business",
-      "engineering": "Engineering",
-      "anyField": "Any Field",
-      "online": "Online",
-      "inPerson": "In Person",
-      "hybrid": "Hybrid",
+      "business": "Negocios",
+      "engineering": "Ingeniería",
+      "anyField": "Cualquier Área",
+      "online": "En Línea",
+      "inPerson": "Presencial",
+      "hybrid": "Híbrido",
       "opt": "OPT",
       "cpt": "CPT",
       "f1": "F1",
-      "loading": "Loading...",
-      "scholarshipsFound": "scholarships found",
+      "loading": "Cargando...",
+      "scholarshipsFound": "becas encontradas",
       "levels": {
-        "all": "All Levels",
-        "graduate": "Graduate",
-        "doctorate": "Doctorate",
-        "undergraduate": "Undergraduate"
+        "all": "Todos los Niveles",
+        "graduate": "Posgrado",
+        "doctorate": "Doctorado",
+        "undergraduate": "Pregrado"
       },
       "courseModalities": {
-        "online": "Online",
-        "inPerson": "In Person",
-        "hybrid": "Hybrid",
-        "mixed": "Mixed"
+        "online": "En Línea",
+        "inPerson": "Presencial",
+        "hybrid": "Híbrido",
+        "mixed": "Mixto"
       }
     },
     "scholarshipCard": {
-      "university": "University:",
-      "studyMode": "Course Modality",
-      "workAuthorization": "Work Authorization",
-      "financialOverview": "Financial Overview",
-      "originalPrice": "Original Price",
-      "withScholarship": "With Scholarship",
-      "perCredit": "Per Credit",
-      "scholarshipDiscount": "Scholarship Discount",
-      "applicationFee": "Application Fee",
-      "customFee": "Custom fee set by university",
-      "standardFee": "Standard application fee",
-      "expired": "Expired",
-      "days": "days",
-      "details": "Details",
-      "applyNow": "Apply Now",
-      "notAvailable": "Not Available for Application"
+      "university": "Universidad:",
+      "studyMode": "Modalidad del Curso",
+      "workAuthorization": "Autorización de Trabajo",
+      "financialOverview": "Resumen Financiero",
+      "originalPrice": "Precio Original",
+      "withScholarship": "Con Beca",
+      "perCredit": "Por Crédito",
+      "scholarshipDiscount": "Descuento de Beca",
+      "applicationFee": "Tarifa de Solicitud",
+      "customFee": "Tarifa personalizada de la universidad",
+      "standardFee": "Tarifa de solicitud estándar",
+      "expired": "Expirada",
+      "days": "días",
+      "details": "Detalles",
+      "applyNow": "Aplicar Ahora",
+      "notAvailable": "No Disponible para Aplicación"
     },
     "noResults": {
-      "title": "No scholarships found",
-      "description": "Try adjusting your search criteria to discover more opportunities",
-      "clearFilters": "Clear Filters"
+      "title": "No se encontraron becas",
+      "description": "Intente ajustar sus criterios de búsqueda para descubrir más oportunidades",
+      "clearFilters": "Limpiar Filtros"
     },
     "pagination": {
-      "previous": "Previous",
-      "next": "Next",
-      "page": "Page",
-      "of": "of"
+      "previous": "Anterior",
+      "next": "Siguiente",
+      "page": "Página",
+      "of": "de"
     },
     "callToAction": {
-      "readyToStart": "Ready to Start?",
-      "readyToTransform": "Ready to Transform",
-      "title": "Ready to Transform Your Future?",
-      "description": "Join thousands of international students who have secured their educational dreams through our exclusive scholarship opportunities.",
-      "getStartedToday": "Get Started Today",
-      "learnMore": "Learn More"
+      "readyToStart": "¿Listo para Empezar?",
+      "readyToTransform": "¿Listo para Transformar tu Futuro?",
+      "title": "¿Listo para Transformar tu Futuro?",
+      "description": "Únase a miles de estudiantes internacionales que han asegurado sus sueños educativos a través de nuestras oportunidades exclusivas de becas.",
+      "getStartedToday": "Empieza Hoy Mismo",
+      "learnMore": "Más Información"
     },
     "modal": {
-      "exclusiveScholarship": "Exclusive Scholarship",
-      "anyField": "Any Field",
-      "universityHidden": "University Hidden - Unlock with Selection Process",
-      "universityInfoAvailable": "University Information Available",
-      "loginRequired": "Log in to view university details",
-      "financialBreakdown": "Financial Breakdown",
-      "originalAnnualCost": "Original Annual Cost",
-      "withScholarship": "With Scholarship",
-      "annualSavings": "Annual Savings",
-      "costPerCredit": "Cost Per Credit",
-      "totalCredits": "Total Credits",
-      "coverage": "Coverage",
-      "programInformation": "Program Information",
-      "academicLevel": "Academic Level",
-      "notSpecified": "Not specified",
-      "studyMode": "Course Modality",
-      "onlineLearning": "Online Learning",
-      "inPerson": "In Person",
-      "hybridMode": "Hybrid Mode",
-      "programDuration": "Program Duration",
-      "language": "Language",
-      "workAuthorization": "Work Authorization",
-      "programDescription": "Program Description",
-      "applicationDeadline": "Application Deadline",
-      "daysLeft": "days left",
-      "deadline": "Deadline:",
-      "universityInformation": "University Information",
-      "universityNameAvailable": "University Name Available",
+      "exclusive": "Exclusivo",
+      "exclusiveScholarship": "Beca Exclusiva",
+      "anyField": "Cualquier Área",
+      "universityHidden": "Universidad Oculta - Desbloquear con el Proceso de Selección",
+      "universityInfoAvailable": "Información de la Universidad Disponible",
+      "loginRequired": "Inicie sesión para ver los detalles de la universidad",
+      "financialBreakdown": "Desglose Financiero",
+      "originalAnnualCost": "Costo Anual Original",
+      "withScholarship": "Con Beca",
+      "annualSavings": "Ahorro Anual",
+      "costPerCredit": "Costo por Crédito",
+      "totalCredits": "Créditos Totales",
+      "coverage": "Cobertura",
+      "programInformation": "Información del Programa",
+      "academicLevel": "Nivel Académico",
+      "notSpecified": "No especificado",
+      "studyMode": "Modalidad del Curso",
+      "onlineLearning": "Aprendizaje en Línea",
+      "inPerson": "Presencial",
+      "hybridMode": "Modalidad Híbrida",
+      "programDuration": "Duración del Programa",
+      "language": "Idioma",
+      "workAuthorization": "Autorización de Trabajo",
+      "programDescription": "Descripción del Programa",
+      "applicationDeadline": "Fecha Límite de Aplicación",
+      "daysLeft": "días restantes",
+      "deadline": "Fecha Límite",
+      "universityInformation": "Información de la Universidad",
+      "universityNameAvailable": "Nombre de la Universidad Disponible",
       "ranking": "Ranking:",
-      "universityDetailsLocked": "🔒 University details available after Selection Process payment.",
+      "universityDetailsLocked": "🔒 Los detalles de la universidad estarán disponibles después del pago del Proceso de Selección.",
       "unlockUniversityInfo": "Desbloquea la información de la universidad pagando el Proceso de Selección",
       "unlockImage": "Inicia sesión para desbloquear la imagen",
-      "requirements": "Requirements",
-      "additionalBenefits": "Additional Benefits",
-      "expired": "Expired",
-      "scholarshipExpired": "Scholarship Expired",
-      "noLongerAccepting": "Not Available for application",
-      "canStillView": "You can still view the information, but it will not be possible to apply for this scholarship."
+      "requirements": "Requisitos",
+      "additionalBenefits": "Beneficios Adicionales",
+      "expired": "Expirada",
+      "scholarshipExpired": "Beca Expirada",
+      "noLongerAccepting": "No disponible para aplicación",
+      "canStillView": "Aún puede ver la información, pero no será posible aplicar a esta beca.",
+      "internalFeesTitle": "Tarifas Internas de la Universidad",
+      "internalFeesDisclaimer": "Estas tarifas se pagan directamente a la universidad, no a través de nuestra plataforma",
+      "internalFeesAvailable": "Tarifas Internas de la Universidad Disponibles",
+      "internalFeesNotice": "Esta beca puede tener tarifas internas adicionales de la universidad. Estas tarifas serán visibles después del pago de la Tarifa de Proceso de Selección.",
+      "universityInternalFees": "Tarifas Internas de la Universidad",
+      "viewUniversityFeesPage": "Ver Página de Tarifas de la Universidad"
     }
   },
   "universitiesPage": {
@@ -1388,27 +1628,28 @@
             "address": {
               "label": "Address",
               "value": "Los Angeles - CA - USA"
-                    }
-      }
+            }
+          }
         }
       }
     },
     "messages": {
-      "checkEmail": "Check your email!",
-      "studentVerification": "A confirmation link has been sent to your email. Please check your inbox (and spam folder) to activate your account.",
-      "passwordsNotMatch": "Passwords do not match",
-      "invalidPasswordChars": "Password contains invalid characters. Only letters, numbers, and @ # $ ! are allowed.",
-      "invalidPhone": "Please enter a valid phone number with country code",
-      "mustAcceptTerms": "You must accept the Terms of Use and Privacy Policy to continue",
-      "mustAnswerReferralCode": "Please answer whether you have a referral code to continue",
-      "authenticationFailed": "Authentication failed. Please try again.",
-      "invalidCredentials": "Invalid email or password. Please check your credentials and try again.",
-      "emailNotConfirmed": "Please check your email and click the confirmation link before signing in.",
-      "tooManyRequests": "Too many login attempts. Please wait a few minutes before trying again.",
-      "userNotFound": "No account found with this email address. Please check your email or create a new account.",
-      "weakPassword": "Password is too weak. Please choose a stronger password.",
-      "invalidEmail": "Please enter a valid email address.",
-      "signupDisabled": "New registrations are currently disabled. Please contact support.",
+      "invalidDependents": "Por favor, seleccione entre 0 y 5 dependientes.",
+      "checkEmail": "¡Verifica tu correo electrónico!",
+      "studentVerification": "Se ha enviado un enlace de confirmación a tu correo electrónico. Por favor, revisa tu bandeja de entrada (y la carpeta de correo no deseado) para activar tu cuenta.",
+      "passwordsNotMatch": "Las contraseñas no coinciden",
+      "invalidPasswordChars": "La contraseña contiene caracteres no válidos. Solo se permiten letras, números y @ # $ !.",
+      "invalidPhone": "Por favor, introduce un número de teléfono válido con prefijo de país",
+      "mustAcceptTerms": "Debes aceptar los Términos de Uso y la Política de Privacidad para continuar",
+      "mustAnswerReferralCode": "Por favor, responde si tienes un código de referido para continuar",
+      "authenticationFailed": "Error de autenticación. Por favor, inténtalo de nuevo.",
+      "invalidCredentials": "Email o contraseña no válidos. Por favor, verifica tus credenciales e inténtalo de nuevo.",
+      "emailNotConfirmed": "Por favor, verifica tu correo electrónico y haz clic en el enlace de confirmación antes de iniciar sesión.",
+      "tooManyRequests": "Demasiados intentos de inicio de sesión. Por favor, espera unos minutos antes de volver a intentarlo.",
+      "userNotFound": "No se encontró ninguna cuenta con esta dirección de correo electrónico. Por favor, verifica tu correo o crea una nueva cuenta.",
+      "weakPassword": "La contraseña es demasiado débil. Por favor, elige una contraseña más fuerte.",
+      "invalidEmail": "Por favor, introduce una dirección de correo electrónico válida.",
+      "signupDisabled": "Los nuevos registros están deshabilitados actualmente. Por favor, ponte en contacto con el soporte.",
       "preCheckoutModal": {
         "securePayment": "Pago Seguro",
         "closeModal": "Cerrar modal",
@@ -1458,10 +1699,45 @@
         "invalidCoupon": "Cupón inválido",
         "connectionError": "Error al validar cupón. Verifique su conexión e intente nuevamente."
       },
-      "registrationFailed": "Registration Failed",
-      "emailAlreadyRegistered": "This email is already registered. Please sign in or use another email."
+      "registrationFailed": "Registro fallido",
+      "emailAlreadyRegistered": "Este correo electrónico ya está registrado. Por favor, inicia sesión o utiliza otro correo electrónico."
     }
+  },
+  "ssoCallback": {
+    "processing": {
+      "title": "Espere un momento",
+      "preparing": "Estamos preparando el entorno para usted...",
+      "connecting": "Conectando con 323 Network...",
+      "preparingAccount": "Preparando su cuenta...",
+      "creatingSession": "Creando sesión...",
+      "waitMessage": "Esto puede llevar unos segundos...",
+      "secureConnection": "Conectando de forma segura a Matrícula USA"
     },
+    "success": {
+      "title": "¡Todo listo!",
+      "newUser": "¡Todo listo! Redirigiéndote...",
+      "returningUser": "¡Bienvenido de nuevo! Redirigiéndote...",
+      "redirecting": "Redirigiéndote ahora...",
+      "welcomeNew": "¡Bienvenido a Matrícula US!",
+      "loginSuccess": "¡Inicio de sesión exitoso!"
+    },
+    "error": {
+      "title": "Ups, algo salió mal",
+      "authenticationFailed": "No se pudo completar la autenticación. Será redirigido a la página de inicio de sesión en breve.",
+      "tokenNotProvided": "Token no proporcionado en la URL",
+      "tokenValidationError": "Error al validar el token",
+      "sessionCreationError": "Error al crear la sesión",
+      "sessionNotCreated": "La sesión no se creó correctamente",
+      "noAuthMethod": "Ningún método de autenticación disponible",
+      "tokenNotFoundInMagicLink": "Token o tipo no encontrado en el magic link",
+      "tokensNotFoundInRedirect": "Tokens no encontrados en el redireccionamiento",
+      "locationHeaderNotFound": "Encabezado de ubicación no encontrado en el redireccionamiento",
+      "tokensNotFoundInResponse": "Tokens no encontrados en la respuesta",
+      "supabaseUrlNotConfigured": "VITE_SUPABASE_URL no configurada",
+      "tryAgain": "Intentar de nuevo",
+      "goToLogin": "Ir al inicio de sesión"
+    }
+  },
   "features": {
     "whyChoose": "Why Choose MatriculaUSA?",
     "subtitle": "Everything you need to succeed in your American education journey",
@@ -1529,6 +1805,21 @@
     "amount": "Amount",
     "support": "Support"
   },
+  "profileRequiredModal": {
+    "cpfMissing": {
+      "title": "CPF Requerido",
+      "description": "Para pagar vía Parcelow/PIX, debe registrar su CPF en su perfil.",
+      "details": "El CPF es obligatorio para procesar pagos vía Parcelow. Esto garantiza la seguridad de su transacción y cumple con las regulaciones brasileñas.",
+      "buttonGoToProfile": "Ir al Perfil"
+    },
+    "profileIncomplete": {
+      "title": "Complete su Perfil",
+      "description": "Su perfil está incompleto. Por favor, complete toda la información necesaria antes de continuar con el pago.",
+      "details": "Necesitamos información adicional para procesar su pago de forma segura. ¡Solo toma unos minutos!",
+      "buttonCompleteProfile": "Completar Perfil"
+    },
+    "notNow": "Ahora No"
+  },
   "studentDashboard": {
     "title": "Panel del Estudiante",
     "subtitle": "Gestiona tus solicitudes de beca",
@@ -1537,12 +1828,12 @@
       "title": "Esta es tu barra de progreso de tasas de solicitud. Completa cada paso para avanzar.",
       "allStepsCompleted": "¡Todos los pasos completados! 🎉",
       "selectionProcessFee": "Tarifa de Proceso de Selección",
-      "applicationFee": "Tarifa de Solicitud", 
+      "applicationFee": "Tarifa de Solicitud",
       "scholarshipFee": "Tarifa de Beca",
       "i20ControlFee": "Tarifa de Control I-20",
       "completed": "¡Completado!",
       "payApplicationFee": "Paga la Tarifa de Solicitud para aplicar a una beca específica.",
-      "payScholarshipFee": "Paga la Tarifa de Beca para confirmar tu solicitud de beca.", 
+      "payScholarshipFee": "Paga la Tarifa de Beca para confirmar tu solicitud de beca.",
       "payI20Fee": "Paga la Tarifa de Control I-20 para iniciar tu proceso de validación de documentos e I-20.",
       "daysRemaining": "Tienes 10 días después de la tarifa de beca."
     },
@@ -1564,7 +1855,7 @@
     "stats": {
       "myApplications": "Mis Solicitudes",
       "totalSubmitted": "Total enviadas",
-      "approved": "Aprobadas", 
+      "approved": "Aprobadas",
       "successful": "Exitosas",
       "pending": "Pendientes",
       "underReview": "En revisión"
@@ -1579,7 +1870,7 @@
     },
     "sidebar": {
       "overview": "Resumen",
-      "browseScholarships": "Explorar Becas", 
+      "browseScholarships": "Explorar Becas",
       "selectedScholarships": "Becas Seleccionadas",
       "myApplications": "Mis Solicitudes",
       "matriculaRewards": "Matricula Rewards",
@@ -3017,7 +3308,7 @@
       },
       "testimonials": [
         {
-          "name": "Maria Silva",
+          "name": "Gustavo Santos",
           "university": "University of California",
           "course": "Computer Science",
           "text": "I got a 40% scholarship and I'm fulfilling my dream of studying in the USA. The process was much simpler than I imagined.",
@@ -3436,43 +3727,5 @@
     "3800Expired": "Not Available for application",
     "3800Expiring": "Last hours to apply! Deadline expires tomorrow (November 6th)",
     "3800ExpiringShort": "Deadline expires tomorrow"
-  },
-  "scholarshipsPage": {
-    "modal": {
-      "exclusive": "Exclusive",
-      "expired": "Expired",
-      "annualSavings": "Annual Savings",
-      "coverage": "Coverage",
-      "deadline": "Deadline",
-      "days": "days",
-      "financialBreakdown": "Financial Details",
-      "originalAnnualCost": "Original Annual Cost",
-      "withScholarship": "With Scholarship",
-      "costPerCredit": "Cost per Credit",
-      "additionalBenefits": "Benefits",
-      "programDescription": "Scholarship Description",
-      "programInformation": "Scholarship Information",
-      "academicLevel": "Academic Level",
-      "studyMode": "Study Mode",
-      "programDuration": "Scholarship Duration",
-      "language": "Language",
-      "workAuthorization": "Work Authorization",
-      "requirements": "Requirements",
-      "applicationDeadline": "Application Deadline",
-      "internalFeesNote": "Internal fees are shown only after payment of the selection process fee",
-      "internalFeesTitle": "Tarifas Internas de la Universidad",
-      "internalFeesDisclaimer": "Estas tarifas se pagan directamente a la universidad, no a través de nuestra plataforma",
-      "internalFeesAvailable": "Tarifas Internas de la Universidad Disponibles",
-      "internalFeesNotice": "Esta beca puede tener tarifas internas adicionales de la universidad. Estas tarifas serán visibles después del pago de la Tarifa de Proceso de Selección.",
-      "anyField": "Any Field",
-      "inPerson": "In-Person",
-      "universityInternalFees": "Tarifas Internas de la Universidad",
-      "viewUniversityFeesPage": "Ver Página de Tarifas de la Universidad"
-    },
-    "scholarshipCard": {
-      "applicationFee": "Application Fee",
-      "customFee": "Tarifa personalizada",
-      "standardFee": "Tarifa estándar"
-    }
   }
 }

@@ -3,6 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import { ArrowLeft, CreditCard, Upload, X } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 import { supabase } from '../lib/supabase';
+import { getN8nProxyUrl } from '../utils/storageProxy';
 import { useAuth } from '../hooks/useAuth';
 import { useSearchParams } from 'react-router-dom';
 import { useFeeConfig } from '../hooks/useFeeConfig';
@@ -555,6 +556,7 @@ export const ZelleCheckoutPage: React.FC<ZelleCheckoutPageProps> = ({
 
       // Enviar webhook para n8n
       const imageUrl = `${import.meta.env.VITE_SUPABASE_URL}/storage/v1/object/public/zelle_comprovantes/${uploadData.path}`;
+      const proxiedImageUrl = getN8nProxyUrl(imageUrl);
       
       // Payload padronizado para o webhook
       const webhookId = Math.random().toString(36).substr(2, 9);
@@ -562,7 +564,7 @@ export const ZelleCheckoutPage: React.FC<ZelleCheckoutPageProps> = ({
       
       const webhookPayload: WebhookPayload = {
         user_id: user?.id,
-        image_url: imageUrl,
+        image_url: proxiedImageUrl,
         value: currentFee.amount.toString(), // Apenas o número, sem símbolos (já com desconto aplicado se houver cupom)
         currency: 'USD',
         fee_type: normalizedFeeType,

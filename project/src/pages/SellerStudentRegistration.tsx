@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { Link, useNavigate, useSearchParams } from 'react-router-dom';
+import { Link, useNavigate, useSearchParams, useLocation } from 'react-router-dom';
 import { UserCheck, CheckCircle, X, Target, ArrowLeft, ArrowRight } from 'lucide-react';
 import { useAuth } from '../hooks/useAuth';
 import { useScholarshipPackages } from '../hooks/useScholarshipPackages';
@@ -48,6 +48,7 @@ const SellerStudentRegistration: React.FC = () => {
   const { packages, loading: packagesLoading } = useScholarshipPackages();
   const { systemType } = useSystemType();
   const navigate = useNavigate();
+  const location = useLocation();
 
   // Guardar acesso: apenas equipe interna (admin/affiliate_admin)
   const allowedRoles = new Set(['admin', 'affiliate_admin', 'seller']);
@@ -273,7 +274,7 @@ const SellerStudentRegistration: React.FC = () => {
           <p className="text-slate-600 mb-6">Esta página é exclusiva para a equipe interna.</p>
           <div className="flex justify-center gap-3">
             <button
-              onClick={() => navigate('/login')}
+              onClick={() => navigate(`/login${location.search}`)}
               className="bg-blue-600 text-white py-2 px-4 rounded-lg hover:bg-blue-700 transition-colors"
             >
               Ir para Login
@@ -682,7 +683,7 @@ const SellerStudentRegistration: React.FC = () => {
         <div className="mt-6 text-center">
           <p className="text-gray-600">
             Already have an account?{' '}
-            <Link to="/login" className="text-blue-600 hover:underline">
+            <Link to={`/login${location.search}`} className="text-blue-600 hover:underline">
               Sign in
             </Link>
           </p>

@@ -18,6 +18,7 @@ interface User {
 export interface UserProfile {
   id: string;
   user_id: string;
+  email: string | null;
   full_name: string | null;
   phone: string | null;
   country: string | null;
@@ -31,7 +32,11 @@ export interface UserProfile {
   updated_at: string | null;
   is_application_fee_paid: boolean;
   has_paid_selection_process_fee: boolean;
-  has_paid_i20_control_fee?: boolean; // adicionada para refletir Overview
+  has_paid_i20_control_fee?: boolean;
+  selection_process_paid_at?: string | null;
+  application_fee_paid_at?: string | null;
+  scholarship_fee_paid_at?: string | null;
+  i20_paid_at?: string | null;
   is_admin: boolean; // legado: mantido por compatibilidade
   role?: 'student' | 'school' | 'admin' | 'affiliate_admin' | 'seller';
   stripe_customer_id: string | null;
@@ -947,11 +952,25 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
     // Normaliza o e-mail para evitar duplicidade por case/espacos
     const normalizedEmail = (email || '').trim().toLowerCase();
     
+    // Capturar informações de IP e User-Agent para conformidade legal
+    let clientInfo: { registration_ip: string | null; user_agent: string } = { 
+        registration_ip: null, 
+        user_agent: navigator.userAgent 
+    };
+    try {
+      const { getClientInfo } = await import('../utils/clientInfo');
+      clientInfo = await getClientInfo();
+    } catch (e) {
+      console.warn('⚠️ [USEAUTH] Erro ao obter informações do cliente:', e);
+    }
+
     const signUpData = {
       ...cleanUserData,
       name: cleanUserData.full_name, // redundância para garantir compatibilidade
       full_name: cleanUserData.full_name, // Adicionar full_name explicitamente
       email: normalizedEmail, // Adicionar email do aluno ao metadata
+      registration_ip: clientInfo.registration_ip, // Adicionado para o trigger de termos
+      user_agent: clientInfo.user_agent // Adicionado para o trigger de termos
     };
     
     console.log('🔍 [USEAUTH] signUpData final:', signUpData);

@@ -47,7 +47,7 @@ const ReferralInfoCard: React.FC<ReferralInfoCardProps> = React.memo(({
                 <div className={`w-2 h-2 rounded-full ${
                   referralInfo.type === 'seller' ? 'bg-green-500' :
                   referralInfo.type === 'affiliate' ? 'bg-blue-500' :
-                  'bg-purple-500'
+                  'bg-blue-500'
                 }`}></div>
                 <span className="text-sm font-medium text-slate-700">
                   {referralInfo.type === 'seller' ? 'Seller' :

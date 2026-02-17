@@ -198,6 +198,10 @@ function PaymentsTableBase(props: PaymentsTableProps) {
 												? 'bg-purple-100 text-purple-800'
 												: paymentMethod === 'stripe'
 												? 'bg-blue-100 text-blue-800'
+												: paymentMethod === 'parcelow'
+												? 'bg-emerald-100 text-emerald-800'
+												: paymentMethod === 'pix'
+												? 'bg-cyan-100 text-cyan-800'
 												: 'bg-gray-100 text-gray-800';
 											const label = paymentMethod === 'manual'
 												? 'Outside'

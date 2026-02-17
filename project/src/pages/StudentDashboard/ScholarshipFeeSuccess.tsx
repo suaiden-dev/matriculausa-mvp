@@ -1,5 +1,5 @@
 import React, { useEffect, useState, useRef } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, useSearchParams } from 'react-router-dom';
 import { supabase } from '../../lib/supabase';
 import { useAuth } from '../../hooks/useAuth';
 import CustomLoading from '../../components/CustomLoading';
@@ -15,29 +15,114 @@ const ScholarshipFeeSuccess: React.FC = () => {
   const [paidAmount, setPaidAmount] = useState<number | null>(null);
   const [promotionalCoupon, setPromotionalCoupon] = useState<string | null>(null);
   const navigate = useNavigate();
-  const { userProfile } = useAuth();
-  const verificationRef = useRef<boolean>(false); // ✅ Proteção contra chamadas duplicadas
+  const { userProfile, user } = useAuth();
+  const verificationRef = useRef<boolean>(false);
+  const [searchParams] = useSearchParams();
 
   const { t } = useTranslation();
 
+  // Função para verificar pagamento Parcelow
+  const verifyParcelowPayment = async (reference: string) => {
+    if (!user?.id) {
+      setError('User not authenticated.');
+      setLoading(false);
+      return;
+    }
+
+    const maxAttempts = 30;
+    let attempts = 0;
+
+    const poll = async () => {
+      attempts++;
+      console.log(`[Parcelow] Tentativa ${attempts}/${maxAttempts}`);
+
+      try {
+        // Buscar o pagamento pelo reference (que pode estar truncado)
+        const { data: payment, error: paymentError } = await supabase
+          .from('individual_fee_payments')
+          .select('*')
+          .eq('user_id', user.id)
+          .ilike('parcelow_reference', `${reference}%`)
+          .eq('payment_method', 'parcelow')
+          .order('created_at', { ascending: false })
+          .limit(1)
+          .maybeSingle();
+
+        if (payment && payment.parcelow_status === 'paid') {
+          console.log('[Parcelow] ✅ Pagamento confirmado!');
+          setPaidAmount(payment.amount);
+          dispatchCacheInvalidationEvent(CacheInvalidationEvent.PAYMENT_COMPLETED);
+          setLoading(false);
+          setShowAnimation(true);
+
+          setTimeout(() => {
+            navigate('/student/dashboard/applications');
+          }, 6000);
+          return;
+        }
+
+        if (attempts >= maxAttempts) {
+          setError('Payment verification timeout');
+          setLoading(false);
+          return;
+        }
+
+        setTimeout(poll, 10000);
+      } catch (err) {
+        console.error('[Parcelow] Erro:', err);
+        if (attempts >= maxAttempts) {
+          setError('Payment verification failed');
+          setLoading(false);
+        } else {
+          setTimeout(poll, 10000);
+        }
+      }
+    };
+
+    poll();
+  };
+
   useEffect(() => {
-    // ✅ Proteção contra chamadas duplicadas (React StrictMode ou re-renders)
+    // Aguardar usuário estar carregado
+    if (!user) {
+      console.log('[ScholarshipFeeSuccess] Aguardando autenticação do usuário...');
+      return;
+    }
+
     if (verificationRef.current) {
       console.log('[ScholarshipFeeSuccess] Verificação já foi executada, pulando chamada duplicada.');
       return;
     }
     
-    const params = new URLSearchParams(window.location.search);
-    const sessionId = params.get('session_id');
+    verificationRef.current = true;
+
+    // Aceitar tanto parâmetros encurtados (ref, pm) quanto completos (reference, payment_method)
+    const reference = searchParams.get('ref') || searchParams.get('reference');
+    const paymentMethod = searchParams.get('pm') || searchParams.get('payment_method');
+    const sessionId = searchParams.get('session_id');
+
+    // Detectar se é pagamento Parcelow
+    // Se houver reference e NÃO houver session_id, é Parcelow
+    // pm=p significa payment_method=parcelow
+    if (reference && !sessionId) {
+      console.log('[Parcelow] Pagamento Parcelow detectado (via reference)');
+      verifyParcelowPayment(reference);
+      return;
+    }
+    
+    // Fallback: se tiver payment_method=parcelow ou pm=p explicitamente
+    if ((paymentMethod === 'parcelow' || paymentMethod === 'p') && reference) {
+      console.log('[Parcelow] Pagamento Parcelow detectado (via payment_method)');
+      verifyParcelowPayment(reference);
+      return;
+    }
+
     console.log('[ScholarshipFeeSuccess] sessionId from URL:', sessionId);
     if (!sessionId) {
       setError('Session ID not found.');
       setLoading(false);
       return;
     }
-    
-    // ✅ Marcar como executado ANTES de fazer a chamada
-    verificationRef.current = true;
     
     const verifySession = async () => {
       try {
@@ -176,7 +261,7 @@ const ScholarshipFeeSuccess: React.FC = () => {
       }
     };
     verifySession();
-  }, [navigate]);
+  }, [navigate, searchParams, user]);
 
   const handleGoToChat = () => {
     if (applicationId) {

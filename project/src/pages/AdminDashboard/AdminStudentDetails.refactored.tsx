@@ -16,6 +16,7 @@ import { generateTermAcceptancePDF, StudentTermAcceptanceData } from '../../util
 import { recordIndividualFeePayment } from '../../lib/paymentRecorder';
 import { useStudentLogs } from '../../hooks/useStudentLogs';
 import { getGrossPaidAmounts } from '../../utils/paymentConverter';
+import { handleViewDocument } from '../../components/EnhancedStudentTracking/utils/documentUtils';
 
 // Componentes de UI Base
 import {
@@ -239,6 +240,9 @@ const AdminStudentDetails: React.FC = () => {
   /**
    * Valida e normaliza valores pagos usando a mesma lógica do Payment Management
    * Se o valor estiver muito discrepante (provavelmente BRL não convertido), usa valores fixos em dólar
+   * 
+   * ✅ NOVO: Se não há valores em realPaidAmounts MAS a flag de pagamento está marcada,
+   * calcula o valor esperado baseado na configuração de taxas (para pagamentos legados)
    */
   const validateAndNormalizePaidAmounts = React.useCallback((
     realPaidAmounts: Record<string, number>,
@@ -247,7 +251,14 @@ const AdminStudentDetails: React.FC = () => {
     feeAmountFn: (feeType: string) => number,
     dependents: number = 0,
     hasMatriculaRewardsDiscount: boolean = false,
-    studentHasSellerCode: boolean = false
+    studentHasSellerCode: boolean = false,
+    // ✅ NOVO: Receber as flags de pagamento para fallback
+    paymentFlags?: {
+      has_paid_selection: boolean;
+      has_paid_application: boolean;
+      has_paid_scholarship: boolean;
+      has_paid_i20: boolean;
+    }
   ): Record<string, number> => {
     const normalized: Record<string, number> = {};
     
@@ -291,6 +302,22 @@ const AdminStudentDetails: React.FC = () => {
           normalized.selection_process = expectedSelectionProcess + dependentCost;
         }
       }
+    } else if (paymentFlags?.has_paid_selection) {
+      // ✅ NOVO: Fallback para pagamentos legados sem registro em individual_fee_payments
+      console.log(`[AdminStudentDetails] 💡 Pagamento legado detectado para selection_process - calculando valor esperado`);
+      const hasMatrDiscount = hasMatriculaRewardsDiscount || studentHasSellerCode;
+      let expectedSelectionProcess: number;
+      if (hasMatrDiscount) {
+        expectedSelectionProcess = 350; // $400 - $50 desconto
+      } else {
+        expectedSelectionProcess = sysType === 'simplified' ? 350 : 400;
+      }
+      
+      if (feeOverrides?.selection_process_fee !== undefined) {
+        normalized.selection_process = feeOverrides.selection_process_fee;
+      } else {
+        normalized.selection_process = expectedSelectionProcess + dependentCost;
+      }
     }
 
     // Scholarship Fee
@@ -308,6 +335,15 @@ const AdminStudentDetails: React.FC = () => {
           normalized.scholarship = expectedScholarship;
         }
       }
+    } else if (paymentFlags?.has_paid_scholarship) {
+      // ✅ NOVO: Fallback para pagamentos legados
+      console.log(`[AdminStudentDetails] 💡 Pagamento legado detectado para scholarship - calculando valor esperado`);
+      const expectedScholarship = sysType === 'simplified' ? 550 : 900;
+      if (feeOverrides?.scholarship_fee !== undefined) {
+        normalized.scholarship = feeOverrides.scholarship_fee;
+      } else {
+        normalized.scholarship = expectedScholarship;
+      }
     }
 
     // I-20 Control Fee
@@ -324,6 +360,15 @@ const AdminStudentDetails: React.FC = () => {
         } else {
           normalized.i20_control = expectedI20Control;
         }
+      }
+    } else if (paymentFlags?.has_paid_i20) {
+      // ✅ NOVO: Fallback para pagamentos legados
+      console.log(`[AdminStudentDetails] 💡 Pagamento legado detectado para i20_control - calculando valor esperado`);
+      const expectedI20Control = feeAmountFn('i20_control_fee');
+      if (feeOverrides?.i20_control_fee !== undefined) {
+        normalized.i20_control = feeOverrides.i20_control_fee;
+      } else {
+        normalized.i20_control = expectedI20Control;
       }
     }
 
@@ -343,6 +388,14 @@ const AdminStudentDetails: React.FC = () => {
         if (dependents > 0) {
           normalized.application += dependents * 100;
         }
+      }
+    } else if (paymentFlags?.has_paid_application) {
+      // ✅ NOVO: Fallback para pagamentos legados
+      console.log(`[AdminStudentDetails] 💡 Pagamento legado detectado para application - calculando valor esperado`);
+      const expectedApplicationFee = feeAmountFn('application_fee');
+      normalized.application = expectedApplicationFee;
+      if (dependents > 0) {
+        normalized.application += dependents * 100;
       }
     }
 
@@ -449,6 +502,13 @@ const AdminStudentDetails: React.FC = () => {
   // Estados de dados secundários (alguns ainda são locais)
   const [referralInfo, setReferralInfo] = useState<any>(null);
   const [hasMatriculaRewardsDiscount, setHasMatriculaRewardsDiscount] = useState(false);
+  const [matriculaRewardsInfo, setMatriculaRewardsInfo] = useState<{
+    name: string | null;
+    email: string | null;
+    code: string;
+    usedAt: string;
+  } | null>(null);
+  const [loadingMatriculaRewards, setLoadingMatriculaRewards] = useState(false);
   // termAcceptances, realPaidAmounts e pendingZellePayments agora vêm dos React Query hooks (definidos acima)
   
   // Estados de edição
@@ -634,9 +694,42 @@ const AdminStudentDetails: React.FC = () => {
       try {
         const amounts = await getGrossPaidAmounts(student.user_id, ['selection_process', 'scholarship', 'i20_control', 'application']);
         
+        // ✅ DEBUG: Log detalhado dos valores ANTES da normalização
+        console.log(`[AdminStudentDetails] 🔍 DEBUG - Valores BRUTOS retornados por getGrossPaidAmounts para ${student.student_email}:`, {
+          user_id: student.user_id,
+          email: student.student_email,
+          amounts_raw: amounts,
+          amounts_raw_keys: Object.keys(amounts),
+          amounts_raw_values: Object.values(amounts),
+          amounts_raw_selection: amounts.selection_process,
+          amounts_raw_application: amounts.application,
+          amounts_raw_scholarship: amounts.scholarship,
+          amounts_raw_i20: amounts.i20_control,
+          has_paid_selection: student.has_paid_selection_process_fee,
+          has_paid_application: student.is_application_fee_paid,
+          has_paid_scholarship: student.is_scholarship_fee_paid,
+          has_paid_i20: student.has_paid_i20_control_fee
+        });
+        
         // ✅ APLICAR VALIDAÇÃO: Usar a mesma lógica do Payment Management
         // Se valores estiverem muito discrepantes (provavelmente BRL não convertido), usar valores fixos em dólar
         const hasMatrFromSellerCode = !!(student?.seller_referral_code && /^MATR/i.test(student.seller_referral_code));
+        
+        console.log(`[AdminStudentDetails] 🔍 DEBUG - Parâmetros para validateAndNormalizePaidAmounts:`, {
+          amounts,
+          userSystemType,
+          userFeeOverrides,
+          dependents: student?.dependents || 0,
+          hasMatriculaRewardsDiscount,
+          hasMatrFromSellerCode,
+          paymentFlags: {
+            has_paid_selection: student.has_paid_selection_process_fee,
+            has_paid_application: student.is_application_fee_paid,
+            has_paid_scholarship: student.is_scholarship_fee_paid,
+            has_paid_i20: student.has_paid_i20_control_fee
+          }
+        });
+        
         const normalizedAmounts = validateAndNormalizePaidAmounts(
           amounts,
           userSystemType,
@@ -644,8 +737,21 @@ const AdminStudentDetails: React.FC = () => {
           getFeeAmount,
           student?.dependents || 0,
           hasMatriculaRewardsDiscount,
-          hasMatrFromSellerCode
+          hasMatrFromSellerCode,
+          // ✅ NOVO: Passar flags de pagamento para fallback de pagamentos legados
+          {
+            has_paid_selection: student.has_paid_selection_process_fee,
+            has_paid_application: student.is_application_fee_paid,
+            has_paid_scholarship: student.is_scholarship_fee_paid,
+            has_paid_i20: student.has_paid_i20_control_fee
+          }
         );
+        
+        console.log('[AdminStudentDetails] 🔍 DEBUG - Resultado da normalização:', {
+          input_amounts: amounts,
+          output_normalized: normalizedAmounts,
+          was_empty: Object.keys(normalizedAmounts).length === 0
+        });
         
         setRealPaidAmounts(normalizedAmounts);
         console.log('[AdminStudentDetails] ✅ realPaidAmounts carregado e normalizado:', normalizedAmounts);
@@ -666,7 +772,19 @@ const AdminStudentDetails: React.FC = () => {
     loadRealPaidAmounts();
     // Remover validateAndNormalizePaidAmounts das dependências pois é estável (useCallback com [] vazio)
     // Remover getFeeAmount também, pois pode mudar a cada render mas não afeta a lógica de quando carregar
-  }, [student?.user_id, userSystemType, userFeeOverrides, student?.dependents, hasMatriculaRewardsDiscount, student?.seller_referral_code]);
+  }, [
+    student?.user_id, 
+    userSystemType, 
+    userFeeOverrides, 
+    student?.dependents, 
+    hasMatriculaRewardsDiscount, 
+    student?.seller_referral_code,
+    // ✅ NOVO: Adicionar flags de pagamento para recarregar quando status mudar
+    student?.has_paid_selection_process_fee,
+    student?.is_application_fee_paid,
+    student?.is_scholarship_fee_paid,
+    student?.has_paid_i20_control_fee
+  ]);
 
   // Função para recarregar realPaidAmounts (força recarregamento mesmo se dependências não mudaram)
   const reloadRealPaidAmounts = React.useCallback(async () => {
@@ -696,7 +814,14 @@ const AdminStudentDetails: React.FC = () => {
         getFeeAmount,
         student?.dependents || 0,
         hasMatriculaRewardsDiscount,
-        hasMatrFromSellerCode
+        hasMatrFromSellerCode,
+        // ✅ NOVO: Passar flags de pagamento para fallback de pagamentos legados
+        {
+          has_paid_selection: student.has_paid_selection_process_fee,
+          has_paid_application: student.is_application_fee_paid,
+          has_paid_scholarship: student.is_scholarship_fee_paid,
+          has_paid_i20: student.has_paid_i20_control_fee
+        }
       );
       
       setRealPaidAmounts(normalizedAmounts);
@@ -712,7 +837,21 @@ const AdminStudentDetails: React.FC = () => {
         application: false,
       });
     }
-  }, [student?.user_id, student?.dependents, student?.seller_referral_code, userSystemType, userFeeOverrides, hasMatriculaRewardsDiscount, getFeeAmount, validateAndNormalizePaidAmounts]);
+  }, [
+    student?.user_id, 
+    student?.dependents, 
+    student?.seller_referral_code, 
+    userSystemType, 
+    userFeeOverrides, 
+    hasMatriculaRewardsDiscount, 
+    getFeeAmount, 
+    validateAndNormalizePaidAmounts,
+    // ✅ NOVO: Adicionar flags de pagamento
+    student?.has_paid_selection_process_fee,
+    student?.is_application_fee_paid,
+    student?.is_scholarship_fee_paid,
+    student?.has_paid_i20_control_fee
+  ]);
 
   // Carregar referral info quando necessário (ainda é local pois depende de seller_referral_code)
   React.useEffect(() => {
@@ -722,6 +861,56 @@ const AdminStudentDetails: React.FC = () => {
       setReferralInfo(null);
     }
   }, [student?.seller_referral_code]);
+
+  // Carregar informações do Matricula Rewards (quem indicou este aluno usando código MATR)
+  // Usa os dados do secondaryDataQuery que já carrega via RPC (contorna RLS)
+  React.useEffect(() => {
+    // Usar dados do secondaryDataQuery que já carrega matricula_rewards_info via RPC
+    const rewardsInfo = secondaryDataQuery.data?.matriculaRewardsInfo;
+    const isLoading = secondaryDataQuery.isLoading;
+
+    console.log('🔍 [MatriculaRewards] secondaryDataQuery data:', secondaryDataQuery.data);
+    console.log('🔍 [MatriculaRewards] Matricula Rewards info from query:', rewardsInfo);
+    console.log('🔍 [MatriculaRewards] Loading:', isLoading);
+
+    setLoadingMatriculaRewards(isLoading);
+
+    // Se não há informações de Matricula Rewards ou é null, limpar estado
+    if (!rewardsInfo || rewardsInfo === 'null' || (typeof rewardsInfo === 'object' && Object.keys(rewardsInfo).length === 0)) {
+      console.log('ℹ️ [MatriculaRewards] No MATR code found for this student');
+      setMatriculaRewardsInfo(null);
+      return;
+    }
+
+    // Extrair informações do resultado da RPC
+    // A RPC retorna: code, used_at, referrer_id, referrer_name, referrer_email
+    const referrerName = rewardsInfo.referrer_name || null;
+    const referrerEmail = rewardsInfo.referrer_email || null;
+    const code = rewardsInfo.code || null;
+    const usedAt = rewardsInfo.used_at || null; // Campo retornado pela RPC é 'used_at'
+
+    // Se não temos código, não há nada para mostrar
+    if (!code) {
+      console.log('ℹ️ [MatriculaRewards] No code found in rewards info');
+      setMatriculaRewardsInfo(null);
+      return;
+    }
+
+    console.log('✅ [MatriculaRewards] Found Matricula Rewards info:', {
+      code,
+      referrerName,
+      referrerEmail,
+      usedAt
+    });
+
+    setMatriculaRewardsInfo({
+      name: referrerName,
+      email: referrerEmail,
+      code: code,
+      usedAt: usedAt // Usar used_at da RPC
+    });
+    console.log('✅ [MatriculaRewards] Info set successfully');
+  }, [secondaryDataQuery.data?.matriculaRewardsInfo, secondaryDataQuery.isLoading]);
 
   // Pagamentos Zelle pendentes agora vêm do usePendingZellePaymentsQuery hook
 
@@ -1019,8 +1208,8 @@ const AdminStudentDetails: React.FC = () => {
     }
   }, [student, dependents, saveProfile, profileId, queryClient, user, logAction]);
 
-  const handleMarkAsPaid = useCallback((feeType: string) => {
-    setPendingPayment({ fee_type: feeType });
+  const handleMarkAsPaid = useCallback((feeType: 'selection_process' | 'application' | 'scholarship' | 'i20_control') => {
+    setPendingPayment({ fee_type: feeType, payment_method: 'manual' });
     setPaymentAmount(getFeeAmount(feeType));
     setShowPaymentModal(true);
   }, [getFeeAmount]);
@@ -1869,43 +2058,7 @@ const AdminStudentDetails: React.FC = () => {
     }
   }, [student, user, logAction, queryClient, profileId]);
 
-  const handleViewDocument = useCallback((doc: { file_url: string; filename: string }) => {
-    // ✅ Aceitar tanto file_url quanto url (fallback)
-    const fileUrl: string | undefined = doc?.file_url || (doc as any)?.url;
-    if (!doc || !fileUrl) {
-      console.error('Documento ou file_url/url está vazio ou undefined');
-      return;
-    }
-    
-    try {
-      // ✅ CORREÇÃO: Se já é uma URL completa do Supabase, usar diretamente
-      if (fileUrl && (fileUrl.startsWith('https://') || fileUrl.startsWith('http://'))) {
-        // Se já é uma URL completa, usar diretamente
-        window.open(fileUrl, '_blank');
-      } else {
-        // ✅ CORREÇÃO: Determinar o bucket correto baseado no caminho do arquivo
-        // Transfer Form uploads estão no bucket 'document-attachments' com caminho 'transfer-forms-filled/...'
-        // Outros documentos estão no bucket 'student-documents'
-        let bucket = 'student-documents'; // padrão
-        
-        if (fileUrl.includes('transfer-forms-filled/') || fileUrl.includes('transfer-forms/')) {
-          bucket = 'document-attachments';
-        }
-        
-        // Se file_url é um path do storage, converter para URL pública
-        const publicUrl = supabase.storage
-          .from(bucket)
-          .getPublicUrl(fileUrl)
-          .data.publicUrl;
-        
-        window.open(publicUrl, '_blank');
-      }
-    } catch (error) {
-      console.error('Erro ao gerar URL pública:', error);
-      // Fallback: tentar usar a URL original
-      window.open(fileUrl, '_blank');
-    }
-  }, []);
+  // handleViewDocument removido daqui pois agora é importado de documentUtils
 
   const handleUploadDocument = useCallback(async (appId: string, docType: string, file: File) => {
     if (!canUniversityManage || !student) return;
@@ -2012,6 +2165,32 @@ const AdminStudentDetails: React.FC = () => {
   const approveApplication = useCallback(async (applicationId: string) => {
     if (!student || !isPlatformAdmin) return;
     
+    // Validar se todos os documentos estão aprovados
+    const currentApp = (student.all_applications || []).find((a: any) => a.id === applicationId);
+    if (!currentApp) {
+      alert('Application not found.');
+      return;
+    }
+
+    const appDocuments = currentApp.documents || [];
+    const requiredTypes = ['passport', 'funds_proof', 'diploma'];
+    
+    // 1. Verificar se os documentos obrigatórios básicos estão presentes
+    const presentTypes = appDocuments.map((d: any) => (d.type || '').toLowerCase());
+    const missingRequired = requiredTypes.filter(type => !presentTypes.includes(type));
+    
+    if (missingRequired.length > 0) {
+      alert(`Cannot approve: Missing required documents (${missingRequired.join(', ')}).`);
+      return;
+    }
+
+    // 2. Verificar se todos os documentos da aplicação estão aprovados
+    const allDocsApproved = appDocuments.length > 0 && appDocuments.every((doc: any) => (doc.status || '').toLowerCase() === 'approved');
+    if (!allDocsApproved) {
+      alert('Cannot approve: All documents in the application must be approved first.');
+      return;
+    }
+
     try {
       setApprovingStudent(true);
       
@@ -2948,11 +3127,21 @@ const AdminStudentDetails: React.FC = () => {
                 }}
               />
 
-              {student.seller_referral_code && student.all_applications && (
+              {/* Referral Info Card - mostra seller referral OU Matricula Rewards */}
+              {(student.seller_referral_code || matriculaRewardsInfo?.code) && student.all_applications && (
                 <ReferralInfoCard
-                  referralCode={student.seller_referral_code}
-                  referralInfo={referralInfo}
-                  loading={false}
+                  referralCode={matriculaRewardsInfo?.code || student.seller_referral_code || null}
+                  referralInfo={
+                    matriculaRewardsInfo
+                      ? {
+                          type: 'student',
+                          name: matriculaRewardsInfo.name || 'Unknown',
+                          email: matriculaRewardsInfo.email || 'No email',
+                          isRewards: true, // ✅ Indica que é Matricula Rewards
+                        }
+                      : referralInfo
+                  }
+                  loading={matriculaRewardsInfo ? loadingMatriculaRewards : false}
                 />
               )}
 
@@ -2980,6 +3169,8 @@ const AdminStudentDetails: React.FC = () => {
               />
 
               <StudentDocumentsCard
+                studentId={student.student_id}
+                documentsStatus={student.documents_status}
                 applications={student.all_applications || []}
                 expandedApps={expandedApps}
                 canPlatformAdmin={isPlatformAdmin}
@@ -3079,8 +3270,8 @@ const AdminStudentDetails: React.FC = () => {
                 ? termAcceptances
                 : (directTermAcceptances || []);
 
-              const checkoutTermsAcceptances = combinedTermAcceptances.filter(acc => acc.term_type === 'checkout_terms');
-              let identityPhotoAcceptance = checkoutTermsAcceptances.find(acc => {
+              const checkoutTermsAcceptances = combinedTermAcceptances.filter((acc: any) => acc.term_type === 'checkout_terms');
+              let identityPhotoAcceptance = checkoutTermsAcceptances.find((acc: any) => {
                 // aceitar caminhos em diferentes chaves ou formatos
                 const path = acc.identity_photo_path || acc.identity_photo || acc.photo_path || null;
                 return path && String(path).trim() !== '';

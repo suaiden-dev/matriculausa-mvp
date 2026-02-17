@@ -34,7 +34,7 @@ interface PaymentStatusCardProps {
   onCancelEditFees: () => void;
   onResetFees: () => Promise<void>;
   onEditFeesChange: (fees: any) => void;
-  onMarkAsPaid: (feeType: string) => void;
+  onMarkAsPaid: (feeType: 'selection_process' | 'application' | 'scholarship' | 'i20_control') => void;
   onEditPaymentMethod: (feeType: string) => void;
   onUpdatePaymentMethod: (feeType: string) => Promise<void>;
   onCancelPaymentMethod: () => void;

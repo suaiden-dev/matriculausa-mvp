@@ -1,0 +1,14 @@
+{
+    "compilerOptions": {
+        "allowJs": true,
+        "lib": [
+            "deno.window"
+        ],
+        "strict": true
+    },
+    "imports": {
+        "@supabase/supabase-js": "npm:@supabase/supabase-js@2.49.1",
+        "stripe": "npm:stripe@17.7.0",
+        "jspdf": "npm:jspdf@2.5.1"
+    }
+}
