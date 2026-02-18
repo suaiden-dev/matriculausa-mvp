@@ -504,7 +504,7 @@
     "hero": {
       "title": "Sua Porta de Entrada para Universidades Americanas",
       "subtitle": "Descubra bolsas de estudo exclusivas e desbloqueie seu potencial nos Estados Unidos",
-      "description": "Conecte-se com universidades de ponta, acesse bolsas exclusivas e receba suporte personalizado durante toda sua jornada para estudar nos EUA.",
+      "description": "Conecte-se com universidades de ponta, acesse bolsas exclusivas e receba suporte personalizado durante toda o seu processo de matricula.",
       "cta": "Inicie Sua Jornada",
       "watchVideo": "Assistir Vídeo"
     },
@@ -671,8 +671,8 @@
         ]
       },
       "selectionFee": {
-        "title": "Pague Taxa de Seleção ({{selectionProcessFee}})",
-        "description": "Desbloqueie todas as bolsas. Esta taxa é final e não reembolsável. (+$150 por dependente)",
+        "title": "Pague Taxa de processo seletivo ({{selectionProcessFee}})",
+        "description": "Desbloqueie todas as bolsas. Esta taxa é final e você será reembolsado caso não seja aceito em nenhuma universidade. (+$150 por dependente)",
         "items": [
           "Acesso para navegar pelas bolsas",
           "Iniciar processo de candidatura",
@@ -3203,7 +3203,7 @@
         "processErrorRetry": "Erro ao processar cancelamento de inscrição. Por favor, tente novamente."
       }
     },
-    "copyright": "© 2024 Matrícula USA. Todos os direitos reservados."
+    "copyright": "© 2026 Matrícula USA. Todos os direitos reservados."
   },
   "matriculaRewardsLanding": {
     "badge": "Novo Programa de Recompensas",
@@ -3236,7 +3236,7 @@
         "description": "Veja como seria sua conta com algumas indicações",
         "referralCode": {
           "title": "Seu Código de Referência",
-          "code": "MTR2024",
+          "code": "MTR2026",
           "copy": "Copiar Código",
           "copied": "Copiado!",
           "loginToGetCode": "Faça login para obter seu código de referência"
@@ -3612,7 +3612,7 @@
       ]
     },
     "socialProof": {
-      "title": "Mais de 150 alunos aprovados só em 2024",
+      "title": "Mais de 150 alunos aprovados só em 2026",
       "subtitle": "Veja o que nossos alunos estão dizendo sobre sua experiência",
       "ctaButton": "SER O PRÓXIMO APROVADO",
       "statistics": {
