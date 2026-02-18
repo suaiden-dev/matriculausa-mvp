@@ -1,14 +1,14 @@
 import React, { useState } from 'react';
-import { 
-  MapPin, 
-  DollarSign, 
-  Calendar, 
-  Users, 
-  CheckCircle, 
-  ArrowRight, 
-  Briefcase, 
-  Home, 
-  Utensils, 
+import {
+  MapPin,
+  DollarSign,
+  Calendar,
+  Users,
+  CheckCircle,
+  ArrowRight,
+  Briefcase,
+  Home,
+  Utensils,
   Package,
   Star,
   Shield,
@@ -42,7 +42,7 @@ const jobs: Job[] = [
     title: 'Home Health Aid',
     location: 'VA/DC/MD',
     wage: '$17/hour',
-    filing: 'September 2025',
+    filing: 'September 2026',
     category: 'healthcare',
     code: '0116',
     description: 'Assists persons in need with daily living activities at home or in a care facility. Duties include housekeeping, meal preparation, transfers, bathing, dressing, medication reminders, and general companion care.',
@@ -60,7 +60,7 @@ const jobs: Job[] = [
     title: 'Kitchen Helper',
     location: 'Atlanta, GA',
     wage: '$15/hour',
-    filing: 'December 2025',
+    filing: 'December 2026',
     category: 'hospitality',
     code: '0118',
     description: 'Assist in cooking food, prepare ingredients (washing, cleaning, cutting, peeling), clean work area, and remove trash.'
@@ -70,7 +70,7 @@ const jobs: Job[] = [
     title: 'Hospitality Server',
     location: 'Cincinnati, OH',
     wage: '$15/hour',
-    filing: 'December 2025',
+    filing: 'December 2026',
     category: 'hospitality',
     code: '0120',
     description: 'Prepare and serve food safely, maintain clean environment, assist with setup and takedown, provide a welcoming atmosphere for guests.'
@@ -80,7 +80,7 @@ const jobs: Job[] = [
     title: 'Kitchen Helper',
     location: 'Cincinnati, OH',
     wage: '$15/hour',
-    filing: 'December 2025',
+    filing: 'December 2026',
     category: 'hospitality',
     code: '0121'
   },
@@ -89,7 +89,7 @@ const jobs: Job[] = [
     title: 'Hospitality Server',
     location: 'Akron, OH',
     wage: '$15/hour',
-    filing: 'December 2025',
+    filing: 'December 2026',
     category: 'hospitality',
     code: '0130'
   },
@@ -98,7 +98,7 @@ const jobs: Job[] = [
     title: 'Hospitality Server',
     location: 'Detroit, MI',
     wage: '$15/hour',
-    filing: 'December 2025',
+    filing: 'December 2026',
     category: 'hospitality',
     code: '0131'
   },
@@ -107,7 +107,7 @@ const jobs: Job[] = [
     title: 'Kitchen Helper',
     location: 'Detroit, MI',
     wage: '$15/hour',
-    filing: 'December 2025',
+    filing: 'December 2026',
     category: 'hospitality',
     code: '0132'
   },
@@ -116,7 +116,7 @@ const jobs: Job[] = [
     title: 'Hospitality Server',
     location: 'North Las Vegas, NV',
     wage: '$15/hour',
-    filing: 'December 2025',
+    filing: 'December 2026',
     category: 'hospitality',
     code: '0133'
   },
@@ -125,7 +125,7 @@ const jobs: Job[] = [
     title: 'Kitchen Helper',
     location: 'North Las Vegas, NV',
     wage: '$15/hour',
-    filing: 'December 2025',
+    filing: 'December 2026',
     category: 'hospitality',
     code: '0134'
   },
@@ -134,7 +134,7 @@ const jobs: Job[] = [
     title: 'Hospitality Server',
     location: 'Glendale, AZ',
     wage: '$15/hour',
-    filing: 'December 2025',
+    filing: 'December 2026',
     category: 'hospitality',
     code: '0135'
   },
@@ -143,7 +143,7 @@ const jobs: Job[] = [
     title: 'Kitchen Helper',
     location: 'Glendale, AZ',
     wage: '$15/hour',
-    filing: 'December 2025',
+    filing: 'December 2026',
     category: 'hospitality',
     code: '0136'
   },
@@ -152,7 +152,7 @@ const jobs: Job[] = [
     title: 'Kitchen Helper',
     location: 'Chaska, MN',
     wage: '$15/hour',
-    filing: 'December 2025',
+    filing: 'December 2026',
     category: 'hospitality',
     code: '0137'
   },
@@ -161,7 +161,7 @@ const jobs: Job[] = [
     title: 'Hospitality Server',
     location: 'Chaska, MN',
     wage: '$15/hour',
-    filing: 'December 2025',
+    filing: 'December 2026',
     category: 'hospitality',
     code: '0138'
   },
@@ -170,7 +170,7 @@ const jobs: Job[] = [
     title: 'Kitchen Helper',
     location: 'Columbus, OH',
     wage: '$15/hour',
-    filing: 'December 2025',
+    filing: 'December 2026',
     category: 'hospitality',
     code: '0139'
   },
@@ -179,7 +179,7 @@ const jobs: Job[] = [
     title: 'Hospitality Server',
     location: 'Columbus, OH',
     wage: '$15/hour',
-    filing: 'December 2025',
+    filing: 'December 2026',
     category: 'hospitality',
     code: '0140'
   },
@@ -189,7 +189,7 @@ const jobs: Job[] = [
     title: 'Industrial Upshifter',
     location: 'Cincinnati, OH',
     wage: '$14/hour',
-    filing: 'December 2025',
+    filing: 'December 2026',
     category: 'warehouse',
     code: '0122',
     description: 'Pick customer order items and package them for shipping.'
@@ -199,7 +199,7 @@ const jobs: Job[] = [
     title: 'Order Picker',
     location: 'Anaheim, CA',
     wage: '$17/hour',
-    filing: 'November 2025',
+    filing: 'November 2026',
     category: 'warehouse',
     code: '0141',
     description: 'Verify and maintain records on shipments, prepare items for shipping, assemble/stamp/ship merchandise, receive/unpack/record materials, arrange transportation.',
@@ -210,7 +210,7 @@ const jobs: Job[] = [
     title: 'Order Picker',
     location: 'Baldwin Park, CA',
     wage: '$17/hour',
-    filing: 'November 2025',
+    filing: 'November 2026',
     category: 'warehouse',
     code: '0142',
     requirements: ['Interview required']
@@ -220,7 +220,7 @@ const jobs: Job[] = [
     title: 'Order Picker',
     location: 'City of Industry, CA',
     wage: '$17/hour',
-    filing: 'November 2025',
+    filing: 'November 2026',
     category: 'warehouse',
     code: '0143',
     requirements: ['Interview required']
@@ -230,7 +230,7 @@ const jobs: Job[] = [
     title: 'Order Picker',
     location: 'Colton, CA',
     wage: '$17/hour',
-    filing: 'November 2025',
+    filing: 'November 2026',
     category: 'warehouse',
     code: '0144',
     requirements: ['Interview required']
@@ -240,7 +240,7 @@ const jobs: Job[] = [
     title: 'Order Picker',
     location: 'El Monte, CA',
     wage: '$17/hour',
-    filing: 'November 2025',
+    filing: 'November 2026',
     category: 'warehouse',
     code: '0145',
     requirements: ['Interview required']
@@ -250,7 +250,7 @@ const jobs: Job[] = [
     title: 'Order Picker',
     location: 'Fresno, CA',
     wage: '$17/hour',
-    filing: 'November 2025',
+    filing: 'November 2026',
     category: 'warehouse',
     code: '0146',
     requirements: ['Interview required']
@@ -260,7 +260,7 @@ const jobs: Job[] = [
     title: 'Order Picker',
     location: 'Madera, CA',
     wage: '$17/hour',
-    filing: 'November 2025',
+    filing: 'November 2026',
     category: 'warehouse',
     code: '0147',
     requirements: ['Interview required']
@@ -270,7 +270,7 @@ const jobs: Job[] = [
     title: 'Order Picker',
     location: 'Perris, CA',
     wage: '$17/hour',
-    filing: 'November 2025',
+    filing: 'November 2026',
     category: 'warehouse',
     code: '0148',
     requirements: ['Interview required']
@@ -280,7 +280,7 @@ const jobs: Job[] = [
     title: 'Order Picker',
     location: 'Santa Ana, CA',
     wage: '$17/hour',
-    filing: 'November 2025',
+    filing: 'November 2026',
     category: 'warehouse',
     code: '0149',
     requirements: ['Interview required']
@@ -290,7 +290,7 @@ const jobs: Job[] = [
     title: 'Order Picker',
     location: 'Sun Valley, CA',
     wage: '$17/hour',
-    filing: 'November 2025',
+    filing: 'November 2026',
     category: 'warehouse',
     code: '0150',
     requirements: ['Interview required']
@@ -319,7 +319,7 @@ const EB3JobsLanding: React.FC = () => {
   const scrollToOffer = () => {
     const element = document.getElementById('pre-candidatura');
     if (element) {
-      element.scrollIntoView({ 
+      element.scrollIntoView({
         behavior: 'smooth',
         block: 'start'
       });
@@ -330,12 +330,12 @@ const EB3JobsLanding: React.FC = () => {
     try {
       // Busca o token de autenticação do Supabase (opcional)
       const { data: { session } } = await supabase.auth.getSession();
-      
+
       // Prepara headers com ou sem autenticação
       const headers: Record<string, string> = {
         'Content-Type': 'application/json',
       };
-      
+
       if (session?.access_token) {
         headers['Authorization'] = `Bearer ${session.access_token}`;
       }
@@ -361,7 +361,7 @@ const EB3JobsLanding: React.FC = () => {
       }
 
       const { session_url } = await response.json();
-      
+
       // Redireciona para o checkout do Stripe
       window.location.href = session_url;
     } catch (error) {
@@ -373,7 +373,7 @@ const EB3JobsLanding: React.FC = () => {
     const matchesCategory = selectedCategory === 'all' || job.category === selectedCategory;
     const matchesLocation = selectedLocation === 'all' || job.location.toLowerCase().includes(selectedLocation.toLowerCase());
     const matchesSearch = job.title.toLowerCase().includes(searchTerm.toLowerCase()) ||
-                         job.location.toLowerCase().includes(searchTerm.toLowerCase());
+      job.location.toLowerCase().includes(searchTerm.toLowerCase());
     return matchesCategory && matchesLocation && matchesSearch;
   });
 
@@ -397,12 +397,12 @@ const EB3JobsLanding: React.FC = () => {
 
   return (
     <>
-      <SEOHead 
+      <SEOHead
         title="EB-3 Jobs - Work and Live Legally in the USA | MatriculaUSA"
         description="EB-3 employment opportunities for permanent residence in the USA. Jobs in healthcare, hospitality, and logistics with Green Card for you and your family."
         keywords="EB-3, Green Card, USA jobs, permanent residence, employment opportunities, immigration"
       />
-      
+
       <div className="bg-white">
         {/* Hero Section */}
         <section className="relative bg-gradient-to-br from-slate-50 via-blue-50 to-red-50 overflow-hidden">
@@ -410,7 +410,7 @@ const EB3JobsLanding: React.FC = () => {
             <div className="absolute top-20 left-10 w-96 h-96 bg-[#05294E]/5 rounded-full blur-3xl"></div>
             <div className="absolute bottom-20 right-10 w-96 h-96 bg-[#D0151C]/5 rounded-full blur-3xl"></div>
           </div>
-          
+
           <div className="relative max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-20 md:py-32">
             <div className="text-center">
               <motion.div
@@ -422,7 +422,7 @@ const EB3JobsLanding: React.FC = () => {
                 <Briefcase className="h-4 w-4 mr-2 text-[#05294E]" />
                 <span className="text-sm font-bold text-slate-700">{t('eb3Jobs.hero.badge')}</span>
               </motion.div>
-              
+
               <motion.h1
                 initial={{ opacity: 0, y: 30 }}
                 animate={{ opacity: 1, y: 0 }}
@@ -430,7 +430,7 @@ const EB3JobsLanding: React.FC = () => {
                 className="text-5xl md:text-6xl lg:text-7xl font-black mb-8 leading-tight text-slate-900"
                 dangerouslySetInnerHTML={{ __html: t('eb3Jobs.hero.title') }}
               />
-              
+
               <motion.p
                 initial={{ opacity: 0, y: 30 }}
                 animate={{ opacity: 1, y: 0 }}
@@ -466,7 +466,7 @@ const EB3JobsLanding: React.FC = () => {
                 transition={{ duration: 0.6, delay: 0.4 }}
                 className="flex flex-col sm:flex-row gap-4 justify-center"
               >
-                <button 
+                <button
                   onClick={scrollToOffer}
                   className="group bg-[#D0151C] hover:bg-[#B01218] text-white px-8 py-4 rounded-2xl text-lg font-bold transition-all duration-300 shadow-xl hover:shadow-2xl flex items-center justify-center"
                 >
@@ -492,20 +492,19 @@ const EB3JobsLanding: React.FC = () => {
                   <Shield className="h-4 w-4 mr-2 text-[#05294E]" />
                   <span className="text-sm font-bold text-slate-700">{t('eb3Jobs.whatIsEb3.badge')}</span>
                 </div>
-                
+
                 <h2 className="text-4xl md:text-5xl font-black text-slate-900 mb-8" dangerouslySetInnerHTML={{ __html: t('eb3Jobs.whatIsEb3.title') }} />
-                
+
                 <div className="space-y-6">
                   {t('eb3Jobs.whatIsEb3.benefits', { returnObjects: true }).map((benefit: any, index: number) => (
                     <div key={index} className="flex items-start space-x-4">
-                      <div className={`w-12 h-12 rounded-2xl flex items-center justify-center shadow-lg flex-shrink-0 ${
-                        index === 0 ? 'bg-[#05294E]' : 
-                        index === 1 ? 'bg-[#D0151C]' : 
-                        'bg-green-600'
-                      }`}>
+                      <div className={`w-12 h-12 rounded-2xl flex items-center justify-center shadow-lg flex-shrink-0 ${index === 0 ? 'bg-[#05294E]' :
+                          index === 1 ? 'bg-[#D0151C]' :
+                            'bg-green-600'
+                        }`}>
                         {index === 0 ? <CheckCircle className="h-6 w-6 text-white" /> :
-                         index === 1 ? <DollarSign className="h-6 w-6 text-white" /> :
-                         <MapPin className="h-6 w-6 text-white" />}
+                          index === 1 ? <DollarSign className="h-6 w-6 text-white" /> :
+                            <MapPin className="h-6 w-6 text-white" />}
                       </div>
                       <div>
                         <h3 className="text-xl font-bold text-slate-900 mb-2">{benefit.title}</h3>
@@ -524,7 +523,7 @@ const EB3JobsLanding: React.FC = () => {
                   alt="Workers in the USA"
                   className="rounded-3xl shadow-2xl w-full"
                 />
-                
+
                 <div className="absolute -bottom-6 -left-6 bg-white rounded-2xl p-6 shadow-2xl border border-slate-200">
                   <div className="flex items-center space-x-4">
                     <div className="bg-green-600 w-12 h-12 rounded-2xl flex items-center justify-center">
@@ -564,11 +563,10 @@ const EB3JobsLanding: React.FC = () => {
                     <button
                       key={category.id}
                       onClick={() => setSelectedCategory(category.id)}
-                      className={`px-4 py-2 rounded-xl font-semibold transition-all duration-300 ${
-                        selectedCategory === category.id
+                      className={`px-4 py-2 rounded-xl font-semibold transition-all duration-300 ${selectedCategory === category.id
                           ? 'bg-[#05294E] text-white shadow-lg'
                           : 'bg-slate-100 text-slate-700 hover:bg-slate-200'
-                      }`}
+                        }`}
                     >
                       {category.name} ({category.count})
                     </button>
@@ -592,7 +590,7 @@ const EB3JobsLanding: React.FC = () => {
                       ))}
                     </select>
                   </div>
-                  
+
                   {/* Search */}
                   <div className="relative">
                     <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-slate-400" />
@@ -613,7 +611,7 @@ const EB3JobsLanding: React.FC = () => {
               {filteredJobs.map((job) => {
                 const IconComponent = categoryIcons[job.category];
                 const isExpanded = expandedJob === job.id;
-                
+
                 return (
                   <motion.div
                     key={job.id}
@@ -630,19 +628,19 @@ const EB3JobsLanding: React.FC = () => {
                         </div>
                         <span className="text-xs text-slate-500 font-mono">#{job.code}</span>
                       </div>
-                      
+
                       <h3 className="text-xl font-bold text-slate-900 mb-2">{job.title}</h3>
-                      
+
                       <div className="flex items-center text-slate-600 mb-2">
                         <MapPin className="h-4 w-4 mr-2 text-[#05294E]" />
                         <span className="text-sm">{job.location}</span>
                       </div>
-                      
+
                       <div className="flex items-center text-slate-600 mb-2">
                         <DollarSign className="h-4 w-4 mr-2 text-green-600" />
                         <span className="text-sm font-semibold text-green-600">{job.wage}</span>
                       </div>
-                      
+
                       <div className="flex items-center text-slate-600 mb-4">
                         <Calendar className="h-4 w-4 mr-2 text-blue-600" />
                         <span className="text-sm">Filing: {job.filing}</span>
@@ -662,7 +660,7 @@ const EB3JobsLanding: React.FC = () => {
                           {isExpanded ? t('eb3Jobs.jobs.jobCard.lessDetails') : t('eb3Jobs.jobs.jobCard.moreDetails')}
                           {isExpanded ? <ChevronUp className="ml-1 h-4 w-4" /> : <ChevronDown className="ml-1 h-4 w-4" />}
                         </button>
-                        <button 
+                        <button
                           onClick={scrollToOffer}
                           className="bg-[#05294E] text-white px-4 py-2 rounded-xl text-sm font-semibold hover:bg-[#05294E]/90 transition-colors"
                         >
@@ -686,7 +684,7 @@ const EB3JobsLanding: React.FC = () => {
                               <p className="text-slate-600 text-sm">{job.description}</p>
                             </div>
                           )}
-                          
+
                           {job.requirements && job.requirements.length > 0 && (
                             <div>
                               <h4 className="font-semibold text-slate-900 mb-2">{t('eb3Jobs.jobs.jobCard.requirements')}</h4>
@@ -731,16 +729,15 @@ const EB3JobsLanding: React.FC = () => {
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-8">
               {t('eb3Jobs.benefits.items', { returnObjects: true }).map((benefit: any, index: number) => (
                 <div key={index} className="bg-white p-8 rounded-3xl shadow-lg hover:shadow-xl transition-all duration-300 border border-slate-200 text-center">
-                  <div className={`w-16 h-16 rounded-2xl flex items-center justify-center mx-auto mb-6 ${
-                    index === 0 ? 'bg-green-100' : 
-                    index === 1 ? 'bg-blue-100' : 
-                    index === 2 ? 'bg-orange-100' : 
-                    'bg-purple-100'
-                  }`}>
+                  <div className={`w-16 h-16 rounded-2xl flex items-center justify-center mx-auto mb-6 ${index === 0 ? 'bg-green-100' :
+                      index === 1 ? 'bg-blue-100' :
+                        index === 2 ? 'bg-orange-100' :
+                          'bg-purple-100'
+                    }`}>
                     {index === 0 ? <CheckCircle className="h-8 w-8 text-green-600" /> :
-                     index === 1 ? <DollarSign className="h-8 w-8 text-blue-600" /> :
-                     index === 2 ? <MapPin className="h-8 w-8 text-orange-600" /> :
-                     <Users className="h-8 w-8 text-purple-600" />}
+                      index === 1 ? <DollarSign className="h-8 w-8 text-blue-600" /> :
+                        index === 2 ? <MapPin className="h-8 w-8 text-orange-600" /> :
+                          <Users className="h-8 w-8 text-purple-600" />}
                   </div>
                   <h3 className="text-xl font-bold text-slate-900 mb-4">{benefit.title}</h3>
                   <p className="text-slate-600">{benefit.description}</p>
@@ -763,11 +760,10 @@ const EB3JobsLanding: React.FC = () => {
             <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
               {t('eb3Jobs.howItWorks.steps', { returnObjects: true }).map((step: any, index: number) => (
                 <div key={index} className="text-center">
-                  <div className={`w-16 h-16 rounded-2xl flex items-center justify-center mx-auto mb-6 shadow-lg ${
-                    index === 0 ? 'bg-[#05294E]' : 
-                    index === 1 ? 'bg-[#D0151C]' : 
-                    'bg-green-600'
-                  }`}>
+                  <div className={`w-16 h-16 rounded-2xl flex items-center justify-center mx-auto mb-6 shadow-lg ${index === 0 ? 'bg-[#05294E]' :
+                      index === 1 ? 'bg-[#D0151C]' :
+                        'bg-green-600'
+                    }`}>
                     <span className="text-2xl font-bold text-white">{index + 1}</span>
                   </div>
                   <h3 className="text-xl font-bold text-slate-900 mb-4">{step.title}</h3>
@@ -786,7 +782,7 @@ const EB3JobsLanding: React.FC = () => {
             <div className="absolute bottom-10 right-10 w-96 h-96 bg-white/5 rounded-full blur-3xl"></div>
             <div className="absolute top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2 w-[800px] h-[800px] bg-white/3 rounded-full blur-3xl"></div>
           </div>
-          
+
           <div className="relative max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
             <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 items-center">
               {/* Left Text Section */}
@@ -816,85 +812,85 @@ const EB3JobsLanding: React.FC = () => {
                 >
                   {/* Subtle glow effect */}
                   <div className="absolute inset-0 bg-gradient-to-br from-white/50 to-transparent rounded-3xl pointer-events-none"></div>
-                  
+
                   {/* Content */}
                   <div className="relative z-10">
                     {/* Logo/Header */}
                     <div className="text-center mb-6">
-                    <div className="inline-flex items-center justify-center w-16 h-16 bg-gradient-to-r from-[#05294E] to-[#D0151C] rounded-2xl mb-4">
-                      <Briefcase className="h-8 w-8 text-white" />
-                    </div>
-                    <h3 className="text-2xl md:text-3xl font-black text-[#05294E] mb-2">
-                      {t('eb3Jobs.offer.card.title')}
-                    </h3>
-                    <div className="w-16 h-1 bg-[#05294E] mx-auto"></div>
-                  </div>
-
-                  {/* Features List */}
-                  <div className="space-y-3 mb-6">
-                    {t('eb3Jobs.offer.card.features', { returnObjects: true }).map((feature: string, index: number) => (
-                      <div key={index} className="flex items-center space-x-3">
-                        <CheckCircle className="h-5 w-5 text-[#05294E] flex-shrink-0" />
-                        <span className="text-[#05294E] font-semibold">{feature}</span>
+                      <div className="inline-flex items-center justify-center w-16 h-16 bg-gradient-to-r from-[#05294E] to-[#D0151C] rounded-2xl mb-4">
+                        <Briefcase className="h-8 w-8 text-white" />
                       </div>
-                    ))}
-                  </div>
+                      <h3 className="text-2xl md:text-3xl font-black text-[#05294E] mb-2">
+                        {t('eb3Jobs.offer.card.title')}
+                      </h3>
+                      <div className="w-16 h-1 bg-[#05294E] mx-auto"></div>
+                    </div>
 
-                  {/* Pricing */}
-                  <div className="text-center mb-6">
-                    <div className="text-gray-400 line-through text-lg mb-2">
-                      {t('eb3Jobs.offer.card.pricing.originalPrice')}
-                    </div>
-                    <div className="text-4xl md:text-5xl font-black text-[#05294E] mb-2">
-                      {t('eb3Jobs.offer.card.pricing.currentPrice')}
-                    </div>
-                    <div className="flex items-center justify-center space-x-2 text-[#05294E] text-sm">
-                      <CheckCircle className="h-4 w-4 text-green-500" />
-                      <span>{t('eb3Jobs.offer.card.pricing.guarantee')}</span>
-                    </div>
-                  </div>
-
-                  {/* CTA Button */}
-                  <div className="text-center mb-6">
-                    <button 
-                      onClick={handleStripeCheckout}
-                      className="bg-green-500 hover:bg-green-600 text-white font-black text-lg px-8 py-4 rounded-2xl transition-all duration-300 transform hover:scale-105 shadow-lg"
-                    >
-                      {t('eb3Jobs.offer.card.signUpNow')}
-                    </button>
-                  </div>
-
-                  {/* Security Icons */}
-                  <div className="grid grid-cols-3 gap-4 mb-6">
-                    <div className="text-center">
-                      <div className="bg-gray-100 w-12 h-12 rounded-xl flex items-center justify-center mx-auto mb-2">
-                        <Shield className="h-6 w-6 text-[#05294E]" />
-                      </div>
-                      <div className="text-xs text-gray-600 font-medium">{t('eb3Jobs.offer.card.security.secureCheckout')}</div>
-                    </div>
-                    <div className="text-center">
-                      <div className="bg-gray-100 w-12 h-12 rounded-xl flex items-center justify-center mx-auto mb-2">
-                        <Star className="h-6 w-6 text-[#05294E]" />
-                      </div>
-                      <div className="text-xs text-gray-600 font-medium">{t('eb3Jobs.offer.card.security.satisfactionGuaranteed')}</div>
-                    </div>
-                    <div className="text-center">
-                      <div className="bg-gray-100 w-12 h-12 rounded-xl flex items-center justify-center mx-auto mb-2">
-                        <Shield className="h-6 w-6 text-[#05294E]" />
-                      </div>
-                      <div className="text-xs text-gray-600 font-medium">{t('eb3Jobs.offer.card.security.protectedPrivacy')}</div>
-                    </div>
-                  </div>
-
-                  {/* Payment Methods */}
-                  <div className="text-center">
-                    <div className="text-xs text-gray-500 mb-3">{t('eb3Jobs.offer.card.paymentMethods')}</div>
-                    <div className="flex flex-wrap justify-center items-center gap-3">
-                      {t('eb3Jobs.offer.card.methods', { returnObjects: true }).map((method: string, index: number) => (
-                        <div key={index} className="bg-gray-100 px-3 py-1 rounded text-xs font-semibold text-gray-700">{method}</div>
+                    {/* Features List */}
+                    <div className="space-y-3 mb-6">
+                      {t('eb3Jobs.offer.card.features', { returnObjects: true }).map((feature: string, index: number) => (
+                        <div key={index} className="flex items-center space-x-3">
+                          <CheckCircle className="h-5 w-5 text-[#05294E] flex-shrink-0" />
+                          <span className="text-[#05294E] font-semibold">{feature}</span>
+                        </div>
                       ))}
                     </div>
-                  </div>
+
+                    {/* Pricing */}
+                    <div className="text-center mb-6">
+                      <div className="text-gray-400 line-through text-lg mb-2">
+                        {t('eb3Jobs.offer.card.pricing.originalPrice')}
+                      </div>
+                      <div className="text-4xl md:text-5xl font-black text-[#05294E] mb-2">
+                        {t('eb3Jobs.offer.card.pricing.currentPrice')}
+                      </div>
+                      <div className="flex items-center justify-center space-x-2 text-[#05294E] text-sm">
+                        <CheckCircle className="h-4 w-4 text-green-500" />
+                        <span>{t('eb3Jobs.offer.card.pricing.guarantee')}</span>
+                      </div>
+                    </div>
+
+                    {/* CTA Button */}
+                    <div className="text-center mb-6">
+                      <button
+                        onClick={handleStripeCheckout}
+                        className="bg-green-500 hover:bg-green-600 text-white font-black text-lg px-8 py-4 rounded-2xl transition-all duration-300 transform hover:scale-105 shadow-lg"
+                      >
+                        {t('eb3Jobs.offer.card.signUpNow')}
+                      </button>
+                    </div>
+
+                    {/* Security Icons */}
+                    <div className="grid grid-cols-3 gap-4 mb-6">
+                      <div className="text-center">
+                        <div className="bg-gray-100 w-12 h-12 rounded-xl flex items-center justify-center mx-auto mb-2">
+                          <Shield className="h-6 w-6 text-[#05294E]" />
+                        </div>
+                        <div className="text-xs text-gray-600 font-medium">{t('eb3Jobs.offer.card.security.secureCheckout')}</div>
+                      </div>
+                      <div className="text-center">
+                        <div className="bg-gray-100 w-12 h-12 rounded-xl flex items-center justify-center mx-auto mb-2">
+                          <Star className="h-6 w-6 text-[#05294E]" />
+                        </div>
+                        <div className="text-xs text-gray-600 font-medium">{t('eb3Jobs.offer.card.security.satisfactionGuaranteed')}</div>
+                      </div>
+                      <div className="text-center">
+                        <div className="bg-gray-100 w-12 h-12 rounded-xl flex items-center justify-center mx-auto mb-2">
+                          <Shield className="h-6 w-6 text-[#05294E]" />
+                        </div>
+                        <div className="text-xs text-gray-600 font-medium">{t('eb3Jobs.offer.card.security.protectedPrivacy')}</div>
+                      </div>
+                    </div>
+
+                    {/* Payment Methods */}
+                    <div className="text-center">
+                      <div className="text-xs text-gray-500 mb-3">{t('eb3Jobs.offer.card.paymentMethods')}</div>
+                      <div className="flex flex-wrap justify-center items-center gap-3">
+                        {t('eb3Jobs.offer.card.methods', { returnObjects: true }).map((method: string, index: number) => (
+                          <div key={index} className="bg-gray-100 px-3 py-1 rounded text-xs font-semibold text-gray-700">{method}</div>
+                        ))}
+                      </div>
+                    </div>
                   </div>
                 </motion.div>
               </div>
@@ -915,7 +911,7 @@ const EB3JobsLanding: React.FC = () => {
                       {t('eb3Jobs.offer.guarantee.title')}
                     </h3>
                   </div>
-                  
+
                   <p className="text-white text-sm leading-relaxed">
                     {t('eb3Jobs.offer.guarantee.description')}
                   </p>
@@ -963,7 +959,7 @@ const EB3JobsLanding: React.FC = () => {
                       )}
                     </div>
                   </button>
-                  
+
                   <AnimatePresence>
                     {expandedJob === `faq-${index}` && (
                       <motion.div
@@ -994,22 +990,22 @@ const EB3JobsLanding: React.FC = () => {
               <Briefcase className="h-4 w-4 mr-2" />
               <span className="text-sm font-medium">{t('eb3Jobs.cta.badge')}</span>
             </div>
-            
+
             <h2 className="text-4xl md:text-6xl font-black mb-6 leading-tight" dangerouslySetInnerHTML={{ __html: t('eb3Jobs.cta.title') }} />
-            
+
             <p className="text-xl mb-10 text-blue-100 max-w-3xl mx-auto leading-relaxed">
               {t('eb3Jobs.cta.subtitle')}
             </p>
-            
+
             <div className="flex flex-col sm:flex-row gap-6 justify-center">
-              <button 
+              <button
                 onClick={scrollToOffer}
                 className="group bg-[#D0151C] text-white px-10 py-5 rounded-2xl text-xl font-black hover:bg-[#B01218] transition-all duration-300 transform hover:scale-105 shadow-2xl flex items-center justify-center"
               >
                 {t('eb3Jobs.cta.applyNow')}
                 <ArrowRight className="ml-3 h-6 w-6 group-hover:translate-x-1 transition-transform" />
               </button>
-              <button 
+              <button
                 onClick={() => window.open('https://wa.me/12136762544', '_blank')}
                 className="group bg-transparent border-2 border-white text-white px-10 py-5 rounded-2xl text-xl font-black hover:bg-white hover:text-[#05294E] transition-all duration-300 flex items-center justify-center"
               >
@@ -1017,7 +1013,7 @@ const EB3JobsLanding: React.FC = () => {
                 {t('eb3Jobs.cta.contactUs')}
               </button>
             </div>
-            
+
             <div className="mt-8 flex flex-col sm:flex-row gap-4 justify-center text-blue-100">
               {t('eb3Jobs.cta.features', { returnObjects: true }).map((feature: string, index: number) => (
                 <div key={index} className="flex items-center text-sm">

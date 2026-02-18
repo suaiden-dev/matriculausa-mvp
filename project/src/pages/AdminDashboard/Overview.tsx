@@ -59,6 +59,7 @@ const Overview: React.FC<OverviewProps> = ({ stats, universities, users, applica
 
   const UNIVERSITIES_PER_PAGE = 4; // Reduzido para caber melhor no layout compacto
 
+
   // Função para verificar se deve filtrar (produção, staging ou local para testes)
   const shouldFilter = useMemo(() => {
     const hostname = window.location.hostname;
@@ -300,6 +301,7 @@ const Overview: React.FC<OverviewProps> = ({ stats, universities, users, applica
           </div>
         </div>
       )}
+
 
       {/* Stats Cards */}
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">

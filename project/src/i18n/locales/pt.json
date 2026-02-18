@@ -3811,7 +3811,7 @@
     "jobs": {
       "badge": "Empregos Disponíveis",
       "title": "Lista de <span class=\"text-[#05294E]\">Oportunidades</span>",
-      "lastUpdated": "Última atualização: 8 de setembro de 2025",
+      "lastUpdated": "Última atualização: 18 de fevereiro de 2026",
       "filters": {
         "allJobs": "Todos os Empregos",
         "healthcare": "Saúde",
@@ -4063,7 +4063,7 @@
     "toastSuccess": "Processo Seletivo concluído com sucesso!",
     "toastErrorScore": "Infelizmente você não atingiu a pontuação mínima. Tente novamente.",
     "toastErrorSave": "Erro ao salvar suas respostas. Por favor, tente novamente.",
-    "copyright": "© 2024 Matrícula USA • Processo Seletivo de Alunos",
+    "copyright": "© 2026 Matrícula USA • Processo Seletivo de Alunos",
     "results": {
       "congratulations": "Parabéns!",
       "passedMessage": "Você foi aprovado no processo seletivo e está um passo mais próximo do seu sonho!",

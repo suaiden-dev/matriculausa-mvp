@@ -3771,7 +3771,7 @@
     "jobs": {
       "badge": "Available Jobs",
       "title": "List of <span class=\"text-[#05294E]\">Opportunities</span>",
-      "lastUpdated": "Last updated: September 8, 2025",
+      "lastUpdated": "Last updated: February 18, 2026",
       "filters": {
         "allJobs": "All Jobs",
         "healthcare": "Healthcare",
@@ -4023,7 +4023,7 @@
     "toastSuccess": "Selection Process successfully completed!",
     "toastErrorScore": "Unfortunately you didn't reach the minimum score. Try again.",
     "toastErrorSave": "Error saving your answers. Please try again.",
-    "copyright": "© 2024 Matrícula USA • Student Selection Process",
+    "copyright": "© 2026 Matrícula USA • Student Selection Process",
     "results": {
       "congratulations": "Congratulations!",
       "passedMessage": "You have passed the selection process and are one step closer to your dream!",

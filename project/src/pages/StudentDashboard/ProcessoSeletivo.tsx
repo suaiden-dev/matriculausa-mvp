@@ -386,7 +386,7 @@ const ProcessoSeletivo = () => {
                 if (q.id === 4) {
                     newAnswers[q.id] = 'Sim';
                     newAnswers[-4] = 'B2';
-                    newAnswers[-41] = '2025-12-31';
+                    newAnswers[-41] = '2026-12-31';
                 } else {
                     newAnswers[q.id] = 'Sim';
                 }
