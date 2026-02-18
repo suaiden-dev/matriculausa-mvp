@@ -1,27 +1,30 @@
 import React, { useMemo } from 'react';
 import { useNavigate } from 'react-router-dom';
 import KanbanColumn from './KanbanColumn';
-import { 
-  APPLICATION_FLOW_STAGES, 
+import {
+  APPLICATION_FLOW_STAGES,
   getCurrentStage,
-  ApplicationFlowStageKey 
+  ApplicationFlowStageKey
 } from '../../utils/applicationFlowStages';
-import { useStudentUnreadMessages } from '../../hooks/useStudentUnreadMessages';
-import { useGlobalStudentUnread } from '../../hooks/useGlobalStudentUnread';
+// Imports removed
 import { StudentRecord } from './StudentApplicationsView';
 
 interface StudentApplicationsKanbanViewProps {
   students: StudentRecord[];
+  getUnreadCount: (studentId: string) => number;
+  getGlobalUnreadCount: (studentId: string) => number;
 }
 
-const StudentApplicationsKanbanView: React.FC<StudentApplicationsKanbanViewProps> = ({ students }) => {
+const StudentApplicationsKanbanView: React.FC<StudentApplicationsKanbanViewProps> = ({
+  students,
+  getUnreadCount,
+  getGlobalUnreadCount
+}) => {
   const navigate = useNavigate();
-  const { getUnreadCount } = useStudentUnreadMessages();
-  const { getUnreadCount: getGlobalUnreadCount } = useGlobalStudentUnread();
 
   // Função centralizada para pegar unread counts
   const getStudentTotalUnread = (studentId: string) => {
-    return getUnreadCount(studentId) + getGlobalUnreadCount(studentId); // Nota: useGlobalStudentUnread usa studentId como chave no Map
+    return getUnreadCount(studentId) + getGlobalUnreadCount(studentId);
   };
 
   // Filtramos apenas os que pagaram a selection fee ou estão inscritos
@@ -32,7 +35,7 @@ const StudentApplicationsKanbanView: React.FC<StudentApplicationsKanbanViewProps
   // Organize students by their last completed stage (milestone)
   const studentsByStage = useMemo(() => {
     const stageMap = new Map<ApplicationFlowStageKey, StudentRecord[]>();
-    
+
     // Initialize all stages with empty arrays
     APPLICATION_FLOW_STAGES.forEach(stage => {
       stageMap.set(stage.key, []);
@@ -41,7 +44,7 @@ const StudentApplicationsKanbanView: React.FC<StudentApplicationsKanbanViewProps
     // Distribute students to their last completed stages
     displayStudents.forEach(student => {
       let lastCompletedStage: ApplicationFlowStageKey | null = null;
-      
+
       for (const stageDef of APPLICATION_FLOW_STAGES) {
         // Pular transfer_form se não for transfer student
         if (stageDef.requiresTransfer && student.student_process_type !== 'transfer') {
@@ -50,12 +53,12 @@ const StudentApplicationsKanbanView: React.FC<StudentApplicationsKanbanViewProps
 
         // Usamos a lógica de status para ver se completou este degrau
         const { stage: currentStage } = getCurrentStage(student as any);
-        
+
         // Se este é o estágio atual (pendente), então o anterior foi o último completado
         if (currentStage === stageDef.key) {
           break;
         }
-        
+
         lastCompletedStage = stageDef.key;
       }
 
@@ -82,7 +85,7 @@ const StudentApplicationsKanbanView: React.FC<StudentApplicationsKanbanViewProps
 
     // Always show non-transfer stages
     if (!stage.requiresTransfer) return true;
-    
+
     // For transfer stages, only show if there are transfer students in that stage
     const studentsInStage = studentsByStage.get(stage.key) || [];
     return studentsInStage.length > 0;
@@ -102,10 +105,10 @@ const StudentApplicationsKanbanView: React.FC<StudentApplicationsKanbanViewProps
         <div className="flex gap-4 h-full min-w-max">
           {visibleStages.map(stage => {
             const studentsInStage = studentsByStage.get(stage.key) || [];
-            
+
             return (
-              <div 
-                key={stage.key} 
+              <div
+                key={stage.key}
                 className="flex-shrink-0 w-80"
                 style={{ height: 'calc(100vh - 280px)' }}
               >

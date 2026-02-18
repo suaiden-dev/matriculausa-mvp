@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { useTranslation } from 'react-i18next';
-import { 
+import {
   Search,
   Eye,
   Calendar,
@@ -50,7 +50,7 @@ export interface StudentRecord {
   has_paid_selection_process_fee: boolean;
   has_paid_i20_control_fee: boolean;
   seller_referral_code: string | null;
-  
+
   // Dados da aplicação (podem ser null se não aplicou ainda)
   application_id: string | null;
   scholarship_id: string | null;
@@ -67,7 +67,7 @@ export interface StudentRecord {
   university_name: string | null;
   reviewed_at: string | null;
   reviewed_by: string | null;
-  
+
   // Campos adicionais para múltiplas aplicações
   is_locked: boolean;
   total_applications: number;
@@ -83,12 +83,12 @@ const StudentApplicationsView: React.FC = () => {
   const [selectedStudent, setSelectedStudent] = useState<StudentRecord | null>(null);
   const [currentPage, setCurrentPage] = useState(1);
   const [itemsPerPage] = useState(20);
-  const [expandedApps, setExpandedApps] = useState<{[key: string]: boolean}>({});
+  const [expandedApps, setExpandedApps] = useState<{ [key: string]: boolean }>({});
   const [dependents, setDependents] = useState<number>(0);
-  const [approvingDocs, setApprovingDocs] = useState<{[key: string]: boolean}>({});
+  const [approvingDocs, setApprovingDocs] = useState<{ [key: string]: boolean }>({});
   const [pendingZelleByUser, setPendingZelleByUser] = useState<{ [userId: string]: number }>({});
   const [blackCouponUsers, setBlackCouponUsers] = useState<Set<string>>(new Set());
-  
+
   // View mode toggle (table ou kanban) com persistência
   const [viewMode, setViewMode] = useState<'table' | 'kanban'>(() => {
     if (typeof window !== 'undefined') {
@@ -104,7 +104,7 @@ const StudentApplicationsView: React.FC = () => {
       localStorage.setItem('student_view_mode', viewMode);
     }
   }, [viewMode]);
-  
+
   // Estados para geração em massa de documentos
   const [selectedStudents, setSelectedStudents] = useState<Set<string>>(new Set());
   const [selectAll, setSelectAll] = useState(false);
@@ -134,7 +134,7 @@ const StudentApplicationsView: React.FC = () => {
         .from('promotional_coupon_usage')
         .select('user_id, coupon_code')
         .ilike('coupon_code', 'BLACK');
-      
+
       if (data) {
         const userIds = new Set<string>();
         data.forEach((row: any) => {
@@ -152,28 +152,28 @@ const StudentApplicationsView: React.FC = () => {
   };
 
   // Evitar mostrar usuários de teste em produção
-  const isProductionHost = typeof window !== 'undefined' && 
+  const isProductionHost = typeof window !== 'undefined' &&
     (window.location.hostname === 'matriculausa.com' || window.location.hostname === 'www.matriculausa.com');
-  
+
   // Hook para configurações dinâmicas de taxas
   const { getFeeAmount, formatFeeAmount, hasOverride } = useFeeConfig(selectedStudent?.user_id);
 
   // Auth e role do usuário atual
   const { user } = useAuth();
   const isPlatformAdmin = user?.role === 'admin';
-  
+
   // Hook para mensagens não lidas por estudante
   const { getUnreadCount } = useStudentUnreadMessages();
   const { getUnreadCount: getGlobalUnreadCount } = useGlobalStudentUnread();
 
   // Aprovação e rejeição de documentos pelo admin
   const approveableTypes = new Set(['passport', 'funds_proof', 'diploma']);
-  const [rejectingDocs, setRejectingDocs] = useState<{[key: string]: boolean}>({});
+  const [rejectingDocs, setRejectingDocs] = useState<{ [key: string]: boolean }>({});
   const [showRejectModal, setShowRejectModal] = useState(false);
-  const [rejectData, setRejectData] = useState<{applicationId: string, docType: string} | null>(null);
+  const [rejectData, setRejectData] = useState<{ applicationId: string, docType: string } | null>(null);
   const [rejectReason, setRejectReason] = useState('');
   const [isRefreshing, setIsRefreshing] = useState(false);
-  
+
   // Estado para modal de visualização de documentos
   const [previewUrl, setPreviewUrl] = useState<string | null>(null);
 
@@ -242,7 +242,7 @@ const StudentApplicationsView: React.FC = () => {
 
     const loadingKey = `${applicationId}:${docType}`;
     setRejectingDocs(prev => ({ ...prev, [loadingKey]: true }));
-    
+
     try {
       const targetApp = selectedStudent?.all_applications?.find((a: any) => a.id === applicationId);
       if (!targetApp) {
@@ -310,7 +310,7 @@ const StudentApplicationsView: React.FC = () => {
 
       // Invalidar query de students para refetch automático
       queryClient.invalidateQueries({ queryKey: queryKeys.students.all });
-      
+
     } catch (error: any) {
       console.error('Erro ao rejeitar documento:', error);
     } finally {
@@ -340,12 +340,12 @@ const StudentApplicationsView: React.FC = () => {
   const [onlyPaidSelectionFee, setOnlyPaidSelectionFee] = useState(false);
   const [onlyBlackCouponUsers, setOnlyBlackCouponUsers] = useState(false);
   const [showCurrentStudents, setShowCurrentStudents] = useState(false);
-  
+
   // Dados para os filtros - agora vêm do React Query (filterDataQuery)
 
   // Chave para localStorage
   const FILTERS_STORAGE_KEY = 'admin_student_filters';
-  
+
   // Lista de bolsas a ocultar por padrão
   const HIDDEN_SCHOLARSHIPS = ['Current Students Scholarship'];
 
@@ -476,7 +476,7 @@ const StudentApplicationsView: React.FC = () => {
             userIds.add(row.user_id);
           }
         });
-        
+
         setBlackCouponUsers(userIds);
       } catch (e) {
         console.error('Unexpected error loading BLACK coupon users:', e);
@@ -563,14 +563,14 @@ const StudentApplicationsView: React.FC = () => {
 
   const handleBulkGenerateDocuments = async () => {
     setIsGeneratingDocuments(true);
-    
-    const selectedRecords = currentStudents.filter(s => 
+
+    const selectedRecords = currentStudents.filter(s =>
       selectedStudents.has(s.student_id)
     );
-    
+
     // Extrair apenas os user_ids
     const user_ids = selectedRecords.map(s => s.user_id);
-    
+
     try {
       // Chamar Edge Function para processamento em massa
       const { data, error } = await supabase.functions.invoke(
@@ -581,7 +581,7 @@ const StudentApplicationsView: React.FC = () => {
           }
         }
       );
-      
+
       if (error) {
         console.error('Erro ao gerar documentos em massa:', error);
         toast.error(
@@ -591,11 +591,11 @@ const StudentApplicationsView: React.FC = () => {
         setIsGeneratingDocuments(false);
         return;
       }
-      
+
       // Exibir toast com resumo
       const { success_count, skipped_count, error_count, total } = data;
       const totalDocs = success_count + skipped_count;
-      
+
       if (error_count > 0) {
         toast.error(
           `Processamento concluído com erros: ${totalDocs} processados (${success_count} gerados, ${skipped_count} pulados, ${error_count} erros)`,
@@ -607,7 +607,7 @@ const StudentApplicationsView: React.FC = () => {
           { duration: 5000 }
         );
       }
-      
+
     } catch (error: any) {
       console.error('Erro ao chamar Edge Function:', error);
       toast.error(
@@ -616,7 +616,7 @@ const StudentApplicationsView: React.FC = () => {
       );
     } finally {
       setIsGeneratingDocuments(false);
-      
+
       // Limpar seleção
       setSelectedStudents(new Set());
       setSelectAll(false);
@@ -695,25 +695,25 @@ const StudentApplicationsView: React.FC = () => {
     if (isProductionHost && (student.student_email || '').toLowerCase().includes('uorak')) {
       return false;
     }
-    const matchesSearch = 
+    const matchesSearch =
       student.student_name.toLowerCase().includes(searchTerm.toLowerCase()) ||
       student.student_email.toLowerCase().includes(searchTerm.toLowerCase()) ||
       (student.scholarship_title && student.scholarship_title.toLowerCase().includes(searchTerm.toLowerCase())) ||
       (student.university_name && student.university_name.toLowerCase().includes(searchTerm.toLowerCase()));
-    
-    const matchesStatus = statusFilter === 'all' || 
-      student.status === statusFilter || 
+
+    const matchesStatus = statusFilter === 'all' ||
+      student.status === statusFilter ||
       (statusFilter === 'no_applications' && !student.application_id) ||
       (statusFilter === 'multiple_applications' && student.total_applications > 1 && !student.is_locked) ||
       (statusFilter === 'locked' && student.is_locked) ||
       (statusFilter === 'single_application' && student.total_applications === 1);
-    
+
     // Filtro para mostrar apenas usuários que pagaram a taxa de seleção
     const matchesSelectionFee = !onlyPaidSelectionFee || student.has_paid_selection_process_fee;
-    
+
     // Filtro para mostrar apenas usuários que usaram cupom BLACK
     const matchesBlackCoupon = !onlyBlackCouponUsers || blackCouponUsers.has(student.user_id);
-    
+
     // Debug: verificar se o student.user_id está no Set
     if (onlyBlackCouponUsers && student.user_id) {
       const hasCoupon = blackCouponUsers.has(student.user_id);
@@ -730,7 +730,7 @@ const StudentApplicationsView: React.FC = () => {
         }
       }
     }
-    
+
     // Filtro por etapa do processo (baseado no Application Flow)
     const matchesStage = stageFilter === 'all' || (() => {
       let result = false;
@@ -741,10 +741,10 @@ const StudentApplicationsView: React.FC = () => {
           break;
         case 'application':
           // Estudantes que fizeram aplicações mas ainda não foram aprovados
-          result = (student.total_applications || 0) > 0 && 
-                   student.status !== 'approved' && 
-                   student.status !== 'enrolled' && 
-                   !student.is_application_fee_paid;
+          result = (student.total_applications || 0) > 0 &&
+            student.status !== 'approved' &&
+            student.status !== 'enrolled' &&
+            !student.is_application_fee_paid;
           break;
         case 'review':
           // Estudantes com aplicações aprovadas mas ainda não pagaram application fee
@@ -764,11 +764,11 @@ const StudentApplicationsView: React.FC = () => {
           break;
         case 'acceptance':
           // Carta de aceitação enviada/assinada/aprovada mas ainda não matriculado
-          result = !!student.acceptance_letter_status && 
-                   (student.acceptance_letter_status === 'sent' || 
-                    student.acceptance_letter_status === 'signed' || 
-                    student.acceptance_letter_status === 'approved') &&
-                   student.status !== 'enrolled';
+          result = !!student.acceptance_letter_status &&
+            (student.acceptance_letter_status === 'sent' ||
+              student.acceptance_letter_status === 'signed' ||
+              student.acceptance_letter_status === 'approved') &&
+            student.status !== 'enrolled';
           break;
         case 'enrollment':
           // Matriculado
@@ -779,57 +779,57 @@ const StudentApplicationsView: React.FC = () => {
       }
       return result;
     })();
-    
+
     // Filtro por bolsa
-    const matchesScholarship = scholarshipFilter === 'all' || 
+    const matchesScholarship = scholarshipFilter === 'all' ||
       (student.scholarship_id && student.scholarship_id === scholarshipFilter);
-    
+
     // Filtro por universidade
-    const matchesUniversity = universityFilter === 'all' || 
+    const matchesUniversity = universityFilter === 'all' ||
       (student.university_name && student.university_name.toLowerCase().includes(universityFilter.toLowerCase()));
-    
+
     // Filtro por affiliate admin
     const matchesAffiliate = affiliateFilter === 'all' || (() => {
       if (!student.seller_referral_code) {
         // Se não tem referral code, só aparece se filtro for "all"
         return affiliateFilter === 'all';
       }
-      
+
       // Buscar o affiliate admin pelo referral code do estudante
       // Primeiro tenta pelo referral_code direto do affiliate
       let affiliate = affiliates.find(aff => aff.referral_code === student.seller_referral_code);
-      
+
       if (!affiliate) {
         // Se não encontrar, busca pelos sellers do affiliate
-        affiliate = affiliates.find(aff => 
+        affiliate = affiliates.find(aff =>
           aff.sellers?.some((seller: any) => seller.referral_code === student.seller_referral_code)
         );
       }
-      
+
       return affiliate && affiliate.id === affiliateFilter;
     })();
-    
+
     // Filtro por tempo
     const matchesTime = (() => {
       if (timeFilter === 'all') return true;
-      
+
       const studentDate = dayjs(student.student_created_at);
-      
+
       // Se tem datas específicas selecionadas, usar elas
       if (startDate && endDate) {
         return studentDate.isAfter(startDate.subtract(1, 'day')) && studentDate.isBefore(endDate.add(1, 'day'));
       }
-      
+
       // Se tem apenas data de início
       if (startDate) {
         return studentDate.isAfter(startDate.subtract(1, 'day'));
       }
-      
+
       // Se tem apenas data de fim
       if (endDate) {
         return studentDate.isBefore(endDate.add(1, 'day'));
       }
-      
+
       // Filtros predefinidos
       const now = dayjs();
       switch (timeFilter) {
@@ -840,12 +840,12 @@ const StudentApplicationsView: React.FC = () => {
         default: return true;
       }
     })();
-    
+
     const finalResult = matchesSearch && matchesStatus && matchesSelectionFee && matchesBlackCoupon && matchesStage && matchesScholarship && matchesUniversity && matchesAffiliate && matchesTime;
-    
+
     return finalResult;
   });
-  
+
 
   const totalPages = Math.ceil(filteredStudents.length / itemsPerPage);
   const startIndex = (currentPage - 1) * itemsPerPage;
@@ -909,21 +909,19 @@ const StudentApplicationsView: React.FC = () => {
               fill="none"
               strokeDasharray={`${2 * Math.PI * 14}`}
               strokeDashoffset={`${2 * Math.PI * 14 * (1 - progressPercentage / 100)}`}
-              className={`transition-all duration-300 ${
-                progressPercentage === 100 ? 'text-green-500' : 
-                progressPercentage >= 50 ? 'text-blue-500' : 
-                'text-yellow-500'
-              }`}
+              className={`transition-all duration-300 ${progressPercentage === 100 ? 'text-green-500' :
+                  progressPercentage >= 50 ? 'text-blue-500' :
+                    'text-yellow-500'
+                }`}
             />
           </svg>
           {/* Ícone da etapa atual no centro */}
           <div className="absolute inset-0 flex items-center justify-center">
-            {React.createElement(currentStep.icon, { 
-              className: `h-3 w-3 ${
-                progressPercentage === 100 ? 'text-green-600' : 
-                progressPercentage >= 50 ? 'text-blue-600' : 
-                'text-yellow-600'
-              }` 
+            {React.createElement(currentStep.icon, {
+              className: `h-3 w-3 ${progressPercentage === 100 ? 'text-green-600' :
+                  progressPercentage >= 50 ? 'text-blue-600' :
+                    'text-yellow-600'
+                }`
             })}
           </div>
         </div>
@@ -944,12 +942,11 @@ const StudentApplicationsView: React.FC = () => {
               return (
                 <div
                   key={step.key}
-                  className={`w-2 h-2 rounded-full ${
-                    status === 'completed' ? 'bg-green-500' :
-                    status === 'in_progress' ? 'bg-blue-500' :
-                    status === 'rejected' ? 'bg-red-500' :
-                    'bg-gray-300'
-                  }`}
+                  className={`w-2 h-2 rounded-full ${status === 'completed' ? 'bg-green-500' :
+                      status === 'in_progress' ? 'bg-blue-500' :
+                        status === 'rejected' ? 'bg-red-500' :
+                          'bg-gray-300'
+                    }`}
                   title={`${step.label}: ${status}`}
                 />
               );
@@ -985,28 +982,26 @@ const StudentApplicationsView: React.FC = () => {
           <div className="flex items-center bg-gray-100 rounded-lg p-1">
             <button
               onClick={() => setViewMode('table')}
-              className={`flex items-center gap-2 px-3 py-1.5 rounded-md text-sm font-medium transition-colors ${
-                viewMode === 'table'
+              className={`flex items-center gap-2 px-3 py-1.5 rounded-md text-sm font-medium transition-colors ${viewMode === 'table'
                   ? 'bg-white text-gray-900 shadow-sm'
                   : 'text-gray-600 hover:text-gray-900'
-              }`}
+                }`}
             >
               <Table className="w-4 h-4" />
               Table
             </button>
             <button
               onClick={() => setViewMode('kanban')}
-              className={`flex items-center gap-2 px-3 py-1.5 rounded-md text-sm font-medium transition-colors ${
-                viewMode === 'kanban'
+              className={`flex items-center gap-2 px-3 py-1.5 rounded-md text-sm font-medium transition-colors ${viewMode === 'kanban'
                   ? 'bg-white text-gray-900 shadow-sm'
                   : 'text-gray-600 hover:text-gray-900'
-              }`}
+                }`}
             >
               <LayoutGrid className="w-4 h-4" />
               Kanban
             </button>
           </div>
-          
+
           <div className="flex items-center space-x-2">
             <span className="text-sm text-gray-500">
               {filteredStudents.length} students found
@@ -1024,39 +1019,39 @@ const StudentApplicationsView: React.FC = () => {
       <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-6">
         <div className="space-y-4">
           {/* Primeira linha - Busca e Status */}
-        <div className="flex flex-col sm:flex-row gap-4">
-          <div className="flex-1">
-            <div className="relative">
-              <Search className="absolute left-3 top-3 h-5 w-5 text-gray-400" />
-              <input
-                type="text"
-                placeholder="Search by student name, email, scholarship, or university..."
-                value={searchTerm}
-                onChange={(e) => setSearchTerm(e.target.value)}
-                className="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#05294E] focus:border-[#05294E]"
-              />
+          <div className="flex flex-col sm:flex-row gap-4">
+            <div className="flex-1">
+              <div className="relative">
+                <Search className="absolute left-3 top-3 h-5 w-5 text-gray-400" />
+                <input
+                  type="text"
+                  placeholder="Search by student name, email, scholarship, or university..."
+                  value={searchTerm}
+                  onChange={(e) => setSearchTerm(e.target.value)}
+                  className="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#05294E] focus:border-[#05294E]"
+                />
+              </div>
+            </div>
+            <div className="sm:w-48">
+              <select
+                value={statusFilter}
+                onChange={(e) => setStatusFilter(e.target.value)}
+                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#05294E] focus:border-[#05294E]"
+              >
+                <option value="all">All Students</option>
+                <option value="no_applications">No Applications</option>
+                <option value="single_application">Single Application</option>
+                <option value="multiple_applications">Multiple Applications</option>
+                <option value="locked">Scholarship Selected</option>
+                <option value="pending">Pending</option>
+                <option value="under_review">Under Review</option>
+                <option value="approved">Approved</option>
+                <option value="rejected">Rejected</option>
+                <option value="enrolled">Enrolled</option>
+              </select>
             </div>
           </div>
-          <div className="sm:w-48">
-            <select
-              value={statusFilter}
-              onChange={(e) => setStatusFilter(e.target.value)}
-              className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#05294E] focus:border-[#05294E]"
-            >
-              <option value="all">All Students</option>
-              <option value="no_applications">No Applications</option>
-              <option value="single_application">Single Application</option>
-              <option value="multiple_applications">Multiple Applications</option>
-              <option value="locked">Scholarship Selected</option>
-              <option value="pending">Pending</option>
-              <option value="under_review">Under Review</option>
-              <option value="approved">Approved</option>
-              <option value="rejected">Rejected</option>
-              <option value="enrolled">Enrolled</option>
-            </select>
-            </div>
-          </div>
-          
+
           {/* Segunda linha - Novos filtros */}
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-4">
             {/* Filtro por Etapa */}
@@ -1078,7 +1073,7 @@ const StudentApplicationsView: React.FC = () => {
                 <option value="enrollment">Enrollment</option>
               </select>
             </div>
-            
+
             {/* Filtro por Bolsa */}
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-1">Scholarship</label>
@@ -1095,7 +1090,7 @@ const StudentApplicationsView: React.FC = () => {
                 ))}
               </select>
             </div>
-            
+
             {/* Filtro por Universidade */}
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-1">University</label>
@@ -1112,7 +1107,7 @@ const StudentApplicationsView: React.FC = () => {
                 ))}
               </select>
             </div>
-            
+
             {/* Filtro por Tempo */}
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-1">Time Period</label>
@@ -1241,7 +1236,7 @@ const StudentApplicationsView: React.FC = () => {
                 )}
               </div>
             </div>
-            
+
             {/* Filtro por Admin Affiliate */}
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-1">Affiliate Admin</label>
@@ -1259,7 +1254,7 @@ const StudentApplicationsView: React.FC = () => {
               </select>
             </div>
           </div>
-          
+
           {/* Checkboxes para filtros e botão para limpar filtros */}
           <div className="flex items-center justify-between pt-4 border-t border-gray-200">
             <div className="flex flex-col sm:flex-row gap-4 flex-wrap">
@@ -1325,212 +1320,215 @@ const StudentApplicationsView: React.FC = () => {
 
       {/* Conditional Rendering: Table View or Kanban View */}
       {viewMode === 'kanban' ? (
-        <StudentApplicationsKanbanView students={filteredStudents} />
+        <StudentApplicationsKanbanView
+          students={filteredStudents}
+          getUnreadCount={getUnreadCount}
+          getGlobalUnreadCount={getGlobalUnreadCount}
+        />
       ) : (
-      /* Applications List - Table View */
-      <div className="bg-white rounded-xl shadow-sm border border-gray-200">
-        <div className="overflow-x-auto">
-          <table className="min-w-full divide-y divide-gray-200">
-            <thead className="bg-gray-50">
-              <tr>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                  <input
-                    type="checkbox"
-                    checked={selectAll}
-                    onChange={handleSelectAll}
-                    className="rounded border-gray-300 text-blue-600 focus:ring-blue-500"
-                  />
-                </th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                  Student
-                </th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                  Scholarship
-                </th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                  Application Flow
-                </th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                  Applied Date
-                </th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                  Last Activity
-                </th>
-                
-              </tr>
-            </thead>
-            <tbody className="bg-white divide-y divide-gray-200">
-              {currentStudents.map((student) => (
-                <tr
-                  key={student.application_id || student.student_id}
-                  className="hover:bg-gray-50 cursor-pointer"
-                  onClick={() => { window.location.href = `/admin/dashboard/students/${student.student_id}`; }}
-                >
-                  <td className="px-6 py-4" onClick={(e) => e.stopPropagation()}>
+        /* Applications List - Table View */
+        <div className="bg-white rounded-xl shadow-sm border border-gray-200">
+          <div className="overflow-x-auto">
+            <table className="min-w-full divide-y divide-gray-200">
+              <thead className="bg-gray-50">
+                <tr>
+                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                     <input
                       type="checkbox"
-                      checked={selectedStudents.has(student.student_id)}
-                      onChange={() => handleSelectStudent(student.student_id)}
+                      checked={selectAll}
+                      onChange={handleSelectAll}
                       className="rounded border-gray-300 text-blue-600 focus:ring-blue-500"
                     />
-                  </td>
-                  <td className="px-6 py-4 whitespace-nowrap">
-                    <div className="flex items-center">
-                      <div className="flex-shrink-0 h-10 w-10 relative">
-                        <div className="h-10 w-10 rounded-full bg-gray-300 flex items-center justify-center">
-                          <User className="h-5 w-5 text-gray-600" />
-                        </div>
-                        {/* Indicador de mensagens não lidas */}
-                        {(getUnreadCount(student.user_id) > 0 || getGlobalUnreadCount(student.user_id) > 0) && (
-                          <div className="absolute -top-1 -right-1 w-4 h-4 bg-blue-500 rounded-full flex items-center justify-center">
-                            <span className="text-xs font-bold text-white">
-                              {(() => {
-                                const v = Math.max(getUnreadCount(student.user_id), getGlobalUnreadCount(student.user_id));
-                                return v > 9 ? '9+' : v;
-                              })()}
-                            </span>
+                  </th>
+                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                    Student
+                  </th>
+                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                    Scholarship
+                  </th>
+                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                    Application Flow
+                  </th>
+                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                    Applied Date
+                  </th>
+                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                    Last Activity
+                  </th>
+
+                </tr>
+              </thead>
+              <tbody className="bg-white divide-y divide-gray-200">
+                {currentStudents.map((student) => (
+                  <tr
+                    key={student.application_id || student.student_id}
+                    className="hover:bg-gray-50 cursor-pointer"
+                    onClick={() => { window.location.href = `/admin/dashboard/students/${student.student_id}`; }}
+                  >
+                    <td className="px-6 py-4" onClick={(e) => e.stopPropagation()}>
+                      <input
+                        type="checkbox"
+                        checked={selectedStudents.has(student.student_id)}
+                        onChange={() => handleSelectStudent(student.student_id)}
+                        className="rounded border-gray-300 text-blue-600 focus:ring-blue-500"
+                      />
+                    </td>
+                    <td className="px-6 py-4 whitespace-nowrap">
+                      <div className="flex items-center">
+                        <div className="flex-shrink-0 h-10 w-10 relative">
+                          <div className="h-10 w-10 rounded-full bg-gray-300 flex items-center justify-center">
+                            <User className="h-5 w-5 text-gray-600" />
                           </div>
+                          {/* Indicador de mensagens não lidas */}
+                          {(getUnreadCount(student.user_id) > 0 || getGlobalUnreadCount(student.user_id) > 0) && (
+                            <div className="absolute -top-1 -right-1 w-4 h-4 bg-blue-500 rounded-full flex items-center justify-center">
+                              <span className="text-xs font-bold text-white">
+                                {(() => {
+                                  const v = Math.max(getUnreadCount(student.user_id), getGlobalUnreadCount(student.user_id));
+                                  return v > 9 ? '9+' : v;
+                                })()}
+                              </span>
+                            </div>
+                          )}
+                        </div>
+                        <div className="ml-4">
+                          <div className="flex items-center">
+                            <div className="text-sm font-medium text-gray-900">
+                              {student.student_name}
+                            </div>
+                            {blackCouponUsers.has(student.user_id) && (
+                              <span className="ml-2 inline-flex items-center px-2 py-0.5 rounded-full text-xs font-bold bg-gradient-to-r from-purple-600 to-indigo-600 text-white shadow-md" title="Student used BLACK promotional coupon">
+                                <Sparkles className="h-3 w-3 mr-1" />
+                                BLACK
+                              </span>
+                            )}
+                            {pendingZelleByUser[student.user_id] > 0 && (
+                              <span className="ml-2 inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-amber-100 text-amber-800" title="Zelle payment awaiting admin approval">
+                                Zelle pending approval
+                              </span>
+                            )}
+                            {!student.is_locked && student.total_applications > 1 && (
+                              <span className="ml-2 inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-amber-100 text-amber-800">
+                                {student.total_applications} Applications
+                              </span>
+                            )}
+                          </div>
+                          <div className="text-sm text-gray-500">
+                            {student.student_email}
+                          </div>
+                        </div>
+                      </div>
+                    </td>
+                    <td className="px-6 py-4">
+                      <div className="text-sm text-gray-900">
+                        {student.scholarship_title ? (
+                          student.scholarship_title
+                        ) : student.total_applications > 0 ? (
+                          <span className="text-amber-600">
+                            {student.total_applications} Application{student.total_applications > 1 ? 's' : ''} (Pending Payment)
+                          </span>
+                        ) : (
+                          'No Application'
                         )}
                       </div>
-                      <div className="ml-4">
-                        <div className="flex items-center">
-                          <div className="text-sm font-medium text-gray-900">
-                            {student.student_name}
-                          </div>
-                          {blackCouponUsers.has(student.user_id) && (
-                            <span className="ml-2 inline-flex items-center px-2 py-0.5 rounded-full text-xs font-bold bg-gradient-to-r from-purple-600 to-indigo-600 text-white shadow-md" title="Student used BLACK promotional coupon">
-                              <Sparkles className="h-3 w-3 mr-1" />
-                              BLACK
-                            </span>
-                          )}
-                          {pendingZelleByUser[student.user_id] > 0 && (
-                            <span className="ml-2 inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-amber-100 text-amber-800" title="Zelle payment awaiting admin approval">
-                              Zelle pending approval
-                            </span>
-                          )}
-                          {!student.is_locked && student.total_applications > 1 && (
-                            <span className="ml-2 inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-amber-100 text-amber-800">
-                              {student.total_applications} Applications
-                            </span>
-                          )}
+                      {student.university_name && (
+                        <div className="text-sm text-gray-500 flex items-center">
+                          <Building className="h-4 w-4 mr-1" />
+                          {student.university_name}
                         </div>
-                        <div className="text-sm text-gray-500">
-                          {student.student_email}
-                        </div>
-                      </div>
-                    </div>
-                  </td>
-                  <td className="px-6 py-4">
-                    <div className="text-sm text-gray-900">
-                      {student.scholarship_title ? (
-                        student.scholarship_title
-                      ) : student.total_applications > 0 ? (
-                        <span className="text-amber-600">
-                          {student.total_applications} Application{student.total_applications > 1 ? 's' : ''} (Pending Payment)
-                        </span>
-                      ) : (
-                        'No Application'
                       )}
-                    </div>
-                    {student.university_name && (
-                      <div className="text-sm text-gray-500 flex items-center">
-                        <Building className="h-4 w-4 mr-1" />
-                        {student.university_name}
+                    </td>
+                    <td className="px-6 py-4">
+                      <ApplicationFlowSteps student={student} />
+                    </td>
+                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                      <div className="flex items-center">
+                        <Calendar className="h-4 w-4 mr-1" />
+                        {student.applied_at
+                          ? new Date(student.applied_at).toLocaleDateString()
+                          : `Joined ${new Date(student.student_created_at).toLocaleDateString()}`
+                        }
                       </div>
-                    )}
-                  </td>
-                  <td className="px-6 py-4">
-                    <ApplicationFlowSteps student={student} />
-                  </td>
-                  <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-                    <div className="flex items-center">
-                      <Calendar className="h-4 w-4 mr-1" />
-                      {student.applied_at 
-                        ? new Date(student.applied_at).toLocaleDateString()
-                        : `Joined ${new Date(student.student_created_at).toLocaleDateString()}`
-                      }
-                    </div>
-                  </td>
-                  <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-                    <div className="flex items-center">
-                      <Clock className="h-4 w-4 mr-1" />
-                      {(() => {
-                        if (!student.most_recent_activity) {
-                          return new Date(student.student_created_at).toLocaleDateString();
-                        }
-                        const now = new Date();
-                        const activityDate = new Date(student.most_recent_activity);
-                        const hoursDiff = (now.getTime() - activityDate.getTime()) / (1000 * 60 * 60);
-                        
-                        if (hoursDiff < 1) {
-                          return 'Just now';
-                        } else if (hoursDiff < 24) {
-                          return `${Math.floor(hoursDiff)}h ago`;
-                        } else if (hoursDiff < 168) { // 7 days
-                          return `${Math.floor(hoursDiff / 24)}d ago`;
-                        } else {
-                          return activityDate.toLocaleDateString();
-                        }
-                      })()}
-                    </div>
-                  </td>
-                  
-                </tr>
-              ))}
-            </tbody>
-          </table>
-        </div>
+                    </td>
+                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                      <div className="flex items-center">
+                        <Clock className="h-4 w-4 mr-1" />
+                        {(() => {
+                          if (!student.most_recent_activity) {
+                            return new Date(student.student_created_at).toLocaleDateString();
+                          }
+                          const now = new Date();
+                          const activityDate = new Date(student.most_recent_activity);
+                          const hoursDiff = (now.getTime() - activityDate.getTime()) / (1000 * 60 * 60);
 
-        {/* Pagination */}
-        {totalPages > 1 && (
-          <div className="bg-white px-4 py-3 flex items-center justify-between border-t border-gray-200 sm:px-6">
-            <div className="flex-1 flex justify-between sm:hidden">
-              <button
-                onClick={() => setCurrentPage(Math.max(1, currentPage - 1))}
-                disabled={currentPage === 1}
-                className="relative inline-flex items-center px-4 py-2 border border-gray-300 text-sm font-medium rounded-md text-gray-700 bg-white hover:bg-gray-50 disabled:opacity-50"
-              >
-                Previous
-              </button>
-              <button
-                onClick={() => setCurrentPage(Math.min(totalPages, currentPage + 1))}
-                disabled={currentPage === totalPages}
-                className="ml-3 relative inline-flex items-center px-4 py-2 border border-gray-300 text-sm font-medium rounded-md text-gray-700 bg-white hover:bg-gray-50 disabled:opacity-50"
-              >
-                Next
-              </button>
-            </div>
-            <div className="hidden sm:flex-1 sm:flex sm:items-center sm:justify-between">
-              <div>
-                <p className="text-sm text-gray-700">
-                  Showing <span className="font-medium">{startIndex + 1}</span> to{' '}
-                  <span className="font-medium">
-                    {Math.min(startIndex + itemsPerPage, filteredStudents.length)}
-                  </span>{' '}
-                  of <span className="font-medium">{filteredStudents.length}</span> results
-                </p>
-              </div>
-              <div>
-                <nav className="relative z-0 inline-flex rounded-md shadow-sm -space-x-px" aria-label="Pagination">
-                  {Array.from({ length: totalPages }, (_, i) => i + 1).map((page) => (
-                    <button
-                      key={page}
-                      onClick={() => setCurrentPage(page)}
-                      className={`relative inline-flex items-center px-4 py-2 border text-sm font-medium ${
-                        currentPage === page
-                          ? 'z-10 bg-[#05294E] border-[#05294E] text-white'
-                          : 'bg-white border-gray-300 text-gray-500 hover:bg-gray-50'
-                      }`}
-                    >
-                      {page}
-                    </button>
-                  ))}
-                </nav>
-              </div>
-            </div>
+                          if (hoursDiff < 1) {
+                            return 'Just now';
+                          } else if (hoursDiff < 24) {
+                            return `${Math.floor(hoursDiff)}h ago`;
+                          } else if (hoursDiff < 168) { // 7 days
+                            return `${Math.floor(hoursDiff / 24)}d ago`;
+                          } else {
+                            return activityDate.toLocaleDateString();
+                          }
+                        })()}
+                      </div>
+                    </td>
+
+                  </tr>
+                ))}
+              </tbody>
+            </table>
           </div>
-        )}
-      </div>
+
+          {/* Pagination */}
+          {totalPages > 1 && (
+            <div className="bg-white px-4 py-3 flex items-center justify-between border-t border-gray-200 sm:px-6">
+              <div className="flex-1 flex justify-between sm:hidden">
+                <button
+                  onClick={() => setCurrentPage(Math.max(1, currentPage - 1))}
+                  disabled={currentPage === 1}
+                  className="relative inline-flex items-center px-4 py-2 border border-gray-300 text-sm font-medium rounded-md text-gray-700 bg-white hover:bg-gray-50 disabled:opacity-50"
+                >
+                  Previous
+                </button>
+                <button
+                  onClick={() => setCurrentPage(Math.min(totalPages, currentPage + 1))}
+                  disabled={currentPage === totalPages}
+                  className="ml-3 relative inline-flex items-center px-4 py-2 border border-gray-300 text-sm font-medium rounded-md text-gray-700 bg-white hover:bg-gray-50 disabled:opacity-50"
+                >
+                  Next
+                </button>
+              </div>
+              <div className="hidden sm:flex-1 sm:flex sm:items-center sm:justify-between">
+                <div>
+                  <p className="text-sm text-gray-700">
+                    Showing <span className="font-medium">{startIndex + 1}</span> to{' '}
+                    <span className="font-medium">
+                      {Math.min(startIndex + itemsPerPage, filteredStudents.length)}
+                    </span>{' '}
+                    of <span className="font-medium">{filteredStudents.length}</span> results
+                  </p>
+                </div>
+                <div>
+                  <nav className="relative z-0 inline-flex rounded-md shadow-sm -space-x-px" aria-label="Pagination">
+                    {Array.from({ length: totalPages }, (_, i) => i + 1).map((page) => (
+                      <button
+                        key={page}
+                        onClick={() => setCurrentPage(page)}
+                        className={`relative inline-flex items-center px-4 py-2 border text-sm font-medium ${currentPage === page
+                            ? 'z-10 bg-[#05294E] border-[#05294E] text-white'
+                            : 'bg-white border-gray-300 text-gray-500 hover:bg-gray-50'
+                          }`}
+                      >
+                        {page}
+                      </button>
+                    ))}
+                  </nav>
+                </div>
+              </div>
+            </div>
+          )}
+        </div>
       )}
 
       {/* Detailed View Modal */}
@@ -1569,7 +1567,7 @@ const StudentApplicationsView: React.FC = () => {
                 </button>
               </div>
             </div>
-            
+
             <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6">
               <div className="grid grid-cols-1 lg:grid-cols-12 gap-8">
                 <div className="lg:col-span-8 space-y-6">
@@ -1630,22 +1628,20 @@ const StudentApplicationsView: React.FC = () => {
                               <dt className="text-sm font-medium text-slate-600">Current Status</dt>
                               <dd className="mt-1">
                                 <div className="flex items-center space-x-2">
-                                  <div className={`w-2 h-2 rounded-full ${
-                                    selectedStudent.is_locked ? 'bg-green-500' : 
-                                    selectedStudent.status === 'approved' ? 'bg-blue-500' :
-                                    selectedStudent.status === 'under_review' ? 'bg-yellow-500' :
-                                    selectedStudent.total_applications > 0 ? 'bg-orange-500' : 'bg-gray-500'
-                                  }`}></div>
-                                  <span className={`text-sm font-medium ${
-                                    selectedStudent.is_locked ? 'text-green-700' : 
-                                    selectedStudent.status === 'approved' ? 'text-blue-700' :
-                                    selectedStudent.status === 'under_review' ? 'text-yellow-700' :
-                                    selectedStudent.total_applications > 0 ? 'text-orange-700' : 'text-gray-700'
-                                  }`}>
+                                  <div className={`w-2 h-2 rounded-full ${selectedStudent.is_locked ? 'bg-green-500' :
+                                      selectedStudent.status === 'approved' ? 'bg-blue-500' :
+                                        selectedStudent.status === 'under_review' ? 'bg-yellow-500' :
+                                          selectedStudent.total_applications > 0 ? 'bg-orange-500' : 'bg-gray-500'
+                                    }`}></div>
+                                  <span className={`text-sm font-medium ${selectedStudent.is_locked ? 'text-green-700' :
+                                      selectedStudent.status === 'approved' ? 'text-blue-700' :
+                                        selectedStudent.status === 'under_review' ? 'text-yellow-700' :
+                                          selectedStudent.total_applications > 0 ? 'text-orange-700' : 'text-gray-700'
+                                    }`}>
                                     {selectedStudent.is_locked ? 'Scholarship Selected' :
-                                     selectedStudent.status === 'approved' ? 'Approved - Pending Payment' :
-                                     selectedStudent.status === 'under_review' ? 'Under Review' :
-                                     selectedStudent.total_applications > 0 ? 'Applications Submitted' : 'No Applications Yet'}
+                                      selectedStudent.status === 'approved' ? 'Approved - Pending Payment' :
+                                        selectedStudent.status === 'under_review' ? 'Under Review' :
+                                          selectedStudent.total_applications > 0 ? 'Applications Submitted' : 'No Applications Yet'}
                                   </span>
                                 </div>
                               </dd>
@@ -1690,14 +1686,13 @@ const StudentApplicationsView: React.FC = () => {
                             <div className="flex-1">
                               <dt className="text-sm font-medium text-slate-600">Application Status</dt>
                               <dd className="text-base text-slate-700">
-                                <span className={`inline-flex items-center px-3 py-1 rounded-full text-sm font-medium ${
-                                  selectedStudent.status === 'approved' ? 'bg-green-100 text-green-800' :
-                                  selectedStudent.status === 'under_review' ? 'bg-blue-100 text-blue-800' :
-                                  selectedStudent.status === 'rejected' ? 'bg-red-100 text-red-800' :
-                                  'bg-yellow-100 text-yellow-800'
-                                }`}>
-                                  {selectedStudent.status ? 
-                                    selectedStudent.status.charAt(0).toUpperCase() + selectedStudent.status.slice(1) : 
+                                <span className={`inline-flex items-center px-3 py-1 rounded-full text-sm font-medium ${selectedStudent.status === 'approved' ? 'bg-green-100 text-green-800' :
+                                    selectedStudent.status === 'under_review' ? 'bg-blue-100 text-blue-800' :
+                                      selectedStudent.status === 'rejected' ? 'bg-red-100 text-red-800' :
+                                        'bg-yellow-100 text-yellow-800'
+                                  }`}>
+                                  {selectedStudent.status ?
+                                    selectedStudent.status.charAt(0).toUpperCase() + selectedStudent.status.slice(1) :
                                     'Status not available'
                                   }
                                 </span>
@@ -1712,7 +1707,7 @@ const StudentApplicationsView: React.FC = () => {
                                 <dd className="text-base text-slate-700">
                                   {new Date(selectedStudent.applied_at).toLocaleDateString('en-US', {
                                     year: 'numeric',
-                                    month: 'long', 
+                                    month: 'long',
                                     day: 'numeric'
                                   })}
                                 </dd>
@@ -1765,20 +1760,18 @@ const StudentApplicationsView: React.FC = () => {
                                 </div>
                                 <div className="text-right space-y-2 w-full md:w-auto">
                                   <div>
-                                    <span className={`inline-flex items-center px-3 py-1 rounded-full text-sm font-medium ${
-                                      app.status === 'approved' ? 'bg-green-100 text-green-800' :
-                                      app.status === 'under_review' ? 'bg-blue-100 text-blue-800' :
-                                      app.status === 'rejected' ? 'bg-red-100 text-red-800' :
-                                      'bg-yellow-100 text-yellow-800'
-                                    }`}>
+                                    <span className={`inline-flex items-center px-3 py-1 rounded-full text-sm font-medium ${app.status === 'approved' ? 'bg-green-100 text-green-800' :
+                                        app.status === 'under_review' ? 'bg-blue-100 text-blue-800' :
+                                          app.status === 'rejected' ? 'bg-red-100 text-red-800' :
+                                            'bg-yellow-100 text-yellow-800'
+                                      }`}>
                                       {(app.status || 'Pending').charAt(0).toUpperCase() + (app.status || 'pending').slice(1)}
                                     </span>
                                   </div>
                                   {app.status === 'approved' && (
                                     <div className="text-right">
-                                      <div className={`inline-flex items-center px-2 py-1 rounded-lg text-xs font-medium ${
-                                        app.is_application_fee_paid ? 'bg-green-100 text-green-700' : 'bg-amber-100 text-amber-700'
-                                      }`}>
+                                      <div className={`inline-flex items-center px-2 py-1 rounded-lg text-xs font-medium ${app.is_application_fee_paid ? 'bg-green-100 text-green-700' : 'bg-amber-100 text-amber-700'
+                                        }`}>
                                         {app.is_application_fee_paid ? (
                                           <><CheckCircle className="w-3 h-3 mr-1" />Fee Paid</>
                                         ) : (
@@ -1798,7 +1791,7 @@ const StudentApplicationsView: React.FC = () => {
                             <div>
                               <p className="text-blue-800 text-sm font-medium mb-1">Multiple Applications Policy</p>
                               <p className="text-blue-700 text-sm">
-                                Student can apply to multiple scholarships. Once approved and application fee is paid for one scholarship, 
+                                Student can apply to multiple scholarships. Once approved and application fee is paid for one scholarship,
                                 the student will be committed to that scholarship and cannot switch to others.
                               </p>
                             </div>
@@ -1821,7 +1814,7 @@ const StudentApplicationsView: React.FC = () => {
                           </div>
                           <h3 className="text-lg font-medium text-slate-900 mb-2">No Scholarship Applications</h3>
                           <p className="text-slate-600 max-w-md mx-auto">
-                            This student has registered but hasn't submitted any scholarship applications yet. 
+                            This student has registered but hasn't submitted any scholarship applications yet.
                             They may still be in the process of selecting a program or preparing their documents.
                           </p>
                           {selectedStudent.has_paid_selection_process_fee && (
@@ -1878,8 +1871,8 @@ const StudentApplicationsView: React.FC = () => {
                                     // ✅ CORREÇÃO: Para simplified, Selection Process Fee é fixo ($350), sem dependentes
                                     // Dependentes só afetam Application Fee ($100 por dependente)
                                     const systemType = student?.system_type || 'legacy';
-                                    const total = systemType === 'simplified' 
-                                      ? baseFee 
+                                    const total = systemType === 'simplified'
+                                      ? baseFee
                                       : baseFee + (dependents * 150);
                                     return formatFeeAmount(total);
                                   }
@@ -1993,14 +1986,14 @@ const StudentApplicationsView: React.FC = () => {
 
                         // Se é uma aplicação única (student está committed)
                         if (selectedStudent.scholarship_title && selectedStudent.all_applications) {
-                          const committedApp = selectedStudent.all_applications.find((app: any) => 
+                          const committedApp = selectedStudent.all_applications.find((app: any) =>
                             app.scholarships?.title === selectedStudent.scholarship_title
                           );
                           if (committedApp && committedApp.documents && Array.isArray(committedApp.documents) && committedApp.documents.length > 0) {
                             applicationsWithDocs = [committedApp];
                             hasDocuments = true;
                           }
-                        } 
+                        }
                         // Se tem múltiplas aplicações (não committed ainda)
                         else if (selectedStudent.all_applications && selectedStudent.all_applications.length > 0) {
                           selectedStudent.all_applications.forEach((app: any) => {
@@ -2010,7 +2003,7 @@ const StudentApplicationsView: React.FC = () => {
                             }
                           });
                         }
-                        
+
                         const documentTypes = [
                           { key: 'passport', label: 'Passport', description: 'Valid passport copy' },
                           { key: 'diploma', label: 'High School Diploma', description: 'Educational certificate' },
@@ -2061,7 +2054,7 @@ const StudentApplicationsView: React.FC = () => {
                             {applicationsWithDocs.map((app: any, appIndex: number) => {
                               const appKey = app.id || `app-${appIndex}`;
                               const isExpanded = expandedApps[appKey] || false;
-                              
+
                               return (
                                 <div key={appKey} className="border border-slate-200 rounded-xl overflow-hidden">
                                   {/* Scholarship Header - Clickable */}
@@ -2078,18 +2071,17 @@ const StudentApplicationsView: React.FC = () => {
                                       </p>
                                     </div>
                                     <div className="flex items-center space-x-2">
-                                      <span className={`inline-flex items-center px-2 py-1 rounded-full text-xs font-medium ${
-                                        app.status === 'approved' ? 'bg-green-100 text-green-800' :
-                                        app.status === 'under_review' ? 'bg-blue-100 text-blue-800' :
-                                        app.status === 'rejected' ? 'bg-red-100 text-red-800' :
-                                        'bg-yellow-100 text-yellow-800'
-                                      }`}>
+                                      <span className={`inline-flex items-center px-2 py-1 rounded-full text-xs font-medium ${app.status === 'approved' ? 'bg-green-100 text-green-800' :
+                                          app.status === 'under_review' ? 'bg-blue-100 text-blue-800' :
+                                            app.status === 'rejected' ? 'bg-red-100 text-red-800' :
+                                              'bg-yellow-100 text-yellow-800'
+                                        }`}>
                                         {(app.status || 'Pending').charAt(0).toUpperCase() + (app.status || 'pending').slice(1)}
                                       </span>
-                                      <svg 
+                                      <svg
                                         className={`w-5 h-5 text-slate-400 transition-transform ${isExpanded ? 'rotate-180' : ''}`}
-                                        fill="none" 
-                                        stroke="currentColor" 
+                                        fill="none"
+                                        stroke="currentColor"
                                         viewBox="0 0 24 24"
                                       >
                                         <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
@@ -2109,7 +2101,7 @@ const StudentApplicationsView: React.FC = () => {
                                           };
 
                                           return (
-                                            <div 
+                                            <div
                                               key={`${app.id}-${doc.type}-${docIndex}`}
                                               className="border border-slate-200 rounded-lg p-4 hover:bg-slate-50 transition-colors"
                                             >
@@ -2122,7 +2114,7 @@ const StudentApplicationsView: React.FC = () => {
                                                   </div>
                                                   <p className="text-xs text-slate-600 mb-2 line-clamp-2">{docType.description}</p>
                                                 </div>
-                                                
+
                                                 <div className="flex items-center flex-wrap gap-1 ml-0 md:ml-3 flex-shrink-0 justify-start md:justify-end w-full md:w-auto">
                                                   <button
                                                     onClick={() => handleViewDocument({
@@ -2153,31 +2145,31 @@ const StudentApplicationsView: React.FC = () => {
                                                     <span className="hidden md:inline">Download</span>
                                                   </button>
                                                   {isPlatformAdmin && approveableTypes.has(doc.type) && (doc.status || '').toLowerCase() !== 'approved' && (
-                                                    (doc.status || '').toLowerCase() !== 'rejected' || 
+                                                    (doc.status || '').toLowerCase() !== 'rejected' ||
                                                     (doc.status || '').toLowerCase() === 'rejected' && doc.uploaded_at && doc.rejected_at && new Date(doc.uploaded_at) > new Date(doc.rejected_at)
                                                   ) && (
-                                                    <>
-                                                      <button
-                                                        onClick={() => handleApproveDocument(app.id, doc.type)}
-                                                        disabled={!!approvingDocs[`${app.id}:${doc.type}`]}
-                                                        className={`text-xs font-medium flex items-center space-x-1 transition-colors px-2 py-1 rounded-md border ${approvingDocs[`${app.id}:${doc.type}`] ? 'text-slate-400 border-slate-200 bg-slate-50' : 'text-green-700 border-green-300 hover:bg-green-50'}`}
-                                                      >
-                                                        <CheckCircle className="w-3 h-3" />
-                                                        <span className="hidden md:inline">Approve</span>
-                                                      </button>
-                                                      <button
-                                                        onClick={() => openRejectModal(app.id, doc.type)}
-                                                        disabled={!!rejectingDocs[`${app.id}:${doc.type}`]}
-                                                        className={`text-xs font-medium flex items-center space-x-1 transition-colors px-2 py-1 rounded-md border ${rejectingDocs[`${app.id}:${doc.type}`] ? 'text-slate-400 border-slate-200 bg-slate-50' : 'text-red-700 border-red-300 hover:bg-red-50'}`}
-                                                      >
-                                                        <XCircle className="w-3 h-3" />
-                                                        <span className="hidden md:inline">Reject</span>
-                                                      </button>
-                                                    </>
-                                                  )}
+                                                      <>
+                                                        <button
+                                                          onClick={() => handleApproveDocument(app.id, doc.type)}
+                                                          disabled={!!approvingDocs[`${app.id}:${doc.type}`]}
+                                                          className={`text-xs font-medium flex items-center space-x-1 transition-colors px-2 py-1 rounded-md border ${approvingDocs[`${app.id}:${doc.type}`] ? 'text-slate-400 border-slate-200 bg-slate-50' : 'text-green-700 border-green-300 hover:bg-green-50'}`}
+                                                        >
+                                                          <CheckCircle className="w-3 h-3" />
+                                                          <span className="hidden md:inline">Approve</span>
+                                                        </button>
+                                                        <button
+                                                          onClick={() => openRejectModal(app.id, doc.type)}
+                                                          disabled={!!rejectingDocs[`${app.id}:${doc.type}`]}
+                                                          className={`text-xs font-medium flex items-center space-x-1 transition-colors px-2 py-1 rounded-md border ${rejectingDocs[`${app.id}:${doc.type}`] ? 'text-slate-400 border-slate-200 bg-slate-50' : 'text-red-700 border-red-300 hover:bg-red-50'}`}
+                                                        >
+                                                          <XCircle className="w-3 h-3" />
+                                                          <span className="hidden md:inline">Reject</span>
+                                                        </button>
+                                                      </>
+                                                    )}
                                                 </div>
                                               </div>
-                                              
+
                                               {/* Status e datas */}
                                               <div className="flex flex-wrap items-center gap-2">
                                                 <span className={`inline-flex items-center px-2 py-1 rounded-md text-xs font-medium ${getStatusColor(doc.status)}`}>
@@ -2319,7 +2311,7 @@ const StudentApplicationsView: React.FC = () => {
                 <XCircle className="w-6 h-6" />
               </button>
             </div>
-            
+
             <div className="mb-4">
               <p className="text-sm text-gray-600 mb-2">
                 Document: <span className="font-medium">{rejectData?.docType}</span>
@@ -2337,7 +2329,7 @@ const StudentApplicationsView: React.FC = () => {
                 required
               />
             </div>
-            
+
             <div className="flex justify-end space-x-3">
               <button
                 onClick={() => {
@@ -2360,7 +2352,7 @@ const StudentApplicationsView: React.FC = () => {
           </div>
         </div>
       )}
-      
+
       {/* Modal de visualização de documentos */}
       {previewUrl && (
         <DocumentViewerModal
