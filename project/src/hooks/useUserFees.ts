@@ -14,8 +14,6 @@ export interface UserFees {
 
 /**
  * Hook que retorna os valores corretos das taxas baseado no sistema do usuário
- * Para sistema simplificado: 350, 550, 900
- * Para sistema legacy: valores padrão (400, 900, 900)
  */
 export const useUserFees = (userId?: string): UserFees => {
   const { systemType } = useSystemType();
@@ -23,15 +21,15 @@ export const useUserFees = (userId?: string): UserFees => {
   const { getFeeAmount } = useFeeConfig(userId);
 
   return useMemo(() => {
-    // Para sistema simplificado, usar valores fixos
+    // Para sistema simplificado, usar valores vindo do banco (via useSimplifiedFees)
     if (systemType === 'simplified' && !simplifiedFeesLoading) {
       return {
         selectionProcessFee: fee350,
         scholarshipFee: fee550,
         i20ControlFee: fee900,
-        selectionProcessFeeString: `$${fee350}`,
-        scholarshipFeeString: `$${fee550}`,
-        i20ControlFeeString: `$${fee900}`,
+        selectionProcessFeeString: `$${fee350.toFixed(2)}`,
+        scholarshipFeeString: `$${fee550.toFixed(2)}`,
+        i20ControlFeeString: `$${fee900.toFixed(2)}`,
       };
     }
 

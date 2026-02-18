@@ -402,7 +402,7 @@ export const useFeeConfig = (userId?: string) => {
     if (feeType === 'scholarship_fee') {
       // Usar system_type carregado diretamente da tabela user_profiles
       if (userSystemType) {
-        const amount = userSystemType === 'simplified' ? 550 : 900;
+        const amount = userSystemType === 'simplified' ? 900 : 900;
         
         // Debug para jolie8862@uorak.com
         if (userId === '935e0eec-82c6-4a70-b013-e85dde6e63f7') {

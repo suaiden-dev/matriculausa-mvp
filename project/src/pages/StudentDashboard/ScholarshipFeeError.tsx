@@ -9,16 +9,16 @@ const ScholarshipFeeError: React.FC = () => {
   const { user } = useAuth();
   const { formatFeeAmount } = useFeeConfig(user?.id);
   const { scholarshipFee, hasSellerPackage } = useDynamicFees();
-  
+
   return (
     <div className="min-h-[60vh] flex flex-col items-center justify-center bg-white px-4">
       <div className="bg-white rounded-2xl shadow-lg p-10 max-w-md w-full flex flex-col items-center">
         <XCircle className="h-16 w-16 text-red-600 mb-4" />
         <h1 className="text-3xl font-bold text-red-700 mb-2">Scholarship Fee Payment Error</h1>
         <p className="text-slate-700 mb-6 text-center">
-          There was a problem processing your payment 
+          There was a problem processing your payment
           {/* of <span className="font-bold">
-            {hasSellerPackage ? scholarshipFee : formatFeeAmount(550)}
+            {hasSellerPackage ? scholarshipFee : formatFeeAmount(900)}
           </span>.<br/> */}
           Please try again. If the error persists, contact support.
         </p>

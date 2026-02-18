@@ -68,8 +68,8 @@
           },
           "scholarshipFee": {
             "title": "Scholarship Fee",
-            "description": "Pay the $550 Scholarship Fee to formalize the grant",
-            "price": "$550"
+            "description": "Pay the $900 Scholarship Fee to formalize the grant",
+            "price": "$900"
           },
           "i20Fee": {
             "title": "I-20 Control Fee",
@@ -206,8 +206,8 @@
           },
           "scholarshipFee": {
             "title": "Taxa da Bolsa",
-            "description": "Pague a Taxa da Bolsa de $550 para formalizar a concessão",
-            "price": "$550"
+            "description": "Pague a Taxa da Bolsa de $900 para formalizar a concessão",
+            "price": "$900"
           },
           "i20Fee": {
             "title": "Taxa de Controle i20",

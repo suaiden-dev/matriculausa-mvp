@@ -35,7 +35,7 @@ const Cos = () => {
     {
       step: 3,
       title: t('processPages.common.scholarshipFee'),
-      price: "$550",
+      price: "$900",
       description: t('processPages.cos.steps.list.step3.description'),
       items: t('processPages.cos.steps.list.step3.items', { returnObjects: true }) as string[],
       colorClass: "bg-coral",
@@ -64,14 +64,14 @@ const Cos = () => {
   const COS_VALUES = [
     { label: t('processPages.common.selectionProcess'), value: "$350", included: true },
     { label: t('processPages.common.applicationFeeI20'), value: "$350", included: true },
-    { label: t('processPages.common.scholarshipFee'), value: "$550", included: true },
+    { label: t('processPages.common.scholarshipFee'), value: "$900", included: true },
     { label: t('processPages.common.controlFee'), value: "$900", included: true },
     { label: t('processPages.common.legalFees'), value: "$1.800", included: true },
   ];
 
   return (
     <div className="min-h-screen bg-background">
-      <ProcessHeader 
+      <ProcessHeader
         title={t('processPages.cos.header.title')}
         subtitle={t('processPages.cos.header.subtitle')}
         description={t('processPages.cos.header.description')}
@@ -79,7 +79,7 @@ const Cos = () => {
       />
       <PromiseSection text={t('processPages.cos.promise')} />
       <ClientsSection />
-      <ProcessStepsSection 
+      <ProcessStepsSection
         title={t('processPages.cos.steps.title')}
         description={t('processPages.cos.steps.description')}
         steps={COS_STEPS}
@@ -91,7 +91,7 @@ const Cos = () => {
           variant: "banner"
         }}
       />
-      <ProcessFundsSummary 
+      <ProcessFundsSummary
         description={t('processPages.cos.funds.description')}
         mainApplicantGradient="gradient-primary"
         dependentGradient="gradient-teal-purple"
@@ -106,7 +106,7 @@ const Cos = () => {
         }}
       />
 
-      <ProcessValuesSummary 
+      <ProcessValuesSummary
         description={t('processPages.cos.values.description')}
         values={COS_VALUES}
       />

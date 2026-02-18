@@ -1,8 +1,8 @@
 import React from 'react';
-import { 
-  CreditCard, 
-  FileText, 
-  Shield, 
+import {
+  CreditCard,
+  FileText,
+  Shield,
   Plane,
   DollarSign,
   GraduationCap,
@@ -50,7 +50,7 @@ const ProcessoDetalhado: React.FC = () => {
           <p className="text-center text-slate-600 text-lg mb-12 max-w-2xl mx-auto">
             Investimento necessário para cada fase do seu processo de admissão e visto
           </p>
-          
+
           <div className="space-y-8">
             {/* Etapa 1 */}
             <div className="bg-slate-50 rounded-3xl shadow-xl p-8 border border-slate-200 hover:-translate-y-2 transition-transform duration-300">
@@ -152,7 +152,7 @@ const ProcessoDetalhado: React.FC = () => {
                       3. Scholarship Fee (Escolha de Vaga com Bolsa)
                     </h3>
                     <div className="text-3xl font-black text-amber-600">
-                      $550
+                      $900
                     </div>
                   </div>
                   <p className="text-slate-700 text-lg mb-2">
@@ -454,7 +454,7 @@ const ProcessoDetalhado: React.FC = () => {
                         Processo de visto F1
                       </h3>
                       <p className="text-slate-600 mb-2">
-                        Preenchimento da DS-160, agendamento e treinamento para a entrevista. 
+                        Preenchimento da DS-160, agendamento e treinamento para a entrevista.
                       </p>
                       <p className="text-sm text-slate-500 italic">
                         As taxas do governo (SEVIS $350 + Consulado $185) e honorários de visto ($900 principal + $100 por dependente) <strong>não são pagos na plataforma</strong>.

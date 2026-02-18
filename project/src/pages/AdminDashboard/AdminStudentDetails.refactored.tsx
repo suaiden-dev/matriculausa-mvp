@@ -322,7 +322,7 @@ const AdminStudentDetails: React.FC = () => {
 
     // Scholarship Fee
     if (realPaidAmounts.scholarship !== undefined && realPaidAmounts.scholarship > 0) {
-      const expectedScholarship = sysType === 'simplified' ? 550 : 900;
+      const expectedScholarship = sysType === 'simplified' ? 900 : 900;
 
       if (isValueReasonable(realPaidAmounts.scholarship, expectedScholarship)) {
         normalized.scholarship = realPaidAmounts.scholarship;
@@ -338,7 +338,7 @@ const AdminStudentDetails: React.FC = () => {
     } else if (paymentFlags?.has_paid_scholarship) {
       // ✅ NOVO: Fallback para pagamentos legados
       console.log(`[AdminStudentDetails] 💡 Pagamento legado detectado para scholarship - calculando valor esperado`);
-      const expectedScholarship = sysType === 'simplified' ? 550 : 900;
+      const expectedScholarship = sysType === 'simplified' ? 900 : 900;
       if (feeOverrides?.scholarship_fee !== undefined) {
         normalized.scholarship = feeOverrides.scholarship_fee;
       } else {

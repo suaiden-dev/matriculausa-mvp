@@ -89,7 +89,7 @@ function processApplications(
 
     // Scholarship Fee - Prioridade: valor real pago (se razoável) > override > cálculo fixo
     let scholarshipFee: number;
-    const expectedScholarship = systemType === 'simplified' ? 550 : 900;
+    const expectedScholarship = systemType === 'simplified' ? 900 : 900;
     
     if (realPaid?.scholarship !== undefined && realPaid.scholarship > 0) {
       // Verificar se o valor está razoável (dentro de 50% do esperado)
@@ -427,7 +427,7 @@ function processStripeUsers(
       scholarshipFee = Math.round(userOverrides.scholarship_fee * 100);
     } else {
       const systemType = userSystemTypesMap.get(stripeUser.user_id) || 'legacy';
-      const amount = systemType === 'simplified' ? 550 : 900;
+      const amount = systemType === 'simplified' ? 900 : 900;
       scholarshipFee = Math.round(amount * 100);
     }
     let applicationFee = Math.round(getFeeAmount('application_fee') * 100);

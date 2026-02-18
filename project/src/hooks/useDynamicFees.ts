@@ -60,13 +60,13 @@ export const useDynamicFees = (): DynamicFeeValues => {
       // (pode ser override ou valor já pago)
       const finalSelection = (actualSelection !== 350 && actualSelection !== 400) 
         ? actualSelection 
-        : 350; // Usar valor fixo do affiliate se não houver override/pagamento
+        : fee350; // Usar valor vindo do useSimplifiedFees
       const finalScholarship = (actualScholarship !== 550 && actualScholarship !== 900) 
         ? actualScholarship 
-        : 550; // Usar valor fixo do affiliate se não houver override/pagamento
+        : fee550; // Usar valor vindo do useSimplifiedFees
       const finalI20 = (actualI20 !== 900) 
         ? actualI20 
-        : 900; // Usar valor fixo do affiliate se não houver override/pagamento
+        : fee900; // Usar valor vindo do useSimplifiedFees
       
       return {
         selectionProcessFee: `$${finalSelection.toFixed(2)}`,
@@ -150,13 +150,18 @@ export const useDynamicFees = (): DynamicFeeValues => {
       const actualScholarship = Number(getFeeAmount('scholarship_fee'));
       const actualI20 = Number(getFeeAmount('i20_control_fee'));
       
+      // No simplificado, o valor padrão se não houver override deve vir do useSimplifiedFees
+      const finalSelection = (actualSelection !== 350 && actualSelection !== 400) ? actualSelection : fee350;
+      const finalScholarship = (actualScholarship !== 550 && actualScholarship !== 900) ? actualScholarship : fee550;
+      const finalI20 = (actualI20 !== 900) ? actualI20 : fee900;
+
       return {
-        selectionProcessFee: `$${actualSelection.toFixed(2)}`,
-        scholarshipFee: `$${actualScholarship.toFixed(2)}`,
-        i20ControlFee: `$${actualI20.toFixed(2)}`,
-        selectionProcessFeeAmount: actualSelection,
-        scholarshipFeeAmount: actualScholarship,
-        i20ControlFeeAmount: actualI20,
+        selectionProcessFee: `$${finalSelection.toFixed(2)}`,
+        scholarshipFee: `$${finalScholarship.toFixed(2)}`,
+        i20ControlFee: `$${finalI20.toFixed(2)}`,
+        selectionProcessFeeAmount: finalSelection,
+        scholarshipFeeAmount: finalScholarship,
+        i20ControlFeeAmount: finalI20,
         hasSellerPackage: false
       };
     }
