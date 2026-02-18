@@ -2889,7 +2889,7 @@
         "processErrorRetry": "Error al procesar la solicitud de desuscripción. Por favor, intenta nuevamente."
       }
     },
-    "copyright": "© 2024 Matrícula USA. All rights reserved."
+    "copyright": "© 2026 Matrícula USA. All rights reserved."
   },
   "matriculaRewardsLanding": {
     "badge": "New Rewards Program",
@@ -2922,7 +2922,7 @@
         "description": "See what your account would look like with some referrals",
         "referralCode": {
           "title": "Your Referral Code",
-          "code": "MTR2024",
+          "code": "MTR2026",
           "copy": "Copy Code",
           "copied": "Copied!",
           "loginToGetCode": "Login to get your referral code"
@@ -3298,7 +3298,7 @@
       ]
     },
     "socialProof": {
-      "title": "More than 150 students approved in 2024 alone",
+      "title": "More than 150 students approved in 2026 alone",
       "subtitle": "See what our students are saying about their experience",
       "ctaButton": "BE THE NEXT APPROVED",
       "statistics": {

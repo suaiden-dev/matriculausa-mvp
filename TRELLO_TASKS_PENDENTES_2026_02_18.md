@@ -39,8 +39,43 @@ Implementar regra de integridade no Dashboard do Admin para garantir conformidad
 
 ---
 
-### [FIX] Mudança de Nome: Taxa de Processo Seletivo
+### [TEXT/UI] Atualização de Suporte Personalizado
 **Descrição:**
-Finalizar a padronização visual em todos os idiomas.
-- **Ação:** Revisar componentes que ainda usam o termo "Taxa de Seleção" (Selection Fee) e substituir por "Taxa de Processo Seletivo" (Selection Process Fee) para manter a consistência com o jurídico.
-- **Arquivos:** `pt.json`, `en.json`, `es.json`.
+Alterar frase institucional para foco no processo de matrícula.
+- **De:** "receba suporte personalizado durante toda sua jornada para estudar nos EUA."
+- **Para:** "receba suporte personalizado durante toda o seu processo de matricula"
+- **Locais:** `pt.json` e arquivos de tradução relacionados.
+
+---
+
+### [FIX] Atualização da Regra e Nome da Taxa de Seleção
+**Descrição:**
+Ajustar nomenclatura e política de reembolso para maior transparência.
+- **De:** "Pague Taxa de Seleção ($400.00). Desbloqueie todas as bolsas. Esta taxa é final e não reembolsável."
+- **Para:** "Pague Taxa de processo seletivo ($400.00). Desbloqueie todas as bolsas. Esta taxa é final e você será reembolsado caso não seja aceito em nenhuma universidade."
+- **Locais:** `pt.json` e componentes de checkout/dashboard.
+
+---
+
+### [BRANDING] Atualização de Ano de Copyright
+**Descrição:**
+Atualizar o ano base da plataforma no rodapé e comunicações.
+- **De:** "2024 Matrícula USA. Todos os direitos reservados."
+- **Para:** "2026 Matrícula USA. Todos os direitos reservados."
+- **Locais:** `Footer`, `pt.json`, `en.json`, `es.json`.
+
+---
+
+### [REFACTOR/I18N] Divisibilidade e Otimização de Traduções
+**Descrição:**
+Os arquivos de tradução (`pt.json`, etc) excederam 4.000 linhas, causando lentidão no VS Code e riscos de conflito.
+- **Ação:** Dividir o arquivo monolítico em namespaces menores (ex: `admin.json`, `student.json`, `school.json`, `common.json`).
+- **Benefício:** Melhora a performance de carregamento e evita erros de sintaxe JSON em arquivos gigantes.
+
+---
+
+### [REFACTOR] Limpeza de Código Legado (Admin)
+**Descrição:**
+Remover arquivos mortos e padronizar a nova arquitetura.
+- **Ação:** Deletar `AdminStudentDetails.tsx` (legado de 6.5k linhas) e renomear `AdminStudentDetails.refactored.tsx` (novo de 3.5k linhas) para ser o arquivo principal.
+- **Ação:** Quebrar o novo arquivo em sub-componentes e hooks utilitários conforme `REFATORACAO_ARQUIVOS_CRITICOS.md`.
