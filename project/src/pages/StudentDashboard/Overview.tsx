@@ -473,7 +473,6 @@ const Overview: React.FC<OverviewProps> = ({
     // Mas os outros passos já não podem ser "current"
   }
 
-  const allCompleted = steps.every(step => step.completed);
 
   // Cálculo do progresso visual para a trilha animada
   const calculateVisualProgress = () => {
@@ -531,9 +530,6 @@ const Overview: React.FC<OverviewProps> = ({
           </div>
 
           {/* Progress Bar dentro do bloco azul */}
-          <div className="text-center text-white/90 text-sm md:text-base font-medium mb-1">
-            {allCompleted ? t('studentDashboard.progressBar.allStepsCompleted') : t('studentDashboard.progressBar.title')}
-          </div>
           <div className="mb-2 md:mb-4">
             {/* Status do Onboarding acima da trilha - Layout Pílula Integrado */}
             {!userProfile?.onboarding_completed && (
@@ -548,7 +544,7 @@ const Overview: React.FC<OverviewProps> = ({
                 <p className="text-white text-[10px] md:text-sm font-bold tracking-tight opacity-90 drop-shadow-md">
                   {isOnboardingStarted 
                     ? `Você parou em: ${currentStepLabel}`
-                    : 'Comece sua jornada agora mesmo'}
+                    : 'Comece seu processo agora mesmo'}
                 </p>
               </div>
             )}
@@ -580,7 +576,7 @@ const Overview: React.FC<OverviewProps> = ({
               <h3 className="relative text-lg md:text-xl font-black text-white uppercase tracking-widest leading-tight">
                 {userProfile?.onboarding_completed 
                   ? 'Portal de Documentos' 
-                  : (isOnboardingStarted ? 'Continuar Jornada' : 'Iniciar Jornada')}
+                  : (isOnboardingStarted ? 'Continuar Processo' : 'Iniciar Processo')}
               </h3>
             </button>
           )}

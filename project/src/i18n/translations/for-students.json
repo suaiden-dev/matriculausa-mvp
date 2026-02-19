@@ -142,11 +142,11 @@
       "hero": {
         "title": "Sua Porta de Entrada para a Educação nos EUA",
         "subtitle": "Descubra bolsas exclusivas e desbloqueie seu potencial",
-        "description": "Conecte-se com universidades de ponta, acesse bolsas exclusivas e receba suporte personalizado durante toda sua jornada."
+        "description": "Conecte-se com universidades de ponta, acesse bolsas exclusivas e receba suporte personalizado durante todo seu processo."
       },
       "benefits": {
         "title": "Por Que Nos Escolher?",
-        "subtitle": "Tudo que você precisa para ter sucesso na sua jornada educacional americana",
+        "subtitle": "Tudo que você precisa para ter sucesso no seu processo educacional americano",
         "benefits": {
           "economy": {
             "title": "Economia Garantida",
@@ -223,7 +223,7 @@
       },
       "comparison": {
         "title": "Antes vs Depois",
-        "subtitle": "Veja como podemos transformar sua jornada",
+        "subtitle": "Veja como podemos transformar seu processo",
         "before": {
           "title": "Antes do MatriculaUSA",
           "items": [
@@ -253,7 +253,7 @@
       },
       "specialOffer": {
         "title": "Não Perca Esta Oportunidade",
-        "subtitle": "Comece sua jornada para a educação americana hoje",
+        "subtitle": "Comece seu processo para a educação americana hoje",
         "benefits": {
           "quickAnalysis": {
             "title": "Análise em 24h",

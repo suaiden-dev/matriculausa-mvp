@@ -106,125 +106,154 @@ const MobileTermsView: React.FC<{
   studentId,
   logAction,
   t
-}) => (
+}) => {
+  const [page, setPage] = React.useState<'terms' | 'selfie'>('terms');
+
+  return (
   <div className="space-y-4 bg-white min-h-full flex flex-col">
-    {/* Header com botão de voltar */}
+    {/* Header */}
     <div className="flex items-center gap-3 pb-4 border-b border-gray-200">
       <button
-        onClick={() => setShowTermsInDrawer(false)}
+        onClick={() => {
+          if (page === 'selfie') {
+            setPage('terms');
+          } else {
+            setShowTermsInDrawer(false);
+          }
+        }}
         className="p-2 hover:bg-gray-100 rounded-full transition-colors"
       >
         <ArrowLeft className="w-5 h-5 text-gray-600" />
       </button>
       <h3 className="text-lg font-semibold text-gray-900">
-        {activeTerm ? activeTerm.title : t('preCheckoutModal.termsAndConditions.title')}
+        {page === 'selfie'
+          ? 'Verificação de Identidade'
+          : (activeTerm ? activeTerm.title : t('preCheckoutModal.termsAndConditions.title'))
+        }
       </h3>
     </div>
 
-    {/* Content */}
-    {loadingTerms ? (
-      <div className="flex-1 flex items-center justify-center p-6">
-        <div className="text-center">
-          <div className="w-12 h-12 border-4 border-blue-200 border-t-blue-600 rounded-full animate-spin mx-auto mb-4"></div>
-          <p className="text-slate-600 text-sm">{t('preCheckoutModal.loading')}</p>
-        </div>
-      </div>
-    ) : activeTerm ? (
+    {/* PAGE 1: Terms Content */}
+    {page === 'terms' && (
       <>
-        <div 
-          ref={termsContentRef}
-          onScroll={handleTermsScroll}
-          className="flex-1 overflow-y-auto prose prose-sm max-w-none prose-headings:text-gray-900 prose-p:text-gray-600 mb-6"
-          dangerouslySetInnerHTML={{ __html: activeTerm.content }}
-        />
-        
-        {!hasScrolledToBottom && checkIfContentNeedsScroll() && (
-          <div className="flex items-center justify-center p-3 bg-amber-50 border border-amber-200 rounded-lg mt-4 mb-6">
-            <Scroll className="h-4 w-4 text-amber-600 mr-2" />
-            <span className="text-amber-800 text-sm font-medium">
-              {t('preCheckoutModal.scrollToBottomFirst')}
-            </span>
+        {loadingTerms ? (
+          <div className="flex-1 flex items-center justify-center p-6">
+            <div className="text-center">
+              <div className="w-12 h-12 border-4 border-blue-200 border-t-blue-600 rounded-full animate-spin mx-auto mb-4"></div>
+              <p className="text-slate-600 text-sm">{t('preCheckoutModal.loading')}</p>
+            </div>
+          </div>
+        ) : activeTerm ? (
+          <>
+            <div 
+              ref={termsContentRef}
+              onScroll={handleTermsScroll}
+              className="flex-1 overflow-y-auto prose prose-sm max-w-none prose-headings:text-gray-900 prose-p:text-gray-600 mb-6"
+              dangerouslySetInnerHTML={{ __html: activeTerm.content }}
+            />
+            
+            {!hasScrolledToBottom && checkIfContentNeedsScroll() && (
+              <div className="flex items-center justify-center p-3 bg-amber-50 border border-amber-200 rounded-lg mt-4 mb-6">
+                <Scroll className="h-4 w-4 text-amber-600 mr-2" />
+                <span className="text-amber-800 text-sm font-medium">
+                  {t('preCheckoutModal.scrollToBottomFirst')}
+                </span>
+              </div>
+            )}
+
+            <div className="border-t border-gray-200 bg-gray-50 p-4 -mx-4 -mb-4 rounded-b-2xl mt-4">
+              <button
+                onClick={() => setPage('selfie')}
+                disabled={!hasScrolledToBottom}
+                className={`w-full py-3 px-4 rounded-xl font-semibold transition-all text-sm ${
+                  hasScrolledToBottom
+                    ? 'bg-blue-600 text-white hover:bg-blue-700 shadow-lg'
+                    : 'bg-slate-300 text-slate-500 cursor-not-allowed'
+                }`}
+              >
+                {hasScrolledToBottom
+                  ? 'Confirmar Leitura →'
+                  : (checkIfContentNeedsScroll()
+                      ? t('preCheckoutModal.scrollToBottomFirst')
+                      : t('preCheckoutModal.readingTerms')
+                    )
+                }
+              </button>
+            </div>
+          </>
+        ) : (
+          <div className="flex-1 flex items-center justify-center p-6">
+            <div className="text-center">
+              <p className="text-slate-600 text-sm">{t('preCheckoutModal.noTermsFound')}</p>
+            </div>
           </div>
         )}
+      </>
+    )}
 
-        {/* Identity Photo Upload Section */}
-        {hasScrolledToBottom && (
-          <div className="border-t border-gray-100 pt-6 mt-2 mb-4">
-            <h4 className="text-base font-semibold text-gray-900 mb-2">
-              Verificação de Identidade
-            </h4>
-            <p className="text-sm text-gray-600 mb-4">
+    {/* PAGE 2: Selfie Upload */}
+    {page === 'selfie' && (
+      <>
+        <div className="flex-1">
+          <div className="text-center mb-6">
+            <p className="text-sm text-gray-600">
               Para aceitar os termos, por favor tire uma selfie segurando seu documento de identidade.
             </p>
-            
-            <IdentityPhotoUpload
-              initialPhotoPath={identityPhotoPath || undefined}
-              onUploadSuccess={async (filePath, fileName) => {
-                setIdentityPhotoPath(filePath);
-                setIdentityPhotoName(fileName);
-                
-                // Log da ação
-                if (logAction && studentId && userId) {
-                  try {
-                    await logAction(
-                      'identity_photo_upload',
-                      `Identity photo uploaded by student during terms acceptance`,
-                      userId,
-                      'student',
-                      {
-                        student_id: studentId,
-                        file_path: filePath,
-                        file_name: fileName,
-                        uploaded_at: new Date().toISOString(),
-                        term_id: activeTerm.id
-                      }
-                    );
-                  } catch (logError) {
-                    console.error('⚠️ [SelectionFeeStep] Erro ao logar upload de foto:', logError);
-                  }
-                }
-              }}
-              onUploadError={(error) => {
-                console.error('Erro ao fazer upload:', error);
-              }}
-              onRemove={() => {
-                setIdentityPhotoPath(null);
-                setIdentityPhotoName(null);
-              }}
-            />
           </div>
-        )}
 
-        {/* Footer com botão de aceitar */}
+          <IdentityPhotoUpload
+            initialPhotoPath={identityPhotoPath || undefined}
+            onUploadSuccess={async (filePath, fileName) => {
+              setIdentityPhotoPath(filePath);
+              setIdentityPhotoName(fileName);
+              if (logAction && studentId && userId) {
+                try {
+                  await logAction(
+                    'identity_photo_upload',
+                    `Identity photo uploaded by student during terms acceptance`,
+                    userId,
+                    'student',
+                    {
+                      student_id: studentId,
+                      file_path: filePath,
+                      file_name: fileName,
+                      uploaded_at: new Date().toISOString(),
+                      term_id: activeTerm?.id
+                    }
+                  );
+                } catch (logError) {
+                  console.error('⚠️ [SelectionFeeStep] Erro ao logar upload de foto:', logError);
+                }
+              }
+            }}
+            onUploadError={(error) => {
+              console.error('Erro ao fazer upload:', error);
+            }}
+            onRemove={() => {
+              setIdentityPhotoPath(null);
+              setIdentityPhotoName(null);
+            }}
+          />
+        </div>
+
         <div className="border-t border-gray-200 bg-gray-50 p-4 -mx-4 -mb-4 rounded-b-2xl mt-4">
           <button
             onClick={handleTermsAccept}
-            disabled={!hasScrolledToBottom || !identityPhotoPath}
+            disabled={!identityPhotoPath}
             className={`w-full py-3 px-4 rounded-xl font-semibold transition-all text-sm ${
-              hasScrolledToBottom && identityPhotoPath
+              identityPhotoPath
                 ? 'bg-blue-600 text-white hover:bg-blue-700 shadow-lg'
                 : 'bg-slate-300 text-slate-500 cursor-not-allowed'
             }`}
           >
-            {hasScrolledToBottom 
-              ? t('preCheckoutModal.acceptTerms')
-              : (checkIfContentNeedsScroll() 
-                  ? t('preCheckoutModal.scrollToBottomFirst') 
-                  : t('preCheckoutModal.readingTerms')
-                )
-            }
+            {t('preCheckoutModal.acceptTerms') || 'Aceitar e Confirmar'}
           </button>
         </div>
       </>
-    ) : (
-      <div className="flex-1 flex items-center justify-center p-6">
-        <div className="text-center">
-          <p className="text-slate-600 text-sm">{t('preCheckoutModal.noTermsFound')}</p>
-        </div>
-      </div>
     )}
   </div>
-);
+  );
+};
 
 export const SelectionFeeStep: React.FC<StepProps> = ({ onNext }) => {
   const { t } = useTranslation();
@@ -254,6 +283,7 @@ export const SelectionFeeStep: React.FC<StepProps> = ({ onNext }) => {
   const [activeTerm, setActiveTerm] = useState<Term | null>(null);
   const [loadingTerms, setLoadingTerms] = useState(false);
   const [userClickedCheckbox, setUserClickedCheckbox] = useState(false);
+  const [termsModalPage, setTermsModalPage] = useState<'terms' | 'selfie'>('terms');
   const termsContentRef = useRef<HTMLDivElement>(null);
 
   // Identity Photo States
@@ -370,20 +400,39 @@ export const SelectionFeeStep: React.FC<StepProps> = ({ onNext }) => {
     }
   }, []);
 
-  // Check if content needs scrolling
+  // Check if content needs scrolling (pure function, no side effects)
   const checkIfContentNeedsScroll = useCallback(() => {
     if (termsContentRef.current) {
       const { scrollHeight, clientHeight } = termsContentRef.current;
-      const needsScroll = scrollHeight > clientHeight;
-      
-      if (!needsScroll) {
-        setHasScrolledToBottom(true);
-      }
-      
-      return needsScroll;
+      return scrollHeight > clientHeight;
     }
     return false;
   }, []);
+
+  // After terms content renders in the modal, check if the container actually needs scroll.
+  // We wait for the next animation frame + a small delay to ensure the HTML content
+  // (injected via dangerouslySetInnerHTML) has fully painted before measuring.
+  useEffect(() => {
+    if (!showTermsModal || loadingTerms || !activeTerm || termsModalPage !== 'terms') return;
+
+    let raf: number;
+    const timer = setTimeout(() => {
+      raf = requestAnimationFrame(() => {
+        if (termsContentRef.current) {
+          const { scrollHeight, clientHeight } = termsContentRef.current;
+          // Only auto-allow if content genuinely fits without scrolling
+          if (scrollHeight <= clientHeight) {
+            setHasScrolledToBottom(true);
+          }
+        }
+      });
+    }, 300);
+
+    return () => {
+      clearTimeout(timer);
+      cancelAnimationFrame(raf);
+    };
+  }, [showTermsModal, loadingTerms, activeTerm, termsModalPage]);
 
   // Handle terms modal open
   const handleTermsClick = async () => {
@@ -405,6 +454,7 @@ export const SelectionFeeStep: React.FC<StepProps> = ({ onNext }) => {
     
     setShowTermsModal(true);
     setHasScrolledToBottom(false);
+    setTermsModalPage('terms');
   };
 
   // Handle terms acceptance
@@ -1404,21 +1454,21 @@ export const SelectionFeeStep: React.FC<StepProps> = ({ onNext }) => {
   const paymentMethods = [
     {
       id: 'stripe' as const,
-      name: 'Stripe',
+      name: 'Cartão de Crédito',
       description: 'Pay securely with your credit or debit card',
       icon: StripeIcon
-    },
-    {
-      id: 'parcelow' as const,
-      name: 'Parcelow',
-      description: 'Pay with Credit Card in up to 12 installments',
-      icon: ParcelowIcon
     },
     {
       id: 'pix' as const,
       name: 'PIX',
       description: 'Instant payment method from Brazil',
       icon: PixIcon
+    },
+    {
+      id: 'parcelow' as const,
+      name: 'Parcelow',
+      description: 'Pay with Credit Card in up to 12 installments',
+      icon: ParcelowIcon
     },
     {
       id: 'zelle' as const,
@@ -1472,7 +1522,7 @@ export const SelectionFeeStep: React.FC<StepProps> = ({ onNext }) => {
             Pagar Taxa do Processo Seletivo
           </h2>
           <p className="text-lg md:text-xl text-white/60 font-medium">
-            Inicie sua jornada pagando a taxa do processo seletivo
+            Inicie seu processo pagando a taxa do processo seletivo
           </p>
         </div>
 
@@ -1519,21 +1569,13 @@ export const SelectionFeeStep: React.FC<StepProps> = ({ onNext }) => {
           {/* Mostrar seção sempre, exceto se tiver seller_referral_code */}
           {!hasSellerReferralCode ? (
             <div className="mb-6 space-y-4">
-              <div className="text-center">
-                <h3 className="text-lg font-semibold text-gray-900 mb-2">
-                  {t('preCheckoutModal.referralCode') || 'Matricula Rewards'}
-                </h3>
-                <p className="text-sm text-gray-600">
-                  Have a referral code? Get $50 off your application process fee!
-                </p>
-              </div>
 
               {/* Mostrar campo de código sempre */}
               {true && (
                 <>
                   {/* Checkbox para perguntar se tem código - só aparece se não tem desconto ativo e não tem código aplicado */}
                   {!activeDiscount?.has_discount && !codeApplied && (
-                    <div className="flex items-start space-x-3 p-3 bg-gray-50 rounded-lg">
+                    <div className="flex items-center space-x-3 p-3 bg-gray-50 rounded-lg">
                       <label htmlFor="hasReferralCode" className="checkbox-container cursor-pointer flex-shrink-0">
                         <input
                           id="hasReferralCode"
@@ -1563,56 +1605,182 @@ export const SelectionFeeStep: React.FC<StepProps> = ({ onNext }) => {
 
                   {/* Campo de input - aparece se checkbox marcado OU se já tem código aplicado */}
                   {((hasReferralCode && showCodeStep) || (activeDiscount?.has_discount && discountCode) || (codeApplied && discountCode)) && (
-                    <div className="space-y-3">
-                      <div className="relative">
-                        <input
-                          type="text"
-                          value={discountCode}
-                          onChange={(e) => {
-                            // Só permitir edição se não houver desconto ativo e código não foi aplicado
-                            if (!activeDiscount?.has_discount && !codeApplied) {
-                              setDiscountCode(e.target.value.toUpperCase());
-                            }
-                          }}
-                          placeholder={t('preCheckoutModal.placeholder') || 'Enter code'}
-                          readOnly={!!activeDiscount?.has_discount || !!hasAffiliateCode || codeApplied}
-                          className={`w-full px-4 py-3 border rounded-lg focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 transition-all text-center font-mono text-base tracking-wider ${
-                            activeDiscount?.has_discount || hasAffiliateCode || codeApplied
-                              ? 'border-green-400 bg-green-50 text-gray-800 cursor-not-allowed pr-10' 
-                              : 'border-gray-300 bg-white hover:border-gray-400'
-                          }`}
-                          style={{ fontSize: '16px' }}
-                          maxLength={8}
-                        />
-                        {(activeDiscount?.has_discount || codeApplied) && (
-                          <div className="absolute right-3 top-1/2 -translate-y-1/2">
-                            <CheckCircle className="w-5 h-5 text-green-500" />
+                    <div className="pt-4 flex flex-col xl:flex-row xl:justify-center gap-12">
+                      {/* Referral Code (Left) */}
+                      <div className="space-y-4 max-w-md w-full">
+                        <div className="text-center">
+                          <h3 className="text-lg font-semibold text-gray-900 mb-2">
+                            {t('preCheckoutModal.referralCode') || 'Matricula Rewards'}
+                          </h3>
+                          <p className="text-sm text-gray-600">
+                            Have a referral code? Get $50 off your application process fee!
+                          </p>
+                        </div>
+                        
+                        <div className="flex flex-col sm:flex-row gap-2">
+                          <div className="relative flex-1">
+                            <input
+                              type="text"
+                              value={discountCode}
+                              onChange={(e) => {
+                                if (!activeDiscount?.has_discount && !codeApplied) {
+                                  setDiscountCode(e.target.value.toUpperCase());
+                                }
+                              }}
+                              placeholder={t('preCheckoutModal.placeholder') || 'Enter code'}
+                              readOnly={!!activeDiscount?.has_discount || !!hasAffiliateCode || codeApplied}
+                              className={`w-full px-4 py-3 border rounded-lg focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 transition-all text-center font-mono text-base tracking-wider ${
+                                activeDiscount?.has_discount || hasAffiliateCode || codeApplied
+                                  ? 'border-green-400 bg-green-50 text-gray-800 cursor-not-allowed pr-10' 
+                                  : 'border-gray-300 bg-white hover:border-gray-400'
+                              }`}
+                              style={{ fontSize: '16px' }}
+                              maxLength={8}
+                            />
+                            {(activeDiscount?.has_discount || codeApplied) && (
+                              <div className="absolute right-3 top-1/2 -translate-y-1/2">
+                                <CheckCircle className="w-5 h-5 text-green-500" />
+                              </div>
+                            )}
                           </div>
+
+                          {!activeDiscount?.has_discount && !hasAffiliateCode && !codeApplied && (
+                            <button
+                              onClick={validateDiscountCode}
+                              disabled={isValidating || !discountCode.trim()}
+                              className="px-6 py-3 bg-blue-600 text-white rounded-lg font-medium hover:bg-blue-700 disabled:bg-gray-300 disabled:cursor-not-allowed transition-colors whitespace-nowrap sm:w-auto w-full"
+                            >
+                              {isValidating ? (
+                                <div className="flex items-center space-x-2 justify-center">
+                                  <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin"></div>
+                                  <span>{t('preCheckoutModal.validating') || 'Validating...'}</span>
+                                </div>
+                              ) : (
+                                t('preCheckoutModal.validate') || 'Validate Code'
+                              )}
+                            </button>
+                          )}
+                        </div>
+                        
+                        {validationResult && !validationResult.isValid && (
+                          <p className="text-sm text-red-600 text-center">
+                            {validationResult.message}
+                          </p>
                         )}
                       </div>
-                      {!activeDiscount?.has_discount && !hasAffiliateCode && !codeApplied && (
-                        <button
-                          onClick={validateDiscountCode}
-                          disabled={isValidating || !discountCode.trim()}
-                          className="w-full px-6 py-3 bg-blue-600 text-white rounded-lg font-medium hover:bg-blue-700 disabled:bg-gray-300 disabled:cursor-not-allowed transition-colors"
-                        >
-                          {isValidating ? (
-                            <div className="flex items-center space-x-2 justify-center">
-                              <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin"></div>
-                              <span>{t('preCheckoutModal.validating') || 'Validating...'}</span>
+
+                      {/* Promotional Coupon (Right) */}
+                      <div className="space-y-4 max-w-md w-full">
+                        <div className="text-center">
+                          <h3 className="text-lg font-semibold text-gray-900 mb-2 flex items-center justify-center gap-2">
+                            <Tag className="w-5 h-5 text-blue-600" />
+                            Promotional Coupon
+                          </h3>
+                          <p className="text-sm text-gray-600">
+                            Have a promotional coupon? Apply it here for extra savings!
+                          </p>
+                        </div>
+
+                        <div className="space-y-3">
+                          {promotionalCouponValidation?.isValid ? (
+                            <div className="bg-emerald-500/10 border border-emerald-500/20 rounded-2xl p-6 space-y-4 shadow-inner relative overflow-hidden">
+                              <div className="absolute top-0 right-0 w-32 h-32 bg-emerald-500/5 rounded-full blur-[40px] -mr-16 -mt-16 pointer-events-none" />
+                              
+                              <div className="flex items-center justify-between relative z-10">
+                                <div className="flex items-center space-x-3">
+                                  <div className="w-10 h-10 bg-emerald-50 rounded-xl flex items-center justify-center border border-emerald-100">
+                                    <CheckCircle className="w-6 h-6 text-emerald-500" />
+                                  </div>
+                                  <div>
+                                    <span className="text-xs font-bold text-gray-400 uppercase tracking-widest block">Cupom Aplicado</span>
+                                    <span className="text-lg font-black text-gray-800 uppercase tracking-tight">{promotionalCoupon}</span>
+                                  </div>
+                                </div>
+                                <button
+                                  onClick={removePromotionalCoupon}
+                                  className="px-4 py-2 bg-gray-50 hover:bg-red-50 text-gray-400 hover:text-red-500 rounded-lg text-xs font-black uppercase tracking-widest transition-all border border-gray-100 hover:border-red-100"
+                                >
+                                  Remover
+                                </button>
+                              </div>
+
+                              <div className="space-y-3 pt-4 border-t border-gray-100 relative z-10">
+                                <div className="flex justify-between text-xs font-bold uppercase tracking-widest text-gray-400">
+                                  <span>Preço Original:</span>
+                                  <span className="line-through text-gray-300">
+                                    ${selectionFeeAmount.toFixed(2)}
+                                  </span>
+                                </div>
+                                <div className="flex justify-between text-xs font-bold uppercase tracking-widest text-gray-400">
+                                  <span>Desconto:</span>
+                                  <span className="text-emerald-500">
+                                    -${promotionalCouponValidation.discountAmount?.toFixed(2)}
+                                  </span>
+                                </div>
+                                <div className="flex justify-between text-xl font-black uppercase tracking-tight pt-3 text-gray-900">
+                                  <span>Total Final:</span>
+                                  <span className="text-emerald-500">
+                                    ${promotionalCouponValidation.finalAmount?.toFixed(2)}
+                                  </span>
+                                </div>
+                              </div>
                             </div>
                           ) : (
-                            t('preCheckoutModal.validate') || 'Validate Code'
+                            <div className="space-y-4">
+                              <div className="flex flex-col sm:flex-row gap-2">
+                                <div className="relative flex-1 group/input">
+                                  <input
+                                    ref={promotionalCouponInputRef}
+                                    type="text"
+                                    value={promotionalCoupon}
+                                    onChange={(e) => {
+                                      const newValue = e.target.value.toUpperCase();
+                                      const cursorPosition = e.target.selectionStart;
+                                      setPromotionalCoupon(newValue);
+                                      requestAnimationFrame(() => {
+                                        if (promotionalCouponInputRef.current) {
+                                          promotionalCouponInputRef.current.setSelectionRange(cursorPosition, cursorPosition);
+                                          promotionalCouponInputRef.current.focus();
+                                        }
+                                      });
+                                    }}
+                                    placeholder="CÓDIGO PROMOCIONAL"
+                                    className="w-full px-5 py-3.5 bg-gray-50 border border-gray-200 rounded-xl focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500/50 transition-all text-center font-black text-gray-900 text-lg tracking-[0.2em] placeholder:text-gray-300"
+                                    maxLength={20}
+                                    autoComplete="off"
+                                  />
+                                  <div className="absolute inset-x-0 bottom-0 h-[2px] bg-gradient-to-r from-transparent via-blue-500/50 to-transparent scale-x-0 group-focus-within/input:scale-x-100 transition-transform duration-500" />
+                                </div>
+                                <button
+                                  onClick={validatePromotionalCoupon}
+                                  disabled={isValidatingPromotionalCoupon || !promotionalCoupon.trim()}
+                                  className={`px-6 py-3.5 rounded-xl font-black uppercase tracking-widest text-sm transition-all shadow-xl active:scale-95 whitespace-nowrap sm:w-auto w-full ${
+                                    isValidatingPromotionalCoupon || !promotionalCoupon.trim()
+                                      ? 'bg-gray-100 text-gray-400 border border-gray-200 cursor-not-allowed'
+                                      : 'bg-blue-600 text-white hover:bg-blue-700 border border-blue-500/50 shadow-[0_0_20px_rgba(37,99,235,0.2)]'
+                                  }`}
+                                >
+                                  {isValidatingPromotionalCoupon ? (
+                                    <div className="flex items-center justify-center space-x-2">
+                                      <Loader2 className="w-5 h-5 animate-spin" />
+                                      <span>Validando...</span>
+                                    </div>
+                                  ) : (
+                                    'Validar'
+                                  )}
+                                </button>
+                              </div>
+                              
+                              {promotionalCouponValidation && !promotionalCouponValidation.isValid && (
+                                <div className="bg-red-500/10 border border-red-500/20 rounded-xl p-4 flex items-center space-x-3 backdrop-blur-md">
+                                  <AlertCircle className="w-5 h-5 text-red-500 flex-shrink-0" />
+                                  <span className="text-sm text-red-400 font-medium">{promotionalCouponValidation.message}</span>
+                                </div>
+                              )}
+                            </div>
                           )}
-                        </button>
-                      )}
-                      
-                      {/* Validation Result - apenas mensagem de erro simples */}
-                      {validationResult && !validationResult.isValid && (
-                        <p className="text-sm text-red-600 text-center">
-                          {validationResult.message}
-                        </p>
-                      )}
+                        </div>
+                      </div>
                     </div>
                   )}
                 </>
@@ -1620,126 +1788,12 @@ export const SelectionFeeStep: React.FC<StepProps> = ({ onNext }) => {
             </div>
           ) : null}
 
-          {/* Cupom Promocional Section - para TODOS os usuários */}
-          <div className="mb-6 space-y-4">
-            <div className="text-center">
-              <h3 className="text-lg font-semibold text-gray-900 mb-2 flex items-center justify-center gap-2">
-                <Tag className="w-5 h-5 text-blue-600" />
-                Promotional Coupon
-              </h3>
-              <p className="text-sm text-gray-600">
-                Have a promotional coupon? Apply it here for extra savings!
-              </p>
-            </div>
-
-            <div className="space-y-3">
-              {promotionalCouponValidation?.isValid ? (
-                // Cupom aplicado - mostrar informações e botão remover
-                <div className="bg-emerald-500/10 border border-emerald-500/20 rounded-2xl p-6 space-y-4 shadow-inner relative overflow-hidden">
-                  <div className="absolute top-0 right-0 w-32 h-32 bg-emerald-500/5 rounded-full blur-[40px] -mr-16 -mt-16 pointer-events-none" />
-                  
-                  <div className="flex items-center justify-between relative z-10">
-                    <div className="flex items-center space-x-3">
-                      <div className="w-10 h-10 bg-emerald-50 rounded-xl flex items-center justify-center border border-emerald-100">
-                        <CheckCircle className="w-6 h-6 text-emerald-500" />
-                      </div>
-                      <div>
-                        <span className="text-xs font-bold text-gray-400 uppercase tracking-widest block">Cupom Aplicado</span>
-                        <span className="text-lg font-black text-gray-800 uppercase tracking-tight">{promotionalCoupon}</span>
-                      </div>
-                    </div>
-                    <button
-                      onClick={removePromotionalCoupon}
-                      className="px-4 py-2 bg-gray-50 hover:bg-red-50 text-gray-400 hover:text-red-500 rounded-lg text-xs font-black uppercase tracking-widest transition-all border border-gray-100 hover:border-red-100"
-                    >
-                      Remover
-                    </button>
-                  </div>
-
-                  <div className="space-y-3 pt-4 border-t border-gray-100 relative z-10">
-                    <div className="flex justify-between text-xs font-bold uppercase tracking-widest text-gray-400">
-                      <span>Preço Original:</span>
-                      <span className="line-through text-gray-300">
-                        ${selectionFeeAmount.toFixed(2)}
-                      </span>
-                    </div>
-                    <div className="flex justify-between text-xs font-bold uppercase tracking-widest text-gray-400">
-                      <span>Desconto:</span>
-                      <span className="text-emerald-500">
-                        -${promotionalCouponValidation.discountAmount?.toFixed(2)}
-                      </span>
-                    </div>
-                    <div className="flex justify-between text-xl font-black uppercase tracking-tight pt-3 text-gray-900">
-                      <span>Total Final:</span>
-                      <span className="text-emerald-500">
-                        ${promotionalCouponValidation.finalAmount?.toFixed(2)}
-                      </span>
-                    </div>
-                  </div>
-                </div>
-              ) : (
-                // Input para validar cupom
-                <div className="space-y-4">
-                  <div className="flex gap-3">
-                    <div className="relative flex-1 group/input">
-                      <input
-                        ref={promotionalCouponInputRef}
-                        type="text"
-                        value={promotionalCoupon}
-                        onChange={(e) => {
-                          const newValue = e.target.value.toUpperCase();
-                          const cursorPosition = e.target.selectionStart;
-                          setPromotionalCoupon(newValue);
-                          requestAnimationFrame(() => {
-                            if (promotionalCouponInputRef.current) {
-                              promotionalCouponInputRef.current.setSelectionRange(cursorPosition, cursorPosition);
-                              promotionalCouponInputRef.current.focus();
-                            }
-                          });
-                        }}
-                        placeholder="CÓDIGO PROMOCIONAL"
-                        className="w-full px-5 py-3.5 bg-gray-50 border border-gray-200 rounded-xl focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500/50 transition-all text-center font-black text-gray-900 text-lg tracking-[0.2em] placeholder:text-gray-300"
-                        maxLength={20}
-                        autoComplete="off"
-                      />
-                      <div className="absolute inset-x-0 bottom-0 h-[2px] bg-gradient-to-r from-transparent via-blue-500/50 to-transparent scale-x-0 group-focus-within/input:scale-x-100 transition-transform duration-500" />
-                    </div>
-                    <button
-                      onClick={validatePromotionalCoupon}
-                      disabled={isValidatingPromotionalCoupon || !promotionalCoupon.trim()}
-                      className={`px-8 py-3.5 rounded-xl font-black uppercase tracking-widest text-sm transition-all shadow-xl active:scale-95 ${
-                        isValidatingPromotionalCoupon || !promotionalCoupon.trim()
-                          ? 'bg-gray-100 text-gray-400 border border-gray-200 cursor-not-allowed'
-                          : 'bg-blue-600 text-white hover:bg-blue-700 border border-blue-500/50 shadow-[0_0_20px_rgba(37,99,235,0.2)]'
-                      }`}
-                    >
-                      {isValidatingPromotionalCoupon ? (
-                        <div className="flex items-center justify-center space-x-2">
-                          <Loader2 className="w-5 h-5 animate-spin" />
-                          <span>Validando...</span>
-                        </div>
-                      ) : (
-                        'Validar'
-                      )}
-                    </button>
-                  </div>
-                  
-                  {promotionalCouponValidation && !promotionalCouponValidation.isValid && (
-                    <div className="bg-red-500/10 border border-red-500/20 rounded-xl p-4 flex items-center space-x-3 backdrop-blur-md">
-                      <AlertCircle className="w-5 h-5 text-red-500 flex-shrink-0" />
-                      <span className="text-sm text-red-400 font-medium">{promotionalCouponValidation.message}</span>
-                    </div>
-                  )}
-                </div>
-              )}
-            </div>
-          </div>
 
 
           {/* Terms acceptance section */}
           <div className="mb-8">
-            <div className="flex items-start space-x-4 p-5 bg-gray-50 border border-gray-100 rounded-[1.5rem] group/terms hover:bg-gray-100/50 transition-colors duration-300 shadow-sm">
-              <label htmlFor="termsAccepted" className={`checkbox-container ${hasAcceptedTermsInDB ? 'cursor-not-allowed opacity-75' : 'cursor-pointer'} flex-shrink-0 mt-0.5`}>
+            <div className="flex items-center space-x-3 p-3 bg-gray-50 border border-gray-100 rounded-lg group/terms hover:bg-gray-100/50 transition-colors duration-300 shadow-sm">
+              <label htmlFor="termsAccepted" className={`checkbox-container ${hasAcceptedTermsInDB ? 'cursor-not-allowed opacity-75' : 'cursor-pointer'} flex-shrink-0`}>
                 <input
                   id="termsAccepted"
                   name="termsAccepted"
@@ -1752,6 +1806,7 @@ export const SelectionFeeStep: React.FC<StepProps> = ({ onNext }) => {
                 <div className="checkmark border-gray-300" />
               </label>
               <label htmlFor="termsAccepted" className={`text-xs sm:text-sm text-gray-600 leading-relaxed flex-1 ${hasAcceptedTermsInDB ? 'cursor-default' : 'cursor-pointer'} group-hover/terms:text-gray-900 transition-colors`}>
+                <span className="text-red-500 font-bold mr-1">*</span>
                 {t('preCheckoutModal.acceptContractTerms') || 'Eu aceito os termos e condições do contrato de prestação de serviços.'}
               </label>
             </div>
@@ -1884,11 +1939,26 @@ export const SelectionFeeStep: React.FC<StepProps> = ({ onNext }) => {
                       
                       <div className="flex-1 min-w-0">
                         <div className="flex items-center justify-between">
-                          <div className="flex items-center gap-3">
-                            <h4 className="text-lg font-black text-gray-900 uppercase tracking-tight">
-                              {method.name}
-                            </h4>
-                          </div>
+                          <div className="flex flex-col">
+                              <h4 className="text-lg font-black text-gray-900 uppercase tracking-tight">
+                                {method.name}
+                              </h4>
+                              {method.id === 'stripe' && (
+                                <span className="text-[10px] font-bold text-gray-400 mt-1 uppercase tracking-wide leading-tight">* Inclui taxas de processamento</span>
+                              )}
+                              {method.id === 'pix' && (
+                                <span className="text-[10px] font-bold text-gray-400 mt-1 uppercase tracking-wide leading-tight">* Inclui taxas de processamento</span>
+                              )}
+                              {method.id === 'parcelow' && (
+                                <span className="text-[10px] font-bold text-gray-400 mt-1 uppercase tracking-wide leading-tight max-w-[200px] sm:max-w-none">* Taxas de operadora e processamento da plataforma serão aplicadas</span>
+                              )}
+                              {method.id === 'zelle' && (
+                                <span className="text-[10px] font-bold text-amber-500 mt-1 uppercase tracking-wide leading-tight flex items-center gap-1">
+                                  <AlertCircle className="w-3 h-3 flex-shrink-0" />
+                                  Processamento pode levar até 48 horas
+                                </span>
+                              )}
+                            </div>
 
                           <div className="flex items-center gap-3">
                             {method.id === 'stripe' && cardAmountWithFees > 0 && (
@@ -1927,9 +1997,7 @@ export const SelectionFeeStep: React.FC<StepProps> = ({ onNext }) => {
                             )}
                           </div>
                         </div>
-                        <p className="text-xs text-gray-500 font-bold uppercase tracking-widest mt-1.5 opacity-80 group-hover/method:opacity-100 transition-opacity">
-                          {method.description}
-                        </p>
+
                         
                         {isDisabled && !!isBlocked && !!pendingPayment && method.id !== 'zelle' && (
                           <div className="mt-3 flex items-center space-x-2 bg-amber-50 border border-amber-100 w-fit px-2 py-1 rounded-lg">
@@ -1955,13 +2023,13 @@ export const SelectionFeeStep: React.FC<StepProps> = ({ onNext }) => {
           <Dialog open={showTermsModal} onClose={() => setShowTermsModal(false)} className="relative z-[10021]">
             <div className="fixed inset-0 bg-black/60 backdrop-blur-sm z-[10020]" aria-hidden="true" />
             <div className="fixed inset-0 flex items-center justify-center p-2 sm:p-4 z-[10020]">
-              <Dialog.Panel className="w-full max-w-4xl bg-white/90 backdrop-blur-xl rounded-[2.5rem] shadow-[0_32px_64px_-16px_rgba(0,0,0,0.3)] overflow-hidden relative border border-white/20 max-h-[90dvh] flex flex-col">
+              <Dialog.Panel className="w-full max-w-4xl bg-white/90 backdrop-blur-xl rounded-[2.5rem] shadow-[0_32px_64px_-16px_rgba(0,0,0,0.3)] overflow-hidden relative max-h-[90dvh] flex flex-col">
                 <div className="relative bg-gradient-to-br from-blue-600/90 via-blue-700/90 to-indigo-800/90 text-white p-6 sm:p-8 flex-shrink-0 border-b border-white/10">
                   <div className="absolute top-0 right-0 w-64 h-64 bg-white/10 rounded-full blur-[80px] -mr-32 -mt-32 pointer-events-none" />
                   
                   <button
                     onClick={() => setShowTermsModal(false)}
-                    className="absolute top-4 right-4 p-2.5 hover:bg-white/20 rounded-2xl transition-all duration-300 group/close"
+                    className="absolute top-4 right-4 p-2.5 hover:bg-white/20 rounded-2xl transition-all duration-300 group/close z-50"
                     title={t('preCheckoutModal.closeTerms') || 'Close'}
                   >
                     <X className="w-6 h-6 group-hover/close:rotate-90 transition-transform duration-500" />
@@ -1980,119 +2048,142 @@ export const SelectionFeeStep: React.FC<StepProps> = ({ onNext }) => {
                   </div>
                 </div>
 
-                <div className="flex-1 overflow-y-auto p-6 sm:p-10 scrollbar-thin scrollbar-thumb-gray-200 scrollbar-track-transparent">
-                  {loadingTerms ? (
-                    <div className="flex flex-col items-center justify-center py-20">
-                      <div className="w-16 h-16 border-4 border-blue-500/20 border-t-blue-600 rounded-full animate-spin mb-4"></div>
-                      <p className="text-gray-400 font-bold uppercase tracking-widest text-xs">{t('preCheckoutModal.loading')}</p>
-                    </div>
-                  ) : activeTerm ? (
-                    <>
-                      <div 
-                        ref={termsContentRef}
-                        onScroll={handleTermsScroll}
-                        className="prose prose-blue max-w-none prose-headings:font-black prose-headings:uppercase prose-headings:tracking-tight prose-p:text-gray-600 prose-p:leading-relaxed prose-strong:text-gray-900"
-                        dangerouslySetInnerHTML={{ __html: activeTerm?.content || '' }}
-                      />
-                      
-                      {!hasScrolledToBottom && checkIfContentNeedsScroll() && (
-                        <div className="sticky bottom-0 left-0 right-0 flex items-center justify-center p-4 mt-8 bg-gradient-to-t from-white via-white/95 to-transparent z-10">
-                          <div className="flex items-center gap-3 bg-amber-50 border border-amber-200 px-6 py-3 rounded-2xl shadow-sm animate-bounce">
-                            <Scroll className="h-5 w-5 text-amber-600" />
-                            <span className="text-amber-800 text-sm font-black uppercase tracking-tight">
-                              {t('preCheckoutModal.scrollToBottomFirst')}
-                            </span>
-                          </div>
-                        </div>
-                      )}
+                {/* PAGE 1: Terms Content */}
+                {termsModalPage === 'terms' && (
+                  <div
+                    ref={termsContentRef}
+                    onScroll={handleTermsScroll}
+                    className="flex-1 overflow-y-auto p-6 sm:p-10 scrollbar-thin scrollbar-thumb-gray-200 scrollbar-track-transparent"
+                  >
+                    {loadingTerms ? (
+                      <div className="flex flex-col items-center justify-center py-20">
+                        <div className="w-16 h-16 border-4 border-blue-500/20 border-t-blue-600 rounded-full animate-spin mb-4"></div>
+                        <p className="text-gray-400 font-bold uppercase tracking-widest text-xs">{t('preCheckoutModal.loading')}</p>
+                      </div>
+                    ) : activeTerm ? (
+                      <>
+                        <div 
+                          className="prose prose-blue max-w-none prose-headings:font-black prose-headings:uppercase prose-headings:tracking-tight prose-p:text-gray-600 prose-p:leading-relaxed prose-strong:text-gray-900"
+                          dangerouslySetInnerHTML={{ __html: activeTerm?.content || '' }}
+                        />
+                        
 
-                      {/* Identity Photo Upload Section for Desktop */}
-                      {hasScrolledToBottom && (
-                        <div className="mt-8 border-t border-gray-100 pt-8">
-                          <div className="text-center mb-6">
-                            <h4 className="text-xl font-black text-gray-900 mb-2 uppercase tracking-tight">
-                              Verificação de Identidade
-                            </h4>
-                            <p className="text-gray-600 font-medium">
-                              Para finalizar a aceitação dos termos, precisamos verificar sua identidade.
-                              <br/>
-                              Por favor, envie uma selfie segurando seu documento de identidade.
-                            </p>
-                          </div>
-                          
-                          <div className="max-w-md mx-auto bg-gray-50 rounded-2xl p-6 border border-gray-100">
-                            <IdentityPhotoUpload
-                              initialPhotoPath={identityPhotoPath || undefined}
-                              onUploadSuccess={async (filePath, fileName) => {
-                                setIdentityPhotoPath(filePath);
-                                setIdentityPhotoName(fileName);
-                                
-                                // Log da ação
-                                if (logAction && userProfile?.id && user?.id) {
-                                  try {
-                                    await logAction(
-                                      'identity_photo_upload',
-                                      `Identity photo uploaded by student during terms acceptance (desktop)`,
-                                      user.id,
-                                      'student',
-                                      {
-                                        student_id: userProfile.id,
-                                        file_path: filePath,
-                                        file_name: fileName,
-                                        uploaded_at: new Date().toISOString(),
-                                        term_id: activeTerm.id
-                                      }
-                                    );
-                                  } catch (logError) {
-                                    console.error('⚠️ [SelectionFeeStep] Erro ao logar upload de foto:', logError);
-                                  }
-                                }
-                              }}
-                              onUploadError={(error) => {
-                                console.error('Erro ao fazer upload:', error);
-                              }}
-                              onRemove={() => {
-                                setIdentityPhotoPath(null);
-                                setIdentityPhotoName(null);
-                              }}
-                            />
-                          </div>
+                      </>
+                    ) : (
+                      <div className="flex flex-col items-center justify-center py-20 text-gray-400">
+                        <AlertCircle className="w-12 h-12 mb-4 opacity-20" />
+                        <p className="font-bold uppercase tracking-widest text-xs">{t('preCheckoutModal.noTermsFound')}</p>
+                      </div>
+                    )}
+                  </div>
+                )}
+
+                {/* PAGE 2: Selfie Upload */}
+                {termsModalPage === 'selfie' && (
+                  <div className="flex-1 overflow-y-auto p-6 sm:p-10">
+                    <div className="max-w-3xl mx-auto">
+                      <div className="text-center mb-8">
+                        <div className="w-16 h-16 bg-blue-100 rounded-2xl flex items-center justify-center mx-auto mb-4">
+                          <Shield className="w-8 h-8 text-blue-600" />
                         </div>
-                      )}
-                    </>
-                  ) : (
-                    <div className="flex flex-col items-center justify-center py-20 text-gray-400">
-                      <AlertCircle className="w-12 h-12 mb-4 opacity-20" />
-                      <p className="font-bold uppercase tracking-widest text-xs">{t('preCheckoutModal.noTermsFound')}</p>
+                        <h4 className="text-2xl font-black text-gray-900 mb-2 uppercase tracking-tight">
+                          Verificação de Identidade
+                        </h4>
+                        <p className="text-gray-600 font-medium">
+                          Para finalizar a aceitação dos termos, precisamos verificar sua identidade.
+                          <br />
+                          Por favor, envie uma selfie segurando seu documento de identidade.
+                        </p>
+                      </div>
+
+                      <div className="bg-gray-50 rounded-2xl p-8 border border-gray-100">
+                        <IdentityPhotoUpload
+                          initialPhotoPath={identityPhotoPath || undefined}
+                          onUploadSuccess={async (filePath, fileName) => {
+                            setIdentityPhotoPath(filePath);
+                            setIdentityPhotoName(fileName);
+                            if (logAction && userProfile?.id && user?.id) {
+                              try {
+                                await logAction(
+                                  'identity_photo_upload',
+                                  `Identity photo uploaded by student during terms acceptance (desktop)`,
+                                  user.id,
+                                  'student',
+                                  {
+                                    student_id: userProfile.id,
+                                    file_path: filePath,
+                                    file_name: fileName,
+                                    uploaded_at: new Date().toISOString(),
+                                    term_id: activeTerm?.id
+                                  }
+                                );
+                              } catch (logError) {
+                                console.error('⚠️ [SelectionFeeStep] Erro ao logar upload de foto:', logError);
+                              }
+                            }
+                          }}
+                          onUploadError={(error) => {
+                            console.error('Erro ao fazer upload:', error);
+                          }}
+                          onRemove={() => {
+                            setIdentityPhotoPath(null);
+                            setIdentityPhotoName(null);
+                          }}
+                        />
+                      </div>
                     </div>
-                  )}
-                </div>
+                  </div>
+                )}
 
                 <div className="border-t border-gray-100 bg-gray-50/80 backdrop-blur-md p-6 sm:p-8 flex-shrink-0">
                   <div className="flex flex-col sm:flex-row gap-4 max-w-2xl mx-auto">
-                    <button
-                      onClick={() => setShowTermsModal(false)}
-                      className="px-8 py-4 bg-gray-200/50 text-gray-600 rounded-2xl font-black uppercase tracking-widest text-sm hover:bg-gray-200 transition-all active:scale-95"
-                    >
-                      {t('preCheckoutModal.closeTerms') || 'Fechar'}
-                    </button>
-                    <button
-                      onClick={handleTermsAccept}
-                      disabled={!hasScrolledToBottom || !identityPhotoPath}
-                      className={`flex-1 px-10 py-4 rounded-2xl font-black uppercase tracking-widest text-sm transition-all shadow-xl active:scale-95 ${
-                        hasScrolledToBottom && identityPhotoPath
-                          ? 'bg-blue-600 text-white hover:bg-blue-500 shadow-blue-500/25 hover:shadow-blue-500/40'
-                          : 'bg-gray-200 text-gray-400 cursor-not-allowed border border-gray-100'
-                      }`}
-                    >
-                      {hasScrolledToBottom 
-                        ? t('preCheckoutModal.acceptTerms')
-                        : (checkIfContentNeedsScroll() 
-                            ? t('preCheckoutModal.scrollToBottomFirst') 
-                            : t('preCheckoutModal.readingTerms')
-                          )
-                      }
-                    </button>
+                    {termsModalPage === 'terms' ? (
+                      <>
+                        <button
+                          onClick={() => setShowTermsModal(false)}
+                          className="px-8 py-4 bg-gray-200/50 text-gray-600 rounded-2xl font-black uppercase tracking-widest text-sm hover:bg-gray-200 transition-all active:scale-95"
+                        >
+                          {t('preCheckoutModal.closeTerms') || 'Fechar'}
+                        </button>
+                        <button
+                          onClick={() => setTermsModalPage('selfie')}
+                          disabled={!hasScrolledToBottom}
+                          className={`flex-1 px-10 py-4 rounded-2xl font-black uppercase tracking-widest text-sm transition-all shadow-xl active:scale-95 ${
+                            hasScrolledToBottom
+                              ? 'bg-blue-600 text-white hover:bg-blue-500 shadow-blue-500/25 hover:shadow-blue-500/40'
+                              : 'bg-gray-200 text-gray-400 cursor-not-allowed border border-gray-100'
+                          }`}
+                        >
+                          {hasScrolledToBottom
+                            ? 'Confirmar Leitura →'
+                            : (checkIfContentNeedsScroll()
+                                ? t('preCheckoutModal.scrollToBottomFirst')
+                                : t('preCheckoutModal.readingTerms')
+                              )
+                          }
+                        </button>
+                      </>
+                    ) : (
+                      <>
+                        <button
+                          onClick={() => setTermsModalPage('terms')}
+                          className="px-8 py-4 bg-gray-200/50 text-gray-600 rounded-2xl font-black uppercase tracking-widest text-sm hover:bg-gray-200 transition-all active:scale-95"
+                        >
+                          ← Voltar
+                        </button>
+                        <button
+                          onClick={handleTermsAccept}
+                          disabled={!identityPhotoPath}
+                          className={`flex-1 px-10 py-4 rounded-2xl font-black uppercase tracking-widest text-sm transition-all shadow-xl active:scale-95 ${
+                            identityPhotoPath
+                              ? 'bg-blue-600 text-white hover:bg-blue-500 shadow-blue-500/25 hover:shadow-blue-500/40'
+                              : 'bg-gray-200 text-gray-400 cursor-not-allowed border border-gray-100'
+                          }`}
+                        >
+                          {t('preCheckoutModal.acceptTerms') || 'Aceitar e Confirmar'}
+                        </button>
+                      </>
+                    )}
                   </div>
                 </div>
               </Dialog.Panel>

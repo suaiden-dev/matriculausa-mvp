@@ -9,7 +9,6 @@ import {
   AlertCircle, 
   RefreshCw,
   Building,
-  ArrowRight,
   Shield,
   GraduationCap
 } from 'lucide-react';
@@ -269,7 +268,7 @@ export const ScholarshipFeeStep: React.FC<StepProps> = ({ onNext, onBack }) => {
             scholarshipsIds={[zelleScholarshipId]}
             onSuccess={() => {
               setShowZelleCheckout(false);
-              handleRefresh();
+              onNext();
             }}
             metadata={{
               application_id: applications.find(a => a.scholarship_id === zelleScholarshipId)?.id,
@@ -295,7 +294,7 @@ export const ScholarshipFeeStep: React.FC<StepProps> = ({ onNext, onBack }) => {
           <p className="text-lg md:text-xl text-white/60 font-medium max-w-2xl">
             {allPaid 
               ? 'Pagamento da bolsa confirmado! Você está pronto para avançar.' 
-              : 'Realize o pagamento da taxa da bolsa para garantir sua vaga e iniciar o processo de matrícula.'}
+              : 'Esta taxa é o compromisso final com a bolsa ou faculdade selecionada.'}
           </p>
         </div>
         
@@ -311,11 +310,30 @@ export const ScholarshipFeeStep: React.FC<StepProps> = ({ onNext, onBack }) => {
         )}
       </div>
 
-      <div className={`bg-white rounded-[2.5rem] p-6 md:p-10 shadow-2xl border relative overflow-hidden ${
-        allPaid 
-          ? 'border-emerald-500/30 ring-1 ring-emerald-500/20' 
-          : 'border-gray-100'
-      }`}>
+      {allPaid && !loading && applications.length > 0 && (
+        <div className="space-y-10 pb-12 max-w-4xl mx-auto px-4">
+          <div className="bg-white border border-emerald-500/30 ring-1 ring-emerald-500/20 rounded-[2.5rem] p-6 md:p-10 shadow-2xl relative overflow-hidden">
+            <div className="absolute top-0 right-0 w-64 h-64 bg-blue-500/5 rounded-full blur-[80px] -mr-32 -mt-32 pointer-events-none" />
+            
+            <div className="relative z-10 text-center py-6">
+              <div className="w-20 h-20 bg-emerald-500/20 rounded-full flex items-center justify-center mx-auto mb-6 border border-emerald-500/30">
+                <CheckCircle className="w-12 h-12 text-emerald-400" />
+              </div>
+              <h3 className="text-3xl font-black text-gray-900 mb-3 uppercase tracking-tight">Etapa Concluída</h3>
+              <p className="text-gray-500 mb-8 font-medium">Sua taxa de bolsa foi processada com sucesso. Esta etapa está completa.</p>
+              <button
+                onClick={onNext}
+                className="w-full max-w-xs bg-blue-600 text-white py-4 px-8 rounded-xl hover:bg-blue-700 transition-all font-bold uppercase tracking-widest shadow-lg shadow-blue-500/20 hover:scale-105 active:scale-95 mx-auto"
+              >
+                Continuar
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {!allPaid && (
+        <div className={`bg-white rounded-[2.5rem] p-6 md:p-10 shadow-2xl border relative overflow-hidden border-gray-100`}>
         <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 items-start relative z-10">
           <div className="lg:col-span-8 space-y-6">
             {applications.map((app) => {
@@ -388,7 +406,10 @@ export const ScholarshipFeeStep: React.FC<StepProps> = ({ onNext, onBack }) => {
                             <div className="w-14 h-14 flex items-center justify-center bg-blue-50/50 rounded-2xl group-hover/btn:bg-blue-50 transition-colors">
                               <StripeIcon className="w-9 h-9" />
                             </div>
-                            <div className="font-black text-gray-900 text-base uppercase tracking-tight">Cartão de Crédito</div>
+                            <div>
+                              <div className="font-black text-gray-900 text-base uppercase tracking-tight">Cartão de Crédito</div>
+                              <div className="text-[10px] font-bold text-gray-400 mt-1 uppercase tracking-wide leading-tight">* Inclui taxas de processamento</div>
+                            </div>
                           </div>
                           <div className="flex items-center gap-5">
                             <div className="text-right">
@@ -415,7 +436,10 @@ export const ScholarshipFeeStep: React.FC<StepProps> = ({ onNext, onBack }) => {
                             <div className="w-14 h-14 flex items-center justify-center bg-emerald-50/50 rounded-2xl group-hover/btn:bg-emerald-50 transition-colors">
                               <PixIcon className="w-9 h-9" />
                             </div>
-                            <div className="font-black text-gray-900 text-base uppercase tracking-tight">PIX</div>
+                            <div>
+                              <div className="font-black text-gray-900 text-base uppercase tracking-tight">PIX</div>
+                              <div className="text-[10px] font-bold text-gray-400 mt-1 uppercase tracking-wide leading-tight">* Inclui taxas de processamento</div>
+                            </div>
                           </div>
                           <div className="flex items-center gap-5">
                             <div className="text-right">
@@ -442,7 +466,10 @@ export const ScholarshipFeeStep: React.FC<StepProps> = ({ onNext, onBack }) => {
                             <div className="w-14 h-14 flex items-center justify-center bg-orange-50/50 rounded-2xl group-hover/btn:bg-orange-50 transition-colors px-2">
                               <ParcelowIcon className="w-full h-10" />
                             </div>
-                            <div className="font-black text-gray-900 text-base uppercase tracking-tight">Parcelow</div>
+                            <div>
+                              <div className="font-black text-gray-900 text-base uppercase tracking-tight">Parcelow</div>
+                              <div className="text-[10px] font-bold text-gray-400 mt-1 uppercase tracking-wide leading-tight max-w-[220px]">* Taxas de operadora e processamento da plataforma serão aplicadas</div>
+                            </div>
                           </div>
                           <div className="flex items-center gap-5">
                             <div className="text-right flex flex-col items-end">
@@ -470,7 +497,13 @@ export const ScholarshipFeeStep: React.FC<StepProps> = ({ onNext, onBack }) => {
                             <div className="w-14 h-14 flex items-center justify-center bg-purple-50/50 rounded-2xl group-hover/btn:bg-purple-50 transition-colors">
                               <ZelleIcon className="w-9 h-9" />
                             </div>
-                            <div className="font-black text-gray-900 text-base uppercase tracking-tight">Zelle</div>
+                            <div>
+                              <div className="font-black text-gray-900 text-base uppercase tracking-tight">Zelle</div>
+                              <div className="text-[10px] font-bold text-amber-500 mt-1 uppercase tracking-wide leading-tight flex items-center gap-1">
+                                <AlertCircle className="w-3 h-3" />
+                                Processamento pode levar até 48 horas
+                              </div>
+                            </div>
                           </div>
                           <div className="flex items-center gap-5">
                             <div className="text-right">
@@ -519,50 +552,29 @@ export const ScholarshipFeeStep: React.FC<StepProps> = ({ onNext, onBack }) => {
           </div>
 
           <div className="lg:col-span-4 space-y-6 lg:sticky lg:top-8">
-            <div className="bg-gradient-to-br from-blue-600 to-blue-700 rounded-[3rem] p-10 shadow-2xl shadow-blue-500/30 relative overflow-hidden group border border-white/10">
-              <div className="absolute top-0 right-0 w-64 h-64 bg-white/10 rounded-full blur-[100px] -mr-32 -mt-32 pointer-events-none group-hover:scale-150 transition-transform duration-1000" />
-              <div className="absolute bottom-0 left-0 w-32 h-32 bg-black/10 rounded-full blur-[60px] -ml-16 -mb-16 pointer-events-none" />
+
+
+            <div className="bg-gradient-to-br from-gray-900 to-black border border-white/10 rounded-[2.5rem] p-8 space-y-6 shadow-2xl relative overflow-hidden">
+              <div className="absolute top-0 right-0 w-32 h-32 bg-white/5 rounded-full blur-2xl -mr-16 -mt-16 pointer-events-none" />
               
-              <div className="relative z-10 space-y-10">
-
-
-                <div className="space-y-4 pt-4">
-                  <button
-                    onClick={onNext}
-                    disabled={!allPaid}
-                    className={`w-full py-6 rounded-3xl font-black uppercase tracking-[0.3em] text-xs transition-all flex items-center justify-center gap-3 group/btn relative overflow-hidden ${
-                      allPaid 
-                        ? 'bg-white text-blue-700 hover:scale-[1.02] active:scale-95 shadow-2xl hover:shadow-white/20' 
-                        : 'bg-white/10 text-white/30 cursor-not-allowed border border-white/5'
-                    }`}
-                  >
-                    <span className="relative z-10 text-center leading-tight">
-                      Concluir &<br />Continuar
-                    </span>
-                    <ArrowRight className={`w-4 h-4 relative z-10 transition-transform duration-500 ${allPaid ? 'group-hover/btn:translate-x-1' : ''}`} />
-                  </button>
-                </div>
-              </div>
-            </div>
-
-            <div className="bg-gray-50 border border-gray-200 rounded-[2.5rem] p-8 space-y-6 shadow-sm">
-               <div className="flex items-start space-x-4">
-                <div className="w-10 h-10 bg-blue-100 rounded-2xl flex items-center justify-center border border-blue-200 flex-shrink-0">
-                  <Clock className="w-5 h-5 text-blue-600" />
+               <div className="flex items-start space-x-4 relative z-10">
+                <div className="w-10 h-10 bg-white/10 rounded-2xl flex items-center justify-center border border-white/10 flex-shrink-0">
+                  <Clock className="w-5 h-5 text-blue-400" />
                 </div>
                 <div>
-                  <h4 className="text-gray-900 text-xs font-black uppercase tracking-widest mb-1">Processamento</h4>
-                  <p className="text-[10px] text-gray-500 leading-relaxed font-bold uppercase tracking-tight">
+                  <h4 className="text-white text-xs font-black uppercase tracking-widest mb-1">Processamento</h4>
+                  <p className="text-[10px] text-white/50 leading-relaxed font-bold uppercase tracking-tight">
                     Cartão e PIX são processados imediatamente.
                   </p>
                 </div>
               </div>
             </div>
-            
+
           </div>
         </div>
-      </div>
-      
+        </div> // Fim da div bg-white
+      )}
+
       <Dialog
         open={showCpfModal}
         onClose={() => setShowCpfModal(false)}

@@ -64,14 +64,14 @@
       },
       "conversion": {
         "title": "Pronto para começar seu processo?",
-        "description": "Clique no botão abaixo para iniciar sua jornada rumo aos Estados Unidos com todo o suporte necessário.",
+        "description": "Clique no botão abaixo para iniciar seu processo rumo aos Estados Unidos com todo o suporte necessário.",
         "buttonText": "Começar Agora",
         "redirectAuthenticated": "Você será direcionado para a área do estudante para realizar o pagamento do processo seletivo.",
         "redirectAnonymous": "Você será direcionado para criar sua conta. É rápido e gratuito!",
         "referralBadge": "Código de Vendedor Aplicado",
         "afterSteps": {
           "title": "Pronto para dar o primeiro passo?",
-          "description": "Agora que você conhece as etapas, inicie sua jornada hoje mesmo.",
+          "description": "Agora que você conhece as etapas, inicie seu processo hoje mesmo.",
           "buttonText": "Iniciar Processo"
         },
         "afterFunds": {
@@ -307,19 +307,19 @@
   },
   "paymentBlocker": {
     "scholarships": {
-      "title": "Bolsas de Estudo Bloqueadas",
-      "description": "Para acessar nossa coleção exclusiva de bolsas de estudo, você precisa completar o processo de seleção inicial. Esta é a primeira etapa da sua jornada para estudar nos Estados Unidos."
+       "title": "Bolsas de Estudo Bloqueadas",
+       "description": "Para acessar nossa coleção exclusiva de bolsas de estudo, você precisa completar o processo de seleção inicial. Esta é a primeira etapa do seu processo para estudar nos Estados Unidos."
     },
     "universities": {
       "title": "Universidades Bloqueadas",
-      "description": "Para explorar nossas universidades parceiras e seus programas, você precisa completar o processo de seleção inicial. Esta é a primeira etapa da sua jornada para estudar nos Estados Unidos."
+      "description": "Para explorar nossas universidades parceiras e seus programas, você precisa completar o processo de seleção inicial. Esta é a primeira etapa do seu processo para estudar nos Estados Unidos."
     },
     "default": {
       "title": "Conteúdo Bloqueado",
-      "description": "Para acessar este conteúdo, você precisa completar o processo de seleção inicial. Esta é a primeira etapa da sua jornada para estudar nos Estados Unidos."
+      "description": "Para acessar este conteúdo, você precisa completar o processo de seleção inicial. Esta é a primeira etapa do seu processo para estudar nos Estados Unidos."
     },
     "selectionProcessFee": "Taxa do Processo Seletivo",
-    "completeApplicationJourney": "Complete sua jornada de candidatura",
+    "completeApplicationJourney": "Complete seu processo de candidatura",
     "goToDashboardAndPayFee": "Ir ao Painel e Pagar Taxa",
     "learnHowItWorks": "Aprender Como Funciona",
     "contentLockedMessage": "Este conteúdo está bloqueado até que o pagamento seja concluído"
@@ -503,8 +503,8 @@
     "hero": {
       "title": "Sua Porta de Entrada para Universidades Americanas",
       "subtitle": "Descubra bolsas de estudo exclusivas e desbloqueie seu potencial nos Estados Unidos",
-      "description": "Conecte-se com universidades de ponta, acesse bolsas exclusivas e receba suporte personalizado durante toda sua jornada para estudar nos EUA.",
-      "cta": "Inicie Sua Jornada",
+      "description": "Conecte-se com universidades de ponta, acesse bolsas exclusivas e receba suporte personalizado durante todo seu processo para estudar nos EUA.",
+      "cta": "Inicie Seu Processo",
       "watchVideo": "Assistir Vídeo"
     },
     "featuredUniversities": {
@@ -515,7 +515,7 @@
     },
     "features": {
       "title": "Por Que Escolher MatriculaUSA?",
-      "subtitle": "Tudo que você precisa para ter sucesso na sua jornada educacional americana",
+      "subtitle": "Tudo que você precisa para ter sucesso no seu processo educacional americano",
       "smartMatching": {
         "title": "Correspondência Inteligente",
         "description": "Sistema alimentado por IA encontra as melhores universidades e bolsas para seu perfil"
@@ -636,7 +636,7 @@
     "cta": {
       "title": "Pronto para Começar Seu Sonho Americano?",
       "subtitle": "Junte-se a milhares de estudantes internacionais que encontraram seu caminho para a educação americana através da plataforma abrangente do MatriculaUSA.",
-      "button": "Comece Sua Jornada Hoje",
+      "button": "Comece Seu Processo Hoje",
       "learnMore": "Saiba Mais",
       "features": {
         "freeToStart": "Gratuito para começar",
@@ -652,7 +652,7 @@
   "howItWorks": {
     "title": "Como Funciona",
     "subtitle": "Seu caminho para uma universidade americana, passo a passo",
-    "journey": "Sua Jornada",
+    "journey": "Seu Processo",
     "stats": {
       "setup": "Configuração em 5 Minutos",
       "success": "95% de Taxa de Sucesso",
@@ -1741,7 +1741,7 @@
     "subtitle": "Gerencie suas candidaturas de bolsa",
     "welcome": "Bem-vindo de volta",
     "progressBar": {
-      "title": "Esta é sua barra de progresso de taxas de candidatura. Complete cada etapa para avançar.",
+      "title": "",
       "allStepsCompleted": "Todos os Passos Completados! 🎉",
       "selectionProcessFee": "Taxa do Processo Seletivo",
       "applicationFee": "Taxa de Matrícula",
@@ -4078,7 +4078,7 @@
   "scholarshipSelection": {
     "confirmationModal": {
       "title": "Confirmar Seleção",
-      "description": "Você selecionou {{count}} bolsas. Esta escolha é definitiva e, após confirmar, você não poderá mais alterar sua seleção para este processo seletivo.",
+      "description": "Ao confirmar, você não poderá mais alterar as bolsas escolhidas. Revise cuidadosamente sua seleção antes de prosseguir.",
       "confirm": "Confirmar e Prosseguir",
       "cancel": "Revisar Novamente"
     }

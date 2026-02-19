@@ -5,6 +5,7 @@ import { usePaymentBlocked } from '../hooks/usePaymentBlocked';
 import { supabase } from '../lib/supabase';
 import { generateUUID } from '../utils/uuid';
 import { config } from '../lib/config';
+import { getN8nProxyUrl } from '../utils/storageProxy';
 
 interface ZelleCheckoutProps {
   feeType: 'selection_process' | 'application_fee' | 'enrollment_fee' | 'scholarship_fee' | 'i20_control_fee';
@@ -32,7 +33,7 @@ export const ZelleCheckout: React.FC<ZelleCheckoutProps> = ({
   metadata = {},
   onProcessingChange
 }) => {
-  const { user, supabaseUser } = useAuth();
+  const { user } = useAuth();
   const { isBlocked, pendingPayment: blockedPendingPayment, rejectedPayment: blockedRejectedPayment, approvedPayment: blockedApprovedPayment, loading: paymentBlockedLoading } = usePaymentBlocked();
   
   // Localhost Test Mode
@@ -931,25 +932,24 @@ export const ZelleCheckout: React.FC<ZelleCheckoutProps> = ({
 
   const sendToN8n = async (comprovanteUrl: string, paymentId: string) => {
     try {
-      const webhookPayload = {
-        tipo_notf: 'Novo pagamento Zelle - Validação Automática',
-        email_aluno: user?.email,
-        nome_aluno: (supabaseUser?.user_metadata as any)?.full_name || user?.name || user?.email || 'Unknown',
-        fee_type: feeType,
-        amount: amount,
-        currency: 'USD',
-        comprovante_url: comprovanteUrl,
-        payment_id: paymentId,
+      // Construir a URL proxied para o n8n conseguir acessar a imagem
+      const proxiedImageUrl = getN8nProxyUrl(comprovanteUrl);
+
+      // Payload no mesmo formato que o ZelleCheckoutPage.tsx usa
+      const webhookPayload: Record<string, any> = {
         user_id: user?.id,
+        image_url: proxiedImageUrl,
+        value: amount.toString(),
+        currency: 'USD',
+        fee_type: feeType,
         timestamp: new Date().toISOString(),
-        scholarships_ids: scholarshipsIds || [],
-        validation_required: true,
-        metadata: {
-          ...metadata,
-          payment_method: 'zelle',
-          comprovante_uploaded_at: new Date().toISOString()
-        }
+        payment_id: paymentId,
       };
+
+      // Adicionar scholarships_ids se aplicável
+      if ((feeType === 'application_fee' || feeType === 'scholarship_fee') && scholarshipsIds && scholarshipsIds.length > 0) {
+        webhookPayload.scholarships_ids = scholarshipsIds;
+      }
 
       console.log('📤 [ZelleCheckout] Enviando para n8n:', webhookPayload);
 
@@ -1028,7 +1028,7 @@ export const ZelleCheckout: React.FC<ZelleCheckoutProps> = ({
         });
       }, 150);
       
-      // Gerar ID único para o pagamento (será usado pelo n8n para criar o registro)
+      // Gerar ID único para o pagamento (enviado ao n8n para referência)
       console.log('💾 [ZelleCheckout] Gerando ID único para o pagamento...');
       const realPaymentId = generateUUID();
       console.log('✅ [ZelleCheckout] ID gerado:', realPaymentId);
@@ -1037,7 +1037,7 @@ export const ZelleCheckout: React.FC<ZelleCheckoutProps> = ({
       // Construir imageUrl igual ao fluxo padrão (URL completa do storage)
       const imageUrl = comprovanteUrl; // comprovanteUrl já é a URL pública completa
       
-      // Enviar para n8n e aguardar resposta (igual ao fluxo padrão)
+      // Enviar para n8n e aguardar resposta (o n8n criará o registro no banco)
       const { n8nResponse } = await sendToN8n(comprovanteUrl, realPaymentId);
       
       clearInterval(sendProgressInterval);
@@ -1144,7 +1144,9 @@ export const ZelleCheckout: React.FC<ZelleCheckoutProps> = ({
             const updateData: any = {
               screenshot_url: imageUrl,
               admin_notes: `n8n response: ${n8nResponse.response}`,
-              updated_at: new Date().toISOString()
+              updated_at: new Date().toISOString(),
+              // ✅ Sempre garantir que fee_type esteja correto (n8n pode criar sem fee_type)
+              fee_type: feeType,
             };
             
             // ✅ APENAS quando a IA aprova, marcar como aprovado

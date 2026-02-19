@@ -6,8 +6,7 @@ export type OnboardingStep =
   | "documents_upload"
   | "payment"
   | "scholarship_fee"
-  | "university_documents"
-  | "completed";
+  | "university_documents";
 
 export interface OnboardingState {
   currentStep: OnboardingStep;

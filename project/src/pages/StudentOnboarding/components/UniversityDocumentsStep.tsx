@@ -32,10 +32,9 @@ import {
   Star,
   Monitor,
   Calendar,
-  X,
   Eye,
   Download,
-  Lock
+  Tag,
 } from 'lucide-react';
 import { useAuth } from '../../../hooks/useAuth';
 import { supabase } from '../../../lib/supabase';
@@ -45,14 +44,52 @@ import { useFeeConfig } from '../../../hooks/useFeeConfig';
 import { useStudentLogs } from '../../../hooks/useStudentLogs';
 import DocumentRequestsCard from '../../../components/DocumentRequestsCard';
 import DocumentViewerModal from '../../../components/DocumentViewerModal';
-import { I20ControlFeeModal } from '../../../components/I20ControlFeeModal';
 import { STRIPE_PRODUCTS } from '../../../stripe-config';
 import { ProfileRequiredModal } from '../../../components/ProfileRequiredModal';
 import { ZelleCheckout } from '../../../components/ZelleCheckout';
 import { ExpandableTabs } from '../../../components/ui/expandable-tabs';
 import { motion, AnimatePresence } from 'framer-motion';
+import { calculateCardAmountWithFees, getExchangeRate, calculatePIXTotalWithIOF } from '../../../utils/stripeFeeCalculator';
 
-export const UniversityDocumentsStep: React.FC<StepProps> = ({ onNext, onBack }) => {
+// Componente SVG para o logo do PIX (oficial)
+const PixIcon = ({ className }: { className?: string }) => (
+  <svg className={className} xmlns="http://www.w3.org/2000/svg" viewBox="0 0 48 48">
+    <path fill="#4db6ac" d="M11.9,12h-0.68l8.04-8.04c2.62-2.61,6.86-2.61,9.48,0L36.78,12H36.1c-1.6,0-3.11,0.62-4.24,1.76l-6.8,6.77c-0.59,0.59-1.53,0.59-2.12,0l-6.8-6.77C15.01,12.62,13.5,12,11.9,12z"/>
+    <path fill="#4db6ac" d="M36.1,36h0.68l-8.04,8.04c-2.62,2.61-6.86,2.61-9.48,0L11.22,36h0.68c1.6,0,3.11-0.62,4.24-1.76l6.8-6.77c0.59-0.59,1.53-0.59,2.12,0l6.8,6.77C32.99,35.38,34.5,36,36.1,36z"/>
+    <path fill="#4db6ac" d="M44.04,28.74L38.78,34H36.1c-1.07,0-2.07-0.42-2.83-1.17l-6.8-6.78c-1.36-1.36-3.58-1.36-4.94,0l-6.8,6.78C13.97,33.58,12.97,34,11.9,34H9.22l-5.26-5.26c-2.61-2.62-2.61-6.86,0-9.48L9.22,14h2.68c1.07,0,2.07,0.42,2.83,1.17l6.8,6.78c0.68,0.68,1.58,1.02,2.47,1.02s1.79-0.34,2.47-1.02l6.8-6.78C34.03,14.42,35.03,14,36.1,14h2.68l5.26,5.26C46.65,21.88,46.65,26.12,44.04,28.74z"/>
+  </svg>
+);
+
+// Componente SVG para o logo do Zelle (oficial)
+const ZelleIcon = ({ className }: { className?: string }) => (
+  <svg className={className} xmlns="http://www.w3.org/2000/svg" viewBox="0 0 48 48">
+    <path fill="#a0f" d="M35,42H13c-3.866,0-7-3.134-7-7V13c0-3.866,3.134-7,7-7h22c3.866,0,7,3.134,7,7v22C42,38.866,38.866,42,35,42z"/>
+    <path fill="#fff" d="M17.5,18.5h14c0.552,0,1-0.448,1-1V15c0-0.552-0.448-1-1-1h-14c-0.552,0-1,0.448-1,1v2.5C16.5,18.052,16.948,18.5,17.5,18.5z"/>
+    <path fill="#fff" d="M17,34.5h14.5c0.552,0,1-0.448,1-1V31c0-0.552-0.448-1-1-1H17c-0.552,0-1,0.448-1,1v2.5C16,34.052,16.448,34.5,17,34.5z"/>
+    <path fill="#fff" d="M22.25,11v6c0,0.276,0.224,0.5,0.5,0.5h3.5c0.276,0,0.5-0.224,0.5-0.5v-6c0-0.276-0.224-0.5-0.5-0.5h-3.5C22.474,10.5,22.25,10.724,22.25,11z"/>
+    <path fill="#fff" d="M22.25,32v6c0,0.276,0.224,0.5,0.5,0.5h3.5c0.276,0,0.5-0.224,0.5-0.5v-6c0-0.276-0.224-0.5-0.5-0.5h-3.5C22.474,31.5,22.25,31.724,22.25,32z"/>
+    <path fill="#fff" d="M16.578,30.938H22l10.294-12.839c0.178-0.222,0.019-0.552-0.266-0.552H26.5L16.275,30.298C16.065,30.553,16.247,30.938,16.578,30.938z"/>
+  </svg>
+);
+
+const StripeIcon = ({ className }: { className?: string }) => (
+  <svg className={className} xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none">
+    <rect x="2" y="4" width="20" height="16" rx="2" fill="#7950F2"/>
+    <path d="M6 8h12M6 12h8M6 16h4" stroke="white" strokeWidth="1.5" strokeLinecap="round"/>
+  </svg>
+);
+
+const ParcelowIcon = ({ className }: { className?: string }) => (
+  <div className={`${className} flex items-center justify-center bg-white rounded-lg overflow-hidden p-0.5 border border-gray-100`}>
+    <img
+      src="/parcelow_share.webp"
+      alt="Parcelow"
+      className="w-full h-full object-contain scale-110"
+    />
+  </div>
+);
+
+export const UniversityDocumentsStep: React.FC<StepProps> = ({ onBack }) => {
   const { t } = useTranslation();
   const navigate = useNavigate();
   const { user, userProfile } = useAuth();
@@ -63,7 +100,6 @@ export const UniversityDocumentsStep: React.FC<StepProps> = ({ onNext, onBack })
   const [applicationDetails, setApplicationDetails] = useState<any>(null);
   const [activeTab, setActiveTab] = useState<'welcome' | 'details' | 'i20' | 'documents' | 'acceptance'>('welcome');
   const [previewUrl, setPreviewUrl] = useState<string | null>(null);
-  const [showI20ControlFeeModal, setShowI20ControlFeeModal] = useState(false);
   const [selectedPaymentMethod, setSelectedPaymentMethod] = useState<'stripe' | 'zelle' | 'pix' | 'parcelow' | null>(null);
   const [i20Loading, setI20Loading] = useState(false);
   const [showProfileRequiredModal, setShowProfileRequiredModal] = useState(false);
@@ -74,6 +110,21 @@ export const UniversityDocumentsStep: React.FC<StepProps> = ({ onNext, onBack })
   const [scholarshipFeeDeadline, setScholarshipFeeDeadline] = useState<Date | null>(null);
   const [i20Countdown, setI20Countdown] = useState<string | null>(null);
   const [i20CountdownValues, setI20CountdownValues] = useState<{ days: number, hours: number, minutes: number, seconds: number } | null>(null);
+  const [exchangeRate, setExchangeRate] = useState<number>(0);
+  const [promotionalCoupon, setPromotionalCoupon] = useState('');
+  const [isValidatingPromotionalCoupon, setIsValidatingPromotionalCoupon] = useState(false);
+  const [promotionalCouponValidation, setPromotionalCouponValidation] = useState<{
+    isValid: boolean;
+    message: string;
+    discountAmount?: number;
+    finalAmount?: number;
+    couponId?: string;
+  } | null>(null);
+  const promotionalCouponInputRef = React.useRef<HTMLInputElement>(null);
+
+  useEffect(() => {
+    getExchangeRate().then(rate => setExchangeRate(rate));
+  }, []);
   useEffect(() => {
     fetchApplicationDetails();
   }, [userProfile?.id]);
@@ -256,16 +307,79 @@ export const UniversityDocumentsStep: React.FC<StepProps> = ({ onNext, onBack })
     }
   };
 
-  const handlePayI20 = () => {
-    setSelectedPaymentMethod(null);
-    setProfileErrorType(null);
-    setShowI20ControlFeeModal(true);
+
+  const validatePromotionalCoupon = async () => {
+    if (!promotionalCoupon.trim()) {
+      setPromotionalCouponValidation({
+        isValid: false,
+        message: 'Por favor, insira um código de cupom'
+      });
+      return;
+    }
+
+    const normalizedCode = promotionalCoupon.trim().toUpperCase();
+    const normalizedFeeType = 'i20_control_fee';
+    const baseAmount = getFeeAmount('i20_control_fee');
+    
+    setIsValidatingPromotionalCoupon(true);
+    setPromotionalCouponValidation(null);
+
+    try {
+      const { data: result, error } = await supabase.rpc('validate_and_apply_admin_promotional_coupon', {
+        p_code: normalizedCode,
+        p_fee_type: normalizedFeeType,
+        p_user_id: user?.id
+      });
+
+      if (error) {
+        console.error('[UniversityDocumentsStep] Erro RPC:', error);
+        throw error;
+      }
+
+      if (!result || !result.valid) {
+        setPromotionalCouponValidation({
+          isValid: false,
+          message: result?.message || 'Código de cupom inválido'
+        });
+        return;
+      }
+
+      // Calculate discount
+      let discountAmount = 0;
+      if (result.discount_type === 'percentage') {
+        discountAmount = (baseAmount * result.discount_value) / 100;
+      } else {
+        discountAmount = result.discount_value;
+      }
+
+      const finalAmount = Math.max(0, baseAmount - discountAmount);
+
+      setPromotionalCouponValidation({
+        isValid: true,
+        message: `Cupom ${normalizedCode} aplicado! Você economizou $${discountAmount.toFixed(2)}`,
+        discountAmount: discountAmount,
+        finalAmount: finalAmount,
+        couponId: result.coupon_id
+      });
+
+      // Salvar no window
+      (window as any).__checkout_promotional_coupon = normalizedCode;
+      (window as any).__checkout_final_amount = finalAmount;
+
+    } catch (err: any) {
+      console.error('Error validating coupon:', err);
+      setPromotionalCouponValidation({
+        isValid: false,
+        message: 'Erro ao validar cupom. Tente novamente.'
+      });
+    } finally {
+      setIsValidatingPromotionalCoupon(false);
+    }
   };
 
   const handlePaymentMethodSelect = async (method: 'stripe' | 'zelle' | 'pix' | 'parcelow', exchangeRateParam?: number) => {
     // Verificar CPF apenas para Parcelow
     if (method === 'parcelow' && !userProfile?.cpf_document) {
-      setShowI20ControlFeeModal(false);
       setProfileErrorType('cpf_missing');
       setShowProfileRequiredModal(true);
       return;
@@ -350,7 +464,6 @@ export const UniversityDocumentsStep: React.FC<StepProps> = ({ onNext, onBack })
 
       } else if (method === 'zelle') {
         setShowZelleCheckout(true);
-        setShowI20ControlFeeModal(false);
         setI20Loading(false);
       }
 
@@ -361,10 +474,6 @@ export const UniversityDocumentsStep: React.FC<StepProps> = ({ onNext, onBack })
     }
   };
 
-  const handleCloseI20Modal = () => {
-    setShowI20ControlFeeModal(false);
-    setSelectedPaymentMethod(null);
-  };
 
   if (loading) {
     return (
@@ -417,7 +526,9 @@ export const UniversityDocumentsStep: React.FC<StepProps> = ({ onNext, onBack })
 
   const hasPaid = (userProfile as any)?.has_paid_i20_control_fee;
 
-  const isAcceptanceUnlocked = hasPaid && allDocsApproved;
+  const isAcceptanceUnlocked = hasPaid && !!applicationDetails.acceptance_letter_url;
+
+
 
   return (
     <div className="space-y-8 pb-24">
@@ -430,25 +541,11 @@ export const UniversityDocumentsStep: React.FC<StepProps> = ({ onNext, onBack })
             </div>
           </div>
           <h2 className="text-4xl md:text-6xl font-black text-white uppercase tracking-tighter leading-none">
-            Portal da <span className="text-blue-400">Candidatura</span>
+            Minha <span className="text-blue-400">Candidatura</span>
           </h2>
 
         </div>
 
-        {/* Global Progress Button */}
-        <button 
-          onClick={onNext}
-          className="group relative flex items-center gap-3 bg-gradient-to-r from-emerald-500 to-teal-500 hover:from-emerald-600 hover:to-teal-600 p-1 pr-6 rounded-2xl shadow-xl shadow-emerald-500/20 transition-all hover:scale-105 active:scale-95"
-        >
-          <div className="w-12 h-12 bg-white/20 rounded-xl flex items-center justify-center backdrop-blur-sm group-hover:rotate-12 transition-transform">
-            <CheckCircle2 className="w-6 h-6 text-white" />
-          </div>
-          <div className="text-left">
-            <p className="text-[10px] font-black text-white/70 uppercase tracking-widest leading-none mb-1">Onboarding</p>
-            <p className="text-sm font-black text-white uppercase tracking-tight">Finalizar Jornada</p>
-          </div>
-          <ChevronRight className="w-4 h-4 text-white/50 group-hover:translate-x-1 transition-transform" />
-        </button>
       </div>
 
       {/* Tabs Navigation */}
@@ -496,7 +593,7 @@ export const UniversityDocumentsStep: React.FC<StepProps> = ({ onNext, onBack })
 
                       <div className="space-y-14">
                         <p className="text-gray-600 leading-relaxed text-lg">
-                          Falta muito pouco para tudo ficar pronto! Nesta etapa final você pode rever os detalhes da universidade que escolheu, enviar a documentação obrigatória e realizar o pagamento da taxa da I-20. Assim que tudo estiver certo, sua Carta de Aceite estará liberada aqui mesmo para você baixar.
+                          Falta muito pouco para tudo ficar pronto! Nesta etapa final você pode rever os detalhes da universidade que escolheu, enviar a documentação obrigatória e realizar o pagamento da Taxa de Controle I-20. Assim que tudo estiver certo, sua Carta de Aceite estará liberada aqui mesmo para você baixar.
                         </p>
 
                         <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
@@ -531,8 +628,8 @@ export const UniversityDocumentsStep: React.FC<StepProps> = ({ onNext, onBack })
 
                     <div className="lg:col-span-4 flex flex-col justify-center">
                       <div className="bg-gradient-to-br from-gray-900 to-black rounded-[2.5rem] p-8 py-12 text-white flex flex-col justify-center">
-                        <h4 className="text-xs font-black uppercase tracking-widest text-white/40 mb-4">Precisa de Ajuda?</h4>
-                        <p className="text-sm text-gray-400 mb-6">Nossos mentores estão prontos para ajudar com qualquer dúvida sobre este processo.</p>
+                        <h4 className="text-xs font-black uppercase tracking-widest text-white-400 mb-4">Precisa de Ajuda?</h4>
+                        <p className="text-sm text-white-400 mb-6">Nossos mentores estão prontos para ajudar com qualquer dúvida sobre este processo.</p>
                         <button 
                           onClick={() => navigate('/student/dashboard/chat')}
                           className="w-full py-4 bg-white/10 hover:bg-white/20 rounded-2xl text-xs font-black uppercase tracking-widest transition-all"
@@ -553,21 +650,21 @@ export const UniversityDocumentsStep: React.FC<StepProps> = ({ onNext, onBack })
                    <div className="space-y-4">
                      {[
                        { 
-                         title: 'Enviar / Análise de Documentos', 
+                         title: 'Envio de Documentos', 
                          status: allDocsApproved ? 'Concluído' : 'Em Análise', 
                          variant: allDocsApproved ? 'success' : 'warning',
                          tab: 'documents' 
                        },
                        { 
-                         title: 'Taxa I-20 (Controle)', 
+                         title: 'Taxa de Controle I-20', 
                          status: hasPaid ? 'Pago' : 'Pendente', 
                          variant: hasPaid ? 'success' : 'warning',
                          tab: 'i20' 
                        },
                        { 
                          title: 'Recebimento da Carta de Aceite', 
-                         status: isAcceptanceUnlocked ? 'Disponível' : (allDocsApproved && hasPaid ? 'Aguardando Emissão' : 'Bloqueado'), 
-                         variant: isAcceptanceUnlocked ? 'success' : (allDocsApproved && hasPaid ? 'warning' : 'error'),
+                         status: applicationDetails.acceptance_letter_url ? 'Disponível' : (hasPaid ? 'Liberação em Andamento' : 'Liberação Pendente'), 
+                         variant: applicationDetails.acceptance_letter_url ? 'success' : 'error',
                          tab: 'acceptance' 
                        }
                      ].map((step, i) => {
@@ -614,7 +711,6 @@ export const UniversityDocumentsStep: React.FC<StepProps> = ({ onNext, onBack })
                              </div>
                              <div className="flex flex-col">
                                <span className="text-sm font-bold text-gray-900 uppercase tracking-tight">{step.title}</span>
-                               <span className="text-[8px] text-gray-400 font-black uppercase tracking-widest mt-0.5">Clique para ir</span>
                              </div>
                            </div>
                            <div className="flex items-center gap-2">
@@ -1013,15 +1109,42 @@ export const UniversityDocumentsStep: React.FC<StepProps> = ({ onNext, onBack })
                           <p className="text-gray-500 font-medium">Requisito essencial para emissão do seu documento oficial de estudante</p>
                         </div>
                       </div>
-                      <div className="bg-white px-8 py-6 rounded-3xl border border-slate-200 shadow-xl shadow-slate-200/50 flex flex-col items-center">
-                        <span className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1">Valor da Taxa</span>
-                        <span className="text-4xl font-black text-blue-600 tracking-tighter">{formatFeeAmount(getFeeAmount('i20_control_fee'))}</span>
-                      </div>
                     </div>
                   </div>
 
                   {/* Content Info */}
                   <div className="p-8 md:p-16 space-y-12">
+                  {showZelleCheckout ? (
+                    <div className="max-w-3xl mx-auto">
+                      <button 
+                        onClick={() => setShowZelleCheckout(false)}
+                        className="mb-8 flex items-center text-gray-400 hover:text-gray-900 transition-all gap-3 group"
+                      >
+                        <div className="w-8 h-8 rounded-full bg-gray-100 flex items-center justify-center group-hover:bg-gray-200 group-hover:scale-110 transition-all">
+                          <ChevronRight className="w-4 h-4 rotate-180" />
+                        </div>
+                        <span className="font-black uppercase tracking-widest text-xs">Voltar para Opções</span>
+                      </button>
+
+                      <div className="bg-white rounded-[2.5rem] overflow-hidden shadow-xl border border-gray-100">
+                        <ZelleCheckout
+                          feeType="i20_control_fee"
+                          amount={promotionalCouponValidation?.finalAmount ?? getFeeAmount('i20_control_fee')}
+                          scholarshipsIds={applicationDetails?.scholarships?.id ? [applicationDetails.scholarships.id] : []}
+                          metadata={{
+                            application_id: applicationDetails?.id,
+                            selected_scholarship_id: applicationDetails?.scholarships?.id
+                          }}
+                          onSuccess={() => {
+                            setShowZelleCheckout(false);
+                            fetchApplicationDetails(true);
+                          }}
+                          className="w-full"
+                        />
+                      </div>
+                    </div>
+                  ) : (
+                    <>
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-12">
                       <div className="space-y-6">
                         <h4 className="text-xl font-black text-gray-900 uppercase tracking-tight flex items-center gap-3">
@@ -1100,28 +1223,161 @@ export const UniversityDocumentsStep: React.FC<StepProps> = ({ onNext, onBack })
                            </div>
                          </div>
 
-                         <button
-                           onClick={handlePayI20}
-                           disabled={i20Loading}
-                           className="w-full group relative bg-blue-600 hover:bg-blue-700 text-white p-1 rounded-2xl shadow-2xl shadow-blue-500/30 transition-all hover:scale-[1.02] active:scale-98 disabled:opacity-50"
-                         >
-                           <div className="bg-white/10 p-5 rounded-xl border border-white/10 flex items-center justify-center gap-4">
-                              {i20Loading ? (
-                                <>
-                                  <Loader2 className="w-6 h-6 animate-spin" />
-                                  <span className="font-black uppercase tracking-widest">Processando...</span>
-                                </>
-                              ) : (
-                                <>
-                                  <DollarSign className="w-6 h-6 group-hover:scale-110 transition-transform" />
-                                  <span className="text-lg font-black uppercase tracking-widest">Realizar Pagamento</span>
-                                  <ChevronRight className="w-5 h-5 opacity-50 group-hover:translate-x-1 transition-transform" />
-                                </>
-                              )}
-                           </div>
-                         </button>
+                       </div>
+                    </div>
+
+                    {/* Integrated Payment Options - Expanded to full width */}
+                    <div className="space-y-8 pt-6 pb-8 px-8 md:pt-8 md:pb-10 md:px-10 border-2 border-slate-200 rounded-[3rem] bg-slate-50/50 mt-12">
+                      <div className="flex flex-col md:flex-row md:items-center justify-between gap-6">
+                        <div>
+                          <h4 className="text-2xl font-black text-gray-900 uppercase tracking-tight">
+                            Escolha o Método de Pagamento
+                          </h4>
+                        </div>
+
+                        <div className="bg-white px-8 py-6 rounded-3xl border border-slate-200 shadow-xl shadow-slate-200/50 flex flex-col items-center min-w-[200px]">
+                           <span className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1">Valor Total da Taxa</span>
+                           <span className="text-4xl font-black text-blue-600 tracking-tighter leading-none">
+                             {formatFeeAmount(promotionalCouponValidation?.finalAmount || getFeeAmount('i20_control_fee'))}
+                           </span>
+                        </div>
+                      </div>
+
+                      {/* Promotional Coupon Section */}
+                      <div className="bg-blue-50/50 border border-blue-100 p-6 rounded-[2rem] space-y-4">
+                        <div className="flex items-center gap-3 text-blue-900 font-bold uppercase tracking-tight text-sm">
+                          <Tag className="w-4 h-4" />
+                          Cupom Promocional
+                        </div>
+                        <div className="flex gap-3">
+                          <input
+                            ref={promotionalCouponInputRef}
+                            type="text"
+                            value={promotionalCoupon}
+                            onChange={(e) => setPromotionalCoupon(e.target.value)}
+                            placeholder="INSIRA O CÓDIGO"
+                            className="flex-1 bg-white border border-blue-100 rounded-2xl px-6 py-4 text-sm font-bold uppercase tracking-widest placeholder:text-gray-300 focus:outline-none focus:ring-2 focus:ring-blue-500/20"
+                          />
+                          <button
+                            onClick={validatePromotionalCoupon}
+                            disabled={isValidatingPromotionalCoupon || !promotionalCoupon.trim()}
+                            className="bg-slate-200 hover:bg-slate-300 disabled:opacity-50 text-slate-500 font-black px-8 py-4 rounded-2xl uppercase tracking-widest text-xs transition-all active:scale-95"
+                          >
+                            {isValidatingPromotionalCoupon ? <Loader2 className="w-4 h-4 animate-spin" /> : 'Validar'}
+                          </button>
+                        </div>
+                        {promotionalCouponValidation && (
+                          <p className={`text-xs font-bold uppercase tracking-wider ${promotionalCouponValidation.isValid ? 'text-emerald-600' : 'text-red-500'}`}>
+                            {promotionalCouponValidation.message}
+                          </p>
+                        )}
+                      </div>
+
+                      <div className="flex flex-col gap-4">
+                        {/* Stripe Option */}
+                        <button
+                          onClick={() => handlePaymentMethodSelect('stripe')}
+                          disabled={i20Loading}
+                          className="group/btn relative bg-white border border-gray-200 p-6 rounded-[2rem] text-left hover:scale-[1.01] active:scale-95 transition-all shadow-sm hover:shadow-md disabled:opacity-50 hover:border-blue-200 flex items-center"
+                        >
+                          <div className="w-14 h-14 flex items-center justify-center bg-blue-50 transition-colors rounded-2xl mr-5">
+                            <StripeIcon className="w-9 h-9" />
+                          </div>
+                          <div className="flex-1">
+                             <div className="flex items-center justify-between mb-1">
+                                <span className="font-bold text-gray-900 text-lg">Cartão de Crédito</span>
+                                <span className="bg-blue-100 text-blue-600 text-sm font-black px-3 py-1.5 rounded-full border border-blue-200 uppercase tracking-tight">
+                                  {formatFeeAmount(calculateCardAmountWithFees(promotionalCouponValidation?.finalAmount || getFeeAmount('i20_control_fee')))}
+                                </span>
+                             </div>
+                             <p className="text-[10px] text-gray-400 mt-1 uppercase tracking-widest font-bold">* Inclui taxas de processamento</p>
+                          </div>
+                          {selectedPaymentMethod === 'stripe' && i20Loading && (
+                            <div className="absolute inset-0 bg-white/80 backdrop-blur-sm rounded-[2rem] flex items-center justify-center z-10">
+                              <Loader2 className="w-8 h-8 text-blue-600 animate-spin" />
+                            </div>
+                          )}
+                        </button>
+
+                        {/* PIX Option */}
+                        <button
+                          onClick={() => handlePaymentMethodSelect('pix', exchangeRate)}
+                          disabled={i20Loading}
+                          className="group/btn relative bg-white border border-gray-200 p-6 rounded-[2rem] text-left hover:scale-[1.01] active:scale-95 transition-all shadow-sm hover:shadow-md disabled:opacity-50 hover:border-emerald-200 flex items-center"
+                        >
+                          <div className="w-14 h-14 flex items-center justify-center bg-emerald-50 transition-colors rounded-2xl mr-5">
+                            <PixIcon className="w-9 h-9" />
+                          </div>
+                          <div className="flex-1">
+                             <div className="flex items-center justify-between mb-1">
+                                <span className="font-bold text-gray-900 text-lg">PIX</span>
+                                <span className="bg-emerald-100 text-emerald-600 text-sm font-black px-3 py-1.5 rounded-full border border-emerald-200 uppercase tracking-tight">
+                                  R$ {calculatePIXTotalWithIOF(promotionalCouponValidation?.finalAmount || getFeeAmount('i20_control_fee'), exchangeRate).totalWithIOF.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
+                                </span>
+                             </div>
+                             <p className="text-[10px] text-gray-400 mt-1 uppercase tracking-widest font-bold">* Inclui taxas de processamento</p>
+                          </div>
+                          {selectedPaymentMethod === 'pix' && i20Loading && (
+                            <div className="absolute inset-0 bg-white/80 backdrop-blur-sm rounded-[2rem] flex items-center justify-center z-10">
+                              <Loader2 className="w-8 h-8 text-emerald-500 animate-spin" />
+                            </div>
+                          )}
+                        </button>
+
+                        {/* Parcelow Option */}
+                        <button
+                          onClick={() => handlePaymentMethodSelect('parcelow')}
+                          disabled={i20Loading}
+                          className="group/btn relative bg-white border border-gray-200 p-6 rounded-[2rem] text-left hover:scale-[1.01] active:scale-95 transition-all shadow-sm hover:shadow-md disabled:opacity-50 hover:border-orange-200 flex items-center"
+                        >
+                          <div className="w-14 h-14 flex items-center justify-center bg-orange-50 transition-colors rounded-2xl mr-5 px-1">
+                            <ParcelowIcon className="w-full h-10" />
+                          </div>
+                          <div className="flex-1">
+                             <div className="flex items-center justify-between mb-1">
+                                <span className="font-bold text-gray-900 text-lg">Parcelow</span>
+                                <div className="text-right flex flex-col items-end">
+                                  <span className="bg-blue-100 text-blue-600 text-sm font-black px-3 py-1.5 rounded-full border border-blue-200 uppercase tracking-tight">
+                                    {formatFeeAmount(promotionalCouponValidation?.finalAmount || getFeeAmount('i20_control_fee'))}
+                                  </span>
+                                  <div className="text-[10px] font-black text-blue-500 uppercase tracking-widest mt-1">ou em até 12x</div>
+                                </div>
+                             </div>
+                             <p className="text-[10px] text-gray-400 mt-1 uppercase tracking-widest font-bold">* Taxas da operadora e processamento da plataforma serão aplicadas</p>
+                          </div>
+                          {selectedPaymentMethod === 'parcelow' && i20Loading && (
+                            <div className="absolute inset-0 bg-white/80 backdrop-blur-sm rounded-[2rem] flex items-center justify-center z-10">
+                              <Loader2 className="w-8 h-8 text-orange-500 animate-spin" />
+                            </div>
+                          )}
+                        </button>
+
+                        {/* Zelle Option */}
+                        <button
+                          onClick={() => handlePaymentMethodSelect('zelle')}
+                          disabled={i20Loading}
+                          className="group/btn relative bg-white border border-gray-200 p-6 rounded-[2rem] text-left hover:scale-[1.01] active:scale-95 transition-all shadow-sm hover:shadow-md disabled:opacity-50 hover:border-purple-200 flex items-center"
+                        >
+                          <div className="w-14 h-14 flex items-center justify-center bg-purple-50 transition-colors rounded-2xl mr-5">
+                            <ZelleIcon className="w-9 h-9" />
+                          </div>
+                          <div className="flex-1">
+                             <div className="flex items-center justify-between mb-1">
+                                <span className="font-bold text-gray-900 text-lg">Zelle</span>
+                                <span className="bg-indigo-100 text-indigo-600 text-sm font-black px-3 py-1.5 rounded-full border border-indigo-200 uppercase tracking-tight">
+                                  {formatFeeAmount(promotionalCouponValidation?.finalAmount || getFeeAmount('i20_control_fee'))}
+                                </span>
+                             </div>
+                             <div className="mt-2 flex items-center gap-2 text-orange-600">
+                                <AlertCircle className="w-3.5 h-3.5" />
+                                <span className="text-[10px] font-black uppercase tracking-widest">Processamento pode levar até 48 horas</span>
+                             </div>
+                          </div>
+                        </button>
                       </div>
                     </div>
+                    </>
+                  )}
                   </div>
                 </div>
               ) : (
@@ -1199,7 +1455,7 @@ export const UniversityDocumentsStep: React.FC<StepProps> = ({ onNext, onBack })
                         <FolderOpen className="w-10 h-10 text-white" />
                       </div>
                       <div className="flex-1 text-center md:text-left space-y-2">
-                        <h3 className="text-2xl font-black text-gray-900 uppercase tracking-tight">Gestão de <span className="text-blue-600">Documentação</span></h3>
+                        <h3 className="text-2xl font-black text-gray-900 uppercase tracking-tight">Envio de <span className="text-blue-600">Documentos</span></h3>
                         <p className="text-gray-600 font-medium">Envie os documentos solicitados pela universidade para análise e aprovação final.</p>
                       </div>
                     </div>
@@ -1239,177 +1495,169 @@ export const UniversityDocumentsStep: React.FC<StepProps> = ({ onNext, onBack })
 
           {activeTab === 'acceptance' && (
             <div className="space-y-8 pb-12">
-               {!isAcceptanceUnlocked ? (
-                 <div className="bg-white rounded-[2.5rem] p-12 text-center border border-slate-300 shadow-2xl space-y-8 relative overflow-hidden">
-                    <div className="absolute top-0 right-0 w-64 h-64 bg-slate-500/10 rounded-full blur-[80px] -mr-32 -mt-32 pointer-events-none" />
-                    
-                    <div className="w-24 h-24 bg-red-50 rounded-3xl flex items-center justify-center mx-auto border border-red-100 relative shadow-sm">
-                       <Award className="w-12 h-12 text-red-600" />
-                       <div className="absolute -bottom-2 -right-2 w-10 h-10 bg-red-500 rounded-full flex items-center justify-center shadow-lg border-2 border-white">
-                          <Lock className="w-5 h-5 text-red-50" />
-                       </div>
-                    </div>
-                    <div className="max-w-md mx-auto space-y-4">
-                       <h3 className="text-3xl font-black text-gray-900 uppercase tracking-tighter">Acesso Bloqueado</h3>
-                       <p className="text-gray-600 font-medium leading-relaxed">
-                          Sua carta de aceite será liberada assim que os seguintes requisitos forem cumpridos:
-                       </p>
-                    </div>
-
-                     <div className="grid grid-cols-1 sm:grid-cols-2 gap-6 max-w-2xl mx-auto">
-                        <div className={`p-8 rounded-[2rem] border transition-all duration-300 ${allDocsApproved ? 'bg-emerald-50 border-emerald-200 shadow-sm' : 'bg-slate-50 border-slate-200'}`}>
-                           <div className="flex items-center gap-3 mb-3">
-                              <div className={`w-10 h-10 rounded-xl flex items-center justify-center ${allDocsApproved ? 'bg-emerald-500 text-white shadow-emerald-200 shadow-lg' : 'bg-blue-600 text-white shadow-blue-200 shadow-lg'}`}>
-                                 {allDocsApproved ? <CheckCircle2 className="w-5 h-5" /> : <Clock className="w-5 h-5" />}
-                              </div>
-                              <span className={`text-[10px] font-black uppercase tracking-widest ${allDocsApproved ? 'text-emerald-600' : 'text-gray-900'}`}>Documentos</span>
-                           </div>
-                           <p className={`text-base font-bold tracking-tight uppercase ${allDocsApproved ? 'text-gray-900' : 'text-gray-900'}`}>Aprovação de Documentos</p>
-                           {!allDocsApproved && (
-                             <button onClick={() => setActiveTab('documents')} className="mt-4 text-[10px] font-black text-blue-600 uppercase tracking-widest hover:blue-700 underline-offset-4 hover:underline transition-all">Resolver Pendências</button>
-                           )}
+              {!isAcceptanceUnlocked ? (
+                <div className="bg-white rounded-[3rem] shadow-2xl border border-gray-100 overflow-hidden relative">
+                  <div className="absolute top-0 right-0 w-80 h-80 bg-slate-500/5 rounded-full blur-[100px] -mr-40 -mt-40 pointer-events-none" />
+                  
+                  {/* Header Card matching I-20 Tab */}
+                  <div className="bg-slate-50 px-8 py-10 md:p-12 border-b border-slate-100">
+                    <div className="flex flex-col md:flex-row items-center justify-between gap-8">
+                      <div className="flex items-center gap-6">
+                        <div className="w-20 h-20 bg-blue-600 rounded-[2rem] flex items-center justify-center shadow-xl shadow-blue-500/20 transition-transform">
+                          <Award className="w-10 h-10 text-white" />
                         </div>
-
-                        <div className={`p-8 rounded-[2rem] border transition-all duration-300 ${hasPaid ? 'bg-emerald-50 border-emerald-200 shadow-sm' : 'bg-slate-50 border-slate-200'}`}>
-                           <div className="flex items-center gap-3 mb-3">
-                              <div className={`w-10 h-10 rounded-xl flex items-center justify-center ${hasPaid ? 'bg-emerald-500 text-white shadow-emerald-200 shadow-lg' : 'bg-blue-600 text-white shadow-blue-200 shadow-lg'}`}>
-                                 {hasPaid ? <CheckCircle2 className="w-5 h-5" /> : <DollarSign className="w-5 h-5" />}
-                              </div>
-                              <span className={`text-[10px] font-black uppercase tracking-widest ${hasPaid ? 'text-emerald-600' : 'text-gray-900'}`}>Pagamento</span>
-                           </div>
-                           <p className={`text-base font-bold tracking-tight uppercase ${hasPaid ? 'text-gray-900' : 'text-gray-900'}`}>Taxa I-20 (Controle)</p>
-                           {!hasPaid && (
-                             <button onClick={() => setActiveTab('i20')} className="mt-4 text-[10px] font-black text-blue-600 uppercase tracking-widest hover:text-blue-700 underline-offset-4 hover:underline transition-all">Pagar Agora</button>
-                           )}
+                        <div className="text-center md:text-left">
+                          <h2 className="text-3xl font-black text-gray-900 uppercase tracking-tighter leading-none mb-2">Carta de <span className="text-blue-600">Aceite</span></h2>
+                          <p className="text-gray-500 font-medium">Documento oficial de admissão da universidade</p>
                         </div>
-                     </div>
-                 </div>
-                ) : (
-                  <div className="space-y-8">
-                    {/* Acceptance Header Card */}
-                    <div className="bg-white rounded-[2.5rem] shadow-2xl border border-gray-100 overflow-hidden group">
-                      <div className="bg-gradient-to-br from-emerald-600 via-emerald-600 to-teal-700 p-12 md:p-16 relative overflow-hidden">
-                        <div className="absolute top-0 right-0 w-96 h-96 bg-white/10 rounded-full blur-[100px] -mr-48 -mt-48 pointer-events-none" />
-                        <div className="relative z-10">
-                          <div className="flex flex-col md:flex-row items-center gap-10">
-                            <div className="w-24 h-24 md:w-32 md:h-32 bg-white/20 rounded-[2.5rem] flex items-center justify-center backdrop-blur-md shadow-2xl border border-white/30 animate-bounce-slow">
-                              <Award className="w-12 h-12 md:w-16 md:h-16 text-white" />
-                            </div>
-                            <div className="flex-1 text-center md:text-left space-y-4">
-                              <div className="flex flex-wrap justify-center md:justify-start gap-2">
-                                <span className="px-3 py-1 bg-white/10 backdrop-blur-md rounded-full text-[10px] font-black text-white uppercase tracking-widest border border-white/20">Documento Oficial</span>
-                                <span className="px-3 py-1 bg-yellow-400/20 backdrop-blur-md rounded-full text-[10px] font-black text-yellow-300 uppercase tracking-widest border border-yellow-400/30">Admissão Confirmada</span>
-                              </div>
-                              <h3 className="text-4xl md:text-5xl font-black text-white uppercase tracking-tighter leading-tight">Parabéns pelo seu Aceite!</h3>
-                              <p className="text-emerald-100 text-lg font-medium max-w-2xl leading-relaxed">
-                                Sua jornada acadêmica nos EUA acaba de se tornar realidade. Sua carta de aceite oficial já está disponível para download.
-                              </p>
-                            </div>
+                      </div>
+                      <div className="flex items-center gap-2 px-4 py-2 bg-red-50 border border-red-100 rounded-2xl">
+                        <Clock className="w-4 h-4 text-red-500 animate-pulse" />
+                        <span className="text-[10px] font-black text-red-600 uppercase tracking-widest">
+                          {hasPaid ? 'Liberação em Andamento' : 'Liberação Pendente'}
+                        </span>
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* Content Info */}
+                  <div className="p-8 md:p-16 space-y-12">
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-12">
+                      <div className="space-y-6">
+                        <h4 className="text-xl font-black text-gray-900 uppercase tracking-tight flex items-center gap-3">
+                          <div className="w-8 h-8 bg-blue-50 rounded-lg flex items-center justify-center">
+                            <Award className="w-4 h-4 text-blue-600" />
                           </div>
+                          Sua Confirmação de Sucesso
+                        </h4>
+                        <p className="text-gray-600 leading-relaxed font-medium">
+                          A Carta de Aceite é o documento oficial emitido pela universidade que confirma sua admissão. Ela contém detalhes importantes sobre seu curso e é fundamental para o processo de visto.
+                        </p>
+                        <div className="p-6 bg-slate-50 border border-slate-200 rounded-3xl flex items-start gap-4">
+                           <div className="w-10 h-10 bg-white rounded-xl flex items-center justify-center shadow-sm">
+                              <ShieldCheck className="w-5 h-5 text-slate-400" />
+                           </div>
+                           <p className="text-xs font-bold text-slate-500 leading-relaxed uppercase tracking-wider">
+                             {!hasPaid 
+                               ? "Este documento será liberado automaticamente após a aprovação da Taxa de Controle I-20."
+                               : "Sua taxa foi aprovada. Aguardando a emissão da carta pela universidade."}
+                           </p>
                         </div>
                       </div>
 
-                      {/* Acceptance Actions Content */}
-                      <div className="p-8 md:p-12 bg-white">
+                      <div className="space-y-8">
+                         {/* Requirements Section styled like i20 deadline */}
+                         <div className="bg-blue-50 border border-blue-200 rounded-[2rem] p-8 relative overflow-hidden">
+                            <div className="absolute top-0 right-0 p-4 opacity-5">
+                              <DollarSign className="w-20 h-20 text-blue-900" />
+                            </div>
+                            <div className="flex items-start gap-4 relative z-10">
+                              <div className="w-10 h-10 bg-white rounded-xl shadow-sm flex items-center justify-center flex-shrink-0">
+                                <DollarSign className="w-5 h-5 text-blue-600" />
+                              </div>
+                              <div className="flex-1">
+                                <h5 className="font-black text-blue-900 uppercase tracking-tight mb-2">Qual o próximo passo?</h5>
+                                <p className="text-sm font-medium text-blue-800 leading-relaxed mb-6">
+                                  {!hasPaid 
+                                    ? 'Falta apenas o pagamento da Taxa de Controle I-20 para que sua carta oficial de aceitação seja liberada imediatamente.'
+                                    : 'Sua taxa foi paga! A universidade está agora enviando sua carta oficial.'}
+                                </p>
+                                
+                                {!hasPaid && (
+                                  <button
+                                    onClick={() => setActiveTab('i20')}
+                                    className="w-full bg-blue-600 hover:bg-blue-700 text-white px-6 py-4 rounded-xl font-black uppercase tracking-widest text-[10px] transition-all flex items-center justify-center gap-3 shadow-lg shadow-blue-200 active:scale-95"
+                                  >
+                                    Completar Liberação Agora
+                                    <ArrowRight className="w-4 h-4" />
+                                  </button>
+                                )}
+                              </div>
+                            </div>
+                         </div>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              ) : (
+                <div className="space-y-8">
+                  {/* Success Header matching I-20 Success */}
+                  <div className="bg-white rounded-[3rem] shadow-2xl border border-gray-100 overflow-hidden">
+                    <div className="bg-gradient-to-br from-emerald-600 via-emerald-600 to-teal-700 p-12 text-center relative overflow-hidden">
+                       <div className="absolute inset-0 opacity-10 pointer-events-none">
+                         <Award className="w-64 h-64 -left-16 -top-16 absolute -rotate-12" />
+                         <CheckCircle className="w-64 h-64 -right-16 -bottom-16 absolute rotate-12" />
+                       </div>
+                       <div className="relative z-10 space-y-6">
+                         <div className="w-24 h-24 bg-white/20 rounded-[2rem] flex items-center justify-center mx-auto backdrop-blur-md shadow-inner border border-white/30 animate-bounce-slow">
+                           <Award className="w-12 h-12 text-white" />
+                         </div>
+                         <div className="space-y-2">
+                           <h2 className="text-4xl md:text-5xl font-black text-white uppercase tracking-tighter leading-none">Carta <span className="text-emerald-200">Disponível</span></h2>
+                           <p className="text-emerald-100 text-lg font-medium">Parabéns! Sua admissão oficial foi confirmada.</p>
+                         </div>
+                       </div>
+                    </div>
+
+                    <div className="p-8 md:p-16">
+                      {/* Integrated Alerts when Paid but No URL */}
+                      {!applicationDetails.acceptance_letter_url ? (
+                        <div className="bg-yellow-50 border border-yellow-200 rounded-[2rem] p-8 flex flex-col md:flex-row items-start gap-6">
+                          <div className="w-14 h-14 bg-yellow-100 rounded-2xl flex items-center justify-center flex-shrink-0 border border-yellow-200">
+                            <Clock className="w-7 h-7 text-yellow-600 animate-pulse" />
+                          </div>
+                          <div className="flex-1">
+                            <h3 className="text-xl font-bold text-yellow-900 mb-2">Aguardando Envio da Universidade</h3>
+                            <p className="text-yellow-800 font-medium leading-relaxed">
+                              Sua Taxa I-20 foi paga com sucesso! A universidade está processando sua carta oficial e ela aparecerá aqui automaticamente em breve.
+                            </p>
+                          </div>
+                        </div>
+                      ) : (
                         <div className="grid grid-cols-1 md:grid-cols-12 gap-8 items-center">
                           <div className="md:col-span-7 space-y-4">
                             <div className="inline-flex items-center gap-2 px-3 py-1 bg-slate-100 rounded-lg text-[10px] font-black text-slate-500 uppercase tracking-widest">
                               <Info className="w-3 h-3" />
-                              O que significa este documento?
+                              Instruções de Download
                             </div>
                             <p className="text-gray-600 leading-relaxed font-medium">
-                              A Carta de Aceite é o documento oficial emitido pela universidade confirmando sua admissão no programa. Ela é essencial para os próximos passos da sua jornada internacional e para a emissão do seu visto.
+                              Sua carta de aceite já pode ser visualizada ou baixada em formato PDF. Recomendamos que você guarde uma cópia digital e física deste documento.
                             </p>
                           </div>
                           
                           <div className="md:col-span-5 flex flex-col gap-4">
-                            {applicationDetails.acceptance_letter_url ? (
-                              <>
-                                <button 
-                                  onClick={() => handleViewDocument(applicationDetails.acceptance_letter_url, 'document-attachments')}
-                                  className="w-full bg-slate-900 hover:bg-slate-800 text-white px-8 py-5 rounded-2xl font-black uppercase tracking-widest text-xs hover:scale-[1.02] active:scale-95 transition-all shadow-xl flex items-center justify-center gap-3 group"
-                                >
-                                  <FileSearch className="w-5 h-5 group-hover:rotate-12 transition-transform" />
-                                  Visualizar Carta
-                                </button>
-                                <button 
-                                  onClick={() => handleDownloadDocument(applicationDetails.acceptance_letter_url, 'acceptance_letter', 'document-attachments')}
-                                  className="w-full bg-white hover:bg-slate-50 text-emerald-600 px-8 py-5 rounded-2xl font-black uppercase tracking-widest text-xs transition-all border-2 border-emerald-100 flex items-center justify-center gap-3 active:scale-95 hover:border-emerald-200"
-                                >
-                                  <Download className="w-5 h-5" />
-                                  Baixar PDF Original
-                                </button>
-                              </>
-                            ) : (
-                              <div className="text-center p-8 bg-slate-50 rounded-2xl border border-dashed border-slate-200">
-                                <Clock className="w-8 h-8 text-slate-300 mx-auto mb-3" />
-                                <p className="text-xs font-bold uppercase tracking-widest text-slate-400">Aguardando Envio da Universidade</p>
-                                <p className="text-[10px] text-slate-300 mt-1 uppercase font-black tracking-widest">Liberação em andamento</p>
-                              </div>
-                            )}
+                            <button 
+                              onClick={() => handleViewDocument(applicationDetails.acceptance_letter_url, 'document-attachments')}
+                              className="w-full bg-slate-900 hover:bg-slate-800 text-white px-8 py-5 rounded-2xl font-black uppercase tracking-widest text-xs hover:scale-[1.02] active:scale-95 transition-all shadow-xl flex items-center justify-center gap-3 group"
+                            >
+                              <FileSearch className="w-5 h-5 group-hover:rotate-12 transition-transform" />
+                              Visualizar Carta
+                            </button>
+                            <button 
+                              onClick={() => handleDownloadDocument(applicationDetails.acceptance_letter_url, 'acceptance_letter', 'document-attachments')}
+                              className="w-full bg-white hover:bg-slate-50 text-emerald-600 px-8 py-5 rounded-2xl font-black uppercase tracking-widest text-xs transition-all border-2 border-emerald-100 flex items-center justify-center gap-3 active:scale-95 hover:border-emerald-200"
+                            >
+                              <Download className="w-5 h-5" />
+                              Baixar PDF Original
+                            </button>
                           </div>
                         </div>
-                      </div>
+                      )}
                     </div>
                   </div>
-                )}
+                </div>
+              )}
             </div>
           )}
-
         </motion.div>
       </AnimatePresence>
 
+
       {/* Legacy/Modals support */}
-      {previewUrl && (
-        <DocumentViewerModal documentUrl={previewUrl || ''} onClose={() => setPreviewUrl(null)} />
-      )}
 
-      {showZelleCheckout && (
-        <div className="fixed inset-0 z-[60] flex items-center justify-center p-4 bg-black/80 backdrop-blur-sm animate-in fade-in duration-300">
-          <div className="bg-white rounded-[2.5rem] w-full max-w-xl max-h-[90vh] overflow-y-auto relative shadow-2xl border border-white/20 animate-in zoom-in-95 duration-300 custom-scrollbar">
-            <button 
-              onClick={() => setShowZelleCheckout(false)} 
-              className="absolute top-6 right-6 p-2 rounded-full bg-gray-100/50 hover:bg-gray-100 text-gray-400 hover:text-gray-600 transition-all z-10"
-            >
-              <X className="w-5 h-5" />
-            </button>
-            <div className="p-8 md:p-10">
-              <div className="flex items-center gap-4 mb-8 pb-8 border-b border-gray-100">
-                <div className="w-14 h-14 rounded-2xl bg-purple-50 flex items-center justify-center text-purple-600 shadow-sm border border-purple-100">
-                  <DollarSign className="w-7 h-7" />
-                </div>
-                <div>
-                  <h3 className="text-xl font-black uppercase tracking-tight text-gray-900">Pagamento via Zelle</h3>
-                  <p className="text-xs text-gray-500 font-medium mt-1">Siga as instruções para realizar a transferência</p>
-                </div>
-              </div>
-              
-              <ZelleCheckout
-                feeType="i20_control_fee"
-                amount={getFeeAmount('i20_control_fee')}
-                scholarshipsIds={applicationDetails?.scholarships?.id ? [applicationDetails.scholarships.id] : []}
-                metadata={{
-                  application_id: applicationDetails?.id,
-                  selected_scholarship_id: applicationDetails?.scholarships?.id
-                }}
-                onSuccess={() => {
-                  setShowZelleCheckout(false);
-                  fetchApplicationDetails();
-                }}
-                className="w-full"
-              />
-            </div>
-          </div>
-        </div>
-      )}
 
-      <I20ControlFeeModal
-        isOpen={showI20ControlFeeModal}
-        onClose={handleCloseI20Modal}
-        selectedPaymentMethod={selectedPaymentMethod}
-        onPaymentMethodSelect={handlePaymentMethodSelect}
-        isLoading={i20Loading}
-      />
+
+
 
       <ProfileRequiredModal
         isOpen={showProfileRequiredModal}

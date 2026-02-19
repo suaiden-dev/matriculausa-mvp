@@ -561,7 +561,7 @@ export const ScholarshipSelectionStep: React.FC<StepProps> = ({ onNext, onBack: 
                   Importante: Esta é uma escolha definitiva
                 </p>
                 <p className="text-sm text-amber-800 font-medium leading-relaxed">
-                  Por favor, revise cuidadosamente as bolsas selecionadas abaixo. Assim que você clicar em "Confirmar", não poderá mais voltar para selecionar outras bolsas. Estas serão as bolsas para as quais você se candidatará.
+                  Ao confirmar, você não poderá mais alterar as bolsas escolhidas. Revise cuidadosamente sua seleção abaixo antes de prosseguir.
                 </p>
               </div>
             </div>

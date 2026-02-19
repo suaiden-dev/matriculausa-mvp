@@ -17,7 +17,7 @@ import {
   XCircle,
   AlertTriangle
 } from 'lucide-react';
-import { getDeliveryModeColor, getDeliveryModeLabel } from '../../../utils/scholarshipHelpers';
+
 import { useAuth } from '../../../hooks/useAuth';
 import { supabase } from '../../../lib/supabase';
 import { useTranslation } from 'react-i18next';
@@ -29,9 +29,9 @@ import TruncatedText from '../../../components/TruncatedText';
 import { PencilLoader } from '../../../components/PencilLoader';
 
 const DOCUMENT_TYPES = [
-  { key: 'passport', label: 'Passport', description: 'Upload a clear photo or scan of your passport' },
-  { key: 'diploma', label: 'High School Diploma', description: 'Upload your high school diploma or equivalent' },
-  { key: 'funds_proof', label: 'Proof of Funds', description: 'Upload bank statements or financial documents' },
+  { key: 'passport', label: 'Passport', description: 'Upload a clear photo or scan of your passport.' },
+  { key: 'diploma', label: 'High School Diploma', description: 'Upload your high school diploma or equivalent.' },
+  { key: 'funds_proof', label: 'Proof of Funds', description: 'Upload bank statements or financial documents. Minimum of $20,000 USD is required, plus $5,000 USD for each dependent.' },
 ];
 
 export const DocumentsUploadStep: React.FC<StepProps> = ({ onNext }) => {
@@ -492,6 +492,7 @@ export const DocumentsUploadStep: React.FC<StepProps> = ({ onNext }) => {
   if (isLocked) {
     const isApproved = userProfile?.documents_status === 'approved';
     const approvedApps = applications.filter(app => app.status === 'approved' || app.status === 'enrolled');
+    const hasSelectedApp = !!selectedAppId && approvedApps.some(app => app.id === selectedAppId);
 
     const handleConfirmSelection = () => {
       if (selectedAppId) {
@@ -510,6 +511,35 @@ export const DocumentsUploadStep: React.FC<StepProps> = ({ onNext }) => {
         handleConfirmSelection();
       }
     };
+
+    if (isApproved && hasSelectedApp) {
+      return (
+        <div className="space-y-10 pb-24 sm:pb-12 max-w-4xl mx-auto px-4 mt-12">
+          <div className="bg-white border border-emerald-500/30 ring-1 ring-emerald-500/20 rounded-[2.5rem] p-6 md:p-12 shadow-2xl relative overflow-hidden">
+            <div className="absolute top-0 right-0 w-80 h-80 bg-blue-500/5 rounded-full blur-[100px] -mr-40 -mt-40 pointer-events-none" />
+            <div className="relative z-10 text-center py-10">
+              <div className="w-24 h-24 bg-emerald-500/20 rounded-full flex items-center justify-center mx-auto mb-8 border border-emerald-500/30">
+                <CheckCircle className="w-12 h-12 text-emerald-500" />
+              </div>
+              <h3 className="text-3xl md:text-4xl font-black text-gray-900 mb-4 uppercase tracking-tight">Etapa Concluída</h3>
+              <p className="text-gray-500 mb-10 font-medium text-lg max-w-lg mx-auto leading-relaxed">
+                Você já selecionou sua bolsa e seus documentos foram aprovados. Esta etapa está completa.
+              </p>
+              
+              <div className="flex justify-center">
+                <button
+                  onClick={onNext}
+                  className="w-full sm:w-auto bg-blue-600 text-white py-5 px-12 rounded-2xl hover:bg-blue-700 transition-all font-black uppercase tracking-widest text-sm shadow-xl shadow-blue-500/20 hover:scale-105 active:scale-95 flex items-center justify-center gap-3"
+                >
+                  Continuar
+                  <ArrowRight className="w-5 h-5" />
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      );
+    }
 
     return (
       <>
@@ -842,9 +872,9 @@ export const DocumentsUploadStep: React.FC<StepProps> = ({ onNext }) => {
                 <AlertTriangle className="w-12 h-12 text-red-600" />
               </div>
               <div className="space-y-4">
-                <h2 className="text-3xl font-black text-gray-900 uppercase tracking-tight">Confirmar Bolsa</h2>
+                <h2 className="text-3xl font-black text-gray-900 uppercase tracking-tight">Confirmar Seleção</h2>
                 <p className="text-gray-500 font-medium text-lg leading-relaxed">
-                  Essa decisão é final e que não tem como mudar.
+                  Esta decisão é definitiva. Ao confirmar, você não poderá mais alterar a bolsa escolhida para este processo seletivo.
                 </p>
               </div>
               <div className="flex gap-4">
@@ -873,7 +903,7 @@ export const DocumentsUploadStep: React.FC<StepProps> = ({ onNext }) => {
       <div className="text-center md:text-left space-y-4 px-4">
         <h2 className="text-3xl md:text-5xl font-black text-white uppercase tracking-tighter leading-none">Upload Documents</h2>
         <p className="text-lg md:text-xl text-white/60 font-medium max-w-2xl mt-2">
-          We need few documents to verify your eligibility and process your application.
+          We need a few documents to verify your eligibility and process your application.
         </p>
       </div>
 
@@ -975,7 +1005,7 @@ export const DocumentsUploadStep: React.FC<StepProps> = ({ onNext }) => {
             <div className="flex items-center gap-4 p-5 bg-blue-50/50 rounded-2xl border border-blue-100/30">
               <Info className="w-6 h-6 text-blue-500 flex-shrink-0" />
               <p className="text-xs font-bold text-blue-800/70 uppercase tracking-wide leading-relaxed">
-                Make sure all documents are clear, legible, and match the information provided in your profile. Our AI will analyze them automatically.
+                Make sure all documents are clear, legible, and match the information provided in your profile. Note: Documents must be in English or accompanied by a certified English translation. Our AI will analyze them automatically.
               </p>
             </div>
 

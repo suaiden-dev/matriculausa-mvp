@@ -1,6 +1,6 @@
 import React, { useEffect, useState } from 'react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
-import { ArrowLeft, CheckCircle } from 'lucide-react';
+import { ArrowLeft, Bell, Clock } from 'lucide-react';
 import { useAuth } from '../../hooks/useAuth';
 import { useOnboardingProgress } from './hooks/useOnboardingProgress';
 import { StepIndicator } from './components/StepIndicator';
@@ -13,25 +13,76 @@ import { PaymentStep } from './components/PaymentStep'; // Payment step componen
 import { ScholarshipFeeStep } from './components/ScholarshipFeeStep';
 import { UniversityDocumentsStep } from './components/UniversityDocumentsStep';
 import { OnboardingStep } from './types';
-import { supabase } from '../../lib/supabase';
 import PaymentSuccessOverlay from '../../components/PaymentSuccessOverlay';
 import CustomLoading from '../../components/CustomLoading';
 import { useTranslation } from 'react-i18next';
 import LanguageSelector from '../../components/LanguageSelector';
+import { useSmartPollingNotifications } from '../../hooks/useSmartPollingNotifications';
+import NotificationsModal from '../../components/NotificationsModal';
 
 const StudentOnboarding: React.FC = () => {
-  const { user, userProfile, loading: authLoading } = useAuth();
+  const { user, loading: authLoading } = useAuth();
   const navigate = useNavigate();
   const [searchParams] = useSearchParams();
   const { state, loading, goToStep } = useOnboardingProgress();
   const { t } = useTranslation();
   const [showPaymentAnimation, setShowPaymentAnimation] = useState(false);
   const [isVerifyingPayment, setIsVerifyingPayment] = useState(false);
+  const [showNotif, setShowNotif] = useState(false);
+  const [showNotificationsModal, setShowNotificationsModal] = useState(false);
+
+  // Notifications logic
+  const {
+    notifications,
+    unreadCount: newNotificationCount,
+    markAsRead,
+    markAllAsRead,
+    clearAll,
+    requestNotificationPermission
+  } = useSmartPollingNotifications({
+    userType: 'student',
+    userId: user?.id || '',
+    onNotificationReceived: (notification) => {
+      console.log('🔔 Nova notificação recebida via polling no Onboarding:', notification);
+    }
+  });
+
+  useEffect(() => {
+    requestNotificationPermission();
+  }, []);
+
+  useEffect(() => {
+    const handleClickOutside = (event: MouseEvent) => {
+      const target = event.target as Element;
+      if (!target.closest('.notifications-container')) {
+        setShowNotif(false);
+      }
+    };
+
+    if (showNotif) {
+      document.addEventListener('mousedown', handleClickOutside);
+    }
+
+    return () => {
+      document.removeEventListener('mousedown', handleClickOutside);
+    };
+  }, [showNotif]);
+
+  const openNotification = async (n: any) => {
+    try {
+      if (n && !n.read_at) {
+        await markAsRead(n.id);
+      }
+    } catch { }
+    setShowNotif(false);
+    const target = n?.link || '/student/dashboard';
+    navigate(target);
+  };
 
   useEffect(() => {
     const stepParam = searchParams.get('step');
     if (stepParam) {
-      const validSteps: OnboardingStep[] = ['welcome', 'selection_fee', 'scholarship_selection', 'process_type', 'documents_upload', 'payment', 'scholarship_fee', 'university_documents', 'completed'];
+      const validSteps: OnboardingStep[] = ['welcome', 'selection_fee', 'scholarship_selection', 'process_type', 'documents_upload', 'payment', 'scholarship_fee', 'university_documents'];
       if (validSteps.includes(stepParam as OnboardingStep)) {
         window.localStorage.setItem('onboarding_current_step', stepParam);
         if (stepParam === 'welcome') {
@@ -45,9 +96,28 @@ const StudentOnboarding: React.FC = () => {
     }
   }, [searchParams, goToStep]);
 
+  // Sincronizar URL com o passo atual
+  useEffect(() => {
+    const currentStepUrl = searchParams.get('step');
+    if (state.currentStep && state.currentStep !== currentStepUrl) {
+      const newParams = new URLSearchParams(searchParams);
+      newParams.set('step', state.currentStep);
+      navigate(`?${newParams.toString()}`, { replace: true });
+    }
+  }, [state.currentStep, searchParams, navigate]);
+
   // Scroll to top when step changes
   useEffect(() => {
-    window.scrollTo({ top: 0, behavior: 'smooth' });
+    // Usamos um pequeno timeout para garantir que o novo passo já foi renderizado
+    // e o layout atualizado antes de rolar para o topo
+    const timer = setTimeout(() => {
+      window.scrollTo({ top: 0, behavior: 'smooth' });
+      // Fallback para garantir a rolagem em diferentes estruturas de containers
+      document.documentElement.scrollTo({ top: 0, behavior: 'smooth' });
+      document.body.scrollTo({ top: 0, behavior: 'smooth' });
+    }, 100);
+    
+    return () => clearTimeout(timer);
   }, [state.currentStep]);
 
   useEffect(() => {
@@ -103,7 +173,12 @@ const StudentOnboarding: React.FC = () => {
               url.searchParams.delete('session_id');
               url.searchParams.delete('pix_payment');
               window.history.replaceState({}, '', url.toString());
-              window.location.reload();
+              
+              if (stepParam === 'payment' || stepParam === 'scholarship_fee') {
+                handleNext();
+              } else {
+                window.location.reload();
+              }
             }, 6000);
           } else {
             setIsVerifyingPayment(false);
@@ -122,7 +197,12 @@ const StudentOnboarding: React.FC = () => {
         const url = new URL(window.location.href);
         url.searchParams.delete('payment');
         window.history.replaceState({}, '', url.toString());
-        window.location.reload();
+        
+        if (stepParam === 'payment' || stepParam === 'scholarship_fee') {
+          handleNext();
+        } else {
+          window.location.reload();
+        }
       }, 6000);
     }
   }, [searchParams]);
@@ -162,7 +242,6 @@ const StudentOnboarding: React.FC = () => {
       'payment',
       'scholarship_fee',
       'university_documents',
-      'completed',
     ];
 
     const currentIndex = steps.indexOf(state.currentStep);
@@ -181,7 +260,6 @@ const StudentOnboarding: React.FC = () => {
       'payment',
       'scholarship_fee',
       'university_documents',
-      'completed',
     ];
 
     const currentIndex = steps.indexOf(state.currentStep);
@@ -190,21 +268,7 @@ const StudentOnboarding: React.FC = () => {
     }
   };
 
-  const handleComplete = async () => {
-    if (userProfile?.id) {
-      try {
-        await supabase
-          .from('user_profiles')
-          .update({ onboarding_completed: true })
-          .eq('id', userProfile.id);
-        
-        window.localStorage.removeItem('onboarding_current_step');
-        navigate('/student/dashboard');
-      } catch (error) {
-        console.error('Error completing onboarding:', error);
-      }
-    }
-  };
+
   const allSteps: OnboardingStep[] = [
     'welcome',
     'selection_fee',
@@ -214,7 +278,6 @@ const StudentOnboarding: React.FC = () => {
     'payment',
     'scholarship_fee',
     'university_documents',
-    'completed',
   ];
 
   const currentIdx = allSteps.indexOf(state.currentStep);
@@ -247,35 +310,6 @@ const StudentOnboarding: React.FC = () => {
         return <ScholarshipFeeStep onNext={handleNext} onBack={handleBack} />;
       case 'university_documents':
         return <UniversityDocumentsStep onNext={handleNext} onBack={handleBack} />;
-      case 'completed':
-        return (
-          <div className="space-y-10 pb-12 max-w-4xl mx-auto px-4">
-            {/* Header */}
-            <div className="text-center md:text-left space-y-4">
-              <h2 className="text-3xl md:text-5xl font-black text-white uppercase tracking-tighter leading-none">Onboarding Concluído</h2>
-              <p className="text-lg md:text-xl text-white/60 font-medium max-w-2xl mt-2">Você completou todas as etapas necessárias.</p>
-            </div>
-
-            {/* Main White Container */}
-            <div className="bg-white border border-emerald-500/30 ring-1 ring-emerald-500/20 rounded-[2.5rem] p-6 md:p-10 shadow-2xl relative overflow-hidden">
-              <div className="absolute top-0 right-0 w-64 h-64 bg-blue-500/5 rounded-full blur-[80px] -mr-32 -mt-32 pointer-events-none" />
-              
-              <div className="relative z-10 text-center py-6">
-                <div className="w-20 h-20 bg-emerald-500/20 rounded-full flex items-center justify-center mx-auto mb-6 border border-emerald-500/30">
-                  <CheckCircle className="w-12 h-12 text-emerald-400" />
-                </div>
-                <h3 className="text-3xl font-black text-gray-900 mb-3 uppercase tracking-tight">Tudo Pronto!</h3>
-                <p className="text-gray-500 mb-8 font-medium">Parabéns! Você completou todas as etapas do onboarding com sucesso.</p>
-                <button
-                  onClick={handleComplete}
-                  className="w-full max-w-xs bg-blue-600 text-white py-4 px-8 rounded-xl hover:bg-blue-700 transition-all font-bold uppercase tracking-widest shadow-lg shadow-blue-500/20 hover:scale-105 active:scale-95 mx-auto"
-                >
-                  Ir para o Painel
-                </button>
-              </div>
-            </div>
-          </div>
-        );
       default:
         return <WelcomeStep onNext={handleNext} onBack={handleBack} />;
     }
@@ -304,7 +338,7 @@ const StudentOnboarding: React.FC = () => {
   }
 
   return (
-    <div className="min-h-screen bg-[#020617] w-full flex flex-col relative overflow-hidden">
+    <div className="min-h-screen bg-[#020617] w-full flex flex-col relative overflow-x-hidden">
       {/* Background blobs decorativos */}
       <div className="absolute top-0 right-0 -mr-20 -mt-20 w-96 h-96 bg-blue-600/20 rounded-full blur-[120px] pointer-events-none" />
       
@@ -395,6 +429,61 @@ const StudentOnboarding: React.FC = () => {
             </button>
 
             <div className="flex items-center gap-3">
+              {/* Notifications Bell */}
+              <div className="relative notifications-container">
+                <button
+                  onClick={() => {
+                    if (window.innerWidth < 768) {
+                      setShowNotificationsModal(true);
+                    } else {
+                      setShowNotif(!showNotif);
+                    }
+                  }}
+                  className="relative p-2 rounded-xl bg-white hover:bg-gray-50 transition-colors shadow-sm border border-gray-100 flex items-center justify-center h-[42px] w-[42px]"
+                  title="Notifications"
+                >
+                  <Bell className="h-5 w-5 text-gray-600" />
+                  {newNotificationCount > 0 && (
+                    <span className="absolute -top-1 -right-1 h-5 w-5 bg-red-500 rounded-full flex items-center justify-center text-white text-[10px] font-bold border-2 border-white shadow-sm">
+                      {newNotificationCount > 99 ? '99+' : newNotificationCount}
+                    </span>
+                  )}
+                </button>
+
+                {/* Notifications Dropdown - Desktop */}
+                {showNotif && (
+                  <div className="hidden md:block absolute right-0 top-full mt-2 w-80 bg-white rounded-xl shadow-xl border border-slate-200 py-2 z-[100]">
+                    <div className="px-4 pb-2 border-b border-slate-200 font-semibold text-slate-900 flex items-center justify-between">
+                      <span className="text-sm">Notificações</span>
+                      <div className="flex items-center gap-2 text-[10px]">
+                        <button onClick={() => markAllAsRead()} className="text-blue-600 hover:underline">Marcar todas</button>
+                        <span className="text-slate-300">|</span>
+                        <button onClick={() => clearAll()} className="text-red-600 hover:underline">Limpar</button>
+                      </div>
+                    </div>
+                    <div className="max-h-80 overflow-y-auto">
+                      {notifications.length === 0 ? (
+                        <div className="px-4 py-8 text-sm text-slate-500 text-center">Nenhuma notificação</div>
+                      ) : (
+                        notifications.map((n) => (
+                          <div key={n.id} className={`px-4 py-3 hover:bg-slate-50 cursor-pointer border-b border-slate-50 last:border-0 ${!n.read_at ? 'bg-blue-50/30' : ''}`} onClick={() => openNotification(n)}>
+                            <div className="text-sm font-bold text-slate-900 flex items-center justify-between">
+                              <span className="truncate pr-4">{n.title}</span>
+                              {!n.read_at && <span className="h-2 w-2 rounded-full bg-blue-500 flex-shrink-0"></span>}
+                            </div>
+                            <div className="text-xs text-slate-600 mt-1 line-clamp-2">{n.message}</div>
+                            <div className="text-[10px] text-slate-400 mt-1.5 flex items-center gap-1">
+                              <Clock className="w-3 h-3" />
+                              {new Date(n.created_at).toLocaleString()}
+                            </div>
+                          </div>
+                        ))
+                      )}
+                    </div>
+                  </div>
+                )}
+              </div>
+
               <LanguageSelector variant="dashboard" showLabel={true} />
               <button
                 onClick={() => navigate('/student/dashboard')}
@@ -416,6 +505,22 @@ const StudentOnboarding: React.FC = () => {
           {renderStep()}
         </div>
       </div>
+
+      {/* Notifications Modal - for mobile */}
+      <NotificationsModal
+        isOpen={showNotificationsModal}
+        onClose={() => setShowNotificationsModal(false)}
+        notifications={notifications}
+        onNotificationClick={async (notification) => {
+          await markAsRead(notification.id);
+          if (notification.link) {
+            navigate(notification.link);
+          }
+          setShowNotificationsModal(false);
+        }}
+        onMarkAllAsRead={markAllAsRead}
+        onClearAll={clearAll}
+      />
     </div>
   );
 };
