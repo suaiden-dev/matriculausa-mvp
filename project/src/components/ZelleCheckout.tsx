@@ -1373,7 +1373,7 @@ export const ZelleCheckout: React.FC<ZelleCheckoutProps> = ({
               Payment Under Review
           </h3>
             <p className="text-sm sm:text-base text-amber-800 mb-4 leading-relaxed">
-            Your payment proof requires additional verification. Our team will review it within 24 hours.
+            Your payment proof requires additional verification. Our team will review it within 48 hours.
           </p>
             <div className="flex justify-center space-x-2 mt-4">
               <div className="w-2 h-2 bg-amber-500 rounded-full animate-bounce" style={{ animationDelay: '0s' }}></div>

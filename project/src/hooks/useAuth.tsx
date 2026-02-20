@@ -872,6 +872,8 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
       localStorage.removeItem('cached_user_profile');
       localStorage.removeItem('pending_seller_referral_code');
       localStorage.removeItem('sb-fitpynguasqqutuhzifx-auth-token');
+      localStorage.removeItem('onboarding_current_step');
+      localStorage.removeItem('pending_open_modal');
       sessionStorage.clear();
       
       // Forçar refresh da página para limpar completamente o estado
@@ -897,6 +899,8 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
       localStorage.removeItem('cached_user');
       localStorage.removeItem('cached_user_profile');
       localStorage.removeItem('sb-fitpynguasqqutuhzifx-auth-token');
+      localStorage.removeItem('onboarding_current_step');
+      localStorage.removeItem('pending_open_modal');
       sessionStorage.clear();
       
       // Forçar redirecionamento

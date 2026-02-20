@@ -60,10 +60,17 @@ const ZelleIcon = ({ className }: { className?: string }) => (
 );
 
 const StripeIcon = ({ className }: { className?: string }) => (
-  <svg className={className} xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none">
-    <rect x="2" y="4" width="20" height="16" rx="2" fill="#7950F2"/>
-    <path d="M6 8h12M6 12h8M6 16h4" stroke="white" strokeWidth="1.5" strokeLinecap="round"/>
-  </svg>
+  <div className={`${className} flex items-center justify-center bg-[#635bff] rounded-lg overflow-hidden shadow-sm shadow-[#635bff]/20`}>
+    <span 
+      className="text-white font-black text-[28px] leading-[0] select-none"
+      style={{ 
+        fontFamily: 'system-ui, -apple-system, sans-serif',
+        transform: 'translateY(-1.5px)' // Puxando para cima para compensar o peso da fonte
+      }}
+    >
+      S
+    </span>
+  </div>
 );
 
 const ParcelowIcon = ({ className }: { className?: string }) => (
@@ -79,6 +86,7 @@ const ParcelowIcon = ({ className }: { className?: string }) => (
 import { Dialog } from '@headlessui/react';
 import { useTranslation } from 'react-i18next';
 import { useNavigate } from 'react-router-dom';
+import { usePaymentBlocked } from '../../../hooks/usePaymentBlocked';
 
 export const ScholarshipFeeStep: React.FC<StepProps> = ({ onNext, onBack }) => {
   const { userProfile } = useAuth();
@@ -86,20 +94,16 @@ export const ScholarshipFeeStep: React.FC<StepProps> = ({ onNext, onBack }) => {
   useTranslation();
   const navigate = useNavigate();
   const { getFeeAmount, formatFeeAmount } = useFeeConfig(userProfile?.id);
-  
+  const { isBlocked, pendingPayment, refetch: refetchPaymentStatus } = usePaymentBlocked();
+
   const [applications, setApplications] = useState<ApplicationWithScholarship[]>([]);
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
   const [exchangeRate, setExchangeRate] = useState<number>(0);
 
-  // Zelle state
-  const [showZelleCheckout, setShowZelleCheckout] = useState(false);
-  const [zelleAmount, setZelleAmount] = useState<number>(0);
-  const [zelleScholarshipId, setZelleScholarshipId] = useState<string>('');
-
-  // Modern Checkout states
   const [isProcessingCheckout, setIsProcessingCheckout] = useState<string | null>(null);
   const [showCpfModal, setShowCpfModal] = useState<boolean>(false);
+  const [zelleActiveApp, setZelleActiveApp] = useState<ApplicationWithScholarship | null>(null);
 
   const fetchApplications = useCallback(async () => {
     if (!userProfile?.id) return;
@@ -230,14 +234,15 @@ export const ScholarshipFeeStep: React.FC<StepProps> = ({ onNext, onBack }) => {
   };
 
   const handleZelleClick = (application: ApplicationWithScholarship) => {
-    const amount = getFeeAmount('scholarship_fee');
-    setZelleAmount(amount);
-    setZelleScholarshipId(application.scholarship_id);
-    setShowZelleCheckout(true);
+    setZelleActiveApp(prev => prev?.id === application.id ? null : application);
   };
 
   const unpaidApplications = applications.filter(app => !app.is_scholarship_fee_paid);
   const allPaid = applications.length > 0 && unpaidApplications.length === 0;
+
+  // Detecta se há um Zelle pendente do tipo scholarship_fee
+  const hasZellePendingScholarshipFee = isBlocked && pendingPayment?.fee_type === 'scholarship_fee';
+
 
   if (loading && applications.length === 0) {
     return (
@@ -248,37 +253,6 @@ export const ScholarshipFeeStep: React.FC<StepProps> = ({ onNext, onBack }) => {
     );
   }
 
-  if (showZelleCheckout) {
-    return (
-      <div className="max-w-4xl mx-auto px-4">
-        <button 
-          onClick={() => setShowZelleCheckout(false)}
-          className="mb-8 flex items-center text-white/60 hover:text-white transition-all gap-3 group"
-        >
-          <div className="w-10 h-10 rounded-full bg-white/5 flex items-center justify-center group-hover:bg-white/10 group-hover:scale-110 transition-all border border-white/5">
-            <ChevronRight className="w-5 h-5 rotate-180" />
-          </div>
-          <span className="font-black uppercase tracking-widest text-xs">Voltar</span>
-        </button>
-
-        <div className="bg-white rounded-[2.5rem] overflow-hidden shadow-2xl border border-white/10">
-          <ZelleCheckout
-            feeType="scholarship_fee"
-            amount={zelleAmount}
-            scholarshipsIds={[zelleScholarshipId]}
-            onSuccess={() => {
-              setShowZelleCheckout(false);
-              onNext();
-            }}
-            metadata={{
-              application_id: applications.find(a => a.scholarship_id === zelleScholarshipId)?.id,
-              selected_scholarship_id: zelleScholarshipId
-            }}
-          />
-        </div>
-      </div>
-    );
-  }
 
   return (
     <div className="space-y-10 pb-20 max-w-7xl mx-auto px-4">
@@ -396,125 +370,194 @@ export const ScholarshipFeeStep: React.FC<StepProps> = ({ onNext, onBack }) => {
                     {/* Payment Options List */}
                     {!app.is_scholarship_fee_paid && (
                       <div className="flex flex-col gap-4 mt-4">
-                        {/* Stripe Option */}
-                        <button
-                          onClick={() => processCheckout(app, 'stripe')}
-                          disabled={!!isProcessingCheckout}
-                          className="group/btn relative bg-white border border-gray-200 p-5 rounded-[2rem] text-left hover:scale-[1.01] active:scale-95 transition-all shadow-sm hover:shadow-md disabled:opacity-50 hover:border-blue-200 flex items-center justify-between"
-                        >
-                          <div className="flex items-center gap-5">
-                            <div className="w-14 h-14 flex items-center justify-center bg-blue-50/50 rounded-2xl group-hover/btn:bg-blue-50 transition-colors">
-                              <StripeIcon className="w-9 h-9" />
-                            </div>
-                            <div>
-                              <div className="font-black text-gray-900 text-base uppercase tracking-tight">Cartão de Crédito</div>
-                              <div className="text-[10px] font-bold text-gray-400 mt-1 uppercase tracking-wide leading-tight">* Inclui taxas de processamento</div>
-                            </div>
-                          </div>
-                          <div className="flex items-center gap-5">
-                            <div className="text-right">
-                              <div className="bg-blue-100 text-blue-600 text-sm font-black px-3 py-1.5 rounded-full border border-blue-200 uppercase tracking-tight">
-                                {formatFeeAmount(cardAmount)}
+                        {/* Zelle Pendente — bloqueia outros métodos */}
+                        {hasZellePendingScholarshipFee ? (
+                          <div className="flex flex-col gap-0">
+                            {/* Banner de aviso */}
+                            <div className="bg-amber-50 border border-amber-200 rounded-t-[2rem] px-6 py-4 flex items-start gap-4">
+                              <div className="w-10 h-10 bg-amber-100 rounded-2xl flex items-center justify-center border border-amber-200 flex-shrink-0 mt-0.5">
+                                <AlertCircle className="w-5 h-5 text-amber-600" />
+                              </div>
+                              <div>
+                                <p className="text-sm font-black text-amber-700 uppercase tracking-tight">Pagamento Zelle em Análise</p>
+                                <p className="text-xs text-amber-600/80 font-medium mt-0.5 leading-relaxed">
+                                  Você já iniciou um pagamento via Zelle. Aguarde a confirmação antes de usar outro método. Isso pode levar até 48 horas.
+                                </p>
                               </div>
                             </div>
-                            <ChevronRight className="w-6 h-6 text-gray-300 group-hover/btn:translate-x-1 transition-transform" />
-                          </div>
-                          {isProcessingCheckout === `${app.id}_stripe` && (
-                            <div className="absolute inset-0 bg-white/80 backdrop-blur-sm rounded-[2rem] flex items-center justify-center z-10">
-                              <RefreshCw className="w-8 h-8 text-blue-600 animate-spin" />
-                            </div>
-                          )}
-                        </button>
 
-                        {/* PIX Option */}
-                        <button
-                          onClick={() => processCheckout(app, 'pix')}
-                          disabled={!!isProcessingCheckout}
-                          className="group/btn relative bg-white border border-gray-200 p-5 rounded-[2rem] text-left hover:scale-[1.01] active:scale-95 transition-all shadow-sm hover:shadow-md disabled:opacity-50 hover:border-emerald-200 flex items-center justify-between"
-                        >
-                          <div className="flex items-center gap-5">
-                            <div className="w-14 h-14 flex items-center justify-center bg-emerald-50/50 rounded-2xl group-hover/btn:bg-emerald-50 transition-colors">
-                              <PixIcon className="w-9 h-9" />
-                            </div>
-                            <div>
-                              <div className="font-black text-gray-900 text-base uppercase tracking-tight">PIX</div>
-                              <div className="text-[10px] font-bold text-gray-400 mt-1 uppercase tracking-wide leading-tight">* Inclui taxas de processamento</div>
+                            {/* ZelleCheckout inline — aberto automaticamente */}
+                            <div className="border border-amber-200 border-t-0 rounded-b-[2rem] overflow-hidden bg-white shadow-sm">
+                              <ZelleCheckout
+                                feeType="scholarship_fee"
+                                amount={getFeeAmount('scholarship_fee')}
+                                scholarshipsIds={[app.scholarship_id]}
+                                metadata={{
+                                  application_id: app.id,
+                                  selected_scholarship_id: app.scholarship_id
+                                }}
+                                onSuccess={() => {
+                                  setZelleActiveApp(null);
+                                  onNext();
+                                }}
+                                onProcessingChange={(isProcessing) => {
+                                  if (isProcessing) refetchPaymentStatus();
+                                }}
+                              />
                             </div>
                           </div>
-                          <div className="flex items-center gap-5">
-                            <div className="text-right">
-                              <div className="bg-emerald-100 text-emerald-600 text-sm font-black px-3 py-1.5 rounded-full border border-emerald-200 uppercase tracking-tight">
-                                R$ {pixInfo.totalWithIOF.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
+                        ) : (
+                          <>
+                            {/* Stripe Option */}
+                            <button
+                              onClick={() => processCheckout(app, 'stripe')}
+                              disabled={!!isProcessingCheckout}
+                              className="group/btn relative bg-white border border-gray-200 p-5 rounded-[2rem] text-left hover:scale-[1.01] active:scale-95 transition-all shadow-sm hover:shadow-md disabled:opacity-50 hover:border-blue-200 flex items-center justify-between"
+                            >
+                              <div className="flex items-center gap-5">
+                                <div className="w-14 h-14 flex items-center justify-center bg-blue-50/50 rounded-2xl group-hover/btn:bg-blue-50 transition-colors">
+                                  <StripeIcon className="w-9 h-9" />
+                                </div>
+                                <div>
+                                  <div className="font-black text-gray-900 text-base uppercase tracking-tight">Cartão de Crédito</div>
+                                  <div className="text-[10px] font-bold text-gray-400 mt-1 uppercase tracking-wide leading-tight">* Podem incluir taxas de processamento</div>
+                                </div>
                               </div>
-                            </div>
-                            <ChevronRight className="w-6 h-6 text-gray-300 group-hover/btn:translate-x-1 transition-transform" />
-                          </div>
-                          {isProcessingCheckout === `${app.id}_pix` && (
-                            <div className="absolute inset-0 bg-white/80 backdrop-blur-sm rounded-[2rem] flex items-center justify-center z-10">
-                              <RefreshCw className="w-8 h-8 text-[#4db6ac] animate-spin" />
-                            </div>
-                          )}
-                        </button>
+                              <div className="flex items-center gap-5">
+                                <div className="text-right">
+                                  <div className="bg-blue-100 text-blue-600 text-sm font-black px-3 py-1.5 rounded-full border border-blue-200 uppercase tracking-tight">
+                                    {formatFeeAmount(cardAmount)}
+                                  </div>
+                                </div>
+                                <ChevronRight className="w-6 h-6 text-gray-300 group-hover/btn:translate-x-1 transition-transform" />
+                              </div>
+                              {isProcessingCheckout === `${app.id}_stripe` && (
+                                <div className="absolute inset-0 bg-white/80 backdrop-blur-sm rounded-[2rem] flex items-center justify-center z-10">
+                                  <RefreshCw className="w-8 h-8 text-blue-600 animate-spin" />
+                                </div>
+                              )}
+                            </button>
 
-                        {/* Parcelow Option */}
-                        <button
-                          onClick={() => processCheckout(app, 'parcelow')}
-                          disabled={!!isProcessingCheckout}
-                          className="group/btn relative bg-white border border-gray-200 p-5 rounded-[2rem] text-left hover:scale-[1.01] active:scale-95 transition-all shadow-sm hover:shadow-md disabled:opacity-50 hover:border-orange-200 flex items-center justify-between"
-                        >
-                          <div className="flex items-center gap-5">
-                            <div className="w-14 h-14 flex items-center justify-center bg-orange-50/50 rounded-2xl group-hover/btn:bg-orange-50 transition-colors px-2">
-                              <ParcelowIcon className="w-full h-10" />
-                            </div>
-                            <div>
-                              <div className="font-black text-gray-900 text-base uppercase tracking-tight">Parcelow</div>
-                              <div className="text-[10px] font-bold text-gray-400 mt-1 uppercase tracking-wide leading-tight max-w-[220px]">* Taxas de operadora e processamento da plataforma serão aplicadas</div>
-                            </div>
-                          </div>
-                          <div className="flex items-center gap-5">
-                            <div className="text-right flex flex-col items-end">
-                              <div className="bg-blue-100 text-blue-700 text-sm font-black px-3 py-1.5 rounded-full border border-blue-200 uppercase tracking-tight">
-                                {formatFeeAmount(cardAmount)}
+                            {/* PIX Option */}
+                            <button
+                              onClick={() => processCheckout(app, 'pix')}
+                              disabled={!!isProcessingCheckout}
+                              className="group/btn relative bg-white border border-gray-200 p-5 rounded-[2rem] text-left hover:scale-[1.01] active:scale-95 transition-all shadow-sm hover:shadow-md disabled:opacity-50 hover:border-emerald-200 flex items-center justify-between"
+                            >
+                              <div className="flex items-center gap-5">
+                                <div className="w-14 h-14 flex items-center justify-center bg-emerald-50/50 rounded-2xl group-hover/btn:bg-emerald-50 transition-colors">
+                                  <PixIcon className="w-9 h-9" />
+                                </div>
+                                <div>
+                                  <div className="font-black text-gray-900 text-base uppercase tracking-tight">PIX</div>
+                                  <div className="text-[10px] font-bold text-gray-400 mt-1 uppercase tracking-wide leading-tight">* Podem incluir taxas de processamento</div>
+                                </div>
                               </div>
-                              <span className="text-[10px] font-bold text-blue-500 mt-1 uppercase tracking-widest">Até 12x no cartão</span>
-                            </div>
-                            <ChevronRight className="w-6 h-6 text-gray-300 group-hover/btn:translate-x-1 transition-transform" />
-                          </div>
-                          {isProcessingCheckout === `${app.id}_parcelow` && (
-                            <div className="absolute inset-0 bg-white/80 backdrop-blur-sm rounded-[2rem] flex items-center justify-center z-10">
-                              <RefreshCw className="w-8 h-8 text-orange-500 animate-spin" />
-                            </div>
-                          )}
-                        </button>
+                              <div className="flex items-center gap-5">
+                                <div className="text-right">
+                                  <div className="bg-emerald-100 text-emerald-600 text-sm font-black px-3 py-1.5 rounded-full border border-emerald-200 uppercase tracking-tight">
+                                    R$ {pixInfo.totalWithIOF.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
+                                  </div>
+                                </div>
+                                <ChevronRight className="w-6 h-6 text-gray-300 group-hover/btn:translate-x-1 transition-transform" />
+                              </div>
+                              {isProcessingCheckout === `${app.id}_pix` && (
+                                <div className="absolute inset-0 bg-white/80 backdrop-blur-sm rounded-[2rem] flex items-center justify-center z-10">
+                                  <RefreshCw className="w-8 h-8 text-[#4db6ac] animate-spin" />
+                                </div>
+                              )}
+                            </button>
 
-                        {/* Zelle Option */}
-                        <button
-                          onClick={() => handleZelleClick(app)}
-                          disabled={!!isProcessingCheckout}
-                          className="group/btn relative bg-white border border-gray-200 p-5 rounded-[2rem] text-left hover:scale-[1.01] active:scale-95 transition-all shadow-sm hover:shadow-md disabled:opacity-50 hover:border-purple-200 flex items-center justify-between"
-                        >
-                          <div className="flex items-center gap-5">
-                            <div className="w-14 h-14 flex items-center justify-center bg-purple-50/50 rounded-2xl group-hover/btn:bg-purple-50 transition-colors">
-                              <ZelleIcon className="w-9 h-9" />
-                            </div>
-                            <div>
-                              <div className="font-black text-gray-900 text-base uppercase tracking-tight">Zelle</div>
-                              <div className="text-[10px] font-bold text-amber-500 mt-1 uppercase tracking-wide leading-tight flex items-center gap-1">
-                                <AlertCircle className="w-3 h-3" />
-                                Processamento pode levar até 48 horas
+                            {/* Parcelow Option */}
+                            <button
+                              onClick={() => processCheckout(app, 'parcelow')}
+                              disabled={!!isProcessingCheckout}
+                              className="group/btn relative bg-white border border-gray-200 p-5 rounded-[2rem] text-left hover:scale-[1.01] active:scale-95 transition-all shadow-sm hover:shadow-md disabled:opacity-50 hover:border-orange-200 flex items-center justify-between"
+                            >
+                              <div className="flex items-center gap-5">
+                                <div className="w-14 h-14 flex items-center justify-center bg-orange-50/50 rounded-2xl group-hover/btn:bg-orange-50 transition-colors px-2">
+                                  <ParcelowIcon className="w-full h-10" />
+                                </div>
+                                <div>
+                                  <div className="font-black text-gray-900 text-base uppercase tracking-tight">Parcelow</div>
+                                  <div className="text-[10px] font-bold text-gray-400 mt-1 uppercase tracking-wide leading-tight">* Podem incluir taxas de operadora e processamento da plataforma</div>
+                                </div>
                               </div>
-                            </div>
-                          </div>
-                          <div className="flex items-center gap-5">
-                            <div className="text-right">
-                              <div className="bg-indigo-100 text-indigo-600 text-sm font-black px-3 py-1.5 rounded-full border border-indigo-200 uppercase tracking-tight">
-                                {formatFeeAmount(baseAmount)}
+                              <div className="flex items-center gap-5">
+                                <div className="text-right flex flex-col items-end">
+                                  <div className="bg-blue-100 text-blue-700 text-sm font-black px-3 py-1.5 rounded-full border border-blue-200 uppercase tracking-tight">
+                                    {formatFeeAmount(cardAmount)}
+                                  </div>
+                                  <span className="text-[10px] font-bold text-blue-500 mt-1 uppercase tracking-widest">Até 12x no cartão</span>
+                                </div>
+                                <ChevronRight className="w-6 h-6 text-gray-300 group-hover/btn:translate-x-1 transition-transform" />
                               </div>
-                              <span className="text-[10px] font-bold text-indigo-400 mt-1 block uppercase tracking-widest">Sem Taxas</span>
+                              {isProcessingCheckout === `${app.id}_parcelow` && (
+                                <div className="absolute inset-0 bg-white/80 backdrop-blur-sm rounded-[2rem] flex items-center justify-center z-10">
+                                  <RefreshCw className="w-8 h-8 text-orange-500 animate-spin" />
+                                </div>
+                              )}
+                            </button>
+
+                            {/* Zelle Option — accordion inline */}
+                            <div className="flex flex-col">
+                              <button
+                                onClick={() => handleZelleClick(app)}
+                                disabled={!!isProcessingCheckout}
+                                className={`group/btn relative bg-white border p-5 text-left hover:scale-[1.01] active:scale-[0.99] transition-all shadow-sm hover:shadow-md disabled:opacity-50 hover:border-purple-200 flex items-center justify-between ${
+                                  zelleActiveApp?.id === app.id
+                                    ? 'rounded-t-[2rem] border-purple-200 border-b-0 bg-purple-50/30'
+                                    : 'rounded-[2rem] border-gray-200'
+                                }`}
+                              >
+                                <div className="flex items-center gap-5">
+                                  <div className="w-14 h-14 flex items-center justify-center bg-purple-50/50 rounded-2xl group-hover/btn:bg-purple-50 transition-colors">
+                                    <ZelleIcon className="w-9 h-9" />
+                                  </div>
+                                  <div>
+                                    <div className="font-black text-gray-900 text-base uppercase tracking-tight">Zelle</div>
+                                    <div className="text-[10px] font-bold text-amber-500 mt-1 uppercase tracking-wide leading-tight flex items-center gap-1">
+                                      <AlertCircle className="w-3 h-3" />
+                                      Processamento pode levar até 48 horas
+                                    </div>
+                                  </div>
+                                </div>
+                                <div className="flex items-center gap-5">
+                                  <div className="text-right">
+                                    <div className="bg-indigo-100 text-indigo-600 text-sm font-black px-3 py-1.5 rounded-full border border-indigo-200 uppercase tracking-tight">
+                                      {formatFeeAmount(baseAmount)}
+                                    </div>
+                                    <span className="text-[10px] font-bold text-indigo-400 mt-1 block uppercase tracking-widest">Sem Taxas</span>
+                                  </div>
+                                  <ChevronRight className={`w-6 h-6 text-gray-300 transition-transform ${
+                                    zelleActiveApp?.id === app.id ? 'rotate-90' : 'group-hover/btn:translate-x-1'
+                                  }`} />
+                                </div>
+                              </button>
+
+                              {zelleActiveApp?.id === app.id && (
+                                <div className="border border-purple-200 border-t-0 rounded-b-[2rem] overflow-hidden bg-white shadow-sm">
+                                  <ZelleCheckout
+                                    feeType="scholarship_fee"
+                                    amount={getFeeAmount('scholarship_fee')}
+                                    scholarshipsIds={[app.scholarship_id]}
+                                    metadata={{
+                                      application_id: app.id,
+                                      selected_scholarship_id: app.scholarship_id
+                                    }}
+                                    onSuccess={() => {
+                                      setZelleActiveApp(null);
+                                      onNext();
+                                    }}
+                                    onProcessingChange={(isProcessing) => {
+                                      if (isProcessing) refetchPaymentStatus();
+                                    }}
+                                  />
+                                </div>
+                              )}
                             </div>
-                            <ChevronRight className="w-6 h-6 text-gray-300 group-hover/btn:translate-x-1 transition-transform" />
-                          </div>
-                        </button>
+                          </>
+                        )}
                       </div>
                     )}
 

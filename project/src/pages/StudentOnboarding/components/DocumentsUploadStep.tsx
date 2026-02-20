@@ -15,7 +15,9 @@ import {
   ArrowRight,
   ChevronDown,
   XCircle,
-  AlertTriangle
+  AlertTriangle,
+  Send,
+  Globe
 } from 'lucide-react';
 
 import { useAuth } from '../../../hooks/useAuth';
@@ -31,7 +33,7 @@ import { PencilLoader } from '../../../components/PencilLoader';
 const DOCUMENT_TYPES = [
   { key: 'passport', label: 'Passport', description: 'Upload a clear photo or scan of your passport.' },
   { key: 'diploma', label: 'High School Diploma', description: 'Upload your high school diploma or equivalent.' },
-  { key: 'funds_proof', label: 'Proof of Funds', description: 'Upload bank statements or financial documents. Minimum of $20,000 USD is required, plus $5,000 USD for each dependent.' },
+  { key: 'funds_proof', label: 'Proof of Funds', description: 'Upload bank statements or financial documents. Minimum of $22,000 USD is required, plus $5,000 USD for each dependent.' },
 ];
 
 export const DocumentsUploadStep: React.FC<StepProps> = ({ onNext }) => {
@@ -101,15 +103,9 @@ export const DocumentsUploadStep: React.FC<StepProps> = ({ onNext }) => {
             .eq('student_id', userProfile.id)
             .order('created_at', { ascending: false });
           
-          if (!error && data) {
-            setApplications(data);
-            
-            // Auto-select if there's only one approved application
-            const approvedApps = data.filter(a => a.status === 'approved' || a.status === 'enrolled');
-            if (approvedApps.length === 1) {
-              setSelectedAppId(approvedApps[0].id);
+            if (!error && data) {
+              setApplications(data);
             }
-          }
         } catch (err) {
           console.error('Error fetching applications:', err);
         } finally {
@@ -492,7 +488,50 @@ export const DocumentsUploadStep: React.FC<StepProps> = ({ onNext }) => {
   if (isLocked) {
     const isApproved = userProfile?.documents_status === 'approved';
     const approvedApps = applications.filter(app => app.status === 'approved' || app.status === 'enrolled');
-    const hasSelectedApp = !!selectedAppId && approvedApps.some(app => app.id === selectedAppId);
+    
+    // Verificar se já existe uma aplicação paga para mostrar estado concluído
+    const paidApplication = applications.find(app => !!app.is_application_fee_paid);
+
+    if (paidApplication) {
+      return (
+        <div className="space-y-10 pb-12 max-w-4xl mx-auto px-4">
+          {/* Header */}
+          <div className="text-center md:text-left space-y-4">
+            <h2 className="text-3xl md:text-5xl font-black text-white uppercase tracking-tighter leading-none">
+              Escolha sua Universidade
+            </h2>
+            <p className="text-lg md:text-xl text-white/60 font-medium max-w-2xl mt-2">
+              Etapa concluída com sucesso.
+            </p>
+          </div>
+
+          {/* Success Card */}
+          <div className="bg-white border border-emerald-500/30 ring-1 ring-emerald-500/20 rounded-[2.5rem] p-6 md:p-10 shadow-2xl relative overflow-hidden animate-in fade-in zoom-in duration-500">
+            <div className="absolute top-0 right-0 w-64 h-64 bg-blue-500/5 rounded-full blur-[80px] -mr-32 -mt-32 pointer-events-none" />
+            
+            <div className="relative z-10 text-center py-6">
+              <div className="w-20 h-20 bg-emerald-500/20 rounded-full flex items-center justify-center mx-auto mb-6 border border-emerald-500/30">
+                <CheckCircle className="w-12 h-12 text-emerald-500" />
+              </div>
+              <h3 className="text-3xl font-black text-gray-900 mb-4 uppercase tracking-tight">
+                Bolsa Confirmada!
+              </h3>
+              <p className="text-gray-500 mb-8 font-medium text-lg max-w-lg mx-auto">
+                Você selecionou a bolsa <span className="text-blue-600 font-bold">{paidApplication.scholarships?.title}</span> e a taxa de aplicação já foi paga.
+              </p>
+              <button
+                onClick={onNext}
+                className="w-full max-w-xs bg-blue-600 text-white py-4 px-8 rounded-xl hover:bg-blue-700 transition-all font-bold uppercase tracking-widest shadow-lg shadow-blue-500/20 hover:scale-105 active:scale-95 mx-auto flex items-center justify-center gap-2 group"
+              >
+                <span>Continuar</span>
+                <ArrowRight className="w-5 h-5 group-hover:translate-x-1 transition-transform" />
+              </button>
+            </div>
+          </div>
+        </div>
+      );
+    }
+
 
     const handleConfirmSelection = () => {
       if (selectedAppId) {
@@ -512,34 +551,7 @@ export const DocumentsUploadStep: React.FC<StepProps> = ({ onNext }) => {
       }
     };
 
-    if (isApproved && hasSelectedApp) {
-      return (
-        <div className="space-y-10 pb-24 sm:pb-12 max-w-4xl mx-auto px-4 mt-12">
-          <div className="bg-white border border-emerald-500/30 ring-1 ring-emerald-500/20 rounded-[2.5rem] p-6 md:p-12 shadow-2xl relative overflow-hidden">
-            <div className="absolute top-0 right-0 w-80 h-80 bg-blue-500/5 rounded-full blur-[100px] -mr-40 -mt-40 pointer-events-none" />
-            <div className="relative z-10 text-center py-10">
-              <div className="w-24 h-24 bg-emerald-500/20 rounded-full flex items-center justify-center mx-auto mb-8 border border-emerald-500/30">
-                <CheckCircle className="w-12 h-12 text-emerald-500" />
-              </div>
-              <h3 className="text-3xl md:text-4xl font-black text-gray-900 mb-4 uppercase tracking-tight">Etapa Concluída</h3>
-              <p className="text-gray-500 mb-10 font-medium text-lg max-w-lg mx-auto leading-relaxed">
-                Você já selecionou sua bolsa e seus documentos foram aprovados. Esta etapa está completa.
-              </p>
-              
-              <div className="flex justify-center">
-                <button
-                  onClick={onNext}
-                  className="w-full sm:w-auto bg-blue-600 text-white py-5 px-12 rounded-2xl hover:bg-blue-700 transition-all font-black uppercase tracking-widest text-sm shadow-xl shadow-blue-500/20 hover:scale-105 active:scale-95 flex items-center justify-center gap-3"
-                >
-                  Continuar
-                  <ArrowRight className="w-5 h-5" />
-                </button>
-              </div>
-            </div>
-          </div>
-        </div>
-      );
-    }
+
 
     return (
       <>
@@ -590,6 +602,7 @@ export const DocumentsUploadStep: React.FC<StepProps> = ({ onNext }) => {
                       const hasDocumentIssues = app.status !== 'rejected' && appDocs.some(d => 
                         ['rejected', 'changes_requested'].includes(d.status?.toLowerCase() || '')
                       );
+                      const showAmberAlert = hasDocumentIssues;
                       
                       return (
                         <div 
@@ -710,26 +723,26 @@ export const DocumentsUploadStep: React.FC<StepProps> = ({ onNext }) => {
                                     if (app.id) toggleChecklist(app.id); 
                                   }}
                                   className={`w-full flex items-center justify-between p-3 rounded-xl transition-all border group/btn ${
-                                    hasDocumentIssues 
+                                    showAmberAlert 
                                       ? 'bg-amber-50 border-amber-200 hover:bg-amber-100 shadow-sm shadow-amber-100' 
                                       : 'bg-slate-50 border-slate-200 hover:bg-slate-100'
                                   }`}
                                 >
                                    <div className="flex items-center gap-2">
                                      <div className="relative">
-                                       <FileText className={`w-4 h-4 ${hasDocumentIssues ? 'text-amber-600' : 'text-blue-600'}`} />
-                                       {hasDocumentIssues && (
-                                         <span className="absolute -top-1 -right-1 w-2 h-2 bg-orange-500 rounded-full border border-white animate-pulse" />
+                                       <FileText className={`w-4 h-4 ${showAmberAlert ? 'text-amber-600' : 'text-blue-600'}`} />
+                                       {showAmberAlert && (
+                                         <span className="absolute -top-1 -right-1 w-2 h-2 bg-amber-500 rounded-full border border-white animate-pulse" />
                                        )}
                                      </div>
-                                     <span className={`text-sm font-bold uppercase tracking-tight ${hasDocumentIssues ? 'text-amber-900' : 'text-slate-700'}`}>
+                                     <span className={`text-sm font-bold uppercase tracking-tight ${showAmberAlert ? 'text-amber-900' : 'text-slate-700'}`}>
                                        Verificar Documentos
                                      </span>
-                                     {hasDocumentIssues && (
-                                       <span className="flex h-2 w-2 rounded-full bg-orange-500 ml-1 shadow-sm shadow-orange-200" />
+                                     {showAmberAlert && (
+                                       <span className="flex h-2 w-2 rounded-full bg-amber-500 ml-1 shadow-sm shadow-amber-200" />
                                      )}
                                    </div>
-                                  <ChevronDown className={`w-4 h-4 transition-transform ${hasDocumentIssues ? 'text-amber-400' : 'text-slate-400'} ${app.id && openChecklists[app.id] ? 'rotate-180' : ''}`} />
+                                  <ChevronDown className={`w-4 h-4 transition-transform ${showAmberAlert ? 'text-amber-400' : 'text-slate-400'} ${app.id && openChecklists[app.id] ? 'rotate-180' : ''}`} />
                                 </button>
 
                                 {app.id && openChecklists[app.id] && (
@@ -748,18 +761,40 @@ export const DocumentsUploadStep: React.FC<StepProps> = ({ onNext }) => {
                                           const isUploading = uploadingFiles[key];
 
                                           return (
-                                            <div key={docInfo.type} className={`p-3 rounded-xl border-2 transition-all ${isRejectedStatus ? 'border-red-100 bg-red-50/30' : 'border-slate-50 bg-white'}`}>
+                                            <div key={docInfo.type} className={`p-3 rounded-xl border-2 transition-all ${
+                                              isRejectedStatus ? 'border-red-100 bg-red-50/30' : 
+                                              isUnderReviewStatus ? 'border-blue-100 bg-blue-50/30' :
+                                              isApprovedStatus ? 'border-emerald-100 bg-emerald-50/30' :
+                                              'border-amber-100 bg-amber-50/30'
+                                            }`}>
                                               <div className="flex items-start justify-between gap-3">
                                                 <div className="flex-1 min-w-0">
                                                   <div className="flex items-center gap-2 mb-1">
-                                                    <div className={`w-5 h-5 rounded-full flex-shrink-0 flex items-center justify-center border ${isApprovedStatus ? 'bg-emerald-100 border-emerald-400 text-emerald-600' : isRejectedStatus ? 'bg-red-100 border-red-400 text-red-600' : 'bg-slate-100 border-slate-300 text-slate-400'}`}>
+                                                    <div className={`w-5 h-5 rounded-full flex-shrink-0 flex items-center justify-center border ${
+                                                      isApprovedStatus ? 'bg-emerald-100 border-emerald-400 text-emerald-600' : 
+                                                      isRejectedStatus ? 'bg-red-100 border-red-400 text-red-600' : 
+                                                      isUnderReviewStatus ? 'bg-blue-100 border-blue-400 text-blue-600' :
+                                                      'bg-amber-100 border-amber-400 text-amber-600'
+                                                    }`}>
                                                       {isApprovedStatus ? <CheckCircle className="w-3 h-3" /> : isRejectedStatus ? <XCircle className="w-3 h-3" /> : <Clock className="w-3 h-3" />}
                                                     </div>
                                                     <h5 className="text-xs font-bold text-slate-900 truncate">{docInfo.label}</h5>
                                                   </div>
-                                                  <span className={`inline-block px-2 py-0.5 rounded-full text-[9px] font-black uppercase tracking-widest ${isApprovedStatus ? 'bg-emerald-100 text-emerald-700' : isRejectedStatus ? 'bg-red-100 text-red-700' : 'bg-slate-100 text-slate-500'}`}>
-                                                    {isApprovedStatus ? 'Aprovado' : isRejectedStatus ? 'Pendência' : isUnderReviewStatus ? 'Em Revisão' : 'Pendente'}
-                                                  </span>
+                                                  <div className="flex flex-wrap items-center gap-2">
+                                                    <span className={`inline-block px-2 py-0.5 rounded-full text-[9px] font-black uppercase tracking-widest ${
+                                                      isApprovedStatus ? 'bg-emerald-100 text-emerald-700' : 
+                                                      isRejectedStatus ? 'bg-red-100 text-red-700' : 
+                                                      isUnderReviewStatus ? 'bg-blue-100 text-blue-700' :
+                                                      'bg-amber-100 text-amber-700'
+                                                    }`}>
+                                                      {isApprovedStatus ? 'Aprovado' : isRejectedStatus ? 'Rejeitado' : isUnderReviewStatus ? 'Em Análise' : 'Pendente'}
+                                                    </span>
+                                                    {isRejectedStatus && (
+                                                      <span className="text-[9px] font-bold text-red-600 uppercase tracking-tight italic opacity-70">
+                                                        • Importante: Documentos rejeitados podem ser reenviados para uma nova análise.
+                                                      </span>
+                                                    )}
+                                                  </div>
                                                   
                                                   {isRejectedStatus && (docData?.rejection_reason || docData?.review_notes) && (
                                                     <div className="mt-2">
@@ -777,7 +812,7 @@ export const DocumentsUploadStep: React.FC<StepProps> = ({ onNext }) => {
                                               {isRejectedStatus && (
                                                 <div className="mt-3 space-y-2" onClick={(e) => e.stopPropagation()}>
                                                   {!selectedFile ? (
-                                                    <label className="block w-full cursor-pointer bg-white border-2 border-dashed border-blue-200 hover:border-blue-400 hover:bg-blue-50 p-2 rounded-lg text-center transition-all group/upload">
+                                                    <label className="flex w-1/2 cursor-pointer bg-white border-2 border-dashed border-blue-200 hover:border-blue-400 hover:bg-blue-50 p-1.5 rounded-lg text-center transition-all group/upload items-center justify-center">
                                                       <span className="text-[10px] font-black text-blue-600 uppercase tracking-widest flex items-center justify-center gap-2">
                                                         <Upload className="w-3 h-3 group-hover/upload:scale-110 transition-transform" />
                                                         Selecionar Novo Arquivo
@@ -790,8 +825,8 @@ export const DocumentsUploadStep: React.FC<StepProps> = ({ onNext }) => {
                                                       />
                                                     </label>
                                                   ) : (
-                                                    <div className="flex items-center gap-2">
-                                                      <div className="flex-1 bg-blue-50 border border-blue-200 rounded-lg p-2 flex items-center justify-between min-w-0">
+                                                    <div className="flex items-center gap-2 w-1/2">
+                                                      <div className="flex-1 bg-blue-50 border border-blue-200 rounded-lg p-1.5 flex items-center justify-between min-w-0">
                                                         <span className="text-[10px] font-bold text-blue-700 truncate mr-2">{selectedFile.name}</span>
                                                         <button 
                                                           onClick={() => handleSelectAppDocFile(app.id, docInfo.type, null)}
@@ -803,9 +838,9 @@ export const DocumentsUploadStep: React.FC<StepProps> = ({ onNext }) => {
                                                       <button
                                                         onClick={() => handleUploadAppDoc(app.id, docInfo.type)}
                                                         disabled={isUploading}
-                                                        className="bg-blue-600 text-white p-2 rounded-lg hover:bg-blue-700 disabled:opacity-50 transition-all shadow-md shadow-blue-500/20 flex items-center justify-center min-w-[32px] min-h-[32px]"
+                                                        className="bg-blue-600 text-white py-2 px-4 rounded-lg hover:bg-blue-700 disabled:opacity-50 transition-all shadow-md shadow-blue-500/20 flex items-center justify-center min-w-[48px] min-h-[32px]"
                                                       >
-                                                        {isUploading ? <Loader2 className="w-3 h-3 animate-spin" /> : <RefreshCw className="w-3 h-3" />}
+                                                        {isUploading ? <Loader2 className="w-3 h-3 animate-spin" /> : <Send className="w-3 h-3" />}
                                                       </button>
                                                     </div>
                                                   )}
@@ -1005,7 +1040,14 @@ export const DocumentsUploadStep: React.FC<StepProps> = ({ onNext }) => {
             <div className="flex items-center gap-4 p-5 bg-blue-50/50 rounded-2xl border border-blue-100/30">
               <Info className="w-6 h-6 text-blue-500 flex-shrink-0" />
               <p className="text-xs font-bold text-blue-800/70 uppercase tracking-wide leading-relaxed">
-                Make sure all documents are clear, legible, and match the information provided in your profile. Note: Documents must be in English or accompanied by a certified English translation. Our AI will analyze them automatically.
+                Make sure all documents are clear, legible, and match the information provided in your profile. Note: Documents must be in English or accompanied by a certified English translation.
+              </p>
+            </div>
+
+            <div className="flex items-center gap-4 p-5 bg-purple-50 rounded-2xl border border-purple-100/30">
+              <Globe className="w-6 h-6 text-purple-600 flex-shrink-0" />
+              <p className="text-xs font-bold text-purple-900 uppercase tracking-wide leading-relaxed">
+                Caso não tenha um documento traduzido, recomendamos os serviços de tradução da <a href="https://lushamerica.com/" target="_blank" rel="noopener noreferrer" className="underline hover:text-purple-700 font-black">Lush America Translations</a>.
               </p>
             </div>
 

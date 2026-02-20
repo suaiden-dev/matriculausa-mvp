@@ -71,8 +71,19 @@ const Overview: React.FC<OverviewProps> = ({
     if (typeof window === 'undefined') return null;
     const savedStep = window.localStorage.getItem('onboarding_current_step');
     const validSteps = ['welcome', 'selection_fee', 'scholarship_selection', 'process_type', 'documents_upload', 'payment', 'scholarship_fee', 'university_documents', 'completed'];
-    return savedStep && validSteps.includes(savedStep) ? savedStep : null;
-  }, []);
+    
+    if (!savedStep || !validSteps.includes(savedStep)) return null;
+
+    // Se o usuário não pagou a taxa de seleção, ele não deve conseguir avançar além desse ponto via localStorage antigo
+    if (userProfile && !userProfile.has_paid_selection_process_fee) {
+      const stepsAfterSelection = ['scholarship_selection', 'process_type', 'documents_upload', 'payment', 'scholarship_fee', 'university_documents', 'waiting_approval', 'completed'];
+      if (stepsAfterSelection.includes(savedStep)) {
+        return 'welcome';
+      }
+    }
+
+    return savedStep;
+  }, [userProfile]);
   
   const hasSavedOnboardingStep = savedOnboardingStep !== null;
   const isOnboardingStarted = hasSavedOnboardingStep && savedOnboardingStep !== 'welcome';

@@ -47,6 +47,7 @@ import DocumentViewerModal from '../../../components/DocumentViewerModal';
 import { STRIPE_PRODUCTS } from '../../../stripe-config';
 import { ProfileRequiredModal } from '../../../components/ProfileRequiredModal';
 import { ZelleCheckout } from '../../../components/ZelleCheckout';
+import { usePaymentBlocked } from '../../../hooks/usePaymentBlocked';
 import { ExpandableTabs } from '../../../components/ui/expandable-tabs';
 import { motion, AnimatePresence } from 'framer-motion';
 import { calculateCardAmountWithFees, getExchangeRate, calculatePIXTotalWithIOF } from '../../../utils/stripeFeeCalculator';
@@ -73,10 +74,17 @@ const ZelleIcon = ({ className }: { className?: string }) => (
 );
 
 const StripeIcon = ({ className }: { className?: string }) => (
-  <svg className={className} xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none">
-    <rect x="2" y="4" width="20" height="16" rx="2" fill="#7950F2"/>
-    <path d="M6 8h12M6 12h8M6 16h4" stroke="white" strokeWidth="1.5" strokeLinecap="round"/>
-  </svg>
+  <div className={`${className} flex items-center justify-center bg-[#635bff] rounded-lg overflow-hidden shadow-sm shadow-[#635bff]/20`}>
+    <span 
+      className="text-white font-black text-[28px] leading-[0] select-none"
+      style={{ 
+        fontFamily: 'system-ui, -apple-system, sans-serif',
+        transform: 'translateY(-1.5px)' // Puxando para cima para compensar o peso da fonte
+      }}
+    >
+      S
+    </span>
+  </div>
 );
 
 const ParcelowIcon = ({ className }: { className?: string }) => (
@@ -105,7 +113,13 @@ export const UniversityDocumentsStep: React.FC<StepProps> = ({ onBack }) => {
   const [showProfileRequiredModal, setShowProfileRequiredModal] = useState(false);
   const [profileErrorType, setProfileErrorType] = useState<'cpf_missing' | 'profile_incomplete' | null>(null);
   const [realI20PaidAmount, setRealI20PaidAmount] = useState<number | null>(null);
-  const [showZelleCheckout, setShowZelleCheckout] = useState(false);
+  const [zelleActive, setZelleActive] = useState(false);
+  const [documentRequests, setDocumentRequests] = useState<any[]>([]);
+  const { isBlocked, pendingPayment, refetch: refetchPaymentStatus } = usePaymentBlocked();
+
+  // Detecta se há um Zelle pendente do tipo i20_control_fee
+  const hasZellePendingI20 = isBlocked && pendingPayment?.fee_type === 'i20_control_fee';
+  
   const [realI20PaymentDate, setRealI20PaymentDate] = useState<string | null>(null);
   const [scholarshipFeeDeadline, setScholarshipFeeDeadline] = useState<Date | null>(null);
   const [i20Countdown, setI20Countdown] = useState<string | null>(null);
@@ -176,6 +190,16 @@ export const UniversityDocumentsStep: React.FC<StepProps> = ({ onBack }) => {
             setRealI20PaidAmount(paymentData.amount || paymentData.gross_amount_usd);
             setRealI20PaymentDate(paymentData.paid_at);
           }
+        }
+        
+        // Buscar solicitações de documentos para verificar status real de conclusão
+        const { data: reqs } = await supabase
+          .from('document_requests')
+          .select('id, title, status, document_request_uploads(status)')
+          .eq('scholarship_application_id', data.id);
+        
+        if (reqs) {
+          setDocumentRequests(reqs);
         }
       }
 
@@ -463,7 +487,7 @@ export const UniversityDocumentsStep: React.FC<StepProps> = ({ onBack }) => {
          }
 
       } else if (method === 'zelle') {
-        setShowZelleCheckout(true);
+        setZelleActive(true);
         setI20Loading(false);
       }
 
@@ -517,12 +541,24 @@ export const UniversityDocumentsStep: React.FC<StepProps> = ({ onBack }) => {
   const tabIds: ('welcome' | 'details' | 'documents' | 'i20' | 'acceptance')[] = ['welcome', 'details', 'documents', 'i20', 'acceptance'];
   const activeTabIndex = tabIds.indexOf(activeTab);
 
-  const requiredDocs = ['transcript', 'diploma', 'passport', 'bank_balance'];
-  const allDocsApproved = requiredDocs.every(key => {
-    const doc = (applicationDetails.documents || []).find((d: any) => d.type === key) || 
-                (applicationDetails.user_profiles?.documents || []).find((d: any) => d.type === key);
-    return doc?.status === 'approved';
+  // 1. Verifica os documentos "core" (JSONB)
+  const coreDocs = (applicationDetails?.documents || []) as any[];
+  
+  // 2. Verifica as solicitações dinâmicas
+  const hasPendingRequests = documentRequests.some(req => {
+    const uploads = req.document_request_uploads || [];
+    const hasValidUpload = uploads.some((u: any) => u.status === 'approved' || u.status === 'under_review');
+    return !hasValidUpload;
   });
+
+  // O passo é considerado "Concluído" (para o estudante) se:
+  // - Todas as solicitações dinâmicas tiverem pelo menos um envio em análise ou aprovado
+  // (Ignora-se o status 'rejected' dos docs core aqui pois, se houver rejeição, 
+  // haverá uma solicitação pendente no hasPendingRequests para o aluno agir)
+  const allDocsDone = !hasPendingRequests;
+  const allDocsApproved = !hasPendingRequests && 
+                        coreDocs.every(d => d.status === 'approved') && 
+                        (documentRequests.length === 0 || documentRequests.every(req => (req.document_request_uploads || []).some((u: any) => u.status === 'approved')));
 
   const hasPaid = (userProfile as any)?.has_paid_i20_control_fee;
 
@@ -651,8 +687,8 @@ export const UniversityDocumentsStep: React.FC<StepProps> = ({ onBack }) => {
                      {[
                        { 
                          title: 'Envio de Documentos', 
-                         status: allDocsApproved ? 'Concluído' : 'Em Análise', 
-                         variant: allDocsApproved ? 'success' : 'warning',
+                         status: allDocsApproved ? 'Concluído' : (allDocsDone ? 'Em Análise' : 'Ação Necessária'), 
+                         variant: allDocsApproved ? 'success' : (allDocsDone ? 'success' : 'warning'),
                          tab: 'documents' 
                        },
                        { 
@@ -669,6 +705,7 @@ export const UniversityDocumentsStep: React.FC<StepProps> = ({ onBack }) => {
                        }
                      ].map((step, i) => {
                        const isClickable = true;
+                       const isLetterAvailable = step.tab === 'acceptance' && applicationDetails.acceptance_letter_url;
                        
                        const variantStyles = {
                          success: {
@@ -689,6 +726,12 @@ export const UniversityDocumentsStep: React.FC<StepProps> = ({ onBack }) => {
                            status: 'text-red-600',
                            indicator: 'bg-red-500'
                          },
+                         highlighted: {
+                            container: 'bg-gradient-to-br from-amber-50/60 to-orange-50/60 backdrop-blur-xl border border-amber-400/40 shadow-[0_10px_40px_rgba(245,158,11,0.15)] hover:shadow-amber-500/30 hover:border-amber-500 transform hover:scale-[1.02] transition-all duration-500 relative overflow-hidden group ring-2 ring-white/50',
+                            iconBg: 'bg-gradient-to-br from-amber-500 to-orange-600 text-white shadow-[0_0_20px_rgba(245,158,11,0.5)] border border-amber-400/30',
+                            status: 'text-amber-700 font-black tracking-tight',
+                            indicator: 'bg-amber-600 animate-pulse shadow-[0_0_12px_rgba(245,158,11,0.6)]'
+                         },
                          default: {
                            container: 'bg-slate-50 border-slate-200 hover:border-blue-300 hover:bg-white',
                            iconBg: 'bg-slate-100 text-slate-400',
@@ -697,25 +740,39 @@ export const UniversityDocumentsStep: React.FC<StepProps> = ({ onBack }) => {
                          }
                        };
 
-                       const styles = variantStyles[step.variant as keyof typeof variantStyles] || variantStyles.default;
+                       const styles = isLetterAvailable 
+                        ? variantStyles.highlighted 
+                        : (variantStyles[step.variant as keyof typeof variantStyles] || variantStyles.default);
                        
                        return (
                          <div 
                            key={i} 
                            onClick={() => isClickable && setActiveTab(step.tab as any)}
-                           className={`flex items-center justify-between p-4 rounded-xl border transition-all cursor-pointer hover:shadow-lg hover:shadow-blue-500/5 hover:scale-[1.02] ${styles.container}`}
+                           className={`flex items-center justify-between p-4 rounded-xl border transition-all cursor-pointer hover:shadow-lg ${styles.container}`}
                          >
-                           <div className="flex items-center gap-3">
-                             <div className={`w-8 h-8 rounded-lg flex items-center justify-center transition-colors ${styles.iconBg}`}>
-                               <span className="text-xs font-bold">{i + 1}</span>
+                            {/* Golden Shine effect */}
+                            {isLetterAvailable && (
+                              <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/60 to-transparent translate-x-[-100%] group-hover:translate-x-[100%] transition-transform duration-1000 pointer-events-none" />
+                            )}
+
+                           <div className="flex items-center gap-3 relative z-10">
+                             <div className={`w-10 h-10 rounded-lg flex items-center justify-center transition-all ${styles.iconBg} ${isLetterAvailable ? 'group-hover:scale-110' : ''}`}>
+                               {isLetterAvailable ? <Award className="w-5 h-5 text-white animate-bounce-slow" /> : <span className="text-xs font-bold">{i + 1}</span>}
                              </div>
                              <div className="flex flex-col">
-                               <span className="text-sm font-bold text-gray-900 uppercase tracking-tight">{step.title}</span>
+                               <span className={`text-sm font-bold uppercase tracking-tight ${isLetterAvailable ? 'text-amber-950' : 'text-gray-900'}`}>{step.title}</span>
+                               {isLetterAvailable && (
+                                  <div className="flex items-center gap-1.5 mt-0.5">
+                                    <span className="w-1.5 h-1.5 bg-amber-500 rounded-full animate-ping" />
+                                    <span className="text-[10px] text-amber-700 font-extrabold uppercase tracking-widest">Documento Disponível</span>
+                                  </div>
+                               )}
                              </div>
                            </div>
-                           <div className="flex items-center gap-2">
-                              <div className={`w-1.5 h-1.5 rounded-full ${styles.indicator}`} />
+                           <div className="flex items-center gap-2 relative z-10">
+                              <div className={`w-2 h-2 rounded-full ${styles.indicator}`} />
                               <span className={`text-[10px] font-black uppercase tracking-widest ${styles.status}`}>{step.status}</span>
+                              {isLetterAvailable && <ArrowRight className="w-4 h-4 text-amber-600 ml-2 group-hover:translate-x-1 transition-transform" />}
                            </div>
                          </div>
                        );
@@ -726,7 +783,7 @@ export const UniversityDocumentsStep: React.FC<StepProps> = ({ onBack }) => {
 
 
 
-              {hasPaid && allDocsApproved && (
+              {hasPaid && (
                   <div className="md:col-span-12 bg-white rounded-[3rem] p-8 md:p-16 shadow-2xl shadow-blue-900/5 border border-slate-200 relative overflow-hidden">
                     <div className="absolute top-0 right-0 w-96 h-96 bg-blue-500/5 rounded-full blur-[120px] -mr-48 -mt-48" />
                     <h4 className="text-2xl font-black text-gray-900 uppercase tracking-tight mb-8 relative z-10 flex items-center gap-3">
@@ -1114,36 +1171,6 @@ export const UniversityDocumentsStep: React.FC<StepProps> = ({ onBack }) => {
 
                   {/* Content Info */}
                   <div className="p-8 md:p-16 space-y-12">
-                  {showZelleCheckout ? (
-                    <div className="max-w-3xl mx-auto">
-                      <button 
-                        onClick={() => setShowZelleCheckout(false)}
-                        className="mb-8 flex items-center text-gray-400 hover:text-gray-900 transition-all gap-3 group"
-                      >
-                        <div className="w-8 h-8 rounded-full bg-gray-100 flex items-center justify-center group-hover:bg-gray-200 group-hover:scale-110 transition-all">
-                          <ChevronRight className="w-4 h-4 rotate-180" />
-                        </div>
-                        <span className="font-black uppercase tracking-widest text-xs">Voltar para Opções</span>
-                      </button>
-
-                      <div className="bg-white rounded-[2.5rem] overflow-hidden shadow-xl border border-gray-100">
-                        <ZelleCheckout
-                          feeType="i20_control_fee"
-                          amount={promotionalCouponValidation?.finalAmount ?? getFeeAmount('i20_control_fee')}
-                          scholarshipsIds={applicationDetails?.scholarships?.id ? [applicationDetails.scholarships.id] : []}
-                          metadata={{
-                            application_id: applicationDetails?.id,
-                            selected_scholarship_id: applicationDetails?.scholarships?.id
-                          }}
-                          onSuccess={() => {
-                            setShowZelleCheckout(false);
-                            fetchApplicationDetails(true);
-                          }}
-                          className="w-full"
-                        />
-                      </div>
-                    </div>
-                  ) : (
                     <>
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-12">
                       <div className="space-y-6">
@@ -1274,110 +1301,187 @@ export const UniversityDocumentsStep: React.FC<StepProps> = ({ onBack }) => {
                       </div>
 
                       <div className="flex flex-col gap-4">
-                        {/* Stripe Option */}
-                        <button
-                          onClick={() => handlePaymentMethodSelect('stripe')}
-                          disabled={i20Loading}
-                          className="group/btn relative bg-white border border-gray-200 p-6 rounded-[2rem] text-left hover:scale-[1.01] active:scale-95 transition-all shadow-sm hover:shadow-md disabled:opacity-50 hover:border-blue-200 flex items-center"
-                        >
-                          <div className="w-14 h-14 flex items-center justify-center bg-blue-50 transition-colors rounded-2xl mr-5">
-                            <StripeIcon className="w-9 h-9" />
-                          </div>
-                          <div className="flex-1">
-                             <div className="flex items-center justify-between mb-1">
-                                <span className="font-bold text-gray-900 text-lg">Cartão de Crédito</span>
-                                <span className="bg-blue-100 text-blue-600 text-sm font-black px-3 py-1.5 rounded-full border border-blue-200 uppercase tracking-tight">
-                                  {formatFeeAmount(calculateCardAmountWithFees(promotionalCouponValidation?.finalAmount || getFeeAmount('i20_control_fee')))}
-                                </span>
-                             </div>
-                             <p className="text-[10px] text-gray-400 mt-1 uppercase tracking-widest font-bold">* Inclui taxas de processamento</p>
-                          </div>
-                          {selectedPaymentMethod === 'stripe' && i20Loading && (
-                            <div className="absolute inset-0 bg-white/80 backdrop-blur-sm rounded-[2rem] flex items-center justify-center z-10">
-                              <Loader2 className="w-8 h-8 text-blue-600 animate-spin" />
+                        {hasZellePendingI20 ? (
+                          <div className="flex flex-col gap-0">
+                            {/* Banner de aviso */}
+                            <div className="bg-amber-50 border border-amber-200 rounded-t-[2rem] px-6 py-4 flex items-start gap-4">
+                              <div className="w-10 h-10 bg-amber-100 rounded-2xl flex items-center justify-center border border-amber-200 flex-shrink-0 mt-0.5">
+                                <AlertCircle className="w-5 h-5 text-amber-600" />
+                              </div>
+                              <div>
+                                <p className="text-sm font-black text-amber-700 uppercase tracking-tight">Pagamento Zelle em Análise</p>
+                                <p className="text-xs text-amber-600/80 font-medium mt-0.5 leading-relaxed">
+                                  Você já iniciou um pagamento via Zelle. Aguarde a confirmação antes de usar outro método. Isso pode levar até 48 horas.
+                                </p>
+                              </div>
                             </div>
-                          )}
-                        </button>
 
-                        {/* PIX Option */}
-                        <button
-                          onClick={() => handlePaymentMethodSelect('pix', exchangeRate)}
-                          disabled={i20Loading}
-                          className="group/btn relative bg-white border border-gray-200 p-6 rounded-[2rem] text-left hover:scale-[1.01] active:scale-95 transition-all shadow-sm hover:shadow-md disabled:opacity-50 hover:border-emerald-200 flex items-center"
-                        >
-                          <div className="w-14 h-14 flex items-center justify-center bg-emerald-50 transition-colors rounded-2xl mr-5">
-                            <PixIcon className="w-9 h-9" />
-                          </div>
-                          <div className="flex-1">
-                             <div className="flex items-center justify-between mb-1">
-                                <span className="font-bold text-gray-900 text-lg">PIX</span>
-                                <span className="bg-emerald-100 text-emerald-600 text-sm font-black px-3 py-1.5 rounded-full border border-emerald-200 uppercase tracking-tight">
-                                  R$ {calculatePIXTotalWithIOF(promotionalCouponValidation?.finalAmount || getFeeAmount('i20_control_fee'), exchangeRate).totalWithIOF.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
-                                </span>
-                             </div>
-                             <p className="text-[10px] text-gray-400 mt-1 uppercase tracking-widest font-bold">* Inclui taxas de processamento</p>
-                          </div>
-                          {selectedPaymentMethod === 'pix' && i20Loading && (
-                            <div className="absolute inset-0 bg-white/80 backdrop-blur-sm rounded-[2rem] flex items-center justify-center z-10">
-                              <Loader2 className="w-8 h-8 text-emerald-500 animate-spin" />
+                            {/* ZelleCheckout inline — aberto automaticamente */}
+                            <div className="border border-amber-200 border-t-0 rounded-b-[2rem] overflow-hidden bg-white shadow-sm">
+                              <ZelleCheckout
+                                feeType="i20_control_fee"
+                                amount={promotionalCouponValidation?.finalAmount ?? getFeeAmount('i20_control_fee')}
+                                scholarshipsIds={applicationDetails?.scholarships?.id ? [applicationDetails.scholarships.id] : []}
+                                metadata={{
+                                  application_id: applicationDetails?.id,
+                                  selected_scholarship_id: applicationDetails?.scholarships?.id
+                                }}
+                                onSuccess={() => {
+                                  setZelleActive(false);
+                                  fetchApplicationDetails(true);
+                                  refetchPaymentStatus();
+                                }}
+                                onProcessingChange={(isProcessing) => {
+                                  if (isProcessing) refetchPaymentStatus();
+                                }}
+                                className="w-full"
+                              />
                             </div>
-                          )}
-                        </button>
-
-                        {/* Parcelow Option */}
-                        <button
-                          onClick={() => handlePaymentMethodSelect('parcelow')}
-                          disabled={i20Loading}
-                          className="group/btn relative bg-white border border-gray-200 p-6 rounded-[2rem] text-left hover:scale-[1.01] active:scale-95 transition-all shadow-sm hover:shadow-md disabled:opacity-50 hover:border-orange-200 flex items-center"
-                        >
-                          <div className="w-14 h-14 flex items-center justify-center bg-orange-50 transition-colors rounded-2xl mr-5 px-1">
-                            <ParcelowIcon className="w-full h-10" />
                           </div>
-                          <div className="flex-1">
-                             <div className="flex items-center justify-between mb-1">
-                                <span className="font-bold text-gray-900 text-lg">Parcelow</span>
-                                <div className="text-right flex flex-col items-end">
-                                  <span className="bg-blue-100 text-blue-600 text-sm font-black px-3 py-1.5 rounded-full border border-blue-200 uppercase tracking-tight">
-                                    {formatFeeAmount(promotionalCouponValidation?.finalAmount || getFeeAmount('i20_control_fee'))}
-                                  </span>
-                                  <div className="text-[10px] font-black text-blue-500 uppercase tracking-widest mt-1">ou em até 12x</div>
+                        ) : (
+                          <>
+                            {/* Stripe Option */}
+                            <button
+                              onClick={() => handlePaymentMethodSelect('stripe')}
+                              disabled={i20Loading}
+                              className="group/btn relative bg-white border border-gray-200 p-6 rounded-[2rem] text-left hover:scale-[1.01] active:scale-95 transition-all shadow-sm hover:shadow-md disabled:opacity-50 hover:border-blue-200 flex items-center"
+                            >
+                              <div className="w-14 h-14 flex items-center justify-center bg-blue-50 transition-colors rounded-2xl mr-5">
+                                <StripeIcon className="w-9 h-9" />
+                              </div>
+                              <div className="flex-1">
+                                 <div className="flex items-center justify-between mb-1">
+                                    <span className="font-bold text-gray-900 text-lg">Cartão de Crédito</span>
+                                    <span className="bg-blue-100 text-blue-600 text-sm font-black px-3 py-1.5 rounded-full border border-blue-200 uppercase tracking-tight">
+                                      {formatFeeAmount(calculateCardAmountWithFees(promotionalCouponValidation?.finalAmount || getFeeAmount('i20_control_fee')))}
+                                    </span>
+                                 </div>
+                                 <p className="text-[10px] text-gray-400 mt-1 uppercase tracking-widest font-bold">* Inclui taxas de processamento</p>
+                              </div>
+                              {selectedPaymentMethod === 'stripe' && i20Loading && (
+                                <div className="absolute inset-0 bg-white/80 backdrop-blur-sm rounded-[2rem] flex items-center justify-center z-10">
+                                  <Loader2 className="w-8 h-8 text-blue-600 animate-spin" />
                                 </div>
-                             </div>
-                             <p className="text-[10px] text-gray-400 mt-1 uppercase tracking-widest font-bold">* Taxas da operadora e processamento da plataforma serão aplicadas</p>
-                          </div>
-                          {selectedPaymentMethod === 'parcelow' && i20Loading && (
-                            <div className="absolute inset-0 bg-white/80 backdrop-blur-sm rounded-[2rem] flex items-center justify-center z-10">
-                              <Loader2 className="w-8 h-8 text-orange-500 animate-spin" />
-                            </div>
-                          )}
-                        </button>
+                              )}
+                            </button>
 
-                        {/* Zelle Option */}
-                        <button
-                          onClick={() => handlePaymentMethodSelect('zelle')}
-                          disabled={i20Loading}
-                          className="group/btn relative bg-white border border-gray-200 p-6 rounded-[2rem] text-left hover:scale-[1.01] active:scale-95 transition-all shadow-sm hover:shadow-md disabled:opacity-50 hover:border-purple-200 flex items-center"
-                        >
-                          <div className="w-14 h-14 flex items-center justify-center bg-purple-50 transition-colors rounded-2xl mr-5">
-                            <ZelleIcon className="w-9 h-9" />
-                          </div>
-                          <div className="flex-1">
-                             <div className="flex items-center justify-between mb-1">
-                                <span className="font-bold text-gray-900 text-lg">Zelle</span>
-                                <span className="bg-indigo-100 text-indigo-600 text-sm font-black px-3 py-1.5 rounded-full border border-indigo-200 uppercase tracking-tight">
-                                  {formatFeeAmount(promotionalCouponValidation?.finalAmount || getFeeAmount('i20_control_fee'))}
-                                </span>
-                             </div>
-                             <div className="mt-2 flex items-center gap-2 text-orange-600">
-                                <AlertCircle className="w-3.5 h-3.5" />
-                                <span className="text-[10px] font-black uppercase tracking-widest">Processamento pode levar até 48 horas</span>
-                             </div>
-                          </div>
-                        </button>
+                            {/* PIX Option */}
+                            <button
+                              onClick={() => handlePaymentMethodSelect('pix', exchangeRate)}
+                              disabled={i20Loading}
+                              className="group/btn relative bg-white border border-gray-200 p-6 rounded-[2rem] text-left hover:scale-[1.01] active:scale-95 transition-all shadow-sm hover:shadow-md disabled:opacity-50 hover:border-emerald-200 flex items-center"
+                            >
+                              <div className="w-14 h-14 flex items-center justify-center bg-emerald-50 transition-colors rounded-2xl mr-5">
+                                <PixIcon className="w-9 h-9" />
+                              </div>
+                              <div className="flex-1">
+                                 <div className="flex items-center justify-between mb-1">
+                                    <span className="font-bold text-gray-900 text-lg">PIX</span>
+                                    <span className="bg-emerald-100 text-emerald-600 text-sm font-black px-3 py-1.5 rounded-full border border-emerald-200 uppercase tracking-tight">
+                                      R$ {calculatePIXTotalWithIOF(promotionalCouponValidation?.finalAmount || getFeeAmount('i20_control_fee'), exchangeRate).totalWithIOF.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
+                                    </span>
+                                 </div>
+                                 <p className="text-[10px] text-gray-400 mt-1 uppercase tracking-widest font-bold">* Inclui taxas de processamento</p>
+                              </div>
+                              {selectedPaymentMethod === 'pix' && i20Loading && (
+                                <div className="absolute inset-0 bg-white/80 backdrop-blur-sm rounded-[2rem] flex items-center justify-center z-10">
+                                  <Loader2 className="w-8 h-8 text-emerald-500 animate-spin" />
+                                </div>
+                              )}
+                            </button>
+
+                            {/* Parcelow Option */}
+                            <button
+                              onClick={() => handlePaymentMethodSelect('parcelow')}
+                              disabled={i20Loading}
+                              className="group/btn relative bg-white border border-gray-200 p-6 rounded-[2rem] text-left hover:scale-[1.01] active:scale-95 transition-all shadow-sm hover:shadow-md disabled:opacity-50 hover:border-orange-200 flex items-center"
+                            >
+                              <div className="w-14 h-14 flex items-center justify-center bg-orange-50 transition-colors rounded-2xl mr-5 px-1">
+                                <ParcelowIcon className="w-full h-10" />
+                              </div>
+                              <div className="flex-1">
+                                 <div className="flex items-center justify-between mb-1">
+                                    <span className="font-bold text-gray-900 text-lg">Parcelow</span>
+                                    <div className="text-right flex flex-col items-end">
+                                      <span className="bg-blue-100 text-blue-600 text-sm font-black px-3 py-1.5 rounded-full border border-blue-200 uppercase tracking-tight">
+                                        {formatFeeAmount(promotionalCouponValidation?.finalAmount || getFeeAmount('i20_control_fee'))}
+                                      </span>
+                                      <div className="text-[10px] font-black text-blue-500 uppercase tracking-widest mt-1">ou em até 12x</div>
+                                    </div>
+                                 </div>
+                                 <p className="text-[10px] text-gray-400 mt-1 uppercase tracking-widest font-bold">* Taxas da operadora e processamento da plataforma serão aplicadas</p>
+                              </div>
+                              {selectedPaymentMethod === 'parcelow' && i20Loading && (
+                                <div className="absolute inset-0 bg-white/80 backdrop-blur-sm rounded-[2rem] flex items-center justify-center z-10">
+                                  <Loader2 className="w-8 h-8 text-orange-500 animate-spin" />
+                                </div>
+                              )}
+                            </button>
+
+                            {/* Zelle Option — accordion inline */}
+                            <div className="flex flex-col">
+                              <button
+                                onClick={() => setZelleActive(!zelleActive)}
+                                disabled={i20Loading}
+                                className={`group/btn relative bg-white border p-6 text-left hover:scale-[1.01] active:scale-[0.99] transition-all shadow-sm hover:shadow-md disabled:opacity-50 hover:border-purple-200 flex items-center justify-between ${
+                                  zelleActive
+                                    ? 'rounded-t-[2rem] border-purple-200 border-b-0 bg-purple-50/30'
+                                    : 'rounded-[2rem] border-gray-200'
+                                }`}
+                              >
+                                <div className="flex items-center">
+                                  <div className="w-14 h-14 flex items-center justify-center bg-purple-50 transition-colors rounded-2xl mr-5">
+                                    <ZelleIcon className="w-9 h-9" />
+                                  </div>
+                                  <div className="flex-1">
+                                     <div className="flex items-center justify-between mb-1">
+                                        <span className="font-bold text-gray-900 text-lg">Zelle</span>
+                                        <div className="text-right">
+                                          <div className="bg-indigo-100 text-indigo-600 text-sm font-black px-3 py-1.5 rounded-full border border-indigo-200 uppercase tracking-tight">
+                                            {formatFeeAmount(promotionalCouponValidation?.finalAmount || getFeeAmount('i20_control_fee'))}
+                                          </div>
+                                          <span className="text-[10px] font-bold text-indigo-400 mt-1 block uppercase tracking-widest">Sem Taxas</span>
+                                        </div>
+                                     </div>
+                                     <div className="mt-2 flex items-center gap-2 text-amber-500">
+                                        <AlertCircle className="w-3.5 h-3.5" />
+                                        <span className="text-[10px] font-bold uppercase tracking-wide">Processamento pode levar até 48 horas</span>
+                                     </div>
+                                  </div>
+                                </div>
+                                <ChevronRight className={`w-6 h-6 text-gray-300 transition-transform ${
+                                  zelleActive ? 'rotate-90' : 'group-hover/btn:translate-x-1'
+                                }`} />
+                              </button>
+
+                              {zelleActive && (
+                                <div className="border border-purple-200 border-t-0 rounded-b-[2rem] overflow-hidden bg-white shadow-sm">
+                                  <ZelleCheckout
+                                    feeType="i20_control_fee"
+                                    amount={promotionalCouponValidation?.finalAmount ?? getFeeAmount('i20_control_fee')}
+                                    scholarshipsIds={applicationDetails?.scholarships?.id ? [applicationDetails.scholarships.id] : []}
+                                    metadata={{
+                                      application_id: applicationDetails?.id,
+                                      selected_scholarship_id: applicationDetails?.scholarships?.id
+                                    }}
+                                    onSuccess={() => {
+                                      setZelleActive(false);
+                                      fetchApplicationDetails(true);
+                                      refetchPaymentStatus();
+                                    }}
+                                    onProcessingChange={(isProcessing) => {
+                                      if (isProcessing) refetchPaymentStatus();
+                                    }}
+                                    className="w-full"
+                                  />
+                                </div>
+                              )}
+                            </div>
+                          </>
+                        )}
                       </div>
                     </div>
                     </>
-                  )}
                   </div>
                 </div>
               ) : (
@@ -1431,7 +1535,7 @@ export const UniversityDocumentsStep: React.FC<StepProps> = ({ onBack }) => {
                             <div className="w-10 h-10 bg-emerald-100 rounded-xl shadow-sm flex items-center justify-center group-hover:scale-110 transition-transform">
                                <Stamp className="w-5 h-5 text-emerald-600" />
                             </div>
-                            <span className="px-3 py-1 bg-emerald-500 rounded-lg text-[10px] font-black text-white uppercase tracking-widest">Emitindo</span>
+                            <span className="px-3 py-1 bg-emerald-500 rounded-lg text-[10px] font-black text-white uppercase tracking-widest">Pago</span>
                          </div>
                        </div>
                     </div>
@@ -1672,7 +1776,7 @@ export const UniversityDocumentsStep: React.FC<StepProps> = ({ onBack }) => {
       <style dangerouslySetInnerHTML={{ __html: `
         @keyframes bounce-slow {
           0%, 100% { transform: translateY(0); }
-          50% { transform: translateY(-10px); }
+          50% { transform: translateY(-4px); }
         }
         .animate-bounce-slow {
           animation: bounce-slow 3s ease-in-out infinite;

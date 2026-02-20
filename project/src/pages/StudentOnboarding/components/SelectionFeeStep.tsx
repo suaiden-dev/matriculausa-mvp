@@ -55,12 +55,19 @@ const ZelleIcon = ({ className }: { className?: string }) => (
   </svg>
 );
 
-// Componente SVG para o logo do Stripe (baseado no ícone oficial)
+// Componente para o logo do Stripe (estilo S logo)
 const StripeIcon = ({ className }: { className?: string }) => (
-  <svg className={className} xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none">
-    <rect x="2" y="4" width="20" height="16" rx="2" fill="#7950F2"/>
-    <path d="M6 8h12M6 12h8M6 16h4" stroke="white" strokeWidth="1.5" strokeLinecap="round"/>
-  </svg>
+  <div className={`${className} flex items-center justify-center bg-[#635bff] rounded-lg overflow-hidden shadow-sm shadow-[#635bff]/20`}>
+    <span 
+      className="text-white font-black text-[28px] leading-[0] select-none"
+      style={{ 
+        fontFamily: 'system-ui, -apple-system, sans-serif',
+        transform: 'translateY(-1.5px)' // Puxando para cima para compensar o peso da fonte
+      }}
+    >
+      S
+    </span>
+  </div>
 );
 
 const ParcelowIcon = ({ className }: { className?: string }) => (
@@ -172,7 +179,7 @@ const MobileTermsView: React.FC<{
                 }`}
               >
                 {hasScrolledToBottom
-                  ? 'Confirmar Leitura →'
+                  ? 'Confirmar Leitura'
                   : (checkIfContentNeedsScroll()
                       ? t('preCheckoutModal.scrollToBottomFirst')
                       : t('preCheckoutModal.readingTerms')
@@ -197,7 +204,7 @@ const MobileTermsView: React.FC<{
         <div className="flex-1">
           <div className="text-center mb-6">
             <p className="text-sm text-gray-600">
-              Para aceitar os termos, por favor tire uma selfie segurando seu documento de identidade.
+              Para aceitar os termos, por favor envie uma selfie segurando um documento com foto (Passaporte, RG, CNH, etc...).
             </p>
           </div>
 
@@ -260,7 +267,7 @@ export const SelectionFeeStep: React.FC<StepProps> = ({ onNext }) => {
   const navigate = useNavigate();
   const { user, userProfile, refetchUserProfile } = useAuth();
   const { getFeeAmount, formatFeeAmount } = useFeeConfig(user?.id);
-  const { isBlocked, pendingPayment, loading: paymentBlockedLoading } = usePaymentBlocked();
+  const { isBlocked, pendingPayment, loading: paymentBlockedLoading, refetch: refetchPaymentStatus } = usePaymentBlocked();
   const { recordTermAcceptance, checkTermAcceptance } = useTermsAcceptance();
   const { recordAffiliateTermAcceptance, checkIfUserHasAffiliate } = useAffiliateTermsAcceptance();
   const { activeDiscount, hasUsedReferralCode } = useReferralCode();
@@ -1218,6 +1225,11 @@ export const SelectionFeeStep: React.FC<StepProps> = ({ onNext }) => {
     }
   }, [isBlocked, pendingPayment, paymentBlockedLoading]);
 
+  // Identificar se há um pagamento Zelle pendente ESPECÍFICO para Taxa de Seleção
+  const hasZellePendingSelectionFee = isBlocked && pendingPayment?.fee_type === 'selection_process';
+
+
+
   const selectionFeeAmount = getFeeAmount('selection_process');
 
   // Calcular preço final com desconto
@@ -1535,7 +1547,7 @@ export const SelectionFeeStep: React.FC<StepProps> = ({ onNext }) => {
                 <CreditCard className="w-8 h-8 text-blue-500" />
               </div>
               <div>
-                <h3 className="text-2xl font-black text-gray-900 uppercase tracking-tight">Taxa de Seleção</h3>
+                <h3 className="text-2xl font-black text-gray-900 uppercase tracking-tight">Taxa de Processo Seletivo</h3>
                 <p className="text-xs font-bold text-gray-400 uppercase tracking-widest mt-1">Pagamento Único</p>
               </div>
             </div>
@@ -1820,10 +1832,8 @@ export const SelectionFeeStep: React.FC<StepProps> = ({ onNext }) => {
 
           {/* Skeleton Loading enquanto verifica pagamentos pendentes */}
           {/* Condicional Principal: Loading -> Zelle -> Lista de Métodos */}
+          {/* Condicional Principal: Loading -> Zelle Bloqueado -> Lista de Métodos */}
           {paymentBlockedLoading ? (
-            /* =========================================================================
-               CT01: Skeleton Loading (Verificando bloqueios)
-               ========================================================================= */
             <div className="space-y-4 animate-pulse">
               <div className="h-5 w-48 bg-gray-200 rounded mb-4"></div>
               {[1, 2, 3].map((i) => (
@@ -1838,10 +1848,55 @@ export const SelectionFeeStep: React.FC<StepProps> = ({ onNext }) => {
                 </div>
               ))}
             </div>
+          ) : hasZellePendingSelectionFee ? (
+            <div className="flex flex-col gap-0">
+              {/* Banner de aviso âmbar */}
+              <div className="bg-amber-50 border border-amber-200 rounded-t-[2rem] px-6 py-4 flex items-start gap-4">
+                <div className="w-10 h-10 bg-amber-100 rounded-2xl flex items-center justify-center border border-amber-200 flex-shrink-0 mt-0.5">
+                  <AlertCircle className="w-5 h-5 text-amber-600" />
+                </div>
+                <div>
+                  <p className="text-sm font-black text-amber-700 uppercase tracking-tight">Pagamento Zelle em Análise</p>
+                  <p className="text-xs text-amber-600/80 font-medium mt-0.5 leading-relaxed">
+                    Você já iniciou um pagamento via Zelle para esta taxa. Aguarde a confirmação antes de tentar outro método. Isso pode levar até 48 horas.
+                  </p>
+                </div>
+              </div>
+
+              {/* ZelleCheckout inline — aberto automaticamente */}
+              <div className="border border-amber-200 border-t-0 rounded-b-[2rem] overflow-hidden bg-white shadow-sm">
+                <ZelleCheckout
+                  feeType="selection_process"
+                  amount={computedBasePrice}
+                  scholarshipsIds={[]}
+                  metadata={{
+                    discount_applied: computedBasePrice < selectionFeeAmount,
+                    original_amount: selectionFeeAmount,
+                    final_amount: computedBasePrice,
+                    ...(activeDiscount?.has_discount && activeDiscount.affiliate_code ? { discount_code: activeDiscount.affiliate_code } : {}),
+                    ...(validationResult?.isValid && codeApplied && discountCode.trim() ? { discount_code: discountCode.trim().toUpperCase() } : {}),
+                    promotional_coupon: (window as any).__checkout_promotional_coupon || null
+                  }}
+                  onSuccess={() => {
+                    console.log('✅ [SelectionFeeStep] Pagamento Zelle aprovado');
+                    setZellePaymentSubmitted(false);
+                    setShowZelleCheckout(false);
+                    setIsZelleProcessing(false);
+                    onNext(); 
+                  }}
+                  onError={(error) => {
+                    setError(error);
+                    setZellePaymentSubmitted(false);
+                    setIsZelleProcessing(false);
+                  }}
+                  onProcessingChange={(isProcessing) => {
+                    setIsZelleProcessing(isProcessing);
+                    if (isProcessing) refetchPaymentStatus();
+                  }}
+                />
+              </div>
+            </div>
           ) : showZelleCheckout ? (
-            /* =========================================================================
-               CT02: Zelle Checkout (Ativo)
-               ========================================================================= */
             <div className="space-y-6 bg-white border border-gray-100 rounded-3xl p-6 shadow-xl relative overflow-hidden">
               <div className="absolute top-0 right-0 w-32 h-32 bg-blue-500/5 rounded-full blur-[40px] -mr-16 -mt-16 pointer-events-none" />
               <div className="flex items-center justify-between mb-2 relative z-10">
@@ -1873,7 +1928,7 @@ export const SelectionFeeStep: React.FC<StepProps> = ({ onNext }) => {
                   promotional_coupon: (window as any).__checkout_promotional_coupon || null
                 }}
                 onSuccess={() => {
-                  console.log('✅ [SelectionFeeStep] Pagamento Zelle aprovado - avançando para próxima step');
+                  console.log('✅ [SelectionFeeStep] Pagamento Zelle aprovado');
                   setZellePaymentSubmitted(false);
                   setShowZelleCheckout(false);
                   setIsZelleProcessing(false);
@@ -1886,13 +1941,11 @@ export const SelectionFeeStep: React.FC<StepProps> = ({ onNext }) => {
                 }}
                 onProcessingChange={(isProcessing) => {
                   setIsZelleProcessing(isProcessing);
+                  if (isProcessing) refetchPaymentStatus();
                 }}
               />
             </div>
           ) : (
-            /* =========================================================================
-               CT03: Lista de Métodos de Pagamento
-               ========================================================================= */
             <div className="space-y-4 relative z-10">
               {!!isBlocked && !!pendingPayment && (
                 <div className="bg-amber-500/10 border border-amber-500/20 rounded-2xl p-4 mb-6 backdrop-blur-md">
@@ -1919,7 +1972,7 @@ export const SelectionFeeStep: React.FC<StepProps> = ({ onNext }) => {
                 const isDisabled = !!loading || 
                   !termsAccepted || 
                   (hasReferralCode && !(validationResult?.isValid) && !activeDiscount?.has_discount) ||
-                  (!!isBlocked && !!pendingPayment && method.id !== 'zelle'); // Bloqueio se já tem Zelle pendente (exceto Zelle)
+                  (!!isBlocked && !!pendingPayment && method.id !== 'zelle');
                 
                 return (
                   <button
@@ -1944,13 +1997,13 @@ export const SelectionFeeStep: React.FC<StepProps> = ({ onNext }) => {
                                 {method.name}
                               </h4>
                               {method.id === 'stripe' && (
-                                <span className="text-[10px] font-bold text-gray-400 mt-1 uppercase tracking-wide leading-tight">* Inclui taxas de processamento</span>
+                                <span className="text-[10px] font-bold text-gray-400 mt-1 uppercase tracking-wide leading-tight">* Podem incluir taxas de processamento</span>
                               )}
                               {method.id === 'pix' && (
-                                <span className="text-[10px] font-bold text-gray-400 mt-1 uppercase tracking-wide leading-tight">* Inclui taxas de processamento</span>
+                                <span className="text-[10px] font-bold text-gray-400 mt-1 uppercase tracking-wide leading-tight">* Podem incluir taxas de processamento</span>
                               )}
                               {method.id === 'parcelow' && (
-                                <span className="text-[10px] font-bold text-gray-400 mt-1 uppercase tracking-wide leading-tight max-w-[200px] sm:max-w-none">* Taxas de operadora e processamento da plataforma serão aplicadas</span>
+                                <span className="text-[10px] font-bold text-gray-400 mt-1 uppercase tracking-wide leading-tight max-w-[200px] sm:max-w-none">* Podem incluir taxas de operadora e processamento da plataforma</span>
                               )}
                               {method.id === 'zelle' && (
                                 <span className="text-[10px] font-bold text-amber-500 mt-1 uppercase tracking-wide leading-tight flex items-center gap-1">
@@ -1972,7 +2025,7 @@ export const SelectionFeeStep: React.FC<StepProps> = ({ onNext }) => {
                                   ${computedBasePrice.toFixed(2)}
                                 </span>
                                 <span className="text-xs font-bold text-blue-500 mt-1 whitespace-nowrap">
-                                  12x ${(computedBasePrice / 12).toFixed(2)}
+                                  Até 12x no cartão
                                 </span>
                               </div>
                             )}
@@ -1998,7 +2051,6 @@ export const SelectionFeeStep: React.FC<StepProps> = ({ onNext }) => {
                           </div>
                         </div>
 
-                        
                         {isDisabled && !!isBlocked && !!pendingPayment && method.id !== 'zelle' && (
                           <div className="mt-3 flex items-center space-x-2 bg-amber-50 border border-amber-100 w-fit px-2 py-1 rounded-lg">
                             <AlertCircle className="w-3 h-3 text-amber-600" />
@@ -2092,7 +2144,7 @@ export const SelectionFeeStep: React.FC<StepProps> = ({ onNext }) => {
                         <p className="text-gray-600 font-medium">
                           Para finalizar a aceitação dos termos, precisamos verificar sua identidade.
                           <br />
-                          Por favor, envie uma selfie segurando seu documento de identidade.
+                          Por favor, envie uma selfie segurando um documento com foto (Passaporte, RG, CNH, etc...).
                         </p>
                       </div>
 
@@ -2141,21 +2193,21 @@ export const SelectionFeeStep: React.FC<StepProps> = ({ onNext }) => {
                       <>
                         <button
                           onClick={() => setShowTermsModal(false)}
-                          className="px-8 py-4 bg-gray-200/50 text-gray-600 rounded-2xl font-black uppercase tracking-widest text-sm hover:bg-gray-200 transition-all active:scale-95"
+                          className="flex-[1] px-8 py-4 bg-gray-200/50 text-gray-600 rounded-2xl font-black uppercase tracking-widest text-sm hover:bg-gray-200 transition-all active:scale-95"
                         >
                           {t('preCheckoutModal.closeTerms') || 'Fechar'}
                         </button>
                         <button
                           onClick={() => setTermsModalPage('selfie')}
                           disabled={!hasScrolledToBottom}
-                          className={`flex-1 px-10 py-4 rounded-2xl font-black uppercase tracking-widest text-sm transition-all shadow-xl active:scale-95 ${
+                          className={`flex-[2] px-10 py-4 rounded-2xl font-black uppercase tracking-widest text-sm transition-all shadow-xl active:scale-95 ${
                             hasScrolledToBottom
                               ? 'bg-blue-600 text-white hover:bg-blue-500 shadow-blue-500/25 hover:shadow-blue-500/40'
                               : 'bg-gray-200 text-gray-400 cursor-not-allowed border border-gray-100'
                           }`}
                         >
                           {hasScrolledToBottom
-                            ? 'Confirmar Leitura →'
+                            ? 'Confirmar Leitura'
                             : (checkIfContentNeedsScroll()
                                 ? t('preCheckoutModal.scrollToBottomFirst')
                                 : t('preCheckoutModal.readingTerms')
@@ -2167,14 +2219,14 @@ export const SelectionFeeStep: React.FC<StepProps> = ({ onNext }) => {
                       <>
                         <button
                           onClick={() => setTermsModalPage('terms')}
-                          className="px-8 py-4 bg-gray-200/50 text-gray-600 rounded-2xl font-black uppercase tracking-widest text-sm hover:bg-gray-200 transition-all active:scale-95"
+                          className="flex-[1] px-8 py-4 bg-gray-200/50 text-gray-600 rounded-2xl font-black uppercase tracking-widest text-sm hover:bg-gray-200 transition-all active:scale-95"
                         >
-                          ← Voltar
+                          Voltar
                         </button>
                         <button
                           onClick={handleTermsAccept}
                           disabled={!identityPhotoPath}
-                          className={`flex-1 px-10 py-4 rounded-2xl font-black uppercase tracking-widest text-sm transition-all shadow-xl active:scale-95 ${
+                          className={`flex-[2] px-10 py-4 rounded-2xl font-black uppercase tracking-widest text-sm transition-all shadow-xl active:scale-95 ${
                             identityPhotoPath
                               ? 'bg-blue-600 text-white hover:bg-blue-500 shadow-blue-500/25 hover:shadow-blue-500/40'
                               : 'bg-gray-200 text-gray-400 cursor-not-allowed border border-gray-100'
