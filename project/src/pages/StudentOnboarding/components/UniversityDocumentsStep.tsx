@@ -1252,7 +1252,7 @@ export const UniversityDocumentsStep: React.FC<StepProps> = ({ onBack }) => {
 
                         <div className="bg-white px-8 py-6 rounded-3xl border border-slate-200 shadow-xl shadow-slate-200/50 flex flex-col items-center min-w-[200px]">
                            <span className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1">Valor Total da Taxa</span>
-                           <span className="text-4xl font-black text-blue-600 tracking-tighter leading-none">
+                           <span className="text-4xl font-black text-grey-900 tracking-tighter leading-none">
                              {formatFeeAmount(promotionalCouponValidation?.finalAmount || getFeeAmount('i20_control_fee'))}
                            </span>
                         </div>
@@ -1340,7 +1340,7 @@ export const UniversityDocumentsStep: React.FC<StepProps> = ({ onBack }) => {
                               <div className="flex-1">
                                  <div className="flex items-center justify-between mb-1">
                                     <span className="font-bold text-gray-900 text-lg">Cartão de Crédito</span>
-                                    <span className="bg-blue-100 text-blue-600 text-sm font-black px-3 py-1.5 rounded-full border border-blue-200 uppercase tracking-tight">
+                                    <span className="text-grey-900 text-sm font-black px-3 py-1.5 uppercase tracking-tight">
                                       {formatFeeAmount(calculateCardAmountWithFees(promotionalCouponValidation?.finalAmount || getFeeAmount('i20_control_fee')))}
                                     </span>
                                  </div>
@@ -1365,7 +1365,7 @@ export const UniversityDocumentsStep: React.FC<StepProps> = ({ onBack }) => {
                               <div className="flex-1">
                                  <div className="flex items-center justify-between mb-1">
                                     <span className="font-bold text-gray-900 text-lg">PIX</span>
-                                    <span className="bg-emerald-100 text-emerald-600 text-sm font-black px-3 py-1.5 rounded-full border border-emerald-200 uppercase tracking-tight">
+                                    <span className="text-grey-900 text-sm font-black px-3 py-1.5 uppercase tracking-tight">
                                       R$ {calculatePIXTotalWithIOF(promotionalCouponValidation?.finalAmount || getFeeAmount('i20_control_fee'), exchangeRate).totalWithIOF.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
                                     </span>
                                  </div>
@@ -1391,10 +1391,10 @@ export const UniversityDocumentsStep: React.FC<StepProps> = ({ onBack }) => {
                                  <div className="flex items-center justify-between mb-1">
                                     <span className="font-bold text-gray-900 text-lg">Parcelow</span>
                                     <div className="text-right flex flex-col items-end">
-                                      <span className="bg-blue-100 text-blue-600 text-sm font-black px-3 py-1.5 rounded-full border border-blue-200 uppercase tracking-tight">
+                                      <span className="text-grey-900 text-sm font-black px-3 py-1.5 uppercase tracking-tight">
                                         {formatFeeAmount(promotionalCouponValidation?.finalAmount || getFeeAmount('i20_control_fee'))}
                                       </span>
-                                      <div className="text-[10px] font-black text-blue-500 uppercase tracking-widest mt-1">ou em até 12x</div>
+                                      <div className="text-[10px] font-black text-grey-900 uppercase tracking-widest mt-1">ou em até 12x</div>
                                     </div>
                                  </div>
                                  <p className="text-[10px] text-gray-400 mt-1 uppercase tracking-widest font-bold">* Taxas da operadora e processamento da plataforma serão aplicadas</p>
@@ -1424,10 +1424,10 @@ export const UniversityDocumentsStep: React.FC<StepProps> = ({ onBack }) => {
                                    <div className="flex items-center justify-between mb-1">
                                       <span className="font-bold text-gray-900 text-lg">Zelle</span>
                                       <div className="text-right">
-                                        <div className="bg-indigo-100 text-indigo-600 text-sm font-black px-3 py-1.5 rounded-full border border-indigo-200 uppercase tracking-tight">
+                                        <div className="text-grey-900 text-sm font-black px-3 py-1.5 uppercase tracking-tight">
                                           {formatFeeAmount(promotionalCouponValidation?.finalAmount || getFeeAmount('i20_control_fee'))}
                                         </div>
-                                        <span className="text-[10px] font-bold text-indigo-400 mt-1 block uppercase tracking-widest">Sem Taxas</span>
+                                        <span className="text-[10px] font-bold text-grey-900 mt-1 block uppercase tracking-widest">Sem Taxas</span>
                                       </div>
                                    </div>
                                    <div className="mt-2 flex items-center gap-2 text-amber-500">
