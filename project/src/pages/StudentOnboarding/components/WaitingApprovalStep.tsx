@@ -46,6 +46,7 @@ interface ApplicationWithScholarship {
     title: string;
     annual_value_with_scholarship: number;
     level: string;
+    image_url: string | null;
     university_id?: string;
     universities: {
       id: string;
@@ -453,17 +454,20 @@ export const WaitingApprovalStep: React.FC<StepProps> = ({ onComplete }) => {
                   {/* University Info */}
                   <div className="flex flex-col md:flex-row md:items-center justify-between gap-6 mb-8">
                     <div className="flex items-center space-x-6">
-                      <div className="w-20 h-20 bg-gray-50 rounded-3xl flex items-center justify-center border border-gray-200 overflow-hidden shadow-sm p-3">
-                        {application.scholarships.universities?.logo_url ? (
+                      {application.scholarships.image_url || application.scholarships.universities?.logo_url ? (
+                        <div className="w-28 h-28 bg-white rounded-[2rem] flex items-center justify-center border border-gray-100/50 overflow-hidden shadow-sm flex-shrink-0">
                           <img
-                            src={application.scholarships.universities.logo_url}
-                            alt={application.scholarships.universities.name}
-                            className="w-full h-full object-contain"
+                            src={application.scholarships.image_url || application.scholarships.universities?.logo_url || ''}
+                            alt=""
+                            className="w-full h-full object-contain p-2"
+                            onError={(e) => { (e.target as HTMLImageElement).parentElement!.style.display = 'none'; }}
                           />
-                        ) : (
-                          <Building className="w-10 h-10 text-gray-300" />
-                        )}
-                      </div>
+                        </div>
+                      ) : (
+                        <div className="w-28 h-28 bg-slate-50 rounded-[2rem] flex items-center justify-center flex-shrink-0">
+                          <Building className="w-16 h-16 text-slate-300" />
+                        </div>
+                      )}
                       <div className="min-w-0 flex-1">
                         <h3 className="text-2xl font-black text-gray-900 truncate uppercase tracking-tight mb-1">
                           {application.scholarships.title}

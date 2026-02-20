@@ -82,7 +82,7 @@ const StudentOnboarding: React.FC = () => {
   useEffect(() => {
     const stepParam = searchParams.get('step');
     if (stepParam) {
-      const validSteps: OnboardingStep[] = ['welcome', 'selection_fee', 'scholarship_selection', 'process_type', 'documents_upload', 'payment', 'scholarship_fee', 'university_documents'];
+      const validSteps: OnboardingStep[] = ['welcome', 'selection_fee', 'scholarship_selection', 'process_type', 'documents_upload', 'payment', 'scholarship_fee', 'my_applications'];
       if (validSteps.includes(stepParam as OnboardingStep)) {
         window.localStorage.setItem('onboarding_current_step', stepParam);
         if (stepParam === 'welcome') {
@@ -215,7 +215,7 @@ const StudentOnboarding: React.FC = () => {
 
   useEffect(() => {
     const stepParam = searchParams.get('step');
-    if (!loading && state.onboardingCompleted && stepParam !== 'university_documents') {
+    if (!loading && state.onboardingCompleted && stepParam !== 'my_applications') {
       navigate('/student/dashboard');
     }
   }, [loading, state.onboardingCompleted, searchParams, navigate]);
@@ -241,7 +241,7 @@ const StudentOnboarding: React.FC = () => {
       'documents_upload',
       'payment',
       'scholarship_fee',
-      'university_documents',
+      'my_applications',
     ];
 
     const currentIndex = steps.indexOf(state.currentStep);
@@ -259,7 +259,7 @@ const StudentOnboarding: React.FC = () => {
       'documents_upload',
       'payment',
       'scholarship_fee',
-      'university_documents',
+      'my_applications',
     ];
 
     const currentIndex = steps.indexOf(state.currentStep);
@@ -277,7 +277,7 @@ const StudentOnboarding: React.FC = () => {
     'documents_upload',
     'payment',
     'scholarship_fee',
-    'university_documents',
+    'my_applications',
   ];
 
   const currentIdx = allSteps.indexOf(state.currentStep);
@@ -290,7 +290,7 @@ const StudentOnboarding: React.FC = () => {
   if (state.documentsUploaded && currentIdx > allSteps.indexOf('documents_upload')) completedSteps.push('documents_upload');
   if (state.applicationFeePaid && currentIdx > allSteps.indexOf('payment')) completedSteps.push('payment');
   if (state.scholarshipFeePaid && currentIdx > allSteps.indexOf('scholarship_fee')) completedSteps.push('scholarship_fee');
-  if (state.universityDocumentsUploaded && currentIdx > allSteps.indexOf('university_documents')) completedSteps.push('university_documents');
+  if (state.universityDocumentsUploaded && currentIdx > allSteps.indexOf('my_applications')) completedSteps.push('my_applications');
 
   const renderStep = () => {
     switch (state.currentStep) {
@@ -308,7 +308,7 @@ const StudentOnboarding: React.FC = () => {
         return <PaymentStep onNext={handleNext} onBack={handleBack} />;
       case 'scholarship_fee':
         return <ScholarshipFeeStep onNext={handleNext} onBack={handleBack} />;
-      case 'university_documents':
+      case 'my_applications':
         return <UniversityDocumentsStep onNext={handleNext} onBack={handleBack} />;
       default:
         return <WelcomeStep onNext={handleNext} onBack={handleBack} />;
@@ -495,7 +495,7 @@ const StudentOnboarding: React.FC = () => {
           </div>
         )}
 
-        {state.currentStep !== 'welcome' && state.currentStep !== 'university_documents' && (
+        {state.currentStep !== 'welcome' && state.currentStep !== 'my_applications' && (
           <div className="mb-6 sm:mb-8">
             <StepIndicator currentStep={state.currentStep} completedSteps={completedSteps} />
           </div>

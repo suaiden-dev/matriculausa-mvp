@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useMemo, useCallback } from 'react';
-import { Award, Building, DollarSign, X, CheckCircle2, ArrowRight, Info, Search, GraduationCap, BookOpen, Monitor, Briefcase, Calendar, ChevronDown, ChevronUp, Filter } from 'lucide-react';
+import { Award, Building, DollarSign, X, CheckCircle2, Info, Search, GraduationCap, BookOpen, Monitor, Briefcase, Calendar, ChevronDown, ChevronUp, Filter } from 'lucide-react';
 import { useAuth } from '../../../hooks/useAuth';
 import { useCartStore } from '../../../stores/applicationStore';
 import { useScholarships } from '../../../hooks/useScholarships';
@@ -547,8 +547,7 @@ export const ScholarshipSelectionStep: React.FC<StepProps> = ({ onNext, onBack: 
     return (
       <div className="w-full h-full flex flex-col">
         <div className="max-w-4xl mx-auto w-full px-4">
-          <h1 className="text-2xl sm:text-4xl font-black mb-4 flex items-center gap-3 text-white uppercase tracking-tighter">
-            <GraduationCap className="h-8 w-8 sm:h-10 sm:w-10 text-white" />
+          <h1 className="text-2xl sm:text-4xl font-black mb-4 text-white uppercase tracking-tighter">
             <span>{t('studentDashboard.selectedScholarships.title') || 'Review Your Selected Scholarships'}</span>
           </h1>
           
@@ -568,7 +567,7 @@ export const ScholarshipSelectionStep: React.FC<StepProps> = ({ onNext, onBack: 
           </div>
 
           {/* Cart Contents */}
-          <div className="bg-white rounded-[2.5rem] shadow-2xl border border-slate-200 p-6 sm:p-10 relative overflow-hidden">
+          <div className="bg-white rounded-[2.5rem] shadow-2xl border border-slate-200 p-6 sm:px-24 py-10 relative overflow-hidden">
             <div className="absolute top-0 right-0 w-64 h-64 bg-blue-500/5 rounded-full blur-[80px] -mr-32 -mt-32 pointer-events-none" />
             
             <div className="relative z-10">
@@ -580,12 +579,9 @@ export const ScholarshipSelectionStep: React.FC<StepProps> = ({ onNext, onBack: 
                   
                   return (
                     <li key={scholarship.id} className="py-6 first:pt-0 last:pb-0">
-                      <div className="flex items-start justify-between gap-6">
+                      <div className="flex items-center justify-between gap-6">
                         <div className="flex-1 min-w-0">
-                          <div className="flex items-start gap-4">
-                            <div className="w-12 h-12 bg-slate-50 rounded-xl flex items-center justify-center flex-shrink-0 border border-slate-100">
-                              <GraduationCap className="w-6 h-6 text-blue-600" />
-                            </div>
+                          <div className="flex items-center gap-4">
                             <div className="flex-1">
                               <div className="font-black text-slate-900 text-lg uppercase tracking-tight mb-1">{scholarship.title}</div>
                               <div className="text-slate-500 text-sm mb-2 flex items-center">
@@ -649,7 +645,6 @@ export const ScholarshipSelectionStep: React.FC<StepProps> = ({ onNext, onBack: 
                   className="flex-1 w-full bg-blue-600 text-white py-5 rounded-2xl font-black uppercase tracking-[0.2em] text-sm hover:bg-blue-700 transition-all shadow-xl shadow-blue-500/20 hover:scale-105 active:scale-95 disabled:bg-slate-300 disabled:cursor-not-allowed flex items-center justify-center space-x-3"
                 >
                   <span>Confirmar</span>
-                  <ArrowRight className="w-6 h-6" />
                 </button>
               </div>
             </div>
@@ -703,12 +698,12 @@ export const ScholarshipSelectionStep: React.FC<StepProps> = ({ onNext, onBack: 
         <div className="space-y-6 pb-24 sm:pb-6">
           {/* Header Section */}
           <div>
-            <div className="text-center mb-4">
-              <h2 className="text-2xl sm:text-3xl font-bold text-white mb-2">
-                Choose Your Scholarships
+            <div className="text-center md:text-left mb-8 space-y-4">
+              <h2 className="text-3xl md:text-5xl font-black text-white uppercase tracking-tighter leading-none">
+                Escolha de Bolsas
               </h2>
-              <p className="text-base sm:text-lg text-white/70 font-medium mb-4">
-                Click on the scholarship cards below to select them. You need at least one to proceed.
+              <p className="text-lg md:text-xl text-white/60 font-medium max-w-2xl">
+                {t('studentDashboard.findScholarships.description') || 'Clique nos cards abaixo para selecionar suas bolsas. É necessário escolher ao menos uma para prosseguir.'}
               </p>
             </div>
 
@@ -1050,26 +1045,24 @@ export const ScholarshipSelectionStep: React.FC<StepProps> = ({ onNext, onBack: 
           )}
 
           {/* Fixed Continue Button - Mobile */}
-          <div className="fixed bottom-0 left-0 right-0 bg-white border-t-2 border-slate-300 shadow-xl z-50 p-4 sm:hidden">
+          <div className="fixed bottom-0 left-0 right-0 bg-white shadow-xl z-50 p-4 sm:hidden">
             <button
               onClick={handleContinue}
               disabled={selectedIds.size === 0}
               className="w-full bg-blue-600 text-white py-4 px-6 rounded-lg hover:bg-blue-700 transition-all font-bold text-base disabled:opacity-50 disabled:cursor-not-allowed shadow-lg flex items-center justify-center space-x-2 disabled:bg-gray-400"
             >
               <span>Continue ({selectedIds.size} selected)</span>
-              {selectedIds.size > 0 && <ArrowRight className="w-5 h-5" />}
             </button>
           </div>
 
           {/* Continue Button - Desktop */}
-          <div className="hidden sm:block pt-4 border-t-2 border-slate-300">
+          <div className="hidden sm:block pt-4">
             <button
               onClick={handleContinue}
               disabled={selectedIds.size === 0}
               className="w-full bg-blue-600 text-white py-3.5 px-6 rounded-lg hover:bg-blue-700 transition-all font-bold text-base disabled:opacity-50 disabled:cursor-not-allowed shadow-md flex items-center justify-center space-x-2 disabled:bg-gray-400"
             >
               <span>Continue ({selectedIds.size} selected)</span>
-              {selectedIds.size > 0 && <ArrowRight className="w-5 h-5" />}
             </button>
           </div>
         </div>

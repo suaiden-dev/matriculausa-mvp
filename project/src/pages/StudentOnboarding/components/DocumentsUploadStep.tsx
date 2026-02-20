@@ -6,9 +6,7 @@ import {
   Loader2, 
   X, 
   Clock, 
-  DollarSign, 
   AlertCircle,
-  Info,
   RefreshCw,
   Building,
   GraduationCap,
@@ -17,7 +15,6 @@ import {
   XCircle,
   AlertTriangle,
   Send,
-  Globe
 } from 'lucide-react';
 
 import { useAuth } from '../../../hooks/useAuth';
@@ -71,9 +68,15 @@ export const DocumentsUploadStep: React.FC<StepProps> = ({ onNext }) => {
   }, [showConfirmModal]);
 
   const DOCUMENT_LABELS: Record<string, string> = {
-    passport: t('studentDashboard.myApplications.documents.passport') || 'Passport',
-    diploma: t('studentDashboard.myApplications.documents.highSchoolDiploma') || 'High School Diploma',
-    funds_proof: t('studentDashboard.myApplications.documents.proofOfFunds') || 'Proof of Funds',
+    passport: t('studentDashboard.documentsAndScholarshipChoice.passport') || 'Passport',
+    diploma: t('studentDashboard.documentsAndScholarshipChoice.diploma') || 'High School Diploma',
+    funds_proof: t('studentDashboard.documentsAndScholarshipChoice.fundsProof') || 'Proof of Funds',
+  };
+
+  const DOCUMENT_DESCRIPTIONS: Record<string, string> = {
+    passport: t('studentDashboard.documentsAndScholarshipChoice.passportDescription') || 'Faça upload de uma foto ou digitalização nítida do seu passaporte.',
+    diploma: t('studentDashboard.documentsAndScholarshipChoice.diplomaDescription') || 'Upload your high school diploma or equivalent.',
+    funds_proof: t('studentDashboard.documentsAndScholarshipChoice.fundsProofDescription') || 'Faça upload de extratos bancários ou documentos financeiros. É necessário um mínimo de $22.000 USD, mais $5.000 USD para cada dependente.',
   };
 
   // Obter process type do localStorage (escopado pref.)
@@ -641,25 +644,25 @@ export const DocumentsUploadStep: React.FC<StepProps> = ({ onNext }) => {
 
                           {/* Card Content */}
                           <div className="p-4 sm:p-5 flex-1 flex flex-col">
-                            <div className="flex gap-5 items-center mb-5">
-                              {scholarship?.universities?.logo_url ? (
-                                <div className="w-20 h-20 bg-white rounded-2xl flex items-center justify-center border border-slate-200 overflow-hidden shadow-sm p-2 flex-shrink-0">
+                            <div className="flex gap-4 items-center mb-4">
+                              {scholarship?.image_url || scholarship?.universities?.logo_url ? (
+                                <div className="w-28 h-28 bg-white rounded-[2rem] flex items-center justify-center flex-shrink-0 overflow-hidden relative border border-gray-100/50 shadow-sm">
                                   <img 
-                                    src={scholarship.universities.logo_url} 
+                                    src={scholarship?.image_url || scholarship?.universities?.logo_url} 
                                     alt="" 
-                                    className="w-full h-full object-contain"
+                                    className="w-full h-full object-contain transform scale-100 p-2"
                                     onError={(e) => { (e.target as HTMLImageElement).parentElement!.style.display = 'none'; }}
                                   />
                                 </div>
                               ) : (
-                                <div className="w-20 h-20 bg-slate-50 rounded-2xl flex items-center justify-center border border-slate-100 flex-shrink-0">
-                                  <Building className="w-10 h-10 text-slate-400" />
+                                <div className="w-28 h-28 bg-slate-50 rounded-[2rem] flex items-center justify-center flex-shrink-0">
+                                  <Building className="w-16 h-16 text-slate-300" />
                                 </div>
                               )}
                               
                               <div className="flex-1 min-w-0">
                                 {/* Title */}
-                                <h4 className="text-lg sm:text-xl font-bold text-slate-900 mb-1 leading-tight group-hover:text-[#05294E] transition-colors pr-24">
+                                <h4 className="text-lg font-bold text-slate-900 mb-0.5 leading-tight group-hover:text-[#05294E] transition-colors pr-20">
                                   {scholarship?.title}
                                 </h4>
                                 
@@ -936,9 +939,11 @@ export const DocumentsUploadStep: React.FC<StepProps> = ({ onNext }) => {
   return (
     <div className="space-y-10 pb-24 sm:pb-12 max-w-4xl mx-auto">
       <div className="text-center md:text-left space-y-4 px-4">
-        <h2 className="text-3xl md:text-5xl font-black text-white uppercase tracking-tighter leading-none">Upload Documents</h2>
+        <h2 className="text-3xl md:text-5xl font-black text-white uppercase tracking-tighter leading-none">
+          {t('studentDashboard.documentsUploadStep.title')}
+        </h2>
         <p className="text-lg md:text-xl text-white/60 font-medium max-w-2xl mt-2">
-          We need a few documents to verify your eligibility and process your application.
+          {t('studentDashboard.documentsUploadStep.subtitle')}
         </p>
       </div>
 
@@ -954,6 +959,17 @@ export const DocumentsUploadStep: React.FC<StepProps> = ({ onNext }) => {
             </div>
           )}
 
+          <div className="relative overflow-hidden mb-6">
+            <div className="relative z-10">
+              <h4 className="text-lg font-black text-gray-900 uppercase tracking-tight mb-2">
+                Instruções Importantes
+              </h4>
+              <div className="text-gray-800 font-medium leading-relaxed relative z-[20]">
+                Garanta que os documentos enviados estejam totalmente legíveis e <strong>exclusivamente em inglês</strong>. Caso precise de tradução, recomendamos os serviços do nosso parceiro <a href="https://lushamerica.com/" target="_blank" rel="noopener noreferrer" className="text-blue-600 font-black hover:text-blue-800 underline transition-all cursor-pointer relative z-[50]" style={{textDecoration: 'none'}}>Lush America Translations</a>.
+              </div>
+            </div>
+          </div>
+
           <div className="grid grid-cols-1 gap-8">
             {DOCUMENT_TYPES.map((doc) => {
               const hasError = fieldErrors[doc.key];
@@ -963,25 +979,26 @@ export const DocumentsUploadStep: React.FC<StepProps> = ({ onNext }) => {
                 const documentLimit = getDocumentLimit();
                 
                 return (
-                  <div key={doc.key} className={`p-6 md:p-8 rounded-[2rem] border-2 transition-all duration-300 ${hasError ? 'border-red-100 bg-red-50/30' : 'border-slate-50 bg-slate-50/50 hover:border-blue-100 group'}`}>
+                  <div key={doc.key} className={`p-6 md:p-8 rounded-[2rem] border-2 transition-all duration-300 ${hasError ? 'border-red-100 bg-red-50/30' : fundsFiles.length > 0 ? 'border-emerald-100 bg-emerald-50/20' : 'border-slate-50 bg-slate-50/50 hover:border-blue-100 group'}`}>
                     <div className="flex flex-col md:flex-row gap-6">
-                      <div className="w-16 h-16 bg-white rounded-2xl flex items-center justify-center border border-gray-50 shadow-sm flex-shrink-0 group-hover:scale-110 transition-transform">
-                        <DollarSign className="w-8 h-8 text-blue-600" />
-                      </div>
+
                       <div className="flex-1 space-y-4">
                         <div className="flex items-center justify-between">
-                          <h3 className="text-xl font-black text-gray-900 uppercase tracking-tight">{doc.label}</h3>
-                          <span className="px-3 py-1 bg-blue-50 text-blue-600 text-[10px] font-black uppercase rounded-full tracking-widest border border-blue-100">{fundsFiles.length}/{documentLimit} Files</span>
+                          <div className="flex items-center gap-3">
+                            <h3 className="text-xl font-black text-gray-900 uppercase tracking-tight">{DOCUMENT_LABELS[doc.key]}</h3>
+                            {fundsFiles.length > 0 && <CheckCircle className="w-5 h-5 text-emerald-500" />}
+                          </div>
+                          <span className="px-3 py-1 bg-blue-50 text-blue-600 text-[10px] font-black uppercase rounded-full tracking-widest border border-blue-100">{fundsFiles.length}/{documentLimit} {t('common.files', 'Arquivos')}</span>
                         </div>
-                        <p className="text-gray-500 font-medium text-sm leading-relaxed">{doc.description}</p>
+                        <p className="text-gray-500 font-medium text-sm leading-relaxed">{DOCUMENT_DESCRIPTIONS[doc.key]}</p>
                         
                         <div className="space-y-4">
                           <div className="relative group/upload">
                             <input type="file" accept="application/pdf" multiple onChange={(e) => handleFundsFileAdd(Array.from(e.target.files || []))} className="absolute inset-0 w-full h-full opacity-0 cursor-pointer z-20" disabled={isLocked || uploading || analyzing} />
                             <div className="border-2 border-dashed border-blue-200 rounded-2xl p-8 text-center bg-white group-hover/upload:border-blue-400 group-hover/upload:bg-blue-50/30 transition-all">
                               <Upload className="w-10 h-10 text-blue-400 mx-auto mb-3 group-hover/upload:scale-110 transition-transform" />
-                              <p className="text-sm text-blue-700 font-black uppercase tracking-widest">Drag & Drop or Click to Select</p>
-                              <p className="text-[10px] text-gray-400 font-bold uppercase tracking-widest mt-2">{processType} Limit: {documentLimit} Documents (Max 10MB Total)</p>
+                              <p className="text-sm text-blue-700 font-black uppercase tracking-widest">{t('studentDashboard.documentsAndScholarshipChoice.dragDropFiles')}</p>
+                              <p className="text-[10px] text-gray-400 font-bold uppercase tracking-widest mt-2">{processType} Limit: {documentLimit} {t('studentDashboard.documentsAndScholarshipChoice.documents')} (Max 10MB Total)</p>
                             </div>
                           </div>
 
@@ -1009,20 +1026,18 @@ export const DocumentsUploadStep: React.FC<StepProps> = ({ onNext }) => {
               return (
                 <div key={doc.key} className={`p-6 md:p-8 rounded-[2rem] border-2 transition-all duration-300 ${hasError ? 'border-red-100 bg-red-50/30' : hasFile ? 'border-emerald-100 bg-emerald-50/20' : 'border-slate-50 bg-slate-50/50 hover:border-blue-100 group'}`}>
                   <div className="flex flex-col md:flex-row gap-6">
-                    <div className={`w-16 h-16 rounded-2xl flex items-center justify-center border border-gray-50 shadow-sm flex-shrink-0 group-hover:scale-110 transition-transform ${hasFile ? 'bg-emerald-50 text-emerald-600' : 'bg-white text-blue-600'}`}>
-                      <FileText className="w-8 h-8" />
-                    </div>
+
                     <div className="flex-1 space-y-4">
                       <div className="flex items-center justify-between">
-                        <h3 className="text-xl font-black text-gray-900 uppercase tracking-tight">{doc.label}</h3>
+                        <h3 className="text-xl font-black text-gray-900 uppercase tracking-tight">{DOCUMENT_LABELS[doc.key]}</h3>
                         {hasFile && <CheckCircle className="w-5 h-5 text-emerald-500" />}
                       </div>
-                      <p className="text-gray-500 font-medium text-sm leading-relaxed">{doc.description}</p>
+                      <p className="text-gray-500 font-medium text-sm leading-relaxed">{DOCUMENT_DESCRIPTIONS[doc.key]}</p>
                       
                       <div className="flex flex-col sm:flex-row items-center gap-4">
                         <label className={`w-full sm:w-auto px-6 py-3 rounded-xl font-black text-[10px] uppercase tracking-widest border transition-all cursor-pointer flex items-center justify-center gap-2 ${hasFile ? 'bg-emerald-50 text-emerald-700 border-emerald-100' : 'bg-blue-50 text-blue-700 border-blue-100 hover:bg-blue-100'}`}>
                           <Upload className="w-4 h-4" />
-                          {hasFile ? 'Change File' : 'Choose File'}
+                          {hasFile ? t('common.showLess', 'Alterar Arquivo') : t('studentDashboard.documentsAndScholarshipChoice.chooseFile')}
                           <input type="file" accept="application/pdf,image/*" onChange={(e) => handleFileChange(doc.key, e.target.files?.[0] || null)} className="hidden" disabled={isLocked || uploading || analyzing} />
                         </label>
                         {hasFile && (
@@ -1037,20 +1052,6 @@ export const DocumentsUploadStep: React.FC<StepProps> = ({ onNext }) => {
           </div>
 
           <div className="pt-8 border-t border-gray-50 space-y-6">
-            <div className="flex items-center gap-4 p-5 bg-blue-50/50 rounded-2xl border border-blue-100/30">
-              <Info className="w-6 h-6 text-blue-500 flex-shrink-0" />
-              <p className="text-xs font-bold text-blue-800/70 uppercase tracking-wide leading-relaxed">
-                Make sure all documents are clear, legible, and match the information provided in your profile. Note: Documents must be in English or accompanied by a certified English translation.
-              </p>
-            </div>
-
-            <div className="flex items-center gap-4 p-5 bg-purple-50 rounded-2xl border border-purple-100/30">
-              <Globe className="w-6 h-6 text-purple-600 flex-shrink-0" />
-              <p className="text-xs font-bold text-purple-900 uppercase tracking-wide leading-relaxed">
-                Caso não tenha um documento traduzido, recomendamos os serviços de tradução da <a href="https://lushamerica.com/" target="_blank" rel="noopener noreferrer" className="underline hover:text-purple-700 font-black">Lush America Translations</a>.
-              </p>
-            </div>
-
             <button
               onClick={handleUpload}
               disabled={!allFilesSelected || uploading || analyzing || mergingPdfs}
@@ -1059,17 +1060,16 @@ export const DocumentsUploadStep: React.FC<StepProps> = ({ onNext }) => {
               {(uploading || mergingPdfs) ? (
                 <>
                   <Loader2 className="w-6 h-6 animate-spin" />
-                  <span>Uploading Documents...</span>
+                  <span>{t('studentDashboard.documentsUploadStep.uploadingDocuments')}</span>
                 </>
               ) : analyzing ? (
                 <>
                   <RefreshCw className="w-6 h-6 animate-spin" />
-                  <span>AI Analysis in Progress...</span>
+                  <span>{t('studentDashboard.documentsUploadStep.aiAnalysisInProgress')}</span>
                 </>
               ) : (
                 <>
-                  <span>Upload and Continue</span>
-                  <ArrowRight className="w-4 h-4" />
+                  <span>{t('studentDashboard.documentsUploadStep.uploadAndContinue')}</span>
                 </>
               )}
             </button>
@@ -1099,7 +1099,7 @@ export const DocumentsUploadStep: React.FC<StepProps> = ({ onNext }) => {
       {/* Fixed Continue Button Mobile */}
       <div className="fixed bottom-0 left-0 right-0 bg-white border-t border-gray-100 shadow-2xl z-50 p-4 sm:hidden">
         <button onClick={handleUpload} disabled={!allFilesSelected || uploading || analyzing || mergingPdfs} className="w-full bg-blue-600 text-white py-4 rounded-xl font-black uppercase tracking-widest text-xs shadow-lg flex items-center justify-center gap-2 disabled:opacity-50">
-          {uploading || analyzing ? <Loader2 className="w-5 h-5 animate-spin" /> : <span>Upload and Continue</span>}
+          {uploading || analyzing ? <Loader2 className="w-5 h-5 animate-spin" /> : <span>{t('studentDashboard.documentsUploadStep.uploadAndContinue')}</span>}
         </button>
       </div>
     </div>

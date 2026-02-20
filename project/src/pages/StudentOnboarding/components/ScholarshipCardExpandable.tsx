@@ -3,9 +3,7 @@ import {
   Building, 
   Clock, 
   DollarSign, 
-  GraduationCap, 
-  Award, 
-  Briefcase,
+  GraduationCap,
   CheckCircle,
   AlertTriangle,
   ChevronDown,
@@ -16,8 +14,6 @@ import {
   formatAmount, 
   getFieldBadgeColor, 
   getLevelIcon, 
-  getDeliveryModeIcon, 
-  getDeliveryModeColor, 
   getDeliveryModeLabel,
   getDaysUntilDeadlineDisplay,
   getDeadlineStatus,
@@ -42,7 +38,6 @@ export const ScholarshipCardExpandable: React.FC<ScholarshipCardExpandableProps>
 }) => {
   const { t } = useTranslation();
   const [isExpanded, setIsExpanded] = useState(false);
-  const [imageError, setImageError] = useState(false);
   const isBlocked = is3800ScholarshipBlocked(scholarship);
   const systemType = (userProfile?.system_type as any) || 'legacy';
   const dependents = Number(userProfile?.dependents) || 0;
@@ -67,8 +62,9 @@ export const ScholarshipCardExpandable: React.FC<ScholarshipCardExpandableProps>
             <h3 className="text-base font-bold text-slate-900 mb-1.5 line-clamp-2">
               {scholarship.title}
             </h3>
-            <div className="flex items-center gap-2 mb-2 flex-wrap">
-              <span className={`px-2 py-0.5 rounded text-xs font-medium text-white ${getFieldBadgeColor(scholarship.field_of_study)}`}>
+            <div className="flex items-center gap-2 mb-1 flex-wrap">
+              <span className={`px-2 py-0.5 rounded text-xs font-medium text-white shadow-sm flex items-center gap-1.5 ${getFieldBadgeColor(scholarship.field_of_study)}`}>
+                <GraduationCap className="h-3.5 w-3.5" strokeWidth={2.5} />
                 {scholarship.field_of_study || 'Any Field'}
               </span>
               {scholarship.is_exclusive && (
@@ -77,7 +73,7 @@ export const ScholarshipCardExpandable: React.FC<ScholarshipCardExpandableProps>
                 </span>
               )}
             </div>
-            <div className="flex items-center text-slate-600 text-sm mb-2">
+            <div className="flex items-center text-slate-600 text-sm mb-1">
               <Building className="h-4 w-4 mr-1.5 text-[#05294E]" />
               <span className="truncate">{scholarship.universities?.name || 'Unknown University'}</span>
             </div>
@@ -156,19 +152,18 @@ export const ScholarshipCardExpandable: React.FC<ScholarshipCardExpandableProps>
       {/* Expanded Content */}
       {isExpanded && (
         <div className="px-4 sm:px-5 pb-4 sm:pb-5 border-t border-slate-200 bg-slate-50/50">
-          <div className="pt-4 space-y-4">
+          <div className="pt-4 space-y-2">
             {/* Program Details */}
             <div className="grid grid-cols-1 gap-2 sm:gap-3">
               {/* Course Modality */}
               {scholarship.delivery_mode && (
                 <div className="flex items-center justify-between p-2 sm:p-3 bg-white rounded-lg border border-slate-200">
                   <div className="flex items-center">
-                    {getDeliveryModeIcon(scholarship.delivery_mode)}
-                    <span className="text-xs font-medium text-slate-600 ml-2">
+                    <span className="text-xs font-medium text-black">
                       {t('studentDashboard.findScholarships.scholarshipCard.studyMode')}
                     </span>
                   </div>
-                  <span className={`px-2 py-1 rounded-md text-xs font-semibold ${getDeliveryModeColor(scholarship.delivery_mode)}`}>
+                  <span className="px-2 py-1 rounded-md text-xs font-semibold text-black">
                     {getDeliveryModeLabel(scholarship.delivery_mode, t)}
                   </span>
                 </div>
@@ -176,18 +171,15 @@ export const ScholarshipCardExpandable: React.FC<ScholarshipCardExpandableProps>
 
               {/* Work Permissions */}
               {scholarship.work_permissions && scholarship.work_permissions.length > 0 && (
-                <div className="p-2 sm:p-3 bg-white rounded-lg border border-slate-200">
-                  <div className="flex items-center mb-2">
-                    <Briefcase className="h-3 w-3 text-emerald-600" />
-                    <span className="text-xs font-medium text-slate-600 ml-2">
-                      {t('studentDashboard.findScholarships.scholarshipCard.workAuthorization')}
-                    </span>
-                  </div>
-                  <div className="flex flex-wrap gap-1">
+                <div className="flex items-center justify-between p-2 sm:p-3 bg-white rounded-lg border border-slate-200">
+                  <span className="text-xs font-medium text-black whitespace-nowrap mr-2">
+                    {t('studentDashboard.findScholarships.scholarshipCard.workAuthorization')}
+                  </span>
+                  <div className="flex flex-wrap justify-end gap-1">
                     {scholarship.work_permissions.map((permission: string, index: number) => (
                       <span
                         key={index}
-                        className="px-2 py-1 bg-emerald-100 text-emerald-700 rounded-md text-xs font-semibold"
+                        className="px-2 py-1 bg-gray-100 text-black rounded-md text-xs font-semibold"
                       >
                         {permission}
                       </span>
@@ -199,9 +191,8 @@ export const ScholarshipCardExpandable: React.FC<ScholarshipCardExpandableProps>
 
             {/* Financial Impact Section */}
             <div className="bg-gradient-to-br from-slate-50 to-slate-100 rounded-xl p-3 sm:p-4 border border-slate-200">
-              <h4 className="text-xs sm:text-sm font-bold text-slate-700 mb-2 sm:mb-3 flex items-center gap-2">
-                <DollarSign className="h-3 w-3 sm:h-4 sm:w-4 text-green-600" />
-                {t('studentDashboard.findScholarships.scholarshipCard.financialOverview')}
+              <h4 className="text-xs sm:text-sm font-bold text-black mb-2 sm:mb-3 flex items-center gap-2">
+                Análise Geral
               </h4>
 
               <div className="space-y-1 sm:space-y-2">
@@ -230,11 +221,6 @@ export const ScholarshipCardExpandable: React.FC<ScholarshipCardExpandableProps>
                       ${applicationFee}
                     </span>
                   </div>
-                  <div className="text-xs text-slate-400 text-center mt-1">
-                    {scholarship.application_fee_amount && Number(scholarship.application_fee_amount) !== 35000
-                      ? t('scholarshipsPage.scholarshipCard.customFee')
-                      : t('scholarshipsPage.scholarshipCard.standardFee')}
-                  </div>
                 </div>
               </div>
             </div>
@@ -244,7 +230,10 @@ export const ScholarshipCardExpandable: React.FC<ScholarshipCardExpandableProps>
               <div className="flex items-center justify-between text-xs sm:text-sm">
                 <span className="text-slate-500">{t('studentDashboard.findScholarships.scholarshipCard.level')}</span>
                 <div className="flex items-center">
-                  {getLevelIcon(scholarship.level || 'undergraduate')}
+                  {React.cloneElement(getLevelIcon(scholarship.level || 'undergraduate'), { 
+                    className: "h-3.5 w-3.5",
+                    strokeWidth: 2.5
+                  })}
                   <span className="ml-1 capitalize text-slate-700 text-xs sm:text-sm">{scholarship.level}</span>
                 </div>
               </div>
@@ -252,8 +241,7 @@ export const ScholarshipCardExpandable: React.FC<ScholarshipCardExpandableProps>
                 <div className="flex items-center justify-between text-sm">
                   <span className="text-slate-500">{t('studentDashboard.findScholarships.scholarshipCard.studyMode')}</span>
                   <div className="flex items-center">
-                    {getDeliveryModeIcon(scholarship.delivery_mode)}
-                    <span className="ml-1 text-slate-700">{getDeliveryModeLabel(scholarship.delivery_mode, t)}</span>
+                    <span className="text-black text-xs sm:text-sm font-semibold">{getDeliveryModeLabel(scholarship.delivery_mode, t)}</span>
                   </div>
                 </div>
               )}

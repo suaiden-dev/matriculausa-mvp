@@ -70,13 +70,13 @@ const Overview: React.FC<OverviewProps> = ({
   const savedOnboardingStep = React.useMemo(() => {
     if (typeof window === 'undefined') return null;
     const savedStep = window.localStorage.getItem('onboarding_current_step');
-    const validSteps = ['welcome', 'selection_fee', 'scholarship_selection', 'process_type', 'documents_upload', 'payment', 'scholarship_fee', 'university_documents', 'completed'];
+    const validSteps = ['welcome', 'selection_fee', 'scholarship_selection', 'process_type', 'documents_upload', 'payment', 'scholarship_fee', 'my_applications', 'completed'];
     
     if (!savedStep || !validSteps.includes(savedStep)) return null;
 
     // Se o usuário não pagou a taxa de seleção, ele não deve conseguir avançar além desse ponto via localStorage antigo
     if (userProfile && !userProfile.has_paid_selection_process_fee) {
-      const stepsAfterSelection = ['scholarship_selection', 'process_type', 'documents_upload', 'payment', 'scholarship_fee', 'university_documents', 'waiting_approval', 'completed'];
+      const stepsAfterSelection = ['scholarship_selection', 'process_type', 'documents_upload', 'payment', 'scholarship_fee', 'my_applications', 'waiting_approval', 'completed'];
       if (stepsAfterSelection.includes(savedStep)) {
         return 'welcome';
       }
@@ -99,7 +99,7 @@ const Overview: React.FC<OverviewProps> = ({
       'documents_upload': 'Upload de Documentos',
       'payment': 'Taxa de Aplicação',
       'scholarship_fee': 'Taxa da Bolsa',
-      'university_documents': 'Documentos da Faculdade',
+      'my_applications': 'Documentos da Faculdade',
       'waiting_approval': 'Aguardando Aprovação',
       'completed': 'Concluído'
     };
@@ -575,7 +575,7 @@ const Overview: React.FC<OverviewProps> = ({
           {(!userProfile?.onboarding_completed || recentApplications.length > 0) && (
             <button
               onClick={() => {
-                const targetStep = userProfile?.onboarding_completed ? 'university_documents' : (savedOnboardingStep || 'welcome');
+                const targetStep = userProfile?.onboarding_completed ? 'my_applications' : (savedOnboardingStep || 'welcome');
                 navigate(`/student/onboarding?step=${targetStep}`);
               }}
               className="max-w-md mx-auto w-full group relative overflow-hidden bg-white/10 backdrop-blur-xl border border-white/20 rounded-2xl p-4 transition-all duration-500 hover:bg-white/20 hover:border-white/40 hover:scale-[1.05] active:scale-[0.95] shadow-[0_20px_40px_rgba(0,0,0,0.2)] flex items-center justify-center text-center"

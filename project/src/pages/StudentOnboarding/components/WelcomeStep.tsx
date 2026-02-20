@@ -238,7 +238,7 @@ export const WelcomeStep: React.FC<StepProps> = ({ onNext }) => {
             onClick={onNext}
             className="group relative bg-[#05294E] hover:bg-blue-600 text-white px-16 py-6 rounded-2xl font-black text-xl flex items-center justify-center gap-4 mx-auto transition-all duration-500 shadow-2xl hover:scale-105 active:scale-95 uppercase tracking-[0.2em]"
           >
-            <span>Iniciar Jornada</span>
+            <span>Iniciar Processo</span>
             <ArrowUpRight className="w-6 h-6 group-hover:translate-x-1 group-hover:-translate-y-1 transition-transform" />
           </button>
         </div>

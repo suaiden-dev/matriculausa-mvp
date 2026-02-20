@@ -14,7 +14,7 @@ export const useOnboardingProgress = () => {
   const getSavedStep = useCallback((): OnboardingStep | null => {
     // Usar apenas localStorage por enquanto (campo no banco não existe ainda)
     const savedStep = window.localStorage.getItem(ONBOARDING_STEP_KEY);
-    const validSteps: OnboardingStep[] = ['welcome', 'selection_fee', 'scholarship_selection', 'process_type', 'documents_upload', 'payment', 'scholarship_fee', 'university_documents', 'completed'];
+    const validSteps: OnboardingStep[] = ['welcome', 'selection_fee', 'scholarship_selection', 'process_type', 'documents_upload', 'payment', 'scholarship_fee', 'my_applications', 'completed'];
     if (savedStep && validSteps.includes(savedStep as OnboardingStep)) {
       return savedStep as OnboardingStep;
     }
@@ -30,7 +30,7 @@ export const useOnboardingProgress = () => {
   const [state, setState] = useState<OnboardingState>(() => {
     // Inicializar com step do localStorage se existir (síncrono)
     const savedStep = window.localStorage.getItem(ONBOARDING_STEP_KEY);
-    const validSteps: OnboardingStep[] = ['welcome', 'selection_fee', 'scholarship_selection', 'process_type', 'documents_upload', 'payment', 'scholarship_fee', 'university_documents', 'completed'];
+    const validSteps: OnboardingStep[] = ['welcome', 'selection_fee', 'scholarship_selection', 'process_type', 'documents_upload', 'payment', 'scholarship_fee', 'my_applications', 'completed'];
     const initialStep = savedStep && validSteps.includes(savedStep as OnboardingStep) ? savedStep as OnboardingStep : 'welcome';
     
     return {
@@ -247,14 +247,14 @@ export const useOnboardingProgress = () => {
       let currentStep: OnboardingStep;
       
       const urlParams = new URLSearchParams(window.location.search);
-      const isForcingPortal = urlParams.get('step') === 'university_documents';
+      const isForcingPortal = urlParams.get('step') === 'my_applications';
 
       if (onboardingCompleted && !isForcingPortal) {
         currentStep = 'completed';
         // Limpar step salvo quando completado
         window.localStorage.removeItem(ONBOARDING_STEP_KEY);
       } else if (onboardingCompleted && isForcingPortal) {
-        currentStep = 'university_documents';
+        currentStep = 'my_applications';
       } else if (isNewUser) {
         // Novo usuário (sem progresso E sem step salvo) sempre começa na página de welcome
         currentStep = 'welcome';
@@ -280,12 +280,12 @@ export const useOnboardingProgress = () => {
         } else if (!scholarshipFeePaid) {
           maxAllowedStep = 'scholarship_fee';
         } else {
-          maxAllowedStep = 'university_documents';
+          maxAllowedStep = 'my_applications';
         }
 
         // Se o step salvo é mais avançado que o permitido, usar o permitido
         // Caso contrário, respeitar o desejo do usuário (permitir voltar)
-        const allSteps: OnboardingStep[] = ['welcome', 'selection_fee', 'scholarship_selection', 'process_type', 'documents_upload', 'payment', 'scholarship_fee', 'university_documents', 'completed'];
+        const allSteps: OnboardingStep[] = ['welcome', 'selection_fee', 'scholarship_selection', 'process_type', 'documents_upload', 'payment', 'scholarship_fee', 'my_applications', 'completed'];
         const savedIdx = allSteps.indexOf(savedStep);
         const maxIdx = allSteps.indexOf(maxAllowedStep);
         
@@ -312,7 +312,7 @@ export const useOnboardingProgress = () => {
           currentStep = 'scholarship_fee';
         } else if (!onboardingCompleted) {
           // Sempre passar pelo university_documents antes de reach completed
-          currentStep = 'university_documents';
+          currentStep = 'my_applications';
         } else {
           currentStep = 'completed';
         }
@@ -374,7 +374,7 @@ export const useOnboardingProgress = () => {
         case 'scholarship_fee':
           updates.scholarshipFeePaid = true;
           break;
-        case 'university_documents':
+        case 'my_applications':
           updates.universityDocumentsUploaded = true;
           break;
         case 'completed':

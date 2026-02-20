@@ -2,12 +2,9 @@ import React, { useState } from 'react';
 import { 
   Building, 
   Clock, 
-  DollarSign, 
   AlertTriangle,
-  Briefcase,
   Star,
-  GraduationCap,
-  Globe
+  GraduationCap
 } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 import { 
@@ -16,7 +13,6 @@ import {
   getDaysUntilDeadlineDisplay,
   getDeadlineStatus,
   getLevelIcon,
-  getDeliveryModeColor,
   getDeliveryModeLabel
 } from '../../../utils/scholarshipHelpers.tsx';
 import { is3800Scholarship, is3800ScholarshipBlocked } from '../../../utils/scholarshipDeadlineValidation';
@@ -125,32 +121,35 @@ const ScholarshipCardFullComponent: React.FC<ScholarshipCardFullProps> = ({
         <ScholarshipExpiryWarning scholarship={scholarship} variant="badge" className="mb-2" />
         
         {/* Title and Secondary Badges */}
-        <div className="mb-4">
+        <div className="mb-2">
           <h3 className="text-lg sm:text-xl font-black text-slate-900 mb-2 leading-tight line-clamp-2 group-hover:text-[#05294E] transition-colors">
             {scholarship.title}
           </h3>
           
           <div className="flex flex-wrap items-center gap-1.5">
             <span className={`px-2.5 py-1 rounded-lg text-[10px] font-bold text-white shadow-sm flex items-center gap-1.5 ${getFieldBadgeColor(scholarship.field_of_study)}`}>
-              <GraduationCap className="h-3 w-3" />
+              <GraduationCap className="h-3.5 w-3.5" strokeWidth={2.5} />
               {scholarship.field_of_study || 'Any Field'}
             </span>
             <span className="px-2.5 py-1 rounded-lg text-[10px] font-bold bg-slate-100 text-slate-700 border border-slate-200 flex items-center gap-1.5">
-              {getLevelIcon(scholarship.level || 'undergraduate')}
+              {React.cloneElement(getLevelIcon(scholarship.level || 'undergraduate'), { 
+                className: "h-3.5 w-3.5",
+                strokeWidth: 2.5
+              })}
               <span className="capitalize">{scholarship.level || 'Undergraduate'}</span>
             </span>
           </div>
         </div>
 
         {/* Info Boxes Section */}
-        <div className="space-y-2 mb-4">
+        <div className="space-y-1.5 mb-2">
           {/* University Info Box */}
-          <div className="flex items-center gap-3 p-2.5 bg-slate-50 rounded-xl border border-slate-100">
+          <div className="flex items-center gap-3 py-1.5 px-2.5 bg-slate-50 rounded-xl border border-slate-100">
             <div className="w-8 h-8 rounded-lg bg-white shadow-sm flex items-center justify-center border border-slate-200 flex-shrink-0">
               <Building className="h-4 w-4 text-[#05294E]" />
             </div>
             <div className="flex-1 min-w-0">
-              <p className="text-[9px] font-bold text-slate-400 uppercase tracking-widest mb-0">
+              <p className="text-[9px] font-bold text-slate-400 uppercase tracking-widest leading-none">
                 {t('studentDashboard.findScholarships.scholarshipCard.university')}
               </p>
               <p className="text-xs font-bold text-slate-700 truncate">
@@ -161,14 +160,13 @@ const ScholarshipCardFullComponent: React.FC<ScholarshipCardFullProps> = ({
 
           {/* Modality Info Box */}
           {scholarship.delivery_mode && (
-            <div className="flex items-center justify-between p-2.5 bg-white rounded-xl border border-slate-100 shadow-sm">
+            <div className="flex items-center justify-between p-2.5 bg-white rounded-xl border border-gray-200 shadow-sm">
               <div className="flex items-center gap-2">
-                <Globe className="h-4 w-4 text-indigo-500" />
-                <span className="text-xs font-bold text-slate-600">
+                <span className="text-xs font-bold text-black">
                   {t('studentDashboard.findScholarships.scholarshipCard.studyMode')}
                 </span>
               </div>
-              <span className={`px-2 py-0.5 rounded-md text-[10px] font-black uppercase tracking-tight ${getDeliveryModeColor(scholarship.delivery_mode)}`}>
+              <span className="px-2 py-0.5 rounded-md text-[10px] font-black uppercase tracking-tight text-black">
                 {getDeliveryModeLabel(scholarship.delivery_mode, t)}
               </span>
             </div>
@@ -176,18 +174,15 @@ const ScholarshipCardFullComponent: React.FC<ScholarshipCardFullProps> = ({
 
           {/* Work Permissions Info Box */}
           {scholarship.work_permissions && scholarship.work_permissions.length > 0 && (
-            <div className="p-2.5 bg-white rounded-xl border border-slate-100 shadow-sm">
-              <div className="flex items-center gap-2 mb-2">
-                <Briefcase className="h-4 w-4 text-emerald-500" />
-                <span className="text-xs font-bold text-slate-600">
-                  {t('studentDashboard.findScholarships.scholarshipCard.workAuthorization')}
-                </span>
-              </div>
-              <div className="flex flex-wrap gap-1.5">
+            <div className="flex items-center justify-between p-2.5 bg-white rounded-xl border border-gray-200 shadow-sm">
+              <span className="text-xs font-bold text-black whitespace-nowrap mr-2">
+                {t('studentDashboard.findScholarships.scholarshipCard.workAuthorization')}
+              </span>
+              <div className="flex flex-wrap justify-end gap-1.5">
                 {scholarship.work_permissions.slice(0, 3).map((permission: string, index: number) => (
                   <span
                     key={index}
-                    className="px-2 py-0.5 bg-emerald-50 text-emerald-700 rounded-md text-[10px] font-black uppercase border border-emerald-100"
+                    className="px-2 py-0.5 bg-gray-100 text-black rounded-md text-[10px] font-black uppercase border border-gray-200"
                   >
                     {permission}
                   </span>
@@ -198,10 +193,9 @@ const ScholarshipCardFullComponent: React.FC<ScholarshipCardFullProps> = ({
         </div>
 
         {/* Financial Overview Table View */}
-        <div className="bg-white rounded-2xl p-4 border-2 border-slate-100 shadow-sm mb-4">
-          <h4 className="text-[11px] font-black text-[#05294E] mb-3 flex items-center gap-1.5 uppercase tracking-widest">
-            <DollarSign className="h-4 w-4 text-emerald-500" />
-            {t('studentDashboard.findScholarships.scholarshipCard.financialOverview')}
+        <div className="bg-white rounded-2xl p-4 border border-gray-200 shadow-sm">
+          <h4 className="text-[11px] font-black text-black mb-3 flex items-center gap-1.5 uppercase tracking-widest">
+            Análise Geral
           </h4>
           
           <div className="space-y-2">
@@ -246,19 +240,15 @@ const ScholarshipCardFullComponent: React.FC<ScholarshipCardFullProps> = ({
 
             <div className="flex items-center justify-between pt-1.5 border-t border-slate-100">
               <span className="text-slate-400 text-xs font-medium">{t('scholarshipsPage.scholarshipCard.applicationFee')}</span>
-              <span className="text-indigo-600 text-xs font-bold">
+              <span className="text-slate-500 text-xs font-bold">
                 ${getApplicationFeeWithDependents(scholarship)}
               </span>
             </div>
-            
-            <p className="text-[9px] text-slate-300 text-center font-bold tracking-tight mt-2 uppercase">
-              {t('scholarshipsPage.scholarshipCard.standardFee')}
-            </p>
           </div>
         </div>
 
         {/* Action Buttons Container */}
-        <div className="mt-auto pt-4 space-y-3 border-t border-slate-100">
+        <div className="mt-auto pt-2 space-y-2 border-t border-slate-100">
           <button
             type="button"
             onClick={(e) => {

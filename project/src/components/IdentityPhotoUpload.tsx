@@ -182,7 +182,7 @@ export const IdentityPhotoUpload: React.FC<IdentityPhotoUploadProps> = ({
               Como tirar a foto correta
             </h4>
             <p className="text-xs text-gray-600 mb-3">
-              Tire uma selfie segurando seu documento de identidade ao lado do seu rosto. 
+              Tire uma selfie segurando um documento com foto (passaporte, RG, CNH ou outros) ao lado do seu rosto. 
               Certifique-se de que tanto seu rosto quanto o documento estejam claramente visíveis.
             </p>
             <div className="flex justify-center">

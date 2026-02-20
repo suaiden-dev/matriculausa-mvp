@@ -4,13 +4,11 @@ import { supabase } from '../../../lib/supabase';
 import { StepProps } from '../types';
 import { 
   CheckCircle, 
-  Clock, 
   ChevronRight, 
   AlertCircle, 
   RefreshCw,
   Building,
-  Shield,
-  GraduationCap
+  Shield
 } from 'lucide-react';
 import { ZelleCheckout } from '../../../components/ZelleCheckout';
 
@@ -30,6 +28,7 @@ interface ApplicationWithScholarship {
     original_annual_value: number;
     annual_value_with_scholarship: number;
     scholarship_fee: number; // Assuming this field exists or we calculate it
+    image_url: string | null;
     universities: {
       id: string;
       name: string;
@@ -255,7 +254,7 @@ export const ScholarshipFeeStep: React.FC<StepProps> = ({ onNext, onBack }) => {
 
 
   return (
-    <div className="space-y-10 pb-20 max-w-7xl mx-auto px-4">
+    <div className="space-y-10 pb-20 w-full mx-auto">
       <div className="flex flex-col md:flex-row md:items-end justify-between gap-6">
         <div className="text-center md:text-left space-y-4">
           <div className="inline-flex items-center bg-blue-500/10 border border-blue-500/20 px-4 py-2 rounded-full mb-2">
@@ -272,20 +271,11 @@ export const ScholarshipFeeStep: React.FC<StepProps> = ({ onNext, onBack }) => {
           </p>
         </div>
         
-        {!allPaid && (
-          <button
-            onClick={handleRefresh}
-            disabled={refreshing}
-            className="flex items-center gap-2 px-6 py-3 bg-white/5 border border-white/10 rounded-2xl text-white/60 hover:bg-white/10 hover:text-white transition-all text-xs font-black uppercase tracking-widest disabled:opacity-50 group"
-          >
-            <RefreshCw className={`w-4 h-4 transition-transform ${refreshing ? 'animate-spin' : 'group-hover:rotate-180 duration-500'}`} />
-            {refreshing ? 'Atualizando...' : 'Atualizar Status'}
-          </button>
-        )}
+
       </div>
 
       {allPaid && !loading && applications.length > 0 && (
-        <div className="space-y-10 pb-12 max-w-4xl mx-auto px-4">
+        <div className="space-y-10 pb-12 w-full mx-auto">
           <div className="bg-white border border-emerald-500/30 ring-1 ring-emerald-500/20 rounded-[2.5rem] p-6 md:p-10 shadow-2xl relative overflow-hidden">
             <div className="absolute top-0 right-0 w-64 h-64 bg-blue-500/5 rounded-full blur-[80px] -mr-32 -mt-32 pointer-events-none" />
             
@@ -308,8 +298,8 @@ export const ScholarshipFeeStep: React.FC<StepProps> = ({ onNext, onBack }) => {
 
       {!allPaid && (
         <div className={`bg-white rounded-[2.5rem] p-6 md:p-10 shadow-2xl border relative overflow-hidden border-gray-100`}>
-        <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 items-start relative z-10">
-          <div className="lg:col-span-8 space-y-6">
+        <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 items-start relative z-10 w-full">
+          <div className="lg:col-span-12 space-y-6">
             {applications.map((app) => {
               const baseAmount = getFeeAmount('scholarship_fee');
               const cardAmount = calculateCardAmountWithFees(baseAmount);
@@ -318,10 +308,10 @@ export const ScholarshipFeeStep: React.FC<StepProps> = ({ onNext, onBack }) => {
               return (
                 <div 
                   key={app.id}
-                  className={`group relative bg-gray-50 border rounded-[2rem] p-8 transition-colors ${
+                  className={`group relative bg-white border rounded-[2rem] p-8 transition-all ${
                     app.is_scholarship_fee_paid 
-                      ? 'border-emerald-500/30 ring-1 ring-emerald-500/20 bg-emerald-50/50' 
-                      : 'border-gray-200 hover:border-gray-300 hover:bg-white hover:shadow-xl'
+                      ? 'border-emerald-500/30 ring-1 ring-emerald-500/20 bg-white' 
+                      : 'border-slate-200 hover:border-slate-300 shadow-sm hover:shadow-xl'
                   }`}
                 >
                   {app.is_scholarship_fee_paid && (
@@ -333,17 +323,20 @@ export const ScholarshipFeeStep: React.FC<StepProps> = ({ onNext, onBack }) => {
                   <div className="flex flex-col gap-8">
                     <div className="flex flex-col md:flex-row md:items-center justify-between gap-6">
                       <div className="flex items-center space-x-6">
-                        <div className="w-20 h-20 bg-white rounded-3xl flex items-center justify-center border border-gray-200 overflow-hidden shadow-sm p-3 group-hover:scale-105 transition-transform duration-500">
-                          {app.scholarships?.universities?.logo_url ? (
+                        {app.scholarships?.image_url || app.scholarships?.universities?.logo_url ? (
+                          <div className="w-28 h-28 bg-white rounded-[2rem] flex items-center justify-center border border-gray-100/50 overflow-hidden shadow-sm flex-shrink-0 group-hover:scale-105 transition-transform duration-500">
                             <img 
-                              src={app.scholarships.universities.logo_url} 
-                              alt={app.scholarships.universities.name} 
-                              className="w-full h-full object-contain"
+                              src={app.scholarships.image_url || app.scholarships.universities?.logo_url || ''} 
+                              alt="" 
+                              className="w-full h-full object-contain p-2"
+                              onError={(e) => { (e.target as HTMLImageElement).parentElement!.style.display = 'none'; }}
                             />
-                          ) : (
-                            <GraduationCap className="w-10 h-10 text-gray-300" />
-                          )}
-                        </div>
+                          </div>
+                        ) : (
+                          <div className="w-28 h-28 bg-slate-50 rounded-[2rem] flex items-center justify-center flex-shrink-0">
+                            <Building className="w-16 h-16 text-slate-300" />
+                          </div>
+                        )}
                         <div className="min-w-0 flex-1">
                           <div className="flex items-center gap-3 mb-1">
                             <h3 className="text-2xl font-black text-gray-900 truncate uppercase tracking-tight">
@@ -361,7 +354,7 @@ export const ScholarshipFeeStep: React.FC<StepProps> = ({ onNext, onBack }) => {
                         <div className="flex items-center gap-3 mb-1">
                           <span className="text-[10px] font-black text-gray-400 uppercase tracking-[0.2em]">Scholarship Fee</span>
                         </div>
-                        <div className="text-4xl font-black text-gray-900 tracking-tighter">
+                        <div className="text-4xl font-black text-black tracking-tighter">
                           {formatFeeAmount(baseAmount)}
                         </div>
                       </div>
@@ -415,17 +408,17 @@ export const ScholarshipFeeStep: React.FC<StepProps> = ({ onNext, onBack }) => {
                               className="group/btn relative bg-white border border-gray-200 p-5 rounded-[2rem] text-left hover:scale-[1.01] active:scale-95 transition-all shadow-sm hover:shadow-md disabled:opacity-50 hover:border-blue-200 flex items-center justify-between"
                             >
                               <div className="flex items-center gap-5">
-                                <div className="w-14 h-14 flex items-center justify-center bg-blue-50/50 rounded-2xl group-hover/btn:bg-blue-50 transition-colors">
+                                <div className="w-14 h-14 flex items-center justify-center bg-slate-50 rounded-2xl group-hover/btn:bg-slate-100 transition-colors">
                                   <StripeIcon className="w-9 h-9" />
                                 </div>
                                 <div>
-                                  <div className="font-black text-gray-900 text-base uppercase tracking-tight">Cartão de Crédito</div>
-                                  <div className="text-[10px] font-bold text-gray-400 mt-1 uppercase tracking-wide leading-tight">* Podem incluir taxas de processamento</div>
+                                  <div className="font-black text-slate-900 text-base uppercase tracking-tight">Cartão de Crédito</div>
+                                  <div className="text-[10px] font-bold text-slate-400 mt-1 uppercase tracking-wide leading-tight">* Taxas de processamento podem ser aplicadas</div>
                                 </div>
                               </div>
                               <div className="flex items-center gap-5">
                                 <div className="text-right">
-                                  <div className="bg-blue-100 text-blue-600 text-sm font-black px-3 py-1.5 rounded-full border border-blue-200 uppercase tracking-tight">
+                                  <div className="text-black text-xl font-black uppercase tracking-tight">
                                     {formatFeeAmount(cardAmount)}
                                   </div>
                                 </div>
@@ -445,17 +438,17 @@ export const ScholarshipFeeStep: React.FC<StepProps> = ({ onNext, onBack }) => {
                               className="group/btn relative bg-white border border-gray-200 p-5 rounded-[2rem] text-left hover:scale-[1.01] active:scale-95 transition-all shadow-sm hover:shadow-md disabled:opacity-50 hover:border-emerald-200 flex items-center justify-between"
                             >
                               <div className="flex items-center gap-5">
-                                <div className="w-14 h-14 flex items-center justify-center bg-emerald-50/50 rounded-2xl group-hover/btn:bg-emerald-50 transition-colors">
+                                <div className="w-14 h-14 flex items-center justify-center bg-slate-50 rounded-2xl group-hover/btn:bg-slate-100 transition-colors">
                                   <PixIcon className="w-9 h-9" />
                                 </div>
                                 <div>
-                                  <div className="font-black text-gray-900 text-base uppercase tracking-tight">PIX</div>
-                                  <div className="text-[10px] font-bold text-gray-400 mt-1 uppercase tracking-wide leading-tight">* Podem incluir taxas de processamento</div>
+                                  <div className="font-black text-slate-900 text-base uppercase tracking-tight">PIX</div>
+                                  <div className="text-[10px] font-bold text-slate-400 mt-1 uppercase tracking-wide leading-tight">* Aprovação instantânea</div>
                                 </div>
                               </div>
                               <div className="flex items-center gap-5">
                                 <div className="text-right">
-                                  <div className="bg-emerald-100 text-emerald-600 text-sm font-black px-3 py-1.5 rounded-full border border-emerald-200 uppercase tracking-tight">
+                                  <div className="text-black text-xl font-black uppercase tracking-tight">
                                     R$ {pixInfo.totalWithIOF.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
                                   </div>
                                 </div>
@@ -475,20 +468,19 @@ export const ScholarshipFeeStep: React.FC<StepProps> = ({ onNext, onBack }) => {
                               className="group/btn relative bg-white border border-gray-200 p-5 rounded-[2rem] text-left hover:scale-[1.01] active:scale-95 transition-all shadow-sm hover:shadow-md disabled:opacity-50 hover:border-orange-200 flex items-center justify-between"
                             >
                               <div className="flex items-center gap-5">
-                                <div className="w-14 h-14 flex items-center justify-center bg-orange-50/50 rounded-2xl group-hover/btn:bg-orange-50 transition-colors px-2">
+                                <div className="w-14 h-14 flex items-center justify-center bg-slate-50 rounded-2xl group-hover/btn:bg-slate-100 transition-colors px-2">
                                   <ParcelowIcon className="w-full h-10" />
                                 </div>
                                 <div>
-                                  <div className="font-black text-gray-900 text-base uppercase tracking-tight">Parcelow</div>
-                                  <div className="text-[10px] font-bold text-gray-400 mt-1 uppercase tracking-wide leading-tight">* Podem incluir taxas de operadora e processamento da plataforma</div>
+                                  <div className="font-black text-slate-900 text-base uppercase tracking-tight">Parcelow</div>
+                                  <div className="text-[10px] font-bold text-slate-400 mt-1 uppercase tracking-wide leading-tight">* Até 12x no cartão</div>
                                 </div>
                               </div>
                               <div className="flex items-center gap-5">
                                 <div className="text-right flex flex-col items-end">
-                                  <div className="bg-blue-100 text-blue-700 text-sm font-black px-3 py-1.5 rounded-full border border-blue-200 uppercase tracking-tight">
+                                  <div className="text-black text-xl font-black uppercase tracking-tight">
                                     {formatFeeAmount(cardAmount)}
                                   </div>
-                                  <span className="text-[10px] font-bold text-blue-500 mt-1 uppercase tracking-widest">Até 12x no cartão</span>
                                 </div>
                                 <ChevronRight className="w-6 h-6 text-gray-300 group-hover/btn:translate-x-1 transition-transform" />
                               </div>
@@ -511,23 +503,23 @@ export const ScholarshipFeeStep: React.FC<StepProps> = ({ onNext, onBack }) => {
                                 }`}
                               >
                                 <div className="flex items-center gap-5">
-                                  <div className="w-14 h-14 flex items-center justify-center bg-purple-50/50 rounded-2xl group-hover/btn:bg-purple-50 transition-colors">
+                                  <div className="w-14 h-14 flex items-center justify-center bg-slate-50 rounded-2xl group-hover/btn:bg-slate-100 transition-colors">
                                     <ZelleIcon className="w-9 h-9" />
                                   </div>
                                   <div>
-                                    <div className="font-black text-gray-900 text-base uppercase tracking-tight">Zelle</div>
-                                    <div className="text-[10px] font-bold text-amber-500 mt-1 uppercase tracking-wide leading-tight flex items-center gap-1">
+                                    <div className="font-black text-slate-900 text-base uppercase tracking-tight">Zelle</div>
+                                    <div className="text-[10px] font-bold text-slate-500 mt-1 uppercase tracking-wide leading-tight flex items-center gap-1">
                                       <AlertCircle className="w-3 h-3" />
-                                      Processamento pode levar até 48 horas
+                                      Processamento em até 48 horas
                                     </div>
                                   </div>
                                 </div>
                                 <div className="flex items-center gap-5">
                                   <div className="text-right">
-                                    <div className="bg-indigo-100 text-indigo-600 text-sm font-black px-3 py-1.5 rounded-full border border-indigo-200 uppercase tracking-tight">
+                                    <div className="text-black text-xl font-black uppercase tracking-tight">
                                       {formatFeeAmount(baseAmount)}
                                     </div>
-                                    <span className="text-[10px] font-bold text-indigo-400 mt-1 block uppercase tracking-widest">Sem Taxas</span>
+                                    <span className="text-[10px] font-bold text-slate-400 mt-1 block uppercase tracking-widest">Sem Taxas</span>
                                   </div>
                                   <ChevronRight className={`w-6 h-6 text-gray-300 transition-transform ${
                                     zelleActiveApp?.id === app.id ? 'rotate-90' : 'group-hover/btn:translate-x-1'
@@ -562,8 +554,8 @@ export const ScholarshipFeeStep: React.FC<StepProps> = ({ onNext, onBack }) => {
                     )}
 
                     {app.is_scholarship_fee_paid && (
-                      <div className="flex items-center gap-4 bg-emerald-50 border border-emerald-100 px-6 py-4 rounded-[2rem]">
-                        <div className="w-12 h-12 bg-emerald-100 rounded-2xl flex items-center justify-center border border-emerald-200">
+                      <div className="flex items-center gap-4 bg-white border border-emerald-100 px-6 py-4 rounded-[2rem]">
+                        <div className="w-12 h-12 bg-emerald-50 rounded-2xl flex items-center justify-center border border-emerald-100">
                           <CheckCircle className="w-6 h-6 text-emerald-600" />
                         </div>
                         <div>
@@ -593,30 +585,9 @@ export const ScholarshipFeeStep: React.FC<StepProps> = ({ onNext, onBack }) => {
               </div>
             )}
           </div>
-
-          <div className="lg:col-span-4 space-y-6 lg:sticky lg:top-8">
-
-
-            <div className="bg-gradient-to-br from-gray-900 to-black border border-white/10 rounded-[2.5rem] p-8 space-y-6 shadow-2xl relative overflow-hidden">
-              <div className="absolute top-0 right-0 w-32 h-32 bg-white/5 rounded-full blur-2xl -mr-16 -mt-16 pointer-events-none" />
-              
-               <div className="flex items-start space-x-4 relative z-10">
-                <div className="w-10 h-10 bg-white/10 rounded-2xl flex items-center justify-center border border-white/10 flex-shrink-0">
-                  <Clock className="w-5 h-5 text-blue-400" />
-                </div>
-                <div>
-                  <h4 className="text-white text-xs font-black uppercase tracking-widest mb-1">Processamento</h4>
-                  <p className="text-[10px] text-white/50 leading-relaxed font-bold uppercase tracking-tight">
-                    Cartão e PIX são processados imediatamente.
-                  </p>
-                </div>
-              </div>
-            </div>
-
-          </div>
         </div>
-        </div> // Fim da div bg-white
-      )}
+      </div>
+    )}
 
       <Dialog
         open={showCpfModal}

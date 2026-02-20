@@ -2,7 +2,7 @@ import React, { useState, useEffect, useRef, useCallback } from 'react';
 import ReactDOM from 'react-dom';
 import { Dialog } from '@headlessui/react';
 import { useNavigate } from 'react-router-dom';
-import { Loader2, CheckCircle, AlertCircle, CreditCard, X, Scroll, ArrowLeft, Shield, Tag } from 'lucide-react';
+import { Loader2, CheckCircle, AlertCircle, X, ArrowLeft, Shield } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 import { useAuth } from '../../../hooks/useAuth';
 import { useFeeConfig } from '../../../hooks/useFeeConfig';
@@ -87,7 +87,6 @@ const MobileTermsView: React.FC<{
   hasScrolledToBottom: boolean;
   termsContentRef: React.RefObject<HTMLDivElement>;
   handleTermsScroll: () => void;
-  checkIfContentNeedsScroll: () => boolean;
   handleTermsAccept: () => void;
   setShowTermsInDrawer: (value: boolean) => void;
   identityPhotoPath: string | null;
@@ -103,7 +102,6 @@ const MobileTermsView: React.FC<{
   hasScrolledToBottom,
   termsContentRef,
   handleTermsScroll,
-  checkIfContentNeedsScroll,
   handleTermsAccept,
   setShowTermsInDrawer,
   identityPhotoPath,
@@ -158,15 +156,7 @@ const MobileTermsView: React.FC<{
               className="flex-1 overflow-y-auto prose prose-sm max-w-none prose-headings:text-gray-900 prose-p:text-gray-600 mb-6"
               dangerouslySetInnerHTML={{ __html: activeTerm.content }}
             />
-            
-            {!hasScrolledToBottom && checkIfContentNeedsScroll() && (
-              <div className="flex items-center justify-center p-3 bg-amber-50 border border-amber-200 rounded-lg mt-4 mb-6">
-                <Scroll className="h-4 w-4 text-amber-600 mr-2" />
-                <span className="text-amber-800 text-sm font-medium">
-                  {t('preCheckoutModal.scrollToBottomFirst')}
-                </span>
-              </div>
-            )}
+
 
             <div className="border-t border-gray-200 bg-gray-50 p-4 -mx-4 -mb-4 rounded-b-2xl mt-4">
               <button
@@ -179,11 +169,8 @@ const MobileTermsView: React.FC<{
                 }`}
               >
                 {hasScrolledToBottom
-                  ? 'Confirmar Leitura'
-                  : (checkIfContentNeedsScroll()
-                      ? t('preCheckoutModal.scrollToBottomFirst')
-                      : t('preCheckoutModal.readingTerms')
-                    )
+                  ? t('preCheckoutModal.confirmReading') || 'Confirmar Leitura'
+                  : t('preCheckoutModal.scrollToBottomFirst')
                 }
               </button>
             </div>
@@ -202,45 +189,50 @@ const MobileTermsView: React.FC<{
     {page === 'selfie' && (
       <>
         <div className="flex-1">
-          <div className="text-center mb-6">
-            <p className="text-sm text-gray-600">
-              Para aceitar os termos, por favor envie uma selfie segurando um documento com foto (Passaporte, RG, CNH, etc...).
-            </p>
-          </div>
+          <div className="bg-gray-50 rounded-2xl pt-1 pb-4 px-4 sm:pt-2 sm:pb-6 sm:px-6 border border-gray-100 shadow-sm">
+            <div className="text-center mb-3">
+              <h4 className="text-xl font-black text-gray-900 mb-1 uppercase tracking-tight">
+                Verificação de Identidade
+              </h4>
+              <p className="text-xs text-gray-600 font-medium leading-relaxed">
+                Para finalizar a aceitação dos termos, precisamos verificar sua identidade.
+              </p>
+            </div>
 
-          <IdentityPhotoUpload
-            initialPhotoPath={identityPhotoPath || undefined}
-            onUploadSuccess={async (filePath, fileName) => {
-              setIdentityPhotoPath(filePath);
-              setIdentityPhotoName(fileName);
-              if (logAction && studentId && userId) {
-                try {
-                  await logAction(
-                    'identity_photo_upload',
-                    `Identity photo uploaded by student during terms acceptance`,
-                    userId,
-                    'student',
-                    {
-                      student_id: studentId,
-                      file_path: filePath,
-                      file_name: fileName,
-                      uploaded_at: new Date().toISOString(),
-                      term_id: activeTerm?.id
-                    }
-                  );
-                } catch (logError) {
-                  console.error('⚠️ [SelectionFeeStep] Erro ao logar upload de foto:', logError);
+            <IdentityPhotoUpload
+              initialPhotoPath={identityPhotoPath || undefined}
+              onUploadSuccess={async (filePath, fileName) => {
+                setIdentityPhotoPath(filePath);
+                setIdentityPhotoName(fileName);
+                if (logAction && studentId && userId) {
+                  try {
+                    await logAction(
+                      'identity_photo_upload',
+                      `Identity photo uploaded by student during terms acceptance`,
+                      userId,
+                      'student',
+                      {
+                        student_id: studentId,
+                        file_path: filePath,
+                        file_name: fileName,
+                        uploaded_at: new Date().toISOString(),
+                        term_id: activeTerm?.id
+                      }
+                    );
+                  } catch (logError) {
+                    console.error('⚠️ [SelectionFeeStep] Erro ao logar upload de foto:', logError);
+                  }
                 }
-              }
-            }}
-            onUploadError={(error) => {
-              console.error('Erro ao fazer upload:', error);
-            }}
-            onRemove={() => {
-              setIdentityPhotoPath(null);
-              setIdentityPhotoName(null);
-            }}
-          />
+              }}
+              onUploadError={(error) => {
+                console.error('Erro ao fazer upload:', error);
+              }}
+              onRemove={() => {
+                setIdentityPhotoPath(null);
+                setIdentityPhotoName(null);
+              }}
+            />
+          </div>
         </div>
 
         <div className="border-t border-gray-200 bg-gray-50 p-4 -mx-4 -mb-4 rounded-b-2xl mt-4">
@@ -407,14 +399,6 @@ export const SelectionFeeStep: React.FC<StepProps> = ({ onNext }) => {
     }
   }, []);
 
-  // Check if content needs scrolling (pure function, no side effects)
-  const checkIfContentNeedsScroll = useCallback(() => {
-    if (termsContentRef.current) {
-      const { scrollHeight, clientHeight } = termsContentRef.current;
-      return scrollHeight > clientHeight;
-    }
-    return false;
-  }, []);
 
   // After terms content renders in the modal, check if the container actually needs scroll.
   // We wait for the next animation frame + a small delay to ensure the HTML content
@@ -1175,16 +1159,7 @@ export const SelectionFeeStep: React.FC<StepProps> = ({ onNext }) => {
     checkExistingAcceptance();
   }, [user?.id, checkTermAcceptance]);
 
-  // Check scroll requirements when activeTerm changes
-  useEffect(() => {
-    if (activeTerm && (showTermsModal || showTermsInDrawer)) {
-      const timer = setTimeout(() => {
-        checkIfContentNeedsScroll();
-      }, 100);
-      
-      return () => clearTimeout(timer);
-    }
-  }, [activeTerm, showTermsModal, showTermsInDrawer, checkIfContentNeedsScroll]);
+
 
   // Reset scroll state when showing terms in drawer
   useEffect(() => {
@@ -1543,9 +1518,6 @@ export const SelectionFeeStep: React.FC<StepProps> = ({ onNext }) => {
           
           <div className="flex flex-col md:flex-row md:items-center justify-between mb-8 space-y-6 md:space-y-0 relative z-10">
             <div className="flex items-center space-x-4">
-              <div className="w-16 h-16 bg-blue-500/5 rounded-2xl flex items-center justify-center border border-gray-100 shadow-inner">
-                <CreditCard className="w-8 h-8 text-blue-500" />
-              </div>
               <div>
                 <h3 className="text-2xl font-black text-gray-900 uppercase tracking-tight">Taxa de Processo Seletivo</h3>
                 <p className="text-xs font-bold text-gray-400 uppercase tracking-widest mt-1">Pagamento Único</p>
@@ -1621,57 +1593,59 @@ export const SelectionFeeStep: React.FC<StepProps> = ({ onNext }) => {
                       {/* Referral Code (Left) */}
                       <div className="space-y-4 max-w-md w-full">
                         <div className="text-center">
-                          <h3 className="text-lg font-semibold text-gray-900 mb-2">
-                            {t('preCheckoutModal.referralCode') || 'Matricula Rewards'}
+                          <h3 className="text-xl font-black text-gray-900 uppercase tracking-tight mb-2">
+                            {hasReferralCode ? 'Código de Indicação' : (t('preCheckoutModal.referralCode') || 'Código de Referência')}
                           </h3>
                           <p className="text-sm text-gray-600">
-                            Have a referral code? Get $50 off your application process fee!
+                            Use um código de indicação e ganhe $50 de desconto!
                           </p>
                         </div>
                         
-                        <div className="flex flex-col sm:flex-row gap-2">
-                          <div className="relative flex-1">
-                            <input
-                              type="text"
-                              value={discountCode}
-                              onChange={(e) => {
-                                if (!activeDiscount?.has_discount && !codeApplied) {
-                                  setDiscountCode(e.target.value.toUpperCase());
-                                }
-                              }}
-                              placeholder={t('preCheckoutModal.placeholder') || 'Enter code'}
-                              readOnly={!!activeDiscount?.has_discount || !!hasAffiliateCode || codeApplied}
-                              className={`w-full px-4 py-3 border rounded-lg focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 transition-all text-center font-mono text-base tracking-wider ${
-                                activeDiscount?.has_discount || hasAffiliateCode || codeApplied
-                                  ? 'border-green-400 bg-green-50 text-gray-800 cursor-not-allowed pr-10' 
-                                  : 'border-gray-300 bg-white hover:border-gray-400'
-                              }`}
-                              style={{ fontSize: '16px' }}
-                              maxLength={8}
-                            />
-                            {(activeDiscount?.has_discount || codeApplied) && (
-                              <div className="absolute right-3 top-1/2 -translate-y-1/2">
-                                <CheckCircle className="w-5 h-5 text-green-500" />
-                              </div>
+                        <div className="space-y-4">
+                          <div className="flex flex-col sm:flex-row gap-2">
+                            <div className="relative flex-1 group/input">
+                              <input
+                                type="text"
+                                value={discountCode}
+                                onChange={(e) => {
+                                  if (!activeDiscount?.has_discount && !codeApplied) {
+                                    setDiscountCode(e.target.value.toUpperCase());
+                                  }
+                                }}
+                                placeholder={t('preCheckoutModal.placeholder') || 'Digite o código'}
+                                readOnly={!!activeDiscount?.has_discount || !!hasAffiliateCode || codeApplied}
+                                className="w-full px-5 py-3.5 bg-gray-50 border border-gray-200 rounded-xl focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500/50 transition-all text-center font-black text-gray-900 text-lg tracking-[0.2em] placeholder:text-gray-300"
+                                maxLength={8}
+                              />
+                              {(activeDiscount?.has_discount || codeApplied) && (
+                                <div className="absolute right-3 top-1/2 -translate-y-1/2">
+                                  <CheckCircle className="w-5 h-5 text-green-500" />
+                                </div>
+                              )}
+                              <div className="absolute inset-x-0 bottom-0 h-[2px] bg-gradient-to-r from-transparent via-blue-500/50 to-transparent scale-x-0 group-focus-within/input:scale-x-100 transition-transform duration-500" />
+                            </div>
+
+                            {!activeDiscount?.has_discount && !hasAffiliateCode && !codeApplied && (
+                              <button
+                                onClick={validateDiscountCode}
+                                disabled={isValidating || !discountCode.trim()}
+                                className={`px-6 py-3.5 rounded-xl font-black uppercase tracking-widest text-sm transition-all shadow-xl active:scale-95 whitespace-nowrap sm:w-auto w-full ${
+                                  isValidating || !discountCode.trim()
+                                    ? 'bg-gray-100 text-gray-400 border border-gray-200 cursor-not-allowed'
+                                    : 'bg-blue-600 text-white hover:bg-blue-700 border border-blue-500/50 shadow-[0_0_20px_rgba(37,99,235,0.2)]'
+                                }`}
+                              >
+                                {isValidating ? (
+                                  <div className="flex items-center space-x-2 justify-center">
+                                    <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin"></div>
+                                    <span>{t('preCheckoutModal.validating') || 'Validando...'}</span>
+                                  </div>
+                                ) : (
+                                  'Validar'
+                                )}
+                              </button>
                             )}
                           </div>
-
-                          {!activeDiscount?.has_discount && !hasAffiliateCode && !codeApplied && (
-                            <button
-                              onClick={validateDiscountCode}
-                              disabled={isValidating || !discountCode.trim()}
-                              className="px-6 py-3 bg-blue-600 text-white rounded-lg font-medium hover:bg-blue-700 disabled:bg-gray-300 disabled:cursor-not-allowed transition-colors whitespace-nowrap sm:w-auto w-full"
-                            >
-                              {isValidating ? (
-                                <div className="flex items-center space-x-2 justify-center">
-                                  <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin"></div>
-                                  <span>{t('preCheckoutModal.validating') || 'Validating...'}</span>
-                                </div>
-                              ) : (
-                                t('preCheckoutModal.validate') || 'Validate Code'
-                              )}
-                            </button>
-                          )}
                         </div>
                         
                         {validationResult && !validationResult.isValid && (
@@ -1684,12 +1658,11 @@ export const SelectionFeeStep: React.FC<StepProps> = ({ onNext }) => {
                       {/* Promotional Coupon (Right) */}
                       <div className="space-y-4 max-w-md w-full">
                         <div className="text-center">
-                          <h3 className="text-lg font-semibold text-gray-900 mb-2 flex items-center justify-center gap-2">
-                            <Tag className="w-5 h-5 text-blue-600" />
-                            Promotional Coupon
+                          <h3 className="text-xl font-black text-gray-900 uppercase tracking-tight mb-2">
+                            Cupom Promocional
                           </h3>
                           <p className="text-sm text-gray-600">
-                            Have a promotional coupon? Apply it here for extra savings!
+                            Tem um cupom promocional? Aplique aqui para economizar ainda mais!
                           </p>
                         </div>
 
@@ -1756,7 +1729,7 @@ export const SelectionFeeStep: React.FC<StepProps> = ({ onNext }) => {
                                         }
                                       });
                                     }}
-                                    placeholder="CÓDIGO PROMOCIONAL"
+                                    placeholder={t('preCheckoutModal.placeholder') || 'Digite o código'}
                                     className="w-full px-5 py-3.5 bg-gray-50 border border-gray-200 rounded-xl focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500/50 transition-all text-center font-black text-gray-900 text-lg tracking-[0.2em] placeholder:text-gray-300"
                                     maxLength={20}
                                     autoComplete="off"
@@ -2006,7 +1979,7 @@ export const SelectionFeeStep: React.FC<StepProps> = ({ onNext }) => {
                                 <span className="text-[10px] font-bold text-gray-400 mt-1 uppercase tracking-wide leading-tight max-w-[200px] sm:max-w-none">* Podem incluir taxas de operadora e processamento da plataforma</span>
                               )}
                               {method.id === 'zelle' && (
-                                <span className="text-[10px] font-bold text-amber-500 mt-1 uppercase tracking-wide leading-tight flex items-center gap-1">
+                                <span className="text-[10px] font-bold text-gray-400 mt-1 uppercase tracking-wide leading-tight flex items-center gap-1">
                                   <AlertCircle className="w-3 h-3 flex-shrink-0" />
                                   Processamento pode levar até 48 horas
                                 </span>
@@ -2015,29 +1988,29 @@ export const SelectionFeeStep: React.FC<StepProps> = ({ onNext }) => {
 
                           <div className="flex items-center gap-3">
                             {method.id === 'stripe' && cardAmountWithFees > 0 && (
-                              <span className="bg-blue-100 text-blue-600 text-sm font-black px-3 py-1.5 rounded-full border border-blue-200">
+                              <span className="text-black text-lg font-black px-2">
                                 ${cardAmountWithFees.toFixed(2)}
                               </span>
                             )}
                             {method.id === 'parcelow' && computedBasePrice > 0 && (
                               <div className="flex flex-col items-end">
-                                <span className="bg-blue-100 text-blue-700 text-sm font-black px-3 py-1.5 rounded-full border border-blue-200">
-                                  ${computedBasePrice.toFixed(2)}
-                                </span>
-                                <span className="text-xs font-bold text-blue-500 mt-1 whitespace-nowrap">
+                                 <span className="text-black text-lg font-black px-2">
+                                   ${computedBasePrice.toFixed(2)}
+                                 </span>
+                                <span className="text-xs font-bold text-black mt-1 whitespace-nowrap">
                                   Até 12x no cartão
                                 </span>
                               </div>
                             )}
                             {method.id === 'pix' && pixAmountWithFees > 0 && exchangeRate && (
-                              <span className="bg-emerald-100 text-emerald-600 text-sm font-black px-3 py-1.5 rounded-full border border-emerald-200">
-                                R$ {pixAmountWithFees.toFixed(2)}
-                              </span>
+                               <span className="text-black text-lg font-black px-2">
+                                 R$ {pixAmountWithFees.toFixed(2)}
+                               </span>
                             )}
                             {method.id === 'zelle' && computedBasePrice > 0 && (
-                              <span className="bg-indigo-100 text-indigo-600 text-sm font-black px-3 py-1.5 rounded-full border border-indigo-200">
-                                ${computedBasePrice.toFixed(2)}
-                              </span>
+                               <span className="text-black text-lg font-black px-2">
+                                 ${computedBasePrice.toFixed(2)}
+                               </span>
                             )}
                             
                             {isProcessing && (
@@ -2088,9 +2061,6 @@ export const SelectionFeeStep: React.FC<StepProps> = ({ onNext }) => {
                   </button>
                   
                   <div className="flex items-center gap-4 relative z-10">
-                    <div className="w-14 h-14 bg-white/20 backdrop-blur-md rounded-2xl flex items-center justify-center border border-white/20 shadow-inner">
-                      <Shield className="w-7 h-7 text-white" />
-                    </div>
                     <div>
                       <Dialog.Title className="text-2xl sm:text-3xl font-black uppercase tracking-tighter">
                         {activeTerm?.title ? activeTerm.title : t('preCheckoutModal.termsAndConditions.title')}
@@ -2132,23 +2102,18 @@ export const SelectionFeeStep: React.FC<StepProps> = ({ onNext }) => {
 
                 {/* PAGE 2: Selfie Upload */}
                 {termsModalPage === 'selfie' && (
-                  <div className="flex-1 overflow-y-auto p-6 sm:p-10">
+                  <div className="flex-1 overflow-y-auto p-4 sm:p-6">
                     <div className="max-w-3xl mx-auto">
-                      <div className="text-center mb-8">
-                        <div className="w-16 h-16 bg-blue-100 rounded-2xl flex items-center justify-center mx-auto mb-4">
-                          <Shield className="w-8 h-8 text-blue-600" />
+                      <div className="bg-gray-50 rounded-3xl pt-2 pb-6 px-6 sm:pt-4 sm:pb-10 sm:px-10 border border-gray-100 shadow-sm">
+                        <div className="text-center mb-4">
+                          <h4 className="text-2xl font-black text-gray-900 mb-1 uppercase tracking-tight">
+                            Verificação de Identidade
+                          </h4>
+                          <p className="text-base text-gray-600 font-medium">
+                            Para finalizar a aceitação dos termos, precisamos verificar sua identidade.
+                          </p>
                         </div>
-                        <h4 className="text-2xl font-black text-gray-900 mb-2 uppercase tracking-tight">
-                          Verificação de Identidade
-                        </h4>
-                        <p className="text-gray-600 font-medium">
-                          Para finalizar a aceitação dos termos, precisamos verificar sua identidade.
-                          <br />
-                          Por favor, envie uma selfie segurando um documento com foto (Passaporte, RG, CNH, etc...).
-                        </p>
-                      </div>
 
-                      <div className="bg-gray-50 rounded-2xl p-8 border border-gray-100">
                         <IdentityPhotoUpload
                           initialPhotoPath={identityPhotoPath || undefined}
                           onUploadSuccess={async (filePath, fileName) => {
@@ -2207,11 +2172,8 @@ export const SelectionFeeStep: React.FC<StepProps> = ({ onNext }) => {
                           }`}
                         >
                           {hasScrolledToBottom
-                            ? 'Confirmar Leitura'
-                            : (checkIfContentNeedsScroll()
-                                ? t('preCheckoutModal.scrollToBottomFirst')
-                                : t('preCheckoutModal.readingTerms')
-                              )
+                            ? t('preCheckoutModal.confirmReading') || 'Confirmar Leitura'
+                            : t('preCheckoutModal.scrollToBottomFirst')
                           }
                         </button>
                       </>
@@ -2268,7 +2230,6 @@ export const SelectionFeeStep: React.FC<StepProps> = ({ onNext }) => {
                 hasScrolledToBottom={hasScrolledToBottom}
                 termsContentRef={termsContentRef}
                 handleTermsScroll={handleTermsScroll}
-                checkIfContentNeedsScroll={checkIfContentNeedsScroll}
                 handleTermsAccept={handleTermsAccept}
                 identityPhotoPath={identityPhotoPath}
                 setIdentityPhotoPath={setIdentityPhotoPath}
