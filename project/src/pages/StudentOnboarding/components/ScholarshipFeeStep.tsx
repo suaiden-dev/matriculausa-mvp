@@ -97,7 +97,7 @@ export const ScholarshipFeeStep: React.FC<StepProps> = ({ onNext, onBack }) => {
 
   const [applications, setApplications] = useState<ApplicationWithScholarship[]>([]);
   const [loading, setLoading] = useState(true);
-  const [refreshing, setRefreshing] = useState(false);
+  // const [refreshing, setRefreshing] = useState(false);
   const [exchangeRate, setExchangeRate] = useState<number>(0);
 
   const [isProcessingCheckout, setIsProcessingCheckout] = useState<string | null>(null);
@@ -149,7 +149,6 @@ export const ScholarshipFeeStep: React.FC<StepProps> = ({ onNext, onBack }) => {
       console.error('Error fetching applications:', err);
     } finally {
       setLoading(false);
-      setRefreshing(false);
     }
   }, [userProfile?.id, applications.length]);
 
@@ -158,10 +157,10 @@ export const ScholarshipFeeStep: React.FC<StepProps> = ({ onNext, onBack }) => {
     getExchangeRate().then(rate => setExchangeRate(rate));
   }, [fetchApplications]);
 
-  const handleRefresh = () => {
+  /* const handleRefresh = () => {
     setRefreshing(true);
     fetchApplications();
-  };
+  }; */
 
   const processCheckout = async (application: ApplicationWithScholarship, method: 'stripe' | 'pix' | 'parcelow') => {
     if (method === 'parcelow' && !userProfile?.cpf_document) {
@@ -253,8 +252,37 @@ export const ScholarshipFeeStep: React.FC<StepProps> = ({ onNext, onBack }) => {
   }
 
 
+  if (allPaid && !loading && applications.length > 0) {
+    return (
+      <div className="space-y-10 pb-12 max-w-4xl mx-auto px-4">
+        <div className="text-center md:text-left space-y-4">
+          <h2 className="text-3xl md:text-5xl font-black text-white uppercase tracking-tighter leading-none">Taxa da Bolsa</h2>
+          <p className="text-lg md:text-xl text-white/60 font-medium max-w-2xl mt-2">Pagamento da bolsa confirmado! Você está pronto para avançar.</p>
+        </div>
+
+        <div className="bg-white border border-emerald-500/30 ring-1 ring-emerald-500/20 rounded-[2.5rem] p-8 md:p-10 shadow-2xl relative overflow-hidden">
+          <div className="absolute top-0 right-0 w-64 h-64 bg-blue-500/5 rounded-full blur-[80px] -mr-32 -mt-32 pointer-events-none" />
+          
+          <div className="relative z-10 text-center py-4">
+            <div className="w-20 h-20 bg-emerald-500/20 rounded-full flex items-center justify-center mx-auto mb-6 border border-emerald-500/30">
+              <CheckCircle className="w-12 h-12 text-emerald-400" />
+            </div>
+            <h3 className="text-3xl font-black text-gray-900 mb-3 uppercase tracking-tight">Etapa Concluída</h3>
+            <p className="text-gray-500 mb-8 font-medium">Sua taxa de bolsa foi processada com sucesso. Esta etapa está completa.</p>
+            <button
+              onClick={onNext}
+              className="w-full max-w-xs bg-blue-600 text-white py-4 px-8 rounded-xl hover:bg-blue-700 transition-all font-bold uppercase tracking-widest shadow-lg shadow-blue-500/20 hover:scale-105 active:scale-95 mx-auto"
+            >
+              Continuar
+            </button>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
   return (
-    <div className="space-y-10 pb-20 w-full mx-auto">
+    <div className="space-y-10 pb-20 w-full mx-auto px-4">
       <div className="flex flex-col md:flex-row md:items-end justify-between gap-6">
         <div className="text-center md:text-left space-y-4">
           <div className="inline-flex items-center bg-blue-500/10 border border-blue-500/20 px-4 py-2 rounded-full mb-2">
@@ -265,39 +293,12 @@ export const ScholarshipFeeStep: React.FC<StepProps> = ({ onNext, onBack }) => {
             Taxa da Bolsa
           </h2>
           <p className="text-lg md:text-xl text-white/60 font-medium max-w-2xl">
-            {allPaid 
-              ? 'Pagamento da bolsa confirmado! Você está pronto para avançar.' 
-              : 'Esta taxa é o compromisso final com a bolsa ou faculdade selecionada.'}
+            Esta taxa é o compromisso final com a bolsa ou faculdade selecionada.
           </p>
         </div>
-        
-
       </div>
 
-      {allPaid && !loading && applications.length > 0 && (
-        <div className="space-y-10 pb-12 w-full mx-auto">
-          <div className="bg-white border border-emerald-500/30 ring-1 ring-emerald-500/20 rounded-[2.5rem] p-6 md:p-10 shadow-2xl relative overflow-hidden">
-            <div className="absolute top-0 right-0 w-64 h-64 bg-blue-500/5 rounded-full blur-[80px] -mr-32 -mt-32 pointer-events-none" />
-            
-            <div className="relative z-10 text-center py-6">
-              <div className="w-20 h-20 bg-emerald-500/20 rounded-full flex items-center justify-center mx-auto mb-6 border border-emerald-500/30">
-                <CheckCircle className="w-12 h-12 text-emerald-400" />
-              </div>
-              <h3 className="text-3xl font-black text-gray-900 mb-3 uppercase tracking-tight">Etapa Concluída</h3>
-              <p className="text-gray-500 mb-8 font-medium">Sua taxa de bolsa foi processada com sucesso. Esta etapa está completa.</p>
-              <button
-                onClick={onNext}
-                className="w-full max-w-xs bg-blue-600 text-white py-4 px-8 rounded-xl hover:bg-blue-700 transition-all font-bold uppercase tracking-widest shadow-lg shadow-blue-500/20 hover:scale-105 active:scale-95 mx-auto"
-              >
-                Continuar
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
-
-      {!allPaid && (
-        <div className={`bg-white rounded-[2.5rem] p-6 md:p-10 shadow-2xl border relative overflow-hidden border-gray-100`}>
+      <div className={`bg-white rounded-[2.5rem] p-6 md:p-10 shadow-2xl border relative overflow-hidden border-gray-100`}>
         <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 items-start relative z-10 w-full">
           <div className="lg:col-span-12 space-y-6">
             {applications.map((app) => {
@@ -587,8 +588,6 @@ export const ScholarshipFeeStep: React.FC<StepProps> = ({ onNext, onBack }) => {
           </div>
         </div>
       </div>
-    )}
-
       <Dialog
         open={showCpfModal}
         onClose={() => setShowCpfModal(false)}

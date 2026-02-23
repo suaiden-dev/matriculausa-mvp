@@ -11,18 +11,14 @@ import {
   Phone, 
   Globe, 
   Mail, 
-  DollarSign,
-
   Clock,
   ArrowRight,
   ShieldCheck,
   LayoutDashboard,
 
-  FileSearch,
   CheckCircle2,
   ExternalLink,
   TrendingUp,
-  History,
   Stamp,
   Home,
   FolderOpen,
@@ -32,7 +28,6 @@ import {
 
   Eye,
   Download,
-  Tag,
 } from 'lucide-react';
 import { useAuth } from '../../../hooks/useAuth';
 import { supabase } from '../../../lib/supabase';
@@ -399,6 +394,53 @@ export const UniversityDocumentsStep: React.FC<StepProps> = ({ onBack }) => {
     }
   };
 
+  // Função para remover cupom promocional aplicado
+  const removePromotionalCoupon = async () => {
+    if (!promotionalCoupon.trim() || !user?.id) return;
+    
+    console.log('[UniversityDocumentsStep] Removendo cupom promocional...');
+    
+    try {
+      const { data: sessionData } = await supabase.auth.getSession();
+      const token = sessionData.session?.access_token;
+
+      if (!token) {
+        throw new Error('Usuário não autenticado');
+      }
+
+      // Remover do banco de dados
+      const response = await fetch(`${import.meta.env.VITE_SUPABASE_URL}/functions/v1/remove-promotional-coupon`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${token}`,
+        },
+        body: JSON.stringify({
+          coupon_code: promotionalCoupon.trim().toUpperCase(),
+          fee_type: 'i20_control_fee'
+        }),
+      });
+
+      const result = await response.json();
+      
+      if (!result.success) {
+        console.warn('[UniversityDocumentsStep] ⚠️ Aviso: Não foi possível remover o cupom do banco:', result.error);
+      } else {
+        console.log('[UniversityDocumentsStep] ✅ Cupom removido do banco com sucesso!');
+      }
+    } catch (error) {
+      console.warn('[UniversityDocumentsStep] ⚠️ Aviso: Erro ao remover cupom do banco:', error);
+    }
+    
+    // Limpar estados locais
+    setPromotionalCoupon('');
+    setPromotionalCouponValidation(null);
+    
+    // Limpar do window
+    delete (window as any).__checkout_promotional_coupon;
+    delete (window as any).__checkout_final_amount;
+  };
+
   const handlePaymentMethodSelect = async (method: 'stripe' | 'zelle' | 'pix' | 'parcelow', exchangeRateParam?: number) => {
     // Verificar CPF apenas para Parcelow
     if (method === 'parcelow' && !userProfile?.cpf_document) {
@@ -575,7 +617,7 @@ export const UniversityDocumentsStep: React.FC<StepProps> = ({ onBack }) => {
             </div>
           </div>
           <h2 className="text-4xl md:text-6xl font-black text-white uppercase tracking-tighter leading-none">
-            Minha <span className="text-blue-400">Candidatura</span>
+            Minha <span className="text-blue-400">Aplicação</span>
           </h2>
 
         </div>
@@ -636,7 +678,7 @@ export const UniversityDocumentsStep: React.FC<StepProps> = ({ onBack }) => {
                             className="flex items-center gap-4 p-5 bg-slate-50 hover:bg-white rounded-2xl border border-slate-200 hover:border-blue-300 hover:shadow-lg hover:shadow-blue-500/5 transition-all text-left group"
                           >
                             <div className="w-12 h-12 bg-white rounded-xl shadow-sm flex items-center justify-center group-hover:scale-110 transition-transform">
-                              <FileSearch className="w-6 h-6 text-slate-600 group-hover:text-blue-600 transition-colors" />
+                              <FolderOpen className="w-6 h-6 text-slate-600 group-hover:text-blue-600 transition-colors" />
                             </div>
                             <div>
                               <p className="text-sm font-black text-gray-900 uppercase tracking-tight">Enviar Documentos</p>
@@ -678,7 +720,6 @@ export const UniversityDocumentsStep: React.FC<StepProps> = ({ onBack }) => {
                 {/* Timeline simplified */}
                 <div className="bg-white rounded-[2.5rem] p-8 border border-slate-200 shadow-2xl shadow-blue-900/5">
                    <h4 className="text-lg font-black text-gray-900 uppercase tracking-widest mb-6 flex items-center gap-2">
-                     <History className="w-5 h-5 text-blue-600" />
                      Próximas Etapas
                    </h4>
                    <div className="space-y-4">
@@ -725,10 +766,10 @@ export const UniversityDocumentsStep: React.FC<StepProps> = ({ onBack }) => {
                            indicator: 'bg-red-500'
                          },
                          highlighted: {
-                            container: 'bg-gradient-to-br from-amber-50/60 to-orange-50/60 backdrop-blur-xl border border-amber-400/40 shadow-[0_10px_40px_rgba(245,158,11,0.15)] hover:shadow-amber-500/30 hover:border-amber-500 transform hover:scale-[1.02] transition-all duration-500 relative overflow-hidden group ring-2 ring-white/50',
-                            iconBg: 'bg-gradient-to-br from-amber-500 to-orange-600 text-white shadow-[0_0_20px_rgba(245,158,11,0.5)] border border-amber-400/30',
-                            status: 'text-amber-700 font-black tracking-tight',
-                            indicator: 'bg-amber-600 animate-pulse shadow-[0_0_12px_rgba(245,158,11,0.6)]'
+                            container: 'bg-gradient-to-br from-emerald-50/60 to-teal-50/60 backdrop-blur-xl border border-emerald-400/40 shadow-[0_10px_40px_rgba(16,185,129,0.15)] hover:shadow-emerald-500/30 hover:border-emerald-500 transform hover:scale-[1.02] transition-all duration-500 relative overflow-hidden group ring-2 ring-white/50',
+                            iconBg: 'bg-gradient-to-br from-emerald-500 to-teal-600 text-white shadow-[0_0_20px_rgba(16,185,129,0.5)] border border-emerald-400/30',
+                            status: 'text-emerald-700 font-black tracking-tight',
+                            indicator: 'bg-emerald-600 animate-pulse shadow-[0_0_12px_rgba(16,185,129,0.6)]'
                          },
                          default: {
                            container: 'bg-slate-50 border-slate-200 hover:border-blue-300 hover:bg-white',
@@ -748,7 +789,7 @@ export const UniversityDocumentsStep: React.FC<StepProps> = ({ onBack }) => {
                            onClick={() => isClickable && setActiveTab(step.tab as any)}
                            className={`flex items-center justify-between p-4 rounded-xl border transition-all cursor-pointer hover:shadow-lg ${styles.container}`}
                          >
-                            {/* Golden Shine effect */}
+                            {/* Emerald Shine effect */}
                             {isLetterAvailable && (
                               <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/60 to-transparent translate-x-[-100%] group-hover:translate-x-[100%] transition-transform duration-1000 pointer-events-none" />
                             )}
@@ -758,11 +799,11 @@ export const UniversityDocumentsStep: React.FC<StepProps> = ({ onBack }) => {
                                {isLetterAvailable ? <Award className="w-5 h-5 text-white animate-bounce-slow" /> : <span className="text-xs font-bold">{i + 1}</span>}
                              </div>
                              <div className="flex flex-col">
-                               <span className={`text-sm font-bold uppercase tracking-tight ${isLetterAvailable ? 'text-amber-950' : 'text-gray-900'}`}>{step.title}</span>
+                               <span className={`text-sm font-bold uppercase tracking-tight ${isLetterAvailable ? 'text-emerald-950' : 'text-gray-900'}`}>{step.title}</span>
                                {isLetterAvailable && (
                                   <div className="flex items-center gap-1.5 mt-0.5">
-                                    <span className="w-1.5 h-1.5 bg-amber-500 rounded-full animate-ping" />
-                                    <span className="text-[10px] text-amber-700 font-extrabold uppercase tracking-widest">Documento Disponível</span>
+                                    <span className="w-1.5 h-1.5 bg-emerald-500 rounded-full animate-ping" />
+                                    <span className="text-[10px] text-emerald-700 font-extrabold uppercase tracking-widest">Documento Disponível</span>
                                   </div>
                                )}
                              </div>
@@ -770,7 +811,7 @@ export const UniversityDocumentsStep: React.FC<StepProps> = ({ onBack }) => {
                            <div className="flex items-center gap-2 relative z-10">
                               <div className={`w-2 h-2 rounded-full ${styles.indicator}`} />
                               <span className={`text-[10px] font-black uppercase tracking-widest ${styles.status}`}>{step.status}</span>
-                              {isLetterAvailable && <ArrowRight className="w-4 h-4 text-amber-600 ml-2 group-hover:translate-x-1 transition-transform" />}
+                              {isLetterAvailable && <ArrowRight className="w-4 h-4 text-emerald-600 ml-2 group-hover:translate-x-1 transition-transform" />}
                            </div>
                          </div>
                        );
@@ -942,7 +983,7 @@ export const UniversityDocumentsStep: React.FC<StepProps> = ({ onBack }) => {
                                      <p className="text-[10px] font-black text-slate-500 uppercase tracking-widest mb-1">{fee.frequency || fee.details || 'Pagamento Único'}</p>
                                      <p className="text-sm font-black text-gray-900 uppercase truncate" title={fee.category || fee.name}>{fee.category || fee.name}</p>
                                    </div>
-                                   <span className="text-xl font-black text-blue-600 whitespace-nowrap">${Number(fee.amount).toFixed(2)}</span>
+                                   <span className="text-xl font-black text-gray-900 whitespace-nowrap">${Number(fee.amount).toFixed(2)}</span>
                                 </div>
                               ))}
                             </div>
@@ -1151,7 +1192,6 @@ export const UniversityDocumentsStep: React.FC<StepProps> = ({ onBack }) => {
                         </div>
                         <div className="text-center md:text-left">
                           <h2 className="text-3xl font-black text-gray-900 uppercase tracking-tighter leading-none mb-2">Taxa de Controle <span className="text-blue-600">I-20</span></h2>
-                          <p className="text-gray-500 font-medium">Requisito essencial para emissão do seu documento oficial de estudante</p>
                         </div>
                       </div>
                     </div>
@@ -1171,14 +1211,6 @@ export const UniversityDocumentsStep: React.FC<StepProps> = ({ onBack }) => {
                         <p className="text-gray-600 leading-relaxed font-medium">
                           {t('studentDashboard.applicationChatPage.i20ControlFee.description')}
                         </p>
-                        <div className="p-6 bg-blue-50 border border-blue-100 rounded-3xl flex items-start gap-4">
-                           <div className="w-10 h-10 bg-white rounded-xl flex items-center justify-center shadow-sm">
-                              <ShieldCheck className="w-5 h-5 text-blue-600" />
-                           </div>
-                           <p className="text-xs font-bold text-blue-800 leading-relaxed uppercase tracking-wider">
-                             Garante o processamento digital e físico do documento I-20 enviado pela universidade para o seu endereço.
-                           </p>
-                        </div>
                       </div>
 
                       <div className="space-y-8">
@@ -1187,13 +1219,7 @@ export const UniversityDocumentsStep: React.FC<StepProps> = ({ onBack }) => {
                              ? 'bg-red-50 border-red-200' 
                              : 'bg-amber-50 border-amber-200'
                          }`}>
-                           <div className="absolute top-0 right-0 p-4 opacity-5">
-                             <Clock className={`w-20 h-20 ${i20Countdown === 'Expired' ? 'text-red-900' : 'text-amber-900'}`} />
-                           </div>
                            <div className="flex items-start gap-4 relative z-10">
-                              <div className="w-10 h-10 bg-white rounded-xl shadow-sm flex items-center justify-center flex-shrink-0">
-                                <AlertCircle className={`w-5 h-5 ${i20Countdown === 'Expired' ? 'text-red-600' : 'text-amber-600'}`} />
-                              </div>
                               <div className="flex-1">
                                 <h5 className={`font-black uppercase tracking-tight mb-2 ${i20Countdown === 'Expired' ? 'text-red-900' : 'text-amber-900'}`}>
                                   {i20Countdown === 'Expired' ? 'Prazo Expirado' : 'Atenção ao Prazo'}
@@ -1259,33 +1285,115 @@ export const UniversityDocumentsStep: React.FC<StepProps> = ({ onBack }) => {
                       </div>
 
                       {/* Promotional Coupon Section */}
-                      <div className="bg-blue-50/50 border border-blue-100 p-6 rounded-[2rem] space-y-4">
-                        <div className="flex items-center gap-3 text-blue-900 font-bold uppercase tracking-tight text-sm">
-                          <Tag className="w-4 h-4" />
-                          Cupom Promocional
-                        </div>
-                        <div className="flex gap-3">
-                          <input
-                            ref={promotionalCouponInputRef}
-                            type="text"
-                            value={promotionalCoupon}
-                            onChange={(e) => setPromotionalCoupon(e.target.value)}
-                            placeholder="INSIRA O CÓDIGO"
-                            className="flex-1 bg-white border border-blue-100 rounded-2xl px-6 py-4 text-sm font-bold uppercase tracking-widest placeholder:text-gray-300 focus:outline-none focus:ring-2 focus:ring-blue-500/20"
-                          />
-                          <button
-                            onClick={validatePromotionalCoupon}
-                            disabled={isValidatingPromotionalCoupon || !promotionalCoupon.trim()}
-                            className="bg-slate-200 hover:bg-slate-300 disabled:opacity-50 text-slate-500 font-black px-8 py-4 rounded-2xl uppercase tracking-widest text-xs transition-all active:scale-95"
-                          >
-                            {isValidatingPromotionalCoupon ? <Loader2 className="w-4 h-4 animate-spin" /> : 'Validar'}
-                          </button>
-                        </div>
-                        {promotionalCouponValidation && (
-                          <p className={`text-xs font-bold uppercase tracking-wider ${promotionalCouponValidation.isValid ? 'text-emerald-600' : 'text-red-500'}`}>
-                            {promotionalCouponValidation.message}
+                      <div className="space-y-4 max-w-2xl mx-auto w-full">
+                        <div className="text-center">
+                          <h3 className="text-xl font-black text-gray-900 uppercase tracking-tight mb-2">
+                            Cupom Promocional
+                          </h3>
+                          <p className="text-sm text-gray-600">
+                            Tem um cupom promocional? Aplique aqui para economizar ainda mais na sua Taxa I-20!
                           </p>
-                        )}
+                        </div>
+
+                        <div className="space-y-3">
+                          {promotionalCouponValidation?.isValid ? (
+                            <div className="bg-emerald-500/10 border border-emerald-500/20 rounded-2xl p-6 space-y-4 shadow-inner relative overflow-hidden">
+                              <div className="absolute top-0 right-0 w-32 h-32 bg-emerald-500/5 rounded-full blur-[40px] -mr-16 -mt-16 pointer-events-none" />
+                              
+                              <div className="flex items-center justify-between relative z-10">
+                                <div className="flex items-center space-x-3">
+                                  <div className="w-10 h-10 bg-emerald-50 rounded-xl flex items-center justify-center border border-emerald-100">
+                                    <CheckCircle className="w-6 h-6 text-emerald-500" />
+                                  </div>
+                                  <div>
+                                    <span className="text-xs font-bold text-gray-400 uppercase tracking-widest block">Cupom Aplicado</span>
+                                    <span className="text-lg font-black text-gray-800 uppercase tracking-tight">{promotionalCoupon}</span>
+                                  </div>
+                                </div>
+                                <button
+                                  onClick={removePromotionalCoupon}
+                                  className="px-4 py-2 bg-gray-50 hover:bg-red-50 text-gray-400 hover:text-red-500 rounded-lg text-xs font-black uppercase tracking-widest transition-all border border-gray-100 hover:border-red-100"
+                                >
+                                  Remover
+                                </button>
+                              </div>
+
+                              <div className="space-y-3 pt-4 border-t border-gray-100 relative z-10">
+                                <div className="flex justify-between text-xs font-bold uppercase tracking-widest text-gray-400">
+                                  <span>Preço Original:</span>
+                                  <span className="line-through text-gray-300">
+                                    ${getFeeAmount('i20_control_fee').toFixed(2)}
+                                  </span>
+                                </div>
+                                <div className="flex justify-between text-xs font-bold uppercase tracking-widest text-gray-400">
+                                  <span>Desconto:</span>
+                                  <span className="text-emerald-500">
+                                    -${promotionalCouponValidation.discountAmount?.toFixed(2)}
+                                  </span>
+                                </div>
+                                <div className="flex justify-between text-xl font-black uppercase tracking-tight pt-3 text-gray-900">
+                                  <span>Total Final:</span>
+                                  <span className="text-emerald-500">
+                                    ${promotionalCouponValidation.finalAmount?.toFixed(2)}
+                                  </span>
+                                </div>
+                              </div>
+                            </div>
+                          ) : (
+                            <div className="space-y-4">
+                              <div className="flex flex-col sm:flex-row gap-2">
+                                <div className="relative flex-1 group/input">
+                                  <input
+                                    ref={promotionalCouponInputRef}
+                                    type="text"
+                                    value={promotionalCoupon}
+                                    onChange={(e) => {
+                                      const newValue = e.target.value.toUpperCase();
+                                      const cursorPosition = e.target.selectionStart;
+                                      setPromotionalCoupon(newValue);
+                                      requestAnimationFrame(() => {
+                                        if (promotionalCouponInputRef.current) {
+                                          promotionalCouponInputRef.current.setSelectionRange(cursorPosition, cursorPosition);
+                                          promotionalCouponInputRef.current.focus();
+                                        }
+                                      });
+                                    }}
+                                    placeholder={t('preCheckoutModal.placeholder') || "Digite o código"}
+                                    className="w-full px-5 py-3.5 bg-gray-50 border border-gray-200 rounded-xl focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500/50 transition-all text-center font-black text-gray-900 text-lg tracking-[0.2em] placeholder:text-gray-300"
+                                    maxLength={20}
+                                    autoComplete="off"
+                                  />
+                                  <div className="absolute inset-x-0 bottom-0 h-[2px] bg-gradient-to-r from-transparent via-blue-500/50 to-transparent scale-x-0 group-focus-within/input:scale-x-100 transition-transform duration-500" />
+                                </div>
+                                <button
+                                  onClick={validatePromotionalCoupon}
+                                  disabled={isValidatingPromotionalCoupon || !promotionalCoupon.trim()}
+                                  className={`px-6 py-3.5 rounded-xl font-black uppercase tracking-widest text-sm transition-all shadow-xl active:scale-95 whitespace-nowrap sm:w-auto w-full ${
+                                    isValidatingPromotionalCoupon || !promotionalCoupon.trim()
+                                      ? 'bg-gray-100 text-gray-400 border border-gray-200 cursor-not-allowed'
+                                      : 'bg-blue-600 text-white hover:bg-blue-700 border border-blue-500/50 shadow-[0_0_20px_rgba(37,99,235,0.2)]'
+                                  }`}
+                                >
+                                  {isValidatingPromotionalCoupon ? (
+                                    <div className="flex items-center justify-center space-x-2">
+                                      <Loader2 className="w-5 h-5 animate-spin" />
+                                      <span>Validando...</span>
+                                    </div>
+                                  ) : (
+                                    'Validar'
+                                  )}
+                                </button>
+                              </div>
+                              
+                              {promotionalCouponValidation && !promotionalCouponValidation.isValid && (
+                                <div className="bg-red-500/10 border border-red-500/20 rounded-xl p-4 flex items-center space-x-3 backdrop-blur-md">
+                                  <AlertCircle className="w-5 h-5 text-red-500 flex-shrink-0" />
+                                  <span className="text-sm text-red-400 font-medium">{promotionalCouponValidation.message}</span>
+                                </div>
+                              )}
+                            </div>
+                          )}
+                        </div>
                       </div>
 
                       <div className="flex flex-col gap-4">
@@ -1340,11 +1448,11 @@ export const UniversityDocumentsStep: React.FC<StepProps> = ({ onBack }) => {
                               <div className="flex-1">
                                  <div className="flex items-center justify-between mb-1">
                                     <span className="font-bold text-gray-900 text-lg">Cartão de Crédito</span>
-                                    <span className="text-grey-900 text-sm font-black px-3 py-1.5 uppercase tracking-tight">
+                                    <span className="text-grey-900 text-xl font-black px-3 py-1.5 uppercase tracking-tight">
                                       {formatFeeAmount(calculateCardAmountWithFees(promotionalCouponValidation?.finalAmount || getFeeAmount('i20_control_fee')))}
                                     </span>
                                  </div>
-                                 <p className="text-[10px] text-gray-400 mt-1 uppercase tracking-widest font-bold">* Inclui taxas de processamento</p>
+                                 <p className="text-[10px] text-gray-400 mt-1 uppercase tracking-widest font-bold">* Podem incluir taxas de processamento</p>
                               </div>
                               {selectedPaymentMethod === 'stripe' && i20Loading && (
                                 <div className="absolute inset-0 bg-white/80 backdrop-blur-sm rounded-[2rem] flex items-center justify-center z-10">
@@ -1365,11 +1473,11 @@ export const UniversityDocumentsStep: React.FC<StepProps> = ({ onBack }) => {
                               <div className="flex-1">
                                  <div className="flex items-center justify-between mb-1">
                                     <span className="font-bold text-gray-900 text-lg">PIX</span>
-                                    <span className="text-grey-900 text-sm font-black px-3 py-1.5 uppercase tracking-tight">
+                                    <span className="text-grey-900 text-xl font-black px-3 py-1.5 uppercase tracking-tight">
                                       R$ {calculatePIXTotalWithIOF(promotionalCouponValidation?.finalAmount || getFeeAmount('i20_control_fee'), exchangeRate).totalWithIOF.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
                                     </span>
                                  </div>
-                                 <p className="text-[10px] text-gray-400 mt-1 uppercase tracking-widest font-bold">* Inclui taxas de processamento</p>
+                                 <p className="text-[10px] text-gray-400 mt-1 uppercase tracking-widest font-bold">* Podem incluir taxas de processamento</p>
                               </div>
                               {selectedPaymentMethod === 'pix' && i20Loading && (
                                 <div className="absolute inset-0 bg-white/80 backdrop-blur-sm rounded-[2rem] flex items-center justify-center z-10">
@@ -1391,13 +1499,13 @@ export const UniversityDocumentsStep: React.FC<StepProps> = ({ onBack }) => {
                                  <div className="flex items-center justify-between mb-1">
                                     <span className="font-bold text-gray-900 text-lg">Parcelow</span>
                                     <div className="text-right flex flex-col items-end">
-                                      <span className="text-grey-900 text-sm font-black px-3 py-1.5 uppercase tracking-tight">
+                                      <span className="text-grey-900 text-xl font-black px-3 py-1.5 uppercase tracking-tight">
                                         {formatFeeAmount(promotionalCouponValidation?.finalAmount || getFeeAmount('i20_control_fee'))}
                                       </span>
                                       <div className="text-[10px] font-black text-grey-900 uppercase tracking-widest mt-1">ou em até 12x</div>
                                     </div>
                                  </div>
-                                 <p className="text-[10px] text-gray-400 mt-1 uppercase tracking-widest font-bold">* Taxas da operadora e processamento da plataforma serão aplicadas</p>
+                                 <p className="text-[10px] text-gray-400 mt-1 uppercase tracking-widest font-bold">* Podem incluir taxas da operadora e processamento da plataforma</p>
                               </div>
                               {selectedPaymentMethod === 'parcelow' && i20Loading && (
                                 <div className="absolute inset-0 bg-white/80 backdrop-blur-sm rounded-[2rem] flex items-center justify-center z-10">
@@ -1424,13 +1532,13 @@ export const UniversityDocumentsStep: React.FC<StepProps> = ({ onBack }) => {
                                    <div className="flex items-center justify-between mb-1">
                                       <span className="font-bold text-gray-900 text-lg">Zelle</span>
                                       <div className="text-right">
-                                        <div className="text-grey-900 text-sm font-black px-3 py-1.5 uppercase tracking-tight">
+                                        <div className="text-grey-900 text-xl font-black px-3 py-1.5 uppercase tracking-tight">
                                           {formatFeeAmount(promotionalCouponValidation?.finalAmount || getFeeAmount('i20_control_fee'))}
                                         </div>
                                         <span className="text-[10px] font-bold text-grey-900 mt-1 block uppercase tracking-widest">Sem Taxas</span>
                                       </div>
                                    </div>
-                                   <div className="mt-2 flex items-center gap-2 text-amber-500">
+                                   <div className="mt-2 flex items-center gap-2 text-gray-400">
                                       <AlertCircle className="w-3.5 h-3.5" />
                                       <span className="text-[10px] font-bold uppercase tracking-wide">Processamento pode levar até 48 horas</span>
                                    </div>
@@ -1580,7 +1688,6 @@ export const UniversityDocumentsStep: React.FC<StepProps> = ({ onBack }) => {
                         </div>
                         <div className="text-center md:text-left">
                           <h2 className="text-3xl font-black text-gray-900 uppercase tracking-tighter leading-none mb-2">Carta de <span className="text-blue-600">Aceite</span></h2>
-                          <p className="text-gray-500 font-medium">Documento oficial de admissão da universidade</p>
                         </div>
                       </div>
                       <div className="flex items-center gap-2 px-4 py-2 bg-red-50 border border-red-100 rounded-2xl">
@@ -1597,9 +1704,6 @@ export const UniversityDocumentsStep: React.FC<StepProps> = ({ onBack }) => {
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-12">
                       <div className="space-y-6">
                         <h4 className="text-xl font-black text-gray-900 uppercase tracking-tight flex items-center gap-3">
-                          <div className="w-8 h-8 bg-blue-50 rounded-lg flex items-center justify-center">
-                            <Award className="w-4 h-4 text-blue-600" />
-                          </div>
                           Sua Confirmação de Sucesso
                         </h4>
                         <p className="text-gray-600 leading-relaxed font-medium">
@@ -1620,13 +1724,7 @@ export const UniversityDocumentsStep: React.FC<StepProps> = ({ onBack }) => {
                       <div className="space-y-8">
                          {/* Requirements Section styled like i20 deadline */}
                          <div className="bg-blue-50 border border-blue-200 rounded-[2rem] p-8 relative overflow-hidden">
-                            <div className="absolute top-0 right-0 p-4 opacity-5">
-                              <DollarSign className="w-20 h-20 text-blue-900" />
-                            </div>
                             <div className="flex items-start gap-4 relative z-10">
-                              <div className="w-10 h-10 bg-white rounded-xl shadow-sm flex items-center justify-center flex-shrink-0">
-                                <DollarSign className="w-5 h-5 text-blue-600" />
-                              </div>
                               <div className="flex-1">
                                 <h5 className="font-black text-blue-900 uppercase tracking-tight mb-2">Qual o próximo passo?</h5>
                                 <p className="text-sm font-medium text-blue-800 leading-relaxed mb-6">

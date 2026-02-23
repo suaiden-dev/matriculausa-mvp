@@ -509,10 +509,10 @@ export const DocumentsUploadStep: React.FC<StepProps> = ({ onNext }) => {
           </div>
 
           {/* Success Card */}
-          <div className="bg-white border border-emerald-500/30 ring-1 ring-emerald-500/20 rounded-[2.5rem] p-6 md:p-10 shadow-2xl relative overflow-hidden animate-in fade-in zoom-in duration-500">
+          <div className="bg-white border border-emerald-500/30 ring-1 ring-emerald-500/20 rounded-[2.5rem] p-8 md:p-10 shadow-2xl relative overflow-hidden animate-in fade-in zoom-in duration-500">
             <div className="absolute top-0 right-0 w-64 h-64 bg-blue-500/5 rounded-full blur-[80px] -mr-32 -mt-32 pointer-events-none" />
             
-            <div className="relative z-10 text-center py-6">
+            <div className="relative z-10 text-center py-4">
               <div className="w-20 h-20 bg-emerald-500/20 rounded-full flex items-center justify-center mx-auto mb-6 border border-emerald-500/30">
                 <CheckCircle className="w-12 h-12 text-emerald-500" />
               </div>

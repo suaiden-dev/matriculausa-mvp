@@ -1479,10 +1479,10 @@ export const SelectionFeeStep: React.FC<StepProps> = ({ onNext }) => {
         </div>
 
         {/* Main White Container */}
-        <div className="bg-white border border-emerald-500/30 ring-1 ring-emerald-500/20 rounded-[2.5rem] p-6 md:p-10 shadow-2xl relative overflow-hidden">
+        <div className="bg-white border border-emerald-500/30 ring-1 ring-emerald-500/20 rounded-[2.5rem] p-8 md:p-10 shadow-2xl relative overflow-hidden">
           <div className="absolute top-0 right-0 w-64 h-64 bg-blue-500/5 rounded-full blur-[80px] -mr-32 -mt-32 pointer-events-none" />
           
-          <div className="relative z-10 text-center py-6">
+          <div className="relative z-10 text-center py-4">
             <div className="w-20 h-20 bg-emerald-500/20 rounded-full flex items-center justify-center mx-auto mb-6 border border-emerald-500/30">
               <CheckCircle className="w-12 h-12 text-emerald-400" />
             </div>
@@ -1988,13 +1988,13 @@ export const SelectionFeeStep: React.FC<StepProps> = ({ onNext }) => {
 
                           <div className="flex items-center gap-3">
                             {method.id === 'stripe' && cardAmountWithFees > 0 && (
-                              <span className="text-black text-lg font-black px-2">
+                              <span className="text-grey-900 text-lg font-black px-2">
                                 ${cardAmountWithFees.toFixed(2)}
                               </span>
                             )}
                             {method.id === 'parcelow' && computedBasePrice > 0 && (
                               <div className="flex flex-col items-end">
-                                 <span className="text-black text-lg font-black px-2">
+                                 <span className="text-grey-900 text-lg font-black px-2">
                                    ${computedBasePrice.toFixed(2)}
                                  </span>
                                 <span className="text-xs font-bold text-black mt-1 whitespace-nowrap">
@@ -2003,12 +2003,12 @@ export const SelectionFeeStep: React.FC<StepProps> = ({ onNext }) => {
                               </div>
                             )}
                             {method.id === 'pix' && pixAmountWithFees > 0 && exchangeRate && (
-                               <span className="text-black text-lg font-black px-2">
+                               <span className="text-grey-900 text-lg font-black px-2">
                                  R$ {pixAmountWithFees.toFixed(2)}
                                </span>
                             )}
                             {method.id === 'zelle' && computedBasePrice > 0 && (
-                               <span className="text-black text-lg font-black px-2">
+                               <span className="text-grey-900 text-lg font-black px-2">
                                  ${computedBasePrice.toFixed(2)}
                                </span>
                             )}

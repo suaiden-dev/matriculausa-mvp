@@ -162,11 +162,11 @@ const ScholarshipCardFullComponent: React.FC<ScholarshipCardFullProps> = ({
           {scholarship.delivery_mode && (
             <div className="flex items-center justify-between p-2.5 bg-white rounded-xl border border-gray-200 shadow-sm">
               <div className="flex items-center gap-2">
-                <span className="text-xs font-bold text-black">
+                <span className="text-xs font-bold text-grey-900">
                   {t('studentDashboard.findScholarships.scholarshipCard.studyMode')}
                 </span>
               </div>
-              <span className="px-2 py-0.5 rounded-md text-[10px] font-black uppercase tracking-tight text-black">
+              <span className="px-2 py-0.5 rounded-md text-[10px] font-black uppercase tracking-tight text-grey-900">
                 {getDeliveryModeLabel(scholarship.delivery_mode, t)}
               </span>
             </div>
@@ -175,14 +175,14 @@ const ScholarshipCardFullComponent: React.FC<ScholarshipCardFullProps> = ({
           {/* Work Permissions Info Box */}
           {scholarship.work_permissions && scholarship.work_permissions.length > 0 && (
             <div className="flex items-center justify-between p-2.5 bg-white rounded-xl border border-gray-200 shadow-sm">
-              <span className="text-xs font-bold text-black whitespace-nowrap mr-2">
+              <span className="text-xs font-bold text-grey-900 whitespace-nowrap mr-2">
                 {t('studentDashboard.findScholarships.scholarshipCard.workAuthorization')}
               </span>
               <div className="flex flex-wrap justify-end gap-1.5">
                 {scholarship.work_permissions.slice(0, 3).map((permission: string, index: number) => (
                   <span
                     key={index}
-                    className="px-2 py-0.5 bg-gray-100 text-black rounded-md text-[10px] font-black uppercase border border-gray-200"
+                    className="px-2 py-0.5 bg-gray-100 text-grey-900 rounded-md text-[10px] font-black uppercase border border-gray-200"
                   >
                     {permission}
                   </span>
@@ -194,7 +194,7 @@ const ScholarshipCardFullComponent: React.FC<ScholarshipCardFullProps> = ({
 
         {/* Financial Overview Table View */}
         <div className="bg-white rounded-2xl p-4 border border-gray-200 shadow-sm">
-          <h4 className="text-[11px] font-black text-black mb-3 flex items-center gap-1.5 uppercase tracking-widest">
+          <h4 className="text-[11px] font-black text-grey-900 mb-3 flex items-center gap-1.5 uppercase tracking-widest">
             Análise Geral
           </h4>
           
@@ -256,7 +256,7 @@ const ScholarshipCardFullComponent: React.FC<ScholarshipCardFullProps> = ({
               e.stopPropagation();
               onViewDetails?.();
             }}
-            className="flex items-center justify-center w-full py-3 text-sm font-bold text-[#05294E] bg-slate-50 border border-slate-200 shadow-sm hover:shadow-md hover:bg-slate-100 rounded-2xl transition-all duration-300"
+            className="flex items-center justify-center w-full py-3 text-sm font-bold text-grey-900 bg-slate-50 border border-slate-200 shadow-sm hover:shadow-md hover:bg-slate-100 rounded-2xl transition-all duration-300"
           >
             {t('scholarshipsPage.scholarshipCard.details') || 'View Full Details'}
           </button>
