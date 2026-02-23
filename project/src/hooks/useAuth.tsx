@@ -75,7 +75,7 @@ interface AuthContextType {
   userProfile: UserProfile | null;
   login: (email: string, password: string) => Promise<void>;
   logout: () => Promise<void>;
-  register: (email: string, password: string, userData: { full_name: string; role: 'student' | 'school' | 'admin' | 'affiliate_admin' | 'seller'; [key: string]: any }, options?: SignUpOptions) => Promise<void>;
+  register: (email: string, password: string, userData: { full_name: string; role: 'student' | 'school' | 'admin' | 'affiliate_admin' | 'seller'; [key: string]: any }, options?: SignUpOptions) => Promise<any>;
   switchRole: (newRole: 'student' | 'school' | 'admin' | 'affiliate_admin' | 'seller') => void;
   isAuthenticated: boolean;
   loading: boolean;
@@ -911,7 +911,7 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
   };
 
   // Função para registrar usuário
-  const register = async (email: string, password: string, userData: { full_name: string; role: 'student' | 'school' | 'admin' | 'affiliate_admin' | 'seller'; [key: string]: any }, options?: SignUpOptions) => {
+  const register = async (email: string, password: string, userData: { full_name: string; role: 'student' | 'school' | 'admin' | 'affiliate_admin' | 'seller'; [key: string]: any }, options?: SignUpOptions): Promise<any> => {
     console.log('🔍 [USEAUTH] Iniciando função register');
     console.log('🔍 [USEAUTH] userData recebido:', userData);
     
@@ -1207,6 +1207,8 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
     // ✅ NOVO: Enviar mensagem automática de boas-vindas no chat para novos alunos (registro por staff)
     // A mensagem de boas-vindas agora é enviada automaticamente pelo trigger do banco de dados
     // Não é mais necessário enviar manualmente aqui
+
+    return data;
   };
 
   // Função para trocar role do usuário (apenas para desenvolvimento/admin)

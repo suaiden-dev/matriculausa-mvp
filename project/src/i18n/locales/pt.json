@@ -307,8 +307,8 @@
   },
   "paymentBlocker": {
     "scholarships": {
-       "title": "Bolsas de Estudo Bloqueadas",
-       "description": "Para acessar nossa coleção exclusiva de bolsas de estudo, você precisa completar o processo de seleção inicial. Esta é a primeira etapa do seu processo para estudar nos Estados Unidos."
+      "title": "Bolsas de Estudo Bloqueadas",
+      "description": "Para acessar nossa coleção exclusiva de bolsas de estudo, você precisa completar o processo de seleção inicial. Esta é a primeira etapa do seu processo para estudar nos Estados Unidos."
     },
     "universities": {
       "title": "Universidades Bloqueadas",
@@ -2505,7 +2505,7 @@
           "title": "Taxa de Controle I-20 Paga com Sucesso!",
           "description": "Seu pagamento da Taxa de Controle I-20 foi processado com sucesso. A universidade agora processará sua carta de aceitação.",
           "nextSteps": "Próximos passos:",
-            "nextStepsList": [
+          "nextStepsList": [
             "Aguarde a universidade processar sua carta de aceitação",
             "Sua carta de aceitação aparecerá na aba Carta de Aceite quando estiver pronta",
             "Entre em contato com o chat de suporte se tiver dúvidas sobre o processo"
@@ -3146,6 +3146,7 @@
       "title": "Para Estudantes",
       "forStudents": "Para Estudantes",
       "scholarships": "Bolsas",
+      "matriculaRewards": "Matrícula Rewards",
       "universities": "Universidades",
       "howItWorks": "Como Funciona",
       "support": "Suporte",
@@ -4089,6 +4090,44 @@
       "description": "Ao confirmar, você não poderá mais alterar as bolsas escolhidas. Revise cuidadosamente sua seleção antes de prosseguir.",
       "confirm": "Confirmar e Prosseguir",
       "cancel": "Revisar Novamente"
+    }
+  },
+  "rapidRegistration": {
+    "title": "Registro e Pagamento",
+    "subtitle": "Complete seu registro e inicie seu processo seletivo",
+    "form": {
+      "title": "Informações Pessoais",
+      "fullName": "Nome Completo",
+      "email": "E-mail",
+      "phone": "Telefone",
+      "dependents": "Número de Dependentes",
+      "password": "Senha",
+      "terms": "Eu aceito os Termos e Condições",
+      "submit": "Confirmar Registro",
+      "confirmPassword": "Confirmar Senha",
+      "error": {
+        "passwordsNotMatch": "As senhas não coincidem",
+        "terms": "Você deve aceitar os termos"
+      },
+      "placeholders": {
+        "fullName": "Digite seu nome completo",
+        "email": "exemplo@email.com",
+        "phone": "Seu número de telefone",
+        "dependents": "0",
+        "password": "Crie uma senha forte",
+        "confirmPassword": "Repita sua senha"
+      }
+    },
+    "sidebar": {
+      "title": "Resumo do Pagamento",
+      "currentFee": "Total a Pagar Agora",
+      "feeExplanation": "A Taxa de Processo de Seleção (US$400.00) é o primeiro pagamento obrigatório na plataforma MatriculaUSA. Ela desbloqueia seu acesso completo para visualizar todas as bolsas e iniciar seu processo de candidatura. Esta taxa é final e você será reembolsado caso não seja aceito em nenhuma universidade.",
+      "futureFeesTitle": "Taxas Futuras",
+      "enrollmentFee": "Taxa de Matrícula",
+      "scholarshipFee": "Taxa da Bolsa",
+      "i20Fee": "Taxa de Controle I-20",
+      "futureFeesNote": "As taxas futuras são estimativas e variam por universidade.",
+      "approximateValue": "Valor Aproximado"
     }
   }
 }

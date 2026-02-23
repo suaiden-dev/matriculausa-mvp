@@ -622,3 +622,32 @@ All colors MUST be HSL.
 .custom-scrollbar::-webkit-scrollbar-thumb:hover {
   background-color: rgba(107, 114, 128, 0.5);
 }
+
+/* Quick Registration Phone Input Styling */
+.quick-registration-phone {
+  display: flex !important;
+  align-items: center;
+}
+
+.quick-registration-phone .PhoneInputCountry {
+  margin-right: 0.75rem;
+  display: flex;
+  align-items: center;
+}
+
+.quick-registration-phone .PhoneInputInput {
+  flex: 1;
+  outline: none;
+  background: transparent;
+  border: none;
+  font-size: 1rem;
+  color: #111827; /* text-gray-900 */
+}
+
+.quick-registration-phone .PhoneInputInput::placeholder {
+  color: #9ca3af; /* text-gray-400 */
+}
+
+.quick-registration-phone .PhoneInputCountrySelect {
+  cursor: pointer;
+}

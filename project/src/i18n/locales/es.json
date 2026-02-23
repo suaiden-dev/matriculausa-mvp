@@ -2793,35 +2793,35 @@
   },
   "footer": {
     "company": {
-      "title": "Company",
-      "about": "About Us",
-      "careers": "Careers",
-      "contact": "Contact",
+      "title": "Empresa",
+      "about": "Sobre Nosotros",
+      "careers": "Carreras",
+      "contact": "Contacto",
       "blog": "Blog",
-      "description": "MatriculaUSA is the leading platform for international students who want to study in the United States. We make the entire application, enrollment, and scholarship process easier at American universities, offering technology, expert support, and exclusive opportunities to turn your international dream into reality."
+      "description": "MatriculaUSA es la plataforma líder para estudiantes internacionales que quieren estudiar en los Estados Unidos. Hacemos que todo el proceso de solicitud, inscripción y becas sea más fácil en las universidades estadounidenses, ofreciendo tecnología, soporte experto y oportunidades exclusivas para convertir su sueño internacional en realidad."
     },
     "students": {
-      "title": "For Students",
-      "forStudents": "For Students",
-      "scholarships": "Scholarships",
-      "matriculaRewards": "Matricula Rewards",
-      "universities": "Universities",
-      "howItWorks": "How It Works",
-      "support": "Support",
-      "faq": "FAQ",
-      "helpCenter": "Help Center"
+      "title": "Para Estudiantes",
+      "forStudents": "Para Estudiantes",
+      "scholarships": "Becas",
+      "matriculaRewards": "Matrícula Rewards",
+      "universities": "Universidades",
+      "howItWorks": "Cómo Funciona",
+      "support": "Soporte",
+      "faq": "Preguntas Frecuentes",
+      "helpCenter": "Centro de Ayuda"
     },
     "universities": {
-      "title": "For Universities",
-      "partners": "Become a Partner",
-      "dashboard": "University Dashboard",
-      "resources": "Resources"
+      "title": "Para Universidades",
+      "partners": "Conviértase en Socio",
+      "dashboard": "Panel de la Universidad",
+      "resources": "Recursos"
     },
     "legal": {
       "title": "Legal",
-      "privacy": "Privacy Policy",
-      "terms": "Terms of Service",
-      "cookies": "Cookie Policy"
+      "privacy": "Política de Privacidad",
+      "terms": "Términos de Servicio",
+      "cookies": "Política de Cookies"
     },
     "contact": {
       "email": "info@matriculausa.com",
@@ -3727,5 +3727,43 @@
     "3800Expired": "Not Available for application",
     "3800Expiring": "Last hours to apply! Deadline expires tomorrow (November 6th)",
     "3800ExpiringShort": "Deadline expires tomorrow"
+  },
+  "rapidRegistration": {
+    "title": "Registro y Pago",
+    "subtitle": "Complete su registro e inicie su proceso de selección",
+    "form": {
+      "title": "Información Personal",
+      "fullName": "Nombre Completo",
+      "email": "Correo electrónico",
+      "phone": "Teléfono",
+      "dependents": "Número de Dependientes",
+      "password": "Contraseña",
+      "terms": "Acepto los Términos y Condiciones",
+      "submit": "Confirmar Registro",
+      "confirmPassword": "Confirmar Contraseña",
+      "error": {
+        "passwordsNotMatch": "Las contraseñas no coinciden",
+        "terms": "Debes aceptar los términos"
+      },
+      "placeholders": {
+        "fullName": "Ingrese su nombre completo",
+        "email": "ejemplo@email.com",
+        "phone": "Su número de teléfono",
+        "dependents": "0",
+        "password": "Cree una contraseña segura",
+        "confirmPassword": "Repita su contraseña"
+      }
+    },
+    "sidebar": {
+      "title": "Resumen de Pago",
+      "currentFee": "Total a Pagar Ahora",
+      "feeExplanation": "La Tarifa del Proceso de Selección ($400.00) es el primer pago obligatorio en la plataforma MatriculaUSA. Desbloquea su acceso completo para ver todas las becas e iniciar su proceso de solicitud. Esta tarifa es final y se le reembolsará si no es aceptado en ninguna universidad.",
+      "futureFeesTitle": "Tarifas Futuras",
+      "enrollmentFee": "Tarifa de Matrícula",
+      "scholarshipFee": "Tarifa de Beca",
+      "i20Fee": "Tarifa de Control I-20",
+      "futureFeesNote": "Las tarifas futuras son estimaciones y varían según la universidad.",
+      "approximateValue": "Valor Aproximado"
+    }
   }
 }

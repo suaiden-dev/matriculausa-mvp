@@ -4027,5 +4027,43 @@
     "3800Expired": "Not Available for application",
     "3800Expiring": "Last hours to apply! Deadline expires tomorrow (November 6th)",
     "3800ExpiringShort": "Deadline expires tomorrow"
+  },
+  "rapidRegistration": {
+    "title": "Registration and Payment",
+    "subtitle": "Complete your registration and start your application process",
+    "form": {
+      "title": "Personal Information",
+      "fullName": "Full Name",
+      "email": "E-mail",
+      "phone": "Phone",
+      "dependents": "Number of Dependents",
+      "password": "Password",
+      "terms": "I accept the Terms and Conditions",
+      "submit": "Confirm Registration",
+      "confirmPassword": "Confirm Password",
+      "error": {
+        "passwordsNotMatch": "Passwords do not match",
+        "terms": "You must accept the terms"
+      },
+      "placeholders": {
+        "fullName": "Enter your full name",
+        "email": "example@email.com",
+        "phone": "Your phone number",
+        "dependents": "0",
+        "password": "Create a strong password",
+        "confirmPassword": "Repeat your password"
+      }
+    },
+    "sidebar": {
+      "title": "Payment Summary",
+      "currentFee": "Total to Pay Now",
+      "feeExplanation": "The Selection Process Fee ($400.00) is the first mandatory payment on the MatriculaUSA platform. It unlocks your full access to view all scholarships and start your application process. This fee is final and you will be refunded if not accepted to any university.",
+      "futureFeesTitle": "Future Fees",
+      "enrollmentFee": "Enrollment Fee",
+      "scholarshipFee": "Scholarship Fee",
+      "i20Fee": "I-20 Control Fee",
+      "futureFeesNote": "Future fees are estimates and vary by university.",
+      "approximateValue": "Approximate Value"
+    }
   }
 }
