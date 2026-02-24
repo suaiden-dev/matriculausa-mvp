@@ -3072,13 +3072,13 @@
       "description": "before proceeding with payment"
     },
     "closeTerms": "Close terms",
-    "scrollToBottomFirst": "Scroll to bottom first",
-    "readingTerms": "Please read the terms before accepting",
-    "acceptContractTerms": "I accept the contract terms and conditions",
-    "cancel": "Cancel",
-    "acceptTerms": "Accept Terms",
-    "loading": "Loading terms...",
-    "noTermsFound": "No active terms found.",
+    "loading": "Loading...",
+    "noTermsFound": "No terms found.",
+    "confirmReading": "Confirm Reading",
+    "scrollToBottomFirst": "Read to the end",
+    "acceptTerms": "Accept and Confirm",
+    "uploadPhotoRequired": "Please upload a selfie with your document to continue.",
+    "uploadPhoto": "Upload Selfie with Document",
     "promotionalCoupon": {
       "title": "Selection Process Fee",
       "discountedValue": "Discounted Value",
@@ -4075,7 +4075,16 @@
       "futureFeesNote": "Future fees are estimates and vary by university."
     },
     "terms": {
-      "contractSubtitle": "Service Provision Agreement"
+      "contractSubtitle": "Service Provision Agreement",
+      "selfieTitle": "Identity Verification",
+      "selfieSubtitle": "To complete the contract acceptance, we need a selfie of you holding your ID document.",
+      "selfieStep1": "Hold your ID next to your face",
+      "selfieStep2": "Make sure everything is legible",
+      "clickToTakeSelfie": "Click to take your selfie",
+      "selfieFormats": "JPG or PNG • MAX 5MB"
+    },
+    "coupons": {
+      "promotionalLabel": "Promotional Coupon"
     },
     "zelle": {
       "title": "Payment with Zelle",

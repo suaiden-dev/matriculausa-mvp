@@ -15,13 +15,14 @@ import {
   CheckCircle2,
   ChevronDown,
   Shield,
-  Scroll,
   X,
   ArrowLeft,
   Eye,
   EyeOff,
   Ticket,
-  CheckCircle
+  CheckCircle,
+  Camera,
+  Upload
 } from 'lucide-react';
 import { Dialog, Transition } from '@headlessui/react';
 import { useTermsAcceptance } from '../hooks/useTermsAcceptance';
@@ -190,7 +191,11 @@ const QuickRegistration: React.FC = () => {
   const [activeTerm, setActiveTerm] = useState<Term | null>(null);
   const [loadingTerms, setLoadingTerms] = useState(false);
   const [hasScrolledToBottom, setHasScrolledToBottom] = useState(false);
+  const [termsModalPage, setTermsModalPage] = useState<'terms' | 'selfie'>('terms');
+  const [identityPhoto, setIdentityPhoto] = useState<File | null>(null);
+  const [identityPhotoPreview, setIdentityPhotoPreview] = useState<string | null>(null);
   const termsContentRef = useRef<HTMLDivElement>(null);
+  const fileInputRef = useRef<HTMLInputElement>(null);
 
   // Fees with Stripe fees
   const [exchangeRate, setExchangeRate] = useState<number | null>(null);
@@ -424,20 +429,44 @@ const QuickRegistration: React.FC = () => {
     await loadActiveTerms();
     setShowTermsModal(true);
     setHasScrolledToBottom(false);
+    setTermsModalPage('terms');
   };
 
   const handleTermsAccept = async () => {
-    if (hasScrolledToBottom && activeTerm) {
-      // In a real scenario we'd need a user ID, but since this is BEFORE registration,
-      // we'll just mark it as accepted in state and record it after registration if needed,
-      // or record it anonymously if the system supports it.
-      // However, the rule says: "ao aceitar ele vai para o primeiro registro do banco"
-      // This implies we should record it. But we don't have a user ID yet.
-      // THE QUICK REGISTRATION FLOW REGISTERS THE USER THEN PAYS.
-      // So we will record the acceptance AFTER registration.
-      setFormData((prev: any) => ({ ...prev, termsAccepted: true }));
-      setShowTermsModal(false);
+    if (termsModalPage === 'terms') {
+      if (hasScrolledToBottom && activeTerm) {
+        setTermsModalPage('selfie');
+      }
+    } else {
+      // Página de Selfie
+      if (identityPhotoPreview) {
+        setFormData((prev: any) => ({ ...prev, termsAccepted: true }));
+        setShowTermsModal(false);
+      }
     }
+  };
+
+  const handleFileSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    // Validação básica
+    if (!file.type.startsWith('image/')) {
+      setError('Apenas arquivos de imagem são permitidos');
+      return;
+    }
+
+    if (file.size > 5 * 1024 * 1024) {
+      setError('O arquivo deve ter no máximo 5MB');
+      return;
+    }
+
+    setIdentityPhoto(file);
+    const reader = new FileReader();
+    reader.onloadend = () => {
+      setIdentityPhotoPreview(reader.result as string);
+    };
+    reader.readAsDataURL(file);
   };
 
   const handleTermsScroll = () => {
@@ -544,13 +573,62 @@ const QuickRegistration: React.FC = () => {
 
       const result = await register(formData.email, formData.password, userData);
       
-      // 2. Record Terms Acceptance
-      if (activeTerm && result?.user?.id) {
-        try {
-          await recordTermAcceptance(activeTerm.id, 'checkout_terms', result.user.id);
-        } catch (termErr) {
-          console.error('Failed to record terms acceptance:', termErr);
-          // Continue anyway, registration was successful
+      // 2. Upload Identity Photo and record Terms Acceptance
+      if (result?.user?.id) {
+        // Record terms acceptance first
+        if (activeTerm) {
+          try {
+            await recordTermAcceptance(activeTerm.id, 'checkout_terms', result.user.id);
+            
+            // If we have a photo, upload it and update the record
+            if (identityPhoto) {
+              const { data: sessionData } = await supabase.auth.getSession();
+              const token = sessionData.session?.access_token;
+              
+              if (token) {
+                const uploadFormData = new FormData();
+                uploadFormData.append('file', identityPhoto);
+                
+                const SUPABASE_URL = import.meta.env.VITE_SUPABASE_URL;
+                const uploadResponse = await fetch(`${SUPABASE_URL}/functions/v1/upload-identity-photo`, {
+                  method: 'POST',
+                  headers: {
+                    'Authorization': `Bearer ${token}`,
+                  },
+                  body: uploadFormData,
+                });
+                
+                const uploadResult = await uploadResponse.json();
+                
+                if (uploadResult.success) {
+                  // Update the acceptance record with photo info
+                  const { data: termAcceptance } = await supabase
+                    .from('comprehensive_term_acceptance')
+                    .select('id')
+                    .eq('user_id', result.user.id)
+                    .eq('term_id', activeTerm.id)
+                    .eq('term_type', 'checkout_terms')
+                    .order('accepted_at', { ascending: false })
+                    .limit(1)
+                    .maybeSingle();
+
+                  if (termAcceptance) {
+                    await supabase
+                      .from('comprehensive_term_acceptance')
+                      .update({
+                        identity_photo_path: uploadResult.filePath,
+                        identity_photo_name: uploadResult.fileName,
+                        identity_photo_status: 'pending'
+                      })
+                      .eq('id', termAcceptance.id);
+                  }
+                }
+              }
+            }
+          } catch (termErr) {
+            console.error('Failed to record terms or upload photo:', termErr);
+            // Continue anyway, registration was successful
+          }
         }
       }
       
@@ -1299,20 +1377,15 @@ const QuickRegistration: React.FC = () => {
               >
                 <Dialog.Panel className="w-full max-w-4xl max-h-[95vh] flex flex-col transform overflow-hidden rounded-[2.5rem] bg-white p-0 text-left align-middle shadow-2xl transition-all border border-slate-100">
                   {/* Header */}
-                  <div className="relative flex-shrink-0 px-8 py-6 border-b border-slate-100 bg-slate-50/50">
+                  <div className="relative flex-shrink-0 px-8 py-4 border-b border-slate-100 bg-slate-50/50">
                     <div className="flex items-center justify-between">
-                      <div className="flex items-center space-x-4">
-                        <div className="w-12 h-12 bg-[#05294E] rounded-2xl flex items-center justify-center shadow-lg shadow-blue-900/10">
-                          <Scroll className="w-6 h-6 text-white" />
-                        </div>
-                        <div>
-                          <Dialog.Title as="h3" className="text-2xl font-black text-slate-900 uppercase tracking-tighter">
-                            {activeTerm?.title || t('preCheckoutModal.termsAndConditions.title')}
-                          </Dialog.Title>
-                          <p className="text-xs font-bold text-slate-400 uppercase tracking-[0.2em] mt-1">
-                            {t('rapidRegistration.terms.contractSubtitle') || 'Contrato de Prestação de Serviços'}
-                          </p>
-                        </div>
+                      <div>
+                        <Dialog.Title as="h3" className="text-2xl font-black text-slate-900 uppercase tracking-tighter">
+                          {activeTerm?.title || t('preCheckoutModal.termsAndConditions.title')}
+                        </Dialog.Title>
+                        <p className="text-xs font-bold text-slate-400 uppercase tracking-[0.2em] mt-1">
+                          {t('rapidRegistration.terms.contractSubtitle') || 'Contrato de Prestação de Serviços'}
+                        </p>
                       </div>
                       <button
                         onClick={() => setShowTermsModal(false)}
@@ -1324,51 +1397,151 @@ const QuickRegistration: React.FC = () => {
                   </div>
 
                   {/* Content */}
-                  <div className="flex-1 overflow-hidden p-8 flex flex-col min-h-0">
-                    <div 
-                      ref={termsContentRef}
-                      onScroll={handleTermsScroll}
-                      className="flex-1 overflow-y-auto pr-4 scrollbar-thin scrollbar-thumb-slate-200 scrollbar-track-transparent"
-                    >
-                      {loadingTerms ? (
-                        <div className="flex flex-col items-center justify-center py-20 space-y-4">
-                          <Loader2 className="w-12 h-12 text-[#05294E] animate-spin" />
-                          <p className="text-slate-400 font-bold uppercase tracking-widest text-xs">{t('preCheckoutModal.loading')}</p>
+                  <div className="flex-1 overflow-hidden px-8 py-4 flex flex-col min-h-0">
+                    {termsModalPage === 'terms' ? (
+                      <div 
+                        ref={termsContentRef}
+                        onScroll={handleTermsScroll}
+                        className="flex-1 overflow-y-auto pr-4 scrollbar-thin scrollbar-thumb-slate-200 scrollbar-track-transparent"
+                      >
+                        {loadingTerms ? (
+                          <div className="flex flex-col items-center justify-center py-20 space-y-4">
+                            <Loader2 className="w-12 h-12 text-[#05294E] animate-spin" />
+                            <p className="text-slate-400 font-bold uppercase tracking-widest text-xs">{t('preCheckoutModal.loading')}</p>
+                          </div>
+                        ) : activeTerm ? (
+                          <div 
+                            className="prose prose-slate max-w-none prose-p:text-slate-600 prose-p:font-medium prose-headings:text-slate-900 prose-headings:font-black prose-headings:uppercase prose-headings:tracking-tight prose-strong:text-slate-900"
+                            dangerouslySetInnerHTML={{ __html: activeTerm.content }}
+                          />
+                        ) : (
+                          <div className="text-center py-20">
+                            <Shield className="w-16 h-16 text-slate-100 mx-auto mb-4" />
+                            <p className="font-bold text-slate-400 uppercase tracking-widest text-xs">{t('preCheckoutModal.noTermsFound')}</p>
+                          </div>
+                        )}
+                      </div>
+                    ) : (
+                      <div className="flex-1 overflow-y-auto pr-4 space-y-6">
+                        <div className="bg-blue-50 rounded-[2rem] p-6 border border-blue-100 relative overflow-hidden">
+                          <div className="absolute top-0 right-0 w-32 h-32 bg-blue-100/50 rounded-full -mr-16 -mt-16"></div>
+                          <div className="relative z-10 flex flex-col md:flex-row items-center gap-6">
+                            <div className="flex-1 text-center md:text-left">
+                              <h4 className="text-xl font-black text-blue-900 uppercase tracking-tight mb-3 flex items-center justify-center md:justify-start">
+                                <Camera className="w-6 h-6 mr-3 text-blue-600" />
+                                {t('rapidRegistration.terms.selfieTitle') || 'Verificação de Identidade'}
+                              </h4>
+                              <p className="text-xs text-blue-800/70 font-bold leading-relaxed mb-4 uppercase tracking-wide">
+                                {t('rapidRegistration.terms.selfieSubtitle') || 'Para finalizar a aceitação do contrato, precisamos de uma selfie sua segurando seu documento de identidade.'}
+                              </p>
+                              
+                              <div className="space-y-3">
+                                <div className="flex items-center gap-3">
+                                  <div className="w-5 h-5 bg-blue-600 rounded-lg flex items-center justify-center text-white text-[9px] font-black">1</div>
+                                  <p className="text-[11px] font-bold text-blue-900 uppercase tracking-wider">{t('rapidRegistration.terms.selfieStep1') || 'Segure seu documento ao lado do rosto'}</p>
+                                </div>
+                                <div className="flex items-center gap-3">
+                                  <div className="w-5 h-5 bg-blue-600 rounded-lg flex items-center justify-center text-white text-[9px] font-black">2</div>
+                                  <p className="text-[11px] font-bold text-blue-900 uppercase tracking-wider">{t('rapidRegistration.terms.selfieStep2') || 'Certifique-se de que tudo está legível'}</p>
+                                </div>
+                              </div>
+                            </div>
+                            
+                            <div className="w-full md:w-48 flex-shrink-0">
+                               <img 
+                                src="/helpselfie.png" 
+                                alt="Exemplo de Selfie" 
+                                className="w-full h-auto rounded-[1rem] border-[3px] border-white shadow-xl transition-all"
+                              />
+                            </div>
+                          </div>
                         </div>
-                      ) : activeTerm ? (
-                        <div 
-                          className="prose prose-slate max-w-none prose-p:text-slate-600 prose-p:font-medium prose-headings:text-slate-900 prose-headings:font-black prose-headings:uppercase prose-headings:tracking-tight prose-strong:text-slate-900"
-                          dangerouslySetInnerHTML={{ __html: activeTerm.content }}
-                        />
-                      ) : (
-                        <div className="text-center py-20">
-                          <Shield className="w-16 h-16 text-slate-100 mx-auto mb-4" />
-                          <p className="font-bold text-slate-400 uppercase tracking-widest text-xs">{t('preCheckoutModal.noTermsFound')}</p>
-                        </div>
-                      )}
-                    </div>
 
-                    <div className="mt-8 pt-8 border-t border-slate-100 flex flex-col sm:flex-row gap-4 flex-shrink-0">
+                        <div className="space-y-4">
+                          {!identityPhotoPreview ? (
+                            <div 
+                              onClick={() => fileInputRef.current?.click()}
+                              className="border-4 border-dashed border-slate-100 rounded-[2.5rem] p-12 text-center hover:border-blue-200 hover:bg-blue-50/30 transition-all cursor-pointer group"
+                            >
+                              <input
+                                ref={fileInputRef}
+                                type="file"
+                                accept="image/*"
+                                capture="user"
+                                onChange={handleFileSelect}
+                                className="hidden"
+                              />
+                              <div className="w-20 h-20 bg-slate-50 rounded-[2rem] flex items-center justify-center mx-auto mb-6 transition-transform group-hover:scale-110 group-hover:bg-white shadow-sm">
+                                <Upload className="w-10 h-10 text-slate-400 group-hover:text-blue-600" />
+                              </div>
+                              <p className="text-lg font-black text-slate-900 uppercase tracking-tight mb-2">
+                                {t('rapidRegistration.terms.clickToTakeSelfie') || 'Clique para tirar sua selfie'}
+                              </p>
+                              <p className="text-xs text-slate-400 font-bold uppercase tracking-[0.2em]">
+                                {t('rapidRegistration.terms.selfieFormats') || 'JPG ou PNG • MÁX 5MB'}
+                              </p>
+                            </div>
+                          ) : (
+                            <div className="relative group">
+                              <div className="rounded-[2.5rem] overflow-hidden border-4 border-emerald-100 shadow-2xl h-80">
+                                <img
+                                  src={identityPhotoPreview}
+                                  alt="Sua Selfie"
+                                  className="w-full h-full object-cover"
+                                />
+                                <div className="absolute inset-x-0 bottom-0 bg-gradient-to-t from-emerald-900/80 to-transparent p-8">
+                                  <div className="flex items-center justify-between">
+                                    <div className="flex items-center text-white">
+                                      <CheckCircle2 className="w-6 h-6 mr-2 text-emerald-400" />
+                                      <span className="font-black uppercase tracking-tighter text-xl">Foto capturada!</span>
+                                    </div>
+                                    <button
+                                      onClick={() => {
+                                        setIdentityPhoto(null);
+                                        setIdentityPhotoPreview(null);
+                                      }}
+                                      className="px-6 py-2 bg-white/20 hover:bg-white/40 backdrop-blur-md rounded-xl text-white font-black uppercase tracking-widest text-xs transition-all border border-white/20"
+                                    >
+                                      Remover/Trocar
+                                    </button>
+                                  </div>
+                                </div>
+                              </div>
+                            </div>
+                          )}
+                        </div>
+                      </div>
+                    )}
+
+                    <div className="mt-4 pt-4 border-t border-slate-100 flex flex-col sm:flex-row gap-4 flex-shrink-0">
                       <button
                         type="button"
                         className="flex-1 px-8 py-4 bg-slate-100 text-slate-600 rounded-2xl font-black uppercase tracking-widest text-xs hover:bg-slate-200 transition-all active:scale-95"
-                        onClick={() => setShowTermsModal(false)}
+                        onClick={() => {
+                          if (termsModalPage === 'selfie') {
+                            setTermsModalPage('terms');
+                          } else {
+                            setShowTermsModal(false);
+                          }
+                        }}
                       >
-                        {t('preCheckoutModal.closeTerms') || 'Fechar'}
+                        {termsModalPage === 'selfie' ? 'Voltar para os Termos' : (t('preCheckoutModal.closeTerms') || 'Fechar')}
                       </button>
                       <button
                         type="button"
-                        disabled={!hasScrolledToBottom || loadingTerms}
+                        disabled={(termsModalPage === 'terms' ? !hasScrolledToBottom : !identityPhotoPreview) || loadingTerms}
                         className={`flex-[2] px-8 py-4 rounded-2xl font-black uppercase tracking-widest text-xs transition-all shadow-xl active:scale-95 ${
-                          hasScrolledToBottom
+                          (termsModalPage === 'terms' ? hasScrolledToBottom : identityPhotoPreview)
                             ? 'bg-[#05294E] text-white hover:bg-blue-900 shadow-blue-900/10'
                             : 'bg-slate-100 text-slate-300 cursor-not-allowed shadow-none'
                         }`}
                         onClick={handleTermsAccept}
                       >
-                        {hasScrolledToBottom 
-                          ? t('preCheckoutModal.acceptTerms') || 'Aceitar e Confirmar' 
-                          : t('preCheckoutModal.scrollToBottomFirst') || 'Leia até o final'
+                        {termsModalPage === 'terms' 
+                          ? (hasScrolledToBottom 
+                            ? t('preCheckoutModal.confirmReading') || 'Confirmar Leitura' 
+                            : t('preCheckoutModal.scrollToBottomFirst') || 'Leia até o final')
+                          : (t('preCheckoutModal.acceptTerms') || 'Aceitar e Confirmar')
                         }
                       </button>
                     </div>

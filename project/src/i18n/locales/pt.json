@@ -3095,9 +3095,13 @@
     "enterReferralCode": "Digite seu código de referência para obter desconto",
     "haveReferralCode": "Tenho um código de desconto",
     "usingYourReferralCode": "Usando o código de referência que você usou no registro",
-    "scrollToBottomFirst": "Leia todo o termo primeiro",
-    "readingTerms": "Leia todo o termo primeiro",
+    "loading": "Carregando...",
+    "noTermsFound": "Nenhum termo encontrado.",
     "confirmReading": "Confirmar Leitura",
+    "scrollToBottomFirst": "Leia até o final",
+    "acceptTerms": "Aceitar e Confirmar",
+    "uploadPhotoRequired": "Por favor, envie uma selfie com seu documento para continuar.",
+    "uploadPhoto": "Enviar Selfie com Documento",
     "placeholder": "Digite o código",
     "invalidCode": "Código inválido ou inativo",
     "selfReferral": "Você não pode usar seu próprio código de referência",
@@ -3122,9 +3126,6 @@
     "closeTerms": "Fechar termos",
     "acceptContractTerms": "Aceito os termos e condições do contrato",
     "cancel": "Cancelar",
-    "acceptTerms": "Aceitar Termos",
-    "loading": "Carregando termos...",
-    "noTermsFound": "Nenhum termo ativo encontrado.",
     "promotionalCoupon": {
       "title": "Taxa de Processo de Seleção",
       "discountedValue": "Valor com Desconto",
@@ -4123,8 +4124,8 @@
         "email": "exemplo@email.com",
         "phone": "Seu número de telefone",
         "dependents": "0",
-        "password": "Crie uma senha forte",
-        "confirmPassword": "Repita sua senha"
+        "password": "Digite sua senha",
+        "confirmPassword": "Confirme sua senha"
       }
     },
     "sidebar": {
@@ -4139,7 +4140,16 @@
       "futureFeesNote": "As taxas futuras são estimativas e variam por universidade."
     },
     "terms": {
-      "contractSubtitle": "Contrato de Prestação de Serviços"
+      "contractSubtitle": "Contrato de Prestação de Serviços",
+      "selfieTitle": "Verificação de Identidade",
+      "selfieSubtitle": "Para finalizar a aceitação do contrato, precisamos de uma selfie sua segurando seu documento de identidade.",
+      "selfieStep1": "Segure seu documento ao lado do rosto",
+      "selfieStep2": "Certifique-se de que tudo está legível",
+      "clickToTakeSelfie": "Clique para tirar sua selfie",
+      "selfieFormats": "JPG ou PNG • MÁX 5MB"
+    },
+    "coupons": {
+      "promotionalLabel": "Cupom Promocional"
     },
     "zelle": {
       "title": "Pagamento com Zelle",
