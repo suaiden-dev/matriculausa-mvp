@@ -113,7 +113,7 @@
               "Proof of bank funds ($22,000 minimum)",
               "Full address in country of origin",
               "School transcripts or diploma",
-              "Payment via Zelle to: info@thefutureofenglish.com"
+              "Payment via Zelle to: pay@matriculausa.com"
             ]
           },
           "step2": {
@@ -184,7 +184,7 @@
               "Proof of current visa or status",
               "Proof of bank funds ($22,000 minimum)",
               "Full address in the US",
-              "Payment via Zelle to: info@thefutureofenglish.com"
+              "Payment via Zelle to: pay@matriculausa.com"
             ]
           },
           "step2": {
@@ -240,7 +240,7 @@
               "Proof of current visa or status",
               "Proof of bank funds ($22,000 minimum)",
               "Full address in the US",
-              "Payment via Zelle to: info@thefutureofenglish.com"
+              "Payment via Zelle to: pay@matriculausa.com"
             ]
           },
           "step2": {
@@ -291,7 +291,6 @@
     "home": "Home",
     "howItWorks": "How It Works",
     "scholarships": "Scholarships",
-    "universities": "Universities",
     "forUniversities": "For Universities",
     "about": "About",
     "contact": "Contact",
@@ -1565,6 +1564,7 @@
       "invalidEmail": "Please enter a valid email address.",
       "signupDisabled": "New registrations are currently disabled. Please contact support.",
       "preCheckoutModal": {
+        "noTermsFound": "No terms found",
         "securePayment": "Secure Payment",
         "closeModal": "Close modal",
         "closeTerms": "Close terms",
@@ -1749,7 +1749,19 @@
       "payApplicationFee": "Pay the Application Fee to guarantee your scholarship.",
       "payScholarshipFee": "Pay the Scholarship Fee to confirm your scholarship application.",
       "payI20Fee": "Pay the I-20 Control Fee to start your I-20 and document validation process.",
-      "daysRemaining": "You have 10 days after the scholarship fee."
+      "daysRemaining": "You have 10 days after the scholarship fee.",
+      "onboarding": {
+        "payFee": "Pay Selection Fee",
+        "payFeeDesc": "Start your process by paying the selection fee.",
+        "chooseScholarships": "Choose Scholarships",
+        "chooseScholarshipsDesc": "Select the universities and scholarships you are interested in.",
+        "uploadDocuments": "Upload Documents",
+        "uploadDocumentsDesc": "Upload your passport, diploma, and proof of funds.",
+        "underReview": "Under Review",
+        "underReviewDesc": "We are reviewing your documents. 48h timeframe.",
+        "completed": "Selection Process Completed",
+        "completedDesc": "All set! Move to the next step."
+      }
     },
     "stepByStepTour": {
       "title": "Step-by-Step Tour",
@@ -1939,11 +1951,13 @@
         "details": "Details",
         "alreadyApplied": "Already Applied",
         "deselect": "Deselect",
-        "selectScholarship": "Select Scholarship",
+        "selectScholarship": "Select",
         "checking": "Checking...",
         "inPerson": "In Person",
         "mixed": "Mixed",
-        "more": "more"
+        "more": "more",
+        "showMore": "Show More Details",
+        "showLess": "Show Less Details"
       },
       "noResults": {
         "title": "No scholarships found",
@@ -2064,7 +2078,8 @@
       "smartAssistantDescription": "Use the floating button on the corner of the screen to ask questions in real-time.",
       "supportChatHelp": "Support Chat:",
       "supportChatDescription": "Access the team chat right below the 'My Applications' section in the dashboard.",
-      "backToOverview": "Got it, Back to Dashboard"
+      "backToOverview": "Got it, Back to Dashboard",
+      "gotItContinue": "Got it, Continue"
     },
     "manualReview": {
       "title": "Manual Document Review",
@@ -2287,6 +2302,7 @@
         "pendingScholarshipFee": "PENDING SCHOLARSHIP FEE"
       },
       "nextSteps": "Next Steps:",
+      "rejectionReason": "Reason:",
       "scholarshipDetails": {
         "annualScholarshipValue": "Annual Scholarships starting from",
         "applicationDate": "Application Date",
@@ -2325,6 +2341,7 @@
         "applicationInProgress": "Your application to {{universityName}} is in progress.",
         "scholarship": "Scholarship:",
         "howToProceed": "How to Proceed",
+        "description": "Use the chat below to communicate directly with the university regarding pending documents and next steps.",
         "documentRequests": {
           "title": "Check Document Requests",
           "description": "Upload the documents requested by the university to continue your process.",
@@ -3055,13 +3072,13 @@
       "description": "before proceeding with payment"
     },
     "closeTerms": "Close terms",
-    "scrollToBottomFirst": "Scroll to bottom first",
-    "readingTerms": "Please read the terms before accepting",
-    "acceptContractTerms": "I accept the contract terms and conditions",
-    "cancel": "Cancel",
-    "acceptTerms": "Accept Terms",
-    "loading": "Loading terms...",
-    "noTermsFound": "No active terms found.",
+    "loading": "Loading...",
+    "noTermsFound": "No terms found.",
+    "confirmReading": "Confirm Reading",
+    "scrollToBottomFirst": "Read to the end",
+    "acceptTerms": "Accept and Confirm",
+    "uploadPhotoRequired": "Please upload a selfie with your document to continue.",
+    "uploadPhoto": "Upload Selfie with Document",
     "promotionalCoupon": {
       "title": "Selection Process Fee",
       "discountedValue": "Discounted Value",
@@ -3168,7 +3185,7 @@
         "processErrorRetry": "Error processing unsubscribe request. Please try again."
       }
     },
-    "copyright": "© 2026 Matrícula USA. All rights reserved."
+    "copyright": "© 2024 Matrícula USA. All rights reserved."
   },
   "matriculaRewardsLanding": {
     "badge": "New Rewards Program",
@@ -3201,7 +3218,7 @@
         "description": "See what your account would look like with some referrals",
         "referralCode": {
           "title": "Your Referral Code",
-          "code": "MTR2026",
+          "code": "MTR2024",
           "copy": "Copy Code",
           "copied": "Copied!",
           "loginToGetCode": "Login to get your referral code"
@@ -3577,7 +3594,7 @@
       ]
     },
     "socialProof": {
-      "title": "More than 150 students approved in 2026 alone",
+      "title": "More than 150 students approved in 2024 alone",
       "subtitle": "See what our students are saying about their experience",
       "ctaButton": "BE THE NEXT APPROVED",
       "statistics": {
@@ -4011,5 +4028,95 @@
     "3800Expired": "Not Available for application",
     "3800Expiring": "Last hours to apply! Deadline expires tomorrow (November 6th)",
     "3800ExpiringShort": "Deadline expires tomorrow"
+  },
+  "rapidRegistration": {
+    "title": "Registration and Payment",
+    "subtitle": "Complete your registration and start your application process",
+    "form": {
+      "title": "Personal Information",
+      "fullName": "Full Name",
+      "email": "E-mail",
+      "phone": "Phone",
+      "dependents": "Number of Dependents",
+      "dependentsSubtitle": "Family members (spouse and/or children)",
+      "dependentOptions": {
+        "count_zero": "0 Dependents",
+        "count_one": "1 Dependent",
+        "count_other": "{{count}} Dependents"
+      },
+      "termsAcceptedBadge": "Terms Viewed and Accepted",
+      "password": "Password",
+      "terms": "I accept the Terms and Conditions",
+      "submit": "Confirm Registration",
+      "confirmPassword": "Confirm Password",
+      "error": {
+        "passwordsNotMatch": "Passwords do not match",
+        "terms": "You must accept the terms",
+        "general": "A registration error occurred. Please try again."
+      },
+      "placeholders": {
+        "fullName": "Enter your full name",
+        "email": "example@email.com",
+        "phone": "Your phone number",
+        "dependents": "0",
+        "password": "Create a strong password",
+        "confirmPassword": "Repeat your password"
+      }
+    },
+    "sidebar": {
+      "title": "Payment Summary",
+      "total": "Total",
+      "currentFee": "Total to Pay Now",
+      "feeExplanation": "The Selection Process Fee ($400.00) is the first mandatory payment on the MatriculaUSA platform. It unlocks your full access to view all scholarships and start your application process. This fee is final and you will be refunded if not accepted to any university.",
+      "futureFeesTitle": "Future Fees",
+      "enrollmentFee": "Enrollment Fee",
+      "scholarshipFee": "Scholarship Fee",
+      "i20Fee": "I-20 Control Fee",
+      "futureFeesNote": "Future fees are estimates and vary by university."
+    },
+    "terms": {
+      "contractSubtitle": "Service Provision Agreement",
+      "selfieTitle": "Identity Verification",
+      "selfieSubtitle": "To complete the contract acceptance, we need a selfie of you holding your ID document.",
+      "selfieStep1": "Hold your ID next to your face",
+      "selfieStep2": "Make sure everything is legible",
+      "clickToTakeSelfie": "Click to take your selfie",
+      "selfieFormats": "JPG or PNG • MAX 5MB"
+    },
+    "coupons": {
+      "promotionalLabel": "Promotional Coupon"
+    },
+    "zelle": {
+      "title": "Payment with Zelle",
+      "subtitle": "Follow the instructions below to complete your payment.",
+      "back": "Back"
+    },
+    "payment": {
+      "selectMethod": "Select Payment Method",
+      "methods": {
+        "stripe": "Credit Card",
+        "pix": "PIX",
+        "zelle": "Zelle",
+        "parcelow": "Parcelow"
+      },
+      "notes": {
+        "processingFees": "* May include processing fees",
+        "parcelowFees": "* May include carrier and platform processing fees",
+        "zelleTime": "Processing can take up to 48 hours"
+      },
+      "payWith": "Pay with {{method}}",
+      "securePayment": "Secure Payment",
+      "cpf": {
+        "label": "Enter your CPF (Required for Parcelow)",
+        "placeholder": "000.000.000-00",
+        "error": "CPF is required for Parcelow payment."
+      },
+      "installment": "Up to 12 installments",
+      "error": {
+        "invalidMethod": "Invalid payment method.",
+        "notAuthenticated": "User not authenticated.",
+        "generationFailed": "Failed to generate payment link. Please try again."
+      }
+    }
   }
 }

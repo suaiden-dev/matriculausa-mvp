@@ -48,7 +48,6 @@
     "home": "Home",
     "howItWorks": "How It Works",
     "scholarships": "Scholarships",
-    "universities": "Universidades",
     "forUniversities": "For Universities",
     "about": "About",
     "contact": "Contact",
@@ -122,7 +121,7 @@
               "Comprobante de fondos bancarios ($22.000 mínimo)",
               "Dirección completa en el país de origen",
               "Historial escolar o diploma",
-              "Pago vía Zelle a: info@thefutureofenglish.com"
+              "Pago vía Zelle a: pay@matriculausa.com"
             ]
           },
           "step2": {
@@ -193,7 +192,7 @@
               "Comprobante de visa o estatus actual",
               "Comprobante de fondos bancários ($22.000 mínimo)",
               "Dirección completa en EE. UU.",
-              "Pago vía Zelle a: info@thefutureofenglish.com"
+              "Pago vía Zelle a: pay@matriculausa.com"
             ]
           },
           "step2": {
@@ -249,7 +248,7 @@
               "Comprobante de visa o estatus actual",
               "Comprobante de fondos bancários ($22.000 mínimo)",
               "Dirección completa en EE. UU.",
-              "Pago vía Zelle a: info@thefutureofenglish.com"
+              "Pago vía Zelle a: pay@matriculausa.com"
             ]
           },
           "step2": {
@@ -887,7 +886,7 @@
       "details": "Detalles",
       "alreadyApplied": "Ya Aplicado",
       "deselect": "Deseleccionar",
-      "selectScholarship": "Seleccionar Beca",
+      "selectScholarship": "Seleccionar",
       "checking": "Verificando...",
       "inPerson": "Presencial",
       "mixed": "Mixto",
@@ -1652,6 +1651,7 @@
       "invalidEmail": "Por favor, introduce una dirección de correo electrónico válida.",
       "signupDisabled": "Los nuevos registros están deshabilitados actualmente. Por favor, ponte en contacto con el soporte.",
       "preCheckoutModal": {
+        "noTermsFound": "No se encontraron términos",
         "securePayment": "Pago Seguro",
         "closeModal": "Cerrar modal",
         "closeTerms": "Cerrar términos",
@@ -2235,7 +2235,7 @@
         "details": "Detalles",
         "alreadyApplied": "Ya Aplicado",
         "deselect": "Deseleccionar",
-        "selectScholarship": "Seleccionar Beca",
+        "selectScholarship": "Seleccionar",
         "checking": "Verificando...",
         "inPerson": "Presencial",
         "mixed": "Mixto",
@@ -2747,82 +2747,72 @@
     }
   },
   "preCheckoutModal": {
-    "securePayment": "Secure Payment",
-    "securePaymentProcess": "Secure Payment Process",
-    "closeModal": "Close modal",
-    "securePaymentGateway": "Secure Payment Gateway",
-    "totalAmount": "Total Amount",
-    "referralCode": "Referral Code",
-    "yourReferralCode": "Your Referral Code",
-    "enterReferralCode": "Enter your referral code to get a discount",
-    "haveReferralCode": "I have a discount code",
-    "usingYourReferralCode": "Using the referral code you used during registration",
-    "placeholder": "Enter code",
-    "validate": "Validate",
-    "validating": "Validating...",
-    "pleaseEnterCode": "Please enter a code",
-    "invalidCode": "Invalid or inactive code",
-    "selfReferral": "You cannot use your own referral code",
-    "alreadyUsedCode": "You have already used a referral code previously",
-    "sellerReferralCodeBlocked": "You cannot use Matricula Rewards codes because you have a seller referral code",
-    "sellerReferralCodeBlockedTitle": "Matricula Rewards Blocked",
-    "sellerReferralCodeBlockedMessage": "You cannot use Matricula Rewards codes because you registered with a seller referral code. This is a system restriction to prevent conflicts between different referral systems.",
-    "sellerReferralCodeInfoTitle": "Seller Referral Code Detected",
-    "sellerReferralCodeInfoMessage": "You registered with a seller referral code, so Matricula Rewards codes are not available. You can still proceed with payment at the regular price.",
-    "validCode": "Valid code! $50 discount applied",
-    "errorValidating": "Error validating code",
-    "codeAlreadyUsed": "Code already used",
-    "discountAlreadyApplied": "Your discount has already been applied previously",
-    "continueWithoutCode": "Continue without code",
-    "goToPayment": "Go to payment",
-    "applyCodeAndContinue": "Apply code and continue",
-    "processingPayment": "Processing Payment...",
-    "mustAcceptTerms": "You must accept the terms and conditions before continuing",
+    "loading": "Cargando...",
+    "noTermsFound": "No se encontraron términos.",
+    "confirmReading": "Confirmar Lectura",
+    "scrollToBottomFirst": "Lea hasta el final",
+    "acceptTerms": "Aceptar y Confirmar",
+    "uploadPhotoRequired": "Por favor, envíe una selfie con su documento para continuar.",
+    "uploadPhoto": "Enviar Selfie con Documento",
+    "usingYourReferralCode": "Usando su código de referencia",
+    "placeholder": "Ingrese el código",
+    "validate": "Validar",
+    "validating": "Validando...",
+    "pleaseEnterCode": "Por favor, ingrese un código",
+    "invalidCode": "Código inválido o inactivo",
+    "selfReferral": "No puede usar su propio código de referencia",
+    "alreadyUsedCode": "Ya ha usado um código de referencia anteriormente",
+    "validCode": "¡Código válido! Descuento de $50 aplicado",
+    "errorValidating": "Error al validar el código",
+    "codeAlreadyUsed": "Código ya utilizado",
+    "discountAlreadyApplied": "Su descuento ya ha sido aplicado anteriormente",
+    "continueWithoutCode": "Continuar sin código",
+    "goToPayment": "Ir al pago",
+    "applyCodeAndContinue": "Aplicar código y continuar",
+    "processingPayment": "Procesando Pago...",
+    "mustAcceptTerms": "Debe aceptar los términos y condiciones antes de continuar",
     "termsAndConditions": {
-      "title": "Terms and Conditions",
-      "termsOfUse": "Terms of Use",
-      "and": "and",
-      "privacyPolicy": "Privacy Policy",
-      "description": "before proceeding with payment"
+      "title": "Términos y Condiciones",
+      "termsOfUse": "Términos de Uso",
+      "and": "y",
+      "privacyPolicy": "Política de Privacidad",
+      "description": "antes de proceder con el pago"
     },
-    "closeTerms": "Close terms",
-    "scrollToBottomFirst": "Scroll to bottom first",
-    "readingTerms": "Please read the terms before accepting",
-    "acceptContractTerms": "I accept the contract terms and conditions",
-    "cancel": "Cancel",
-    "acceptTerms": "Accept Terms"
+    "closeTerms": "Cerrar",
+    "acceptContractTerms": "Acepto los términos y condiciones del contrato",
+    "cancel": "Cancelar"
   },
   "footer": {
     "company": {
-      "title": "Company",
-      "about": "About Us",
-      "careers": "Careers",
-      "contact": "Contact",
+      "title": "Empresa",
+      "about": "Sobre Nosotros",
+      "careers": "Carreras",
+      "contact": "Contacto",
       "blog": "Blog",
-      "description": "MatriculaUSA is the leading platform for international students who want to study in the United States. We make the entire application, enrollment, and scholarship process easier at American universities, offering technology, expert support, and exclusive opportunities to turn your international dream into reality."
+      "description": "MatriculaUSA es la plataforma líder para estudiantes internacionales que quieren estudiar en los Estados Unidos. Hacemos que todo el proceso de solicitud, inscripción y becas sea más fácil en las universidades estadounidenses, ofreciendo tecnología, soporte experto y oportunidades exclusivas para convertir su sueño internacional en realidad."
     },
     "students": {
-      "title": "For Students",
-      "forStudents": "For Students",
-      "scholarships": "Scholarships",
-      "matriculaRewards": "Matricula Rewards",
-      "universities": "Universities",
-      "howItWorks": "How It Works",
-      "support": "Support",
-      "faq": "FAQ",
-      "helpCenter": "Help Center"
+      "title": "Para Estudiantes",
+      "forStudents": "Para Estudiantes",
+      "scholarships": "Becas",
+      "matriculaRewards": "Matrícula Rewards",
+      "universities": "Universidades",
+      "howItWorks": "Cómo Funciona",
+      "support": "Soporte",
+      "faq": "Preguntas Frecuentes",
+      "helpCenter": "Centro de Ayuda"
     },
     "universities": {
-      "title": "For Universities",
-      "partners": "Become a Partner",
-      "dashboard": "University Dashboard",
-      "resources": "Resources"
+      "title": "Para Universidades",
+      "partners": "Conviértase en Socio",
+      "dashboard": "Panel de la Universidad",
+      "resources": "Recursos"
     },
     "legal": {
       "title": "Legal",
-      "privacy": "Privacy Policy",
-      "terms": "Terms of Service",
-      "cookies": "Cookie Policy"
+      "privacy": "Política de Privacidad",
+      "terms": "Términos de Servicio",
+      "cookies": "Política de Cookies"
     },
     "contact": {
       "email": "info@matriculausa.com",
@@ -2889,7 +2879,7 @@
         "processErrorRetry": "Error al procesar la solicitud de desuscripción. Por favor, intenta nuevamente."
       }
     },
-    "copyright": "© 2026 Matrícula USA. All rights reserved."
+    "copyright": "© 2024 Matrícula USA. All rights reserved."
   },
   "matriculaRewardsLanding": {
     "badge": "New Rewards Program",
@@ -2922,7 +2912,7 @@
         "description": "See what your account would look like with some referrals",
         "referralCode": {
           "title": "Your Referral Code",
-          "code": "MTR2026",
+          "code": "MTR2024",
           "copy": "Copy Code",
           "copied": "Copied!",
           "loginToGetCode": "Login to get your referral code"
@@ -3298,7 +3288,7 @@
       ]
     },
     "socialProof": {
-      "title": "More than 150 students approved in 2026 alone",
+      "title": "More than 150 students approved in 2024 alone",
       "subtitle": "See what our students are saying about their experience",
       "ctaButton": "BE THE NEXT APPROVED",
       "statistics": {
@@ -3727,6 +3717,96 @@
   "scholarshipDeadline": {
     "3800Expired": "Not Available for application",
     "3800Expiring": "Last hours to apply! Deadline expires tomorrow (November 6th)",
-    "3800ExpiringShort": "Deadline expires tomorrow"
+    "3800ExpiringShort": "El plazo expira mañana"
+  },
+  "rapidRegistration": {
+    "title": "Registro y Pago",
+    "subtitle": "Complete su registro e inicie su proceso de selección",
+    "form": {
+      "title": "Información Personal",
+      "fullName": "Nombre Completo",
+      "email": "Correo electrónico",
+      "phone": "Teléfono",
+      "dependents": "Número de Dependientes",
+      "dependentsSubtitle": "Miembros de la familia (cónyuge y/o hijos)",
+      "dependentOptions": {
+        "count_zero": "0 Dependientes",
+        "count_one": "1 Dependiente",
+        "count_other": "{{count}} Dependientes"
+      },
+      "termsAcceptedBadge": "Términos Vistos y Aceptados",
+      "password": "Contraseña",
+      "terms": "Acepto los Términos y Condiciones",
+      "submit": "Confirmar Registro",
+      "confirmPassword": "Confirmar Contraseña",
+      "error": {
+        "passwordsNotMatch": "Las contraseñas no coinciden",
+        "terms": "Debe aceptar los términos",
+        "general": "Ocurrió un error en el registro. Por favor, inténtelo de nuevo."
+      },
+      "placeholders": {
+        "fullName": "Ingrese su nombre completo",
+        "email": "ejemplo@email.com",
+        "phone": "Su número de teléfono",
+        "dependents": "0",
+        "password": "Cree una contraseña segura",
+        "confirmPassword": "Repita su contraseña"
+      }
+    },
+    "sidebar": {
+      "title": "Resumen de Pago",
+      "total": "Total",
+      "currentFee": "Total a Pagar Ahora",
+      "feeExplanation": "La Tarifa del Proceso de Selección ($400.00) es el primer pago obligatorio en la plataforma MatriculaUSA. Desbloquea su acceso completo para ver todas las becas e iniciar su proceso de solicitud. Esta tarifa es final y se le reembolsará si no es aceptado en ninguna universidad.",
+      "futureFeesTitle": "Tarifas Futuras",
+      "enrollmentFee": "Tarifa de Matrícula",
+      "scholarshipFee": "Tarifa de Beca",
+      "i20Fee": "Tarifa de Control I-20",
+      "futureFeesNote": "Las tarifas futuras son estimaciones y varían según la universidad."
+    },
+    "terms": {
+      "contractSubtitle": "Contrato de Prestación de Servicios",
+      "selfieTitle": "Verificación de Identidad",
+      "selfieSubtitle": "Para finalizar la aceptación del contrato, necesitamos una selfie suya sosteniendo su documento de identidad.",
+      "selfieStep1": "Sostenga su documento al lado de su cara",
+      "selfieStep2": "Asegúrese de que todo sea legible",
+      "clickToTakeSelfie": "Haga clic para tomar su selfie",
+      "selfieFormats": "JPG o PNG • MÁX 5MB"
+    },
+    "coupons": {
+      "promotionalLabel": "Cupón Promocional"
+    },
+    "zelle": {
+      "title": "Pago con Zelle",
+      "subtitle": "Siga las instrucciones a continuación para completar su pago.",
+      "back": "Volver"
+    },
+    "payment": {
+      "selectMethod": "Seleccione el Método de Pago",
+      "methods": {
+        "stripe": "Tarjeta de Crédito",
+        "pix": "PIX",
+        "zelle": "Zelle",
+        "parcelow": "Parcelow"
+      },
+      "notes": {
+        "processingFees": "* Pueden incluir tarifas de procesamiento",
+        "parcelowFees": "* Pueden incluir cargos del operador y procesamiento de la plataforma",
+        "zelleTime": "El procesamiento puede tardar hasta 48 horas"
+      },
+      "payWith": "Pagar con {{method}}",
+      "securePayment": "Pagar de Forma Segura",
+      "cpf": {
+        "label": "Ingrese su CPF (Obligatorio para Parcelow)",
+        "placeholder": "000.000.000-00",
+        "error": "Se requiere CPF para el pago de Parcelow."
+      },
+      "installment": "Hasta 12 cuotas con tarjeta",
+      "error": {
+        "invalidMethod": "Método de pago inválido.",
+        "notAuthenticated": "Usuario no autenticado.",
+        "generationFailed": "Error al generar el enlace de pago. Por favor, inténtelo de nuevo."
+      }
+    }
   }
 }
