@@ -160,7 +160,7 @@ const AppContent = () => {
           <Route path="/auth/323-network/callback" element={<Auth323NetworkCallback />} />
           <Route path="/eb3-jobs" element={<EB3JobsLanding />} />
           <Route path="/unsubscribe" element={<UnsubscribeNewsletter />} />
-          <Route path="/quick-registration" element={<QuickRegistration />} />
+          <Route path="/selection-fee-registration" element={<QuickRegistration />} />
           
           <Route path="/checkout/zelle/waiting" element={<ZelleWaitingPage />} />
           <Route path="/checkout/zelle" element={<ZelleCheckoutPage />} />

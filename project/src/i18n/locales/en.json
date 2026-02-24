@@ -4067,11 +4067,17 @@
       "title": "Payment Summary",
       "total": "Total",
       "currentFee": "Total to Pay Now",
-      "feeExplanation": "The Selection Process Fee ($400.00) is the first mandatory payment on the MatriculaUSA platform. It unlocks your full access to view all scholarships and start your application process. This fee is final and you will be refunded if not accepted to any university.",
+      "dependentsFee": "Dependents Fee",
+      "couponApplied": "Coupon Applied",
+      "feeExplanation": "The Selection Process Fee ($400.00) is the first mandatory payment on the MatriculaUSA platform. It unlocks your full access to view all scholarships and start your application process.",
+      "refundAssurance": "If you are not accepted by any university at the end of the process, you can request a refund of the fees paid.",
       "futureFeesTitle": "Future Fees",
       "enrollmentFee": "Enrollment Fee",
       "scholarshipFee": "Scholarship Fee",
       "i20Fee": "I-20 Control Fee",
+      "enrollmentFeeTooltip": "The Enrollment Fee varies by university and is a mandatory payment to formally process your application after you have been accepted. This amount confirms your intention to enroll and is managed directly by the platform.",
+      "scholarshipFeeTooltip": "The Scholarship Fee is charged when you proceed with the application for your chosen scholarship. This fee covers platform processing costs.",
+      "i20FeeTooltip": "The I-20 Control Fee is a mandatory and essential payment to apply for the F-1 student visa. It is the final fee for the release of your scholarship acceptance letter and has a 10-day payment window.",
       "futureFeesNote": "Future fees are estimates and vary by university."
     },
     "terms": {
@@ -4081,7 +4087,14 @@
       "selfieStep1": "Hold your ID next to your face",
       "selfieStep2": "Make sure everything is legible",
       "clickToTakeSelfie": "Click to take your selfie",
-      "selfieFormats": "JPG or PNG • MAX 5MB"
+      "selfieFormats": "JPG or PNG • MAX 5MB",
+      "photoCaptured": "Photo captured!",
+      "removeChange": "Remove/Change",
+      "backToTerms": "Back to Terms",
+      "confirmReading": "Confirm Reading",
+      "scrollToBottom": "Read until the end",
+      "acceptAndConfirm": "Accept and Confirm",
+      "close": "Close"
     },
     "coupons": {
       "promotionalLabel": "Promotional Coupon"
@@ -4117,6 +4130,78 @@
         "notAuthenticated": "User not authenticated.",
         "generationFailed": "Failed to generate payment link. Please try again."
       }
+    }
+  },
+  "zelleComponent": {
+    "instructions": {
+      "title": "Zelle Payment Instructions",
+      "subtitle": "Follow these steps to complete your payment via Zelle",
+      "detailsTitle": "Zelle Payment Details",
+      "detailsSubtitle": "Send payment to the recipient below",
+      "recipientEmail": "Recipient Email",
+      "paymentAmount": "Payment Amount",
+      "youSaved": "You saved {{amount}}!",
+      "important": "Important",
+      "importantNote": "Make sure to send the exact amount of <strong>{{amount}}</strong> to <strong>{{email}}</strong> via Zelle. Any discrepancy will delay your payment processing.",
+      "uploadTitle": "Upload Payment Confirmation Screenshot *",
+      "clickToUpload": "Click to upload or drag and drop",
+      "fileFormats": "PNG, JPG up to 5MB",
+      "selectFile": "Select File",
+      "remove": "Remove",
+      "changeFile": "Change File",
+      "submitPayment": "Submit Payment",
+      "processing": "Processing...",
+      "paymentProcessing": "Payment Processing..."
+    },
+    "analyzing": {
+      "title": "Analyzing Payment...",
+      "subtitle": "Your payment confirmation is being automatically validated by our AI system."
+    },
+    "underReview": {
+      "title": "Payment Under Review",
+      "subtitle": "Your payment proof requires additional verification. Our team will review it within 48 hours.",
+      "notification": "You will be notified once the review is complete. Please do not submit another payment."
+    },
+    "success": {
+      "title": "Payment Approved Successfully!",
+      "subtitle": "Your Zelle payment has been processed and approved. You can now proceed with the next steps.",
+      "detailsTitle": "Payment Details:",
+      "originalAmount": "Original Amount:",
+      "discountApplied": "Discount Applied:",
+      "finalAmount": "Final Amount:",
+      "youSavedSuccess": "You saved!",
+      "amount": "Amount:",
+      "feeType": "Fee Type:",
+      "paymentId": "Payment ID:",
+      "submitted": "Submitted:",
+      "nextStepsTitle": "What happens next?",
+      "stepUploaded": "Payment confirmation uploaded",
+      "stepApproved": "Payment approved successfully",
+      "stepProceeding": "Proceeding to next step automatically"
+    },
+    "rejected": {
+      "title": "Payment Rejected",
+      "subtitle": "Your payment proof was not approved. Please review the reason below and upload a new payment confirmation.",
+      "reasonTitle": "Rejection Reason:",
+      "defaultReason": "Payment was rejected by admin. Please upload a new payment confirmation.",
+      "uploadNew": "Upload New Payment Proof",
+      "uploadNewNote": "Click the button above to upload a new payment confirmation screenshot"
+    },
+    "uploadModal": {
+      "uploadingTitle": "Uploading Document...",
+      "uploadingMessage": "Please wait while we upload your payment confirmation",
+      "sendingTitle": "Sending for Verification...",
+      "sendingMessage": "Your payment proof is being sent for automatic validation",
+      "analyzingTitle": "Analyzing Payment...",
+      "analyzingMessage": "Our AI is validating your payment confirmation"
+    },
+    "errors": {
+      "fileSize": "File size must be less than 5MB",
+      "fileType": "Please select an image file (JPG, PNG, etc.)",
+      "uploadRequired": "Please upload a screenshot of your payment confirmation",
+      "uploadFailed": "Failed to upload payment confirmation",
+      "alreadyPending": "You already have a payment being processed. Please wait for it to be reviewed.",
+      "checkingStatus": "Checking payment status..."
     }
   }
 }

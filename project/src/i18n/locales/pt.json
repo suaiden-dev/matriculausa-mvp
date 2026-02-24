@@ -4095,8 +4095,8 @@
     }
   },
   "rapidRegistration": {
-    "title": "Registro e Pagamento",
-    "subtitle": "Complete seu registro e inicie seu processo seletivo",
+    "title": "Início do Processo de Seleção",
+    "subtitle": "Complete seu registro e inicie seu processo de seleção",
     "form": {
       "title": "Informações Pessoais",
       "fullName": "Nome Completo",
@@ -4132,11 +4132,17 @@
       "title": "Resumo do Pagamento",
       "total": "Total",
       "currentFee": "Total a Pagar Agora",
-      "feeExplanation": "A Taxa de Processo de Seleção (US$400.00) é o primeiro pagamento obrigatório na plataforma MatriculaUSA. Ela desbloqueia seu acesso completo para visualizar todas as bolsas e iniciar seu processo de candidatura. Esta taxa é final e você será reembolsado caso não seja aceito em nenhuma universidade.",
+      "dependentsFee": "Taxa de Dependentes",
+      "couponApplied": "Cupom Aplicado",
+      "feeExplanation": "A Taxa do Processo de Seleção (US$400.00) é o primeiro pagamento obrigatório na plataforma MatriculaUSA. Ela desbloqueia seu acesso completo para visualizar todas as bolsas e iniciar seu processo de candidatura.",
+      "refundAssurance": "Caso não seja aceito em nenhuma universidade ao final do processo voce pode pedir reembolso das taxas pagas.",
       "futureFeesTitle": "Taxas Futuras",
       "enrollmentFee": "Taxa de Matrícula",
       "scholarshipFee": "Taxa da Bolsa",
       "i20Fee": "Taxa de Controle I-20",
+      "enrollmentFeeTooltip": "A Taxa de Matrícula varia por universidade e é um pagamento necessário para processar formalmente sua candidatura após você ter sido aceito. Este valor confirma sua intenção de se matricular e é gerenciado diretamente pela plataforma.",
+      "scholarshipFeeTooltip": "A Taxa da Bolsa é cobrada quando você prossegue com a candidatura da bolsa escolhida. Esta taxa cobre custos de processamento da plataforma.",
+      "i20FeeTooltip": "A Taxa de Controle I-20 é um pagamento obrigatório e essencial para solicitar o visto de estudante F-1. É a taxa final para a liberação da carta de aceite da sua bolsa e possui uma janela de pagamento de 10 dias.",
       "futureFeesNote": "As taxas futuras são estimativas e variam por universidade."
     },
     "terms": {
@@ -4146,7 +4152,14 @@
       "selfieStep1": "Segure seu documento ao lado do rosto",
       "selfieStep2": "Certifique-se de que tudo está legível",
       "clickToTakeSelfie": "Clique para tirar sua selfie",
-      "selfieFormats": "JPG ou PNG • MÁX 5MB"
+      "selfieFormats": "JPG ou PNG • MÁX 5MB",
+      "photoCaptured": "Foto capturada!",
+      "removeChange": "Remover/Trocar",
+      "backToTerms": "Voltar para os Termos",
+      "confirmReading": "Confirmar Leitura",
+      "scrollToBottom": "Leia até o final",
+      "acceptAndConfirm": "Aceitar e Confirmar",
+      "close": "Fechar"
     },
     "coupons": {
       "promotionalLabel": "Cupom Promocional"
@@ -4182,6 +4195,78 @@
         "notAuthenticated": "Usuário não autenticado.",
         "generationFailed": "Falha ao gerar link de pagamento. Tente novamente."
       }
+    }
+  },
+  "zelleComponent": {
+    "instructions": {
+      "title": "Instruções de Pagamento via Zelle",
+      "subtitle": "Siga estas etapas para concluir seu pagamento via Zelle",
+      "detailsTitle": "Detalhes do Pagamento Zelle",
+      "detailsSubtitle": "Envie o pagamento para o destinatário abaixo",
+      "recipientEmail": "E-mail do Destinatário",
+      "paymentAmount": "Valor do Pagamento",
+      "youSaved": "Você economizou {{amount}}!",
+      "important": "Importante",
+      "importantNote": "Certifique-se de enviar o valor exato de <strong>{{amount}}</strong> para <strong>{{email}}</strong> via Zelle. Qualquer discrepância atrasará o processamento do seu pagamento.",
+      "uploadTitle": "Carregar Captura de Tela de Confirmação de Pagamento *",
+      "clickToUpload": "Clique para carregar ou arraste e solte",
+      "fileFormats": "PNG, JPG até 5MB",
+      "selectFile": "Selecionar Arquivo",
+      "remove": "Remover",
+      "changeFile": "Alterar Arquivo",
+      "submitPayment": "Enviar Pagamento",
+      "processing": "Processando...",
+      "paymentProcessing": "Processamento de Pagamento..."
+    },
+    "analyzing": {
+      "title": "Analisando Pagamento...",
+      "subtitle": "Sua confirmação de pagamento está sendo validada automaticamente pelo nosso sistema de IA."
+    },
+    "underReview": {
+      "title": "Pagamento em Revisão",
+      "subtitle": "Seu comprovante de pagamento requer verificação adicional. Nossa equipe irá revisá-lo em até 48 horas.",
+      "notification": "Você será notificado assim que a revisão for concluída. Por favor, não envie outro pagamento."
+    },
+    "success": {
+      "title": "Pagamento Aprovado com Sucesso!",
+      "subtitle": "Seu pagamento Zelle foi processado e aprovado. Você pode agora prosseguir com as próximas etapas.",
+      "detailsTitle": "Detalhes do Pagamento:",
+      "originalAmount": "Valor Original:",
+      "discountApplied": "Desconto Aplicado:",
+      "finalAmount": "Valor Final:",
+      "youSavedSuccess": "Você economizou!",
+      "amount": "Valor:",
+      "feeType": "Tipo de Taxa:",
+      "paymentId": "ID do Pagamento:",
+      "submitted": "Enviado em:",
+      "nextStepsTitle": "O que acontece agora?",
+      "stepUploaded": "Confirmação de pagamento carregada",
+      "stepApproved": "Pagamento aprovado com sucesso",
+      "stepProceeding": "Prosseguindo para a próxima etapa automaticamente"
+    },
+    "rejected": {
+      "title": "Pagamento Rejeitado",
+      "subtitle": "Seu comprovante de pagamento não foi aprovado. Por favor, revise o motivo abaixo e carregue uma nova confirmação de pagamento.",
+      "reasonTitle": "Motivo da Rejeição:",
+      "defaultReason": "O pagamento foi rejeitado pelo administrador. Por favor, carregue uma nova confirmação de pagamento.",
+      "uploadNew": "Carregar Novo Comprovante de Pagamento",
+      "uploadNewNote": "Clique no botão acima para carregar uma nova captura de tela de confirmação de pagamento"
+    },
+    "uploadModal": {
+      "uploadingTitle": "Carregando Documento...",
+      "uploadingMessage": "Por favor, aguarde enquanto carregamos sua confirmação de pagamento",
+      "sendingTitle": "Enviando para Verificação...",
+      "sendingMessage": "Seu comprovante de pagamento está sendo enviado para validação automática",
+      "analyzingTitle": "Analisando Pagamento...",
+      "analyzingMessage": "Nossa IA está validando sua confirmação de pagamento"
+    },
+    "errors": {
+      "fileSize": "O tamanho do arquivo deve ser inferior a 5MB",
+      "fileType": "Por favor, selecione um arquivo de imagem (JPG, PNG, etc.)",
+      "uploadRequired": "Por favor, carregue uma captura de tela da sua confirmação de pagamento",
+      "uploadFailed": "Falha ao carregar a confirmação do pagamento",
+      "alreadyPending": "Você já tem um pagamento em processamento. Por favor, aguarde a revisão.",
+      "checkingStatus": "Verificando status do pagamento..."
     }
   }
 }

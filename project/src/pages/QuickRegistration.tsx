@@ -3,6 +3,7 @@ import { useTranslation } from 'react-i18next';
 import { useNavigate, useLocation } from 'react-router-dom';
 import { useAuth } from '../hooks/useAuth';
 import { useFeeConfig } from '../hooks/useFeeConfig';
+import { STRIPE_PRODUCTS } from '../stripe-config';
 import { supabase } from '../lib/supabase';
 import { 
   Mail, 
@@ -22,7 +23,8 @@ import {
   Ticket,
   CheckCircle,
   Camera,
-  Upload
+  Upload,
+  Info
 } from 'lucide-react';
 import { Dialog, Transition } from '@headlessui/react';
 import { useTermsAcceptance } from '../hooks/useTermsAcceptance';
@@ -204,6 +206,7 @@ const QuickRegistration: React.FC = () => {
 
   // Constants
   const baseFee = getFeeAmount('selection_process');
+  const dependentsFeeValue = (formData.dependents || 0) * 100;
   
   // Calcular preço final com desconto (Lógica da SelectionFeeStep)
   const currentFee = (() => {
@@ -236,12 +239,14 @@ const QuickRegistration: React.FC = () => {
 
   const handleValidateCoupon = async (code: string) => {
     if (!code) return;
-    setCouponCode(code.toUpperCase());
     setHasReferralCode(true);
+    await validateDiscountCode(code);
   };
 
-  const validateDiscountCode = async () => {
-    if (!couponCode.trim()) {
+  const validateDiscountCode = async (providedCode?: string) => {
+    const targetCode = (providedCode || couponCode).trim().toUpperCase();
+    
+    if (!targetCode) {
       setValidationResult({
         isValid: false,
         message: t('preCheckoutModal.pleaseEnterCode') || 'Please enter a code'
@@ -253,15 +258,33 @@ const QuickRegistration: React.FC = () => {
     setValidationResult(null);
 
     try {
-      // Check if code exists and is active
-      const { data: affiliateCodeData, error: affiliateError } = await supabase
+      // Check if code exists and is active (checking both affiliate_codes and sellers)
+      let { data: affiliateCodeData, error: affiliateError } = await supabase
         .from('affiliate_codes')
         .select('user_id, code, is_active')
-        .eq('code', couponCode.trim().toUpperCase())
+        .eq('code', targetCode)
         .eq('is_active', true)
-        .single();
+        .maybeSingle();
 
-      if (affiliateError || !affiliateCodeData) {
+      // Fallback to sellers table if not found in affiliate_codes
+      if (!affiliateCodeData && !affiliateError) {
+        const { data: sellerData } = await supabase
+          .from('sellers')
+          .select('user_id, referral_code, is_active')
+          .eq('referral_code', targetCode)
+          .eq('is_active', true)
+          .maybeSingle();
+        
+        if (sellerData) {
+          affiliateCodeData = {
+            user_id: sellerData.user_id,
+            code: sellerData.referral_code,
+            is_active: sellerData.is_active
+          };
+        }
+      }
+
+      if (!affiliateCodeData) {
         setValidationResult({
           isValid: false,
           message: t('preCheckoutModal.invalidCode') || 'Invalid code'
@@ -283,7 +306,7 @@ const QuickRegistration: React.FC = () => {
         const { data: result, error: validationError } = await supabase
           .rpc('validate_and_apply_referral_code', {
             user_id_param: supabaseUser.id,
-            affiliate_code_param: couponCode.trim().toUpperCase(),
+            affiliate_code_param: targetCode,
             email_param: supabaseUser.email
           });
 
@@ -305,6 +328,7 @@ const QuickRegistration: React.FC = () => {
       });
       setIsCouponValid(true);
       setCodeApplied(true);
+      if (providedCode) setCouponCode(targetCode);
 
     } catch (error) {
       console.error('Error validating code:', error);
@@ -664,6 +688,41 @@ const QuickRegistration: React.FC = () => {
         apiUrl = `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/parcelow-checkout-selection-process`;
       }
 
+      // Metadata estruturado para o webhook e tracking
+      const paymentMetadata = {
+        student_id: sessionData.session?.user?.id,
+        user_id: sessionData.session?.user?.id,
+        email: sessionData.session?.user?.email,
+        full_name: formData.full_name,
+        phone: formData.phone,
+        country: formData.country,
+        cpf: formData.cpf,
+        field_of_interest: formData.field_of_interest,
+        academic_level: formData.academic_level,
+        english_proficiency: formData.english_proficiency,
+        affiliate_code: codeApplied ? couponCode : undefined,
+        promotional_coupon: promotionalCouponValidation?.isValid ? promotionalCoupon : undefined,
+        registration_source: 'quick_registration',
+        fee_type: 'selection_process',
+        payment_method: method
+      };
+
+      console.log('[DEBUG] Payment Request:', {
+        apiUrl,
+        method,
+        body: {
+          price_id: STRIPE_PRODUCTS.selectionProcess.priceId,
+          amount: currentFee,
+          payment_method: method,
+          success_url: `${window.location.origin}/student/dashboard/selection-process-fee-success?session_id={CHECKOUT_SESSION_ID}`,
+          cancel_url: window.location.href,
+          mode: 'payment',
+          payment_type: 'selection_process',
+          fee_type: 'selection_process',
+          metadata: paymentMetadata
+        }
+      });
+
       const response = await fetch(apiUrl, {
         method: 'POST',
         headers: {
@@ -671,28 +730,36 @@ const QuickRegistration: React.FC = () => {
           'Authorization': `Bearer ${token}`
         },
         body: JSON.stringify({
-          price_id: 'price_selection_process_fee',
+          price_id: STRIPE_PRODUCTS.selectionProcess.priceId,
           amount: currentFee,
           payment_method: method,
-          success_url: `${window.location.origin}/student/dashboard`,
-          cancel_url: window.location.href, // VOLTA PARA ESTA MESMA PÁGINA COM TODOS OS PARÂMETROS
+          success_url: `${window.location.origin}/student/dashboard/selection-process-fee-success?session_id={CHECKOUT_SESSION_ID}&pm=${method === 'pix' ? 'pix' : 's'}`,
+          cancel_url: window.location.href,
           mode: 'payment',
           payment_type: 'selection_process',
           fee_type: 'selection_process',
-          discount_code: codeApplied ? couponCode : undefined,
-          promotional_coupon: promotionalCouponValidation?.isValid ? promotionalCoupon : undefined
+          metadata: paymentMetadata,
+          // Campos no root para compatibilidade
+          user_id: sessionData.session?.user?.id,
+          email: sessionData.session?.user?.email,
+          cpf: formData.cpf
         })
       });
 
       const data = await response.json();
-      if (data.session_url || data.url) {
-        window.location.href = data.session_url || data.url;
+      console.log('[DEBUG] Payment Response:', data);
+
+      const paymentUrl = data.session_url || data.url || data.checkout_url;
+
+      if (paymentUrl) {
+        window.location.href = paymentUrl;
       } else {
         throw new Error(data.error || t('rapidRegistration.payment.error.generationFailed', 'Falha ao gerar link de pagamento. Tente novamente.'));
       }
     } catch (err: any) {
+      console.error('[DEBUG] Payment Catch Error:', err);
       console.error('Payment redirect failed:', err);
-      throw err; // Repassa pro catch principal mostrar na tela e não ir pro dashboard
+      throw err;
     }
   };
 
@@ -718,7 +785,7 @@ const QuickRegistration: React.FC = () => {
   if (showZelleCheckout) {
     return (
       <div className="min-h-screen bg-gray-50 flex flex-col items-center p-4 pt-12 pb-32">
-        <div className="max-w-xl w-full relative">
+        <div className="max-w-4xl w-full relative">
           <button 
             onClick={() => setShowZelleCheckout(false)}
             className="flex items-center gap-2 text-gray-500 font-bold hover:text-[#05294E] transition-all mb-8 group"
@@ -782,7 +849,7 @@ const QuickRegistration: React.FC = () => {
                           onChange={handleChange}
                           disabled={isRegistered}
                           placeholder={t('rapidRegistration.form.placeholders.fullName')}
-                          className="block w-full pl-12 pr-4 py-3.5 border border-slate-200 rounded-2xl focus:ring-2 focus:ring-[#05294E] focus:border-[#05294E] text-slate-900 bg-slate-50/50 transition-all duration-300 disabled:opacity-50 disabled:cursor-not-allowed"
+                          className="block w-full pl-12 pr-4 py-3.5 border border-slate-200 rounded-2xl outline-none focus:outline-none focus:ring-2 focus:ring-[#05294E] focus:border-[#05294E] text-slate-900 bg-slate-50/50 transition-all duration-300 disabled:opacity-50 disabled:cursor-not-allowed"
                         />
                       </div>
                     </div>
@@ -804,7 +871,7 @@ const QuickRegistration: React.FC = () => {
                           onChange={handleChange}
                           disabled={isRegistered}
                           placeholder={t('rapidRegistration.form.placeholders.email')}
-                          className="block w-full pl-12 pr-4 py-3.5 border border-slate-200 rounded-2xl focus:ring-2 focus:ring-[#05294E] focus:border-[#05294E] text-slate-900 bg-slate-50/50 transition-all duration-300 disabled:opacity-50 disabled:cursor-not-allowed"
+                          className="block w-full pl-12 pr-4 py-3.5 border border-slate-200 rounded-2xl outline-none focus:outline-none focus:ring-2 focus:ring-[#05294E] focus:border-[#05294E] text-slate-900 bg-slate-50/50 transition-all duration-300 disabled:opacity-50 disabled:cursor-not-allowed"
                         />
                       </div>
                     </div>
@@ -824,7 +891,7 @@ const QuickRegistration: React.FC = () => {
                           onChange={(value) => {
                             setFormData((prev: any) => ({ ...prev, phone: value || '' }));
                           }}
-                          className={`quick-registration-phone w-full px-4 py-3.5 bg-slate-50/50 border border-slate-200 rounded-2xl focus-within:ring-2 focus-within:ring-[#05294E] focus-within:border-[#05294E] text-slate-900 transition-all duration-300 ${isRegistered ? 'opacity-50 cursor-not-allowed' : ''}`}
+                          className={`quick-registration-phone w-full px-4 py-3.5 bg-slate-50/50 border border-slate-200 rounded-2xl outline-none focus-within:outline-none focus-within:ring-2 focus-within:ring-[#05294E] focus-within:border-[#05294E] text-slate-900 transition-all duration-300 ${isRegistered ? 'opacity-50 cursor-not-allowed' : ''}`}
                           placeholder={t('rapidRegistration.form.placeholders.phone')}
                         />
                       </div>
@@ -854,7 +921,7 @@ const QuickRegistration: React.FC = () => {
                             const value = parseInt(e.target.value) || 0;
                             setFormData((prev: any) => ({ ...prev, dependents: value }));
                           }}
-                          className="appearance-none block w-full pl-12 pr-12 py-3.5 border border-slate-200 rounded-2xl focus:ring-2 focus:ring-[#05294E] focus:border-[#05294E] text-slate-900 bg-slate-50/50 transition-all duration-300 text-sm sm:text-base cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed"
+                          className="appearance-none block w-full pl-12 pr-12 py-3.5 border border-slate-200 rounded-2xl outline-none focus:outline-none focus:ring-2 focus:ring-[#05294E] focus:border-[#05294E] text-slate-900 bg-slate-50/50 transition-all duration-300 text-sm sm:text-base cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed"
                         >
                           <option value={0}>{t('rapidRegistration.form.dependentOptions.count', { count: 0 })}</option>
                           <option value={1}>{t('rapidRegistration.form.dependentOptions.count', { count: 1 })}</option>
@@ -884,7 +951,7 @@ const QuickRegistration: React.FC = () => {
                           onChange={handleChange}
                           disabled={isRegistered}
                           placeholder={t('rapidRegistration.form.placeholders.password')}
-                          className="block w-full pl-12 pr-12 py-3.5 border border-slate-200 rounded-2xl focus:ring-2 focus:ring-[#05294E] focus:border-[#05294E] text-slate-900 bg-slate-50/50 transition-all duration-300 disabled:opacity-50 disabled:cursor-not-allowed"
+                          className="block w-full pl-12 pr-12 py-3.5 border border-slate-200 rounded-2xl outline-none focus:outline-none focus:ring-2 focus:ring-[#05294E] focus:border-[#05294E] text-slate-900 bg-slate-50/50 transition-all duration-300 disabled:opacity-50 disabled:cursor-not-allowed"
                         />
                         <button
                           type="button"
@@ -919,7 +986,7 @@ const QuickRegistration: React.FC = () => {
                           onChange={handleChange}
                           disabled={isRegistered}
                           placeholder={t('rapidRegistration.form.placeholders.confirmPassword')}
-                          className="block w-full pl-12 pr-12 py-3.5 border border-slate-200 rounded-2xl focus:ring-2 focus:ring-[#05294E] focus:border-[#05294E] text-slate-900 bg-slate-50/50 transition-all duration-300 disabled:opacity-50 disabled:cursor-not-allowed"
+                          className="block w-full pl-12 pr-12 py-3.5 border border-slate-200 rounded-2xl outline-none focus:outline-none focus:ring-2 focus:ring-[#05294E] focus:border-[#05294E] text-slate-900 bg-slate-50/50 transition-all duration-300 disabled:opacity-50 disabled:cursor-not-allowed"
                         />
                         <button
                           type="button"
@@ -1004,7 +1071,7 @@ const QuickRegistration: React.FC = () => {
                                     }}
                                     placeholder={t('preCheckoutModal.placeholder') || 'Digite o código'}
                                     readOnly={codeApplied}
-                                    className="w-full px-5 py-3.5 bg-slate-50 border border-slate-200 rounded-xl focus:ring-2 focus:ring-[#05294E]/20 focus:border-[#05294E] transition-all text-center font-black text-slate-900 text-lg tracking-[0.2em] placeholder:text-slate-300 disabled:opacity-50"
+                                    className="w-full px-5 py-3.5 bg-slate-50 border border-slate-200 rounded-xl outline-none focus:outline-none focus:ring-2 focus:ring-[#05294E]/20 focus:border-[#05294E] transition-all text-center font-black text-slate-900 text-lg tracking-[0.2em] placeholder:text-slate-300 disabled:opacity-50"
                                   />
                                   {codeApplied && (
                                     <div className="absolute right-3 top-1/2 -translate-y-1/2">
@@ -1016,7 +1083,7 @@ const QuickRegistration: React.FC = () => {
                                 {!codeApplied && (
                                   <button
                                     type="button"
-                                    onClick={validateDiscountCode}
+                                    onClick={() => validateDiscountCode()}
                                     disabled={isValidating || !couponCode.trim()}
                                     className={`px-6 py-3.5 rounded-xl font-black uppercase tracking-widest text-xs transition-all shadow-lg active:scale-95 ${
                                       isValidating || !couponCode.trim()
@@ -1071,7 +1138,7 @@ const QuickRegistration: React.FC = () => {
                                       value={promotionalCoupon}
                                       onChange={(e) => setPromotionalCoupon(e.target.value.toUpperCase())}
                                       placeholder="Digite o código"
-                                      className="w-full px-5 py-3.5 bg-slate-50 border border-slate-200 rounded-xl focus:ring-2 focus:ring-[#05294E]/20 focus:border-[#05294E] transition-all text-center font-black text-slate-900 text-lg tracking-[0.2em] placeholder:text-slate-300"
+                                      className="w-full px-5 py-3.5 bg-slate-50 border border-slate-200 rounded-xl outline-none focus:outline-none focus:ring-2 focus:ring-[#05294E]/20 focus:border-[#05294E] transition-all text-center font-black text-slate-900 text-lg tracking-[0.2em] placeholder:text-slate-300"
                                     />
                                   </div>
                                   <button
@@ -1129,11 +1196,19 @@ const QuickRegistration: React.FC = () => {
                               setFormData((prev: typeof formData) => ({ ...prev, termsAccepted: false }));
                             }
                           }}
-                          className="h-5 w-5 text-[#05294E] border-gray-300 rounded focus:ring-[#05294E] disabled:opacity-50 disabled:cursor-not-allowed"
+                          className="h-5 w-5 text-[#05294E] border-gray-300 rounded focus:ring-[#05294E] disabled:opacity-50 disabled:cursor-not-allowed cursor-pointer"
                         />
                       </div>
                       <div className="flex-1">
-                        <label className={`text-sm text-gray-700 leading-relaxed block font-medium ${formData.termsAccepted ? 'cursor-default' : 'cursor-pointer'}`}>
+                        <label 
+                          htmlFor="termsAccepted"
+                          className={`text-sm text-gray-700 leading-relaxed block font-medium ${formData.termsAccepted ? 'cursor-default' : 'cursor-pointer'}`}
+                          onClick={(e) => {
+                            // Prevent event bubbling if clicking the label, 
+                            // to avoid handleTermsClick being called twice (once by div click, once by input change)
+                            e.stopPropagation();
+                          }}
+                        >
                           <span className="text-[#D0151C] font-bold mr-1">*</span>
                           {t('preCheckoutModal.acceptContractTerms') || 'Eu aceito os termos e condições do contrato de prestação de serviços.'}
                         </label>
@@ -1249,7 +1324,7 @@ const QuickRegistration: React.FC = () => {
                                       setFormData((prev: any) => ({ ...prev, cpf: formatted }));
                                     }}
                                     placeholder={t('rapidRegistration.payment.cpf.placeholder')}
-                                    className="block w-1/2 pl-11 pr-4 py-3 border border-blue-200/50 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none text-sm font-bold text-slate-900 bg-white transition-all duration-300 disabled:opacity-50 disabled:cursor-not-allowed"
+                                    className="block w-1/2 pl-11 pr-4 py-3 border border-blue-200/50 rounded-xl outline-none focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 text-sm font-bold text-slate-900 bg-white transition-all duration-300 disabled:opacity-50 disabled:cursor-not-allowed"
                                   />
                                 </div>
                               </div>
@@ -1296,12 +1371,20 @@ const QuickRegistration: React.FC = () => {
                       <span className="text-4xl font-black text-grey-900 tracking-tighter">
                         {formattedAmount}
                       </span>
+                      {isCouponValid && (
+                        <div className="flex items-center justify-end mt-1">
+                          <span className="bg-emerald-50 text-emerald-600 px-2 py-0.5 rounded-full text-[10px] font-black uppercase tracking-widest border border-emerald-100 flex items-center">
+                            <Ticket className="w-2.5 h-2.5 mr-1" />
+                            {t('rapidRegistration.sidebar.couponApplied')}
+                          </span>
+                        </div>
+                      )}
                     </div>
                   </div>
                   
                   <div className="bg-slate-50 rounded-2xl p-5 border border-slate-100">
                     <p className="text-sm text-slate-600 leading-relaxed font-medium italic">
-                      "{t('rapidRegistration.sidebar.feeExplanation')}"
+                      {t('rapidRegistration.sidebar.feeExplanation')}
                     </p>
                   </div>
                 </div>
@@ -1313,16 +1396,57 @@ const QuickRegistration: React.FC = () => {
                   </h4>
                   
                   <div className="space-y-4">
-                    <div className="flex justify-between items-center">
-                      <span className="text-sm font-bold text-slate-500 uppercase tracking-tight">{t('rapidRegistration.sidebar.enrollmentFee')}</span>
-                      <span className="font-black text-slate-900">$350.00</span>
+                    <div className="flex flex-col">
+                      <div className="flex justify-between items-center relative">
+                        <div className="flex items-center">
+                          <span className="text-sm font-bold text-slate-500 uppercase tracking-tight">{t('rapidRegistration.sidebar.enrollmentFee')}</span>
+                          <div className="ml-2 cursor-help text-blue-500/40 hover:text-blue-600 transition-colors group/icon relative">
+                            <Info className="w-4 h-4" />
+                            <div className="absolute bottom-full left-1/2 -translate-x-1/2 mb-2 w-64 p-4 bg-slate-900 text-white text-[11px] rounded-2xl opacity-0 invisible group-hover/icon:opacity-100 group-hover/icon:visible transition-all duration-300 pointer-events-none z-50 shadow-2xl normal-case font-medium border border-slate-800 leading-relaxed translate-y-2 group-hover/icon:translate-y-0">
+                              {t('rapidRegistration.sidebar.enrollmentFeeTooltip')}
+                              <div className="absolute top-full left-1/2 -translate-x-1/2 border-8 border-transparent border-t-slate-900" />
+                            </div>
+                          </div>
+                        </div>
+                        <span className="font-black text-slate-900">$350.00</span>
+                      </div>
+                      {formData.dependents > 0 && (
+                        <div className="flex justify-between items-center mt-2 pt-2 border-t border-dashed border-slate-100/50 pl-4">
+                          <span className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">
+                            {t('rapidRegistration.sidebar.dependentsFee')} (x{formData.dependents})
+                          </span>
+                          <span className="text-xs font-black text-slate-600">
+                            +{formatFeeAmount(dependentsFeeValue)}
+                          </span>
+                        </div>
+                      )}
                     </div>
-                    <div className="flex justify-between items-center">
-                      <span className="text-sm font-bold text-slate-500 uppercase tracking-tight">{t('rapidRegistration.sidebar.scholarshipFee')}</span>
+
+                    <div className="flex justify-between items-center relative">
+                      <div className="flex items-center">
+                        <span className="text-sm font-bold text-slate-500 uppercase tracking-tight">{t('rapidRegistration.sidebar.scholarshipFee')}</span>
+                        <div className="ml-2 cursor-help text-blue-500/40 hover:text-blue-600 transition-colors group/icon relative">
+                          <Info className="w-4 h-4" />
+                          <div className="absolute bottom-full left-1/2 -translate-x-1/2 mb-2 w-64 p-4 bg-slate-900 text-white text-[11px] rounded-2xl opacity-0 invisible group-hover/icon:opacity-100 group-hover/icon:visible transition-all duration-300 pointer-events-none z-50 shadow-2xl normal-case font-medium border border-slate-800 leading-relaxed translate-y-2 group-hover/icon:translate-y-0">
+                            {t('rapidRegistration.sidebar.scholarshipFeeTooltip')}
+                            <div className="absolute top-full left-1/2 -translate-x-1/2 border-8 border-transparent border-t-slate-900" />
+                          </div>
+                        </div>
+                      </div>
                       <span className="font-black text-slate-900">$900.00</span>
                     </div>
-                    <div className="flex justify-between items-center">
-                      <span className="text-sm font-bold text-slate-500 uppercase tracking-tight">{t('rapidRegistration.sidebar.i20Fee')}</span>
+
+                    <div className="flex justify-between items-center relative">
+                      <div className="flex items-center">
+                        <span className="text-sm font-bold text-slate-500 uppercase tracking-tight">{t('rapidRegistration.sidebar.i20Fee')}</span>
+                        <div className="ml-2 cursor-help text-blue-500/40 hover:text-blue-600 transition-colors group/icon relative">
+                          <Info className="w-4 h-4" />
+                          <div className="absolute bottom-full left-1/2 -translate-x-1/2 mb-2 w-64 p-4 bg-slate-900 text-white text-[11px] rounded-2xl opacity-0 invisible group-hover/icon:opacity-100 group-hover/icon:visible transition-all duration-300 pointer-events-none z-50 shadow-2xl normal-case font-medium border border-slate-800 leading-relaxed translate-y-2 group-hover/icon:translate-y-0">
+                            {t('rapidRegistration.sidebar.i20FeeTooltip')}
+                            <div className="absolute top-full left-1/2 -translate-x-1/2 border-8 border-transparent border-t-slate-900" />
+                          </div>
+                        </div>
+                      </div>
                       <span className="font-black text-slate-900">$900.00</span>
                     </div>
                   </div>
@@ -1331,6 +1455,16 @@ const QuickRegistration: React.FC = () => {
                     * {t('rapidRegistration.sidebar.futureFeesNote')}
                   </p>
                 </div>
+              </div>
+
+              {/* Refund Assurance Note */}
+              <div className="bg-white border border-slate-200 rounded-2xl p-4 flex items-start space-x-3 shadow-xl">
+                <div className="w-8 h-8 rounded-lg bg-slate-50 flex items-center justify-center shrink-0 mt-0.5 border border-slate-100">
+                  <Shield className="w-4 h-4 text-[#05294E]" />
+                </div>
+                <p className="text-[11px] font-bold text-slate-700 leading-relaxed uppercase tracking-wide">
+                  {t('rapidRegistration.sidebar.refundAssurance')}
+                </p>
               </div>
 
               {/* Submit Button */}
@@ -1493,7 +1627,7 @@ const QuickRegistration: React.FC = () => {
                                   <div className="flex items-center justify-between">
                                     <div className="flex items-center text-white">
                                       <CheckCircle2 className="w-6 h-6 mr-2 text-emerald-400" />
-                                      <span className="font-black uppercase tracking-tighter text-xl">Foto capturada!</span>
+                                      <span className="font-black uppercase tracking-tighter text-xl">{t('rapidRegistration.terms.photoCaptured')}</span>
                                     </div>
                                     <button
                                       onClick={() => {
@@ -1502,7 +1636,7 @@ const QuickRegistration: React.FC = () => {
                                       }}
                                       className="px-6 py-2 bg-white/20 hover:bg-white/40 backdrop-blur-md rounded-xl text-white font-black uppercase tracking-widest text-xs transition-all border border-white/20"
                                     >
-                                      Remover/Trocar
+                                      {t('rapidRegistration.terms.removeChange')}
                                     </button>
                                   </div>
                                 </div>
@@ -1525,7 +1659,7 @@ const QuickRegistration: React.FC = () => {
                           }
                         }}
                       >
-                        {termsModalPage === 'selfie' ? 'Voltar para os Termos' : (t('preCheckoutModal.closeTerms') || 'Fechar')}
+                        {termsModalPage === 'selfie' ? t('rapidRegistration.terms.backToTerms') : (t('preCheckoutModal.closeTerms') || t('rapidRegistration.terms.close'))}
                       </button>
                       <button
                         type="button"
@@ -1539,9 +1673,9 @@ const QuickRegistration: React.FC = () => {
                       >
                         {termsModalPage === 'terms' 
                           ? (hasScrolledToBottom 
-                            ? t('preCheckoutModal.confirmReading') || 'Confirmar Leitura' 
-                            : t('preCheckoutModal.scrollToBottomFirst') || 'Leia até o final')
-                          : (t('preCheckoutModal.acceptTerms') || 'Aceitar e Confirmar')
+                            ? t('rapidRegistration.terms.confirmReading') 
+                            : t('rapidRegistration.terms.scrollToBottom'))
+                          : t('rapidRegistration.terms.acceptAndConfirm')
                         }
                       </button>
                     </div>

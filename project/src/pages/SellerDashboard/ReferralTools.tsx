@@ -3,10 +3,9 @@ import { Copy, Check } from 'lucide-react';
 
 interface ReferralToolsProps {
   sellerProfile: any;
-  stats: any;
 }
 
-const ReferralTools: React.FC<ReferralToolsProps> = ({ sellerProfile, stats }) => {
+const ReferralTools: React.FC<ReferralToolsProps> = ({ sellerProfile }) => {
   const [copiedText, setCopiedText] = useState<string | null>(null);
 
   const referralCode = sellerProfile?.referral_code || '';
@@ -78,6 +77,31 @@ const ReferralTools: React.FC<ReferralToolsProps> = ({ sellerProfile, stats }) =
                 title="Copy link"
               >
                 {copiedText === 'url' ? (
+                  <Check className="h-4 w-4 text-green-600" />
+                ) : (
+                  <Copy className="h-4 w-4" />
+                )}
+              </button>
+            </div>
+          </div>
+        </div>
+
+        <div className="bg-white rounded-xl shadow-sm border border-slate-200 p-6">
+          <h3 className="text-lg font-semibold text-slate-900 mb-4">Selection Fee Registration</h3>
+          <div className="bg-slate-50 rounded-lg p-4">
+            <div className="flex items-center space-x-2">
+              <input
+                type="text"
+                value={`${window.location.origin}/selection-fee-registration?ref=${referralCode}`}
+                readOnly
+                className="flex-1 bg-white border border-slate-200 rounded px-3 py-2 text-sm font-mono"
+              />
+              <button
+                onClick={() => copyToClipboard(`${window.location.origin}/selection-fee-registration?ref=${referralCode}`, 'selection')}
+                className="bg-slate-100 hover:bg-slate-200 text-slate-700 px-3 py-2 rounded transition-colors"
+                title="Copy link"
+              >
+                {copiedText === 'selection' ? (
                   <Check className="h-4 w-4 text-green-600" />
                 ) : (
                   <Copy className="h-4 w-4" />

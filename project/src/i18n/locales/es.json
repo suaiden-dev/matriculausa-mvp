@@ -3757,11 +3757,16 @@
       "title": "Resumen de Pago",
       "total": "Total",
       "currentFee": "Total a Pagar Ahora",
-      "feeExplanation": "La Tarifa del Proceso de Selección ($400.00) es el primer pago obligatorio en la plataforma MatriculaUSA. Desbloquea su acceso completo para ver todas las becas e iniciar su proceso de solicitud. Esta tarifa es final y se le reembolsará si no es aceptado en ninguna universidad.",
+      "dependentsFee": "Tarifa de Dependientes",
+      "feeExplanation": "La Tarifa del Proceso de Selección ($400.00) es el primer pago obligatorio en la plataforma MatriculaUSA. Desbloquea su acceso completo para ver todas las becas e iniciar su proceso de solicitud.",
+      "refundAssurance": "Si no es aceptado por ninguna universidad al final del proceso, puede solicitar el reembolso de las tarifas pagadas.",
       "futureFeesTitle": "Tarifas Futuras",
       "enrollmentFee": "Tarifa de Matrícula",
       "scholarshipFee": "Tarifa de Beca",
       "i20Fee": "Tarifa de Control I-20",
+      "enrollmentFeeTooltip": "La Tarifa de Matrícula varía según la universidad y es un pago necesario para procesar formalmente su solicitud después de haber sido aceptado. Este monto confirma su intención de inscribirse y es gestionado directamente por la plataforma.",
+      "scholarshipFeeTooltip": "La Tarifa de Beca se cobra cuando procede con la solicitud de la beca elegida. Esta tarifa cubre los costos de procesamiento de la plataforma.",
+      "i20FeeTooltip": "La Tarifa de Control I-20 es un pago obligatorio y esencial para solicitar la visa de estudiante F-1. Es la tarifa final para la liberación de su carta de aceptación de beca y tiene una ventana de pago de 10 días.",
       "futureFeesNote": "Las tarifas futuras son estimaciones y varían según la universidad."
     },
     "terms": {

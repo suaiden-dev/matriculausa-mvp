@@ -1,4 +1,5 @@
 import React, { useState, useRef, useEffect } from 'react';
+import { useTranslation, Trans } from 'react-i18next';
 import { Upload, DollarSign, CheckCircle, AlertCircle, X, Clock, Loader2, FileUp, Send, Sparkles } from 'lucide-react';
 import { useAuth } from '../hooks/useAuth';
 import { usePaymentBlocked } from '../hooks/usePaymentBlocked';
@@ -33,6 +34,7 @@ export const ZelleCheckout: React.FC<ZelleCheckoutProps> = ({
   metadata = {},
   onProcessingChange
 }) => {
+  const { t } = useTranslation();
   const { user } = useAuth();
   const { isBlocked, pendingPayment: blockedPendingPayment, rejectedPayment: blockedRejectedPayment, approvedPayment: blockedApprovedPayment, loading: paymentBlockedLoading } = usePaymentBlocked();
   
@@ -295,7 +297,7 @@ export const ZelleCheckout: React.FC<ZelleCheckoutProps> = ({
             step: 'rejected',
             paymentStatus: 'rejected',
             zellePaymentId: rejectedPayment.id,
-            rejectionReason: rejectedPayment.admin_notes || 'Payment was rejected by admin',
+            rejectionReason: rejectedPayment.admin_notes || t('zelleComponent.rejected.defaultReason'),
             isProcessing: false
           };
         }
@@ -306,7 +308,7 @@ export const ZelleCheckout: React.FC<ZelleCheckoutProps> = ({
           step: 'rejected',
           paymentStatus: 'rejected',
           zellePaymentId: rejectedPayment.id,
-          rejectionReason: rejectedPayment.admin_notes || 'Payment was rejected by admin',
+          rejectionReason: rejectedPayment.admin_notes || t('zelleComponent.rejected.defaultReason'),
           isProcessing: false
         };
       }
@@ -451,7 +453,7 @@ export const ZelleCheckout: React.FC<ZelleCheckoutProps> = ({
         setStep('rejected');
         setPaymentStatus('rejected');
         setZellePaymentId(blockedRejectedPayment.id);
-        setRejectionReason(blockedRejectedPayment.admin_notes || 'Payment was rejected by admin');
+        setRejectionReason(blockedRejectedPayment.admin_notes || t('zelleComponent.rejected.defaultReason'));
         setIsProcessing(false);
         onProcessingChange?.(false);
         
@@ -459,7 +461,7 @@ export const ZelleCheckout: React.FC<ZelleCheckoutProps> = ({
         stepRef.current = 'rejected';
         paymentStatusRef.current = 'rejected';
         zellePaymentIdRef.current = blockedRejectedPayment.id;
-        rejectionReasonRef.current = blockedRejectedPayment.admin_notes || 'Payment was rejected by admin';
+        rejectionReasonRef.current = blockedRejectedPayment.admin_notes || t('zelleComponent.rejected.defaultReason');
         isProcessingRef.current = false;
       }
     }
@@ -666,7 +668,7 @@ export const ZelleCheckout: React.FC<ZelleCheckoutProps> = ({
             setStep('rejected');
             setPaymentStatus('rejected');
             setZellePaymentId(data.id);
-            setRejectionReason(data.admin_notes || 'Payment was rejected by admin');
+            setRejectionReason(data.admin_notes || t('zelleComponent.rejected.defaultReason'));
             setIsProcessing(false);
             onProcessingChange?.(false);
             
@@ -674,7 +676,7 @@ export const ZelleCheckout: React.FC<ZelleCheckoutProps> = ({
             stepRef.current = 'rejected';
             paymentStatusRef.current = 'rejected';
             zellePaymentIdRef.current = data.id;
-            rejectionReasonRef.current = data.admin_notes || 'Payment was rejected by admin';
+            rejectionReasonRef.current = data.admin_notes || t('zelleComponent.rejected.defaultReason');
             isProcessingRef.current = false;
             
             // Forçar atualização do hook na próxima verificação
@@ -724,7 +726,7 @@ export const ZelleCheckout: React.FC<ZelleCheckoutProps> = ({
             setStep('rejected');
             setPaymentStatus('rejected');
             setZellePaymentId(data.id);
-            setRejectionReason(data.admin_notes || 'Payment was rejected by admin');
+            setRejectionReason(data.admin_notes || t('zelleComponent.rejected.defaultReason'));
             setIsProcessing(false);
             onProcessingChange?.(false);
             
@@ -732,7 +734,7 @@ export const ZelleCheckout: React.FC<ZelleCheckoutProps> = ({
             stepRef.current = 'rejected';
             paymentStatusRef.current = 'rejected';
             zellePaymentIdRef.current = data.id;
-            rejectionReasonRef.current = data.admin_notes || 'Payment was rejected by admin';
+            rejectionReasonRef.current = data.admin_notes || t('zelleComponent.rejected.defaultReason');
             isProcessingRef.current = false;
             
             // Forçar atualização do hook na próxima verificação
@@ -792,14 +794,14 @@ export const ZelleCheckout: React.FC<ZelleCheckoutProps> = ({
           console.log(`🚫 [ZelleCheckout] Rejeição detectada no polling para ${feeType}, atualizando estado`);
           setStep('rejected');
           setPaymentStatus('rejected');
-          setRejectionReason(paymentData.admin_notes || 'Payment was rejected by admin');
+          setRejectionReason(paymentData.admin_notes || t('zelleComponent.rejected.defaultReason'));
           setIsProcessing(false);
           onProcessingChange?.(false);
           
           // Atualizar refs
           stepRef.current = 'rejected';
           paymentStatusRef.current = 'rejected';
-          rejectionReasonRef.current = paymentData.admin_notes || 'Payment was rejected by admin';
+          rejectionReasonRef.current = paymentData.admin_notes || t('zelleComponent.rejected.defaultReason');
           isProcessingRef.current = false;
           
           // Forçar atualização do hook na próxima verificação
@@ -852,12 +854,12 @@ export const ZelleCheckout: React.FC<ZelleCheckoutProps> = ({
     const file = event.target.files?.[0];
     if (file) {
       if (file.size > 5 * 1024 * 1024) { // 5MB limit
-        setError('File size must be less than 5MB');
+        setError(t('zelleComponent.errors.fileSize'));
         return;
       }
       
       if (!file.type.startsWith('image/')) {
-        setError('Please select an image file (JPG, PNG, etc.)');
+        setError(t('zelleComponent.errors.fileType'));
         return;
       }
       
@@ -875,7 +877,7 @@ export const ZelleCheckout: React.FC<ZelleCheckoutProps> = ({
 
   const validatePaymentDetails = () => {
     if (!comprovanteFile) {
-      setError('Please upload a screenshot of your payment confirmation');
+      setError(t('zelleComponent.errors.uploadRequired'));
       return false;
     }
     return true;
@@ -926,7 +928,7 @@ export const ZelleCheckout: React.FC<ZelleCheckoutProps> = ({
       return publicUrl;
     } catch (error) {
       console.error('Error uploading comprovante:', error);
-      throw new Error('Failed to upload payment confirmation');
+      throw new Error(t('zelleComponent.errors.uploadFailed'));
     }
   };
 
@@ -994,7 +996,7 @@ export const ZelleCheckout: React.FC<ZelleCheckoutProps> = ({
     // BLOQUEIO: Não permitir submit se há pagamento pendente
     if (isBlocked && blockedPendingPayment) {
       console.log('🚫 [ZelleCheckout] Tentativa de submit bloqueada - há pagamento pendente');
-      setError('You already have a payment being processed. Please wait for it to be reviewed.');
+      setError(t('zelleComponent.errors.alreadyPending'));
       return;
     }
 
@@ -1010,7 +1012,7 @@ export const ZelleCheckout: React.FC<ZelleCheckoutProps> = ({
       // Upload comprovante
       const comprovanteUrl = await uploadComprovante();
       if (!comprovanteUrl) {
-        throw new Error('Failed to upload payment confirmation');
+        throw new Error(t('zelleComponent.errors.uploadFailed'));
       }
       
       // Atualizar modal para etapa de envio
@@ -1196,7 +1198,7 @@ export const ZelleCheckout: React.FC<ZelleCheckoutProps> = ({
       
     } catch (error: any) {
       setShowUploadModal(false);
-      setError(error.message || 'An error occurred while processing your payment');
+      setError(error.message || t('zelleComponent.errors.uploadFailed'));
       onError?.(error.message);
       setLoading(false);
     }
@@ -1212,8 +1214,8 @@ export const ZelleCheckout: React.FC<ZelleCheckoutProps> = ({
         case 'uploading':
           return {
             icon: FileUp,
-            title: 'Uploading Document...',
-            message: 'Please wait while we upload your payment confirmation',
+            title: t('zelleComponent.uploadModal.uploadingTitle'),
+            message: t('zelleComponent.uploadModal.uploadingMessage'),
             bgGradient: 'from-blue-50/50 to-blue-100/30',
             borderColor: 'border-blue-200',
             iconGradient: 'from-blue-500 to-blue-600',
@@ -1225,8 +1227,8 @@ export const ZelleCheckout: React.FC<ZelleCheckoutProps> = ({
         case 'sending':
           return {
             icon: Send,
-            title: 'Sending for Verification...',
-            message: 'Your payment proof is being sent for automatic validation',
+            title: t('zelleComponent.uploadModal.sendingTitle'),
+            message: t('zelleComponent.uploadModal.sendingMessage'),
             bgGradient: 'from-indigo-50/50 to-indigo-100/30',
             borderColor: 'border-indigo-200',
             iconGradient: 'from-indigo-500 to-indigo-600',
@@ -1238,8 +1240,8 @@ export const ZelleCheckout: React.FC<ZelleCheckoutProps> = ({
         case 'analyzing':
           return {
             icon: Sparkles,
-            title: 'Analyzing Payment...',
-            message: 'Our AI is validating your payment confirmation',
+            title: t('zelleComponent.uploadModal.analyzingTitle'),
+            message: t('zelleComponent.uploadModal.analyzingMessage'),
             bgGradient: 'from-purple-50/50 to-purple-100/30',
             borderColor: 'border-purple-200',
             iconGradient: 'from-purple-500 to-purple-600',
@@ -1251,8 +1253,8 @@ export const ZelleCheckout: React.FC<ZelleCheckoutProps> = ({
         default:
           return {
             icon: Loader2,
-            title: 'Processing...',
-            message: 'Please wait',
+            title: t('zelleComponent.instructions.processing'),
+            message: t('zelleComponent.uploadModal.uploadingMessage'),
             bgGradient: 'from-blue-50/50 to-blue-100/30',
             borderColor: 'border-blue-200',
             iconGradient: 'from-blue-500 to-blue-600',
@@ -1334,10 +1336,10 @@ export const ZelleCheckout: React.FC<ZelleCheckoutProps> = ({
             </div>
           </div>
           <h3 className="text-xl sm:text-2xl font-bold text-blue-900 mb-3">
-            Analyzing Payment...
+            {t('zelleComponent.analyzing.title')}
           </h3>
           <p className="text-sm sm:text-base text-blue-700 mb-4">
-            Your payment confirmation is being automatically validated by our AI system.
+            {t('zelleComponent.analyzing.subtitle')}
           </p>
 
           {isLocalhost && (
@@ -1370,10 +1372,10 @@ export const ZelleCheckout: React.FC<ZelleCheckoutProps> = ({
               </div>
             </div>
             <h3 className="text-xl sm:text-2xl font-bold text-amber-900 mb-3">
-              Payment Under Review
+              {t('zelleComponent.underReview.title')}
           </h3>
             <p className="text-sm sm:text-base text-amber-800 mb-4 leading-relaxed">
-            Your payment proof requires additional verification. Our team will review it within 48 hours.
+            {t('zelleComponent.underReview.subtitle')}
           </p>
             <div className="flex justify-center space-x-2 mt-4">
               <div className="w-2 h-2 bg-amber-500 rounded-full animate-bounce" style={{ animationDelay: '0s' }}></div>
@@ -1385,42 +1387,42 @@ export const ZelleCheckout: React.FC<ZelleCheckoutProps> = ({
 
         {/* Payment Details */}
         <div className="bg-white rounded-lg p-3 sm:p-4 mb-4">
-          <h4 className="font-semibold text-gray-800 mb-3 text-sm sm:text-base">Payment Details:</h4>
+          <h4 className="font-semibold text-gray-800 mb-3 text-sm sm:text-base">{t('zelleComponent.success.detailsTitle')}</h4>
           <div className="space-y-2 text-xs sm:text-sm text-gray-600">
             {metadata?.discount_applied && metadata?.original_amount ? (
               <div className="space-y-1">
                 <div className="flex justify-between">
-                  <span>Original Amount:</span>
+                  <span>{t('zelleComponent.success.originalAmount')}</span>
                   <span className="font-medium">${metadata.original_amount.toFixed(2)} USD</span>
                 </div>
                 <div className="flex justify-between text-green-600">
-                  <span>Discount Applied:</span>
+                  <span>{t('zelleComponent.success.discountApplied')}</span>
                   <span className="font-medium">-$50.00 USD</span>
                 </div>
                 <div className="flex justify-between pt-2 border-t border-gray-200">
-                  <span className="font-semibold">Final Amount:</span>
+                  <span className="font-semibold">{t('zelleComponent.success.finalAmount')}</span>
                   <span className="font-bold text-green-700">${amount.toFixed(2)} USD</span>
                 </div>
               </div>
             ) : (
               <div className="flex justify-between">
-                <span className="font-semibold">Amount:</span>
+                <span className="font-semibold">{t('zelleComponent.success.amount')}</span>
                 <span className="font-bold text-gray-900">${amount.toFixed(2)} USD</span>
               </div>
             )}
             <div className="flex justify-between pt-2 border-t border-gray-200">
-              <span>Fee Type:</span>
+              <span>{t('zelleComponent.success.feeType')}</span>
               <span className="font-medium">{feeType.replace('_', ' ')}</span>
             </div>
             {(zellePaymentId || blockedPendingPayment?.id) && (
               <div className="flex justify-between pt-2 border-t border-gray-200">
-                <span>Payment ID:</span>
+                <span>{t('zelleComponent.success.paymentId')}</span>
                 <span className="font-mono text-xs">{zellePaymentId || blockedPendingPayment?.id}</span>
               </div>
             )}
             {blockedPendingPayment?.created_at && (
               <div className="flex justify-between pt-2 border-t border-gray-200">
-                <span>Submitted:</span>
+                <span>{t('zelleComponent.success.submitted')}</span>
                 <span className="font-medium">{new Date(blockedPendingPayment.created_at).toLocaleString()}</span>
               </div>
             )}
@@ -1435,10 +1437,10 @@ export const ZelleCheckout: React.FC<ZelleCheckoutProps> = ({
             </div>
             <div>
               <p className="text-xs sm:text-sm text-blue-800 font-medium mb-1">
-                Payment Under Review
+                {t('zelleComponent.underReview.title')}
               </p>
               <p className="text-xs sm:text-sm text-blue-700">
-                You will be notified once the review is complete. Please do not submit another payment.
+                {t('zelleComponent.underReview.notification')}
               </p>
             </div>
           </div>
@@ -1465,10 +1467,10 @@ export const ZelleCheckout: React.FC<ZelleCheckoutProps> = ({
         <div className="text-center mb-4 sm:mb-6">
           <AlertCircle className="w-16 h-16 sm:w-20 sm:h-20 text-red-500 mx-auto mb-4" />
           <h3 className="text-lg sm:text-xl font-bold text-red-800 mb-2">
-            Payment Rejected
+            {t('zelleComponent.rejected.title')}
           </h3>
           <p className="text-sm sm:text-base text-red-700 mb-4">
-            Your payment proof was not approved. Please review the reason below and upload a new payment confirmation.
+            {t('zelleComponent.rejected.subtitle')}
           </p>
         </div>
 
@@ -1478,7 +1480,7 @@ export const ZelleCheckout: React.FC<ZelleCheckoutProps> = ({
             <div className="flex items-start gap-3">
               <AlertCircle className="w-5 h-5 sm:w-6 sm:h-6 text-red-500 flex-shrink-0 mt-0.5" />
               <div className="flex-1">
-                <h4 className="font-bold text-gray-900 mb-2 text-sm sm:text-base">Rejection Reason:</h4>
+                <h4 className="font-bold text-gray-900 mb-2 text-sm sm:text-base">{t('zelleComponent.rejected.reasonTitle')}</h4>
                 <p className="text-sm sm:text-base text-gray-800 bg-red-50 p-3 rounded-lg border border-red-200 font-medium">
                   {rejectionReason}
                 </p>
@@ -1488,43 +1490,43 @@ export const ZelleCheckout: React.FC<ZelleCheckoutProps> = ({
         ) : (
           <div className="bg-white rounded-lg border-2 border-red-300 p-4 sm:p-5 mb-4">
             <p className="text-sm sm:text-base text-gray-700">
-              Payment was rejected by admin. Please upload a new payment confirmation.
+              {t('zelleComponent.rejected.defaultReason')}
             </p>
           </div>
         )}
 
         {/* Payment Details */}
         <div className="bg-white rounded-lg border border-gray-200 p-3 sm:p-4 mb-4">
-          <h4 className="font-semibold text-gray-800 mb-3 text-sm sm:text-base">Payment Details:</h4>
+          <h4 className="font-semibold text-gray-800 mb-3 text-sm sm:text-base">{t('zelleComponent.success.detailsTitle')}</h4>
           <div className="space-y-2 text-xs sm:text-sm text-gray-600">
             {metadata?.discount_applied && metadata?.original_amount ? (
               <div className="space-y-1">
                 <div className="flex justify-between">
-                  <span>Original Amount:</span>
+                  <span>{t('zelleComponent.success.originalAmount')}</span>
                   <span className="font-medium">${metadata.original_amount.toFixed(2)} USD</span>
                 </div>
                 <div className="flex justify-between text-green-600">
-                  <span>Discount Applied:</span>
+                  <span>{t('zelleComponent.success.discountApplied')}</span>
                   <span className="font-medium">-$50.00 USD</span>
                 </div>
                 <div className="flex justify-between pt-2 border-t border-gray-200">
-                  <span className="font-semibold">Final Amount:</span>
+                  <span className="font-semibold">{t('zelleComponent.success.finalAmount')}</span>
                   <span className="font-bold text-green-700">${amount.toFixed(2)} USD</span>
                 </div>
               </div>
             ) : (
               <div className="flex justify-between">
-                <span className="font-semibold">Amount:</span>
+                <span className="font-semibold">{t('zelleComponent.success.amount')}</span>
                 <span className="font-bold text-gray-900">${amount.toFixed(2)} USD</span>
               </div>
             )}
             <div className="flex justify-between pt-2 border-t border-gray-200">
-              <span>Fee Type:</span>
+              <span>{t('zelleComponent.success.feeType')}</span>
               <span className="font-medium">{feeType.replace('_', ' ')}</span>
             </div>
             {zellePaymentId && (
               <div className="flex justify-between pt-2 border-t border-gray-200">
-                <span>Payment ID:</span>
+                <span>{t('zelleComponent.success.paymentId')}</span>
                 <span className="font-mono text-xs">{zellePaymentId}</span>
               </div>
             )}
@@ -1559,10 +1561,10 @@ export const ZelleCheckout: React.FC<ZelleCheckoutProps> = ({
             }}
             className="w-full bg-red-600 text-white py-3 sm:py-4 px-6 rounded-lg hover:bg-red-700 transition-colors font-semibold text-base sm:text-lg shadow-lg hover:shadow-xl transform hover:-translate-y-0.5"
           >
-            Upload New Payment Proof
+            {t('zelleComponent.rejected.uploadNew')}
           </button>
           <p className="text-xs sm:text-sm text-center text-gray-600">
-            Click the button above to upload a new payment confirmation screenshot
+            {t('zelleComponent.rejected.uploadNewNote')}
           </p>
 
           {isLocalhost && (
@@ -1586,37 +1588,36 @@ export const ZelleCheckout: React.FC<ZelleCheckoutProps> = ({
       <div className={`bg-green-50 border border-green-200 rounded-lg p-4 sm:p-6 text-center ${className}`}>
         <CheckCircle className="w-16 h-16 text-green-500 mx-auto mb-4" />
         <h3 className="text-lg sm:text-xl font-semibold text-green-800 mb-2">
-          Payment Approved Successfully!
+          {t('zelleComponent.success.title')}
         </h3>
         <p className="text-sm sm:text-base text-green-700 mb-4">
-          Your Zelle payment has been processed and approved. 
-          You can now proceed with the next steps.
+          {t('zelleComponent.success.subtitle')}
         </p>
         <div className="bg-white rounded-lg p-3 sm:p-4 mb-4 text-left">
-          <h4 className="font-semibold text-gray-800 mb-2 text-sm sm:text-base">Payment Details:</h4>
+          <h4 className="font-semibold text-gray-800 mb-2 text-sm sm:text-base">{t('zelleComponent.success.detailsTitle')}</h4>
           <div className="space-y-1 text-xs sm:text-sm text-gray-600">
             {metadata?.discount_applied && metadata?.original_amount ? (
               <div className="space-y-1">
-                <div><strong>Original Amount:</strong> ${metadata.original_amount.toFixed(2)} USD</div>
-                <div><strong>Discount Applied:</strong> -$50.00 USD</div>
-                <div><strong>Final Amount:</strong> <span className="font-bold text-green-700">${amount.toFixed(2)} USD</span></div>
-                <div className="text-green-600 font-medium">🎉 You saved $50.00!</div>
+                <div><strong>{t('zelleComponent.success.originalAmount')}</strong> ${metadata.original_amount.toFixed(2)} USD</div>
+                <div><strong>{t('zelleComponent.success.discountApplied')}</strong> -$50.00 USD</div>
+                <div><strong>{t('zelleComponent.success.finalAmount')}</strong> <span className="font-bold text-green-700">${amount.toFixed(2)} USD</span></div>
+                <div className="text-green-600 font-medium">🎉 {t('zelleComponent.success.youSavedSuccess')}</div>
               </div>
             ) : (
-              <div><strong>Amount:</strong> ${amount.toFixed(2)} USD</div>
+              <div><strong>{t('zelleComponent.success.amount')}</strong> ${amount.toFixed(2)} USD</div>
             )}
-            <div><strong>Fee Type:</strong> {feeType.replace('_', ' ')}</div>
+            <div><strong>{t('zelleComponent.success.feeType')}</strong> {feeType.replace('_', ' ')}</div>
             {zellePaymentId && (
-              <div><strong>Payment ID:</strong> {zellePaymentId}</div>
+              <div><strong>{t('zelleComponent.success.paymentId')}</strong> {zellePaymentId}</div>
             )}
           </div>
         </div>
         <div className="bg-blue-50 border border-blue-200 rounded-lg p-3 sm:p-4 mb-4">
-          <h4 className="font-semibold text-blue-800 mb-2 text-sm sm:text-base">What happens next?</h4>
+          <h4 className="font-semibold text-blue-800 mb-2 text-sm sm:text-base">{t('zelleComponent.success.nextStepsTitle')}</h4>
           <div className="text-xs sm:text-sm text-blue-700 space-y-1">
-            <div>✅ Payment confirmation uploaded</div>
-            <div>✅ Payment approved successfully</div>
-            <div>🚀 Proceeding to next step automatically</div>
+            <div>✅ {t('zelleComponent.success.stepUploaded')}</div>
+            <div>✅ {t('zelleComponent.success.stepApproved')}</div>
+            <div>🚀 {t('zelleComponent.success.stepProceeding')}</div>
           </div>
         </div>
       </div>
@@ -1628,7 +1629,7 @@ export const ZelleCheckout: React.FC<ZelleCheckoutProps> = ({
     return (
       <div className={`bg-white border border-gray-200 rounded-lg p-4 sm:p-6 text-center ${className}`}>
         <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600 mx-auto mb-4"></div>
-        <p className="text-sm text-gray-600">Checking payment status...</p>
+        <p className="text-sm text-gray-600">{t('zelleComponent.errors.checkingStatus')}</p>
       </div>
     );
   }
@@ -1645,10 +1646,10 @@ export const ZelleCheckout: React.FC<ZelleCheckoutProps> = ({
         <div className="space-y-4 sm:space-y-6">
           <div>
             <h3 className="text-lg sm:text-xl font-semibold text-gray-900 mb-1 sm:mb-2">
-              Zelle Payment Instructions
+              {t('zelleComponent.instructions.title')}
             </h3>
             <p className="text-sm sm:text-base text-gray-600">
-              Follow these steps to complete your payment via Zelle
+              {t('zelleComponent.instructions.subtitle')}
             </p>
           </div>
 
@@ -1659,8 +1660,8 @@ export const ZelleCheckout: React.FC<ZelleCheckoutProps> = ({
                 <DollarSign className="w-4 h-4 sm:w-5 sm:h-5 text-gray-600" />
               </div>
               <div className="min-w-0 flex-1">
-                <h2 className="text-base sm:text-lg font-semibold text-gray-900">Zelle Payment Details</h2>
-                <p className="text-xs sm:text-sm text-gray-600">Send payment to the recipient below</p>
+                <h2 className="text-base sm:text-lg font-semibold text-gray-900">{t('zelleComponent.instructions.detailsTitle')}</h2>
+                <p className="text-xs sm:text-sm text-gray-600">{t('zelleComponent.instructions.detailsSubtitle')}</p>
               </div>
             </div>
 
@@ -1668,7 +1669,7 @@ export const ZelleCheckout: React.FC<ZelleCheckoutProps> = ({
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 sm:gap-4">
                 <div>
                   <label className="block text-xs sm:text-sm font-medium text-gray-700 mb-1">
-                    Recipient Email
+                    {t('zelleComponent.instructions.recipientEmail')}
                   </label>
                   <div className="bg-gray-50 border border-gray-200 rounded-lg p-2 sm:p-3">
                     <code className="text-xs sm:text-sm font-mono text-gray-900 break-all">pay@matriculausa.com</code>
@@ -1677,7 +1678,7 @@ export const ZelleCheckout: React.FC<ZelleCheckoutProps> = ({
                 
                 <div>
                   <label className="block text-xs sm:text-sm font-medium text-gray-700 mb-1">
-                    Payment Amount
+                    {t('zelleComponent.instructions.paymentAmount')}
                   </label>
                   <div className="bg-gray-50 border border-gray-200 rounded-lg p-2 sm:p-3">
                     {metadata?.discount_applied && metadata?.original_amount ? (
@@ -1685,7 +1686,7 @@ export const ZelleCheckout: React.FC<ZelleCheckoutProps> = ({
                         <div className="text-xs text-gray-500 line-through">${metadata.original_amount.toFixed(2)} USD</div>
                         <div className="text-base sm:text-lg font-bold text-gray-900">${amount.toFixed(2)} USD</div>
                         <div className="text-xs text-green-600 font-medium">
-                          🎉 You saved ${(metadata.original_amount - amount).toFixed(2)}!
+                          🎉 {t('zelleComponent.instructions.youSaved', { amount: `$${(metadata.original_amount - amount).toFixed(2)}` })}
                         </div>
                       </div>
                     ) : (
@@ -1701,9 +1702,13 @@ export const ZelleCheckout: React.FC<ZelleCheckoutProps> = ({
                     <span className="text-gray-600 text-xs font-bold">!</span>
                   </div>
                   <div className="min-w-0 flex-1">
-                    <p className="text-xs sm:text-sm text-gray-800 font-medium mb-1">Important</p>
+                    <p className="text-xs sm:text-sm text-gray-800 font-medium mb-1">{t('zelleComponent.instructions.important')}</p>
                     <p className="text-xs sm:text-sm text-gray-700">
-                      Make sure to send the exact amount of <strong>${amount.toFixed(2)} USD</strong> to <strong className="break-all">pay@matriculausa.com</strong> via Zelle. Any discrepancy will delay your payment processing.
+                      <Trans 
+                        i18nKey="zelleComponent.instructions.importantNote"
+                        values={{ amount: `$${amount.toFixed(2)} USD`, email: 'pay@matriculausa.com' }}
+                        components={{ strong: <strong className="break-all" /> }}
+                      />
                     </p>
                   </div>
                 </div>
@@ -1715,7 +1720,7 @@ export const ZelleCheckout: React.FC<ZelleCheckoutProps> = ({
           <div className="bg-gray-50 border border-gray-200 rounded-lg p-3 sm:p-4">
             <h4 className="font-medium text-sm sm:text-base text-gray-900 mb-2 sm:mb-3 flex items-center">
               <Upload className="w-4 h-4 sm:w-5 sm:h-5 mr-2 text-gray-600 flex-shrink-0" />
-              <span>Upload Payment Confirmation Screenshot *</span>
+              <span>{t('zelleComponent.instructions.uploadTitle')}</span>
             </h4>
             
             {error && (
@@ -1744,14 +1749,14 @@ export const ZelleCheckout: React.FC<ZelleCheckoutProps> = ({
                       }}
                       className="text-red-600 hover:text-red-700 text-xs sm:text-sm font-medium"
                     >
-                      Remove
+                      {t('zelleComponent.instructions.remove')}
                     </button>
                     <span className="text-gray-500 hidden sm:inline">|</span>
                     <button
                       onClick={() => fileInputRef.current?.click()}
                       className="text-blue-600 hover:text-blue-700 text-xs sm:text-sm font-medium"
                     >
-                      Change File
+                      {t('zelleComponent.instructions.changeFile')}
                     </button>
                   </div>
                 </div>
@@ -1759,16 +1764,16 @@ export const ZelleCheckout: React.FC<ZelleCheckoutProps> = ({
                 <div>
                   <Upload className="w-10 h-10 sm:w-12 sm:h-12 text-gray-400 mx-auto mb-3 sm:mb-4" />
                   <p className="text-sm sm:text-base text-gray-600 mb-1 sm:mb-2">
-                    Click to upload or drag and drop
+                    {t('zelleComponent.instructions.clickToUpload')}
                   </p>
                   <p className="text-xs sm:text-sm text-gray-500 mb-3 sm:mb-0">
-                    PNG, JPG up to 5MB
+                    {t('zelleComponent.instructions.fileFormats')}
                   </p>
                   <button
                     onClick={() => fileInputRef.current?.click()}
                     className="mt-2 sm:mt-4 bg-blue-600 text-white px-4 py-2 text-sm sm:text-base rounded-lg hover:bg-blue-700 transition-colors"
                   >
-                    Select File
+                    {t('zelleComponent.instructions.selectFile')}
                   </button>
                 </div>
               )}
@@ -1787,7 +1792,7 @@ export const ZelleCheckout: React.FC<ZelleCheckoutProps> = ({
             disabled={loading || !comprovanteFile || (isBlocked && blockedPendingPayment)}
             className="w-full bg-blue-600 text-white py-2.5 sm:py-3 px-4 rounded-lg hover:bg-blue-700 transition-colors font-medium text-sm sm:text-base disabled:opacity-50 disabled:cursor-not-allowed"
           >
-            {loading ? 'Processing...' : (isBlocked && blockedPendingPayment) ? 'Payment Processing...' : 'Submit Payment'}
+            {loading ? t('zelleComponent.instructions.processing') : (isBlocked && blockedPendingPayment) ? t('zelleComponent.instructions.paymentProcessing') : t('zelleComponent.instructions.submitPayment')}
           </button>
 
           {isLocalhost && (
