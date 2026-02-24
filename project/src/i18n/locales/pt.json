@@ -1555,6 +1555,7 @@
       "invalidPhone": "Por favor, digite um número de telefone válido com código do país",
       "mustAnswerReferralCode": "Por favor, responda se você tem um código de referência para continuar",
       "preCheckoutModal": {
+        "noTermsFound": "Nenhum termo encontrado",
         "securePayment": "Pagamento Seguro",
         "closeModal": "Fechar modal",
         "closeTerms": "Fechar termos",
@@ -4101,13 +4102,21 @@
       "email": "E-mail",
       "phone": "Telefone",
       "dependents": "Número de Dependentes",
+      "dependentsSubtitle": "Membros da família (cônjuge e/ou filhos)",
+      "dependentOptions": {
+        "count_zero": "0 Dependentes",
+        "count_one": "1 Dependente",
+        "count_other": "{{count}} Dependentes"
+      },
+      "termsAcceptedBadge": "Termos Visualizados e Aceitos",
       "password": "Senha",
       "terms": "Eu aceito os Termos e Condições",
       "submit": "Confirmar Registro",
       "confirmPassword": "Confirmar Senha",
       "error": {
         "passwordsNotMatch": "As senhas não coincidem",
-        "terms": "Você deve aceitar os termos"
+        "terms": "Você deve aceitar os termos",
+        "general": "Ocorreu um erro no registro. Tente novamente."
       },
       "placeholders": {
         "fullName": "Digite seu nome completo",
@@ -4120,14 +4129,49 @@
     },
     "sidebar": {
       "title": "Resumo do Pagamento",
+      "total": "Total",
       "currentFee": "Total a Pagar Agora",
       "feeExplanation": "A Taxa de Processo de Seleção (US$400.00) é o primeiro pagamento obrigatório na plataforma MatriculaUSA. Ela desbloqueia seu acesso completo para visualizar todas as bolsas e iniciar seu processo de candidatura. Esta taxa é final e você será reembolsado caso não seja aceito em nenhuma universidade.",
       "futureFeesTitle": "Taxas Futuras",
       "enrollmentFee": "Taxa de Matrícula",
       "scholarshipFee": "Taxa da Bolsa",
       "i20Fee": "Taxa de Controle I-20",
-      "futureFeesNote": "As taxas futuras são estimativas e variam por universidade.",
-      "approximateValue": "Valor Aproximado"
+      "futureFeesNote": "As taxas futuras são estimativas e variam por universidade."
+    },
+    "terms": {
+      "contractSubtitle": "Contrato de Prestação de Serviços"
+    },
+    "zelle": {
+      "title": "Pagamento com Zelle",
+      "subtitle": "Siga as instruções abaixo para concluir seu pagamento.",
+      "back": "Voltar"
+    },
+    "payment": {
+      "selectMethod": "Selecione o Método de Pagamento",
+      "methods": {
+        "stripe": "Cartão de Crédito",
+        "pix": "PIX",
+        "zelle": "Zelle",
+        "parcelow": "Parcelow"
+      },
+      "notes": {
+        "processingFees": "* Podem incluir taxas de processamento",
+        "parcelowFees": "* Podem incluir taxas de operadora e processamento da plataforma",
+        "zelleTime": "Processamento pode levar até 48 horas"
+      },
+      "payWith": "Pagar com {{method}}",
+      "securePayment": "Pagar de Forma Segura",
+      "cpf": {
+        "label": "Informe seu CPF (Obrigatório para Parcelow)",
+        "placeholder": "000.000.000-00",
+        "error": "CPF é obrigatório para pagamento via Parcelow."
+      },
+      "installment": "Até 12x no cartão",
+      "error": {
+        "invalidMethod": "Método de pagamento inválido.",
+        "notAuthenticated": "Usuário não autenticado.",
+        "generationFailed": "Falha ao gerar link de pagamento. Tente novamente."
+      }
     }
   }
 }

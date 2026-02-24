@@ -1564,6 +1564,7 @@
       "invalidEmail": "Please enter a valid email address.",
       "signupDisabled": "New registrations are currently disabled. Please contact support.",
       "preCheckoutModal": {
+        "noTermsFound": "No terms found",
         "securePayment": "Secure Payment",
         "closeModal": "Close modal",
         "closeTerms": "Close terms",
@@ -4037,13 +4038,21 @@
       "email": "E-mail",
       "phone": "Phone",
       "dependents": "Number of Dependents",
+      "dependentsSubtitle": "Family members (spouse and/or children)",
+      "dependentOptions": {
+        "count_zero": "0 Dependents",
+        "count_one": "1 Dependent",
+        "count_other": "{{count}} Dependents"
+      },
+      "termsAcceptedBadge": "Terms Viewed and Accepted",
       "password": "Password",
       "terms": "I accept the Terms and Conditions",
       "submit": "Confirm Registration",
       "confirmPassword": "Confirm Password",
       "error": {
         "passwordsNotMatch": "Passwords do not match",
-        "terms": "You must accept the terms"
+        "terms": "You must accept the terms",
+        "general": "A registration error occurred. Please try again."
       },
       "placeholders": {
         "fullName": "Enter your full name",
@@ -4056,14 +4065,49 @@
     },
     "sidebar": {
       "title": "Payment Summary",
+      "total": "Total",
       "currentFee": "Total to Pay Now",
       "feeExplanation": "The Selection Process Fee ($400.00) is the first mandatory payment on the MatriculaUSA platform. It unlocks your full access to view all scholarships and start your application process. This fee is final and you will be refunded if not accepted to any university.",
       "futureFeesTitle": "Future Fees",
       "enrollmentFee": "Enrollment Fee",
       "scholarshipFee": "Scholarship Fee",
       "i20Fee": "I-20 Control Fee",
-      "futureFeesNote": "Future fees are estimates and vary by university.",
-      "approximateValue": "Approximate Value"
+      "futureFeesNote": "Future fees are estimates and vary by university."
+    },
+    "terms": {
+      "contractSubtitle": "Service Provision Agreement"
+    },
+    "zelle": {
+      "title": "Payment with Zelle",
+      "subtitle": "Follow the instructions below to complete your payment.",
+      "back": "Back"
+    },
+    "payment": {
+      "selectMethod": "Select Payment Method",
+      "methods": {
+        "stripe": "Credit Card",
+        "pix": "PIX",
+        "zelle": "Zelle",
+        "parcelow": "Parcelow"
+      },
+      "notes": {
+        "processingFees": "* May include processing fees",
+        "parcelowFees": "* May include carrier and platform processing fees",
+        "zelleTime": "Processing can take up to 48 hours"
+      },
+      "payWith": "Pay with {{method}}",
+      "securePayment": "Secure Payment",
+      "cpf": {
+        "label": "Enter your CPF (Required for Parcelow)",
+        "placeholder": "000.000.000-00",
+        "error": "CPF is required for Parcelow payment."
+      },
+      "installment": "Up to 12 installments",
+      "error": {
+        "invalidMethod": "Invalid payment method.",
+        "notAuthenticated": "User not authenticated.",
+        "generationFailed": "Failed to generate payment link. Please try again."
+      }
     }
   }
 }

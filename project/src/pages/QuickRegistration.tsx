@@ -5,12 +5,10 @@ import { useAuth } from '../hooks/useAuth';
 import { useFeeConfig } from '../hooks/useFeeConfig';
 import { supabase } from '../lib/supabase';
 import { 
-  CreditCard, 
   Mail, 
   User, 
   Users, 
   Lock, 
-  ShieldCheck, 
   AlertCircle,
   HelpCircle,
   Loader2,
@@ -18,10 +16,12 @@ import {
   ChevronDown,
   Shield,
   Scroll,
-  CheckCircle,
   X,
+  ArrowLeft,
   Eye,
-  EyeOff
+  EyeOff,
+  Ticket,
+  CheckCircle
 } from 'lucide-react';
 import { Dialog, Transition } from '@headlessui/react';
 import { useTermsAcceptance } from '../hooks/useTermsAcceptance';
@@ -51,26 +51,34 @@ const ZelleIcon = ({ className }: { className?: string }) => (
 );
 
 const StripeIcon = ({ className }: { className?: string }) => (
-  <svg className={className} xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none">
-    <rect x="2" y="4" width="20" height="16" rx="2" fill="#7950F2"/>
-    <path d="M6 8h12M6 12h8M6 16h4" stroke="white" strokeWidth="1.5" strokeLinecap="round"/>
-  </svg>
+  <div className={`${className} flex items-center justify-center bg-[#635bff] rounded-lg overflow-hidden shadow-sm shadow-[#635bff]/20`}>
+    <span 
+      className="text-white font-black text-[28px] leading-[0] select-none"
+      style={{ 
+        fontFamily: 'system-ui, -apple-system, sans-serif',
+        transform: 'translateY(-1.5px)' 
+      }}
+    >
+      S
+    </span>
+  </div>
 );
 
 const ParcelowIcon = ({ className }: { className?: string }) => (
-  <img 
-    src="/parcelow_share.webp" 
-    alt="Parcelow" 
-    className={className} 
-    style={{ objectFit: 'contain' }}
-  />
+  <div className={`${className} flex items-center justify-center bg-white rounded-lg overflow-hidden p-0.5 shadow-sm border border-gray-100`}>
+    <img 
+      src="/parcelow_share.webp" 
+      alt="Parcelow" 
+      className="w-full h-full object-contain scale-110" 
+    />
+  </div>
 );
 
 const QuickRegistration: React.FC = () => {
   const { t } = useTranslation();
   const navigate = useNavigate();
   const location = useLocation();
-  const { register } = useAuth();
+  const { register, supabaseUser, userProfile, updateUserProfile } = useAuth();
   const { getFeeAmount, formatFeeAmount } = useFeeConfig();
   const { recordTermAcceptance } = useTermsAcceptance();
 
@@ -86,15 +94,32 @@ const QuickRegistration: React.FC = () => {
   }
 
   // Form State
-  const [formData, setFormData] = useState({
-    full_name: '',
-    email: '',
-    phone: '',
-    dependents: 0,
-    password: '',
-    confirm_password: '',
-    termsAccepted: false
+  const [formData, setFormData] = useState(() => {
+    try {
+      const saved = sessionStorage.getItem('matricula_quick_form');
+      if (saved) return JSON.parse(saved);
+    } catch {}
+    return {
+      full_name: '',
+      email: '',
+      phone: '',
+      dependents: 0,
+      password: '',
+      confirm_password: '',
+      termsAccepted: false,
+      cpf: ''
+    };
   });
+
+  const [isRegistered, setIsRegistered] = useState(() => {
+    return sessionStorage.getItem('matricula_quick_registered') === 'true';
+  });
+
+  useEffect(() => {
+    if (formData.full_name || formData.email) {
+      sessionStorage.setItem('matricula_quick_form', JSON.stringify(formData));
+    }
+  }, [formData]);
 
   // UI State
   const [loading, setLoading] = useState(false);
@@ -105,6 +130,60 @@ const QuickRegistration: React.FC = () => {
   const [showZelleCheckout, setShowZelleCheckout] = useState(false);
   const [showPassword, setShowPassword] = useState(false);
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
+
+  // Aligned with SelectionFeeStep coupon states
+  const [hasReferralCode, setHasReferralCode] = useState(false);
+  const [isValidating, setIsValidating] = useState(false);
+  const [validationResult, setValidationResult] = useState<{
+    isValid: boolean;
+    message: string;
+    discountAmount?: number;
+    isSelfReferral?: boolean;
+  } | null>(null);
+  const [codeApplied, setCodeApplied] = useState(false);
+
+  // Promotional coupon states (admin coupons)
+  const [isValidatingPromotionalCoupon, setIsValidatingPromotionalCoupon] = useState(false);
+  const [promotionalCouponValidation, setPromotionalCouponValidation] = useState<{
+    isValid: boolean;
+    message: string;
+    discountAmount?: number;
+    finalAmount?: number;
+    couponId?: string;
+  } | null>(null);
+  const [promotionalCoupon, setPromotionalCoupon] = useState('');
+  
+  // Auto-scroll to top when Zelle checkout is shown
+  useEffect(() => {
+    if (showZelleCheckout) {
+      const timer = setTimeout(() => {
+        window.scrollTo({ top: 0, behavior: 'instant' });
+        document.documentElement.scrollTop = 0;
+        document.body.scrollTop = 0;
+      }, 50);
+      return () => clearTimeout(timer);
+    }
+  }, [showZelleCheckout]);
+
+  // Auto-clear error after 5 seconds
+  useEffect(() => {
+    if (error) {
+      const timer = setTimeout(() => {
+        setError(null);
+      }, 5000);
+      return () => clearTimeout(timer);
+    }
+  }, [error]);
+
+  // CPF Mask/Format helper
+  const formatCPF = (value: string) => {
+    return value
+      .replace(/\D/g, '')
+      .replace(/(\d{3})(\d)/, '$1.$2')
+      .replace(/(\d{3})(\d)/, '$1.$2')
+      .replace(/(\d{3})(\d{1,2})/, '$1-$2')
+      .replace(/(-\d{2})\d+?$/, '$1');
+  };
 
   // Terms state
   const [showTermsModal, setShowTermsModal] = useState(false);
@@ -120,8 +199,22 @@ const QuickRegistration: React.FC = () => {
 
   // Constants
   const baseFee = getFeeAmount('selection_process');
-  const discountAmount = 50;
-  const currentFee = isCouponValid ? baseFee - discountAmount : baseFee;
+  
+  // Calcular preço final com desconto (Lógica da SelectionFeeStep)
+  const currentFee = (() => {
+    // 1. Cupom promocional tem prioridade
+    if (promotionalCouponValidation?.isValid && promotionalCouponValidation.finalAmount !== undefined) {
+      return promotionalCouponValidation.finalAmount;
+    }
+    
+    // 2. Código validado e aplicado
+    if ((isCouponValid || codeApplied) && validationResult?.isValid) {
+      const discount = validationResult.discountAmount || 50;
+      return Math.max(baseFee - discount, 0);
+    }
+    
+    return baseFee;
+  })();
 
   const formattedAmount = formatFeeAmount(currentFee);
   const originalFormattedAmount = formatFeeAmount(baseFee);
@@ -138,13 +231,148 @@ const QuickRegistration: React.FC = () => {
 
   const handleValidateCoupon = async (code: string) => {
     if (!code) return;
-    try {
-      if (code.length > 3) {
-        setIsCouponValid(true);
-      }
-    } catch (err) {
-      console.error('Error validating coupon:', err);
+    setCouponCode(code.toUpperCase());
+    setHasReferralCode(true);
+  };
+
+  const validateDiscountCode = async () => {
+    if (!couponCode.trim()) {
+      setValidationResult({
+        isValid: false,
+        message: t('preCheckoutModal.pleaseEnterCode') || 'Please enter a code'
+      });
+      return;
     }
+
+    setIsValidating(true);
+    setValidationResult(null);
+
+    try {
+      // Check if code exists and is active
+      const { data: affiliateCodeData, error: affiliateError } = await supabase
+        .from('affiliate_codes')
+        .select('user_id, code, is_active')
+        .eq('code', couponCode.trim().toUpperCase())
+        .eq('is_active', true)
+        .single();
+
+      if (affiliateError || !affiliateCodeData) {
+        setValidationResult({
+          isValid: false,
+          message: t('preCheckoutModal.invalidCode') || 'Invalid code'
+        });
+        return;
+      }
+
+      // Check if not self-referral
+      if (affiliateCodeData.user_id === supabaseUser?.id) {
+        setValidationResult({
+          isValid: false,
+          message: t('preCheckoutModal.selfReferral') || 'Self-referral not allowed'
+        });
+        return;
+      }
+
+      // Se já estiver logado/registrado, podemos aplicar no banco
+      if (isRegistered && supabaseUser?.id && supabaseUser?.email) {
+        const { data: result, error: validationError } = await supabase
+          .rpc('validate_and_apply_referral_code', {
+            user_id_param: supabaseUser.id,
+            affiliate_code_param: couponCode.trim().toUpperCase(),
+            email_param: supabaseUser.email
+          });
+
+        if (validationError || !result?.success) {
+          const errorMessage = validationError?.message || result?.error || t('preCheckoutModal.errorValidating') || 'Erro ao validar código';
+          setValidationResult({
+            isValid: false,
+            message: errorMessage
+          });
+          return;
+        }
+      }
+
+      // Se for apenas pré-registro, validamos localmente para a UI
+      setValidationResult({
+        isValid: true,
+        message: t('preCheckoutModal.validCode') || 'Valid code! $50 discount applied',
+        discountAmount: 50
+      });
+      setIsCouponValid(true);
+      setCodeApplied(true);
+
+    } catch (error) {
+      console.error('Error validating code:', error);
+      setValidationResult({
+        isValid: false,
+        message: t('preCheckoutModal.errorValidating') || 'Error validating code'
+      });
+    } finally {
+      setIsValidating(false);
+    }
+  };
+
+  const validatePromotionalCoupon = async () => {
+    if (!promotionalCoupon.trim()) {
+      setPromotionalCouponValidation({
+        isValid: false,
+        message: 'Please enter a coupon code'
+      });
+      return;
+    }
+
+    const normalizedCode = promotionalCoupon.trim().toUpperCase();
+    
+    setIsValidatingPromotionalCoupon(true);
+    setPromotionalCouponValidation(null);
+
+    try {
+      const { data: result, error } = await supabase.rpc('validate_and_apply_admin_promotional_coupon', {
+        p_code: normalizedCode,
+        p_fee_type: 'selection_process',
+        p_user_id: supabaseUser?.id || null
+      });
+
+      if (error || !result?.valid) {
+        setPromotionalCouponValidation({
+          isValid: false,
+          message: result?.message || 'Invalid coupon code'
+        });
+        return;
+      }
+
+      let dAmount = 0;
+      if (result.discount_type === 'percentage') {
+        dAmount = (baseFee * result.discount_value) / 100;
+      } else {
+        dAmount = result.discount_value;
+      }
+      
+      dAmount = Math.min(dAmount, baseFee);
+      const fAmount = Math.max(0, baseFee - dAmount);
+
+      setPromotionalCouponValidation({
+        isValid: true,
+        message: `Coupon ${normalizedCode} applied! You saved $${dAmount.toFixed(2)}`,
+        discountAmount: dAmount,
+        finalAmount: fAmount,
+        couponId: result.id
+      });
+      
+    } catch (error: any) {
+      console.error('Error validating promotional coupon:', error);
+      setPromotionalCouponValidation({
+        isValid: false,
+        message: 'Failed to validate coupon'
+      });
+    } finally {
+      setIsValidatingPromotionalCoupon(false);
+    }
+  };
+
+  const removePromotionalCoupon = () => {
+    setPromotionalCoupon('');
+    setPromotionalCouponValidation(null);
   };
 
   // Load exchange rate and calculate fees
@@ -207,7 +435,7 @@ const QuickRegistration: React.FC = () => {
       // This implies we should record it. But we don't have a user ID yet.
       // THE QUICK REGISTRATION FLOW REGISTERS THE USER THEN PAYS.
       // So we will record the acceptance AFTER registration.
-      setFormData(prev => ({ ...prev, termsAccepted: true }));
+      setFormData((prev: any) => ({ ...prev, termsAccepted: true }));
       setShowTermsModal(false);
     }
   };
@@ -237,7 +465,7 @@ const QuickRegistration: React.FC = () => {
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) => {
     const { name, value, type } = e.target;
-    setFormData(prev => ({
+    setFormData((prev: any) => ({
       ...prev,
       [name]: type === 'checkbox' ? (e.target as HTMLInputElement).checked : 
                name === 'dependents' ? parseInt(value) : value
@@ -246,6 +474,42 @@ const QuickRegistration: React.FC = () => {
 
   const handleRegisterAndPay = async (e: React.FormEvent) => {
     e.preventDefault();
+
+    // Se já tiver pago, redireciona ao clicar em pagar
+    if (userProfile?.has_paid_selection_process_fee) {
+      navigate('/student/dashboard');
+      return;
+    }
+
+    if (isRegistered) {
+      setLoading(true);
+      setError(null);
+      try {
+        if (selectedMethod === 'parcelow') {
+          if (!formData.cpf || formData.cpf.length < 14) {
+            throw new Error(t('rapidRegistration.payment.cpf.error') || 'CPF é obrigatório para pagamento via Parcelow.');
+          }
+          // Update profile if CPF is missing
+          if (!userProfile?.cpf_document || userProfile.cpf_document !== formData.cpf) {
+            await updateUserProfile({ cpf_document: formData.cpf });
+          }
+        }
+
+        if (selectedMethod === 'stripe' || selectedMethod === 'pix' || selectedMethod === 'parcelow' || !selectedMethod) {
+          await handlePaymentCheckout(selectedMethod || 'stripe');
+        } else if (selectedMethod === 'zelle') {
+          setShowZelleCheckout(true);
+          setLoading(false);
+        } else {
+          throw new Error(t('rapidRegistration.payment.error.invalidMethod') || 'Método de pagamento inválido.');
+        }
+      } catch (err: any) {
+        setError(err.message || 'Error occurred');
+        setLoading(false);
+      }
+      return;
+    }
+
     if (formData.password !== formData.confirm_password) {
       setError(t('rapidRegistration.form.error.passwordsNotMatch') || 'As senhas não coincidem');
       setLoading(false);
@@ -254,6 +518,12 @@ const QuickRegistration: React.FC = () => {
 
     if (!formData.termsAccepted) {
       setError(t('rapidRegistration.form.error.terms') || 'Você deve aceitar os termos');
+      setLoading(false);
+      return;
+    }
+
+    if (selectedMethod === 'parcelow' && (!formData.cpf || formData.cpf.length < 14)) {
+      setError(t('rapidRegistration.payment.cpf.error') || 'CPF é obrigatório para pagamento via Parcelow.');
       setLoading(false);
       return;
     }
@@ -267,8 +537,9 @@ const QuickRegistration: React.FC = () => {
         full_name: formData.full_name,
         phone: formData.phone,
         dependents: formData.dependents,
-        referralCode: couponCode,
-        role: 'student' as const
+        referralCode: codeApplied ? couponCode : undefined,
+        role: 'student' as const,
+        cpf_document: formData.cpf // Include CPF in metadata
       };
 
       const result = await register(formData.email, formData.password, userData);
@@ -283,18 +554,22 @@ const QuickRegistration: React.FC = () => {
         }
       }
       
-      // 2. Initiate Payment
+      setIsRegistered(true);
+      sessionStorage.setItem('matricula_quick_registered', 'true');
+      
+      // 3. Initiate Payment
       if (selectedMethod === 'stripe' || selectedMethod === 'pix' || selectedMethod === 'parcelow' || !selectedMethod) {
         await handlePaymentCheckout(selectedMethod || 'stripe');
       } else if (selectedMethod === 'zelle') {
         setShowZelleCheckout(true);
+        setLoading(false);
       } else {
-        navigate('/student/dashboard');
+        throw new Error(t('rapidRegistration.payment.error.invalidMethod') || 'Método de pagamento inválido.');
       }
 
     } catch (err: any) {
       console.error('Registration failed:', err);
-      setError(err.message || t('rapidRegistration.form.error.general'));
+      setError(err.message || t('rapidRegistration.form.error.general', 'Ocorreu um erro no registro.'));
       setLoading(false);
     }
   };
@@ -304,7 +579,7 @@ const QuickRegistration: React.FC = () => {
       const { data: sessionData } = await supabase.auth.getSession();
       const token = sessionData.session?.access_token;
       
-      if (!token) throw new Error('Not authenticated');
+      if (!token) throw new Error(t('rapidRegistration.payment.error.notAuthenticated', 'Usuário não autenticado.'));
 
       let apiUrl = `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/stripe-checkout-selection-process-fee`;
       if (method === 'parcelow') {
@@ -322,11 +597,12 @@ const QuickRegistration: React.FC = () => {
           amount: currentFee,
           payment_method: method,
           success_url: `${window.location.origin}/student/dashboard`,
-          cancel_url: `${window.location.origin}/student/dashboard`,
+          cancel_url: window.location.href, // VOLTA PARA ESTA MESMA PÁGINA COM TODOS OS PARÂMETROS
           mode: 'payment',
           payment_type: 'selection_process',
           fee_type: 'selection_process',
-          discount_code: isCouponValid ? couponCode : undefined
+          discount_code: codeApplied ? couponCode : undefined,
+          promotional_coupon: promotionalCouponValidation?.isValid ? promotionalCoupon : undefined
         })
       });
 
@@ -334,40 +610,63 @@ const QuickRegistration: React.FC = () => {
       if (data.session_url || data.url) {
         window.location.href = data.session_url || data.url;
       } else {
-        navigate('/student/dashboard');
+        throw new Error(data.error || t('rapidRegistration.payment.error.generationFailed', 'Falha ao gerar link de pagamento. Tente novamente.'));
       }
-    } catch (err) {
+    } catch (err: any) {
       console.error('Payment redirect failed:', err);
-      navigate('/student/dashboard');
+      throw err; // Repassa pro catch principal mostrar na tela e não ir pro dashboard
     }
+  };
+
+  const getButtonText = () => {
+    const methodNames: Record<string, string> = {
+      stripe: t('rapidRegistration.payment.methods.stripe', 'Cartão de Crédito'),
+      pix: t('rapidRegistration.payment.methods.pix', 'PIX'),
+      parcelow: t('rapidRegistration.payment.methods.parcelow', 'Parcelow'),
+      zelle: t('rapidRegistration.payment.methods.zelle', 'Zelle')
+    };
+
+    const methodLabel = methodNames[selectedMethod || ''];
+    
+    if (methodLabel) {
+      return t('rapidRegistration.payment.payWith', { method: methodLabel });
+    }
+    
+    return isRegistered 
+      ? (t('rapidRegistration.payment.securePayment', 'Pagar de Forma Segura')) 
+      : (t('rapidRegistration.form.submit', 'Confirmar Registro'));
   };
 
   if (showZelleCheckout) {
     return (
-      <div className="min-h-screen bg-white flex items-center justify-center p-4">
-        <div className="max-w-xl w-full">
-          <div className="mb-8 text-center">
-            <h2 className="text-2xl font-bold text-gray-900 mb-2">Pagamento com Zelle</h2>
-            <p className="text-gray-600">Siga as instruções abaixo para concluir seu pagamento.</p>
-          </div>
-          <ZelleCheckout 
-            amount={currentFee}
-            feeType="selection_process"
-            onSuccess={() => navigate('/student/dashboard')}
-          />
+      <div className="min-h-screen bg-gray-50 flex flex-col items-center p-4 pt-12 pb-32">
+        <div className="max-w-xl w-full relative">
           <button 
             onClick={() => setShowZelleCheckout(false)}
-            className="mt-6 w-full text-gray-500 font-medium hover:text-gray-700 transition-all"
+            className="flex items-center gap-2 text-gray-500 font-bold hover:text-[#05294E] transition-all mb-8 group"
           >
-            Voltar para as opções de pagamento
+            <ArrowLeft className="w-5 h-5 transition-transform group-hover:-translate-x-1" />
+            {t('rapidRegistration.zelle.back')}
           </button>
+
+          <div className="bg-white rounded-[2.5rem] shadow-2xl border border-slate-200 p-8 overflow-hidden">
+            <div className="mb-8 text-center">
+              <h2 className="text-3xl font-black text-gray-900 mb-2 uppercase tracking-tight">{t('rapidRegistration.zelle.title')}</h2>
+              <p className="text-gray-500 font-medium">{t('rapidRegistration.zelle.subtitle')}</p>
+            </div>
+            <ZelleCheckout 
+              amount={currentFee}
+              feeType="selection_process"
+              onSuccess={() => navigate('/student/dashboard')}
+            />
+          </div>
         </div>
       </div>
     );
   }
 
   return (
-    <div className="min-h-screen bg-gray-50 pt-24 pb-12">
+    <div className="min-h-screen bg-gray-50 pt-24 pb-32">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
         <div className="text-center mb-12">
           <h1 className="text-4xl font-extrabold text-grey-900 tracking-tight sm:text-5xl">
@@ -380,10 +679,13 @@ const QuickRegistration: React.FC = () => {
 
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
           {/* Left: Registration Form */}
-          <div className="lg:col-span-2">
-            <div className="bg-white rounded-2xl shadow-sm border border-gray-100 overflow-hidden">
-              <div className="p-8">
-                <form onSubmit={handleRegisterAndPay} className="space-y-6">
+          <div className="lg:col-span-2 space-y-8">
+            <form id="registration-form" onSubmit={handleRegisterAndPay} className="space-y-8">
+              {/* Seção 1: Informações da Conta & Termos */}
+              <div className="bg-white rounded-3xl shadow-xl border border-slate-200 p-8 relative overflow-hidden">
+                <div className="absolute top-0 right-0 w-32 h-32 bg-blue-50 rounded-full -mr-16 -mt-16 opacity-50"></div>
+                
+                <div className="relative z-10 space-y-8">
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-x-8 gap-y-6">
                     {/* Full Name */}
                     <div className="flex flex-col">
@@ -400,8 +702,9 @@ const QuickRegistration: React.FC = () => {
                           required
                           value={formData.full_name}
                           onChange={handleChange}
+                          disabled={isRegistered}
                           placeholder={t('rapidRegistration.form.placeholders.fullName')}
-                          className="block w-full pl-12 pr-4 py-3.5 border border-slate-200 rounded-2xl focus:ring-2 focus:ring-[#05294E] focus:border-[#05294E] text-slate-900 bg-slate-50/50 transition-all duration-300"
+                          className="block w-full pl-12 pr-4 py-3.5 border border-slate-200 rounded-2xl focus:ring-2 focus:ring-[#05294E] focus:border-[#05294E] text-slate-900 bg-slate-50/50 transition-all duration-300 disabled:opacity-50 disabled:cursor-not-allowed"
                         />
                       </div>
                     </div>
@@ -421,8 +724,9 @@ const QuickRegistration: React.FC = () => {
                           required
                           value={formData.email}
                           onChange={handleChange}
+                          disabled={isRegistered}
                           placeholder={t('rapidRegistration.form.placeholders.email')}
-                          className="block w-full pl-12 pr-4 py-3.5 border border-slate-200 rounded-2xl focus:ring-2 focus:ring-[#05294E] focus:border-[#05294E] text-slate-900 bg-slate-50/50 transition-all duration-300"
+                          className="block w-full pl-12 pr-4 py-3.5 border border-slate-200 rounded-2xl focus:ring-2 focus:ring-[#05294E] focus:border-[#05294E] text-slate-900 bg-slate-50/50 transition-all duration-300 disabled:opacity-50 disabled:cursor-not-allowed"
                         />
                       </div>
                     </div>
@@ -438,10 +742,11 @@ const QuickRegistration: React.FC = () => {
                           defaultCountry="US"
                           addInternationalOption={false}
                           value={formData.phone}
+                          disabled={isRegistered}
                           onChange={(value) => {
-                            setFormData(prev => ({ ...prev, phone: value || '' }));
+                            setFormData((prev: any) => ({ ...prev, phone: value || '' }));
                           }}
-                          className="quick-registration-phone w-full px-4 py-3.5 bg-slate-50/50 border border-slate-200 rounded-2xl focus-within:ring-2 focus-within:ring-[#05294E] focus-within:border-[#05294E] text-slate-900 transition-all duration-300"
+                          className={`quick-registration-phone w-full px-4 py-3.5 bg-slate-50/50 border border-slate-200 rounded-2xl focus-within:ring-2 focus-within:ring-[#05294E] focus-within:border-[#05294E] text-slate-900 transition-all duration-300 ${isRegistered ? 'opacity-50 cursor-not-allowed' : ''}`}
                           placeholder={t('rapidRegistration.form.placeholders.phone')}
                         />
                       </div>
@@ -452,7 +757,7 @@ const QuickRegistration: React.FC = () => {
                       <label className="block text-sm font-bold text-slate-700 mb-2 px-1 leading-tight">
                         {t('rapidRegistration.form.dependents')} 
                         <span className="block text-[10px] font-normal text-slate-400 mt-0.5">
-                          Family members (spouse and/or children)
+                        {t('rapidRegistration.form.dependentsSubtitle') || 'Family members (spouse and/or children)'}
                         </span>
                       </label>
                       <div className="relative mt-auto">
@@ -466,18 +771,19 @@ const QuickRegistration: React.FC = () => {
                           id="dependents"
                           name="dependents"
                           value={formData.dependents || 0}
+                          disabled={isRegistered}
                           onChange={(e) => {
                             const value = parseInt(e.target.value) || 0;
-                            setFormData(prev => ({ ...prev, dependents: value }));
+                            setFormData((prev: any) => ({ ...prev, dependents: value }));
                           }}
-                          className="appearance-none block w-full pl-12 pr-12 py-3.5 border border-slate-200 rounded-2xl focus:ring-2 focus:ring-[#05294E] focus:border-[#05294E] text-slate-900 bg-slate-50/50 transition-all duration-300 text-sm sm:text-base cursor-pointer"
+                          className="appearance-none block w-full pl-12 pr-12 py-3.5 border border-slate-200 rounded-2xl focus:ring-2 focus:ring-[#05294E] focus:border-[#05294E] text-slate-900 bg-slate-50/50 transition-all duration-300 text-sm sm:text-base cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed"
                         >
-                          <option value={0}>0 Dependents</option>
-                          <option value={1}>1 Dependent</option>
-                          <option value={2}>2 Dependents</option>
-                          <option value={3}>3 Dependents</option>
-                          <option value={4}>4 Dependents</option>
-                          <option value={5}>5 Dependents</option>
+                          <option value={0}>{t('rapidRegistration.form.dependentOptions.count', { count: 0 })}</option>
+                          <option value={1}>{t('rapidRegistration.form.dependentOptions.count', { count: 1 })}</option>
+                          <option value={2}>{t('rapidRegistration.form.dependentOptions.count', { count: 2 })}</option>
+                          <option value={3}>{t('rapidRegistration.form.dependentOptions.count', { count: 3 })}</option>
+                          <option value={4}>{t('rapidRegistration.form.dependentOptions.count', { count: 4 })}</option>
+                          <option value={5}>{t('rapidRegistration.form.dependentOptions.count', { count: 5 })}</option>
                         </select>
                       </div>
                     </div>
@@ -498,13 +804,15 @@ const QuickRegistration: React.FC = () => {
                           minLength={6}
                           value={formData.password}
                           onChange={handleChange}
+                          disabled={isRegistered}
                           placeholder={t('rapidRegistration.form.placeholders.password')}
-                          className="block w-full pl-12 pr-12 py-3.5 border border-slate-200 rounded-2xl focus:ring-2 focus:ring-[#05294E] focus:border-[#05294E] text-slate-900 bg-slate-50/50 transition-all duration-300"
+                          className="block w-full pl-12 pr-12 py-3.5 border border-slate-200 rounded-2xl focus:ring-2 focus:ring-[#05294E] focus:border-[#05294E] text-slate-900 bg-slate-50/50 transition-all duration-300 disabled:opacity-50 disabled:cursor-not-allowed"
                         />
                         <button
                           type="button"
                           onClick={() => setShowPassword(!showPassword)}
-                          className="absolute inset-y-0 right-0 pr-4 flex items-center text-slate-400 hover:text-slate-600 transition-colors"
+                          disabled={isRegistered}
+                          className="absolute inset-y-0 right-0 pr-4 flex items-center text-slate-400 hover:text-slate-600 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
                         >
                           {showPassword ? (
                             <EyeOff className="h-5 w-5" />
@@ -531,13 +839,15 @@ const QuickRegistration: React.FC = () => {
                           minLength={6}
                           value={formData.confirm_password}
                           onChange={handleChange}
+                          disabled={isRegistered}
                           placeholder={t('rapidRegistration.form.placeholders.confirmPassword')}
-                          className="block w-full pl-12 pr-12 py-3.5 border border-slate-200 rounded-2xl focus:ring-2 focus:ring-[#05294E] focus:border-[#05294E] text-slate-900 bg-slate-50/50 transition-all duration-300"
+                          className="block w-full pl-12 pr-12 py-3.5 border border-slate-200 rounded-2xl focus:ring-2 focus:ring-[#05294E] focus:border-[#05294E] text-slate-900 bg-slate-50/50 transition-all duration-300 disabled:opacity-50 disabled:cursor-not-allowed"
                         />
                         <button
                           type="button"
                           onClick={() => setShowConfirmPassword(!showConfirmPassword)}
-                          className="absolute inset-y-0 right-0 pr-4 flex items-center text-slate-400 hover:text-slate-600 transition-colors"
+                          disabled={isRegistered}
+                          className="absolute inset-y-0 right-0 pr-4 flex items-center text-slate-400 hover:text-slate-600 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
                         >
                           {showConfirmPassword ? (
                             <EyeOff className="h-5 w-5" />
@@ -547,14 +857,183 @@ const QuickRegistration: React.FC = () => {
                         </button>
                       </div>
                     </div>
+
                   </div>
 
-                  {/* Terms acceptance - Moved before payment */}
-                  <div className="mt-4 mb-16">
+                  {/* Seção Agrupada: Cupons e Termos (Coladinhos) */}
+                  <div className="mt-6 pt-6 border-t border-slate-100 space-y-2">
+                    {!userProfile?.seller_referral_code && !codeApplied && (
+                      <div className="relative z-10">
+                        {/* Checkbox para Referral Code */}
+                        <div className="flex items-center space-x-3 p-4 bg-slate-50/50 border border-slate-100 rounded-2xl group transition-all duration-300 hover:bg-white shadow-sm cursor-pointer" onClick={() => {
+                          setHasReferralCode(!hasReferralCode);
+                        }}>
+                          <input
+                            id="hasReferralCode"
+                            type="checkbox"
+                            checked={hasReferralCode}
+                            onChange={(e) => {
+                              setHasReferralCode(e.target.checked);
+                              if (!e.target.checked) {
+                                setCouponCode('');
+                                setValidationResult(null);
+                                setCodeApplied(false);
+                                setIsCouponValid(false);
+                              }
+                            }}
+                            className="h-5 w-5 text-[#05294E] border-gray-300 rounded focus:ring-[#05294E] cursor-pointer"
+                          />
+                          <label 
+                            htmlFor="hasReferralCode" 
+                            className="text-sm text-slate-700 font-medium leading-relaxed cursor-pointer flex-1"
+                            onClick={(e) => {
+                              // Parent already has the toggle logic, but let's make it robust
+                              e.preventDefault(); 
+                              const newState = !hasReferralCode;
+                              setHasReferralCode(newState);
+                              if (!newState) {
+                                setCouponCode('');
+                                setValidationResult(null);
+                                setCodeApplied(false);
+                                setIsCouponValid(false);
+                              }
+                            }}
+                          >
+                            {t('preCheckoutModal.haveReferralCode') || 'Eu tenho um código de indicação'}
+                          </label>
+                        </div>
+
+                        {/* Área de Input de Cupons */}
+                        {(hasReferralCode || promotionalCouponValidation?.isValid || codeApplied) && (
+                          <div className="grid grid-cols-1 md:grid-cols-2 gap-8 pt-4 pb-2">
+                            {/* ... (Referral e Promo Columns mantidos) */}
+                            {/* Referral Code Column */}
+                            <div className="space-y-4">
+                              <h4 className="text-xs font-black text-slate-400 uppercase tracking-widest flex items-center">
+                                <Ticket className="w-3 h-3 mr-2" />
+                                {t('preCheckoutModal.referralCode') || 'Código de Indicação'}
+                              </h4>
+                              
+                              <div className="flex gap-2">
+                                <div className="relative flex-1 group/input">
+                                  <input
+                                    type="text"
+                                    value={couponCode}
+                                    onChange={(e) => {
+                                      if (!codeApplied) {
+                                        setCouponCode(e.target.value.toUpperCase());
+                                      }
+                                    }}
+                                    placeholder={t('preCheckoutModal.placeholder') || 'Digite o código'}
+                                    readOnly={codeApplied}
+                                    className="w-full px-5 py-3.5 bg-slate-50 border border-slate-200 rounded-xl focus:ring-2 focus:ring-[#05294E]/20 focus:border-[#05294E] transition-all text-center font-black text-slate-900 text-lg tracking-[0.2em] placeholder:text-slate-300 disabled:opacity-50"
+                                  />
+                                  {codeApplied && (
+                                    <div className="absolute right-3 top-1/2 -translate-y-1/2">
+                                      <CheckCircle className="w-5 h-5 text-emerald-500" />
+                                    </div>
+                                  )}
+                                </div>
+
+                                {!codeApplied && (
+                                  <button
+                                    type="button"
+                                    onClick={validateDiscountCode}
+                                    disabled={isValidating || !couponCode.trim()}
+                                    className={`px-6 py-3.5 rounded-xl font-black uppercase tracking-widest text-xs transition-all shadow-lg active:scale-95 ${
+                                      isValidating || !couponCode.trim()
+                                        ? 'bg-slate-100 text-slate-400 cursor-not-allowed border border-slate-200'
+                                        : 'bg-[#05294E] text-white hover:bg-[#063a6e] border border-[#05294E]/50'
+                                    }`}
+                                  >
+                                    {isValidating ? (
+                                      <Loader2 className="w-4 h-4 animate-spin mx-auto" />
+                                    ) : (
+                                      'Validar'
+                                    )}
+                                  </button>
+                                )}
+                              </div>
+                              
+                              {validationResult && (
+                                <div className={`flex items-center gap-2 text-xs font-bold p-3 rounded-lg ${validationResult.isValid ? 'text-emerald-600 bg-emerald-50 border border-emerald-100' : 'text-red-500 bg-red-50 border border-red-100'}`}>
+                                  {validationResult.isValid ? <CheckCircle className="w-4 h-4" /> : <AlertCircle className="w-4 h-4" />}
+                                  {validationResult.message}
+                                </div>
+                              )}
+                            </div>
+
+                            {/* Promotional Coupon Column */}
+                            <div className="space-y-4">
+                              <h4 className="text-xs font-black text-slate-400 uppercase tracking-widest flex items-center">
+                                <Ticket className="w-3 h-3 mr-2" />
+                                {t('rapidRegistration.coupons.promotionalLabel') || 'Cupom Promocional'}
+                              </h4>
+
+                              {promotionalCouponValidation?.isValid ? (
+                                <div className="bg-emerald-50 border border-emerald-100 rounded-xl p-4 flex items-center justify-between shadow-inner">
+                                  <div className="flex items-center space-x-3">
+                                    <div className="w-10 h-10 bg-white rounded-lg flex items-center justify-center border border-emerald-100">
+                                      <CheckCircle className="w-6 h-6 text-emerald-500" />
+                                    </div>
+                                    <div>
+                                      <span className="text-[10px] font-black text-emerald-600/50 uppercase block tracking-widest leading-none mb-1">Cupom Aplicado</span>
+                                      <span className="text-lg font-black text-emerald-700 uppercase tracking-tight">{promotionalCoupon}</span>
+                                    </div>
+                                  </div>
+                                  <button type="button" onClick={removePromotionalCoupon} className="p-2 bg-white hover:bg-red-50 text-slate-400 hover:text-red-500 rounded-lg transition-all border border-slate-100 hover:border-red-100">
+                                    <X className="w-5 h-5" />
+                                  </button>
+                                </div>
+                              ) : (
+                                <div className="flex gap-2">
+                                  <div className="relative flex-1 group/input">
+                                    <input
+                                      type="text"
+                                      value={promotionalCoupon}
+                                      onChange={(e) => setPromotionalCoupon(e.target.value.toUpperCase())}
+                                      placeholder="Digite o código"
+                                      className="w-full px-5 py-3.5 bg-slate-50 border border-slate-200 rounded-xl focus:ring-2 focus:ring-[#05294E]/20 focus:border-[#05294E] transition-all text-center font-black text-slate-900 text-lg tracking-[0.2em] placeholder:text-slate-300"
+                                    />
+                                  </div>
+                                  <button
+                                    type="button"
+                                    onClick={validatePromotionalCoupon}
+                                    disabled={isValidatingPromotionalCoupon || !promotionalCoupon.trim()}
+                                    className={`px-6 py-3.5 rounded-xl font-black uppercase tracking-widest text-xs transition-all shadow-lg active:scale-95 ${
+                                      isValidatingPromotionalCoupon || !promotionalCoupon.trim()
+                                        ? 'bg-slate-100 text-slate-400 cursor-not-allowed border border-slate-200'
+                                        : 'bg-[#05294E] text-white hover:bg-[#063a6e] border border-[#05294E]/50'
+                                    }`}
+                                  >
+                                    {isValidatingPromotionalCoupon ? (
+                                      <Loader2 className="w-4 h-4 animate-spin mx-auto" />
+                                    ) : (
+                                      'Validar'
+                                    )}
+                                  </button>
+                                </div>
+                              )}
+                              
+                              {promotionalCouponValidation && !promotionalCouponValidation.isValid && (
+                                <div className="flex items-center gap-2 text-xs font-bold p-3 rounded-lg text-red-500 bg-red-50 border border-red-100">
+                                  <AlertCircle className="w-4 h-4" />
+                                  {promotionalCouponValidation.message}
+                                </div>
+                              )}
+                            </div>
+                          </div>
+                        )}
+                      </div>
+                    )}
+
+                    {/* Terms acceptance */}
                     <div 
                       onClick={() => !formData.termsAccepted && handleTermsClick()}
-                      className={`flex items-start space-x-3 p-4 bg-gray-50 border border-gray-100 rounded-2xl group/terms hover:bg-gray-100/50 transition-colors duration-300 cursor-pointer ${
-                        formData.termsAccepted ? 'border-emerald-100 bg-emerald-50/30' : ''
+                      className={`flex items-start space-x-3 p-4 border rounded-2xl group/terms transition-colors duration-300 ${
+                        formData.termsAccepted 
+                          ? 'border-gray-100 bg-emerald-50/20 cursor-default' 
+                          : 'bg-gray-50 border-gray-100 hover:bg-gray-100/50 cursor-pointer'
                       }`}
                     >
                       <div className="flex items-center h-5 mt-0.5">
@@ -563,199 +1042,172 @@ const QuickRegistration: React.FC = () => {
                           name="termsAccepted"
                           type="checkbox"
                           required
+                          disabled={isRegistered}
                           checked={formData.termsAccepted}
                           onChange={(e) => {
                             if (e.target.checked) {
                               handleTermsClick();
                             } else {
-                              setFormData(prev => ({ ...prev, termsAccepted: false }));
+                              setFormData((prev: typeof formData) => ({ ...prev, termsAccepted: false }));
                             }
                           }}
-                          className="h-5 w-5 text-[#05294E] border-gray-300 rounded focus:ring-[#05294E]"
+                          className="h-5 w-5 text-[#05294E] border-gray-300 rounded focus:ring-[#05294E] disabled:opacity-50 disabled:cursor-not-allowed"
                         />
                       </div>
                       <div className="flex-1">
-                        <label className="text-sm text-gray-700 leading-relaxed cursor-pointer block font-medium">
+                        <label className={`text-sm text-gray-700 leading-relaxed block font-medium ${formData.termsAccepted ? 'cursor-default' : 'cursor-pointer'}`}>
                           <span className="text-[#D0151C] font-bold mr-1">*</span>
                           {t('preCheckoutModal.acceptContractTerms') || 'Eu aceito os termos e condições do contrato de prestação de serviços.'}
                         </label>
                         {formData.termsAccepted && (
                           <span className="text-[10px] text-emerald-600 font-bold uppercase tracking-widest flex items-center mt-1">
                             <CheckCircle2 className="w-3 h-3 mr-1" />
-                            Termos Visualizados e Aceitos
+                            {t('rapidRegistration.form.termsAcceptedBadge') || 'Termos Visualizados e Aceitos'}
                           </span>
                         )}
                       </div>
                     </div>
                   </div>
+                </div>
+              </div>
 
-                  {/* Payment Methods Section - Updated styling */}
-                  <div>
-                    <h3 className="text-lg font-black text-[#05294E] mb-4 flex items-center uppercase tracking-tight">
-                      <CreditCard className="mr-2 h-5 w-5" />
-                      {t('payment.selectMethod') || 'Selecione o Método de Pagamento'}
-                    </h3>
-                    
-                    <div className="space-y-4">
-                      {/* Stripe / Card */}
-                      <button
-                        type="button"
-                        onClick={() => setSelectedMethod('stripe')}
-                        className={`w-full p-6 rounded-[1.5rem] border-2 transition-all duration-300 text-left relative overflow-hidden group/method ${
-                          selectedMethod === 'stripe'
-                            ? 'border-[#05294E] bg-slate-50 shadow-lg'
-                            : 'border-slate-100 bg-white hover:border-slate-200'
-                        }`}
-                      >
-                        <div className="flex items-center space-x-5 relative z-10">
-                          <div className="flex-shrink-0 w-14 h-14 flex items-center justify-center rounded-xl bg-white border border-gray-100 shadow-sm">
-                            <StripeIcon className="h-8 w-8" />
-                          </div>
-                          <div className="flex-1 min-w-0">
-                            <div className="flex items-center justify-between">
-                              <div className="flex flex-col">
-                                <h4 className="text-lg font-black text-slate-900 uppercase tracking-tight">Cartão de Crédito</h4>
-                                <span className="text-[10px] font-bold text-slate-400 mt-1 uppercase tracking-wide">* Internacional (Stripe)</span>
+              {/* Seção 2: Método de Pagamento */}
+              <div className="bg-white rounded-3xl shadow-xl border border-slate-200 p-8 relative overflow-hidden">
+                <div className="absolute top-0 right-0 w-32 h-32 bg-blue-50 rounded-full -mr-16 -mt-16 opacity-50"></div>
+                
+                <div className="relative z-10">
+                  <h3 className="text-2xl font-black text-grey-900 mb-8 flex items-center uppercase tracking-tight">
+                    {t('rapidRegistration.payment.selectMethod')}
+                  </h3>
+                  
+                  <div className="space-y-4">
+                      {[
+                        { id: 'stripe' as const, name: t('rapidRegistration.payment.methods.stripe'), icon: StripeIcon },
+                        { id: 'pix' as const, name: t('rapidRegistration.payment.methods.pix'), icon: PixIcon },
+                        { id: 'zelle' as const, name: t('rapidRegistration.payment.methods.zelle'), icon: ZelleIcon },
+                        { id: 'parcelow' as const, name: t('rapidRegistration.payment.methods.parcelow'), icon: ParcelowIcon }
+                      ].map((method) => {
+                        const Icon = method.icon;
+                        const isSelected = selectedMethod === method.id;
+                        const isFormValid = formData.full_name && formData.email && formData.phone && formData.password && formData.confirm_password;
+                        const isDisabled = !isRegistered && (!isFormValid || !formData.termsAccepted);
+                        
+                        return (
+                          <React.Fragment key={method.id}>
+                            <button
+                            key={method.id}
+                            type="button"
+                            disabled={isDisabled}
+                            onClick={() => setSelectedMethod(method.id)}
+                            className={`w-full p-6 rounded-2xl border-2 transition-all duration-300 text-left relative overflow-hidden group/method ${
+                              isSelected
+                                ? 'border-blue-500 bg-blue-50 shadow-[0_0_30px_rgba(59,130,246,0.1)]'
+                                : 'border-gray-100 bg-gray-50 hover:border-gray-200 hover:bg-white'
+                            } ${isDisabled ? 'opacity-40 cursor-not-allowed grayscale' : 'cursor-pointer hover:scale-[1.01] active:scale-[0.99]'}`}
+                          >
+                            <div className="flex items-center space-x-5 relative z-10">
+                              <div className="flex-shrink-0 w-14 h-14 flex items-center justify-center rounded-xl bg-white border border-gray-100 transition-transform duration-500 group-hover/method:scale-110 shadow-sm">
+                                <Icon className="w-10 h-10 text-gray-700" />
                               </div>
-                              <div className="flex items-center gap-3">
-                                <span className="text-slate-900 text-lg font-black">${cardAmountWithFees.toFixed(2)}</span>
-                                {selectedMethod === 'stripe' && <CheckCircle className="h-5 w-5 text-emerald-500" />}
+                              <div className="flex-1 min-w-0">
+                                <div className="flex items-center justify-between">
+                                  <div className="flex flex-col">
+                                    <h4 className="text-lg font-black text-gray-900 uppercase tracking-tight">{method.name}</h4>
+                                    {method.id === 'stripe' && (
+                                      <span className="text-[10px] font-bold text-gray-400 mt-1 uppercase tracking-wide leading-tight">{t('rapidRegistration.payment.notes.processingFees')}</span>
+                                    )}
+                                    {method.id === 'pix' && (
+                                      <span className="text-[10px] font-bold text-gray-400 mt-1 uppercase tracking-wide leading-tight">{t('rapidRegistration.payment.notes.processingFees')}</span>
+                                    )}
+                                    {method.id === 'parcelow' && (
+                                      <span className="text-[10px] font-bold text-gray-400 mt-1 uppercase tracking-wide leading-tight max-w-[200px] sm:max-w-none">{t('rapidRegistration.payment.notes.parcelowFees')}</span>
+                                    )}
+                                    {method.id === 'zelle' && (
+                                      <span className="text-[10px] font-bold text-gray-400 mt-1 uppercase tracking-wide leading-tight flex items-center gap-1">
+                                        <AlertCircle className="w-3 h-3 flex-shrink-0" />
+                                    {t('rapidRegistration.payment.notes.zelleTime')}
+                                      </span>
+                                    )}
+                                  </div>
+                                  <div className="flex items-center gap-3">
+                                    {method.id === 'stripe' && (
+                                      <span className="text-grey-900 text-lg font-black px-2">${cardAmountWithFees.toFixed(2)}</span>
+                                    )}
+                                    {method.id === 'pix' && exchangeRate && (
+                                      <span className="text-grey-900 text-lg font-black px-2">R$ {pixAmountWithFees.toFixed(2)}</span>
+                                    )}
+                                    {method.id === 'parcelow' && (
+                                      <div className="flex flex-col items-end">
+                                        <span className="text-grey-900 text-lg font-black px-2">${currentFee.toFixed(2)}</span>
+                                         <span className="text-xs font-bold text-black mt-1 whitespace-nowrap">{t('rapidRegistration.payment.installment')}</span>
+                                      </div>
+                                    )}
+                                    {method.id === 'zelle' && (
+                                      <span className="text-grey-900 text-lg font-black px-2">${currentFee.toFixed(2)}</span>
+                                    )}
+                                  </div>
+                                </div>
                               </div>
                             </div>
-                          </div>
-                        </div>
-                      </button>
-
-                      {/* PIX */}
-                      <button
-                        type="button"
-                        onClick={() => setSelectedMethod('pix')}
-                        className={`w-full p-6 rounded-[1.5rem] border-2 transition-all duration-300 text-left relative overflow-hidden group/method ${
-                          selectedMethod === 'pix'
-                            ? 'border-[#05294E] bg-slate-50 shadow-lg'
-                            : 'border-slate-100 bg-white hover:border-slate-200'
-                        }`}
-                      >
-                        <div className="flex items-center space-x-5 relative z-10">
-                          <div className="flex-shrink-0 w-14 h-14 flex items-center justify-center rounded-xl bg-[#E2F9F6] border border-[#B2EBE3] shadow-sm">
-                            <PixIcon className="h-8 w-8" />
-                          </div>
-                          <div className="flex-1 min-w-0">
-                            <div className="flex items-center justify-between">
-                              <div className="flex flex-col">
-                                <h4 className="text-lg font-black text-slate-900 uppercase tracking-tight">PIX</h4>
-                                <span className="text-[10px] font-bold text-slate-400 mt-1 uppercase tracking-wide">* Brasileiros</span>
-                              </div>
-                              <div className="flex items-center gap-3">
-                                <span className="text-slate-900 text-lg font-black">R$ {pixAmountWithFees.toFixed(2)}</span>
-                                {selectedMethod === 'pix' && <CheckCircle className="h-5 w-5 text-emerald-500" />}
+                          </button>
+                          
+                          {/* Inline CPF Field - Only for Parcelow when selected */}
+                          {method.id === 'parcelow' && isSelected && (
+                            <div className="mt-2 ml-4 mr-4 animate-in fade-in slide-in-from-top-2 duration-300">
+                              <div className="bg-blue-50/50 p-4 rounded-2xl border border-blue-100/50">
+                                <label className="block text-[10px] font-black text-blue-900/60 uppercase tracking-widest mb-2 leading-tight flex items-center gap-2">
+                                  <AlertCircle className="w-3 h-3 flex-shrink-0" />
+                                  {t('rapidRegistration.payment.cpf.label')}
+                                </label>
+                                <div className="relative">
+                                  <input
+                                    type="text"
+                                    name="cpf"
+                                    required
+                                    disabled={loading}
+                                    value={formData.cpf}
+                                    onChange={(e) => {
+                                      const formatted = formatCPF(e.target.value);
+                                      setFormData((prev: any) => ({ ...prev, cpf: formatted }));
+                                    }}
+                                    placeholder={t('rapidRegistration.payment.cpf.placeholder')}
+                                    className="block w-1/2 pl-11 pr-4 py-3 border border-blue-200/50 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none text-sm font-bold text-slate-900 bg-white transition-all duration-300 disabled:opacity-50 disabled:cursor-not-allowed"
+                                  />
+                                </div>
                               </div>
                             </div>
-                          </div>
-                        </div>
-                      </button>
-
-                      {/* Zelle */}
-                      <button
-                        type="button"
-                        onClick={() => setSelectedMethod('zelle')}
-                        className={`w-full p-6 rounded-[1.5rem] border-2 transition-all duration-300 text-left relative overflow-hidden group/method ${
-                          selectedMethod === 'zelle'
-                            ? 'border-[#05294E] bg-slate-50 shadow-lg'
-                            : 'border-slate-100 bg-white hover:border-slate-200'
-                        }`}
-                      >
-                        <div className="flex items-center space-x-5 relative z-10">
-                          <div className="flex-shrink-0 w-14 h-14 flex items-center justify-center rounded-xl bg-[#6D1ED4]/10 border border-[#6D1ED4]/20 shadow-sm">
-                            <ZelleIcon className="h-8 w-8" />
-                          </div>
-                          <div className="flex-1 min-w-0">
-                            <div className="flex items-center justify-between">
-                              <div className="flex flex-col">
-                                <h4 className="text-lg font-black text-slate-900 uppercase tracking-tight">Zelle</h4>
-                                <span className="text-[10px] font-bold text-slate-400 mt-1 uppercase tracking-wide">* Residentes nos EUA</span>
-                              </div>
-                              <div className="flex items-center gap-3">
-                                <span className="text-slate-900 text-lg font-black">${currentFee.toFixed(2)}</span>
-                                {selectedMethod === 'zelle' && <CheckCircle className="h-5 w-5 text-emerald-500" />}
-                              </div>
-                            </div>
-                          </div>
-                        </div>
-                      </button>
-
-                      {/* Parcelow */}
-                      <button
-                        type="button"
-                        onClick={() => setSelectedMethod('parcelow')}
-                        className={`w-full p-6 rounded-[1.5rem] border-2 transition-all duration-300 text-left relative overflow-hidden group/method ${
-                          selectedMethod === 'parcelow'
-                            ? 'border-[#05294E] bg-slate-50 shadow-lg'
-                            : 'border-slate-100 bg-white hover:border-slate-200'
-                        }`}
-                      >
-                        <div className="flex items-center space-x-5 relative z-10">
-                          <div className="flex-shrink-0 w-14 h-14 flex items-center justify-center rounded-xl bg-white border border-gray-100 shadow-sm">
-                            <ParcelowIcon className="h-10 w-10" />
-                          </div>
-                          <div className="flex-1 min-w-0">
-                            <div className="flex items-center justify-between">
-                              <div className="flex flex-col">
-                                <h4 className="text-lg font-black text-slate-900 uppercase tracking-tight">Parcelow</h4>
-                                <span className="text-[10px] font-bold text-slate-400 mt-1 uppercase tracking-wide">* Parcelamento para Brasileiros</span>
-                              </div>
-                              <div className="flex items-center gap-3">
-                                <span className="text-slate-900 text-lg font-black">${currentFee.toFixed(2)}</span>
-                                {selectedMethod === 'parcelow' && <CheckCircle className="h-5 w-5 text-emerald-500" />}
-                              </div>
-                            </div>
-                          </div>
-                        </div>
-                      </button>
-                    </div>
+                          )}
+                        </React.Fragment>
+                      );
+                    })}
                   </div>
-
+                  
                   {error && (
-                    <div className="p-4 bg-red-50 rounded-xl flex items-center text-red-700 text-sm">
+                    <div className="mt-8 p-4 bg-red-50 rounded-xl flex items-center text-red-700 text-sm">
                       <AlertCircle className="h-5 w-5 mr-2" />
                       {error}
                     </div>
                   )}
-
-                  <button
-                    type="submit"
-                    disabled={loading || !formData.termsAccepted}
-                    className={`w-full text-white font-bold py-5 rounded-2xl transition-all flex items-center justify-center text-lg shadow-xl hover:shadow-2xl hover:scale-[1.02] active:scale-[0.98] disabled:opacity-50 disabled:cursor-not-allowed disabled:scale-100 ${
-                      formData.termsAccepted ? 'bg-[#05294E]' : 'bg-slate-400'
-                    }`}
-                  >
-                    {loading ? (
-                      <Loader2 className="h-6 w-6 animate-spin mr-2" />
-                    ) : (
-                      <CheckCircle2 className="h-6 w-6 mr-2" />
-                    )}
-                    {t('rapidRegistration.form.submit')}
-                  </button>
-                </form>
+                </div>
               </div>
-            </div>
+            </form>
+            <div className="h-12"></div> {/* Spacing below payment method */}
           </div>
 
           {/* Right: Sticky Summary */}
           <div className="lg:col-span-1">
             <div className="sticky top-24 space-y-6">
-              <div className="bg-white rounded-3xl shadow-xl border border-slate-100 p-8 relative overflow-hidden">
+              <div className="bg-white rounded-3xl shadow-xl border border-slate-200 p-8 relative overflow-hidden">
                 <div className="absolute top-0 right-0 w-32 h-32 bg-blue-50 rounded-full -mr-16 -mt-16 opacity-50"></div>
                 
-                <h3 className="text-xl font-black text-slate-900 mb-8 pb-4 border-b border-slate-50 flex items-center uppercase tracking-tight relative z-10">
-                  <ShieldCheck className="h-6 w-6 text-[#05294E] mr-3" />
+                <h3 className="text-2xl font-black text-slate-900 mb-8 pb-4 border-b border-slate-50 flex items-center uppercase tracking-tight relative z-10">
                   {t('rapidRegistration.sidebar.title')}
                 </h3>
 
                 <div className="space-y-6 mb-8 relative z-10">
                   <div className="flex justify-between items-end">
-                    <span className="text-slate-500 font-bold uppercase tracking-widest text-xs mb-1">
-                      {t('rapidRegistration.sidebar.currentFee')}
+                    <span className="text-slate-900 font-bold uppercase tracking-widest text-xs mb-1">
+                      {t('rapidRegistration.sidebar.total')}
                     </span>
                     <div className="text-right">
                       {isCouponValid && (
@@ -763,7 +1215,7 @@ const QuickRegistration: React.FC = () => {
                           {originalFormattedAmount}
                         </span>
                       )}
-                      <span className="text-4xl font-black text-[#05294E] tracking-tighter">
+                      <span className="text-4xl font-black text-grey-900 tracking-tighter">
                         {formattedAmount}
                       </span>
                     </div>
@@ -803,17 +1255,17 @@ const QuickRegistration: React.FC = () => {
                 </div>
               </div>
 
-              {/* Trust badges */}
-              <div className="grid grid-cols-2 gap-4">
-                <div className="bg-white p-5 rounded-2xl border border-slate-100 shadow-sm flex flex-col items-center text-center">
-                  <ShieldCheck className="h-8 w-8 text-emerald-500 mb-2" />
-                  <span className="text-[10px] font-black text-slate-900 uppercase tracking-widest">Pagamento Seguro</span>
-                </div>
-                <div className="bg-white p-5 rounded-2xl border border-slate-100 shadow-sm flex flex-col items-center text-center">
-                  <CheckCircle2 className="h-8 w-8 text-[#05294E] mb-2" />
-                  <span className="text-[10px] font-black text-slate-900 uppercase tracking-widest">Suporte 24/7</span>
-                </div>
-              </div>
+              {/* Submit Button */}
+              <button
+                type="submit"
+                form="registration-form"
+                disabled={loading || (!formData.termsAccepted && !isRegistered) || (selectedMethod === 'parcelow' && (!formData.cpf || formData.cpf.length < 14))}
+                className={`w-full text-white font-bold py-5 rounded-2xl transition-all flex items-center justify-center text-lg shadow-xl hover:shadow-2xl hover:scale-[1.02] active:scale-[0.98] disabled:opacity-50 disabled:cursor-not-allowed disabled:scale-100 ${
+                  (formData.termsAccepted || isRegistered) && (selectedMethod !== 'parcelow' || (formData.cpf && formData.cpf.length >= 14)) ? 'bg-[#05294E]' : 'bg-slate-400'
+                }`}
+              >
+                {getButtonText()}
+              </button>
             </div>
           </div>
         </div>
@@ -858,7 +1310,7 @@ const QuickRegistration: React.FC = () => {
                             {activeTerm?.title || t('preCheckoutModal.termsAndConditions.title')}
                           </Dialog.Title>
                           <p className="text-xs font-bold text-slate-400 uppercase tracking-[0.2em] mt-1">
-                            Contrato de Prestação de Serviços
+                            {t('rapidRegistration.terms.contractSubtitle') || 'Contrato de Prestação de Serviços'}
                           </p>
                         </div>
                       </div>

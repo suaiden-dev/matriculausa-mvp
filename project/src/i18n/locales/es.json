@@ -1651,6 +1651,7 @@
       "invalidEmail": "Por favor, introduce una dirección de correo electrónico válida.",
       "signupDisabled": "Los nuevos registros están deshabilitados actualmente. Por favor, ponte en contacto con el soporte.",
       "preCheckoutModal": {
+        "noTermsFound": "No se encontraron términos",
         "securePayment": "Pago Seguro",
         "closeModal": "Cerrar modal",
         "closeTerms": "Cerrar términos",
@@ -3737,13 +3738,21 @@
       "email": "Correo electrónico",
       "phone": "Teléfono",
       "dependents": "Número de Dependientes",
+      "dependentsSubtitle": "Miembros de la familia (cónyuge y/o hijos)",
+      "dependentOptions": {
+        "count_zero": "0 Dependientes",
+        "count_one": "1 Dependiente",
+        "count_other": "{{count}} Dependientes"
+      },
+      "termsAcceptedBadge": "Términos Vistos y Aceptados",
       "password": "Contraseña",
       "terms": "Acepto los Términos y Condiciones",
       "submit": "Confirmar Registro",
       "confirmPassword": "Confirmar Contraseña",
       "error": {
         "passwordsNotMatch": "Las contraseñas no coinciden",
-        "terms": "Debes aceptar los términos"
+        "terms": "Debe aceptar los términos",
+        "general": "Ocurrió un error en el registro. Por favor, inténtelo de nuevo."
       },
       "placeholders": {
         "fullName": "Ingrese su nombre completo",
@@ -3756,14 +3765,49 @@
     },
     "sidebar": {
       "title": "Resumen de Pago",
+      "total": "Total",
       "currentFee": "Total a Pagar Ahora",
       "feeExplanation": "La Tarifa del Proceso de Selección ($400.00) es el primer pago obligatorio en la plataforma MatriculaUSA. Desbloquea su acceso completo para ver todas las becas e iniciar su proceso de solicitud. Esta tarifa es final y se le reembolsará si no es aceptado en ninguna universidad.",
       "futureFeesTitle": "Tarifas Futuras",
       "enrollmentFee": "Tarifa de Matrícula",
       "scholarshipFee": "Tarifa de Beca",
       "i20Fee": "Tarifa de Control I-20",
-      "futureFeesNote": "Las tarifas futuras son estimaciones y varían según la universidad.",
-      "approximateValue": "Valor Aproximado"
+      "futureFeesNote": "Las tarifas futuras son estimaciones y varían según la universidad."
+    },
+    "terms": {
+      "contractSubtitle": "Contrato de Prestación de Servicios"
+    },
+    "zelle": {
+      "title": "Pago con Zelle",
+      "subtitle": "Siga las instrucciones a continuación para completar su pago.",
+      "back": "Volver"
+    },
+    "payment": {
+      "selectMethod": "Seleccione el Método de Pago",
+      "methods": {
+        "stripe": "Tarjeta de Crédito",
+        "pix": "PIX",
+        "zelle": "Zelle",
+        "parcelow": "Parcelow"
+      },
+      "notes": {
+        "processingFees": "* Pueden incluir tarifas de procesamiento",
+        "parcelowFees": "* Pueden incluir cargos del operador y procesamiento de la plataforma",
+        "zelleTime": "El procesamiento puede tardar hasta 48 horas"
+      },
+      "payWith": "Pagar con {{method}}",
+      "securePayment": "Pagar de Forma Segura",
+      "cpf": {
+        "label": "Ingrese su CPF (Obligatorio para Parcelow)",
+        "placeholder": "000.000.000-00",
+        "error": "Se requiere CPF para el pago de Parcelow."
+      },
+      "installment": "Hasta 12 cuotas con tarjeta",
+      "error": {
+        "invalidMethod": "Método de pago inválido.",
+        "notAuthenticated": "Usuario no autenticado.",
+        "generationFailed": "Error al generar el enlace de pago. Por favor, inténtelo de nuevo."
+      }
     }
   }
 }
