@@ -60,6 +60,12 @@ export interface UserProfile {
   // System type inherited from seller
   system_type?: 'legacy' | 'simplified';
 
+  // CPF Document
+  cpf_document?: string;
+
+  // Onboarding completion status
+  onboarding_completed?: boolean;
+
   // ... outras colunas se existirem
 }
 
@@ -69,7 +75,7 @@ interface AuthContextType {
   userProfile: UserProfile | null;
   login: (email: string, password: string) => Promise<void>;
   logout: () => Promise<void>;
-  register: (email: string, password: string, userData: { full_name: string; role: 'student' | 'school' | 'admin' | 'affiliate_admin' | 'seller'; [key: string]: any }, options?: SignUpOptions) => Promise<void>;
+  register: (email: string, password: string, userData: { full_name: string; role: 'student' | 'school' | 'admin' | 'affiliate_admin' | 'seller'; [key: string]: any }, options?: SignUpOptions) => Promise<any>;
   switchRole: (newRole: 'student' | 'school' | 'admin' | 'affiliate_admin' | 'seller') => void;
   isAuthenticated: boolean;
   loading: boolean;
@@ -866,6 +872,8 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
       localStorage.removeItem('cached_user_profile');
       localStorage.removeItem('pending_seller_referral_code');
       localStorage.removeItem('sb-fitpynguasqqutuhzifx-auth-token');
+      localStorage.removeItem('onboarding_current_step');
+      localStorage.removeItem('pending_open_modal');
       sessionStorage.clear();
       
       // Forçar refresh da página para limpar completamente o estado
@@ -891,6 +899,8 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
       localStorage.removeItem('cached_user');
       localStorage.removeItem('cached_user_profile');
       localStorage.removeItem('sb-fitpynguasqqutuhzifx-auth-token');
+      localStorage.removeItem('onboarding_current_step');
+      localStorage.removeItem('pending_open_modal');
       sessionStorage.clear();
       
       // Forçar redirecionamento
@@ -901,7 +911,7 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
   };
 
   // Função para registrar usuário
-  const register = async (email: string, password: string, userData: { full_name: string; role: 'student' | 'school' | 'admin' | 'affiliate_admin' | 'seller'; [key: string]: any }, options?: SignUpOptions) => {
+  const register = async (email: string, password: string, userData: { full_name: string; role: 'student' | 'school' | 'admin' | 'affiliate_admin' | 'seller'; [key: string]: any }, options?: SignUpOptions): Promise<any> => {
     console.log('🔍 [USEAUTH] Iniciando função register');
     console.log('🔍 [USEAUTH] userData recebido:', userData);
     
@@ -1197,6 +1207,8 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
     // ✅ NOVO: Enviar mensagem automática de boas-vindas no chat para novos alunos (registro por staff)
     // A mensagem de boas-vindas agora é enviada automaticamente pelo trigger do banco de dados
     // Não é mais necessário enviar manualmente aqui
+
+    return data;
   };
 
   // Função para trocar role do usuário (apenas para desenvolvimento/admin)

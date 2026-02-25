@@ -104,7 +104,7 @@ export function transformPaymentsToRecordsAndStats({
 
     // Scholarship Fee - Prioridade: valor real pago (se razoável) > override > cálculo fixo
     let scholarshipFee: number;
-    const expectedScholarship = systemType === 'simplified' ? 550 : 900;
+    const expectedScholarship = systemType === 'simplified' ? 900 : 900;
     
     if (realPaid?.scholarship !== undefined && realPaid.scholarship > 0) {
       // Verificar se o valor está razoável (dentro de 50% do esperado)
@@ -488,7 +488,7 @@ export function transformPaymentsToRecordsAndStats({
 
     // Scholarship Fee - Prioridade: valor real pago (se razoável) > override > cálculo fixo
     let scholarshipFee: number;
-    const expectedScholarship = systemType === 'simplified' ? 550 : 900;
+    const expectedScholarship = systemType === 'simplified' ? 900 : 900;
     
     if (realPaid?.scholarship !== undefined && realPaid.scholarship > 0) {
       // Verificar se o valor está razoável (dentro de 50% do esperado)

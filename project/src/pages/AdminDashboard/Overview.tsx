@@ -245,7 +245,6 @@ const Overview: React.FC<OverviewProps> = ({ stats, universities, error, loading
     }
   };
 
-
   return (
     <div className="space-y-8">
       {/* Error Alert */}

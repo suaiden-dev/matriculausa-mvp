@@ -12,7 +12,7 @@ export interface SimplifiedFees {
 export const useSimplifiedFees = (): SimplifiedFees => {
   const [fees, setFees] = useState<SimplifiedFees>({
     fee350: 350,
-    fee550: 550,
+    fee550: 900,
     fee900: 900,
     loading: true,
     error: null
@@ -35,7 +35,7 @@ export const useSimplifiedFees = (): SimplifiedFees => {
 
         const feeData = {
           fee350: 350,
-          fee550: 550,
+          fee550: 900,
           fee900: 900,
           loading: false,
           error: null
@@ -48,7 +48,7 @@ export const useSimplifiedFees = (): SimplifiedFees => {
                 feeData.fee350 = parseInt(item.value) || 350;
                 break;
               case 'simplified_fee_550':
-                feeData.fee550 = parseInt(item.value) || 550;
+                feeData.fee550 = parseInt(item.value) || 900;
                 break;
               case 'simplified_fee_900':
                 feeData.fee900 = parseInt(item.value) || 900;
@@ -67,7 +67,7 @@ export const useSimplifiedFees = (): SimplifiedFees => {
         if (isMounted) {
           setFees({
             fee350: 350,
-            fee550: 550,
+            fee550: 900,
             fee900: 900,
             loading: false,
             error: err instanceof Error ? err.message : 'Unknown error'

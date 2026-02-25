@@ -61,7 +61,7 @@ const SimplifiedAffiliateTools: React.FC = () => {
     const fetchSellerCode = async () => {
       if (user?.id) {
         try {
-          const { data, error } = await supabase
+          const { data } = await supabase
             .from('sellers')
             .select('referral_code')
             .eq('user_id', user.id)
@@ -168,8 +168,33 @@ const SimplifiedAffiliateTools: React.FC = () => {
                     )}
                   </button>
                 </div>
+              </div>
             </div>
-          </div>
+
+            <div className="bg-white rounded-xl shadow-sm border border-slate-200 p-6">
+              <h3 className="text-lg font-semibold text-slate-900 mb-4">Selection Fee Registration</h3>
+              <div className="bg-slate-50 rounded-lg p-4">
+                <div className="flex items-center space-x-2">
+                  <input
+                    type="text"
+                    value={`${origin}/selection-fee-registration?ref=${sellerCode}`}
+                    readOnly
+                    className="flex-1 bg-white border border-slate-200 rounded px-3 py-2 text-sm font-mono"
+                  />
+                  <button
+                    onClick={() => copyToClipboard(`${origin}/selection-fee-registration?ref=${sellerCode}`, 'selection-fee')}
+                    className="bg-slate-100 hover:bg-slate-200 text-slate-700 px-3 py-2 rounded transition-colors"
+                    title="Copy link"
+                  >
+                    {copiedText === 'selection-fee' ? (
+                      <Check className="h-4 w-4 text-green-600" />
+                    ) : (
+                      <Copy className="h-4 w-4" />
+                    )}
+                  </button>
+                </div>
+              </div>
+            </div>
           </div>
 
           {/* Landing Page Links - apenas para sellers simplified */}

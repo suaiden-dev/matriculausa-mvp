@@ -25,12 +25,12 @@ interface MonthlyPerformance {
 const Analytics: React.FC<AnalyticsProps> = ({ stats, sellers = [], userId }) => {
   const [monthlyData, setMonthlyData] = useState<MonthlyPerformance[]>([]);
   const [loadingMonthly, setLoadingMonthly] = useState(false);
-  
+
   // Estados para receita ajustada (mesmo padrão do Overview.tsx)
   const [clientAdjustedRevenue, setClientAdjustedRevenue] = useState<number | null>(null);
   const [adjustedRevenueByReferral, setAdjustedRevenueByReferral] = useState<Record<string, number>>({});
   const [loadingAdjusted, setLoadingAdjusted] = useState(false);
-  
+
   // Estados para diferenciar estudantes pagos vs registrados
   const [paidStudentsCount, setPaidStudentsCount] = useState<number>(0);
   const [registeredOnlyCount, setRegisteredOnlyCount] = useState<number>(0);
@@ -60,7 +60,7 @@ const Analytics: React.FC<AnalyticsProps> = ({ stats, sellers = [], userId }) =>
         setClientAdjustedRevenue(null);
         return;
       }
-      
+
       // Descobrir affiliate_admin_id
       const { data: aaList, error: aaErr } = await supabase
         .from('affiliate_admins')
@@ -78,14 +78,14 @@ const Analytics: React.FC<AnalyticsProps> = ({ stats, sellers = [], userId }) =>
         .from('sellers')
         .select('referral_code')
         .eq('affiliate_admin_id', affiliateAdminId);
-      
+
       if (sellersErr || !sellers || sellers.length === 0) {
         setClientAdjustedRevenue(null);
         return;
       }
-      
+
       const referralCodes = sellers.map(s => s.referral_code);
-      
+
       // ✅ CORREÇÃO: Buscar perfis usando RPC centralizada que verifica TODAS as aplicações
       const { data: profiles, error: profilesErr } = await supabase
         .rpc('get_affiliate_admin_profiles_with_fees', { admin_user_id: currentUserId });
@@ -116,11 +116,11 @@ const Analytics: React.FC<AnalyticsProps> = ({ stats, sellers = [], userId }) =>
 
       // Buscar valores reais pagos de individual_fee_payments
       const realPaidAmountsMap: Record<string, { selection_process?: number; scholarship?: number; i20_control?: number }> = {};
-      
+
       // Buscar valores pagos para cada estudante
       await Promise.all(profiles.map(async (p: any) => {
         if (!p.user_id) return;
-        
+
         try {
           // ✅ CORREÇÃO: Usar getDisplayAmounts para exibição (valores "Zelle" sem taxas)
           const amounts = await getDisplayAmounts(p.user_id, ['selection_process', 'scholarship', 'i20_control']);
@@ -153,8 +153,8 @@ const Analytics: React.FC<AnalyticsProps> = ({ stats, sellers = [], userId }) =>
             const baseSel = ov.selection_process_fee != null ? Number(ov.selection_process_fee) : baseSelDefault;
             // ✅ CORREÇÃO: Para simplified, Selection Process Fee é fixo ($350), sem dependentes
             // Dependentes só afetam Application Fee ($100 por dependente)
-            selPaid = ov.selection_process_fee != null 
-              ? baseSel 
+            selPaid = ov.selection_process_fee != null
+              ? baseSel
               : (p?.system_type === 'simplified' ? baseSel : baseSel + (deps * 150));
           }
         }
@@ -168,7 +168,7 @@ const Analytics: React.FC<AnalyticsProps> = ({ stats, sellers = [], userId }) =>
             schPaid = realPaid.scholarship;
           } else {
             // Fallback: cálculo fixo para dados antigos sem registro
-            const schBaseDefault = p?.system_type === 'simplified' ? 550 : 900;
+            const schBaseDefault = p?.system_type === 'simplified' ? 900 : 900;
             const schBase = ov.scholarship_fee != null ? Number(ov.scholarship_fee) : schBaseDefault;
             schPaid = schBase;
           }
@@ -224,7 +224,7 @@ const Analytics: React.FC<AnalyticsProps> = ({ stats, sellers = [], userId }) =>
 
     try {
       setLoadingMonthly(true);
-      
+
       // Descobrir affiliate_admin_id
       const { data: userData } = await supabase.auth.getUser();
       const currentUserId = userData?.user?.id;
@@ -232,7 +232,7 @@ const Analytics: React.FC<AnalyticsProps> = ({ stats, sellers = [], userId }) =>
         setMonthlyData([]);
         return;
       }
-      
+
       const { data: aaList, error: aaErr } = await supabase
         .from('affiliate_admins')
         .select('id')
@@ -249,14 +249,14 @@ const Analytics: React.FC<AnalyticsProps> = ({ stats, sellers = [], userId }) =>
         .from('sellers')
         .select('referral_code')
         .eq('affiliate_admin_id', affiliateAdminId);
-      
+
       if (sellersErr || !sellers || sellers.length === 0) {
         setMonthlyData([]);
         return;
       }
-      
+
       const referralCodes = sellers.map(s => s.referral_code);
-      
+
       // Buscar perfis de estudantes vinculados via seller_referral_code com dados de criação
       const { data: profiles, error: profilesErr } = await supabase
         .from('user_profiles')
@@ -273,7 +273,7 @@ const Analytics: React.FC<AnalyticsProps> = ({ stats, sellers = [], userId }) =>
         `)
         .in('seller_referral_code', referralCodes)
         .order('created_at', { ascending: false });
-        
+
       if (profilesErr || !profiles) {
         setMonthlyData([]);
         return;
@@ -301,11 +301,11 @@ const Analytics: React.FC<AnalyticsProps> = ({ stats, sellers = [], userId }) =>
 
       // ✅ CORREÇÃO: Buscar valores reais pagos para usar nos cálculos (mesma lógica do loadAdjustedRevenue)
       const realPaidAmountsMap: Record<string, { selection_process?: number; scholarship?: number; i20_control?: number }> = {};
-      
+
       // Buscar valores pagos para cada estudante
       await Promise.all((profiles || []).map(async (p: any) => {
         if (!p.user_id) return;
-        
+
         try {
           // ✅ CORREÇÃO: Usar getDisplayAmounts para exibição (valores "Zelle" sem taxas)
           const amounts = await getDisplayAmounts(p.user_id, ['selection_process', 'scholarship', 'i20_control']);
@@ -321,7 +321,7 @@ const Analytics: React.FC<AnalyticsProps> = ({ stats, sellers = [], userId }) =>
 
       // Calcular dados mensais dos últimos 12 meses
       const monthlyMap: Record<string, { students_count: number; total_revenue: number; active_sellers: Set<string> }> = {};
-      
+
       // Inicializar últimos 12 meses
       for (let i = 11; i >= 0; i--) {
         const date = new Date();
@@ -338,7 +338,7 @@ const Analytics: React.FC<AnalyticsProps> = ({ stats, sellers = [], userId }) =>
       (profiles || []).forEach((p) => {
         const createdDate = new Date(p.created_at);
         const monthYear = `${createdDate.getFullYear()}-${String(createdDate.getMonth() + 1).padStart(2, '0')}`;
-        
+
         if (!monthlyMap[monthYear]) return; // Fora do range de 12 meses
 
         const deps = Number(p?.dependents || 0);
@@ -357,14 +357,14 @@ const Analytics: React.FC<AnalyticsProps> = ({ stats, sellers = [], userId }) =>
             const baseSel = ov.selection_process_fee != null ? Number(ov.selection_process_fee) : baseSelDefault;
             // ✅ CORREÇÃO: Para simplified, Selection Process Fee é fixo ($350), sem dependentes
             // Dependentes só afetam Application Fee ($100 por dependente)
-            selPaid = ov.selection_process_fee != null 
-              ? baseSel 
+            selPaid = ov.selection_process_fee != null
+              ? baseSel
               : (p?.system_type === 'simplified' ? baseSel : baseSel + (deps * 150));
           }
         }
 
         // Scholarship Fee - usar valor real pago se disponível, senão calcular
-        const hasAnyScholarshipPaid = Array.isArray(p?.scholarship_applications) 
+        const hasAnyScholarshipPaid = Array.isArray(p?.scholarship_applications)
           ? p.scholarship_applications.some((app: any) => app.is_scholarship_fee_paid)
           : false;
         let schPaid = 0;
@@ -374,7 +374,7 @@ const Analytics: React.FC<AnalyticsProps> = ({ stats, sellers = [], userId }) =>
             schPaid = realPaid.scholarship;
           } else {
             // Fallback: cálculo fixo para dados antigos sem registro
-            const schBaseDefault = p?.system_type === 'simplified' ? 550 : 900;
+            const schBaseDefault = p?.system_type === 'simplified' ? 900 : 900;
             const schBase = ov.scholarship_fee != null ? Number(ov.scholarship_fee) : schBaseDefault;
             schPaid = schBase;
           }
@@ -448,7 +448,7 @@ const Analytics: React.FC<AnalyticsProps> = ({ stats, sellers = [], userId }) =>
       // Sort by revenue first, then by number of students
       const revenueA = a.total_revenue || 0;
       const revenueB = b.total_revenue || 0;
-      
+
       if (revenueB !== revenueA) {
         return revenueB - revenueA;
       }
@@ -467,10 +467,10 @@ const Analytics: React.FC<AnalyticsProps> = ({ stats, sellers = [], userId }) =>
     return ((current - previous) / previous) * 100;
   };
 
-  const sellersGrowthPercentage = lastMonthData && currentMonthData ? 
+  const sellersGrowthPercentage = lastMonthData && currentMonthData ?
     calculateSafeGrowth(currentMonthData.active_sellers, lastMonthData.active_sellers) : 0;
 
-  const revenueGrowthPercentage = lastMonthData && currentMonthData ? 
+  const revenueGrowthPercentage = lastMonthData && currentMonthData ?
     calculateSafeGrowth(Number(currentMonthData.total_revenue), Number(lastMonthData.total_revenue)) : 0;
 
   return (
@@ -514,263 +514,259 @@ const Analytics: React.FC<AnalyticsProps> = ({ stats, sellers = [], userId }) =>
       <div className="px-4 sm:px-6 lg:px-8">
         <div className="space-y-8">
           {/* KPI Cards */}
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-4">
-        {/* Estudantes que pagaram */}
-        <div className="bg-white rounded-xl shadow-sm border border-slate-200 p-6">
-          <div className="flex items-center justify-between">
-            <div>
-              <p className="text-sm font-medium text-slate-600">Paid Students</p>
-              {loadingAdjusted ? (
-                <div className="h-9 bg-slate-200 rounded animate-pulse mt-1"></div>
-              ) : (
-                <>
-                  <p className="text-3xl font-bold text-green-600 mt-1">{paidStudentsCount}</p>
-                  <p className="text-xs text-slate-500 mt-1">At least Selection Process paid</p>
-                </>
-              )}
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-4">
+            {/* Estudantes que pagaram */}
+            <div className="bg-white rounded-xl shadow-sm border border-slate-200 p-6">
+              <div className="flex items-center justify-between">
+                <div>
+                  <p className="text-sm font-medium text-slate-600">Paid Students</p>
+                  {loadingAdjusted ? (
+                    <div className="h-9 bg-slate-200 rounded animate-pulse mt-1"></div>
+                  ) : (
+                    <>
+                      <p className="text-3xl font-bold text-green-600 mt-1">{paidStudentsCount}</p>
+                      <p className="text-xs text-slate-500 mt-1">At least Selection Process paid</p>
+                    </>
+                  )}
+                </div>
+                <div className="w-12 h-12 bg-green-100 rounded-xl flex items-center justify-center">
+                  <UserCheck className="h-6 w-6 text-green-600" />
+                </div>
+              </div>
             </div>
-            <div className="w-12 h-12 bg-green-100 rounded-xl flex items-center justify-center">
-              <UserCheck className="h-6 w-6 text-green-600" />
-            </div>
-          </div>
-        </div>
 
-        {/* Estudantes apenas registrados */}
-        <div className="bg-white rounded-xl shadow-sm border border-slate-200 p-6">
-          <div className="flex items-center justify-between">
-            <div>
-              <p className="text-sm font-medium text-slate-600">Registered Only</p>
-              {loadingAdjusted ? (
-                <div className="h-9 bg-slate-200 rounded animate-pulse mt-1"></div>
-              ) : (
-                <>
-                  <p className="text-3xl font-bold text-orange-600 mt-1">{registeredOnlyCount}</p>
-                  <p className="text-xs text-slate-500 mt-1">Not paid yet</p>
-                </>
-              )}
+            {/* Estudantes apenas registrados */}
+            <div className="bg-white rounded-xl shadow-sm border border-slate-200 p-6">
+              <div className="flex items-center justify-between">
+                <div>
+                  <p className="text-sm font-medium text-slate-600">Registered Only</p>
+                  {loadingAdjusted ? (
+                    <div className="h-9 bg-slate-200 rounded animate-pulse mt-1"></div>
+                  ) : (
+                    <>
+                      <p className="text-3xl font-bold text-orange-600 mt-1">{registeredOnlyCount}</p>
+                      <p className="text-xs text-slate-500 mt-1">Not paid yet</p>
+                    </>
+                  )}
+                </div>
+                <div className="w-12 h-12 bg-orange-100 rounded-xl flex items-center justify-center">
+                  <UserX className="h-6 w-6 text-orange-600" />
+                </div>
+              </div>
             </div>
-            <div className="w-12 h-12 bg-orange-100 rounded-xl flex items-center justify-center">
-              <UserX className="h-6 w-6 text-orange-600" />
-            </div>
-          </div>
-        </div>
 
-        <div className="bg-white rounded-xl shadow-sm border border-slate-200 p-6">
-          <div className="flex items-center justify-between">
-            <div>
-              <p className="text-sm font-medium text-slate-600">Activation Rate</p>
-              <p className="text-3xl font-bold text-blue-600 mt-1">
-                {safeStats.totalSellers > 0 
-                  ? ((safeStats.activeSellers / safeStats.totalSellers) * 100).toFixed(1)
-                  : 0
-                }%
-              </p>
-            </div>
-            <div className="w-12 h-12 bg-blue-100 rounded-xl flex items-center justify-center">
-              <TrendingUp className="h-6 w-6 text-blue-600" />
-            </div>
-          </div>
-          <div className="mt-4 flex items-center text-sm">
-            <span className={`font-medium ${
-              sellersGrowthPercentage > 0 ? 'text-green-600' : 
-              sellersGrowthPercentage < 0 ? 'text-red-600' : 'text-slate-600'
-            }`}>
-              {sellersGrowthPercentage > 0 ? `+${sellersGrowthPercentage.toFixed(1)}%` : 
-               sellersGrowthPercentage < 0 ? `${sellersGrowthPercentage.toFixed(1)}%` : '0%'}
-            </span>
-            <span className="text-slate-600 ml-1">vs previous month</span>
-          </div>
-        </div>
-
-        <div className="bg-white rounded-xl shadow-sm border border-slate-200 p-6">
-          <div className="flex items-center justify-between">
-            <div>
-              <p className="text-sm font-medium text-slate-600">Conversion per Seller</p>
-              <p className="text-3xl font-bold text-green-600 mt-1">
-                {safeStats.activeSellers > 0 
-                  ? (safeStats.totalStudents / safeStats.activeSellers).toFixed(1)
-                  : 0
-                }
-              </p>
-            </div>
-            <div className="w-12 h-12 bg-green-100 rounded-xl flex items-center justify-center">
-              <Users className="h-6 w-6 text-green-600" />
-            </div>
-          </div>
-          <div className="mt-4 flex items-center text-sm">
-            <span className={`font-medium ${
-              revenueGrowthPercentage > 0 ? 'text-green-600' : 
-              revenueGrowthPercentage < 0 ? 'text-red-600' : 'text-slate-600'
-            }`}>
-              {revenueGrowthPercentage > 0 ? `+${revenueGrowthPercentage.toFixed(1)}%` : 
-               revenueGrowthPercentage < 0 ? `${revenueGrowthPercentage.toFixed(1)}%` : '0%'}
-            </span>
-            <span className="text-slate-600 ml-1">vs previous month</span>
-          </div>
-        </div>
-
-        <div className="bg-white rounded-xl shadow-sm border border-slate-200 p-6">
-          <div className="flex items-center justify-between">
-            <div>
-              <p className="text-sm font-medium text-slate-600">Revenue per Student</p>
-              {loadingAdjusted ? (
-                <div className="h-9 bg-slate-200 rounded animate-pulse mt-1"></div>
-              ) : (
-                <>
+            <div className="bg-white rounded-xl shadow-sm border border-slate-200 p-6">
+              <div className="flex items-center justify-between">
+                <div>
+                  <p className="text-sm font-medium text-slate-600">Activation Rate</p>
                   <p className="text-3xl font-bold text-blue-600 mt-1">
-                    {paidStudentsCount > 0 
-                      ? formatCurrency((clientAdjustedRevenue || safeStats.totalRevenue) / paidStudentsCount) 
-                      : '$0.00'
+                    {safeStats.totalSellers > 0
+                      ? ((safeStats.activeSellers / safeStats.totalSellers) * 100).toFixed(1)
+                      : 0
+                    }%
+                  </p>
+                </div>
+                <div className="w-12 h-12 bg-blue-100 rounded-xl flex items-center justify-center">
+                  <TrendingUp className="h-6 w-6 text-blue-600" />
+                </div>
+              </div>
+              <div className="mt-4 flex items-center text-sm">
+                <span className={`font-medium ${sellersGrowthPercentage > 0 ? 'text-green-600' :
+                    sellersGrowthPercentage < 0 ? 'text-red-600' : 'text-slate-600'
+                  }`}>
+                  {sellersGrowthPercentage > 0 ? `+${sellersGrowthPercentage.toFixed(1)}%` :
+                    sellersGrowthPercentage < 0 ? `${sellersGrowthPercentage.toFixed(1)}%` : '0%'}
+                </span>
+                <span className="text-slate-600 ml-1">vs previous month</span>
+              </div>
+            </div>
+
+            <div className="bg-white rounded-xl shadow-sm border border-slate-200 p-6">
+              <div className="flex items-center justify-between">
+                <div>
+                  <p className="text-sm font-medium text-slate-600">Conversion per Seller</p>
+                  <p className="text-3xl font-bold text-green-600 mt-1">
+                    {safeStats.activeSellers > 0
+                      ? (safeStats.totalStudents / safeStats.activeSellers).toFixed(1)
+                      : 0
                     }
                   </p>
-                  <p className="text-xs text-slate-500 mt-1">Per paid student</p>
-                </>
-              )}
-            </div>
-            <div className="w-12 h-12 bg-blue-100 rounded-xl flex items-center justify-center">
-              <DollarSign className="h-6 w-6 text-blue-600" />
-            </div>
-          </div>
-          <div className="mt-4 flex items-center text-sm">
-            {loadingAdjusted ? (
-              <div className="h-4 bg-slate-200 rounded animate-pulse w-24"></div>
-            ) : (
-              <>
-                <span className={`font-medium ${
-                  revenueGrowthPercentage > 0 ? 'text-green-600' : 
-                  revenueGrowthPercentage < 0 ? 'text-red-600' : 'text-slate-600'
-                }`}>
-                  {revenueGrowthPercentage > 0 ? `+${revenueGrowthPercentage.toFixed(1)}%` : 
-                   revenueGrowthPercentage < 0 ? `${revenueGrowthPercentage.toFixed(1)}%` : '0%'}
+                </div>
+                <div className="w-12 h-12 bg-green-100 rounded-xl flex items-center justify-center">
+                  <Users className="h-6 w-6 text-green-600" />
+                </div>
+              </div>
+              <div className="mt-4 flex items-center text-sm">
+                <span className={`font-medium ${revenueGrowthPercentage > 0 ? 'text-green-600' :
+                    revenueGrowthPercentage < 0 ? 'text-red-600' : 'text-slate-600'
+                  }`}>
+                  {revenueGrowthPercentage > 0 ? `+${revenueGrowthPercentage.toFixed(1)}%` :
+                    revenueGrowthPercentage < 0 ? `${revenueGrowthPercentage.toFixed(1)}%` : '0%'}
                 </span>
-                <span className="text-slate-600 ml-1">vs mês anterior</span>
-              </>
-            )}
-          </div>
-        </div>
-      </div>
-
-      {/* Charts Section */}
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
-        {/* Monthly Performance Chart */}
-        <div className="bg-white rounded-xl shadow-sm border border-slate-200 p-6">
-          <div className="flex items-center justify-between mb-6">
-            <h3 className="text-lg font-semibold text-slate-900">Monthly Performance</h3>
-            <BarChart3 className="h-5 w-5 text-slate-400" />
-          </div>
-          
-          <div className="space-y-4">
-            {loadingMonthly || loadingAdjusted ? (
-              // Skeleton loading para monthly performance
-              [...Array(6)].map((_, idx) => (
-                <div key={idx} className="flex items-center justify-between">
-                  <div className="flex items-center space-x-3">
-                    <div className="w-20 h-4 bg-slate-200 rounded animate-pulse"></div>
-                    <div className="flex-1 bg-slate-100 rounded-full h-2 min-w-[120px]">
-                      <div className="bg-slate-200 h-2 rounded-full w-1/2 animate-pulse"></div>
-                    </div>
-                  </div>
-                  <div className="text-right">
-                    <div className="h-4 bg-slate-200 rounded animate-pulse w-16 mb-1"></div>
-                    <div className="h-3 bg-slate-200 rounded animate-pulse w-12"></div>
-                  </div>
-                </div>
-              ))
-            ) : monthlyData.length > 0 ? (
-              monthlyData.map((data) => (
-                <div key={data.month_year} className="flex items-center justify-between">
-                  <div className="flex items-center space-x-3">
-                    <div className="w-20 text-sm text-slate-600 font-medium">{data.month_year}</div>
-                    <div className="flex-1 bg-slate-100 rounded-full h-2 min-w-[120px]">
-                      <div 
-                        className="bg-blue-600 h-2 rounded-full transition-all duration-300"
-                        style={{ width: `${(data.students_count / Math.max(...monthlyData.map(d => d.students_count), 1)) * 100}%` }}
-                      ></div>
-                    </div>
-                  </div>
-                  <div className="text-right">
-                    <div className="text-sm font-medium text-slate-900">{data.students_count} students</div>
-                    <div className="text-xs text-slate-500">{formatCurrency(data.total_revenue)}</div>
-                  </div>
-                </div>
-              ))
-            ) : (
-              <div className="text-center py-8">
-                <BarChart3 className="h-8 w-8 text-slate-300 mx-auto mb-2" />
-                <p className="text-slate-500 text-sm">No monthly data available</p>
+                <span className="text-slate-600 ml-1">vs previous month</span>
               </div>
-            )}
-          </div>
-        </div>
+            </div>
 
-        {/* Top Sellers */}
-        <div className="bg-white rounded-xl shadow-sm border border-slate-200 p-6">
-          <div className="flex items-center justify-between mb-6">
-            <h3 className="text-lg font-semibold text-slate-900">Top Sellers</h3>
-            <Award className="h-5 w-5 text-slate-400" />
-          </div>
-          
-          <div className="space-y-4">
-            {loadingAdjusted ? (
-              // Skeleton loading para top sellers
-              [...Array(3)].map((_, idx) => (
-                <div key={idx} className="flex items-center justify-between">
-                  <div className="flex items-center space-x-3">
-                    <div className="w-8 h-8 bg-slate-200 rounded-lg animate-pulse"></div>
-                    <div>
-                      <div className="h-4 bg-slate-200 rounded animate-pulse w-24 mb-1"></div>
-                      <div className="h-3 bg-slate-200 rounded animate-pulse w-32"></div>
-                    </div>
-                  </div>
-                  <div className="text-right">
-                    <div className="h-4 bg-slate-200 rounded animate-pulse w-16 mb-1"></div>
-                    <div className="h-3 bg-slate-200 rounded animate-pulse w-12"></div>
-                  </div>
+            <div className="bg-white rounded-xl shadow-sm border border-slate-200 p-6">
+              <div className="flex items-center justify-between">
+                <div>
+                  <p className="text-sm font-medium text-slate-600">Revenue per Student</p>
+                  {loadingAdjusted ? (
+                    <div className="h-9 bg-slate-200 rounded animate-pulse mt-1"></div>
+                  ) : (
+                    <>
+                      <p className="text-3xl font-bold text-blue-600 mt-1">
+                        {paidStudentsCount > 0
+                          ? formatCurrency((clientAdjustedRevenue || safeStats.totalRevenue) / paidStudentsCount)
+                          : '$0.00'
+                        }
+                      </p>
+                      <p className="text-xs text-slate-500 mt-1">Per paid student</p>
+                    </>
+                  )}
                 </div>
-              ))
-            ) : topSellers.length > 0 ? (
-              topSellers.map((seller, idx) => (
-                <div key={seller.id} className="flex items-center justify-between">
-                  <div className="flex items-center space-x-3">
-                    <div className={`w-8 h-8 rounded-lg flex items-center justify-center text-sm font-medium ${
-                      idx === 0 ? 'bg-yellow-100 text-yellow-800' :
-                      idx === 1 ? 'bg-slate-100 text-slate-800' :
-                      idx === 2 ? 'bg-orange-100 text-orange-800' :
-                      'bg-slate-50 text-slate-600'
-                    }`}>
-                      {idx + 1}
-                    </div>
-                    <div>
-                      <div className="text-sm font-medium text-slate-900">{seller.name}</div>
-                      <div className="text-xs text-slate-500">{seller.email}</div>
-                    </div>
-                  </div>
-                  <div className="text-right">
-                    <div className="text-sm font-medium text-slate-900">{seller.students_count || 0} students</div>
-                    <div className="text-xs text-slate-500">{formatCurrency(seller.total_revenue || 0)}</div>
-                  </div>
+                <div className="w-12 h-12 bg-blue-100 rounded-xl flex items-center justify-center">
+                  <DollarSign className="h-6 w-6 text-blue-600" />
                 </div>
-              ))
-            ) : (
-              <div className="text-center py-8">
-                <Award className="h-8 w-8 text-slate-300 mx-auto mb-2" />
-                <p className="text-slate-500 text-sm">No sellers registered</p>
               </div>
-            )}
+              <div className="mt-4 flex items-center text-sm">
+                {loadingAdjusted ? (
+                  <div className="h-4 bg-slate-200 rounded animate-pulse w-24"></div>
+                ) : (
+                  <>
+                    <span className={`font-medium ${revenueGrowthPercentage > 0 ? 'text-green-600' :
+                        revenueGrowthPercentage < 0 ? 'text-red-600' : 'text-slate-600'
+                      }`}>
+                      {revenueGrowthPercentage > 0 ? `+${revenueGrowthPercentage.toFixed(1)}%` :
+                        revenueGrowthPercentage < 0 ? `${revenueGrowthPercentage.toFixed(1)}%` : '0%'}
+                    </span>
+                    <span className="text-slate-600 ml-1">vs mês anterior</span>
+                  </>
+                )}
+              </div>
+            </div>
           </div>
-        </div>
-      </div>
 
-      {/* Data Source Info */}
-      <div className="bg-slate-50 rounded-lg p-4">
-        <div className="flex items-center space-x-2 text-slate-600 text-sm">
-          <Calendar className="h-4 w-4" />
-          <span>Data last updated: {new Date().toLocaleString()}</span>
-        </div>
-        <p className="text-xs text-slate-500 mt-1">
-          All data is sourced from real-time database queries using optimized SQL functions
-        </p>
-      </div>
+          {/* Charts Section */}
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
+            {/* Monthly Performance Chart */}
+            <div className="bg-white rounded-xl shadow-sm border border-slate-200 p-6">
+              <div className="flex items-center justify-between mb-6">
+                <h3 className="text-lg font-semibold text-slate-900">Monthly Performance</h3>
+                <BarChart3 className="h-5 w-5 text-slate-400" />
+              </div>
+
+              <div className="space-y-4">
+                {loadingMonthly || loadingAdjusted ? (
+                  // Skeleton loading para monthly performance
+                  [...Array(6)].map((_, idx) => (
+                    <div key={idx} className="flex items-center justify-between">
+                      <div className="flex items-center space-x-3">
+                        <div className="w-20 h-4 bg-slate-200 rounded animate-pulse"></div>
+                        <div className="flex-1 bg-slate-100 rounded-full h-2 min-w-[120px]">
+                          <div className="bg-slate-200 h-2 rounded-full w-1/2 animate-pulse"></div>
+                        </div>
+                      </div>
+                      <div className="text-right">
+                        <div className="h-4 bg-slate-200 rounded animate-pulse w-16 mb-1"></div>
+                        <div className="h-3 bg-slate-200 rounded animate-pulse w-12"></div>
+                      </div>
+                    </div>
+                  ))
+                ) : monthlyData.length > 0 ? (
+                  monthlyData.map((data) => (
+                    <div key={data.month_year} className="flex items-center justify-between">
+                      <div className="flex items-center space-x-3">
+                        <div className="w-20 text-sm text-slate-600 font-medium">{data.month_year}</div>
+                        <div className="flex-1 bg-slate-100 rounded-full h-2 min-w-[120px]">
+                          <div
+                            className="bg-blue-600 h-2 rounded-full transition-all duration-300"
+                            style={{ width: `${(data.students_count / Math.max(...monthlyData.map(d => d.students_count), 1)) * 100}%` }}
+                          ></div>
+                        </div>
+                      </div>
+                      <div className="text-right">
+                        <div className="text-sm font-medium text-slate-900">{data.students_count} students</div>
+                        <div className="text-xs text-slate-500">{formatCurrency(data.total_revenue)}</div>
+                      </div>
+                    </div>
+                  ))
+                ) : (
+                  <div className="text-center py-8">
+                    <BarChart3 className="h-8 w-8 text-slate-300 mx-auto mb-2" />
+                    <p className="text-slate-500 text-sm">No monthly data available</p>
+                  </div>
+                )}
+              </div>
+            </div>
+
+            {/* Top Sellers */}
+            <div className="bg-white rounded-xl shadow-sm border border-slate-200 p-6">
+              <div className="flex items-center justify-between mb-6">
+                <h3 className="text-lg font-semibold text-slate-900">Top Sellers</h3>
+                <Award className="h-5 w-5 text-slate-400" />
+              </div>
+
+              <div className="space-y-4">
+                {loadingAdjusted ? (
+                  // Skeleton loading para top sellers
+                  [...Array(3)].map((_, idx) => (
+                    <div key={idx} className="flex items-center justify-between">
+                      <div className="flex items-center space-x-3">
+                        <div className="w-8 h-8 bg-slate-200 rounded-lg animate-pulse"></div>
+                        <div>
+                          <div className="h-4 bg-slate-200 rounded animate-pulse w-24 mb-1"></div>
+                          <div className="h-3 bg-slate-200 rounded animate-pulse w-32"></div>
+                        </div>
+                      </div>
+                      <div className="text-right">
+                        <div className="h-4 bg-slate-200 rounded animate-pulse w-16 mb-1"></div>
+                        <div className="h-3 bg-slate-200 rounded animate-pulse w-12"></div>
+                      </div>
+                    </div>
+                  ))
+                ) : topSellers.length > 0 ? (
+                  topSellers.map((seller, idx) => (
+                    <div key={seller.id} className="flex items-center justify-between">
+                      <div className="flex items-center space-x-3">
+                        <div className={`w-8 h-8 rounded-lg flex items-center justify-center text-sm font-medium ${idx === 0 ? 'bg-yellow-100 text-yellow-800' :
+                            idx === 1 ? 'bg-slate-100 text-slate-800' :
+                              idx === 2 ? 'bg-orange-100 text-orange-800' :
+                                'bg-slate-50 text-slate-600'
+                          }`}>
+                          {idx + 1}
+                        </div>
+                        <div>
+                          <div className="text-sm font-medium text-slate-900">{seller.name}</div>
+                          <div className="text-xs text-slate-500">{seller.email}</div>
+                        </div>
+                      </div>
+                      <div className="text-right">
+                        <div className="text-sm font-medium text-slate-900">{seller.students_count || 0} students</div>
+                        <div className="text-xs text-slate-500">{formatCurrency(seller.total_revenue || 0)}</div>
+                      </div>
+                    </div>
+                  ))
+                ) : (
+                  <div className="text-center py-8">
+                    <Award className="h-8 w-8 text-slate-300 mx-auto mb-2" />
+                    <p className="text-slate-500 text-sm">No sellers registered</p>
+                  </div>
+                )}
+              </div>
+            </div>
+          </div>
+
+          {/* Data Source Info */}
+          <div className="bg-slate-50 rounded-lg p-4">
+            <div className="flex items-center space-x-2 text-slate-600 text-sm">
+              <Calendar className="h-4 w-4" />
+              <span>Data last updated: {new Date().toLocaleString()}</span>
+            </div>
+            <p className="text-xs text-slate-500 mt-1">
+              All data is sourced from real-time database queries using optimized SQL functions
+            </p>
+          </div>
         </div>
       </div>
     </div>

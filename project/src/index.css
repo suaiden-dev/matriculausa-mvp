@@ -543,3 +543,12 @@ All colors MUST be HSL.
 .animate-fade-in {
   animation: fadeIn 0.3s ease-out;
 }
+
+/* Remove default black outline from PhoneInput inside Quick Registration */
+.quick-registration-phone .PhoneInputInput,
+.quick-registration-phone .PhoneInputInput:focus {
+  outline: none !important;
+  box-shadow: none !important;
+  border: none !important;
+  background: transparent !important;
+}

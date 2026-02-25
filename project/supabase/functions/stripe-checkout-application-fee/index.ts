@@ -1,17 +1,23 @@
-import 'jsr:@supabase/functions-js/edge-runtime.d.ts';
-import Stripe from 'npm:stripe@17.7.0';
-import { createClient } from 'npm:@supabase/supabase-js@2.49.1';
-import { getStripeConfig } from '../stripe-config.ts';
-import { calculateCardAmountWithFees, calculatePIXAmountWithFees } from '../utils/stripe-fee-calculator.ts';
+import "jsr:@supabase/functions-js/edge-runtime.d.ts";
+import Stripe from "npm:stripe@17.7.0";
+import { createClient } from "npm:@supabase/supabase-js@2.49.1";
+import { getStripeConfig } from "../stripe-config.ts";
+import {
+  calculateCardAmountWithFees,
+  calculatePIXAmountWithFees,
+} from "../utils/stripe-fee-calculator.ts";
 
-const supabase = createClient(Deno.env.get('SUPABASE_URL') ?? '', Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') ?? '');
+const supabase = createClient(
+  Deno.env.get("SUPABASE_URL") ?? "",
+  Deno.env.get("SUPABASE_SERVICE_ROLE_KEY") ?? "",
+);
 
 function corsResponse(body: string | object | null, status = 200) {
   const headers = {
-    'Access-Control-Allow-Origin': '*',
-    'Access-Control-Allow-Methods': 'POST, OPTIONS',
-    'Access-Control-Allow-Headers': 'Content-Type, Authorization',
-    'Content-Type': 'application/json',
+    "Access-Control-Allow-Origin": "*",
+    "Access-Control-Allow-Methods": "POST, OPTIONS",
+    "Access-Control-Allow-Headers": "Content-Type, Authorization",
+    "Content-Type": "application/json",
   };
 
   if (status === 204) {
@@ -26,54 +32,89 @@ function corsResponse(body: string | object | null, status = 200) {
 
 Deno.serve(async (req) => {
   try {
-    if (req.method === 'OPTIONS') {
+    if (req.method === "OPTIONS") {
       return corsResponse(null, 204);
     }
 
     // Obter configuração do Stripe baseada no ambiente detectado
     const config = getStripeConfig(req);
-    
+
     // Criar instância do Stripe com a chave correta para o ambiente
     const stripe = new Stripe(config.secretKey, {
       appInfo: {
-        name: 'MatriculaUSA Integration',
-        version: '1.0.0',
+        name: "MatriculaUSA Integration",
+        version: "1.0.0",
       },
     });
 
     console.log(`🔧 Using Stripe in ${config.environment.environment} mode`);
 
-    const { price_id, success_url, cancel_url, mode, metadata, payment_method } = await req.json();
-    
+    const {
+      price_id,
+      success_url,
+      cancel_url,
+      mode,
+      metadata,
+      payment_method,
+    } = await req.json();
+
     // Garantir que payment_method tenha um valor padrão
-    const finalPaymentMethod = payment_method || 'stripe';
-    
-    const authHeader = req.headers.get('Authorization');
+    const finalPaymentMethod = payment_method || "stripe";
+
+    const authHeader = req.headers.get("Authorization");
     if (!authHeader) {
-      return corsResponse({ error: 'No authorization header' }, 401);
+      return corsResponse({ error: "No authorization header" }, 401);
     }
 
-    const token = authHeader.replace('Bearer ', '');
-    const { data: { user }, error: authError } = await supabase.auth.getUser(token);
-    
+    const token = authHeader.replace("Bearer ", "");
+    const { data: { user }, error: authError } = await supabase.auth.getUser(
+      token,
+    );
+
     if (authError || !user) {
-      return corsResponse({ error: 'Invalid token' }, 401);
+      return corsResponse({ error: "Invalid token" }, 401);
     }
 
-    console.log('[stripe-checkout-application-fee] Received payload:', { price_id, success_url, cancel_url, mode, metadata });
-    console.log('[stripe-checkout-application-fee] Metadata recebido:', metadata);
-    console.log('[stripe-checkout-application-fee] selected_scholarship_id no metadata:', metadata?.selected_scholarship_id);
-    console.log('[stripe-checkout-application-fee] final_amount no metadata:', metadata?.final_amount);
-    console.log('[stripe-checkout-application-fee] amount no metadata:', metadata?.amount);
+    console.log("[stripe-checkout-application-fee] Received payload:", {
+      price_id,
+      success_url,
+      cancel_url,
+      mode,
+      metadata,
+    });
+    console.log(
+      "[stripe-checkout-application-fee] Metadata recebido:",
+      metadata,
+    );
+    console.log(
+      "[stripe-checkout-application-fee] selected_scholarship_id no metadata:",
+      metadata?.selected_scholarship_id,
+    );
+    console.log(
+      "[stripe-checkout-application-fee] final_amount no metadata:",
+      metadata?.final_amount,
+    );
+    console.log(
+      "[stripe-checkout-application-fee] amount no metadata:",
+      metadata?.amount,
+    );
 
     // ✅ CORREÇÃO: Verificar se há valor com desconto no metadata (já inclui dependentes e desconto)
-    const hasFinalAmountFromMetadata = metadata?.final_amount && !isNaN(parseFloat(metadata.final_amount));
-    const finalAmountFromMetadata = hasFinalAmountFromMetadata ? parseFloat(metadata.final_amount) : null;
-    
+    const hasFinalAmountFromMetadata = metadata?.final_amount &&
+      !isNaN(parseFloat(metadata.final_amount));
+    const finalAmountFromMetadata = hasFinalAmountFromMetadata
+      ? parseFloat(metadata.final_amount)
+      : null;
+
     if (finalAmountFromMetadata) {
-      console.log('[stripe-checkout-application-fee] ✅ Usando valor com desconto do metadata:', finalAmountFromMetadata);
+      console.log(
+        "[stripe-checkout-application-fee] ✅ Usando valor com desconto do metadata:",
+        finalAmountFromMetadata,
+      );
     } else {
-      console.log('[stripe-checkout-application-fee] ℹ️ Nenhum valor com desconto no metadata, calculando do zero');
+      console.log(
+        "[stripe-checkout-application-fee] ℹ️ Nenhum valor com desconto no metadata, calculando do zero",
+      );
     }
 
     // Lógica para PIX (conversão USD -> BRL)
@@ -81,28 +122,34 @@ Deno.serve(async (req) => {
 
     // Busca o perfil do usuário para obter o user_profiles.id correto e informações de dependentes
     const { data: userProfile, error: profileError } = await supabase
-      .from('user_profiles')
-      .select('id, user_id, system_type, dependents')
-      .eq('user_id', user.id)
+      .from("user_profiles")
+      .select("id, user_id, system_type, dependents")
+      .eq("user_id", user.id)
       .single();
 
     if (profileError || !userProfile) {
-      console.error('[stripe-checkout-application-fee] User profile not found:', profileError);
-      return corsResponse({ error: 'User profile not found' }, 404);
+      console.error(
+        "[stripe-checkout-application-fee] User profile not found:",
+        profileError,
+      );
+      return corsResponse({ error: "User profile not found" }, 404);
     }
 
     // Verifica se application_id foi fornecido
     let applicationId = metadata?.application_id;
     if (!applicationId) {
-      return corsResponse({ error: 'Application ID is required in metadata' }, 400);
+      return corsResponse(
+        { error: "Application ID is required in metadata" },
+        400,
+      );
     }
 
     // Verifica se a aplicação existe e pertence ao usuário (usando userProfile.id)
     let { data: application, error: appError } = await supabase
-      .from('scholarship_applications')
-      .select('id, student_id, scholarship_id, student_process_type')
-      .eq('id', applicationId)
-      .eq('student_id', userProfile.id)
+      .from("scholarship_applications")
+      .select("id, student_id, scholarship_id, student_process_type")
+      .eq("id", applicationId)
+      .eq("student_id", userProfile.id)
       .single();
 
     // NOTA: Não validamos deadline aqui porque se o aluno chegou até aqui para pagar,
@@ -111,60 +158,92 @@ Deno.serve(async (req) => {
 
     // Se a aplicação não existe, tenta criar uma nova
     if (appError || !application) {
-      console.log('[stripe-checkout-application-fee] Application not found, attempting to create new one');
-      
+      console.log(
+        "[stripe-checkout-application-fee] Application not found, attempting to create new one",
+      );
+
       // Extrai scholarship_id do metadata se disponível
-      const scholarshipId = metadata?.selected_scholarship_id || metadata?.scholarship_id;
+      const scholarshipId = metadata?.selected_scholarship_id ||
+        metadata?.scholarship_id;
       if (!scholarshipId) {
-        console.error('[stripe-checkout-application-fee] No scholarship_id in metadata to create application');
-        return corsResponse({ error: 'Application not found and scholarship_id missing to create new one' }, 404);
+        console.error(
+          "[stripe-checkout-application-fee] No scholarship_id in metadata to create application",
+        );
+        return corsResponse({
+          error:
+            "Application not found and scholarship_id missing to create new one",
+        }, 404);
       }
 
       // Preparar dados da aplicação incluindo student_process_type se disponível
       const applicationData: any = {
         student_id: userProfile.id,
         scholarship_id: scholarshipId,
-        status: 'pending',
+        status: "pending",
         applied_at: new Date().toISOString(),
       };
 
-      console.log('[stripe-checkout-application-fee] Dados da aplicação a serem criados:', applicationData);
-      console.log('[stripe-checkout-application-fee] scholarshipId extraído:', scholarshipId);
+      console.log(
+        "[stripe-checkout-application-fee] Dados da aplicação a serem criados:",
+        applicationData,
+      );
+      console.log(
+        "[stripe-checkout-application-fee] scholarshipId extraído:",
+        scholarshipId,
+      );
 
       // Adicionar student_process_type se disponível no metadata
       if (metadata?.student_process_type) {
         applicationData.student_process_type = metadata.student_process_type;
-        console.log('[stripe-checkout-application-fee] Adding student_process_type:', metadata.student_process_type);
+        console.log(
+          "[stripe-checkout-application-fee] Adding student_process_type:",
+          metadata.student_process_type,
+        );
       }
 
       // Cria nova aplicação usando userProfile.id (correto)
       const { data: newApp, error: insertError } = await supabase
-        .from('scholarship_applications')
+        .from("scholarship_applications")
         .insert(applicationData)
-        .select('id, student_id, scholarship_id, student_process_type')
+        .select("id, student_id, scholarship_id, student_process_type")
         .single();
 
       if (insertError || !newApp) {
-        console.error('[stripe-checkout-application-fee] Error creating application:', insertError);
-        return corsResponse({ error: 'Failed to create application' }, 500);
+        console.error(
+          "[stripe-checkout-application-fee] Error creating application:",
+          insertError,
+        );
+        return corsResponse({ error: "Failed to create application" }, 500);
       }
 
       application = newApp;
       applicationId = newApp.id;
-      console.log('[stripe-checkout-application-fee] New application created:', application.id);
+      console.log(
+        "[stripe-checkout-application-fee] New application created:",
+        application.id,
+      );
     } else {
-      console.log('[stripe-checkout-application-fee] Application verified:', application.id);
-      
+      console.log(
+        "[stripe-checkout-application-fee] Application verified:",
+        application.id,
+      );
+
       // Se a aplicação existe mas não tem student_process_type, atualiza se disponível
       if (!application.student_process_type && metadata?.student_process_type) {
-        console.log('[stripe-checkout-application-fee] Updating existing application with student_process_type:', metadata.student_process_type);
+        console.log(
+          "[stripe-checkout-application-fee] Updating existing application with student_process_type:",
+          metadata.student_process_type,
+        );
         const { error: updateError } = await supabase
-          .from('scholarship_applications')
+          .from("scholarship_applications")
           .update({ student_process_type: metadata.student_process_type })
-          .eq('id', application.id);
-        
+          .eq("id", application.id);
+
         if (updateError) {
-          console.error('[stripe-checkout-application-fee] Error updating student_process_type:', updateError);
+          console.error(
+            "[stripe-checkout-application-fee] Error updating student_process_type:",
+            updateError,
+          );
         }
       }
     }
@@ -173,153 +252,224 @@ Deno.serve(async (req) => {
     let applicationFeeAmount = 350.00; // Valor padrão como fallback
     let universityId = null;
     let stripeConnectAccountId = null;
-    
+
     // ✅ CORREÇÃO: Se há valor com desconto no metadata, usar diretamente (já inclui dependentes e desconto)
     if (finalAmountFromMetadata) {
       applicationFeeAmount = finalAmountFromMetadata;
-      console.log('[stripe-checkout-application-fee] ✅ Usando valor com desconto do metadata (já inclui dependentes e desconto):', applicationFeeAmount);
-      
+      console.log(
+        "[stripe-checkout-application-fee] ✅ Usando valor com desconto do metadata (já inclui dependentes e desconto):",
+        applicationFeeAmount,
+      );
+
       // Ainda precisamos buscar universityId e stripeConnectAccountId para o metadata
       // Application fee sempre usa o valor da universidade (não muda com pacotes)
-      console.log('[stripe-checkout-application-fee] Buscando dados da universidade para scholarship_id:', application.scholarship_id);
-      
+      console.log(
+        "[stripe-checkout-application-fee] Buscando dados da universidade para scholarship_id:",
+        application.scholarship_id,
+      );
+
       if (application.scholarship_id) {
         try {
           // Buscar dados da bolsa incluindo universidade (apenas para obter universityId)
-          const { data: scholarshipData, error: scholarshipError } = await supabase
-            .from('scholarships')
-            .select('id, university_id')
-            .eq('id', application.scholarship_id)
-            .single();
-          
+          const { data: scholarshipData, error: scholarshipError } =
+            await supabase
+              .from("scholarships")
+              .select("id, university_id")
+              .eq("id", application.scholarship_id)
+              .single();
+
           if (!scholarshipError && scholarshipData) {
             universityId = scholarshipData.university_id;
-            
+
             // Buscar conta Stripe Connect da universidade
             if (universityId) {
-              const { data: universityConfig, error: configError } = await supabase
-                .from('university_fee_configurations')
-                .select('stripe_connect_account_id, stripe_charges_enabled')
-                .eq('university_id', universityId)
-                .single();
-              
-              if (!configError && universityConfig?.stripe_connect_account_id && universityConfig?.stripe_charges_enabled) {
-                stripeConnectAccountId = universityConfig.stripe_connect_account_id;
-                console.log('[stripe-checkout-application-fee] Conta Stripe Connect encontrada:', stripeConnectAccountId);
+              const { data: universityConfig, error: configError } =
+                await supabase
+                  .from("university_fee_configurations")
+                  .select("stripe_connect_account_id, stripe_charges_enabled")
+                  .eq("university_id", universityId)
+                  .single();
+
+              if (
+                !configError && universityConfig?.stripe_connect_account_id &&
+                universityConfig?.stripe_charges_enabled
+              ) {
+                stripeConnectAccountId =
+                  universityConfig.stripe_connect_account_id;
+                console.log(
+                  "[stripe-checkout-application-fee] Conta Stripe Connect encontrada:",
+                  stripeConnectAccountId,
+                );
               } else {
-                console.log('[stripe-checkout-application-fee] Universidade não tem conta Connect ativa:', configError);
+                console.log(
+                  "[stripe-checkout-application-fee] Universidade não tem conta Connect ativa:",
+                  configError,
+                );
               }
             }
           }
         } catch (error) {
-          console.error('[stripe-checkout-application-fee] Erro ao buscar dados da universidade:', error);
+          console.error(
+            "[stripe-checkout-application-fee] Erro ao buscar dados da universidade:",
+            error,
+          );
         }
       }
     } else {
       // Se não há valor com desconto, calcular do zero (lógica original)
       // Application fee sempre usa o valor da universidade (não muda com pacotes)
-      console.log('[stripe-checkout-application-fee] Buscando dados da bolsa para scholarship_id:', application.scholarship_id);
-      
+      console.log(
+        "[stripe-checkout-application-fee] Buscando dados da bolsa para scholarship_id:",
+        application.scholarship_id,
+      );
+
       if (application.scholarship_id) {
         try {
           // Buscar dados da bolsa incluindo universidade
-          const { data: scholarshipData, error: scholarshipError } = await supabase
-            .from('scholarships')
-            .select('id, university_id, application_fee_amount')
-            .eq('id', application.scholarship_id)
-            .single();
-          
-          console.log('[stripe-checkout-application-fee] Resultado da busca da bolsa:', {
-            scholarshipData,
-            scholarshipError,
-            scholarshipId: application.scholarship_id
-          });
-          
+          const { data: scholarshipData, error: scholarshipError } =
+            await supabase
+              .from("scholarships")
+              .select("id, university_id, application_fee_amount")
+              .eq("id", application.scholarship_id)
+              .single();
+
+          console.log(
+            "[stripe-checkout-application-fee] Resultado da busca da bolsa:",
+            {
+              scholarshipData,
+              scholarshipError,
+              scholarshipId: application.scholarship_id,
+            },
+          );
+
           if (!scholarshipError && scholarshipData) {
             // O valor já está em dólares no banco
-            applicationFeeAmount = scholarshipData.application_fee_amount || 0.50;
+            applicationFeeAmount = scholarshipData.application_fee_amount ||
+              0.50;
             universityId = scholarshipData.university_id;
-            
-            console.log('[stripe-checkout-application-fee] Valores extraídos da bolsa:', {
-              originalAmount: scholarshipData.application_fee_amount,
-              applicationFeeAmount,
-              universityId
-            });
-            
+
+            console.log(
+              "[stripe-checkout-application-fee] Valores extraídos da bolsa:",
+              {
+                originalAmount: scholarshipData.application_fee_amount,
+                applicationFeeAmount,
+                universityId,
+              },
+            );
+
             // Buscar conta Stripe Connect da universidade
             if (universityId) {
-              const { data: universityConfig, error: configError } = await supabase
-                .from('university_fee_configurations')
-                .select('stripe_connect_account_id, stripe_charges_enabled')
-                .eq('university_id', universityId)
-                .single();
-              
-              if (!configError && universityConfig?.stripe_connect_account_id && universityConfig?.stripe_charges_enabled) {
-                stripeConnectAccountId = universityConfig.stripe_connect_account_id;
-                console.log('[stripe-checkout-application-fee] Conta Stripe Connect encontrada:', stripeConnectAccountId);
+              const { data: universityConfig, error: configError } =
+                await supabase
+                  .from("university_fee_configurations")
+                  .select("stripe_connect_account_id, stripe_charges_enabled")
+                  .eq("university_id", universityId)
+                  .single();
+
+              if (
+                !configError && universityConfig?.stripe_connect_account_id &&
+                universityConfig?.stripe_charges_enabled
+              ) {
+                stripeConnectAccountId =
+                  universityConfig.stripe_connect_account_id;
+                console.log(
+                  "[stripe-checkout-application-fee] Conta Stripe Connect encontrada:",
+                  stripeConnectAccountId,
+                );
               } else {
-                console.log('[stripe-checkout-application-fee] Universidade não tem conta Connect ativa:', configError);
+                console.log(
+                  "[stripe-checkout-application-fee] Universidade não tem conta Connect ativa:",
+                  configError,
+                );
               }
             }
-            
-            console.log('[stripe-checkout-application-fee] Dados da bolsa encontrados:', {
-              applicationFeeAmount,
-              universityId,
-              stripeConnectAccountId
-            });
+
+            console.log(
+              "[stripe-checkout-application-fee] Dados da bolsa encontrados:",
+              {
+                applicationFeeAmount,
+                universityId,
+                stripeConnectAccountId,
+              },
+            );
           } else {
-            console.log('[stripe-checkout-application-fee] Usando valores padrão (bolsa não encontrada):', scholarshipError);
+            console.log(
+              "[stripe-checkout-application-fee] Usando valores padrão (bolsa não encontrada):",
+              scholarshipError,
+            );
           }
         } catch (error) {
-          console.error('[stripe-checkout-application-fee] Erro ao buscar dados da bolsa:', error);
-          console.log('[stripe-checkout-application-fee] Usando valores padrão como fallback');
+          console.error(
+            "[stripe-checkout-application-fee] Erro ao buscar dados da bolsa:",
+            error,
+          );
+          console.log(
+            "[stripe-checkout-application-fee] Usando valores padrão como fallback",
+          );
         }
       } else {
-        console.log('[stripe-checkout-application-fee] Nenhum scholarship_id encontrado na aplicação');
+        console.log(
+          "[stripe-checkout-application-fee] Nenhum scholarship_id encontrado na aplicação",
+        );
       }
 
       // Adicionar custo por dependente para ambos os sistemas (legacy e simplified)
-      const systemType = userProfile.system_type || 'legacy';
+      const systemType = userProfile.system_type || "legacy";
       const dependents = Number(userProfile.dependents) || 0;
-      
-      console.log('[stripe-checkout-application-fee] Informações do estudante:', {
-        systemType,
-        dependents,
-        baseApplicationFee: applicationFeeAmount
-      });
-      
+
+      console.log(
+        "[stripe-checkout-application-fee] Informações do estudante:",
+        {
+          systemType,
+          dependents,
+          baseApplicationFee: applicationFeeAmount,
+        },
+      );
+
       if (dependents > 0) {
         const dependentsCost = dependents * 100; // $100 por dependente (para ambos os sistemas)
         applicationFeeAmount += dependentsCost;
-        console.log(`[stripe-checkout-application-fee] ✅ Adicionado $${dependentsCost} por ${dependents} dependente(s). Novo valor: $${applicationFeeAmount}`);
+        console.log(
+          `[stripe-checkout-application-fee] ✅ Adicionado $${dependentsCost} por ${dependents} dependente(s). Novo valor: $${applicationFeeAmount}`,
+        );
       } else {
-        console.log('[stripe-checkout-application-fee] Sem custo adicional de dependentes (dependentes:', dependents, ')');
+        console.log(
+          "[stripe-checkout-application-fee] Sem custo adicional de dependentes (dependentes:",
+          dependents,
+          ")",
+        );
       }
     }
 
     // Garantir valor mínimo de $0.50 USD
     const minAmount = 0.50;
     if (applicationFeeAmount < minAmount) {
-      console.log(`[stripe-checkout-application-fee] Valor muito baixo (${applicationFeeAmount}), ajustando para mínimo: ${minAmount}`);
+      console.log(
+        `[stripe-checkout-application-fee] Valor muito baixo (${applicationFeeAmount}), ajustando para mínimo: ${minAmount}`,
+      );
       applicationFeeAmount = minAmount;
     }
-    
+
     // Valor base (sem markup) - usado para comissões
     const baseAmount = applicationFeeAmount;
-    
-    console.log('[stripe-checkout-application-fee] Valores finais calculados:', {
-      originalAmount: applicationFeeAmount,
-      baseAmount,
-      stripeConnectAccountId
-    });
+
+    console.log(
+      "[stripe-checkout-application-fee] Valores finais calculados:",
+      {
+        originalAmount: applicationFeeAmount,
+        baseAmount,
+        stripeConnectAccountId,
+      },
+    );
 
     // Monta o metadata para o Stripe (valores base serão atualizados após cálculo do markup)
     const sessionMetadata: any = {
       ...metadata, // Primeiro o metadata recebido
       student_id: user.id,
-      fee_type: 'application_fee',
+      fee_type: "application_fee",
       application_id: applicationId,
-      student_process_type: application?.student_process_type || metadata?.student_process_type || null,
+      student_process_type: application?.student_process_type ||
+        metadata?.student_process_type || null,
       application_fee_amount: applicationFeeAmount.toString(),
       base_amount: baseAmount.toString(), // Valor base para comissões
       final_amount: applicationFeeAmount.toString(), // ✅ Valor final (com desconto se aplicável)
@@ -329,92 +479,128 @@ Deno.serve(async (req) => {
       payment_method: finalPaymentMethod, // Adicionar método de pagamento
       exchange_rate: exchangeRate.toString(), // Adicionar taxa de câmbio para PIX
     };
-    
+
     // ✅ Se havia cupom promocional no metadata original, preservar
     if (metadata?.promotional_coupon) {
       sessionMetadata.promotional_coupon = metadata.promotional_coupon;
-      console.log('[stripe-checkout-application-fee] ✅ Cupom promocional preservado no metadata:', metadata.promotional_coupon);
+      console.log(
+        "[stripe-checkout-application-fee] ✅ Cupom promocional preservado no metadata:",
+        metadata.promotional_coupon,
+      );
     }
 
-    console.log('[stripe-checkout-application-fee] Metadata final configurado:', sessionMetadata);
-    if (finalPaymentMethod === 'pix') {
-      console.log('[PIX] 🇧🇷 PIX selecionado para Application Fee - Configurando sessão PIX...');
-      console.log('[PIX] 💰 Valor USD:', applicationFeeAmount);
-      
+    console.log(
+      "[stripe-checkout-application-fee] Metadata final configurado:",
+      sessionMetadata,
+    );
+    if (finalPaymentMethod === "pix") {
+      console.log(
+        "[PIX] 🇧🇷 PIX selecionado para Application Fee - Configurando sessão PIX...",
+      );
+      console.log("[PIX] 💰 Valor USD:", applicationFeeAmount);
+
       // Priorizar taxa de câmbio enviada pelo frontend (se disponível) para garantir consistência
-      const frontendExchangeRate = metadata?.exchange_rate ? parseFloat(metadata.exchange_rate) : null;
-      
+      const frontendExchangeRate = metadata?.exchange_rate
+        ? parseFloat(metadata.exchange_rate)
+        : null;
+
       if (frontendExchangeRate && frontendExchangeRate > 0) {
         // Usar taxa do frontend para garantir que o valor calculado seja o mesmo
         exchangeRate = frontendExchangeRate;
-        console.log('[stripe-checkout-application-fee] 💱 Usando taxa de câmbio do frontend (para consistência):', exchangeRate);
+        console.log(
+          "[stripe-checkout-application-fee] 💱 Usando taxa de câmbio do frontend (para consistência):",
+          exchangeRate,
+        );
       } else {
         // Se frontend não enviou taxa, buscar nova
-      try {
-        console.log('[stripe-checkout-application-fee] 💱 Obtendo taxa de câmbio com margem comercial...');
-        
-        // Usar API externa com margem comercial (mais realista que Stripe)
-        const response = await fetch('https://api.exchangerate-api.com/v4/latest/USD');
-        if (response.ok) {
-          const data = await response.json();
-          const baseRate = parseFloat(data.rates.BRL);
-          
-          // Aplicar margem comercial (3-5% acima da taxa oficial)
-          exchangeRate = baseRate * 1.04; // 4% de margem
-          console.log('[stripe-checkout-application-fee] 💱 Taxa base (ExchangeRates-API):', baseRate);
-          console.log('[stripe-checkout-application-fee] 💱 Taxa com margem comercial (+4%):', exchangeRate);
-        } else {
-          throw new Error('API externa falhou');
+        try {
+          console.log(
+            "[stripe-checkout-application-fee] 💱 Obtendo taxa de câmbio com margem comercial...",
+          );
+
+          // Usar API externa com margem comercial (mais realista que Stripe)
+          const response = await fetch(
+            "https://api.exchangerate-api.com/v4/latest/USD",
+          );
+          if (response.ok) {
+            const data = await response.json();
+            const baseRate = parseFloat(data.rates.BRL);
+
+            // Aplicar margem comercial (3-5% acima da taxa oficial)
+            exchangeRate = baseRate * 1.04; // 4% de margem
+            console.log(
+              "[stripe-checkout-application-fee] 💱 Taxa base (ExchangeRates-API):",
+              baseRate,
+            );
+            console.log(
+              "[stripe-checkout-application-fee] 💱 Taxa com margem comercial (+4%):",
+              exchangeRate,
+            );
+          } else {
+            throw new Error("API externa falhou");
+          }
+        } catch (apiError) {
+          console.error(
+            "[stripe-checkout-application-fee] ❌ Erro na API externa:",
+            apiError,
+          );
+          exchangeRate = 5.6; // Taxa de fallback
+          console.log(
+            "[stripe-checkout-application-fee] 💱 Usando taxa de fallback:",
+            exchangeRate,
+          );
         }
-      } catch (apiError) {
-        console.error('[stripe-checkout-application-fee] ❌ Erro na API externa:', apiError);
-        exchangeRate = 5.6; // Taxa de fallback
-        console.log('[stripe-checkout-application-fee] 💱 Usando taxa de fallback:', exchangeRate);
       }
-    }
-      
+
       // Logs específicos para PIX após cálculo da taxa
-      console.log('[PIX] 💱 Taxa de conversão:', exchangeRate);
-      console.log('[PIX] 💰 Valor BRL:', Math.round(applicationFeeAmount * exchangeRate * 100));
-      console.log('[PIX] 🔗 Success URL PIX:', `${success_url}`);
+      console.log("[PIX] 💱 Taxa de conversão:", exchangeRate);
+      console.log(
+        "[PIX] 💰 Valor BRL:",
+        Math.round(applicationFeeAmount * exchangeRate * 100),
+      );
+      console.log("[PIX] 🔗 Success URL PIX:", `${success_url}`);
     }
 
     // Sempre aplicar markup de taxas do Stripe
     let grossAmountInCents: number;
-    if (finalPaymentMethod === 'pix') {
+    if (finalPaymentMethod === "pix") {
       // Para PIX: calcular markup considerando taxa de câmbio
       grossAmountInCents = calculatePIXAmountWithFees(baseAmount, exchangeRate);
     } else {
       // Para cartão: calcular markup
       grossAmountInCents = calculateCardAmountWithFees(baseAmount);
     }
-    console.log('[stripe-checkout-application-fee] ✅ Markup ATIVADO (ambiente:', config.environment.environment, ')');
-    
+    console.log(
+      "[stripe-checkout-application-fee] ✅ Markup ATIVADO (ambiente:",
+      config.environment.environment,
+      ")",
+    );
+
     // Atualizar metadata com valores gross e fee
     sessionMetadata.gross_amount = (grossAmountInCents / 100).toString();
-    sessionMetadata.fee_type = 'stripe_processing';
-    sessionMetadata.fee_amount = ((grossAmountInCents / 100) - baseAmount).toString();
-    sessionMetadata.markup_enabled = 'true';
-    
-    console.log('[stripe-checkout-application-fee] 💰 Valores calculados:', {
+    sessionMetadata.fee_amount = ((grossAmountInCents / 100) - baseAmount)
+      .toString();
+    sessionMetadata.markup_enabled = "true";
+
+    console.log("[stripe-checkout-application-fee] 💰 Valores calculados:", {
       baseAmount,
       grossAmount: grossAmountInCents / 100,
       feeAmount: (grossAmountInCents / 100) - baseAmount,
       grossAmountInCents,
-      markupEnabled: true
+      markupEnabled: true,
     });
 
     // Configuração da sessão Stripe
     const sessionConfig: any = {
-      payment_method_types: finalPaymentMethod === 'pix' ? ['pix'] : ['card'],
+      payment_method_types: finalPaymentMethod === "pix" ? ["pix"] : ["card"],
       client_reference_id: user.id,
       customer_email: user.email,
       line_items: [
         {
           price_data: {
-            currency: finalPaymentMethod === 'pix' ? 'brl' : 'usd',
+            currency: finalPaymentMethod === "pix" ? "brl" : "usd",
             product_data: {
-              name: 'Application Fee',
+              name: "Application Fee",
               description: `Application fee for scholarship application`,
             },
             unit_amount: grossAmountInCents, // Valor com markup já calculado
@@ -422,8 +608,8 @@ Deno.serve(async (req) => {
           quantity: 1,
         },
       ],
-      mode: mode || 'payment',
-      success_url: finalPaymentMethod === 'pix' 
+      mode: mode || "payment",
+      success_url: finalPaymentMethod === "pix"
         ? `${success_url}&pix_payment=true`
         : success_url,
       cancel_url: cancel_url, // Mesma página de erro para PIX e Stripe
@@ -432,67 +618,75 @@ Deno.serve(async (req) => {
 
     // Se tiver conta Stripe Connect, usar conta da universidade (sem platform fee)
     if (stripeConnectAccountId) {
-      console.log('[stripe-checkout-application-fee] Configurando Checkout Session com Stripe Connect (100% para universidade)');
-      
+      console.log(
+        "[stripe-checkout-application-fee] Configurando Checkout Session com Stripe Connect (100% para universidade)",
+      );
+
       // Adicionar informações do Connect no metadata
       sessionMetadata.stripe_connect_account_id = stripeConnectAccountId;
-      sessionMetadata.requires_transfer = 'true';
+      sessionMetadata.requires_transfer = "true";
       // Transferir o valor base (sem markup) para a universidade
       sessionMetadata.transfer_amount = Math.round(baseAmount * 100).toString(); // 100% do valor base para a universidade
-      
-      console.log('[stripe-checkout-application-fee] Metadata configurado para webhook:', {
-        stripe_connect_account_id: stripeConnectAccountId,
-        transfer_amount: Math.round(baseAmount * 100),
-        base_amount: baseAmount,
-        requires_transfer: true
-      });
+
+      console.log(
+        "[stripe-checkout-application-fee] Metadata configurado para webhook:",
+        {
+          stripe_connect_account_id: stripeConnectAccountId,
+          transfer_amount: Math.round(baseAmount * 100),
+          base_amount: baseAmount,
+          requires_transfer: true,
+        },
+      );
     } else {
-      console.log('[stripe-checkout-application-fee] Usando conta padrão (sem Connect)');
+      console.log(
+        "[stripe-checkout-application-fee] Usando conta padrão (sem Connect)",
+      );
     }
 
     // Criar sessão Stripe (sempre usando Checkout Session)
     const session = await stripe.checkout.sessions.create(sessionConfig);
-    
-    console.log('[stripe-checkout-application-fee] Created Stripe session:', {
+
+    console.log("[stripe-checkout-application-fee] Created Stripe session:", {
       sessionId: session.id,
       amount: applicationFeeAmount,
       grossAmountInCents,
       metadata: session.metadata,
       hasStripeConnect: !!stripeConnectAccountId,
-      fullAmountToUniversity: true
+      fullAmountToUniversity: true,
     });
 
     // Log the checkout session creation
     try {
-      await supabase.rpc('log_student_action', {
+      await supabase.rpc("log_student_action", {
         p_student_id: userProfile.id,
-        p_action_type: 'checkout_session_created',
-        p_action_description: `Stripe checkout session created for Application Fee (${session.id})`,
+        p_action_type: "checkout_session_created",
+        p_action_description:
+          `Stripe checkout session created for Application Fee (${session.id})`,
         p_performed_by: user.id,
-        p_performed_by_type: 'student',
+        p_performed_by_type: "student",
         p_metadata: {
-          fee_type: 'application_fee',
+          fee_type: "application_fee",
           payment_method: finalPaymentMethod,
           session_id: session.id,
           amount: applicationFeeAmount,
           application_id: applicationId,
           scholarship_id: application.scholarship_id,
           university_id: universityId,
-          has_stripe_connect: !!stripeConnectAccountId
-        }
+          has_stripe_connect: !!stripeConnectAccountId,
+        },
       });
     } catch (logError) {
-      console.error('Failed to log checkout session creation:', logError);
+      console.error("Failed to log checkout session creation:", logError);
     }
 
     return corsResponse({ session_url: session.url }, 200);
   } catch (error) {
-    console.error('Checkout error:', error);
-    console.error('[stripe-checkout-application-fee] Erro detalhado:', {
+    console.error("Checkout error:", error);
+    console.error("[stripe-checkout-application-fee] Erro detalhado:", {
       error: error.message,
       stack: error.stack,
-      name: error.name
+      name: error.name,
     });
-    return corsResponse({ error: 'Internal server error' }, 500);
+    return corsResponse({ error: "Internal server error" }, 500);
   }
-}); 
+});

@@ -257,7 +257,7 @@ export async function getDisplayAmounts(
 
     // Valores base por system_type
     const baseSelectionFee = systemType === 'simplified' ? 350 : 400;
-    const baseScholarshipFee = systemType === 'simplified' ? 550 : 900;
+    const baseScholarshipFee = systemType === 'simplified' ? 900 : 900; // Agora ambos são 900
     const baseI20Fee = 900; // Sempre 900 para ambos os sistemas
 
     // Selection Process Fee - Prioridade: override > cupom promocional > valor real pago (Zelle) > cálculo fixo

@@ -1,9 +1,9 @@
 import React, { useState, useMemo, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { 
-  Users, 
-  Building2, 
-  DollarSign, 
+import {
+  Users,
+  Building2,
+  DollarSign,
   Search,
   ChevronRight,
   MapPin,
@@ -38,11 +38,11 @@ interface FilterState {
 
 const AffiliateManagement: React.FC = () => {
   console.log('🚀 [AffiliateManagement] Componente renderizado');
-  
+
   const { affiliates, allSellers, allStudents, loading, error, refetch } = useAffiliateData();
   const navigate = useNavigate();
   const { isDevelopment } = useEnvironment();
-  
+
   console.log('🚀 [AffiliateManagement] Dados recebidos:', {
     affiliates: affiliates.length,
     allSellers: allSellers.length,
@@ -50,20 +50,20 @@ const AffiliateManagement: React.FC = () => {
     loading,
     isDevelopment
   });
-  
+
   // Filtrar affiliates com email @uorak.com
   const filteredAffiliates = useMemo(() => {
     const shouldFilter = !isDevelopment; // Filtrar em produção e staging
-    
+
     console.log('🔍 [AffiliateManagement] Filtro affiliates:', {
       shouldFilter,
       totalAffiliates: affiliates.length
     });
-    
+
     if (!shouldFilter) {
       return affiliates;
     }
-    
+
     const filtered = affiliates.filter((aff: any) => {
       const email = aff.email?.toLowerCase() || '';
       const shouldExclude = email.includes('@uorak.com');
@@ -72,28 +72,28 @@ const AffiliateManagement: React.FC = () => {
       }
       return !shouldExclude;
     });
-    
+
     console.log('🔍 [AffiliateManagement] Affiliates filtrados:', {
       antes: affiliates.length,
       depois: filtered.length
     });
-    
+
     return filtered;
   }, [affiliates, isDevelopment]);
-  
+
   // Filtrar sellers com email @uorak.com
   const filteredSellers = useMemo(() => {
     const shouldFilter = !isDevelopment; // Filtrar em produção e staging
-    
+
     console.log('🔍 [AffiliateManagement] Filtro sellers:', {
       shouldFilter,
       totalSellers: allSellers.length
     });
-    
+
     if (!shouldFilter) {
       return allSellers;
     }
-    
+
     const filtered = allSellers.filter((seller: any) => {
       const email = seller.email?.toLowerCase() || '';
       const shouldExclude = email.includes('@uorak.com');
@@ -102,15 +102,15 @@ const AffiliateManagement: React.FC = () => {
       }
       return !shouldExclude;
     });
-    
+
     console.log('🔍 [AffiliateManagement] Sellers filtrados:', {
       antes: allSellers.length,
       depois: filtered.length
     });
-    
+
     return filtered;
   }, [allSellers, isDevelopment]);
-  
+
   const [filters, setFilters] = useState<FilterState>({
     search: '',
     status: 'all',
@@ -119,11 +119,11 @@ const AffiliateManagement: React.FC = () => {
     dateFrom: '',
     dateTo: ''
   });
-  
+
   const [expandedAffiliates, setExpandedAffiliates] = useState<Set<string>>(new Set());
   const [expandedSellers, setExpandedSellers] = useState<Set<string>>(new Set());
   const [expandedStudents, setExpandedStudents] = useState<Set<string>>(new Set());
-  
+
   // ✅ NOVO: Estado para armazenar datas de pagamento de cada taxa individual dos estudantes
   const [studentPaymentDates, setStudentPaymentDates] = useState<Record<string, { selection_process?: string; scholarship?: string; i20_control?: string; application?: string }>>({});
 
@@ -159,7 +159,7 @@ const AffiliateManagement: React.FC = () => {
     try {
       setLoadingManualPayments(true);
       const manualPaymentsMap: Record<string, number> = {};
-      
+
       // Para cada affiliate admin, calcular os pagamentos manuais
       for (const affiliate of affiliates) {
         // 1. Descobrir affiliate_admin_id
@@ -168,7 +168,7 @@ const AffiliateManagement: React.FC = () => {
           .select('id')
           .eq('user_id', affiliate.user_id)
           .limit(1);
-        
+
         if (aaErr || !aaList || aaList.length === 0) {
           manualPaymentsMap[affiliate.user_id] = 0;
           continue;
@@ -180,18 +180,18 @@ const AffiliateManagement: React.FC = () => {
           .from('sellers')
           .select('referral_code')
           .eq('affiliate_admin_id', affiliateAdminId);
-        
+
         if (sellersErr || !sellers || sellers.length === 0) {
           manualPaymentsMap[affiliate.user_id] = 0;
           continue;
         }
-        
+
         const referralCodes = sellers.map(s => s.referral_code);
-        
+
         // 3. Buscar perfis de estudantes vinculados via seller_referral_code
         const { data: profiles, error: profilesErr } = await supabase
           .from('user_profiles')
-        .select(`
+          .select(`
           id,
           user_id,
           has_paid_selection_process_fee, 
@@ -205,7 +205,7 @@ const AffiliateManagement: React.FC = () => {
           scholarship_applications(is_scholarship_fee_paid, scholarship_fee_payment_method)
         `)
           .in('seller_referral_code', referralCodes);
-        
+
         if (profilesErr || !profiles) {
           manualPaymentsMap[affiliate.user_id] = 0;
           continue;
@@ -213,12 +213,12 @@ const AffiliateManagement: React.FC = () => {
 
         // Filtrar estudantes com email @uorak.com
         const shouldFilter = !isDevelopment; // Filtrar em produção e staging
-        
-        const filteredProfiles = shouldFilter 
+
+        const filteredProfiles = shouldFilter
           ? (profiles || []).filter((p: any) => {
-              const email = p.email?.toLowerCase() || '';
-              return !email.includes('@uorak.com');
-            })
+            const email = p.email?.toLowerCase() || '';
+            return !email.includes('@uorak.com');
+          })
           : (profiles || []);
 
         // 4. Preparar overrides por user_id (usar filteredProfiles)
@@ -277,7 +277,7 @@ const AffiliateManagement: React.FC = () => {
 
         manualPaymentsMap[affiliate.user_id] = manualRevenue;
       }
-      
+
       setAffiliateManualPayments(manualPaymentsMap);
     } catch (error: any) {
       console.error('Error loading affiliate manual payments:', error);
@@ -291,7 +291,7 @@ const AffiliateManagement: React.FC = () => {
   const filteredStudents = useMemo(() => {
     const allStudentsArray = allStudents || [];
     const shouldFilter = !isDevelopment; // Filtrar em produção e staging
-    
+
     // Debug temporário
     console.log('🔍 [AffiliateManagement] Filtro debug:', {
       hostname: window.location.hostname,
@@ -299,12 +299,12 @@ const AffiliateManagement: React.FC = () => {
       shouldFilter,
       totalStudents: allStudentsArray.length
     });
-    
+
     if (!shouldFilter) {
       console.log('🔍 [AffiliateManagement] Não filtrando - ambiente de desenvolvimento');
       return allStudentsArray;
     }
-    
+
     const filtered = allStudentsArray.filter((s: any) => {
       const email = s.email?.toLowerCase() || '';
       const shouldExclude = email.includes('@uorak.com');
@@ -313,13 +313,13 @@ const AffiliateManagement: React.FC = () => {
       }
       return !shouldExclude;
     });
-    
+
     console.log('🔍 [AffiliateManagement] Resultado do filtro:', {
       antes: allStudentsArray.length,
       depois: filtered.length,
       excluidos: allStudentsArray.length - filtered.length
     });
-    
+
     return filtered;
   }, [allStudents, isDevelopment]);
 
@@ -414,7 +414,7 @@ const AffiliateManagement: React.FC = () => {
       try {
         // ✅ NOVO: Iniciar loading
         if (mounted) setIsLoadingRealPaidAmounts(true);
-        
+
         const uniqueUserIds = Array.from(new Set((filteredStudents || []).map((s: any) => s.user_id).filter(Boolean)));
         if (uniqueUserIds.length === 0) {
           if (mounted) {
@@ -427,13 +427,13 @@ const AffiliateManagement: React.FC = () => {
         // Buscar valores reais pagos em batches (10 por vez)
         const BATCH_SIZE = 10;
         const realPaidMap: Record<string, { selection_process?: number; scholarship?: number; i20_control?: number; application?: number }> = {};
-        
+
         for (let i = 0; i < uniqueUserIds.length; i += BATCH_SIZE) {
           const batch = uniqueUserIds.slice(i, i + BATCH_SIZE);
-          
+
           await Promise.allSettled(batch.map(async (userId) => {
             if (!mounted) return;
-            
+
             try {
               // ✅ CORREÇÃO: Usar getDisplayAmounts para exibição nos dashboards (valores "Zelle" sem taxas)
               const amounts = await getDisplayAmounts(userId, ['selection_process', 'scholarship', 'i20_control', 'application']);
@@ -466,7 +466,7 @@ const AffiliateManagement: React.FC = () => {
         }
       }
     };
-    
+
     loadRealPaidAmounts();
     return () => { mounted = false; };
   }, [filteredStudents]);
@@ -492,7 +492,7 @@ const AffiliateManagement: React.FC = () => {
           .from('individual_fee_payments')
           .select('user_id, fee_type, payment_date')
           .in('user_id', uniqueUserIds)
-           .in('fee_type', ['selection_process', 'scholarship', 'i20_control', 'application'])
+          .in('fee_type', ['selection_process', 'scholarship', 'i20_control', 'application'])
           .not('payment_date', 'is', null)
           .order('payment_date', { ascending: false }); // Mais recente primeiro
 
@@ -504,16 +504,16 @@ const AffiliateManagement: React.FC = () => {
 
         // ✅ CORREÇÃO: Agrupar por user_id e fee_type, armazenando a data mais recente de cada taxa
         const datesMap: Record<string, { selection_process?: string; scholarship?: string; i20_control?: string; application?: string }> = {};
-        
+
         (payments || []).forEach((payment: any) => {
           const userId = payment.user_id;
           const feeType = payment.fee_type;
           const paymentDate = payment.payment_date;
-          
+
           if (!datesMap[userId]) {
             datesMap[userId] = {};
           }
-          
+
           // Mapear fee_type para a chave correta e usar apenas a data mais recente
           if (feeType === 'selection_process' && !datesMap[userId].selection_process) {
             datesMap[userId].selection_process = paymentDate;
@@ -543,7 +543,7 @@ const AffiliateManagement: React.FC = () => {
     if (!filters.dateFrom && !filters.dateTo) {
       return filteredStudents;
     }
-    
+
     // Com filtro de data, retornar todos os estudantes (a filtragem será feita no cálculo de valores)
     return filteredStudents;
   }, [filteredStudents, filters.dateFrom, filters.dateTo]);
@@ -555,20 +555,20 @@ const AffiliateManagement: React.FC = () => {
     const hasDateFilter = filters.dateFrom || filters.dateTo;
     const dateFrom = filters.dateFrom ? new Date(filters.dateFrom) : null;
     const dateTo = filters.dateTo ? new Date(filters.dateTo + 'T23:59:59') : null; // Incluir todo o dia final
-    
+
     const result = (studentsFilteredByDate || []).map((s: any) => {
       const o = overridesMap[s.user_id] || {};
       const dependents = Number(dependentsMap[s.profile_id]) || 0;
       const realPaid = realPaidAmountsMap[s.user_id] || {};
       const paymentDates = studentPaymentDates[s.user_id] || {};
       let total = 0;
-      
+
       // Determinar valores base baseado no system_type do estudante
       const systemType = s.system_type || 'legacy';
       const baseSelectionFee = systemType === 'simplified' ? 350 : 400;
       const baseScholarshipFee = systemType === 'simplified' ? 550 : 900;
       const baseI20Fee = 900; // Sempre 900 para ambos os sistemas
-      
+
       // ✅ CORREÇÃO: Verificar se Selection Process Fee foi pago E se foi pago no período (se houver filtro)
       if (s.has_paid_selection_process_fee) {
         // Se há filtro de data, verificar se foi pago no período
@@ -579,18 +579,18 @@ const AffiliateManagement: React.FC = () => {
           } else {
             const paymentDateObj = new Date(paymentDate);
             const isInPeriod = (!dateFrom || paymentDateObj >= dateFrom) && (!dateTo || paymentDateObj <= dateTo);
-            
+
             if (isInPeriod) {
-        let sel = 0;
-        if (realPaid.selection_process !== undefined && realPaid.selection_process > 0) {
-          sel = realPaid.selection_process;
-        } else if (o.selection_process_fee != null) {
-          sel = Number(o.selection_process_fee);
-        } else {
-          sel = systemType === 'simplified' ? baseSelectionFee : baseSelectionFee + (dependents * 150);
-        }
-        total += sel || 0;
-      }
+              let sel = 0;
+              if (realPaid.selection_process !== undefined && realPaid.selection_process > 0) {
+                sel = realPaid.selection_process;
+              } else if (o.selection_process_fee != null) {
+                sel = Number(o.selection_process_fee);
+              } else {
+                sel = systemType === 'simplified' ? baseSelectionFee : baseSelectionFee + (dependents * 150);
+              }
+              total += sel || 0;
+            }
           }
         } else {
           // Sem filtro de data, incluir normalmente
@@ -605,7 +605,7 @@ const AffiliateManagement: React.FC = () => {
           total += sel || 0;
         }
       }
-      
+
       // ✅ CORREÇÃO: Verificar se Scholarship Fee foi pago E se foi pago no período (se houver filtro)
       if (s.is_scholarship_fee_paid) {
         // Se há filtro de data, verificar se foi pago no período
@@ -616,18 +616,18 @@ const AffiliateManagement: React.FC = () => {
           } else {
             const paymentDateObj = new Date(paymentDate);
             const isInPeriod = (!dateFrom || paymentDateObj >= dateFrom) && (!dateTo || paymentDateObj <= dateTo);
-            
+
             if (isInPeriod) {
-        let schol = 0;
-        if (realPaid.scholarship !== undefined && realPaid.scholarship > 0) {
-          schol = realPaid.scholarship;
-        } else if (o.scholarship_fee != null) {
-          schol = Number(o.scholarship_fee);
-        } else {
-          schol = baseScholarshipFee;
-        }
-        total += schol || 0;
-      }
+              let schol = 0;
+              if (realPaid.scholarship !== undefined && realPaid.scholarship > 0) {
+                schol = realPaid.scholarship;
+              } else if (o.scholarship_fee != null) {
+                schol = Number(o.scholarship_fee);
+              } else {
+                schol = baseScholarshipFee;
+              }
+              total += schol || 0;
+            }
           }
         } else {
           // Sem filtro de data, incluir normalmente
@@ -642,7 +642,7 @@ const AffiliateManagement: React.FC = () => {
           total += schol || 0;
         }
       }
-      
+
       // ✅ CORREÇÃO: Verificar se I-20 Control Fee foi pago E se foi pago no período (se houver filtro)
       // I-20 só conta se scholarship foi pago
       if (s.is_scholarship_fee_paid && s.has_paid_i20_control_fee) {
@@ -654,17 +654,17 @@ const AffiliateManagement: React.FC = () => {
           } else {
             const paymentDateObj = new Date(paymentDate);
             const isInPeriod = (!dateFrom || paymentDateObj >= dateFrom) && (!dateTo || paymentDateObj <= dateTo);
-            
+
             if (isInPeriod) {
-        let i20 = 0;
-        if (realPaid.i20_control !== undefined && realPaid.i20_control > 0) {
-          i20 = realPaid.i20_control;
-        } else if (o.i20_control_fee != null) {
-          i20 = Number(o.i20_control_fee);
-        } else {
-          i20 = baseI20Fee;
-        }
-        total += i20 || 0;
+              let i20 = 0;
+              if (realPaid.i20_control !== undefined && realPaid.i20_control > 0) {
+                i20 = realPaid.i20_control;
+              } else if (o.i20_control_fee != null) {
+                i20 = Number(o.i20_control_fee);
+              } else {
+                i20 = baseI20Fee;
+              }
+              total += i20 || 0;
             }
           }
         } else {
@@ -680,7 +680,7 @@ const AffiliateManagement: React.FC = () => {
           total += i20 || 0;
         }
       }
-      
+
       return { ...s, total_paid_adjusted: total };
     });
     return result;
@@ -705,10 +705,10 @@ const AffiliateManagement: React.FC = () => {
       const sellersFiltered = isDevelopment
         ? (aff.sellers || [])
         : (aff.sellers || []).filter((seller: any) => {
-            const email = seller.email?.toLowerCase() || '';
-            return !email.includes('@uorak.com');
-          });
-      
+          const email = seller.email?.toLowerCase() || '';
+          return !email.includes('@uorak.com');
+        });
+
       const sellersAdjusted = sellersFiltered.map((seller: any) => {
         const studentsForSeller = adjustedStudentsBySellerId[seller.id] || [];
         const totalRevenueAdjusted = studentsForSeller.reduce((sum, st) => sum + (st.total_paid_adjusted || 0), 0);
@@ -733,7 +733,7 @@ const AffiliateManagement: React.FC = () => {
       // Filtro de busca
       if (filters.search) {
         const searchLower = filters.search.toLowerCase();
-        const matchesSearch = 
+        const matchesSearch =
           affiliate.full_name.toLowerCase().includes(searchLower) ||
           (affiliate.company_name && affiliate.company_name.toLowerCase().includes(searchLower)) ||
           affiliate.email.toLowerCase().includes(searchLower) ||
@@ -753,7 +753,7 @@ const AffiliateManagement: React.FC = () => {
     // Ordenação
     filtered.sort((a, b) => {
       let aValue: any, bValue: any;
-      
+
       switch (filters.sortBy) {
         case 'name':
           const aDisplayName = (a.company_name && a.company_name.trim() ? a.company_name : a.full_name).toLowerCase();
@@ -859,31 +859,31 @@ const AffiliateManagement: React.FC = () => {
   // Função para calcular informações de pagamento de um affiliate admin
   const getAffiliatePaymentInfo = (affiliateUserId: string, totalRevenue: number) => {
     const affiliateRequests = affiliatePaymentRequests.filter(req => req.referrer_user_id === affiliateUserId);
-    
+
     // Verificar se os dados ainda estão carregando
     const isLoading = loadingPaymentRequests || loadingManualPayments;
-    
+
     // Outside Payments = pagamentos manuais (payment_method = 'manual')
     const outsidePayments = affiliateManualPayments[affiliateUserId] || 0;
-    
+
     // Calcular Available Balance seguindo a mesma lógica do FinancialOverview.tsx
     // availableBalance = Math.max(0, (totalRevenue - manualRevenue) - totalPaidOut - totalApproved - totalPending)
     const manualRevenue = outsidePayments; // Pagamentos manuais (outside payments)
-    
+
     const totalPaidOut = affiliateRequests
       .filter(req => req.status === 'paid')
       .reduce((sum, req) => sum + (req.amount_usd || 0), 0);
-    
+
     const totalApproved = affiliateRequests
       .filter(req => req.status === 'approved')
       .reduce((sum, req) => sum + (req.amount_usd || 0), 0);
-    
+
     const totalPending = affiliateRequests
       .filter(req => req.status === 'pending')
       .reduce((sum, req) => sum + (req.amount_usd || 0), 0);
-    
+
     const availableBalance = Math.max(0, (totalRevenue - manualRevenue) - totalPaidOut - totalApproved - totalPending);
-    
+
     return {
       outsidePayments,
       pendingPayments: totalPending + totalApproved,
@@ -910,20 +910,20 @@ const AffiliateManagement: React.FC = () => {
 
   const getStatusBadge = (status: string) => {
     const statusConfig = {
-      active: { 
-        color: 'bg-green-100 text-green-800 border-green-200', 
+      active: {
+        color: 'bg-green-100 text-green-800 border-green-200',
         icon: CheckCircle2,
-        label: 'Active' 
+        label: 'Active'
       },
-      inactive: { 
-        color: 'bg-red-100 text-red-800 border-red-200', 
+      inactive: {
+        color: 'bg-red-100 text-red-800 border-red-200',
         icon: AlertCircle,
-        label: 'Inactive' 
+        label: 'Inactive'
       },
-      pending: { 
-        color: 'bg-yellow-100 text-yellow-800 border-yellow-200', 
+      pending: {
+        color: 'bg-yellow-100 text-yellow-800 border-yellow-200',
         icon: Loader2,
-        label: 'Pending' 
+        label: 'Pending'
       }
     };
 
@@ -1218,8 +1218,8 @@ const AffiliateManagement: React.FC = () => {
             <Users className="h-12 w-12 text-slate-400 mx-auto mb-4" />
             <h3 className="text-lg font-medium text-slate-900 mb-2">No affiliates found</h3>
             <p className="text-slate-600">
-              {filters.search || filters.status !== 'all' 
-                ? 'Try adjusting your filters to see more results.' 
+              {filters.search || filters.status !== 'all'
+                ? 'Try adjusting your filters to see more results.'
                 : 'No affiliate partners have been registered yet.'}
             </p>
             {/* Debug info */}
@@ -1227,8 +1227,8 @@ const AffiliateManagement: React.FC = () => {
               <p>Total affiliates: {affiliates.length}</p>
               <p>First affiliate sample: {affiliates[0] ? JSON.stringify({
                 id: affiliates[0].id,
-                name: affiliates[0].company_name && affiliates[0].company_name.trim() 
-                  ? affiliates[0].company_name 
+                name: affiliates[0].company_name && affiliates[0].company_name.trim()
+                  ? affiliates[0].company_name
                   : affiliates[0].full_name,
                 email: affiliates[0].email
               }) : 'None'}</p>
@@ -1237,37 +1237,37 @@ const AffiliateManagement: React.FC = () => {
         ) : (
           filteredAndSortedAffiliates.map((affiliate) => {
             const isExpanded = expandedAffiliates.has(affiliate.id);
-            
+
             return (
-              <div 
-                key={affiliate.id} 
+              <div
+                key={affiliate.id}
                 className="bg-white rounded-2xl border border-slate-200 overflow-hidden hover:shadow-lg hover:border-slate-300 transition-all duration-200 ease-in-out transform"
-                >
+              >
                 {/* Affiliate Header */}
-                <div 
-                    className="p-6 cursor-pointer"
-                    onClick={() => toggleAffiliateExpansion(affiliate.id)}
-                    >
+                <div
+                  className="p-6 cursor-pointer"
+                  onClick={() => toggleAffiliateExpansion(affiliate.id)}
+                >
                   <div className="flex items-center justify-between">
                     <div className="flex items-center space-x-4">
                       <div className="w-12 h-12 bg-gradient-to-br from-blue-500 to-purple-600 rounded-xl flex items-center justify-center shadow-md">
                         <span className="text-white font-bold text-lg">
-                          {(affiliate.company_name && affiliate.company_name.trim() 
-                            ? affiliate.company_name 
+                          {(affiliate.company_name && affiliate.company_name.trim()
+                            ? affiliate.company_name
                             : affiliate.full_name).charAt(0).toUpperCase()}
                         </span>
                       </div>
-                      
+
                       <div className="flex-1">
                         <div className="flex items-center space-x-3">
                           <h3 className="text-lg font-semibold text-slate-900">
-                            {affiliate.company_name && affiliate.company_name.trim() 
-                              ? affiliate.company_name 
+                            {affiliate.company_name && affiliate.company_name.trim()
+                              ? affiliate.company_name
                               : affiliate.full_name}
                           </h3>
                           {getStatusBadge(affiliate.status)}
                         </div>
-                        
+
                         <div className="flex items-center space-x-4 mt-1 text-sm text-slate-600">
                           <div className="flex items-center space-x-1">
                             <Mail className="h-4 w-4" />
@@ -1294,7 +1294,7 @@ const AffiliateManagement: React.FC = () => {
                         </div>
                       </div>
                     </div>
-                    
+
                     <div className="flex items-center space-x-4">
                       {/* Quick Stats */}
                       <div className="grid grid-cols-6 gap-4 text-center">
@@ -1316,50 +1316,49 @@ const AffiliateManagement: React.FC = () => {
                           </p>
                           <p className="text-xs text-slate-600">Total Revenue</p>
                         </div>
-             <div>
-               {(() => {
-                 const paymentInfo = getAffiliatePaymentInfo(affiliate.user_id, affiliate.total_revenue);
-                 return (
-                   <>
-                     <p className="text-lg font-bold text-purple-600">
-                       {paymentInfo.isLoading ? (
-                         <div className="animate-pulse bg-slate-200 h-6 w-16 rounded"></div>
-                       ) : (
-                         `$${paymentInfo.outsidePayments.toLocaleString()}`
-                       )}
-                     </p>
-                     <p className="text-xs text-slate-600">Outside Payments</p>
-                   </>
-                 );
-               })()}
-             </div>
-             <div>
-               {(() => {
-                 const paymentInfo = getAffiliatePaymentInfo(affiliate.user_id, affiliate.total_revenue);
-                 return (
-                   <>
-                     <p className="text-lg font-bold text-orange-600">
-                       {paymentInfo.isLoading ? (
-                         <div className="animate-pulse bg-slate-200 h-6 w-16 rounded"></div>
-                       ) : (
-                         `$${paymentInfo.availableBalance.toLocaleString()}`
-                       )}
-                     </p>
-                     <p className="text-xs text-slate-600">Available Balance</p>
-                   </>
-                 );
-               })()}
-             </div>
+                        <div>
+                          {(() => {
+                            const paymentInfo = getAffiliatePaymentInfo(affiliate.user_id, affiliate.total_revenue);
+                            return (
+                              <>
+                                <p className="text-lg font-bold text-purple-600">
+                                  {paymentInfo.isLoading ? (
+                                    <div className="animate-pulse bg-slate-200 h-6 w-16 rounded"></div>
+                                  ) : (
+                                    `$${paymentInfo.outsidePayments.toLocaleString()}`
+                                  )}
+                                </p>
+                                <p className="text-xs text-slate-600">Outside Payments</p>
+                              </>
+                            );
+                          })()}
+                        </div>
+                        <div>
+                          {(() => {
+                            const paymentInfo = getAffiliatePaymentInfo(affiliate.user_id, affiliate.total_revenue);
+                            return (
+                              <>
+                                <p className="text-lg font-bold text-orange-600">
+                                  {paymentInfo.isLoading ? (
+                                    <div className="animate-pulse bg-slate-200 h-6 w-16 rounded"></div>
+                                  ) : (
+                                    `$${paymentInfo.availableBalance.toLocaleString()}`
+                                  )}
+                                </p>
+                                <p className="text-xs text-slate-600">Available Balance</p>
+                              </>
+                            );
+                          })()}
+                        </div>
                       </div>
-                      
+
                       {/* Expand Button */}
                       <button
                         onClick={() => toggleAffiliateExpansion(affiliate.id)}
                         className="p-2 text-slate-400 hover:text-slate-600 transition-all duration-200 hover:bg-slate-50 rounded-lg"
                       >
-                        <div className={`transform transition-transform duration-300 ${
-                          isExpanded ? 'rotate-90' : 'rotate-0'
-                        }`}>
+                        <div className={`transform transition-transform duration-300 ${isExpanded ? 'rotate-90' : 'rotate-0'
+                          }`}>
                           <ChevronRight className="h-5 w-5" />
                         </div>
                       </button>
@@ -1368,9 +1367,8 @@ const AffiliateManagement: React.FC = () => {
                 </div>
 
                 {/* Expanded Content */}
-                <div className={`overflow-hidden transition-all duration-300 ease-in-out ${
-                  isExpanded ? 'max-h-[2000px] opacity-100' : 'max-h-0 opacity-0'
-                }`}>
+                <div className={`overflow-hidden transition-all duration-300 ease-in-out ${isExpanded ? 'max-h-[2000px] opacity-100' : 'max-h-0 opacity-0'
+                  }`}>
                   <div className="border-t border-slate-200 bg-slate-50">
                     <div className="p-6">
                       {/* Payment Information */}
@@ -1379,10 +1377,10 @@ const AffiliateManagement: React.FC = () => {
                           <DollarSign className="h-6 w-6 mr-3" />
                           Payment Information
                         </h4>
-                        
-                 {(() => {
-                   const paymentInfo = getAffiliatePaymentInfo(affiliate.user_id, affiliate.total_revenue);
-                   return (
+
+                        {(() => {
+                          const paymentInfo = getAffiliatePaymentInfo(affiliate.user_id, affiliate.total_revenue);
+                          return (
                             <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
                               <div className="bg-white rounded-lg border border-slate-200 p-6">
                                 <div className="flex items-center justify-between">
@@ -1401,67 +1399,67 @@ const AffiliateManagement: React.FC = () => {
                                   </div>
                                 </div>
                               </div>
-                              
-                       <div className="bg-white rounded-lg border border-slate-200 p-6">
-                         <div className="flex items-center justify-between">
-                           <div>
-                             <p className="text-sm font-medium text-slate-600">Outside Payments</p>
-                             {paymentInfo.isLoading ? (
-                               <div className="animate-pulse bg-slate-200 h-8 w-24 rounded mb-1"></div>
-                             ) : (
-                               <p className="text-2xl font-bold text-purple-600">
-                                 ${paymentInfo.outsidePayments.toLocaleString()}
-                               </p>
-                             )}
 
-                           </div>
-                           <div className="w-12 h-12 bg-purple-100 rounded-lg flex items-center justify-center">
-                             <DollarSign className="h-6 w-6 text-purple-600" />
-                           </div>
-                         </div>
-                       </div>
-                       
-                       <div className="bg-white rounded-lg border border-slate-200 p-6">
-                         <div className="flex items-center justify-between">
-                           <div>
-                             <p className="text-sm font-medium text-slate-600">Available Balance</p>
-                             {paymentInfo.isLoading ? (
-                               <div className="animate-pulse bg-slate-200 h-8 w-24 rounded mb-1"></div>
-                             ) : (
-                               <p className="text-2xl font-bold text-orange-600">
-                                 ${paymentInfo.availableBalance.toLocaleString()}
-                               </p>
-                             )}
-                             <p className="text-xs text-slate-500 mt-1">
-                               Pending withdrawal
-                             </p>
-                           </div>
-                           <div className="w-12 h-12 bg-orange-100 rounded-lg flex items-center justify-center">
-                             <DollarSign className="h-6 w-6 text-orange-600" />
-                           </div>
-                         </div>
-                       </div>
-                       
-                       <div className="bg-white rounded-lg border border-slate-200 p-6">
-                         <div className="flex items-center justify-between">
-                           <div>
-                             <p className="text-sm font-medium text-slate-600">Payment Requests</p>
-                             {paymentInfo.isLoading ? (
-                               <div className="animate-pulse bg-slate-200 h-8 w-24 rounded mb-1"></div>
-                             ) : (
-                               <p className="text-2xl font-bold text-blue-600">
-                                 ${paymentInfo.pendingPayments.toLocaleString()}
-                               </p>
-                             )}
-                             <p className="text-xs text-slate-500 mt-1">
-                               {paymentInfo.totalRequests} request{paymentInfo.totalRequests !== 1 ? 's' : ''} pending/approved
-                             </p>
-                           </div>
-                           <div className="w-12 h-12 bg-blue-100 rounded-lg flex items-center justify-center">
-                             <CreditCard className="h-6 w-6 text-blue-600" />
-                           </div>
-                         </div>
-                       </div>
+                              <div className="bg-white rounded-lg border border-slate-200 p-6">
+                                <div className="flex items-center justify-between">
+                                  <div>
+                                    <p className="text-sm font-medium text-slate-600">Outside Payments</p>
+                                    {paymentInfo.isLoading ? (
+                                      <div className="animate-pulse bg-slate-200 h-8 w-24 rounded mb-1"></div>
+                                    ) : (
+                                      <p className="text-2xl font-bold text-purple-600">
+                                        ${paymentInfo.outsidePayments.toLocaleString()}
+                                      </p>
+                                    )}
+
+                                  </div>
+                                  <div className="w-12 h-12 bg-purple-100 rounded-lg flex items-center justify-center">
+                                    <DollarSign className="h-6 w-6 text-purple-600" />
+                                  </div>
+                                </div>
+                              </div>
+
+                              <div className="bg-white rounded-lg border border-slate-200 p-6">
+                                <div className="flex items-center justify-between">
+                                  <div>
+                                    <p className="text-sm font-medium text-slate-600">Available Balance</p>
+                                    {paymentInfo.isLoading ? (
+                                      <div className="animate-pulse bg-slate-200 h-8 w-24 rounded mb-1"></div>
+                                    ) : (
+                                      <p className="text-2xl font-bold text-orange-600">
+                                        ${paymentInfo.availableBalance.toLocaleString()}
+                                      </p>
+                                    )}
+                                    <p className="text-xs text-slate-500 mt-1">
+                                      Pending withdrawal
+                                    </p>
+                                  </div>
+                                  <div className="w-12 h-12 bg-orange-100 rounded-lg flex items-center justify-center">
+                                    <DollarSign className="h-6 w-6 text-orange-600" />
+                                  </div>
+                                </div>
+                              </div>
+
+                              <div className="bg-white rounded-lg border border-slate-200 p-6">
+                                <div className="flex items-center justify-between">
+                                  <div>
+                                    <p className="text-sm font-medium text-slate-600">Payment Requests</p>
+                                    {paymentInfo.isLoading ? (
+                                      <div className="animate-pulse bg-slate-200 h-8 w-24 rounded mb-1"></div>
+                                    ) : (
+                                      <p className="text-2xl font-bold text-blue-600">
+                                        ${paymentInfo.pendingPayments.toLocaleString()}
+                                      </p>
+                                    )}
+                                    <p className="text-xs text-slate-500 mt-1">
+                                      {paymentInfo.totalRequests} request{paymentInfo.totalRequests !== 1 ? 's' : ''} pending/approved
+                                    </p>
+                                  </div>
+                                  <div className="w-12 h-12 bg-blue-100 rounded-lg flex items-center justify-center">
+                                    <CreditCard className="h-6 w-6 text-blue-600" />
+                                  </div>
+                                </div>
+                              </div>
                             </div>
                           );
                         })()}
@@ -1473,7 +1471,7 @@ const AffiliateManagement: React.FC = () => {
                           <Building2 className="h-6 w-6 mr-3" />
                           Sellers ({affiliate.sellers.length})
                         </h4>
-                        
+
                         {affiliate.sellers.length === 0 ? (
                           <div className="text-center py-12">
                             <Building2 className="h-12 w-12 text-slate-300 mx-auto mb-4" />
@@ -1484,17 +1482,17 @@ const AffiliateManagement: React.FC = () => {
                           <div className="gap-6 space-y-3">
                             {affiliate.sellers.map((seller: any) => {
                               const isSellerExpanded = expandedSellers.has(seller.id);
-                              const sellerStudents = adjustedStudents.filter((student: any) => 
+                              const sellerStudents = adjustedStudents.filter((student: any) =>
                                 student.referred_by_seller_id === seller.id
                               );
-                              
+
                               return (
                                 <div key={seller.id} className="bg-white rounded-lg border border-slate-200 hover:border-slate-300 hover:shadow-lg transition-all duration-200 ease-in-out transform ">
                                   <div className="p-4">
-                                    <div 
-                                        className="flex items-center justify-between cursor-pointer"
-                                        onClick={() => toggleSellerExpansion(seller.id)}
-                                        >
+                                    <div
+                                      className="flex items-center justify-between cursor-pointer"
+                                      onClick={() => toggleSellerExpansion(seller.id)}
+                                    >
                                       <div className="flex-1">
                                         <div className="flex items-center justify-between">
                                           <div>
@@ -1528,15 +1526,14 @@ const AffiliateManagement: React.FC = () => {
                                                 )}
                                               </p>
                                             </div>
-                                            
+
                                             {sellerStudents.length > 0 && (
                                               <button
                                                 onClick={() => toggleSellerExpansion(seller.id)}
                                                 className="p-2 text-slate-400 hover:text-slate-600 transition-all duration-200 hover:bg-slate-50 rounded-lg"
                                               >
-                                                <div className={`transform transition-transform duration-300 ${
-                                                  isSellerExpanded ? 'rotate-90' : 'rotate-0'
-                                                }`}>
+                                                <div className={`transform transition-transform duration-300 ${isSellerExpanded ? 'rotate-90' : 'rotate-0'
+                                                  }`}>
                                                   <ChevronRight className="h-4 w-4" />
                                                 </div>
                                               </button>
@@ -1545,13 +1542,12 @@ const AffiliateManagement: React.FC = () => {
                                         </div>
                                       </div>
                                     </div>
-                                    
+
                                     {/* Lista de Estudantes Expandida */}
-                                    <div className={`overflow-hidden transition-all duration-300 ease-in-out ${
-                                      isSellerExpanded && sellerStudents.length > 0 
-                                        ? 'max-h-[1200px] opacity-100 mt-4' 
+                                    <div className={`overflow-hidden transition-all duration-300 ease-in-out ${isSellerExpanded && sellerStudents.length > 0
+                                        ? 'max-h-[1200px] opacity-100 mt-4'
                                         : 'max-h-0 opacity-0 mt-0'
-                                    }`}>
+                                      }`}>
                                       <div className="pt-4 border-t border-slate-200">
                                         <h6 className="text-sm font-medium text-slate-700 mb-3 flex items-center">
                                           <GraduationCap className="h-4 w-4 mr-2" />
@@ -1565,16 +1561,16 @@ const AffiliateManagement: React.FC = () => {
                                             const o = overridesMap[student.user_id] || {};
                                             const dependents = Number(dependentsMap[student.profile_id]) || 0;
                                             const systemType = student.system_type || 'legacy';
-                                            
+
                                             // Calcular valores de cada taxa
                                             const hasDateFilter = filters.dateFrom || filters.dateTo;
                                             const dateFrom = filters.dateFrom ? new Date(filters.dateFrom) : null;
                                             const dateTo = filters.dateTo ? new Date(filters.dateTo + 'T23:59:59') : null;
-                                            
+
                                             const baseSelectionFee = systemType === 'simplified' ? 350 : 400;
-                                            const baseScholarshipFee = systemType === 'simplified' ? 550 : 900;
+                                            const baseScholarshipFee = systemType === 'simplified' ? 900 : 900;
                                             const baseI20Fee = 900;
-                                            
+
                                             // Selection Process Fee
                                             let selectionFee = 0;
                                             let selectionDate: string | null = null;
@@ -1593,7 +1589,7 @@ const AffiliateManagement: React.FC = () => {
                                                 }
                                               }
                                             }
-                                            
+
                                             // Scholarship Fee
                                             let scholarshipFee = 0;
                                             let scholarshipDate: string | null = null;
@@ -1612,7 +1608,7 @@ const AffiliateManagement: React.FC = () => {
                                                 }
                                               }
                                             }
-                                            
+
                                             // I-20 Control Fee
                                             let i20Fee = 0;
                                             let i20Date: string | null = null;
@@ -1654,10 +1650,10 @@ const AffiliateManagement: React.FC = () => {
                                                 }
                                               }
                                             }
-                                            
+
                                             return (
-                                            <div 
-                                              key={student.id}
+                                              <div
+                                                key={student.id}
                                                 className="bg-slate-50 rounded-lg border border-slate-200 hover:border-slate-300 hover:shadow-sm transition-all duration-200"
                                               >
                                                 <div className="flex items-center justify-between p-3">
@@ -1669,85 +1665,82 @@ const AffiliateManagement: React.FC = () => {
                                                       }}
                                                       className="p-1 text-slate-400 hover:text-slate-600 transition-colors"
                                                     >
-                                                      <ChevronRight className={`h-4 w-4 transform transition-transform duration-200 ${
-                                                        isStudentExpanded ? 'rotate-90' : 'rotate-0'
-                                                      }`} />
+                                                      <ChevronRight className={`h-4 w-4 transform transition-transform duration-200 ${isStudentExpanded ? 'rotate-90' : 'rotate-0'
+                                                        }`} />
                                                     </button>
-                                                    
-                                                <div className="w-8 h-8 bg-blue-100 rounded-lg flex items-center justify-center">
-                                                  <span className="text-sm font-medium text-blue-600">
-                                                    {student.full_name?.charAt(0)?.toUpperCase() || 'S'}
-                                                  </span>
-                                                </div>
-                                                <div className="flex-1 min-w-0">
-                                                  <p className="text-sm font-medium text-slate-900">
-                                                    {student.full_name || 'Name not provided'}
-                                                  </p>
-                                                  <div className="flex items-center space-x-4 text-xs text-slate-500">
-                                                    <span className="flex items-center">
-                                                      <Mail className="h-3 w-3 mr-1" />
-                                                      {student.email}
-                                                    </span>
-                                                    {student.country && (
-                                                      <span className="flex items-center">
-                                                        <MapPin className="h-3 w-3 mr-1" />
-                                                        {student.country}
+
+                                                    <div className="w-8 h-8 bg-blue-100 rounded-lg flex items-center justify-center">
+                                                      <span className="text-sm font-medium text-blue-600">
+                                                        {student.full_name?.charAt(0)?.toUpperCase() || 'S'}
                                                       </span>
-                                                    )}
-                                                    {student.university_name && (
-                                                      <span className="flex items-center">
-                                                        <Building className="h-3 w-3 mr-1" />
-                                                        {student.university_name}
-                                                      </span>
-                                                    )}
+                                                    </div>
+                                                    <div className="flex-1 min-w-0">
+                                                      <p className="text-sm font-medium text-slate-900">
+                                                        {student.full_name || 'Name not provided'}
+                                                      </p>
+                                                      <div className="flex items-center space-x-4 text-xs text-slate-500">
+                                                        <span className="flex items-center">
+                                                          <Mail className="h-3 w-3 mr-1" />
+                                                          {student.email}
+                                                        </span>
+                                                        {student.country && (
+                                                          <span className="flex items-center">
+                                                            <MapPin className="h-3 w-3 mr-1" />
+                                                            {student.country}
+                                                          </span>
+                                                        )}
+                                                        {student.university_name && (
+                                                          <span className="flex items-center">
+                                                            <Building className="h-3 w-3 mr-1" />
+                                                            {student.university_name}
+                                                          </span>
+                                                        )}
+                                                      </div>
+                                                    </div>
                                                   </div>
-                                                </div>
-                                              </div>
-                                              
-                                              <div className="flex items-center space-x-3">
-                                                <div className="text-right">
-                                                  <div className="flex items-center space-x-2">
-                                                    <span className={`inline-flex items-center px-2 py-1 text-xs font-medium rounded-full ${
-                                                      student.status === 'active' || student.status === 'registered' || student.status === 'enrolled' 
-                                                        ? 'bg-green-100 text-green-800' 
-                                                        : student.status === 'pending'
-                                                        ? 'bg-yellow-100 text-yellow-800'
-                                                        : 'bg-gray-100 text-gray-800'
-                                                    }`}>
-                                                      {student.status || 'Unknown'}
-                                                    </span>
-                                                  </div>
-                                                  <p className="text-sm font-medium text-green-600 mt-1">
-                                                    {isLoadingRealPaidAmounts ? (
-                                                      <div className="animate-pulse bg-slate-200 h-4 w-16 rounded"></div>
-                                                    ) : (
-                                                      formatCurrency(student.total_paid_adjusted)
-                                                    )}
-                                                  </p>
-                                                  <p className="text-xs text-slate-500">
-                                                    {formatDate(student.created_at)}
-                                                  </p>
-                                                </div>
-                                                
-                                                <button
+
+                                                  <div className="flex items-center space-x-3">
+                                                    <div className="text-right">
+                                                      <div className="flex items-center space-x-2">
+                                                        <span className={`inline-flex items-center px-2 py-1 text-xs font-medium rounded-full ${student.status === 'active' || student.status === 'registered' || student.status === 'enrolled'
+                                                            ? 'bg-green-100 text-green-800'
+                                                            : student.status === 'pending'
+                                                              ? 'bg-yellow-100 text-yellow-800'
+                                                              : 'bg-gray-100 text-gray-800'
+                                                          }`}>
+                                                          {student.status || 'Unknown'}
+                                                        </span>
+                                                      </div>
+                                                      <p className="text-sm font-medium text-green-600 mt-1">
+                                                        {isLoadingRealPaidAmounts ? (
+                                                          <div className="animate-pulse bg-slate-200 h-4 w-16 rounded"></div>
+                                                        ) : (
+                                                          formatCurrency(student.total_paid_adjusted)
+                                                        )}
+                                                      </p>
+                                                      <p className="text-xs text-slate-500">
+                                                        {formatDate(student.created_at)}
+                                                      </p>
+                                                    </div>
+
+                                                    <button
                                                       onClick={(e) => {
                                                         e.stopPropagation();
                                                         handleViewStudent(student.profile_id || student.id);
                                                       }}
-                                                  className="flex items-center space-x-1 px-3 py-1 text-xs text-blue-600 hover:text-blue-800 hover:bg-blue-50 rounded-lg transition-colors"
-                                                >
-                                                  <Eye className="h-3 w-3" />
-                                                  <span>View</span>
-                                                </button>
-                                              </div>
-                                            </div>
-                                                
+                                                      className="flex items-center space-x-1 px-3 py-1 text-xs text-blue-600 hover:text-blue-800 hover:bg-blue-50 rounded-lg transition-colors"
+                                                    >
+                                                      <Eye className="h-3 w-3" />
+                                                      <span>View</span>
+                                                    </button>
+                                                  </div>
+                                                </div>
+
                                                 {/* ✅ NOVO: Detalhes das Taxas Expandidas */}
-                                                <div className={`overflow-hidden transition-all duration-300 ease-in-out ${
-                                                  isStudentExpanded 
-                                                    ? 'max-h-[500px] opacity-100' 
+                                                <div className={`overflow-hidden transition-all duration-300 ease-in-out ${isStudentExpanded
+                                                    ? 'max-h-[500px] opacity-100'
                                                     : 'max-h-0 opacity-0'
-                                                }`}>
+                                                  }`}>
                                                   <div className="px-3 pb-3 border-t border-slate-200 pt-3">
                                                     <h6 className="text-xs font-semibold text-slate-700 mb-2 flex items-center">
                                                       <CreditCard className="h-3 w-3 mr-1" />
@@ -1764,11 +1757,10 @@ const AffiliateManagement: React.FC = () => {
                                                                 Paid: {new Date(selectionDate).toLocaleDateString()}
                                                               </p>
                                                             )}
-                                        </div>
+                                                          </div>
                                                           <div className="text-right">
-                                                            <p className={`text-sm font-semibold ${
-                                                              selectionFee > 0 ? 'text-green-600' : 'text-slate-400'
-                                                            }`}>
+                                                            <p className={`text-sm font-semibold ${selectionFee > 0 ? 'text-green-600' : 'text-slate-400'
+                                                              }`}>
                                                               {isLoadingRealPaidAmounts ? (
                                                                 <div className="animate-pulse bg-slate-200 h-4 w-16 rounded"></div>
                                                               ) : (
@@ -1782,10 +1774,10 @@ const AffiliateManagement: React.FC = () => {
                                                                 <p className="text-xs text-amber-600 mt-0.5">Outside period</p>
                                                               ) : null;
                                                             })()}
-                                      </div>
-                                    </div>
+                                                          </div>
+                                                        </div>
                                                       )}
-                                                      
+
                                                       {/* Scholarship Fee */}
                                                       {student.is_scholarship_fee_paid && (
                                                         <div className="flex items-center justify-between p-2 bg-white rounded border border-slate-200">
@@ -1798,9 +1790,8 @@ const AffiliateManagement: React.FC = () => {
                                                             )}
                                                           </div>
                                                           <div className="text-right">
-                                                            <p className={`text-sm font-semibold ${
-                                                              scholarshipFee > 0 ? 'text-green-600' : 'text-slate-400'
-                                                            }`}>
+                                                            <p className={`text-sm font-semibold ${scholarshipFee > 0 ? 'text-green-600' : 'text-slate-400'
+                                                              }`}>
                                                               {isLoadingRealPaidAmounts ? (
                                                                 <div className="animate-pulse bg-slate-200 h-4 w-16 rounded"></div>
                                                               ) : (
@@ -1817,40 +1808,39 @@ const AffiliateManagement: React.FC = () => {
                                                           </div>
                                                         </div>
                                                       )}
-                                                      
-                                                       {/* Application Fee */}
-                                                       {student.is_application_fee_paid && (
-                                                         <div className="flex items-center justify-between p-2 bg-white rounded border border-slate-200">
-                                                           <div className="flex-1">
-                                                             <p className="text-xs font-medium text-slate-700">Application Fee</p>
-                                                             {applicationDate && (
-                                                               <p className="text-xs text-slate-500 mt-0.5">
-                                                                 Paid: {new Date(applicationDate).toLocaleDateString()}
-                                                               </p>
-                                                             )}
-                                                           </div>
-                                                           <div className="text-right">
-                                                             <p className={`text-sm font-semibold ${
-                                                               applicationFee > 0 ? 'text-green-600' : 'text-slate-400'
-                                                             }`}>
-                                                               {isLoadingRealPaidAmounts ? (
-                                                                 <div className="animate-pulse bg-slate-200 h-4 w-16 rounded"></div>
-                                                               ) : (
-                                                                 applicationFee > 0 ? formatCurrency(applicationFee) : 'N/A'
-                                                               )}
-                                                             </p>
-                                                             {hasDateFilter && applicationDate && (() => {
-                                                               const paymentDateObj = new Date(applicationDate);
-                                                               const isInPeriod = (!dateFrom || paymentDateObj >= dateFrom) && (!dateTo || paymentDateObj <= dateTo);
-                                                               return !isInPeriod ? (
-                                                                 <p className="text-xs text-amber-600 mt-0.5">Outside period</p>
-                                                               ) : null;
-                                                             })()}
-                                                           </div>
-                                                         </div>
-                                                       )}
-                                                       
-                                                       {/* I-20 Control Fee */}
+
+                                                      {/* Application Fee */}
+                                                      {student.is_application_fee_paid && (
+                                                        <div className="flex items-center justify-between p-2 bg-white rounded border border-slate-200">
+                                                          <div className="flex-1">
+                                                            <p className="text-xs font-medium text-slate-700">Application Fee</p>
+                                                            {applicationDate && (
+                                                              <p className="text-xs text-slate-500 mt-0.5">
+                                                                Paid: {new Date(applicationDate).toLocaleDateString()}
+                                                              </p>
+                                                            )}
+                                                          </div>
+                                                          <div className="text-right">
+                                                            <p className={`text-sm font-semibold ${applicationFee > 0 ? 'text-green-600' : 'text-slate-400'
+                                                              }`}>
+                                                              {isLoadingRealPaidAmounts ? (
+                                                                <div className="animate-pulse bg-slate-200 h-4 w-16 rounded"></div>
+                                                              ) : (
+                                                                applicationFee > 0 ? formatCurrency(applicationFee) : 'N/A'
+                                                              )}
+                                                            </p>
+                                                            {hasDateFilter && applicationDate && (() => {
+                                                              const paymentDateObj = new Date(applicationDate);
+                                                              const isInPeriod = (!dateFrom || paymentDateObj >= dateFrom) && (!dateTo || paymentDateObj <= dateTo);
+                                                              return !isInPeriod ? (
+                                                                <p className="text-xs text-amber-600 mt-0.5">Outside period</p>
+                                                              ) : null;
+                                                            })()}
+                                                          </div>
+                                                        </div>
+                                                      )}
+
+                                                      {/* I-20 Control Fee */}
                                                       {student.is_scholarship_fee_paid && student.has_paid_i20_control_fee && (
                                                         <div className="flex items-center justify-between p-2 bg-white rounded border border-slate-200">
                                                           <div className="flex-1">
@@ -1862,9 +1852,8 @@ const AffiliateManagement: React.FC = () => {
                                                             )}
                                                           </div>
                                                           <div className="text-right">
-                                                            <p className={`text-sm font-semibold ${
-                                                              i20Fee > 0 ? 'text-green-600' : 'text-slate-400'
-                                                            }`}>
+                                                            <p className={`text-sm font-semibold ${i20Fee > 0 ? 'text-green-600' : 'text-slate-400'
+                                                              }`}>
                                                               {isLoadingRealPaidAmounts ? (
                                                                 <div className="animate-pulse bg-slate-200 h-4 w-16 rounded"></div>
                                                               ) : (
@@ -1881,7 +1870,7 @@ const AffiliateManagement: React.FC = () => {
                                                           </div>
                                                         </div>
                                                       )}
-                                                      
+
                                                       {/* Total */}
                                                       <div className="flex items-center justify-between p-2 bg-slate-100 rounded border border-slate-300 mt-2">
                                                         <p className="text-xs font-semibold text-slate-900">Total (Period)</p>

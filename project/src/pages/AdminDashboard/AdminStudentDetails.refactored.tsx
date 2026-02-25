@@ -11,12 +11,12 @@ import RefreshButton from '../../components/RefreshButton';
 import { useTransferForm } from '../../hooks/useTransferForm';
 import { useDocumentRequests } from '../../hooks/useDocumentRequests';
 import { useAdminNotes } from '../../hooks/useAdminNotes';
+import DocumentViewerModal from '../../components/DocumentViewerModal';
 import { useDocumentRequestHandlers } from '../../hooks/useDocumentRequestHandlers';
 import { generateTermAcceptancePDF, StudentTermAcceptanceData } from '../../utils/pdfGenerator';
 import { recordIndividualFeePayment } from '../../lib/paymentRecorder';
 import { useStudentLogs } from '../../hooks/useStudentLogs';
 import { getGrossPaidAmounts } from '../../utils/paymentConverter';
-import { handleViewDocument } from '../../components/EnhancedStudentTracking/utils/documentUtils';
 
 // Componentes de UI Base
 import {
@@ -77,17 +77,17 @@ const AdminStudentDetails: React.FC = () => {
   const [searchParams] = useSearchParams();
   const { user, userProfile } = useAuth();
   const queryClient = useQueryClient();
-  
+
   // React Query Hooks
   const studentDetailsQuery = useStudentDetailsQuery(profileId);
   const student = studentDetailsQuery.data || null;
   const loading = studentDetailsQuery.isLoading;
-  
+
   // Dados secundários
   const secondaryDataQuery = useStudentSecondaryDataQuery(student?.user_id);
   const pendingZelleQuery = usePendingZellePaymentsQuery(student?.user_id);
   const [directTermAcceptances, setDirectTermAcceptances] = useState<any[] | null>(null);
-  
+
   // Forçar refetch de dados secundários se estiverem vazios no mount/local refresh.
   React.useEffect(() => {
     if (!student?.user_id) return;
@@ -183,9 +183,9 @@ const AdminStudentDetails: React.FC = () => {
   // Debug: log secondary data for admin details
   console.log('🔍 [AdminStudentDetails] secondaryDataQuery.data:', secondaryDataQuery.data);
   console.log('🔍 [AdminStudentDetails] termAcceptances:', termAcceptances);
-  
+
   // Log específico para status de foto de identidade
-  const identityPhotoAcceptance = termAcceptances.find((acc: any) => 
+  const identityPhotoAcceptance = termAcceptances.find((acc: any) =>
     acc.term_type === 'checkout_terms' && (acc.identity_photo_path || acc.identity_photo_status)
   );
   if (identityPhotoAcceptance) {
@@ -199,7 +199,7 @@ const AdminStudentDetails: React.FC = () => {
   const [realPaidAmounts, setRealPaidAmounts] = useState<Record<string, number>>({});
   const [loadingPaidAmounts, setLoadingPaidAmounts] = useState<Record<string, boolean>>({});
   const pendingZellePayments = pendingZelleQuery.data || [];
-  
+
   // Função para atualizar student localmente (mantida para compatibilidade com hooks que dependem de setStudent)
   const setStudent = React.useCallback((updater: any) => {
     if (typeof updater === 'function') {
@@ -213,7 +213,7 @@ const AdminStudentDetails: React.FC = () => {
       queryClient.setQueryData(queryKeys.students.details(profileId), updater);
     }
   }, [studentDetailsQuery.data, profileId, queryClient]);
-  
+
   // Função para refresh de todos os dados
   const [isRefreshing, setIsRefreshing] = useState(false);
   const handleRefresh = async () => {
@@ -232,7 +232,7 @@ const AdminStudentDetails: React.FC = () => {
       }, 300);
     }
   };
-  
+
   const { saving, saveProfile, markFeeAsPaid, approveDocument, rejectDocument } = useAdminStudentActions();
   const { getFeeAmount, formatFeeAmount, hasOverride, userSystemType, userFeeOverrides, loadUserFeeOverrides } = useFeeConfig(student?.user_id);
   const { logAction } = useStudentLogs(student?.student_id || '');
@@ -261,7 +261,7 @@ const AdminStudentDetails: React.FC = () => {
     }
   ): Record<string, number> => {
     const normalized: Record<string, number> = {};
-    
+
     // Helper: Verifica se o valor está dentro de uma faixa razoável (50% de tolerância)
     const isValueReasonable = (realValue: number, expectedValue: number): boolean => {
       const tolerance = 0.5; // 50% de tolerância
@@ -279,7 +279,7 @@ const AdminStudentDetails: React.FC = () => {
       // e podem ter pequenas variações devido a taxas do Stripe, conversão de moeda, etc.
       // Para valores razoáveis (entre $50 e $2000), sempre aceitar o valor real pago
       const isReasonableRange = realPaidAmounts.selection_process >= 50 && realPaidAmounts.selection_process <= 2000;
-      
+
       if (isReasonableRange) {
         // Valor está em range razoável, aceitar diretamente (já foi processado pelo paymentConverter)
         normalized.selection_process = realPaidAmounts.selection_process;
@@ -295,7 +295,7 @@ const AdminStudentDetails: React.FC = () => {
         } else {
           expectedSelectionProcess = sysType === 'simplified' ? 350 : 400;
         }
-        
+
         if (feeOverrides?.selection_process_fee !== undefined) {
           normalized.selection_process = feeOverrides.selection_process_fee;
         } else {
@@ -312,7 +312,7 @@ const AdminStudentDetails: React.FC = () => {
       } else {
         expectedSelectionProcess = sysType === 'simplified' ? 350 : 400;
       }
-      
+
       if (feeOverrides?.selection_process_fee !== undefined) {
         normalized.selection_process = feeOverrides.selection_process_fee;
       } else {
@@ -322,8 +322,8 @@ const AdminStudentDetails: React.FC = () => {
 
     // Scholarship Fee
     if (realPaidAmounts.scholarship !== undefined && realPaidAmounts.scholarship > 0) {
-      const expectedScholarship = sysType === 'simplified' ? 550 : 900;
-      
+      const expectedScholarship = sysType === 'simplified' ? 900 : 900;
+
       if (isValueReasonable(realPaidAmounts.scholarship, expectedScholarship)) {
         normalized.scholarship = realPaidAmounts.scholarship;
       } else {
@@ -338,7 +338,7 @@ const AdminStudentDetails: React.FC = () => {
     } else if (paymentFlags?.has_paid_scholarship) {
       // ✅ NOVO: Fallback para pagamentos legados
       console.log(`[AdminStudentDetails] 💡 Pagamento legado detectado para scholarship - calculando valor esperado`);
-      const expectedScholarship = sysType === 'simplified' ? 550 : 900;
+      const expectedScholarship = sysType === 'simplified' ? 900 : 900;
       if (feeOverrides?.scholarship_fee !== undefined) {
         normalized.scholarship = feeOverrides.scholarship_fee;
       } else {
@@ -349,7 +349,7 @@ const AdminStudentDetails: React.FC = () => {
     // I-20 Control Fee
     if (realPaidAmounts.i20_control !== undefined && realPaidAmounts.i20_control > 0) {
       const expectedI20Control = feeAmountFn('i20_control_fee');
-      
+
       if (isValueReasonable(realPaidAmounts.i20_control, expectedI20Control)) {
         normalized.i20_control = realPaidAmounts.i20_control;
       } else {
@@ -378,7 +378,7 @@ const AdminStudentDetails: React.FC = () => {
       const expectedApplicationFeeWithDeps = dependents > 0
         ? expectedApplicationFee + (dependents * 100)
         : expectedApplicationFee;
-      
+
       if (isValueReasonable(realPaidAmounts.application, expectedApplicationFeeWithDeps)) {
         normalized.application = realPaidAmounts.application;
       } else {
@@ -405,7 +405,7 @@ const AdminStudentDetails: React.FC = () => {
   // Estados locais - Definir antes dos hooks personalizados que dependem deles
   const [documentRequests, setDocumentRequests] = useState<any[]>([]);
   const isPlatformAdmin = user?.role === 'admin';
-  
+
   // Hooks para Transfer Form
   const {
     transferFormFile,
@@ -417,7 +417,11 @@ const AdminStudentDetails: React.FC = () => {
     handleApproveTransferFormUpload,
     handleRejectTransferFormUpload
   } = useTransferForm(student, isPlatformAdmin, user?.id, user?.email, logAction);
-  
+
+  // Estados para Preview de Documentos
+  const [previewUrl, setPreviewUrl] = useState<string | null>(null);
+  const [previewFileName, setPreviewFileName] = useState<string | undefined>(undefined);
+
   // Hooks para Document Requests
   const {
     showNewRequestModal,
@@ -428,7 +432,7 @@ const AdminStudentDetails: React.FC = () => {
     updateNewDocumentRequest,
     handleCreateDocumentRequest
   } = useDocumentRequests(student, user?.id, setDocumentRequests);
-  
+
   // Hooks para Admin Notes
   const {
     adminNotes,
@@ -446,7 +450,7 @@ const AdminStudentDetails: React.FC = () => {
     handleSaveEditNote,
     handleDeleteNote
   } = useAdminNotes(student, user?.id, setStudent, logAction, student?.student_id);
-  
+
   // Hooks para Document Request Handlers
   const {
     uploadingDocumentRequest,
@@ -465,7 +469,7 @@ const AdminStudentDetails: React.FC = () => {
   const [activeTab, setActiveTab] = useState<TabId>('overview');
   const [dependents, setDependents] = useState(0);
   const [isEditing, setIsEditing] = useState(false);
-  
+
   // Ler parâmetro 'tab' da URL e definir aba inicial
   useEffect(() => {
     const tabParam = searchParams.get('tab');
@@ -477,28 +481,28 @@ const AdminStudentDetails: React.FC = () => {
   const [isProgressExpanded, setIsProgressExpanded] = useState(false);
   const [i20Deadline, setI20Deadline] = useState<string | null>(null);
   const [i20Countdown, setI20Countdown] = useState<string>('');
-  
+
   // Estados de documentos
   const [uploadingDocs, setUploadingDocs] = useState<Record<string, boolean>>({});
   const [approvingDocs, setApprovingDocs] = useState<Record<string, boolean>>({});
   const [rejectingDocs] = useState<Record<string, boolean>>({});
   const [processingIdentityPhoto, setProcessingIdentityPhoto] = useState(false);
-  
+
   // Estados de modal
   const [showPaymentModal, setShowPaymentModal] = useState(false);
   const [showRejectDocModal, setShowRejectDocModal] = useState(false);
-  const [rejectDocData, setRejectDocData] = useState<{applicationId: string; docType: string} | null>(null);
+  const [rejectDocData, setRejectDocData] = useState<{ applicationId: string; docType: string } | null>(null);
   const [pendingPayment, setPendingPayment] = useState<any>(null);
   const [paymentMethod, setPaymentMethod] = useState('manual');
   const [paymentAmount, setPaymentAmount] = useState(0);
-  
+
   // Estados para aprovar/rejeitar aplicação
   const [approvingStudent, setApprovingStudent] = useState(false);
   const [rejectingStudent, setRejectingStudent] = useState(false);
   const [showRejectStudentModal, setShowRejectStudentModal] = useState(false);
   const [rejectStudentReason, setRejectStudentReason] = useState('');
   const [pendingRejectAppId, setPendingRejectAppId] = useState<string | null>(null);
-  
+
   // Estados de dados secundários (alguns ainda são locais)
   const [referralInfo, setReferralInfo] = useState<any>(null);
   const [hasMatriculaRewardsDiscount, setHasMatriculaRewardsDiscount] = useState(false);
@@ -510,7 +514,7 @@ const AdminStudentDetails: React.FC = () => {
   } | null>(null);
   const [loadingMatriculaRewards, setLoadingMatriculaRewards] = useState(false);
   // termAcceptances, realPaidAmounts e pendingZellePayments agora vêm dos React Query hooks (definidos acima)
-  
+
   // Estados de edição
   const [isEditingProcessType, setIsEditingProcessType] = useState(false);
   const [editingProcessType, setEditingProcessType] = useState('');
@@ -545,8 +549,8 @@ const AdminStudentDetails: React.FC = () => {
     }
 
     // Buscar aplicação com acceptance letter
-    const appWithLetter = student.all_applications?.find((app: any) => 
-      app.acceptance_letter_sent_at && 
+    const appWithLetter = student.all_applications?.find((app: any) =>
+      app.acceptance_letter_sent_at &&
       (app.acceptance_letter_status === 'sent' || app.acceptance_letter_status === 'approved')
     );
 
@@ -555,27 +559,27 @@ const AdminStudentDetails: React.FC = () => {
       const acceptanceDate = new Date(appWithLetter.acceptance_letter_sent_at);
       const deadline = new Date(acceptanceDate.getTime() + 10 * 24 * 60 * 60 * 1000); // 10 dias
       setI20Deadline(deadline.toISOString());
-      
+
       // Calcular countdown
       const updateCountdown = () => {
         const now = new Date();
         const diff = deadline.getTime() - now.getTime();
-        
+
         if (diff <= 0) {
           setI20Countdown('Expired');
           return;
         }
-        
+
         const days = Math.floor(diff / (1000 * 60 * 60 * 24));
         const hours = Math.floor((diff % (1000 * 60 * 60 * 24)) / (1000 * 60 * 60));
         const minutes = Math.floor((diff % (1000 * 60 * 60)) / (1000 * 60));
-        
+
         setI20Countdown(`${days}d ${hours}h ${minutes}m`);
       };
-      
+
       updateCountdown();
       const interval = setInterval(updateCountdown, 60000); // Atualizar a cada minuto
-      
+
       return () => clearInterval(interval);
     } else {
       setI20Deadline(null);
@@ -601,10 +605,10 @@ const AdminStudentDetails: React.FC = () => {
 
         if (usedCodes && usedCodes.length > 0) {
           // Verificar se algum código começa com MATR
-          const hasMatrCode = usedCodes.some((code: any) => 
+          const hasMatrCode = usedCodes.some((code: any) =>
             code.affiliate_code && /^MATR/i.test(code.affiliate_code)
           );
-          
+
           if (hasMatrCode) {
             setHasMatriculaRewardsDiscount(true);
             return;
@@ -619,10 +623,10 @@ const AdminStudentDetails: React.FC = () => {
           .limit(10);
 
         if (affiliateRefs && affiliateRefs.length > 0) {
-          const hasMatrDiscount = affiliateRefs.some((ref: any) => 
+          const hasMatrDiscount = affiliateRefs.some((ref: any) =>
             ref.affiliate_code && /^MATR/i.test(ref.affiliate_code)
           );
-          
+
           if (hasMatrDiscount) {
             setHasMatriculaRewardsDiscount(true);
             return;
@@ -649,12 +653,12 @@ const AdminStudentDetails: React.FC = () => {
   // Usa gross_amount_usd quando disponível, senão usa amount
   // Aplica validação para garantir que valores em BRL não sejam exibidos como USD
   // ✅ IMPORTANTE: Este useEffect deve vir DEPOIS das definições de userSystemType, userFeeOverrides, getFeeAmount, hasMatriculaRewardsDiscount e validateAndNormalizePaidAmounts
-  
+
   // Usar useRef para rastrear se já carregamos os dados e evitar loops infinitos
   const lastLoadedUserIdRef = React.useRef<string | null>(null);
   const lastLoadedDepsRef = React.useRef<string>('');
   const isLoadingRef = React.useRef<boolean>(false);
-  
+
   React.useEffect(() => {
     if (!student?.user_id) {
       setRealPaidAmounts({});
@@ -663,7 +667,7 @@ const AdminStudentDetails: React.FC = () => {
       isLoadingRef.current = false;
       return;
     }
-    
+
     // Criar uma string de dependências para comparação (sem getFeeAmount e validateAndNormalizePaidAmounts que são funções)
     const depsKey = JSON.stringify({
       userId: student.user_id,
@@ -674,16 +678,16 @@ const AdminStudentDetails: React.FC = () => {
       // Serializar userFeeOverrides de forma estável
       overrides: userFeeOverrides ? JSON.stringify(userFeeOverrides) : ''
     });
-    
+
     // Evitar re-executar se as dependências não mudaram ou se já está carregando
     if (isLoadingRef.current || (lastLoadedUserIdRef.current === student.user_id && lastLoadedDepsRef.current === depsKey)) {
       return;
     }
-    
+
     lastLoadedUserIdRef.current = student.user_id;
     lastLoadedDepsRef.current = depsKey;
     isLoadingRef.current = true;
-    
+
     const loadRealPaidAmounts = async () => {
       setLoadingPaidAmounts({
         selection_process: true,
@@ -693,7 +697,7 @@ const AdminStudentDetails: React.FC = () => {
       });
       try {
         const amounts = await getGrossPaidAmounts(student.user_id, ['selection_process', 'scholarship', 'i20_control', 'application']);
-        
+
         // ✅ DEBUG: Log detalhado dos valores ANTES da normalização
         console.log(`[AdminStudentDetails] 🔍 DEBUG - Valores BRUTOS retornados por getGrossPaidAmounts para ${student.student_email}:`, {
           user_id: student.user_id,
@@ -710,11 +714,11 @@ const AdminStudentDetails: React.FC = () => {
           has_paid_scholarship: student.is_scholarship_fee_paid,
           has_paid_i20: student.has_paid_i20_control_fee
         });
-        
+
         // ✅ APLICAR VALIDAÇÃO: Usar a mesma lógica do Payment Management
         // Se valores estiverem muito discrepantes (provavelmente BRL não convertido), usar valores fixos em dólar
         const hasMatrFromSellerCode = !!(student?.seller_referral_code && /^MATR/i.test(student.seller_referral_code));
-        
+
         console.log(`[AdminStudentDetails] 🔍 DEBUG - Parâmetros para validateAndNormalizePaidAmounts:`, {
           amounts,
           userSystemType,
@@ -729,7 +733,7 @@ const AdminStudentDetails: React.FC = () => {
             has_paid_i20: student.has_paid_i20_control_fee
           }
         });
-        
+
         const normalizedAmounts = validateAndNormalizePaidAmounts(
           amounts,
           userSystemType,
@@ -746,13 +750,13 @@ const AdminStudentDetails: React.FC = () => {
             has_paid_i20: student.has_paid_i20_control_fee
           }
         );
-        
+
         console.log('[AdminStudentDetails] 🔍 DEBUG - Resultado da normalização:', {
           input_amounts: amounts,
           output_normalized: normalizedAmounts,
           was_empty: Object.keys(normalizedAmounts).length === 0
         });
-        
+
         setRealPaidAmounts(normalizedAmounts);
         console.log('[AdminStudentDetails] ✅ realPaidAmounts carregado e normalizado:', normalizedAmounts);
       } catch (error) {
@@ -768,16 +772,16 @@ const AdminStudentDetails: React.FC = () => {
         isLoadingRef.current = false;
       }
     };
-    
+
     loadRealPaidAmounts();
     // Remover validateAndNormalizePaidAmounts das dependências pois é estável (useCallback com [] vazio)
     // Remover getFeeAmount também, pois pode mudar a cada render mas não afeta a lógica de quando carregar
   }, [
-    student?.user_id, 
-    userSystemType, 
-    userFeeOverrides, 
-    student?.dependents, 
-    hasMatriculaRewardsDiscount, 
+    student?.user_id,
+    userSystemType,
+    userFeeOverrides,
+    student?.dependents,
+    hasMatriculaRewardsDiscount,
     student?.seller_referral_code,
     // ✅ NOVO: Adicionar flags de pagamento para recarregar quando status mudar
     student?.has_paid_selection_process_fee,
@@ -789,22 +793,22 @@ const AdminStudentDetails: React.FC = () => {
   // Função para recarregar realPaidAmounts (força recarregamento mesmo se dependências não mudaram)
   const reloadRealPaidAmounts = React.useCallback(async () => {
     if (!student?.user_id) return;
-    
+
     // Resetar refs para forçar recarregamento
     lastLoadedUserIdRef.current = null;
     lastLoadedDepsRef.current = '';
     isLoadingRef.current = false;
-    
+
     setLoadingPaidAmounts({
       selection_process: true,
       scholarship: true,
       i20_control: true,
       application: true,
     });
-    
+
     try {
       const amounts = await getGrossPaidAmounts(student.user_id, ['selection_process', 'scholarship', 'i20_control', 'application']);
-      
+
       // ✅ APLICAR VALIDAÇÃO: Usar a mesma lógica do Payment Management
       const hasMatrFromSellerCode = !!(student?.seller_referral_code && /^MATR/i.test(student.seller_referral_code));
       const normalizedAmounts = validateAndNormalizePaidAmounts(
@@ -823,11 +827,11 @@ const AdminStudentDetails: React.FC = () => {
           has_paid_i20: student.has_paid_i20_control_fee
         }
       );
-      
+
       setRealPaidAmounts(normalizedAmounts);
-      console.log('[AdminStudentDetails] ✅ realPaidAmounts recarregado após refresh/save:', normalizedAmounts);
+      console.log('[PaymentStatusCard] ✅ realPaidAmounts recarregado após refresh/save:', normalizedAmounts);
     } catch (error) {
-      console.error('[AdminStudentDetails] Erro ao recarregar valores brutos pagos:', error);
+      console.error('[PaymentStatusCard] Erro ao recarregar valores brutos pagos:', error);
       setRealPaidAmounts({});
     } finally {
       setLoadingPaidAmounts({
@@ -838,13 +842,13 @@ const AdminStudentDetails: React.FC = () => {
       });
     }
   }, [
-    student?.user_id, 
-    student?.dependents, 
-    student?.seller_referral_code, 
-    userSystemType, 
-    userFeeOverrides, 
-    hasMatriculaRewardsDiscount, 
-    getFeeAmount, 
+    student?.user_id,
+    student?.dependents,
+    student?.seller_referral_code,
+    userSystemType,
+    userFeeOverrides,
+    hasMatriculaRewardsDiscount,
+    getFeeAmount,
     validateAndNormalizePaidAmounts,
     // ✅ NOVO: Adicionar flags de pagamento
     student?.has_paid_selection_process_fee,
@@ -857,7 +861,7 @@ const AdminStudentDetails: React.FC = () => {
   React.useEffect(() => {
     if (student?.seller_referral_code) {
       fetchReferralInfo(student.seller_referral_code);
-        } else {
+    } else {
       setReferralInfo(null);
     }
   }, [student?.seller_referral_code]);
@@ -934,7 +938,7 @@ const AdminStudentDetails: React.FC = () => {
           return;
         }
         const applicationIds = student.all_applications.map((app: any) => app.id).filter(Boolean);
-        
+
         if (applicationIds.length === 0) {
           if (!cancelled) setDocumentRequests([]);
           return;
@@ -951,17 +955,17 @@ const AdminStudentDetails: React.FC = () => {
             .select(fieldsWithUploads)
             .in('scholarship_application_id', applicationIds)
             .order('created_at', { ascending: false }),
-          
+
           (() => {
             const universityIds = (student.all_applications || [])
               .map((app: any) => app.scholarships?.university_id || app.university_id)
               .filter(Boolean);
             const uniqueUniversityIds = [...new Set(universityIds)];
-            
+
             if (uniqueUniversityIds.length === 0) {
               return Promise.resolve({ data: [], error: null });
             }
-            
+
             return supabase
               .from('document_requests')
               .select(fieldsWithUploads)
@@ -994,7 +998,7 @@ const AdminStudentDetails: React.FC = () => {
 
     // Debounce para evitar múltiplas chamadas
     const timeoutId = setTimeout(loadDocumentRequests, 300);
-    
+
     return () => {
       cancelled = true;
       clearTimeout(timeoutId);
@@ -1048,7 +1052,7 @@ const AdminStudentDetails: React.FC = () => {
       if (sellerData) {
         let affiliateName: string | null = null;
         let affiliateEmail: string | null = null;
-        
+
         // Mapear affiliate_admin_id -> user_id via affiliate_admins
         const { data: affiliateAdmin } = await supabase
           .from('affiliate_admins')
@@ -1064,7 +1068,7 @@ const AdminStudentDetails: React.FC = () => {
             .select('full_name, email')
             .eq('user_id', affiliateUserId)
             .maybeSingle();
-          
+
           if (affiliateProfile) {
             affiliateName = (affiliateProfile as any)?.full_name || null;
             affiliateEmail = (affiliateProfile as any)?.email || null;
@@ -1156,7 +1160,7 @@ const AdminStudentDetails: React.FC = () => {
 
   const handleSaveProfile = useCallback(async () => {
     if (!student) return;
-    
+
     const result = await saveProfile(student.student_id, {
       full_name: student.student_name,
       email: student.student_email,
@@ -1174,7 +1178,7 @@ const AdminStudentDetails: React.FC = () => {
       setIsEditing(false);
       // Invalidar queries relacionadas
       queryClient.invalidateQueries({ queryKey: queryKeys.students.details(profileId) });
-      
+
       // Log da ação
       try {
         await logAction(
@@ -1201,7 +1205,7 @@ const AdminStudentDetails: React.FC = () => {
       } catch (logError) {
         console.error('Failed to log profile update:', logError);
       }
-      
+
       alert('Profile saved successfully!');
     } else {
       alert('Error saving profile: ' + result.error);
@@ -1223,7 +1227,7 @@ const AdminStudentDetails: React.FC = () => {
     // Para Application Fee e Scholarship Fee, buscar a aplicação aprovada ou mais recente
     if (feeType === 'application' || feeType === 'scholarship') {
       const approvedApps = student?.all_applications?.filter((app: any) => app.status === 'approved') || [];
-      
+
       if (approvedApps.length > 1) {
         // Com múltiplas aplicações, usar a primeira aprovada (ou implementar seleção se necessário)
         applicationId = approvedApps[0]?.id;
@@ -1251,7 +1255,7 @@ const AdminStudentDetails: React.FC = () => {
     // O admin deve ter controle total sobre o valor a ser registrado
     // O valor da bolsa (application_fee_amount) é apenas uma referência, não deve sobrescrever o valor informado
     let finalPaymentAmount = paymentAmount;
-    
+
     // Para Application Fee, o valor informado pelo admin deve ser respeitado
     // Não sobrescrever com application_fee_amount da bolsa
     if (feeType === 'application' && applicationId) {
@@ -1259,7 +1263,7 @@ const AdminStudentDetails: React.FC = () => {
       // Se o admin informou $1200, registrar $1200, não sobrescrever com o valor da bolsa
       console.log(`[PaymentStatusCard] Application Fee - Usando valor informado pelo admin: $${paymentAmount}`);
       finalPaymentAmount = paymentAmount;
-      
+
       // Nota: Se no futuro precisar adicionar dependentes automaticamente,
       // isso deve ser feito apenas se o admin não informou um valor customizado
       // Por enquanto, respeitamos sempre o valor informado
@@ -1274,11 +1278,11 @@ const AdminStudentDetails: React.FC = () => {
     // Registrar pagamento na tabela individual_fee_payments
     const paymentDate = new Date().toISOString();
     const paymentMethodValue = (paymentMethod || 'manual') as 'stripe' | 'zelle' | 'manual';
-    
+
     // ✅ IMPORTANTE: Ativar loading ANTES de registrar o pagamento
     // Isso evita mostrar o valor antigo enquanto o novo valor está sendo carregado
     setLoadingPaidAmounts(prev => ({ ...prev, [feeType]: true }));
-    
+
     // ✅ IMPORTANTE: Registrar pagamento na tabela individual_fee_payments ANTES de marcar como pago
     // Isso garante que o registro seja feito mesmo se houver erro ao marcar como pago
     try {
@@ -1288,7 +1292,7 @@ const AdminStudentDetails: React.FC = () => {
         amount: finalPaymentAmount,
         payment_method: paymentMethodValue
       });
-      
+
       const recordResult = await recordIndividualFeePayment(supabase, {
         userId: student.user_id,
         feeType: feeType,
@@ -1301,7 +1305,7 @@ const AdminStudentDetails: React.FC = () => {
         grossAmountUsd: null, // Para pagamentos manuais, não há valor bruto do Stripe
         feeAmountUsd: null // Para pagamentos manuais, não há taxas do Stripe
       });
-      
+
       if (!recordResult.success) {
         console.error('[PaymentStatusCard] ❌ Failed to record individual fee payment:', recordResult.error);
         // Mostrar alerta ao admin sobre o erro, mas continuar o fluxo
@@ -1350,17 +1354,17 @@ const AdminStudentDetails: React.FC = () => {
             .single();
 
           if (updatedApplication?.scholarships) {
-            const scholarship = Array.isArray(updatedApplication.scholarships) 
-              ? updatedApplication.scholarships[0] 
+            const scholarship = Array.isArray(updatedApplication.scholarships)
+              ? updatedApplication.scholarships[0]
               : updatedApplication.scholarships;
-            
+
             if (scholarship) {
               setStudent((prev: any) => {
                 if (!prev) return prev;
                 const updatedStudent = { ...prev, is_application_fee_paid: true };
                 updatedStudent.scholarship_title = scholarship.title;
-                const university = Array.isArray(scholarship.universities) 
-                  ? scholarship.universities[0] 
+                const university = Array.isArray(scholarship.universities)
+                  ? scholarship.universities[0]
                   : scholarship.universities;
                 updatedStudent.university_name = university?.name;
                 return updatedStudent as any;
@@ -1392,13 +1396,13 @@ const AdminStudentDetails: React.FC = () => {
 
       setShowPaymentModal(false);
       setPendingPayment(null);
-      
+
       // ✅ IMPORTANTE: Atualizar realPaidAmounts após registrar pagamento
       // O loading já foi ativado antes de registrar o pagamento
       // Buscar novamente os valores pagos para refletir o pagamento recém-registrado
       try {
         const updatedAmounts = await getGrossPaidAmounts(student.user_id, ['selection_process', 'scholarship', 'i20_control', 'application']);
-        
+
         // ✅ APLICAR VALIDAÇÃO: Usar a mesma lógica do Payment Management
         const hasMatrFromSellerCode = !!(student?.seller_referral_code && /^MATR/i.test(student.seller_referral_code));
         const normalizedAmounts = validateAndNormalizePaidAmounts(
@@ -1410,7 +1414,7 @@ const AdminStudentDetails: React.FC = () => {
           hasMatriculaRewardsDiscount,
           hasMatrFromSellerCode
         );
-        
+
         setRealPaidAmounts(normalizedAmounts);
         console.log('[PaymentStatusCard] ✅ realPaidAmounts atualizado após pagamento:', normalizedAmounts);
       } catch (updateError) {
@@ -1419,7 +1423,7 @@ const AdminStudentDetails: React.FC = () => {
         // Desativar loading após atualizar
         setLoadingPaidAmounts(prev => ({ ...prev, [feeType]: false }));
       }
-      
+
       // Invalidar queries relacionadas
       queryClient.invalidateQueries({ queryKey: queryKeys.students.details(profileId) });
       queryClient.invalidateQueries({ queryKey: queryKeys.students.secondaryData(student?.user_id) });
@@ -1431,12 +1435,12 @@ const AdminStudentDetails: React.FC = () => {
 
   const handleApproveDocument = useCallback(async (appId: string, docType: string) => {
     if (!student) return;
-    
+
     setApprovingDocs(prev => ({ ...prev, [`${appId}:${docType}`]: true }));
-    
+
     try {
       const result = await approveDocument(appId, docType);
-      
+
       if (result.success) {
         // Buscar os documentos atualizados do banco de dados
         const { data: updatedApp, error: fetchError } = await supabase
@@ -1444,7 +1448,7 @@ const AdminStudentDetails: React.FC = () => {
           .select('id, documents')
           .eq('id', appId)
           .single();
-        
+
         if (!fetchError && updatedApp) {
           // Atualizar o estado do student localmente sem reload
           setStudent((prev: any) => {
@@ -1506,7 +1510,7 @@ const AdminStudentDetails: React.FC = () => {
           .select('id, documents')
           .eq('id', rejectDocData.applicationId)
           .single();
-        
+
         if (!fetchError && updatedApp) {
           // Atualizar o estado do student localmente sem reload
           setStudent((prev: any) => {
@@ -1540,7 +1544,7 @@ const AdminStudentDetails: React.FC = () => {
 
         // ENVIAR NOTIFICAÇÕES PARA O ALUNO
         console.log('📤 [handleConfirmReject] Enviando notificações de rejeição para o aluno...');
-        
+
         // Obter labels amigáveis para os documentos (definir antes do try para estar disponível em ambos os blocos)
         const docLabels: Record<string, string> = {
           passport: 'Passport',
@@ -1548,7 +1552,7 @@ const AdminStudentDetails: React.FC = () => {
           funds_proof: 'Proof of Funds',
         };
         const docLabel = docLabels[rejectDocData.docType] || rejectDocData.docType;
-        
+
         try {
           // 1. ENVIAR EMAIL VIA WEBHOOK (payload idêntico ao da universidade)
           const rejectionPayload = {
@@ -1583,14 +1587,14 @@ const AdminStudentDetails: React.FC = () => {
 
         // 2. ENVIAR NOTIFICAÇÃO IN-APP PARA O ALUNO (SINO)
         console.log('📤 [handleConfirmReject] Enviando notificação in-app para o aluno...');
-        
+
         try {
           // docLabel já foi calculado acima, reutilizar
-          
+
           // Usar Edge Function que tem service role para criar notificação
           const { data: { session } } = await supabase.auth.getSession();
           const accessToken = session?.access_token;
-          
+
           if (!accessToken) {
             console.error('❌ [handleConfirmReject] Access token não encontrado');
           } else {
@@ -1602,7 +1606,7 @@ const AdminStudentDetails: React.FC = () => {
               message: `Your ${docLabel} document has been rejected. Reason: ${reason}. Please review and upload a corrected version.`,
               link: '/student/dashboard/applications',
             };
-            
+
             const response = await fetch(`${import.meta.env.VITE_SUPABASE_FUNCTIONS_URL}/create-student-notification`, {
               method: 'POST',
               headers: {
@@ -1611,7 +1615,7 @@ const AdminStudentDetails: React.FC = () => {
               },
               body: JSON.stringify(notificationPayload),
             });
-            
+
             if (!response.ok) {
               const errorText = await response.text();
               console.error('❌ [handleConfirmReject] Erro ao criar notificação:', response.status, errorText);
@@ -1624,7 +1628,7 @@ const AdminStudentDetails: React.FC = () => {
           console.error('❌ [handleConfirmReject] Erro ao enviar notificação in-app:', notificationError);
           // Não falhar o processo se a notificação in-app falhar
         }
-        
+
         // Fechar o modal de rejeição
         setShowRejectDocModal(false);
         setRejectDocData(null);
@@ -1714,11 +1718,11 @@ const AdminStudentDetails: React.FC = () => {
 
       // Invalidar e refetch queries para atualizar UI
       console.log('🔄 [handleApproveIdentityPhoto] Invalidando e refazendo queries...');
-      
+
       // Limpar cache completamente para forçar refetch
       queryClient.removeQueries({ queryKey: queryKeys.students.secondaryData(student?.user_id) });
       queryClient.removeQueries({ queryKey: queryKeys.students.details(profileId) });
-      
+
       // Refetch forçado
       await Promise.all([
         queryClient.refetchQueries({ queryKey: queryKeys.students.secondaryData(student?.user_id), type: 'active' }),
@@ -1919,10 +1923,10 @@ const AdminStudentDetails: React.FC = () => {
       let verifyData: any = null;
       let attempts = 0;
       const maxAttempts = 5;
-      
+
       while (attempts < maxAttempts) {
         await new Promise(resolve => setTimeout(resolve, 300)); // Aguardar entre tentativas
-        
+
         const { data: checkData, error: verifyError } = await supabase
           .from('comprehensive_term_acceptance')
           .select('id, identity_photo_status, identity_photo_rejection_reason, identity_photo_reviewed_at')
@@ -1937,7 +1941,7 @@ const AdminStudentDetails: React.FC = () => {
 
         verifyData = checkData;
         console.log(`✅ [handleRejectIdentityPhoto] Status verificado no banco (tentativa ${attempts + 1}/${maxAttempts}):`, verifyData);
-        
+
         if (verifyData.identity_photo_status === 'rejected') {
           console.log('✅ [handleRejectIdentityPhoto] Status confirmado como "rejected" no banco!');
           break;
@@ -1957,11 +1961,11 @@ const AdminStudentDetails: React.FC = () => {
 
       // 7. Invalidar e refetch queries para atualizar UI
       console.log('🔄 [handleRejectIdentityPhoto] Invalidando e refazendo queries...');
-      
+
       // Limpar cache completamente para forçar refetch
       queryClient.removeQueries({ queryKey: queryKeys.students.secondaryData(student?.user_id) });
       queryClient.removeQueries({ queryKey: queryKeys.students.details(profileId) });
-      
+
       // Refetch forçado via queryClient
       await Promise.all([
         queryClient.refetchQueries({ queryKey: queryKeys.students.secondaryData(student?.user_id), type: 'active' }),
@@ -2058,13 +2062,25 @@ const AdminStudentDetails: React.FC = () => {
     }
   }, [student, user, logAction, queryClient, profileId]);
 
-  // handleViewDocument removido daqui pois agora é importado de documentUtils
+  // Handler para visualizar documento usando o modal premium
+  const handleOnViewDocument = useCallback((doc: any) => {
+    console.log('🔍 [ADMIN] Visualizando documento:', doc);
+    const url = doc.file_url || doc.url || doc.file_path;
+    const name = doc.filename || doc.name || doc.title;
+
+    if (url) {
+      setPreviewUrl(url);
+      setPreviewFileName(name);
+    } else {
+      console.warn('⚠️ [ADMIN] Documento não tem URL para visualização:', doc);
+    }
+  }, []);
 
   const handleUploadDocument = useCallback(async (appId: string, docType: string, file: File) => {
     if (!canUniversityManage || !student) return;
     const k = `${appId}:${docType}`;
     setUploadingDocs(prev => ({ ...prev, [k]: true }));
-    
+
     try {
       // Caminho no bucket
       const safeDocType = docType.replace(/[^a-z0-9_\-]/gi, '').toLowerCase();
@@ -2075,7 +2091,7 @@ const AdminStudentDetails: React.FC = () => {
       const { error: uploadError } = await supabase.storage
         .from('student-documents')
         .upload(storagePath, file, { upsert: true, cacheControl: '3600' });
-      
+
       if (uploadError) {
         console.error('Upload error:', uploadError);
         alert('Error uploading document: ' + uploadError.message);
@@ -2092,7 +2108,7 @@ const AdminStudentDetails: React.FC = () => {
         console.error('Application not found:', appId);
         return;
       }
-      
+
       const currentDocs: any[] = Array.isArray(targetApp.documents) ? targetApp.documents : [];
       let found = false;
       const updatedDocs = currentDocs.map((d: any) => {
@@ -2107,7 +2123,7 @@ const AdminStudentDetails: React.FC = () => {
         }
         return d;
       });
-      
+
       const finalDocs = found
         ? updatedDocs
         : [...updatedDocs, { type: docType, url: publicUrl, status: 'under_review', uploaded_at: new Date().toISOString() }];
@@ -2118,7 +2134,7 @@ const AdminStudentDetails: React.FC = () => {
         .eq('id', appId)
         .select('id, documents')
         .single();
-      
+
       if (error) {
         console.error('Update documents error:', error);
         alert('Error updating document: ' + error.message);
@@ -2128,15 +2144,15 @@ const AdminStudentDetails: React.FC = () => {
       // Atualizar estado local
       setStudent((prev: any) => {
         if (!prev) return prev;
-        const updatedApps = (prev.all_applications || []).map((a: any) => 
+        const updatedApps = (prev.all_applications || []).map((a: any) =>
           a.id === appId ? { ...a, documents: data?.documents || finalDocs } : a
         );
         return { ...prev, all_applications: updatedApps } as any;
       });
-      
+
       // Invalidar queries relacionadas
       queryClient.invalidateQueries({ queryKey: queryKeys.students.details(profileId) });
-      
+
       // Log the action
       try {
         await logAction(
@@ -2164,7 +2180,7 @@ const AdminStudentDetails: React.FC = () => {
   // Funções para aprovar/rejeitar aplicação
   const approveApplication = useCallback(async (applicationId: string) => {
     if (!student || !isPlatformAdmin) return;
-    
+
     // Validar se todos os documentos estão aprovados
     const currentApp = (student.all_applications || []).find((a: any) => a.id === applicationId);
     if (!currentApp) {
@@ -2174,28 +2190,58 @@ const AdminStudentDetails: React.FC = () => {
 
     const appDocuments = currentApp.documents || [];
     const requiredTypes = ['passport', 'funds_proof', 'diploma'];
-    
+
     // 1. Verificar se os documentos obrigatórios básicos estão presentes
     const presentTypes = appDocuments.map((d: any) => (d.type || '').toLowerCase());
     const missingRequired = requiredTypes.filter(type => !presentTypes.includes(type));
-    
+
     if (missingRequired.length > 0) {
       alert(`Cannot approve: Missing required documents (${missingRequired.join(', ')}).`);
       return;
     }
 
-    // 2. Verificar se todos os documentos da aplicação estão aprovados
+    // 2. Verificar se todos os documentos da aplicação estão aprovados (Legacy/Main JSON)
     const allDocsApproved = appDocuments.length > 0 && appDocuments.every((doc: any) => (doc.status || '').toLowerCase() === 'approved');
-    if (!allDocsApproved) {
+
+    // Se não tiver documentos legacy, ou se tiver e algum não estiver aprovado
+    if (appDocuments.length > 0 && !allDocsApproved) {
       alert('Cannot approve: All documents in the application must be approved first.');
       return;
     }
 
+    // 3. (Novo) Verificar document_requests associados a esta aplicação
+    // Buscar requests e seus uploads
+    const { data: docRequests, error: reqError } = await supabase
+      .from('document_requests')
+      .select('id, title, document_request_uploads(status)')
+      .eq('scholarship_application_id', applicationId);
+
+    if (reqError) {
+      console.error('Error checking document requests:', reqError);
+      alert('Error validating documents. Please try again.');
+      return;
+    }
+
+    if (docRequests && docRequests.length > 0) {
+      const pendingOrRejectedRequests = docRequests.filter(req => {
+        const uploads = req.document_request_uploads || [];
+        // Verificar se existe pelo menos um upload APROVADO para este request
+        const hasApproved = uploads.some((u: any) => u.status === 'approved');
+        return !hasApproved;
+      });
+
+      if (pendingOrRejectedRequests.length > 0) {
+        const titles = pendingOrRejectedRequests.map(r => r.title).join(', ');
+        alert(`Cannot approve: The following document requests need approval: ${titles}`);
+        return;
+      }
+    }
+
     try {
       setApprovingStudent(true);
-      
+
       console.log('🔄 [APPROVE] Iniciando aprovação da aplicação:', applicationId);
-      
+
       const { data: updatedApp, error: updateError } = await supabase
         .from('scholarship_applications')
         .update({ status: 'approved' })
@@ -2207,7 +2253,7 @@ const AdminStudentDetails: React.FC = () => {
         console.error('❌ [APPROVE] Erro ao atualizar status da aplicação:', updateError);
         throw new Error('Failed to update application status: ' + updateError.message);
       }
-      
+
       console.log('✅ [APPROVE] Aplicação aprovada no banco:', updatedApp);
 
       // Atualizar também o documents_status no perfil do usuário
@@ -2236,14 +2282,14 @@ const AdminStudentDetails: React.FC = () => {
             email_universidade: user?.email,
             o_que_enviar: `Congratulations, you have been selected for the scholarship.`
           };
-          
+
           try {
             const webhookResponse = await fetch('https://nwh.suaiden.com/webhook/notfmatriculausa', {
               method: 'POST',
               headers: { 'Content-Type': 'application/json' },
               body: JSON.stringify(webhookPayload),
             });
-            
+
             if (!webhookResponse.ok) {
               const webhookErrorText = await webhookResponse.text();
               console.error('Webhook error:', webhookErrorText);
@@ -2308,7 +2354,7 @@ const AdminStudentDetails: React.FC = () => {
             console.warn('⚠️ [APPROVE] Student é null, não é possível atualizar');
             return prev;
           }
-          
+
           // Criar um novo array de aplicações com a aplicação atualizada
           const updatedApps = (prev.all_applications || []).map((app: any) => {
             if (app.id === applicationId) {
@@ -2322,24 +2368,24 @@ const AdminStudentDetails: React.FC = () => {
             }
             return app;
           });
-          
+
           console.log('✅ [APPROVE] Novo array de aplicações criado:', updatedApps.length, 'aplicações');
-          
+
           // Criar um novo objeto student completamente para garantir que o React detecte a mudança
           const newStudent = {
             ...prev,
             all_applications: updatedApps,
             application_status: 'approved'
           } as any;
-          
+
           console.log('✅ [APPROVE] Novo objeto student criado');
           return newStudent;
         });
-        
+
         console.log('✅ [APPROVE] setStudent chamado, aguardando re-render...');
-          // Invalidar queries relacionadas
-          queryClient.invalidateQueries({ queryKey: queryKeys.students.details(profileId) });
-          queryClient.invalidateQueries({ queryKey: queryKeys.students.all });
+        // Invalidar queries relacionadas
+        queryClient.invalidateQueries({ queryKey: queryKeys.students.details(profileId) });
+        queryClient.invalidateQueries({ queryKey: queryKeys.students.all });
       } else {
         console.warn('⚠️ [APPROVE] updatedApp é null ou undefined');
       }
@@ -2352,26 +2398,26 @@ const AdminStudentDetails: React.FC = () => {
 
   const rejectApplication = useCallback(async (applicationId: string) => {
     if (!student || !isPlatformAdmin) return;
-    
+
     try {
       setRejectingStudent(true);
-      
+
       const { data: updatedApp, error: updateError } = await supabase
         .from('scholarship_applications')
         .update({ status: 'rejected', notes: rejectStudentReason || null })
         .eq('id', applicationId)
         .select()
         .single();
-      
+
       if (updateError) {
         console.error('Erro ao atualizar status da aplicação:', updateError);
         throw updateError;
       }
-      
+
       setShowRejectStudentModal(false);
       setRejectStudentReason('');
       setPendingRejectAppId(null);
-      
+
       // Log da ação
       try {
         await logAction(
@@ -2392,12 +2438,12 @@ const AdminStudentDetails: React.FC = () => {
       } catch (logError) {
         console.error('⚠️ [rejectApplication] Erro ao logar ação (não crítico):', logError);
       }
-      
+
       // Atualizar o estado local com os dados atualizados do banco
       if (updatedApp) {
         setStudent((prev: any) => {
           if (!prev) return prev;
-          
+
           // Criar um novo array de aplicações com a aplicação atualizada
           const updatedApps = (prev.all_applications || []).map((app: any) => {
             if (app.id === applicationId) {
@@ -2411,7 +2457,7 @@ const AdminStudentDetails: React.FC = () => {
             }
             return app;
           });
-          
+
           // Criar um novo objeto student completamente para garantir que o React detecte a mudança
           return {
             ...prev,
@@ -2419,7 +2465,7 @@ const AdminStudentDetails: React.FC = () => {
             application_status: 'rejected'
           } as any;
         });
-        
+
         console.log('✅ [REJECT] Estado local atualizado com sucesso');
         // Invalidar queries relacionadas
         queryClient.invalidateQueries({ queryKey: queryKeys.students.details(profileId) });
@@ -2459,7 +2505,7 @@ const AdminStudentDetails: React.FC = () => {
 
   const getStepStatus = useCallback((step: { key: string; label: string }) => {
     if (!student) return 'pending';
-    
+
     switch (step.key) {
       case 'selection_fee':
         return student.has_paid_selection_process_fee ? 'completed' : 'pending';
@@ -2481,8 +2527,8 @@ const AdminStudentDetails: React.FC = () => {
         return 'pending';
       case 'transfer_form':
         if (student.student_process_type !== 'transfer') return 'skipped';
-        const transferApp = student.all_applications?.find((app: any) => 
-          app.student_process_type === 'transfer' && 
+        const transferApp = student.all_applications?.find((app: any) =>
+          app.student_process_type === 'transfer' &&
           (app.transfer_form_status === 'approved' || app.transfer_form_status === 'sent')
         );
         return transferApp ? 'completed' : 'pending';
@@ -2495,14 +2541,14 @@ const AdminStudentDetails: React.FC = () => {
 
   const getCurrentStep = useCallback(() => {
     if (!student) return null;
-    
+
     for (let i = 0; i < steps.length; i++) {
       const status = getStepStatus(steps[i]);
       if (status === 'in_progress' || status === 'pending') {
         return { step: steps[i], index: i, status };
       }
     }
-    
+
     // Se todos estão completos, retorna o último
     return { step: steps[steps.length - 1], index: steps.length - 1, status: 'completed' };
   }, [student, steps, getStepStatus]);
@@ -2513,7 +2559,7 @@ const AdminStudentDetails: React.FC = () => {
       // Buscar identity_photo_path e identity_photo_name se não estiverem no acceptance
       let identityPhotoPath = acceptance.identity_photo_path;
       let identityPhotoName = acceptance.identity_photo_name;
-      
+
       // Se não estiverem no acceptance, buscar do banco
       if (!identityPhotoPath && acceptance.id) {
         const { data: termAcceptanceData, error: termError } = await supabase
@@ -2521,13 +2567,13 @@ const AdminStudentDetails: React.FC = () => {
           .select('identity_photo_path, identity_photo_name')
           .eq('id', acceptance.id)
           .maybeSingle();
-        
+
         if (!termError && termAcceptanceData) {
           identityPhotoPath = termAcceptanceData.identity_photo_path;
           identityPhotoName = termAcceptanceData.identity_photo_name;
         }
       }
-      
+
       // Preparar dados para o PDF
       const pdfData: StudentTermAcceptanceData = {
         student_name: acceptance.user_full_name || student?.student_name || 'N/A',
@@ -2542,7 +2588,7 @@ const AdminStudentDetails: React.FC = () => {
         identity_photo_path: identityPhotoPath || undefined,
         identity_photo_name: identityPhotoName || undefined
       };
-      
+
       // Gerar e baixar o PDF (agora é assíncrono)
       await generateTermAcceptancePDF(pdfData);
     } catch (error) {
@@ -2560,7 +2606,7 @@ const AdminStudentDetails: React.FC = () => {
 
       // Criar tabela se não existir
       const { error: createTableError } = await supabase.rpc('create_user_fee_overrides_table_if_not_exists');
-      
+
       if (createTableError) {
         console.warn('Erro ao criar tabela, tentando continuar:', createTableError);
       }
@@ -2608,17 +2654,17 @@ const AdminStudentDetails: React.FC = () => {
       // Invalidar queries relacionadas
       queryClient.invalidateQueries({ queryKey: queryKeys.students.details(profileId) });
       queryClient.invalidateQueries({ queryKey: queryKeys.students.secondaryData(student?.user_id) });
-      
+
       // ✅ Aguardar um pouco para garantir que o banco foi atualizado
       await new Promise(resolve => setTimeout(resolve, 200));
-      
+
       // ✅ Recarregar realPaidAmounts E userFeeOverrides após salvar fees
       // Isso garante que os valores estejam atualizados quando iniciar nova edição
       await Promise.all([
         reloadRealPaidAmounts(),
         loadUserFeeOverrides()
       ]);
-      
+
       // ✅ Forçar recarregamento de overrides no PaymentStatusCard
       setOverridesRefreshKey(prev => prev + 1);
     } catch (error: any) {
@@ -2663,14 +2709,14 @@ const AdminStudentDetails: React.FC = () => {
       // Invalidar queries relacionadas
       queryClient.invalidateQueries({ queryKey: queryKeys.students.details(profileId) });
       queryClient.invalidateQueries({ queryKey: queryKeys.students.secondaryData(student?.user_id) });
-      
+
       // ✅ Recarregar realPaidAmounts E userFeeOverrides após resetar fees
       // Isso garante que os valores estejam atualizados quando iniciar nova edição
       await Promise.all([
         reloadRealPaidAmounts(),
         loadUserFeeOverrides()
       ]);
-      
+
       // ✅ Forçar recarregamento de overrides no PaymentStatusCard
       setOverridesRefreshKey(prev => prev + 1);
     } catch (error: any) {
@@ -2684,10 +2730,10 @@ const AdminStudentDetails: React.FC = () => {
   // Handler para iniciar edição de fees
   const handleStartEditFees = useCallback(async () => {
     if (!student) return;
-    
+
     // ✅ IMPORTANTE: Recarregar realPaidAmounts antes de iniciar edição
     await reloadRealPaidAmounts();
-    
+
     // ✅ Buscar overrides diretamente do banco para garantir valores atualizados
     // Isso evita problemas de closure com o estado do hook
     let currentOverrides: {
@@ -2695,7 +2741,7 @@ const AdminStudentDetails: React.FC = () => {
       scholarship_fee?: number;
       i20_control_fee?: number;
     } | null = null;
-    
+
     try {
       // ✅ Forçar nova query sem cache adicionando timestamp
       const { data: overrideData, error: overrideError } = await supabase
@@ -2703,11 +2749,11 @@ const AdminStudentDetails: React.FC = () => {
         .select('selection_process_fee, scholarship_fee, i20_control_fee, updated_at')
         .eq('user_id', student.user_id)
         .maybeSingle();
-      
+
       if (overrideError && overrideError.code !== 'PGRST116') {
         console.error('❌ [handleStartEditFees] Erro ao buscar overrides:', overrideError);
       }
-      
+
       if (!overrideError && overrideData) {
         currentOverrides = {
           selection_process_fee: overrideData.selection_process_fee != null ? Number(overrideData.selection_process_fee) : undefined,
@@ -2721,7 +2767,7 @@ const AdminStudentDetails: React.FC = () => {
     } catch (error) {
       console.error('❌ [handleStartEditFees] Erro ao buscar overrides:', error);
     }
-    
+
     // ✅ Buscar affiliate admin email do aluno para verificar se deve aplicar custo de dependentes
     let studentAffiliateAdminEmail: string | null = null;
     if (student.seller_referral_code) {
@@ -2729,7 +2775,7 @@ const AdminStudentDetails: React.FC = () => {
         const { data: result, error } = await supabase.rpc('get_affiliate_admin_email_by_seller_code', {
           seller_code: student.seller_referral_code
         });
-        
+
         if (!error && result && result.length > 0 && result[0]?.email) {
           studentAffiliateAdminEmail = result[0].email;
         }
@@ -2737,14 +2783,14 @@ const AdminStudentDetails: React.FC = () => {
         console.error('Error fetching student affiliate admin email:', error);
       }
     }
-    
+
     // ✅ Verificar se é do affiliate admin "contato@brantimmigration.com" para aplicar valores fixos
     const isBrantImmigrationAffiliate = studentAffiliateAdminEmail?.toLowerCase() === 'contato@brantimmigration.com';
-    
+
     // ✅ Se a fee já foi paga, usar o valor realmente pago (realPaidAmounts) como padrão
     // Caso contrário, usar o valor calculado/esperado
     // Nota: realPaidAmounts foi recarregado acima, então agora está atualizado
-    
+
     // Selection Process Fee
     let selectionProcessValue: number;
     if (student.has_paid_selection_process_fee && realPaidAmounts?.selection_process !== undefined && realPaidAmounts?.selection_process !== null) {
@@ -2752,34 +2798,34 @@ const AdminStudentDetails: React.FC = () => {
       selectionProcessValue = realPaidAmounts.selection_process;
     } else {
       // Se não foi pago, calcular o valor esperado
-      
+
       // ✅ PRIORIDADE 1: Verificar override primeiro (antes de Brant)
       if (currentOverrides?.selection_process_fee !== undefined && currentOverrides?.selection_process_fee !== null) {
-      // Se tem override, usar o valor do override diretamente
+        // Se tem override, usar o valor do override diretamente
         selectionProcessValue = currentOverrides.selection_process_fee;
         console.log('✅ [handleStartEditFees] Selection Process usando override:', selectionProcessValue);
       } else if (isBrantImmigrationAffiliate) {
         // ✅ PRIORIDADE 2: Se for do affiliate admin "contato@brantimmigration.com", usar valores fixos
         // Selection Process: $400 base + $150 por dependente
         selectionProcessValue = 400 + (dependents * 150);
-    } else {
-        // Caso contrário, calcular normalmente
-      const hasMatrFromSellerCode = student?.seller_referral_code && /^MATR/i.test(student.seller_referral_code);
-      const hasMatrDiscount = hasMatriculaRewardsDiscount || hasMatrFromSellerCode;
-      
-      let base: number;
-      if (hasMatrDiscount) {
-        base = 350; // $400 - $50 desconto
       } else {
-        const systemType = userSystemType || 'legacy';
-        base = systemType === 'simplified' ? 350 : 400;
-      }
-        
+        // Caso contrário, calcular normalmente
+        const hasMatrFromSellerCode = student?.seller_referral_code && /^MATR/i.test(student.seller_referral_code);
+        const hasMatrDiscount = hasMatriculaRewardsDiscount || hasMatrFromSellerCode;
+
+        let base: number;
+        if (hasMatrDiscount) {
+          base = 350; // $400 - $50 desconto
+        } else {
+          const systemType = userSystemType || 'legacy';
+          base = systemType === 'simplified' ? 350 : 400;
+        }
+
         // Para legacy, dependentes só se for do Brant (já tratado acima)
         selectionProcessValue = base;
       }
     }
-    
+
     // Scholarship Fee
     let scholarshipValue: number;
     if (student.is_scholarship_fee_paid && realPaidAmounts?.scholarship !== undefined && realPaidAmounts?.scholarship !== null) {
@@ -2799,7 +2845,7 @@ const AdminStudentDetails: React.FC = () => {
         scholarshipValue = getFeeAmount('scholarship_fee');
       }
     }
-    
+
     // I-20 Control Fee
     let i20ControlValue: number;
     if (student.has_paid_i20_control_fee && realPaidAmounts?.i20_control !== undefined && realPaidAmounts?.i20_control !== null) {
@@ -2819,18 +2865,18 @@ const AdminStudentDetails: React.FC = () => {
         i20ControlValue = getFeeAmount('i20_control_fee');
       }
     }
-    
+
     const finalFees = {
       selection_process: selectionProcessValue,
       scholarship: scholarshipValue,
       i20_control: i20ControlValue
     };
-    
+
     console.log('✅ [handleStartEditFees] Valores finais para edição:', finalFees);
     console.log('✅ [handleStartEditFees] Overrides usados:', currentOverrides);
-    
+
     setEditingFees(finalFees);
-    
+
     // ✅ Verificar se o estado foi atualizado (usar setTimeout para verificar após o próximo render)
     setTimeout(() => {
       console.log('🔍 [handleStartEditFees] Estado editingFees após setEditingFees (verificação):', finalFees);
@@ -2852,17 +2898,17 @@ const AdminStudentDetails: React.FC = () => {
   // Handler para atualizar método de pagamento
   const handleUpdatePaymentMethod = useCallback(async (feeType: string) => {
     if (!student || !isPlatformAdmin) return;
-    
+
     setSavingPaymentMethod(true);
     try {
       const method = paymentMethod as 'stripe' | 'zelle' | 'manual';
-      
+
       if (feeType === 'selection_process') {
         const { error } = await supabase
           .from('user_profiles')
           .update({ selection_process_fee_payment_method: method })
           .eq('id', student.student_id);
-        
+
         if (error) throw error;
       } else if (feeType === 'application') {
         // Buscar aplicação que tem application fee pago
@@ -2872,7 +2918,7 @@ const AdminStudentDetails: React.FC = () => {
             .from('scholarship_applications')
             .update({ application_fee_payment_method: method })
             .eq('id', paidApp.id);
-          
+
           if (error) throw error;
         }
       } else if (feeType === 'scholarship') {
@@ -2883,7 +2929,7 @@ const AdminStudentDetails: React.FC = () => {
             .from('scholarship_applications')
             .update({ scholarship_fee_payment_method: method })
             .eq('id', paidApp.id);
-          
+
           if (error) throw error;
         }
       } else if (feeType === 'i20_control') {
@@ -2891,10 +2937,10 @@ const AdminStudentDetails: React.FC = () => {
           .from('user_profiles')
           .update({ i20_control_fee_payment_method: method })
           .eq('id', student.student_id);
-        
+
         if (error) throw error;
       }
-      
+
       // Log da ação
       try {
         await logAction(
@@ -3034,41 +3080,41 @@ const AdminStudentDetails: React.FC = () => {
                 }}
                 onSaveProcessType={async () => {
                   setSavingProcessType(true);
-                  
+
                   try {
                     // student_process_type está na tabela scholarship_applications, não em user_profiles
                     // Precisamos atualizar todas as aplicações do estudante ou a aplicação ativa/locked
                     const applications = student.all_applications || [];
-                    
+
                     if (applications.length === 0) {
                       alert('Error: Student has no applications. Cannot update process type.');
                       setSavingProcessType(false);
                       return;
                     }
-                    
+
                     // Atualizar todas as aplicações do estudante com o novo process type
                     const applicationIds = applications.map((app: any) => app.id).filter(Boolean);
-                    
+
                     if (applicationIds.length === 0) {
                       alert('Error: No valid application IDs found.');
                       setSavingProcessType(false);
                       return;
                     }
-                    
+
                     console.log('🔄 [onSaveProcessType] Atualizando student_process_type em aplicações:', applicationIds);
-                    
+
                     const { error: updateError } = await supabase
                       .from('scholarship_applications')
                       .update({ student_process_type: editingProcessType })
                       .in('id', applicationIds);
-                    
+
                     if (updateError) {
                       console.error('❌ [onSaveProcessType] Erro ao atualizar:', updateError);
                       throw updateError;
                     }
-                    
+
                     console.log('✅ [onSaveProcessType] student_process_type atualizado com sucesso');
-                    
+
                     // Atualizar estado local imediatamente
                     setStudent((prev: any) => {
                       if (!prev) return prev;
@@ -3077,16 +3123,16 @@ const AdminStudentDetails: React.FC = () => {
                         ...app,
                         student_process_type: editingProcessType
                       }));
-                      return { 
-                        ...prev, 
+                      return {
+                        ...prev,
                         student_process_type: editingProcessType,
                         all_applications: updatedApps
                       } as any;
                     });
-                    
+
                     // Invalidar queries para garantir sincronização
                     queryClient.invalidateQueries({ queryKey: queryKeys.students.details(profileId) });
-                    
+
                     // Log da ação
                     try {
                       await logAction(
@@ -3108,7 +3154,7 @@ const AdminStudentDetails: React.FC = () => {
                     } catch (logError) {
                       console.error('⚠️ [onSaveProcessType] Erro ao logar ação (não crítico):', logError);
                     }
-                    
+
                     setIsEditingProcessType(false);
                   } catch (error: any) {
                     console.error('❌ [onSaveProcessType] Erro ao atualizar process type:', error);
@@ -3134,11 +3180,11 @@ const AdminStudentDetails: React.FC = () => {
                   referralInfo={
                     matriculaRewardsInfo
                       ? {
-                          type: 'student',
-                          name: matriculaRewardsInfo.name || 'Unknown',
-                          email: matriculaRewardsInfo.email || 'No email',
-                          isRewards: true, // ✅ Indica que é Matricula Rewards
-                        }
+                        type: 'student',
+                        name: matriculaRewardsInfo.name || 'Unknown',
+                        email: matriculaRewardsInfo.email || 'No email',
+                        isRewards: true, // ✅ Indica que é Matricula Rewards
+                      }
                       : referralInfo
                   }
                   loading={matriculaRewardsInfo ? loadingMatriculaRewards : false}
@@ -3164,8 +3210,8 @@ const AdminStudentDetails: React.FC = () => {
                 />
               )}
 
-              <SelectedScholarshipCard 
-                student={student} 
+              <SelectedScholarshipCard
+                student={student}
               />
 
               <StudentDocumentsCard
@@ -3181,7 +3227,7 @@ const AdminStudentDetails: React.FC = () => {
                 approvingStudent={approvingStudent}
                 rejectingStudent={rejectingStudent}
                 onToggleExpand={(appKey) => setExpandedApps(prev => ({ ...prev, [appKey]: !prev[appKey] }))}
-                onViewDocument={handleViewDocument}
+                onViewDocument={handleOnViewDocument}
                 onUploadDocument={handleUploadDocument}
                 onApproveDocument={handleApproveDocument}
                 onRejectDocument={handleRejectDocument}
@@ -3263,7 +3309,7 @@ const AdminStudentDetails: React.FC = () => {
                 />
               </Suspense>
             )}
-            
+
             {/* Identity Photo Verification Card */}
             {(() => {
               const combinedTermAcceptances = (termAcceptances && termAcceptances.length > 0)
@@ -3337,7 +3383,7 @@ const AdminStudentDetails: React.FC = () => {
               handleUploadTransferForm={handleUploadTransferForm}
               handleApproveTransferFormUpload={handleApproveTransferFormUpload}
               handleRejectTransferFormUpload={handleRejectTransferFormUpload}
-              handleViewDocument={handleViewDocument}
+              handleViewDocument={handleOnViewDocument}
               handleDownloadDocument={handleDownloadDocument}
             />
           )}
@@ -3354,7 +3400,7 @@ const AdminStudentDetails: React.FC = () => {
                 return paidApp || apps[0];
               })()}
               studentId={student?.user_id || ''}
-              onViewDocument={handleViewDocument}
+              onViewDocument={handleOnViewDocument}
               onDownloadDocument={handleDownloadDocument}
               onUploadDocument={handleUploadDocumentRequest}
               onApproveDocument={handleApproveDocumentRequest}
@@ -3384,7 +3430,7 @@ const AdminStudentDetails: React.FC = () => {
       {/* Logs Tab */}
       {activeTab === 'logs' && (
         <Suspense fallback={<TabLoadingSkeleton />}>
-          <StudentLogsView 
+          <StudentLogsView
             studentId={student?.student_id || ''}
             studentName={student?.student_name || ''}
           />
@@ -3472,9 +3518,20 @@ const AdminStudentDetails: React.FC = () => {
           </div>
         </div>
       )}
+
+      {/* Modal de Visualização de Documentos Premium */}
+      {previewUrl && (
+        <DocumentViewerModal
+          documentUrl={previewUrl}
+          fileName={previewFileName}
+          onClose={() => {
+            setPreviewUrl(null);
+            setPreviewFileName(undefined);
+          }}
+        />
+      )}
     </div>
   );
 };
 
 export default AdminStudentDetails;
-

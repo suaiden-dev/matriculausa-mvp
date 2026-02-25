@@ -28,11 +28,11 @@ interface OverviewProps {
 const Overview: React.FC<OverviewProps> = ({ stats, sellerProfile, students = [], onRefresh, onNavigate }) => {
   const recentStudents = students.slice(0, 5);
   const { getFeeAmount } = useFeeConfig(); // Para valores padrão, será usado para overrides específicos por estudante
-  const [studentPackageFees, setStudentPackageFees] = useStateReact<{[key: string]: any}>({});
-  const [studentDependents, setStudentDependents] = useStateReact<{[key: string]: number}>({});
-  const [studentFeeOverrides, setStudentFeeOverrides] = useStateReact<{[key: string]: any}>({});
-  const [studentSystemTypes, setStudentSystemTypes] = useStateReact<{[key: string]: string}>({});
-  const [studentRealPaidAmounts, setStudentRealPaidAmounts] = useStateReact<{[key: string]: { selection_process?: number; scholarship?: number; i20_control?: number }}>({});
+  const [studentPackageFees, setStudentPackageFees] = useStateReact<{ [key: string]: any }>({});
+  const [studentDependents, setStudentDependents] = useStateReact<{ [key: string]: number }>({});
+  const [studentFeeOverrides, setStudentFeeOverrides] = useStateReact<{ [key: string]: any }>({});
+  const [studentSystemTypes, setStudentSystemTypes] = useStateReact<{ [key: string]: string }>({});
+  const [studentRealPaidAmounts, setStudentRealPaidAmounts] = useStateReact<{ [key: string]: { selection_process?: number; scholarship?: number; i20_control?: number } }>({});
   const [loadingRealPaidAmounts, setLoadingRealPaidAmounts] = useStateReact<boolean>(true);
   const [loadingCalc, setLoadingCalc] = useStateReact<boolean>(false);
 
@@ -72,21 +72,21 @@ const Overview: React.FC<OverviewProps> = ({ stats, sellerProfile, students = []
         // Buscar dependents e system_type por user_id (student ID) diretamente
         if (idsToLoadDeps.length > 0) {
           console.log('🔍 [OVERVIEW] Carregando dependents e system_type para student IDs:', idsToLoadDeps);
-          
+
           const { data: depsRows, error: depsError } = await supabase
             .from('user_profiles')
             .select('user_id, dependents, system_type')
             .in('user_id', idsToLoadDeps); // Buscar por user_id (student ID) como MyStudents
-          
+
           if (!depsError && depsRows) {
-            const newDeps: {[key: string]: number} = {};
-            const newSystemTypes: {[key: string]: string} = {};
+            const newDeps: { [key: string]: number } = {};
+            const newSystemTypes: { [key: string]: string } = {};
             // Inicializar todos como 0 e 'legacy'
-            idsToLoadDeps.forEach((id: string) => { 
-              newDeps[id] = 0; 
+            idsToLoadDeps.forEach((id: string) => {
+              newDeps[id] = 0;
               newSystemTypes[id] = 'legacy';
             });
-            
+
             // Mapear resultados diretamente
             depsRows.forEach((r: any) => {
               if (r.user_id) {
@@ -97,15 +97,15 @@ const Overview: React.FC<OverviewProps> = ({ stats, sellerProfile, students = []
                 console.log('🔍 [OVERVIEW] Dependents e system_type para', r.user_id, ':', deps, systemType);
               }
             });
-            
+
             setStudentDependents(prev => ({ ...prev, ...newDeps }));
             setStudentSystemTypes(prev => ({ ...prev, ...newSystemTypes }));
           } else {
             console.warn('🔍 [OVERVIEW] Erro ao carregar dependents e system_type:', depsError);
-            const newDeps: {[key: string]: number} = {};
-            const newSystemTypes: {[key: string]: string} = {};
-            idsToLoadDeps.forEach((id: string) => { 
-              newDeps[id] = 0; 
+            const newDeps: { [key: string]: number } = {};
+            const newSystemTypes: { [key: string]: string } = {};
+            idsToLoadDeps.forEach((id: string) => {
+              newDeps[id] = 0;
               newSystemTypes[id] = 'legacy';
             });
             setStudentDependents(prev => ({ ...prev, ...newDeps }));
@@ -117,7 +117,7 @@ const Overview: React.FC<OverviewProps> = ({ stats, sellerProfile, students = []
         // O wilfried8078@uorak.com precisa mostrar $2,398 que é o valor COM override
         if (idsToLoadOverrides.length > 0) {
           console.log('🔄 [OVERVIEW] Carregando overrides para:', idsToLoadOverrides.length, 'estudantes');
-          
+
           const results = await Promise.allSettled(idsToLoadOverrides.map(async (id: string) => {
             try {
               // Tentar primeiro via RPC function (security definer)
@@ -138,8 +138,8 @@ const Overview: React.FC<OverviewProps> = ({ stats, sellerProfile, students = []
               return { id, overrides: null, error };
             }
           }));
-          
-          const newOverrides: {[key: string]: any} = {};
+
+          const newOverrides: { [key: string]: any } = {};
           results.forEach((res: any, idx: number) => {
             const id = idsToLoadOverrides[idx];
             if (res.status === 'fulfilled' && !res.value.error && res.value.overrides) {
@@ -155,7 +155,7 @@ const Overview: React.FC<OverviewProps> = ({ stats, sellerProfile, students = []
               newOverrides[id] = null;
             }
           });
-          
+
           setStudentFeeOverrides(prev => ({ ...prev, ...newOverrides }));
         }
 
@@ -165,7 +165,7 @@ const Overview: React.FC<OverviewProps> = ({ stats, sellerProfile, students = []
           const results = await Promise.allSettled(idsToLoadFees.map((id: string) =>
             supabase.rpc('get_user_package_fees', { user_id_param: id })
           ));
-          const newFees: {[key: string]: any} = {};
+          const newFees: { [key: string]: any } = {};
           results.forEach((res: any, idx: number) => {
             const id = idsToLoadFees[idx];
             if (res.status === 'fulfilled' && res.value && !res.value.error) {
@@ -182,7 +182,7 @@ const Overview: React.FC<OverviewProps> = ({ stats, sellerProfile, students = []
         if (idsToLoadRealPaid.length > 0) {
           console.log('🔄 [OVERVIEW] Carregando valores reais pagos para:', idsToLoadRealPaid.length, 'estudantes');
           setLoadingRealPaidAmounts(true);
-          
+
           const results = await Promise.allSettled(idsToLoadRealPaid.map(async (id: string) => {
             try {
               // ✅ CORREÇÃO: Usar getDisplayAmounts para exibição (valores "Zelle" sem taxas)
@@ -193,8 +193,8 @@ const Overview: React.FC<OverviewProps> = ({ stats, sellerProfile, students = []
               return { id, amounts: {} };
             }
           }));
-          
-          const newRealPaid: {[key: string]: { selection_process?: number; scholarship?: number; i20_control?: number }} = {};
+
+          const newRealPaid: { [key: string]: { selection_process?: number; scholarship?: number; i20_control?: number } } = {};
           results.forEach((res: any, idx: number) => {
             const id = idsToLoadRealPaid[idx];
             if (res.status === 'fulfilled' && res.value) {
@@ -203,7 +203,7 @@ const Overview: React.FC<OverviewProps> = ({ stats, sellerProfile, students = []
               newRealPaid[id] = {};
             }
           });
-          
+
           setStudentRealPaidAmounts(prev => ({ ...prev, ...newRealPaid }));
           setLoadingRealPaidAmounts(false);
         } else {
@@ -239,13 +239,13 @@ const Overview: React.FC<OverviewProps> = ({ stats, sellerProfile, students = []
         const baseSel = overrides.selection_process_fee != null ? Number(overrides.selection_process_fee) : baseSelDefault;
         // ✅ CORREÇÃO: Para simplified, Selection Process Fee é fixo ($350), sem dependentes
         // Dependentes só afetam Application Fee ($100 por dependente)
-        const selPaid = overrides.selection_process_fee != null 
-          ? baseSel 
+        const selPaid = overrides.selection_process_fee != null
+          ? baseSel
           : (systemType === 'simplified' ? baseSel : baseSel + (deps * 150));
         total += selPaid;
       }
     }
-    
+
     // Scholarship Fee
     if (student.is_scholarship_fee_paid) {
       if (realPaid.scholarship !== undefined && realPaid.scholarship > 0) {
@@ -253,12 +253,12 @@ const Overview: React.FC<OverviewProps> = ({ stats, sellerProfile, students = []
         total += realPaid.scholarship;
       } else {
         // Fallback: calcular baseado no system_type
-        const schBaseDefault = systemType === 'simplified' ? 550 : 900;
+        const schBaseDefault = systemType === 'simplified' ? 900 : 900;
         const schBase = overrides.scholarship_fee != null ? Number(overrides.scholarship_fee) : schBaseDefault;
         total += schBase;
       }
     }
-    
+
     // I-20 Control Fee
     if (student.has_paid_i20_control_fee) {
       if (realPaid.i20_control !== undefined && realPaid.i20_control > 0) {
@@ -270,16 +270,16 @@ const Overview: React.FC<OverviewProps> = ({ stats, sellerProfile, students = []
         total += i20Base;
       }
     }
-    
+
     // Application fee não entra na receita do seller
-    
+
     return total;
   };
 
   // Função para deduplificar estudantes como no MyStudents.tsx
   const getUniqueStudents = React.useMemo(() => {
     if (!students || students.length === 0) return [];
-    
+
     // Agrupar por estudante para remover duplicatas (mesma lógica do MyStudents.tsx)
     const groupedByStudent = new Map<string, any>();
     students.forEach(student => {
@@ -289,19 +289,19 @@ const Overview: React.FC<OverviewProps> = ({ stats, sellerProfile, students = []
       }
       // Se já existe, manter o primeiro (não sobrescrever)
     });
-    
+
     return Array.from(groupedByStudent.values());
   }, [students]);
 
   const adjustedTotalRevenue = React.useMemo(() => {
     // Não calcular receita enquanto valores reais pagos estão carregando
     if (loadingRealPaidAmounts) return 0;
-    
+
     const uniqueStudents = getUniqueStudents;
     if (!uniqueStudents || uniqueStudents.length === 0) return 0;
-    
+
     const total = uniqueStudents.reduce((sum: number, s: any) => sum + calculateStudentAdjustedPaid(s), 0);
-    
+
     return total;
   }, [getUniqueStudents, studentPackageFees, studentDependents, studentFeeOverrides, studentRealPaidAmounts, loadingRealPaidAmounts]);
 
@@ -390,16 +390,16 @@ const Overview: React.FC<OverviewProps> = ({ stats, sellerProfile, students = []
               {(loadingCalc || loadingRealPaidAmounts) ? (
                 <div className="h-8 w-40 bg-slate-200 rounded animate-pulse" />
               ) : (
-              <p className="text-3xl font-bold text-slate-900">{formatCurrency(adjustedTotalRevenue)}</p>
+                <p className="text-3xl font-bold text-slate-900">{formatCurrency(adjustedTotalRevenue)}</p>
               )}
               <div className="flex items-center mt-2">
                 <TrendingUp className="h-4 w-4 text-emerald-500 mr-1" />
                 {(loadingCalc || loadingRealPaidAmounts) ? (
                   <div className="h-4 w-24 bg-slate-200 rounded animate-pulse" />
                 ) : (
-                <span className="text-sm font-medium text-emerald-600">
-                  {getUniqueStudents.length > 0 ? (adjustedTotalRevenue / getUniqueStudents.length).toFixed(2) : 0} per student
-                </span>
+                  <span className="text-sm font-medium text-emerald-600">
+                    {getUniqueStudents.length > 0 ? (adjustedTotalRevenue / getUniqueStudents.length).toFixed(2) : 0} per student
+                  </span>
                 )}
               </div>
             </div>
@@ -450,8 +450,8 @@ const Overview: React.FC<OverviewProps> = ({ stats, sellerProfile, students = []
       <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
         {quickActions.map((action, index) => {
           return (
-            <div 
-              key={index} 
+            <div
+              key={index}
               className="bg-white rounded-2xl shadow-sm border border-slate-200 p-6 hover:shadow-lg transition-all duration-300 group cursor-pointer"
               onClick={() => onNavigate && onNavigate(action.view)}
             >
@@ -463,7 +463,7 @@ const Overview: React.FC<OverviewProps> = ({ stats, sellerProfile, students = []
                   {action.view === 'performance' && loadingCalc ? (
                     <div className="h-6 w-20 bg-slate-200 rounded animate-pulse" />
                   ) : (
-                  <span className="text-2xl font-bold text-slate-900">{action.count}</span>
+                    <span className="text-2xl font-bold text-slate-900">{action.count}</span>
                   )}
                 </div>
               </div>
@@ -489,7 +489,7 @@ const Overview: React.FC<OverviewProps> = ({ stats, sellerProfile, students = []
                   Ranking of your top performing students by revenue
                 </p>
               </div>
-              <div 
+              <div
                 onClick={handleViewAllStudents}
                 className="text-blue-600 hover:text-blue-700 font-medium text-sm flex items-center cursor-pointer self-start sm:self-auto"
               >
@@ -498,7 +498,7 @@ const Overview: React.FC<OverviewProps> = ({ stats, sellerProfile, students = []
               </div>
             </div>
           </div>
-          
+
           <div className="p-4 sm:p-6">
             <div className="space-y-4">
               {/* Top 3 Students by Revenue */}
@@ -506,8 +506,8 @@ const Overview: React.FC<OverviewProps> = ({ stats, sellerProfile, students = []
                 .sort((a, b) => (calculateStudentAdjustedPaid(b) || 0) - (calculateStudentAdjustedPaid(a) || 0))
                 .slice(0, 3)
                 .map((student, index) => (
-                  <div 
-                    key={student.id || index} 
+                  <div
+                    key={student.id || index}
                     className="bg-slate-50 rounded-xl p-4 border border-slate-200 hover:bg-slate-100 transition-all duration-300 group"
                   >
                     <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
@@ -516,15 +516,15 @@ const Overview: React.FC<OverviewProps> = ({ stats, sellerProfile, students = []
                         <div className="w-12 h-12 bg-slate-200 rounded-xl flex items-center justify-center font-bold text-slate-700 flex-shrink-0">
                           {index + 1}
                         </div>
-                        
+
                         {/* Student Info */}
                         <div className="min-w-0">
                           <p className="font-semibold text-slate-900 text-lg break-words">{student.full_name}</p>
                           <p className="text-sm text-slate-600 break-words">{student.email}</p>
-                          
+
                         </div>
                       </div>
-                      
+
                       {/* Revenue Metrics */}
                       <div className="text-left sm:text-right">
                         <div className="space-y-1">
@@ -532,9 +532,9 @@ const Overview: React.FC<OverviewProps> = ({ stats, sellerProfile, students = []
                             {(loadingCalc || loadingRealPaidAmounts) ? (
                               <div className="h-6 w-28 bg-slate-200 rounded animate-pulse" />
                             ) : (
-                            <span className="text-2xl font-bold text-slate-900 whitespace-nowrap">
+                              <span className="text-2xl font-bold text-slate-900 whitespace-nowrap">
                                 {formatCurrency(calculateStudentAdjustedPaid(student) || 0)}
-                            </span>
+                              </span>
                             )}
                             {!(loadingCalc || loadingRealPaidAmounts) && <span className="text-sm text-slate-500">revenue</span>}
                           </div>
@@ -550,7 +550,7 @@ const Overview: React.FC<OverviewProps> = ({ stats, sellerProfile, students = []
                     </div>
                   </div>
                 ))}
-              
+
               {/* Additional Top Students (4th to 6th place) */}
               {getUniqueStudents.length > 3 && (
                 <div className="pt-4 border-t border-slate-200">
@@ -560,8 +560,8 @@ const Overview: React.FC<OverviewProps> = ({ stats, sellerProfile, students = []
                       .sort((a, b) => (calculateStudentAdjustedPaid(b) || 0) - (calculateStudentAdjustedPaid(a) || 0))
                       .slice(3, 6)
                       .map((student, index) => (
-                        <div 
-                          key={student.id || index + 3} 
+                        <div
+                          key={student.id || index + 3}
                           className="bg-slate-50 rounded-lg p-3 border border-slate-200 hover:bg-slate-100 transition-colors"
                         >
                           <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
@@ -579,16 +579,16 @@ const Overview: React.FC<OverviewProps> = ({ stats, sellerProfile, students = []
                                 {loadingCalc ? (
                                   <div className="h-4 w-20 bg-slate-200 rounded animate-pulse" />
                                 ) : (
-                                <span className="text-sm text-slate-700 font-medium whitespace-nowrap">
+                                  <span className="text-sm text-slate-700 font-medium whitespace-nowrap">
                                     {formatCurrency(calculateStudentAdjustedPaid(student) || 0)}
-                                </span>
+                                  </span>
                                 )}
                                 {loadingCalc ? (
                                   <div className="h-3 w-16 bg-slate-200 rounded animate-pulse" />
                                 ) : (
-                                <span className="text-xs text-slate-500">
-                                  {formatDate(student.created_at)}
-                                </span>
+                                  <span className="text-xs text-slate-500">
+                                    {formatDate(student.created_at)}
+                                  </span>
                                 )}
                               </div>
                             </div>

@@ -64,14 +64,14 @@
       },
       "conversion": {
         "title": "Pronto para começar seu processo?",
-        "description": "Clique no botão abaixo para iniciar sua jornada rumo aos Estados Unidos com todo o suporte necessário.",
+        "description": "Clique no botão abaixo para iniciar seu processo rumo aos Estados Unidos com todo o suporte necessário.",
         "buttonText": "Começar Agora",
         "redirectAuthenticated": "Você será direcionado para a área do estudante para realizar o pagamento do processo seletivo.",
         "redirectAnonymous": "Você será direcionado para criar sua conta. É rápido e gratuito!",
         "referralBadge": "Código de Vendedor Aplicado",
         "afterSteps": {
           "title": "Pronto para dar o primeiro passo?",
-          "description": "Agora que você conhece as etapas, inicie sua jornada hoje mesmo.",
+          "description": "Agora que você conhece as etapas, inicie seu processo hoje mesmo.",
           "buttonText": "Iniciar Processo"
         },
         "afterFunds": {
@@ -113,7 +113,7 @@
               "Comprovante de fundos bancários ($22.000 mínimo)",
               "Endereço completo no país de origem",
               "Histórico escolar ou diploma",
-              "Pagamento via Zelle para: info@thefutureofenglish.com"
+              "Pagamento via Zelle para: pay@matriculausa.com"
             ]
           },
           "step2": {
@@ -184,7 +184,7 @@
               "Comprovante de visto ou status atual",
               "Comprovante de fundos bancários ($22.000 mínimo)",
               "Endereço completo nos EUA",
-              "Pagamento via Zelle para: info@thefutureofenglish.com"
+              "Pagamento via Zelle para: pay@matriculausa.com"
             ]
           },
           "step2": {
@@ -240,7 +240,7 @@
               "Comprovante de visto ou status atual",
               "Comprovante de fundos bancários ($22.000 mínimo)",
               "Endereço completo nos EUA",
-              "Pagamento via Zelle para: info@thefutureofenglish.com"
+              "Pagamento via Zelle para: pay@matriculausa.com"
             ]
           },
           "step2": {
@@ -308,18 +308,18 @@
   "paymentBlocker": {
     "scholarships": {
       "title": "Bolsas de Estudo Bloqueadas",
-      "description": "Para acessar nossa coleção exclusiva de bolsas de estudo, você precisa completar o processo de seleção inicial. Esta é a primeira etapa da sua jornada para estudar nos Estados Unidos."
+      "description": "Para acessar nossa coleção exclusiva de bolsas de estudo, você precisa completar o processo de seleção inicial. Esta é a primeira etapa do seu processo para estudar nos Estados Unidos."
     },
     "universities": {
       "title": "Universidades Bloqueadas",
-      "description": "Para explorar nossas universidades parceiras e seus programas, você precisa completar o processo de seleção inicial. Esta é a primeira etapa da sua jornada para estudar nos Estados Unidos."
+      "description": "Para explorar nossas universidades parceiras e seus programas, você precisa completar o processo de seleção inicial. Esta é a primeira etapa do seu processo para estudar nos Estados Unidos."
     },
     "default": {
       "title": "Conteúdo Bloqueado",
-      "description": "Para acessar este conteúdo, você precisa completar o processo de seleção inicial. Esta é a primeira etapa da sua jornada para estudar nos Estados Unidos."
+      "description": "Para acessar este conteúdo, você precisa completar o processo de seleção inicial. Esta é a primeira etapa do seu processo para estudar nos Estados Unidos."
     },
-    "selectionProcessFee": "Taxa de Processo de Seleção",
-    "completeApplicationJourney": "Complete sua jornada de candidatura",
+    "selectionProcessFee": "Taxa do Processo Seletivo",
+    "completeApplicationJourney": "Complete seu processo de candidatura",
     "goToDashboardAndPayFee": "Ir ao Painel e Pagar Taxa",
     "learnHowItWorks": "Aprender Como Funciona",
     "contentLockedMessage": "Este conteúdo está bloqueado até que o pagamento seja concluído"
@@ -503,8 +503,8 @@
     "hero": {
       "title": "Sua Porta de Entrada para Universidades Americanas",
       "subtitle": "Descubra bolsas de estudo exclusivas e desbloqueie seu potencial nos Estados Unidos",
-      "description": "Conecte-se com universidades de ponta, acesse bolsas exclusivas e receba suporte personalizado durante toda sua jornada para estudar nos EUA.",
-      "cta": "Inicie Sua Jornada",
+      "description": "Conecte-se com universidades de ponta, acesse bolsas exclusivas e receba suporte personalizado durante todo seu processo para estudar nos EUA.",
+      "cta": "Inicie Seu Processo",
       "watchVideo": "Assistir Vídeo"
     },
     "featuredUniversities": {
@@ -515,7 +515,7 @@
     },
     "features": {
       "title": "Por Que Escolher MatriculaUSA?",
-      "subtitle": "Tudo que você precisa para ter sucesso na sua jornada educacional americana",
+      "subtitle": "Tudo que você precisa para ter sucesso no seu processo educacional americano",
       "smartMatching": {
         "title": "Correspondência Inteligente",
         "description": "Sistema alimentado por IA encontra as melhores universidades e bolsas para seu perfil"
@@ -636,7 +636,7 @@
     "cta": {
       "title": "Pronto para Começar Seu Sonho Americano?",
       "subtitle": "Junte-se a milhares de estudantes internacionais que encontraram seu caminho para a educação americana através da plataforma abrangente do MatriculaUSA.",
-      "button": "Comece Sua Jornada Hoje",
+      "button": "Comece Seu Processo Hoje",
       "learnMore": "Saiba Mais",
       "features": {
         "freeToStart": "Gratuito para começar",
@@ -652,7 +652,7 @@
   "howItWorks": {
     "title": "Como Funciona",
     "subtitle": "Seu caminho para uma universidade americana, passo a passo",
-    "journey": "Sua Jornada",
+    "journey": "Seu Processo",
     "stats": {
       "setup": "Configuração em 5 Minutos",
       "success": "95% de Taxa de Sucesso",
@@ -670,7 +670,7 @@
         ]
       },
       "selectionFee": {
-        "title": "Pague Taxa de Seleção ({{selectionProcessFee}})",
+        "title": "Pague Taxa do Processo Seletivo",
         "description": "Desbloqueie todas as bolsas. Esta taxa é final e não reembolsável. (+$150 por dependente)",
         "items": [
           "Acesso para navegar pelas bolsas",
@@ -688,7 +688,7 @@
         ]
       },
       "applicationFee": {
-        "title": "Pague Taxa de Matrícula (Conforme a universidade)",
+        "title": "Pague Taxa de Matrícula",
         "description": "Confirme sua universidade. Esta taxa é final e não reembolsável. (+$100 por dependente)",
         "items": [
           "Veja bolsas aprovadas",
@@ -697,7 +697,7 @@
         ]
       },
       "scholarshipFee": {
-        "title": "Pague Taxa de Bolsa ({{scholarshipFee}})",
+        "title": "Pague Taxa de Bolsa",
         "description": "Obtenha chat direto com sua universidade. Esta taxa é final e não reembolsável.",
         "items": [
           "Chat direto com universidade",
@@ -706,7 +706,7 @@
         ]
       },
       "i20Fee": {
-        "title": "Pague Taxa de Controle I-20 ({{i20ControlFee}})",
+        "title": "Pague Taxa de Controle I-20",
         "description": "Necessário para seu visto F-1. Esta taxa é final e não reembolsável.",
         "items": [
           "Essencial para visto de estudante F-1",
@@ -769,8 +769,8 @@
         "answer": "O MatriculaUSA é gratuito para criar seu perfil e explorar universidades. No entanto, uma vez que você inicia o processo de candidatura e é aprovado para uma bolsa, todas as taxas associadas ao fluxo de admissão e matrícula se tornam obrigatórias. Elas são claramente apresentadas antes de qualquer pagamento. Todas as taxas são finais e não reembolsáveis."
       },
       "q2": {
-        "question": "O que é a Taxa de Processo de Seleção?",
-        "answer": "A Taxa de Processo de Seleção (US{{selectionProcessFee}}) é o primeiro pagamento obrigatório na plataforma MatriculaUSA. Ela desbloqueia seu acesso completo para visualizar todas as bolsas e iniciar seu processo de candidatura. Esta taxa é final e não reembolsável."
+        "question": "O que é a Taxa do Processo Seletivo?",
+        "answer": "A Taxa do Processo Seletivo (US{{selectionProcessFee}}) é o primeiro pagamento obrigatório na plataforma MatriculaUSA. Ela desbloqueia seu acesso completo para visualizar todas as bolsas e iniciar seu processo de candidatura. Esta taxa é final e você será reembolsado caso não seja aceito em nenhuma universidade."
       },
       "q3": {
         "question": "O que é a Taxa de Bolsa?",
@@ -811,7 +811,7 @@
     }
   },
   "fees": {
-    "selectionProcess": "Taxa de Processo de Seleção",
+    "selectionProcess": "Taxa do Processo Seletivo",
     "application": "Taxa de Matrícula",
     "scholarship": "Taxa de Bolsa",
     "i20Control": "Taxa de Controle I-20",
@@ -1555,6 +1555,7 @@
       "invalidPhone": "Por favor, digite um número de telefone válido com código do país",
       "mustAnswerReferralCode": "Por favor, responda se você tem um código de referência para continuar",
       "preCheckoutModal": {
+        "noTermsFound": "Nenhum termo encontrado",
         "securePayment": "Pagamento Seguro",
         "closeModal": "Fechar modal",
         "closeTerms": "Fechar termos",
@@ -1576,7 +1577,7 @@
         "codeAlreadyUsed": "Código já utilizado",
         "discountAlreadyApplied": "Desconto já aplicado em sua conta",
         "haveReferralCode": "Você tem um código de indicação de amigo?",
-        "placeholder": "Digite o código aqui",
+        "placeholder": "Digite o código",
         "validating": "Validando...",
         "validate": "Validar Código",
         "acceptContractTerms": "Eu li e aceito os termos e condições do contrato",
@@ -1586,8 +1587,9 @@
         "termsAndConditions": {
           "title": "Termos e Condições"
         },
-        "scrollToBottomFirst": "Role até o final para aceitar",
-        "readingTerms": "Lendo termos...",
+        "scrollToBottomFirst": "Leia todo o termo primeiro",
+        "readingTerms": "Leia todo o termo primeiro",
+        "confirmReading": "Confirmar Leitura",
         "acceptTerms": "Aceitar Termos",
         "cancel": "Cancelar",
         "loading": "Carregando...",
@@ -1739,11 +1741,11 @@
   "studentDashboard": {
     "title": "Painel do Estudante",
     "subtitle": "Gerencie suas candidaturas de bolsa",
-    "welcome": "Bem-vindo de volta",
+    "welcome": "Bem-vindo",
     "progressBar": {
-      "title": "Esta é sua barra de progresso de taxas de candidatura. Complete cada etapa para avançar.",
+      "title": "",
       "allStepsCompleted": "Todos os Passos Completados! 🎉",
-      "selectionProcessFee": "Taxa de Processo de Seleção",
+      "selectionProcessFee": "Taxa do Processo Seletivo",
       "applicationFee": "Taxa de Matrícula",
       "scholarshipFee": "Taxa de Bolsa",
       "i20ControlFee": "Taxa de Controle I-20",
@@ -1751,7 +1753,19 @@
       "payApplicationFee": "Pague a Taxa de Matrícula para garantir a sua bolsa.",
       "payScholarshipFee": "Pague a Taxa de Bolsa para confirmar sua candidatura de bolsa.",
       "payI20Fee": "Pague a Taxa de Controle I-20 para iniciar seu processo de validação I-20 e documentos.",
-      "daysRemaining": "Você tem 10 dias após a taxa de bolsa."
+      "daysRemaining": "Você tem 10 dias após a taxa de bolsa.",
+      "onboarding": {
+        "payFee": "Pagar Taxa de Seleção",
+        "payFeeDesc": "Inicie seu processo pagando a taxa de seleção.",
+        "chooseScholarships": "Escolher Bolsas",
+        "chooseScholarshipsDesc": "Selecione as universidades e bolsas do seu interesse.",
+        "uploadDocuments": "Enviar Documentos",
+        "uploadDocumentsDesc": "Envie seu passaporte, diploma e comprovante de fundos.",
+        "underReview": "Em Revisão",
+        "underReviewDesc": "Estamos analisando seus documentos. Prazo de 48h.",
+        "completed": "Processo de Seleção Concluído",
+        "completedDesc": "Tudo pronto! Siga para a próxima etapa."
+      }
     },
     "stepByStepTour": {
       "title": "Tour Passo a Passo",
@@ -1855,6 +1869,7 @@
     "findScholarships": {
       "title": "Encontrar Bolsas",
       "subtitle": "Descubra oportunidades adaptadas ao seu perfil acadêmico",
+      "description": "Navegue pelas bolsas e selecione quais gostaria de se matricular. É necessário escolher ao menos uma para prosseguir.",
       "pagination": {
         "previous": "Anterior",
         "next": "Próximo",
@@ -1932,17 +1947,21 @@
         "level": "Nível",
         "deadline": "Prazo",
         "daysLeft": "dias restantes",
+        "days": "dias",
+        "scholarshipDiscount": "Desconto da Bolsa",
         "showDetails": "Mostrar Detalhes",
         "show": "Mostrar",
         "view": "Ver",
         "details": "Detalhes",
         "alreadyApplied": "Já Candidatou",
         "deselect": "Desmarcar",
-        "selectScholarship": "Selecionar Bolsa",
+        "selectScholarship": "Selecionar",
         "checking": "Verificando...",
         "inPerson": "Presencial",
         "mixed": "Misto",
-        "more": "mais"
+        "more": "mais",
+        "showMore": "Mostrar Mais Detalhes",
+        "showLess": "Mostrar Menos Detalhes"
       },
       "noResults": {
         "title": "Nenhuma bolsa encontrada",
@@ -2028,11 +2047,11 @@
       "insufficientFundsError": "Fundos insuficientes detectados. O saldo mínimo necessário é de $22.000 USD.",
       "diplomaDamagedError": "O diploma parece estar danificado ou pouco claro. Faça upload de uma cópia clara e sem danos.",
       "passport": "Passaporte",
-      "passportDescription": "Documento de passaporte válido",
+      "passportDescription": "Faça upload de uma foto ou digitalização nítida do seu passaporte.",
       "diploma": "Diploma do Ensino Médio",
       "diplomaDescription": "Diploma oficial do ensino médio ou certificado",
       "fundsProof": "Comprovante de Fundos",
-      "fundsProofDescription": "Extrato bancário ou documentação financeira",
+      "fundsProofDescription": "Faça upload de extratos bancários ou documentos financeiros. É necessário um mínimo de $22.000 USD, mais $5.000 USD para cada dependente.",
       "documents": "documentos",
       "dragDropFiles": "Arraste e solte arquivos PDF aqui ou clique para selecionar",
       "onlyPdfSupported": "Apenas arquivos PDF são suportados para múltiplos documentos",
@@ -2063,7 +2082,16 @@
       "smartAssistantDescription": "Use o botão flutuante no canto da tela para tirar dúvidas em tempo real.",
       "supportChatHelp": "Chat com Suporte:",
       "supportChatDescription": "Acesse o chat da equipe logo abaixo da seção 'Minhas Candidaturas' no painel.",
-      "backToOverview": "Entendi, Voltar ao Painel"
+      "backToOverview": "Entendi, Voltar ao Painel",
+      "gotItContinue": "Entendi, Continuar"
+    },
+    "documentsUploadStep": {
+      "title": "Envio de Documentos",
+      "subtitle": "Precisamos de alguns documentos para verificar sua elegibilidade e processar sua candidatura.",
+      "importantNotice": "Certifique-se que os documentos enviados estão claramente visíveis e legíveis. Certifique-se também de que os documentos enviados estão exclusivamente em <boldUnderline>Inglês</boldUnderline>, se não tiver os documentos traduzidos recomendamos os serviços de traduções de documentos de nosso parceiro <link>Lush America Translations</link>.",
+      "uploadAndContinue": "Fazer Upload e Continuar",
+      "uploadingDocuments": "Fazendo Upload dos Documentos...",
+      "aiAnalysisInProgress": "Análise por IA em Andamento..."
     },
     "manualReview": {
       "title": "Revisão Manual de Documentos",
@@ -2286,6 +2314,7 @@
         "pendingScholarshipFee": "PENDENTE TAXA DA BOLSA"
       },
       "nextSteps": "Próximos Passos:",
+      "rejectionReason": "Motivo:",
       "scholarshipDetails": {
         "annualScholarshipValue": "Valor Anual da Bolsa",
         "applicationDate": "Data da Aplicação",
@@ -2324,6 +2353,7 @@
         "applicationInProgress": "Sua aplicação para {{universityName}} está em andamento.",
         "scholarship": "Bolsa:",
         "howToProceed": "Como Proceder",
+        "description": "Utilize o chat abaixo para se comunicar diretamente com a universidade sobre documentos pendentes e próximos passos.",
         "documentRequests": {
           "title": "Verificar Solicitações de Documentos",
           "description": "Faça upload dos documentos solicitados pela universidade para continuar seu processo.",
@@ -2478,7 +2508,7 @@
           "nextSteps": "Próximos passos:",
           "nextStepsList": [
             "Aguarde a universidade processar sua carta de aceitação",
-            "Sua carta de aceitação aparecerá na aba Documentos quando estiver pronta",
+            "Sua carta de aceitação aparecerá na aba Carta de Aceite quando estiver pronta",
             "Entre em contato com o chat de suporte se tiver dúvidas sobre o processo"
           ]
         },
@@ -2977,7 +3007,7 @@
   },
   "productNames": {
     "selectionProcess": "Processo de Seleção",
-    "selectionProcessFee": "Taxa de Processo de Seleção",
+    "selectionProcessFee": "Taxa do Processo Seletivo",
     "applicationFee": "Taxa de Matrícula",
     "scholarshipFee": "Taxa de Bolsa",
     "enrollmentFee": "Taxa de Matrícula",
@@ -3060,15 +3090,19 @@
     "closeModal": "Fechar modal",
     "securePaymentGateway": "Gateway de Pagamento Seguro",
     "totalAmount": "Valor Total",
-    "referralCode": "Código de Referência",
+    "referralCode": "Código de Indicação",
     "yourReferralCode": "Seu Código de Referência",
     "enterReferralCode": "Digite seu código de referência para obter desconto",
     "haveReferralCode": "Tenho um código de desconto",
     "usingYourReferralCode": "Usando o código de referência que você usou no registro",
+    "loading": "Carregando...",
+    "noTermsFound": "Nenhum termo encontrado.",
+    "confirmReading": "Confirmar Leitura",
+    "scrollToBottomFirst": "Leia até o final",
+    "acceptTerms": "Aceitar e Confirmar",
+    "uploadPhotoRequired": "Por favor, envie uma selfie com seu documento para continuar.",
+    "uploadPhoto": "Enviar Selfie com Documento",
     "placeholder": "Digite o código",
-    "validate": "Validar",
-    "validating": "Validando...",
-    "pleaseEnterCode": "Por favor, digite um código",
     "invalidCode": "Código inválido ou inativo",
     "selfReferral": "Você não pode usar seu próprio código de referência",
     "alreadyUsedCode": "Você já usou um código de referência anteriormente",
@@ -3090,13 +3124,8 @@
       "description": "antes de prosseguir com o pagamento"
     },
     "closeTerms": "Fechar termos",
-    "scrollToBottomFirst": "Role até o final primeiro",
-    "readingTerms": "Por favor, leia os termos antes de aceitar",
     "acceptContractTerms": "Aceito os termos e condições do contrato",
     "cancel": "Cancelar",
-    "acceptTerms": "Aceitar Termos",
-    "loading": "Carregando termos...",
-    "noTermsFound": "Nenhum termo ativo encontrado.",
     "promotionalCoupon": {
       "title": "Taxa de Processo de Seleção",
       "discountedValue": "Valor com Desconto",
@@ -3119,6 +3148,7 @@
       "title": "Para Estudantes",
       "forStudents": "Para Estudantes",
       "scholarships": "Bolsas",
+      "matriculaRewards": "Matrícula Rewards",
       "universities": "Universidades",
       "howItWorks": "Como Funciona",
       "support": "Suporte",
@@ -4048,6 +4078,195 @@
   "scholarshipDeadline": {
     "3800Expired": "Esta bolsa não está mais aceitando candidaturas",
     "3800Expiring": "Últimas horas para se candidatar! Prazo expira amanhã (6 de novembro)",
-    "3800ExpiringShort": "Prazo expira amanhã"
+    "prazoExpiraAmanha": "Prazo expira amanhã",
+    "parcelowCpfModal": {
+      "title": "CPF Necessário",
+      "description": "Para realizar pagamentos via Parcelow, você precisa ter um CPF registrado em seu perfil. Deseja ir para seu perfil agora para completar seu cadastro?",
+      "confirm": "Ir para o Perfil",
+      "cancel": "Agora não"
+    }
+  },
+  "scholarshipSelection": {
+    "confirmationModal": {
+      "title": "Confirmar Seleção",
+      "description": "Ao confirmar, você não poderá mais alterar as bolsas escolhidas. Revise cuidadosamente sua seleção antes de prosseguir.",
+      "confirm": "Confirmar e Prosseguir",
+      "cancel": "Revisar Novamente"
+    }
+  },
+  "rapidRegistration": {
+    "title": "Início do Processo de Seleção",
+    "subtitle": "Complete seu registro e inicie seu processo de seleção",
+    "form": {
+      "title": "Informações Pessoais",
+      "fullName": "Nome Completo",
+      "email": "E-mail",
+      "phone": "Telefone",
+      "dependents": "Número de Dependentes",
+      "dependentsSubtitle": "Membros da família (cônjuge e/ou filhos)",
+      "dependentOptions": {
+        "count_zero": "0 Dependentes",
+        "count_one": "1 Dependente",
+        "count_other": "{{count}} Dependentes"
+      },
+      "termsAcceptedBadge": "Termos Visualizados e Aceitos",
+      "password": "Senha",
+      "terms": "Eu aceito os Termos e Condições",
+      "submit": "Confirmar Registro",
+      "confirmPassword": "Confirmar Senha",
+      "error": {
+        "passwordsNotMatch": "As senhas não coincidem",
+        "terms": "Você deve aceitar os termos",
+        "general": "Ocorreu um erro no registro. Tente novamente."
+      },
+      "placeholders": {
+        "fullName": "Digite seu nome completo",
+        "email": "exemplo@email.com",
+        "phone": "Seu número de telefone",
+        "dependents": "0",
+        "password": "Digite sua senha",
+        "confirmPassword": "Confirme sua senha"
+      }
+    },
+    "sidebar": {
+      "title": "Resumo do Pagamento",
+      "total": "Total",
+      "currentFee": "Total a Pagar Agora",
+      "dependentsFee": "Taxa de Dependentes",
+      "couponApplied": "Cupom Aplicado",
+      "feeExplanation": "A Taxa do Processo de Seleção (US$400.00) é o primeiro pagamento obrigatório na plataforma MatriculaUSA. Ela desbloqueia seu acesso completo para visualizar todas as bolsas e iniciar seu processo de candidatura.",
+      "refundAssurance": "Caso não seja aceito em nenhuma universidade ao final do processo voce pode pedir reembolso das taxas pagas.",
+      "futureFeesTitle": "Taxas Futuras",
+      "enrollmentFee": "Taxa de Matrícula",
+      "scholarshipFee": "Taxa da Bolsa",
+      "i20Fee": "Taxa de Controle I-20",
+      "enrollmentFeeTooltip": "A Taxa de Matrícula varia por universidade e é um pagamento necessário para processar formalmente sua candidatura após você ter sido aceito. Este valor confirma sua intenção de se matricular e é gerenciado diretamente pela plataforma.",
+      "scholarshipFeeTooltip": "A Taxa da Bolsa é cobrada quando você prossegue com a candidatura da bolsa escolhida. Esta taxa cobre custos de processamento da plataforma.",
+      "i20FeeTooltip": "A Taxa de Controle I-20 é um pagamento obrigatório e essencial para solicitar o visto de estudante F-1. É a taxa final para a liberação da carta de aceite da sua bolsa e possui uma janela de pagamento de 10 dias.",
+      "futureFeesNote": "As taxas futuras são estimativas e variam por universidade."
+    },
+    "terms": {
+      "contractSubtitle": "Contrato de Prestação de Serviços",
+      "selfieTitle": "Verificação de Identidade",
+      "selfieSubtitle": "Para finalizar a aceitação do contrato, precisamos de uma selfie sua segurando seu documento de identidade.",
+      "selfieStep1": "Segure seu documento ao lado do rosto",
+      "selfieStep2": "Certifique-se de que tudo está legível",
+      "clickToTakeSelfie": "Clique para tirar sua selfie",
+      "selfieFormats": "JPG ou PNG • MÁX 5MB",
+      "photoCaptured": "Foto capturada!",
+      "removeChange": "Remover/Trocar",
+      "backToTerms": "Voltar para os Termos",
+      "confirmReading": "Confirmar Leitura",
+      "scrollToBottom": "Leia até o final",
+      "acceptAndConfirm": "Aceitar e Confirmar",
+      "close": "Fechar"
+    },
+    "coupons": {
+      "promotionalLabel": "Cupom Promocional"
+    },
+    "zelle": {
+      "title": "Pagamento com Zelle",
+      "subtitle": "Siga as instruções abaixo para concluir seu pagamento.",
+      "back": "Voltar"
+    },
+    "payment": {
+      "selectMethod": "Selecione o Método de Pagamento",
+      "methods": {
+        "stripe": "Cartão de Crédito",
+        "pix": "PIX",
+        "zelle": "Zelle",
+        "parcelow": "Parcelow"
+      },
+      "notes": {
+        "processingFees": "* Podem incluir taxas de processamento",
+        "parcelowFees": "* Podem incluir taxas de operadora e processamento da plataforma",
+        "zelleTime": "Processamento pode levar até 48 horas"
+      },
+      "payWith": "Pagar com {{method}}",
+      "securePayment": "Pagar de Forma Segura",
+      "cpf": {
+        "label": "Informe seu CPF (Obrigatório para Parcelow)",
+        "placeholder": "000.000.000-00",
+        "error": "CPF é obrigatório para pagamento via Parcelow."
+      },
+      "installment": "Até 12x no cartão",
+      "error": {
+        "invalidMethod": "Método de pagamento inválido.",
+        "notAuthenticated": "Usuário não autenticado.",
+        "generationFailed": "Falha ao gerar link de pagamento. Tente novamente."
+      }
+    }
+  },
+  "zelleComponent": {
+    "instructions": {
+      "title": "Instruções de Pagamento via Zelle",
+      "subtitle": "Siga estas etapas para concluir seu pagamento via Zelle",
+      "detailsTitle": "Detalhes do Pagamento Zelle",
+      "detailsSubtitle": "Envie o pagamento para o destinatário abaixo",
+      "recipientEmail": "E-mail do Destinatário",
+      "paymentAmount": "Valor do Pagamento",
+      "youSaved": "Você economizou {{amount}}!",
+      "important": "Importante",
+      "importantNote": "Certifique-se de enviar o valor exato de <strong>{{amount}}</strong> para <strong>{{email}}</strong> via Zelle. Qualquer discrepância atrasará o processamento do seu pagamento.",
+      "uploadTitle": "Carregar Captura de Tela de Confirmação de Pagamento *",
+      "clickToUpload": "Clique para carregar ou arraste e solte",
+      "fileFormats": "PNG, JPG até 5MB",
+      "selectFile": "Selecionar Arquivo",
+      "remove": "Remover",
+      "changeFile": "Alterar Arquivo",
+      "submitPayment": "Enviar Pagamento",
+      "processing": "Processando...",
+      "paymentProcessing": "Processamento de Pagamento..."
+    },
+    "analyzing": {
+      "title": "Analisando Pagamento...",
+      "subtitle": "Sua confirmação de pagamento está sendo validada automaticamente pelo nosso sistema de IA."
+    },
+    "underReview": {
+      "title": "Pagamento em Revisão",
+      "subtitle": "Seu comprovante de pagamento requer verificação adicional. Nossa equipe irá revisá-lo em até 48 horas.",
+      "notification": "Você será notificado assim que a revisão for concluída. Por favor, não envie outro pagamento."
+    },
+    "success": {
+      "title": "Pagamento Aprovado com Sucesso!",
+      "subtitle": "Seu pagamento Zelle foi processado e aprovado. Você pode agora prosseguir com as próximas etapas.",
+      "detailsTitle": "Detalhes do Pagamento:",
+      "originalAmount": "Valor Original:",
+      "discountApplied": "Desconto Aplicado:",
+      "finalAmount": "Valor Final:",
+      "youSavedSuccess": "Você economizou!",
+      "amount": "Valor:",
+      "feeType": "Tipo de Taxa:",
+      "paymentId": "ID do Pagamento:",
+      "submitted": "Enviado em:",
+      "nextStepsTitle": "O que acontece agora?",
+      "stepUploaded": "Confirmação de pagamento carregada",
+      "stepApproved": "Pagamento aprovado com sucesso",
+      "stepProceeding": "Prosseguindo para a próxima etapa automaticamente"
+    },
+    "rejected": {
+      "title": "Pagamento Rejeitado",
+      "subtitle": "Seu comprovante de pagamento não foi aprovado. Por favor, revise o motivo abaixo e carregue uma nova confirmação de pagamento.",
+      "reasonTitle": "Motivo da Rejeição:",
+      "defaultReason": "O pagamento foi rejeitado pelo administrador. Por favor, carregue uma nova confirmação de pagamento.",
+      "uploadNew": "Carregar Novo Comprovante de Pagamento",
+      "uploadNewNote": "Clique no botão acima para carregar uma nova captura de tela de confirmação de pagamento"
+    },
+    "uploadModal": {
+      "uploadingTitle": "Carregando Documento...",
+      "uploadingMessage": "Por favor, aguarde enquanto carregamos sua confirmação de pagamento",
+      "sendingTitle": "Enviando para Verificação...",
+      "sendingMessage": "Seu comprovante de pagamento está sendo enviado para validação automática",
+      "analyzingTitle": "Analisando Pagamento...",
+      "analyzingMessage": "Nossa IA está validando sua confirmação de pagamento"
+    },
+    "errors": {
+      "fileSize": "O tamanho do arquivo deve ser inferior a 5MB",
+      "fileType": "Por favor, selecione um arquivo de imagem (JPG, PNG, etc.)",
+      "uploadRequired": "Por favor, carregue uma captura de tela da sua confirmação de pagamento",
+      "uploadFailed": "Falha ao carregar a confirmação do pagamento",
+      "alreadyPending": "Você já tem um pagamento em processamento. Por favor, aguarde a revisão.",
+      "checkingStatus": "Verificando status do pagamento..."
+    }
   }
 }
