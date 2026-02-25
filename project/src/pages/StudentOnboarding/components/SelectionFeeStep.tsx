@@ -307,9 +307,15 @@ export const SelectionFeeStep: React.FC<StepProps> = ({ onNext }) => {
   const [hasReferralCode, setHasReferralCode] = useState(false);
   const [showCodeStep, setShowCodeStep] = useState(false);
   
-  // CPF validation modal state
+  // CPF validation modal state (mantido para possível uso futuro)
   const [showCpfModal, setShowCpfModal] = useState<boolean>(false);
   const [codeApplied, setCodeApplied] = useState(false);
+
+  // CPF inline states
+  const [showInlineCpf, setShowInlineCpf] = useState(false);
+  const [inlineCpf, setInlineCpf] = useState('');
+  const [savingCpf, setSavingCpf] = useState(false);
+  const [cpfError, setCpfError] = useState<string | null>(null);
 
   // Promotional coupon states (admin coupons)
   const [promotionalCoupon, setPromotionalCoupon] = useState('');
@@ -1313,10 +1319,57 @@ export const SelectionFeeStep: React.FC<StepProps> = ({ onNext }) => {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [zellePaymentSubmitted, user?.id]);
 
+  // Salvar CPF inline e prosseguir ao checkout Parcelow
+  const saveCpfAndCheckout = async () => {
+    const cleaned = inlineCpf.replace(/\D/g, '');
+    if (cleaned.length !== 11) {
+      setCpfError('CPF inválido. Digite os 11 dígitos.');
+      return;
+    }
+    if (!user?.id) return;
+
+    setSavingCpf(true);
+    setCpfError(null);
+
+    try {
+      const { error } = await supabase
+        .from('user_profiles')
+        .update({ cpf_document: cleaned })
+        .eq('user_id', user.id);
+
+      if (error) throw error;
+
+      // Atualizar o perfil localmente
+      await refetchUserProfile();
+
+      // Fechar campo inline e prosseguir
+      setShowInlineCpf(false);
+      setInlineCpf('');
+
+      // Chamar checkout normalmente agora que CPF está salvo
+      handleCheckout('parcelow');
+    } catch (err: any) {
+      setCpfError('Erro ao salvar CPF. Tente novamente.');
+      console.error('[SelectionFeeStep] Erro ao salvar CPF inline:', err);
+    } finally {
+      setSavingCpf(false);
+    }
+  };
+
+  // Formatar CPF enquanto digita (000.000.000-00)
+  const formatCpf = (value: string) => {
+    const digits = value.replace(/\D/g, '').slice(0, 11);
+    return digits
+      .replace(/(\d{3})(\d)/, '$1.$2')
+      .replace(/(\d{3})(\d)/, '$1.$2')
+      .replace(/(\d{3})(\d{1,2})$/, '$1-$2');
+  };
+
   const handleCheckout = async (paymentMethod: 'stripe' | 'zelle' | 'pix' | 'parcelow') => {
     // Verificar CPF se o método for Parcelow
     if (paymentMethod === 'parcelow' && !userProfile?.cpf_document) {
-      setShowCpfModal(true);
+      setShowInlineCpf(true);
+      setSelectedMethod('parcelow');
       return;
     }
 
@@ -1426,10 +1479,12 @@ export const SelectionFeeStep: React.FC<StepProps> = ({ onNext }) => {
 
       const data = await response.json();
       
-      if (data.session_url) {
-        window.location.href = data.session_url;
+      const redirectUrl = data.session_url || data.checkout_url;
+      
+      if (redirectUrl) {
+        window.location.href = redirectUrl;
       } else {
-        throw new Error('Session URL not found');
+        throw new Error('Session/Checkout URL not found');
       }
     } catch (err: any) {
       console.error('Error processing checkout:', err);
@@ -1948,99 +2003,144 @@ export const SelectionFeeStep: React.FC<StepProps> = ({ onNext }) => {
                   (!!isBlocked && !!pendingPayment && method.id !== 'zelle');
                 
                 return (
-                  <button
-                    key={method.id}
-                    onClick={() => handleCheckout(method.id)}
-                    disabled={isDisabled}
-                    className={`w-full p-6 rounded-2xl border-2 transition-all duration-300 text-left relative overflow-hidden group/method ${
-                      isSelected
-                        ? 'border-blue-500 bg-blue-50 shadow-[0_0_30px_rgba(59,130,246,0.1)]'
-                        : 'border-gray-100 bg-gray-50 hover:border-gray-200 hover:bg-white'
-                    } ${isDisabled ? 'opacity-40 cursor-not-allowed grayscale' : 'cursor-pointer hover:scale-[1.01] active:scale-[0.99]'}`}
-                  >
-                    <div className="flex items-center space-x-5 relative z-10">
-                      <div className={`flex-shrink-0 w-14 h-14 flex items-center justify-center rounded-xl bg-white border border-gray-100 transition-transform duration-500 group-hover/method:scale-110 shadow-sm`}>
-                        <Icon className="w-10 h-10 text-gray-700" />
-                      </div>
-                      
-                      <div className="flex-1 min-w-0">
-                        <div className="flex items-center justify-between">
-                          <div className="flex flex-col">
-                              <h4 className="text-lg font-black text-gray-900 uppercase tracking-tight">
-                                {method.name}
-                              </h4>
-                              {method.id === 'stripe' && (
-                                <span className="text-[10px] font-bold text-gray-400 mt-1 uppercase tracking-wide leading-tight">* Podem incluir taxas de processamento</span>
-                              )}
-                              {method.id === 'pix' && (
-                                <span className="text-[10px] font-bold text-gray-400 mt-1 uppercase tracking-wide leading-tight">* Podem incluir taxas de processamento</span>
-                              )}
-                              {method.id === 'parcelow' && (
-                                <span className="text-[10px] font-bold text-gray-400 mt-1 uppercase tracking-wide leading-tight max-w-[200px] sm:max-w-none">* Podem incluir taxas de operadora e processamento da plataforma</span>
-                              )}
-                              {method.id === 'zelle' && (
-                                <span className="text-[10px] font-bold text-gray-400 mt-1 uppercase tracking-wide leading-tight flex items-center gap-1">
-                                  <AlertCircle className="w-3 h-3 flex-shrink-0" />
-                                  Processamento pode levar até 48 horas
+                  <div key={method.id} className="w-full flex flex-col">
+                    <button
+                      onClick={() => handleCheckout(method.id)}
+                      disabled={isDisabled}
+                      className={`w-full p-6 rounded-2xl border-2 transition-all duration-300 text-left relative overflow-hidden group/method ${
+                        isSelected
+                          ? 'border-blue-100 bg-blue-50 shadow-[0_0_30px_rgba(59,130,246,0.1)]'
+                          : 'border-gray-100 bg-gray-50 hover:border-gray-200 hover:bg-white'
+                      } ${isDisabled ? 'opacity-40 cursor-not-allowed grayscale' : 'cursor-pointer hover:scale-[1.01] active:scale-[0.99]'}`}
+                    >
+                      <div className="flex items-center space-x-5 relative z-10">
+                        <div className={`flex-shrink-0 w-14 h-14 flex items-center justify-center rounded-xl bg-white border border-gray-100 transition-transform duration-500 group-hover/method:scale-110 shadow-sm`}>
+                          <Icon className="w-10 h-10 text-gray-700" />
+                        </div>
+                        
+                        <div className="flex-1 min-w-0">
+                          <div className="flex items-center justify-between">
+                            <div className="flex flex-col">
+                                <h4 className="text-lg font-black text-gray-900 uppercase tracking-tight">
+                                  {method.name}
+                                </h4>
+                                {method.id === 'stripe' && (
+                                  <span className="text-[10px] font-bold text-gray-400 mt-1 uppercase tracking-wide leading-tight">* Podem incluir taxas de processamento</span>
+                                )}
+                                {method.id === 'pix' && (
+                                  <span className="text-[10px] font-bold text-gray-400 mt-1 uppercase tracking-wide leading-tight">* Podem incluir taxas de processamento</span>
+                                )}
+                                {method.id === 'parcelow' && (
+                                  <span className="text-[10px] font-bold text-gray-400 mt-1 uppercase tracking-wide leading-tight max-w-[200px] sm:max-w-none">* Podem incluir taxas de operadora e processamento da plataforma</span>
+                                )}
+                                {method.id === 'zelle' && (
+                                  <span className="text-[10px] font-bold text-gray-400 mt-1 uppercase tracking-wide leading-tight flex items-center gap-1">
+                                    <AlertCircle className="w-3 h-3 flex-shrink-0" />
+                                    Processamento pode levar até 48 horas
+                                  </span>
+                                )}
+                              </div>
+
+                            <div className="flex items-center gap-3">
+                              {method.id === 'stripe' && cardAmountWithFees > 0 && (
+                                <span className="text-grey-900 text-lg font-black px-2">
+                                  ${cardAmountWithFees.toFixed(2)}
                                 </span>
                               )}
-                            </div>
-
-                          <div className="flex items-center gap-3">
-                            {method.id === 'stripe' && cardAmountWithFees > 0 && (
-                              <span className="text-grey-900 text-lg font-black px-2">
-                                ${cardAmountWithFees.toFixed(2)}
-                              </span>
-                            )}
-                            {method.id === 'parcelow' && computedBasePrice > 0 && (
-                              <div className="flex flex-col items-end">
+                              {method.id === 'parcelow' && computedBasePrice > 0 && (
+                                <div className="flex flex-col items-end">
+                                   <span className="text-grey-900 text-lg font-black px-2">
+                                     ${computedBasePrice.toFixed(2)}
+                                   </span>
+                                  <span className="text-[10px] font-bold text-slate-900 mt-1 block uppercase tracking-widest leading-tight">
+                                    * Até 12x no cartão
+                                  </span>
+                                </div>
+                              )}
+                              {method.id === 'pix' && pixAmountWithFees > 0 && exchangeRate && (
+                                 <span className="text-grey-900 text-lg font-black px-2">
+                                   R$ {pixAmountWithFees.toFixed(2)}
+                                 </span>
+                              )}
+                              {method.id === 'zelle' && computedBasePrice > 0 && (
                                  <span className="text-grey-900 text-lg font-black px-2">
                                    ${computedBasePrice.toFixed(2)}
                                  </span>
-                                <span className="text-xs font-bold text-black mt-1 whitespace-nowrap">
-                                  Até 12x no cartão
-                                </span>
-                              </div>
-                            )}
-                            {method.id === 'pix' && pixAmountWithFees > 0 && exchangeRate && (
-                               <span className="text-grey-900 text-lg font-black px-2">
-                                 R$ {pixAmountWithFees.toFixed(2)}
-                               </span>
-                            )}
-                            {method.id === 'zelle' && computedBasePrice > 0 && (
-                               <span className="text-grey-900 text-lg font-black px-2">
-                                 ${computedBasePrice.toFixed(2)}
-                               </span>
-                            )}
-                            
-                            {isProcessing && (
-                              <Loader2 className="w-5 h-5 text-blue-500 animate-spin flex-shrink-0" />
-                            )}
-                            {isSelected && !loading && (
-                              <div className="bg-blue-500 rounded-full p-1 shadow-[0_0_15px_rgba(59,130,246,0.3)]">
-                                <CheckCircle className="w-4 h-4 text-white" />
-                              </div>
-                            )}
+                              )}
+                              
+                              {isProcessing && (
+                                <Loader2 className="w-5 h-5 text-blue-500 animate-spin flex-shrink-0" />
+                              )}
+                              {isSelected && !loading && (
+                                <div className="bg-blue-500 rounded-full p-1 shadow-[0_0_15px_rgba(59,130,246,0.3)]">
+                                  <CheckCircle className="w-4 h-4 text-white" />
+                                </div>
+                              )}
+                            </div>
                           </div>
-                        </div>
 
-                        {isDisabled && !!isBlocked && !!pendingPayment && method.id !== 'zelle' && (
-                          <div className="mt-3 flex items-center space-x-2 bg-amber-50 border border-amber-100 w-fit px-2 py-1 rounded-lg">
-                            <AlertCircle className="w-3 h-3 text-amber-600" />
-                            <span className="text-[10px] text-amber-600 font-bold uppercase tracking-tight">
-                              Indisponível - Zelle em processamento
-                            </span>
-                          </div>
+                          {isDisabled && !!isBlocked && !!pendingPayment && method.id !== 'zelle' && (
+                            <div className="mt-3 flex items-center space-x-2 bg-amber-50 border border-amber-100 w-fit px-2 py-1 rounded-lg">
+                              <AlertCircle className="w-3 h-3 text-amber-600" />
+                              <span className="text-[10px] text-amber-600 font-bold uppercase tracking-tight">
+                                Indisponível - Zelle em processamento
+                              </span>
+                            </div>
+                          )}
+                        </div>
+                      </div>
+                    </button>
+
+                    {/* Campo inline de CPF para Parcelow - Exibido logo abaixo do botão de forma integrada */}
+                    {method.id === 'parcelow' && showInlineCpf && (
+                      <div className="p-6 bg-blue-50 border-2 border-blue-100 rounded-2xl mt-4 space-y-4 animate-fadeIn relative z-0 shadow-[0_15px_30px_rgba(59,130,246,0.1)]">
+                        <div className="flex flex-col sm:flex-row sm:items-center gap-4">
+                           <div className="flex-1">
+                              <p className="text-[11px] font-black text-blue-700 uppercase tracking-widest mb-2 flex items-center gap-2">
+                                <Shield className="w-3 h-3" />
+                                Verificação Obrigatória Parcelow
+                              </p>
+                              <div className="relative">
+                                <input
+                                  type="text"
+                                  value={inlineCpf}
+                                  onChange={(e) => {
+                                    setInlineCpf(formatCpf(e.target.value));
+                                    setCpfError(null);
+                                  }}
+                                  placeholder="Digite seu CPF (000.000.000-00)"
+                                  maxLength={14}
+                                  className="w-full px-4 py-3 rounded-xl border border-blue-200 text-sm font-medium text-gray-900 focus:outline-none focus:ring-2 focus:ring-blue-500 bg-white transition-all"
+                                />
+                              </div>
+                           </div>
+                           <button
+                            onClick={saveCpfAndCheckout}
+                            disabled={savingCpf || inlineCpf.replace(/\D/g, '').length !== 11}
+                            className="sm:mt-6 px-8 py-3 rounded-xl bg-blue-600 text-white text-sm font-black hover:bg-blue-700 transition-all disabled:opacity-50 disabled:cursor-not-allowed whitespace-nowrap flex items-center justify-center gap-2 shadow-lg shadow-blue-500/25 active:scale-95"
+                          >
+                            {savingCpf ? <Loader2 className="w-4 h-4 animate-spin" /> : 'Ir ao pagamento'}
+                          </button>
+                        </div>
+                        {cpfError && (
+                          <p className="text-xs text-red-600 flex items-center gap-1 font-bold animate-pulse">
+                            <AlertCircle className="w-4 h-4" />
+                            {cpfError}
+                          </p>
                         )}
                       </div>
-                    </div>
-                  </button>
+                    )}
+                  </div>
+
                 );
               })}
-            </div>
-          )}
-        </div>
+
+
+
+          </div>
+        )}
       </div>
+    </div>
 
       {/* Terms and Conditions Modal for desktop */}
       {showTermsModal && userClickedCheckbox && ReactDOM.createPortal(

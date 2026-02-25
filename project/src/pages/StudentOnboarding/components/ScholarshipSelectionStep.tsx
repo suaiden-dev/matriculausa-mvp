@@ -702,15 +702,14 @@ export const ScholarshipSelectionStep: React.FC<StepProps> = ({ onNext, onBack: 
               <h2 className="text-3xl md:text-5xl font-black text-white uppercase tracking-tighter leading-none">
                 Escolha de Bolsas
               </h2>
-              <p className="text-lg md:text-xl text-white/60 font-medium max-w-2xl">
-                {t('studentDashboard.findScholarships.description') || 'Clique nos cards abaixo para selecionar suas bolsas. É necessário escolher ao menos uma para prosseguir.'}
+              <p className="text-lg md:text-xl text-white/60 font-medium max-w-3xl">
+                Navegue pelas bolsas e selecione quais gostaria de se matricular. É necessário escolher ao menos uma para prosseguir.
               </p>
             </div>
 
             {/* Instructions Box - Sem background azul */}
             <div 
-              className="bg-white rounded-lg p-4 border border-slate-200 shadow-sm transform-gpu"
-              style={{ backfaceVisibility: 'hidden', isolation: 'isolate' }}
+              className="bg-white rounded-xl p-6 border border-slate-200 shadow-sm"
             >
               <div className="flex items-start space-x-3">
                 <Info className="w-5 h-5 text-blue-600 flex-shrink-0 mt-0.5" />
@@ -750,8 +749,7 @@ export const ScholarshipSelectionStep: React.FC<StepProps> = ({ onNext, onBack: 
 
           {/* Advanced Filters - Collapsible */}
           <div 
-            className="bg-white rounded-lg border-2 border-slate-300 shadow-sm transform-gpu"
-            style={{ backfaceVisibility: 'hidden', isolation: 'isolate' }}
+            className="bg-white rounded-xl border-2 border-slate-300 shadow-sm overflow-hidden"
           >
             {/* Filter Header - Always Visible */}
             <div 

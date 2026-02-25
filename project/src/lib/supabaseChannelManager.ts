@@ -1,8 +1,8 @@
-import { supabase } from './supabase';
+import { supabase } from "./supabase";
 
 class SupabaseChannelManager {
   private channels: Map<string, any> = new Map();
-  private subscriptions: Map<string, boolean> = new Map();
+  private referenceCounts: Map<string, number> = new Map();
 
   /**
    * Cria ou retorna um canal existente
@@ -18,49 +18,78 @@ class SupabaseChannelManager {
   }
 
   /**
-   * Subscribe to a channel if not already subscribed
+   * Subscribe to a channel with reference counting
    */
   subscribe(channelName: string, config?: any) {
-    if (this.subscriptions.get(channelName)) {
-      console.log(`Channel ${channelName} already subscribed, skipping...`);
+    const count = this.referenceCounts.get(channelName) || 0;
+    this.referenceCounts.set(channelName, count + 1);
+
+    if (count > 0) {
+      console.log(
+        `[ChannelManager] Channel ${channelName} already has ${count} subscribers, incrementing...`,
+      );
       return this.channels.get(channelName);
     }
 
     const channel = this.getChannel(channelName, config);
-    channel.subscribe();
-    this.subscriptions.set(channelName, true);
-    console.log(`Subscribed to channel: ${channelName}`);
+    channel.subscribe((status: string) => {
+      console.log(
+        `[ChannelManager] Subscription status for ${channelName}:`,
+        status,
+      );
+    });
+    console.log(`[ChannelManager] Subscribed to new channel: ${channelName}`);
     return channel;
   }
 
   /**
-   * Unsubscribe from a channel
+   * Unsubscribe from a channel with reference counting
    */
   unsubscribe(channelName: string) {
-    if (!this.subscriptions.get(channelName)) {
-      console.log(`Channel ${channelName} not subscribed, skipping unsubscribe...`);
+    const count = this.referenceCounts.get(channelName) || 0;
+
+    if (count <= 0) {
+      console.log(
+        `[ChannelManager] Channel ${channelName} has no active subscribers, skipping...`,
+      );
       return;
     }
 
+    if (count > 1) {
+      this.referenceCounts.set(channelName, count - 1);
+      console.log(
+        `[ChannelManager] Channel ${channelName} still has ${
+          count - 1
+        } subscribers, holding...`,
+      );
+      return;
+    }
+
+    // Ultima inscrição sendo removida
     const channel = this.channels.get(channelName);
     if (channel) {
       try {
         supabase.removeChannel(channel);
-        console.log(`Unsubscribed from channel: ${channelName}`);
+        console.log(
+          `[ChannelManager] Last subscriber left. Removed channel: ${channelName}`,
+        );
       } catch (error) {
-        console.warn(`Error unsubscribing from channel ${channelName}:`, error);
+        console.warn(
+          `[ChannelManager] Error removing channel ${channelName}:`,
+          error,
+        );
       }
     }
 
     this.channels.delete(channelName);
-    this.subscriptions.delete(channelName);
+    this.referenceCounts.delete(channelName);
   }
 
   /**
    * Unsubscribe from all channels
    */
   unsubscribeAll() {
-    for (const [channelName] of this.subscriptions) {
+    for (const [channelName] of this.referenceCounts) {
       this.unsubscribe(channelName);
     }
   }
@@ -69,14 +98,14 @@ class SupabaseChannelManager {
    * Check if a channel is subscribed
    */
   isSubscribed(channelName: string): boolean {
-    return this.subscriptions.get(channelName) || false;
+    return (this.referenceCounts.get(channelName) || 0) > 0;
   }
 
   /**
    * Get all active channel names
    */
   getActiveChannels(): string[] {
-    return Array.from(this.subscriptions.keys());
+    return Array.from(this.referenceCounts.keys());
   }
 }
 
@@ -84,8 +113,8 @@ class SupabaseChannelManager {
 export const channelManager = new SupabaseChannelManager();
 
 // Cleanup on page unload
-if (typeof window !== 'undefined') {
-  window.addEventListener('beforeunload', () => {
+if (typeof window !== "undefined") {
+  window.addEventListener("beforeunload", () => {
     channelManager.unsubscribeAll();
   });
 }

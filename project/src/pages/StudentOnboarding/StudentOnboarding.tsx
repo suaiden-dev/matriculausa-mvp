@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useState, useCallback } from 'react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
 import { ArrowLeft, Bell, Clock } from 'lucide-react';
 import { useAuth } from '../../hooks/useAuth';
@@ -23,13 +23,52 @@ import NotificationsModal from '../../components/NotificationsModal';
 const StudentOnboarding: React.FC = () => {
   const { user, loading: authLoading } = useAuth();
   const navigate = useNavigate();
-  const [searchParams] = useSearchParams();
+  const [searchParams, setSearchParams] = useSearchParams();
+  const processingPaymentRef = React.useRef<string | null>(null);
   const { state, loading, goToStep } = useOnboardingProgress();
   const { t } = useTranslation();
   const [showPaymentAnimation, setShowPaymentAnimation] = useState(false);
   const [isVerifyingPayment, setIsVerifyingPayment] = useState(false);
   const [showNotif, setShowNotif] = useState(false);
   const [showNotificationsModal, setShowNotificationsModal] = useState(false);
+
+  const handleNext = useCallback(() => {
+    const steps: OnboardingStep[] = [
+      'welcome',
+      'selection_fee',
+      'scholarship_selection',
+      'process_type',
+      'documents_upload',
+      'payment',
+      'scholarship_fee',
+      'my_applications',
+      'completed'
+    ];
+
+    const currentIndex = steps.indexOf(state.currentStep);
+    if (currentIndex < steps.length - 1) {
+      goToStep(steps[currentIndex + 1]);
+    }
+  }, [state.currentStep, goToStep]);
+
+  const handleBack = useCallback(() => {
+    const steps: OnboardingStep[] = [
+      'welcome',
+      'selection_fee',
+      'scholarship_selection',
+      'process_type',
+      'documents_upload',
+      'payment',
+      'scholarship_fee',
+      'my_applications',
+      'completed'
+    ];
+
+    const currentIndex = steps.indexOf(state.currentStep);
+    if (currentIndex > 0) {
+      goToStep(steps[currentIndex - 1]);
+    }
+  }, [state.currentStep, goToStep]);
 
   // Notifications logic
   const {
@@ -125,87 +164,142 @@ const StudentOnboarding: React.FC = () => {
     const stepParam = searchParams.get('step');
     const sessionId = searchParams.get('session_id');
 
-    if (paymentSuccess === 'success' && stepParam && sessionId) {
-      const verifyStripeSession = async () => {
-        try {
-          let edgeFunctionName = '';
-          if (stepParam === 'scholarship_selection') {
-            edgeFunctionName = 'verify-stripe-session-selection-process-fee';
-          } else if (stepParam === 'payment') {
-            edgeFunctionName = 'verify-stripe-session-application-fee';
-          } else if (stepParam === 'scholarship_fee' || stepParam === 'completed') {
-            edgeFunctionName = 'verify-stripe-session-scholarship-fee';
-          }
+    if (paymentSuccess === 'success' && stepParam) {
+      const paymentKey = sessionId || 'manual_pix';
+      if (processingPaymentRef.current === paymentKey) return;
+      processingPaymentRef.current = paymentKey;
 
-          if (!edgeFunctionName) return;
-
-          const SUPABASE_PROJECT_URL = import.meta.env.VITE_SUPABASE_URL;
-          const EDGE_FUNCTION_ENDPOINT = `${SUPABASE_PROJECT_URL}/functions/v1/${edgeFunctionName}`;
-          
-          let token = null;
-          try {
-            const raw = localStorage.getItem(`sb-${SUPABASE_PROJECT_URL.split('//')[1].split('.')[0]}-auth-token`);
-            if (raw) {
-              const tokenObj = JSON.parse(raw);
-              token = tokenObj?.access_token || null;
-            }
-          } catch (e) {
-            console.error('[Onboarding] Erro ao obter token:', e);
-          }
-
-          const response = await fetch(EDGE_FUNCTION_ENDPOINT, {
-            method: 'POST',
-            headers: {
-              'Content-Type': 'application/json',
-              ...(token && { 'Authorization': `Bearer ${token}` }),
-            },
-            body: JSON.stringify({ sessionId }),
-          });
-
-          const data = await response.json();
-
-          if (data.status === 'complete' || data.success) {
-            setIsVerifyingPayment(false);
-            setShowPaymentAnimation(true);
-            setTimeout(() => {
-              const url = new URL(window.location.href);
-              url.searchParams.delete('payment');
-              url.searchParams.delete('session_id');
-              url.searchParams.delete('pix_payment');
-              window.history.replaceState({}, '', url.toString());
-              
-              if (stepParam === 'payment' || stepParam === 'scholarship_fee') {
-                handleNext();
-              } else {
-                window.location.reload();
-              }
-            }, 6000);
-          } else {
-            setIsVerifyingPayment(false);
-          }
-        } catch (error) {
-          console.error('[Onboarding] Erro ao verificar sessão Stripe:', error);
+      if (!sessionId || sessionId === '{CHECKOUT_SESSION_ID}') {
+        // Fluxo Parcelow PIX (ou sem session id válido)
+        // O webhook demora alguns segundos. Vamos segurar a tela de "Verificando" para dar tempo ao webhook.
+        setIsVerifyingPayment(true);
+        setTimeout(() => {
           setIsVerifyingPayment(false);
-        }
-      };
+          setShowPaymentAnimation(true);
 
-      setIsVerifyingPayment(true);
-      verifyStripeSession();
-    } else if (paymentSuccess === 'success' && stepParam) {
-      setShowPaymentAnimation(true);
-      setTimeout(() => {
-        const url = new URL(window.location.href);
-        url.searchParams.delete('payment');
-        window.history.replaceState({}, '', url.toString());
+          // Limpar parâmetros da URL de forma reativa
+          const newParams = new URLSearchParams(searchParams);
+          newParams.delete('payment');
+          newParams.delete('session_id');
+          newParams.delete('pix_payment');
+          setSearchParams(newParams, { replace: true });
+
+          setTimeout(() => {
+            setShowPaymentAnimation(false);
+            if (stepParam === 'payment' || stepParam === 'scholarship_fee') {
+              handleNext();
+            } else {
+                const cleanUrl = new URL(window.location.href);
+                cleanUrl.searchParams.delete('payment');
+                cleanUrl.searchParams.delete('session_id');
+                cleanUrl.searchParams.delete('pix_payment');
+                window.location.href = cleanUrl.toString();
+            }
+          }, 4000);
+        }, 10000); // Aguarda 10 segundos extras antes da aba de sucesso
+      } else {
+        // Fluxo Stripe Normal / Stripe PIX
+        let pollCount = 0;
+        const MAX_POLLS = 10; // Max 30 segundos
         
-        if (stepParam === 'payment' || stepParam === 'scholarship_fee') {
-          handleNext();
-        } else {
-          window.location.reload();
-        }
-      }, 6000);
+        const verifyStripeSession = async () => {
+          pollCount++;
+          try {
+            let edgeFunctionName = '';
+            if (stepParam === 'scholarship_selection') {
+              edgeFunctionName = 'verify-stripe-session-selection-process-fee';
+            } else if (stepParam === 'payment') {
+              edgeFunctionName = 'verify-stripe-session-application-fee';
+            } else if (stepParam === 'scholarship_fee' || stepParam === 'completed') {
+              edgeFunctionName = 'verify-stripe-session-scholarship-fee';
+            } else if (stepParam === 'my_applications') {
+              edgeFunctionName = 'verify-stripe-session-i20-control-fee';
+            }
+
+            if (!edgeFunctionName) {
+              setIsVerifyingPayment(false);
+              return;
+            }
+
+            const SUPABASE_PROJECT_URL = import.meta.env.VITE_SUPABASE_URL;
+            const EDGE_FUNCTION_ENDPOINT = `${SUPABASE_PROJECT_URL}/functions/v1/${edgeFunctionName}`;
+            
+            let token = null;
+            try {
+              const raw = localStorage.getItem(`sb-${SUPABASE_PROJECT_URL.split('//')[1].split('.')[0]}-auth-token`);
+              if (raw) {
+                const tokenObj = JSON.parse(raw);
+                token = tokenObj?.access_token || null;
+              }
+            } catch (e) {
+              console.error('[Onboarding] Erro ao obter token:', e);
+            }
+
+            const response = await fetch(EDGE_FUNCTION_ENDPOINT, {
+              method: 'POST',
+              headers: {
+                'Content-Type': 'application/json',
+                ...(token && { 'Authorization': `Bearer ${token}` }),
+              },
+              body: JSON.stringify({ sessionId }),
+            });
+
+            const data = await response.json();
+
+            if (data.status === 'complete' || data.success) {
+              setIsVerifyingPayment(false);
+              setShowPaymentAnimation(true);
+              
+              // Limpar parâmetros da URL de forma reativa
+              const newParams = new URLSearchParams(searchParams);
+              newParams.delete('payment');
+              newParams.delete('session_id');
+              newParams.delete('pix_payment');
+              setSearchParams(newParams, { replace: true });
+
+              setTimeout(() => {
+                setShowPaymentAnimation(false);
+                if (stepParam === 'payment' || stepParam === 'scholarship_fee') {
+                  handleNext();
+                } else {
+                  // Se for selection_fee ou outro, o OnboardingProgress vai decidir o próximo passo após o reload
+                    const cleanUrl = new URL(window.location.href);
+                cleanUrl.searchParams.delete('payment');
+                cleanUrl.searchParams.delete('session_id');
+                cleanUrl.searchParams.delete('pix_payment');
+                window.location.href = cleanUrl.toString();
+                }
+              }, 4000);
+            } else if ((data.status === 'open' || data.status === 'pending') && pollCount < MAX_POLLS) {
+              // Pagamento assíncrono (ex: PIX), tenta novamente a cada 3s
+              setTimeout(verifyStripeSession, 3000);
+            } else {
+              // Falha ou tempo limite estourado, sai da tela de verificação
+              setIsVerifyingPayment(false);
+              const newParams = new URLSearchParams(searchParams);
+              newParams.delete('payment');
+              newParams.delete('session_id');
+              setSearchParams(newParams, { replace: true });
+              // Para garantir que o progress veja o real atual, força render ou reload.
+              if (pollCount >= MAX_POLLS) {
+                  const cleanUrl = new URL(window.location.href);
+                cleanUrl.searchParams.delete('payment');
+                cleanUrl.searchParams.delete('session_id');
+                cleanUrl.searchParams.delete('pix_payment');
+                window.location.href = cleanUrl.toString();
+              }
+            }
+          } catch (error) {
+            console.error('[Onboarding] Erro ao verificar sessão Stripe:', error);
+            setIsVerifyingPayment(false);
+          }
+        };
+
+        setIsVerifyingPayment(true);
+        verifyStripeSession();
+      }
     }
-  }, [searchParams]);
+  }, [searchParams, handleNext]);
 
   useEffect(() => {
     if (!authLoading && user && user.role !== 'student') {
@@ -232,41 +326,6 @@ const StudentOnboarding: React.FC = () => {
     return null;
   }
 
-  const handleNext = () => {
-    const steps: OnboardingStep[] = [
-      'welcome',
-      'selection_fee',
-      'scholarship_selection',
-      'process_type',
-      'documents_upload',
-      'payment',
-      'scholarship_fee',
-      'my_applications',
-    ];
-
-    const currentIndex = steps.indexOf(state.currentStep);
-    if (currentIndex < steps.length - 1) {
-      goToStep(steps[currentIndex + 1]);
-    }
-  };
-
-  const handleBack = () => {
-    const steps: OnboardingStep[] = [
-      'welcome',
-      'selection_fee',
-      'scholarship_selection',
-      'process_type',
-      'documents_upload',
-      'payment',
-      'scholarship_fee',
-      'my_applications',
-    ];
-
-    const currentIndex = steps.indexOf(state.currentStep);
-    if (currentIndex > 0) {
-      goToStep(steps[currentIndex - 1]);
-    }
-  };
 
 
   const allSteps: OnboardingStep[] = [
@@ -326,12 +385,18 @@ const StudentOnboarding: React.FC = () => {
   }
 
   if (isVerifyingPayment) {
+    const stepParam = searchParams.get('step');
+    let translationKey = 'selectionProcessFee';
+    if (stepParam === 'payment') translationKey = 'applicationFee';
+    else if (stepParam === 'scholarship_fee') translationKey = 'scholarshipFee';
+    else if (stepParam === 'my_applications') translationKey = 'i20ControlFee';
+
     return (
       <div className="min-h-screen flex items-center justify-center bg-[#020617]">
         <CustomLoading 
           color="green" 
-          title={t('successPages.selectionProcessFee.verifying')} 
-          message={t('successPages.selectionProcessFee.pleaseWait')} 
+          title={t(`successPages.${translationKey}.verifying`)} 
+          message={t(`successPages.${translationKey}.pleaseWait`)} 
         />
       </div>
     );

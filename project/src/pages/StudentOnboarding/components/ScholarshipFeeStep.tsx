@@ -218,10 +218,12 @@ export const ScholarshipFeeStep: React.FC<StepProps> = ({ onNext, onBack }) => {
       }
 
       const data = await response.json();
-      if (data.session_url || data.url) {
-        window.location.href = data.session_url || data.url;
+      const redirectUrl = data.session_url || data.checkout_url || data.url;
+      
+      if (redirectUrl) {
+        window.location.href = redirectUrl;
       } else {
-        throw new Error('Session URL not found');
+        throw new Error('Session/Checkout URL not found');
       }
     } catch (err: any) {
       console.error(`Error processing ${method} checkout:`, err);
@@ -353,9 +355,9 @@ export const ScholarshipFeeStep: React.FC<StepProps> = ({ onNext, onBack }) => {
 
                       <div className="flex flex-col md:items-end">
                         <div className="flex items-center gap-3 mb-1">
-                          <span className="text-[10px] font-black text-gray-400 uppercase tracking-[0.2em]">Scholarship Fee</span>
+                          <span className="text-[10px] font-black text-gray-500 uppercase tracking-[0.2em]">Scholarship Fee</span>
                         </div>
-                        <div className="text-4xl font-black text-black tracking-tighter">
+                        <div className="text-4xl font-black text-slate-900 tracking-tighter">
                           {formatFeeAmount(baseAmount)}
                         </div>
                       </div>
@@ -406,7 +408,7 @@ export const ScholarshipFeeStep: React.FC<StepProps> = ({ onNext, onBack }) => {
                             <button
                               onClick={() => processCheckout(app, 'stripe')}
                               disabled={!!isProcessingCheckout}
-                              className="group/btn relative bg-white border border-gray-200 p-5 rounded-[2rem] text-left hover:scale-[1.01] active:scale-95 transition-all shadow-sm hover:shadow-md disabled:opacity-50 hover:border-blue-200 flex items-center justify-between"
+                              className="group/btn relative bg-white border border-gray-200 p-5 rounded-[2rem] text-left hover:scale-[1.01] active:scale-95 transition-all shadow-sm hover:shadow-md disabled:opacity-50 hover:border-blue-600/30 hover:bg-blue-50/10 flex items-center justify-between"
                             >
                               <div className="flex items-center gap-5">
                                 <div className="w-14 h-14 flex items-center justify-center bg-slate-50 rounded-2xl group-hover/btn:bg-slate-100 transition-colors">
@@ -414,12 +416,12 @@ export const ScholarshipFeeStep: React.FC<StepProps> = ({ onNext, onBack }) => {
                                 </div>
                                 <div>
                                   <div className="font-black text-slate-900 text-base uppercase tracking-tight">Cartão de Crédito</div>
-                                  <div className="text-[10px] font-bold text-slate-400 mt-1 uppercase tracking-wide leading-tight">* Taxas de processamento podem ser aplicadas</div>
+                                  <div className="text-[10px] font-bold text-slate-400 mt-1 uppercase tracking-wide leading-tight">* Podem incluir taxas de processamento</div>
                                 </div>
                               </div>
                               <div className="flex items-center gap-5">
                                 <div className="text-right">
-                                  <div className="text-black text-xl font-black uppercase tracking-tight">
+                                  <div className="text-slate-900 text-xl font-black uppercase tracking-tight">
                                     {formatFeeAmount(cardAmount)}
                                   </div>
                                 </div>
@@ -436,7 +438,7 @@ export const ScholarshipFeeStep: React.FC<StepProps> = ({ onNext, onBack }) => {
                             <button
                               onClick={() => processCheckout(app, 'pix')}
                               disabled={!!isProcessingCheckout}
-                              className="group/btn relative bg-white border border-gray-200 p-5 rounded-[2rem] text-left hover:scale-[1.01] active:scale-95 transition-all shadow-sm hover:shadow-md disabled:opacity-50 hover:border-emerald-200 flex items-center justify-between"
+                              className="group/btn relative bg-white border border-gray-200 p-5 rounded-[2rem] text-left hover:scale-[1.01] active:scale-95 transition-all shadow-sm hover:shadow-md disabled:opacity-50 hover:border-blue-600/30 hover:bg-blue-50/10 flex items-center justify-between"
                             >
                               <div className="flex items-center gap-5">
                                 <div className="w-14 h-14 flex items-center justify-center bg-slate-50 rounded-2xl group-hover/btn:bg-slate-100 transition-colors">
@@ -444,12 +446,12 @@ export const ScholarshipFeeStep: React.FC<StepProps> = ({ onNext, onBack }) => {
                                 </div>
                                 <div>
                                   <div className="font-black text-slate-900 text-base uppercase tracking-tight">PIX</div>
-                                  <div className="text-[10px] font-bold text-slate-400 mt-1 uppercase tracking-wide leading-tight">* Aprovação instantânea</div>
+                                  <div className="text-[10px] font-bold text-slate-400 mt-1 uppercase tracking-wide leading-tight">* Podem incluir taxas de processamento</div>
                                 </div>
                               </div>
                               <div className="flex items-center gap-5">
                                 <div className="text-right">
-                                  <div className="text-black text-xl font-black uppercase tracking-tight">
+                                  <div className="text-slate-900 text-xl font-black uppercase tracking-tight">
                                     R$ {pixInfo.totalWithIOF.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
                                   </div>
                                 </div>
@@ -466,7 +468,7 @@ export const ScholarshipFeeStep: React.FC<StepProps> = ({ onNext, onBack }) => {
                             <button
                               onClick={() => processCheckout(app, 'parcelow')}
                               disabled={!!isProcessingCheckout}
-                              className="group/btn relative bg-white border border-gray-200 p-5 rounded-[2rem] text-left hover:scale-[1.01] active:scale-95 transition-all shadow-sm hover:shadow-md disabled:opacity-50 hover:border-orange-200 flex items-center justify-between"
+                              className="group/btn relative bg-white border border-gray-200 p-5 rounded-[2rem] text-left hover:scale-[1.01] active:scale-95 transition-all shadow-sm hover:shadow-md disabled:opacity-50 hover:border-blue-600/30 hover:bg-blue-50/10 flex items-center justify-between"
                             >
                               <div className="flex items-center gap-5">
                                 <div className="w-14 h-14 flex items-center justify-center bg-slate-50 rounded-2xl group-hover/btn:bg-slate-100 transition-colors px-2">
@@ -474,14 +476,15 @@ export const ScholarshipFeeStep: React.FC<StepProps> = ({ onNext, onBack }) => {
                                 </div>
                                 <div>
                                   <div className="font-black text-slate-900 text-base uppercase tracking-tight">Parcelow</div>
-                                  <div className="text-[10px] font-bold text-slate-400 mt-1 uppercase tracking-wide leading-tight">* Até 12x no cartão</div>
+                                  <div className="text-[10px] font-bold text-slate-400 mt-1 uppercase tracking-wide leading-tight">* Podem incluir taxas de operadora e processamento da plataforma</div>
                                 </div>
                               </div>
                               <div className="flex items-center gap-5">
                                 <div className="text-right flex flex-col items-end">
-                                  <div className="text-black text-xl font-black uppercase tracking-tight">
+                                  <div className="text-slate-900 text-xl font-black uppercase tracking-tight">
                                     {formatFeeAmount(cardAmount)}
                                   </div>
+                                  <span className="text-[10px] font-bold text-slate-900 mt-1 block uppercase tracking-widest leading-tight">Até 12x no cartão</span>
                                 </div>
                                 <ChevronRight className="w-6 h-6 text-gray-300 group-hover/btn:translate-x-1 transition-transform" />
                               </div>
@@ -497,7 +500,7 @@ export const ScholarshipFeeStep: React.FC<StepProps> = ({ onNext, onBack }) => {
                               <button
                                 onClick={() => handleZelleClick(app)}
                                 disabled={!!isProcessingCheckout}
-                                className={`group/btn relative bg-white border p-5 text-left hover:scale-[1.01] active:scale-[0.99] transition-all shadow-sm hover:shadow-md disabled:opacity-50 hover:border-purple-200 flex items-center justify-between ${
+                                className={`group/btn relative bg-white border p-5 text-left hover:scale-[1.01] active:scale-[0.99] transition-all shadow-sm hover:shadow-md disabled:opacity-50 hover:border-blue-600/30 hover:bg-blue-50/10 flex items-center justify-between ${
                                   zelleActiveApp?.id === app.id
                                     ? 'rounded-t-[2rem] border-purple-200 border-b-0 bg-purple-50/30'
                                     : 'rounded-[2rem] border-gray-200'
@@ -511,16 +514,16 @@ export const ScholarshipFeeStep: React.FC<StepProps> = ({ onNext, onBack }) => {
                                     <div className="font-black text-slate-900 text-base uppercase tracking-tight">Zelle</div>
                                     <div className="text-[10px] font-bold text-slate-500 mt-1 uppercase tracking-wide leading-tight flex items-center gap-1">
                                       <AlertCircle className="w-3 h-3" />
-                                      Processamento em até 48 horas
+                                      Processamento pode levar até 48 horas
                                     </div>
                                   </div>
                                 </div>
                                 <div className="flex items-center gap-5">
                                   <div className="text-right">
-                                    <div className="text-black text-xl font-black uppercase tracking-tight">
+                                    <div className="text-slate-900 text-xl font-black uppercase tracking-tight">
                                       {formatFeeAmount(baseAmount)}
                                     </div>
-                                    <span className="text-[10px] font-bold text-slate-400 mt-1 block uppercase tracking-widest">Sem Taxas</span>
+                                    <span className="text-[10px] font-bold text-slate-900 mt-1 block uppercase tracking-widest">Sem Taxas</span>
                                   </div>
                                   <ChevronRight className={`w-6 h-6 text-gray-300 transition-transform ${
                                     zelleActiveApp?.id === app.id ? 'rotate-90' : 'group-hover/btn:translate-x-1'

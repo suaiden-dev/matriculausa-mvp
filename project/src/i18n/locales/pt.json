@@ -1714,6 +1714,7 @@
     "no": "Não",
     "showMore": "Mostrar Mais",
     "showLess": "Mostrar Menos",
+    "changeFile": "Alterar Arquivo",
     "readMore": "Ler Mais",
     "learnMore": "Saiba Mais",
     "featured": "Destaque",
@@ -2488,7 +2489,7 @@
       },
       "i20ControlFee": {
         "title": "Taxa de Controle I-20",
-        "description": "O I-20 é o Certificado de Elegibilidade oficial emitido pela universidade que comprova seu status de estudante nos EUA.",
+        "description": "O I-20 é uma taxa essencial para visto de estudantes F-1, alem disso é uma taxa obrigatória para a liberação da sua carta de aceite pela faculdade. Esta taxa tem um prazo máximo de 10 dias para pagamento.",
         "deadlineInfo": "Prazo: 10 dias após pagamento da Taxa da Bolsa.",
         "timerInfo": "Tempo restante para pagamento:",
         "paymentInfo": "Garante processamento correto do seu I-20 pela universidade.",

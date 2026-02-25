@@ -43,8 +43,7 @@ const Auth: React.FC<AuthProps> = ({ mode }) => {
   const [referralCodeLoading, setReferralCodeLoading] = useState(false);
   const [referralCodeType, setReferralCodeType] = useState<'seller' | 'rewards' | null>(null);
   const [isReferralCodeLocked, setIsReferralCodeLocked] = useState(false);
-  // Estado para rastrear se o seller é do sistema simplificado
-  const [isSimplifiedSeller, setIsSimplifiedSeller] = useState(false);
+  // Estado removido: isSimplifiedSeller (sem utilidade lida)
   // Terms acceptance state
   const [termsAccepted, setTermsAccepted] = useState(false);
   // Newsletter consent state
@@ -126,21 +125,15 @@ const Auth: React.FC<AuthProps> = ({ mode }) => {
         if (!error && data) {
           try {
             const { data: systemTypeData, error: systemTypeError } = await supabase
-              .rpc('get_seller_system_type_by_referral_code', { referral_code: codeUpper });
+              .rpc('get_seller_admin_system_type_by_code', { seller_code: codeUpper });
             
              if (!systemTypeError && systemTypeData) {
                const isSimplified = systemTypeData === 'simplified';
-               setIsSimplifiedSeller(isSimplified);
                console.log('[AUTH] System type do seller:', systemTypeData, 'isSimplified:', isSimplified);
-             } else {
-               setIsSimplifiedSeller(false);
              }
           } catch (err) {
             console.error('[AUTH] Erro ao verificar system_type do seller:', err);
-            setIsSimplifiedSeller(false);
           }
-        } else {
-          setIsSimplifiedSeller(false);
         }
       } else if (isRewards) {
         setReferralCodeType('rewards');
@@ -338,9 +331,6 @@ const Auth: React.FC<AuthProps> = ({ mode }) => {
   const handleReferralCodeChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const code = e.target.value.toUpperCase();
     setFormData(prev => ({ ...prev, referralCode: code }));
-    
-    // Resetar estado de simplified seller quando o código muda
-    setIsSimplifiedSeller(false);
     
     if (code.length >= 4) {
       validateReferralCode(code);

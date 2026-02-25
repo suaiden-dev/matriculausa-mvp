@@ -84,11 +84,12 @@ export const ApplicationFeeStep: React.FC<StepProps> = ({ onNext }) => {
       }
 
       const data = await response.json();
+      const redirectUrl = data.session_url || data.checkout_url || data.url;
       
-      if (data.session_url) {
-        window.location.href = data.session_url;
+      if (redirectUrl) {
+        window.location.href = redirectUrl;
       } else {
-        throw new Error('URL da sessão não encontrada');
+        throw new Error('URL de redirecionamento não encontrada');
       }
     } catch (err: any) {
       console.error('Erro ao processar checkout:', err);

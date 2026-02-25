@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, useRef } from 'react';
 import { useAuth } from '../../../hooks/useAuth';
 import { supabase } from '../../../lib/supabase';
 import { OnboardingStep, OnboardingState } from '../types';
@@ -47,6 +47,7 @@ export const useOnboardingProgress = () => {
     };
   });
   const [loading, setLoading] = useState(true);
+  const lastCheckId = useRef(0);
 
   const checkProgress = useCallback(async () => {
     if (!user?.id || !userProfile?.id) {
@@ -54,12 +55,12 @@ export const useOnboardingProgress = () => {
       return;
     }
 
+    const currentCheckId = ++lastCheckId.current;
+
     try {
       setLoading(true);
       const selAppId = window.localStorage.getItem('selected_application_id');
-      const savedStepLog = window.localStorage.getItem(ONBOARDING_STEP_KEY);
-      const savedStep = getSavedStep();
-      console.log('[OnboardingDebug] Starting checkProgress. LocalStorage - selAppId:', selAppId, 'savedStep:', savedStepLog);
+      console.log('[OnboardingDebug] Starting checkProgress. LocalStorage - selAppId:', selAppId);
 
       // 1. Verificar Selection Fee
       let selectionFeePaid = userProfile.has_paid_selection_process_fee || false;
@@ -124,7 +125,7 @@ export const useOnboardingProgress = () => {
       const processTypeSelected = 
         (applications && applications.length > 0 && !!applications[0].student_process_type) ||
         (userProfile.documents_uploaded || false) ||
-        (!!storedProcessType && ['initial', 'transfer', 'change_of_status'].includes(storedProcessType) && selectionFeePaid && scholarshipsSelected && savedStep !== 'scholarship_selection' && savedStep !== 'selection_fee');
+        (!!storedProcessType && ['initial', 'transfer', 'change_of_status'].includes(storedProcessType) && selectionFeePaid && scholarshipsSelected && getSavedStep() !== 'scholarship_selection' && getSavedStep() !== 'selection_fee');
 
       // 4. Verificar Documentos
       const documentsUploaded = userProfile.documents_uploaded || false;
@@ -240,6 +241,11 @@ export const useOnboardingProgress = () => {
       // 8. Verificar se onboarding foi completado
       const onboardingCompleted = isOnboardingCompleted;
 
+      // Re-ler o step salvo após as operações assíncronas para evitar race conditions
+      const savedStep = getSavedStep();
+      const savedStepLog = window.localStorage.getItem(ONBOARDING_STEP_KEY);
+      console.log('[OnboardingDebug] Calculating step. savedStep from localStorage:', savedStepLog);
+
       // Verificar se é um novo usuário (sem nenhum progresso E sem step salvo)
       // Se há step salvo, significa que o usuário já interagiu com o onboarding
       const isNewUser = !selectionFeePaid && !scholarshipsSelected && !processTypeSelected && !documentsUploaded && !savedStep;
@@ -318,6 +324,11 @@ export const useOnboardingProgress = () => {
         }
       }
 
+      if (currentCheckId !== lastCheckId.current) {
+        console.log('[OnboardingDebug] checkProgress call is stale, ignoring results.');
+        return;
+      }
+
       setState({
         currentStep,
         selectionFeePaid,
@@ -336,7 +347,9 @@ export const useOnboardingProgress = () => {
     } catch (error) {
       console.error('Error checking onboarding progress:', error);
     } finally {
-      setLoading(false);
+      if (currentCheckId === lastCheckId.current) {
+        setLoading(false);
+      }
     }
   }, [user?.id, userProfile?.id, userProfile?.has_paid_selection_process_fee, userProfile?.documents_uploaded, userProfile?.documents_status, userProfile?.is_application_fee_paid, userProfile?.onboarding_completed, fetchCart, getSavedStep, saveStep]);
 

@@ -126,7 +126,7 @@ export const DocumentsUploadStep: React.FC<StepProps> = ({ onNext }) => {
   const getDocumentLimit = (): number => {
     switch (processType) {
       case 'change_of_status': return 5;
-      case 'transfer': return 10;
+      case 'transfer': return 5;
       case 'initial':
       default: return 5;
     }
@@ -178,6 +178,14 @@ export const DocumentsUploadStep: React.FC<StepProps> = ({ onNext }) => {
     if (isLocked) return;
     if (file && !validateFileSize(file)) {
       setFieldErrors(prev => ({ ...prev, [key]: 'File size exceeds 10MB' }));
+      // Limpar erro após 4 segundos
+      setTimeout(() => {
+        setFieldErrors(prev => {
+          const next = { ...prev };
+          delete next[key];
+          return next;
+        });
+      }, 4000);
       return;
     }
     setFieldErrors(prev => { const next = { ...prev }; delete next[key]; return next; });
@@ -190,16 +198,40 @@ export const DocumentsUploadStep: React.FC<StepProps> = ({ onNext }) => {
     const maxLimit = getDocumentLimit();
     if (currentFiles.length + newFiles.length > maxLimit) {
       setFieldErrors(prev => ({ ...prev, funds_proof: `Maximum limit is ${maxLimit} documents` }));
+      // Limpar erro após 4 segundos
+      setTimeout(() => {
+        setFieldErrors(prev => {
+          const next = { ...prev };
+          delete next.funds_proof;
+          return next;
+        });
+      }, 4000);
       return;
     }
     const oversizedFiles = newFiles.filter(f => !validateFileSize(f));
     if (oversizedFiles.length > 0) {
       setFieldErrors(prev => ({ ...prev, funds_proof: 'Each file must be under 10MB' }));
+      // Limpar erro após 4 segundos
+      setTimeout(() => {
+        setFieldErrors(prev => {
+          const next = { ...prev };
+          delete next.funds_proof;
+          return next;
+        });
+      }, 4000);
       return;
     }
     const combinedFiles = [...currentFiles, ...newFiles];
     if (!validateTotalSize(combinedFiles)) {
       setFieldErrors(prev => ({ ...prev, funds_proof: 'Total file size exceeds 10MB' }));
+      // Limpar erro após 4 segundos
+      setTimeout(() => {
+        setFieldErrors(prev => {
+          const next = { ...prev };
+          delete next.funds_proof;
+          return next;
+        });
+      }, 4000);
       return;
     }
     setFieldErrors(prev => { const next = { ...prev }; delete next.funds_proof; return next; });
@@ -208,6 +240,11 @@ export const DocumentsUploadStep: React.FC<StepProps> = ({ onNext }) => {
 
   const handleFundsFileRemove = (index: number) => {
     if (isLocked) return;
+    setFieldErrors(prev => {
+      const next = { ...prev };
+      delete next.funds_proof;
+      return next;
+    });
     setFiles(prev => {
       const currentFiles = [...(prev.funds_proof as File[])];
       currentFiles.splice(index, 1);
@@ -564,11 +601,11 @@ export const DocumentsUploadStep: React.FC<StepProps> = ({ onNext }) => {
         >
           <div className="space-y-10 max-w-5xl mx-auto pb-12 px-4">
             {/* Header Outside Container */}
-            <div className="text-center space-y-4 animate-in fade-in slide-in-from-top-10 duration-1000">
+            <div className="text-center md:text-left space-y-4 animate-in fade-in slide-in-from-top-10 duration-1000">
               <h2 className="text-3xl md:text-5xl font-black text-white uppercase tracking-tighter leading-none">
                 {isApproved ? 'Escolha sua Universidade' : 'Candidaturas em Análise'}
               </h2>
-              <p className="text-lg md:text-xl text-white/60 font-medium max-w-2xl mx-auto">
+              <p className="text-lg md:text-xl text-white/60 font-medium max-w-2xl mt-2">
                 {isApproved 
                   ? 'Parabéns! Você foi aceito. Selecione abaixo a universidade para seguir com o pagamento.' 
                   : 'Seus documentos estão sendo revisados. Você pode acompanhar o status de cada bolsa abaixo.'}
@@ -892,8 +929,7 @@ export const DocumentsUploadStep: React.FC<StepProps> = ({ onNext }) => {
                       disabled={!selectedAppId}
                       className="w-full max-w-md bg-blue-600 text-white px-10 py-6 rounded-[2rem] font-black uppercase tracking-[0.3em] text-sm hover:bg-blue-700 transition-all shadow-2xl shadow-blue-500/40 hover:scale-105 active:scale-95 flex items-center justify-center space-x-4 disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:scale-100 group"
                     >
-                      <span className="relative z-10">{!selectedAppId ? 'Selecione uma Bolsa' : 'Confirmar Bolsa'}</span>
-                      <ArrowRight className="w-6 h-6 group-hover:translate-x-2 transition-transform relative z-10" />
+                      <span className="relative z-10">{!selectedAppId ? 'Selecione uma Bolsa' : 'Selecionar Bolsa'}</span>
                     </button>
                   </div>
                 )}
@@ -995,9 +1031,11 @@ export const DocumentsUploadStep: React.FC<StepProps> = ({ onNext }) => {
                         <div className="space-y-4">
                           <div className="relative group/upload">
                             <input type="file" accept="application/pdf" multiple onChange={(e) => handleFundsFileAdd(Array.from(e.target.files || []))} className="absolute inset-0 w-full h-full opacity-0 cursor-pointer z-20" disabled={isLocked || uploading || analyzing} />
-                            <div className="border-2 border-dashed border-blue-200 rounded-2xl p-8 text-center bg-white group-hover/upload:border-blue-400 group-hover/upload:bg-blue-50/30 transition-all">
-                              <Upload className="w-10 h-10 text-blue-400 mx-auto mb-3 group-hover/upload:scale-110 transition-transform" />
-                              <p className="text-sm text-blue-700 font-black uppercase tracking-widest">{t('studentDashboard.documentsAndScholarshipChoice.dragDropFiles')}</p>
+                            <div className={`border-2 border-dashed rounded-2xl p-8 text-center transition-all bg-white group-hover/upload:bg-blue-50/30 ${hasError ? 'border-red-300' : 'border-blue-200 group-hover/upload:border-blue-400'}`}>
+                              <Upload className={`w-10 h-10 mx-auto mb-3 group-hover/upload:scale-110 transition-transform ${hasError ? 'text-red-400' : 'text-blue-400'}`} />
+                              <p className={`text-sm font-black uppercase tracking-widest ${hasError ? 'text-red-700' : 'text-blue-700'}`}>
+                                {hasError ? fieldErrors[doc.key] : t('studentDashboard.documentsAndScholarshipChoice.dragDropFiles')}
+                              </p>
                               <p className="text-[10px] text-gray-400 font-bold uppercase tracking-widest mt-2">{processType} Limit: {documentLimit} {t('studentDashboard.documentsAndScholarshipChoice.documents')} (Max 10MB Total)</p>
                             </div>
                           </div>
@@ -1005,12 +1043,12 @@ export const DocumentsUploadStep: React.FC<StepProps> = ({ onNext }) => {
                           {fundsFiles.length > 0 && (
                             <div className="grid grid-cols-1 gap-2">
                               {fundsFiles.map((file, idx) => (
-                                <div key={idx} className="flex items-center justify-between p-4 bg-white border border-gray-50 rounded-xl shadow-sm animate-in slide-in-from-left-2 duration-300" style={{ animationDelay: `${idx * 50}ms` }}>
+                                <div key={idx} className="flex items-center justify-between p-4 bg-white border border-slate-200 rounded-xl shadow-sm animate-in slide-in-from-left-2 duration-300" style={{ animationDelay: `${idx * 50}ms` }}>
                                   <div className="flex items-center gap-3">
                                     <FileText className="w-4 h-4 text-red-500" />
                                     <span className="text-xs font-bold text-gray-700 uppercase tracking-tight truncate max-w-[200px]">{file.name}</span>
                                   </div>
-                                  <button onClick={() => handleFundsFileRemove(idx)} className="p-2 text-gray-300 hover:text-red-500 hover:bg-red-50 rounded-lg transition-all"><X className="w-4 h-4" /></button>
+                                  <button onClick={() => handleFundsFileRemove(idx)} className="p-2 text-gray-500 hover:text-red-500 hover:bg-red-50 rounded-lg transition-all"><X className="w-4 h-4" /></button>
                                 </div>
                               ))}
                             </div>
@@ -1035,12 +1073,14 @@ export const DocumentsUploadStep: React.FC<StepProps> = ({ onNext }) => {
                       <p className="text-gray-500 font-medium text-sm leading-relaxed">{DOCUMENT_DESCRIPTIONS[doc.key]}</p>
                       
                       <div className="flex flex-col sm:flex-row items-center gap-4">
-                        <label className={`w-full sm:w-auto px-6 py-3 rounded-xl font-black text-[10px] uppercase tracking-widest border transition-all cursor-pointer flex items-center justify-center gap-2 ${hasFile ? 'bg-emerald-50 text-emerald-700 border-emerald-100' : 'bg-blue-50 text-blue-700 border-blue-100 hover:bg-blue-100'}`}>
+                        <label className={`w-full sm:w-auto px-6 py-3 rounded-xl font-black text-[10px] uppercase tracking-widest border transition-all cursor-pointer flex items-center justify-center gap-2 ${hasError ? 'bg-red-50 text-red-700 border-red-200 hover:bg-red-100' : hasFile ? 'bg-emerald-50 text-emerald-700 border-emerald-100' : 'bg-blue-50 text-blue-700 border-blue-100 hover:bg-blue-100'}`}>
                           <Upload className="w-4 h-4" />
-                          {hasFile ? t('common.showLess', 'Alterar Arquivo') : t('studentDashboard.documentsAndScholarshipChoice.chooseFile')}
+                          {hasFile ? t('common.changeFile', 'Alterar Arquivo') : t('studentDashboard.documentsAndScholarshipChoice.chooseFile')}
                           <input type="file" accept="application/pdf,image/*" onChange={(e) => handleFileChange(doc.key, e.target.files?.[0] || null)} className="hidden" disabled={isLocked || uploading || analyzing} />
                         </label>
-                        {hasFile && (
+                        {hasError ? (
+                          <span className="text-[10px] font-black text-red-600 uppercase tracking-widest animate-in fade-in slide-in-from-left-2">{fieldErrors[doc.key]}</span>
+                        ) : hasFile && (
                           <span className="text-[10px] font-black text-emerald-600 uppercase tracking-widest truncate max-w-[200px]">{hasFile.name}</span>
                         )}
                       </div>
