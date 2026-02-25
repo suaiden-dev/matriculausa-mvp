@@ -41,9 +41,10 @@ interface OverviewProps {
   error: string | null;
   onApprove?: (universityId: string) => void;
   onReject?: (universityId: string) => void;
+  loading?: boolean;
 }
 
-const Overview: React.FC<OverviewProps> = ({ stats, universities, users, applications, error, onApprove, onReject }) => {
+const Overview: React.FC<OverviewProps> = ({ stats, universities, error, loading, onApprove, onReject }) => {
   const { isDevelopment } = useEnvironment();
   const [currentPage, setCurrentPage] = useState(1);
   const [loadingPayments, setLoadingPayments] = useState(true);
@@ -95,56 +96,18 @@ const Overview: React.FC<OverviewProps> = ({ stats, universities, users, applica
     return email.toLowerCase().includes('@uorak.com');
   };
 
-  // Filtrar usuários, universidades e aplicações excluindo @uorak.com em produção/staging
-  const filteredUsers = useMemo(() => {
-    if (!shouldFilter) return users;
-    console.log('🔍 [Overview] Filtrando usuários:', { total: users.length, shouldFilter });
-    const filtered = users.filter((user: any) => {
-      const email = user.email || user.user?.email || '';
-      return !shouldExcludeEmail(email);
-    });
-    console.log('🔍 [Overview] Usuários filtrados:', { antes: users.length, depois: filtered.length });
-    return filtered;
-  }, [users, shouldFilter]);
+  const pendingUniversities = useMemo(() => 
+    universities.filter((u: any) => !u.is_approved),
+    [universities]
+  );
 
-  const filteredUniversities = useMemo(() => {
-    if (!shouldFilter) return universities;
-    console.log('🔍 [Overview] Filtrando universidades:', { total: universities.length, shouldFilter });
-    const filtered = universities.filter((university: any) => {
-      // Verificar se a universidade tem um usuário associado com email @uorak.com
-      const email = university.user?.email || university.email || '';
-      return !shouldExcludeEmail(email);
-    });
-    console.log('🔍 [Overview] Universidades filtradas:', { antes: universities.length, depois: filtered.length });
-    return filtered;
-  }, [universities, shouldFilter]);
+  const currentUniversities = useMemo(() => {
+    const startIndex = (currentPage - 1) * UNIVERSITIES_PER_PAGE;
+    return pendingUniversities.slice(startIndex, startIndex + UNIVERSITIES_PER_PAGE);
+  }, [pendingUniversities, currentPage]);
 
-  const filteredApplications = useMemo(() => {
-    if (!shouldFilter) return applications;
-    console.log('🔍 [Overview] Filtrando aplicações:', { total: applications.length, shouldFilter });
-    const filtered = applications.filter((application: any) => {
-      const email = application.user?.email || application.student_email || application.user_email || '';
-      return !shouldExcludeEmail(email);
-    });
-    console.log('🔍 [Overview] Aplicações filtradas:', { antes: applications.length, depois: filtered.length });
-    return filtered;
-  }, [applications, shouldFilter]);
-
-  // Recalcular stats baseado nos dados filtrados
-  const filteredStats = useMemo(() => {
-    const filteredPendingUniversities = filteredUniversities.filter((u: any) => !u.is_approved);
-    const filteredApprovedUniversities = filteredUniversities.filter((u: any) => u.is_approved);
-    const filteredStudents = filteredUsers.filter((u: any) => u.role === 'student');
-
-    return {
-      ...stats,
-      totalUniversities: filteredUniversities.length,
-      pendingUniversities: filteredPendingUniversities.length,
-      approvedUniversities: filteredApprovedUniversities.length,
-      totalStudents: filteredStudents.length,
-      totalApplications: filteredApplications.length
-    };
-  }, [stats, filteredUniversities, filteredUsers, filteredApplications]);
+  // Usamos o prop stats diretamente para garantir consistência com o banco
+  const displayStats = stats;
 
   // Carregar dados de pagamentos pendentes
   useEffect(() => {
@@ -180,7 +143,7 @@ const Overview: React.FC<OverviewProps> = ({ stats, universities, users, applica
         try {
           const { data: zellePaymentsData, error: zelleError } = await supabase
             .from('zelle_payments')
-            .select('*')
+            .select('id, amount, status, user_id')
             .eq('status', 'pending_verification')
             .gt('amount', 0);
 
@@ -262,13 +225,9 @@ const Overview: React.FC<OverviewProps> = ({ stats, universities, users, applica
     loadPendingConversations();
   }, [user]);
 
-  // Filtrar universidades pendentes usando dados filtrados
-  const pendingUniversities = filteredUniversities.filter((u: any) => !u.is_approved);
-
   // Calcular paginação
   const totalPages = Math.ceil(pendingUniversities.length / UNIVERSITIES_PER_PAGE);
   const startIndex = (currentPage - 1) * UNIVERSITIES_PER_PAGE;
-  const currentUniversities = pendingUniversities.slice(startIndex, startIndex + UNIVERSITIES_PER_PAGE);
 
   const handleApprove = (universityId: string) => {
     if (onApprove) {
@@ -309,11 +268,10 @@ const Overview: React.FC<OverviewProps> = ({ stats, universities, users, applica
         >
           <div className="flex items-center justify-between">
             <div>
-              <p className="text-sm font-medium text-slate-500 mb-1">Total Universities</p>
-              <p className="text-3xl font-bold text-slate-900">{filteredStats.totalUniversities}</p>
+              <p className="text-3xl font-bold text-slate-900">{displayStats.totalUniversities}</p>
               <div className="flex items-center mt-2">
                 <TrendingUp className="h-4 w-4 text-green-500 mr-1" />
-                <span className="text-sm font-medium text-green-600">+{filteredStats.monthlyGrowth}% this month</span>
+                <span className="text-sm font-medium text-green-600">+{displayStats.monthlyGrowth}% this month</span>
               </div>
             </div>
             <div className="w-14 h-14 bg-gradient-to-br from-blue-500 to-blue-600 rounded-2xl flex items-center justify-center shadow-lg group-hover:scale-110 transition-transform duration-300">
@@ -329,10 +287,10 @@ const Overview: React.FC<OverviewProps> = ({ stats, universities, users, applica
           <div className="flex items-center justify-between">
             <div>
               <p className="text-sm font-medium text-slate-500 mb-1">Total Users</p>
-              <p className="text-3xl font-bold text-slate-900">{filteredUsers.length}</p>
+              <p className="text-3xl font-bold text-slate-900">{displayStats.totalStudents}</p>
               <div className="flex items-center mt-2">
                 <Users className="h-4 w-4 text-blue-500 mr-1" />
-                <span className="text-sm font-medium text-blue-600">{filteredStats.totalStudents} students</span>
+                <span className="text-sm font-medium text-blue-600">Active students</span>
               </div>
             </div>
             <div className="w-14 h-14 bg-gradient-to-br from-green-500 to-green-600 rounded-2xl flex items-center justify-center shadow-lg group-hover:scale-110 transition-transform duration-300">
@@ -348,7 +306,7 @@ const Overview: React.FC<OverviewProps> = ({ stats, universities, users, applica
           <div className="flex items-center justify-between">
             <div>
               <p className="text-sm font-medium text-slate-500 mb-1">Total Scholarships</p>
-              <p className="text-3xl font-bold text-slate-900">{filteredStats.totalScholarships}</p>
+              <p className="text-3xl font-bold text-slate-900">{displayStats.totalScholarships}</p>
             </div>
             <div className="w-14 h-14 bg-gradient-to-br from-[#05294E] to-blue-600 rounded-2xl flex items-center justify-center shadow-lg group-hover:scale-110 transition-transform duration-300">
               <Award className="h-7 w-7 text-white" />
@@ -360,7 +318,7 @@ const Overview: React.FC<OverviewProps> = ({ stats, universities, users, applica
           <div className="flex items-center justify-between">
             <div>
               <p className="text-sm font-medium text-slate-500 mb-1">Applications</p>
-              <p className="text-3xl font-bold text-slate-900">{filteredStats.totalApplications}</p>
+              <p className="text-3xl font-bold text-slate-900">{displayStats.totalApplications}</p>
               <div className="flex items-center mt-2">
                 <FileText className="h-4 w-4 text-orange-500 mr-1" />
                 <span className="text-sm font-medium text-orange-600">Active submissions</span>
@@ -411,7 +369,29 @@ const Overview: React.FC<OverviewProps> = ({ stats, universities, users, applica
             </div>
 
             <div className="p-6">
-              {pendingUniversities.length === 0 ? (
+              {loading ? (
+                <div className="space-y-4">
+                  {[1, 2, 3].map((i) => (
+                    <div key={i} className="animate-pulse bg-slate-50 rounded-xl p-4 border border-slate-100">
+                      <div className="flex items-center space-x-3 mb-3">
+                        <div className="w-8 h-8 bg-slate-200 rounded-lg"></div>
+                        <div className="flex-1 space-y-2">
+                          <div className="h-4 bg-slate-200 rounded w-3/4"></div>
+                          <div className="h-3 bg-slate-200 rounded w-1/2"></div>
+                        </div>
+                      </div>
+                      <div className="h-6 bg-slate-200 rounded-full w-24 mb-3"></div>
+                      <div className="flex justify-between">
+                        <div className="h-8 bg-slate-200 rounded-lg w-20"></div>
+                        <div className="flex space-x-1">
+                          <div className="h-8 w-8 bg-slate-200 rounded-lg"></div>
+                          <div className="h-8 w-8 bg-slate-200 rounded-lg"></div>
+                        </div>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              ) : pendingUniversities.length === 0 ? (
                 <div className="text-center py-12">
                   <div className="w-20 h-20 bg-green-100 rounded-2xl flex items-center justify-center mx-auto mb-6">
                     <CheckCircle className="h-10 w-10 text-green-600" />

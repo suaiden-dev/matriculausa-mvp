@@ -361,8 +361,7 @@ export const useUniversityFinancialData = (): UseUniversityFinancialDataReturn =
               const numericFee = typeof feeAmount === 'string' ? parseFloat(feeAmount) : feeAmount;
               const student = studentsMap[app.student_id];
               const deps = Number(student?.dependents) || 0;
-              const systemType = (student?.system_type as any) || 'legacy';
-              const withDeps = systemType === 'legacy' && deps > 0 ? numericFee + deps * 100 : numericFee;
+              const withDeps = deps > 0 ? numericFee + deps * 100 : numericFee;
               return sum + withDeps;
             }
             return sum;
@@ -380,8 +379,7 @@ export const useUniversityFinancialData = (): UseUniversityFinancialDataReturn =
               const numericFee = typeof feeAmount === 'string' ? parseFloat(feeAmount) : feeAmount;
               const student = studentsMap[app.student_id];
               const deps = Number(student?.dependents) || 0;
-              const systemType = (student?.system_type as any) || 'legacy';
-              const withDeps = systemType === 'legacy' && deps > 0 ? numericFee + deps * 100 : numericFee;
+              const withDeps = deps > 0 ? numericFee + deps * 100 : numericFee;
               return sum + withDeps;
             }
             return sum;
@@ -412,8 +410,7 @@ export const useUniversityFinancialData = (): UseUniversityFinancialDataReturn =
               const numericFee = typeof feeAmount === 'string' ? parseFloat(feeAmount) : feeAmount;
               const student = studentsMap[app.student_id];
               const deps = Number(student?.dependents) || 0;
-              const systemType = (student?.system_type as any) || 'legacy';
-              const withDeps = systemType === 'legacy' && deps > 0 ? numericFee + deps * 100 : numericFee;
+              const withDeps = deps > 0 ? numericFee + deps * 100 : numericFee;
               return sum + withDeps;
             }
             return sum;
@@ -426,8 +423,7 @@ export const useUniversityFinancialData = (): UseUniversityFinancialDataReturn =
               const numericFee = typeof feeAmount === 'string' ? parseFloat(feeAmount) : feeAmount;
               const student = studentsMap[app.student_id];
               const deps = Number(student?.dependents) || 0;
-              const systemType = (student?.system_type as any) || 'legacy';
-              const withDeps = systemType === 'legacy' && deps > 0 ? numericFee + deps * 100 : numericFee;
+              const withDeps = deps > 0 ? numericFee + deps * 100 : numericFee;
               return sum + withDeps;
             }
             return sum;

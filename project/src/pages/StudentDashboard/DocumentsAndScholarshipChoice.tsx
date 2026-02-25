@@ -358,7 +358,7 @@ const DocumentsAndScholarshipChoice: React.FC = () => {
         }
       }
       
-      if (!n8nData && webhookResult.response_passaport !== undefined) {
+      if (!n8nData && webhookResult.response_passport !== undefined) {
         n8nData = webhookResult;
       }
 
@@ -369,25 +369,42 @@ const DocumentsAndScholarshipChoice: React.FC = () => {
         const dataItem = Array.isArray(n8nData) && n8nData.length > 0 ? n8nData[0] : 
                         (typeof n8nData === 'object' && n8nData !== null ? n8nData : {});
 
-        const respPassport = dataItem.response_passaport;
+        const respPassport = dataItem.response_passport || dataItem.response_passaport;
         const respFunds = dataItem.response_funds;
         const respDegree = dataItem.response_degree;
 
+        // Helper to check if a language is English
+        const checkIsEnglish = (lang: string | null | undefined): boolean => {
+          if (!lang) return true;
+          const l = String(lang).toLowerCase();
+          return ['en', 'english', 'eng', 'true'].includes(l) || l.startsWith('en');
+        };
+
+        const passportOriginalErr = typeof respPassport === 'string' ? respPassport : (dataItem.details_passport || '');
+        const fundsOriginalErr = typeof respFunds === 'string' ? respFunds : (dataItem.details_funds || '');
+        const degreeOriginalErr = typeof respDegree === 'string' ? respDegree : (dataItem.details_degree || '');
+
+        // NOVO: Passaporte não precisa de tradução (sempre tem versão em inglês)
+        const passportNeedsTranslation = false; 
+        
+        // NOVO: Verifica erro no texto OU campo específico de idioma detectado
+        const degreeNeedsTranslation = isLanguageError(degreeOriginalErr) || 
+                                      (dataItem.detected_language_degree && !checkIsEnglish(dataItem.detected_language_degree));
+        
+        const fundsNeedsTranslation = isLanguageError(fundsOriginalErr) || 
+                                     (dataItem.detected_language_funds && !checkIsEnglish(dataItem.detected_language_funds));
+
         const passportOk = respPassport === true;
-        const fundsOk = respFunds === true;
-        const degreeOk = respDegree === true;
+        const fundsOk = respFunds === true && !fundsNeedsTranslation;
+        const degreeOk = respDegree === true && !degreeNeedsTranslation;
 
         console.log('🔍 [DEBUG] dataItem:', dataItem);
-        console.log('🔍 [DEBUG] respPassport:', respPassport, 'passportOk:', passportOk);
-        console.log('🔍 [DEBUG] respFunds:', respFunds, 'fundsOk:', fundsOk);
-        console.log('🔍 [DEBUG] respDegree:', respDegree, 'degreeOk:', degreeOk);
+        console.log('🔍 [DEBUG] Translation Needed:', { passportNeedsTranslation, degreeNeedsTranslation, fundsNeedsTranslation });
+        console.log('🔍 [DEBUG] Final Ok status:', { passportOk, fundsOk, degreeOk });
         
-        const passportErr = typeof respPassport === 'string' ? getFormattedErrorMessage(respPassport, 'passport') : 
-                           (passportOk ? '' : getFormattedErrorMessage(dataItem.details_passport || 'Invalid document.', 'passport'));
-        const fundsErr = typeof respFunds === 'string' ? getFormattedErrorMessage(respFunds, 'funds_proof') : 
-                        (fundsOk ? '' : getFormattedErrorMessage(dataItem.details_funds || 'Invalid document.', 'funds_proof'));
-        const degreeErr = typeof respDegree === 'string' ? getFormattedErrorMessage(respDegree, 'diploma') : 
-                         (degreeOk ? '' : getFormattedErrorMessage(dataItem.details_degree || 'Invalid document.', 'diploma'));
+        const passportErr = passportOk ? '' : getFormattedErrorMessage(passportOriginalErr || 'Invalid document.', 'passport');
+        const fundsErr = fundsOk ? '' : getFormattedErrorMessage(fundsOriginalErr || 'Invalid document.', 'funds_proof');
+        const degreeErr = degreeOk ? '' : getFormattedErrorMessage(degreeOriginalErr || 'Invalid document.', 'diploma');
         
         console.log('🔍 [DEBUG] Final errors:', { passportErr, fundsErr, degreeErr });
 
@@ -440,9 +457,107 @@ const DocumentsAndScholarshipChoice: React.FC = () => {
           setFieldErrors({});
           navigate('/student/dashboard/application-fee');
         } else {
-          // Documentos com erro - apenas salvar no perfil para revisão manual
-          // NÃO criar aplicações na universidade ainda
-          // NÃO processar carrinho ainda
+          // Check if only language errors exist (needs translation)
+          const documentsNeedingTranslation: Array<{type: string; source_language: string; document_url: string}> = [];
+          
+          // Helper to guess language from error message if direct detection fails
+          const guessLanguage = (errMsg: string | null | undefined, detected: string | null | undefined) => {
+            if (detected && detected.toLowerCase() !== 'english') return detected;
+            if (!errMsg) return 'Portuguese'; // Default to Portuguese for our main audience
+            const msg = String(errMsg).toLowerCase();
+            if (msg.includes('portuguese') || msg.includes('português')) return 'Portuguese';
+            if (msg.includes('spanish') || msg.includes('espanhol')) return 'Spanish';
+            if (msg.includes('french') || msg.includes('francês')) return 'French';
+            if (msg.includes('german') || msg.includes('alemão')) return 'German';
+            if (msg.includes('japanese') || msg.includes('japonês')) return 'Japanese';
+            return 'Portuguese'; // Default
+          };
+
+          if (passportNeedsTranslation) {
+            documentsNeedingTranslation.push({
+              type: 'passport',
+              source_language: guessLanguage(passportErr, dataItem.detected_language_passport || dataItem.detected_language),
+              document_url: docUrls.passport || '',
+            });
+          }
+          if (degreeNeedsTranslation) {
+            documentsNeedingTranslation.push({
+              type: 'diploma',
+              source_language: guessLanguage(degreeErr, dataItem.detected_language_degree || dataItem.detected_language),
+              document_url: docUrls.diploma || '',
+            });
+          }
+          if (fundsNeedsTranslation) {
+            documentsNeedingTranslation.push({
+              type: 'funds_proof',
+              source_language: guessLanguage(fundsErr, dataItem.detected_language_funds || dataItem.detected_language),
+              document_url: docUrls.funds_proof || '',
+            });
+          }
+
+          // Check if ONLY language errors exist (no other failures)
+          // A non-language error is one where the document is NOT Ok AND it's NOT a language error
+          // We also check if the response exists to avoid false positives on missing fields
+          const hasNonLanguageErrors = 
+            (respPassport !== undefined && !passportOk && !passportNeedsTranslation) ||
+            (respDegree !== undefined && !degreeOk && !degreeNeedsTranslation) ||
+            (respFunds !== undefined && !fundsOk && !fundsNeedsTranslation);
+
+          console.log('🔍 [DEBUG] hasNonLanguageErrors:', hasNonLanguageErrors);
+
+          // PRIORIDADE: Se houver qualquer documento precisando de tradução, vai para o checkout de tradução
+          // Isso evita que erros secundários (como "não é diploma") que podem ser causados pelo idioma errado
+          // bloqueiem o fluxo de tradução.
+          if (documentsNeedingTranslation.length > 0) {
+            // ALL errors are language-related → redirect to translation checkout
+            await supabase
+              .from('user_profiles')
+              .update({
+                documents: uploadedDocs,
+                documents_uploaded: true,
+                documents_status: 'needs_translation',
+              })
+              .eq('user_id', user.id);
+
+            // Log the translation redirect
+            try {
+              const { data: profile } = await supabase
+                .from('user_profiles')
+                .select('id')
+                .eq('user_id', user.id)
+                .single();
+              
+              if (profile) {
+                await supabase.rpc('log_student_action', {
+                  p_student_id: profile.id,
+                  p_action_type: 'document_translation_needed',
+                  p_action_description: `Documents need translation - redirecting to translation checkout`,
+                  p_performed_by: user.id,
+                  p_performed_by_type: 'student',
+                  p_metadata: {
+                    documents_needing_translation: documentsNeedingTranslation.map(d => d.type),
+                    detected_languages: documentsNeedingTranslation.map(d => d.source_language),
+                    process_type: processType
+                  }
+                });
+              }
+            } catch (logError) {
+              console.error('Failed to log translation redirect:', logError);
+            }
+
+            setAnalyzing(false);
+            setError(null);
+            setFieldErrors({});
+            navigate('/student/dashboard/document-translation', {
+              state: {
+                documentsNeedingTranslation,
+                docUrls,
+              }
+            });
+            return;
+          }
+
+          // Non-language errors exist → go to manual review (original behavior)
           await supabase
             .from('user_profiles')
             .update({
@@ -1000,7 +1115,12 @@ const DocumentsAndScholarshipChoice: React.FC = () => {
   });
 
   // Função para detectar se o erro é sobre documentos não estarem em inglês
-  const isLanguageError = (errorMessage: string): boolean => {
+  const isLanguageError = (errorMessage: string | null | undefined): boolean => {
+    if (!errorMessage) return false;
+    
+    // Normalize string for checking
+    const msg = String(errorMessage).toLowerCase();
+    
     const languageErrorKeywords = [
       'not in english',
       'not in english.',
@@ -1023,12 +1143,19 @@ const DocumentsAndScholarshipChoice: React.FC = () => {
       'please provide an english version',
       'please provide an english version or certified translation',
       'all documents must be in english',
-      'document must be in english'
+      'document must be in english',
+      'must be in english',
+      'não está em inglês',
+      'não está em ingles',
+      'não esta em ingles',
+      'não esta em inglês',
+      'idioma error',
+      'documento em português',
+      'documento em portugues',
+      'language error'
     ];
     
-    return languageErrorKeywords.some(keyword => 
-      errorMessage.toLowerCase().includes(keyword.toLowerCase())
-    );
+    return languageErrorKeywords.some(keyword => msg.includes(keyword));
   };
 
   // Função para detectar se o erro é sobre acesso a dados do documento

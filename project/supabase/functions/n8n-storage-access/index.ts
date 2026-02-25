@@ -19,12 +19,12 @@ serve(async (req) => {
     const pathParam = url.searchParams.get('path')
     const token = url.searchParams.get('token')
     
-    // Shared secret token to prevent abuse
-    // Should be set in Supabase Secrets as N8N_STORAGE_SECRET
-    const sharedSecret = Deno.env.get('N8N_STORAGE_SECRET') || 'n8n_default_secret_2026'
+    // Shared secret tokens to prevent abuse
+    const N8N_STORAGE_SECRET = Deno.env.get('N8N_STORAGE_SECRET') || 'n8n_default_secret_2026';
+    const TFOE_N8N_TOKEN = 'tfoe_n8n_2026_a7b3c9d1e5f2';
 
-    if (!token || token !== sharedSecret) {
-      console.error('[n8n-storage-proxy] Unauthorized access attempt');
+    if (!token || (token !== N8N_STORAGE_SECRET && token !== TFOE_N8N_TOKEN)) {
+      console.error('[n8n-storage-proxy] Unauthorized access attempt: Invalid token');
       return new Response(JSON.stringify({ error: 'Unauthorized' }), {
         status: 401,
         headers: { ...corsHeaders, 'Content-Type': 'application/json' }
