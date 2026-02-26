@@ -225,7 +225,7 @@ Deno.serve(async (req) => {
     // URLs de redirect após pagamento Parcelow
     // Apontar para o onboarding, próximo passo após a taxa de bolsa
     const redirectSuccess =
-      `${origin}/student/onboarding?step=documents_upload&payment=success&ref=${
+      `${origin}/student/onboarding?step=my_applications&payment=success&ref=${
         encodeURIComponent(reference)
       }&pm=p`;
     const redirectFailed =
