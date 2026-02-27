@@ -2,7 +2,6 @@ import React, { useState, useRef } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Upload, X, CheckCircle, AlertCircle, Camera } from 'lucide-react';
 import { supabase } from '../lib/supabase';
-import { useAuth } from '../hooks/useAuth';
 
 interface IdentityPhotoUploadProps {
   onUploadSuccess: (filePath: string, fileName: string) => void;

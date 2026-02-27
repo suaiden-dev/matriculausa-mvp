@@ -2371,6 +2371,64 @@
           "viewDetails": "Ver Detalles del Pago"
         }
       },
+      "chat": {
+        "title": "Chat de la Solicitud",
+        "subtitle": "Comunícate directamente con la universidad",
+        "placeholder": "Escribe tu mensaje...",
+        "sendButton": "Enviar",
+        "attachFile": "Adjuntar archivo",
+        "fileUploaded": "Archivo adjunto: {{fileName}}",
+        "messageSent": "Mensaje enviado con éxito",
+        "messageError": "Error al enviar el mensaje. Inténtalo de nuevo.",
+        "noMessages": "Aún no hay mensajes. ¡Inicia una conversación!",
+        "loading": "Cargando mensajes...",
+        "sending": "Enviando...",
+        "online": "En línea",
+        "lastSeen": "Visto por última vez {{time}}",
+        "typing": "Escribiendo...",
+        "messageStatus": {
+          "sent": "Enviado",
+          "delivered": "Entregado",
+          "read": "Leído"
+        },
+        "actions": {
+          "markAsRead": "Marcar como leído",
+          "deleteMessage": "Eliminar mensaje",
+          "downloadAttachment": "Descargar archivo adjunto"
+        },
+        "edit": {
+          "placeholder": "Edita tu mensaje...",
+          "save": "Guardar",
+          "cancel": "Cancelar"
+        },
+        "attachment": {
+          "label": "Archivo adjunto",
+          "remove": "Eliminar"
+        }
+      },
+      "studentChat": {
+        "header": {
+          "title": "Equipo de Soporte",
+          "responseTime": "Tiempo de respuesta: 1-2 horas hábiles",
+          "helpTooltip": "¿Cómo funciona el chat?"
+        },
+        "guide": {
+          "title": "Chatea con el equipo de soporte",
+          "subtitle": "Este chat te conecta directamente con el equipo de soporte. Úsalo para preguntas sobre becas, documentos y el progreso de tu solicitud. Evita compartir datos confidenciales (contraseñas o números de tarjeta).",
+          "supportsAttachments": "Envía mensajes y archivos adjuntos",
+          "businessHours": "Respuestas durante horario laboral",
+          "historySaved": "El historial de conversación se guarda",
+          "ctaStart": "Entendido",
+          "ctaLater": "Ahora no"
+        },
+        "input": {
+          "placeholder": "Escribe tu mensaje..."
+        },
+        "recipientLabel": {
+          "student": "Estudiante",
+          "support": "Administración"
+        }
+      },
       "details": {
         "studentInformation": {
           "title": "Información del Estudiante",

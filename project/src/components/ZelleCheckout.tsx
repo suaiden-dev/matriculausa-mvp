@@ -1,5 +1,6 @@
 import React, { useState, useRef, useEffect } from 'react';
 import { Upload, DollarSign, CheckCircle, AlertCircle, X, Clock, Loader2, FileUp, Send, Sparkles } from 'lucide-react';
+import { useTranslation } from 'react-i18next';
 import { useAuth } from '../hooks/useAuth';
 import { usePaymentBlocked } from '../hooks/usePaymentBlocked';
 import { supabase } from '../lib/supabase';
@@ -33,6 +34,7 @@ export const ZelleCheckout: React.FC<ZelleCheckoutProps> = ({
   metadata = {},
   onProcessingChange
 }) => {
+  const { t } = useTranslation();
   const { user } = useAuth();
   const { isBlocked, pendingPayment: blockedPendingPayment, rejectedPayment: blockedRejectedPayment, approvedPayment: blockedApprovedPayment, loading: paymentBlockedLoading } = usePaymentBlocked();
   
@@ -1212,8 +1214,8 @@ export const ZelleCheckout: React.FC<ZelleCheckoutProps> = ({
         case 'uploading':
           return {
             icon: FileUp,
-            title: 'Uploading Document...',
-            message: 'Please wait while we upload your payment confirmation',
+            title: t('zelleWaiting.actions.uploadingDocument') || 'Uploading Document...',
+            message: t('zelleWaiting.actions.uploadingWait') || 'Please wait while we upload your payment confirmation',
             bgGradient: 'from-blue-50/50 to-blue-100/30',
             borderColor: 'border-blue-200',
             iconGradient: 'from-blue-500 to-blue-600',
@@ -1225,8 +1227,8 @@ export const ZelleCheckout: React.FC<ZelleCheckoutProps> = ({
         case 'sending':
           return {
             icon: Send,
-            title: 'Sending for Verification...',
-            message: 'Your payment proof is being sent for automatic validation',
+            title: t('zelleWaiting.actions.sendingDocument') || 'Sending for Verification...',
+            message: t('zelleWaiting.actions.sendingWait') || 'Your payment proof is being sent for automatic validation',
             bgGradient: 'from-indigo-50/50 to-indigo-100/30',
             borderColor: 'border-indigo-200',
             iconGradient: 'from-indigo-500 to-indigo-600',
@@ -1238,8 +1240,8 @@ export const ZelleCheckout: React.FC<ZelleCheckoutProps> = ({
         case 'analyzing':
           return {
             icon: Sparkles,
-            title: 'Analyzing Payment...',
-            message: 'Our AI is validating your payment confirmation',
+            title: t('zelleWaiting.analyzingPayment'),
+            message: t('zelleWaiting.details.analyzingAi') || 'Our AI is validating your payment confirmation',
             bgGradient: 'from-blue-50/50 to-blue-100/30',
             borderColor: 'border-blue-200',
             iconGradient: 'from-blue-500 to-blue-600',
@@ -1251,8 +1253,8 @@ export const ZelleCheckout: React.FC<ZelleCheckoutProps> = ({
         default:
           return {
             icon: Loader2,
-            title: 'Processing...',
-            message: 'Please wait',
+            title: t('zelleCheckout.processing'),
+            message: t('zelleWaiting.actions.analyzingWait') || 'Please wait',
             bgGradient: 'from-blue-50/50 to-blue-100/30',
             borderColor: 'border-blue-200',
             iconGradient: 'from-blue-500 to-blue-600',
@@ -1331,10 +1333,10 @@ export const ZelleCheckout: React.FC<ZelleCheckoutProps> = ({
             </div>
           </div>
           <h3 className="text-xl sm:text-2xl font-bold text-blue-900 mb-3">
-            Analyzing Payment...
+            {t('zelleWaiting.analyzingPayment')}
           </h3>
           <p className="text-sm sm:text-base text-blue-700 mb-4">
-            Your payment confirmation is being automatically validated by our AI system.
+            {t('zelleWaiting.details.analyzingAi') || 'Your payment confirmation is being automatically validated by our AI system.'}
           </p>
 
           {isLocalhost && (
@@ -1367,10 +1369,10 @@ export const ZelleCheckout: React.FC<ZelleCheckoutProps> = ({
               </div>
             </div>
             <h3 className="text-xl sm:text-2xl font-bold text-amber-900 mb-3">
-              Payment Under Review
+              {t('zelleWaiting.messages.under_review')}
           </h3>
             <p className="text-sm sm:text-base text-amber-800 mb-4 leading-relaxed">
-            Your payment proof requires additional verification. Our team will review it within 48 hours.
+              {t('zelleWaiting.details.under_review')}
           </p>
             <div className="flex justify-center space-x-2 mt-4">
               <div className="w-2 h-2 bg-amber-500 rounded-full animate-bounce" style={{ animationDelay: '0s' }}></div>
@@ -1382,17 +1384,17 @@ export const ZelleCheckout: React.FC<ZelleCheckoutProps> = ({
 
         {/* Payment Details */}
         <div className="bg-white rounded-lg p-3 sm:p-4 mb-4">
-          <h4 className="font-semibold text-gray-800 mb-3 text-sm sm:text-base">Payment Details:</h4>
+          <h4 className="font-semibold text-gray-800 mb-3 text-sm sm:text-base">{t('zelleCheckout.paymentDetails')}:</h4>
           <div className="space-y-2 text-xs sm:text-sm text-gray-600">
             {metadata?.discount_applied && metadata?.original_amount ? (
               <div className="space-y-1">
                 <div className="flex justify-between">
-                  <span>Original Amount:</span>
+                  <span>{t('zelleCheckout.originalAmount')}:</span>
                   <span className="font-medium">${metadata.original_amount.toFixed(2)} USD</span>
                 </div>
                 <div className="flex justify-between text-green-600">
-                  <span>Discount Applied:</span>
-                  <span className="font-medium">-$50.00 USD</span>
+                  <span>{t('zelleCheckout.discountApplied')}:</span>
+                  <span className="font-medium">-${(metadata.original_amount - amount).toFixed(2)} USD</span>
                 </div>
                 <div className="flex justify-between pt-2 border-t border-gray-200">
                   <span className="font-semibold">Final Amount:</span>
@@ -1401,7 +1403,7 @@ export const ZelleCheckout: React.FC<ZelleCheckoutProps> = ({
               </div>
             ) : (
               <div className="flex justify-between">
-                <span className="font-semibold">Amount:</span>
+                <span className="font-semibold">{t('zelleCheckout.amount')}:</span>
                 <span className="font-bold text-gray-900">${amount.toFixed(2)} USD</span>
               </div>
             )}
@@ -1462,10 +1464,10 @@ export const ZelleCheckout: React.FC<ZelleCheckoutProps> = ({
         <div className="text-center mb-4 sm:mb-6">
           <AlertCircle className="w-16 h-16 sm:w-20 sm:h-20 text-red-500 mx-auto mb-4" />
           <h3 className="text-lg sm:text-xl font-bold text-red-800 mb-2">
-            Payment Rejected
+            {t('zelleWaiting.messages.rejected')}
           </h3>
           <p className="text-sm sm:text-base text-red-700 mb-4">
-            Your payment proof was not approved. Please review the reason below and upload a new payment confirmation.
+            {t('zelleWaiting.details.rejected')}
           </p>
         </div>
 
@@ -1485,7 +1487,7 @@ export const ZelleCheckout: React.FC<ZelleCheckoutProps> = ({
         ) : (
           <div className="bg-white rounded-lg border-2 border-red-300 p-4 sm:p-5 mb-4">
             <p className="text-sm sm:text-base text-gray-700">
-              Payment was rejected by admin. Please upload a new payment confirmation.
+              {t('zelleWaiting.details.rejected')}
             </p>
           </div>
         )}
@@ -1583,37 +1585,28 @@ export const ZelleCheckout: React.FC<ZelleCheckoutProps> = ({
       <div className={`bg-green-50 border border-green-200 rounded-lg p-4 sm:p-6 text-center ${className}`}>
         <CheckCircle className="w-16 h-16 text-green-500 mx-auto mb-4" />
         <h3 className="text-lg sm:text-xl font-semibold text-green-800 mb-2">
-          Payment Approved Successfully!
+          {t('zelleWaiting.messages.approved')}
         </h3>
         <p className="text-sm sm:text-base text-green-700 mb-4">
-          Your Zelle payment has been processed and approved. 
-          You can now proceed with the next steps.
+          {t('zelleWaiting.details.approved')}
         </p>
         <div className="bg-white rounded-lg p-3 sm:p-4 mb-4 text-left">
-          <h4 className="font-semibold text-gray-800 mb-2 text-sm sm:text-base">Payment Details:</h4>
+          <h4 className="font-semibold text-gray-800 mb-2 text-sm sm:text-base">{t('zelleCheckout.paymentDetails')}:</h4>
           <div className="space-y-1 text-xs sm:text-sm text-gray-600">
             {metadata?.discount_applied && metadata?.original_amount ? (
               <div className="space-y-1">
-                <div><strong>Original Amount:</strong> ${metadata.original_amount.toFixed(2)} USD</div>
-                <div><strong>Discount Applied:</strong> -$50.00 USD</div>
+                <div><strong>{t('zelleCheckout.originalAmount')}:</strong> ${metadata.original_amount.toFixed(2)} USD</div>
+                <div><strong>{t('zelleCheckout.discountApplied')}:</strong> -${(metadata.original_amount - amount).toFixed(2)} USD</div>
                 <div><strong>Final Amount:</strong> <span className="font-bold text-green-700">${amount.toFixed(2)} USD</span></div>
-                <div className="text-green-600 font-medium">🎉 You saved $50.00!</div>
+                <div className="text-green-600 font-medium">🎉 {t('zelleCheckout.savings') || 'You saved'} ${(metadata.original_amount - amount).toFixed(2)}!</div>
               </div>
             ) : (
-              <div><strong>Amount:</strong> ${amount.toFixed(2)} USD</div>
+              <div><strong>{t('zelleCheckout.amount')}:</strong> ${amount.toFixed(2)} USD</div>
             )}
             <div><strong>Fee Type:</strong> {feeType.replace('_', ' ')}</div>
             {zellePaymentId && (
               <div><strong>Payment ID:</strong> {zellePaymentId}</div>
             )}
-          </div>
-        </div>
-        <div className="bg-blue-50 border border-blue-200 rounded-lg p-3 sm:p-4 mb-4">
-          <h4 className="font-semibold text-blue-800 mb-2 text-sm sm:text-base">What happens next?</h4>
-          <div className="text-xs sm:text-sm text-blue-700 space-y-1">
-            <div>✅ Payment confirmation uploaded</div>
-            <div>✅ Payment approved successfully</div>
-            <div>🚀 Proceeding to next step automatically</div>
           </div>
         </div>
       </div>
@@ -1625,7 +1618,7 @@ export const ZelleCheckout: React.FC<ZelleCheckoutProps> = ({
     return (
       <div className={`bg-white border border-gray-200 rounded-lg p-4 sm:p-6 text-center ${className}`}>
         <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600 mx-auto mb-4"></div>
-        <p className="text-sm text-gray-600">Checking payment status...</p>
+        <p className="text-sm text-gray-600">{t('zelleWaiting.analyzingPayment') || 'Checking payment status...'}</p>
       </div>
     );
   }
@@ -1642,10 +1635,10 @@ export const ZelleCheckout: React.FC<ZelleCheckoutProps> = ({
         <div className="space-y-4 sm:space-y-6">
           <div>
             <h3 className="text-lg sm:text-xl font-semibold text-gray-900 mb-1 sm:mb-2">
-              Zelle Payment Instructions
+              {t('zelleCheckout.instructions') || 'Zelle Payment Instructions'}
             </h3>
             <p className="text-sm sm:text-base text-gray-600">
-              Follow these steps to complete your payment via Zelle
+              {t('zelleCheckout.subtitle') || 'Follow these steps to complete your payment via Zelle'}
             </p>
           </div>
 
@@ -1656,8 +1649,8 @@ export const ZelleCheckout: React.FC<ZelleCheckoutProps> = ({
                 <DollarSign className="w-4 h-4 sm:w-5 sm:h-5 text-gray-600" />
               </div>
               <div className="min-w-0 flex-1">
-                <h2 className="text-base sm:text-lg font-semibold text-gray-900">Zelle Payment Details</h2>
-                <p className="text-xs sm:text-sm text-gray-600">Send payment to the recipient below</p>
+                <h2 className="text-base sm:text-lg font-semibold text-gray-900">{t('zelleCheckout.zellePaymentDetails.title') || 'Zelle Payment Details'}</h2>
+                <p className="text-xs sm:text-sm text-gray-600">{t('zelleCheckout.zellePaymentDetails.subtitle') || 'Send payment to the recipient below'}</p>
               </div>
             </div>
 
@@ -1665,7 +1658,7 @@ export const ZelleCheckout: React.FC<ZelleCheckoutProps> = ({
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 sm:gap-4">
                 <div>
                   <label className="block text-xs sm:text-sm font-medium text-gray-700 mb-1">
-                    Recipient Email
+                    {t('zelleCheckout.zellePaymentDetails.recipientEmail') || 'Recipient Email'}
                   </label>
                   <div className="bg-gray-50 border border-gray-200 rounded-lg p-2 sm:p-3">
                     <code className="text-xs sm:text-sm font-mono text-gray-900 break-all">pay@matriculausa.com</code>
@@ -1674,7 +1667,7 @@ export const ZelleCheckout: React.FC<ZelleCheckoutProps> = ({
                 
                 <div>
                   <label className="block text-xs sm:text-sm font-medium text-gray-700 mb-1">
-                    Payment Amount
+                    {t('zelleCheckout.zellePaymentDetails.paymentAmount') || 'Payment Amount'}
                   </label>
                   <div className="bg-gray-50 border border-gray-200 rounded-lg p-2 sm:p-3">
                     {metadata?.discount_applied && metadata?.original_amount ? (
@@ -1682,7 +1675,7 @@ export const ZelleCheckout: React.FC<ZelleCheckoutProps> = ({
                         <div className="text-xs text-gray-500 line-through">${metadata.original_amount.toFixed(2)} USD</div>
                         <div className="text-base sm:text-lg font-bold text-gray-900">${amount.toFixed(2)} USD</div>
                         <div className="text-xs text-green-600 font-medium">
-                          🎉 You saved ${(metadata.original_amount - amount).toFixed(2)}!
+                          🎉 {t('zelleCheckout.savings') || 'You saved'} ${(metadata.original_amount - amount).toFixed(2)}!
                         </div>
                       </div>
                     ) : (
@@ -1698,9 +1691,8 @@ export const ZelleCheckout: React.FC<ZelleCheckoutProps> = ({
                     <span className="text-gray-600 text-xs font-bold">!</span>
                   </div>
                   <div className="min-w-0 flex-1">
-                    <p className="text-xs sm:text-sm text-gray-800 font-medium mb-1">Important</p>
-                    <p className="text-xs sm:text-sm text-gray-700">
-                      Make sure to send the exact amount of <strong>${amount.toFixed(2)} USD</strong> to <strong className="break-all">pay@matriculausa.com</strong> via Zelle. Any discrepancy will delay your payment processing.
+                    <p className="text-xs sm:text-sm text-gray-800 font-medium mb-1">{t('zelleCheckout.zellePaymentDetails.important')}</p>
+                    <p className="text-xs sm:text-sm text-gray-700" dangerouslySetInnerHTML={{ __html: t('zelleCheckout.zellePaymentDetails.importantMessage', { amount: amount.toFixed(2) })}}>
                     </p>
                   </div>
                 </div>
@@ -1712,7 +1704,7 @@ export const ZelleCheckout: React.FC<ZelleCheckoutProps> = ({
           <div className="bg-gray-50 border border-gray-200 rounded-lg p-3 sm:p-4">
             <h4 className="font-medium text-sm sm:text-base text-gray-900 mb-2 sm:mb-3 flex items-center">
               <Upload className="w-4 h-4 sm:w-5 sm:h-5 mr-2 text-gray-600 flex-shrink-0" />
-              <span>Upload Payment Confirmation Screenshot *</span>
+              <span>{t('zelleCheckout.uploadReceiptDescription') || 'Upload Payment Confirmation Screenshot'} *</span>
             </h4>
             
             {error && (
@@ -1756,16 +1748,16 @@ export const ZelleCheckout: React.FC<ZelleCheckoutProps> = ({
                 <div>
                   <Upload className="w-10 h-10 sm:w-12 sm:h-12 text-gray-400 mx-auto mb-3 sm:mb-4" />
                   <p className="text-sm sm:text-base text-gray-600 mb-1 sm:mb-2">
-                    Click to upload or drag and drop
+                    {t('zelleCheckout.dragAndDrop')}
                   </p>
                   <p className="text-xs sm:text-sm text-gray-500 mb-3 sm:mb-0">
-                    PNG, JPG up to 5MB
+                    {t('zelleCheckout.supportedFormats')}
                   </p>
                   <button
                     onClick={() => fileInputRef.current?.click()}
                     className="mt-2 sm:mt-4 bg-blue-600 text-white px-4 py-2 text-sm sm:text-base rounded-lg hover:bg-blue-700 transition-colors"
                   >
-                    Select File
+                    {t('zelleCheckout.uploadReceipt')}
                   </button>
                 </div>
               )}
@@ -1784,7 +1776,7 @@ export const ZelleCheckout: React.FC<ZelleCheckoutProps> = ({
             disabled={loading || !comprovanteFile || (isBlocked && blockedPendingPayment)}
             className="w-full bg-blue-600 text-white py-2.5 sm:py-3 px-4 rounded-lg hover:bg-blue-700 transition-colors font-medium text-sm sm:text-base disabled:opacity-50 disabled:cursor-not-allowed"
           >
-            {loading ? 'Processing...' : (isBlocked && blockedPendingPayment) ? 'Payment Processing...' : 'Submit Payment'}
+            {loading ? t('zelleCheckout.processing') : (isBlocked && blockedPendingPayment) ? t('zelleWaiting.analyzingPayment') : t('zelleCheckout.submitPayment')}
           </button>
 
           {isLocalhost && (
