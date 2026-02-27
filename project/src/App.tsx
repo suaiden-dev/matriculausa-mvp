@@ -11,6 +11,7 @@ import Home from './pages/Home';
 import About from './pages/About';
 import Auth from './pages/Auth';
 import Scholarships from './pages/Scholarships';
+import QuickRegistration from './pages/QuickRegistration';
 import Universities from './pages/Universities';
 import UniversityDetail from './pages/UniversityDetail';
 import HowItWorks from './pages/HowItWorks';
@@ -159,6 +160,7 @@ const AppContent = () => {
           <Route path="/auth/323-network/callback" element={<Auth323NetworkCallback />} />
           <Route path="/eb3-jobs" element={<EB3JobsLanding />} />
           <Route path="/unsubscribe" element={<UnsubscribeNewsletter />} />
+          <Route path="/selection-fee-registration" element={<QuickRegistration />} />
           
           <Route path="/checkout/zelle/waiting" element={<ZelleWaitingPage />} />
           <Route path="/checkout/zelle" element={<ZelleCheckoutPage />} />

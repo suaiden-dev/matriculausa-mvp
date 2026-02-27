@@ -61,7 +61,7 @@ const SimplifiedAffiliateTools: React.FC = () => {
     const fetchSellerCode = async () => {
       if (user?.id) {
         try {
-          const { data, error } = await supabase
+          const { data } = await supabase
             .from('sellers')
             .select('referral_code')
             .eq('user_id', user.id)
@@ -168,8 +168,9 @@ const SimplifiedAffiliateTools: React.FC = () => {
                     )}
                   </button>
                 </div>
+              </div>
             </div>
-          </div>
+
           </div>
 
           {/* Landing Page Links - apenas para sellers simplified */}

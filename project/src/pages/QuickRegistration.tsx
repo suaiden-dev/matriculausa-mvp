@@ -1,0 +1,1705 @@
+import React, { useState, useEffect, useRef } from 'react';
+import { useTranslation } from 'react-i18next';
+import { useNavigate, useLocation } from 'react-router-dom';
+import { useAuth } from '../hooks/useAuth';
+import { useFeeConfig } from '../hooks/useFeeConfig';
+import { STRIPE_PRODUCTS } from '../stripe-config';
+import { supabase } from '../lib/supabase';
+import { 
+  Mail, 
+  User, 
+  Users, 
+  Lock, 
+  AlertCircle,
+  HelpCircle,
+  Loader2,
+  CheckCircle2,
+  ChevronDown,
+  Shield,
+  X,
+  ArrowLeft,
+  Eye,
+  EyeOff,
+  Ticket,
+  CheckCircle,
+  Camera,
+  Upload,
+  Info
+} from 'lucide-react';
+import { Dialog, Transition } from '@headlessui/react';
+import { useTermsAcceptance } from '../hooks/useTermsAcceptance';
+import { calculateCardAmountWithFees, calculatePIXAmountWithFees, getExchangeRate } from '../utils/stripeFeeCalculator';
+import { ZelleCheckout } from '../components/ZelleCheckout';
+import PhoneInput from 'react-phone-number-input';
+import 'react-phone-number-input/style.css';
+
+// SVG Icons (Simplified for the registration page)
+const PixIcon = ({ className }: { className?: string }) => (
+  <svg className={className} xmlns="http://www.w3.org/2000/svg" viewBox="0 0 48 48">
+    <path fill="#4db6ac" d="M11.9,12h-0.68l8.04-8.04c2.62-2.61,6.86-2.61,9.48,0L36.78,12H36.1c-1.6,0-3.11,0.62-4.24,1.76l-6.8,6.77c-0.59,0.59-1.53,0.59-2.12,0l-6.8-6.77C15.01,12.62,13.5,12,11.9,12z"/>
+    <path fill="#4db6ac" d="M36.1,36h0.68l-8.04,8.04c-2.62,2.61-6.86,2.61-9.48,0L11.22,36h0.68c1.6,0,3.11-0.62,4.24-1.76l6.8-6.77c0.59-0.59,1.53-0.59,2.12,0l6.8,6.77C32.99,35.38,34.5,36,36.1,36z"/>
+    <path fill="#4db6ac" d="M44.04,28.74L38.78,34H36.1c-1.07,0-2.07-0.42-2.83-1.17l-6.8-6.78c-1.36-1.36-3.58-1.36-4.94,0l-6.8,6.78C13.97,33.58,12.97,34,11.9,34H9.22l-5.26-5.26c-2.61-2.62-2.61-6.86,0-9.48L9.22,14h2.68c1.07,0,2.07,0.42,2.83,1.17l6.8,6.78c0.68,0.68,1.58,1.02,2.47,1.02s1.79-0.34,2.47-1.02l6.8-6.78C34.03,14.42,35.03,14,36.1,14h2.68l5.26,5.26C46.65,21.88,46.65,26.12,44.04,28.74z"/>
+  </svg>
+);
+
+const ZelleIcon = ({ className }: { className?: string }) => (
+  <svg className={className} xmlns="http://www.w3.org/2000/svg" viewBox="0 0 48 48">
+    <path fill="#a0f" d="M35,42H13c-3.866,0-7-3.134-7-7V13c0-3.866,3.134-7,7-7h22c3.866,0,7,3.134,7,7v22C42,38.866,38.866,42,35,42z"/>
+    <path fill="#fff" d="M17.5,18.5h14c0.552,0,1-0.448,1-1V15c0-0.552-0.448-1-1-1h-14c-0.552,0-1,0.448-1,1v2.5C16.5,18.052,16.948,18.5,17.5,18.5z"/>
+    <path fill="#fff" d="M17,34.5h14.5c0.552,0,1-0.448,1-1V31c0-0.552-0.448-1-1-1H17c-0.552,0-1,0.448-1,1v2.5C16,34.052,16.448,34.5,17,34.5z"/>
+    <path fill="#fff" d="M22.25,11v6c0,0.276,0.224,0.5,0.5,0.5h3.5c0.276,0,0.5-0.224,0.5-0.5v-6c0-0.276-0.224-0.5-0.5-0.5h-3.5C22.474,10.5,22.25,10.724,22.25,11z"/>
+    <path fill="#fff" d="M22.25,32v6c0,0.276,0.224,0.5,0.5,0.5h3.5c0.276,0,0.5-0.224,0.5-0.5v-6c0-0.276-0.224-0.5-0.5-0.5h-3.5C22.474,31.5,22.25,31.724,22.25,32z"/>
+    <path fill="#fff" d="M16.578,30.938H22l10.294-12.839c0.178-0.222,0.019-0.552-0.266-0.552H26.5L16.275,30.298C16.065,30.553,16.247,30.938,16.578,30.938z"/>
+  </svg>
+);
+
+const StripeIcon = ({ className }: { className?: string }) => (
+  <div className={`${className} flex items-center justify-center bg-[#635bff] rounded-lg overflow-hidden shadow-sm shadow-[#635bff]/20`}>
+    <span 
+      className="text-white font-black text-[28px] leading-[0] select-none"
+      style={{ 
+        fontFamily: 'system-ui, -apple-system, sans-serif',
+        transform: 'translateY(-1.5px)' 
+      }}
+    >
+      S
+    </span>
+  </div>
+);
+
+const ParcelowIcon = ({ className }: { className?: string }) => (
+  <div className={`${className} flex items-center justify-center bg-white rounded-lg overflow-hidden p-0.5 shadow-sm border border-gray-100`}>
+    <img 
+      src="/parcelow_share.webp" 
+      alt="Parcelow" 
+      className="w-full h-full object-contain scale-110" 
+    />
+  </div>
+);
+
+const QuickRegistration: React.FC = () => {
+  const { t } = useTranslation();
+  const navigate = useNavigate();
+  const location = useLocation();
+  const { register, supabaseUser, userProfile, updateUserProfile } = useAuth();
+  const { getFeeAmount, formatFeeAmount } = useFeeConfig();
+  const { recordTermAcceptance } = useTermsAcceptance();
+
+  interface Term {
+    id: string;
+    title: string;
+    content: string;
+    term_type: string;
+    is_active: boolean;
+    version: number;
+    created_at: string;
+    updated_at: string;
+  }
+
+  // Form State
+  const [formData, setFormData] = useState(() => {
+    try {
+      const saved = sessionStorage.getItem('matricula_quick_form');
+      if (saved) return JSON.parse(saved);
+    } catch {}
+    return {
+      full_name: '',
+      email: '',
+      phone: '',
+      dependents: 0,
+      password: '',
+      confirm_password: '',
+      termsAccepted: false,
+      cpf: ''
+    };
+  });
+
+  const [isRegistered, setIsRegistered] = useState(() => {
+    return sessionStorage.getItem('matricula_quick_registered') === 'true';
+  });
+
+  useEffect(() => {
+    if (formData.full_name || formData.email) {
+      sessionStorage.setItem('matricula_quick_form', JSON.stringify(formData));
+    }
+  }, [formData]);
+
+  // UI State
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  const [couponCode, setCouponCode] = useState('');
+  const [isCouponValid, setIsCouponValid] = useState(false);
+  const [selectedMethod, setSelectedMethod] = useState<'stripe' | 'pix' | 'zelle' | 'parcelow'>('stripe');
+  const [showZelleCheckout, setShowZelleCheckout] = useState(false);
+  const [showPassword, setShowPassword] = useState(false);
+  const [showConfirmPassword, setShowConfirmPassword] = useState(false);
+
+  // Aligned with SelectionFeeStep coupon states
+  const [hasReferralCode, setHasReferralCode] = useState(false);
+  const [isValidating, setIsValidating] = useState(false);
+  const [validationResult, setValidationResult] = useState<{
+    isValid: boolean;
+    message: string;
+    discountAmount?: number;
+    isSelfReferral?: boolean;
+  } | null>(null);
+  const [codeApplied, setCodeApplied] = useState(false);
+
+  // Promotional coupon states (admin coupons)
+  const [isValidatingPromotionalCoupon, setIsValidatingPromotionalCoupon] = useState(false);
+  const [promotionalCouponValidation, setPromotionalCouponValidation] = useState<{
+    isValid: boolean;
+    message: string;
+    discountAmount?: number;
+    finalAmount?: number;
+    couponId?: string;
+  } | null>(null);
+  const [promotionalCoupon, setPromotionalCoupon] = useState('');
+  
+  // Auto-scroll to top when Zelle checkout is shown
+  useEffect(() => {
+    if (showZelleCheckout) {
+      const timer = setTimeout(() => {
+        window.scrollTo({ top: 0, behavior: 'instant' });
+        document.documentElement.scrollTop = 0;
+        document.body.scrollTop = 0;
+      }, 50);
+      return () => clearTimeout(timer);
+    }
+  }, [showZelleCheckout]);
+
+  // Auto-clear error after 5 seconds
+  useEffect(() => {
+    if (error) {
+      const timer = setTimeout(() => {
+        setError(null);
+      }, 5000);
+      return () => clearTimeout(timer);
+    }
+  }, [error]);
+
+  // CPF Mask/Format helper
+  const formatCPF = (value: string) => {
+    return value
+      .replace(/\D/g, '')
+      .replace(/(\d{3})(\d)/, '$1.$2')
+      .replace(/(\d{3})(\d)/, '$1.$2')
+      .replace(/(\d{3})(\d{1,2})/, '$1-$2')
+      .replace(/(-\d{2})\d+?$/, '$1');
+  };
+
+  // Terms state
+  const [showTermsModal, setShowTermsModal] = useState(false);
+  const [activeTerm, setActiveTerm] = useState<Term | null>(null);
+  const [loadingTerms, setLoadingTerms] = useState(false);
+  const [hasScrolledToBottom, setHasScrolledToBottom] = useState(false);
+  const [termsModalPage, setTermsModalPage] = useState<'terms' | 'selfie'>('terms');
+  const [identityPhoto, setIdentityPhoto] = useState<File | null>(null);
+  const [identityPhotoPreview, setIdentityPhotoPreview] = useState<string | null>(null);
+  const termsContentRef = useRef<HTMLDivElement>(null);
+  const fileInputRef = useRef<HTMLInputElement>(null);
+
+  // Fees with Stripe fees
+  const [exchangeRate, setExchangeRate] = useState<number | null>(null);
+  const [cardAmountWithFees, setCardAmountWithFees] = useState<number>(0);
+  const [pixAmountWithFees, setPixAmountWithFees] = useState<number>(0);
+
+  // Constants
+  const baseFee = getFeeAmount('selection_process');
+  const dependentsFeeValue = (formData.dependents || 0) * 100;
+  
+  // Calcular preço final com desconto (Lógica da SelectionFeeStep)
+  const currentFee = (() => {
+    // 1. Cupom promocional tem prioridade
+    if (promotionalCouponValidation?.isValid && promotionalCouponValidation.finalAmount !== undefined) {
+      return promotionalCouponValidation.finalAmount;
+    }
+    
+    // 2. Código validado e aplicado
+    if ((isCouponValid || codeApplied) && validationResult?.isValid) {
+      const discount = validationResult.discountAmount || 50;
+      return Math.max(baseFee - discount, 0);
+    }
+    
+    return baseFee;
+  })();
+
+  const formattedAmount = formatFeeAmount(currentFee);
+  const originalFormattedAmount = formatFeeAmount(baseFee);
+
+  // URL Parameter for Coupon
+  useEffect(() => {
+    const params = new URLSearchParams(location.search);
+    const code = params.get('coupon') || params.get('ref');
+    if (code) {
+      setCouponCode(code);
+      handleValidateCoupon(code);
+    }
+  }, [location.search]);
+
+  const handleValidateCoupon = async (code: string) => {
+    if (!code) return;
+    setHasReferralCode(true);
+    await validateDiscountCode(code);
+  };
+
+  const validateDiscountCode = async (providedCode?: string) => {
+    const targetCode = (providedCode || couponCode).trim().toUpperCase();
+    
+    if (!targetCode) {
+      setValidationResult({
+        isValid: false,
+        message: t('preCheckoutModal.pleaseEnterCode') || 'Please enter a code'
+      });
+      return;
+    }
+
+    setIsValidating(true);
+    setValidationResult(null);
+
+    try {
+      // Check if code exists and is active (checking both affiliate_codes and sellers)
+      let { data: affiliateCodeData, error: affiliateError } = await supabase
+        .from('affiliate_codes')
+        .select('user_id, code, is_active')
+        .eq('code', targetCode)
+        .eq('is_active', true)
+        .maybeSingle();
+
+      // Fallback to sellers table if not found in affiliate_codes
+      if (!affiliateCodeData && !affiliateError) {
+        const { data: sellerData } = await supabase
+          .from('sellers')
+          .select('user_id, referral_code, is_active')
+          .eq('referral_code', targetCode)
+          .eq('is_active', true)
+          .maybeSingle();
+        
+        if (sellerData) {
+          affiliateCodeData = {
+            user_id: sellerData.user_id,
+            code: sellerData.referral_code,
+            is_active: sellerData.is_active
+          };
+        }
+      }
+
+      if (!affiliateCodeData) {
+        setValidationResult({
+          isValid: false,
+          message: t('preCheckoutModal.invalidCode') || 'Invalid code'
+        });
+        return;
+      }
+
+      // Check if not self-referral
+      if (affiliateCodeData.user_id === supabaseUser?.id) {
+        setValidationResult({
+          isValid: false,
+          message: t('preCheckoutModal.selfReferral') || 'Self-referral not allowed'
+        });
+        return;
+      }
+
+      // Se já estiver logado/registrado, podemos aplicar no banco
+      if (isRegistered && supabaseUser?.id && supabaseUser?.email) {
+        const { data: result, error: validationError } = await supabase
+          .rpc('validate_and_apply_referral_code', {
+            user_id_param: supabaseUser.id,
+            affiliate_code_param: targetCode,
+            email_param: supabaseUser.email
+          });
+
+        if (validationError || !result?.success) {
+          const errorMessage = validationError?.message || result?.error || t('preCheckoutModal.errorValidating') || 'Erro ao validar código';
+          setValidationResult({
+            isValid: false,
+            message: errorMessage
+          });
+          return;
+        }
+      }
+
+      // Se for apenas pré-registro, validamos localmente para a UI
+      setValidationResult({
+        isValid: true,
+        message: t('preCheckoutModal.validCode') || 'Valid code! $50 discount applied',
+        discountAmount: 50
+      });
+      setIsCouponValid(true);
+      setCodeApplied(true);
+      if (providedCode) setCouponCode(targetCode);
+
+    } catch (error) {
+      console.error('Error validating code:', error);
+      setValidationResult({
+        isValid: false,
+        message: t('preCheckoutModal.errorValidating') || 'Error validating code'
+      });
+    } finally {
+      setIsValidating(false);
+    }
+  };
+
+  const validatePromotionalCoupon = async () => {
+    if (!promotionalCoupon.trim()) {
+      setPromotionalCouponValidation({
+        isValid: false,
+        message: 'Please enter a coupon code'
+      });
+      return;
+    }
+
+    const normalizedCode = promotionalCoupon.trim().toUpperCase();
+    
+    setIsValidatingPromotionalCoupon(true);
+    setPromotionalCouponValidation(null);
+
+    try {
+      const { data: result, error } = await supabase.rpc('validate_and_apply_admin_promotional_coupon', {
+        p_code: normalizedCode,
+        p_fee_type: 'selection_process',
+        p_user_id: supabaseUser?.id || null
+      });
+
+      if (error || !result?.valid) {
+        setPromotionalCouponValidation({
+          isValid: false,
+          message: result?.message || 'Invalid coupon code'
+        });
+        return;
+      }
+
+      let dAmount = 0;
+      if (result.discount_type === 'percentage') {
+        dAmount = (baseFee * result.discount_value) / 100;
+      } else {
+        dAmount = result.discount_value;
+      }
+      
+      dAmount = Math.min(dAmount, baseFee);
+      const fAmount = Math.max(0, baseFee - dAmount);
+
+      setPromotionalCouponValidation({
+        isValid: true,
+        message: `Coupon ${normalizedCode} applied! You saved $${dAmount.toFixed(2)}`,
+        discountAmount: dAmount,
+        finalAmount: fAmount,
+        couponId: result.id
+      });
+      
+    } catch (error: any) {
+      console.error('Error validating promotional coupon:', error);
+      setPromotionalCouponValidation({
+        isValid: false,
+        message: 'Failed to validate coupon'
+      });
+    } finally {
+      setIsValidatingPromotionalCoupon(false);
+    }
+  };
+
+  const removePromotionalCoupon = () => {
+    setPromotionalCoupon('');
+    setPromotionalCouponValidation(null);
+  };
+
+  // Load exchange rate and calculate fees
+  useEffect(() => {
+    const loadExchangeRate = async () => {
+      const rate = await getExchangeRate();
+      setExchangeRate(rate);
+    };
+    loadExchangeRate();
+  }, []);
+
+  useEffect(() => {
+    if (currentFee > 0) {
+      setCardAmountWithFees(calculateCardAmountWithFees(currentFee));
+      if (exchangeRate) {
+        setPixAmountWithFees(calculatePIXAmountWithFees(currentFee, exchangeRate));
+      }
+    }
+  }, [currentFee, exchangeRate]);
+
+  // Load active terms from database
+  const loadActiveTerms = async () => {
+    try {
+      setLoadingTerms(true);
+      const { data, error } = await supabase
+        .from('application_terms')
+        .select('*')
+        .eq('term_type', 'checkout_terms')
+        .eq('is_active', true)
+        .order('created_at', { ascending: false })
+        .limit(1);
+
+      if (error) {
+        console.error('Error loading terms:', error);
+        return;
+      }
+
+      if (data && data.length > 0) {
+        setActiveTerm(data[0]);
+      }
+    } catch (err) {
+      console.error('Unexpected error loading terms:', err);
+    } finally {
+      setLoadingTerms(false);
+    }
+  };
+
+  const handleTermsClick = async () => {
+    await loadActiveTerms();
+    setShowTermsModal(true);
+    setHasScrolledToBottom(false);
+    setTermsModalPage('terms');
+  };
+
+  const handleTermsAccept = async () => {
+    if (termsModalPage === 'terms') {
+      if (hasScrolledToBottom && activeTerm) {
+        setTermsModalPage('selfie');
+      }
+    } else {
+      // Página de Selfie
+      if (identityPhotoPreview) {
+        setFormData((prev: any) => ({ ...prev, termsAccepted: true }));
+        setShowTermsModal(false);
+      }
+    }
+  };
+
+  const handleFileSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    // Validação básica
+    if (!file.type.startsWith('image/')) {
+      setError('Apenas arquivos de imagem são permitidos');
+      return;
+    }
+
+    if (file.size > 5 * 1024 * 1024) {
+      setError('O arquivo deve ter no máximo 5MB');
+      return;
+    }
+
+    setIdentityPhoto(file);
+    const reader = new FileReader();
+    reader.onloadend = () => {
+      setIdentityPhotoPreview(reader.result as string);
+    };
+    reader.readAsDataURL(file);
+  };
+
+  const handleTermsScroll = () => {
+    if (termsContentRef.current) {
+      const { scrollTop, scrollHeight, clientHeight } = termsContentRef.current;
+      if (scrollTop + clientHeight >= scrollHeight - 5) {
+        setHasScrolledToBottom(true);
+      }
+    }
+  };
+
+  useEffect(() => {
+    if (activeTerm && showTermsModal) {
+      const timer = setTimeout(() => {
+        if (termsContentRef.current) {
+          const { scrollHeight, clientHeight } = termsContentRef.current;
+          if (scrollHeight <= clientHeight) {
+            setHasScrolledToBottom(true);
+          }
+        }
+      }, 500);
+      return () => clearTimeout(timer);
+    }
+  }, [activeTerm, showTermsModal]);
+
+  const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) => {
+    const { name, value, type } = e.target;
+    setFormData((prev: any) => ({
+      ...prev,
+      [name]: type === 'checkbox' ? (e.target as HTMLInputElement).checked : 
+               name === 'dependents' ? parseInt(value) : value
+    }));
+  };
+
+  const handleRegisterAndPay = async (e: React.FormEvent) => {
+    e.preventDefault();
+
+    // Se já tiver pago, redireciona ao clicar em pagar
+    if (userProfile?.has_paid_selection_process_fee) {
+      navigate('/student/dashboard');
+      return;
+    }
+
+    if (isRegistered) {
+      setLoading(true);
+      setError(null);
+      try {
+        if (selectedMethod === 'parcelow') {
+          if (!formData.cpf || formData.cpf.length < 14) {
+            throw new Error(t('rapidRegistration.payment.cpf.error') || 'CPF é obrigatório para pagamento via Parcelow.');
+          }
+          // Update profile if CPF is missing
+          if (!userProfile?.cpf_document || userProfile.cpf_document !== formData.cpf) {
+            await updateUserProfile({ cpf_document: formData.cpf });
+          }
+        }
+
+        if (selectedMethod === 'stripe' || selectedMethod === 'pix' || selectedMethod === 'parcelow' || !selectedMethod) {
+          await handlePaymentCheckout(selectedMethod || 'stripe');
+        } else if (selectedMethod === 'zelle') {
+          setShowZelleCheckout(true);
+          setLoading(false);
+        } else {
+          throw new Error(t('rapidRegistration.payment.error.invalidMethod') || 'Método de pagamento inválido.');
+        }
+      } catch (err: any) {
+        setError(err.message || 'Error occurred');
+        setLoading(false);
+      }
+      return;
+    }
+
+    if (formData.password !== formData.confirm_password) {
+      setError(t('rapidRegistration.form.error.passwordsNotMatch') || 'As senhas não coincidem');
+      setLoading(false);
+      return;
+    }
+
+    if (!formData.termsAccepted) {
+      setError(t('rapidRegistration.form.error.terms') || 'Você deve aceitar os termos');
+      setLoading(false);
+      return;
+    }
+
+    if (selectedMethod === 'parcelow' && (!formData.cpf || formData.cpf.length < 14)) {
+      setError(t('rapidRegistration.payment.cpf.error') || 'CPF é obrigatório para pagamento via Parcelow.');
+      setLoading(false);
+      return;
+    }
+
+    setLoading(true);
+    setError(null);
+
+    try {
+      // 1. Register User
+      const userData = {
+        full_name: formData.full_name,
+        phone: formData.phone,
+        dependents: formData.dependents,
+        referralCode: codeApplied ? couponCode : undefined,
+        role: 'student' as const,
+        cpf_document: formData.cpf // Include CPF in metadata
+      };
+
+      const result = await register(formData.email, formData.password, userData);
+      
+      // 2. Upload Identity Photo and record Terms Acceptance
+      if (result?.user?.id) {
+        // Record terms acceptance first
+        if (activeTerm) {
+          try {
+            await recordTermAcceptance(activeTerm.id, 'checkout_terms', result.user.id);
+            
+            // If we have a photo, upload it and update the record
+            if (identityPhoto) {
+              const { data: sessionData } = await supabase.auth.getSession();
+              const token = sessionData.session?.access_token;
+              
+              if (token) {
+                const uploadFormData = new FormData();
+                uploadFormData.append('file', identityPhoto);
+                
+                const SUPABASE_URL = import.meta.env.VITE_SUPABASE_URL;
+                const uploadResponse = await fetch(`${SUPABASE_URL}/functions/v1/upload-identity-photo`, {
+                  method: 'POST',
+                  headers: {
+                    'Authorization': `Bearer ${token}`,
+                  },
+                  body: uploadFormData,
+                });
+                
+                const uploadResult = await uploadResponse.json();
+                
+                if (uploadResult.success) {
+                  // Update the acceptance record with photo info
+                  const { data: termAcceptance } = await supabase
+                    .from('comprehensive_term_acceptance')
+                    .select('id')
+                    .eq('user_id', result.user.id)
+                    .eq('term_id', activeTerm.id)
+                    .eq('term_type', 'checkout_terms')
+                    .order('accepted_at', { ascending: false })
+                    .limit(1)
+                    .maybeSingle();
+
+                  if (termAcceptance) {
+                    await supabase
+                      .from('comprehensive_term_acceptance')
+                      .update({
+                        identity_photo_path: uploadResult.filePath,
+                        identity_photo_name: uploadResult.fileName,
+                        identity_photo_status: 'pending'
+                      })
+                      .eq('id', termAcceptance.id);
+                  }
+                }
+              }
+            }
+          } catch (termErr) {
+            console.error('Failed to record terms or upload photo:', termErr);
+            // Continue anyway, registration was successful
+          }
+        }
+      }
+      
+      setIsRegistered(true);
+      sessionStorage.setItem('matricula_quick_registered', 'true');
+      
+      // 3. Initiate Payment
+      if (selectedMethod === 'stripe' || selectedMethod === 'pix' || selectedMethod === 'parcelow' || !selectedMethod) {
+        await handlePaymentCheckout(selectedMethod || 'stripe');
+      } else if (selectedMethod === 'zelle') {
+        setShowZelleCheckout(true);
+        setLoading(false);
+      } else {
+        throw new Error(t('rapidRegistration.payment.error.invalidMethod') || 'Método de pagamento inválido.');
+      }
+
+    } catch (err: any) {
+      console.error('Registration failed:', err);
+      setError(err.message || t('rapidRegistration.form.error.general', 'Ocorreu um erro no registro.'));
+      setLoading(false);
+    }
+  };
+
+  const handlePaymentCheckout = async (method: 'stripe' | 'pix' | 'parcelow') => {
+    try {
+      const { data: sessionData } = await supabase.auth.getSession();
+      const token = sessionData.session?.access_token;
+      
+      if (!token) throw new Error(t('rapidRegistration.payment.error.notAuthenticated', 'Usuário não autenticado.'));
+
+      let apiUrl = `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/stripe-checkout-selection-process-fee`;
+      if (method === 'parcelow') {
+        apiUrl = `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/parcelow-checkout-selection-process`;
+      }
+
+      // Metadata estruturado para o webhook e tracking
+      const paymentMetadata = {
+        student_id: sessionData.session?.user?.id,
+        user_id: sessionData.session?.user?.id,
+        email: sessionData.session?.user?.email,
+        full_name: formData.full_name,
+        phone: formData.phone,
+        country: formData.country,
+        cpf: formData.cpf,
+        field_of_interest: formData.field_of_interest,
+        academic_level: formData.academic_level,
+        english_proficiency: formData.english_proficiency,
+        affiliate_code: codeApplied ? couponCode : undefined,
+        promotional_coupon: promotionalCouponValidation?.isValid ? promotionalCoupon : undefined,
+        registration_source: 'quick_registration',
+        fee_type: 'selection_process',
+        payment_method: method
+      };
+
+      console.log('[DEBUG] Payment Request:', {
+        apiUrl,
+        method,
+        body: {
+          price_id: STRIPE_PRODUCTS.selectionProcess.priceId,
+          amount: currentFee,
+          payment_method: method,
+          success_url: `${window.location.origin}/student/dashboard/selection-process-fee-success?session_id={CHECKOUT_SESSION_ID}`,
+          cancel_url: window.location.href,
+          mode: 'payment',
+          payment_type: 'selection_process',
+          fee_type: 'selection_process',
+          metadata: paymentMetadata
+        }
+      });
+
+      const response = await fetch(apiUrl, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${token}`
+        },
+        body: JSON.stringify({
+          price_id: STRIPE_PRODUCTS.selectionProcess.priceId,
+          amount: currentFee,
+          payment_method: method,
+          success_url: `${window.location.origin}/student/dashboard/selection-process-fee-success?session_id={CHECKOUT_SESSION_ID}&pm=${method === 'pix' ? 'pix' : 's'}`,
+          cancel_url: window.location.href,
+          mode: 'payment',
+          payment_type: 'selection_process',
+          fee_type: 'selection_process',
+          metadata: paymentMetadata,
+          // Campos no root para compatibilidade
+          user_id: sessionData.session?.user?.id,
+          email: sessionData.session?.user?.email,
+          cpf: formData.cpf
+        })
+      });
+
+      const data = await response.json();
+      console.log('[DEBUG] Payment Response:', data);
+
+      const paymentUrl = data.session_url || data.url || data.checkout_url;
+
+      if (paymentUrl) {
+        window.location.href = paymentUrl;
+      } else {
+        throw new Error(data.error || t('rapidRegistration.payment.error.generationFailed', 'Falha ao gerar link de pagamento. Tente novamente.'));
+      }
+    } catch (err: any) {
+      console.error('[DEBUG] Payment Catch Error:', err);
+      console.error('Payment redirect failed:', err);
+      throw err;
+    }
+  };
+
+  const getButtonText = () => {
+    const methodNames: Record<string, string> = {
+      stripe: t('rapidRegistration.payment.methods.stripe', 'Cartão de Crédito'),
+      pix: t('rapidRegistration.payment.methods.pix', 'PIX'),
+      parcelow: t('rapidRegistration.payment.methods.parcelow', 'Parcelow'),
+      zelle: t('rapidRegistration.payment.methods.zelle', 'Zelle')
+    };
+
+    const methodLabel = methodNames[selectedMethod || ''];
+    
+    if (methodLabel) {
+      return t('rapidRegistration.payment.payWith', { method: methodLabel });
+    }
+    
+    return isRegistered 
+      ? (t('rapidRegistration.payment.securePayment', 'Pagar de Forma Segura')) 
+      : (t('rapidRegistration.form.submit', 'Confirmar Registro'));
+  };
+
+  if (showZelleCheckout) {
+    return (
+      <div className="min-h-screen bg-gray-50 flex flex-col items-center p-4 pt-12 pb-32">
+        <div className="max-w-4xl w-full relative">
+          <button 
+            onClick={() => setShowZelleCheckout(false)}
+            className="flex items-center gap-2 text-gray-500 font-bold hover:text-[#05294E] transition-all mb-8 group"
+          >
+            <ArrowLeft className="w-5 h-5 transition-transform group-hover:-translate-x-1" />
+            {t('rapidRegistration.zelle.back')}
+          </button>
+
+          <div className="bg-white rounded-[2.5rem] shadow-2xl border border-slate-200 p-8 overflow-hidden">
+            <div className="mb-8 text-center">
+              <h2 className="text-3xl font-black text-gray-900 mb-2 uppercase tracking-tight">{t('rapidRegistration.zelle.title')}</h2>
+              <p className="text-gray-500 font-medium">{t('rapidRegistration.zelle.subtitle')}</p>
+            </div>
+            <ZelleCheckout 
+              amount={currentFee}
+              feeType="selection_process"
+              onSuccess={() => navigate('/student/dashboard')}
+            />
+          </div>
+        </div>
+      </div>
+    );
+  }
+
+  return (
+    <div className="min-h-screen bg-gray-50 pt-24 pb-32">
+      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+        <div className="text-center mb-12">
+          <h1 className="text-4xl font-extrabold text-grey-900 tracking-tight sm:text-5xl">
+            {t('rapidRegistration.title')}
+          </h1>
+          <p className="mt-4 text-xl text-gray-500">
+            {t('rapidRegistration.subtitle')}
+          </p>
+        </div>
+
+        <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
+          {/* Left: Registration Form */}
+          <div className="lg:col-span-2 space-y-8">
+            <form id="registration-form" onSubmit={handleRegisterAndPay} className="space-y-8">
+              {/* Seção 1: Informações da Conta & Termos */}
+              <div className="bg-white rounded-3xl shadow-xl border border-slate-200 p-8 relative overflow-hidden">
+                <div className="absolute top-0 right-0 w-32 h-32 bg-blue-50 rounded-full -mr-16 -mt-16 opacity-50"></div>
+                
+                <div className="relative z-10 space-y-8">
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-x-8 gap-y-6">
+                    {/* Full Name */}
+                    <div className="flex flex-col">
+                      <label className="block text-sm font-bold text-slate-700 mb-2 px-1">
+                        <span className="text-[#D0151C] font-bold mr-1">*</span>
+                        {t('rapidRegistration.form.fullName')}
+                      </label>
+                      <div className="relative mt-auto">
+                        <div className="absolute inset-y-0 left-0 pl-4 flex items-center pointer-events-none">
+                          <User className="h-5 w-5 text-slate-400" />
+                        </div>
+                        <input
+                          type="text"
+                          name="full_name"
+                          required
+                          value={formData.full_name}
+                          onChange={handleChange}
+                          disabled={isRegistered}
+                          placeholder={t('rapidRegistration.form.placeholders.fullName')}
+                          className="block w-full pl-12 pr-4 py-3.5 border border-slate-200 rounded-2xl outline-none focus:outline-none focus:ring-2 focus:ring-[#05294E] focus:border-[#05294E] text-slate-900 bg-slate-50/50 transition-all duration-300 disabled:opacity-50 disabled:cursor-not-allowed"
+                        />
+                      </div>
+                    </div>
+
+                    {/* Email */}
+                    <div className="flex flex-col">
+                      <label className="block text-sm font-bold text-slate-700 mb-2 px-1">
+                        <span className="text-[#D0151C] font-bold mr-1">*</span>
+                        {t('rapidRegistration.form.email')}
+                      </label>
+                      <div className="relative mt-auto">
+                        <div className="absolute inset-y-0 left-0 pl-4 flex items-center pointer-events-none">
+                          <Mail className="h-5 w-5 text-slate-400" />
+                        </div>
+                        <input
+                          type="email"
+                          name="email"
+                          required
+                          value={formData.email}
+                          onChange={handleChange}
+                          disabled={isRegistered}
+                          placeholder={t('rapidRegistration.form.placeholders.email')}
+                          className="block w-full pl-12 pr-4 py-3.5 border border-slate-200 rounded-2xl outline-none focus:outline-none focus:ring-2 focus:ring-[#05294E] focus:border-[#05294E] text-slate-900 bg-slate-50/50 transition-all duration-300 disabled:opacity-50 disabled:cursor-not-allowed"
+                        />
+                      </div>
+                    </div>
+
+                    {/* Phone */}
+                    <div className="flex flex-col">
+                      <label className="block text-sm font-bold text-slate-700 mb-2 px-1">
+                        <span className="text-[#D0151C] font-bold mr-1">*</span>
+                        {t('rapidRegistration.form.phone')}
+                      </label>
+                      <div className="relative mt-auto">
+                        <PhoneInput
+                          international
+                          defaultCountry="US"
+                          addInternationalOption={false}
+                          limitMaxLength={true}
+                          maxLength={20}
+                          value={formData.phone}
+                          disabled={isRegistered}
+                          onChange={(value) => {
+                            setFormData((prev: any) => ({ ...prev, phone: value || '' }));
+                          }}
+                          className={`quick-registration-phone w-full px-4 py-3.5 bg-slate-50/50 border border-slate-200 rounded-2xl outline-none focus-within:outline-none focus-within:ring-2 focus-within:ring-[#05294E] focus-within:border-[#05294E] text-slate-900 transition-all duration-300 ${isRegistered ? 'opacity-50 cursor-not-allowed' : ''}`}
+                          placeholder={t('rapidRegistration.form.placeholders.phone')}
+                        />
+                      </div>
+                    </div>
+
+                    {/* Dependents Selector */}
+                    <div className="flex flex-col">
+                      <label className="block text-sm font-bold text-slate-700 mb-2 px-1 leading-tight">
+                        {t('rapidRegistration.form.dependents')} 
+                        <span className="block text-[10px] font-normal text-slate-400 mt-0.5">
+                        {t('rapidRegistration.form.dependentsSubtitle') || 'Family members (spouse and/or children)'}
+                        </span>
+                      </label>
+                      <div className="relative mt-auto">
+                        <div className="absolute inset-y-0 left-0 pl-4 flex items-center pointer-events-none z-10">
+                          <Users className="h-5 w-5 text-slate-400" />
+                        </div>
+                        <div className="absolute inset-y-0 right-4 flex items-center pointer-events-none z-10">
+                          <ChevronDown className="h-5 w-5 text-slate-400" />
+                        </div>
+                        <select
+                          id="dependents"
+                          name="dependents"
+                          value={formData.dependents || 0}
+                          disabled={isRegistered}
+                          onChange={(e) => {
+                            const value = parseInt(e.target.value) || 0;
+                            setFormData((prev: any) => ({ ...prev, dependents: value }));
+                          }}
+                          className="appearance-none block w-full pl-12 pr-12 py-3.5 border border-slate-200 rounded-2xl outline-none focus:outline-none focus:ring-2 focus:ring-[#05294E] focus:border-[#05294E] text-slate-900 bg-slate-50/50 transition-all duration-300 text-sm sm:text-base cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed"
+                        >
+                          <option value={0}>{t('rapidRegistration.form.dependentOptions.count', { count: 0 })}</option>
+                          <option value={1}>{t('rapidRegistration.form.dependentOptions.count', { count: 1 })}</option>
+                          <option value={2}>{t('rapidRegistration.form.dependentOptions.count', { count: 2 })}</option>
+                          <option value={3}>{t('rapidRegistration.form.dependentOptions.count', { count: 3 })}</option>
+                          <option value={4}>{t('rapidRegistration.form.dependentOptions.count', { count: 4 })}</option>
+                          <option value={5}>{t('rapidRegistration.form.dependentOptions.count', { count: 5 })}</option>
+                        </select>
+                      </div>
+                    </div>
+
+                    {/* Password */}
+                    <div className="flex flex-col">
+                      <label className="block text-sm font-bold text-slate-700 mb-2 px-1">
+                        <span className="text-[#D0151C] font-bold mr-1">*</span>
+                        {t('rapidRegistration.form.password')}
+                      </label>
+                      <div className="relative mt-auto">
+                        <div className="absolute inset-y-0 left-0 pl-4 flex items-center pointer-events-none">
+                          <Lock className="h-5 w-5 text-slate-400" />
+                        </div>
+                        <input
+                          type={showPassword ? "text" : "password"}
+                          name="password"
+                          required
+                          minLength={6}
+                          value={formData.password}
+                          onChange={handleChange}
+                          disabled={isRegistered}
+                          placeholder={t('rapidRegistration.form.placeholders.password')}
+                          className="block w-full pl-12 pr-12 py-3.5 border border-slate-200 rounded-2xl outline-none focus:outline-none focus:ring-2 focus:ring-[#05294E] focus:border-[#05294E] text-slate-900 bg-slate-50/50 transition-all duration-300 disabled:opacity-50 disabled:cursor-not-allowed"
+                        />
+                        <button
+                          type="button"
+                          onClick={() => setShowPassword(!showPassword)}
+                          disabled={isRegistered}
+                          className="absolute inset-y-0 right-0 pr-4 flex items-center text-slate-400 hover:text-slate-600 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                        >
+                          {showPassword ? (
+                            <EyeOff className="h-5 w-5" />
+                          ) : (
+                            <Eye className="h-5 w-5" />
+                          )}
+                        </button>
+                      </div>
+                    </div>
+
+                    {/* Confirm Password */}
+                    <div className="flex flex-col">
+                      <label className="block text-sm font-bold text-slate-700 mb-2 px-1">
+                        <span className="text-[#D0151C] font-bold mr-1">*</span>
+                        {t('rapidRegistration.form.confirmPassword')}
+                      </label>
+                      <div className="relative mt-auto">
+                        <div className="absolute inset-y-0 left-0 pl-4 flex items-center pointer-events-none">
+                          <Lock className="h-5 w-5 text-slate-400" />
+                        </div>
+                        <input
+                          type={showConfirmPassword ? "text" : "password"}
+                          name="confirm_password"
+                          required
+                          minLength={6}
+                          value={formData.confirm_password}
+                          onChange={handleChange}
+                          disabled={isRegistered}
+                          placeholder={t('rapidRegistration.form.placeholders.confirmPassword')}
+                          className="block w-full pl-12 pr-12 py-3.5 border border-slate-200 rounded-2xl outline-none focus:outline-none focus:ring-2 focus:ring-[#05294E] focus:border-[#05294E] text-slate-900 bg-slate-50/50 transition-all duration-300 disabled:opacity-50 disabled:cursor-not-allowed"
+                        />
+                        <button
+                          type="button"
+                          onClick={() => setShowConfirmPassword(!showConfirmPassword)}
+                          disabled={isRegistered}
+                          className="absolute inset-y-0 right-0 pr-4 flex items-center text-slate-400 hover:text-slate-600 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                        >
+                          {showConfirmPassword ? (
+                            <EyeOff className="h-5 w-5" />
+                          ) : (
+                            <Eye className="h-5 w-5" />
+                          )}
+                        </button>
+                      </div>
+                    </div>
+
+                  </div>
+
+                  {/* Seção Agrupada: Cupons e Termos (Coladinhos) */}
+                  <div className="mt-6 pt-6 border-t border-slate-100 space-y-2">
+                    {!userProfile?.seller_referral_code && !codeApplied && (
+                      <div className="relative z-10">
+                        {/* Checkbox para Referral Code */}
+                        <div className="flex items-center space-x-3 p-4 bg-slate-50/50 border border-slate-100 rounded-2xl group transition-all duration-300 hover:bg-white shadow-sm cursor-pointer" onClick={() => {
+                          setHasReferralCode(!hasReferralCode);
+                        }}>
+                          <input
+                            id="hasReferralCode"
+                            type="checkbox"
+                            checked={hasReferralCode}
+                            onChange={(e) => {
+                              setHasReferralCode(e.target.checked);
+                              if (!e.target.checked) {
+                                setCouponCode('');
+                                setValidationResult(null);
+                                setCodeApplied(false);
+                                setIsCouponValid(false);
+                              }
+                            }}
+                            className="h-5 w-5 text-[#05294E] border-gray-300 rounded focus:ring-[#05294E] cursor-pointer"
+                          />
+                          <label 
+                            htmlFor="hasReferralCode" 
+                            className="text-sm text-slate-700 font-medium leading-relaxed cursor-pointer flex-1"
+                            onClick={(e) => {
+                              // Parent already has the toggle logic, but let's make it robust
+                              e.preventDefault(); 
+                              const newState = !hasReferralCode;
+                              setHasReferralCode(newState);
+                              if (!newState) {
+                                setCouponCode('');
+                                setValidationResult(null);
+                                setCodeApplied(false);
+                                setIsCouponValid(false);
+                              }
+                            }}
+                          >
+                            {t('preCheckoutModal.haveReferralCode') || 'Eu tenho um código de indicação'}
+                          </label>
+                        </div>
+
+                        {/* Área de Input de Cupons */}
+                        {(hasReferralCode || promotionalCouponValidation?.isValid || codeApplied) && (
+                          <div className="grid grid-cols-1 md:grid-cols-2 gap-8 pt-4 pb-2">
+                            {/* ... (Referral e Promo Columns mantidos) */}
+                            {/* Referral Code Column */}
+                            <div className="space-y-4">
+                              <h4 className="text-xs font-black text-slate-400 uppercase tracking-widest flex items-center">
+                                <Ticket className="w-3 h-3 mr-2" />
+                                {t('preCheckoutModal.referralCode') || 'Código de Indicação'}
+                              </h4>
+                              
+                              <div className="flex gap-2">
+                                <div className="relative flex-1 group/input">
+                                  <input
+                                    type="text"
+                                    value={couponCode}
+                                    onChange={(e) => {
+                                      if (!codeApplied) {
+                                        setCouponCode(e.target.value.toUpperCase());
+                                      }
+                                    }}
+                                    placeholder={t('preCheckoutModal.placeholder') || 'Digite o código'}
+                                    readOnly={codeApplied}
+                                    className="w-full px-5 py-3.5 bg-slate-50 border border-slate-200 rounded-xl outline-none focus:outline-none focus:ring-2 focus:ring-[#05294E]/20 focus:border-[#05294E] transition-all text-center font-black text-slate-900 text-lg tracking-[0.2em] placeholder:text-slate-300 disabled:opacity-50"
+                                  />
+                                  {codeApplied && (
+                                    <div className="absolute right-3 top-1/2 -translate-y-1/2">
+                                      <CheckCircle className="w-5 h-5 text-emerald-500" />
+                                    </div>
+                                  )}
+                                </div>
+
+                                {!codeApplied && (
+                                  <button
+                                    type="button"
+                                    onClick={() => validateDiscountCode()}
+                                    disabled={isValidating || !couponCode.trim()}
+                                    className={`px-6 py-3.5 rounded-xl font-black uppercase tracking-widest text-xs transition-all shadow-lg active:scale-95 ${
+                                      isValidating || !couponCode.trim()
+                                        ? 'bg-slate-100 text-slate-400 cursor-not-allowed border border-slate-200'
+                                        : 'bg-[#05294E] text-white hover:bg-[#063a6e] border border-[#05294E]/50'
+                                    }`}
+                                  >
+                                    {isValidating ? (
+                                      <Loader2 className="w-4 h-4 animate-spin mx-auto" />
+                                    ) : (
+                                      'Validar'
+                                    )}
+                                  </button>
+                                )}
+                              </div>
+                              
+                              {validationResult && (
+                                <div className={`flex items-center gap-2 text-xs font-bold p-3 rounded-lg ${validationResult.isValid ? 'text-emerald-600 bg-emerald-50 border border-emerald-100' : 'text-red-500 bg-red-50 border border-red-100'}`}>
+                                  {validationResult.isValid ? <CheckCircle className="w-4 h-4" /> : <AlertCircle className="w-4 h-4" />}
+                                  {validationResult.message}
+                                </div>
+                              )}
+                            </div>
+
+                            {/* Promotional Coupon Column */}
+                            <div className="space-y-4">
+                              <h4 className="text-xs font-black text-slate-400 uppercase tracking-widest flex items-center">
+                                <Ticket className="w-3 h-3 mr-2" />
+                                {t('rapidRegistration.coupons.promotionalLabel') || 'Cupom Promocional'}
+                              </h4>
+
+                              {promotionalCouponValidation?.isValid ? (
+                                <div className="bg-emerald-50 border border-emerald-100 rounded-xl p-4 flex items-center justify-between shadow-inner">
+                                  <div className="flex items-center space-x-3">
+                                    <div className="w-10 h-10 bg-white rounded-lg flex items-center justify-center border border-emerald-100">
+                                      <CheckCircle className="w-6 h-6 text-emerald-500" />
+                                    </div>
+                                    <div>
+                                      <span className="text-[10px] font-black text-emerald-600/50 uppercase block tracking-widest leading-none mb-1">Cupom Aplicado</span>
+                                      <span className="text-lg font-black text-emerald-700 uppercase tracking-tight">{promotionalCoupon}</span>
+                                    </div>
+                                  </div>
+                                  <button type="button" onClick={removePromotionalCoupon} className="p-2 bg-white hover:bg-red-50 text-slate-400 hover:text-red-500 rounded-lg transition-all border border-slate-100 hover:border-red-100">
+                                    <X className="w-5 h-5" />
+                                  </button>
+                                </div>
+                              ) : (
+                                <div className="flex gap-2">
+                                  <div className="relative flex-1 group/input">
+                                    <input
+                                      type="text"
+                                      value={promotionalCoupon}
+                                      onChange={(e) => setPromotionalCoupon(e.target.value.toUpperCase())}
+                                      placeholder="Digite o código"
+                                      className="w-full px-5 py-3.5 bg-slate-50 border border-slate-200 rounded-xl outline-none focus:outline-none focus:ring-2 focus:ring-[#05294E]/20 focus:border-[#05294E] transition-all text-center font-black text-slate-900 text-lg tracking-[0.2em] placeholder:text-slate-300"
+                                    />
+                                  </div>
+                                  <button
+                                    type="button"
+                                    onClick={validatePromotionalCoupon}
+                                    disabled={isValidatingPromotionalCoupon || !promotionalCoupon.trim()}
+                                    className={`px-6 py-3.5 rounded-xl font-black uppercase tracking-widest text-xs transition-all shadow-lg active:scale-95 ${
+                                      isValidatingPromotionalCoupon || !promotionalCoupon.trim()
+                                        ? 'bg-slate-100 text-slate-400 cursor-not-allowed border border-slate-200'
+                                        : 'bg-[#05294E] text-white hover:bg-[#063a6e] border border-[#05294E]/50'
+                                    }`}
+                                  >
+                                    {isValidatingPromotionalCoupon ? (
+                                      <Loader2 className="w-4 h-4 animate-spin mx-auto" />
+                                    ) : (
+                                      'Validar'
+                                    )}
+                                  </button>
+                                </div>
+                              )}
+                              
+                              {promotionalCouponValidation && !promotionalCouponValidation.isValid && (
+                                <div className="flex items-center gap-2 text-xs font-bold p-3 rounded-lg text-red-500 bg-red-50 border border-red-100">
+                                  <AlertCircle className="w-4 h-4" />
+                                  {promotionalCouponValidation.message}
+                                </div>
+                              )}
+                            </div>
+                          </div>
+                        )}
+                      </div>
+                    )}
+
+                    {/* Terms acceptance */}
+                    <div 
+                      onClick={() => !formData.termsAccepted && handleTermsClick()}
+                      className={`flex items-start space-x-3 p-4 border rounded-2xl group/terms transition-colors duration-300 ${
+                        formData.termsAccepted 
+                          ? 'border-gray-100 bg-emerald-50/20 cursor-default' 
+                          : 'bg-gray-50 border-gray-100 hover:bg-gray-100/50 cursor-pointer'
+                      }`}
+                    >
+                      <div className="flex items-center h-5 mt-0.5">
+                        <input
+                          id="termsAccepted"
+                          name="termsAccepted"
+                          type="checkbox"
+                          required
+                          disabled={isRegistered}
+                          checked={formData.termsAccepted}
+                          onChange={(e) => {
+                            if (e.target.checked) {
+                              handleTermsClick();
+                            } else {
+                              setFormData((prev: typeof formData) => ({ ...prev, termsAccepted: false }));
+                            }
+                          }}
+                          className="h-5 w-5 text-[#05294E] border-gray-300 rounded focus:ring-[#05294E] disabled:opacity-50 disabled:cursor-not-allowed cursor-pointer"
+                        />
+                      </div>
+                      <div className="flex-1">
+                        <label 
+                          htmlFor="termsAccepted"
+                          className={`text-sm text-gray-700 leading-relaxed block font-medium ${formData.termsAccepted ? 'cursor-default' : 'cursor-pointer'}`}
+                          onClick={(e) => {
+                            // Prevent event bubbling if clicking the label, 
+                            // to avoid handleTermsClick being called twice (once by div click, once by input change)
+                            e.stopPropagation();
+                          }}
+                        >
+                          <span className="text-[#D0151C] font-bold mr-1">*</span>
+                          {t('preCheckoutModal.acceptContractTerms') || 'Eu aceito os termos e condições do contrato de prestação de serviços.'}
+                        </label>
+                        {formData.termsAccepted && (
+                          <span className="text-[10px] text-emerald-600 font-bold uppercase tracking-widest flex items-center mt-1">
+                            <CheckCircle2 className="w-3 h-3 mr-1" />
+                            {t('rapidRegistration.form.termsAcceptedBadge') || 'Termos Visualizados e Aceitos'}
+                          </span>
+                        )}
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+              {/* Seção 2: Método de Pagamento */}
+              <div className="bg-white rounded-3xl shadow-xl border border-slate-200 p-8 relative overflow-hidden">
+                <div className="absolute top-0 right-0 w-32 h-32 bg-blue-50 rounded-full -mr-16 -mt-16 opacity-50"></div>
+                
+                <div className="relative z-10">
+                  <h3 className="text-2xl font-black text-grey-900 mb-8 flex items-center uppercase tracking-tight">
+                    {t('rapidRegistration.payment.selectMethod')}
+                  </h3>
+                  
+                  <div className="space-y-4">
+                      {[
+                        { id: 'stripe' as const, name: t('rapidRegistration.payment.methods.stripe'), icon: StripeIcon },
+                        { id: 'pix' as const, name: t('rapidRegistration.payment.methods.pix'), icon: PixIcon },
+                        { id: 'zelle' as const, name: t('rapidRegistration.payment.methods.zelle'), icon: ZelleIcon },
+                        { id: 'parcelow' as const, name: t('rapidRegistration.payment.methods.parcelow'), icon: ParcelowIcon }
+                      ].map((method) => {
+                        const Icon = method.icon;
+                        const isSelected = selectedMethod === method.id;
+                        const isFormValid = formData.full_name && formData.email && formData.phone && formData.password && formData.confirm_password;
+                        const isDisabled = !isRegistered && (!isFormValid || !formData.termsAccepted);
+                        
+                        return (
+                          <React.Fragment key={method.id}>
+                            <button
+                            key={method.id}
+                            type="button"
+                            disabled={isDisabled}
+                            onClick={() => setSelectedMethod(method.id)}
+                            className={`w-full p-6 rounded-2xl border-2 transition-all duration-300 text-left relative overflow-hidden group/method ${
+                              isSelected
+                                ? 'border-blue-500 bg-blue-50 shadow-[0_0_30px_rgba(59,130,246,0.1)]'
+                                : 'border-gray-100 bg-gray-50 hover:border-gray-200 hover:bg-white'
+                            } ${isDisabled ? 'opacity-40 cursor-not-allowed grayscale' : 'cursor-pointer hover:scale-[1.01] active:scale-[0.99]'}`}
+                          >
+                            <div className="flex items-center space-x-5 relative z-10">
+                              <div className="flex-shrink-0 w-14 h-14 flex items-center justify-center rounded-xl bg-white border border-gray-100 transition-transform duration-500 group-hover/method:scale-110 shadow-sm">
+                                <Icon className="w-10 h-10 text-gray-700" />
+                              </div>
+                              <div className="flex-1 min-w-0">
+                                <div className="flex items-center justify-between">
+                                  <div className="flex flex-col">
+                                    <h4 className="text-lg font-black text-gray-900 uppercase tracking-tight">{method.name}</h4>
+                                    {method.id === 'stripe' && (
+                                      <span className="text-[10px] font-bold text-gray-400 mt-1 uppercase tracking-wide leading-tight">{t('rapidRegistration.payment.notes.processingFees')}</span>
+                                    )}
+                                    {method.id === 'pix' && (
+                                      <span className="text-[10px] font-bold text-gray-400 mt-1 uppercase tracking-wide leading-tight">{t('rapidRegistration.payment.notes.processingFees')}</span>
+                                    )}
+                                    {method.id === 'parcelow' && (
+                                      <span className="text-[10px] font-bold text-gray-400 mt-1 uppercase tracking-wide leading-tight max-w-[200px] sm:max-w-none">{t('rapidRegistration.payment.notes.parcelowFees')}</span>
+                                    )}
+                                    {method.id === 'zelle' && (
+                                      <span className="text-[10px] font-bold text-gray-400 mt-1 uppercase tracking-wide leading-tight flex items-center gap-1">
+                                        <AlertCircle className="w-3 h-3 flex-shrink-0" />
+                                    {t('rapidRegistration.payment.notes.zelleTime')}
+                                      </span>
+                                    )}
+                                  </div>
+                                  <div className="flex items-center gap-3">
+                                    {method.id === 'stripe' && (
+                                      <span className="text-grey-900 text-lg font-black px-2">${cardAmountWithFees.toFixed(2)}</span>
+                                    )}
+                                    {method.id === 'pix' && exchangeRate && (
+                                      <span className="text-grey-900 text-lg font-black px-2">R$ {pixAmountWithFees.toFixed(2)}</span>
+                                    )}
+                                    {method.id === 'parcelow' && (
+                                      <div className="flex flex-col items-end">
+                                        <span className="text-grey-900 text-lg font-black px-2">${currentFee.toFixed(2)}</span>
+                                         <span className="text-xs font-bold text-black mt-1 whitespace-nowrap">{t('rapidRegistration.payment.installment')}</span>
+                                      </div>
+                                    )}
+                                    {method.id === 'zelle' && (
+                                      <span className="text-grey-900 text-lg font-black px-2">${currentFee.toFixed(2)}</span>
+                                    )}
+                                  </div>
+                                </div>
+                              </div>
+                            </div>
+                          </button>
+                          
+                          {/* Inline CPF Field - Only for Parcelow when selected */}
+                          {method.id === 'parcelow' && isSelected && (
+                            <div className="mt-2 ml-4 mr-4 animate-in fade-in slide-in-from-top-2 duration-300">
+                              <div className="bg-blue-50/50 p-4 rounded-2xl border border-blue-100/50">
+                                <label className="block text-[10px] font-black text-blue-900/60 uppercase tracking-widest mb-2 leading-tight flex items-center gap-2">
+                                  <AlertCircle className="w-3 h-3 flex-shrink-0" />
+                                  {t('rapidRegistration.payment.cpf.label')}
+                                </label>
+                                <div className="relative">
+                                  <input
+                                    type="text"
+                                    name="cpf"
+                                    required
+                                    disabled={loading}
+                                    value={formData.cpf}
+                                    onChange={(e) => {
+                                      const formatted = formatCPF(e.target.value);
+                                      setFormData((prev: any) => ({ ...prev, cpf: formatted }));
+                                    }}
+                                    placeholder={t('rapidRegistration.payment.cpf.placeholder')}
+                                    className="block w-1/2 pl-11 pr-4 py-3 border border-blue-200/50 rounded-xl outline-none focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 text-sm font-bold text-slate-900 bg-white transition-all duration-300 disabled:opacity-50 disabled:cursor-not-allowed"
+                                  />
+                                </div>
+                              </div>
+                            </div>
+                          )}
+                        </React.Fragment>
+                      );
+                    })}
+                  </div>
+                  
+                  {error && (
+                    <div className="mt-8 p-4 bg-red-50 rounded-xl flex items-center text-red-700 text-sm">
+                      <AlertCircle className="h-5 w-5 mr-2" />
+                      {error}
+                    </div>
+                  )}
+                </div>
+              </div>
+            </form>
+            <div className="h-12"></div> {/* Spacing below payment method */}
+          </div>
+
+          {/* Right: Sticky Summary */}
+          <div className="lg:col-span-1">
+            <div className="sticky top-24 space-y-6">
+              <div className="bg-white rounded-3xl shadow-xl border border-slate-200 p-8 relative overflow-hidden">
+                <div className="absolute top-0 right-0 w-32 h-32 bg-blue-50 rounded-full -mr-16 -mt-16 opacity-50"></div>
+                
+                <h3 className="text-2xl font-black text-slate-900 mb-8 pb-4 border-b border-slate-50 flex items-center uppercase tracking-tight relative z-10">
+                  {t('rapidRegistration.sidebar.title')}
+                </h3>
+
+                <div className="space-y-6 mb-8 relative z-10">
+                  <div className="flex justify-between items-end">
+                    <span className="text-slate-900 font-bold uppercase tracking-widest text-xs mb-1">
+                      {t('rapidRegistration.sidebar.total')}
+                    </span>
+                    <div className="text-right">
+                      {isCouponValid && (
+                        <span className="text-sm line-through block text-slate-300 font-bold mb-1">
+                          {originalFormattedAmount}
+                        </span>
+                      )}
+                      <span className="text-4xl font-black text-grey-900 tracking-tighter">
+                        {formattedAmount}
+                      </span>
+                      {isCouponValid && (
+                        <div className="flex items-center justify-end mt-1">
+                          <span className="bg-emerald-50 text-emerald-600 px-2 py-0.5 rounded-full text-[10px] font-black uppercase tracking-widest border border-emerald-100 flex items-center">
+                            <Ticket className="w-2.5 h-2.5 mr-1" />
+                            {t('rapidRegistration.sidebar.couponApplied')}
+                          </span>
+                        </div>
+                      )}
+                    </div>
+                  </div>
+                  
+                  <div className="bg-slate-50 rounded-2xl p-5 border border-slate-100">
+                    <p className="text-sm text-slate-600 leading-relaxed font-medium italic">
+                      {t('rapidRegistration.sidebar.feeExplanation')}
+                    </p>
+                  </div>
+                </div>
+
+                <div className="space-y-5 pt-8 border-t border-slate-100 relative z-10">
+                  <h4 className="font-black text-slate-900 text-xs uppercase tracking-[0.2em] flex items-center opacity-70">
+                    <HelpCircle className="h-4 w-4 mr-2" />
+                    {t('rapidRegistration.sidebar.futureFeesTitle')}
+                  </h4>
+                  
+                  <div className="space-y-4">
+                    <div className="flex flex-col">
+                      <div className="flex justify-between items-center relative">
+                        <div className="flex items-center">
+                          <span className="text-sm font-bold text-slate-500 uppercase tracking-tight">{t('rapidRegistration.sidebar.enrollmentFee')}</span>
+                          <div className="ml-2 cursor-help text-blue-500/40 hover:text-blue-600 transition-colors group/icon relative">
+                            <Info className="w-4 h-4" />
+                            <div className="absolute bottom-full left-1/2 -translate-x-1/2 mb-2 w-64 p-4 bg-slate-900 text-white text-[11px] rounded-2xl opacity-0 invisible group-hover/icon:opacity-100 group-hover/icon:visible transition-all duration-300 pointer-events-none z-50 shadow-2xl normal-case font-medium border border-slate-800 leading-relaxed translate-y-2 group-hover/icon:translate-y-0">
+                              {t('rapidRegistration.sidebar.enrollmentFeeTooltip')}
+                              <div className="absolute top-full left-1/2 -translate-x-1/2 border-8 border-transparent border-t-slate-900" />
+                            </div>
+                          </div>
+                        </div>
+                        <span className="font-black text-slate-900">$350.00*</span>
+                      </div>
+                      {formData.dependents > 0 && (
+                        <div className="flex justify-between items-center mt-2 pt-2 border-t border-dashed border-slate-100/50 pl-4">
+                          <span className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">
+                            {t('rapidRegistration.sidebar.dependentsFee')} (x{formData.dependents})
+                          </span>
+                          <span className="text-xs font-black text-slate-600">
+                            +{formatFeeAmount(dependentsFeeValue)}
+                          </span>
+                        </div>
+                      )}
+                    </div>
+
+                    <div className="flex justify-between items-center relative">
+                      <div className="flex items-center">
+                        <span className="text-sm font-bold text-slate-500 uppercase tracking-tight">{t('rapidRegistration.sidebar.scholarshipFee')}</span>
+                        <div className="ml-2 cursor-help text-blue-500/40 hover:text-blue-600 transition-colors group/icon relative">
+                          <Info className="w-4 h-4" />
+                          <div className="absolute bottom-full left-1/2 -translate-x-1/2 mb-2 w-64 p-4 bg-slate-900 text-white text-[11px] rounded-2xl opacity-0 invisible group-hover/icon:opacity-100 group-hover/icon:visible transition-all duration-300 pointer-events-none z-50 shadow-2xl normal-case font-medium border border-slate-800 leading-relaxed translate-y-2 group-hover/icon:translate-y-0">
+                            {t('rapidRegistration.sidebar.scholarshipFeeTooltip')}
+                            <div className="absolute top-full left-1/2 -translate-x-1/2 border-8 border-transparent border-t-slate-900" />
+                          </div>
+                        </div>
+                      </div>
+                      <span className="font-black text-slate-900">$900.00*</span>
+                    </div>
+
+                    <div className="flex justify-between items-center relative">
+                      <div className="flex items-center">
+                        <span className="text-sm font-bold text-slate-500 uppercase tracking-tight">{t('rapidRegistration.sidebar.i20Fee')}</span>
+                        <div className="ml-2 cursor-help text-blue-500/40 hover:text-blue-600 transition-colors group/icon relative">
+                          <Info className="w-4 h-4" />
+                          <div className="absolute bottom-full left-1/2 -translate-x-1/2 mb-2 w-64 p-4 bg-slate-900 text-white text-[11px] rounded-2xl opacity-0 invisible group-hover/icon:opacity-100 group-hover/icon:visible transition-all duration-300 pointer-events-none z-50 shadow-2xl normal-case font-medium border border-slate-800 leading-relaxed translate-y-2 group-hover/icon:translate-y-0">
+                            {t('rapidRegistration.sidebar.i20FeeTooltip')}
+                            <div className="absolute top-full left-1/2 -translate-x-1/2 border-8 border-transparent border-t-slate-900" />
+                          </div>
+                        </div>
+                      </div>
+                      <span className="font-black text-slate-900">$900.00*</span>
+                    </div>
+                  </div>
+
+                  <p className="text-[10px] text-slate-400 mt-6 leading-relaxed font-bold uppercase tracking-wide">
+                    * {t('rapidRegistration.sidebar.futureFeesNote')}
+                  </p>
+                </div>
+              </div>
+
+              {/* Refund Assurance Note */}
+              <div className="bg-white border border-slate-200 rounded-3xl p-6 shadow-xl">
+                <div>
+                  <div className="flex items-center space-x-3 mb-3">
+                    <div className="w-10 h-10 rounded-xl bg-emerald-50 text-emerald-600 flex items-center justify-center shrink-0 border border-emerald-100/50 shadow-sm">
+                      <Shield className="w-5 h-5" />
+                    </div>
+                    <h5 className="font-black text-slate-900 text-sm uppercase tracking-widest">{t('rapidRegistration.sidebar.refundAssuranceTitle')}</h5>
+                  </div>
+                  <p className="text-xs font-bold text-slate-600 leading-relaxed pl-12 uppercase tracking-wide">
+                    {t('rapidRegistration.sidebar.refundAssuranceText')}
+                  </p>
+                </div>
+              </div>
+
+              {/* Submit Button */}
+              <button
+                type="submit"
+                form="registration-form"
+                disabled={loading || (!formData.termsAccepted && !isRegistered) || (selectedMethod === 'parcelow' && (!formData.cpf || formData.cpf.length < 14))}
+                className={`w-full text-white font-bold py-5 rounded-2xl transition-all flex items-center justify-center text-lg shadow-xl hover:shadow-2xl hover:scale-[1.02] active:scale-[0.98] disabled:opacity-50 disabled:cursor-not-allowed disabled:scale-100 ${
+                  (formData.termsAccepted || isRegistered) && (selectedMethod !== 'parcelow' || (formData.cpf && formData.cpf.length >= 14)) ? 'bg-[#05294E]' : 'bg-slate-400'
+                }`}
+              >
+                {getButtonText()}
+              </button>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      {/* Terms and Conditions Modal */}
+      <Transition appear show={showTermsModal} as={React.Fragment}>
+        <Dialog as="div" className="relative z-[100]" onClose={() => setShowTermsModal(false)}>
+          <Transition.Child
+            as={React.Fragment}
+            enter="ease-out duration-300"
+            enterFrom="opacity-0"
+            enterTo="opacity-100"
+            leave="ease-in duration-200"
+            leaveFrom="opacity-100"
+            leaveTo="opacity-0"
+          >
+            <div className="fixed inset-0 bg-slate-900/60 backdrop-blur-sm" />
+          </Transition.Child>
+
+          <div className="fixed inset-0 overflow-y-auto">
+            <div className="flex min-h-full items-center justify-center p-4 text-center">
+              <Transition.Child
+                as={React.Fragment}
+                enter="ease-out duration-300"
+                enterFrom="opacity-0 scale-95"
+                enterTo="opacity-100 scale-100"
+                leave="ease-in duration-200"
+                leaveFrom="opacity-100 scale-100"
+                leaveTo="opacity-0 scale-95"
+              >
+                <Dialog.Panel className="w-full max-w-4xl max-h-[95vh] flex flex-col transform overflow-hidden rounded-[2.5rem] bg-white p-0 text-left align-middle shadow-2xl transition-all border border-slate-100">
+                  {/* Header */}
+                  <div className="relative flex-shrink-0 px-8 py-4 border-b border-slate-100 bg-slate-50/50">
+                    <div className="flex items-center justify-between">
+                      <div>
+                        <Dialog.Title as="h3" className="text-2xl font-black text-slate-900 uppercase tracking-tighter">
+                          {activeTerm?.title || t('preCheckoutModal.termsAndConditions.title')}
+                        </Dialog.Title>
+                        <p className="text-xs font-bold text-slate-400 uppercase tracking-[0.2em] mt-1">
+                          {t('rapidRegistration.terms.contractSubtitle') || 'Contrato de Prestação de Serviços'}
+                        </p>
+                      </div>
+                      <button
+                        onClick={() => setShowTermsModal(false)}
+                        className="w-10 h-10 flex items-center justify-center rounded-xl bg-white border border-slate-200 text-slate-400 hover:text-slate-900 hover:border-slate-300 transition-all active:scale-95"
+                      >
+                        <X className="w-5 h-5" />
+                      </button>
+                    </div>
+                  </div>
+
+                  {/* Content */}
+                  <div className="flex-1 overflow-hidden px-8 py-4 flex flex-col min-h-0">
+                    {termsModalPage === 'terms' ? (
+                      <div 
+                        ref={termsContentRef}
+                        onScroll={handleTermsScroll}
+                        className="flex-1 overflow-y-auto pr-4 scrollbar-thin scrollbar-thumb-slate-200 scrollbar-track-transparent"
+                      >
+                        {loadingTerms ? (
+                          <div className="flex flex-col items-center justify-center py-20 space-y-4">
+                            <Loader2 className="w-12 h-12 text-[#05294E] animate-spin" />
+                            <p className="text-slate-400 font-bold uppercase tracking-widest text-xs">{t('preCheckoutModal.loading')}</p>
+                          </div>
+                        ) : activeTerm ? (
+                          <div 
+                            className="prose prose-slate max-w-none prose-p:text-slate-600 prose-p:font-medium prose-headings:text-slate-900 prose-headings:font-black prose-headings:uppercase prose-headings:tracking-tight prose-strong:text-slate-900"
+                            dangerouslySetInnerHTML={{ __html: activeTerm.content }}
+                          />
+                        ) : (
+                          <div className="text-center py-20">
+                            <Shield className="w-16 h-16 text-slate-100 mx-auto mb-4" />
+                            <p className="font-bold text-slate-400 uppercase tracking-widest text-xs">{t('preCheckoutModal.noTermsFound')}</p>
+                          </div>
+                        )}
+                      </div>
+                    ) : (
+                      <div className="flex-1 overflow-y-auto pr-4 space-y-6">
+                        <div className="bg-blue-50 rounded-[2rem] p-6 border border-blue-100 relative overflow-hidden">
+                          <div className="absolute top-0 right-0 w-32 h-32 bg-blue-100/50 rounded-full -mr-16 -mt-16"></div>
+                          <div className="relative z-10 flex flex-col md:flex-row items-center gap-6">
+                            <div className="flex-1 text-center md:text-left">
+                              <h4 className="text-xl font-black text-blue-900 uppercase tracking-tight mb-3 flex items-center justify-center md:justify-start">
+                                <Camera className="w-6 h-6 mr-3 text-blue-600" />
+                                {t('rapidRegistration.terms.selfieTitle') || 'Verificação de Identidade'}
+                              </h4>
+                              <p className="text-xs text-blue-800/70 font-bold leading-relaxed mb-4 uppercase tracking-wide">
+                                {t('rapidRegistration.terms.selfieSubtitle') || 'Para finalizar a aceitação do contrato, precisamos de uma selfie sua segurando seu documento de identidade.'}
+                              </p>
+                              
+                              <div className="space-y-3">
+                                <div className="flex items-center gap-3">
+                                  <div className="w-5 h-5 bg-blue-600 rounded-lg flex items-center justify-center text-white text-[9px] font-black">1</div>
+                                  <p className="text-[11px] font-bold text-blue-900 uppercase tracking-wider">{t('rapidRegistration.terms.selfieStep1') || 'Segure seu documento ao lado do rosto'}</p>
+                                </div>
+                                <div className="flex items-center gap-3">
+                                  <div className="w-5 h-5 bg-blue-600 rounded-lg flex items-center justify-center text-white text-[9px] font-black">2</div>
+                                  <p className="text-[11px] font-bold text-blue-900 uppercase tracking-wider">{t('rapidRegistration.terms.selfieStep2') || 'Certifique-se de que tudo está legível'}</p>
+                                </div>
+                              </div>
+                            </div>
+                            
+                            <div className="w-full md:w-48 flex-shrink-0">
+                               <img 
+                                src="/helpselfie.png" 
+                                alt="Exemplo de Selfie" 
+                                className="w-full h-auto rounded-[1rem] border-[3px] border-white shadow-xl transition-all"
+                              />
+                            </div>
+                          </div>
+                        </div>
+
+                        <div className="space-y-4">
+                          {!identityPhotoPreview ? (
+                            <div 
+                              onClick={() => fileInputRef.current?.click()}
+                              className="border-4 border-dashed border-slate-100 rounded-[2.5rem] p-12 text-center hover:border-blue-200 hover:bg-blue-50/30 transition-all cursor-pointer group"
+                            >
+                              <input
+                                ref={fileInputRef}
+                                type="file"
+                                accept="image/*"
+                                capture="user"
+                                onChange={handleFileSelect}
+                                className="hidden"
+                              />
+                              <div className="w-20 h-20 bg-slate-50 rounded-[2rem] flex items-center justify-center mx-auto mb-6 transition-transform group-hover:scale-110 group-hover:bg-white shadow-sm">
+                                <Upload className="w-10 h-10 text-slate-400 group-hover:text-blue-600" />
+                              </div>
+                              <p className="text-lg font-black text-slate-900 uppercase tracking-tight mb-2">
+                                {t('rapidRegistration.terms.clickToTakeSelfie') || 'Clique para tirar sua selfie'}
+                              </p>
+                              <p className="text-xs text-slate-400 font-bold uppercase tracking-[0.2em]">
+                                {t('rapidRegistration.terms.selfieFormats') || 'JPG ou PNG • MÁX 5MB'}
+                              </p>
+                            </div>
+                          ) : (
+                            <div className="relative group">
+                              <div className="rounded-[2.5rem] overflow-hidden border-4 border-emerald-100 shadow-2xl h-80">
+                                <img
+                                  src={identityPhotoPreview}
+                                  alt="Sua Selfie"
+                                  className="w-full h-full object-cover"
+                                />
+                                <div className="absolute inset-x-0 bottom-0 bg-gradient-to-t from-emerald-900/80 to-transparent p-8">
+                                  <div className="flex items-center justify-between">
+                                    <div className="flex items-center text-white">
+                                      <CheckCircle2 className="w-6 h-6 mr-2 text-emerald-400" />
+                                      <span className="font-black uppercase tracking-tighter text-xl">{t('rapidRegistration.terms.photoCaptured')}</span>
+                                    </div>
+                                    <button
+                                      onClick={() => {
+                                        setIdentityPhoto(null);
+                                        setIdentityPhotoPreview(null);
+                                      }}
+                                      className="px-6 py-2 bg-white/20 hover:bg-white/40 backdrop-blur-md rounded-xl text-white font-black uppercase tracking-widest text-xs transition-all border border-white/20"
+                                    >
+                                      {t('rapidRegistration.terms.removeChange')}
+                                    </button>
+                                  </div>
+                                </div>
+                              </div>
+                            </div>
+                          )}
+                        </div>
+                      </div>
+                    )}
+
+                    <div className="mt-4 pt-4 border-t border-slate-100 flex flex-col sm:flex-row gap-4 flex-shrink-0">
+                      <button
+                        type="button"
+                        className="flex-1 px-8 py-4 bg-slate-100 text-slate-600 rounded-2xl font-black uppercase tracking-widest text-xs hover:bg-slate-200 transition-all active:scale-95"
+                        onClick={() => {
+                          if (termsModalPage === 'selfie') {
+                            setTermsModalPage('terms');
+                          } else {
+                            setShowTermsModal(false);
+                          }
+                        }}
+                      >
+                        {termsModalPage === 'selfie' ? t('rapidRegistration.terms.backToTerms') : (t('preCheckoutModal.closeTerms') || t('rapidRegistration.terms.close'))}
+                      </button>
+                      <button
+                        type="button"
+                        disabled={(termsModalPage === 'terms' ? !hasScrolledToBottom : !identityPhotoPreview) || loadingTerms}
+                        className={`flex-[2] px-8 py-4 rounded-2xl font-black uppercase tracking-widest text-xs transition-all shadow-xl active:scale-95 ${
+                          (termsModalPage === 'terms' ? hasScrolledToBottom : identityPhotoPreview)
+                            ? 'bg-[#05294E] text-white hover:bg-blue-900 shadow-blue-900/10'
+                            : 'bg-slate-100 text-slate-300 cursor-not-allowed shadow-none'
+                        }`}
+                        onClick={handleTermsAccept}
+                      >
+                        {termsModalPage === 'terms' 
+                          ? (hasScrolledToBottom 
+                            ? t('rapidRegistration.terms.confirmReading') 
+                            : t('rapidRegistration.terms.scrollToBottom'))
+                          : t('rapidRegistration.terms.acceptAndConfirm')
+                        }
+                      </button>
+                    </div>
+                  </div>
+                </Dialog.Panel>
+              </Transition.Child>
+            </div>
+          </div>
+        </Dialog>
+      </Transition>
+    </div>
+  );
+};
+
+export default QuickRegistration;

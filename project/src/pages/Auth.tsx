@@ -43,8 +43,6 @@ const Auth: React.FC<AuthProps> = ({ mode }) => {
   const [referralCodeLoading, setReferralCodeLoading] = useState(false);
   const [referralCodeType, setReferralCodeType] = useState<'seller' | 'rewards' | null>(null);
   const [isReferralCodeLocked, setIsReferralCodeLocked] = useState(false);
-  // Estado para rastrear se o seller é do sistema simplificado
-  const [isSimplifiedSeller, setIsSimplifiedSeller] = useState(false);
   // Terms acceptance state
   const [termsAccepted, setTermsAccepted] = useState(false);
   // Newsletter consent state
@@ -130,17 +128,11 @@ const Auth: React.FC<AuthProps> = ({ mode }) => {
             
              if (!systemTypeError && systemTypeData) {
                const isSimplified = systemTypeData === 'simplified';
-               setIsSimplifiedSeller(isSimplified);
                console.log('[AUTH] System type do seller:', systemTypeData, 'isSimplified:', isSimplified);
-             } else {
-               setIsSimplifiedSeller(false);
              }
           } catch (err) {
             console.error('[AUTH] Erro ao verificar system_type do seller:', err);
-            setIsSimplifiedSeller(false);
           }
-        } else {
-          setIsSimplifiedSeller(false);
         }
       } else if (isRewards) {
         setReferralCodeType('rewards');
@@ -167,7 +159,24 @@ const Auth: React.FC<AuthProps> = ({ mode }) => {
     }
   };
 
+  // ✅ NOVA: Função para limpar código de referência
+  const clearReferralCode = () => {
+    console.log('[AUTH] 🧹 Limpando código de referência');
+    setFormData(prev => ({ ...prev, referralCode: '' }));
+    setReferralCodeValid(null);
+    setReferralCodeType(null);
+    setIsReferralCodeLocked(false);
+    referralCodeProcessedRef.current = false;
+    
+    // Limpar do localStorage permanentemente
+    localStorage.removeItem('pending_referral_code');
+    localStorage.removeItem('pending_referral_code_type');
+    localStorage.removeItem('pending_affiliate_code');
+    localStorage.removeItem('pending_seller_referral_code');
+  };
+
   // ✅ FUNÇÃO AUXILIAR: Processar código de referência
+
   const processReferralCode = async (code: string, type: 'seller' | 'rewards' | null = null) => {
     if (!code || referralCodeProcessedRef.current) {
       return;
@@ -243,7 +252,10 @@ const Auth: React.FC<AuthProps> = ({ mode }) => {
         }
         const refCodeFromUrl = urlParams.get('ref');
         
-        if (refCodeFromUrl && !referralCodeProcessedRef.current) {
+        // ⚠️ IGNORAR códigos de Processo Seletivo (iniciam com sp_)
+        if (refCodeFromUrl && refCodeFromUrl.toLowerCase().startsWith('sp_')) {
+          console.log('[AUTH] ℹ️ Ignorando referência de Processo Seletivo (sp_) na URL');
+        } else if (refCodeFromUrl && !referralCodeProcessedRef.current) {
           console.log('[AUTH] ✅ Código encontrado na URL:', refCodeFromUrl);
           
           // Detectar tipo do código
@@ -288,8 +300,15 @@ const Auth: React.FC<AuthProps> = ({ mode }) => {
         const pendingType = localStorage.getItem('pending_referral_code_type');
         
         if (pendingCode && !referralCodeProcessedRef.current) {
-          console.log('[AUTH] ✅ Código encontrado no localStorage:', pendingCode, 'Tipo:', pendingType);
-          await processReferralCode(pendingCode, pendingType as 'seller' | 'rewards' | null);
+          // ⚠️ IGNORAR códigos de Processo Seletivo (iniciam com sp_)
+          if (pendingCode.toLowerCase().startsWith('sp_')) {
+            console.log('[AUTH] ℹ️ Removendo referência de Processo Seletivo (sp_) do localStorage');
+            localStorage.removeItem('pending_referral_code');
+            localStorage.removeItem('pending_referral_code_type');
+          } else {
+            console.log('[AUTH] ✅ Código encontrado no localStorage:', pendingCode, 'Tipo:', pendingType);
+            await processReferralCode(pendingCode, pendingType as 'seller' | 'rewards' | null);
+          }
         }
         
         console.log('[AUTH] Estado final do campo unificado:', {
@@ -320,6 +339,12 @@ const Auth: React.FC<AuthProps> = ({ mode }) => {
         if (!referralCodeProcessedRef.current) {
           const pendingCode = localStorage.getItem('pending_referral_code');
           if (pendingCode && !formData.referralCode) {
+            // ⚠️ IGNORAR códigos de Processo Seletivo (iniciam com sp_)
+            if (pendingCode.toLowerCase().startsWith('sp_')) {
+              localStorage.removeItem('pending_referral_code');
+              localStorage.removeItem('pending_referral_code_type');
+              return;
+            }
             console.log('[AUTH] ✅ Código detectado via polling:', pendingCode);
             const pendingType = localStorage.getItem('pending_referral_code_type');
             await processReferralCode(pendingCode, pendingType as 'seller' | 'rewards' | null);
@@ -339,9 +364,8 @@ const Auth: React.FC<AuthProps> = ({ mode }) => {
     const code = e.target.value.toUpperCase();
     setFormData(prev => ({ ...prev, referralCode: code }));
     
-    // Resetar estado de simplified seller quando o código muda
-    setIsSimplifiedSeller(false);
     
+
     if (code.length >= 4) {
       validateReferralCode(code);
     } else {
@@ -920,6 +944,21 @@ const Auth: React.FC<AuthProps> = ({ mode }) => {
                         <div className="absolute right-4 top-4">
                           <X className="h-5 w-5 text-red-500" />
                         </div>
+                      )}
+
+                      {/* Botão de limpar (X) visível quando trancado ou quando há texto */}
+                      {isReferralCodeLocked && (
+                        <button
+                          type="button"
+                          onClick={(e) => {
+                            e.preventDefault();
+                            clearReferralCode();
+                          }}
+                          className="absolute right-4 top-4 text-slate-400 hover:text-red-500 transition-colors bg-white rounded-full p-0.5"
+                          title="Remover código"
+                        >
+                          <X className="h-5 w-5" />
+                        </button>
                       )}
                     </div>
                     

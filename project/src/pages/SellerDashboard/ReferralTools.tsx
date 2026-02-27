@@ -3,10 +3,9 @@ import { Copy, Check } from 'lucide-react';
 
 interface ReferralToolsProps {
   sellerProfile: any;
-  stats: any;
 }
 
-const ReferralTools: React.FC<ReferralToolsProps> = ({ sellerProfile, stats }) => {
+const ReferralTools: React.FC<ReferralToolsProps> = ({ sellerProfile }) => {
   const [copiedText, setCopiedText] = useState<string | null>(null);
 
   const referralCode = sellerProfile?.referral_code || '';
@@ -86,6 +85,7 @@ const ReferralTools: React.FC<ReferralToolsProps> = ({ sellerProfile, stats }) =
             </div>
           </div>
         </div>
+
       </div>
 
 

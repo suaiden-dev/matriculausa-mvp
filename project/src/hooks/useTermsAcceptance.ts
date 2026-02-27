@@ -1,15 +1,14 @@
-import { useState, useCallback } from 'react';
-import { supabase } from '../lib/supabase';
-import { useAuth } from './useAuth';
-import { sendTermAcceptanceNotification } from '../utils/termAcceptanceNotification';
+import { useCallback, useState } from "react";
+import { supabase } from "../lib/supabase";
+import { useAuth } from "./useAuth";
 
-export type TermType = 
-  | 'terms_of_service'
-  | 'privacy_policy'
-  | 'affiliate_terms'
-  | 'seller_terms'
-  | 'checkout_terms'
-  | 'university_terms';
+export type TermType =
+  | "terms_of_service"
+  | "privacy_policy"
+  | "affiliate_terms"
+  | "seller_terms"
+  | "checkout_terms"
+  | "university_terms";
 
 interface Term {
   id: string;
@@ -41,88 +40,96 @@ export const useTermsAcceptance = () => {
   // Get user's IP address and user agent
   const getClientInfo = useCallback(async () => {
     try {
-      const response = await fetch('https://api.ipify.org?format=json');
+      const response = await fetch("https://api.ipify.org?format=json");
       const data = await response.json();
       return {
         ip_address: data.ip,
-        user_agent: navigator.userAgent
+        user_agent: navigator.userAgent,
       };
     } catch (error) {
-      console.warn('Could not get IP address:', error);
+      console.warn("Could not get IP address:", error);
       return {
         ip_address: null,
-        user_agent: navigator.userAgent
+        user_agent: navigator.userAgent,
       };
     }
   }, []);
 
   // Check if user has accepted a specific term type
-  const checkTermAcceptance = useCallback(async (termType: TermType): Promise<boolean> => {
-    if (!user) return false;
+  const checkTermAcceptance = useCallback(
+    async (termType: TermType): Promise<boolean> => {
+      if (!user) return false;
 
-    try {
-      const { data, error } = await supabase.rpc('check_user_term_acceptance', {
-        p_user_id: user.id,
-        p_term_type: termType
-      });
+      try {
+        const { data, error } = await supabase.rpc(
+          "check_user_term_acceptance",
+          {
+            p_user_id: user.id,
+            p_term_type: termType,
+          },
+        );
 
-      if (error) throw error;
-      return data || false;
-    } catch (error) {
-      console.error('Error checking term acceptance:', error);
-      return false;
-    }
-  }, [user]);
+        if (error) throw error;
+        return data || false;
+      } catch (error) {
+        console.error("Error checking term acceptance:", error);
+        return false;
+      }
+    },
+    [user],
+  );
 
   // Get all unaccepted terms for the user
   const getUnacceptedTerms = useCallback(async (): Promise<Term[]> => {
     if (!user) return [];
 
     try {
-      const { data, error } = await supabase.rpc('get_user_unaccepted_terms', {
-        p_user_id: user.id
+      const { data, error } = await supabase.rpc("get_user_unaccepted_terms", {
+        p_user_id: user.id,
       });
 
       if (error) throw error;
       return data || [];
     } catch (error) {
-      console.error('Error getting unaccepted terms:', error);
+      console.error("Error getting unaccepted terms:", error);
       return [];
     }
   }, [user]);
 
   // Record term acceptance
   const recordTermAcceptance = useCallback(async (
-    termId: string, 
-    termType: TermType
+    termId: string,
+    termType: TermType,
+    p_user_id?: string,
   ): Promise<boolean> => {
-    if (!user) return false;
+    const targetUserId = p_user_id || user?.id;
+    if (!targetUserId) return false;
 
     setLoading(true);
     setError(null);
 
     try {
       const clientInfo = await getClientInfo();
-      
-      const { data, error } = await supabase.rpc('record_term_acceptance', {
-        p_user_id: user.id,
+
+      const { data, error } = await supabase.rpc("record_term_acceptance", {
+        p_user_id: targetUserId,
         p_term_id: termId,
         p_term_type: termType,
         p_ip_address: clientInfo.ip_address,
-        p_user_agent: clientInfo.user_agent
+        p_user_agent: clientInfo.user_agent,
       });
 
       if (error) throw error;
-      
+
       const success = data || false;
-      
+
       // Term acceptance recorded successfully
       // Note: Notification with PDF will be sent after successful payment, not here
-      
+
       return success;
     } catch (error: any) {
-      console.error('Error recording term acceptance:', error);
-      setError(error.message || 'Failed to record term acceptance');
+      console.error("Error recording term acceptance:", error);
+      setError(error.message || "Failed to record term acceptance");
       return false;
     } finally {
       setLoading(false);
@@ -130,65 +137,75 @@ export const useTermsAcceptance = () => {
   }, [user, getClientInfo]);
 
   // Get active terms by type
-  const getActiveTermsByType = useCallback(async (termType: TermType): Promise<Term[]> => {
-    try {
-      const { data, error } = await supabase
-        .from('application_terms')
-        .select('*')
-        .eq('term_type', termType)
-        .eq('is_active', true)
-        .order('version', { ascending: false });
+  const getActiveTermsByType = useCallback(
+    async (termType: TermType): Promise<Term[]> => {
+      try {
+        const { data, error } = await supabase
+          .from("application_terms")
+          .select("*")
+          .eq("term_type", termType)
+          .eq("is_active", true)
+          .order("version", { ascending: false });
 
-      if (error) throw error;
-      return data || [];
-    } catch (error) {
-      console.error('Error getting active terms:', error);
-      return [];
-    }
-  }, []);
+        if (error) throw error;
+        return data || [];
+      } catch (error) {
+        console.error("Error getting active terms:", error);
+        return [];
+      }
+    },
+    [],
+  );
 
   // Get latest active term by type
-  const getLatestActiveTerm = useCallback(async (termType: TermType): Promise<Term | null> => {
-    const terms = await getActiveTermsByType(termType);
-    return terms.length > 0 ? terms[0] : null;
-  }, [getActiveTermsByType]);
+  const getLatestActiveTerm = useCallback(
+    async (termType: TermType): Promise<Term | null> => {
+      const terms = await getActiveTermsByType(termType);
+      return terms.length > 0 ? terms[0] : null;
+    },
+    [getActiveTermsByType],
+  );
 
   // Check if user has accepted all required terms
-  const checkAllRequiredTermsAccepted = useCallback(async (): Promise<boolean> => {
-    if (!user) return false;
+  const checkAllRequiredTermsAccepted = useCallback(
+    async (): Promise<boolean> => {
+      if (!user) return false;
 
-    try {
-      // Get all active terms
-      const { data: activeTerms, error } = await supabase
-        .from('application_terms')
-        .select('term_type')
-        .eq('is_active', true);
+      try {
+        // Get all active terms
+        const { data: activeTerms, error } = await supabase
+          .from("application_terms")
+          .select("term_type")
+          .eq("is_active", true);
 
-      if (error) throw error;
+        if (error) throw error;
 
-      if (!activeTerms || activeTerms.length === 0) return true;
+        if (!activeTerms || activeTerms.length === 0) return true;
 
-      // Check if user has accepted all active terms
-      for (const term of activeTerms) {
-        const hasAccepted = await checkTermAcceptance(term.term_type);
-        if (!hasAccepted) return false;
+        // Check if user has accepted all active terms
+        for (const term of activeTerms) {
+          const hasAccepted = await checkTermAcceptance(term.term_type);
+          if (!hasAccepted) return false;
+        }
+
+        return true;
+      } catch (error) {
+        console.error("Error checking all required terms:", error);
+        return false;
       }
-
-      return true;
-    } catch (error) {
-      console.error('Error checking all required terms:', error);
-      return false;
-    }
-  }, [user, checkTermAcceptance]);
+    },
+    [user, checkTermAcceptance],
+  );
 
   // Get user's acceptance history
-  const getAcceptanceHistory = useCallback(async (): Promise<TermAcceptance[]> => {
-    if (!user) return [];
+  const getAcceptanceHistory = useCallback(
+    async (): Promise<TermAcceptance[]> => {
+      if (!user) return [];
 
-    try {
-      const { data, error } = await supabase
-        .from('comprehensive_term_acceptance')
-        .select(`
+      try {
+        const { data, error } = await supabase
+          .from("comprehensive_term_acceptance")
+          .select(`
           *,
           application_terms (
             title,
@@ -196,16 +213,18 @@ export const useTermsAcceptance = () => {
             version
           )
         `)
-        .eq('user_id', user.id)
-        .order('accepted_at', { ascending: false });
+          .eq("user_id", user.id)
+          .order("accepted_at", { ascending: false });
 
-      if (error) throw error;
-      return data || [];
-    } catch (error) {
-      console.error('Error getting acceptance history:', error);
-      return [];
-    }
-  }, [user]);
+        if (error) throw error;
+        return data || [];
+      } catch (error) {
+        console.error("Error getting acceptance history:", error);
+        return [];
+      }
+    },
+    [user],
+  );
 
   return {
     loading,
@@ -216,6 +235,6 @@ export const useTermsAcceptance = () => {
     getActiveTermsByType,
     getLatestActiveTerm,
     checkAllRequiredTermsAccepted,
-    getAcceptanceHistory
+    getAcceptanceHistory,
   };
 };
