@@ -1,4 +1,120 @@
 {
+  "preCheckoutModal": {
+    "noTermsFound": "No terms found",
+    "securePayment": "Secure Payment",
+    "closeModal": "Close modal",
+    "closeTerms": "Close terms",
+    "totalAmount": "Total amount",
+    "securePaymentGateway": "Secure payment gateway",
+    "promotionalCoupon": {
+      "title": "Promotional Coupon",
+      "enterCode": "Enter code",
+      "validate": "Validate",
+      "validating": "Validating...",
+      "remove": "Remove coupon",
+      "applied": "discount",
+      "discountedValue": "Discounted value",
+      "originalValue": "(original)",
+      "enterCodePlease": "Please enter the coupon code",
+      "successMessage": "Coupon {{code}} applied! Discount of ${{amount}} applied."
+    },
+    "referralCode": "Referral Code",
+    "codeAlreadyUsed": "Code already used",
+    "discountAlreadyApplied": "Discount already applied to your account",
+    "haveReferralCode": "Do you have a friend referral code?",
+    "placeholder": "Enter code here",
+    "validating": "Validating...",
+    "validate": "Validate Code",
+    "acceptContractTerms": "I have read and accept the contract terms and conditions",
+    "processingPayment": "Processing...",
+    "applyCodeAndContinue": "Apply Code and Continue",
+    "goToPayment": "Go to Payment",
+    "termsAndConditions": {
+      "title": "Terms and Conditions"
+    },
+    "scrollToBottomFirst": "Scroll to bottom to accept",
+    "readingTerms": "Reading terms...",
+    "acceptTerms": "Accept Terms",
+    "cancel": "Cancel",
+    "loading": "Loading...",
+    "validCode": "Valid referral code! You will receive $50 discount on the selection process fee.",
+    "pleaseEnterCode": "Please enter a code",
+    "sellerReferralCodeBlocked": "Users with seller code cannot use additional discount codes.",
+    "errorValidating": "Error validating code. Please try again.",
+    "mustAcceptTerms": "You must accept the terms and conditions to continue."
+  },
+  "zelleComponent": {
+    "instructions": {
+      "title": "Zelle Payment Instructions",
+      "subtitle": "Follow these steps to complete your payment via Zelle",
+      "detailsTitle": "Zelle Payment Details",
+      "detailsSubtitle": "Send payment to the recipient below",
+      "recipientEmail": "Recipient Email",
+      "paymentAmount": "Payment Amount",
+      "youSaved": "You saved {{amount}}!",
+      "important": "Important",
+      "importantNote": "Make sure to send the exact amount of <strong>{{amount}}</strong> to <strong>{{email}}</strong> via Zelle. Any discrepancy will delay your payment processing.",
+      "uploadTitle": "Upload Payment Confirmation Screenshot *",
+      "clickToUpload": "Click to upload or drag and drop",
+      "fileFormats": "PNG, JPG up to 5MB",
+      "selectFile": "Select File",
+      "remove": "Remove",
+      "changeFile": "Change File",
+      "submitPayment": "Submit Payment",
+      "processing": "Processing...",
+      "paymentProcessing": "Payment Processing..."
+    },
+    "analyzing": {
+      "title": "Analyzing Payment...",
+      "subtitle": "Your payment confirmation is being automatically validated by our AI system."
+    },
+    "underReview": {
+      "title": "Payment Under Review",
+      "subtitle": "Your payment proof requires additional verification. Our team will review it within 48 hours.",
+      "notification": "You will be notified once the review is complete. Please do not submit another payment."
+    },
+    "success": {
+      "title": "Payment Approved Successfully!",
+      "subtitle": "Your Zelle payment has been processed and approved. You can now proceed with the next steps.",
+      "detailsTitle": "Payment Details:",
+      "originalAmount": "Original Amount:",
+      "discountApplied": "Discount Applied:",
+      "finalAmount": "Final Amount:",
+      "youSavedSuccess": "You saved!",
+      "amount": "Amount:",
+      "feeType": "Fee Type:",
+      "paymentId": "Payment ID:",
+      "submitted": "Submitted:",
+      "nextStepsTitle": "What happens next?",
+      "stepUploaded": "Payment confirmation uploaded",
+      "stepApproved": "Payment approved successfully",
+      "stepProceeding": "Proceeding to next step automatically"
+    },
+    "rejected": {
+      "title": "Payment Rejected",
+      "subtitle": "Your payment proof was not approved. Please review the reason below and upload a new payment confirmation.",
+      "reasonTitle": "Rejection Reason:",
+      "defaultReason": "Payment was rejected by admin. Please upload a new payment confirmation.",
+      "uploadNew": "Upload New Payment Proof",
+      "uploadNewNote": "Click the button above to upload a new payment confirmation screenshot"
+    },
+    "uploadModal": {
+      "uploadingTitle": "Uploading Document...",
+      "uploadingMessage": "Please wait while we upload your payment confirmation",
+      "sendingTitle": "Sending for Verification...",
+      "sendingMessage": "Your payment proof is being sent for automatic validation",
+      "analyzingTitle": "Analyzing Payment...",
+      "analyzingMessage": "Our AI is validating your payment confirmation"
+    },
+    "errors": {
+      "fileSize": "File size must be less than 5MB",
+      "fileType": "Please select an image file (JPG, PNG, etc.)",
+      "uploadRequired": "Please upload a screenshot of your payment confirmation",
+      "uploadFailed": "Failed to upload payment confirmation",
+      "alreadyPending": "You already have a payment being processed. Please wait for it to be reviewed.",
+      "checkingStatus": "Checking payment status..."
+    }
+  },
   "stepByStepGuide": {
     "title": "Step-by-Step Guide",
     "subtitle": "How the application process works",
@@ -291,6 +407,7 @@
     "home": "Home",
     "howItWorks": "How It Works",
     "scholarships": "Scholarships",
+    "universities": "Universities",
     "forUniversities": "For Universities",
     "about": "About",
     "contact": "Contact",
@@ -1563,50 +1680,6 @@
       "weakPassword": "Password is too weak. Please choose a stronger password.",
       "invalidEmail": "Please enter a valid email address.",
       "signupDisabled": "New registrations are currently disabled. Please contact support.",
-      "preCheckoutModal": {
-        "noTermsFound": "No terms found",
-        "securePayment": "Secure Payment",
-        "closeModal": "Close modal",
-        "closeTerms": "Close terms",
-        "totalAmount": "Total amount",
-        "securePaymentGateway": "Secure payment gateway",
-        "promotionalCoupon": {
-          "title": "Promotional Coupon",
-          "enterCode": "Enter code",
-          "validate": "Validate",
-          "validating": "Validating...",
-          "remove": "Remove coupon",
-          "applied": "discount",
-          "discountedValue": "Discounted value",
-          "originalValue": "(original)",
-          "enterCodePlease": "Please enter the coupon code",
-          "successMessage": "Coupon {{code}} applied! Discount of ${{amount}} applied."
-        },
-        "referralCode": "Referral Code",
-        "codeAlreadyUsed": "Code already used",
-        "discountAlreadyApplied": "Discount already applied to your account",
-        "haveReferralCode": "Do you have a friend referral code?",
-        "placeholder": "Enter code here",
-        "validating": "Validating...",
-        "validate": "Validate Code",
-        "acceptContractTerms": "I have read and accept the contract terms and conditions",
-        "processingPayment": "Processing...",
-        "applyCodeAndContinue": "Apply Code and Continue",
-        "goToPayment": "Go to Payment",
-        "termsAndConditions": {
-          "title": "Terms and Conditions"
-        },
-        "scrollToBottomFirst": "Scroll to bottom to accept",
-        "readingTerms": "Reading terms...",
-        "acceptTerms": "Accept Terms",
-        "cancel": "Cancel",
-        "loading": "Loading...",
-        "validCode": "Valid referral code! You will receive $50 discount on the selection process fee.",
-        "pleaseEnterCode": "Please enter a code",
-        "sellerReferralCodeBlocked": "Users with seller code cannot use additional discount codes.",
-        "errorValidating": "Error validating code. Please try again.",
-        "mustAcceptTerms": "You must accept the terms and conditions to continue."
-      },
       "errors": {
         "serverError": "Error connecting to server",
         "tryAgain": "Please try again",
@@ -3031,63 +3104,6 @@
     "parcelowFeesNote": "* Provider and platform processing fees will be applied",
     "parcelowInstallmentPreview": "or in up to {{count}} installments"
   },
-  "preCheckoutModal": {
-    "securePayment": "Secure Payment",
-    "securePaymentProcess": "Secure Payment Process",
-    "closeModal": "Close modal",
-    "securePaymentGateway": "Secure Payment Gateway",
-    "totalAmount": "Total Amount",
-    "referralCode": "Referral Code",
-    "yourReferralCode": "Your Referral Code",
-    "enterReferralCode": "Enter your referral code to get a discount",
-    "haveReferralCode": "I have a discount code",
-    "usingYourReferralCode": "Using the referral code you used during registration",
-    "placeholder": "Enter code",
-    "validate": "Validate",
-    "validating": "Validating...",
-    "pleaseEnterCode": "Please enter a code",
-    "invalidCode": "Invalid or inactive code",
-    "selfReferral": "You cannot use your own referral code",
-    "alreadyUsedCode": "You have already used a referral code previously",
-    "sellerReferralCodeBlocked": "You cannot use Matricula Rewards codes because you have a seller referral code",
-    "sellerReferralCodeBlockedTitle": "Matricula Rewards Blocked",
-    "sellerReferralCodeBlockedMessage": "You cannot use Matricula Rewards codes because you registered with a seller referral code. This is a system restriction to prevent conflicts between different referral systems.",
-    "sellerReferralCodeInfoTitle": "Seller Referral Code Detected",
-    "sellerReferralCodeInfoMessage": "You registered with a seller referral code, so Matricula Rewards codes are not available. You can still proceed with payment at the regular price.",
-    "validCode": "Valid code! $50 discount applied",
-    "errorValidating": "Error validating code",
-    "codeAlreadyUsed": "Code already used",
-    "discountAlreadyApplied": "Your discount has already been applied previously",
-    "continueWithoutCode": "Continue without code",
-    "goToPayment": "Go to payment",
-    "applyCodeAndContinue": "Apply code and continue",
-    "processingPayment": "Processing Payment...",
-    "mustAcceptTerms": "You must accept the terms and conditions before continuing",
-    "mustEnterValidCode": "You must enter a valid code before continuing",
-    "termsAndConditions": {
-      "title": "Terms and Conditions",
-      "termsOfUse": "Terms of Use",
-      "and": "and",
-      "privacyPolicy": "Privacy Policy",
-      "description": "before proceeding with payment"
-    },
-    "closeTerms": "Close terms",
-    "loading": "Loading...",
-    "noTermsFound": "No terms found.",
-    "confirmReading": "Confirm Reading",
-    "scrollToBottomFirst": "Read to the end",
-    "acceptTerms": "Accept and Confirm",
-    "uploadPhotoRequired": "Please upload a selfie with your document to continue.",
-    "uploadPhoto": "Upload Selfie with Document",
-    "promotionalCoupon": {
-      "title": "Selection Process Fee",
-      "discountedValue": "Discounted Value",
-      "originalValue": "Original Value",
-      "applied": "Applied",
-      "successMessage": "Code {{code}} applied! You saved ${{amount}}",
-      "enterCodePlease": "Please enter a promotional code."
-    }
-  },
   "footer": {
     "company": {
       "title": "Company",
@@ -4131,78 +4147,6 @@
         "notAuthenticated": "User not authenticated.",
         "generationFailed": "Failed to generate payment link. Please try again."
       }
-    }
-  },
-  "zelleComponent": {
-    "instructions": {
-      "title": "Zelle Payment Instructions",
-      "subtitle": "Follow these steps to complete your payment via Zelle",
-      "detailsTitle": "Zelle Payment Details",
-      "detailsSubtitle": "Send payment to the recipient below",
-      "recipientEmail": "Recipient Email",
-      "paymentAmount": "Payment Amount",
-      "youSaved": "You saved {{amount}}!",
-      "important": "Important",
-      "importantNote": "Make sure to send the exact amount of <strong>{{amount}}</strong> to <strong>{{email}}</strong> via Zelle. Any discrepancy will delay your payment processing.",
-      "uploadTitle": "Upload Payment Confirmation Screenshot *",
-      "clickToUpload": "Click to upload or drag and drop",
-      "fileFormats": "PNG, JPG up to 5MB",
-      "selectFile": "Select File",
-      "remove": "Remove",
-      "changeFile": "Change File",
-      "submitPayment": "Submit Payment",
-      "processing": "Processing...",
-      "paymentProcessing": "Payment Processing..."
-    },
-    "analyzing": {
-      "title": "Analyzing Payment...",
-      "subtitle": "Your payment confirmation is being automatically validated by our AI system."
-    },
-    "underReview": {
-      "title": "Payment Under Review",
-      "subtitle": "Your payment proof requires additional verification. Our team will review it within 48 hours.",
-      "notification": "You will be notified once the review is complete. Please do not submit another payment."
-    },
-    "success": {
-      "title": "Payment Approved Successfully!",
-      "subtitle": "Your Zelle payment has been processed and approved. You can now proceed with the next steps.",
-      "detailsTitle": "Payment Details:",
-      "originalAmount": "Original Amount:",
-      "discountApplied": "Discount Applied:",
-      "finalAmount": "Final Amount:",
-      "youSavedSuccess": "You saved!",
-      "amount": "Amount:",
-      "feeType": "Fee Type:",
-      "paymentId": "Payment ID:",
-      "submitted": "Submitted:",
-      "nextStepsTitle": "What happens next?",
-      "stepUploaded": "Payment confirmation uploaded",
-      "stepApproved": "Payment approved successfully",
-      "stepProceeding": "Proceeding to next step automatically"
-    },
-    "rejected": {
-      "title": "Payment Rejected",
-      "subtitle": "Your payment proof was not approved. Please review the reason below and upload a new payment confirmation.",
-      "reasonTitle": "Rejection Reason:",
-      "defaultReason": "Payment was rejected by admin. Please upload a new payment confirmation.",
-      "uploadNew": "Upload New Payment Proof",
-      "uploadNewNote": "Click the button above to upload a new payment confirmation screenshot"
-    },
-    "uploadModal": {
-      "uploadingTitle": "Uploading Document...",
-      "uploadingMessage": "Please wait while we upload your payment confirmation",
-      "sendingTitle": "Sending for Verification...",
-      "sendingMessage": "Your payment proof is being sent for automatic validation",
-      "analyzingTitle": "Analyzing Payment...",
-      "analyzingMessage": "Our AI is validating your payment confirmation"
-    },
-    "errors": {
-      "fileSize": "File size must be less than 5MB",
-      "fileType": "Please select an image file (JPG, PNG, etc.)",
-      "uploadRequired": "Please upload a screenshot of your payment confirmation",
-      "uploadFailed": "Failed to upload payment confirmation",
-      "alreadyPending": "You already have a payment being processed. Please wait for it to be reviewed.",
-      "checkingStatus": "Checking payment status..."
     }
   }
 }
