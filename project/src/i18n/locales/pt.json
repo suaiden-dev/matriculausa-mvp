@@ -4135,7 +4135,8 @@
       "dependentsFee": "Taxa de Dependentes",
       "couponApplied": "Cupom Aplicado",
       "feeExplanation": "A Taxa do Processo de Seleção (US$400.00) é o primeiro pagamento obrigatório na plataforma MatriculaUSA. Ela desbloqueia seu acesso completo para visualizar todas as bolsas e iniciar seu processo de candidatura.",
-      "refundAssurance": "Caso não seja aceito em nenhuma universidade ao final do processo voce pode pedir reembolso das taxas pagas.",
+      "refundAssuranceTitle": "Garantia de Reembolso",
+      "refundAssuranceText": "Caso nao seja aceito em nenhuma universidade a taxa de processo seletivo é 100% reembolsavel.",
       "futureFeesTitle": "Taxas Futuras",
       "enrollmentFee": "Taxa de Matrícula",
       "scholarshipFee": "Taxa da Bolsa",
@@ -4143,7 +4144,7 @@
       "enrollmentFeeTooltip": "A Taxa de Matrícula varia por universidade e é um pagamento necessário para processar formalmente sua candidatura após você ter sido aceito. Este valor confirma sua intenção de se matricular e é gerenciado diretamente pela plataforma.",
       "scholarshipFeeTooltip": "A Taxa da Bolsa é cobrada quando você prossegue com a candidatura da bolsa escolhida. Esta taxa cobre custos de processamento da plataforma.",
       "i20FeeTooltip": "A Taxa de Controle I-20 é um pagamento obrigatório e essencial para solicitar o visto de estudante F-1. É a taxa final para a liberação da carta de aceite da sua bolsa e possui uma janela de pagamento de 10 dias.",
-      "futureFeesNote": "As taxas futuras são estimativas e variam por universidade."
+      "futureFeesNote": "Estas taxas são estimativas e podem variar por universidade."
     },
     "terms": {
       "contractSubtitle": "Contrato de Prestação de Serviços",
