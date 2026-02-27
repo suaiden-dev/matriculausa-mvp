@@ -835,6 +835,7 @@ const QuickRegistration: React.FC = () => {
                     {/* Full Name */}
                     <div className="flex flex-col">
                       <label className="block text-sm font-bold text-slate-700 mb-2 px-1">
+                        <span className="text-[#D0151C] font-bold mr-1">*</span>
                         {t('rapidRegistration.form.fullName')}
                       </label>
                       <div className="relative mt-auto">
@@ -857,6 +858,7 @@ const QuickRegistration: React.FC = () => {
                     {/* Email */}
                     <div className="flex flex-col">
                       <label className="block text-sm font-bold text-slate-700 mb-2 px-1">
+                        <span className="text-[#D0151C] font-bold mr-1">*</span>
                         {t('rapidRegistration.form.email')}
                       </label>
                       <div className="relative mt-auto">
@@ -879,6 +881,7 @@ const QuickRegistration: React.FC = () => {
                     {/* Phone */}
                     <div className="flex flex-col">
                       <label className="block text-sm font-bold text-slate-700 mb-2 px-1">
+                        <span className="text-[#D0151C] font-bold mr-1">*</span>
                         {t('rapidRegistration.form.phone')}
                       </label>
                       <div className="relative mt-auto">
@@ -886,6 +889,8 @@ const QuickRegistration: React.FC = () => {
                           international
                           defaultCountry="US"
                           addInternationalOption={false}
+                          limitMaxLength={true}
+                          maxLength={20}
                           value={formData.phone}
                           disabled={isRegistered}
                           onChange={(value) => {
@@ -936,6 +941,7 @@ const QuickRegistration: React.FC = () => {
                     {/* Password */}
                     <div className="flex flex-col">
                       <label className="block text-sm font-bold text-slate-700 mb-2 px-1">
+                        <span className="text-[#D0151C] font-bold mr-1">*</span>
                         {t('rapidRegistration.form.password')}
                       </label>
                       <div className="relative mt-auto">
@@ -971,6 +977,7 @@ const QuickRegistration: React.FC = () => {
                     {/* Confirm Password */}
                     <div className="flex flex-col">
                       <label className="block text-sm font-bold text-slate-700 mb-2 px-1">
+                        <span className="text-[#D0151C] font-bold mr-1">*</span>
                         {t('rapidRegistration.form.confirmPassword')}
                       </label>
                       <div className="relative mt-auto">
@@ -1408,7 +1415,7 @@ const QuickRegistration: React.FC = () => {
                             </div>
                           </div>
                         </div>
-                        <span className="font-black text-slate-900">$350.00</span>
+                        <span className="font-black text-slate-900">$350.00*</span>
                       </div>
                       {formData.dependents > 0 && (
                         <div className="flex justify-between items-center mt-2 pt-2 border-t border-dashed border-slate-100/50 pl-4">
@@ -1433,7 +1440,7 @@ const QuickRegistration: React.FC = () => {
                           </div>
                         </div>
                       </div>
-                      <span className="font-black text-slate-900">$900.00</span>
+                      <span className="font-black text-slate-900">$900.00*</span>
                     </div>
 
                     <div className="flex justify-between items-center relative">
@@ -1447,7 +1454,7 @@ const QuickRegistration: React.FC = () => {
                           </div>
                         </div>
                       </div>
-                      <span className="font-black text-slate-900">$900.00</span>
+                      <span className="font-black text-slate-900">$900.00*</span>
                     </div>
                   </div>
 
@@ -1458,13 +1465,18 @@ const QuickRegistration: React.FC = () => {
               </div>
 
               {/* Refund Assurance Note */}
-              <div className="bg-white border border-slate-200 rounded-2xl p-4 flex items-start space-x-3 shadow-xl">
-                <div className="w-8 h-8 rounded-lg bg-slate-50 flex items-center justify-center shrink-0 mt-0.5 border border-slate-100">
-                  <Shield className="w-4 h-4 text-[#05294E]" />
+              <div className="bg-white border border-slate-200 rounded-3xl p-6 shadow-xl">
+                <div>
+                  <div className="flex items-center space-x-3 mb-3">
+                    <div className="w-10 h-10 rounded-xl bg-emerald-50 text-emerald-600 flex items-center justify-center shrink-0 border border-emerald-100/50 shadow-sm">
+                      <Shield className="w-5 h-5" />
+                    </div>
+                    <h5 className="font-black text-slate-900 text-sm uppercase tracking-widest">{t('rapidRegistration.sidebar.refundAssuranceTitle')}</h5>
+                  </div>
+                  <p className="text-xs font-bold text-slate-600 leading-relaxed pl-12 uppercase tracking-wide">
+                    {t('rapidRegistration.sidebar.refundAssuranceText')}
+                  </p>
                 </div>
-                <p className="text-[11px] font-bold text-slate-700 leading-relaxed uppercase tracking-wide">
-                  {t('rapidRegistration.sidebar.refundAssurance')}
-                </p>
               </div>
 
               {/* Submit Button */}
