@@ -1821,6 +1821,74 @@
     },
     "notNow": "Ahora No"
   },
+  "selectionFeeStep": {
+    "main": {
+      "title": "Tarifa del Proceso de Selección",
+      "subtitle": "Asegura tu lugar pagando la tarifa del proceso de selección",
+      "headerTitle": "Tarifa del Proceso de Selección",
+      "headerSubtitle": "Matricula USA - Tarifa única",
+      "description": "Esta tarifa cubre el procesamiento de su solicitud, la evaluación de documentos y el apoyo inicial para su viaje de estudios en los Estados Unidos.",
+      "identityVerification": "Verificación de Identidad",
+      "identityVerificationSubtitle": "Por favor, envíe una selfie con su documento",
+      "discountApplied": "Descuento Aplicado",
+      "couponApplied": "Cupón {{coupon}} Aplicado",
+      "methods": {
+        "stripe": "Tarjeta de Crédito"
+      },
+      "paymentProcessing": {
+        "title": "Procesando Pago",
+        "subtitle": "Por favor, espere mientras procesamos su pago..."
+      },
+      "zellePayment": "Pago Zelle",
+      "zelleProcessing": {
+        "title": "Procesando Pago Zelle",
+        "subtitle": "Su pago Zelle está siendo verificado."
+      },
+      "zelleUnavailable": "Zelle no está disponible en este momento",
+      "parcelowInstallments": "Hasta 12x",
+      "parcelowVerification": "Verificación Parcelow",
+      "cpfPlaceholder": "Ingrese su CPF",
+      "goToPayment": "Ir al Pago",
+      "selectMethod": "Seleccione el Método de Pago",
+      "serviceContract": "Contrato de Servicio",
+      "back": "Volver",
+      "referralCode": {
+        "title": "Código de Referencia",
+        "subtitle": "¿Tienes un código de amigo? ¡Ingrésalo aquí para obtener un descuento!",
+        "placeholder": "Ingrese Código",
+        "validate": "Validar Código",
+        "applied": "Código aplicado con éxito",
+        "discount": "Descuento:",
+        "originalPrice": "Precio Original:",
+        "totalFinal": "Total Final:"
+      },
+      "promotionalCoupon": {
+        "title": "Cupón Promocional",
+        "subtitle": "Ingrese su código de cupón promocional",
+        "placeholder": "Ingrese el código",
+        "validating": "Validando...",
+        "remove": "Eliminar Cupón",
+        "applied": "Cupón aplicado",
+        "couponApplied": "Cupón aplicado con éxito",
+        "discount": "Descuento:",
+        "originalPrice": "Precio Original:",
+        "totalFinal": "Total Final:"
+      },
+      "processingFees": {
+        "card": "* Pueden incluirse cargos por procesamiento",
+        "pix": "* Pueden incluirse cargos por procesamiento",
+        "parcelow": "* Se aplicarán cargos de operador y procesamiento de plataforma",
+        "zelle": "* El procesamiento puede tardar hasta 48 horas"
+      }
+    },
+    "paid": {
+      "title": "Tarifa de Solicitud Pagada",
+      "subtitle": "Ha pagado con éxito la tarifa del proceso de selección.",
+      "paidTitle": "Pago Confirmado",
+      "paidSubtitle": "Su pago ha sido confirmado con éxito.",
+      "continue": "Continuar al Siguiente Paso"
+    }
+  },
   "studentDashboard": {
     "title": "Panel del Estudiante",
     "subtitle": "Gestiona tus solicitudes de beca",
@@ -1836,7 +1904,28 @@
       "payApplicationFee": "Paga la Tarifa de Solicitud para aplicar a una beca específica.",
       "payScholarshipFee": "Paga la Tarifa de Beca para confirmar tu solicitud de beca.",
       "payI20Fee": "Paga la Tarifa de Control I-20 para iniciar tu proceso de validación de documentos e I-20.",
-      "daysRemaining": "Tienes 10 días después de la tarifa de beca."
+      "daysRemaining": "Tienes 10 días después de la tarifa de beca.",
+      "onboardingBanner": {
+        "actionRequired": "ACCIÓN REQUERIDA",
+        "stoppedAt": "Se detuvo en: {{step}}",
+        "startNow": "Empezar Ahora",
+        "documentsPortal": "Portal de Documentos",
+        "continueProcess": "Continuar Proceso",
+        "startProcess": "Iniciar Proceso",
+        "stepLabels": {
+          "welcome": "Bienvenido",
+          "selection_fee": "Tarifa de Selección",
+          "scholarship_selection": "Selección de Becas",
+          "process_type": "Tipo de Proceso",
+          "documents_upload": "Envío de Documentos",
+          "payment": "Pago",
+          "scholarship_fee": "Tarifa de Beca",
+          "university_documents": "Documentos de la Universidad",
+          "waiting_approval": "Esperando Aprobación",
+          "completed": "Completado",
+          "my_applications": "Mis Solicitudes"
+        }
+      }
     },
     "stepByStepTour": {
       "title": "Tour Paso a Paso",
@@ -2754,6 +2843,7 @@
     "acceptTerms": "Aceptar y Confirmar",
     "uploadPhotoRequired": "Por favor, envíe una selfie con su documento para continuar.",
     "uploadPhoto": "Enviar Selfie con Documento",
+    "haveReferralCode": "¿Tengo un código de referido?",
     "usingYourReferralCode": "Usando su código de referencia",
     "placeholder": "Ingrese el código",
     "validate": "Validar",
@@ -3806,6 +3896,26 @@
         "invalidMethod": "Método de pago inválido.",
         "notAuthenticated": "Usuario no autenticado.",
         "generationFailed": "Error al generar el enlace de pago. Por favor, inténtelo de nuevo."
+      }
+    }
+  },
+  "components": {
+    "identityPhotoUpload": {
+      "titleInstructions": "Cómo tomar la foto correcta",
+      "instructions": "Tómate una selfie sosteniendo un documento con foto (pasaporte, DNI, licencia de conducir u otros) al lado de tu cara. Asegúrate de que tanto tu cara como el documento sean claramente visibles.",
+      "exampleAlt": "Ejemplo de foto com documento",
+      "uploading": "Subiendo foto...",
+      "clickToUpload": "Haz clic para subir la foto",
+      "fileTypes": "JPG o PNG (máximo 5MB)",
+      "success": "Foto subida con éxito",
+      "preview": "Vista previa de la foto",
+      "previewAlt": "Vista previa de la foto de identidad",
+      "remove": "Eliminar",
+      "errors": {
+        "onlyImages": "Solo se permiten archivos JPG y PNG",
+        "maxSize": "El archivo debe tener un máximo de 5MB",
+        "generic": "Error al subir la foto",
+        "unauthenticated": "Usuario no autenticado"
       }
     }
   }

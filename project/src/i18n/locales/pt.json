@@ -1739,6 +1739,74 @@
     },
     "notNow": "Agora Não"
   },
+  "selectionFeeStep": {
+    "main": {
+      "title": "Taxa do Processo Seletivo",
+      "subtitle": "Garanta sua vaga pagando a taxa do processo seletivo",
+      "headerTitle": "Taxa do Processo Seletivo",
+      "headerSubtitle": "Matrícula USA - Taxa única",
+      "description": "Esta taxa cobre o processamento de sua candidatura, avaliação de documentos e suporte inicial para o seu processo de estudo nos Estados Unidos.",
+      "identityVerification": "Verificação de Identidade",
+      "identityVerificationSubtitle": "Por favor, envie uma selfie com seu documento",
+      "discountApplied": "Desconto Aplicado",
+      "couponApplied": "Cupom {{coupon}} Aplicado",
+      "methods": {
+        "stripe": "Cartão de Crédito"
+      },
+      "paymentProcessing": {
+        "title": "Processando Pagamento",
+        "subtitle": "Por favor, aguarde enquanto processamos o seu pagamento..."
+      },
+      "zellePayment": "Pagamento Zelle",
+      "zelleProcessing": {
+        "title": "Processando Pagamento Zelle",
+        "subtitle": "Seu pagamento Zelle está sendo verificado."
+      },
+      "zelleUnavailable": "Zelle não está disponível no momento",
+      "parcelowInstallments": "Em até 12x",
+      "parcelowVerification": "Verificação Parcelow",
+      "cpfPlaceholder": "Digite seu CPF",
+      "goToPayment": "Ir para Pagamento",
+      "selectMethod": "Selecione o Método de Pagamento",
+      "serviceContract": "Contrato de Serviço",
+      "back": "Voltar",
+      "referralCode": {
+        "title": "Código de Indicação",
+        "subtitle": "Tem um código de amigo? Digite aqui para ganhar desconto!",
+        "placeholder": "Inserir Código",
+        "validate": "Validar Código",
+        "applied": "Código aplicado com sucesso",
+        "discount": "Desconto:",
+        "originalPrice": "Preço Original:",
+        "totalFinal": "Total Final:"
+      },
+      "promotionalCoupon": {
+        "title": "Cupom Promocional",
+        "subtitle": "Digite seu cupom de desconto promocional",
+        "placeholder": "Inserir código",
+        "validating": "Validando...",
+        "remove": "Remover Cupom",
+        "applied": "Cupom aplicado",
+        "couponApplied": "Cupom aplicado com sucesso",
+        "discount": "Desconto:",
+        "originalPrice": "Preço Original:",
+        "totalFinal": "Total Final:"
+      },
+      "processingFees": {
+        "card": "* Podem incluir taxas de processamento",
+        "pix": "* Podem incluir taxas de processamento",
+        "parcelow": "* Taxas de operadora e processamento da plataforma",
+        "zelle": "* Processamento pode levar até 48 horas"
+      }
+    },
+    "paid": {
+      "title": "Taxa de Matrícula Paga",
+      "subtitle": "Você pagou com sucesso a taxa do processo seletivo.",
+      "paidTitle": "Pagamento Confirmado",
+      "paidSubtitle": "Seu pagamento foi confirmado com segurança.",
+      "continue": "Continuar para a Próxima Etapa"
+    }
+  },
   "studentDashboard": {
     "title": "Painel do Estudante",
     "subtitle": "Gerencie suas candidaturas de bolsa",
@@ -1755,6 +1823,27 @@
       "payScholarshipFee": "Pague a Taxa de Bolsa para confirmar sua candidatura de bolsa.",
       "payI20Fee": "Pague a Taxa de Controle I-20 para iniciar seu processo de validação I-20 e documentos.",
       "daysRemaining": "Você tem 10 dias após a taxa de bolsa.",
+      "onboardingBanner": {
+        "actionRequired": "AÇÃO NECESSÁRIA",
+        "stoppedAt": "Parou em: {{step}}",
+        "startNow": "Começar Agora",
+        "documentsPortal": "Portal de Documentos",
+        "continueProcess": "Continuar Processo",
+        "startProcess": "Iniciar Processo",
+        "stepLabels": {
+          "welcome": "Bem-vindo",
+          "selection_fee": "Taxa de Seleção",
+          "scholarship_selection": "Seleção de Bolsas",
+          "process_type": "Tipo de Processo",
+          "documents_upload": "Envio de Documentos",
+          "payment": "Pagamento",
+          "scholarship_fee": "Taxa de Bolsa",
+          "university_documents": "Documentos da Universidade",
+          "waiting_approval": "Aguardando Aprovação",
+          "completed": "Concluído",
+          "my_applications": "Minhas Candidaturas"
+        }
+      },
       "onboarding": {
         "payFee": "Pagar Taxa de Seleção",
         "payFeeDesc": "Inicie seu processo pagando a taxa de seleção.",
@@ -4182,6 +4271,26 @@
         "invalidMethod": "Método de pagamento inválido.",
         "notAuthenticated": "Usuário não autenticado.",
         "generationFailed": "Falha ao gerar link de pagamento. Tente novamente."
+      }
+    }
+  },
+  "components": {
+    "identityPhotoUpload": {
+      "titleInstructions": "Como tirar a foto correta",
+      "instructions": "Tire uma selfie segurando um documento com foto (passaporte, RG, CNH ou outros) ao lado do seu rosto. Certifique-se de que tanto seu rosto quanto o documento estejam claramente visíveis.",
+      "exampleAlt": "Exemplo de foto com documento",
+      "uploading": "Enviando foto...",
+      "clickToUpload": "Clique para fazer upload da foto",
+      "fileTypes": "JPG ou PNG (máximo 5MB)",
+      "success": "Foto enviada com sucesso",
+      "preview": "Preview da foto",
+      "previewAlt": "Preview da foto de identidade",
+      "remove": "Remover",
+      "errors": {
+        "onlyImages": "Apenas arquivos JPG e PNG são permitidos",
+        "maxSize": "O arquivo deve ter no máximo 5MB",
+        "generic": "Erro ao fazer upload da foto",
+        "unauthenticated": "Usuário não autenticado"
       }
     }
   }

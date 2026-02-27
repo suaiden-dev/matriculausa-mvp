@@ -1,4 +1,5 @@
 import React, { useState, useRef } from 'react';
+import { useTranslation } from 'react-i18next';
 import { Upload, X, CheckCircle, AlertCircle, Camera } from 'lucide-react';
 import { supabase } from '../lib/supabase';
 import { useAuth } from '../hooks/useAuth';
@@ -19,7 +20,7 @@ export const IdentityPhotoUpload: React.FC<IdentityPhotoUploadProps> = ({
   onRemove,
   initialPhotoPath
 }) => {
-  const { user } = useAuth();
+  const { t } = useTranslation();
   const [preview, setPreview] = useState<string | null>(null);
   const [uploading, setUploading] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -93,7 +94,7 @@ export const IdentityPhotoUpload: React.FC<IdentityPhotoUploadProps> = ({
 
     // Validação de tipo
     if (!ALLOWED_TYPES.includes(file.type)) {
-      const errorMsg = 'Apenas arquivos JPG e PNG são permitidos';
+      const errorMsg = t('components.identityPhotoUpload.errors.onlyImages');
       setError(errorMsg);
       onUploadError?.(errorMsg);
       return;
@@ -101,7 +102,7 @@ export const IdentityPhotoUpload: React.FC<IdentityPhotoUploadProps> = ({
 
     // Validação de tamanho
     if (file.size > MAX_FILE_SIZE) {
-      const errorMsg = 'O arquivo deve ter no máximo 5MB';
+      const errorMsg = t('components.identityPhotoUpload.errors.maxSize');
       setError(errorMsg);
       onUploadError?.(errorMsg);
       return;
@@ -124,7 +125,7 @@ export const IdentityPhotoUpload: React.FC<IdentityPhotoUploadProps> = ({
       const token = sessionData.session?.access_token;
 
       if (!token) {
-        throw new Error('Usuário não autenticado');
+        throw new Error(t('components.identityPhotoUpload.errors.unauthenticated'));
       }
 
       const SUPABASE_URL = import.meta.env.VITE_SUPABASE_URL;
@@ -139,7 +140,7 @@ export const IdentityPhotoUpload: React.FC<IdentityPhotoUploadProps> = ({
       const result = await response.json();
 
       if (!result.success) {
-        throw new Error(result.error || 'Erro ao fazer upload da foto');
+        throw new Error(result.error || t('components.identityPhotoUpload.errors.generic'));
       }
 
       setUploadedFilePath(result.filePath);
@@ -148,7 +149,7 @@ export const IdentityPhotoUpload: React.FC<IdentityPhotoUploadProps> = ({
       setError(null);
     } catch (err: any) {
       console.error('Erro ao fazer upload:', err);
-      const errorMsg = err.message || 'Erro ao fazer upload da foto';
+      const errorMsg = err.message || t('components.identityPhotoUpload.errors.generic');
       setError(errorMsg);
       setPreview(null);
       onUploadError?.(errorMsg);
@@ -179,16 +180,15 @@ export const IdentityPhotoUpload: React.FC<IdentityPhotoUploadProps> = ({
           <Camera className="w-5 h-5 text-blue-600 mt-0.5 flex-shrink-0" />
           <div className="flex-1">
             <h4 className="font-semibold text-gray-900 mb-2 text-sm">
-              Como tirar a foto correta
+              {t('components.identityPhotoUpload.titleInstructions')}
             </h4>
             <p className="text-xs text-gray-600 mb-3">
-              Tire uma selfie segurando um documento com foto (passaporte, RG, CNH ou outros) ao lado do seu rosto. 
-              Certifique-se de que tanto seu rosto quanto o documento estejam claramente visíveis.
+              {t('components.identityPhotoUpload.instructions')}
             </p>
             <div className="flex justify-center">
               <img 
                 src="/helpselfie.png" 
-                alt="Exemplo de foto com documento" 
+                alt={t('components.identityPhotoUpload.exampleAlt')} 
                 className="max-w-full h-auto rounded-lg border-2 border-blue-300 shadow-sm"
                 style={{ maxHeight: '200px' }}
               />
@@ -218,7 +218,7 @@ export const IdentityPhotoUpload: React.FC<IdentityPhotoUploadProps> = ({
             {uploading ? (
               <>
                 <div className="w-12 h-12 border-4 border-blue-200 border-t-blue-600 rounded-full animate-spin"></div>
-                <p className="text-sm text-gray-600">Enviando foto...</p>
+                <p className="text-sm text-gray-600">{t('components.identityPhotoUpload.uploading')}</p>
               </>
             ) : (
               <>
@@ -227,10 +227,10 @@ export const IdentityPhotoUpload: React.FC<IdentityPhotoUploadProps> = ({
                 </div>
                 <div>
                   <p className="text-sm font-medium text-gray-700">
-                    Clique para fazer upload da foto
+                    {t('components.identityPhotoUpload.clickToUpload')}
                   </p>
                   <p className="text-xs text-gray-500 mt-1">
-                    JPG ou PNG (máximo 5MB)
+                    {t('components.identityPhotoUpload.fileTypes')}
                   </p>
                 </div>
               </>
@@ -242,7 +242,7 @@ export const IdentityPhotoUpload: React.FC<IdentityPhotoUploadProps> = ({
           <div className="border-2 border-green-300 rounded-xl overflow-hidden bg-gray-50">
             <img
               src={preview || undefined}
-              alt="Preview da foto de identidade"
+              alt={t('components.identityPhotoUpload.previewAlt')}
               className="w-full h-auto max-h-96 object-contain"
             />
           </div>
@@ -250,11 +250,11 @@ export const IdentityPhotoUpload: React.FC<IdentityPhotoUploadProps> = ({
             {uploadedFilePath && !isRemoved ? (
               <div className="flex items-center gap-2 text-green-700">
                 <CheckCircle className="w-5 h-5" />
-                <span className="text-sm font-medium">Foto enviada com sucesso</span>
+                <span className="text-sm font-medium">{t('components.identityPhotoUpload.success')}</span>
               </div>
             ) : (
               <div className="flex items-center gap-2 text-gray-500">
-                <span className="text-sm">Preview da foto</span>
+                <span className="text-sm">{t('components.identityPhotoUpload.preview')}</span>
               </div>
             )}
             <button
@@ -262,7 +262,7 @@ export const IdentityPhotoUpload: React.FC<IdentityPhotoUploadProps> = ({
               className="px-4 py-2 text-sm font-medium text-red-700 bg-red-50 hover:bg-red-100 rounded-lg transition-colors flex items-center gap-2"
             >
               <X className="w-4 h-4" />
-              Remover
+              {t('components.identityPhotoUpload.remove')}
             </button>
           </div>
         </div>

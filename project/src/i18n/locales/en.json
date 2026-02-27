@@ -1735,6 +1735,74 @@
     },
     "notNow": "Not Now"
   },
+  "selectionFeeStep": {
+    "main": {
+      "title": "Selection Process Fee",
+      "subtitle": "Secure your spot by paying the selection process fee",
+      "headerTitle": "Selection Process Fee",
+      "headerSubtitle": "Matricula USA - One-time fee",
+      "description": "This fee covers your application processing, document evaluation, and initial support for your study journey in the United States.",
+      "identityVerification": "Identity Verification",
+      "identityVerificationSubtitle": "Please provide a selfie with your document",
+      "discountApplied": "Discount Applied",
+      "couponApplied": "Coupon {{coupon}} Applied",
+      "methods": {
+        "stripe": "Credit Card"
+      },
+      "paymentProcessing": {
+        "title": "Processing Payment",
+        "subtitle": "Please wait while we process your payment..."
+      },
+      "zellePayment": "Zelle Payment",
+      "zelleProcessing": {
+        "title": "Zelle Payment Processing",
+        "subtitle": "Your Zelle payment is currently being verified."
+      },
+      "zelleUnavailable": "Zelle is currently unavailable",
+      "parcelowInstallments": "Up to 12x",
+      "parcelowVerification": "Parcelow Verification",
+      "cpfPlaceholder": "Enter your CPF",
+      "goToPayment": "Go to Payment",
+      "selectMethod": "Select Payment Method",
+      "serviceContract": "Service Contract",
+      "back": "Back",
+      "referralCode": {
+        "title": "Referral Code",
+        "subtitle": "Got a friend's code? Enter it here for a discount!",
+        "placeholder": "Enter Referral Code",
+        "validate": "Validate Code",
+        "applied": "Code applied successfully",
+        "discount": "Discount:",
+        "originalPrice": "Original Price:",
+        "totalFinal": "Final Total:"
+      },
+      "promotionalCoupon": {
+        "title": "Promotional Coupon",
+        "subtitle": "Enter your promotional coupon code",
+        "placeholder": "Enter code",
+        "validating": "Validating...",
+        "remove": "Remove Coupon",
+        "applied": "Coupon applied",
+        "couponApplied": "Coupon applied successfully",
+        "discount": "Discount:",
+        "originalPrice": "Original Price:",
+        "totalFinal": "Final Total:"
+      },
+      "processingFees": {
+        "card": "* May include processing fees",
+        "pix": "* May include processing fees",
+        "parcelow": "* Operator and platform fees may apply",
+        "zelle": "* Processing can take up to 48 hours"
+      }
+    },
+    "paid": {
+      "title": "Application Fee Paid",
+      "subtitle": "You have successfully paid the selection process fee.",
+      "paidTitle": "Payment Confirmed",
+      "paidSubtitle": "Your payment has been successfully confirmed.",
+      "continue": "Continue to the Next Step"
+    }
+  },
   "studentDashboard": {
     "title": "Student Dashboard",
     "subtitle": "Manage your scholarship applications",
@@ -1751,6 +1819,27 @@
       "payScholarshipFee": "Pay the Scholarship Fee to confirm your scholarship application.",
       "payI20Fee": "Pay the I-20 Control Fee to start your I-20 and document validation process.",
       "daysRemaining": "You have 10 days after the scholarship fee.",
+      "onboardingBanner": {
+        "actionRequired": "ACTION REQUIRED",
+        "stoppedAt": "Stopped at: {{step}}",
+        "startNow": "Start Now",
+        "documentsPortal": "Documents Portal",
+        "continueProcess": "Continue Process",
+        "startProcess": "Start Process",
+        "stepLabels": {
+          "welcome": "Welcome",
+          "selection_fee": "Selection Fee",
+          "scholarship_selection": "Scholarship Selection",
+          "process_type": "Process Type",
+          "documents_upload": "Documents Upload",
+          "payment": "Payment",
+          "scholarship_fee": "Scholarship Fee",
+          "university_documents": "University Documents",
+          "waiting_approval": "Waiting Approval",
+          "completed": "Completed",
+          "my_applications": "My Applications"
+        }
+      },
       "onboarding": {
         "payFee": "Pay Selection Fee",
         "payFeeDesc": "Start your process by paying the selection fee.",
@@ -3080,6 +3169,7 @@
     "acceptTerms": "Accept and Confirm",
     "uploadPhotoRequired": "Please upload a selfie with your document to continue.",
     "uploadPhoto": "Upload Selfie with Document",
+    "acceptContractTerms": "I accept the service contract terms and conditions",
     "promotionalCoupon": {
       "title": "Selection Process Fee",
       "discountedValue": "Discounted Value",
@@ -4117,6 +4207,26 @@
         "invalidMethod": "Invalid payment method.",
         "notAuthenticated": "User not authenticated.",
         "generationFailed": "Failed to generate payment link. Please try again."
+      }
+    }
+  },
+  "components": {
+    "identityPhotoUpload": {
+      "titleInstructions": "How to take the correct photo",
+      "instructions": "Take a selfie holding a photo ID (passport, ID card, driver's license, or others) next to your face. Make sure both your face and the document are clearly visible.",
+      "exampleAlt": "Example photo with document",
+      "uploading": "Uploading photo...",
+      "clickToUpload": "Click to upload photo",
+      "fileTypes": "JPG or PNG (max 5MB)",
+      "success": "Photo uploaded successfully",
+      "preview": "Photo preview",
+      "previewAlt": "Identity photo preview",
+      "remove": "Remove",
+      "errors": {
+        "onlyImages": "Only JPG and PNG files are allowed",
+        "maxSize": "The file must be at most 5MB",
+        "generic": "Error uploading photo",
+        "unauthenticated": "User not authenticated"
       }
     }
   }

@@ -1499,7 +1499,7 @@ export const SelectionFeeStep: React.FC<StepProps> = ({ onNext }) => {
   const paymentMethods = [
     {
       id: 'stripe' as const,
-      name: t('selectionFeeStep.main.paymentMethods.creditCard'),
+      name: t('selectionFeeStep.main.methods.stripe'),
       description: t('selectionFeeStep.main.processingFees.card'),
       icon: StripeIcon
     },
@@ -1577,8 +1577,8 @@ export const SelectionFeeStep: React.FC<StepProps> = ({ onNext }) => {
           <div className="flex flex-col md:flex-row md:items-center justify-between mb-8 space-y-6 md:space-y-0 relative z-10">
             <div className="flex items-center space-x-4">
               <div>
-                <h3 className="text-2xl font-black text-gray-900 uppercase tracking-tight">{t('selectionFeeStep.main.feeTitle')}</h3>
-                <p className="text-xs font-bold text-gray-400 uppercase tracking-widest mt-1">{t('selectionFeeStep.main.feePaymentType')}</p>
+                <h3 className="text-2xl font-black text-gray-900 uppercase tracking-tight">{t('selectionFeeStep.main.headerTitle')}</h3>
+                <p className="text-xs font-bold text-gray-400 uppercase tracking-widest mt-1">{t('selectionFeeStep.main.headerSubtitle')}</p>
               </div>
             </div>
             <div className="text-left md:text-right">
@@ -1603,7 +1603,7 @@ export const SelectionFeeStep: React.FC<StepProps> = ({ onNext }) => {
 
           <div className="bg-gray-50 rounded-2xl p-5 mb-8 border border-gray-100">
             <p className="text-sm md:text-base text-gray-600 leading-relaxed font-medium">
-              {t('selectionFeeStep.main.feeDescription')}
+              {t('selectionFeeStep.main.description')}
             </p>
           </div>
 
@@ -2212,10 +2212,10 @@ export const SelectionFeeStep: React.FC<StepProps> = ({ onNext }) => {
                       <div className="bg-gray-50 rounded-3xl pt-2 pb-6 px-6 sm:pt-4 sm:pb-10 sm:px-10 border border-gray-100 shadow-sm">
                         <div className="text-center mb-4">
                           <h4 className="text-2xl font-black text-gray-900 mb-1 uppercase tracking-tight">
-                            {t('selectionFeeStep.identityVerification')}
+                            {t('selectionFeeStep.main.identityVerification')}
                           </h4>
                           <p className="text-base text-gray-600 font-medium">
-                            {t('selectionFeeStep.identityVerificationSubtitle')}
+                            {t('selectionFeeStep.main.identityVerificationSubtitle')}
                           </p>
                         </div>
 
