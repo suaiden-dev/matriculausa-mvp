@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef, useCallback } from 'react';
+﻿import React, { useState, useEffect, useRef, useCallback } from 'react';
 import ReactDOM from 'react-dom';
 import { Dialog } from '@headlessui/react';
 import { useNavigate } from 'react-router-dom';
@@ -132,7 +132,7 @@ const MobileTermsView: React.FC<{
       </button>
       <h3 className="text-lg font-semibold text-gray-900">
         {page === 'selfie'
-          ? 'Verificação de Identidade'
+          ? t('selectionFeeStep.identityVerification')
           : (activeTerm ? activeTerm.title : t('preCheckoutModal.termsAndConditions.title'))
         }
       </h3>
@@ -192,10 +192,10 @@ const MobileTermsView: React.FC<{
           <div className="bg-gray-50 rounded-2xl pt-1 pb-4 px-4 sm:pt-2 sm:pb-6 sm:px-6 border border-gray-100 shadow-sm">
             <div className="text-center mb-3">
               <h4 className="text-xl font-black text-gray-900 mb-1 uppercase tracking-tight">
-                Verificação de Identidade
+                {t('selectionFeeStep.identityVerification')}
               </h4>
               <p className="text-xs text-gray-600 font-medium leading-relaxed">
-                Para finalizar a aceitação dos termos, precisamos verificar sua identidade.
+                {t('selectionFeeStep.identityVerificationSubtitle')}
               </p>
             </div>
 
@@ -1371,6 +1371,9 @@ export const SelectionFeeStep: React.FC<StepProps> = ({ onNext }) => {
       setShowInlineCpf(true);
       setSelectedMethod('parcelow');
       return;
+    } else {
+      // Se mudar para qualquer outro método, oculta o campo de CPF
+      setShowInlineCpf(false);
     }
 
     setLoading(true);
@@ -1496,26 +1499,26 @@ export const SelectionFeeStep: React.FC<StepProps> = ({ onNext }) => {
   const paymentMethods = [
     {
       id: 'stripe' as const,
-      name: 'Cartão de Crédito',
-      description: 'Pay securely with your credit or debit card',
+      name: t('selectionFeeStep.main.paymentMethods.creditCard'),
+      description: t('selectionFeeStep.main.processingFees.card'),
       icon: StripeIcon
     },
     {
       id: 'pix' as const,
       name: 'PIX',
-      description: 'Instant payment method from Brazil',
+      description: t('selectionFeeStep.main.processingFees.pix'),
       icon: PixIcon
     },
     {
       id: 'parcelow' as const,
       name: 'Parcelow',
-      description: 'Pay with Credit Card in up to 12 installments',
+      description: t('selectionFeeStep.main.parcelowInstallments'),
       icon: ParcelowIcon
     },
     {
       id: 'zelle' as const,
       name: 'Zelle',
-      description: 'Pay via Zelle and send the proof of payment. Processing may take up to 48 hours.',
+      description: t('selectionFeeStep.main.processingFees.zelle'),
       icon: ZelleIcon,
       requiresVerification: true
     }
@@ -1529,8 +1532,8 @@ export const SelectionFeeStep: React.FC<StepProps> = ({ onNext }) => {
       <div className="space-y-10 pb-12 max-w-4xl mx-auto px-4">
         {/* Header */}
         <div className="text-center md:text-left space-y-4">
-          <h2 className="text-3xl md:text-5xl font-black text-white uppercase tracking-tighter leading-none">Taxa do Processo Seletivo</h2>
-          <p className="text-lg md:text-xl text-white/60 font-medium max-w-2xl mt-2">Pagamento do processo seletivo concluído.</p>
+          <h2 className="text-3xl md:text-5xl font-black text-slate-900 uppercase tracking-tighter leading-none">{t('selectionFeeStep.paid.title')}</h2>
+          <p className="text-lg md:text-xl text-slate-600 font-medium max-w-2xl mt-2">{t('selectionFeeStep.paid.subtitle')}</p>
         </div>
 
         {/* Main White Container */}
@@ -1541,13 +1544,13 @@ export const SelectionFeeStep: React.FC<StepProps> = ({ onNext }) => {
             <div className="w-20 h-20 bg-emerald-500/20 rounded-full flex items-center justify-center mx-auto mb-6 border border-emerald-500/30">
               <CheckCircle className="w-12 h-12 text-emerald-400" />
             </div>
-            <h3 className="text-3xl font-black text-gray-900 mb-3 uppercase tracking-tight">Taxa do Processo Seletivo Paga!</h3>
-            <p className="text-gray-500 mb-8 font-medium">Você já realizou o pagamento da taxa do processo seletivo.</p>
+            <h3 className="text-3xl font-black text-gray-900 mb-3 uppercase tracking-tight">{t('selectionFeeStep.paid.paidTitle')}</h3>
+            <p className="text-gray-500 mb-8 font-medium">{t('selectionFeeStep.paid.paidSubtitle')}</p>
             <button
               onClick={onNext}
               className="w-full max-w-xs bg-blue-600 text-white py-4 px-8 rounded-xl hover:bg-blue-700 transition-all font-bold uppercase tracking-widest shadow-lg shadow-blue-500/20 hover:scale-105 active:scale-95 mx-auto"
             >
-              Continuar
+              {t('selectionFeeStep.paid.continue')}
             </button>
           </div>
         </div>
@@ -1560,11 +1563,11 @@ export const SelectionFeeStep: React.FC<StepProps> = ({ onNext }) => {
       {/* Payment Section */}
       <div className="space-y-6">
         <div className="text-center md:text-left">
-          <h2 className="text-3xl md:text-5xl font-black text-white mb-3 uppercase tracking-tighter">
-            Pagar Taxa do Processo Seletivo
+          <h2 className="text-3xl md:text-5xl font-black text-slate-900 mb-3 uppercase tracking-tighter">
+            {t('selectionFeeStep.main.title')}
           </h2>
-          <p className="text-lg md:text-xl text-white/60 font-medium">
-            Inicie seu processo pagando a taxa do processo seletivo
+          <p className="text-lg md:text-xl text-slate-600 font-medium">
+            {t('selectionFeeStep.main.subtitle')}
           </p>
         </div>
 
@@ -1574,8 +1577,8 @@ export const SelectionFeeStep: React.FC<StepProps> = ({ onNext }) => {
           <div className="flex flex-col md:flex-row md:items-center justify-between mb-8 space-y-6 md:space-y-0 relative z-10">
             <div className="flex items-center space-x-4">
               <div>
-                <h3 className="text-2xl font-black text-gray-900 uppercase tracking-tight">Taxa de Processo Seletivo</h3>
-                <p className="text-xs font-bold text-gray-400 uppercase tracking-widest mt-1">Pagamento Único</p>
+                <h3 className="text-2xl font-black text-gray-900 uppercase tracking-tight">{t('selectionFeeStep.main.feeTitle')}</h3>
+                <p className="text-xs font-bold text-gray-400 uppercase tracking-widest mt-1">{t('selectionFeeStep.main.feePaymentType')}</p>
               </div>
             </div>
             <div className="text-left md:text-right">
@@ -1587,8 +1590,8 @@ export const SelectionFeeStep: React.FC<StepProps> = ({ onNext }) => {
                     <CheckCircle className="w-3 h-3 text-emerald-500 mr-2" />
                     <span className="text-[10px] text-emerald-500 font-black uppercase tracking-widest">
                       {promotionalCouponValidation?.isValid 
-                        ? `Cupom ${promotionalCoupon} Aplicado!`
-                        : 'Desconto de $50 Aplicado!'}
+                        ? t('selectionFeeStep.main.couponApplied', { coupon: promotionalCoupon })
+                        : t('selectionFeeStep.main.discountApplied')}
                     </span>
                   </div>
                 </div>
@@ -1600,7 +1603,7 @@ export const SelectionFeeStep: React.FC<StepProps> = ({ onNext }) => {
 
           <div className="bg-gray-50 rounded-2xl p-5 mb-8 border border-gray-100">
             <p className="text-sm md:text-base text-gray-600 leading-relaxed font-medium">
-              Esta taxa cobre o processamento inicial da sua candidatura e permite que você prossiga com a seleção de bolsas de estudo em nossas universidades parceiras.
+              {t('selectionFeeStep.main.feeDescription')}
             </p>
           </div>
 
@@ -1637,7 +1640,7 @@ export const SelectionFeeStep: React.FC<StepProps> = ({ onNext }) => {
                         <div className="checkmark" />
                       </label>
                       <label htmlFor="hasReferralCode" className="text-sm text-gray-700 leading-relaxed cursor-pointer flex-1">
-                        {t('preCheckoutModal.haveReferralCode') || 'I have a referral code'}
+                        {t('preCheckoutModal.haveReferralCode') || 'Eu tenho um código de indicação'}
                       </label>
                     </div>
                   )}
@@ -1649,10 +1652,10 @@ export const SelectionFeeStep: React.FC<StepProps> = ({ onNext }) => {
                       <div className="space-y-4 max-w-md w-full">
                         <div className="text-center">
                           <h3 className="text-xl font-black text-gray-900 uppercase tracking-tight mb-2">
-                            {hasReferralCode ? 'Código de Indicação' : (t('preCheckoutModal.referralCode') || 'Código de Referência')}
+                            {t('selectionFeeStep.main.referralCode.title')}
                           </h3>
                           <p className="text-sm text-gray-600">
-                            Use um código de indicação e ganhe $50 de desconto!
+                            {t('selectionFeeStep.main.referralCode.subtitle')}
                           </p>
                         </div>
                         
@@ -1696,7 +1699,7 @@ export const SelectionFeeStep: React.FC<StepProps> = ({ onNext }) => {
                                     <span>{t('preCheckoutModal.validating') || 'Validando...'}</span>
                                   </div>
                                 ) : (
-                                  'Validar'
+                                  t('selectionFeeStep.main.referralCode.validate')
                                 )}
                               </button>
                             )}
@@ -1714,10 +1717,10 @@ export const SelectionFeeStep: React.FC<StepProps> = ({ onNext }) => {
                       <div className="space-y-4 max-w-md w-full">
                         <div className="text-center">
                           <h3 className="text-xl font-black text-gray-900 uppercase tracking-tight mb-2">
-                            Cupom Promocional
+                            {t('selectionFeeStep.main.promotionalCoupon.title')}
                           </h3>
                           <p className="text-sm text-gray-600">
-                            Tem um cupom promocional? Aplique aqui para economizar ainda mais!
+                            {t('selectionFeeStep.main.promotionalCoupon.subtitle')}
                           </p>
                         </div>
 
@@ -1732,7 +1735,7 @@ export const SelectionFeeStep: React.FC<StepProps> = ({ onNext }) => {
                                     <CheckCircle className="w-6 h-6 text-emerald-500" />
                                   </div>
                                   <div>
-                                    <span className="text-xs font-bold text-gray-400 uppercase tracking-widest block">Cupom Aplicado</span>
+                                    <span className="text-xs font-bold text-gray-400 uppercase tracking-widest block">{t('selectionFeeStep.main.promotionalCoupon.couponApplied')}</span>
                                     <span className="text-lg font-black text-gray-800 uppercase tracking-tight">{promotionalCoupon}</span>
                                   </div>
                                 </div>
@@ -1740,25 +1743,25 @@ export const SelectionFeeStep: React.FC<StepProps> = ({ onNext }) => {
                                   onClick={removePromotionalCoupon}
                                   className="px-4 py-2 bg-gray-50 hover:bg-red-50 text-gray-400 hover:text-red-500 rounded-lg text-xs font-black uppercase tracking-widest transition-all border border-gray-100 hover:border-red-100"
                                 >
-                                  Remover
+                                  {t('selectionFeeStep.main.promotionalCoupon.remove')}
                                 </button>
                               </div>
 
                               <div className="space-y-3 pt-4 border-t border-gray-100 relative z-10">
                                 <div className="flex justify-between text-xs font-bold uppercase tracking-widest text-gray-400">
-                                  <span>Preço Original:</span>
+                                  <span>{t('selectionFeeStep.main.promotionalCoupon.originalPrice')}</span>
                                   <span className="line-through text-gray-300">
                                     ${selectionFeeAmount.toFixed(2)}
                                   </span>
                                 </div>
                                 <div className="flex justify-between text-xs font-bold uppercase tracking-widest text-gray-400">
-                                  <span>Desconto:</span>
+                                  <span>{t('selectionFeeStep.main.promotionalCoupon.discount')}</span>
                                   <span className="text-emerald-500">
                                     -${promotionalCouponValidation.discountAmount?.toFixed(2)}
                                   </span>
                                 </div>
                                 <div className="flex justify-between text-xl font-black uppercase tracking-tight pt-3 text-gray-900">
-                                  <span>Total Final:</span>
+                                  <span>{t('selectionFeeStep.main.promotionalCoupon.totalFinal')}</span>
                                   <span className="text-emerald-500">
                                     ${promotionalCouponValidation.finalAmount?.toFixed(2)}
                                   </span>
@@ -1803,10 +1806,10 @@ export const SelectionFeeStep: React.FC<StepProps> = ({ onNext }) => {
                                   {isValidatingPromotionalCoupon ? (
                                     <div className="flex items-center justify-center space-x-2">
                                       <Loader2 className="w-5 h-5 animate-spin" />
-                                      <span>Validando...</span>
+                                      <span>{t('selectionFeeStep.main.promotionalCoupon.validating')}</span>
                                     </div>
                                   ) : (
-                                    'Validar'
+                                    t('selectionFeeStep.main.referralCode.validate')
                                   )}
                                 </button>
                               </div>
@@ -1884,9 +1887,9 @@ export const SelectionFeeStep: React.FC<StepProps> = ({ onNext }) => {
                   <AlertCircle className="w-5 h-5 text-amber-600" />
                 </div>
                 <div>
-                  <p className="text-sm font-black text-amber-700 uppercase tracking-tight">Pagamento Zelle em Análise</p>
+                  <p className="text-sm font-black text-amber-700 uppercase tracking-tight">{t('selectionFeeStep.main.zelleProcessing.title')}</p>
                   <p className="text-xs text-amber-600/80 font-medium mt-0.5 leading-relaxed">
-                    Você já iniciou um pagamento via Zelle para esta taxa. Aguarde a confirmação antes de tentar outro método. Isso pode levar até 48 horas.
+                    {t('selectionFeeStep.main.zelleProcessing.subtitle')}
                   </p>
                 </div>
               </div>
@@ -1928,13 +1931,15 @@ export const SelectionFeeStep: React.FC<StepProps> = ({ onNext }) => {
             <div className="space-y-6 bg-white border border-gray-100 rounded-3xl p-6 shadow-xl relative overflow-hidden">
               <div className="absolute top-0 right-0 w-32 h-32 bg-blue-500/5 rounded-full blur-[40px] -mr-16 -mt-16 pointer-events-none" />
               <div className="flex items-center justify-between mb-2 relative z-10">
-                <h3 className="text-xl font-black text-gray-900 uppercase tracking-tight">Pagamento Zelle</h3>
+                <h3 className="text-xl font-black text-gray-900 uppercase tracking-tight">{t('selectionFeeStep.main.zellePayment')}</h3>
                 
                 {!isZelleProcessing && (
                   <button
                     onClick={() => {
                       setShowZelleCheckout(false);
+                      setIsZelleProcessing(false);
                       setSelectedMethod(null);
+                      setShowInlineCpf(false);
                     }}
                     className="p-2 hover:bg-gray-100 rounded-full transition-colors text-gray-400 hover:text-gray-900"
                   >
@@ -1981,17 +1986,17 @@ export const SelectionFeeStep: React.FC<StepProps> = ({ onNext }) => {
                     <AlertCircle className="w-6 h-6 text-amber-500 flex-shrink-0 mt-0.5" />
                     <div>
                       <p className="text-sm font-black text-amber-500 uppercase tracking-tight mb-1">
-                        Pagamento em Processamento
+                        {t('selectionFeeStep.main.paymentProcessing.title')}
                       </p>
                       <p className="text-xs text-white/60 font-medium">
-                        Você já tem um pagamento via Zelle sendo processado. Por favor, aguarde a revisão antes de tentar outro método.
+                        {t('selectionFeeStep.main.paymentProcessing.subtitle')}
                       </p>
                     </div>
                   </div>
                 </div>
               )}
                
-              <p className="text-xs font-black text-gray-400 uppercase tracking-[0.2em] mb-4 px-2">Selecione o método de pagamento:</p>
+              <p className="text-xs font-black text-gray-400 uppercase tracking-[0.2em] mb-4 px-2">{t('selectionFeeStep.main.selectMethod')}</p>
                
               {paymentMethods.map((method) => {
                 const Icon = method.icon;
@@ -2025,18 +2030,18 @@ export const SelectionFeeStep: React.FC<StepProps> = ({ onNext }) => {
                                   {method.name}
                                 </h4>
                                 {method.id === 'stripe' && (
-                                  <span className="text-[10px] font-bold text-gray-400 mt-1 uppercase tracking-wide leading-tight">* Podem incluir taxas de processamento</span>
+                                  <span className="text-[10px] font-bold text-gray-400 mt-1 uppercase tracking-wide leading-tight">{t('selectionFeeStep.main.processingFees.card')}</span>
                                 )}
                                 {method.id === 'pix' && (
-                                  <span className="text-[10px] font-bold text-gray-400 mt-1 uppercase tracking-wide leading-tight">* Podem incluir taxas de processamento</span>
+                                  <span className="text-[10px] font-bold text-gray-400 mt-1 uppercase tracking-wide leading-tight">{t('selectionFeeStep.main.processingFees.pix')}</span>
                                 )}
                                 {method.id === 'parcelow' && (
-                                  <span className="text-[10px] font-bold text-gray-400 mt-1 uppercase tracking-wide leading-tight max-w-[200px] sm:max-w-none">* Podem incluir taxas de operadora e processamento da plataforma</span>
+                                  <span className="text-[10px] font-bold text-gray-400 mt-1 uppercase tracking-wide leading-tight max-w-[200px] sm:max-w-none">{t('selectionFeeStep.main.processingFees.parcelow')}</span>
                                 )}
                                 {method.id === 'zelle' && (
                                   <span className="text-[10px] font-bold text-gray-400 mt-1 uppercase tracking-wide leading-tight flex items-center gap-1">
                                     <AlertCircle className="w-3 h-3 flex-shrink-0" />
-                                    Processamento pode levar até 48 horas
+                                    {t('selectionFeeStep.main.processingFees.zelle')}
                                   </span>
                                 )}
                               </div>
@@ -2053,7 +2058,7 @@ export const SelectionFeeStep: React.FC<StepProps> = ({ onNext }) => {
                                      ${computedBasePrice.toFixed(2)}
                                    </span>
                                   <span className="text-[10px] font-bold text-slate-900 mt-1 block uppercase tracking-widest leading-tight">
-                                    * Até 12x no cartão
+                                    {t('selectionFeeStep.main.parcelowInstallments')}
                                   </span>
                                 </div>
                               )}
@@ -2083,7 +2088,7 @@ export const SelectionFeeStep: React.FC<StepProps> = ({ onNext }) => {
                             <div className="mt-3 flex items-center space-x-2 bg-amber-50 border border-amber-100 w-fit px-2 py-1 rounded-lg">
                               <AlertCircle className="w-3 h-3 text-amber-600" />
                               <span className="text-[10px] text-amber-600 font-bold uppercase tracking-tight">
-                                Indisponível - Zelle em processamento
+                                {t('selectionFeeStep.main.zelleUnavailable')}
                               </span>
                             </div>
                           )}
@@ -2095,10 +2100,10 @@ export const SelectionFeeStep: React.FC<StepProps> = ({ onNext }) => {
                     {method.id === 'parcelow' && showInlineCpf && (
                       <div className="p-6 bg-blue-50 border-2 border-blue-100 rounded-2xl mt-4 space-y-4 animate-fadeIn relative z-0 shadow-[0_15px_30px_rgba(59,130,246,0.1)]">
                         <div className="flex flex-col sm:flex-row sm:items-center gap-4">
-                           <div className="flex-1">
+                            <div className="flex-initial sm:w-[300px]">
                               <p className="text-[11px] font-black text-blue-700 uppercase tracking-widest mb-2 flex items-center gap-2">
                                 <Shield className="w-3 h-3" />
-                                Verificação Obrigatória Parcelow
+                                {t('selectionFeeStep.main.parcelowVerification')}
                               </p>
                               <div className="relative">
                                 <input
@@ -2108,9 +2113,9 @@ export const SelectionFeeStep: React.FC<StepProps> = ({ onNext }) => {
                                     setInlineCpf(formatCpf(e.target.value));
                                     setCpfError(null);
                                   }}
-                                  placeholder="Digite seu CPF (000.000.000-00)"
+                                  placeholder={t('selectionFeeStep.main.cpfPlaceholder')}
                                   maxLength={14}
-                                  className="w-full px-4 py-3 rounded-xl border border-blue-200 text-sm font-medium text-gray-900 focus:outline-none focus:ring-2 focus:ring-blue-500 bg-white transition-all"
+                                   className="w-full px-4 py-3 rounded-xl border border-blue-200 text-sm font-bold text-gray-900 focus:outline-none focus:ring-2 focus:ring-blue-500 bg-white transition-all shadow-sm"
                                 />
                               </div>
                            </div>
@@ -2119,7 +2124,7 @@ export const SelectionFeeStep: React.FC<StepProps> = ({ onNext }) => {
                             disabled={savingCpf || inlineCpf.replace(/\D/g, '').length !== 11}
                             className="sm:mt-6 px-8 py-3 rounded-xl bg-blue-600 text-white text-sm font-black hover:bg-blue-700 transition-all disabled:opacity-50 disabled:cursor-not-allowed whitespace-nowrap flex items-center justify-center gap-2 shadow-lg shadow-blue-500/25 active:scale-95"
                           >
-                            {savingCpf ? <Loader2 className="w-4 h-4 animate-spin" /> : 'Ir ao pagamento'}
+                            {savingCpf ? <Loader2 className="w-4 h-4 animate-spin" /> : t('selectionFeeStep.main.goToPayment')}
                           </button>
                         </div>
                         {cpfError && (
@@ -2165,7 +2170,7 @@ export const SelectionFeeStep: React.FC<StepProps> = ({ onNext }) => {
                       <Dialog.Title className="text-2xl sm:text-3xl font-black uppercase tracking-tighter">
                         {activeTerm?.title ? activeTerm.title : t('preCheckoutModal.termsAndConditions.title')}
                       </Dialog.Title>
-                      <p className="text-blue-100/60 text-xs font-bold uppercase tracking-widest mt-1">Contrato de Prestação de Serviços</p>
+                      <p className="text-blue-100/60 text-xs font-bold uppercase tracking-widest mt-1">{t('selectionFeeStep.main.serviceContract')}</p>
                     </div>
                   </div>
                 </div>
@@ -2207,10 +2212,10 @@ export const SelectionFeeStep: React.FC<StepProps> = ({ onNext }) => {
                       <div className="bg-gray-50 rounded-3xl pt-2 pb-6 px-6 sm:pt-4 sm:pb-10 sm:px-10 border border-gray-100 shadow-sm">
                         <div className="text-center mb-4">
                           <h4 className="text-2xl font-black text-gray-900 mb-1 uppercase tracking-tight">
-                            Verificação de Identidade
+                            {t('selectionFeeStep.identityVerification')}
                           </h4>
                           <p className="text-base text-gray-600 font-medium">
-                            Para finalizar a aceitação dos termos, precisamos verificar sua identidade.
+                            {t('selectionFeeStep.identityVerificationSubtitle')}
                           </p>
                         </div>
 
@@ -2283,7 +2288,7 @@ export const SelectionFeeStep: React.FC<StepProps> = ({ onNext }) => {
                           onClick={() => setTermsModalPage('terms')}
                           className="flex-[1] px-8 py-4 bg-gray-200/50 text-gray-600 rounded-2xl font-black uppercase tracking-widest text-sm hover:bg-gray-200 transition-all active:scale-95"
                         >
-                          Voltar
+                          {t('selectionFeeStep.main.back')}
                         </button>
                         <button
                           onClick={handleTermsAccept}

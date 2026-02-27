@@ -316,7 +316,7 @@ const StudentOnboarding: React.FC = () => {
 
   if (authLoading || loading) {
     return (
-      <div className="min-h-screen bg-[#020617] flex items-center justify-center">
+      <div className="min-h-screen bg-slate-100 flex items-center justify-center">
         <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600"></div>
       </div>
     );
@@ -392,7 +392,7 @@ const StudentOnboarding: React.FC = () => {
     else if (stepParam === 'my_applications') translationKey = 'i20ControlFee';
 
     return (
-      <div className="min-h-screen flex items-center justify-center bg-[#020617]">
+      <div className="flex-1 flex items-center justify-center bg-slate-300">
         <CustomLoading 
           color="green" 
           title={t(`successPages.${translationKey}.verifying`)} 
@@ -403,83 +403,47 @@ const StudentOnboarding: React.FC = () => {
   }
 
   return (
-    <div className="min-h-screen bg-[#020617] w-full flex flex-col relative overflow-x-hidden">
+    <div className="flex-1 w-full flex flex-col relative">
+      {/* Background Camada Base (Chumbo + Blur) - Fixo para não afetar scroll */}
+      <div className="fixed inset-0 bg-slate-300/80 backdrop-blur-3xl z-0 pointer-events-none" />
+      
       {/* Background blobs decorativos */}
-      <div className="absolute top-0 right-0 -mr-20 -mt-20 w-96 h-96 bg-blue-600/20 rounded-full blur-[120px] pointer-events-none" />
+      <div className="fixed top-0 right-0 -mr-20 -mt-20 w-[50vw] h-[50vw] max-w-[500px] max-h-[500px] bg-blue-600/10 rounded-full blur-[100px] pointer-events-none z-0" />
+      <div className="fixed bottom-0 left-0 -ml-20 -mb-20 w-[60vw] h-[60vw] max-w-[600px] max-h-[600px] bg-slate-600/20 rounded-full blur-[120px] pointer-events-none z-0" />
       
       {/* Padrão diagonal inspirado em marcas de luxo - fixo na viewport */}
-      <div className="fixed inset-0 pointer-events-none z-0 overflow-hidden">
-        {/* Linha 1 - y:0% */}
-        <div className="absolute opacity-5 w-16 h-16" style={{ top: '0%', left: '0%', backgroundImage: 'url(/favicon-branco.png)', backgroundSize: 'contain', backgroundRepeat: 'no-repeat', filter: 'blur(1px)' }} />
-        <div className="absolute opacity-5 w-16 h-16" style={{ top: '0%', left: '16%', backgroundImage: 'url(/favicon-branco.png)', backgroundSize: 'contain', backgroundRepeat: 'no-repeat', filter: 'blur(1px)' }} />
-        <div className="absolute opacity-5 w-16 h-16" style={{ top: '0%', left: '33%', backgroundImage: 'url(/favicon-branco.png)', backgroundSize: 'contain', backgroundRepeat: 'no-repeat', filter: 'blur(1px)' }} />
-        <div className="absolute opacity-5 w-16 h-16" style={{ top: '0%', left: '50%', backgroundImage: 'url(/favicon-branco.png)', backgroundSize: 'contain', backgroundRepeat: 'no-repeat', filter: 'blur(1px)' }} />
-        <div className="absolute opacity-5 w-16 h-16" style={{ top: '0%', left: '66%', backgroundImage: 'url(/favicon-branco.png)', backgroundSize: 'contain', backgroundRepeat: 'no-repeat', filter: 'blur(1px)' }} />
-        <div className="absolute opacity-5 w-16 h-16" style={{ top: '0%', left: '83%', backgroundImage: 'url(/favicon-branco.png)', backgroundSize: 'contain', backgroundRepeat: 'no-repeat', filter: 'blur(1px)' }} />
-        
-        {/* Linha 2 - y:12% offset diagonal */}
-        <div className="absolute opacity-5 w-16 h-16" style={{ top: '12%', left: '8%', backgroundImage: 'url(/favicon-branco.png)', backgroundSize: 'contain', backgroundRepeat: 'no-repeat', filter: 'blur(1px)' }} />
-        <div className="absolute opacity-5 w-16 h-16" style={{ top: '12%', left: '25%', backgroundImage: 'url(/favicon-branco.png)', backgroundSize: 'contain', backgroundRepeat: 'no-repeat', filter: 'blur(1px)' }} />
-        <div className="absolute opacity-5 w-16 h-16" style={{ top: '12%', left: '42%', backgroundImage: 'url(/favicon-branco.png)', backgroundSize: 'contain', backgroundRepeat: 'no-repeat', filter: 'blur(1px)' }} />
-        <div className="absolute opacity-5 w-16 h-16" style={{ top: '12%', left: '58%', backgroundImage: 'url(/favicon-branco.png)', backgroundSize: 'contain', backgroundRepeat: 'no-repeat', filter: 'blur(1px)' }} />
-        <div className="absolute opacity-5 w-16 h-16" style={{ top: '12%', left: '75%', backgroundImage: 'url(/favicon-branco.png)', backgroundSize: 'contain', backgroundRepeat: 'no-repeat', filter: 'blur(1px)' }} />
-        <div className="absolute opacity-5 w-16 h-16" style={{ top: '12%', left: '92%', backgroundImage: 'url(/favicon-branco.png)', backgroundSize: 'contain', backgroundRepeat: 'no-repeat', filter: 'blur(1px)' }} />
-        
-        {/* Linha 3 - y:25% */}
-        <div className="absolute opacity-5 w-16 h-16" style={{ top: '25%', left: '0%', backgroundImage: 'url(/favicon-branco.png)', backgroundSize: 'contain', backgroundRepeat: 'no-repeat', filter: 'blur(1px)' }} />
-        <div className="absolute opacity-5 w-16 h-16" style={{ top: '25%', left: '16%', backgroundImage: 'url(/favicon-branco.png)', backgroundSize: 'contain', backgroundRepeat: 'no-repeat', filter: 'blur(1px)' }} />
-        <div className="absolute opacity-5 w-16 h-16" style={{ top: '25%', left: '33%', backgroundImage: 'url(/favicon-branco.png)', backgroundSize: 'contain', backgroundRepeat: 'no-repeat', filter: 'blur(1px)' }} />
-        <div className="absolute opacity-5 w-16 h-16" style={{ top: '25%', left: '50%', backgroundImage: 'url(/favicon-branco.png)', backgroundSize: 'contain', backgroundRepeat: 'no-repeat', filter: 'blur(1px)' }} />
-        <div className="absolute opacity-5 w-16 h-16" style={{ top: '25%', left: '66%', backgroundImage: 'url(/favicon-branco.png)', backgroundSize: 'contain', backgroundRepeat: 'no-repeat', filter: 'blur(1px)' }} />
-        <div className="absolute opacity-5 w-16 h-16" style={{ top: '25%', left: '83%', backgroundImage: 'url(/favicon-branco.png)', backgroundSize: 'contain', backgroundRepeat: 'no-repeat', filter: 'blur(1px)' }} />
-        
-        {/* Linha 4 - y:37% offset diagonal */}
-        <div className="absolute opacity-5 w-16 h-16" style={{ top: '37%', left: '8%', backgroundImage: 'url(/favicon-branco.png)', backgroundSize: 'contain', backgroundRepeat: 'no-repeat', filter: 'blur(1px)' }} />
-        <div className="absolute opacity-5 w-16 h-16" style={{ top: '37%', left: '25%', backgroundImage: 'url(/favicon-branco.png)', backgroundSize: 'contain', backgroundRepeat: 'no-repeat', filter: 'blur(1px)' }} />
-        <div className="absolute opacity-5 w-16 h-16" style={{ top: '37%', left: '42%', backgroundImage: 'url(/favicon-branco.png)', backgroundSize: 'contain', backgroundRepeat: 'no-repeat', filter: 'blur(1px)' }} />
-        <div className="absolute opacity-5 w-16 h-16" style={{ top: '37%', left: '58%', backgroundImage: 'url(/favicon-branco.png)', backgroundSize: 'contain', backgroundRepeat: 'no-repeat', filter: 'blur(1px)' }} />
-        <div className="absolute opacity-5 w-16 h-16" style={{ top: '37%', left: '75%', backgroundImage: 'url(/favicon-branco.png)', backgroundSize: 'contain', backgroundRepeat: 'no-repeat', filter: 'blur(1px)' }} />
-        <div className="absolute opacity-5 w-16 h-16" style={{ top: '37%', left: '92%', backgroundImage: 'url(/favicon-branco.png)', backgroundSize: 'contain', backgroundRepeat: 'no-repeat', filter: 'blur(1px)' }} />
-        
-        {/* Linha 5 - y:50% */}
-        <div className="absolute opacity-5 w-16 h-16" style={{ top: '50%', left: '0%', backgroundImage: 'url(/favicon-branco.png)', backgroundSize: 'contain', backgroundRepeat: 'no-repeat', filter: 'blur(1px)' }} />
-        <div className="absolute opacity-5 w-16 h-16" style={{ top: '50%', left: '16%', backgroundImage: 'url(/favicon-branco.png)', backgroundSize: 'contain', backgroundRepeat: 'no-repeat', filter: 'blur(1px)' }} />
-        <div className="absolute opacity-5 w-16 h-16" style={{ top: '50%', left: '33%', backgroundImage: 'url(/favicon-branco.png)', backgroundSize: 'contain', backgroundRepeat: 'no-repeat', filter: 'blur(1px)' }} />
-        <div className="absolute opacity-5 w-16 h-16" style={{ top: '50%', left: '50%', backgroundImage: 'url(/favicon-branco.png)', backgroundSize: 'contain', backgroundRepeat: 'no-repeat', filter: 'blur(1px)' }} />
-        <div className="absolute opacity-5 w-16 h-16" style={{ top: '50%', left: '66%', backgroundImage: 'url(/favicon-branco.png)', backgroundSize: 'contain', backgroundRepeat: 'no-repeat', filter: 'blur(1px)' }} />
-        <div className="absolute opacity-5 w-16 h-16" style={{ top: '50%', left: '83%', backgroundImage: 'url(/favicon-branco.png)', backgroundSize: 'contain', backgroundRepeat: 'no-repeat', filter: 'blur(1px)' }} />
-        
-        {/* Linha 6 - y:62% offset diagonal */}
-        <div className="absolute opacity-5 w-16 h-16" style={{ top: '62%', left: '8%', backgroundImage: 'url(/favicon-branco.png)', backgroundSize: 'contain', backgroundRepeat: 'no-repeat', filter: 'blur(1px)' }} />
-        <div className="absolute opacity-5 w-16 h-16" style={{ top: '62%', left: '25%', backgroundImage: 'url(/favicon-branco.png)', backgroundSize: 'contain', backgroundRepeat: 'no-repeat', filter: 'blur(1px)' }} />
-        <div className="absolute opacity-5 w-16 h-16" style={{ top: '62%', left: '42%', backgroundImage: 'url(/favicon-branco.png)', backgroundSize: 'contain', backgroundRepeat: 'no-repeat', filter: 'blur(1px)' }} />
-        <div className="absolute opacity-5 w-16 h-16" style={{ top: '62%', left: '58%', backgroundImage: 'url(/favicon-branco.png)', backgroundSize: 'contain', backgroundRepeat: 'no-repeat', filter: 'blur(1px)' }} />
-        <div className="absolute opacity-5 w-16 h-16" style={{ top: '62%', left: '75%', backgroundImage: 'url(/favicon-branco.png)', backgroundSize: 'contain', backgroundRepeat: 'no-repeat', filter: 'blur(1px)' }} />
-        <div className="absolute opacity-5 w-16 h-16" style={{ top: '62%', left: '92%', backgroundImage: 'url(/favicon-branco.png)', backgroundSize: 'contain', backgroundRepeat: 'no-repeat', filter: 'blur(1px)' }} />
-        
-        {/* Linha 7 - y:75% */}
-        <div className="absolute opacity-5 w-16 h-16" style={{ top: '75%', left: '0%', backgroundImage: 'url(/favicon-branco.png)', backgroundSize: 'contain', backgroundRepeat: 'no-repeat', filter: 'blur(1px)' }} />
-        <div className="absolute opacity-5 w-16 h-16" style={{ top: '75%', left: '16%', backgroundImage: 'url(/favicon-branco.png)', backgroundSize: 'contain', backgroundRepeat: 'no-repeat', filter: 'blur(1px)' }} />
-        <div className="absolute opacity-5 w-16 h-16" style={{ top: '75%', left: '33%', backgroundImage: 'url(/favicon-branco.png)', backgroundSize: 'contain', backgroundRepeat: 'no-repeat', filter: 'blur(1px)' }} />
-        <div className="absolute opacity-5 w-16 h-16" style={{ top: '75%', left: '50%', backgroundImage: 'url(/favicon-branco.png)', backgroundSize: 'contain', backgroundRepeat: 'no-repeat', filter: 'blur(1px)' }} />
-        <div className="absolute opacity-5 w-16 h-16" style={{ top: '75%', left: '66%', backgroundImage: 'url(/favicon-branco.png)', backgroundSize: 'contain', backgroundRepeat: 'no-repeat', filter: 'blur(1px)' }} />
-        <div className="absolute opacity-5 w-16 h-16" style={{ top: '75%', left: '83%', backgroundImage: 'url(/favicon-branco.png)', backgroundSize: 'contain', backgroundRepeat: 'no-repeat', filter: 'blur(1px)' }} />
-        
-        {/* Linha 8 - y:87% offset diagonal */}
-        <div className="absolute opacity-5 w-16 h-16" style={{ top: '87%', left: '8%', backgroundImage: 'url(/favicon-branco.png)', backgroundSize: 'contain', backgroundRepeat: 'no-repeat', filter: 'blur(1px)' }} />
-        <div className="absolute opacity-5 w-16 h-16" style={{ top: '87%', left: '25%', backgroundImage: 'url(/favicon-branco.png)', backgroundSize: 'contain', backgroundRepeat: 'no-repeat', filter: 'blur(1px)' }} />
-        <div className="absolute opacity-5 w-16 h-16" style={{ top: '87%', left: '42%', backgroundImage: 'url(/favicon-branco.png)', backgroundSize: 'contain', backgroundRepeat: 'no-repeat', filter: 'blur(1px)' }} />
-        <div className="absolute opacity-5 w-16 h-16" style={{ top: '87%', left: '58%', backgroundImage: 'url(/favicon-branco.png)', backgroundSize: 'contain', backgroundRepeat: 'no-repeat', filter: 'blur(1px)' }} />
-        <div className="absolute opacity-5 w-16 h-16" style={{ top: '87%', left: '75%', backgroundImage: 'url(/favicon-branco.png)', backgroundSize: 'contain', backgroundRepeat: 'no-repeat', filter: 'blur(1px)' }} />
-        <div className="absolute opacity-5 w-16 h-16" style={{ top: '87%', left: '92%', backgroundImage: 'url(/favicon-branco.png)', backgroundSize: 'contain', backgroundRepeat: 'no-repeat', filter: 'blur(1px)' }} />
-        
-        {/* Linha 9 - y:96% */}
-        <div className="absolute opacity-5 w-16 h-16" style={{ top: '96%', left: '0%', backgroundImage: 'url(/favicon-branco.png)', backgroundSize: 'contain', backgroundRepeat: 'no-repeat', filter: 'blur(1px)' }} />
-        <div className="absolute opacity-5 w-16 h-16" style={{ top: '96%', left: '16%', backgroundImage: 'url(/favicon-branco.png)', backgroundSize: 'contain', backgroundRepeat: 'no-repeat', filter: 'blur(1px)' }} />
-        <div className="absolute opacity-5 w-16 h-16" style={{ top: '96%', left: '33%', backgroundImage: 'url(/favicon-branco.png)', backgroundSize: 'contain', backgroundRepeat: 'no-repeat', filter: 'blur(1px)' }} />
-        <div className="absolute opacity-5 w-16 h-16" style={{ top: '96%', left: '50%', backgroundImage: 'url(/favicon-branco.png)', backgroundSize: 'contain', backgroundRepeat: 'no-repeat', filter: 'blur(1px)' }} />
-        <div className="absolute opacity-5 w-16 h-16" style={{ top: '96%', left: '66%', backgroundImage: 'url(/favicon-branco.png)', backgroundSize: 'contain', backgroundRepeat: 'no-repeat', filter: 'blur(1px)' }} />
-        <div className="absolute opacity-5 w-16 h-16" style={{ top: '96%', left: '83%', backgroundImage: 'url(/favicon-branco.png)', backgroundSize: 'contain', backgroundRepeat: 'no-repeat', filter: 'blur(1px)' }} />
+      <div className="fixed inset-0 pointer-events-none z-0 overflow-hidden opacity-[0.35] flex items-center justify-center">
+        {[
+          { y: '0%', offset: false },
+          { y: '12%', offset: true },
+          { y: '25%', offset: false },
+          { y: '37%', offset: true },
+          { y: '50%', offset: false },
+          { y: '62%', offset: true },
+          { y: '75%', offset: false },
+          { y: '87%', offset: true },
+          { y: '96%', offset: false }
+        ].map((row, i) => (
+          <React.Fragment key={`row-${i}`}>
+            {(row.offset ? ['8%', '25%', '42%', '58%', '75%', '92%'] : ['0%', '16%', '33%', '50%', '66%', '83%']).map((x, j) => (
+              <div 
+                key={`m-${i}-${j}`}
+                className="absolute w-16 h-16 bg-white" 
+                style={{ 
+                  top: row.y, 
+                  left: x, 
+                  WebkitMaskImage: 'url(/favicon-branco.png)',
+                  maskImage: 'url(/favicon-branco.png)',
+                  WebkitMaskSize: 'contain',
+                  maskSize: 'contain',
+                  WebkitMaskRepeat: 'no-repeat',
+                  maskRepeat: 'no-repeat',
+                  filter: 'blur(1px)' 
+                }} 
+              />
+            ))}
+          </React.Fragment>
+        ))}
       </div>
       
       <div className="w-full max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 xl:px-12 py-4 sm:py-6 lg:py-8 flex-1 flex flex-col relative z-10">

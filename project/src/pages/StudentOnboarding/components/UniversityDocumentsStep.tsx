@@ -16,6 +16,7 @@ import {
   Lock,
   RefreshCw,
   ShieldCheck,
+  Shield,
   LayoutDashboard,
 
   CheckCircle2,
@@ -119,6 +120,42 @@ export const UniversityDocumentsStep: React.FC<StepProps> = ({ onBack }) => {
   const [i20Countdown, setI20Countdown] = useState<string | null>(null);
   const [i20CountdownValues, setI20CountdownValues] = useState<{ days: number, hours: number, minutes: number, seconds: number } | null>(null);
   const [exchangeRate, setExchangeRate] = useState<number>(0);
+
+  // CPF inline para Parcelow (I-20)
+  const [showInlineCpf, setShowInlineCpf] = useState(false);
+  const [inlineCpf, setInlineCpf] = useState('');
+  const [savingCpf, setSavingCpf] = useState(false);
+  const [cpfError, setCpfError] = useState<string | null>(null);
+
+  const formatCpf = (value: string): string => {
+    const digits = value.replace(/\D/g, '').slice(0, 11);
+    if (digits.length <= 3) return digits;
+    if (digits.length <= 6) return `${digits.slice(0, 3)}.${digits.slice(3)}`;
+    if (digits.length <= 9) return `${digits.slice(0, 3)}.${digits.slice(3, 6)}.${digits.slice(6)}`;
+    return `${digits.slice(0, 3)}.${digits.slice(3, 6)}.${digits.slice(6, 9)}-${digits.slice(9)}`;
+  };
+
+  const saveCpfAndCheckout = async () => {
+    const cpfDigits = inlineCpf.replace(/\D/g, '');
+    if (cpfDigits.length !== 11 || !user?.id) return;
+    setSavingCpf(true);
+    setCpfError(null);
+    try {
+      const { error } = await supabase
+        .from('user_profiles')
+        .update({ cpf_document: inlineCpf })
+        .eq('user_id', user.id);
+      if (error) throw error;
+      setShowInlineCpf(false);
+      setInlineCpf('');
+      // Redirecionar diretamente para o pagamento pulando a verificação do state userProfile que pode estar desatualizado
+      await handlePaymentMethodSelect('parcelow', undefined, true);
+    } catch (err: any) {
+      setCpfError('Erro ao salvar CPF. Tente novamente.');
+    } finally {
+      setSavingCpf(false);
+    }
+  };
   const [promotionalCoupon, setPromotionalCoupon] = useState('');
   const [hasPromotionalCouponCheckbox, setHasPromotionalCouponCheckbox] = useState(false);
   const [isValidatingPromotionalCoupon, setIsValidatingPromotionalCoupon] = useState(false);
@@ -442,12 +479,19 @@ export const UniversityDocumentsStep: React.FC<StepProps> = ({ onBack }) => {
     delete (window as any).__checkout_final_amount;
   };
 
-  const handlePaymentMethodSelect = async (method: 'stripe' | 'zelle' | 'pix' | 'parcelow', exchangeRateParam?: number) => {
-    // Verificar CPF apenas para Parcelow
-    if (method === 'parcelow' && !userProfile?.cpf_document) {
-      setProfileErrorType('cpf_missing');
-      setShowProfileRequiredModal(true);
-      return;
+  const handlePaymentMethodSelect = async (method: 'stripe' | 'zelle' | 'pix' | 'parcelow', exchangeRateParam?: number, skipCpfCheck = false) => {
+    // Resetar estado do CPF inline ao mudar de método
+    if (method !== 'parcelow') {
+      setShowInlineCpf(false);
+    }
+
+    // Verificar CPF para Parcelow — exibir campo inline em vez de modal
+    if (method === 'parcelow' && !skipCpfCheck) {
+      if (!userProfile?.cpf_document) {
+        setShowInlineCpf(true);
+        return;
+      }
+      setShowInlineCpf(false);
     }
 
     setSelectedPaymentMethod(method);
@@ -544,12 +588,12 @@ export const UniversityDocumentsStep: React.FC<StepProps> = ({ onBack }) => {
     return (
       <div className="flex flex-col items-center justify-center py-20 animate-pulse">
         <div className="relative">
-          <div className="w-16 h-16 border-4 border-white/20 border-t-white rounded-full animate-spin"></div>
+          <div className="w-16 h-16 border-4 border-slate-300 border-t-blue-600 rounded-full animate-spin"></div>
           <div className="absolute inset-0 flex items-center justify-center">
-            <GraduationCap className="w-6 h-6 text-white" />
+            <GraduationCap className="w-6 h-6 text-slate-800" />
           </div>
         </div>
-        <p className="text-white/60 font-medium mt-4">Carregando portal de gerenciamento...</p>
+        <p className="text-slate-600 font-medium mt-4">Carregando portal de gerenciamento...</p>
       </div>
     );
   }
@@ -557,14 +601,14 @@ export const UniversityDocumentsStep: React.FC<StepProps> = ({ onBack }) => {
   if (!applicationDetails) {
     return (
       <div className="max-w-4xl mx-auto p-12 bg-white/10 backdrop-blur-md rounded-[2.5rem] border border-white/20 text-center">
-        <div className="w-20 h-20 bg-amber-500/20 rounded-2xl flex items-center justify-center mx-auto mb-6">
+        <div className="w-20 h-20 bg-amber-50 rounded-2xl flex items-center justify-center mx-auto mb-6">
           <AlertCircle className="w-10 h-10 text-amber-500" />
         </div>
-        <h3 className="text-2xl font-black text-white uppercase tracking-tight mb-2">Nenhuma Aplicação Encontrada</h3>
-        <p className="text-white/60 mb-8 max-w-md mx-auto">
+        <h3 className="text-2xl font-black text-slate-900 uppercase tracking-tight mb-2">Nenhuma Aplicação Encontrada</h3>
+        <p className="text-slate-600 mb-8 max-w-md mx-auto">
           Você ainda não possui uma aplicação ativa. Por favor, volte ao passo anterior ou entre em contato com o suporte.
         </p>
-        <button onClick={onBack} className="bg-white text-blue-900 px-8 py-4 rounded-xl font-bold uppercase tracking-widest text-xs hover:bg-white/90 transition-all">
+        <button onClick={onBack} className="bg-slate-900 text-white px-8 py-4 rounded-xl font-bold uppercase tracking-widest text-xs hover:bg-slate-800 transition-all">
           Voltar
         </button>
       </div>
@@ -617,8 +661,8 @@ export const UniversityDocumentsStep: React.FC<StepProps> = ({ onBack }) => {
               <span className="text-[10px] font-black text-blue-400 uppercase tracking-widest">Passo Final</span>
             </div>
           </div>
-          <h2 className="text-4xl md:text-6xl font-black text-white uppercase tracking-tighter leading-none">
-            Minha <span className="text-blue-400">Aplicação</span>
+          <h2 className="text-4xl md:text-6xl font-black text-slate-900 uppercase tracking-tighter leading-none">
+            Minha <span className="text-blue-600">Aplicação</span>
           </h2>
 
         </div>
@@ -1266,7 +1310,7 @@ export const UniversityDocumentsStep: React.FC<StepProps> = ({ onBack }) => {
                            <span className="text-4xl font-black text-grey-900 tracking-tighter leading-none">
                              {formatFeeAmount(promotionalCouponValidation?.finalAmount || getFeeAmount('i20_control_fee'))}
                            </span>
-                        </div>
+                         </div>
                       </div>
 
                       {/* Promotional Coupon Section */}
@@ -1505,42 +1549,87 @@ export const UniversityDocumentsStep: React.FC<StepProps> = ({ onBack }) => {
                             </button>
 
                             {/* Parcelow Option */}
-                            <button
-                              onClick={() => handlePaymentMethodSelect('parcelow')}
-                              disabled={i20Loading}
-                              className="group/btn relative bg-white border border-gray-200 p-6 rounded-[2rem] text-left hover:scale-[1.01] active:scale-95 transition-all shadow-sm hover:shadow-md disabled:opacity-50 hover:border-blue-600/30 hover:bg-blue-50/10 flex items-center"
-                            >
-                              <div className="w-14 h-14 flex items-center justify-center bg-orange-50 transition-colors rounded-2xl mr-5 px-1">
-                                <ParcelowIcon className="w-full h-10" />
-                              </div>
-                              <div className="flex-1 flex flex-col justify-center">
-                                 <div className="flex items-baseline justify-between leading-none">
-                                    <span className="font-bold text-gray-900 text-lg">Parcelow</span>
-                                    <div className="text-right flex flex-col items-end leading-none">
-                                      <span className="text-slate-900 text-xl font-black px-3 uppercase tracking-tight">
-                                        {formatFeeAmount(promotionalCouponValidation?.finalAmount || getFeeAmount('i20_control_fee'))}
-                                      </span>
-                                      <div className="text-[10px] font-black text-slate-900 uppercase tracking-widest">até 12x</div>
+                            <div className="flex flex-col">
+                              <button
+                                onClick={() => handlePaymentMethodSelect('parcelow')}
+                                disabled={i20Loading}
+                                className="group/btn relative bg-white border border-gray-200 p-6 rounded-[2rem] text-left hover:scale-[1.01] active:scale-95 transition-all shadow-sm hover:shadow-md disabled:opacity-50 hover:border-blue-600/30 hover:bg-blue-50/10 flex items-center"
+                              >
+                                <div className="w-14 h-14 flex items-center justify-center bg-orange-50 transition-colors rounded-2xl mr-5 px-1">
+                                  <ParcelowIcon className="w-full h-10" />
+                                </div>
+                                <div className="flex-1 flex flex-col justify-center">
+                                   <div className="flex items-baseline justify-between leading-none">
+                                      <span className="font-bold text-gray-900 text-lg">Parcelow</span>
+                                      <div className="text-right flex flex-col items-end leading-none">
+                                        <span className="text-slate-900 text-xl font-black px-3 uppercase tracking-tight">
+                                          {formatFeeAmount(promotionalCouponValidation?.finalAmount || getFeeAmount('i20_control_fee'))}
+                                        </span>
+                                        <div className="text-[10px] font-black text-slate-900 uppercase tracking-widest">Em até 12x</div>
+                                      </div>
+                                   </div>
+                                   <p className="text-[10px] text-gray-400 uppercase tracking-widest font-bold -mt-1.5 leading-none">* Podem incluir taxas da operadora e processamento da plataforma</p>
+                                </div>
+                                {selectedPaymentMethod === 'parcelow' && i20Loading && (
+                                  <div className="absolute inset-0 bg-white/80 backdrop-blur-sm rounded-[2rem] flex items-center justify-center z-10">
+                                    <Loader2 className="w-8 h-8 text-orange-500 animate-spin" />
+                                  </div>
+                                )}
+                              </button>
+
+                              {/* Campo inline de CPF para Parcelow */}
+                              {showInlineCpf && (
+                                <div className="p-6 bg-blue-50 border-2 border-blue-100 rounded-2xl mt-4 space-y-4 animate-fadeIn relative z-0 shadow-[0_15px_30px_rgba(59,130,246,0.1)]">
+                                  <div className="flex flex-col sm:flex-row sm:items-center gap-4">
+                                    <div className="flex-initial sm:w-[300px]">
+                                      <p className="text-[11px] font-black text-blue-700 uppercase tracking-widest mb-2 flex items-center gap-2">
+                                        <Shield className="w-3 h-3" />
+                                        Verificação Obrigatória Parcelow
+                                      </p>
+                                      <div className="relative">
+                                        <input
+                                          type="text"
+                                          value={inlineCpf}
+                                          onChange={(e) => {
+                                            setInlineCpf(formatCpf(e.target.value));
+                                            setCpfError(null);
+                                          }}
+                                          placeholder="Digite seu CPF (000.000.000-00)"
+                                          maxLength={14}
+                                          className="w-full px-4 py-3 rounded-xl border border-blue-200 text-sm font-bold text-gray-900 focus:outline-none focus:ring-2 focus:ring-blue-500 bg-white transition-all shadow-sm"
+                                        />
+                                      </div>
                                     </div>
-                                 </div>
-                                 <p className="text-[10px] text-gray-400 uppercase tracking-widest font-bold -mt-1.5 leading-none">* Podem incluir taxas da operadora e processamento da plataforma</p>
-                              </div>
-                              {selectedPaymentMethod === 'parcelow' && i20Loading && (
-                                <div className="absolute inset-0 bg-white/80 backdrop-blur-sm rounded-[2rem] flex items-center justify-center z-10">
-                                  <Loader2 className="w-8 h-8 text-orange-500 animate-spin" />
+                                    <button
+                                      onClick={saveCpfAndCheckout}
+                                      disabled={savingCpf || inlineCpf.replace(/\D/g, '').length !== 11}
+                                      className="sm:mt-6 px-8 py-3 rounded-xl bg-blue-600 text-white text-sm font-black hover:bg-blue-700 transition-all disabled:opacity-50 disabled:cursor-not-allowed whitespace-nowrap flex items-center justify-center gap-2 shadow-lg shadow-blue-500/25 active:scale-95"
+                                    >
+                                      {savingCpf ? <Loader2 className="w-4 h-4 animate-spin" /> : 'Ir ao pagamento'}
+                                    </button>
+                                  </div>
+                                  {cpfError && (
+                                    <p className="text-xs text-red-600 flex items-center gap-1 font-bold animate-pulse">
+                                      <AlertCircle className="w-4 h-4" />
+                                      {cpfError}
+                                    </p>
+                                  )}
                                 </div>
                               )}
-                            </button>
+                            </div>
 
                             {/* Zelle Option — accordion inline */}
                             <div className="flex flex-col">
                               <button
-                                onClick={() => setZelleActive(!zelleActive)}
+                                onClick={() => {
+                                  setShowInlineCpf(false);
+                                  setZelleActive(!zelleActive);
+                                }}
                                 disabled={i20Loading}
                                 className={`group/btn relative bg-white border p-6 text-left hover:scale-[1.01] active:scale-[0.99] transition-all shadow-sm hover:shadow-md disabled:opacity-50 hover:border-blue-600/30 hover:bg-blue-50/10 flex items-center ${
                                   zelleActive
-                                    ? 'rounded-t-[2rem] border-purple-200 border-b-0 bg-purple-50/30'
-                                    : 'rounded-[2rem] border-gray-200'
+                                    ? 'rounded-t-[2rem] border-slate-200 border-b-0 bg-slate-50/30'
+                                    : 'rounded-[2rem] border-gray-200 shadow-sm hover:shadow-md'
                                 }`}
                               >
                                 <div className="w-14 h-14 flex items-center justify-center bg-purple-50 transition-colors rounded-2xl mr-5">
@@ -1564,7 +1653,7 @@ export const UniversityDocumentsStep: React.FC<StepProps> = ({ onBack }) => {
                               </button>
 
                               {zelleActive && (
-                                <div className="border border-purple-200 border-t-0 rounded-b-[2rem] overflow-hidden bg-white shadow-sm">
+                                <div className="border border-slate-200 border-t-0 rounded-b-[2rem] overflow-hidden bg-white shadow-sm">
                                   <ZelleCheckout
                                     feeType="i20_control_fee"
                                     amount={promotionalCouponValidation?.finalAmount ?? getFeeAmount('i20_control_fee')}

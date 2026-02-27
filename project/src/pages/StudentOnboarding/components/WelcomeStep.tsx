@@ -22,7 +22,7 @@ export const WelcomeStep: React.FC<StepProps> = ({ onNext }) => {
   const { t } = useTranslation();
   const navigate = useNavigate();
   const { userProfile } = useAuth();
-  const { getFeeAmount, formatFeeAmount } = useFeeConfig(userProfile?.id);
+  const { getFeeAmount, formatFeeAmount } = useFeeConfig(userProfile?.user_id);
 
   const selectionFee = getFeeAmount('selection_process');
   const scholarshipFee = getFeeAmount('scholarship_fee');
@@ -118,12 +118,12 @@ export const WelcomeStep: React.FC<StepProps> = ({ onNext }) => {
           <span className="text-[10px] font-black text-blue-400 uppercase tracking-widest leading-none">Processo de Admissão Oficial</span>
         </div>
         
-        <h1 className="text-5xl md:text-8xl font-black text-white leading-none uppercase tracking-tighter">
+        <h1 className="text-5xl md:text-8xl font-black text-slate-900 leading-none uppercase tracking-tighter">
           Bem-vindo{userProfile?.full_name ? `, ${userProfile.full_name.split(' ')[0]}` : ''}!
         </h1>
         
-        <p className="text-lg md:text-2xl text-white/50 max-w-4xl mx-auto font-medium leading-relaxed text-justify">
-          Sua trajetória acadêmica internacional começa agora com a <span className="text-white">Matrícula USA</span>. Somos especialistas em transformar o sonho de estudar na América em realidade, conectando você às melhores bolsas de estudo através de um processo simplificado, transparente e 100% seguro.
+        <p className="text-lg md:text-2xl text-slate-600 max-w-4xl mx-auto font-medium leading-relaxed text-justify">
+          Sua trajetória acadêmica internacional começa agora com a <span className="text-slate-900">Matrícula USA</span>. Somos especialistas em transformar o sonho de estudar na América em realidade, conectando você às melhores bolsas de estudo através de um processo simplificado, transparente e 100% seguro.
         </p>
       </motion.div>
 
@@ -186,8 +186,8 @@ export const WelcomeStep: React.FC<StepProps> = ({ onNext }) => {
       >
         <div className="flex flex-col md:flex-row items-center justify-center gap-6 md:gap-12">
           <div className="flex-1 text-left space-y-2">
-            <h4 className="text-white font-bold text-lg uppercase tracking-tight italic">Precisa de mais detalhes?</h4>
-            <p className="text-white/60 text-sm leading-relaxed">
+            <h4 className="text-slate-900 font-bold text-lg uppercase tracking-tight italic">Precisa de mais detalhes?</h4>
+            <p className="text-slate-600 text-sm leading-relaxed">
               Para uma explicação completa de cada etapa, prazos e políticas, visite nossa página oficial de ajuda. Caso tenha dúvidas que não foram respondidas aqui, nossa equipe de suporte está pronta para ajudar você.
             </p>
           </div>
@@ -196,7 +196,7 @@ export const WelcomeStep: React.FC<StepProps> = ({ onNext }) => {
               href="https://matriculausa.com/how-it-works" 
               target="_blank" 
               rel="noopener noreferrer"
-              className="inline-flex items-center gap-2 px-6 py-3 bg-white/10 hover:bg-white/20 text-white rounded-xl font-bold text-xs uppercase tracking-widest transition-all border border-white/10"
+              className="inline-flex items-center gap-2 px-6 py-3 bg-slate-200 hover:bg-slate-300 text-slate-900 rounded-xl font-bold text-xs uppercase tracking-widest transition-all border border-slate-300"
             >
               <span>Como Funciona</span>
               <ExternalLink className="w-3.5 h-3.5" />

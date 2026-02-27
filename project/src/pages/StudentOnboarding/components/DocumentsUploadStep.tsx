@@ -537,10 +537,10 @@ export const DocumentsUploadStep: React.FC<StepProps> = ({ onNext }) => {
         <div className="space-y-10 pb-12 max-w-4xl mx-auto px-4">
           {/* Header */}
           <div className="text-center md:text-left space-y-4">
-            <h2 className="text-3xl md:text-5xl font-black text-white uppercase tracking-tighter leading-none">
+            <h2 className="text-3xl md:text-5xl font-black text-slate-900 uppercase tracking-tighter leading-none">
               Escolha sua Universidade
             </h2>
-            <p className="text-lg md:text-xl text-white/60 font-medium max-w-2xl mt-2">
+            <p className="text-lg md:text-xl text-slate-600 font-medium max-w-2xl mt-2">
               Etapa concluída com sucesso.
             </p>
           </div>
@@ -602,10 +602,10 @@ export const DocumentsUploadStep: React.FC<StepProps> = ({ onNext }) => {
           <div className="space-y-10 max-w-5xl mx-auto pb-12 px-4">
             {/* Header Outside Container */}
             <div className="text-center md:text-left space-y-4 animate-in fade-in slide-in-from-top-10 duration-1000">
-              <h2 className="text-3xl md:text-5xl font-black text-white uppercase tracking-tighter leading-none">
+              <h2 className="text-3xl md:text-5xl font-black text-slate-900 uppercase tracking-tighter leading-none">
                 {isApproved ? 'Escolha sua Universidade' : 'Candidaturas em Análise'}
               </h2>
-              <p className="text-lg md:text-xl text-white/60 font-medium max-w-2xl mt-2">
+              <p className="text-lg md:text-xl text-slate-600 font-medium max-w-2xl mt-2">
                 {isApproved 
                   ? 'Parabéns! Você foi aceito. Selecione abaixo a universidade para seguir com o pagamento.' 
                   : 'Seus documentos estão sendo revisados. Você pode acompanhar o status de cada bolsa abaixo.'}
@@ -975,10 +975,10 @@ export const DocumentsUploadStep: React.FC<StepProps> = ({ onNext }) => {
   return (
     <div className="space-y-10 pb-24 sm:pb-12 max-w-4xl mx-auto">
       <div className="text-center md:text-left space-y-4 px-4">
-        <h2 className="text-3xl md:text-5xl font-black text-white uppercase tracking-tighter leading-none">
+        <h2 className="text-3xl md:text-5xl font-black text-slate-900 uppercase tracking-tighter leading-none">
           {t('studentDashboard.documentsUploadStep.title')}
         </h2>
-        <p className="text-lg md:text-xl text-white/60 font-medium max-w-2xl mt-2">
+        <p className="text-lg md:text-xl text-slate-600 font-medium max-w-2xl mt-2">
           {t('studentDashboard.documentsUploadStep.subtitle')}
         </p>
       </div>

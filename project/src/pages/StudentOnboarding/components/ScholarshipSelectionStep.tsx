@@ -547,7 +547,7 @@ export const ScholarshipSelectionStep: React.FC<StepProps> = ({ onNext, onBack: 
     return (
       <div className="w-full h-full flex flex-col">
         <div className="max-w-4xl mx-auto w-full px-4">
-          <h1 className="text-2xl sm:text-4xl font-black mb-4 text-white uppercase tracking-tighter">
+          <h1 className="text-2xl sm:text-4xl font-black mb-4 text-slate-900 uppercase tracking-tighter">
             <span>{t('studentDashboard.selectedScholarships.title') || 'Review Your Selected Scholarships'}</span>
           </h1>
           
@@ -644,7 +644,7 @@ export const ScholarshipSelectionStep: React.FC<StepProps> = ({ onNext, onBack: 
                   disabled={hasBlockedScholarships || cart.length === 0}
                   className="flex-1 w-full bg-blue-600 text-white py-5 rounded-2xl font-black uppercase tracking-[0.2em] text-sm hover:bg-blue-700 transition-all shadow-xl shadow-blue-500/20 hover:scale-105 active:scale-95 disabled:bg-slate-300 disabled:cursor-not-allowed flex items-center justify-center space-x-3"
                 >
-                  <span>Confirmar</span>
+                  <span>Continuar</span>
                 </button>
               </div>
             </div>
@@ -660,8 +660,8 @@ export const ScholarshipSelectionStep: React.FC<StepProps> = ({ onNext, onBack: 
       <div className="space-y-10 pb-12 max-w-4xl mx-auto px-4">
         {/* Header */}
         <div className="text-center md:text-left space-y-4">
-          <h2 className="text-3xl md:text-5xl font-black text-white uppercase tracking-tighter leading-none">Escolha de Bolsas</h2>
-          <p className="text-lg md:text-xl text-white/60 font-medium max-w-2xl mt-2">Seleção de bolsas concluída com sucesso.</p>
+          <h2 className="text-3xl md:text-5xl font-black text-slate-900 uppercase tracking-tighter leading-none">Escolha de Bolsas</h2>
+          <p className="text-lg md:text-xl text-slate-600 font-medium max-w-2xl mt-2">Seleção de bolsas concluída com sucesso.</p>
         </div>
 
         {/* Main White Container */}
@@ -699,10 +699,10 @@ export const ScholarshipSelectionStep: React.FC<StepProps> = ({ onNext, onBack: 
           {/* Header Section */}
           <div>
             <div className="text-center md:text-left mb-8 space-y-4">
-              <h2 className="text-3xl md:text-5xl font-black text-white uppercase tracking-tighter leading-none">
+              <h2 className="text-3xl md:text-5xl font-black text-slate-900 uppercase tracking-tighter leading-none">
                 Escolha de Bolsas
               </h2>
-              <p className="text-lg md:text-xl text-white/60 font-medium max-w-3xl">
+              <p className="text-lg md:text-xl text-slate-600 font-medium max-w-3xl">
                 Navegue pelas bolsas e selecione quais gostaria de se matricular. É necessário escolher ao menos uma para prosseguir.
               </p>
             </div>

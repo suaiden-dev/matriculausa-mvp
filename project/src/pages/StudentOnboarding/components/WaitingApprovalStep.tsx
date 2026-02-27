@@ -317,7 +317,7 @@ export const WaitingApprovalStep: React.FC<StepProps> = ({ onComplete }) => {
     return (
       <div className="text-center py-12">
         <Loader2 className="w-16 h-16 text-blue-600 mx-auto animate-spin mb-4" />
-        <p className="text-white/60">Carregando informações...</p>
+        <p className="text-slate-600">Carregando informações...</p>
       </div>
     );
   }
@@ -374,13 +374,13 @@ export const WaitingApprovalStep: React.FC<StepProps> = ({ onComplete }) => {
       <div className="flex flex-col md:flex-row md:items-end justify-between gap-6">
         <div className="text-center md:text-left space-y-4">
           <div className="inline-flex items-center bg-blue-500/10 border border-blue-500/20 px-4 py-2 rounded-full mb-2">
-            <Shield className="w-4 h-4 text-blue-400 mr-2" />
-            <span className="text-[10px] font-black text-blue-400 uppercase tracking-widest">Último Passo do Onboarding</span>
+            <Shield className="w-4 h-4 text-blue-600 mr-2" />
+            <span className="text-[10px] font-black text-blue-600 uppercase tracking-widest">Último Passo do Onboarding</span>
           </div>
-          <h2 className="text-4xl md:text-6xl font-black text-white uppercase tracking-tighter leading-none">
+          <h2 className="text-4xl md:text-6xl font-black text-slate-900 uppercase tracking-tighter leading-none">
             Carta de Aceitação & I-20
           </h2>
-          <p className="text-lg md:text-xl text-white/60 font-medium max-w-2xl">
+          <p className="text-lg md:text-xl text-slate-600 font-medium max-w-2xl">
             Pague a taxa I-20 e faça o download da sua carta de aceitação para garantir sua vaga.
           </p>
         </div>
@@ -388,7 +388,7 @@ export const WaitingApprovalStep: React.FC<StepProps> = ({ onComplete }) => {
         <button
           onClick={handleRefresh}
           disabled={refreshing}
-          className="flex items-center gap-2 px-6 py-3 bg-white/5 border border-white/10 rounded-2xl text-white/60 hover:bg-white/10 hover:text-white transition-all text-xs font-black uppercase tracking-widest disabled:opacity-50 group"
+          className="flex items-center gap-2 px-6 py-3 bg-white hover:bg-gray-50 border border-gray-100 rounded-2xl text-slate-600 hover:text-slate-900 transition-all text-xs font-black uppercase tracking-widest disabled:opacity-50 group shadow-sm"
         >
           <RefreshCw className={`w-4 h-4 transition-transform ${refreshing ? 'animate-spin' : 'group-hover:rotate-180 duration-500'}`} />
           {refreshing ? 'Atualizando...' : 'Atualizar Status'}
@@ -410,9 +410,9 @@ export const WaitingApprovalStep: React.FC<StepProps> = ({ onComplete }) => {
         <div className="max-w-4xl mx-auto">
           <button 
             onClick={() => setShowZelleCheckout(false)}
-            className="mb-8 flex items-center text-white/60 hover:text-white transition-all gap-3 group"
+            className="mb-8 flex items-center text-slate-600 hover:text-slate-900 transition-all gap-3 group"
           >
-            <div className="w-10 h-10 rounded-full bg-white/5 flex items-center justify-center group-hover:bg-white/10 group-hover:scale-110 transition-all border border-white/5">
+            <div className="w-10 h-10 rounded-full bg-white flex items-center justify-center group-hover:bg-gray-50 group-hover:scale-110 transition-all border border-gray-100 shadow-sm">
               <ChevronRight className="w-5 h-5 rotate-180" />
             </div>
             <span className="font-black uppercase tracking-widest text-xs">Voltar</span>

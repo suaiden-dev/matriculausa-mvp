@@ -104,8 +104,8 @@ export const ProcessTypeStep: React.FC<StepProps> = ({ onNext }) => {
       <div className="space-y-10 pb-12 max-w-4xl mx-auto px-4">
         {/* Header */}
         <div className="text-center md:text-left space-y-4">
-          <h2 className="text-3xl md:text-5xl font-black text-white uppercase tracking-tighter leading-none">Tipo de Processo</h2>
-          <p className="text-lg md:text-xl text-white/60 font-medium max-w-2xl mt-2">Tipo de processo selecionado com sucesso.</p>
+          <h2 className="text-3xl md:text-5xl font-black text-slate-900 uppercase tracking-tighter leading-none">Tipo de Processo</h2>
+          <p className="text-lg md:text-xl text-slate-600 font-medium max-w-2xl mt-2">Tipo de processo selecionado com sucesso.</p>
         </div>
 
         {/* Main White Container */}
@@ -134,10 +134,10 @@ export const ProcessTypeStep: React.FC<StepProps> = ({ onNext }) => {
     <div className="space-y-10 pb-12 max-w-5xl mx-auto px-4">
       {/* Header */}
       <div className="text-center md:text-left space-y-4">
-        <h2 className="text-3xl md:text-5xl font-black text-white uppercase tracking-tighter leading-none">
+        <h2 className="text-3xl md:text-5xl font-black text-slate-900 uppercase tracking-tighter leading-none">
           Situação do Visto
         </h2>
-        <p className="text-lg md:text-xl text-white/60 font-medium max-w-2xl leading-relaxed">
+        <p className="text-lg md:text-xl text-slate-600 font-medium max-w-2xl leading-relaxed">
           Selecione a opção que melhor descreve sua situação atual em relação ao visto americano.
         </p>
       </div>

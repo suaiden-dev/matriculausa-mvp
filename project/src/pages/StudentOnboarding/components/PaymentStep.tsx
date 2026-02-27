@@ -4,11 +4,11 @@ import { supabase } from '../../../lib/supabase';
 import { StepProps } from '../types';
 import { 
   CheckCircle, 
-  ChevronRight, 
   AlertCircle, 
   RefreshCw,
   Building,
-  Shield
+  Shield,
+  Loader2
 } from 'lucide-react';
 import { ZelleCheckout } from '../../../components/ZelleCheckout';
 
@@ -81,16 +81,11 @@ const ParcelowIcon = ({ className }: { className?: string }) => (
   </div>
 );
 
-import { useNavigate } from 'react-router-dom';
-import { Dialog } from '@headlessui/react';
-import { useTranslation } from 'react-i18next';
 import { usePaymentBlocked } from '../../../hooks/usePaymentBlocked';
 
 export const PaymentStep: React.FC<StepProps> = ({ onNext, onBack }) => {
   const { userProfile } = useAuth();
-  const { t } = useTranslation();
-  const navigate = useNavigate();
-  const { getFeeAmount, formatFeeAmount } = useFeeConfig(userProfile?.id);
+  const { getFeeAmount, formatFeeAmount, userDependents } = useFeeConfig(userProfile?.user_id);
   const { isBlocked, pendingPayment, refetch: refetchPaymentStatus } = usePaymentBlocked();
 
   const [applications, setApplications] = useState<ApplicationWithScholarship[]>([]);
@@ -100,8 +95,14 @@ export const PaymentStep: React.FC<StepProps> = ({ onNext, onBack }) => {
   const [exchangeRate, setExchangeRate] = useState<number>(0);
 
   const [isProcessingCheckout, setIsProcessingCheckout] = useState<string | null>(null);
-  const [showCpfModal, setShowCpfModal] = useState<boolean>(false);
   const [zelleActiveApp, setZelleActiveApp] = useState<ApplicationWithScholarship | null>(null);
+
+  // CPF inline states (para Parcelow)
+  const [showInlineCpf, setShowInlineCpf] = useState<string | null>(null); // app.id quando aberto
+  const [inlineCpf, setInlineCpf] = useState('');
+  const [savingCpf, setSavingCpf] = useState(false);
+  const [cpfError, setCpfError] = useState<string | null>(null);
+  const [pendingParcelowApp, setPendingParcelowApp] = useState<ApplicationWithScholarship | null>(null);
 
   const fetchApplications = useCallback(async () => {
     if (!userProfile?.id) return;
@@ -167,12 +168,60 @@ export const PaymentStep: React.FC<StepProps> = ({ onNext, onBack }) => {
     fetchApplications();
   }; */
 
-  const processCheckout = async (application: ApplicationWithScholarship, method: 'stripe' | 'pix' | 'parcelow') => {
-    // Verificar CPF se o método for Parcelow
-    if (method === 'parcelow' && !userProfile?.cpf_document) {
-      setShowCpfModal(true);
+  // Formatar CPF enquanto digita (000.000.000-00)
+  const formatCpf = (value: string) => {
+    const digits = value.replace(/\D/g, '').slice(0, 11);
+    return digits
+      .replace(/(\d{3})(\d)/, '$1.$2')
+      .replace(/(\d{3})(\d)/, '$1.$2')
+      .replace(/(\d{3})(\d{1,2})$/, '$1-$2');
+  };
+
+  // Salvar CPF inline e prosseguir ao checkout Parcelow
+  const saveCpfAndCheckout = async () => {
+    const cleaned = inlineCpf.replace(/\D/g, '');
+    if (cleaned.length !== 11) {
+      setCpfError('CPF inválido. Digite os 11 dígitos.');
       return;
     }
+    if (!pendingParcelowApp) return;
+
+    setSavingCpf(true);
+    setCpfError(null);
+
+    try {
+      const { error } = await supabase
+        .from('user_profiles')
+        .update({ cpf_document: cleaned })
+        .eq('user_id', userProfile?.user_id);
+
+      if (error) throw error;
+
+      // Fechar campo inline
+      setShowInlineCpf(null);
+      setInlineCpf('');
+
+      // Chamar checkout normalmente agora que CPF está salvo (pulando a checagem no estado local)
+      processCheckout(pendingParcelowApp, 'parcelow', true);
+    } catch (err: any) {
+      setCpfError('Erro ao salvar CPF. Tente novamente.');
+      console.error('[PaymentStep] Erro ao salvar CPF inline:', err);
+    } finally {
+      setSavingCpf(false);
+    }
+  };
+
+  const processCheckout = async (application: ApplicationWithScholarship, method: 'stripe' | 'pix' | 'parcelow', skipCpfCheck = false) => {
+    // Verificar CPF se o método for Parcelow e não estivermos ignorando a checagem
+    if (method === 'parcelow' && !userProfile?.cpf_document && !skipCpfCheck) {
+      setPendingParcelowApp(application);
+      setShowInlineCpf(application.id);
+      // Fechar Zelle se aberto
+      setZelleActiveApp(null);
+      return;
+    }
+    // Se mudando de método, fechar CPF inline
+    setShowInlineCpf(null);
 
     try {
       setIsProcessingCheckout(`${application.id}_${method}`);
@@ -250,8 +299,8 @@ export const PaymentStep: React.FC<StepProps> = ({ onNext, onBack }) => {
     return (
       <div className="space-y-10 pb-12 max-w-4xl mx-auto px-4">
         <div className="text-center md:text-left space-y-4">
-          <h2 className="text-3xl md:text-5xl font-black text-white uppercase tracking-tighter leading-none">Taxa de Matrícula</h2>
-          <p className="text-lg md:text-xl text-white/60 font-medium max-w-2xl mt-2">A taxa de matrícula foi processada com sucesso.</p>
+          <h2 className="text-3xl md:text-5xl font-black text-slate-900 uppercase tracking-tighter leading-none">Taxa de Matrícula</h2>
+          <p className="text-lg md:text-xl text-slate-600 font-medium max-w-2xl mt-2">A taxa de matrícula foi processada com sucesso.</p>
         </div>
 
         <div className="bg-white border border-emerald-500/30 ring-1 ring-emerald-500/20 rounded-[2.5rem] p-8 md:p-10 shadow-2xl relative overflow-hidden">
@@ -281,16 +330,16 @@ export const PaymentStep: React.FC<StepProps> = ({ onNext, onBack }) => {
       <div className="flex flex-col md:flex-row md:items-end justify-between gap-6">
         <div className="text-center md:text-left space-y-4">
           <div className="inline-flex items-center bg-blue-500/10 border border-blue-500/20 px-4 py-2 rounded-full mb-2">
-            <Shield className="w-4 h-4 text-blue-400 mr-2" />
-            <span className="text-[10px] font-black text-blue-400 uppercase tracking-widest">Pagamento Seguro & Criptografado</span>
+            <Shield className="w-4 h-4 text-blue-600 mr-2" />
+            <span className="text-[10px] font-black text-blue-600 uppercase tracking-widest">Pagamento Seguro & Criptografado</span>
           </div>
-          <h2 className="text-4xl md:text-6xl font-black text-white uppercase tracking-tighter leading-none">
+          <h2 className="text-4xl md:text-6xl font-black text-slate-900 uppercase tracking-tighter leading-none">
             Taxa de Matrícula
           </h2>
-          <p className="text-lg md:text-xl text-white/60 font-medium max-w-2xl">
+          <p className="text-lg md:text-xl text-slate-600 font-medium max-w-2xl">
             {allPaid 
               ? 'Toda a taxa de matrícula foi processada. Clique no botão abaixo para concluir seu onboarding.' 
-              : 'Pague a taxa de matrícula da bolsa selecionada para que as universidades iniciem a análise oficial do seu perfil.'}
+              : 'Pague a taxa de matrícula da bolsa selecionada para confirmar oficialmente sua escolha e garantir sua vaga.'}
           </p>
         </div>
         
@@ -356,14 +405,26 @@ export const PaymentStep: React.FC<StepProps> = ({ onNext, onBack }) => {
                         </div>
                       </div>
 
-                      <div className="flex flex-col md:items-end">
-                        <div className="flex items-center gap-3 mb-1">
-                          <span className="text-[10px] font-black text-gray-500 uppercase tracking-[0.2em]">Application Fee</span>
+                        <div className="flex flex-col md:items-end">
+                          <div className="flex items-center gap-3 mb-4">
+                            <span className="text-[10px] font-black text-gray-500 uppercase tracking-[0.2em]">Taxa de Matrícula</span>
+                          </div>
+                          {userDependents > 0 && (
+                            <div className="text-right mb-3 flex flex-col items-end gap-1.5 border-b border-slate-100 pb-3 w-full md:w-auto">
+                              <p className="text-xs font-bold text-slate-900 uppercase tracking-tight flex justify-between w-full gap-8">
+                                <span>Taxa sem dependentes:</span>
+                                <span>{formatFeeAmount(baseAmount - (userDependents * 100))}</span>
+                              </p>
+                              <p className="text-xs font-bold text-blue-600 uppercase tracking-tight flex justify-between w-full gap-8">
+                                <span>{userDependents} {userDependents === 1 ? 'dependente' : 'dependentes'} (+$100 cada):</span>
+                                <span>+ {formatFeeAmount(userDependents * 100)}</span>
+                              </p>
+                            </div>
+                          )}
+                          <div className="text-4xl font-black text-slate-900 tracking-tighter">
+                            {formatFeeAmount(baseAmount)}
+                          </div>
                         </div>
-                        <div className="text-4xl font-black text-slate-900 tracking-tighter">
-                          {formatFeeAmount(baseAmount)}
-                        </div>
-                      </div>
                     </div>
 
                     {/* Payment Options List */}
@@ -422,13 +483,10 @@ export const PaymentStep: React.FC<StepProps> = ({ onNext, onBack }) => {
                                   <div className="text-[10px] font-bold text-slate-400 mt-1 uppercase tracking-wide leading-tight">* Podem incluir taxas de processamento</div>
                                 </div>
                               </div>
-                              <div className="flex items-center gap-5">
-                                <div className="text-right">
-                                  <div className="text-slate-900 text-xl font-black uppercase tracking-tight">
-                                    {formatFeeAmount(cardAmount)}
-                                  </div>
+                              <div className="text-right">
+                                <div className="text-slate-900 text-xl font-black uppercase tracking-tight">
+                                  {formatFeeAmount(cardAmount)}
                                 </div>
-                                <ChevronRight className="w-6 h-6 text-gray-300 group-hover/btn:translate-x-1 transition-transform" />
                               </div>
                               {isProcessingCheckout === `${app.id}_stripe` && (
                                 <div className="absolute inset-0 bg-white/80 backdrop-blur-sm rounded-[2rem] flex items-center justify-center z-10">
@@ -452,13 +510,10 @@ export const PaymentStep: React.FC<StepProps> = ({ onNext, onBack }) => {
                                   <div className="text-[10px] font-bold text-slate-400 mt-1 uppercase tracking-wide leading-tight">* Podem incluir taxas de processamento</div>
                                 </div>
                               </div>
-                              <div className="flex items-center gap-5">
-                                <div className="text-right">
-                                  <div className="text-slate-900 text-xl font-black uppercase tracking-tight">
-                                    R$ {pixInfo.totalWithIOF.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
-                                  </div>
+                              <div className="text-right">
+                                <div className="text-slate-900 text-xl font-black uppercase tracking-tight">
+                                  R$ {pixInfo.totalWithIOF.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
                                 </div>
-                                <ChevronRight className="w-6 h-6 text-gray-300 group-hover/btn:translate-x-1 transition-transform" />
                               </div>
                               {isProcessingCheckout === `${app.id}_pix` && (
                                 <div className="absolute inset-0 bg-white/80 backdrop-blur-sm rounded-[2rem] flex items-center justify-center z-10">
@@ -468,35 +523,74 @@ export const PaymentStep: React.FC<StepProps> = ({ onNext, onBack }) => {
                             </button>
 
                             {/* Parcelow Option */}
-                            <button
-                              onClick={() => processCheckout(app, 'parcelow')}
-                              disabled={!!isProcessingCheckout}
-                              className="group/btn relative bg-white border border-gray-200 p-5 rounded-[2rem] text-left hover:scale-[1.01] active:scale-95 transition-all shadow-sm hover:shadow-md disabled:opacity-50 hover:border-blue-600/30 hover:bg-blue-50/10 flex items-center justify-between"
-                            >
-                              <div className="flex items-center gap-5">
-                                <div className="w-14 h-14 flex items-center justify-center bg-slate-50 rounded-2xl group-hover/btn:bg-slate-100 transition-colors px-2">
-                                  <ParcelowIcon className="w-full h-10" />
+                            <div className="flex flex-col">
+                              <button
+                                onClick={() => processCheckout(app, 'parcelow')}
+                                disabled={!!isProcessingCheckout}
+                                className="group/btn relative bg-white border border-gray-200 p-5 rounded-[2rem] text-left hover:scale-[1.01] active:scale-95 transition-all shadow-sm hover:shadow-md disabled:opacity-50 hover:border-blue-600/30 hover:bg-blue-50/10 flex items-center justify-between"
+                              >
+                                <div className="flex items-center gap-5">
+                                  <div className="w-14 h-14 flex items-center justify-center bg-slate-50 rounded-2xl group-hover/btn:bg-slate-100 transition-colors px-2">
+                                    <ParcelowIcon className="w-full h-10" />
+                                  </div>
+                                  <div>
+                                    <div className="font-black text-slate-900 text-base uppercase tracking-tight">Parcelow</div>
+                                    <div className="text-[10px] font-bold text-slate-400 mt-1 uppercase tracking-wide leading-tight">* Podem incluir taxas de operadora e processamento da plataforma</div>
+                                  </div>
                                 </div>
-                                <div>
-                                  <div className="font-black text-slate-900 text-base uppercase tracking-tight">Parcelow</div>
-                                  <div className="text-[10px] font-bold text-slate-400 mt-1 uppercase tracking-wide leading-tight">* Podem incluir taxas de operadora e processamento da plataforma</div>
-                                </div>
-                              </div>
-                              <div className="flex items-center gap-5">
                                 <div className="text-right flex flex-col items-end">
                                   <div className="text-slate-900 text-xl font-black uppercase tracking-tight">
                                     {formatFeeAmount(cardAmount)}
                                   </div>
                                   <span className="text-[10px] font-bold text-slate-900 mt-1 block uppercase tracking-widest leading-tight">Até 12x no cartão</span>
                                 </div>
-                                <ChevronRight className="w-6 h-6 text-gray-300 group-hover/btn:translate-x-1 transition-transform" />
-                              </div>
-                              {isProcessingCheckout === `${app.id}_parcelow` && (
-                                <div className="absolute inset-0 bg-white/80 backdrop-blur-sm rounded-[2rem] flex items-center justify-center z-10">
-                                  <RefreshCw className="w-8 h-8 text-orange-500 animate-spin" />
+                                {isProcessingCheckout === `${app.id}_parcelow` && (
+                                  <div className="absolute inset-0 bg-white/80 backdrop-blur-sm rounded-[2rem] flex items-center justify-center z-10">
+                                    <RefreshCw className="w-8 h-8 text-orange-500 animate-spin" />
+                                  </div>
+                                )}
+                              </button>
+
+                              {/* Campo inline de CPF para Parcelow */}
+                              {showInlineCpf === app.id && (
+                                <div className="p-6 bg-blue-50 border-2 border-blue-100 rounded-2xl mt-4 space-y-4 animate-fadeIn relative z-0 shadow-[0_15px_30px_rgba(59,130,246,0.1)]">
+                                  <div className="flex flex-col sm:flex-row sm:items-center gap-4">
+                                    <div className="flex-initial sm:w-[300px]">
+                                      <p className="text-[11px] font-black text-blue-700 uppercase tracking-widest mb-2 flex items-center gap-2">
+                                        <Shield className="w-3 h-3" />
+                                        Verificação Obrigatória Parcelow
+                                      </p>
+                                      <div className="relative">
+                                        <input
+                                          type="text"
+                                          value={inlineCpf}
+                                          onChange={(e) => {
+                                            setInlineCpf(formatCpf(e.target.value));
+                                            setCpfError(null);
+                                          }}
+                                          placeholder="Digite seu CPF (000.000.000-00)"
+                                          maxLength={14}
+                                          className="w-full px-4 py-3 rounded-xl border border-blue-200 text-sm font-bold text-gray-900 focus:outline-none focus:ring-2 focus:ring-blue-500 bg-white transition-all shadow-sm"
+                                        />
+                                      </div>
+                                    </div>
+                                    <button
+                                      onClick={saveCpfAndCheckout}
+                                      disabled={savingCpf || inlineCpf.replace(/\D/g, '').length !== 11}
+                                      className="sm:mt-6 px-8 py-3 rounded-xl bg-blue-600 text-white text-sm font-black hover:bg-blue-700 transition-all disabled:opacity-50 disabled:cursor-not-allowed whitespace-nowrap flex items-center justify-center gap-2 shadow-lg shadow-blue-500/25 active:scale-95"
+                                    >
+                                      {savingCpf ? <Loader2 className="w-4 h-4 animate-spin" /> : 'Ir ao pagamento'}
+                                    </button>
+                                  </div>
+                                  {cpfError && (
+                                    <p className="text-xs text-red-600 flex items-center gap-1 font-bold animate-pulse">
+                                      <AlertCircle className="w-4 h-4" />
+                                      {cpfError}
+                                    </p>
+                                  )}
                                 </div>
                               )}
-                            </button>
+                            </div>
 
                             {/* Zelle Option — accordion inline */}
                             <div className="flex flex-col">
@@ -505,7 +599,7 @@ export const PaymentStep: React.FC<StepProps> = ({ onNext, onBack }) => {
                                 disabled={!!isProcessingCheckout}
                                 className={`group/btn relative bg-white border p-5 text-left hover:scale-[1.01] active:scale-[0.99] transition-all shadow-sm hover:shadow-md disabled:opacity-50 hover:border-blue-600/30 hover:bg-blue-50/10 flex items-center justify-between ${
                                   zelleActiveApp?.id === app.id
-                                    ? 'rounded-t-[2rem] border-purple-200 border-b-0 bg-purple-50/30'
+                                    ? 'rounded-t-[2rem] border-slate-200 border-b-0 bg-slate-50/30'
                                     : 'rounded-[2rem] border-gray-200'
                                 }`}
                               >
@@ -528,14 +622,11 @@ export const PaymentStep: React.FC<StepProps> = ({ onNext, onBack }) => {
                                     </div>
                                     <span className="text-[10px] font-bold text-slate-900 mt-1 block uppercase tracking-widest">Sem Taxas</span>
                                   </div>
-                                  <ChevronRight className={`w-6 h-6 text-gray-300 transition-transform ${
-                                    zelleActiveApp?.id === app.id ? 'rotate-90' : 'group-hover/btn:translate-x-1'
-                                  }`} />
                                 </div>
                               </button>
 
                               {zelleActiveApp?.id === app.id && (
-                                <div className="border border-purple-200 border-t-0 rounded-b-[2rem] overflow-hidden bg-white shadow-sm">
+                                <div className="border border-slate-200 border-t-0 rounded-b-[2rem] overflow-hidden bg-white shadow-sm">
                                   <ZelleCheckout
                                     feeType="application_fee"
                                     amount={getFeeAmount('application_fee', app.scholarships?.application_fee_amount || undefined)}
@@ -597,46 +688,7 @@ export const PaymentStep: React.FC<StepProps> = ({ onNext, onBack }) => {
         </div>
       </div>
 
-      {/* Modal de Aviso de CPF necessário para Parcelow */}
-      <Dialog
-        open={showCpfModal}
-        onClose={() => setShowCpfModal(false)}
-        className="relative z-[100]"
-      >
-        <div className="fixed inset-0 bg-black/60 backdrop-blur-sm" aria-hidden="true" />
-        <div className="fixed inset-0 flex items-center justify-center p-4">
-          <Dialog.Panel className="w-full max-w-sm rounded-2xl bg-white p-6 shadow-2xl">
-            <div className="flex flex-col items-center text-center">
-              <div className="w-16 h-16 bg-amber-100 rounded-full flex items-center justify-center mb-4">
-                <AlertCircle className="w-8 h-8 text-amber-600" />
-              </div>
-              <Dialog.Title className="text-xl font-bold text-gray-900 mb-2">
-                {t('scholarshipDeadline.parcelowCpfModal.title') || 'CPF Necessary'}
-              </Dialog.Title>
-              <Dialog.Description className="text-gray-600 mb-6">
-                {t('scholarshipDeadline.parcelowCpfModal.description') || 'To pay with Parcelow, you need to register your CPF in your profile.'}
-              </Dialog.Description>
-              <div className="flex flex-col w-full gap-3">
-                <button
-                  onClick={() => {
-                    setShowCpfModal(false);
-                    navigate('/student/dashboard/profile');
-                  }}
-                  className="w-full py-3 px-4 bg-blue-600 text-white rounded-xl font-bold hover:bg-blue-700 transition-colors shadow-lg shadow-blue-500/20"
-                >
-                  {t('scholarshipDeadline.parcelowCpfModal.confirm') || 'Go to Profile'}
-                </button>
-                <button
-                  onClick={() => setShowCpfModal(false)}
-                  className="w-full py-3 px-4 bg-gray-100 text-gray-700 rounded-xl font-bold hover:bg-gray-200 transition-colors"
-                >
-                  {t('scholarshipDeadline.parcelowCpfModal.cancel') || 'Cancel'}
-                </button>
-              </div>
-            </div>
-          </Dialog.Panel>
-        </div>
-      </Dialog>
+
     </div>
   );
 };

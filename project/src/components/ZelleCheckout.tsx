@@ -1240,13 +1240,13 @@ export const ZelleCheckout: React.FC<ZelleCheckoutProps> = ({
             icon: Sparkles,
             title: 'Analyzing Payment...',
             message: 'Our AI is validating your payment confirmation',
-            bgGradient: 'from-purple-50/50 to-purple-100/30',
-            borderColor: 'border-purple-200',
-            iconGradient: 'from-purple-500 to-purple-600',
-            ringColor: 'border-purple-300',
-            titleColor: 'text-purple-900',
-            progressGradient: 'from-purple-500 to-purple-600',
-            dotColor: 'bg-purple-500'
+            bgGradient: 'from-blue-50/50 to-blue-100/30',
+            borderColor: 'border-blue-200',
+            iconGradient: 'from-blue-500 to-blue-600',
+            ringColor: 'border-blue-300',
+            titleColor: 'text-blue-900',
+            progressGradient: 'from-blue-500 to-blue-600',
+            dotColor: 'bg-blue-500'
           };
         default:
           return {
@@ -1269,12 +1269,9 @@ export const ZelleCheckout: React.FC<ZelleCheckoutProps> = ({
 
     return (
       <div className="fixed inset-0 bg-black/60 backdrop-blur-sm z-[9999] flex items-center justify-center p-4">
-        <div className="bg-white rounded-3xl shadow-2xl max-w-md w-full p-8 relative overflow-hidden">
+        <div className="bg-white rounded-3xl shadow-2xl max-w-md w-full p-8 relative overflow-hidden focus:outline-none">
           {/* Background Gradient */}
           <div className={`absolute inset-0 bg-gradient-to-br ${stepInfo.bgGradient}`}></div>
-          
-          {/* Animated Border */}
-          <div className={`absolute inset-0 rounded-3xl border-2 ${stepInfo.borderColor} animate-pulse`}></div>
           
           <div className="relative z-10 text-center">
             {/* Animated Icon */}

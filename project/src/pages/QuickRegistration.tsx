@@ -1249,7 +1249,7 @@ const QuickRegistration: React.FC = () => {
                                       setFormData((prev: any) => ({ ...prev, cpf: formatted }));
                                     }}
                                     placeholder={t('rapidRegistration.payment.cpf.placeholder')}
-                                    className="block w-1/2 pl-11 pr-4 py-3 border border-blue-200/50 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none text-sm font-bold text-slate-900 bg-white transition-all duration-300 disabled:opacity-50 disabled:cursor-not-allowed"
+                                    className="block w-full sm:w-[280px] pl-11 pr-4 py-3 border border-blue-200/50 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none text-sm font-bold text-slate-900 bg-white transition-all duration-300 disabled:opacity-50 disabled:cursor-not-allowed shadow-sm shadow-blue-500/5"
                                   />
                                 </div>
                               </div>
