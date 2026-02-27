@@ -4070,7 +4070,8 @@
       "dependentsFee": "Dependents Fee",
       "couponApplied": "Coupon Applied",
       "feeExplanation": "The Selection Process Fee ($400.00) is the first mandatory payment on the MatriculaUSA platform. It unlocks your full access to view all scholarships and start your application process.",
-      "refundAssurance": "If you are not accepted by any university at the end of the process, you can request a refund of the fees paid.",
+      "refundAssuranceTitle": "Refund Guarantee",
+      "refundAssuranceText": "If you are not accepted by any university, the selection process fee is 100% refundable.",
       "futureFeesTitle": "Future Fees",
       "enrollmentFee": "Enrollment Fee",
       "scholarshipFee": "Scholarship Fee",
@@ -4078,7 +4079,7 @@
       "enrollmentFeeTooltip": "The Enrollment Fee varies by university and is a mandatory payment to formally process your application after you have been accepted. This amount confirms your intention to enroll and is managed directly by the platform.",
       "scholarshipFeeTooltip": "The Scholarship Fee is charged when you proceed with the application for your chosen scholarship. This fee covers platform processing costs.",
       "i20FeeTooltip": "The I-20 Control Fee is a mandatory and essential payment to apply for the F-1 student visa. It is the final fee for the release of your scholarship acceptance letter and has a 10-day payment window.",
-      "futureFeesNote": "Future fees are estimates and vary by university."
+      "futureFeesNote": "These fees are estimates and may vary by university."
     },
     "terms": {
       "contractSubtitle": "Service Provision Agreement",
