@@ -408,43 +408,10 @@ const StudentOnboarding: React.FC = () => {
       <div className="fixed inset-0 bg-slate-300/80 backdrop-blur-3xl z-0 pointer-events-none" />
       
       {/* Background blobs decorativos */}
-      <div className="fixed top-0 right-0 -mr-20 -mt-20 w-[50vw] h-[50vw] max-w-[500px] max-h-[500px] bg-blue-600/10 rounded-full blur-[100px] pointer-events-none z-0" />
+      {/* Background blobs decorativos removidos parcialmente */}
       <div className="fixed bottom-0 left-0 -ml-20 -mb-20 w-[60vw] h-[60vw] max-w-[600px] max-h-[600px] bg-slate-600/20 rounded-full blur-[120px] pointer-events-none z-0" />
       
-      {/* Padrão diagonal inspirado em marcas de luxo - fixo na viewport */}
-      <div className="fixed inset-0 pointer-events-none z-0 overflow-hidden opacity-[0.35] flex items-center justify-center">
-        {[
-          { y: '0%', offset: false },
-          { y: '12%', offset: true },
-          { y: '25%', offset: false },
-          { y: '37%', offset: true },
-          { y: '50%', offset: false },
-          { y: '62%', offset: true },
-          { y: '75%', offset: false },
-          { y: '87%', offset: true },
-          { y: '96%', offset: false }
-        ].map((row, i) => (
-          <React.Fragment key={`row-${i}`}>
-            {(row.offset ? ['8%', '25%', '42%', '58%', '75%', '92%'] : ['0%', '16%', '33%', '50%', '66%', '83%']).map((x, j) => (
-              <div 
-                key={`m-${i}-${j}`}
-                className="absolute w-16 h-16 bg-white" 
-                style={{ 
-                  top: row.y, 
-                  left: x, 
-                  WebkitMaskImage: 'url(/favicon-branco.png)',
-                  maskImage: 'url(/favicon-branco.png)',
-                  WebkitMaskSize: 'contain',
-                  maskSize: 'contain',
-                  WebkitMaskRepeat: 'no-repeat',
-                  maskRepeat: 'no-repeat',
-                  filter: 'blur(1px)' 
-                }} 
-              />
-            ))}
-          </React.Fragment>
-        ))}
-      </div>
+      {/* Removido padrão diagonal de logos no fundo */}
       
       <div className="w-full max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 xl:px-12 py-4 sm:py-6 lg:py-8 flex-1 flex flex-col relative z-10">
         {state.currentStep !== 'welcome' && (
