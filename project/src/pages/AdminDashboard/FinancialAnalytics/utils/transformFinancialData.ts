@@ -126,7 +126,7 @@ function processApplications(
 
     // Scholarship Fee - Prioridade: valor real pago (se razoável) > override > cálculo fixo
     let scholarshipFee: number;
-    const expectedScholarship = systemType === "simplified" ? 550 : 900;
+    const expectedScholarship = systemType === "simplified" ? 900 : 900;
 
     if (realPaid?.scholarship !== undefined && realPaid.scholarship > 0) {
       // Verificar se o valor está razoável (dentro de 50% do esperado)
@@ -206,10 +206,9 @@ function processApplications(
         fee_type: "selection_process",
         amount: selectionProcessFee,
         status: "paid",
-        payment_date:
-          individualPaymentDates.get(student.user_id)?.get(
-            "selection_process",
-          ) || student.last_payment_date || app.paid_at || app.created_at,
+        payment_date: individualPaymentDates.get(student.user_id)?.get(
+          "selection_process",
+        ) || student.last_payment_date || app.paid_at || app.created_at,
         payment_method: student.selection_process_fee_payment_method ||
           "manual",
         student_name: studentName,
@@ -571,7 +570,7 @@ function processStripeUsers(
       scholarshipFee = Math.round(userOverrides.scholarship_fee * 100);
     } else {
       const systemType = userSystemTypesMap.get(stripeUser.user_id) || "legacy";
-      const amount = systemType === "simplified" ? 550 : 900;
+      const amount = systemType === "simplified" ? 900 : 900;
       scholarshipFee = Math.round(amount * 100);
     }
     let applicationFee = Math.round(getFeeAmount("application_fee") * 100);
@@ -587,10 +586,9 @@ function processStripeUsers(
         fee_type: "selection_process",
         amount: selectionProcessFee,
         status: "paid",
-        payment_date:
-          individualPaymentDates.get(stripeUser.user_id)?.get(
-            "selection_process",
-          ) || stripeUser.last_payment_date || stripeUser.created_at,
+        payment_date: individualPaymentDates.get(stripeUser.user_id)?.get(
+          "selection_process",
+        ) || stripeUser.last_payment_date || stripeUser.created_at,
         payment_method: stripeUser.selection_process_fee_payment_method ||
           "manual",
         student_name: studentName,

@@ -18,7 +18,7 @@ export interface DynamicFeeCalculation {
 
 /**
  * Hook que calcula dinamicamente os valores das taxas baseado no sistema do usuário
- * - Sistema simplificado: 350, 550, 900
+ * - Sistema simplificado: 350, 900, 900
  * - Sistema legacy: valores do feeConfig ou padrões (400, 900, 900)
  * - Usuários sem vendedor: valores padrão do sistema
  */
@@ -115,7 +115,7 @@ export const useDynamicFeeCalculationForUser = (targetUserId: string): DynamicFe
     // Se ainda está carregando, usar valores padrão temporários
     if (loading || simplifiedFeesLoading) {
       const selectionProcessFee = Number(getFeeAmount('selection_process')) || 350;
-      const scholarshipFee = Number(getFeeAmount('scholarship_fee')) || 550;
+      const scholarshipFee = Number(getFeeAmount('scholarship_fee')) || 900;
       const i20ControlFee = Number(getFeeAmount('i20_control_fee')) || 900;
 
       return {

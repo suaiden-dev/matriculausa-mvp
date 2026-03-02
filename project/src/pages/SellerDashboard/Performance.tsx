@@ -30,10 +30,10 @@ const Performance: React.FC<PerformanceProps> = ({ sellerProfile, students }) =>
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const { getFeeAmount } = useFeeConfig(); // Para valores padrão, será usado para overrides específicos por estudante
-  const [studentPackageFees, setStudentPackageFees] = useState<{[key: string]: any}>({});
-  const [studentDependents, setStudentDependents] = useState<{[key: string]: number}>({});
-  const [studentFeeOverrides, setStudentFeeOverrides] = useState<{[key: string]: any}>({});
-  const [studentSystemTypes, setStudentSystemTypes] = useState<{[key: string]: string}>({});
+  const [studentPackageFees, setStudentPackageFees] = useState<{ [key: string]: any }>({});
+  const [studentDependents, setStudentDependents] = useState<{ [key: string]: number }>({});
+  const [studentFeeOverrides, setStudentFeeOverrides] = useState<{ [key: string]: any }>({});
+  const [studentSystemTypes, setStudentSystemTypes] = useState<{ [key: string]: string }>({});
   const [studentRealPaidAmounts, setStudentRealPaidAmounts] = useState<Record<string, { selection_process?: number; scholarship?: number; i20_control?: number }>>({});
   const [loadingRealPaidAmounts, setLoadingRealPaidAmounts] = useState<boolean>(true);
   const [originalMonthlyData, setOriginalMonthlyData] = useState<PerformanceData['monthly_data']>([]);
@@ -52,7 +52,7 @@ const Performance: React.FC<PerformanceProps> = ({ sellerProfile, students }) =>
   // Função para deduplificar estudantes como no MyStudents.tsx e Overview.tsx
   const getUniqueStudents = React.useMemo(() => {
     if (!students || students.length === 0) return [];
-    
+
     // Agrupar por estudante para remover duplicatas (mesma lógica do MyStudents.tsx)
     const groupedByStudent = new Map<string, any>();
     students.forEach(student => {
@@ -62,7 +62,7 @@ const Performance: React.FC<PerformanceProps> = ({ sellerProfile, students }) =>
       }
       // Se já existe, manter o primeiro (não sobrescrever)
     });
-    
+
     return Array.from(groupedByStudent.values());
   }, [students]);
 
@@ -86,17 +86,17 @@ const Performance: React.FC<PerformanceProps> = ({ sellerProfile, students }) =>
   const loadStudentDependents = async (student: any) => {
     const studentUserId = student.id;
     if (!studentUserId || studentDependents[studentUserId] !== undefined) return;
-    
+
     // 🚨 CRITICAL: Usar user_id para buscar dependentes, como no Overview.tsx corrigido
     console.log('🔍 [PERFORMANCE] Carregando dependents para', student.email, 'user_id:', studentUserId);
-    
+
     try {
       const { data, error } = await supabase
         .from('user_profiles')
         .select('user_id, dependents, system_type')
         .eq('user_id', studentUserId) // 🚨 Usar user_id direto como no Overview corrigido
         .single();
-      
+
       if (!error && data) {
         const deps = Number(data.dependents || 0);
         const systemType = data.system_type || 'legacy';
@@ -117,11 +117,11 @@ const Performance: React.FC<PerformanceProps> = ({ sellerProfile, students }) =>
 
   const loadStudentFeeOverrides = async (studentUserId: string) => {
     if (!studentUserId || studentFeeOverrides[studentUserId] !== undefined) return;
-    
+
     // 🚨 CRITICAL: HABILITAR overrides para consistência com MyStudents.tsx
     // O wilfried8078@uorak.com precisa mostrar $2,398 que é o valor COM override
     console.log('🔄 [PERFORMANCE] Carregando overrides para:', studentUserId);
-    
+
     try {
       // Tentar primeiro via RPC function (security definer)
       let overrides = null;
@@ -152,7 +152,7 @@ const Performance: React.FC<PerformanceProps> = ({ sellerProfile, students }) =>
         overrides = directResult.data;
         error = directResult.error;
       }
-      
+
       if (!error && overrides) {
         setStudentFeeOverrides(prev => ({ ...prev, [studentUserId]: overrides }));
       } else {
@@ -168,10 +168,10 @@ const Performance: React.FC<PerformanceProps> = ({ sellerProfile, students }) =>
 
   useEffect(() => {
     if (!students || students.length === 0) return;
-    
+
     const uniqueStudents = getUniqueStudents;
     console.log('🔄 [PERFORMANCE] Carregando dados para', uniqueStudents.length, 'estudantes únicos de', students.length, 'originais');
-    
+
     uniqueStudents.forEach((s: any) => {
       if (s.id && !studentPackageFees[s.id]) loadStudentPackageFees(s.id);
       if (s.id && studentDependents[s.id] === undefined) loadStudentDependents(s); // Passa o student completo
@@ -189,18 +189,18 @@ const Performance: React.FC<PerformanceProps> = ({ sellerProfile, students }) =>
         setLoadingRealPaidAmounts(false);
         return;
       }
-      
+
       setLoadingRealPaidAmounts(true);
       const amountsMap: Record<string, { selection_process?: number; scholarship?: number; i20_control?: number }> = {};
       const paymentDatesMap: Record<string, { selection_process?: Date; scholarship?: Date; i20_control?: Date }> = {};
-      
+
       await Promise.allSettled(uniqueUserIds.map(async (userId) => {
         try {
           // Carregar valores pagos
           // ✅ CORREÇÃO: Usar getDisplayAmounts para exibição (valores "Zelle" sem taxas)
           const amounts = await getDisplayAmounts(userId, ['selection_process', 'scholarship', 'i20_control']);
           amountsMap[userId] = amounts;
-          
+
           // Carregar datas de pagamento
           const { data: payments, error } = await supabase
             .from('individual_fee_payments')
@@ -208,7 +208,7 @@ const Performance: React.FC<PerformanceProps> = ({ sellerProfile, students }) =>
             .eq('user_id', userId)
             .in('fee_type', ['selection_process', 'scholarship', 'i20_control'])
             .order('payment_date', { ascending: false });
-          
+
           if (!error && payments) {
             const dates: { selection_process?: Date; scholarship?: Date; i20_control?: Date } = {};
             payments.forEach((payment: any) => {
@@ -226,7 +226,7 @@ const Performance: React.FC<PerformanceProps> = ({ sellerProfile, students }) =>
           console.error(`Erro ao buscar valores pagos para user_id ${userId}:`, error);
         }
       }));
-      
+
       setStudentRealPaidAmounts(amountsMap);
       setStudentPaymentDates(paymentDatesMap);
       setLoadingRealPaidAmounts(false);
@@ -264,14 +264,14 @@ const Performance: React.FC<PerformanceProps> = ({ sellerProfile, students }) =>
           const baseSel = overrides.selection_process_fee != null ? Number(overrides.selection_process_fee) : baseSelDefault;
           // ✅ CORREÇÃO: Para simplified, Selection Process Fee é fixo ($350), sem dependentes
           // Dependentes só afetam Application Fee ($100 por dependente)
-          const selPaid = overrides.selection_process_fee != null 
-            ? baseSel 
+          const selPaid = overrides.selection_process_fee != null
+            ? baseSel
             : (systemType === 'simplified' ? baseSel : baseSel + (deps * 150));
           total += selPaid;
         }
       }
     }
-    
+
     // Scholarship Fee
     if (student.is_scholarship_fee_paid) {
       // Verificar se o pagamento está no período selecionado
@@ -282,13 +282,13 @@ const Performance: React.FC<PerformanceProps> = ({ sellerProfile, students }) =>
           total += realPaid.scholarship;
         } else {
           // Fallback: calcular baseado no system_type
-          const schBaseDefault = systemType === 'simplified' ? 550 : 900;
+          const schBaseDefault = systemType === 'simplified' ? 900 : 900;
           const schBase = overrides.scholarship_fee != null ? Number(overrides.scholarship_fee) : schBaseDefault;
           total += schBase;
         }
       }
     }
-    
+
     // I-20 Control Fee
     if (student.has_paid_i20_control_fee) {
       // Verificar se o pagamento está no período selecionado
@@ -304,7 +304,7 @@ const Performance: React.FC<PerformanceProps> = ({ sellerProfile, students }) =>
         }
       }
     }
-    
+
     // ⚠️ IMPORTANTE: Application fee NÃO é contabilizada na receita do seller (é exclusiva da universidade)
     // Por isso não incluímos student.is_application_fee_paid no cálculo
 
@@ -415,15 +415,15 @@ const Performance: React.FC<PerformanceProps> = ({ sellerProfile, students }) =>
   // Recalcular receita ajustada e monthly_data quando tivermos taxas/dependentes carregados ou quando o filtro de data mudar
   useEffect(() => {
     if (!performanceData) return;
-    
+
     // Usar um timeout para evitar updates muito frequentes
     const timeoutId = setTimeout(() => {
       try {
         const uniqueStudents = getUniqueStudents;
         if (!uniqueStudents || uniqueStudents.length === 0) return;
-        
+
         const adjustedRevenue = uniqueStudents.reduce((sum: number, s: any) => sum + calculateStudentAdjustedPaid(s), 0);
-        
+
         // Contar estudantes únicos que têm pagamentos no período
         const studentsInPeriod = uniqueStudents.filter((s: any) => {
           const paymentDates = studentPaymentDates[s.id] || studentPaymentDates[s.user_id] || {};
@@ -433,20 +433,20 @@ const Performance: React.FC<PerformanceProps> = ({ sellerProfile, students }) =>
             (s.has_paid_i20_control_fee && isDateInRange(paymentDates.i20_control))
           );
         }).length;
-        
+
         console.log('💰 [PERFORMANCE_TOTAL] Total calculado no Performance.tsx:', adjustedRevenue);
         console.log('💰 [PERFORMANCE_TOTAL] Estudantes únicos:', uniqueStudents.length, 'de', students.length, 'originais');
         console.log('📅 [PERFORMANCE_FILTER] Estudantes no período selecionado:', studentsInPeriod);
-        
+
         // Só atualizar se o valor mudou significativamente
         if (Math.abs(adjustedRevenue - (performanceData.total_revenue || 0)) > 1) {
-          setPerformanceData(prev => prev ? { 
-            ...prev, 
+          setPerformanceData(prev => prev ? {
+            ...prev,
             total_revenue: adjustedRevenue,
             total_students: studentsInPeriod
           } : prev);
         }
-        
+
         // Ajustar monthly_data proporcionalmente ao fator de ajuste
         const base = rpcTotalRevenue || 0;
         const factor = base > 0 ? (adjustedRevenue / base) : 1;
@@ -459,7 +459,7 @@ const Performance: React.FC<PerformanceProps> = ({ sellerProfile, students }) =>
         // Ignorar e manter dados originais
       }
     }, 100);
-    
+
     return () => clearTimeout(timeoutId);
   }, [getUniqueStudents, studentPackageFees, studentDependents, studentFeeOverrides, rpcTotalRevenue, originalMonthlyData, performanceData, dateRange, studentPaymentDates]); // Incluído dateRange e studentPaymentDates
 
@@ -570,228 +570,224 @@ const Performance: React.FC<PerformanceProps> = ({ sellerProfile, students }) =>
       <div className="px-4 sm:px-6 lg:px-8">
         <div className="space-y-6">
           {/* Date Range Filter */}
-          <DateRangeFilter 
+          <DateRangeFilter
             onDateRangeChange={(range) => {
               console.log('📅 [PERFORMANCE] Date range changed:', range);
               setDateRange(range);
             }}
             defaultPreset="30days"
           />
-          
+
           {/* KPIs Principais */}
-      <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
-        <div className="rounded-lg bg-white p-6 shadow-sm border border-gray-200">
-          <div className="flex items-center">
-            <div className="flex-shrink-0">
-              <Users className="h-8 w-8 text-blue-600" />
-            </div>
-            <div className="ml-4">
-              <p className="text-sm font-medium text-gray-600">Total Students</p>
-              <p className="text-2xl font-bold text-gray-900">{getSafeNumber(performanceData, 'total_students', 0)}</p>
-            </div>
-          </div>
-        </div>
-
-        <div className="rounded-lg bg-white p-6 shadow-sm border border-gray-200">
-          <div className="flex items-center">
-            <div className="flex-shrink-0">
-              <DollarSign className="h-8 w-8 text-green-600" />
-            </div>
-            <div className="ml-4">
-              <p className="text-sm font-medium text-gray-600">Total Revenue</p>
-              <p className="text-2xl font-bold text-gray-900">{formatCurrency(getSafeNumber(performanceData, 'total_revenue', 0))}</p>
-            </div>
-          </div>
-        </div>
-
-        <div className="rounded-lg bg-white p-6 shadow-sm border border-gray-200">
-          <div className="flex items-center">
-            <div className="flex-shrink-0">
-              <Calendar className="h-8 w-8 text-purple-600" />
-            </div>
-            <div className="ml-4">
-              <p className="text-sm font-medium text-gray-600">This Month</p>
-              <p className="text-2xl font-bold text-gray-900">{getSafeNumber(performanceData, 'monthly_students', 0)}</p>
-            </div>
-          </div>
-        </div>
-
-        <div className="rounded-lg bg-white p-6 shadow-sm border border-gray-200">
-          <div className="flex items-center">
-            <div className="flex-shrink-0">
-              <TrendingUp className="h-8 w-8 text-orange-600" />
-            </div>
-            <div className="ml-4">
-              <p className="text-sm font-medium text-gray-600">Conversion Rate</p>
-              <p className="text-2xl font-bold text-gray-900">
-                {getSafeNumber(performanceData, 'conversion_rate', 0).toFixed(1)}%
-              </p>
-            </div>
-          </div>
-        </div>
-      </div>
-
-      {/* Ranking e Metas */}
-      <div className="grid grid-cols-1 gap-6 lg:grid-cols-2">
-        {/* Ranking */}
-        <div className="rounded-lg bg-white p-6 shadow-sm border border-gray-200">
-          <div className="flex items-center justify-between mb-4">
-            <h3 className="text-lg font-semibold text-gray-900">Ranking</h3>
-            <Award className="h-6 w-6 text-yellow-500" />
-          </div>
-          <div className="text-center">
-            <div className="text-4xl font-bold text-yellow-600 mb-2">
-              {getSafeNumber(performanceData, 'ranking_position', 0)}º
-            </div>
-            <p className="text-gray-600">Position among sellers</p>
-          </div>
-        </div>
-
-        {/* Metas Mensais */}
-        <div className="rounded-lg bg-white p-6 shadow-sm border border-gray-200">
-          <div className="flex items-center justify-between mb-4">
-            <h3 className="text-lg font-semibold text-gray-900">Monthly Goals</h3>
-            <Target className="h-6 w-6 text-blue-500" />
-          </div>
-          <div className="space-y-4">
-            <div>
-              <div className="flex justify-between text-sm mb-1">
-                <span className="text-gray-600">Students</span>
-                <span className="font-medium">{(getSafeNumber(performanceData, 'monthly_students', 0))}/10</span>
-              </div>
-              <div className="w-full bg-gray-200 rounded-full h-2">
-                <div 
-                  className="bg-blue-600 h-2 rounded-full transition-all duration-300"
-                  style={{ width: `${Math.min(((getSafeNumber(performanceData, 'monthly_students', 0)) / 10) * 100, 100)}%` }}
-                ></div>
-              </div>
-            </div>
-            <div>
-              <div className="flex justify-between text-sm mb-1">
-                <span className="text-gray-600">Revenue</span>
-                <span className="font-medium">{formatCurrency(getSafeNumber(performanceData, 'total_revenue', 0))}/$500</span>
-              </div>
-              <div className="w-full bg-gray-200 rounded-full h-2">
-                <div 
-                  className="bg-green-600 h-2 rounded-full transition-all duration-300"
-                  style={{ width: `${Math.min(((getSafeNumber(performanceData, 'total_revenue', 0)) / 500) * 100, 100)}%` }}
-                ></div>
-              </div>
-            </div>
-          </div>
-        </div>
-      </div>
-
-      {/* Conquistas */}
-      <div className="rounded-lg bg-white p-6 shadow-sm border border-gray-200">
-        <div className="flex items-center justify-between mb-4">
-          <h3 className="text-lg font-semibold text-gray-900">Achievements</h3>
-          <Award className="h-6 w-6 text-purple-500" />
-        </div>
-        <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
-          {[
-            {
-              title: 'First Student',
-              description: 'Referred first student',
-              unlocked: (getSafeNumber(performanceData, 'total_students', 0)) >= 1,
-              color: 'green'
-            },
-            {
-              title: 'Bronze Seller',
-              description: 'Referred 5 students',
-              unlocked: (getSafeNumber(performanceData, 'total_students', 0)) >= 5,
-              color: 'yellow'
-            },
-            {
-              title: 'Silver Seller',
-              description: 'Referred 10 students',
-              unlocked: (getSafeNumber(performanceData, 'total_students', 0)) >= 10,
-              color: 'gray'
-            },
-            {
-              title: 'Gold Seller',
-              description: 'Referred 25 students',
-              unlocked: (getSafeNumber(performanceData, 'total_students', 0)) >= 25,
-              color: 'yellow'
-            },
-            {
-              title: 'First Revenue',
-              description: 'Generated first revenue',
-              unlocked: (getSafeNumber(performanceData, 'total_revenue', 0)) > 0,
-              color: 'green'
-            },
-            {
-              title: 'Monthly Goal',
-              description: 'Achieved monthly student goal',
-              unlocked: (getSafeNumber(performanceData, 'monthly_students', 0)) >= 5,
-              color: 'blue'
-            }
-          ].map((achievement, index) => (
-            <div
-              key={index}
-              className={`rounded-lg p-4 border-2 transition-all duration-200 ${
-                achievement.unlocked
-                  ? 'border-green-200 bg-green-50'
-                  : 'border-gray-200 bg-gray-50'
-              }`}
-            >
+          <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
+            <div className="rounded-lg bg-white p-6 shadow-sm border border-gray-200">
               <div className="flex items-center">
-                <div className={`flex-shrink-0 w-10 h-10 rounded-full flex items-center justify-center ${
-                  achievement.unlocked
-                    ? 'bg-green-100 text-green-600'
-                    : 'bg-gray-100 text-gray-400'
-                }`}>
-                  <Award className="h-5 w-5" />
+                <div className="flex-shrink-0">
+                  <Users className="h-8 w-8 text-blue-600" />
                 </div>
-                <div className="ml-3">
-                  <h4 className={`text-sm font-medium ${
-                    achievement.unlocked ? 'text-green-800' : 'text-gray-500'
-                  }`}>
-                    {achievement.title}
-                  </h4>
-                  <p className={`text-xs ${
-                    achievement.unlocked ? 'text-green-600' : 'text-gray-400'
-                  }`}>
-                    {achievement.description}
+                <div className="ml-4">
+                  <p className="text-sm font-medium text-gray-600">Total Students</p>
+                  <p className="text-2xl font-bold text-gray-900">{getSafeNumber(performanceData, 'total_students', 0)}</p>
+                </div>
+              </div>
+            </div>
+
+            <div className="rounded-lg bg-white p-6 shadow-sm border border-gray-200">
+              <div className="flex items-center">
+                <div className="flex-shrink-0">
+                  <DollarSign className="h-8 w-8 text-green-600" />
+                </div>
+                <div className="ml-4">
+                  <p className="text-sm font-medium text-gray-600">Total Revenue</p>
+                  <p className="text-2xl font-bold text-gray-900">{formatCurrency(getSafeNumber(performanceData, 'total_revenue', 0))}</p>
+                </div>
+              </div>
+            </div>
+
+            <div className="rounded-lg bg-white p-6 shadow-sm border border-gray-200">
+              <div className="flex items-center">
+                <div className="flex-shrink-0">
+                  <Calendar className="h-8 w-8 text-purple-600" />
+                </div>
+                <div className="ml-4">
+                  <p className="text-sm font-medium text-gray-600">This Month</p>
+                  <p className="text-2xl font-bold text-gray-900">{getSafeNumber(performanceData, 'monthly_students', 0)}</p>
+                </div>
+              </div>
+            </div>
+
+            <div className="rounded-lg bg-white p-6 shadow-sm border border-gray-200">
+              <div className="flex items-center">
+                <div className="flex-shrink-0">
+                  <TrendingUp className="h-8 w-8 text-orange-600" />
+                </div>
+                <div className="ml-4">
+                  <p className="text-sm font-medium text-gray-600">Conversion Rate</p>
+                  <p className="text-2xl font-bold text-gray-900">
+                    {getSafeNumber(performanceData, 'conversion_rate', 0).toFixed(1)}%
                   </p>
                 </div>
               </div>
             </div>
-          ))}
-        </div>
-      </div>
+          </div>
 
-      {/* Dados Mensais */}
-      {(() => {
-        const monthlyData = (adjustedMonthlyData && adjustedMonthlyData.length > 0)
-          ? adjustedMonthlyData
-          : getSafeArray(performanceData, 'monthly_data', []);
-        if (monthlyData && monthlyData.length > 0) {
-          return (
+          {/* Ranking e Metas */}
+          <div className="grid grid-cols-1 gap-6 lg:grid-cols-2">
+            {/* Ranking */}
             <div className="rounded-lg bg-white p-6 shadow-sm border border-gray-200">
-              <h3 className="text-lg font-semibold text-gray-900">Performance Last 6 Months</h3>
-              <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
-                {monthlyData.map((month: any, index: number) => (
-                  <div key={index} className="rounded-lg bg-gray-50 p-4">
-                    <h4 className="font-medium text-gray-900 mb-2">{month?.month || `Month ${index + 1}`}</h4>
-                    <div className="space-y-2">
-                      <div className="flex justify-between text-sm">
-                        <span className="text-gray-600">Students:</span>
-                        <span className="font-medium">{month?.students || 0}</span>
-                      </div>
-                      <div className="flex justify-between text-sm">
-                        <span className="text-gray-600">Revenue:</span>
-                        <span className="font-medium">{formatCurrency(month?.revenue || 0)}</span>
-                      </div>
-                    </div>
-                  </div>
-                ))}
+              <div className="flex items-center justify-between mb-4">
+                <h3 className="text-lg font-semibold text-gray-900">Ranking</h3>
+                <Award className="h-6 w-6 text-yellow-500" />
+              </div>
+              <div className="text-center">
+                <div className="text-4xl font-bold text-yellow-600 mb-2">
+                  {getSafeNumber(performanceData, 'ranking_position', 0)}º
+                </div>
+                <p className="text-gray-600">Position among sellers</p>
               </div>
             </div>
-          );
-        }
-        return null;
-      })()}
+
+            {/* Metas Mensais */}
+            <div className="rounded-lg bg-white p-6 shadow-sm border border-gray-200">
+              <div className="flex items-center justify-between mb-4">
+                <h3 className="text-lg font-semibold text-gray-900">Monthly Goals</h3>
+                <Target className="h-6 w-6 text-blue-500" />
+              </div>
+              <div className="space-y-4">
+                <div>
+                  <div className="flex justify-between text-sm mb-1">
+                    <span className="text-gray-600">Students</span>
+                    <span className="font-medium">{(getSafeNumber(performanceData, 'monthly_students', 0))}/10</span>
+                  </div>
+                  <div className="w-full bg-gray-200 rounded-full h-2">
+                    <div
+                      className="bg-blue-600 h-2 rounded-full transition-all duration-300"
+                      style={{ width: `${Math.min(((getSafeNumber(performanceData, 'monthly_students', 0)) / 10) * 100, 100)}%` }}
+                    ></div>
+                  </div>
+                </div>
+                <div>
+                  <div className="flex justify-between text-sm mb-1">
+                    <span className="text-gray-600">Revenue</span>
+                    <span className="font-medium">{formatCurrency(getSafeNumber(performanceData, 'total_revenue', 0))}/$500</span>
+                  </div>
+                  <div className="w-full bg-gray-200 rounded-full h-2">
+                    <div
+                      className="bg-green-600 h-2 rounded-full transition-all duration-300"
+                      style={{ width: `${Math.min(((getSafeNumber(performanceData, 'total_revenue', 0)) / 500) * 100, 100)}%` }}
+                    ></div>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          {/* Conquistas */}
+          <div className="rounded-lg bg-white p-6 shadow-sm border border-gray-200">
+            <div className="flex items-center justify-between mb-4">
+              <h3 className="text-lg font-semibold text-gray-900">Achievements</h3>
+              <Award className="h-6 w-6 text-purple-500" />
+            </div>
+            <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
+              {[
+                {
+                  title: 'First Student',
+                  description: 'Referred first student',
+                  unlocked: (getSafeNumber(performanceData, 'total_students', 0)) >= 1,
+                  color: 'green'
+                },
+                {
+                  title: 'Bronze Seller',
+                  description: 'Referred 5 students',
+                  unlocked: (getSafeNumber(performanceData, 'total_students', 0)) >= 5,
+                  color: 'yellow'
+                },
+                {
+                  title: 'Silver Seller',
+                  description: 'Referred 10 students',
+                  unlocked: (getSafeNumber(performanceData, 'total_students', 0)) >= 10,
+                  color: 'gray'
+                },
+                {
+                  title: 'Gold Seller',
+                  description: 'Referred 25 students',
+                  unlocked: (getSafeNumber(performanceData, 'total_students', 0)) >= 25,
+                  color: 'yellow'
+                },
+                {
+                  title: 'First Revenue',
+                  description: 'Generated first revenue',
+                  unlocked: (getSafeNumber(performanceData, 'total_revenue', 0)) > 0,
+                  color: 'green'
+                },
+                {
+                  title: 'Monthly Goal',
+                  description: 'Achieved monthly student goal',
+                  unlocked: (getSafeNumber(performanceData, 'monthly_students', 0)) >= 5,
+                  color: 'blue'
+                }
+              ].map((achievement, index) => (
+                <div
+                  key={index}
+                  className={`rounded-lg p-4 border-2 transition-all duration-200 ${achievement.unlocked
+                      ? 'border-green-200 bg-green-50'
+                      : 'border-gray-200 bg-gray-50'
+                    }`}
+                >
+                  <div className="flex items-center">
+                    <div className={`flex-shrink-0 w-10 h-10 rounded-full flex items-center justify-center ${achievement.unlocked
+                        ? 'bg-green-100 text-green-600'
+                        : 'bg-gray-100 text-gray-400'
+                      }`}>
+                      <Award className="h-5 w-5" />
+                    </div>
+                    <div className="ml-3">
+                      <h4 className={`text-sm font-medium ${achievement.unlocked ? 'text-green-800' : 'text-gray-500'
+                        }`}>
+                        {achievement.title}
+                      </h4>
+                      <p className={`text-xs ${achievement.unlocked ? 'text-green-600' : 'text-gray-400'
+                        }`}>
+                        {achievement.description}
+                      </p>
+                    </div>
+                  </div>
+                </div>
+              ))}
+            </div>
+          </div>
+
+          {/* Dados Mensais */}
+          {(() => {
+            const monthlyData = (adjustedMonthlyData && adjustedMonthlyData.length > 0)
+              ? adjustedMonthlyData
+              : getSafeArray(performanceData, 'monthly_data', []);
+            if (monthlyData && monthlyData.length > 0) {
+              return (
+                <div className="rounded-lg bg-white p-6 shadow-sm border border-gray-200">
+                  <h3 className="text-lg font-semibold text-gray-900">Performance Last 6 Months</h3>
+                  <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
+                    {monthlyData.map((month: any, index: number) => (
+                      <div key={index} className="rounded-lg bg-gray-50 p-4">
+                        <h4 className="font-medium text-gray-900 mb-2">{month?.month || `Month ${index + 1}`}</h4>
+                        <div className="space-y-2">
+                          <div className="flex justify-between text-sm">
+                            <span className="text-gray-600">Students:</span>
+                            <span className="font-medium">{month?.students || 0}</span>
+                          </div>
+                          <div className="flex justify-between text-sm">
+                            <span className="text-gray-600">Revenue:</span>
+                            <span className="font-medium">{formatCurrency(month?.revenue || 0)}</span>
+                          </div>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              );
+            }
+            return null;
+          })()}
         </div>
       </div>
     </div>

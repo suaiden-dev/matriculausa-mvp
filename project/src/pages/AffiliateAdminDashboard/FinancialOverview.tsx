@@ -1,8 +1,8 @@
 import React, { useState, useEffect, useRef, useCallback, useMemo } from 'react';
-import { 
-  DollarSign, 
-  TrendingUp, 
-  Clock, 
+import {
+  DollarSign,
+  TrendingUp,
+  Clock,
   BarChart3,
   PieChart,
   Users,
@@ -29,8 +29,8 @@ interface FinancialOverviewProps {
 }
 
 interface FinancialAnalytics {
-  dailyRevenue: Array<{date: string, amount: number}>;
-  monthlyRevenue: Array<{month: string, amount: number}>;
+  dailyRevenue: Array<{ date: string, amount: number }>;
+  monthlyRevenue: Array<{ month: string, amount: number }>;
   referralTrends: {
     totalReferrals: number;
     completedReferrals: number;
@@ -42,7 +42,7 @@ interface FinancialAnalytics {
     pending: number;
     completed: number;
   };
-  recentActivity: Array<{date: string, type: string, amount: number, description: string}>;
+  recentActivity: Array<{ date: string, type: string, amount: number, description: string }>;
 }
 
 interface CalculatedMetrics {
@@ -58,7 +58,7 @@ const FinancialOverview: React.FC<FinancialOverviewProps> = ({ userId, forceRelo
 
   // ✅ React Query hook para dados financeiros com cache
   const { data: financialData, isLoading, isPending } = useFinancialStatsQuery(userId);
-  
+
   // Detailed financial analytics state (computado a partir de financialData)
   const [financialAnalytics, setFinancialAnalytics] = useState<FinancialAnalytics>({
     dailyRevenue: [],
@@ -80,17 +80,17 @@ const FinancialOverview: React.FC<FinancialOverviewProps> = ({ userId, forceRelo
   // Revenue chart filter state
   const [revenueChartType, setRevenueChartType] = useState<'daily' | 'monthly'>('daily');
   const [revenueChartPeriod, setRevenueChartPeriod] = useState<number>(30);
-  
+
   // Chart refs for Chart.js
   const revenueChartRef = useRef<HTMLCanvasElement>(null);
   const referralStatusChartRef = useRef<HTMLCanvasElement>(null);
   const trendChartRef = useRef<HTMLCanvasElement>(null);
-  
+
   // Chart instances
   const [revenueChart, setRevenueChart] = useState<any>(null);
   const [referralStatusChart, setReferralStatusChart] = useState<any>(null);
   const [trendChart, setTrendChart] = useState<any>(null);
-  
+
   // Calculated metrics state
   const [calculatedMetrics, setCalculatedMetrics] = useState<CalculatedMetrics>({
     revenueGrowth: 0,
@@ -130,27 +130,27 @@ const FinancialOverview: React.FC<FinancialOverviewProps> = ({ userId, forceRelo
         script.src = 'https://cdn.jsdelivr.net/npm/chart.js';
         script.async = true;
         document.head.appendChild(script);
-        
+
         script.onload = () => {
           console.log('Chart.js loaded successfully');
         };
       }
     };
-    
+
     loadChartJS();
   }, []);
 
   // ✅ Função para calcular receita de um profile usando overrides
   const calculateProfileRevenue = useCallback((profile: any) => {
     if (!financialData) return 0;
-    
+
     const { overridesMap, realPaidAmountsMap } = financialData;
     const deps = Number(profile?.dependents || 0);
     const ov = overridesMap[profile?.user_id] || {};
     const realPaid = realPaidAmountsMap[profile?.user_id] || {};
-    
+
     let totalRevenue = 0;
-    
+
     // Selection Process Fee
     if (profile?.has_paid_selection_process_fee) {
       if (realPaid.selection_process !== undefined && realPaid.selection_process > 0) {
@@ -159,12 +159,12 @@ const FinancialOverview: React.FC<FinancialOverviewProps> = ({ userId, forceRelo
         totalRevenue += Number(ov.selection_process_fee);
       } else {
         const baseSelDefault = profile?.system_type === 'simplified' ? 350 : 400;
-        totalRevenue += profile?.system_type === 'simplified' 
-          ? baseSelDefault 
+        totalRevenue += profile?.system_type === 'simplified'
+          ? baseSelDefault
           : baseSelDefault + (deps * 150);
       }
     }
-    
+
     // Scholarship Fee
     if (profile?.is_scholarship_fee_paid) {
       if (realPaid.scholarship !== undefined && realPaid.scholarship > 0) {
@@ -172,10 +172,10 @@ const FinancialOverview: React.FC<FinancialOverviewProps> = ({ userId, forceRelo
       } else if (ov.scholarship_fee != null) {
         totalRevenue += Number(ov.scholarship_fee);
       } else {
-        totalRevenue += profile?.system_type === 'simplified' ? 550 : 900;
+        totalRevenue += profile?.system_type === 'simplified' ? 900 : 900;
       }
     }
-    
+
     // I20 Control Fee
     if (profile?.is_scholarship_fee_paid && profile?.has_paid_i20_control_fee) {
       if (realPaid.i20_control !== undefined && realPaid.i20_control > 0) {
@@ -186,7 +186,7 @@ const FinancialOverview: React.FC<FinancialOverviewProps> = ({ userId, forceRelo
         totalRevenue += 900;
       }
     }
-    
+
     return totalRevenue;
   }, [financialData]);
 
@@ -209,12 +209,12 @@ const FinancialOverview: React.FC<FinancialOverviewProps> = ({ userId, forceRelo
       const date = new Date();
       date.setDate(date.getDate() - i);
       const dateStr = date.toISOString().split('T')[0];
-      
+
       const dayRevenue = referralsData?.filter((r: any) => {
         const rDate = new Date(r.created_at).toISOString().split('T')[0];
         return rDate === dateStr;
       }).reduce((sum: number, r: any) => sum + calculateProfileRevenue(r), 0) || 0;
-      
+
       dailyRevenue.push({ date: dateStr, amount: dayRevenue });
     }
 
@@ -224,13 +224,13 @@ const FinancialOverview: React.FC<FinancialOverviewProps> = ({ userId, forceRelo
       const date = new Date();
       date.setMonth(date.getMonth() - i);
       const monthStr = date.toLocaleDateString('en-US', { year: 'numeric', month: 'short' });
-      
+
       const monthRevenue = referralsData?.filter((r: any) => {
         const rDate = new Date(r.created_at);
-        return rDate.getMonth() === date.getMonth() && 
-               rDate.getFullYear() === date.getFullYear();
+        return rDate.getMonth() === date.getMonth() &&
+          rDate.getFullYear() === date.getFullYear();
       }).reduce((sum: number, r: any) => sum + calculateProfileRevenue(r), 0) || 0;
-      
+
       monthlyRevenue.push({ month: monthStr, amount: monthRevenue });
     }
 
@@ -241,7 +241,7 @@ const FinancialOverview: React.FC<FinancialOverviewProps> = ({ userId, forceRelo
       // ✅ CORREÇÃO: Usar diretamente a flag já calculada pela RPC
       const hasScholarshipPaid = r?.is_scholarship_fee_paid || false;
       const hasI20Paid = !!r?.has_paid_i20_control_fee;
-      
+
       return {
         paidSelection: hasSelectionPaid,
         paidScholarship: hasScholarshipPaid,
@@ -253,7 +253,7 @@ const FinancialOverview: React.FC<FinancialOverviewProps> = ({ userId, forceRelo
       return paidSelection || paidScholarship || paidI20;
     }).length || 0;
     const conversionRate = totalReferrals > 0 ? (completedReferrals / totalReferrals) * 100 : 0;
-    const averageCommission = totalReferrals > 0 ? 
+    const averageCommission = totalReferrals > 0 ?
       referralsData?.reduce((sum: number, r: any) => sum + calculateProfileRevenue(r), 0) / totalReferrals : 0;
 
     // Calcular breakdown por status derivado dos pagamentos usando lógica de overrides
@@ -273,7 +273,7 @@ const FinancialOverview: React.FC<FinancialOverviewProps> = ({ userId, forceRelo
 
     // Criar atividade recente (últimos 10 eventos) usando valores reais pagos
     // ✅ CORREÇÃO: Usar o realPaidAmountsMap já calculado no início da função
-    const recentActivity: Array<{date: string, type: string, amount: number, description: string}> = [];
+    const recentActivity: Array<{ date: string, type: string, amount: number, description: string }> = [];
 
     // Montar eventos por taxa paga usando valores reais pagos
     // ✅ CORREÇÃO: Iterar sobre TODOS os dados para encontrar pagamentos recentes, não apenas os 10 primeiros alunos
@@ -281,7 +281,7 @@ const FinancialOverview: React.FC<FinancialOverviewProps> = ({ userId, forceRelo
       const deps = Number(row?.dependents || 0);
       const ov = overridesMap[row?.user_id] || {};
       const realPaid = realPaidAmountsMap[row?.user_id] || {};
-      
+
       // Usar flags de pagamento para determinar quais taxas foram pagas
       const paidSelection = !!row.has_paid_selection_process_fee;
       const paidI20Control = !!row.has_paid_i20_control_fee;
@@ -301,8 +301,8 @@ const FinancialOverview: React.FC<FinancialOverviewProps> = ({ userId, forceRelo
           const baseSelDefault = row?.system_type === 'simplified' ? 350 : 400;
           // ✅ CORREÇÃO: Para simplified, Selection Process Fee é fixo ($350), sem dependentes
           // Dependentes só afetam Application Fee ($100 por dependente)
-          selectionFeeAmount = row?.system_type === 'simplified' 
-            ? baseSelDefault 
+          selectionFeeAmount = row?.system_type === 'simplified'
+            ? baseSelDefault
             : baseSelDefault + (deps * 150);
         }
         recentActivity.push({
@@ -322,7 +322,7 @@ const FinancialOverview: React.FC<FinancialOverviewProps> = ({ userId, forceRelo
           scholarshipAmount = Number(ov.scholarship_fee);
         } else {
           // Fallback: cálculo fixo
-          scholarshipAmount = row?.system_type === 'simplified' ? 550 : 900;
+          scholarshipAmount = row?.system_type === 'simplified' ? 900 : 900;
         }
         recentActivity.push({
           date: row.scholarship_fee_paid_at || row.created_at,
@@ -366,7 +366,7 @@ const FinancialOverview: React.FC<FinancialOverviewProps> = ({ userId, forceRelo
 
     // Ordenar por data e pegar os 10 mais recentes
     recentActivity.sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
-    
+
     // Agora sim, pegar apenas os 10 primeiros APÓS ordenar tudo
     const finalRecentActivity = recentActivity.slice(0, 10);
 
@@ -395,15 +395,15 @@ const FinancialOverview: React.FC<FinancialOverviewProps> = ({ userId, forceRelo
     }
 
     const ctx = revenueChartRef.current.getContext('2d');
-    const data = revenueChartType === 'daily' 
+    const data = revenueChartType === 'daily'
       ? financialAnalytics.dailyRevenue.slice(-revenueChartPeriod)
       : financialAnalytics.monthlyRevenue.slice(-revenueChartPeriod);
 
     const chart = new window.Chart(ctx, {
       type: 'line',
       data: {
-        labels: data.map(item => 
-          revenueChartType === 'daily' 
+        labels: data.map(item =>
+          revenueChartType === 'daily'
             ? new Date((item as any).date).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })
             : (item as any).month
         ),
@@ -478,7 +478,7 @@ const FinancialOverview: React.FC<FinancialOverviewProps> = ({ userId, forceRelo
     }
 
     const ctx = referralStatusChartRef.current.getContext('2d');
-    
+
     const chart = new window.Chart(ctx, {
       type: 'doughnut',
       data: {
@@ -521,7 +521,7 @@ const FinancialOverview: React.FC<FinancialOverviewProps> = ({ userId, forceRelo
             borderWidth: 1,
             cornerRadius: 8,
             callbacks: {
-              label: function(context: any) {
+              label: function (context: any) {
                 const total = context.dataset.data.reduce((a: number, b: number) => a + b, 0);
                 const percentage = total > 0 ? ((context.parsed / total) * 100).toFixed(1) : 0;
                 return `${context.label}: ${context.parsed} (${percentage}%)`;
@@ -609,12 +609,12 @@ const FinancialOverview: React.FC<FinancialOverviewProps> = ({ userId, forceRelo
     // Calculate revenue growth (comparing last 7 days vs previous 7 days)
     const last7Days = financialAnalytics.dailyRevenue.slice(-7);
     const previous7Days = financialAnalytics.dailyRevenue.slice(-14, -7);
-    
+
     const last7DaysTotal = last7Days.reduce((sum, day) => sum + day.amount, 0);
     const previous7DaysTotal = previous7Days.reduce((sum, day) => sum + day.amount, 0);
-    
-    const revenueGrowth = previous7DaysTotal > 0 
-      ? ((last7DaysTotal - previous7DaysTotal) / previous7DaysTotal) * 100 
+
+    const revenueGrowth = previous7DaysTotal > 0
+      ? ((last7DaysTotal - previous7DaysTotal) / previous7DaysTotal) * 100
       : 0;
 
     // Calculate monthly average
@@ -624,9 +624,9 @@ const FinancialOverview: React.FC<FinancialOverviewProps> = ({ userId, forceRelo
 
     // Find best month
     const bestMonth = financialAnalytics.monthlyRevenue.length > 0
-      ? financialAnalytics.monthlyRevenue.reduce((max, month) => 
-          month.amount > max.amount ? month : max
-        ).month
+      ? financialAnalytics.monthlyRevenue.reduce((max, month) =>
+        month.amount > max.amount ? month : max
+      ).month
       : '';
 
     // Calculate conversion target
@@ -824,7 +824,7 @@ const FinancialOverview: React.FC<FinancialOverviewProps> = ({ userId, forceRelo
             <h3 className="text-xl font-semibold text-slate-900">Revenue Trend</h3>
             <p className="text-sm text-slate-600">Earnings from referrals over time</p>
           </div>
-          
+
           {/* Time Period Filters */}
           <div className="flex flex-col sm:flex-row gap-3">
             <div className="flex space-x-1 bg-slate-100 rounded-lg p-1">
@@ -833,11 +833,10 @@ const FinancialOverview: React.FC<FinancialOverviewProps> = ({ userId, forceRelo
                   setRevenueChartType('daily');
                   setRevenueChartPeriod(7);
                 }}
-                className={`px-3 py-1.5 rounded-md text-sm font-medium transition-all duration-200 whitespace-nowrap ${
-                  revenueChartType === 'daily' && revenueChartPeriod === 7
+                className={`px-3 py-1.5 rounded-md text-sm font-medium transition-all duration-200 whitespace-nowrap ${revenueChartType === 'daily' && revenueChartPeriod === 7
                     ? 'bg-[#05294E] text-white shadow-sm'
                     : 'text-slate-600 hover:text-slate-900'
-                }`}
+                  }`}
               >
                 7D
               </button>
@@ -846,11 +845,10 @@ const FinancialOverview: React.FC<FinancialOverviewProps> = ({ userId, forceRelo
                   setRevenueChartType('daily');
                   setRevenueChartPeriod(30);
                 }}
-                className={`px-3 py-1.5 rounded-md text-sm font-medium transition-all duration-200 whitespace-nowrap ${
-                  revenueChartType === 'daily' && revenueChartPeriod === 30
+                className={`px-3 py-1.5 rounded-md text-sm font-medium transition-all duration-200 whitespace-nowrap ${revenueChartType === 'daily' && revenueChartPeriod === 30
                     ? 'bg-[#05294E] text-white shadow-sm'
                     : 'text-slate-600 hover:text-slate-900'
-                }`}
+                  }`}
               >
                 30D
               </button>
@@ -859,11 +857,10 @@ const FinancialOverview: React.FC<FinancialOverviewProps> = ({ userId, forceRelo
                   setRevenueChartType('monthly');
                   setRevenueChartPeriod(3);
                 }}
-                className={`px-3 py-1.5 rounded-md text-sm font-medium transition-all duration-200 whitespace-nowrap ${
-                  revenueChartType === 'monthly' && revenueChartPeriod === 3
+                className={`px-3 py-1.5 rounded-md text-sm font-medium transition-all duration-200 whitespace-nowrap ${revenueChartType === 'monthly' && revenueChartPeriod === 3
                     ? 'bg-[#05294E] text-white shadow-sm'
                     : 'text-slate-600 hover:text-slate-900'
-                }`}
+                  }`}
               >
                 3M
               </button>
@@ -872,11 +869,10 @@ const FinancialOverview: React.FC<FinancialOverviewProps> = ({ userId, forceRelo
                   setRevenueChartType('monthly');
                   setRevenueChartPeriod(6);
                 }}
-                className={`px-3 py-1.5 rounded-md text-sm font-medium transition-all duration-200 whitespace-nowrap ${
-                  revenueChartType === 'monthly' && revenueChartPeriod === 6
+                className={`px-3 py-1.5 rounded-md text-sm font-medium transition-all duration-200 whitespace-nowrap ${revenueChartType === 'monthly' && revenueChartPeriod === 6
                     ? 'bg-[#05294E] text-white shadow-sm'
                     : 'text-slate-600 hover:text-slate-900'
-                }`}
+                  }`}
               >
                 6M
               </button>
@@ -885,37 +881,36 @@ const FinancialOverview: React.FC<FinancialOverviewProps> = ({ userId, forceRelo
                   setRevenueChartType('monthly');
                   setRevenueChartPeriod(12);
                 }}
-                className={`px-3 py-1.5 rounded-md text-sm font-medium transition-all duration-200 whitespace-nowrap ${
-                  revenueChartType === 'monthly' && revenueChartPeriod === 12
+                className={`px-3 py-1.5 rounded-md text-sm font-medium transition-all duration-200 whitespace-nowrap ${revenueChartType === 'monthly' && revenueChartPeriod === 12
                     ? 'bg-[#05294E] text-white shadow-sm'
                     : 'text-slate-600 hover:text-slate-900'
-                }`}
+                  }`}
               >
                 1Y
               </button>
             </div>
           </div>
         </div>
-        
+
         <div className="h-64">
           <canvas ref={revenueChartRef}></canvas>
         </div>
-        
+
         <div className="mt-4 flex items-center justify-between text-sm">
           <span className="text-slate-600">
-            {revenueChartType === 'daily' 
+            {revenueChartType === 'daily'
               ? `Last ${revenueChartPeriod} day${revenueChartPeriod > 1 ? 's' : ''}`
               : `Last ${revenueChartPeriod} month${revenueChartPeriod > 1 ? 's' : ''}`
             }
           </span>
           <span className="font-semibold text-slate-900">
-            {revenueChartType === 'daily' 
+            {revenueChartType === 'daily'
               ? formatCurrency(
-                  financialAnalytics.dailyRevenue.slice(-revenueChartPeriod).reduce((sum, day) => sum + day.amount, 0)
-                )
+                financialAnalytics.dailyRevenue.slice(-revenueChartPeriod).reduce((sum, day) => sum + day.amount, 0)
+              )
               : formatCurrency(
-                  financialAnalytics.monthlyRevenue.slice(-revenueChartPeriod).reduce((sum, month) => sum + month.amount, 0)
-                )
+                financialAnalytics.monthlyRevenue.slice(-revenueChartPeriod).reduce((sum, month) => sum + month.amount, 0)
+              )
             }
           </span>
         </div>
@@ -929,11 +924,11 @@ const FinancialOverview: React.FC<FinancialOverviewProps> = ({ userId, forceRelo
             <h3 className="text-lg font-semibold text-slate-900">Monthly Performance</h3>
             <BarChart3 className="w-5 h-5 text-slate-600" />
           </div>
-          
+
           <div className="h-48">
             <canvas ref={trendChartRef}></canvas>
           </div>
-          
+
           <div className="mt-4 space-y-2">
             <div className="flex justify-between text-sm">
               <span className="text-slate-600">Best Month</span>
@@ -956,11 +951,11 @@ const FinancialOverview: React.FC<FinancialOverviewProps> = ({ userId, forceRelo
             <h3 className="text-lg font-semibold text-slate-900">Referral Status</h3>
             <PieChart className="w-5 h-5 text-slate-600" />
           </div>
-          
+
           <div className="h-48">
             <canvas ref={referralStatusChartRef}></canvas>
           </div>
-          
+
           <div className="mt-4 grid grid-cols-3 gap-2 text-center">
             <div>
               <div className="text-lg font-semibold text-green-600">
@@ -989,7 +984,7 @@ const FinancialOverview: React.FC<FinancialOverviewProps> = ({ userId, forceRelo
             <h3 className="text-lg font-semibold text-slate-900">Quick Stats</h3>
             <TrendingUp className="w-5 h-5 text-slate-600" />
           </div>
-          
+
           <div className="space-y-4">
             <div className="flex items-center justify-between">
               <span className="text-sm text-slate-600">Last 7 Days</span>
@@ -1010,7 +1005,7 @@ const FinancialOverview: React.FC<FinancialOverviewProps> = ({ userId, forceRelo
               </span>
             </div>
           </div>
-          
+
           <div className="mt-6 pt-4 border-t border-slate-200">
             <div className="text-center">
               <div className="text-2xl font-bold text-green-600">
@@ -1034,17 +1029,16 @@ const FinancialOverview: React.FC<FinancialOverviewProps> = ({ userId, forceRelo
             <span className="text-sm text-slate-600">Live</span>
           </div>
         </div>
-        
+
         <div className="space-y-4">
           {financialAnalytics.recentActivity.length > 0 ? (
             financialAnalytics.recentActivity.map((activity, index) => (
               <div key={index} className="flex items-center space-x-4 p-4 bg-slate-50 rounded-lg hover:bg-slate-100 transition-colors">
-                <div className={`w-3 h-3 rounded-full ${
-                  activity.type === 'commission' ? 'bg-green-500' :
-                  activity.type === 'pending' ? 'bg-yellow-500' :
-                  activity.type === 'earned' ? 'bg-blue-500' :
-                  'bg-slate-500'
-                }`}></div>
+                <div className={`w-3 h-3 rounded-full ${activity.type === 'commission' ? 'bg-green-500' :
+                    activity.type === 'pending' ? 'bg-yellow-500' :
+                      activity.type === 'earned' ? 'bg-blue-500' :
+                        'bg-slate-500'
+                  }`}></div>
                 <div className="flex-1">
                   <p className="text-sm font-medium text-slate-900">{activity.description}</p>
                   <p className="text-xs text-slate-600">
@@ -1057,11 +1051,10 @@ const FinancialOverview: React.FC<FinancialOverviewProps> = ({ userId, forceRelo
                   </p>
                 </div>
                 <div className="text-right">
-                  <p className={`text-sm font-bold ${
-                    activity.type === 'commission' || activity.type === 'earned' ? 'text-green-600' :
-                    activity.type === 'pending' ? 'text-yellow-600' :
-                    'text-slate-600'
-                  }`}>
+                  <p className={`text-sm font-bold ${activity.type === 'commission' || activity.type === 'earned' ? 'text-green-600' :
+                      activity.type === 'pending' ? 'text-yellow-600' :
+                        'text-slate-600'
+                    }`}>
                     {activity.type === 'commission' || activity.type === 'earned' ? '+' : ''}{formatCurrency(activity.amount)}
                   </p>
                 </div>

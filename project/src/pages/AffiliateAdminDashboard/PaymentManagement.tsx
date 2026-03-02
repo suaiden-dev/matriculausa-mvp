@@ -1,10 +1,10 @@
 import React, { useState, useEffect, useCallback, useRef } from 'react';
-import { 
+import {
   DollarSign,
-  TrendingUp, 
+  TrendingUp,
   CreditCard,
   Plus,
-  Download, 
+  Download,
   Loader2,
   Clock,
   CheckCircle,
@@ -22,10 +22,10 @@ import { getDisplayAmounts } from '../../utils/paymentConverter';
 
 const PaymentManagement: React.FC = () => {
   const { user } = useAuth();
-  
+
   // Tab state
   const [activeTab, setActiveTab] = useState<'financial-overview' | 'payment-requests' | 'commission-history'>('financial-overview');
-  
+
   // Payment request modal state
   const [showPaymentRequestModal, setShowPaymentRequestModal] = useState(false);
   const [paymentRequestAmount, setPaymentRequestAmount] = useState<number>(0);
@@ -91,7 +91,7 @@ const PaymentManagement: React.FC = () => {
         .from('sellers')
         .select('referral_code')
         .eq('affiliate_admin_id', affiliateAdminId);
-      
+
       if (sellersErr || !sellers || sellers.length === 0) {
         hasLoadedBalanceForUser.current = uid;
         setAffiliateBalance(0);
@@ -122,7 +122,7 @@ const PaymentManagement: React.FC = () => {
         `)
         .in('seller_referral_code', sellerCodes)
         .eq('role', 'student');
-      
+
       if (userProfilesError || !userProfilesData) {
         console.error('❌ [PAYMENT] Erro ao buscar perfis:', userProfilesError);
         hasLoadedBalanceForUser.current = uid;
@@ -158,11 +158,11 @@ const PaymentManagement: React.FC = () => {
         paymentMethodsMap[p.id] = {
           selection_process: p.selection_process_fee_payment_method,
           i20_control: p.i20_control_fee_payment_method,
-          scholarship: Array.isArray(p.scholarship_applications) 
+          scholarship: Array.isArray(p.scholarship_applications)
             ? p.scholarship_applications.map((a: any) => ({
-                is_paid: a.is_scholarship_fee_paid,
-                method: a.scholarship_fee_payment_method
-              }))
+              is_paid: a.is_scholarship_fee_paid,
+              method: a.scholarship_fee_payment_method
+            }))
             : []
         };
       });
@@ -190,11 +190,11 @@ const PaymentManagement: React.FC = () => {
       // 4. Buscar valores reais pagos de individual_fee_payments
       // Buscar valores pagos para todos os estudantes de uma vez
       const realPaidAmountsMap: Record<string, { selection_process?: number; scholarship?: number; i20_control?: number }> = {};
-      
+
       // Buscar valores pagos para cada estudante
       await Promise.all(profiles.map(async (p: any) => {
         if (!p.user_id) return;
-        
+
         try {
           // ✅ CORREÇÃO: Usar getDisplayAmounts para exibição (valores "Zelle" sem taxas)
           const amounts = await getDisplayAmounts(p.user_id, ['selection_process', 'scholarship', 'i20_control']);
@@ -209,7 +209,7 @@ const PaymentManagement: React.FC = () => {
       }));
 
       // 5. Calcular total usando valores reais pagos, com fallback para cálculo fixo se não houver registro
-      const totalRevenueBreakdown: Array<{profile_id: string, selection: number, scholarship: number, i20: number, total: number}> = [];
+      const totalRevenueBreakdown: Array<{ profile_id: string, selection: number, scholarship: number, i20: number, total: number }> = [];
       const totalRevenue = (profiles || []).reduce((sum: number, p: any) => {
         const deps = Number(p?.dependents || 0);
         const ov = overridesMap[p?.user_id] || {};
@@ -241,7 +241,7 @@ const PaymentManagement: React.FC = () => {
             schPaid = realPaid.scholarship;
           } else {
             // Fallback: cálculo fixo para dados antigos sem registro
-            const baseScholarshipFee = p?.system_type === 'simplified' ? 550 : 900;
+            const baseScholarshipFee = p?.system_type === 'simplified' ? 900 : 900;
             const schol = ov.scholarship_fee != null
               ? Number(ov.scholarship_fee)
               : baseScholarshipFee;
@@ -288,11 +288,11 @@ const PaymentManagement: React.FC = () => {
 
       // 6. Buscar valores de pagamentos manuais de individual_fee_payments
       const manualPaidAmountsMap: Record<string, { selection_process?: number; scholarship?: number; i20_control?: number }> = {};
-      
+
       // Buscar apenas pagamentos manuais para cada estudante
       await Promise.all(profiles.map(async (p: any) => {
         if (!p.user_id) return;
-        
+
         try {
           const { data: manualPayments, error } = await supabase
             .from('individual_fee_payments')
@@ -300,12 +300,12 @@ const PaymentManagement: React.FC = () => {
             .eq('user_id', p.user_id)
             .eq('payment_method', 'manual')
             .in('fee_type', ['selection_process', 'scholarship', 'i20_control']);
-          
+
           if (error) {
             console.error(`[PaymentManagement] Erro ao buscar pagamentos manuais para user_id ${p.user_id}:`, error);
             return;
           }
-          
+
           const amounts: { selection_process?: number; scholarship?: number; i20_control?: number } = {};
           manualPayments?.forEach((payment: any) => {
             const amount = Number(payment.amount);
@@ -317,7 +317,7 @@ const PaymentManagement: React.FC = () => {
               amounts.i20_control = amount;
             }
           });
-          
+
           if (Object.keys(amounts).length > 0) {
             manualPaidAmountsMap[p.user_id] = amounts;
           }
@@ -327,13 +327,13 @@ const PaymentManagement: React.FC = () => {
       }));
 
       // 7. Calcular receita manual usando valores reais pagos, com fallback para cálculo fixo
-      const manualRevenueBreakdown: Array<{profile_id: string, selection: number, scholarship: number, i20: number, total: number}> = [];
+      const manualRevenueBreakdown: Array<{ profile_id: string, selection: number, scholarship: number, i20: number, total: number }> = [];
       const manualRevenue = (profiles || []).reduce((sum: number, p: any) => {
         const deps = Number(p?.dependents || 0);
         const ov = overridesMap[p?.user_id] || {};
         const methods = paymentMethodsMap[p?.profile_id] || {};
         const manualPaid = manualPaidAmountsMap[p?.user_id] || {};
-        
+
         // Selection Process manual - usar valor real pago se disponível, senão calcular
         let selManual = 0;
         if (p?.has_paid_selection_process_fee && methods.selection_process === 'manual') {
@@ -361,7 +361,7 @@ const PaymentManagement: React.FC = () => {
             schManual = manualPaid.scholarship;
           } else {
             // Fallback: cálculo fixo para dados antigos sem registro
-            const baseScholarshipFee = p?.system_type === 'simplified' ? 550 : 900;
+            const baseScholarshipFee = p?.system_type === 'simplified' ? 900 : 900;
             const schol = ov.scholarship_fee != null
               ? Number(ov.scholarship_fee)
               : baseScholarshipFee;
@@ -406,7 +406,7 @@ const PaymentManagement: React.FC = () => {
 
       // 2) Requests do afiliado para calcular Available Balance
       const affiliateRequests = await AffiliatePaymentRequestService.listAffiliatePaymentRequests(uid);
-      
+
       console.group('🔍 [PaymentManagement] Payment Requests');
       console.log('Total requests:', affiliateRequests.length);
       console.log('Requests by status:', {
@@ -470,7 +470,7 @@ const PaymentManagement: React.FC = () => {
       isLoadingRequestsRef.current = true;
       setLoadingRequests(true);
       const requests = await AffiliatePaymentRequestService.listAffiliatePaymentRequests(uid);
-      
+
       console.group('🔍 [PaymentManagement] Payment Requests Loader');
       console.log('userId:', uid);
       console.log('Total requests fetched:', requests.length);
@@ -488,7 +488,7 @@ const PaymentManagement: React.FC = () => {
         updated_at: r.updated_at
       })));
       console.groupEnd();
-      
+
       setAffiliatePaymentRequests(requests);
       hasLoadedRequestsForUser.current = null; // disable cache to always refresh on demand
     } catch (error: any) {
@@ -538,14 +538,14 @@ const PaymentManagement: React.FC = () => {
   // Check if payout details are valid based on method
   const isPayoutDetailsValid = () => {
     if (payoutMethod === 'bank_transfer') {
-      return payoutDetails.bank_name && 
-             payoutDetails.account_name && 
-             payoutDetails.routing_number && 
-             payoutDetails.account_number;
+      return payoutDetails.bank_name &&
+        payoutDetails.account_name &&
+        payoutDetails.routing_number &&
+        payoutDetails.account_number;
     }
     if (payoutMethod === 'zelle') {
-      return (payoutDetails.zelle_email || payoutDetails.zelle_phone) && 
-             !(payoutDetails.zelle_email && payoutDetails.zelle_phone);
+      return (payoutDetails.zelle_email || payoutDetails.zelle_phone) &&
+        !(payoutDetails.zelle_email && payoutDetails.zelle_phone);
     }
     if (payoutMethod === 'stripe') {
       return payoutDetails.stripe_email;
@@ -556,20 +556,20 @@ const PaymentManagement: React.FC = () => {
   // Handle submit payment request
   const handleSubmitPaymentRequest = async () => {
     if (!user?.id) return;
-    
+
     // Validations
     if (!isPaymentAmountValid()) {
       setError('Please enter a valid amount within your available balance');
       setTimeout(() => setError(null), 3000);
       return;
     }
-    
+
     if (!isPayoutDetailsValid()) {
       setError('Please fill in all required payment details');
       setTimeout(() => setError(null), 3000);
       return;
     }
-    
+
     try {
       setSubmittingPayout(true);
       const created = await AffiliatePaymentRequestService.createPaymentRequest({
@@ -586,7 +586,7 @@ const PaymentManagement: React.FC = () => {
       await loadAffiliateBalance();
       setSuccessMessage('Payment request submitted successfully! It will be reviewed by our admin team.');
       setTimeout(() => setSuccessMessage(null), 5000);
-      
+
     } catch (e: any) {
       setError(e.message || 'Failed to submit payment request');
       setTimeout(() => setError(null), 4000);
@@ -650,12 +650,12 @@ const PaymentManagement: React.FC = () => {
   // Realtime updates for affiliate payment requests status changes
   useEffect(() => {
     if (!user?.id || activeTab !== 'payment-requests') return;
-    
+
     const channel = supabase
       .channel('affiliate_requests_realtime')
-      .on('postgres_changes', { 
-        event: '*', 
-        schema: 'public', 
+      .on('postgres_changes', {
+        event: '*',
+        schema: 'public',
         table: 'affiliate_payment_requests',
         filter: `referrer_user_id=eq.${user.id}`
       }, () => {
@@ -666,7 +666,7 @@ const PaymentManagement: React.FC = () => {
       .subscribe();
 
     return () => {
-      try { supabase.removeChannel(channel); } catch (_) {}
+      try { supabase.removeChannel(channel); } catch (_) { }
     };
   }, [user?.id, activeTab, loadAffiliatePaymentRequests, loadAffiliateBalance]);
 
@@ -697,34 +697,30 @@ const PaymentManagement: React.FC = () => {
                 <nav className="flex space-x-8 overflow-x-auto" role="tablist">
                   <button
                     onClick={() => setActiveTab('financial-overview')}
-                    className={`group flex items-center py-4 px-1 border-b-2 font-medium text-sm transition-all duration-200 whitespace-nowrap ${
-                      activeTab === 'financial-overview' 
-                        ? 'border-[#05294E] text-[#05294E]' 
+                    className={`group flex items-center py-4 px-1 border-b-2 font-medium text-sm transition-all duration-200 whitespace-nowrap ${activeTab === 'financial-overview'
+                        ? 'border-[#05294E] text-[#05294E]'
                         : 'border-transparent text-slate-500 hover:text-slate-700 hover:border-slate-300'
-                    }`}
+                      }`}
                     type="button"
                     aria-selected={activeTab === 'financial-overview'}
                     role="tab"
                   >
-                    <TrendingUp className={`w-5 h-5 mr-2 transition-colors ${
-                      activeTab === 'financial-overview' ? 'text-[#05294E]' : 'text-slate-400 group-hover:text-slate-600'
-                    }`} />
+                    <TrendingUp className={`w-5 h-5 mr-2 transition-colors ${activeTab === 'financial-overview' ? 'text-[#05294E]' : 'text-slate-400 group-hover:text-slate-600'
+                      }`} />
                     Financial Overview
                   </button>
                   <button
                     onClick={() => setActiveTab('payment-requests')}
-                    className={`group flex items-center py-4 px-1 border-b-2 font-medium text-sm transition-all duration-200 whitespace-nowrap ${
-                      activeTab === 'payment-requests' 
-                        ? 'border-[#05294E] text-[#05294E]' 
+                    className={`group flex items-center py-4 px-1 border-b-2 font-medium text-sm transition-all duration-200 whitespace-nowrap ${activeTab === 'payment-requests'
+                        ? 'border-[#05294E] text-[#05294E]'
                         : 'border-transparent text-slate-500 hover:text-slate-700 hover:border-slate-300'
-                    }`}
+                      }`}
                     type="button"
                     aria-selected={activeTab === 'payment-requests'}
                     role="tab"
                   >
-                    <CreditCard className={`w-5 h-5 mr-2 transition-colors ${
-                      activeTab === 'payment-requests' ? 'text-[#05294E]' : 'text-slate-400 group-hover:text-slate-600'
-                    }`} />
+                    <CreditCard className={`w-5 h-5 mr-2 transition-colors ${activeTab === 'payment-requests' ? 'text-[#05294E]' : 'text-slate-400 group-hover:text-slate-600'
+                      }`} />
                     Payment Requests
                   </button>
                 </nav>
@@ -737,16 +733,16 @@ const PaymentManagement: React.FC = () => {
                 <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
                   <div className="flex-1">
                     <h2 className="text-lg font-semibold text-slate-900">
-                      {activeTab === 'financial-overview' ? 'Financial Overview' : 
-                       activeTab === 'payment-requests' ? 'Affiliate Payment Requests' : 
-                       'Commission Transaction History'}
+                      {activeTab === 'financial-overview' ? 'Financial Overview' :
+                        activeTab === 'payment-requests' ? 'Affiliate Payment Requests' :
+                          'Commission Transaction History'}
                     </h2>
                     <p className="text-sm text-slate-600 mt-1">
-                      {activeTab === 'financial-overview' 
+                      {activeTab === 'financial-overview'
                         ? 'Comprehensive financial analytics, trends, and performance metrics'
                         : activeTab === 'payment-requests'
-                        ? 'Request payouts from your available balance and track request status'
-                        : 'View detailed commission earnings and transaction history'
+                          ? 'Request payouts from your available balance and track request status'
+                          : 'View detailed commission earnings and transaction history'
                       }
                     </p>
                   </div>
@@ -787,7 +783,7 @@ const PaymentManagement: React.FC = () => {
       </div>
 
       {/* Tab Content */}
-      
+
       {/* Financial Overview Tab */}
       {activeTab === 'financial-overview' && (
         <FinancialOverview userId={user?.id} forceReloadToken={forceReloadToken} />
@@ -815,7 +811,7 @@ const PaymentManagement: React.FC = () => {
                 </div>
               </div>
             </div>
-            
+
             <div className="bg-white p-6 rounded-2xl shadow-sm border border-slate-200">
               <div className="flex items-center">
                 <div className="p-3 bg-green-100 rounded-xl">
@@ -931,24 +927,23 @@ const PaymentManagement: React.FC = () => {
                     {affiliatePaymentRequests.map((req) => (
                       <tr key={req.id} className="hover:bg-gray-50">
                         <td className="px-6 py-4 whitespace-nowrap">
-                          <div className="text-sm font-medium text-gray-900">Payment Request #{String(req.id).slice(0,8)}</div>
+                          <div className="text-sm font-medium text-gray-900">Payment Request #{String(req.id).slice(0, 8)}</div>
                         </td>
                         <td className="px-6 py-4 whitespace-nowrap">
                           <div className="text-sm text-gray-900 font-medium">{formatCurrency(Number(req.amount_usd) || 0)}</div>
                         </td>
-                        <td className="px-6 py-4 whitespace-nowrap capitalize text-sm text-gray-900">{String(req.payout_method || '').replace('_',' ')}</td>
+                        <td className="px-6 py-4 whitespace-nowrap capitalize text-sm text-gray-900">{String(req.payout_method || '').replace('_', ' ')}</td>
                         <td className="px-6 py-4 whitespace-nowrap">
-                          <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${
-                            req.status === 'pending' ? 'bg-yellow-100 text-yellow-800' :
-                            req.status === 'approved' ? 'bg-blue-100 text-blue-800' :
-                            req.status === 'paid' ? 'bg-green-100 text-green-800' :
-                            req.status === 'rejected' ? 'bg-red-100 text-red-800' : 'bg-gray-100 text-gray-800'
-                          }`}>{req.status?.charAt(0).toUpperCase() + req.status?.slice(1)}</span>
+                          <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${req.status === 'pending' ? 'bg-yellow-100 text-yellow-800' :
+                              req.status === 'approved' ? 'bg-blue-100 text-blue-800' :
+                                req.status === 'paid' ? 'bg-green-100 text-green-800' :
+                                  req.status === 'rejected' ? 'bg-red-100 text-red-800' : 'bg-gray-100 text-gray-800'
+                            }`}>{req.status?.charAt(0).toUpperCase() + req.status?.slice(1)}</span>
                         </td>
                         <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">{formatDate(req.created_at)}</td>
                         <td className="px-6 py-4 whitespace-nowrap text-sm">
                           <div className="space-x-2">
-                            <button 
+                            <button
                               onClick={() => {
                                 setSelectedRequest(req);
                                 setShowRequestDetails(true);
@@ -962,7 +957,7 @@ const PaymentManagement: React.FC = () => {
                               <button
                                 onClick={async () => {
                                   if (!user?.id) return;
-                                  if (window.confirm(`Cancel this payment request of ${formatCurrency(Number(req.amount_usd)||0)}?`)) {
+                                  if (window.confirm(`Cancel this payment request of ${formatCurrency(Number(req.amount_usd) || 0)}?`)) {
                                     try {
                                       await AffiliatePaymentRequestService.cancelPaymentRequest(req.id, user.id);
                                       // reload list and balance
@@ -1022,8 +1017,8 @@ const PaymentManagement: React.FC = () => {
             <div className="p-6">
               <div className="flex items-center justify-between mb-6">
                 <h3 className="text-xl font-semibold text-gray-900">Payment Request Details</h3>
-                <button 
-                  onClick={() => setShowRequestDetails(false)} 
+                <button
+                  onClick={() => setShowRequestDetails(false)}
                   className="text-gray-500 hover:text-gray-700"
                 >
                   <XCircle className="h-6 w-6" />
@@ -1035,7 +1030,7 @@ const PaymentManagement: React.FC = () => {
                 <div>
                   <h4 className="font-medium text-gray-900 mb-2">Request Information</h4>
                   <div className="bg-gray-50 rounded-lg p-4">
-                    <p className="text-lg font-semibold">Payment Request #{String(selectedRequest.id).slice(0,8)}</p>
+                    <p className="text-lg font-semibold">Payment Request #{String(selectedRequest.id).slice(0, 8)}</p>
                     <p className="text-gray-600">Created: {formatDate(selectedRequest.created_at)}</p>
                   </div>
                 </div>
@@ -1054,14 +1049,13 @@ const PaymentManagement: React.FC = () => {
                     </div>
                     <div className="flex justify-between">
                       <span className="text-gray-600">Status:</span>
-                      <span className={`inline-flex items-center px-2 py-1 rounded-full text-xs font-medium ${
-                        selectedRequest.status === 'pending' ? 'bg-yellow-100 text-yellow-800' :
-                        selectedRequest.status === 'approved' ? 'bg-blue-100 text-blue-800' :
-                        selectedRequest.status === 'paid' ? 'bg-green-100 text-green-800' :
-                        selectedRequest.status === 'rejected' ? 'bg-red-100 text-red-800' :
-                        selectedRequest.status === 'cancelled' ? 'bg-gray-100 text-gray-800' :
-                        'bg-gray-100 text-gray-800'
-                      }`}>
+                      <span className={`inline-flex items-center px-2 py-1 rounded-full text-xs font-medium ${selectedRequest.status === 'pending' ? 'bg-yellow-100 text-yellow-800' :
+                          selectedRequest.status === 'approved' ? 'bg-blue-100 text-blue-800' :
+                            selectedRequest.status === 'paid' ? 'bg-green-100 text-green-800' :
+                              selectedRequest.status === 'rejected' ? 'bg-red-100 text-red-800' :
+                                selectedRequest.status === 'cancelled' ? 'bg-gray-100 text-gray-800' :
+                                  'bg-gray-100 text-gray-800'
+                        }`}>
                         {selectedRequest.status?.charAt(0).toUpperCase() + selectedRequest.status?.slice(1)}
                       </span>
                     </div>
@@ -1111,7 +1105,7 @@ const PaymentManagement: React.FC = () => {
                         <p className="text-xs text-gray-500">{formatDate(selectedRequest.created_at)}</p>
                       </div>
                     </div>
-                    
+
                     {selectedRequest.approved_at && (
                       <div className="flex items-center space-x-3">
                         <div className="w-2 h-2 bg-green-500 rounded-full"></div>
@@ -1121,7 +1115,7 @@ const PaymentManagement: React.FC = () => {
                         </div>
                       </div>
                     )}
-                    
+
                     {selectedRequest.paid_at && (
                       <div className="flex items-center space-x-3">
                         <div className="w-2 h-2 bg-green-600 rounded-full"></div>
@@ -1148,8 +1142,8 @@ const PaymentManagement: React.FC = () => {
           <div className="bg-white rounded-2xl shadow-xl w-full max-w-lg p-6">
             <div className="flex items-center justify-between mb-4">
               <h3 className="text-xl font-semibold text-gray-900">Request Payment</h3>
-              <button 
-                onClick={() => setShowPaymentRequestModal(false)} 
+              <button
+                onClick={() => setShowPaymentRequestModal(false)}
                 className="text-gray-500 hover:text-gray-700"
               >
                 ✕
@@ -1180,9 +1174,8 @@ const PaymentManagement: React.FC = () => {
                     }
                   }}
                   placeholder="Enter amount in USD"
-                  className={`w-full border rounded-lg px-3 py-2 focus:ring-2 focus:ring-indigo-500 ${
-                    inputError ? 'border-red-300 focus:ring-red-500' : 'border-gray-300'
-                  }`}
+                  className={`w-full border rounded-lg px-3 py-2 focus:ring-2 focus:ring-indigo-500 ${inputError ? 'border-red-300 focus:ring-red-500' : 'border-gray-300'
+                    }`}
                 />
                 <p className="text-xs text-gray-500 mt-1">
                   Available: {formatCurrency(affiliateBalance)} • Requested: {formatCurrency(paymentRequestAmount)}
@@ -1190,7 +1183,7 @@ const PaymentManagement: React.FC = () => {
               </div>
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-1">Payment method</label>
-                <select value={payoutMethod} onChange={(e)=> setPayoutMethod(e.target.value as any)} className="w-full border border-gray-300 rounded-lg px-3 py-2">
+                <select value={payoutMethod} onChange={(e) => setPayoutMethod(e.target.value as any)} className="w-full border border-gray-300 rounded-lg px-3 py-2">
                   <option value="zelle">Zelle</option>
                   <option value="bank_transfer">Bank transfer</option>
                   <option value="stripe">Stripe</option>
@@ -1198,86 +1191,78 @@ const PaymentManagement: React.FC = () => {
               </div>
               {payoutMethod === 'zelle' && (
                 <div className="grid grid-cols-1 gap-3">
-                  <input 
-                    placeholder="Zelle email *" 
+                  <input
+                    placeholder="Zelle email *"
                     type='email'
-                    className={`border rounded-lg px-3 py-2 w-full focus:outline-none focus:ring-2 focus:ring-indigo-500 ${
-                      !payoutDetails.zelle_email && !payoutDetails.zelle_phone ? 'border-red-300' : 'border-gray-300'
-                    }`}
-                    onChange={(e)=> setPayoutDetails({...payoutDetails, zelle_email: e.target.value, zelle_phone: ''})}
+                    className={`border rounded-lg px-3 py-2 w-full focus:outline-none focus:ring-2 focus:ring-indigo-500 ${!payoutDetails.zelle_email && !payoutDetails.zelle_phone ? 'border-red-300' : 'border-gray-300'
+                      }`}
+                    onChange={(e) => setPayoutDetails({ ...payoutDetails, zelle_email: e.target.value, zelle_phone: '' })}
                   />
-                  <input 
-                    placeholder="Zelle phone *" 
-                    className={`border rounded-lg px-3 py-2 w-full focus:outline-none focus:ring-2 focus:ring-indigo-500 ${
-                      !payoutDetails.zelle_email && !payoutDetails.zelle_phone ? 'border-red-300' : 'border-gray-300'
-                    }`}
-                    onChange={(e)=> setPayoutDetails({...payoutDetails, zelle_phone: e.target.value, zelle_email: ''})}
+                  <input
+                    placeholder="Zelle phone *"
+                    className={`border rounded-lg px-3 py-2 w-full focus:outline-none focus:ring-2 focus:ring-indigo-500 ${!payoutDetails.zelle_email && !payoutDetails.zelle_phone ? 'border-red-300' : 'border-gray-300'
+                      }`}
+                    onChange={(e) => setPayoutDetails({ ...payoutDetails, zelle_phone: e.target.value, zelle_email: '' })}
                   />
-                  <input 
-                    placeholder="Account holder name (optional)" 
+                  <input
+                    placeholder="Account holder name (optional)"
                     className="border border-gray-300 rounded-lg px-3 py-2 w-full focus:outline-none focus:ring-2 focus:ring-indigo-500"
-                    onChange={(e)=> setPayoutDetails({...payoutDetails, account_name: e.target.value})}
+                    onChange={(e) => setPayoutDetails({ ...payoutDetails, account_name: e.target.value })}
                   />
                 </div>
               )}
               {payoutMethod === 'bank_transfer' && (
                 <div className="grid grid-cols-1 gap-3">
-                  <input 
-                    placeholder="Bank name *" 
-                    className={`border rounded-lg px-3 py-2 w-full focus:outline-none focus:ring-2 focus:ring-indigo-500 ${
-                      !payoutDetails.bank_name ? 'border-red-300' : 'border-gray-300'
-                    }`}
-                    onChange={(e)=> setPayoutDetails({...payoutDetails, bank_name: e.target.value})}
+                  <input
+                    placeholder="Bank name *"
+                    className={`border rounded-lg px-3 py-2 w-full focus:outline-none focus:ring-2 focus:ring-indigo-500 ${!payoutDetails.bank_name ? 'border-red-300' : 'border-gray-300'
+                      }`}
+                    onChange={(e) => setPayoutDetails({ ...payoutDetails, bank_name: e.target.value })}
                   />
-                  <input 
-                    placeholder="Account holder name *" 
-                    className={`border rounded-lg px-3 py-2 w-full focus:outline-none focus:ring-2 focus:ring-indigo-500 ${
-                      !payoutDetails.account_name ? 'border-red-300' : 'border-gray-300'
-                    }`}
-                    onChange={(e)=> setPayoutDetails({...payoutDetails, account_name: e.target.value})}
+                  <input
+                    placeholder="Account holder name *"
+                    className={`border rounded-lg px-3 py-2 w-full focus:outline-none focus:ring-2 focus:ring-indigo-500 ${!payoutDetails.account_name ? 'border-red-300' : 'border-gray-300'
+                      }`}
+                    onChange={(e) => setPayoutDetails({ ...payoutDetails, account_name: e.target.value })}
                   />
-                  <input 
-                    placeholder="Routing number *" 
-                    className={`border rounded-lg px-3 py-2 w-full focus:outline-none focus:ring-2 focus:ring-indigo-500 ${
-                      !payoutDetails.routing_number ? 'border-red-300' : 'border-gray-300'
-                    }`}
-                    onChange={(e)=> setPayoutDetails({...payoutDetails, routing_number: e.target.value})}
+                  <input
+                    placeholder="Routing number *"
+                    className={`border rounded-lg px-3 py-2 w-full focus:outline-none focus:ring-2 focus:ring-indigo-500 ${!payoutDetails.routing_number ? 'border-red-300' : 'border-gray-300'
+                      }`}
+                    onChange={(e) => setPayoutDetails({ ...payoutDetails, routing_number: e.target.value })}
                   />
-                  <input 
-                    placeholder="Account number *" 
-                    className={`border rounded-lg px-3 py-2 w-full focus:outline-none focus:ring-2 focus:ring-indigo-500 ${
-                      !payoutDetails.account_number ? 'border-red-300' : 'border-gray-300'
-                    }`}
-                    onChange={(e)=> setPayoutDetails({...payoutDetails, account_number: e.target.value})}
+                  <input
+                    placeholder="Account number *"
+                    className={`border rounded-lg px-3 py-2 w-full focus:outline-none focus:ring-2 focus:ring-indigo-500 ${!payoutDetails.account_number ? 'border-red-300' : 'border-gray-300'
+                      }`}
+                    onChange={(e) => setPayoutDetails({ ...payoutDetails, account_number: e.target.value })}
                   />
-                  <input 
-                    placeholder="SWIFT / IBAN (optional)" 
+                  <input
+                    placeholder="SWIFT / IBAN (optional)"
                     className="border border-gray-300 rounded-lg px-3 py-2 w-full focus:outline-none focus:ring-2 focus:ring-indigo-500"
-                    onChange={(e)=> setPayoutDetails({...payoutDetails, swift: e.target.value, iban: e.target.value})}
+                    onChange={(e) => setPayoutDetails({ ...payoutDetails, swift: e.target.value, iban: e.target.value })}
                   />
                 </div>
               )}
               {payoutMethod === 'stripe' && (
                 <div className="grid grid-cols-1 gap-3">
-                  <input placeholder="Stripe email *" className={`border rounded-lg px-3 py-2 w-full focus:outline-none focus:ring-2 focus:ring-indigo-500 ${
-                    !payoutDetails.stripe_email ? 'border-red-300' : 'border-gray-300'
-                  }`} onChange={(e)=> setPayoutDetails({...payoutDetails, stripe_email: e.target.value})}/>
-                  <input placeholder="Stripe account id (optional)" className="border border-gray-300 rounded-lg px-3 py-2 w-full focus:outline-none focus:ring-2 focus:ring-indigo-500" onChange={(e)=> setPayoutDetails({...payoutDetails, stripe_account_id: e.target.value})}/>
+                  <input placeholder="Stripe email *" className={`border rounded-lg px-3 py-2 w-full focus:outline-none focus:ring-2 focus:ring-indigo-500 ${!payoutDetails.stripe_email ? 'border-red-300' : 'border-gray-300'
+                    }`} onChange={(e) => setPayoutDetails({ ...payoutDetails, stripe_email: e.target.value })} />
+                  <input placeholder="Stripe account id (optional)" className="border border-gray-300 rounded-lg px-3 py-2 w-full focus:outline-none focus:ring-2 focus:ring-indigo-500" onChange={(e) => setPayoutDetails({ ...payoutDetails, stripe_account_id: e.target.value })} />
                 </div>
               )}
 
               <div className="flex items-center justify-end gap-3 pt-2">
-                <button onClick={()=> setShowPaymentRequestModal(false)} className="px-4 py-2 rounded-lg border border-gray-300 text-gray-700">Cancel</button>
-                <button 
-                  onClick={handleSubmitPaymentRequest} 
-                  disabled={submittingPayout || !isPaymentAmountValid() || !isPayoutDetailsValid()} 
-                  className={`px-4 py-2 rounded-lg text-white transition-colors ${
-                    isPaymentAmountValid() && isPayoutDetailsValid()
-                      ? 'bg-indigo-600 hover:bg-indigo-700' 
+                <button onClick={() => setShowPaymentRequestModal(false)} className="px-4 py-2 rounded-lg border border-gray-300 text-gray-700">Cancel</button>
+                <button
+                  onClick={handleSubmitPaymentRequest}
+                  disabled={submittingPayout || !isPaymentAmountValid() || !isPayoutDetailsValid()}
+                  className={`px-4 py-2 rounded-lg text-white transition-colors ${isPaymentAmountValid() && isPayoutDetailsValid()
+                      ? 'bg-indigo-600 hover:bg-indigo-700'
                       : 'bg-gray-400 cursor-not-allowed'
-                  } disabled:opacity-60`}
-                  title={!isPaymentAmountValid() ? 'Please enter a valid amount within your available balance' : 
-                         !isPayoutDetailsValid() ? 'Please fill in all required payment details' : 'Submit payment request'}
+                    } disabled:opacity-60`}
+                  title={!isPaymentAmountValid() ? 'Please enter a valid amount within your available balance' :
+                    !isPayoutDetailsValid() ? 'Please fill in all required payment details' : 'Submit payment request'}
                 >
                   {submittingPayout ? 'Submitting...' : 'Submit request'}
                 </button>

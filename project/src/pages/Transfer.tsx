@@ -7,7 +7,6 @@ import ProcessFundsSummary from "@/components/shared/ProcessFundsSummary";
 import ProcessValuesSummary from "@/components/shared/ProcessValuesSummary";
 import ClientsSection from "@/components/shared/ClientsSection";
 import ConversionButton from "@/components/shared/ConversionButton";
-import ProcessFooter from "@/components/shared/ProcessFooter";
 import { useReferralCapture } from "@/hooks/useReferralCapture";
 
 const Transfer = () => {
@@ -36,7 +35,7 @@ const Transfer = () => {
     {
       step: 3,
       title: t('processPages.common.scholarshipFee'),
-      price: "$550",
+      price: "$900",
       description: t('processPages.transfer.steps.list.step3.description'),
       items: t('processPages.transfer.steps.list.step3.items', { returnObjects: true }) as string[],
       colorClass: "bg-coral",
@@ -56,13 +55,13 @@ const Transfer = () => {
   const TRANSFER_VALUES = [
     { label: t('processPages.common.selectionProcess'), value: "$350", included: true },
     { label: t('processPages.common.applicationFeeI20'), value: "$350", included: true },
-    { label: t('processPages.common.scholarshipFee'), value: "$550", included: true },
+    { label: t('processPages.common.scholarshipFee'), value: "$900", included: true },
     { label: t('processPages.common.controlFee'), value: "$900", included: true },
   ];
 
   return (
     <div className="min-h-screen bg-background">
-      <ProcessHeader 
+      <ProcessHeader
         title={t('processPages.transfer.header.title')}
         subtitle={t('processPages.transfer.header.subtitle')}
         description={t('processPages.transfer.header.description')}
@@ -70,7 +69,7 @@ const Transfer = () => {
       />
       <PromiseSection text={t('processPages.transfer.promise')} />
       <ClientsSection />
-      <ProcessStepsSection 
+      <ProcessStepsSection
         title={t('processPages.transfer.steps.title')}
         description={t('processPages.transfer.steps.description')}
         steps={TRANSFER_STEPS}
@@ -82,7 +81,7 @@ const Transfer = () => {
           variant: "banner"
         }}
       />
-      <ProcessFundsSummary 
+      <ProcessFundsSummary
         description={t('processPages.transfer.funds.description')}
         mainApplicantGradient="gradient-teal-purple"
         dependentGradient="gradient-primary"
@@ -97,15 +96,14 @@ const Transfer = () => {
         }}
       />
 
-      <ProcessValuesSummary 
+      <ProcessValuesSummary
         description={t('processPages.transfer.values.description')}
         values={TRANSFER_VALUES}
       />
-      <ConversionButton 
-        showReferralBadge={!!(isValid && referralCode)} 
+      <ConversionButton
+        showReferralBadge={!!(isValid && referralCode)}
         gradientClass="gradient-teal-purple"
       />
-      <ProcessFooter gradientClass="gradient-teal-purple" />
     </div>
   );
 };

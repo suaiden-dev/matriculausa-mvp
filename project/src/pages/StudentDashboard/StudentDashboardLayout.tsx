@@ -84,6 +84,31 @@ const StudentDashboardLayout: React.FC<StudentDashboardLayoutProps> = ({
     requestNotificationPermission();
   }, []);
 
+  // Threshold para obrigatoriedade do questionário: 18/02/2026 às 21:50 UTC (aproximadamente agora)
+  const SURVEY_THRESHOLD_DATE = new Date('2026-02-18T21:50:00Z');
+  const paidAt = profile?.selection_process_paid_at ? new Date(profile.selection_process_paid_at) : null;
+  const isExemptedByLegacy = profile?.selection_process_fee_paid && (!paidAt || paidAt < SURVEY_THRESHOLD_DATE);
+
+  // Redirecionamento obrigatório para o questionário do processo seletivo
+  useEffect(() => {
+    // Se o usuário está isento por ser um pagamento antigo, não redireciona
+    if (isExemptedByLegacy) return;
+
+    // Se o usuário pagou a taxa do processo seletivo mas ainda não passou na pesquisa,
+    // e não está na rota da pesquisa, redireciona para lá.
+    if (
+      !loading &&
+      profile?.selection_process_fee_paid &&
+      !profile?.selection_survey_passed &&
+      !location.pathname.includes('selection-survey') &&
+      !location.pathname.includes('selection-process-fee-success') &&
+      !location.pathname.includes('selection-process-fee-error')
+    ) {
+      console.log('🔒 Redirecionando para o Questionário do Processo Seletivo...');
+      navigate('/student/dashboard/selection-survey');
+    }
+  }, [profile, loading, location.pathname, navigate, isExemptedByLegacy]);
+
   // Clean up duplicate useEffect if present (lines 80-83 in original file were duplicate)
 
   const openNotification = async (n: any) => {
@@ -159,7 +184,8 @@ const StudentDashboardLayout: React.FC<StudentDashboardLayoutProps> = ({
     );
   }
 
-  const sidebarItems = [
+  /* Sidebar Items Definitions */
+  const allSidebarItems = [
     { id: 'overview', label: t('studentDashboard.sidebar.overview'), icon: BarChart3, path: '/student/dashboard/overview' },
     { id: 'scholarships', label: t('studentDashboard.sidebar.browseScholarships'), icon: Award, path: '/student/dashboard/scholarships' },
     { id: 'cart', label: t('studentDashboard.sidebar.selectedScholarships'), icon: GraduationCap, path: '/student/dashboard/cart' },
@@ -168,6 +194,40 @@ const StudentDashboardLayout: React.FC<StudentDashboardLayoutProps> = ({
     { id: 'rewards', label: t('studentDashboard.sidebar.matriculaRewards'), icon: Gift, path: '/student/dashboard/rewards' },
     { id: 'profile', label: t('studentDashboard.sidebar.profile'), icon: User, path: '/student/dashboard/profile' }
   ];
+
+  /* Lógica de Bloqueio: Se pagou e não passou, entra em modo restrito */
+  const selectionFeePaid = profile?.selection_process_fee_paid;
+  const surveyPassed = profile?.selection_survey_passed;
+
+  // Bloqueado se:
+  // 1. Pagou a taxa recentemente (pós-threshold) MAS ainda não passou na prova.
+  const isRestricted = !loading && !isExemptedByLegacy && selectionFeePaid && !surveyPassed;
+
+  console.log('🔍 [Dashboard Layout] Sidebar Logic:', {
+    profileId: profile?.id,
+    selectionFeePaid,
+    surveyPassed,
+    isExemptedByLegacy,
+    paidAt: profile?.selection_process_paid_at,
+    isRestricted,
+    loading
+  });
+
+  let displayedSidebarItems = allSidebarItems;
+
+  if (isRestricted) {
+    // Em modo restrito, removemos quase tudo
+    const allowedIds = ['chat', 'profile', 'rewards'];
+    displayedSidebarItems = allSidebarItems.filter(item => allowedIds.includes(item.id));
+
+    // Adicionar o item do Processo Seletivo no topo
+    displayedSidebarItems.unshift({
+      id: 'selection-survey',
+      label: t('selectionSurvey.title') || 'Processo Seletivo',
+      icon: FileText,
+      path: '/student/dashboard/selection-survey'
+    });
+  }
 
 
   return (
@@ -229,18 +289,25 @@ const StudentDashboardLayout: React.FC<StudentDashboardLayoutProps> = ({
             </div>
 
             {/* Navigation */}
+            {/* Navigation */}
             <nav className="flex-1 px-3 sm:px-4 py-4 sm:py-6 space-y-2">
-              {sidebarItems.map((item) => {
+              {displayedSidebarItems.map((item) => {
                 const Icon = item.icon;
                 const isActive = activeTab === item.id;
+
+                // Em modo restrito, o item do Processo Seletivo deve pulsar
+                const isSelectionSurveyLink = item.id === 'selection-survey';
 
                 return (
                   <Link
                     key={item.id}
                     to={item.path}
-                    className={`group flex items-center justify-between px-3 sm:px-4 py-2.5 sm:py-3 rounded-xl font-medium transition-all duration-200 ${isActive
-                      ? 'bg-blue-600 text-white shadow-lg'
-                      : 'text-slate-600 hover:text-slate-900 hover:bg-slate-100'
+                    className={`group flex items-center justify-between px-3 sm:px-4 py-2.5 sm:py-3 rounded-xl font-medium transition-all duration-200 
+                      ${isActive
+                        ? 'bg-blue-600 text-white shadow-lg'
+                        : isSelectionSurveyLink
+                          ? 'bg-amber-50 text-amber-700 border border-amber-200 animate-pulse hover:bg-amber-100'
+                          : 'text-slate-600 hover:text-slate-900 hover:bg-slate-100'
                       }`}
                     onClick={() => {
                       if (window.innerWidth < 1024) setSidebarOpen(false);
@@ -254,7 +321,12 @@ const StudentDashboardLayout: React.FC<StudentDashboardLayoutProps> = ({
                   >
                     <div className="flex items-center space-x-2 sm:space-x-3">
                       <div className="relative">
-                        <Icon className={`h-4 w-4 sm:h-5 sm:w-5 ${isActive ? 'text-white' : 'text-slate-500'}`} />
+                        <Icon className={`h-4 w-4 sm:h-5 sm:w-5 
+                            ${isActive ? 'text-white' : ''} 
+                            ${!isActive && !isSelectionSurveyLink ? 'text-slate-500' : ''}
+                            ${!isActive && isSelectionSurveyLink ? 'text-amber-600' : ''}
+                        `} />
+
                         {item.id === 'chat' && displayChatUnreadCount > 0 && (
                           <div className={`absolute -top-1 -right-1 w-3 h-3 rounded-full animate-pulse ${isActive
                             ? 'bg-white border-2 border-blue-500'
@@ -270,21 +342,24 @@ const StudentDashboardLayout: React.FC<StudentDashboardLayoutProps> = ({
             </nav>
           </div>
         </div>
-      </div>
+      </div >
 
       {/* Overlay for mobile */}
-      {sidebarOpen && (
-        <div
-          className="fixed inset-0 bg-black bg-opacity-50 z-40 transition-opacity duration-300 lg:hidden"
-          onClick={() => {
-            setSidebarOpen(false);
-            setUserMenuOpen(false);
-          }}
-        />
-      )}
+      {
+        sidebarOpen && (
+          <div
+            className="fixed inset-0 bg-black bg-opacity-50 z-40 transition-opacity duration-300 lg:hidden"
+            onClick={() => {
+              setSidebarOpen(false);
+              setUserMenuOpen(false);
+            }}
+          />
+        )
+      }
 
       {/* Main Content */}
       <div
+        id="student-dashboard-content"
         ref={scrollContainerRef}
         className="flex-1 ml-0 lg:ml-72 overflow-x-hidden h-screen overflow-y-auto"
       >
@@ -475,7 +550,7 @@ const StudentDashboardLayout: React.FC<StudentDashboardLayoutProps> = ({
         onMarkAllAsRead={markAllAsRead}
         onClearAll={clearAll}
       />
-    </div>
+    </div >
   );
 };
 

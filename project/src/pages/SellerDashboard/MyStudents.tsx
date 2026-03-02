@@ -1,12 +1,12 @@
 import React, { useState } from 'react';
-import { 
-  GraduationCap, 
-  Search, 
-  DollarSign, 
-  Calendar, 
-  MapPin, 
-  Mail, 
-  ChevronLeft, 
+import {
+  GraduationCap,
+  Search,
+  DollarSign,
+  Calendar,
+  MapPin,
+  Mail,
+  ChevronLeft,
   ChevronRight,
   Filter as FilterIcon,
   TrendingUp,
@@ -34,20 +34,20 @@ interface Student {
   scholarship_title?: string;
   university_name?: string;
   university_id?: string;
-  
+
   // Campos específicos da aplicação (para múltiplas aplicações)
   application_id?: string;
-  
+
   // Flags de pagamento (agora obrigatórios para cálculos corretos)
   has_paid_selection_process_fee: boolean;
   has_paid_i20_control_fee: boolean;
   is_scholarship_fee_paid: boolean;
   is_application_fee_paid: boolean;
-  
+
   // Para o deadline do I-20 (agora com tipos mais precisos)
   scholarship_fee_paid_date: string | null;
   i20_deadline: string | null; // Data ISO string
-  
+
   // Campos da carta de aceite
   acceptance_letter_sent_at: string | null;
   acceptance_letter_status: string | null;
@@ -76,27 +76,27 @@ interface FilterState {
 interface MyStudentsProps {
   students: Student[];
   onRefresh: () => void;
-  onViewStudent: (studentId: {id: string, profile_id: string}) => void;
+  onViewStudent: (studentId: { id: string, profile_id: string }) => void;
 }
 
 const MyStudents: React.FC<MyStudentsProps> = ({ students, onRefresh, onViewStudent }) => {
   console.log('🚨🚨🚨 [MYSTUDENTS_RENDER] MyStudents component rendered with students:', students.length);
   console.log('🚨🚨🚨 [MYSTUDENTS_RENDER] Students emails:', students.map(s => s.email));
-  
+
   const { getFeeAmount } = useFeeConfig(); // Usar sem parâmetro para valores padrão, será usado para overrides específicos por estudante
   const [currentPage, setCurrentPage] = useState(1);
   const [showAdvancedFilters, setShowAdvancedFilters] = useState(false);
   const [universities, setUniversities] = useState<University[]>([]);
   const [expandedStudents, setExpandedStudents] = useState<Set<string>>(new Set());
-  
+
   // Estado para armazenar as taxas do pacote de cada estudante
-  const [studentPackageFees, setStudentPackageFees] = useStateReact<{[key: string]: any}>({});
+  const [studentPackageFees, setStudentPackageFees] = useStateReact<{ [key: string]: any }>({});
   // Estado para dependentes por estudante
-  const [studentDependents, setStudentDependents] = useStateReact<{[key: string]: number}>({});
+  const [studentDependents, setStudentDependents] = useStateReact<{ [key: string]: number }>({});
   // Estado para armazenar overrides de taxas por estudante
-  const [studentFeeOverrides, setStudentFeeOverrides] = useStateReact<{[key: string]: any}>({});
+  const [studentFeeOverrides, setStudentFeeOverrides] = useStateReact<{ [key: string]: any }>({});
   // Estado para armazenar system_type por estudante
-  const [studentSystemTypes, setStudentSystemTypes] = useStateReact<{[key: string]: string}>({});
+  const [studentSystemTypes, setStudentSystemTypes] = useStateReact<{ [key: string]: string }>({});
   // Estado para armazenar valores reais pagos por estudante
   const [studentRealPaidAmounts, setStudentRealPaidAmounts] = useStateReact<Record<string, { selection_process?: number; scholarship?: number; i20_control?: number }>>({});
   // Estado para controlar loading dos valores reais pagos
@@ -104,11 +104,13 @@ const MyStudents: React.FC<MyStudentsProps> = ({ students, onRefresh, onViewStud
   // Estado para controlar requisições em andamento
   const [loadingRequests, setLoadingRequests] = useStateReact<Set<string>>(new Set());
   // Métodos de pagamento por estudante (para calcular valor pago manualmente)
-  const [studentPaymentMethods, setStudentPaymentMethods] = useStateReact<{[key: string]: {
-    selection_process?: string | null;
-    i20_control?: string | null;
-    scholarship?: Array<{ is_paid: boolean; method: string | null }>; // múltiplas aplicações
-  }}>({});
+  const [studentPaymentMethods, setStudentPaymentMethods] = useStateReact<{
+    [key: string]: {
+      selection_process?: string | null;
+      i20_control?: string | null;
+      scholarship?: Array<{ is_paid: boolean; method: string | null }>; // múltiplas aplicações
+    }
+  }>({});
   // Flag para desabilitar user_fee_overrides se não estiver disponível
   const [userFeeOverridesDisabled, setUserFeeOverridesDisabled] = useStateReact<boolean>(() => {
     try {
@@ -120,28 +122,28 @@ const MyStudents: React.FC<MyStudentsProps> = ({ students, onRefresh, onViewStud
       return false;
     }
   });
-  
+
   // Função para buscar taxas do pacote de um estudante
   const loadStudentPackageFees = async (studentUserId: string) => {
     if (!studentUserId || studentPackageFees[studentUserId] !== undefined) return;
-    
+
     // Verificar se já está carregando
     const requestKey = `package_${studentUserId}`;
     if (loadingRequests.has(requestKey)) return;
-    
+
     // Marcar como carregando
     setLoadingRequests(prev => new Set([...prev, requestKey]));
-    
+
     try {
       const { data: packageFees, error } = await supabase.rpc('get_user_package_fees', {
         user_id_param: studentUserId
       });
-      
+
       if (error) {
         console.error('❌ [MY_STUDENTS] Erro ao buscar taxas do pacote:', error);
         return;
       }
-      
+
       if (packageFees && packageFees.length > 0) {
         setStudentPackageFees(prev => ({
           ...prev,
@@ -168,14 +170,14 @@ const MyStudents: React.FC<MyStudentsProps> = ({ students, onRefresh, onViewStud
   // Buscar dependents do perfil do estudante
   const loadStudentDependents = async (studentUserId: string) => {
     if (!studentUserId || studentDependents[studentUserId] !== undefined) return;
-    
+
     // Verificar se já está carregando
     const requestKey = `dependents_${studentUserId}`;
     if (loadingRequests.has(requestKey)) return;
-    
+
     // Marcar como carregando
     setLoadingRequests(prev => new Set([...prev, requestKey]));
-    
+
     try {
       const { data, error } = await supabase
         .from('user_profiles')
@@ -259,17 +261,17 @@ const MyStudents: React.FC<MyStudentsProps> = ({ students, onRefresh, onViewStud
   // Buscar overrides de taxas para um estudante específico
   const loadStudentFeeOverrides = async (studentUserId: string) => {
     if (!studentUserId || studentFeeOverrides[studentUserId] !== undefined) return;
-    
+
     // DEBUG: Sempre tentar carregar overrides
     console.log('🔄 [LOAD_OVERRIDES] Carregando overrides para:', studentUserId);
-    
+
     // Verificar se já está carregando
     const requestKey = `overrides_${studentUserId}`;
     if (loadingRequests.has(requestKey)) return;
-    
+
     // Marcar como carregando
     setLoadingRequests(prev => new Set([...prev, requestKey]));
-    
+
     try {
       // Tentar primeiro via RPC function (security definer) 
       let overrides = null;
@@ -293,7 +295,7 @@ const MyStudents: React.FC<MyStudentsProps> = ({ students, onRefresh, onViewStud
         overrides = directResult.data;
         error = directResult.error;
       }
-      
+
       if (!error && overrides) {
         // Debug log para wilfried8078@uorak.com
         if (studentUserId === '01fc762b-de80-4509-893f-671c71ceb0b1') {
@@ -311,7 +313,7 @@ const MyStudents: React.FC<MyStudentsProps> = ({ students, onRefresh, onViewStud
           setUserFeeOverridesDisabled(true);
           try {
             localStorage.setItem('user_fee_overrides_disabled', 'true');
-          } catch {}
+          } catch { }
         }
         setStudentFeeOverrides(prev => ({ ...prev, [studentUserId]: null }));
       }
@@ -320,7 +322,7 @@ const MyStudents: React.FC<MyStudentsProps> = ({ students, onRefresh, onViewStud
       setUserFeeOverridesDisabled(true);
       try {
         localStorage.setItem('user_fee_overrides_disabled', 'true');
-      } catch {}
+      } catch { }
       setStudentFeeOverrides(prev => ({ ...prev, [studentUserId]: null }));
     } finally {
       // Remover da lista de carregando
@@ -331,20 +333,20 @@ const MyStudents: React.FC<MyStudentsProps> = ({ students, onRefresh, onViewStud
       });
     }
   };
-  
+
   // Carregar taxas do pacote quando os estudantes mudarem
   useEffect(() => {
     // Debounce para evitar chamadas muito frequentes
     const timeoutId = setTimeout(() => {
       // Obter IDs únicos para evitar chamadas duplicadas
       const uniqueStudentIds = Array.from(new Set(students.map(s => s.id).filter(Boolean)));
-      
+
       console.log('🔍 [MY_STUDENTS] Carregando dados para estudantes únicos:', uniqueStudentIds.length);
-      
+
       if (userFeeOverridesDisabled) {
         console.log('ℹ️ [MY_STUDENTS] user_fee_overrides desabilitado - usando valores padrão');
       }
-      
+
       uniqueStudentIds.forEach(studentId => {
         // Debug para wilfried8078@uorak.com
         if (studentId === '01fc762b-de80-4509-893f-671c71ceb0b1') {
@@ -354,7 +356,7 @@ const MyStudents: React.FC<MyStudentsProps> = ({ students, onRefresh, onViewStud
           console.log('🔍 [MY_STUDENTS_LOAD] overrides já carregado?', studentFeeOverrides[studentId] !== undefined);
           console.log('🔍 [MY_STUDENTS_LOAD] overridesDisabled?', userFeeOverridesDisabled);
         }
-        
+
         if (studentPackageFees[studentId] === undefined) {
           loadStudentPackageFees(studentId);
         }
@@ -384,10 +386,10 @@ const MyStudents: React.FC<MyStudentsProps> = ({ students, onRefresh, onViewStud
         setLoadingRealPaidAmounts(false);
         return;
       }
-      
+
       setLoadingRealPaidAmounts(true);
       const amountsMap: Record<string, { selection_process?: number; scholarship?: number; i20_control?: number }> = {};
-      
+
       await Promise.allSettled(uniqueUserIds.map(async (userId) => {
         try {
           // ✅ CORREÇÃO: Usar getDisplayAmounts para exibição (valores "Zelle" sem taxas)
@@ -397,13 +399,13 @@ const MyStudents: React.FC<MyStudentsProps> = ({ students, onRefresh, onViewStud
           console.error(`Erro ao buscar valores pagos para user_id ${userId}:`, error);
         }
       }));
-      
+
       setStudentRealPaidAmounts(amountsMap);
       setLoadingRealPaidAmounts(false);
     };
     loadRealPaidAmounts();
   }, [students]);
-  
+
   // Estado dos filtros
   const [filters, setFilters] = useState<FilterState>({
     searchTerm: '',
@@ -455,7 +457,7 @@ const MyStudents: React.FC<MyStudentsProps> = ({ students, onRefresh, onViewStud
 
   // Usar universidades carregadas da tabela, com fallback para as dos estudantes
   const availableUniversities = universities.length > 0 ? universities : studentUniversities;
-  
+
   // Pagination constants
   const STUDENTS_PER_PAGE = 10;
 
@@ -464,32 +466,32 @@ const MyStudents: React.FC<MyStudentsProps> = ({ students, onRefresh, onViewStud
     // Primeiro aplicar filtros normais
     let filtered = students.filter(student => {
       // Filtro por termo de busca
-      if (filters.searchTerm && 
-          !student.full_name?.toLowerCase().includes(filters.searchTerm.toLowerCase()) &&
-          !student.email?.toLowerCase().includes(filters.searchTerm.toLowerCase())) {
+      if (filters.searchTerm &&
+        !student.full_name?.toLowerCase().includes(filters.searchTerm.toLowerCase()) &&
+        !student.email?.toLowerCase().includes(filters.searchTerm.toLowerCase())) {
         return false;
       }
-      
+
       // Filtro por universidade
       if (filters.universityFilter !== 'all' && student.university_id !== filters.universityFilter) {
         return false;
       }
-      
+
       // Filtro por período
       if (filters.dateRange.start || filters.dateRange.end) {
         const studentDate = new Date(student.created_at);
         const startDate = filters.dateRange.start ? new Date(filters.dateRange.start) : null;
         const endDate = filters.dateRange.end ? new Date(filters.dateRange.end) : null;
-        
+
         if (startDate && studentDate < startDate) return false;
         if (endDate && studentDate > endDate) return false;
       }
-      
+
       // Filtro por status
       if (filters.statusFilter !== 'all' && student.status !== filters.statusFilter) {
         return false;
       }
-      
+
       // Filtro por pagamento
       if (filters.paymentFilter !== 'all') {
         switch (filters.paymentFilter) {
@@ -504,10 +506,10 @@ const MyStudents: React.FC<MyStudentsProps> = ({ students, onRefresh, onViewStud
             break;
         }
       }
-      
+
       return true;
     });
-    
+
     // Agrupar por estudante
     const groupedByStudent = new Map<string, any[]>();
     filtered.forEach(student => {
@@ -517,7 +519,7 @@ const MyStudents: React.FC<MyStudentsProps> = ({ students, onRefresh, onViewStud
       }
       groupedByStudent.get(studentId)!.push(student);
     });
-    
+
     // Converter para array para exibição
     const displayStudents: any[] = [];
     groupedByStudent.forEach((applications) => {
@@ -533,7 +535,7 @@ const MyStudents: React.FC<MyStudentsProps> = ({ students, onRefresh, onViewStud
         displayStudents.push(mainStudent);
       }
     });
-    
+
     return displayStudents;
   }, [students, filters]);
 
@@ -548,7 +550,7 @@ const MyStudents: React.FC<MyStudentsProps> = ({ students, onRefresh, onViewStud
       let bValue: any;
 
       switch (filters.sortBy) {
-          case 'revenue':
+        case 'revenue':
           aValue = calculateStudentTotalPaid(a);
           bValue = calculateStudentTotalPaid(b);
           break;
@@ -633,7 +635,7 @@ const MyStudents: React.FC<MyStudentsProps> = ({ students, onRefresh, onViewStud
     const missingFees = [];
     const deps = studentDependents[student.id] || 0;
     const overrides = studentFeeOverrides[student.id];
-    
+
     // Selection Process Fee (primeira taxa na ordem do funil)
     if (!student.has_paid_selection_process_fee) {
       let selectionProcessFee;
@@ -669,11 +671,11 @@ const MyStudents: React.FC<MyStudentsProps> = ({ students, onRefresh, onViewStud
       } else {
         // Sem override: usar taxa baseada no system_type
         const systemType = studentSystemTypes[student.id] || 'legacy';
-        scholarshipFee = systemType === 'simplified' ? 550 : 900;
+        scholarshipFee = systemType === 'simplified' ? 900 : 900;
       }
       missingFees.push({ name: 'Scholarship', amount: scholarshipFee, color: 'blue' });
     }
-    
+
     // I-20 Control Fee
     if (!student.has_paid_i20_control_fee) {
       // ✅ CORREÇÃO: Usar lógica consistente para I-20 control fee
@@ -686,7 +688,7 @@ const MyStudents: React.FC<MyStudentsProps> = ({ students, onRefresh, onViewStud
       }
       missingFees.push({ name: 'I20 Control', amount: i20ControlFee, color: 'orange' });
     }
-    
+
     return missingFees;
   };
 
@@ -736,13 +738,13 @@ const MyStudents: React.FC<MyStudentsProps> = ({ students, onRefresh, onViewStud
         const baseSel = overrides.selection_process_fee != null ? Number(overrides.selection_process_fee) : baseSelDefault;
         // ✅ CORREÇÃO: Para simplified, Selection Process Fee é fixo ($350), sem dependentes
         // Dependentes só afetam Application Fee ($100 por dependente)
-        const selPaid = overrides.selection_process_fee != null 
-          ? baseSel 
+        const selPaid = overrides.selection_process_fee != null
+          ? baseSel
           : (systemType === 'simplified' ? baseSel : baseSel + (deps * 150));
         total += selPaid;
       }
     }
-    
+
     // Scholarship Fee
     if (student.is_scholarship_fee_paid) {
       if (realPaid.scholarship !== undefined && realPaid.scholarship > 0) {
@@ -750,12 +752,12 @@ const MyStudents: React.FC<MyStudentsProps> = ({ students, onRefresh, onViewStud
         total += realPaid.scholarship;
       } else {
         // Fallback: calcular baseado no system_type
-        const schBaseDefault = systemType === 'simplified' ? 550 : 900;
+        const schBaseDefault = systemType === 'simplified' ? 900 : 900;
         const schBase = overrides.scholarship_fee != null ? Number(overrides.scholarship_fee) : schBaseDefault;
         total += schBase;
       }
     }
-    
+
     // I-20 Control Fee
     if (student.has_paid_i20_control_fee) {
       if (realPaid.i20_control !== undefined && realPaid.i20_control > 0) {
@@ -767,7 +769,7 @@ const MyStudents: React.FC<MyStudentsProps> = ({ students, onRefresh, onViewStud
         total += i20Base;
       }
     }
-    
+
     // Application fee não é contabilizada na receita do seller (é exclusiva da universidade)
 
     return total;
@@ -799,7 +801,7 @@ const MyStudents: React.FC<MyStudentsProps> = ({ students, onRefresh, onViewStud
         total += Number(overrides.scholarship_fee);
       } else {
         const systemType = studentSystemTypes[student.id] || 'legacy';
-        const scholarshipFee = systemType === 'simplified' ? 550 : 900;
+        const scholarshipFee = systemType === 'simplified' ? 900 : 900;
         total += scholarshipFee;
       }
     }
@@ -830,29 +832,29 @@ const MyStudents: React.FC<MyStudentsProps> = ({ students, onRefresh, onViewStud
         totalUniqueStudents: 0
       };
     }
-    
+
     const totalRevenue = filteredStudents.reduce((sum, student) => sum + calculateStudentTotalPaid(student), 0);
-    
+
     console.log('💰 [MYSTUDENTS_TOTAL] Total calculado no MyStudents.tsx:', totalRevenue);
-    console.log('💰 [MYSTUDENTS_TOTAL] Número de estudantes:', { 
-      'students (total)': students.length, 
-      'filteredStudents (filtrados)': filteredStudents.length 
+    console.log('💰 [MYSTUDENTS_TOTAL] Número de estudantes:', {
+      'students (total)': students.length,
+      'filteredStudents (filtrados)': filteredStudents.length
     });
-    
+
     // Debug para comparar com Performance.tsx
-    console.log('🔍 [MYSTUDENTS_COMPARISON] Estudantes no MyStudents:', filteredStudents.map(s => ({ 
-      id: s.id, 
+    console.log('🔍 [MYSTUDENTS_COMPARISON] Estudantes no MyStudents:', filteredStudents.map(s => ({
+      id: s.id,
       email: s.email,
       has_paid_selection_process: s.has_paid_selection_process_fee,
       has_paid_scholarship: s.is_scholarship_fee_paid,
       has_paid_i20: s.has_paid_i20_control_fee,
       calculated: calculateStudentTotalPaid(s)
     })));
-    
+
     // CRITICAL: Comparação com array não filtrado para entender diferença do Performance.tsx
     const totalRevenueUnfiltered = students.reduce((sum, student) => sum + calculateStudentTotalPaid(student), 0);
     console.log('🚨 [MYSTUDENTS_UNFILTERED] Se usássemos students (não filtrado) como Performance.tsx:', totalRevenueUnfiltered);
-    
+
     // Contar estudantes únicos para as estatísticas
     const uniqueStudentIds = new Set(filteredStudents.map(s => s.id));
     const uniqueActiveStudentIds = new Set(
@@ -860,7 +862,7 @@ const MyStudents: React.FC<MyStudentsProps> = ({ students, onRefresh, onViewStud
         .filter(s => s.status === 'active' || s.status === 'registered' || s.status === 'enrolled')
         .map(s => s.id)
     );
-    
+
     const activeStudents = uniqueActiveStudentIds.size;
     const manualRevenue = filteredStudents.reduce((sum, student) => sum + calculateStudentManualPaid(student), 0);
     const avgRevenuePerStudent = uniqueStudentIds.size > 0 ? totalRevenue / uniqueStudentIds.size : 0;
@@ -933,580 +935,574 @@ const MyStudents: React.FC<MyStudentsProps> = ({ students, onRefresh, onViewStud
       <div className="px-4 sm:px-6 lg:px-8">
         <div className="space-y-6">
           {/* Stats */}
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
-        <div className="bg-white rounded-xl shadow-sm border border-slate-200 p-6">
-          <div className="flex items-center justify-between">
-            <div>
-              <p className="text-sm font-medium text-slate-600">Total Students</p>
-              {loadingRealPaidAmounts ? (
-                <div className="h-10 w-20 bg-slate-200 rounded animate-pulse mt-1" />
-              ) : (
-                <>
-                  <p className="text-3xl font-bold text-blue-600 mt-1">{stats.totalUniqueStudents}</p>
-                  {filteredStudents.length > stats.totalUniqueStudents && (
-                    <p className="text-xs text-slate-500 mt-1">{filteredStudents.length} applications total</p>
-                  )}
-                </>
-              )}
-            </div>
-            <div className="w-12 h-12 bg-blue-100 rounded-xl flex items-center justify-center">
-              <GraduationCap className="h-6 w-6 text-blue-600" />
-            </div>
-          </div>
-        </div>
-
-        <div className="bg-white rounded-xl shadow-sm border border-slate-200 p-6">
-          <div className="flex items-center justify-between">
-            <div>
-              <p className="text-sm font-medium text-slate-600">Manual Paid (Outside)</p>
-              {(Object.keys(studentPaymentMethods).length === 0 && Object.keys(studentDependents).length === 0 && Object.keys(studentFeeOverrides).length === 0) || loadingRealPaidAmounts ? (
-                <div className="h-8 w-40 bg-slate-200 rounded animate-pulse mt-1" />
-              ) : (
-                <p className="text-3xl font-bold text-orange-600 mt-1">{formatCurrency(stats.manualRevenue)}</p>
-              )}
-            </div>
-            <div className="w-12 h-12 bg-orange-100 rounded-xl flex items-center justify-center">
-              <Calendar className="h-6 w-6 text-orange-600" />
-            </div>
-          </div>
-        </div>
-
-        <div className="bg-white rounded-xl shadow-sm border border-slate-200 p-6">
-          <div className="flex items-center justify-between">
-            <div>
-              <p className="text-sm font-medium text-slate-600">Total Revenue</p>
-              {/* Skeleton enquanto dependents/fees/valores reais não carregaram completamente */}
-              {(Object.keys(studentDependents).length === 0 && Object.keys(studentPackageFees).length === 0) || loadingRealPaidAmounts ? (
-                <div className="h-8 w-40 bg-slate-200 rounded animate-pulse mt-1" />
-              ) : (
-                <p className="text-3xl font-bold text-green-600 mt-1">{formatCurrency(stats.totalRevenue)}</p>
-              )}
-            </div>
-            <div className="w-12 h-12 bg-green-100 rounded-xl flex items-center justify-center">
-              <DollarSign className="h-6 w-6 text-green-600" />
-            </div>
-          </div>
-        </div>
-
-        <div className="bg-white rounded-xl shadow-sm border border-slate-200 p-6">
-          <div className="flex items-center justify-between">
-            <div>
-              <p className="text-sm font-medium text-slate-600">Avg. Revenue/Student</p>
-              {(Object.keys(studentDependents).length === 0 && Object.keys(studentPackageFees).length === 0) || loadingRealPaidAmounts ? (
-                <div className="h-8 w-40 bg-slate-200 rounded animate-pulse mt-1" />
-              ) : (
-                <p className="text-3xl font-bold text-purple-600 mt-1">{formatCurrency(stats.avgRevenuePerStudent)}</p>
-              )}
-            </div>
-            <div className="w-12 h-12 bg-purple-100 rounded-xl flex items-center justify-center">
-              <Award className="h-6 w-6 text-purple-600" />
-            </div>
-          </div>
-        </div>
-      </div>
-
-      {/* Search and Filters */}
-      <div className="bg-white rounded-xl shadow-sm border border-slate-200 p-6">
-        <div className="flex flex-col lg:flex-row gap-4 mb-4">
-          <div className="flex-1">
-            <div className="relative">
-              <Search className="absolute left-4 top-3.5 h-5 w-5 text-slate-400" />
-              <input
-                type="text"
-                placeholder="Search students..."
-                value={filters.searchTerm}
-                onChange={(e) => setFilters(prev => ({ ...prev, searchTerm: e.target.value }))}
-                className="w-full pl-12 pr-4 py-3 bg-slate-50 border border-slate-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-[#05294E] focus:border-[#05294E] transition-all duration-200"
-              />
-            </div>
-          </div>
-          
-          <div className="flex gap-3">
-            <button
-              onClick={() => setShowAdvancedFilters(!showAdvancedFilters)}
-              className={`px-4 py-3 rounded-xl font-medium transition-colors duration-200 flex items-center gap-2 ${
-                showAdvancedFilters 
-                  ? 'bg-[#05294E] text-white' 
-                  : 'bg-slate-100 text-slate-700 hover:bg-slate-200'
-              }`}
-            >
-              <FilterIcon className="h-4 w-4" />
-              Advanced
-            </button>
-          </div>
-        </div>
-
-        {/* Filtros Avançados Expandidos */}
-        {showAdvancedFilters && (
-          <div className="border-t border-slate-200 pt-4 space-y-4">
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
-              {/* Filtro por Universidade */}
-              <div>
-                <label className="block text-sm font-medium text-slate-700 mb-2">University</label>
-                <select
-                  value={filters.universityFilter}
-                  onChange={(e) => setFilters(prev => ({ ...prev, universityFilter: e.target.value }))}
-                  className="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#05294E] focus:border-[#05294E]"
-                >
-                  <option value="all">All Universities</option>
-                  {availableUniversities.map((university) => (
-                    <option key={university.id} value={university.id}>
-                      {university.name}
-                    </option>
-                  ))}
-                </select>
-              </div>
-
-              {/* Filtro por Período - Data Inicial */}
-              <div>
-                <label className="block text-sm font-medium text-slate-700 mb-2">Start Date</label>
-                <input
-                  type="date"
-                  value={filters.dateRange.start}
-                  onChange={(e) => setFilters(prev => ({ 
-                    ...prev, 
-                    dateRange: { ...prev.dateRange, start: e.target.value }
-                  }))}
-                  className="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#05294E] focus:border-[#05294E]"
-                />
-              </div>
-
-              {/* Filtro por Período - Data Final */}
-              <div>
-                <label className="block text-sm font-medium text-slate-700 mb-2">End Date</label>
-                <input
-                  type="date"
-                  value={filters.dateRange.end}
-                  onChange={(e) => setFilters(prev => ({ 
-                    ...prev, 
-                    dateRange: { ...prev.dateRange, end: e.target.value }
-                  }))}
-                  className="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#05294E] focus:border-[#05294E]"
-                />
-              </div>
-
-              {/* Filtro por Status */}
-              <div>
-                <label className="block text-sm font-medium text-slate-700 mb-2">Status</label>
-                <select
-                  value={filters.statusFilter}
-                  onChange={(e) => setFilters(prev => ({ ...prev, statusFilter: e.target.value }))}
-                  className="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#05294E] focus:border-[#05294E]"
-                >
-                  <option value="all">All Statuses</option>
-                  <option value="active">Active</option>
-                  <option value="registered">Registered</option>
-                  <option value="enrolled">Enrolled</option>
-                  <option value="completed">Completed</option>
-                  <option value="pending">Pending</option>
-                  <option value="processing">Processing</option>
-                  <option value="dropped">Dropped</option>
-                  <option value="cancelled">Cancelled</option>
-                </select>
-              </div>
-            </div>
-
-            {/* Segunda linha de filtros */}
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-              {/* Filtro por Pagamento */}
-              <div>
-                <label className="block text-sm font-medium text-slate-700 mb-2">Payment Status</label>
-                <select
-                  value={filters.paymentFilter}
-                  onChange={(e) => setFilters(prev => ({ ...prev, paymentFilter: e.target.value }))}
-                  className="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#05294E] focus:border-[#05294E]"
-                >
-                  <option value="all">All Payments</option>
-                  <option value="paid">Has Paid</option>
-                  <option value="unpaid">No Payments</option>
-                  <option value="high_value">High Value ($1000+)</option>
-                </select>
-              </div>
-
-              {/* Ordenação */}
-              <div>
-                <label className="block text-sm font-medium text-slate-700 mb-2">Sort By</label>
-                <select
-                  value={filters.sortBy}
-                  onChange={(e) => setFilters(prev => ({ ...prev, sortBy: e.target.value }))}
-                  className="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#05294E] focus:border-[#05294E]"
-                >
-                  <option value="date">Registration Date</option>
-                  <option value="revenue">Revenue</option>
-                  <option value="name">Name</option>
-                  <option value="status">Status</option>
-                </select>
-              </div>
-
-              <div>
-                <label className="block text-sm font-medium text-slate-700 mb-2">Order</label>
-                <div className="flex gap-2">
-                  <button
-                    onClick={() => setFilters(prev => ({ ...prev, sortOrder: 'desc' }))}
-                    className={`px-3 py-2 rounded-lg font-medium transition-colors ${
-                      filters.sortOrder === 'desc' 
-                        ? 'bg-[#05294E] text-white' 
-                        : 'bg-slate-100 text-slate-700 hover:bg-slate-200'
-                    }`}
-                  >
-                    <TrendingDown className="h-4 w-4" />
-                  </button>
-                  <button
-                    onClick={() => setFilters(prev => ({ ...prev, sortOrder: 'asc' }))}
-                    className={`px-3 py-2 rounded-lg font-medium transition-colors ${
-                      filters.sortOrder === 'asc' 
-                        ? 'bg-[#05294E] text-white' 
-                        : 'bg-slate-100 text-slate-700 hover:bg-slate-200'
-                    }`}
-                  >
-                    <TrendingUp className="h-4 w-4" />
-                  </button>
-                </div>
-              </div>
-            </div>
-
-            {/* Botão de reset */}
-            <div className="flex justify-start">
-              <button
-                onClick={resetFilters}
-                className="px-4 py-2 bg-slate-100 text-slate-700 rounded-lg font-medium hover:bg-slate-200 transition-colors"
-              >
-                Reset Filters
-              </button>
-            </div>
-          </div>
-        )}
-
-        <div className="mt-4 flex items-center justify-between">
-          <div className="flex items-center text-sm text-slate-600">
-            <span className="font-medium">{filteredStudents.length}</span>
-            <span className="ml-1">application{filteredStudents.length !== 1 ? 's' : ''} found</span>
-            {filteredStudents.length !== stats.totalUniqueStudents && (
-              <span className="ml-2 text-slate-500">
-                ({stats.totalUniqueStudents} unique student{stats.totalUniqueStudents !== 1 ? 's' : ''})
-              </span>
-            )}
-            {showAdvancedFilters && (
-              <span className="ml-4 text-slate-500">
-                • Sorted by {filters.sortBy === 'revenue' ? 'revenue' : 
-                  filters.sortBy === 'name' ? 'name' : 
-                  filters.sortBy === 'status' ? 'status' : 'registration date'}
-              </span>
-            )}
-          </div>
-          {totalPages > 1 && (
-            <div className="text-sm text-slate-500">
-              Page {currentPage} of {totalPages}
-            </div>
-          )}
-        </div>
-      </div>
-
-      {/* Students List */}
-      <div className="bg-white rounded-xl shadow-sm border border-slate-200">
-        {paginatedStudents.length > 0 ? (
-          <div className="divide-y divide-slate-200">
-            {paginatedStudents.map((student, index) => (
-              <div 
-                key={`${student.id}-${student.application_id || 'no-app'}-${index}`}
-                className="p-6 hover:bg-slate-50 transition-colors cursor-pointer"
-                onClick={() => {
-                  if (student.hasMultipleApplications) {
-                    // Se tem múltiplas aplicações, expandir dropdown
-                    setExpandedStudents(prev => {
-                      const newSet = new Set(prev);
-                      if (newSet.has(student.id)) {
-                        newSet.delete(student.id);
-                      } else {
-                        newSet.add(student.id);
-                      }
-                      return newSet;
-                    });
-                  } else {
-                    // Se tem apenas uma aplicação, ir para detalhes
-                    onViewStudent({id: student.id, profile_id: student.profile_id});
-                  }
-                }}
-              >
-                <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
-                  <div className="flex items-center space-x-4">
-                    <div className="w-12 h-12 bg-blue-100 rounded-xl flex items-center justify-center">
-                      <span className="text-lg font-medium text-blue-600">
-                        {student.full_name?.charAt(0)?.toUpperCase() || 'S'}
-                      </span>
-                    </div>
-                    <div className="flex-1 min-w-0">
-                      <div className="flex items-center gap-2 flex-wrap">
-                        <h3 className="text-lg font-semibold text-slate-900">
-                          {student.full_name || 'Name not provided'}
-                        </h3>
-                        {student.hasMultipleApplications && (
-                          <span className="inline-flex items-center px-2 py-1 text-xs font-medium text-amber-700 bg-amber-100 rounded-full">
-                            {student.applicationCount} Applications
-                            <svg 
-                              className={`ml-1 h-3 w-3 transform transition-transform ${expandedStudents.has(student.id) ? 'rotate-180' : ''}`}
-                              fill="none" 
-                              stroke="currentColor" 
-                              viewBox="0 0 24 24"
-                            >
-                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
-                            </svg>
-                          </span>
-                        )}
-                      </div>
-                      <div className="flex flex-col sm:flex-row sm:items-center gap-2 sm:gap-4 mt-1">
-                        <div className="flex items-center text-sm text-slate-500">
-                          <Mail className="h-4 w-4 mr-1 flex-shrink-0" />
-                          <span className="truncate">{student.email}</span>
-                        </div>
-                        {student.country && (
-                          <div className="flex items-center text-sm text-slate-500">
-                            <MapPin className="h-4 w-4 mr-1 flex-shrink-0" />
-                            <span className="truncate">{student.country}</span>
-                          </div>
-                        )}
-                        <div className="flex items-center text-sm text-slate-500">
-                          <Calendar className="h-4 w-4 mr-1 flex-shrink-0" />
-                          <span className="truncate">{formatDate(student.created_at)}</span>
-                        </div>
-                        {!student.hasMultipleApplications && student.university_name && (
-                          <div className="flex items-center text-sm text-slate-500">
-                            <Building className="h-4 w-4 mr-1 flex-shrink-0" />
-                            <span className="truncate">{student.university_name}</span>
-                          </div>
-                        )}
-                        {student.hasMultipleApplications && (
-                          <div className="flex items-center text-sm text-slate-500">
-                            <Building className="h-4 w-4 mr-1 flex-shrink-0" />
-                            <span className="truncate">Multiple Universities</span>
-                          </div>
-                        )}
-                      </div>
-                    </div>
-                  </div>
-                  
-                  <div className="flex flex-col items-end gap-2">
-                    <span className={`inline-flex items-center px-2 py-1 text-xs font-medium rounded-full ${
-                      student.status === 'active' || student.status === 'registered' || student.status === 'enrolled' || student.status === 'completed' 
-                        ? 'bg-green-100 text-green-800' 
-                        : student.status === 'pending' || student.status === 'processing'
-                        ? 'bg-yellow-100 text-yellow-800'
-                        : student.status === 'dropped' || student.status === 'cancelled'
-                        ? 'bg-red-100 text-red-800'
-                        : 'bg-gray-100 text-gray-800'
-                    }`}>
-                      {student.status === 'active' ? 'Active' :
-                       student.status === 'registered' ? 'Registered' : 
-                       student.status === 'enrolled' ? 'Enrolled' :
-                       student.status === 'completed' ? 'Completed' :
-                       student.status === 'pending' ? 'Pending' :
-                       student.status === 'processing' ? 'Processing' :
-                       student.status === 'dropped' ? 'Dropped' : 
-                       student.status === 'cancelled' ? 'Cancelled' :
-                       student.status || 'Unknown'}
-                    </span>
-                    
-                    <div className="flex items-center text-sm font-medium text-green-600">
-                      <DollarSign className="h-4 w-4 mr-1" />
-                      {(studentDependents[student.id] === undefined || loadingRealPaidAmounts) ? (
-                        <div className="h-4 w-16 bg-slate-200 rounded animate-pulse" />
-                      ) : (
-                        formatCurrency(calculateStudentTotalPaid(student))
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+            <div className="bg-white rounded-xl shadow-sm border border-slate-200 p-6">
+              <div className="flex items-center justify-between">
+                <div>
+                  <p className="text-sm font-medium text-slate-600">Total Students</p>
+                  {loadingRealPaidAmounts ? (
+                    <div className="h-10 w-20 bg-slate-200 rounded animate-pulse mt-1" />
+                  ) : (
+                    <>
+                      <p className="text-3xl font-bold text-blue-600 mt-1">{stats.totalUniqueStudents}</p>
+                      {filteredStudents.length > stats.totalUniqueStudents && (
+                        <p className="text-xs text-slate-500 mt-1">{filteredStudents.length} applications total</p>
                       )}
-                    </div>
-                  </div>
+                    </>
+                  )}
                 </div>
-                
-                {/* Taxas Faltantes */}
-                <div className="mt-3 pt-3 border-t border-slate-100">
-                  <div className="flex items-center justify-between">
-                    <span className="text-xs font-medium text-slate-600">Payment Missing Fees:</span>
-                    <div className="flex flex-wrap gap-1">
-                      {(() => {
-                        const missingFees = getMissingFees(student);
-                        if (missingFees.length === 0) {
-                          return (
-                            <span className="inline-flex items-center px-2 py-1 text-xs font-medium text-green-700 bg-green-100 rounded-full">
-                              <CheckCircle2 className="h-3 w-3 mr-1" />
-                              All Paid
-                            </span>
-                          );
-                        }
-                        return missingFees.map((fee, index) => (
-                          <span
-                            key={index}
-                            className={`inline-flex items-center px-2 py-1 text-xs font-medium rounded-full ${
-                              fee.color === 'red' ? 'text-red-700 bg-red-100' :
-                              fee.color === 'orange' ? 'text-orange-700 bg-orange-100' :
-                              fee.color === 'blue' ? 'text-blue-700 bg-blue-100' :
-                              'text-gray-700 bg-gray-100'
-                            }`}
-                          >
-                            {fee.name}
-                          </span>
-                        ));
-                      })()}
-                    </div>
-                  </div>
+                <div className="w-12 h-12 bg-blue-100 rounded-xl flex items-center justify-center">
+                  <GraduationCap className="h-6 w-6 text-blue-600" />
                 </div>
+              </div>
+            </div>
 
-                {/* I-20 Control Fee Deadline Status */}
-                <div className="mt-3 pt-3 border-t border-slate-100">
-                  <div className="flex items-center justify-between">
-                    <span className="text-xs font-medium text-slate-600">I-20 Control Fee:</span>
-                    <SellerI20DeadlineTimer 
-                      deadline={calculateI20Deadline(student)}
-                      hasPaid={student.has_paid_i20_control_fee || false}
-                      studentName={student.full_name}
+            <div className="bg-white rounded-xl shadow-sm border border-slate-200 p-6">
+              <div className="flex items-center justify-between">
+                <div>
+                  <p className="text-sm font-medium text-slate-600">Manual Paid (Outside)</p>
+                  {(Object.keys(studentPaymentMethods).length === 0 && Object.keys(studentDependents).length === 0 && Object.keys(studentFeeOverrides).length === 0) || loadingRealPaidAmounts ? (
+                    <div className="h-8 w-40 bg-slate-200 rounded animate-pulse mt-1" />
+                  ) : (
+                    <p className="text-3xl font-bold text-orange-600 mt-1">{formatCurrency(stats.manualRevenue)}</p>
+                  )}
+                </div>
+                <div className="w-12 h-12 bg-orange-100 rounded-xl flex items-center justify-center">
+                  <Calendar className="h-6 w-6 text-orange-600" />
+                </div>
+              </div>
+            </div>
+
+            <div className="bg-white rounded-xl shadow-sm border border-slate-200 p-6">
+              <div className="flex items-center justify-between">
+                <div>
+                  <p className="text-sm font-medium text-slate-600">Total Revenue</p>
+                  {/* Skeleton enquanto dependents/fees/valores reais não carregaram completamente */}
+                  {(Object.keys(studentDependents).length === 0 && Object.keys(studentPackageFees).length === 0) || loadingRealPaidAmounts ? (
+                    <div className="h-8 w-40 bg-slate-200 rounded animate-pulse mt-1" />
+                  ) : (
+                    <p className="text-3xl font-bold text-green-600 mt-1">{formatCurrency(stats.totalRevenue)}</p>
+                  )}
+                </div>
+                <div className="w-12 h-12 bg-green-100 rounded-xl flex items-center justify-center">
+                  <DollarSign className="h-6 w-6 text-green-600" />
+                </div>
+              </div>
+            </div>
+
+            <div className="bg-white rounded-xl shadow-sm border border-slate-200 p-6">
+              <div className="flex items-center justify-between">
+                <div>
+                  <p className="text-sm font-medium text-slate-600">Avg. Revenue/Student</p>
+                  {(Object.keys(studentDependents).length === 0 && Object.keys(studentPackageFees).length === 0) || loadingRealPaidAmounts ? (
+                    <div className="h-8 w-40 bg-slate-200 rounded animate-pulse mt-1" />
+                  ) : (
+                    <p className="text-3xl font-bold text-purple-600 mt-1">{formatCurrency(stats.avgRevenuePerStudent)}</p>
+                  )}
+                </div>
+                <div className="w-12 h-12 bg-purple-100 rounded-xl flex items-center justify-center">
+                  <Award className="h-6 w-6 text-purple-600" />
+                </div>
+              </div>
+            </div>
+          </div>
+
+          {/* Search and Filters */}
+          <div className="bg-white rounded-xl shadow-sm border border-slate-200 p-6">
+            <div className="flex flex-col lg:flex-row gap-4 mb-4">
+              <div className="flex-1">
+                <div className="relative">
+                  <Search className="absolute left-4 top-3.5 h-5 w-5 text-slate-400" />
+                  <input
+                    type="text"
+                    placeholder="Search students..."
+                    value={filters.searchTerm}
+                    onChange={(e) => setFilters(prev => ({ ...prev, searchTerm: e.target.value }))}
+                    className="w-full pl-12 pr-4 py-3 bg-slate-50 border border-slate-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-[#05294E] focus:border-[#05294E] transition-all duration-200"
+                  />
+                </div>
+              </div>
+
+              <div className="flex gap-3">
+                <button
+                  onClick={() => setShowAdvancedFilters(!showAdvancedFilters)}
+                  className={`px-4 py-3 rounded-xl font-medium transition-colors duration-200 flex items-center gap-2 ${showAdvancedFilters
+                      ? 'bg-[#05294E] text-white'
+                      : 'bg-slate-100 text-slate-700 hover:bg-slate-200'
+                    }`}
+                >
+                  <FilterIcon className="h-4 w-4" />
+                  Advanced
+                </button>
+              </div>
+            </div>
+
+            {/* Filtros Avançados Expandidos */}
+            {showAdvancedFilters && (
+              <div className="border-t border-slate-200 pt-4 space-y-4">
+                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+                  {/* Filtro por Universidade */}
+                  <div>
+                    <label className="block text-sm font-medium text-slate-700 mb-2">University</label>
+                    <select
+                      value={filters.universityFilter}
+                      onChange={(e) => setFilters(prev => ({ ...prev, universityFilter: e.target.value }))}
+                      className="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#05294E] focus:border-[#05294E]"
+                    >
+                      <option value="all">All Universities</option>
+                      {availableUniversities.map((university) => (
+                        <option key={university.id} value={university.id}>
+                          {university.name}
+                        </option>
+                      ))}
+                    </select>
+                  </div>
+
+                  {/* Filtro por Período - Data Inicial */}
+                  <div>
+                    <label className="block text-sm font-medium text-slate-700 mb-2">Start Date</label>
+                    <input
+                      type="date"
+                      value={filters.dateRange.start}
+                      onChange={(e) => setFilters(prev => ({
+                        ...prev,
+                        dateRange: { ...prev.dateRange, start: e.target.value }
+                      }))}
+                      className="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#05294E] focus:border-[#05294E]"
                     />
                   </div>
+
+                  {/* Filtro por Período - Data Final */}
+                  <div>
+                    <label className="block text-sm font-medium text-slate-700 mb-2">End Date</label>
+                    <input
+                      type="date"
+                      value={filters.dateRange.end}
+                      onChange={(e) => setFilters(prev => ({
+                        ...prev,
+                        dateRange: { ...prev.dateRange, end: e.target.value }
+                      }))}
+                      className="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#05294E] focus:border-[#05294E]"
+                    />
+                  </div>
+
+                  {/* Filtro por Status */}
+                  <div>
+                    <label className="block text-sm font-medium text-slate-700 mb-2">Status</label>
+                    <select
+                      value={filters.statusFilter}
+                      onChange={(e) => setFilters(prev => ({ ...prev, statusFilter: e.target.value }))}
+                      className="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#05294E] focus:border-[#05294E]"
+                    >
+                      <option value="all">All Statuses</option>
+                      <option value="active">Active</option>
+                      <option value="registered">Registered</option>
+                      <option value="enrolled">Enrolled</option>
+                      <option value="completed">Completed</option>
+                      <option value="pending">Pending</option>
+                      <option value="processing">Processing</option>
+                      <option value="dropped">Dropped</option>
+                      <option value="cancelled">Cancelled</option>
+                    </select>
+                  </div>
                 </div>
 
-                {/* Seção Expandida - Múltiplas Aplicações */}
-                {student.hasMultipleApplications && expandedStudents.has(student.id) && (
-                  <div className="mt-4 pt-4 border-t border-slate-200">
-                    <h4 className="text-sm font-medium text-slate-700 mb-3">All Applications:</h4>
-                    <div className="space-y-3">
-                      {student.allApplications?.map((app: any, appIndex: number) => (
-                        <div 
-                          key={`${app.application_id}-${appIndex}`}
-                          className="flex items-center justify-between p-3 bg-slate-50 rounded-lg"
-                        >
-                          <div className="flex-1">
-                            <div className="flex items-center gap-2">
-                              <span className="font-medium text-sm text-slate-900">
-                                {app.scholarship_title || 'No scholarship selected'}
-                              </span>
-                              {app.university_name && (
-                                <span className="text-xs text-slate-600">
-                                  @ {app.university_name}
-                                </span>
-                              )}
-                            </div>
-                            <div className="flex gap-2 mt-1">
-                              {app.is_application_fee_paid && (
-                                <span className="inline-flex items-center px-2 py-1 text-xs font-medium text-green-700 bg-green-100 rounded-full">
-                                  Application Fee Paid
-                                </span>
-                              )}
-                              {app.is_scholarship_fee_paid && (
-                                <span className="inline-flex items-center px-2 py-1 text-xs font-medium text-blue-700 bg-blue-100 rounded-full">
-                                  Scholarship Fee Paid
-                                </span>
-                              )}
-                              {!app.is_application_fee_paid && !app.is_scholarship_fee_paid && (
-                                <span className="inline-flex items-center px-2 py-1 text-xs font-medium text-gray-700 bg-gray-100 rounded-full">
-                                  Pending Payment
-                                </span>
-                              )}
-                            </div>
-                          </div>
-                          <button
-                            onClick={(e) => {
-                              e.stopPropagation();
-                              onViewStudent({id: app.id, profile_id: app.profile_id});
-                            }}
-                            className="text-xs text-blue-600 hover:text-blue-800 font-medium"
-                          >
-                            View Details
-                          </button>
-                        </div>
-                      ))}
+                {/* Segunda linha de filtros */}
+                <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                  {/* Filtro por Pagamento */}
+                  <div>
+                    <label className="block text-sm font-medium text-slate-700 mb-2">Payment Status</label>
+                    <select
+                      value={filters.paymentFilter}
+                      onChange={(e) => setFilters(prev => ({ ...prev, paymentFilter: e.target.value }))}
+                      className="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#05294E] focus:border-[#05294E]"
+                    >
+                      <option value="all">All Payments</option>
+                      <option value="paid">Has Paid</option>
+                      <option value="unpaid">No Payments</option>
+                      <option value="high_value">High Value ($1000+)</option>
+                    </select>
+                  </div>
+
+                  {/* Ordenação */}
+                  <div>
+                    <label className="block text-sm font-medium text-slate-700 mb-2">Sort By</label>
+                    <select
+                      value={filters.sortBy}
+                      onChange={(e) => setFilters(prev => ({ ...prev, sortBy: e.target.value }))}
+                      className="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#05294E] focus:border-[#05294E]"
+                    >
+                      <option value="date">Registration Date</option>
+                      <option value="revenue">Revenue</option>
+                      <option value="name">Name</option>
+                      <option value="status">Status</option>
+                    </select>
+                  </div>
+
+                  <div>
+                    <label className="block text-sm font-medium text-slate-700 mb-2">Order</label>
+                    <div className="flex gap-2">
+                      <button
+                        onClick={() => setFilters(prev => ({ ...prev, sortOrder: 'desc' }))}
+                        className={`px-3 py-2 rounded-lg font-medium transition-colors ${filters.sortOrder === 'desc'
+                            ? 'bg-[#05294E] text-white'
+                            : 'bg-slate-100 text-slate-700 hover:bg-slate-200'
+                          }`}
+                      >
+                        <TrendingDown className="h-4 w-4" />
+                      </button>
+                      <button
+                        onClick={() => setFilters(prev => ({ ...prev, sortOrder: 'asc' }))}
+                        className={`px-3 py-2 rounded-lg font-medium transition-colors ${filters.sortOrder === 'asc'
+                            ? 'bg-[#05294E] text-white'
+                            : 'bg-slate-100 text-slate-700 hover:bg-slate-200'
+                          }`}
+                      >
+                        <TrendingUp className="h-4 w-4" />
+                      </button>
                     </div>
                   </div>
-                )}
-              </div>
-            ))}
-          </div>
-        ) : (
-          <div className="text-center py-12">
-            <GraduationCap className="h-12 w-12 text-slate-400 mx-auto mb-4" />
-            <h3 className="text-lg font-medium text-slate-900 mb-2">
-              {filters.searchTerm || filters.universityFilter !== 'all' || filters.statusFilter !== 'all' ? 'No applications found' : 'No referenced students yet'}
-            </h3>
-            <p className="text-slate-500">
-              {filters.searchTerm || filters.universityFilter !== 'all' || filters.statusFilter !== 'all' 
-                ? 'Try adjusting your filters' 
-                : 'Share your referral code to get started!'}
-            </p>
-          </div>
-        )}
+                </div>
 
-        {/* Pagination */}
-        {totalPages > 1 && (
-          <div className="px-6 py-4 border-t border-slate-200">
-            {/* Page information centered */}
-            <div className="flex items-center justify-center mb-4">
-              <div className="text-sm text-slate-500">
-                Page {currentPage} of {totalPages}
+                {/* Botão de reset */}
+                <div className="flex justify-start">
+                  <button
+                    onClick={resetFilters}
+                    className="px-4 py-2 bg-slate-100 text-slate-700 rounded-lg font-medium hover:bg-slate-200 transition-colors"
+                  >
+                    Reset Filters
+                  </button>
+                </div>
               </div>
-            </div>
-            
-            {/* Navigation controls centered */}
-            <div className="flex items-center justify-center space-x-2">
-              <button
-                onClick={() => goToPage(currentPage - 1)}
-                disabled={currentPage === 1}
-                className="inline-flex items-center px-3 py-1 border border-slate-300 rounded-md text-sm font-medium text-slate-700 bg-white hover:bg-slate-50 focus:outline-none focus:ring-2 focus:ring-red-500 disabled:opacity-50 disabled:cursor-not-allowed"
-              >
-                <ChevronLeft className="h-4 w-4 mr-1" />
-                Previous
-              </button>
-              
-              {/* Page numbers */}
-              <div className="flex items-center space-x-1">
-                {Array.from({ length: Math.min(totalPages, 5) }, (_, i) => {
-                  let pageNumber;
-                  if (totalPages <= 5) {
-                    pageNumber = i + 1;
-                  } else if (currentPage <= 3) {
-                    pageNumber = i + 1;
-                  } else if (currentPage >= totalPages - 2) {
-                    pageNumber = totalPages - 4 + i;
-                  } else {
-                    pageNumber = currentPage - 2 + i;
-                  }
-                  
-                  return (
-                    <button
-                      key={pageNumber}
-                      onClick={() => goToPage(pageNumber)}
-                      className={`inline-flex items-center px-3 py-1 border rounded-md text-sm font-medium focus:outline-none focus:ring-2 focus:ring-[#05294E] ${
-                        currentPage === pageNumber
-                          ? 'border-[#05294E] bg-[#05294E] text-white'
-                          : 'border-slate-300 text-slate-700 bg-white hover:bg-slate-50'
-                      }`}
-                    >
-                      {pageNumber}
-                    </button>
-                  );
-                })}
-                
-                {totalPages > 5 && currentPage < totalPages - 2 && (
-                  <>
-                    <span className="px-2 text-slate-500">...</span>
-                    <button
-                      onClick={() => goToPage(totalPages)}
-                      className="inline-flex items-center px-3 py-1 border border-slate-300 rounded-md text-sm font-medium text-slate-700 bg-white hover:bg-slate-50 focus:outline-none focus:ring-2 focus:ring-[#05294E]"
-                    >
-                      {totalPages}
-                    </button>
-                  </>
+            )}
+
+            <div className="mt-4 flex items-center justify-between">
+              <div className="flex items-center text-sm text-slate-600">
+                <span className="font-medium">{filteredStudents.length}</span>
+                <span className="ml-1">application{filteredStudents.length !== 1 ? 's' : ''} found</span>
+                {filteredStudents.length !== stats.totalUniqueStudents && (
+                  <span className="ml-2 text-slate-500">
+                    ({stats.totalUniqueStudents} unique student{stats.totalUniqueStudents !== 1 ? 's' : ''})
+                  </span>
+                )}
+                {showAdvancedFilters && (
+                  <span className="ml-4 text-slate-500">
+                    • Sorted by {filters.sortBy === 'revenue' ? 'revenue' :
+                      filters.sortBy === 'name' ? 'name' :
+                        filters.sortBy === 'status' ? 'status' : 'registration date'}
+                  </span>
                 )}
               </div>
-              
-              <button
-                onClick={() => goToPage(currentPage + 1)}
-                disabled={currentPage === totalPages}
-                className="inline-flex items-center px-3 py-1 border border-slate-300 rounded-md text-sm font-medium text-slate-700 bg-white hover:bg-slate-50 focus:outline-none focus:ring-2 focus:ring-[#05294E] disabled:opacity-50 disabled:cursor-not-allowed"
-              >
-                Next
-                <ChevronRight className="h-4 w-4 ml-1" />
-              </button>
+              {totalPages > 1 && (
+                <div className="text-sm text-slate-500">
+                  Page {currentPage} of {totalPages}
+                </div>
+              )}
             </div>
           </div>
-        )}
-      </div>
+
+          {/* Students List */}
+          <div className="bg-white rounded-xl shadow-sm border border-slate-200">
+            {paginatedStudents.length > 0 ? (
+              <div className="divide-y divide-slate-200">
+                {paginatedStudents.map((student, index) => (
+                  <div
+                    key={`${student.id}-${student.application_id || 'no-app'}-${index}`}
+                    className="p-6 hover:bg-slate-50 transition-colors cursor-pointer"
+                    onClick={() => {
+                      if (student.hasMultipleApplications) {
+                        // Se tem múltiplas aplicações, expandir dropdown
+                        setExpandedStudents(prev => {
+                          const newSet = new Set(prev);
+                          if (newSet.has(student.id)) {
+                            newSet.delete(student.id);
+                          } else {
+                            newSet.add(student.id);
+                          }
+                          return newSet;
+                        });
+                      } else {
+                        // Se tem apenas uma aplicação, ir para detalhes
+                        onViewStudent({ id: student.id, profile_id: student.profile_id });
+                      }
+                    }}
+                  >
+                    <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+                      <div className="flex items-center space-x-4">
+                        <div className="w-12 h-12 bg-blue-100 rounded-xl flex items-center justify-center">
+                          <span className="text-lg font-medium text-blue-600">
+                            {student.full_name?.charAt(0)?.toUpperCase() || 'S'}
+                          </span>
+                        </div>
+                        <div className="flex-1 min-w-0">
+                          <div className="flex items-center gap-2 flex-wrap">
+                            <h3 className="text-lg font-semibold text-slate-900">
+                              {student.full_name || 'Name not provided'}
+                            </h3>
+                            {student.hasMultipleApplications && (
+                              <span className="inline-flex items-center px-2 py-1 text-xs font-medium text-amber-700 bg-amber-100 rounded-full">
+                                {student.applicationCount} Applications
+                                <svg
+                                  className={`ml-1 h-3 w-3 transform transition-transform ${expandedStudents.has(student.id) ? 'rotate-180' : ''}`}
+                                  fill="none"
+                                  stroke="currentColor"
+                                  viewBox="0 0 24 24"
+                                >
+                                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
+                                </svg>
+                              </span>
+                            )}
+                          </div>
+                          <div className="flex flex-col sm:flex-row sm:items-center gap-2 sm:gap-4 mt-1">
+                            <div className="flex items-center text-sm text-slate-500">
+                              <Mail className="h-4 w-4 mr-1 flex-shrink-0" />
+                              <span className="truncate">{student.email}</span>
+                            </div>
+                            {student.country && (
+                              <div className="flex items-center text-sm text-slate-500">
+                                <MapPin className="h-4 w-4 mr-1 flex-shrink-0" />
+                                <span className="truncate">{student.country}</span>
+                              </div>
+                            )}
+                            <div className="flex items-center text-sm text-slate-500">
+                              <Calendar className="h-4 w-4 mr-1 flex-shrink-0" />
+                              <span className="truncate">{formatDate(student.created_at)}</span>
+                            </div>
+                            {!student.hasMultipleApplications && student.university_name && (
+                              <div className="flex items-center text-sm text-slate-500">
+                                <Building className="h-4 w-4 mr-1 flex-shrink-0" />
+                                <span className="truncate">{student.university_name}</span>
+                              </div>
+                            )}
+                            {student.hasMultipleApplications && (
+                              <div className="flex items-center text-sm text-slate-500">
+                                <Building className="h-4 w-4 mr-1 flex-shrink-0" />
+                                <span className="truncate">Multiple Universities</span>
+                              </div>
+                            )}
+                          </div>
+                        </div>
+                      </div>
+
+                      <div className="flex flex-col items-end gap-2">
+                        <span className={`inline-flex items-center px-2 py-1 text-xs font-medium rounded-full ${student.status === 'active' || student.status === 'registered' || student.status === 'enrolled' || student.status === 'completed'
+                            ? 'bg-green-100 text-green-800'
+                            : student.status === 'pending' || student.status === 'processing'
+                              ? 'bg-yellow-100 text-yellow-800'
+                              : student.status === 'dropped' || student.status === 'cancelled'
+                                ? 'bg-red-100 text-red-800'
+                                : 'bg-gray-100 text-gray-800'
+                          }`}>
+                          {student.status === 'active' ? 'Active' :
+                            student.status === 'registered' ? 'Registered' :
+                              student.status === 'enrolled' ? 'Enrolled' :
+                                student.status === 'completed' ? 'Completed' :
+                                  student.status === 'pending' ? 'Pending' :
+                                    student.status === 'processing' ? 'Processing' :
+                                      student.status === 'dropped' ? 'Dropped' :
+                                        student.status === 'cancelled' ? 'Cancelled' :
+                                          student.status || 'Unknown'}
+                        </span>
+
+                        <div className="flex items-center text-sm font-medium text-green-600">
+                          <DollarSign className="h-4 w-4 mr-1" />
+                          {(studentDependents[student.id] === undefined || loadingRealPaidAmounts) ? (
+                            <div className="h-4 w-16 bg-slate-200 rounded animate-pulse" />
+                          ) : (
+                            formatCurrency(calculateStudentTotalPaid(student))
+                          )}
+                        </div>
+                      </div>
+                    </div>
+
+                    {/* Taxas Faltantes */}
+                    <div className="mt-3 pt-3 border-t border-slate-100">
+                      <div className="flex items-center justify-between">
+                        <span className="text-xs font-medium text-slate-600">Payment Missing Fees:</span>
+                        <div className="flex flex-wrap gap-1">
+                          {(() => {
+                            const missingFees = getMissingFees(student);
+                            if (missingFees.length === 0) {
+                              return (
+                                <span className="inline-flex items-center px-2 py-1 text-xs font-medium text-green-700 bg-green-100 rounded-full">
+                                  <CheckCircle2 className="h-3 w-3 mr-1" />
+                                  All Paid
+                                </span>
+                              );
+                            }
+                            return missingFees.map((fee, index) => (
+                              <span
+                                key={index}
+                                className={`inline-flex items-center px-2 py-1 text-xs font-medium rounded-full ${fee.color === 'red' ? 'text-red-700 bg-red-100' :
+                                    fee.color === 'orange' ? 'text-orange-700 bg-orange-100' :
+                                      fee.color === 'blue' ? 'text-blue-700 bg-blue-100' :
+                                        'text-gray-700 bg-gray-100'
+                                  }`}
+                              >
+                                {fee.name}
+                              </span>
+                            ));
+                          })()}
+                        </div>
+                      </div>
+                    </div>
+
+                    {/* I-20 Control Fee Deadline Status */}
+                    <div className="mt-3 pt-3 border-t border-slate-100">
+                      <div className="flex items-center justify-between">
+                        <span className="text-xs font-medium text-slate-600">I-20 Control Fee:</span>
+                        <SellerI20DeadlineTimer
+                          deadline={calculateI20Deadline(student)}
+                          hasPaid={student.has_paid_i20_control_fee || false}
+                          studentName={student.full_name}
+                        />
+                      </div>
+                    </div>
+
+                    {/* Seção Expandida - Múltiplas Aplicações */}
+                    {student.hasMultipleApplications && expandedStudents.has(student.id) && (
+                      <div className="mt-4 pt-4 border-t border-slate-200">
+                        <h4 className="text-sm font-medium text-slate-700 mb-3">All Applications:</h4>
+                        <div className="space-y-3">
+                          {student.allApplications?.map((app: any, appIndex: number) => (
+                            <div
+                              key={`${app.application_id}-${appIndex}`}
+                              className="flex items-center justify-between p-3 bg-slate-50 rounded-lg"
+                            >
+                              <div className="flex-1">
+                                <div className="flex items-center gap-2">
+                                  <span className="font-medium text-sm text-slate-900">
+                                    {app.scholarship_title || 'No scholarship selected'}
+                                  </span>
+                                  {app.university_name && (
+                                    <span className="text-xs text-slate-600">
+                                      @ {app.university_name}
+                                    </span>
+                                  )}
+                                </div>
+                                <div className="flex gap-2 mt-1">
+                                  {app.is_application_fee_paid && (
+                                    <span className="inline-flex items-center px-2 py-1 text-xs font-medium text-green-700 bg-green-100 rounded-full">
+                                      Application Fee Paid
+                                    </span>
+                                  )}
+                                  {app.is_scholarship_fee_paid && (
+                                    <span className="inline-flex items-center px-2 py-1 text-xs font-medium text-blue-700 bg-blue-100 rounded-full">
+                                      Scholarship Fee Paid
+                                    </span>
+                                  )}
+                                  {!app.is_application_fee_paid && !app.is_scholarship_fee_paid && (
+                                    <span className="inline-flex items-center px-2 py-1 text-xs font-medium text-gray-700 bg-gray-100 rounded-full">
+                                      Pending Payment
+                                    </span>
+                                  )}
+                                </div>
+                              </div>
+                              <button
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  onViewStudent({ id: app.id, profile_id: app.profile_id });
+                                }}
+                                className="text-xs text-blue-600 hover:text-blue-800 font-medium"
+                              >
+                                View Details
+                              </button>
+                            </div>
+                          ))}
+                        </div>
+                      </div>
+                    )}
+                  </div>
+                ))}
+              </div>
+            ) : (
+              <div className="text-center py-12">
+                <GraduationCap className="h-12 w-12 text-slate-400 mx-auto mb-4" />
+                <h3 className="text-lg font-medium text-slate-900 mb-2">
+                  {filters.searchTerm || filters.universityFilter !== 'all' || filters.statusFilter !== 'all' ? 'No applications found' : 'No referenced students yet'}
+                </h3>
+                <p className="text-slate-500">
+                  {filters.searchTerm || filters.universityFilter !== 'all' || filters.statusFilter !== 'all'
+                    ? 'Try adjusting your filters'
+                    : 'Share your referral code to get started!'}
+                </p>
+              </div>
+            )}
+
+            {/* Pagination */}
+            {totalPages > 1 && (
+              <div className="px-6 py-4 border-t border-slate-200">
+                {/* Page information centered */}
+                <div className="flex items-center justify-center mb-4">
+                  <div className="text-sm text-slate-500">
+                    Page {currentPage} of {totalPages}
+                  </div>
+                </div>
+
+                {/* Navigation controls centered */}
+                <div className="flex items-center justify-center space-x-2">
+                  <button
+                    onClick={() => goToPage(currentPage - 1)}
+                    disabled={currentPage === 1}
+                    className="inline-flex items-center px-3 py-1 border border-slate-300 rounded-md text-sm font-medium text-slate-700 bg-white hover:bg-slate-50 focus:outline-none focus:ring-2 focus:ring-red-500 disabled:opacity-50 disabled:cursor-not-allowed"
+                  >
+                    <ChevronLeft className="h-4 w-4 mr-1" />
+                    Previous
+                  </button>
+
+                  {/* Page numbers */}
+                  <div className="flex items-center space-x-1">
+                    {Array.from({ length: Math.min(totalPages, 5) }, (_, i) => {
+                      let pageNumber;
+                      if (totalPages <= 5) {
+                        pageNumber = i + 1;
+                      } else if (currentPage <= 3) {
+                        pageNumber = i + 1;
+                      } else if (currentPage >= totalPages - 2) {
+                        pageNumber = totalPages - 4 + i;
+                      } else {
+                        pageNumber = currentPage - 2 + i;
+                      }
+
+                      return (
+                        <button
+                          key={pageNumber}
+                          onClick={() => goToPage(pageNumber)}
+                          className={`inline-flex items-center px-3 py-1 border rounded-md text-sm font-medium focus:outline-none focus:ring-2 focus:ring-[#05294E] ${currentPage === pageNumber
+                              ? 'border-[#05294E] bg-[#05294E] text-white'
+                              : 'border-slate-300 text-slate-700 bg-white hover:bg-slate-50'
+                            }`}
+                        >
+                          {pageNumber}
+                        </button>
+                      );
+                    })}
+
+                    {totalPages > 5 && currentPage < totalPages - 2 && (
+                      <>
+                        <span className="px-2 text-slate-500">...</span>
+                        <button
+                          onClick={() => goToPage(totalPages)}
+                          className="inline-flex items-center px-3 py-1 border border-slate-300 rounded-md text-sm font-medium text-slate-700 bg-white hover:bg-slate-50 focus:outline-none focus:ring-2 focus:ring-[#05294E]"
+                        >
+                          {totalPages}
+                        </button>
+                      </>
+                    )}
+                  </div>
+
+                  <button
+                    onClick={() => goToPage(currentPage + 1)}
+                    disabled={currentPage === totalPages}
+                    className="inline-flex items-center px-3 py-1 border border-slate-300 rounded-md text-sm font-medium text-slate-700 bg-white hover:bg-slate-50 focus:outline-none focus:ring-2 focus:ring-[#05294E] disabled:opacity-50 disabled:cursor-not-allowed"
+                  >
+                    Next
+                    <ChevronRight className="h-4 w-4 ml-1" />
+                  </button>
+                </div>
+              </div>
+            )}
+          </div>
         </div>
       </div>
     </div>

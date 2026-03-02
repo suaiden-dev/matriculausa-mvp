@@ -19,26 +19,26 @@ import { ScholarshipCountdownTimer } from '../components/ScholarshipCountdownTim
 const Scholarships: React.FC = () => {
   const { t } = useTranslation();
   const { isAuthenticated, user, userProfile } = useAuth();
-  
+
   // Hook para verificar se usuário já tem application fee paga
-  const { 
-    hasPaidApplicationFee, 
-    committedUniversity, 
-    committedScholarship, 
-    loading: applicationFeeLoading 
+  const {
+    hasPaidApplicationFee,
+    committedUniversity,
+    committedScholarship,
+    loading: applicationFeeLoading
   } = useApplicationFeeStatus();
-  
+
   // Hook para filtro automático baseado no pacote do usuário
-  const { 
-    minScholarshipValue, 
+  const {
+    minScholarshipValue
   } = usePackageScholarshipFilter();
-  
+
   // Obter faixa de bolsa desejada do perfil do usuário (quando logado)
-  const desiredScholarshipRange = isAuthenticated && (userProfile as any)?.desired_scholarship_range 
-  ? (userProfile as any).desired_scholarship_range 
-  : null;
-  
-  
+  const desiredScholarshipRange = isAuthenticated && (userProfile as any)?.desired_scholarship_range
+    ? (userProfile as any).desired_scholarship_range
+    : null;
+
+
   // TODOS OS HOOKS DEVEM VIR ANTES DE QUALQUER LÓGICA CONDICIONAL
   const [searchTerm, setSearchTerm] = useState('');
   const [selectedLevel, setSelectedLevel] = useState('all');
@@ -46,7 +46,7 @@ const Scholarships: React.FC = () => {
   const [selectedStudyMode, setSelectedStudyMode] = useState('all');
   const [selectedWorkAuth, setSelectedWorkAuth] = useState('all');
   const [isModalOpen, setIsModalOpen] = useState(false);
-  
+
   const { scholarships, loading: scholarshipsLoading, error } = useScholarships();
   const [featuredUniversities, setFeaturedUniversities] = useState<any[]>([]);
   const [featuredScholarships, setFeaturedScholarships] = useState<Scholarship[]>([]);
@@ -117,10 +117,10 @@ const Scholarships: React.FC = () => {
           .eq('is_highlighted', true)
           // Removido filtro is_active=true - estudantes podem ver bolsas inativas mas não podem aplicar
           .order('featured_order', { ascending: true });
-        
+
         if (!scholarshipsError && scholarshipsData) {
           setFeaturedScholarships(scholarshipsData);
-          
+
           // Fetch universities of featured scholarships to display information
           const universityIds = scholarshipsData.map(s => s.university_id).filter(Boolean);
           if (universityIds.length > 0) {
@@ -128,7 +128,7 @@ const Scholarships: React.FC = () => {
               .from('universities')
               .select('id, name, location, logo_url')
               .in('id', universityIds);
-            
+
             if (!universitiesError && universitiesData) {
               setFeaturedUniversities(universitiesData);
             }
@@ -173,14 +173,14 @@ const Scholarships: React.FC = () => {
   const { refetchUserProfile } = useAuth();
   const navigate = useNavigate();
   const location = useLocation();
-  
-  
+
+
   // Check if user needs to pay selection process fee (only for students)
   // if (user && user.role === 'student' && (!isAuthenticated || (isAuthenticated && userProfile && !userProfile.has_paid_selection_process_fee))) {
   //   console.log('Scholarships - Showing PaymentRequiredBlocker for student');
   //   return <PaymentRequiredBlocker pageType="scholarships" showHeader={false} />;
   // }
-  
+
 
   const filteredScholarships = scholarships.filter((scholarship: Scholarship) => {
     // Exclude featured scholarships from the general list to avoid duplication
@@ -192,7 +192,7 @@ const Scholarships: React.FC = () => {
       const uniId = scholarship.university_id ?? scholarship.universities?.id ?? scholarship.university_id;
       if (uniId && !approvedUniversityIds.has(uniId)) return false;
     }
-    
+
     const allowUniSearch = isAuthenticated
       ? (user?.role !== 'student' || !!userProfile?.has_paid_selection_process_fee)
       : false;
@@ -211,7 +211,7 @@ const Scholarships: React.FC = () => {
     
     // Filtro automático baseado na faixa de bolsa desejada (quando logado) ou pacote do usuário
     // Mostrar apenas bolsas com valor >= valor selecionado pelo seller
-    const matchesDesiredRange = desiredScholarshipRange !== null 
+    const matchesDesiredRange = desiredScholarshipRange !== null
       ? (value >= desiredScholarshipRange)
       : (minScholarshipValue === null || (value >= minScholarshipValue));
     
@@ -243,7 +243,7 @@ const Scholarships: React.FC = () => {
     
     // Filtro automático baseado na faixa de bolsa desejada (quando logado) ou pacote do usuário
     // Mostrar apenas bolsas com valor >= valor selecionado pelo seller
-    const matchesDesiredRange = desiredScholarshipRange !== null 
+    const matchesDesiredRange = desiredScholarshipRange !== null
       ? (value >= desiredScholarshipRange)
       : (minScholarshipValue === null || (value >= minScholarshipValue));
     
@@ -357,13 +357,13 @@ const Scholarships: React.FC = () => {
     // Criar data atual sem hora (apenas dia)
     const today = new Date();
     today.setHours(0, 0, 0, 0);
-    
+
     // Criar deadline como data local (não UTC) para evitar problemas de timezone
     // Parse da data no formato YYYY-MM-DD como local
     const [year, month, day] = deadline.split('-').map(Number);
     const deadlineDate = new Date(year, month - 1, day); // month - 1 porque Date usa 0-11
     deadlineDate.setHours(23, 59, 59, 999); // Fim do dia
-    
+
     const diffTime = deadlineDate.getTime() - today.getTime();
     const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
     return diffDays;
@@ -406,7 +406,7 @@ const Scholarships: React.FC = () => {
         const isMobile = typeof window !== 'undefined' && window.innerWidth < 640; // breakpoint ~sm
         const newSize = isMobile ? MOBILE_PAGE_SIZE : DEFAULT_PAGE_SIZE;
         setPageSize(prev => (prev !== newSize ? newSize : prev));
-      } catch {}
+      } catch { }
     };
     computePageSize();
     if (typeof window !== 'undefined') {
@@ -450,7 +450,7 @@ const Scholarships: React.FC = () => {
   // Se usuário já tem application fee paga, mostrar mensagem de bloqueio
   if (isAuthenticated && !applicationFeeLoading && hasPaidApplicationFee) {
     return (
-      <ApplicationFeeBlockedMessage 
+      <ApplicationFeeBlockedMessage
         committedUniversity={committedUniversity}
         committedScholarship={committedScholarship}
       />
@@ -465,22 +465,22 @@ const Scholarships: React.FC = () => {
           <div className="absolute top-5 left-10 w-56 h-56 bg-[#D0151C]/10 rounded-full blur-3xl"></div>
           <div className="absolute bottom-5 right-10 w-72 h-72 bg-white/5 rounded-full blur-3xl"></div>
         </div>
-        
+
         <div className="relative max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="text-center">
             <div className="inline-flex items-center bg-white/10 backdrop-blur-sm border border-white/20 rounded-full px-6 py-2 mb-4">
               <Award className="h-4 w-4 mr-2 text-white" />
               <span className="text-sm font-medium text-white">{t('features.exclusiveScholarships.title')}</span>
             </div>
-            
+
             <h1 className="text-4xl md:text-5xl font-black mb-3 leading-tight">
               <span className="text-white">{t('scholarships.title')}</span>
             </h1>
-            
+
             <p className="text-lg text-slate-200 max-w-3xl mx-auto leading-relaxed mb-6">
               {t('scholarships.subtitle')}
             </p>
-            
+
             {/* Stats */}
             <div className="flex flex-wrap justify-center items-center gap-6 text-slate-300">
               <div className="flex items-center bg-white/10 backdrop-blur-sm rounded-xl px-4 py-2">
@@ -610,7 +610,7 @@ const Scholarships: React.FC = () => {
 
 
         {/* Featured Scholarships Section */}
-  {filteredFeaturedScholarships.length > 0 && (
+        {filteredFeaturedScholarships.length > 0 && (
           <div className="mb-12">
             <div className="text-center mb-8">
               <div className="inline-flex items-center bg-gradient-to-r from-yellow-400 to-orange-500 text-white rounded-full px-6 py-2 mb-4">
@@ -624,7 +624,7 @@ const Scholarships: React.FC = () => {
                 {t('scholarshipsPage.featuredSection.description')}
               </p>
             </div>
-            
+
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8 mb-8">
               {filteredFeaturedScholarships.slice(0, 6).map((scholarship) => {
                 const deadlineStatus = getDeadlineStatus(scholarship.deadline);
@@ -634,11 +634,11 @@ const Scholarships: React.FC = () => {
                 const savings = originalValue - scholarshipValue;
                 const savingsPercentage = originalValue > 0 ? Math.round((savings / originalValue) * 100) : 0;
                 const isBlocked = is3800ScholarshipBlocked(scholarship);
-                
+
                 return (
                   <article key={scholarship.id} className="group relative bg-white rounded-3xl shadow-lg hover:shadow-2xl transition-all duration-500 overflow-hidden border border-slate-200 hover:-translate-y-3 hover:border-[#05294E]/20 focus-within:ring-2 focus-within:ring-[#05294E]/50 flex flex-col h-full" role="article" aria-labelledby={`featured-scholarship-title-${scholarship.id}`}>
                     {/* Overlay de blur quando não autenticado */}
-                   
+
                     {/* Featured Badge - Top Right */}
                     <div className="absolute top-4 right-4 z-10">
                       <div className="bg-gradient-to-r from-yellow-400 to-orange-500 text-white px-3 py-1.5 rounded-xl text-xs font-bold shadow-lg backdrop-blur-sm border border-white/20 flex items-center gap-1">
@@ -668,7 +668,7 @@ const Scholarships: React.FC = () => {
                           <Building className="h-16 w-16 text-[#05294E]/30" />
                         </div>
                       )}
-                      
+
                       {/* Gradient Overlay for better text contrast */}
                       <div className="absolute inset-0 bg-gradient-to-t from-black/20 via-transparent to-transparent"></div>
                       
@@ -692,7 +692,7 @@ const Scholarships: React.FC = () => {
                          )}
                        </div>
                     </div>
-                    
+
                     {/* Card Content */}
                     <div className="p-6 flex-1 flex flex-col">
                       {/* Header Section */}
@@ -703,7 +703,7 @@ const Scholarships: React.FC = () => {
                         <h3 id={`featured-scholarship-title-${scholarship.id}`} className={`text-xl font-bold text-slate-900 mb-3 leading-tight line-clamp-2 group-hover:text-[#05294E] transition-colors duration-300`}>
                           {scholarship.title}
                         </h3>
-                        
+
                         {/* Field and Level Badges */}
                         <div className={`flex flex-wrap items-center gap-2 mb-3`}>
                           <span className={`px-2 sm:px-3 py-1 sm:py-1.5 rounded-lg text-xs font-semibold text-white shadow-sm ${getFieldBadgeColor(scholarship.field_of_study)} flex items-center gap-1`}>
@@ -715,7 +715,7 @@ const Scholarships: React.FC = () => {
                             <span className="whitespace-normal break-words">{levelOptions.find(option => option.value === scholarship.level)?.label || t('scholarshipsPage.filters.allLevels')}</span>
                           </span>
                         </div>
-                        
+
                         {/* University Info */}
                         <div className={`flex items-center text-slate-600 mb-4 p-3 bg-gradient-to-r from-slate-50 to-slate-100 rounded-xl border border-slate-200`}>
                           <Building className="h-4 w-4 mr-2 text-[#05294E] flex-shrink-0" />
@@ -726,7 +726,7 @@ const Scholarships: React.FC = () => {
                               : '********'}
                           </span>
                         </div>
-                        
+
                         {/* Program Details */}
                         <div className="grid grid-cols-1 gap-3 mb-4">
                           {/* Course Modality */}
@@ -750,7 +750,7 @@ const Scholarships: React.FC = () => {
                                 <span className="text-xs font-medium text-slate-600 ml-2">{t('scholarshipsPage.scholarshipCard.workAuthorization')}</span>
                               </div>
                               <div className="flex flex-wrap gap-1">
-                                {scholarship.work_permissions.map((permission, index) => (
+                                {scholarship.work_permissions.filter((p: any) => String(p).toUpperCase() !== 'F1').map((permission, index) => (
                                   <span
                                     key={index}
                                     className="px-2 py-1 bg-emerald-100 text-emerald-700 rounded-md text-xs font-semibold"
@@ -764,61 +764,61 @@ const Scholarships: React.FC = () => {
                         </div>
                       </div>
 
-                      {/* Financial Impact Section */}
-                      <div className="mb-6">
-                        <div className="bg-gradient-to-br from-white to-slate-50 rounded-2xl p-4 border border-slate-200 shadow-sm group-hover:shadow-md transition-shadow duration-300">
-                          <h4 className="text-sm font-bold text-slate-700 mb-3 flex items-center gap-2">
-                            <DollarSign className="h-4 w-4 text-green-600" />
-                            {t('scholarshipsPage.scholarshipCard.financialOverview')}
-                          </h4>
-                          
-                          <div className="space-y-2">
-                            <div className="flex items-center justify-between text-sm">
-                              <span className="text-slate-600">{t('scholarshipsPage.scholarshipCard.originalPrice')}</span>
-                              <span className={`font-bold ${savingsPercentage > 0 ? 'line-through text-slate-400' : 'text-blue-700'}`}>
-                                ${formatAmount(originalValue)}
-                              </span>
-                            </div>
-                            {savingsPercentage > 0 && (
+                        {/* Financial Impact Section */}
+                        <div className="mb-6">
+                          <div className="bg-gradient-to-br from-white to-slate-50 rounded-2xl p-4 border border-slate-200 shadow-sm group-hover:shadow-md transition-shadow duration-300">
+                            <h4 className="text-sm font-bold text-slate-700 mb-3 flex items-center gap-2">
+                              <DollarSign className="h-4 w-4 text-green-600" />
+                              {t('scholarshipsPage.scholarshipCard.financialOverview')}
+                            </h4>
+
+                            <div className="space-y-2">
                               <div className="flex items-center justify-between text-sm">
-                                <span className="text-slate-600">{t('scholarshipsPage.scholarshipCard.withScholarship')}</span>
-                                <span className="font-bold text-green-700">${formatAmount(scholarshipValue)}</span>
+                                <span className="text-slate-600">{t('scholarshipsPage.scholarshipCard.originalPrice')}</span>
+                                <span className={`font-bold ${savingsPercentage > 0 ? 'line-through text-slate-400' : 'text-blue-700'}`}>
+                                  ${formatAmount(originalValue)}
+                                </span>
                               </div>
-                            )}
-                            <div className="flex items-center justify-between text-xs text-slate-500 pt-2 border-t border-slate-200">
-                              <span>{t('scholarshipsPage.scholarshipCard.perCredit')}</span>
-                              <span>${formatAmount(scholarship.original_value_per_credit ?? 0)}</span>
-                            </div>
-                            
-                            {/* Subtle discount indicator */}
-                            {savingsPercentage > 0 && (
+                              {savingsPercentage > 0 && (
+                                <div className="flex items-center justify-between text-sm">
+                                  <span className="text-slate-600">{t('scholarshipsPage.scholarshipCard.withScholarship')}</span>
+                                  <span className="font-bold text-green-700">${formatAmount(scholarshipValue)}</span>
+                                </div>
+                              )}
+                              <div className="flex items-center justify-between text-xs text-slate-500 pt-2 border-t border-slate-200">
+                                <span>{t('scholarshipsPage.scholarshipCard.perCredit')}</span>
+                                <span>${formatAmount(scholarship.original_value_per_credit ?? 0)}</span>
+                              </div>
+
+                              {/* Subtle discount indicator */}
+                              {savingsPercentage > 0 && (
+                                <div className="pt-3 border-t border-slate-200">
+                                  <div className="flex items-center justify-between text-xs text-slate-500 mb-2">
+                                    <span>{t('scholarshipsPage.scholarshipCard.scholarshipDiscount')}</span>
+                                    <span className="font-semibold text-green-600">{savingsPercentage}% OFF</span>
+                                  </div>
+                                </div>
+                              )}
+
+                              {/* Application Fee Information */}
                               <div className="pt-3 border-t border-slate-200">
                                 <div className="flex items-center justify-between text-xs text-slate-500 mb-2">
-                                  <span>{t('scholarshipsPage.scholarshipCard.scholarshipDiscount')}</span>
-                                  <span className="font-semibold text-green-600">{savingsPercentage}% OFF</span>
+                                  <span>{t('scholarshipsPage.scholarshipCard.applicationFee')}</span>
+                                  <span className="font-semibold text-purple-600">
+                                    ${scholarship.application_fee_amount ? Number(scholarship.application_fee_amount).toFixed(2) : '350.00'}
+                                  </span>
                                 </div>
-                              </div>
-                            )}
-
-                            {/* Application Fee Information */}
-                            <div className="pt-3 border-t border-slate-200">
-                              <div className="flex items-center justify-between text-xs text-slate-500 mb-2">
-                                <span>{t('scholarshipsPage.scholarshipCard.applicationFee')}</span>
-                                                                 <span className="font-semibold text-purple-600">
-                                   ${scholarship.application_fee_amount ? Number(scholarship.application_fee_amount).toFixed(2) : '350.00'}
-                                 </span>
-                              </div>
-                              <div className="text-xs text-slate-400 text-center">
-                                {scholarship.application_fee_amount && Number(scholarship.application_fee_amount) !== 350 ? 
-                                  t('scholarshipsPage.scholarshipCard.customFee') : 
-                                  t('scholarshipsPage.scholarshipCard.standardFee')
-                                }
+                                <div className="text-xs text-slate-400 text-center">
+                                  {scholarship.application_fee_amount && Number(scholarship.application_fee_amount) !== 350 ?
+                                    t('scholarshipsPage.scholarshipCard.customFee') :
+                                    t('scholarshipsPage.scholarshipCard.standardFee')
+                                  }
+                                </div>
                               </div>
                             </div>
                           </div>
                         </div>
                       </div>
-                    </div>
 
                     {/* Action Buttons - Agora sempre na parte inferior e empilhados */}
                     <div className="px-6 pb-6 mt-auto">
@@ -879,21 +879,23 @@ const Scholarships: React.FC = () => {
           </div>
         )}
 
-                 {/* All Scholarships Section */}
-         <div className="mb-12" ref={scholarshipsSectionRef}>
-           <div className="text-center mb-8">
-             <h2 className="text-3xl md:text-4xl font-bold text-slate-900 mb-4">
-               <span className="text-[#05294E]">{t('scholarshipsPage.allScholarships.title')}</span>
-             </h2>
-             <p className="text-lg text-slate-600 max-w-2xl mx-auto">
-               {t('scholarshipsPage.allScholarships.description')}
-             </p>
-           </div>
-           
-           {/* Scholarships Grid */}
-           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
-             {scholarshipsLoading ? (
-               // Skeleton cards during loading
+        {/* All Scholarships Section */}
+        <div className="mb-12" ref={scholarshipsSectionRef}>
+          {filteredScholarships.length > 0 && (
+            <div className="text-center mb-8">
+              <h2 className="text-3xl md:text-4xl font-bold text-slate-900 mb-4">
+                <span className="text-[#05294E]">{t('scholarshipsPage.allScholarships.title')}</span>
+              </h2>
+              <p className="text-lg text-slate-600 max-w-2xl mx-auto">
+                {t('scholarshipsPage.allScholarships.description')}
+              </p>
+            </div>
+          )}
+
+          {/* Scholarships Grid */}
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
+            {scholarshipsLoading ? (
+              // Skeleton cards during loading
               Array.from({ length: pageSize }).map((_, i) => (
                  <div key={i} className="bg-white rounded-3xl shadow-lg border border-slate-200 p-6 animate-pulse">
                    <div className="h-6 bg-slate-200 rounded w-3/4 mb-4"></div>
@@ -990,20 +992,20 @@ const Scholarships: React.FC = () => {
                           <Building className="h-16 w-16 text-[#05294E]/30" />
                         </div>
                       )}
-                      
-                       {/* Gradient Overlay for better text contrast */}
-                       <div className="absolute inset-0 bg-gradient-to-t from-black/20 via-transparent to-transparent"></div>
-                       
-                       {/* Top Right Badges */}
-                       <div className="absolute top-4 right-4 flex flex-col gap-2">
-                         {/* Exclusive Badge */}
-                         {scholarship.is_exclusive && (
-                           <div className="bg-gradient-to-r from-[#D0151C] to-red-600 text-white px-3 py-1.5 rounded-xl text-xs font-bold shadow-lg backdrop-blur-sm border border-white/20 flex items-center gap-1">
-                             <Star className="h-3 w-3" />
-                             {t('common.exclusive')}
-                           </div>
-                         )}
-                       </div>
+
+                      {/* Gradient Overlay for better text contrast */}
+                      <div className="absolute inset-0 bg-gradient-to-t from-black/20 via-transparent to-transparent"></div>
+
+                      {/* Top Right Badges */}
+                      <div className="absolute top-4 right-4 flex flex-col gap-2">
+                        {/* Exclusive Badge */}
+                        {scholarship.is_exclusive && (
+                          <div className="bg-gradient-to-r from-[#D0151C] to-red-600 text-white px-3 py-1.5 rounded-xl text-xs font-bold shadow-lg backdrop-blur-sm border border-white/20 flex items-center gap-1">
+                            <Star className="h-3 w-3" />
+                            {t('common.exclusive')}
+                          </div>
+                        )}
+                      </div>
 
                        {/* Deadline Badge - Top Left */}
                        <div className="absolute top-4 left-4">
@@ -1040,31 +1042,31 @@ const Scholarships: React.FC = () => {
                             <span className="whitespace-normal break-words">{levelOptions.find(option => option.value === scholarship.level)?.label || 'Undergraduate'}</span>
                           </span>
                         </div>
-                         
-                         {/* University Info */}
-                         <div className={`flex items-center text-slate-600 mb-4 p-3 bg-gradient-to-r from-slate-50 to-slate-100 rounded-xl border border-slate-200`}>
-                           <Building className="h-4 w-4 mr-2 text-[#05294E] flex-shrink-0" />
-                           <span className="text-xs font-semibold mr-2 text-slate-500">{t('scholarshipsPage.scholarshipCard.university')}</span>
-                           <span className={`text-sm font-medium ${shouldApplyBlur ? 'blur-sm text-slate-400' : 'text-slate-700'}`}>
-                             {canViewSensitive
-                               ? (scholarship.university_name || scholarship.universities?.name || 'Unknown University')
-                               : '********'}
-                           </span>
-                         </div>
-                         {/* Program Details */}
-                         <div className="grid grid-cols-1 gap-3 mb-4">
-                           {/* Course Modality */}
-                           {scholarship.delivery_mode && (
-                             <div className="flex items-center justify-between p-3 bg-white rounded-lg border border-slate-200">
-                               <div className="flex items-center">
-                                 {getDeliveryModeIcon(scholarship.delivery_mode)}
-                                 <span className="text-xs font-medium text-slate-600 ml-2">{t('scholarshipsPage.scholarshipCard.studyMode')}</span>
-                               </div>
-                               <span className={`px-2 py-1 rounded-md text-xs font-semibold ${getDeliveryModeColor(scholarship.delivery_mode)}`}>
-                                 {getDeliveryModeLabel(scholarship.delivery_mode)}
-                               </span>
-                             </div>
-                           )}
+
+                        {/* University Info */}
+                        <div className={`flex items-center text-slate-600 mb-4 p-3 bg-gradient-to-r from-slate-50 to-slate-100 rounded-xl border border-slate-200`}>
+                          <Building className="h-4 w-4 mr-2 text-[#05294E] flex-shrink-0" />
+                          <span className="text-xs font-semibold mr-2 text-slate-500">{t('scholarshipsPage.scholarshipCard.university')}</span>
+                          <span className={`text-sm font-medium ${shouldApplyBlur ? 'blur-sm text-slate-400' : 'text-slate-700'}`}>
+                            {canViewSensitive
+                              ? (scholarship.university_name || scholarship.universities?.name || 'Unknown University')
+                              : '********'}
+                          </span>
+                        </div>
+                        {/* Program Details */}
+                        <div className="grid grid-cols-1 gap-3 mb-4">
+                          {/* Course Modality */}
+                          {scholarship.delivery_mode && (
+                            <div className="flex items-center justify-between p-3 bg-white rounded-lg border border-slate-200">
+                              <div className="flex items-center">
+                                {getDeliveryModeIcon(scholarship.delivery_mode)}
+                                <span className="text-xs font-medium text-slate-600 ml-2">{t('scholarshipsPage.scholarshipCard.studyMode')}</span>
+                              </div>
+                              <span className={`px-2 py-1 rounded-md text-xs font-semibold ${getDeliveryModeColor(scholarship.delivery_mode)}`}>
+                                {getDeliveryModeLabel(scholarship.delivery_mode)}
+                              </span>
+                            </div>
+                          )}
 
                            {/* Work Permissions */}
                            {scholarship.work_permissions && scholarship.work_permissions.length > 0 && (
@@ -1146,7 +1148,7 @@ const Scholarships: React.FC = () => {
                        </div>
 
 
-                     </div>
+                      </div>
 
                      {/* Action Buttons - Agora sempre na parte inferior e empilhados */}
                      <div className="px-6 pb-6 mt-auto">
@@ -1235,7 +1237,7 @@ const Scholarships: React.FC = () => {
          </div>
 
         {/* Call to Action */}
-        
+
         {/* Paginação */}
         <div className="flex justify-center items-center gap-4 mt-10">
           <button
@@ -1257,7 +1259,7 @@ const Scholarships: React.FC = () => {
           </button>
         </div>
       </div>
-      
+
       {/* Modal de Detalhes da Bolsa */}
       <ScholarshipDetailModal
         scholarship={selectedScholarshipForModal}
@@ -1267,7 +1269,7 @@ const Scholarships: React.FC = () => {
         user={user as any}
         userRole={user?.role || null}
       />
-      
+
       <SmartChat />
     </div>
   );

@@ -267,7 +267,7 @@ export const useAffiliateData = () => {
                   
                   // Scholarship Fee
                   if (profile.scholarship_applications?.some((app: any) => app.is_scholarship_fee_paid)) {
-                    const scholarshipFee = systemType === 'simplified' ? 550 : 900;
+                    const scholarshipFee = systemType === 'simplified' ? 900 : 900;
                     studentRevenue += scholarshipFee;
                   }
                   

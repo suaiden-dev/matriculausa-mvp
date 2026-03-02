@@ -4,7 +4,7 @@ import { supabase } from '../../lib/supabase';
 import { Scholarship } from '../../types';
 import { useAuth } from '../../hooks/useAuth';
 import { useQueryClient } from '@tanstack/react-query';
-import { setupCacheInvalidationListener } from '../../utils/cacheInvalidation';
+import { setupCacheInvalidationListener, CacheInvalidationEvent } from '../../utils/cacheInvalidation';
 
 import StudentDashboardLayout from './StudentDashboardLayout';
 import Overview from './Overview';
@@ -34,6 +34,8 @@ import { ZelleCheckoutPage } from '../../components/ZelleCheckoutPage';
 import I20ControlFeeSuccess from './I20ControlFeeSuccess';
 import I20ControlFeeError from './I20ControlFeeError';
 import IdentityVerification from './IdentityVerification';
+import ProcessoSeletivo from './ProcessoSeletivo';
+
 
 interface StudentProfile {
   id: string;
@@ -48,6 +50,9 @@ interface StudentProfile {
   cpf_document?: string;
   created_at: string;
   updated_at: string;
+  selection_process_fee_paid?: boolean;
+  selection_process_paid_at?: string | null;
+  selection_survey_passed?: boolean;
 }
 
 interface Application {
@@ -73,20 +78,15 @@ const StudentDashboard: React.FC = () => {
   const navigate = useNavigate();
   const [dashboardError, setDashboardError] = useState<string | null>(null);
   const [recentApplications, setRecentApplications] = useState<Application[]>([]);
-  
-  // Setup cache invalidation listener
-  useEffect(() => {
-    const cleanup = setupCacheInvalidationListener(queryClient);
-    return cleanup;
-  }, [queryClient]);
-  
 
-  
+
+
+
   // Fase 5: Referral Code System
-  const { 
-    hasUsedReferralCode, 
+  const {
+    hasUsedReferralCode,
     applyReferralCodeFromURL,
-    loading: referralLoading 
+    loading: referralLoading
   } = useReferralCode();
   const [showCongratulationsModal, setShowCongratulationsModal] = useState(false);
   const [referralResult, setReferralResult] = useState<any>(null);
@@ -139,8 +139,8 @@ const StudentDashboard: React.FC = () => {
             internal_fees,
             universities (id, name, logo_url, location, is_approved, university_fees_page_url)
           `);
-          // Removido filtro is_active=true - estudantes podem ver bolsas inativas mas não podem aplicar
-          
+        // Removido filtro is_active=true - estudantes podem ver bolsas inativas mas não podem aplicar
+
         if (scholarshipsError) {
           setScholarships([]);
           setDashboardError('Error fetching scholarships.');
@@ -173,11 +173,14 @@ const StudentDashboard: React.FC = () => {
         .select('*')
         .eq('user_id', user.id)
         .single();
+
+      console.log('🔍 [Dashboard Index] Raw Profile Data from DB:', profileData);
+
       if (error) {
         setProfile(null);
         setDashboardError('Error fetching profile.');
       } else if (profileData) {
-        setProfile({
+        const formattedProfile = {
           id: profileData.id,
           name: profileData.full_name || user.name || user.email?.split('@')[0] || '',
           email: user.email,
@@ -189,8 +192,13 @@ const StudentDashboard: React.FC = () => {
           english_proficiency: profileData.english_proficiency || '',
           cpf_document: profileData.cpf_document || '',
           created_at: profileData.created_at,
-          updated_at: profileData.updated_at
-        });
+          updated_at: profileData.updated_at,
+          selection_process_fee_paid: profileData.has_paid_selection_process_fee,
+          selection_process_paid_at: profileData.selection_process_paid_at,
+          selection_survey_passed: profileData.selection_survey_passed
+        };
+        console.log('🔍 [Dashboard Index] Formatted Profile State:', formattedProfile);
+        setProfile(formattedProfile);
       }
       setHasLoadedData(true);
     } catch (error) {
@@ -200,6 +208,27 @@ const StudentDashboard: React.FC = () => {
       setDashboardLoading(false);
     }
   }, [user, userProfile, hasLoadedData]);
+
+  // Setup cache invalidation listener
+  useEffect(() => {
+    const cleanup = setupCacheInvalidationListener(queryClient);
+
+    // Além de invalidar o React Query, forçar o recarregamento dos dados locais do dashboard
+    const handleInvalidation = (e: any) => {
+      const { event } = e.detail;
+      if (event === CacheInvalidationEvent.PROFILE_UPDATED || event === CacheInvalidationEvent.PAYMENT_COMPLETED) {
+        console.log('🔄 [Dashboard Index] Refreshing data due to cache invalidation event:', event);
+        loadDashboardData();
+      }
+    };
+
+    window.addEventListener('cache-invalidation', handleInvalidation as EventListener);
+
+    return () => {
+      cleanup();
+      window.removeEventListener('cache-invalidation', handleInvalidation as EventListener);
+    };
+  }, [queryClient, loadDashboardData]);
 
   useEffect(() => {
     if (user && userProfile && !hasLoadedData) {
@@ -305,186 +334,188 @@ const StudentDashboard: React.FC = () => {
   const isChatRoute = location.pathname.startsWith('/student/dashboard/chat');
 
   return (
-      <StudentDashboardLayout user={user} profile={profile} loading={dashboardLoading}>
-        {/* Área de proteção para o botão */}
-        <div className="floating-cart-area" />
-        {/* Botão do Carrinho */}
-        {!isChatRoute && (
-          <div
+    <StudentDashboardLayout user={user} profile={profile} loading={dashboardLoading}>
+      {/* Área de proteção para o botão */}
+      <div className="floating-cart-area" />
+      {/* Botão do Carrinho */}
+      {!isChatRoute && (
+        <div
+          style={{
+            position: 'fixed',
+            bottom: '20px',
+            right: '20px',
+            zIndex: 99999,
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center'
+          }}
+        >
+          <button
+            onClick={() => navigate('/student/dashboard/cart')}
             style={{
-              position: 'fixed',
-              bottom: '20px',
-              right: '20px',
-              zIndex: 99999,
+              backgroundColor: '#05294E',
+              color: 'white',
+              borderRadius: '50%',
+              width: '60px',
+              height: '60px',
               display: 'flex',
               alignItems: 'center',
-              justifyContent: 'center'
+              justifyContent: 'center',
+              border: '3px solid white',
+              boxShadow: '0 8px 32px rgba(5, 41, 78, 0.3)',
+              cursor: 'pointer',
+              transition: 'all 0.2s ease',
+              position: 'relative',
+              zIndex: 99999,
+              minWidth: '60px',
+              minHeight: '60px',
+              outline: 'none'
             }}
+            onMouseDown={(e) => e.currentTarget.style.transform = 'scale(0.95)'}
+            onMouseUp={(e) => e.currentTarget.style.transform = 'scale(1)'}
+            onTouchStart={(e) => e.currentTarget.style.transform = 'scale(0.95)'}
+            onTouchEnd={(e) => e.currentTarget.style.transform = 'scale(1)'}
+            aria-label={`Cart with ${cart.length} items`}
           >
-            <button
-              onClick={() => navigate('/student/dashboard/cart')}
-              style={{
-                backgroundColor: '#05294E',
-                color: 'white',
-                borderRadius: '50%',
-                width: '60px',
-                height: '60px',
-                display: 'flex',
-                alignItems: 'center',
-                justifyContent: 'center',
-                border: '3px solid white',
-                boxShadow: '0 8px 32px rgba(5, 41, 78, 0.3)',
-                cursor: 'pointer',
-                transition: 'all 0.2s ease',
-                position: 'relative',
-                zIndex: 99999,
-                minWidth: '60px',
-                minHeight: '60px',
-                outline: 'none'
-              }}
-              onMouseDown={(e) => e.currentTarget.style.transform = 'scale(0.95)'}
-              onMouseUp={(e) => e.currentTarget.style.transform = 'scale(1)'}
-              onTouchStart={(e) => e.currentTarget.style.transform = 'scale(0.95)'}
-              onTouchEnd={(e) => e.currentTarget.style.transform = 'scale(1)'}
-              aria-label={`Cart with ${cart.length} items`}
-            >
-              <GraduationCap style={{ width: '28px', height: '28px', color: 'white' }} />
-              {cart.length > 0 && (
-                <span 
-                  style={{
-                    position: 'absolute',
-                    top: '-8px',
-                    right: '-8px',
-                    backgroundColor: '#ef4444',
-                    color: 'white',
-                    borderRadius: '50%',
-                    width: '28px',
-                    height: '28px',
-                    display: 'flex',
-                    alignItems: 'center',
-                    justifyContent: 'center',
-                    fontSize: '14px',
-                    fontWeight: 'bold',
-                    border: '2px solid white',
-                    zIndex: 100000
-                  }}
-                >
-                  {cart.length > 99 ? '99+' : cart.length}
-                </span>
-              )}
-            </button>
-          </div>
-        )}
-        <Routes>
-          <Route 
-            index 
-            element={
-              dashboardLoading ? (
-                <div className="p-8 text-center text-lg text-slate-500">Loading dashboard...</div>
-              ) : dashboardError ? (
-                <div className="p-8 text-center text-red-500">{dashboardError}</div>
-              ) : (
-                <>
-                  {console.log('🔍 [StudentDashboard] Renderizando Overview com stats:', stats)}
-                  <Overview 
-                    profile={profile}
-                    scholarships={scholarships}
-                    applications={applications}
-                    stats={stats}
-                    onApplyScholarship={handleApplyScholarship}
-                    recentApplications={recentApplications}
-                  />
-                </>
-              )
-            } 
-          />
-          <Route 
-            path="overview" 
-            element={
-              dashboardLoading ? (
-                <div className="p-8 text-center text-lg text-slate-500">Loading dashboard...</div>
-              ) : dashboardError ? (
-                <div className="p-8 text-center text-red-500">{dashboardError}</div>
-              ) : (
-                <>
-                  {console.log('🔍 [StudentDashboard] Renderizando Overview (path) com stats:', stats)}
-                  <Overview 
-                    profile={profile}
-                    scholarships={scholarships}
-                    applications={applications}
-                    stats={stats}
-                    onApplyScholarship={handleApplyScholarship}
-                    recentApplications={recentApplications}
-                  />
-                </>
-              )
-            } 
-          />
-          <Route path="cart" element={<CartPage />} />
-          <Route 
-            path="scholarships" 
-            element={
-              <ScholarshipBrowser 
-                scholarships={scholarships}
-                applications={applications}
-              />
-            } 
-          />
-          <Route 
-            path="applications" 
-            element={
-              <MyApplications />
-            } 
-          />
-          <Route 
-            path="application/:applicationId/chat" 
-            element={
-              <ApplicationChatPage />
-            } 
-          />
-          <Route 
-            path="chat" 
-            element={
-              <StudentChatPage />
-            } 
-          />
-          <Route 
-            path="profile" 
-            element={
-              <ProfileManagement 
-                profile={profile}
-                onUpdateProfile={handleProfileUpdate}
-              />
-            } 
-          />
-          <Route path="documents-and-scholarship-choice" element={<DocumentsAndScholarshipChoice />} />
-          <Route path="college-enrollment-checkout" element={<CollegeEnrollmentCheckout />} />
-          <Route path="/scholarship-fee-success" element={<ScholarshipFeeSuccess />} />
-          <Route path="/scholarship-fee-error" element={<ScholarshipFeeError />} />
-          <Route path="/selection-process-fee-success" element={<SelectionProcessFeeSuccess />} />
-          <Route path="/selection-process-fee-error" element={<SelectionProcessFeeError />} />
-          <Route path="/application-fee-success" element={<ApplicationFeeSuccess />} />
-          <Route path="/application-fee-error" element={<ApplicationFeeError />} />
-          <Route path="i20-control-fee-success" element={<I20ControlFeeSuccess />} />
-          <Route path="i20-control-fee-error" element={<I20ControlFeeError />} />
-          <Route path="application-fee" element={<ApplicationFeePage />} />
-          <Route path="rewards" element={<MatriculaRewards />} />
-          <Route path="rewards/store" element={<RewardsStore />} />
-          <Route path="manual-review" element={<ManualReview />} />
-          <Route path="zelle-payment" element={<ZelleCheckoutPage />} />
-          <Route path="identity-verification" element={<IdentityVerification />} />
-        </Routes>
-        
-        {/* Fase 5: Modal de Parabéns para Código de Referência */}
-        {referralResult && (
-          <ReferralCongratulationsModal
-            isOpen={showCongratulationsModal}
-            onClose={() => setShowCongratulationsModal(false)}
-            discountAmount={referralResult.discount_amount || 50}
-            affiliateCode={referralResult.affiliate_code || 'N/A'}
-          />
-        )}
-      </StudentDashboardLayout>
+            <GraduationCap style={{ width: '28px', height: '28px', color: 'white' }} />
+            {cart.length > 0 && (
+              <span
+                style={{
+                  position: 'absolute',
+                  top: '-8px',
+                  right: '-8px',
+                  backgroundColor: '#ef4444',
+                  color: 'white',
+                  borderRadius: '50%',
+                  width: '28px',
+                  height: '28px',
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  fontSize: '14px',
+                  fontWeight: 'bold',
+                  border: '2px solid white',
+                  zIndex: 100000
+                }}
+              >
+                {cart.length > 99 ? '99+' : cart.length}
+              </span>
+            )}
+          </button>
+        </div>
+      )}
+      <Routes>
+        <Route
+          index
+          element={
+            dashboardLoading ? (
+              <div className="p-8 text-center text-lg text-slate-500">Loading dashboard...</div>
+            ) : dashboardError ? (
+              <div className="p-8 text-center text-red-500">{dashboardError}</div>
+            ) : (
+              <>
+                {console.log('🔍 [StudentDashboard] Renderizando Overview com stats:', stats)}
+                <Overview
+                  profile={profile}
+                  scholarships={scholarships}
+                  applications={applications}
+                  stats={stats}
+                  onApplyScholarship={handleApplyScholarship}
+                  recentApplications={recentApplications}
+                />
+              </>
+            )
+          }
+        />
+        <Route
+          path="overview"
+          element={
+            dashboardLoading ? (
+              <div className="p-8 text-center text-lg text-slate-500">Loading dashboard...</div>
+            ) : dashboardError ? (
+              <div className="p-8 text-center text-red-500">{dashboardError}</div>
+            ) : (
+              <>
+                {console.log('🔍 [StudentDashboard] Renderizando Overview (path) com stats:', stats)}
+                <Overview
+                  profile={profile}
+                  scholarships={scholarships}
+                  applications={applications}
+                  stats={stats}
+                  onApplyScholarship={handleApplyScholarship}
+                  recentApplications={recentApplications}
+                />
+              </>
+            )
+          }
+        />
+        <Route path="cart" element={<CartPage />} />
+        <Route
+          path="scholarships"
+          element={
+            <ScholarshipBrowser
+              scholarships={scholarships}
+              applications={applications}
+            />
+          }
+        />
+        <Route
+          path="applications"
+          element={
+            <MyApplications />
+          }
+        />
+        <Route
+          path="application/:applicationId/chat"
+          element={
+            <ApplicationChatPage />
+          }
+        />
+        <Route
+          path="chat"
+          element={
+            <StudentChatPage />
+          }
+        />
+        <Route
+          path="profile"
+          element={
+            <ProfileManagement
+              profile={profile}
+              onUpdateProfile={handleProfileUpdate}
+            />
+          }
+        />
+        <Route path="documents-and-scholarship-choice" element={<DocumentsAndScholarshipChoice />} />
+        <Route path="college-enrollment-checkout" element={<CollegeEnrollmentCheckout />} />
+        <Route path="/scholarship-fee-success" element={<ScholarshipFeeSuccess />} />
+        <Route path="/scholarship-fee-error" element={<ScholarshipFeeError />} />
+        <Route path="/selection-process-fee-success" element={<SelectionProcessFeeSuccess />} />
+        <Route path="/selection-process-fee-error" element={<SelectionProcessFeeError />} />
+        <Route path="/application-fee-success" element={<ApplicationFeeSuccess />} />
+        <Route path="/application-fee-error" element={<ApplicationFeeError />} />
+        <Route path="i20-control-fee-success" element={<I20ControlFeeSuccess />} />
+        <Route path="i20-control-fee-error" element={<I20ControlFeeError />} />
+        <Route path="application-fee" element={<ApplicationFeePage />} />
+        <Route path="rewards" element={<MatriculaRewards />} />
+        <Route path="rewards/store" element={<RewardsStore />} />
+        <Route path="manual-review" element={<ManualReview />} />
+        <Route path="zelle-payment" element={<ZelleCheckoutPage />} />
+        <Route path="identity-verification" element={<IdentityVerification />} />
+        <Route path="selection-survey" element={<ProcessoSeletivo />} />
+
+      </Routes>
+
+      {/* Fase 5: Modal de Parabéns para Código de Referência */}
+      {referralResult && (
+        <ReferralCongratulationsModal
+          isOpen={showCongratulationsModal}
+          onClose={() => setShowCongratulationsModal(false)}
+          discountAmount={referralResult.discount_amount || 50}
+          affiliateCode={referralResult.affiliate_code || 'N/A'}
+        />
+      )}
+    </StudentDashboardLayout>
   );
 };
 

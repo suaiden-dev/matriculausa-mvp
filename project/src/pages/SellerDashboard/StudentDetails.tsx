@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { 
-  User, 
+import {
+  User,
   FileText,
   CheckCircle2,
   XCircle,
@@ -68,7 +68,7 @@ interface StudentDetailsProps {
 
 const StudentDetails: React.FC<StudentDetailsProps> = ({ studentId, profileId, onRefresh, onBack }) => {
   const navigate = useNavigate();
-  
+
   // ✅ Usar o hook centralizado para buscar dados do estudante
   const {
     studentDocuments: hookStudentDocuments,
@@ -77,7 +77,7 @@ const StudentDetails: React.FC<StudentDetailsProps> = ({ studentId, profileId, o
     allApplications: hookAllApplications,
     loadStudentDetails: hookLoadStudentDetails
   } = useStudentDetails();
-  
+
   // Estados locais do Seller (não duplicados do hook)
   const [studentInfo, setStudentInfo] = useState<StudentInfo | null>(null);
   const [loading, setLoading] = useState(true);
@@ -87,23 +87,23 @@ const StudentDetails: React.FC<StudentDetailsProps> = ({ studentId, profileId, o
   const [documentsLoaded, setDocumentsLoaded] = useState(false);
   const [realScholarshipApplication, setRealScholarshipApplication] = useState<any>(null);
   const [loadingApplication, setLoadingApplication] = useState(false);
-  
+
   // Estados para Transfer Form
   const [transferFormUploads, setTransferFormUploads] = useState<any[]>([]);
   const [loadingTransferFormUploads, setLoadingTransferFormUploads] = useState(false);
-  
+
   // Estado para Application Progress Card
   const [isProgressExpanded, setIsProgressExpanded] = useState(false);
-  
+
   // Usar dados do hook
   const scholarshipApplication = hookScholarshipApplication;
   const studentDocuments = hookStudentDocuments;
   const documentRequests = hookDocumentRequests;
-  
+
   // Hook para configurações dinâmicas de taxas (usando student_id para ver overrides do estudante)
   const { getFeeAmount, formatFeeAmount, hasOverride, userSystemType } = useFeeConfig(studentInfo?.student_id);
-  
-  
+
+
   // Estados para taxas dinâmicas do estudante
   const [studentPackageFees, setStudentPackageFees] = useState<any>(null);
   const [dependents, setDependents] = useState<number>(0);
@@ -120,7 +120,7 @@ const StudentDetails: React.FC<StudentDetailsProps> = ({ studentId, profileId, o
       console.log('🔍 [StudentDetails] Using simplified values for student (from useFeeConfig)');
       return {
         selectionProcessFee: 350,
-        scholarshipFee: 550,
+        scholarshipFee: 900,
         i20ControlFee: 900,
         isSimplified: true
       };
@@ -136,23 +136,23 @@ const StudentDetails: React.FC<StudentDetailsProps> = ({ studentId, profileId, o
   };
 
   const studentFees = getStudentFees();
-  
+
   // Estados para edição de Scholarship Range
   const [isEditingPackage, setIsEditingPackage] = useState(false);
   const [selectedPackageId, setSelectedPackageId] = useState<string | null>(null);
   const [isUpdatingPackage, setIsUpdatingPackage] = useState(false);
-  
+
   // Função para buscar taxas do pacote do estudante
   const loadStudentPackageFees = useCallback(async (studentUserId: string) => {
     if (!studentUserId) return;
-    
+
     try {
       console.log('🔍 [STUDENT_DETAILS] Buscando taxas do pacote para estudante:', studentUserId);
-      
+
       const { data: packageFees, error } = await supabase.rpc('get_user_package_fees', {
         user_id_param: studentUserId
       });
-      
+
       if (error) {
         console.error('❌ [STUDENT_DETAILS] Erro ao buscar taxas do pacote:', error);
         setStudentPackageFees(null);
@@ -211,7 +211,7 @@ const StudentDetails: React.FC<StudentDetailsProps> = ({ studentId, profileId, o
       }
 
       console.log('🔍 [StudentDetails] Profile data loaded:', profileData);
-      
+
       // Se não tem desired_scholarship_range, retornar null
       if (!profileData.desired_scholarship_range) {
         console.log('🔍 [StudentDetails] No desired scholarship range set');
@@ -225,7 +225,7 @@ const StudentDetails: React.FC<StudentDetailsProps> = ({ studentId, profileId, o
         id: `range-${desiredRange}`, // ID baseado no range
         package_name: `Scholarship Range $${desiredRange}+`
       };
-      
+
       console.log('🔍 [StudentDetails] Package fees set:', packageFees);
       setStudentPackageFees(packageFees);
     } catch (error) {
@@ -254,7 +254,7 @@ const StudentDetails: React.FC<StudentDetailsProps> = ({ studentId, profileId, o
     try {
       // Extrair o valor do range do ID selecionado (formato: range-3800)
       const rangeValue = selectedPackageId.replace('range-', '');
-      
+
       const { error } = await supabase
         .from('user_profiles')
         .update({ desired_scholarship_range: Number(rangeValue) })
@@ -294,12 +294,12 @@ const StudentDetails: React.FC<StudentDetailsProps> = ({ studentId, profileId, o
 
       // ✅ Buscar informações adicionais específicas do Seller (taxas, RPC, etc)
       console.log('🔍 [STUDENT_DETAILS] Chamando RPC get_student_detailed_info para studentId:', studentId);
-       
+
       const { data: studentData, error: studentError } = await supabase.rpc(
         'get_student_detailed_info',
         { target_student_id: studentId }
       );
-       
+
       if (studentError) {
         console.error('❌ [STUDENT_DETAILS] Erro na RPC:', studentError);
         throw new Error(`Failed to load student info: ${studentError.message}`);
@@ -314,13 +314,13 @@ const StudentDetails: React.FC<StudentDetailsProps> = ({ studentId, profileId, o
         };
         console.log('✅ [STUDENT_DETAILS] Dados processados do estudante:', studentInfoData);
         setStudentInfo(studentInfoData);
-        
+
         // Buscar taxas do pacote do estudante
         if (studentInfoData.student_id) {
           loadStudentPackageFees(studentInfoData.student_id);
           loadDependents(studentInfoData.student_id);
         }
-        
+
         // Carregar scholarship range do perfil
         if (profileId) {
           loadScholarshipRange(profileId);
@@ -328,7 +328,7 @@ const StudentDetails: React.FC<StudentDetailsProps> = ({ studentId, profileId, o
       } else {
         console.warn('⚠️ [STUDENT_DETAILS] Nenhum dado retornado da RPC');
         setStudentInfo(null);
-       }
+      }
 
       // ✅ Carregar histórico de taxas (específico do Seller)
       const { error: feesError } = await supabase.rpc(
@@ -355,7 +355,7 @@ const StudentDetails: React.FC<StudentDetailsProps> = ({ studentId, profileId, o
       // ✅ Marcar documentos como carregados
       setDocumentsLoaded(true);
 
-       console.log('🚀 [STUDENT_DETAILS] loadStudentDetails concluída com sucesso');
+      console.log('🚀 [STUDENT_DETAILS] loadStudentDetails concluída com sucesso');
 
     } catch (err) {
       console.error('❌ [STUDENT_DETAILS] Erro ao carregar detalhes do estudante:', err);
@@ -369,22 +369,22 @@ const StudentDetails: React.FC<StudentDetailsProps> = ({ studentId, profileId, o
   // Funções utilitárias do DocumentsView
   const getDocumentInfo = (upload: any) => {
     const baseUrl = 'https://fitpynguasqqutuhzifx.supabase.co/storage/v1/object/public/document-attachments/';
-    
+
     let filename = 'Document';
     if (upload.file_url) {
       const urlParts = upload.file_url.split('/');
       filename = urlParts[urlParts.length - 1] || 'Document';
     }
-    
+
     const fullUrl = upload.file_url ? `${baseUrl}${upload.file_url}` : null;
-    
+
     console.log('🔗 [DOCUMENT VIEW] URL construction:', {
       original: upload.file_url,
       baseUrl,
       fullUrl,
       filename
     });
-    
+
     return {
       filename,
       fullUrl
@@ -393,11 +393,11 @@ const StudentDetails: React.FC<StudentDetailsProps> = ({ studentId, profileId, o
 
   const getAcceptanceLetterUrl = (application: any) => {
     if (!application?.acceptance_letter_url) return null;
-    
+
     if (application.acceptance_letter_url.startsWith('http')) {
       return application.acceptance_letter_url;
     }
-    
+
     const baseUrl = 'https://fitpynguasqqutuhzifx.supabase.co/storage/v1/object/public/document-attachments/';
     return `${baseUrl}${application.acceptance_letter_url}`;
   };
@@ -405,16 +405,16 @@ const StudentDetails: React.FC<StudentDetailsProps> = ({ studentId, profileId, o
   // Função para buscar transfer form uploads
   const fetchTransferFormUploads = async (applicationId: string) => {
     if (!applicationId) return;
-    
+
     setLoadingTransferFormUploads(true);
-    
+
     try {
       const { data, error } = await supabase
         .from('transfer_form_uploads')
         .select('*')
         .eq('application_id', applicationId)
         .order('uploaded_at', { ascending: false });
-      
+
       if (!error && data) {
         setTransferFormUploads(data);
       } else if (error) {
@@ -454,7 +454,7 @@ const StudentDetails: React.FC<StudentDetailsProps> = ({ studentId, profileId, o
             const paidApp = hookAllApplications.find(
               (app: any) => app.is_application_fee_paid === true
             );
-            
+
             if (paidApp) {
               console.log('⚠️ [DOCUMENTS VIEW] No acceptance letter found, using first paid application:', paidApp);
               setRealScholarshipApplication(paidApp);
@@ -484,7 +484,7 @@ const StudentDetails: React.FC<StudentDetailsProps> = ({ studentId, profileId, o
 
   // Usar a aplicação real se disponível, senão usar a passada como prop
   const currentApplication = realScholarshipApplication || scholarshipApplication;
-  
+
   // Debug: mostrar qual aplicação está sendo usada
   useEffect(() => {
     console.log('🔍 [DOCUMENTS VIEW] Current application:', currentApplication);
@@ -510,7 +510,7 @@ const StudentDetails: React.FC<StudentDetailsProps> = ({ studentId, profileId, o
         setRealPaidAmounts(null);
         return;
       }
-      
+
       try {
         // ✅ CORREÇÃO: Usar getDisplayAmounts para exibição (valores "Zelle" sem taxas)
         const amounts = await getDisplayAmounts(studentId, ['selection_process', 'scholarship', 'i20_control', 'application']);
@@ -530,7 +530,7 @@ const StudentDetails: React.FC<StudentDetailsProps> = ({ studentId, profileId, o
         setCouponUsageData({});
         return;
       }
-      
+
       try {
         // Buscar todos os usos de cupons promocionais para este estudante
         // Incluir registros que foram realmente usados em pagamentos (com payment_id ou individual_fee_payment_id)
@@ -541,7 +541,7 @@ const StudentDetails: React.FC<StudentDetailsProps> = ({ studentId, profileId, o
           .eq('user_id', studentId)
           .not('payment_id', 'is', null)
           .order('used_at', { ascending: false });
-        
+
         const { data: couponUsageWithIndividualFee, error: error2 } = await supabase
           .from('promotional_coupon_usage')
           .select('fee_type, final_amount, original_amount, discount_amount, coupon_code, used_at, individual_fee_payment_id, payment_id')
@@ -556,7 +556,7 @@ const StudentDetails: React.FC<StudentDetailsProps> = ({ studentId, profileId, o
           ...(couponUsageWithPayment || []),
           ...(couponUsageWithIndividualFee || [])
         ];
-        
+
         // Remover duplicados baseado em fee_type + used_at (manter o mais recente)
         const uniqueCouponUsage = allCouponUsage.reduce((acc: any[], current: any) => {
           const existing = acc.find((item: any) => item.fee_type === current.fee_type);
@@ -573,8 +573,8 @@ const StudentDetails: React.FC<StudentDetailsProps> = ({ studentId, profileId, o
           }
           return acc;
         }, []);
-        
-        const couponUsage = uniqueCouponUsage.sort((a: any, b: any) => 
+
+        const couponUsage = uniqueCouponUsage.sort((a: any, b: any) =>
           new Date(b.used_at).getTime() - new Date(a.used_at).getTime()
         );
 
@@ -586,7 +586,7 @@ const StudentDetails: React.FC<StudentDetailsProps> = ({ studentId, profileId, o
 
         // Criar um mapa de fee_type -> dados do cupom (usar o mais recente para cada fee_type)
         const couponMap: Record<string, { final_amount: number; original_amount: number; discount_amount: number; coupon_code: string }> = {};
-        
+
         if (couponUsage && couponUsage.length > 0) {
           couponUsage.forEach((usage: any) => {
             // Normalizar fee_type (i20_control_fee -> i20_control, application_fee -> application)
@@ -619,7 +619,7 @@ const StudentDetails: React.FC<StudentDetailsProps> = ({ studentId, profileId, o
         setCouponUsageData({});
       }
     };
-    
+
     loadCouponUsage();
   }, [studentId]);
 
@@ -981,7 +981,7 @@ const StudentDetails: React.FC<StudentDetailsProps> = ({ studentId, profileId, o
 
   const getStepStatus = useCallback((step: { key: string; label: string }) => {
     if (!studentInfo) return 'pending';
-    
+
     switch (step.key) {
       case 'selection_fee':
         return studentInfo.has_paid_selection_process_fee ? 'completed' : 'pending';
@@ -1004,8 +1004,8 @@ const StudentDetails: React.FC<StudentDetailsProps> = ({ studentId, profileId, o
         return 'pending';
       case 'transfer_form':
         if (studentInfo.student_process_type !== 'transfer') return 'skipped';
-        const transferApp = hookAllApplications?.find((app: any) => 
-          app.student_process_type === 'transfer' && 
+        const transferApp = hookAllApplications?.find((app: any) =>
+          app.student_process_type === 'transfer' &&
           (app.transfer_form_status === 'approved' || app.transfer_form_status === 'sent')
         );
         return transferApp ? 'completed' : 'pending';
@@ -1018,14 +1018,14 @@ const StudentDetails: React.FC<StudentDetailsProps> = ({ studentId, profileId, o
 
   const getCurrentStep = useCallback(() => {
     if (!studentInfo) return null;
-    
+
     for (let i = 0; i < steps.length; i++) {
       const status = getStepStatus(steps[i]);
       if (status === 'in_progress' || status === 'pending') {
         return { step: steps[i], index: i, status };
       }
     }
-    
+
     // Se todos estão completos, retorna o último
     return { step: steps[steps.length - 1], index: steps.length - 1, status: 'completed' };
   }, [studentInfo, steps, getStepStatus]);
@@ -1212,7 +1212,7 @@ const StudentDetails: React.FC<StudentDetailsProps> = ({ studentId, profileId, o
     console.log('🔍 [STUDENT_DETAILS] Loading state:', loading);
     console.log('🔍 [STUDENT_DETAILS] Error state:', error);
     console.log('🔍 [STUDENT_DETAILS] studentId:', studentId);
-    
+
     return (
       <div className="flex items-center justify-center min-h-screen">
         <div className="text-center">
@@ -1238,7 +1238,7 @@ const StudentDetails: React.FC<StudentDetailsProps> = ({ studentId, profileId, o
   // Se um estudante está selecionado, mostrar detalhes
   console.log('🔍 [STUDENT_DETAILS] Renderizando componente com studentInfo:', studentInfo);
   console.log('🔍 [STUDENT_DETAILS] application_status no render:', studentInfo?.application_status);
-  
+
   return (
     <div className="min-h-screen bg-slate-50">
       {/* Header Section */}
@@ -1291,19 +1291,17 @@ const StudentDetails: React.FC<StudentDetailsProps> = ({ studentId, profileId, o
             {TABS.map(tab => (
               <button
                 key={tab.id}
-                className={`group flex items-center py-4 px-1 border-b-2 font-medium text-sm transition-all duration-200 whitespace-nowrap ${
-                  activeTab === tab.id 
-                    ? 'border-[#05294E] text-[#05294E]' 
+                className={`group flex items-center py-4 px-1 border-b-2 font-medium text-sm transition-all duration-200 whitespace-nowrap ${activeTab === tab.id
+                    ? 'border-[#05294E] text-[#05294E]'
                     : 'border-transparent text-slate-500 hover:text-slate-700 hover:border-slate-300'
-                }`}
+                  }`}
                 onClick={() => setActiveTab(tab.id as any)}
                 type="button"
                 aria-selected={activeTab === tab.id}
                 role="tab"
               >
-                <tab.icon className={`w-5 h-5 mr-2 transition-colors ${
-                  activeTab === tab.id ? 'text-[#05294E]' : 'text-slate-400 group-hover:text-slate-600'
-                }`} />
+                <tab.icon className={`w-5 h-5 mr-2 transition-colors ${activeTab === tab.id ? 'text-[#05294E]' : 'text-slate-400 group-hover:text-slate-600'
+                  }`} />
                 {tab.label}
               </button>
             ))}
@@ -1382,9 +1380,9 @@ const StudentDetails: React.FC<StudentDetailsProps> = ({ studentId, profileId, o
                           <dd className="text-base text-slate-900 mt-1">
                             {studentInfo.student_process_type ? (
                               studentInfo.student_process_type === 'initial' ? 'Initial - F-1 Visa Required' :
-                              studentInfo.student_process_type === 'transfer' ? 'Transfer - Current F-1 Student' :
-                              studentInfo.student_process_type === 'change_of_status' ? 'Change of Status - From Other Visa' :
-                              studentInfo.student_process_type
+                                studentInfo.student_process_type === 'transfer' ? 'Transfer - Current F-1 Student' :
+                                  studentInfo.student_process_type === 'change_of_status' ? 'Change of Status - From Other Visa' :
+                                    studentInfo.student_process_type
                             ) : (
                               <span className="text-slate-500 italic">Not specified</span>
                             )}
@@ -1394,12 +1392,10 @@ const StudentDetails: React.FC<StudentDetailsProps> = ({ studentId, profileId, o
                           <dt className="text-sm font-medium text-slate-600">Application Fee</dt>
                           <dd className="mt-1">
                             <div className="flex items-center space-x-2">
-                              <div className={`w-2 h-2 rounded-full ${
-                                studentInfo.is_application_fee_paid ? 'bg-green-500' : 'bg-red-500'
-                              }`}></div>
-                              <span className={`text-sm font-medium ${
-                                studentInfo.is_application_fee_paid ? 'text-green-700' : 'text-red-700'
-                              }`}>
+                              <div className={`w-2 h-2 rounded-full ${studentInfo.is_application_fee_paid ? 'bg-green-500' : 'bg-red-500'
+                                }`}></div>
+                              <span className={`text-sm font-medium ${studentInfo.is_application_fee_paid ? 'text-green-700' : 'text-red-700'
+                                }`}>
                                 {studentInfo.is_application_fee_paid ? 'Paid' : 'Pending'}
                               </span>
                             </div>
@@ -1414,9 +1410,9 @@ const StudentDetails: React.FC<StudentDetailsProps> = ({ studentId, profileId, o
                                 const requiredDocs = ['passport', 'diploma', 'funds_proof'];
                                 const appDocuments = (studentInfo as any)?.documents || [];
                                 const docsFromProps = Array.isArray(studentDocuments) ? studentDocuments : [];
-                                
+
                                 let documentsStatus: string | undefined = undefined;
-                                
+
                                 // Preferir documentos vindos por props (estão mais atualizados)
                                 if (Array.isArray(docsFromProps) && docsFromProps.length > 0) {
                                   const allApproved = requiredDocs.every((t) => {
@@ -1467,7 +1463,7 @@ const StudentDetails: React.FC<StudentDetailsProps> = ({ studentId, profileId, o
                                   // Último recurso: usar documents_status vindo do perfil
                                   documentsStatus = studentInfo?.documents_status || 'pending';
                                 }
-                                
+
                                 const statusDisplay = getDocumentStatusDisplay(documentsStatus);
                                 return (
                                   <>
@@ -1488,11 +1484,11 @@ const StudentDetails: React.FC<StudentDetailsProps> = ({ studentId, profileId, o
                               const acceptanceStatus = (studentInfo as any)?.acceptance_letter_status as string | undefined;
                               const appStatus = (studentInfo as any)?.status || (studentInfo as any)?.application_status as string | undefined;
                               const documentsStatus = (studentInfo as any)?.documents_status as string | undefined;
-                              
+
                               // Verificar se há carta de aceite na aplicação atual
-                              const hasAcceptanceLetter = currentApplication?.acceptance_letter_url && 
-                                                         currentApplication.acceptance_letter_url.trim() !== '';
-                              
+                              const hasAcceptanceLetter = currentApplication?.acceptance_letter_url &&
+                                currentApplication.acceptance_letter_url.trim() !== '';
+
                               // Debug logs
                               console.log('🔍 [ENROLLMENT_STATUS] Debug:', {
                                 acceptanceStatus,
@@ -1502,26 +1498,26 @@ const StudentDetails: React.FC<StudentDetailsProps> = ({ studentId, profileId, o
                                 currentApplicationAcceptanceLetter: currentApplication?.acceptance_letter_url,
                                 studentInfo: studentInfo
                               });
-                              
+
                               // Para usuários com aplicação de bolsa: verificar status da aplicação
                               // Para usuários sem aplicação de bolsa: verificar documents_status
                               // ✅ CORREÇÃO: Incluir verificação de 'sent' e presença de acceptance_letter_url
-                              const isEnrolled = appStatus === 'enrolled' || 
-                                                acceptanceStatus === 'approved' || 
-                                                acceptanceStatus === 'sent' ||
-                                                hasAcceptanceLetter ||
-                                                (documentsStatus === 'approved' && !appStatus);
+                              const isEnrolled = appStatus === 'enrolled' ||
+                                acceptanceStatus === 'approved' ||
+                                acceptanceStatus === 'sent' ||
+                                hasAcceptanceLetter ||
+                                (documentsStatus === 'approved' && !appStatus);
                               const label = isEnrolled ? 'Enrolled' : 'Pending Acceptance';
                               const color = isEnrolled ? 'text-green-700' : 'text-yellow-700';
                               const dot = isEnrolled ? 'bg-green-500' : 'bg-yellow-500';
-                              
+
                               console.log('🔍 [ENROLLMENT_STATUS] Result:', { isEnrolled, label });
-                              
+
                               return (
-                              <div className="flex items-center space-x-2">
+                                <div className="flex items-center space-x-2">
                                   <div className={`w-2 h-2 rounded-full ${dot}`}></div>
                                   <span className={`text-sm font-medium ${color}`}>{label}</span>
-                              </div>
+                                </div>
                               );
                             })()}
                           </dd>
@@ -1654,101 +1650,100 @@ const StudentDetails: React.FC<StudentDetailsProps> = ({ studentId, profileId, o
                 const isSimplified = userSystemType === 'simplified' || (studentInfo as any)?.system_type === 'simplified';
                 return !isSimplified;
               })() && (
-              <div className="bg-white rounded-2xl shadow-sm border border-slate-200">
-                <div className="bg-gradient-to-r rounded-t-2xl from-[#05294E] to-[#0a4a7a] px-6 py-4">
-                  <div className="flex items-center justify-between">
-                    <h3 className="text-lg font-semibold text-white">Scholarship Range</h3>
-                    {!isEditingPackage && (
-                      <button
-                        onClick={handleStartEditPackage}
-                        className="p-1.5 rounded-lg bg-white/20 hover:bg-white/30 transition-colors"
-                        title="Edit scholarship range"
-                      >
-                        <Edit3 className="w-4 h-4 text-white" />
-                      </button>
-                    )}
-                  </div>
-                </div>
-                <div className="p-6">
-                  {isEditingPackage ? (
-                    <div className="space-y-4">
-                      <div>
-                        <label className="block text-sm font-medium text-slate-700 mb-2">
-                          Select Scholarship Range
-                        </label>
-                        <div className="space-y-2">
-                          {[3800, 4200, 4500, 5000, 5500].map((range) => (
-                            <div
-                              key={`range-${range}`}
-                              className={`p-3 border-2 rounded-lg cursor-pointer transition-all ${
-                                selectedPackageId === `range-${range}`
-                                  ? 'border-blue-500 bg-blue-50'
-                                  : 'border-gray-200 hover:border-gray-300'
-                              }`}
-                              onClick={() => setSelectedPackageId(`range-${range}`)}
-                            >
-                              <div className="flex items-center justify-between">
-                                <div>
-                                  <h4 className="font-semibold text-slate-900">Scholarship Range ${range}+</h4>
-                                </div>
-                              </div>
-                            </div>
-                          ))}
-                        </div>
-                      </div>
-                      <div className="flex space-x-2">
-                        <button
-                          onClick={handleSavePackageChange}
-                          disabled={isUpdatingPackage || !selectedPackageId}
-                          className="flex-1 flex items-center justify-center px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
-                        >
-                          {isUpdatingPackage ? (
-                            <>
-                              <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white mr-2"></div>
-                              Saving...
-                            </>
-                          ) : (
-                            <>
-                              <Check className="w-4 h-4 mr-2" />
-                              Save
-                            </>
-                          )}
-                        </button>
-                        <button
-                          onClick={handleCancelEditPackage}
-                          disabled={isUpdatingPackage}
-                          className="flex-1 flex items-center justify-center px-4 py-2 bg-gray-200 text-gray-700 rounded-lg hover:bg-gray-300 disabled:opacity-50 transition-colors"
-                        >
-                          <X className="w-4 h-4 mr-2" />
-                          Cancel
-                        </button>
+                  <div className="bg-white rounded-2xl shadow-sm border border-slate-200">
+                    <div className="bg-gradient-to-r rounded-t-2xl from-[#05294E] to-[#0a4a7a] px-6 py-4">
+                      <div className="flex items-center justify-between">
+                        <h3 className="text-lg font-semibold text-white">Scholarship Range</h3>
+                        {!isEditingPackage && (
+                          <button
+                            onClick={handleStartEditPackage}
+                            className="p-1.5 rounded-lg bg-white/20 hover:bg-white/30 transition-colors"
+                            title="Edit scholarship range"
+                          >
+                            <Edit3 className="w-4 h-4 text-white" />
+                          </button>
+                        )}
                       </div>
                     </div>
-                  ) : (
-                    <div className="space-y-3">
-                      {studentPackageFees ? (
-                        <>
-                          <div className="p-4 bg-blue-50 rounded-lg border border-blue-200">
-                            <div className="flex items-center justify-between mb-2">
-                              <h4 className="font-semibold text-blue-900">{studentPackageFees.package_name}</h4>
-                              <span className="text-sm text-blue-600">Current</span>
+                    <div className="p-6">
+                      {isEditingPackage ? (
+                        <div className="space-y-4">
+                          <div>
+                            <label className="block text-sm font-medium text-slate-700 mb-2">
+                              Select Scholarship Range
+                            </label>
+                            <div className="space-y-2">
+                              {[3800, 4200, 4500, 5000, 5500].map((range) => (
+                                <div
+                                  key={`range-${range}`}
+                                  className={`p-3 border-2 rounded-lg cursor-pointer transition-all ${selectedPackageId === `range-${range}`
+                                      ? 'border-blue-500 bg-blue-50'
+                                      : 'border-gray-200 hover:border-gray-300'
+                                    }`}
+                                  onClick={() => setSelectedPackageId(`range-${range}`)}
+                                >
+                                  <div className="flex items-center justify-between">
+                                    <div>
+                                      <h4 className="font-semibold text-slate-900">Scholarship Range ${range}+</h4>
+                                    </div>
+                                  </div>
+                                </div>
+                              ))}
                             </div>
                           </div>
-                          <div className="text-xs text-slate-500 text-center">
-                            Click edit to change scholarship range
+                          <div className="flex space-x-2">
+                            <button
+                              onClick={handleSavePackageChange}
+                              disabled={isUpdatingPackage || !selectedPackageId}
+                              className="flex-1 flex items-center justify-center px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+                            >
+                              {isUpdatingPackage ? (
+                                <>
+                                  <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white mr-2"></div>
+                                  Saving...
+                                </>
+                              ) : (
+                                <>
+                                  <Check className="w-4 h-4 mr-2" />
+                                  Save
+                                </>
+                              )}
+                            </button>
+                            <button
+                              onClick={handleCancelEditPackage}
+                              disabled={isUpdatingPackage}
+                              className="flex-1 flex items-center justify-center px-4 py-2 bg-gray-200 text-gray-700 rounded-lg hover:bg-gray-300 disabled:opacity-50 transition-colors"
+                            >
+                              <X className="w-4 h-4 mr-2" />
+                              Cancel
+                            </button>
                           </div>
-                        </>
+                        </div>
                       ) : (
-                        <div className="text-center py-4">
-                          <div className="text-slate-400 mb-2">No scholarship range set</div>
-                          <div className="text-sm text-slate-500">Click edit to set scholarship range</div>
+                        <div className="space-y-3">
+                          {studentPackageFees ? (
+                            <>
+                              <div className="p-4 bg-blue-50 rounded-lg border border-blue-200">
+                                <div className="flex items-center justify-between mb-2">
+                                  <h4 className="font-semibold text-blue-900">{studentPackageFees.package_name}</h4>
+                                  <span className="text-sm text-blue-600">Current</span>
+                                </div>
+                              </div>
+                              <div className="text-xs text-slate-500 text-center">
+                                Click edit to change scholarship range
+                              </div>
+                            </>
+                          ) : (
+                            <div className="text-center py-4">
+                              <div className="text-slate-400 mb-2">No scholarship range set</div>
+                              <div className="text-sm text-slate-500">Click edit to set scholarship range</div>
+                            </div>
+                          )}
                         </div>
                       )}
                     </div>
-                  )}
-                </div>
-              </div>
-              )}
+                  </div>
+                )}
 
               {/* Fee Status Card */}
               <div className="bg-white rounded-2xl shadow-sm border border-slate-200">
@@ -1756,19 +1751,19 @@ const StudentDetails: React.FC<StudentDetailsProps> = ({ studentId, profileId, o
                   <h3 className="text-lg font-semibold text-white">Fee Status</h3>
                 </div>
                 <div className="p-6">
-                                     <div className="space-y-3">
-                     {/* Selection Process Fee Status */}
-                     <div className="w-full flex items-center justify-between p-3 rounded-lg border border-slate-200">
-                       <div className="flex items-center justify-between w-full">
-                         <div className="flex items-center space-x-3">
-                           <div className={`w-3 h-3 rounded-full ${studentInfo?.has_paid_selection_process_fee ? 'bg-green-500' : 'bg-red-500'}`}></div>
-                           <span className="text-sm font-medium text-slate-900">Selection Process Fee</span>
-                         </div>
-                         <div className="flex flex-col items-end">
-                           <span className={`text-sm font-medium ${studentInfo?.has_paid_selection_process_fee ? 'text-green-700' : 'text-red-700'}`}>
-                             {studentInfo?.has_paid_selection_process_fee ? 'Paid' : 'Pending'}
-                           </span>
-                           <span className="text-xs text-slate-500">
+                  <div className="space-y-3">
+                    {/* Selection Process Fee Status */}
+                    <div className="w-full flex items-center justify-between p-3 rounded-lg border border-slate-200">
+                      <div className="flex items-center justify-between w-full">
+                        <div className="flex items-center space-x-3">
+                          <div className={`w-3 h-3 rounded-full ${studentInfo?.has_paid_selection_process_fee ? 'bg-green-500' : 'bg-red-500'}`}></div>
+                          <span className="text-sm font-medium text-slate-900">Selection Process Fee</span>
+                        </div>
+                        <div className="flex flex-col items-end">
+                          <span className={`text-sm font-medium ${studentInfo?.has_paid_selection_process_fee ? 'text-green-700' : 'text-red-700'}`}>
+                            {studentInfo?.has_paid_selection_process_fee ? 'Paid' : 'Pending'}
+                          </span>
+                          <span className="text-xs text-slate-500">
                             {(() => {
                               // ✅ PRIORIDADE 1: Se houver uso de cupom promocional, usar final_amount (valor com desconto)
                               if (studentInfo?.has_paid_selection_process_fee && couponUsageData['selection_process']) {
@@ -1785,17 +1780,17 @@ const StudentDetails: React.FC<StudentDetailsProps> = ({ studentId, profileId, o
                                   </span>
                                 );
                               }
-                              
+
                               // ✅ PRIORIDADE 2: Valor real pago (líquido, sem taxas do Stripe)
                               if (studentInfo?.has_paid_selection_process_fee && realPaidAmounts?.selection_process !== undefined && realPaidAmounts.selection_process > 0) {
                                 return formatFeeAmount(realPaidAmounts.selection_process);
                               }
-                              
+
                               // Fallback para valores calculados (apenas se não houver valor real pago)
                               if (studentFees.isSimplified) {
                                 return `$${studentFees.selectionProcessFee.toFixed(2)}`;
                               }
-                              
+
                               const hasCustomOverride = hasOverride('selection_process');
                               if (hasCustomOverride) {
                                 return formatFeeAmount(getFeeAmount('selection_process'));
@@ -1804,16 +1799,16 @@ const StudentDetails: React.FC<StudentDetailsProps> = ({ studentId, profileId, o
                                 // ✅ CORREÇÃO: Para simplified, Selection Process Fee é fixo ($350), sem dependentes
                                 // Dependentes só afetam Application Fee ($100 por dependente)
                                 const systemType = studentInfo?.system_type || 'legacy';
-                                const total = systemType === 'simplified' 
-                                  ? baseFee 
+                                const total = systemType === 'simplified'
+                                  ? baseFee
                                   : baseFee + (dependents * 150);
                                 return formatFeeAmount(total);
                               }
                             })()}
-                           </span>
-                         </div>
-                       </div>
-                     </div>
+                          </span>
+                        </div>
+                      </div>
+                    </div>
 
                     {/* Application Fee Status */}
                     <div className="w-full flex items-center justify-between p-3 rounded-lg border border-slate-200">
@@ -1825,155 +1820,155 @@ const StudentDetails: React.FC<StudentDetailsProps> = ({ studentId, profileId, o
                         <span className={`text-sm font-medium ${studentInfo?.is_application_fee_paid ? 'text-green-700' : 'text-red-700'}`}>
                           {studentInfo?.is_application_fee_paid ? 'Paid' : 'Pending'}
                         </span>
-            {studentInfo?.is_application_fee_paid ? (
-              <span className="text-xs text-slate-500">
-                {(() => {
-                  // ✅ PRIORIDADE 1: Se houver uso de cupom promocional, usar final_amount (valor com desconto)
-                  if (couponUsageData['application']) {
-                    const couponData = couponUsageData['application'];
-                    return (
-                      <span>
-                        <span className="line-through text-slate-400 mr-1">
-                          {formatFeeAmount(couponData.original_amount)}
-                        </span>
-                        <span className="text-green-600 font-semibold">
-                          {formatFeeAmount(couponData.final_amount)}
-                        </span>
-                        <span className="text-slate-400 ml-1">({couponData.coupon_code})</span>
-                      </span>
-                    );
-                  }
-                  
-                  // ✅ PRIORIDADE 2: Valor real pago (líquido, sem taxas do Stripe)
-                  if (realPaidAmounts?.application !== undefined && realPaidAmounts.application > 0) {
-                    return formatFeeAmount(realPaidAmounts.application);
-                  }
-                  
-                  // Fallback: Base da scholarship se disponível; fallback para configuração padrão
-                  let baseAmount = 0;
-                  if (studentInfo?.scholarship?.application_fee_amount) {
-                    baseAmount = Number(studentInfo.scholarship.application_fee_amount);
-                  } else if ((studentInfo as any)?.application_fee_amount) {
-                    baseAmount = Number((studentInfo as any).application_fee_amount);
-                  } else {
-                    baseAmount = getFeeAmount('application_fee');
-                  }
-                  const systemType = studentInfo?.system_type || 'legacy';
-                  const deps = Number(dependents || 0);
-                  if (systemType === 'legacy' && deps > 0) {
-                    return formatFeeAmount(baseAmount + deps * 100);
-                  }
-                  return formatFeeAmount(baseAmount);
-                })()}
-              </span>
-            ) : (
-              <div className="text-right">
-                <div className="text-xs text-slate-700 font-medium">Varies by scholarship</div>
-                <div className="text-[11px] text-slate-500">+ $100 per dependent (applied at checkout)</div>
-              </div>
-            )}
+                        {studentInfo?.is_application_fee_paid ? (
+                          <span className="text-xs text-slate-500">
+                            {(() => {
+                              // ✅ PRIORIDADE 1: Se houver uso de cupom promocional, usar final_amount (valor com desconto)
+                              if (couponUsageData['application']) {
+                                const couponData = couponUsageData['application'];
+                                return (
+                                  <span>
+                                    <span className="line-through text-slate-400 mr-1">
+                                      {formatFeeAmount(couponData.original_amount)}
+                                    </span>
+                                    <span className="text-green-600 font-semibold">
+                                      {formatFeeAmount(couponData.final_amount)}
+                                    </span>
+                                    <span className="text-slate-400 ml-1">({couponData.coupon_code})</span>
+                                  </span>
+                                );
+                              }
+
+                              // ✅ PRIORIDADE 2: Valor real pago (líquido, sem taxas do Stripe)
+                              if (realPaidAmounts?.application !== undefined && realPaidAmounts.application > 0) {
+                                return formatFeeAmount(realPaidAmounts.application);
+                              }
+
+                              // Fallback: Base da scholarship se disponível; fallback para configuração padrão
+                              let baseAmount = 0;
+                              if (studentInfo?.scholarship?.application_fee_amount) {
+                                baseAmount = Number(studentInfo.scholarship.application_fee_amount);
+                              } else if ((studentInfo as any)?.application_fee_amount) {
+                                baseAmount = Number((studentInfo as any).application_fee_amount);
+                              } else {
+                                baseAmount = getFeeAmount('application_fee');
+                              }
+                              const systemType = studentInfo?.system_type || 'legacy';
+                              const deps = Number(dependents || 0);
+                              if (systemType === 'legacy' && deps > 0) {
+                                return formatFeeAmount(baseAmount + deps * 100);
+                              }
+                              return formatFeeAmount(baseAmount);
+                            })()}
+                          </span>
+                        ) : (
+                          <div className="text-right">
+                            <div className="text-xs text-slate-700 font-medium">Varies by scholarship</div>
+                            <div className="text-[11px] text-slate-500">+ $100 per dependent (applied at checkout)</div>
+                          </div>
+                        )}
                       </div>
                     </div>
 
-                     {/* Scholarship Fee Status */}
-                     <div className="w-full flex items-center justify-between p-3 rounded-lg border border-slate-200">
-                       <div className="flex items-center space-x-3">
-                         <div className={`w-3 h-3 rounded-full ${studentInfo?.is_scholarship_fee_paid ? 'bg-green-500' : 'bg-red-500'}`}></div>
-                         <span className="text-sm font-medium text-slate-900">Scholarship Fee</span>
-                       </div>
-                       <div className="flex flex-col items-end">
-                         <span className={`text-sm font-medium ${studentInfo?.is_scholarship_fee_paid ? 'text-green-700' : 'text-red-700'}`}>
-                           {studentInfo?.is_scholarship_fee_paid ? 'Paid' : 'Pending'}
-                         </span>
-                         <span className="text-xs text-slate-500">
-                           {(() => {
-                             // ✅ PRIORIDADE 1: Se houver uso de cupom promocional, usar final_amount (valor com desconto)
-                             if (studentInfo?.is_scholarship_fee_paid && couponUsageData['scholarship']) {
-                               const couponData = couponUsageData['scholarship'];
-                               return (
-                                 <span>
-                                   <span className="line-through text-slate-400 mr-1">
-                                     {formatFeeAmount(couponData.original_amount)}
-                                   </span>
-                                   <span className="text-green-600 font-semibold">
-                                     {formatFeeAmount(couponData.final_amount)}
-                                   </span>
-                                   <span className="text-slate-400 ml-1">({couponData.coupon_code})</span>
-                                 </span>
-                               );
-                             }
-                             
-                             // ✅ PRIORIDADE 2: Valor real pago (líquido, sem taxas do Stripe)
-                             if (studentInfo?.is_scholarship_fee_paid && realPaidAmounts?.scholarship !== undefined && realPaidAmounts.scholarship > 0) {
-                               return formatFeeAmount(realPaidAmounts.scholarship);
-                             }
-                             
-                             // Fallback para valores calculados (apenas se não houver valor real pago)
-                             if (studentFees.isSimplified) {
-                               return `$${studentFees.scholarshipFee.toFixed(2)}`;
-                             }
-                             
-                             if (hasOverride('scholarship_fee')) {
-                               return formatFeeAmount(getFeeAmount('scholarship_fee'));
-                             }
-                             if (studentInfo?.scholarship?.scholarship_fee_amount) {
-                               const amount = Number(studentInfo.scholarship.scholarship_fee_amount);
-                               return formatFeeAmount(amount);
-                             }
-                             return formatFeeAmount(getFeeAmount('scholarship_fee'));
-                           })()}
-                         </span>
-                       </div>
-                     </div>
+                    {/* Scholarship Fee Status */}
+                    <div className="w-full flex items-center justify-between p-3 rounded-lg border border-slate-200">
+                      <div className="flex items-center space-x-3">
+                        <div className={`w-3 h-3 rounded-full ${studentInfo?.is_scholarship_fee_paid ? 'bg-green-500' : 'bg-red-500'}`}></div>
+                        <span className="text-sm font-medium text-slate-900">Scholarship Fee</span>
+                      </div>
+                      <div className="flex flex-col items-end">
+                        <span className={`text-sm font-medium ${studentInfo?.is_scholarship_fee_paid ? 'text-green-700' : 'text-red-700'}`}>
+                          {studentInfo?.is_scholarship_fee_paid ? 'Paid' : 'Pending'}
+                        </span>
+                        <span className="text-xs text-slate-500">
+                          {(() => {
+                            // ✅ PRIORIDADE 1: Se houver uso de cupom promocional, usar final_amount (valor com desconto)
+                            if (studentInfo?.is_scholarship_fee_paid && couponUsageData['scholarship']) {
+                              const couponData = couponUsageData['scholarship'];
+                              return (
+                                <span>
+                                  <span className="line-through text-slate-400 mr-1">
+                                    {formatFeeAmount(couponData.original_amount)}
+                                  </span>
+                                  <span className="text-green-600 font-semibold">
+                                    {formatFeeAmount(couponData.final_amount)}
+                                  </span>
+                                  <span className="text-slate-400 ml-1">({couponData.coupon_code})</span>
+                                </span>
+                              );
+                            }
 
-                     {/* I-20 Control Fee Status */}
-                     <div className="w-full flex items-center justify-between p-3 rounded-lg border border-slate-200">
-                       <div className="flex items-center justify-between w-full">
-                         <div className="flex items-center space-x-3">
-                           <div className={`w-3 h-3 rounded-full ${studentInfo?.has_paid_i20_control_fee ? 'bg-green-500' : 'bg-red-500'}`}></div>
-                           <span className="text-sm font-medium text-slate-900">I-20 Control Fee</span>
-                         </div>
-                         <div className="flex flex-col items-end">
-                           <span className={`text-sm font-medium ${studentInfo?.has_paid_i20_control_fee ? 'text-green-700' : 'text-red-700'}`}>
-                             {studentInfo?.has_paid_i20_control_fee ? 'Paid' : 'Pending'}
-                           </span>
-                           <span className="text-xs text-slate-500">
-                             {(() => {
-                               // ✅ PRIORIDADE 1: Se houver uso de cupom promocional, usar final_amount (valor com desconto)
-                               if (studentInfo?.has_paid_i20_control_fee && couponUsageData['i20_control']) {
-                                 const couponData = couponUsageData['i20_control'];
-                                 return (
-                                   <span>
-                                     <span className="line-through text-slate-400 mr-1">
-                                       {formatFeeAmount(couponData.original_amount)}
-                                     </span>
-                                     <span className="text-green-600 font-semibold">
-                                       {formatFeeAmount(couponData.final_amount)}
-                                     </span>
-                                     <span className="text-slate-400 ml-1">({couponData.coupon_code})</span>
-                                   </span>
-                                 );
-                               }
-                               
-                               // ✅ PRIORIDADE 2: Valor real pago (líquido, sem taxas do Stripe)
-                               if (studentInfo?.has_paid_i20_control_fee && realPaidAmounts?.i20_control !== undefined && realPaidAmounts.i20_control > 0) {
-                                 return formatFeeAmount(realPaidAmounts.i20_control);
-                               }
-                               
-                               // Fallback para valores calculados (apenas se não houver valor real pago)
-                               if (studentFees.isSimplified) {
-                                 return `$${studentFees.i20ControlFee.toFixed(2)}`;
-                               }
-                               
-                               // I-20 Control Fee sempre usa override se disponível, senão valor padrão
-                               // I-20 nunca soma dependentes
-                               return formatFeeAmount(getFeeAmount('i20_control_fee'));
-                             })()}
-                           </span>
-                         </div>
-                       </div>
-                     </div>
-                   </div>
+                            // ✅ PRIORIDADE 2: Valor real pago (líquido, sem taxas do Stripe)
+                            if (studentInfo?.is_scholarship_fee_paid && realPaidAmounts?.scholarship !== undefined && realPaidAmounts.scholarship > 0) {
+                              return formatFeeAmount(realPaidAmounts.scholarship);
+                            }
+
+                            // Fallback para valores calculados (apenas se não houver valor real pago)
+                            if (studentFees.isSimplified) {
+                              return `$${studentFees.scholarshipFee.toFixed(2)}`;
+                            }
+
+                            if (hasOverride('scholarship_fee')) {
+                              return formatFeeAmount(getFeeAmount('scholarship_fee'));
+                            }
+                            if (studentInfo?.scholarship?.scholarship_fee_amount) {
+                              const amount = Number(studentInfo.scholarship.scholarship_fee_amount);
+                              return formatFeeAmount(amount);
+                            }
+                            return formatFeeAmount(getFeeAmount('scholarship_fee'));
+                          })()}
+                        </span>
+                      </div>
+                    </div>
+
+                    {/* I-20 Control Fee Status */}
+                    <div className="w-full flex items-center justify-between p-3 rounded-lg border border-slate-200">
+                      <div className="flex items-center justify-between w-full">
+                        <div className="flex items-center space-x-3">
+                          <div className={`w-3 h-3 rounded-full ${studentInfo?.has_paid_i20_control_fee ? 'bg-green-500' : 'bg-red-500'}`}></div>
+                          <span className="text-sm font-medium text-slate-900">I-20 Control Fee</span>
+                        </div>
+                        <div className="flex flex-col items-end">
+                          <span className={`text-sm font-medium ${studentInfo?.has_paid_i20_control_fee ? 'text-green-700' : 'text-red-700'}`}>
+                            {studentInfo?.has_paid_i20_control_fee ? 'Paid' : 'Pending'}
+                          </span>
+                          <span className="text-xs text-slate-500">
+                            {(() => {
+                              // ✅ PRIORIDADE 1: Se houver uso de cupom promocional, usar final_amount (valor com desconto)
+                              if (studentInfo?.has_paid_i20_control_fee && couponUsageData['i20_control']) {
+                                const couponData = couponUsageData['i20_control'];
+                                return (
+                                  <span>
+                                    <span className="line-through text-slate-400 mr-1">
+                                      {formatFeeAmount(couponData.original_amount)}
+                                    </span>
+                                    <span className="text-green-600 font-semibold">
+                                      {formatFeeAmount(couponData.final_amount)}
+                                    </span>
+                                    <span className="text-slate-400 ml-1">({couponData.coupon_code})</span>
+                                  </span>
+                                );
+                              }
+
+                              // ✅ PRIORIDADE 2: Valor real pago (líquido, sem taxas do Stripe)
+                              if (studentInfo?.has_paid_i20_control_fee && realPaidAmounts?.i20_control !== undefined && realPaidAmounts.i20_control > 0) {
+                                return formatFeeAmount(realPaidAmounts.i20_control);
+                              }
+
+                              // Fallback para valores calculados (apenas se não houver valor real pago)
+                              if (studentFees.isSimplified) {
+                                return `$${studentFees.i20ControlFee.toFixed(2)}`;
+                              }
+
+                              // I-20 Control Fee sempre usa override se disponível, senão valor padrão
+                              // I-20 nunca soma dependentes
+                              return formatFeeAmount(getFeeAmount('i20_control_fee'));
+                            })()}
+                          </span>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
                 </div>
               </div>
             </div>
@@ -2004,7 +1999,7 @@ const StudentDetails: React.FC<StudentDetailsProps> = ({ studentId, profileId, o
                     Document Requests
                   </h4>
                 </div>
-                
+
                 <div className="p-6">
                   {documentRequests && documentRequests.length > 0 ? (
                     <div className="space-y-4">
@@ -2029,7 +2024,7 @@ const StudentDetails: React.FC<StudentDetailsProps> = ({ studentId, profileId, o
                                   )}
                                 </div>
                               </div>
-                              
+
                               <div className="flex flex-wrap gap-2 text-sm text-slate-500">
                                 {request.due_date && (
                                   <span className="flex items-center">
@@ -2039,14 +2034,13 @@ const StudentDetails: React.FC<StudentDetailsProps> = ({ studentId, profileId, o
                                     Due: {formatDate(request.due_date)}
                                   </span>
                                 )}
-                                <span className={`px-2 py-1 rounded-full text-xs font-medium whitespace-nowrap ${
-                                  request.is_global ? 'bg-blue-100 text-blue-800' : 'bg-purple-100 text-purple-800'
-                                }`}>
+                                <span className={`px-2 py-1 rounded-full text-xs font-medium whitespace-nowrap ${request.is_global ? 'bg-blue-100 text-blue-800' : 'bg-purple-100 text-purple-800'
+                                  }`}>
                                   {request.is_global ? 'Global Request' : 'Individual Request'}
                                 </span>
                               </div>
                             </div>
-                            
+
                             {/* University Template */}
                             {request.attachment_url && (
                               <div className="ml-0 sm:ml-4">
@@ -2072,7 +2066,7 @@ const StudentDetails: React.FC<StudentDetailsProps> = ({ studentId, profileId, o
                               </svg>
                               Student Response:
                             </h5>
-                            
+
                             <div className="bg-white border border-slate-200 rounded-2xl p-3 sm:p-4">
                               {(() => {
                                 // Usar document_request_uploads se disponível, senão usar uploads (fallback)
@@ -2089,62 +2083,61 @@ const StudentDetails: React.FC<StudentDetailsProps> = ({ studentId, profileId, o
                                   );
                                 }
                                 return uploads.map((upload: any) => {
-                                const { filename, fullUrl } = getDocumentInfo(upload);
-                                return (
-                                  <div key={upload.id} className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 mb-4 last:mb-0">
-                                    <div className="flex items-start sm:items-center space-x-4 min-w-0">
-                                      <div className="w-12 h-12 bg-green-100 rounded-lg flex items-center justify-center flex-shrink-0">
-                                        <svg className="w-6 h-6 text-green-600" fill="none" stroke="currentColor" strokeWidth={2} viewBox="0 0 24 24">
-                                          <path strokeLinecap="round" strokeLinejoin="round" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
-                                        </svg>
+                                  const { filename, fullUrl } = getDocumentInfo(upload);
+                                  return (
+                                    <div key={upload.id} className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 mb-4 last:mb-0">
+                                      <div className="flex items-start sm:items-center space-x-4 min-w-0">
+                                        <div className="w-12 h-12 bg-green-100 rounded-lg flex items-center justify-center flex-shrink-0">
+                                          <svg className="w-6 h-6 text-green-600" fill="none" stroke="currentColor" strokeWidth={2} viewBox="0 0 24 24">
+                                            <path strokeLinecap="round" strokeLinejoin="round" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+                                          </svg>
+                                        </div>
+                                        <div className="flex-1 min-w-0">
+                                          <p className="font-medium text-slate-900 break-words">{filename}</p>
+                                          <p className="text-sm text-slate-500">
+                                            Submitted on {formatDate(upload.uploaded_at)}
+                                          </p>
+                                          <p className="text-xs text-slate-400 mt-1 break-words">
+                                            Response to: {request.title || 'Document Request'}
+                                          </p>
+                                        </div>
                                       </div>
-                                      <div className="flex-1 min-w-0">
-                                        <p className="font-medium text-slate-900 break-words">{filename}</p>
-                                        <p className="text-sm text-slate-500">
-                                          Submitted on {formatDate(upload.uploaded_at)}
-                                        </p>
-                                        <p className="text-xs text-slate-400 mt-1 break-words">
-                                          Response to: {request.title || 'Document Request'}
-                                        </p>
+                                      <div className="flex flex-wrap gap-2 sm:flex-nowrap sm:space-x-3 sm:self-auto self-start mt-3 sm:mt-0">
+                                        <span className={`px-3 py-1 rounded-full text-sm font-medium whitespace-nowrap ${upload.status === 'approved' ? 'bg-green-100 text-green-800' :
+                                            upload.status === 'rejected' ? 'bg-red-100 text-red-800' :
+                                              upload.status === 'under_review' ? 'bg-yellow-100 text-yellow-800' :
+                                                'bg-slate-100 text-slate-800'
+                                          }`}>
+                                          {upload.status === 'approved' ? 'Approved' :
+                                            upload.status === 'rejected' ? 'Rejected' :
+                                              upload.status === 'under_review' ? 'Under Review' :
+                                                'Pending'}
+                                        </span>
+
+                                        <button
+                                          onClick={() => handleViewDocument({
+                                            ...upload,
+                                            file_url: fullUrl,
+                                            filename
+                                          })}
+                                          className="bg-[#05294E] hover:bg-[#041f38] text-white px-4 py-2 rounded-lg text-sm font-medium transition-colors whitespace-nowrap flex-1 sm:flex-none text-center"
+                                        >
+                                          View
+                                        </button>
+
+                                        <button
+                                          onClick={() => handleDownloadDocument({
+                                            ...upload,
+                                            file_url: fullUrl,
+                                            filename
+                                          })}
+                                          className="bg-slate-200 hover:bg-slate-300 text-slate-700 px-4 py-2 rounded-lg text-sm font-medium transition-colors whitespace-nowrap flex-1 sm:flex-none text-center"
+                                        >
+                                          Download
+                                        </button>
                                       </div>
                                     </div>
-                                    <div className="flex flex-wrap gap-2 sm:flex-nowrap sm:space-x-3 sm:self-auto self-start mt-3 sm:mt-0">
-                                      <span className={`px-3 py-1 rounded-full text-sm font-medium whitespace-nowrap ${
-                                        upload.status === 'approved' ? 'bg-green-100 text-green-800' :
-                                        upload.status === 'rejected' ? 'bg-red-100 text-red-800' :
-                                        upload.status === 'under_review' ? 'bg-yellow-100 text-yellow-800' :
-                                        'bg-slate-100 text-slate-800'
-                                      }`}>
-                                        {upload.status === 'approved' ? 'Approved' :
-                                         upload.status === 'rejected' ? 'Rejected' :
-                                         upload.status === 'under_review' ? 'Under Review' :
-                                         'Pending'}
-                                      </span>
-                                      
-                                      <button
-                                        onClick={() => handleViewDocument({
-                                          ...upload,
-                                          file_url: fullUrl,
-                                          filename
-                                        })}
-                                        className="bg-[#05294E] hover:bg-[#041f38] text-white px-4 py-2 rounded-lg text-sm font-medium transition-colors whitespace-nowrap flex-1 sm:flex-none text-center"
-                                      >
-                                        View
-                                      </button>
-                                      
-                                      <button
-                                        onClick={() => handleDownloadDocument({
-                                          ...upload,
-                                          file_url: fullUrl,
-                                          filename
-                                        })}
-                                        className="bg-slate-200 hover:bg-slate-300 text-slate-700 px-4 py-2 rounded-lg text-sm font-medium transition-colors whitespace-nowrap flex-1 sm:flex-none text-center"
-                                      >
-                                        Download
-                                      </button>
-                                    </div>
-                                  </div>
-                                );
+                                  );
                                 });
                               })()}
                             </div>
@@ -2179,7 +2172,7 @@ const StudentDetails: React.FC<StudentDetailsProps> = ({ studentId, profileId, o
                     </div>
                   </div>
                 </div>
-                
+
                 <div className="p-4 sm:p-6">
                   {loadingApplication && !currentApplication?.acceptance_letter_url ? (
                     <div className="bg-white rounded-3xl p-8">
@@ -2220,14 +2213,14 @@ const StudentDetails: React.FC<StudentDetailsProps> = ({ studentId, profileId, o
                             </div>
                           </div>
                         </div>
-                            
+
                         <div className="flex flex-col sm:flex-row gap-2 sm:items-start sm:ml-auto">
                           <span className="hidden sm:inline-block px-3 py-1 rounded-full text-sm font-medium bg-green-100 text-green-800 whitespace-nowrap">
                             Available
                           </span>
-                          
+
                           <div className="flex flex-col sm:flex-row gap-2 w-full sm:w-auto">
-                            <button 
+                            <button
                               onClick={() => handleViewDocument({
                                 file_url: getAcceptanceLetterUrl(currentApplication),
                                 filename: 'Acceptance Letter'
@@ -2236,8 +2229,8 @@ const StudentDetails: React.FC<StudentDetailsProps> = ({ studentId, profileId, o
                             >
                               View
                             </button>
-                            
-                            <button 
+
+                            <button
                               onClick={() => handleDownloadDocument({
                                 file_url: getAcceptanceLetterUrl(currentApplication),
                                 filename: 'Acceptance Letter'
@@ -2255,9 +2248,9 @@ const StudentDetails: React.FC<StudentDetailsProps> = ({ studentId, profileId, o
                       <div className="text-center">
                         <div className="w-16 h-16 bg-slate-100 rounded-full flex items-center justify-center mx-auto mb-4">
                           <svg className="w-8 h-8 text-slate-400" fill="none" stroke="currentColor" strokeWidth={1.5} viewBox="0 0 24 24">
-                        <path strokeLinecap="round" strokeLinejoin="round" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
-                      </svg>
-                    </div>
+                            <path strokeLinecap="round" strokeLinejoin="round" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+                          </svg>
+                        </div>
                         <h4 className="text-lg font-semibold text-slate-700 mb-2">No Acceptance Letter Yet</h4>
                         <p className="text-slate-500 max-w-md mx-auto">
                           Your acceptance letter will appear here once the university processes your application and sends it to you.
@@ -2265,12 +2258,12 @@ const StudentDetails: React.FC<StudentDetailsProps> = ({ studentId, profileId, o
                         <div className="mt-4 flex items-center justify-center space-x-2 text-sm text-slate-400">
                           <svg className="w-4 h-4" fill="none" stroke="currentColor" strokeWidth={2} viewBox="0 0 24 24">
                             <path strokeLinecap="round" strokeLinejoin="round" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
-                        </svg>
+                          </svg>
                           <span>Please wait for the university to send your acceptance letter</span>
                         </div>
                       </div>
-                      </div>
-                    )}
+                    </div>
+                  )}
                 </div>
               </div>
 
@@ -2290,7 +2283,7 @@ const StudentDetails: React.FC<StudentDetailsProps> = ({ studentId, profileId, o
                       </div>
                     </div>
                   </div>
-                  
+
                   <div className="p-4 sm:p-6">
                     {/* Template enviado pelo admin/universidade */}
                     {(scholarshipApplication as any)?.transfer_form_url && (
@@ -2298,7 +2291,7 @@ const StudentDetails: React.FC<StudentDetailsProps> = ({ studentId, profileId, o
                         <h3 className="text-lg font-semibold text-[#05294E] mb-4 flex items-center">
                           Transfer Form Template
                         </h3>
-                        
+
                         <div className="bg-slate-50 rounded-2xl p-6 border border-slate-200">
                           <div className="flex items-start space-x-4">
                             <div className="flex-shrink-0">
@@ -2320,7 +2313,7 @@ const StudentDetails: React.FC<StudentDetailsProps> = ({ studentId, profileId, o
                               <p className="text-sm text-slate-500 break-words">
                                 Sent on {(scholarshipApplication as any).transfer_form_sent_at ? formatDate((scholarshipApplication as any).transfer_form_sent_at) : 'N/A'}
                               </p>
-                              
+
                               <div className="flex flex-col sm:flex-row gap-2 mt-3">
                                 <button
                                   onClick={() => handleViewDocument({
@@ -2331,7 +2324,7 @@ const StudentDetails: React.FC<StudentDetailsProps> = ({ studentId, profileId, o
                                 >
                                   View Template
                                 </button>
-                                
+
                                 <button
                                   onClick={() => handleDownloadDocument({
                                     file_url: (scholarshipApplication as any).transfer_form_url,
@@ -2362,13 +2355,13 @@ const StudentDetails: React.FC<StudentDetailsProps> = ({ studentId, profileId, o
                           </svg>
                           Student Uploads
                         </h4>
-                        
+
                         <div className="space-y-4">
                           {transferFormUploads.map((upload) => {
                             const statusColor = upload.status === 'approved' ? 'bg-green-100 text-green-800 border-green-200' :
-                                              upload.status === 'rejected' ? 'bg-red-100 text-red-800 border-red-200' :
-                                              'bg-yellow-100 text-yellow-800 border-yellow-200';
-                            
+                              upload.status === 'rejected' ? 'bg-red-100 text-red-800 border-red-200' :
+                                'bg-yellow-100 text-yellow-800 border-yellow-200';
+
                             return (
                               <div key={upload.id} className="bg-white border border-slate-200 rounded-lg p-4">
                                 <div className="flex items-center justify-between mb-3">
@@ -2391,14 +2384,14 @@ const StudentDetails: React.FC<StudentDetailsProps> = ({ studentId, profileId, o
                                     {upload.status.replace('_', ' ').replace(/\b\w/g, (l: string) => l.toUpperCase())}
                                   </span>
                                 </div>
-                                
+
                                 {upload.rejection_reason && (
                                   <div className="mb-3 p-3 bg-red-50 border border-red-200 rounded-lg">
                                     <p className="text-sm font-medium text-red-600 mb-1">Rejection reason:</p>
                                     <p className="text-sm text-red-700">{upload.rejection_reason}</p>
                                   </div>
                                 )}
-                                
+
                                 <div className="flex gap-2">
                                   <button
                                     className="text-blue-600 hover:text-blue-800 text-sm font-medium hover:underline"
@@ -2452,15 +2445,15 @@ const StudentDetails: React.FC<StudentDetailsProps> = ({ studentId, profileId, o
               )}
             </div>
           </div>
-                 )}
-       </div>
-       
-       {/* Modal de visualização de documentos */}
-       {previewUrl && (
-         <DocumentViewerModal documentUrl={previewUrl} onClose={() => setPreviewUrl(null)} />
-       )}
-     </div>
-   );
- };
- 
- export default StudentDetails;
+        )}
+      </div>
+
+      {/* Modal de visualização de documentos */}
+      {previewUrl && (
+        <DocumentViewerModal documentUrl={previewUrl} onClose={() => setPreviewUrl(null)} />
+      )}
+    </div>
+  );
+};
+
+export default StudentDetails;

@@ -7,7 +7,6 @@ import ProcessFundsSummary from "@/components/shared/ProcessFundsSummary";
 import ProcessValuesSummary from "@/components/shared/ProcessValuesSummary";
 import ClientsSection from "@/components/shared/ClientsSection";
 import ConversionButton from "@/components/shared/ConversionButton";
-import ProcessFooter from "@/components/shared/ProcessFooter";
 import { useReferralCapture } from "@/hooks/useReferralCapture";
 
 const Initial = () => {
@@ -36,7 +35,7 @@ const Initial = () => {
     {
       step: 3,
       title: t('processPages.common.scholarshipFee'),
-      price: "$550",
+      price: "$900",
       description: t('processPages.initial.steps.list.step3.description'),
       items: t('processPages.initial.steps.list.step3.items', { returnObjects: true }) as string[],
       colorClass: "bg-gold",
@@ -65,14 +64,14 @@ const Initial = () => {
   const INITIAL_VALUES = [
     { label: t('processPages.common.selectionProcess'), value: "$350", included: true },
     { label: t('processPages.common.applicationFeeI20'), value: "$350", included: true },
-    { label: t('processPages.common.scholarshipFee'), value: "$550", included: true },
+    { label: t('processPages.common.scholarshipFee'), value: "$900", included: true },
     { label: t('processPages.common.controlFee'), value: "$900", included: true },
     { label: t('processPages.common.legalFees'), value: "$1.800", included: true },
   ];
 
   return (
     <div className="min-h-screen bg-background">
-      <ProcessHeader 
+      <ProcessHeader
         title={t('processPages.initial.header.title')}
         subtitle={t('processPages.initial.header.subtitle')}
         description={t('processPages.initial.header.description')}
@@ -80,7 +79,7 @@ const Initial = () => {
       />
       <PromiseSection text={t('processPages.initial.promise')} />
       <ClientsSection />
-      <ProcessStepsSection 
+      <ProcessStepsSection
         title={t('processPages.initial.steps.title')}
         description={t('processPages.initial.steps.description')}
         steps={INITIAL_STEPS}
@@ -92,7 +91,7 @@ const Initial = () => {
           variant: "banner"
         }}
       />
-      <ProcessFundsSummary 
+      <ProcessFundsSummary
         description={t('processPages.initial.funds.description')}
         mainApplicantGradient="gradient-coral-gold"
         dependentGradient="gradient-primary"
@@ -107,15 +106,14 @@ const Initial = () => {
         }}
       />
 
-      <ProcessValuesSummary 
+      <ProcessValuesSummary
         description={t('processPages.initial.values.description')}
         values={INITIAL_VALUES}
       />
-      <ConversionButton 
-        showReferralBadge={!!(isValid && referralCode)} 
+      <ConversionButton
+        showReferralBadge={!!(isValid && referralCode)}
         gradientClass="gradient-coral-gold"
       />
-      <ProcessFooter gradientClass="gradient-coral-gold" />
     </div>
   );
 };

@@ -13,7 +13,7 @@ const DocumentViewerModal: React.FC<DocumentViewerModalProps> = ({ documentUrl, 
   console.log('🔍 [MODAL] documentUrl prop:', documentUrl);
   console.log('🔍 [MODAL] onClose prop:', onClose);
   console.log('🔍 [MODAL] fileName prop:', fileName);
-  
+
   const [loading, setLoading] = React.useState(true);
   const [actualUrl, setActualUrl] = React.useState<string>(documentUrl);
   const [error, setError] = React.useState<string | null>(null);
@@ -24,7 +24,7 @@ const DocumentViewerModal: React.FC<DocumentViewerModalProps> = ({ documentUrl, 
   const detectDocumentType = (url: string, name?: string): 'pdf' | 'image' | 'unknown' => {
     const fullName = name || url;
     const lowerName = fullName.toLowerCase();
-    
+
     // ✅ CORREÇÃO: Extrair extensão da URL mesmo com parâmetros de query
     const extractFileExtension = (url: string): string | null => {
       try {
@@ -39,31 +39,31 @@ const DocumentViewerModal: React.FC<DocumentViewerModalProps> = ({ documentUrl, 
         return null;
       }
     };
-    
+
     // Extrair extensão da URL
     const fileExtension = extractFileExtension(url);
-    
+
     // Verificar extensões de PDF
     if (fileExtension === 'pdf' || lowerName.includes('.pdf') || lowerName.endsWith('pdf')) {
       return 'pdf';
     }
-    
+
     // Verificar extensões de imagem
     const imageExtensions = ['jpg', 'jpeg', 'png', 'gif', 'bmp', 'webp', 'svg', 'tiff', 'tif'];
     if (fileExtension && imageExtensions.includes(fileExtension)) {
       return 'image';
     }
-    
+
     // Fallback: verificar se contém extensões na URL
     if (lowerName.match(/\.(jpg|jpeg|png|gif|bmp|webp|svg)$/)) {
       return 'image';
     }
-    
+
     // Fallback: verificar palavra-chave
     if (lowerName.includes('image') || lowerName.includes('photo') || lowerName.includes('captura') || lowerName.includes('wordmark')) {
       return 'image';
     }
-    
+
     return 'unknown';
   };
 
@@ -72,16 +72,20 @@ const DocumentViewerModal: React.FC<DocumentViewerModalProps> = ({ documentUrl, 
     const testUrl = async () => {
       setLoading(true);
       setError(null);
-      
-      let bucket = 'student-documents'; // Padrão
+
+      // Buckets candidatos para tentar acessar o arquivo
+      // 1. student-documents (padrão)
+      // 2. document-attachments (transfer forms)
+      // 3. term-acceptances (possível local para termos)
+      // 4. legal-documents (fallback)
+      const candidateBuckets = ['student-documents', 'document-attachments', 'term-acceptances', 'legal-documents', 'public'];
       let path = documentUrl;
-      
+
       // Tentar extrair um nome de arquivo amigável da URL se fileName for genérico
       const getFriendlyName = (url: string) => {
         try {
           const parts = url.split('/');
           const lastPart = parts[parts.length - 1].split('?')[0];
-          // Se o nome começar com timestamp (como os nossos), tentar limpar
           return lastPart.replace(/^\d+_/, '').replace(/%20/g, ' ');
         } catch (e) {
           return 'Document';
@@ -93,15 +97,18 @@ const DocumentViewerModal: React.FC<DocumentViewerModalProps> = ({ documentUrl, 
         return;
       }
 
-      // 1. Extrair bucket e path se for uma URL completa do Supabase ou caminho relativo
+      // Se for URL completa, usar lógica existente para extrair bucket
       if (documentUrl.startsWith('http')) {
         if (documentUrl.includes('/storage/v1/object/public/')) {
           const parts = documentUrl.split('/storage/v1/object/public/');
           if (parts.length > 1) {
             const pathParts = parts[1].split('/');
             if (pathParts.length > 1) {
-              bucket = pathParts[0];
-              path = pathParts.slice(1).join('/');
+              const extractedBucket = pathParts[0];
+              const extractedPath = pathParts.slice(1).join('/');
+              // Sobrepor buckets candidatos com o extraído (tentar ele primeiro)
+              candidateBuckets.unshift(extractedBucket);
+              path = extractedPath;
             }
           }
         } else if (documentUrl.includes('/storage/v1/object/sign/')) {
@@ -111,13 +118,13 @@ const DocumentViewerModal: React.FC<DocumentViewerModalProps> = ({ documentUrl, 
           return;
         }
       } else {
-        // Se for um path relativo, se contém 'transfer-forms', trocar bucket
+        // Se for path relativo, ajustar path se necessário
         if (documentUrl.includes('transfer-forms')) {
-          bucket = 'document-attachments';
+          candidateBuckets.unshift('document-attachments');
         }
       }
-      
-      // Definir o título se for genérico
+
+      // Definir título
       if (!fileName || fileName === 'Document' || fileName === 'document.pdf') {
         const title = getFriendlyName(documentUrl);
         setDisplayTitle(title);
@@ -125,48 +132,77 @@ const DocumentViewerModal: React.FC<DocumentViewerModalProps> = ({ documentUrl, 
         setDisplayTitle(fileName);
       }
 
-      // 2. Gerar URL via Proxy (Edge Function)
-      // Usamos fetch com header de Autorização para manter a URL limpa e segura
-      const { data: { session } } = await supabase.auth.getSession();
-      const token = session?.access_token;
-      
-      const functionUrl = `https://fitpynguasqqutuhzifx.functions.supabase.co/document-proxy`;
-      const proxyUrl = `${functionUrl}?bucket=${encodeURIComponent(bucket)}&path=${encodeURIComponent(path)}`;
-      
-      console.log('🔍 [MODAL] Buscando documento via Proxy (Secure Fetch)');
-      
-      try {
-        const response = await fetch(proxyUrl, {
-          headers: {
-            'Authorization': token ? `Bearer ${token}` : '',
-            'apikey': import.meta.env.VITE_SUPABASE_ANON_KEY
+      // Tentar gerar URL assinada e validar com HEAD request
+      for (const bucket of candidateBuckets) {
+        try {
+          // Lógica especial para 'public' bucket (não precisa de assinatura)
+          if (bucket === 'public') {
+            const { data: publicData } = supabase.storage
+              .from(bucket)
+              .getPublicUrl(path);
+
+            if (publicData?.publicUrl) {
+              // Verificar se URL pública é válida
+              try {
+                const response = await fetch(publicData.publicUrl, { method: 'HEAD' });
+                if (response.ok) {
+                  console.log(`✅ [MODAL] Arquivo encontrado no bucket '${bucket}':`, publicData.publicUrl);
+                  setActualUrl(publicData.publicUrl);
+                  setDocumentType(detectDocumentType(path, fileName));
+                  setLoading(false);
+                  return;
+                }
+              } catch (e) {
+                console.warn(`⚠️ [MODAL] Falha ao verificar URL pública no bucket '${bucket}'`, e);
+              }
+            }
+            continue;
           }
-        });
 
-        if (!response.ok) {
-          if (response.status === 403) throw new Error('Acesso negado. Você não tem permissão para ver este documento.');
-          if (response.status === 404) throw new Error('Documento não encontrado no servidor.');
-          throw new Error(`Erro ao carregar documento: ${response.statusText}`);
+          // Para buckets privados, gerar signed URL
+          console.log(`🔄 [MODAL] Tentando bucket: '${bucket}' para path: '${path}'`);
+          const { data: signedData, error: signedError } = await supabase.storage
+            .from(bucket)
+            .createSignedUrl(path, 3600);
+
+          if (signedError) {
+            console.warn(`⚠️ [MODAL] Erro ao gerar URL assinada para bucket '${bucket}':`, signedError.message);
+            continue;
+          }
+
+          if (signedData?.signedUrl) {
+            // Verificar se a URL assinada é acessível (HEAD request)
+            try {
+              // Adicionar timestamp para evitar cache
+              const urlCheck = `${signedData.signedUrl}&t=${Date.now()}`;
+              const response = await fetch(urlCheck, { method: 'HEAD' });
+
+              if (response.ok) {
+                console.log(`✅ [MODAL] Arquivo encontrado e validado no bucket '${bucket}'`);
+                setActualUrl(signedData.signedUrl); // Usar URL original sem timestamp extra
+                setDocumentType(detectDocumentType(path, fileName));
+                setLoading(false);
+                return; // Sucesso! Sair do loop
+              } else {
+                console.warn(`⚠️ [MODAL] URL assinada gerada mas retornou ${response.status} para bucket '${bucket}'`);
+              }
+            } catch (networkError) {
+              console.warn(`⚠️ [MODAL] Erro de rede ao validar URL no bucket '${bucket}'`, networkError);
+              // Em caso de erro de rede (CORS etc), ainda pode ser válido tentar usar a URL se for o único sucesso
+              // Mas aqui vamos continuar tentando outros buckets
+            }
+          }
+        } catch (err) {
+          console.warn(`⚠️ [MODAL] Exceção ao tentar bucket '${bucket}'`, err);
         }
-
-        const blob = await response.blob();
-        const blobUrl = URL.createObjectURL(blob);
-        
-        // Limpar URL anterior se existir
-        if (actualUrl && actualUrl.startsWith('blob:')) {
-          URL.revokeObjectURL(actualUrl);
-        }
-
-        setActualUrl(blobUrl);
-        setDocumentType(detectDocumentType(documentUrl, fileName));
-      } catch (err: any) {
-        console.error('🔍 [MODAL] Error fetching document:', err);
-        setError(err.message || 'Erro inesperado ao carregar o documento.');
-      } finally {
-        setLoading(false);
       }
+
+      // Se chegou aqui, nenhum bucket funcionou
+      console.error('❌ [MODAL] Falha em todos os buckets candidatos:', candidateBuckets);
+      setError('Não foi possível localizar o arquivo em nenhum dos locais de armazenamento esperados.');
+      setLoading(false);
     };
-    
+
     if (documentUrl) {
       testUrl();
     }
@@ -180,7 +216,7 @@ const DocumentViewerModal: React.FC<DocumentViewerModalProps> = ({ documentUrl, 
       const selectors = [
         '.floating-whatsapp-button',
         '.floating-whatsapp-area',
-        '.floating-cart-button', 
+        '.floating-cart-button',
         '.floating-cart-area',
         '[class*="smart-chat"]',
         '[title*="Smart Assistant"]',
@@ -189,7 +225,7 @@ const DocumentViewerModal: React.FC<DocumentViewerModalProps> = ({ documentUrl, 
         'div[style*="position: fixed"][style*="bottom"]',
         'div[style*="position: fixed"][style*="right"]'
       ];
-      
+
       selectors.forEach(selector => {
         const elements = document.querySelectorAll(selector);
         elements.forEach(element => {
@@ -197,7 +233,7 @@ const DocumentViewerModal: React.FC<DocumentViewerModalProps> = ({ documentUrl, 
         });
       });
     }, 50);
-    
+
     return () => {
       clearTimeout(timer);
       // Restaurar botões quando modal fecha
@@ -205,7 +241,7 @@ const DocumentViewerModal: React.FC<DocumentViewerModalProps> = ({ documentUrl, 
         '.floating-whatsapp-button',
         '.floating-whatsapp-area',
         '.floating-cart-button',
-        '.floating-cart-area', 
+        '.floating-cart-area',
         '[class*="smart-chat"]',
         '[title*="Smart Assistant"]',
         '[title*="Help & Support"]',
@@ -213,7 +249,7 @@ const DocumentViewerModal: React.FC<DocumentViewerModalProps> = ({ documentUrl, 
         'div[style*="position: fixed"][style*="bottom"]',
         'div[style*="position: fixed"][style*="right"]'
       ];
-      
+
       selectors.forEach(selector => {
         const elements = document.querySelectorAll(selector);
         elements.forEach(element => {
@@ -231,18 +267,28 @@ const DocumentViewerModal: React.FC<DocumentViewerModalProps> = ({ documentUrl, 
       const a = document.createElement('a');
       a.style.display = 'none';
       a.href = url;
-      
-      // Use filename provided or extract from URL
-      const downloadName = fileName || documentUrl.substring(documentUrl.lastIndexOf('/') + 1);
+
+      // ✅ CORREÇÃO: Limpar o nome do download para remover tokens e parâmetros
+      let downloadName = fileName || documentUrl.split('/').pop()?.split('?')[0] || 'document';
+
+      // Se não tiver extensão, tentar deduzir do tipo detectado
+      if (!downloadName.includes('.')) {
+        const ext = documentType === 'pdf' ? 'pdf' : (documentType === 'image' ? 'png' : '');
+        if (ext) downloadName = `${downloadName}.${ext}`;
+      }
+
+      // Limpar caracteres estranhos
+      downloadName = downloadName.replace(/[/\\?%*:|"<>]/g, '_');
+
       a.download = downloadName;
-      
+
       document.body.appendChild(a);
       a.click();
       window.URL.revokeObjectURL(url);
       a.remove();
     } catch (error) {
       console.error('Failed to download document:', error);
-      // Fallback for browsers that might have issues
+      // Fallback: Tentar limpar a URL mesmo no window.open se possível
       window.open(actualUrl, '_blank');
     }
   };
@@ -260,8 +306,10 @@ const DocumentViewerModal: React.FC<DocumentViewerModalProps> = ({ documentUrl, 
     if (error) {
       return (
         <div className="flex items-center justify-center min-h-[400px] min-w-[400px] flex-col">
-          <div className="text-red-500 text-lg mb-4">⚠️ Error loading document</div>
-          <div className="text-gray-600 text-center mb-4">{error}</div>
+          <div className="text-red-500 text-lg mb-4">⚠️ Erro ao carregar</div>
+          <div className="text-gray-600 text-center mb-4 max-w-md px-4">
+            Não foi possível visualizar este documento. Por favor, entre em contato com o suporte.
+          </div>
           <button
             onClick={onClose}
             className="px-4 py-2 bg-gray-500 text-white rounded hover:bg-gray-600 transition-colors"
@@ -291,9 +339,9 @@ const DocumentViewerModal: React.FC<DocumentViewerModalProps> = ({ documentUrl, 
     // Para imagens, usa img tag
     if (documentType === 'image') {
       return (
-        <img 
-          src={actualUrl} 
-          alt="Document preview" 
+        <img
+          src={actualUrl}
+          alt="Document preview"
           className="object-contain w-full h-full max-h-[80vh]"
           onLoad={() => {
             // Imagem carregada com sucesso
@@ -325,10 +373,10 @@ const DocumentViewerModal: React.FC<DocumentViewerModalProps> = ({ documentUrl, 
   };
 
   const modalContent = (
-    <div 
+    <div
       className="fixed inset-0 bg-black bg-opacity-75 flex items-center justify-center transition-opacity p-4 document-viewer-overlay"
       onClick={onClose}
-      style={{ 
+      style={{
         zIndex: 9999999,
         top: 0,
         left: 0,
@@ -338,7 +386,7 @@ const DocumentViewerModal: React.FC<DocumentViewerModalProps> = ({ documentUrl, 
         backgroundColor: 'rgba(0, 0, 0, 0.75)'
       }}
     >
-      <div 
+      <div
         className="relative bg-white rounded-lg shadow-2xl max-w-6xl max-h-[95vh] w-full h-full flex flex-col overflow-hidden"
         onClick={(e) => e.stopPropagation()}
       >

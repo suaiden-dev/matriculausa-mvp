@@ -14,8 +14,8 @@ import {
 } from '../../components/EnhancedStudentTracking';
 import { supabase } from '../../lib/supabase';
 import { useFeeConfig } from '../../hooks/useFeeConfig';
-import { 
-  useAdjustedStudentsCalculation, 
+import {
+  useAdjustedStudentsCalculation,
   useBlackCouponUsersQuery,
   useAffiliateAdminDataQuery,
   useAffiliateSellersQuery,
@@ -32,7 +32,7 @@ function EnhancedStudentTracking(props) {
   const [expandedSellers, setExpandedSellers] = useState(new Set());
   const [expandedStudents, setExpandedStudents] = useState(new Set());
   const [activeTab, setActiveTab] = useState('details');
-  
+
   // Estados para Transfer Form
   const [transferFormUploads, setTransferFormUploads] = useState<any[]>([]);
   const [loadingTransferFormUploads, setLoadingTransferFormUploads] = useState(false);
@@ -41,25 +41,25 @@ function EnhancedStudentTracking(props) {
   // Hooks personalizados
   const effectiveUserId = userId || user?.id;
   const queryClient = useQueryClient();
-  
+
   // ✅ React Query hooks para dados com cache
   const { data: adminData } = useAffiliateAdminDataQuery(effectiveUserId);
   const { data: sellers = [], isLoading: loadingSellers } = useAffiliateSellersQuery(adminData?.affiliateAdminId);
   const { data: students = [], isLoading: loadingStudents } = useAffiliateStudentProfilesQuery(effectiveUserId);
-  
+
   // Loading combinado
   const loading = loadingSellers || loadingStudents;
-  
+
   // Mock de universidades (não usado no componente atualmente)
   const universities: any[] = [];
-  
+
   // Estado para refresh
   const [isRefreshing, setIsRefreshing] = useState(false);
-  
+
   // Estados locais para o estudante selecionado
   const [selectedStudentId, setSelectedStudentId] = useState<string | null>(null);
   const [selectedProfileId, setSelectedProfileId] = useState<string | null>(null);
-  
+
   // ✅ Usar o novo hook com cache para detalhes do estudante
   const {
     selectedStudent,
@@ -99,12 +99,12 @@ function EnhancedStudentTracking(props) {
   const { filteredSellers, filteredStudents } = useMemo(() => {
     // Aplicar filtros básicos
     const filtered = getFilteredAndSortedData(sellers, students, filters);
-    
+
     // Se não há dados ainda, retornar arrays vazios para evitar loading infinito
     if (!sellers.length && !students.length && !loading) {
       return { filteredSellers: [], filteredStudents: [] };
     }
-    
+
     return filtered;
   }, [sellers, students, filters, loading]);
 
@@ -113,7 +113,7 @@ function EnhancedStudentTracking(props) {
 
   // ✅ React Query Hooks para dados pesados
   const { data: blackCouponUsers = new Set() } = useBlackCouponUsersQuery();
-  
+
   // ✅ Hook composto para cálculos de receita ajustada (substitui toda a lógica manual)
   const {
     allAdjustedStudents,
@@ -123,7 +123,7 @@ function EnhancedStudentTracking(props) {
     dependentsMap,
     realPaidAmountsMap
   } = useAdjustedStudentsCalculation(students, filteredStudents);
-  
+
   // Função de refresh usando React Query
   const handleRefresh = async () => {
     setIsRefreshing(true);
@@ -150,10 +150,10 @@ function EnhancedStudentTracking(props) {
     // Usar system_type do estudante para determinar os valores
     const systemType = student.system_type || 'legacy';
     const isSimplified = systemType === 'simplified';
-    
+
     return {
       selectionProcessFee: isSimplified ? 350 : (Number(feeConfig.selection_process_fee) || 400),
-      scholarshipFee: isSimplified ? 550 : (Number(feeConfig.scholarship_fee_default) || 900),
+      scholarshipFee: isSimplified ? 900 : (Number(feeConfig.scholarship_fee_default) || 900),
       i20ControlFee: 900, // Sempre 900 para ambos os sistemas
       isSimplified: isSimplified
     };
@@ -188,19 +188,19 @@ function EnhancedStudentTracking(props) {
   // Função para buscar aplicação real com campos de transfer form
   const fetchRealApplication = async (studentId) => {
     if (!studentId) return;
-    
+
     try {
       // Verificar se studentId é user_id ou profile_id
       let profileData: any = null;
       let profileError: any = null;
-      
+
       // Primeiro, tentar como user_id
       const { data: userProfileData, error: userProfileError } = await supabase
         .from('user_profiles')
         .select('id')
         .eq('user_id', studentId)
         .single();
-      
+
       if (!userProfileError && userProfileData) {
         profileData = userProfileData;
       } else {
@@ -210,19 +210,19 @@ function EnhancedStudentTracking(props) {
           .select('id')
           .eq('id', studentId)
           .single();
-        
+
         if (!profileIdError && profileIdData) {
           profileData = profileIdData;
         } else {
           profileError = profileIdError;
         }
       }
-      
+
       if (profileError || !profileData) {
         console.error('❌ [TRANSFER_FORM] Error loading profile for student:', studentId, profileError);
         return;
       }
-      
+
       // Buscar aplicação com campos de transfer form
       const { data: applications, error: applicationError } = await supabase
         .from('scholarship_applications')
@@ -244,7 +244,7 @@ function EnhancedStudentTracking(props) {
         .order('status', { ascending: false }) // enrolled vem antes de approved
         .order('created_at', { ascending: false })
         .limit(1);
-      
+
       if (!applicationError && applications && applications.length > 0) {
         const app = applications[0];
         setRealScholarshipApplication(app);
@@ -260,16 +260,16 @@ function EnhancedStudentTracking(props) {
   // Função para buscar transfer form uploads
   const fetchTransferFormUploads = async (applicationId) => {
     if (!applicationId) return;
-    
+
     setLoadingTransferFormUploads(true);
-    
+
     try {
       const { data, error } = await supabase
         .from('transfer_form_uploads')
         .select('*')
         .eq('application_id', applicationId)
         .order('uploaded_at', { ascending: false });
-      
+
       if (!error && data) {
         setTransferFormUploads(data);
       } else if (error) {
@@ -286,7 +286,7 @@ function EnhancedStudentTracking(props) {
   const getTransferApplication = () => {
     // Usar a aplicação real se disponível, senão usar a passada como prop
     const currentApplication = realScholarshipApplication || scholarshipApplication;
-    
+
     return currentApplication?.student_process_type === 'transfer' ? currentApplication : null;
   };
 
@@ -307,7 +307,7 @@ function EnhancedStudentTracking(props) {
   // Loading state - usar skeleton ao invés de spinner
   // ✅ OTIMIZAÇÃO: Só mostrar skeleton no carregamento inicial dos dados essenciais
   const shouldShowSkeleton = (loading && (!sellers.length || !students.length)) || isLoadingAdjustments;
-  
+
   if (shouldShowSkeleton) {
     return (
       <div className="min-h-screen bg-slate-50">
@@ -408,11 +408,10 @@ function EnhancedStudentTracking(props) {
               ].map(tab => (
                 <button
                   key={tab.id}
-                  className={`group flex items-center py-4 px-1 border-b-2 font-medium text-sm transition-all duration-200 whitespace-nowrap min-w-0 ${
-                    activeTab === tab.id 
-                      ? 'border-[#05294E] text-[#05294E]' 
+                  className={`group flex items-center py-4 px-1 border-b-2 font-medium text-sm transition-all duration-200 whitespace-nowrap min-w-0 ${activeTab === tab.id
+                      ? 'border-[#05294E] text-[#05294E]'
                       : 'border-transparent text-slate-500 hover:text-slate-700 hover:border-slate-300'
-                  }`}
+                    }`}
                   onClick={() => setActiveTab(tab.id)}
                   type="button"
                   aria-selected={activeTab === tab.id}
@@ -444,7 +443,7 @@ function EnhancedStudentTracking(props) {
               realPaidAmounts={realPaidAmountsMap[studentDetails?.student_id || studentDetails?.user_id || ''] || {}}
             />
           )}
-          
+
           {activeTab === 'documents' && (
             <div className="space-y-6">
               {/* Document Management Section */}
@@ -476,9 +475,9 @@ function EnhancedStudentTracking(props) {
               {/* Transfer Form Section - Only for Transfer Students */}
               {(() => {
                 const transferApp = getTransferApplication();
-                
+
                 if (!transferApp) return null;
-                
+
                 return (
                   <div className="bg-white rounded-3xl shadow-sm border border-slate-200">
                     <div className="bg-gradient-to-r from-slate-600 to-slate-700 px-6 py-4 rounded-t-3xl">
@@ -501,7 +500,7 @@ function EnhancedStudentTracking(props) {
                             </svg>
                             Transfer Form Template
                           </h3>
-                          
+
                           <div className="bg-slate-50 rounded-2xl p-6 border border-slate-200">
                             <div className="flex items-start space-x-4">
                               <div className="flex-shrink-0">
@@ -523,7 +522,7 @@ function EnhancedStudentTracking(props) {
                                 <p className="text-sm text-slate-500 break-words">
                                   Sent on {transferApp.transfer_form_sent_at ? new Date(transferApp.transfer_form_sent_at).toLocaleDateString('pt-BR') : 'N/A'}
                                 </p>
-                                
+
                                 <div className="flex flex-col sm:flex-row gap-2 mt-3">
                                   <button
                                     onClick={() => handleViewDocument({
@@ -534,7 +533,7 @@ function EnhancedStudentTracking(props) {
                                   >
                                     View Template
                                   </button>
-                                  
+
                                   <button
                                     onClick={() => handleDownloadDocument({
                                       file_url: transferApp.transfer_form_url,
@@ -565,13 +564,13 @@ function EnhancedStudentTracking(props) {
                             </svg>
                             Student Uploads
                           </h4>
-                          
+
                           <div className="space-y-4">
                             {transferFormUploads.map((upload) => {
                               const statusColor = upload.status === 'approved' ? 'bg-green-100 text-green-800 border-green-200' :
-                                                upload.status === 'rejected' ? 'bg-red-100 text-red-800 border-red-200' :
-                                                'bg-yellow-100 text-yellow-800 border-yellow-200';
-                              
+                                upload.status === 'rejected' ? 'bg-red-100 text-red-800 border-red-200' :
+                                  'bg-yellow-100 text-yellow-800 border-yellow-200';
+
                               return (
                                 <div key={upload.id} className="bg-white border border-slate-200 rounded-lg p-4">
                                   <div className="flex items-center justify-between mb-3">
@@ -594,14 +593,14 @@ function EnhancedStudentTracking(props) {
                                       {upload.status.replace('_', ' ').replace(/\b\w/g, (l: string) => l.toUpperCase())}
                                     </span>
                                   </div>
-                                  
+
                                   {upload.rejection_reason && (
                                     <div className="mb-3 p-3 bg-red-50 border border-red-200 rounded-lg">
                                       <p className="text-sm font-medium text-red-600 mb-1">Rejection reason:</p>
                                       <p className="text-sm text-red-700">{upload.rejection_reason}</p>
                                     </div>
                                   )}
-                                  
+
                                   <div className="flex gap-2">
                                     <button
                                       className="text-blue-600 hover:text-blue-800 text-sm font-medium hover:underline"
@@ -713,7 +712,7 @@ function EnhancedStudentTracking(props) {
       <div className="px-4 sm:px-6 lg:px-8">
         <div className="space-y-6">
           {/* Stats Cards - sempre mostra diferenciação entre pagos e registrados */}
-          <StatsCards 
+          <StatsCards
             filteredStudents={adjustedStudents}
             allStudents={allAdjustedStudents}
           />
