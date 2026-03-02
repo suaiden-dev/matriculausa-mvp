@@ -4177,12 +4177,88 @@
     }
   },
   "scholarshipSelection": {
+    "header": {
+      "title": "Escolha de Bolsas",
+      "subtitle": "Navegue pelas bolsas e selecione quais gostaria de se matricular. É necessário escolher ao menos uma para prosseguir."
+    },
+    "errors": {
+      "loadError": "Erro ao carregar bolsas. Tente novamente.",
+      "alreadyLocked": "Você já passou pela revisão de bolsas. Não é possível alterar a seleção.",
+      "updateError": "Erro ao atualizar seleção. Tente novamente.",
+      "selectRequired": "Por favor, selecione ao menos uma bolsa para continuar. Clique nos cards de bolsa acima para adicioná-los à sua seleção."
+    },
+    "review": {
+      "title": "Revise suas Bolsas Selecionadas",
+      "warningTitle": "Importante: Esta é uma escolha definitiva",
+      "warningDescription": "Ao confirmar, você não poderá mais alterar as bolsas escolhidas. Revise cuidadosamente sua seleção abaixo antes de prosseguir.",
+      "unknownUniversity": "Universidade Desconhecida",
+      "backButton": "Voltar para Seleção",
+      "continueButton": "Confirmar e Continuar",
+      "removeButton": "Remover Seleção"
+    },
+    "completed": {
+      "title": "Escolha de Bolsas",
+      "subtitle": "Seleção de bolsas concluída com sucesso.",
+      "cardTitle": "Etapa Concluída",
+      "cardText": "Você já selecionou suas bolsas e passou pela revisão. Esta etapa está completa.",
+      "continueButton": "Continuar"
+    },
+    "grid": {
+      "title": "Bolsas Disponíveis",
+      "option_count": "opção",
+      "option_count_plural": "opções",
+      "noResults": {
+        "title": "Nenhuma bolsa encontrada",
+        "description": "Tente ajustar seus filtros para ver mais opções.",
+        "clearButton": "Limpar todos os filtros"
+      }
+    },
+    "filters": {
+      "title": "Filtrar Bolsas",
+      "searchPlaceholder": "Buscar bolsa...",
+      "searchKeyword": "Palavra-chave",
+      "university": "Universidade",
+      "allUniversities": "Todas as Universidades",
+      "studyLevel": "Nível de Estudo",
+      "allLevels": "Todos os Níveis",
+      "fieldOfStudy": "Área de Estudo",
+      "allFields": "Todas as Áreas de Estudo",
+      "deliveryMode": "Modalidade",
+      "allDeliveryModes": "Todas as Modalidades",
+      "deliveryModeOptions": {
+        "online": "Online",
+        "in_person": "Presencial",
+        "hybrid": "Híbrido",
+        "mixed": "Misto"
+      },
+      "workPermission": "Permissão de Trabalho",
+      "allWorkPermissions": "Todas as Permissões",
+      "scholarshipValue": "Valor da Bolsa",
+      "minValue": "Valor Mínimo",
+      "maxValue": "Valor Máximo",
+      "deadlineDays": "Prazo (dias)",
+      "minPlaceholder": "Mín",
+      "maxPlaceholder": "Máx",
+      "deadlinePlaceholder": "Mín dias restantes",
+      "apply": "Aplicar Filtros",
+      "clear": "Limpar",
+      "activeBadge": "Ativo"
+    },
     "confirmationModal": {
       "title": "Confirmar Seleção",
       "description": "Ao confirmar, você não poderá mais alterar as bolsas escolhidas. Revise cuidadosamente sua seleção antes de prosseguir.",
       "confirm": "Confirmar e Prosseguir",
       "cancel": "Revisar Novamente"
-    }
+    },
+    "quickGuide": {
+      "title": "Guia rápido:",
+      "step1": "<strong>Clique em qualquer card de bolsa</strong> para adicioná-lo à sua seleção",
+      "step2": "<strong>Selecione quantas quiser</strong> - você pode escolher múltiplas opções",
+      "step3": "<strong>Use filtros</strong> para buscar por universidade ou valor da bolsa",
+      "step4": "<strong>Clique em \"Continuar\"</strong> após selecionar ao menos uma bolsa"
+    },
+    "continueWithCount": "Continuar ({{count}} selecionada)",
+    "continueWithCount_plural": "Continuar ({{count}} selecionadas)"
   },
   "rapidRegistration": {
     "title": "Registro e Pagamento",

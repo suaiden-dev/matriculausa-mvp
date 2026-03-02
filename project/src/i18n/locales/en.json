@@ -2035,6 +2035,8 @@
         "level": "Level",
         "deadline": "Deadline",
         "daysLeft": "days left",
+        "days": "days",
+        "scholarshipDiscount": "Scholarship Discount",
         "showDetails": "Show Details",
         "show": "Show",
         "view": "View",
@@ -4119,6 +4121,90 @@
     "3800Expired": "Not Available for application",
     "3800Expiring": "Last hours to apply! Deadline expires tomorrow (November 6th)",
     "3800ExpiringShort": "Deadline expires tomorrow"
+  },
+  "scholarshipSelection": {
+    "header": {
+      "title": "Scholarship Selection",
+      "subtitle": "Browse through the scholarships and select which ones you would like to enroll in. You must choose at least one to proceed."
+    },
+    "errors": {
+      "loadError": "Error loading scholarships. Please try again.",
+      "alreadyLocked": "You have already passed the scholarship review. It is not possible to change the selection.",
+      "updateError": "Error updating selection. Please try again.",
+      "selectRequired": "Please select at least one scholarship to continue. Click on the scholarship cards above to add them to your selection."
+    },
+    "review": {
+      "title": "Review Your Selected Scholarships",
+      "warningTitle": "Important: This is a definitive choice",
+      "warningDescription": "By confirming, you will no longer be able to change the chosen scholarships. Please carefully review your selection below before proceeding.",
+      "unknownUniversity": "Unknown University",
+      "backButton": "Back to Selection",
+      "continueButton": "Confirm and Continue",
+      "removeButton": "Remove Selection"
+    },
+    "completed": {
+      "title": "Scholarship Selection",
+      "subtitle": "Scholarship selection successfully completed.",
+      "cardTitle": "Step Completed",
+      "cardText": "You have already selected your scholarships and passed the review. This step is complete.",
+      "continueButton": "Continue"
+    },
+    "grid": {
+      "title": "Available Scholarships",
+      "option_count": "option",
+      "option_count_plural": "options",
+      "noResults": {
+        "title": "No scholarships found",
+        "description": "Try adjusting your filters to see more options.",
+        "clearButton": "Clear all filters"
+      }
+    },
+    "filters": {
+      "title": "Filter Scholarships",
+      "searchPlaceholder": "Search scholarship...",
+      "searchKeyword": "Search Keyword",
+      "university": "University",
+      "allUniversities": "All Universities",
+      "studyLevel": "Study Level",
+      "allLevels": "All Levels",
+      "fieldOfStudy": "Field of Study",
+      "allFields": "All Fields of Study",
+      "deliveryMode": "Delivery Mode",
+      "allDeliveryModes": "All Delivery Modes",
+      "deliveryModeOptions": {
+        "online": "Online",
+        "in_person": "In Person",
+        "hybrid": "Hybrid",
+        "mixed": "Mixed"
+      },
+      "workPermission": "Work Permission",
+      "allWorkPermissions": "All Permissions",
+      "scholarshipValue": "Scholarship Value",
+      "minValue": "Min Value",
+      "maxValue": "Max Value",
+      "deadlineDays": "Deadline (days)",
+      "minPlaceholder": "Min",
+      "maxPlaceholder": "Max",
+      "deadlinePlaceholder": "Min days left",
+      "apply": "Apply Filters",
+      "clear": "Clear",
+      "activeBadge": "Active"
+    },
+    "confirmationModal": {
+      "title": "Confirm Selection",
+      "description": "By confirming, you will no longer be able to change your selected scholarships. Please carefully review your selection before proceeding.",
+      "confirm": "Confirm and Proceed",
+      "cancel": "Review Again"
+    },
+    "quickGuide": {
+      "title": "Quick guide:",
+      "step1": "<strong>Click any scholarship card</strong> to add it to your selection",
+      "step2": "<strong>Select as many as you want</strong> - you can choose multiple options",
+      "step3": "<strong>Use filters</strong> to search by university or scholarship value",
+      "step4": "<strong>Click \"Continue\"</strong> once you've selected at least one scholarship"
+    },
+    "continueWithCount": "Continue ({{count}} selected)",
+    "continueWithCount_plural": "Continue ({{count}} selected)"
   },
   "rapidRegistration": {
     "title": "Registration and Payment",

@@ -195,13 +195,13 @@ export const ScholarshipSelectionStep: React.FC<StepProps> = ({ onNext, onBack: 
   const getDeliveryModeLabel = useCallback((mode: string) => {
     switch (mode?.toLowerCase()) {
       case 'online':
-        return 'Online';
+        return t('scholarshipSelection.filters.deliveryModeOptions.online');
       case 'in_person':
-        return 'In Person';
+        return t('scholarshipSelection.filters.deliveryModeOptions.in_person');
       case 'hybrid':
-        return 'Hybrid';
+        return t('scholarshipSelection.filters.deliveryModeOptions.hybrid');
       default:
-        return mode || 'Mixed';
+        return mode || t('scholarshipSelection.filters.deliveryModeOptions.mixed');
     }
   }, []);
 
@@ -431,7 +431,7 @@ export const ScholarshipSelectionStep: React.FC<StepProps> = ({ onNext, onBack: 
     
     // Bloquear se já passou pela review
     if (isLocked) {
-      setError('Você já passou pela revisão de bolsas. Não é possível alterar a seleção.');
+      setError(t('scholarshipSelection.errors.alreadyLocked'));
       return;
     }
 
@@ -473,7 +473,7 @@ export const ScholarshipSelectionStep: React.FC<StepProps> = ({ onNext, onBack: 
       }, 200);
     } catch (err) {
       console.error('❌ [ScholarshipSelection] Error toggling scholarship:', err);
-      setError('Erro ao atualizar seleção. Tente novamente.');
+      setError(t('scholarshipSelection.errors.updateError'));
       
       // Em caso de erro, reverter a atualização otimista sincronizando com o cart
       const cartIds = new Set(cart.map(item => item.scholarships.id));
@@ -492,7 +492,7 @@ export const ScholarshipSelectionStep: React.FC<StepProps> = ({ onNext, onBack: 
     }
     
     if (selectedIds.size === 0) {
-      setError('Please select at least one scholarship to continue. Click on the scholarship cards above to add them to your selection.');
+      setError(t('scholarshipSelection.errors.selectRequired'));
       return;
     }
     
@@ -525,8 +525,8 @@ export const ScholarshipSelectionStep: React.FC<StepProps> = ({ onNext, onBack: 
       <div className="space-y-6">
         <div className="bg-gradient-to-br from-blue-50 via-indigo-50 to-purple-50 rounded-xl p-5 sm:p-6 border border-blue-100">
         <div className="text-center">
-            <h2 className="text-2xl sm:text-3xl font-bold text-gray-900 mb-2">Choose Your Scholarships</h2>
-            <p className="text-base sm:text-lg text-gray-700 font-medium">Click on the scholarship cards below to select them. You need at least one to proceed.</p>
+            <h2 className="text-2xl sm:text-3xl font-bold text-gray-900 mb-2">{t('scholarshipSelection.header.title')}</h2>
+            <p className="text-base sm:text-lg text-gray-700 font-medium">{t('scholarshipSelection.header.subtitle')}</p>
           </div>
         </div>
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 sm:gap-6">
@@ -557,10 +557,10 @@ export const ScholarshipSelectionStep: React.FC<StepProps> = ({ onNext, onBack: 
               <AlertTriangle className="h-6 w-6 text-amber-600 flex-shrink-0 mt-0.5" />
               <div className="ml-4">
                 <p className="text-base font-black text-amber-900 mb-1 uppercase tracking-tight">
-                  Importante: Esta é uma escolha definitiva
+                  {t('scholarshipSelection.review.warningTitle')}
                 </p>
                 <p className="text-sm text-amber-800 font-medium leading-relaxed">
-                  Ao confirmar, você não poderá mais alterar as bolsas escolhidas. Revise cuidadosamente sua seleção abaixo antes de prosseguir.
+                  {t('scholarshipSelection.review.warningDescription')}
                 </p>
               </div>
             </div>
@@ -586,7 +586,7 @@ export const ScholarshipSelectionStep: React.FC<StepProps> = ({ onNext, onBack: 
                               <div className="font-black text-slate-900 text-lg uppercase tracking-tight mb-1">{scholarship.title}</div>
                               <div className="text-slate-500 text-sm mb-2 flex items-center">
                                 <Building className="w-4 h-4 mr-1.5" />
-                                {scholarship.universities?.name || scholarship.university_name || 'Unknown University'}
+                                {scholarship.universities?.name || scholarship.university_name || t('scholarshipSelection.review.unknownUniversity')}
                               </div>
                               <div className="text-lg font-black text-green-600">
                                 ${formatAmount(scholarship.annual_value_with_scholarship || scholarship.amount || 'N/A')}
@@ -596,7 +596,7 @@ export const ScholarshipSelectionStep: React.FC<StepProps> = ({ onNext, onBack: 
                               <button
                                 onClick={() => handleRemoveScholarship(scholarship.id)}
                                 className="flex-shrink-0 p-2.5 rounded-xl hover:bg-red-50 text-slate-400 hover:text-red-500 transition-all border border-transparent hover:border-red-100"
-                                title={t('studentDashboard.cartPage.removeFromCart') || 'Remove from selection'}
+                                title={t('scholarshipSelection.review.removeButton')}
                               >
                                 <X className="h-5 h-5" />
                               </button>
@@ -637,14 +637,14 @@ export const ScholarshipSelectionStep: React.FC<StepProps> = ({ onNext, onBack: 
                   }}
                   className="w-full sm:w-auto px-8 py-4 rounded-xl font-bold text-slate-500 hover:bg-slate-50 transition-all uppercase tracking-widest text-sm"
                 >
-                  Voltar para Seleção
+                  {t('scholarshipSelection.review.backButton')}
                 </button>
                 <button
                   onClick={handleContinue}
                   disabled={hasBlockedScholarships || cart.length === 0}
                   className="flex-1 w-full bg-blue-600 text-white py-5 rounded-2xl font-black uppercase tracking-[0.2em] text-sm hover:bg-blue-700 transition-all shadow-xl shadow-blue-500/20 hover:scale-105 active:scale-95 disabled:bg-slate-300 disabled:cursor-not-allowed flex items-center justify-center space-x-3"
                 >
-                  <span>Continuar</span>
+                  <span>{t('scholarshipSelection.review.continueButton')}</span>
                 </button>
               </div>
             </div>
@@ -660,8 +660,8 @@ export const ScholarshipSelectionStep: React.FC<StepProps> = ({ onNext, onBack: 
       <div className="space-y-10 pb-12 max-w-4xl mx-auto px-4">
         {/* Header */}
         <div className="text-center md:text-left space-y-4">
-          <h2 className="text-3xl md:text-5xl font-black text-slate-900 uppercase tracking-tighter leading-none">Escolha de Bolsas</h2>
-          <p className="text-lg md:text-xl text-slate-600 font-medium max-w-2xl mt-2">Seleção de bolsas concluída com sucesso.</p>
+          <h2 className="text-3xl md:text-5xl font-black text-slate-900 uppercase tracking-tighter leading-none">{t('scholarshipSelection.completed.title')}</h2>
+          <p className="text-lg md:text-xl text-slate-600 font-medium max-w-2xl mt-2">{t('scholarshipSelection.completed.subtitle')}</p>
         </div>
 
         {/* Main White Container */}
@@ -672,13 +672,13 @@ export const ScholarshipSelectionStep: React.FC<StepProps> = ({ onNext, onBack: 
             <div className="w-20 h-20 bg-emerald-500/20 rounded-full flex items-center justify-center mx-auto mb-6 border border-emerald-500/30">
               <CheckCircle2 className="w-12 h-12 text-emerald-400" />
             </div>
-            <h3 className="text-3xl font-black text-gray-900 mb-3 uppercase tracking-tight">Etapa Concluída</h3>
-            <p className="text-gray-500 mb-8 font-medium">Você já selecionou suas bolsas e passou pela revisão. Esta etapa está completa.</p>
+            <h3 className="text-3xl font-black text-gray-900 mb-3 uppercase tracking-tight">{t('scholarshipSelection.completed.cardTitle')}</h3>
+            <p className="text-gray-500 mb-8 font-medium">{t('scholarshipSelection.completed.cardText')}</p>
             <button
               onClick={handleContinue}
               className="w-full max-w-xs bg-blue-600 text-white py-4 px-8 rounded-xl hover:bg-blue-700 transition-all font-bold uppercase tracking-widest shadow-lg shadow-blue-500/20 hover:scale-105 active:scale-95 mx-auto"
             >
-              Continuar
+              {t('scholarshipSelection.completed.continueButton')}
             </button>
           </div>
         </div>
@@ -700,10 +700,10 @@ export const ScholarshipSelectionStep: React.FC<StepProps> = ({ onNext, onBack: 
           <div>
             <div className="text-center md:text-left mb-8 space-y-4">
               <h2 className="text-3xl md:text-5xl font-black text-slate-900 uppercase tracking-tighter leading-none">
-                Escolha de Bolsas
+                {t('scholarshipSelection.header.title')}
               </h2>
               <p className="text-lg md:text-xl text-slate-600 font-medium max-w-3xl">
-                Navegue pelas bolsas e selecione quais gostaria de se matricular. É necessário escolher ao menos uma para prosseguir.
+                {t('scholarshipSelection.header.subtitle')}
               </p>
             </div>
 
@@ -715,24 +715,24 @@ export const ScholarshipSelectionStep: React.FC<StepProps> = ({ onNext, onBack: 
                 <Info className="w-5 h-5 text-blue-600 flex-shrink-0 mt-0.5" />
                 <div className="flex-1">
                   <h3 className="font-semibold text-gray-900 mb-2 text-sm sm:text-base">
-                    Quick guide:
+                    {t('scholarshipSelection.quickGuide.title')}
                   </h3>
                   <ul className="space-y-2 text-sm text-gray-700">
                     <li className="flex items-start space-x-2">
                       <CheckCircle2 className="w-4 h-4 text-green-600 flex-shrink-0 mt-0.5" />
-                      <span><strong>Click any scholarship card</strong> to add it to your selection</span>
+                      <span dangerouslySetInnerHTML={{ __html: t('scholarshipSelection.quickGuide.step1') }} />
                     </li>
                     <li className="flex items-start space-x-2">
                       <CheckCircle2 className="w-4 h-4 text-green-600 flex-shrink-0 mt-0.5" />
-                      <span><strong>Select as many as you want</strong> - you can choose multiple options</span>
+                      <span dangerouslySetInnerHTML={{ __html: t('scholarshipSelection.quickGuide.step2') }} />
                     </li>
                     <li className="flex items-start space-x-2">
                       <CheckCircle2 className="w-4 h-4 text-green-600 flex-shrink-0 mt-0.5" />
-                      <span><strong>Use filters</strong> to search by university or scholarship value</span>
+                      <span dangerouslySetInnerHTML={{ __html: t('scholarshipSelection.quickGuide.step3') }} />
                     </li>
                     <li className="flex items-start space-x-2">
                       <CheckCircle2 className="w-4 h-4 text-green-600 flex-shrink-0 mt-0.5" />
-                      <span><strong>Click "Continue"</strong> once you've selected at least one scholarship</span>
+                      <span dangerouslySetInnerHTML={{ __html: t('scholarshipSelection.quickGuide.step4') }} />
                     </li>
                   </ul>
                 </div>
@@ -759,11 +759,11 @@ export const ScholarshipSelectionStep: React.FC<StepProps> = ({ onNext, onBack: 
               <div className="flex items-center space-x-2">
                 <Filter className="w-4 h-4 text-slate-600" />
                 <h3 className="text-sm font-semibold text-gray-900">
-                  Filter Scholarships
+                  {t('scholarshipSelection.filters.title')}
                 </h3>
                 {hasActiveFilters && (
                   <span className="px-2 py-0.5 bg-blue-100 text-blue-700 text-xs font-medium rounded-full">
-                    Active
+                    {t('scholarshipSelection.filters.activeBadge')}
                   </span>
                 )}
               </div>
@@ -776,10 +776,10 @@ export const ScholarshipSelectionStep: React.FC<StepProps> = ({ onNext, onBack: 
                       clearFilters();
                     }}
                     className="flex items-center space-x-1 px-2 py-1 text-xs font-medium text-slate-600 hover:text-slate-800 hover:bg-slate-100 rounded-lg transition-colors"
-                    title="Clear all filters"
+                    title={t('scholarshipSelection.filters.clear')}
                   >
                     <X className="w-3 h-3" />
-                    <span>Clear</span>
+                    <span>{t('scholarshipSelection.filters.clear')}</span>
                   </button>
                 )}
                 {filtersExpanded ? <ChevronUp className="w-4 h-4 text-slate-400" /> : <ChevronDown className="w-4 h-4 text-slate-400" />}
@@ -794,14 +794,14 @@ export const ScholarshipSelectionStep: React.FC<StepProps> = ({ onNext, onBack: 
                   <div className="md:col-span-2 lg:col-span-1">
                     <label htmlFor="search" className="block text-xs font-medium text-slate-700 mb-1.5">
                       <Search className="h-3 w-3 inline mr-1" />
-                      Search Keyword
+                      {t('scholarshipSelection.filters.searchKeyword')}
                     </label>
                     <div className="relative">
                       <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-400" />
                       <input
                         id="search"
                         type="search"
-                        placeholder="Search by name..."
+                        placeholder={t('scholarshipSelection.filters.searchPlaceholder')}
                         value={searchTerm}
                         onChange={(e) => setSearchTerm(e.target.value)}
                         className="w-full pl-10 pr-4 py-2 bg-slate-50 border border-slate-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-600 focus:border-blue-600 text-sm"
@@ -813,7 +813,7 @@ export const ScholarshipSelectionStep: React.FC<StepProps> = ({ onNext, onBack: 
                   <div>
                     <label htmlFor="university" className="block text-xs font-medium text-slate-700 mb-1.5">
                       <Building className="h-3 w-3 inline mr-1" />
-                      University
+                      {t('scholarshipSelection.filters.university')}
                     </label>
                     <select
                       id="university"
@@ -821,7 +821,7 @@ export const ScholarshipSelectionStep: React.FC<StepProps> = ({ onNext, onBack: 
                       onChange={(e) => setSelectedUniversity(e.target.value)}
                       className="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-600 focus:border-blue-600 text-sm"
                     >
-                      <option value="all">All Universities</option>
+                      <option value="all">{t('scholarshipSelection.filters.allUniversities')}</option>
                       {uniqueUniversities.map((uni: any) => (
                         <option key={uni.id} value={uni.id}>{uni.name}</option>
                       ))}
@@ -832,7 +832,7 @@ export const ScholarshipSelectionStep: React.FC<StepProps> = ({ onNext, onBack: 
                   <div>
                     <label htmlFor="level" className="block text-xs font-medium text-slate-700 mb-1.5">
                       <GraduationCap className="h-3 w-3 inline mr-1" />
-                      Study Level
+                      {t('scholarshipSelection.filters.studyLevel')}
                     </label>
                     <select
                       id="level"
@@ -840,7 +840,7 @@ export const ScholarshipSelectionStep: React.FC<StepProps> = ({ onNext, onBack: 
                       onChange={(e) => setSelectedLevel(e.target.value)}
                       className="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-600 focus:border-blue-600 text-sm"
                     >
-                      <option value="all">All Levels</option>
+                      <option value="all">{t('scholarshipSelection.filters.allLevels')}</option>
                       {uniqueLevels.map((lvl) => (
                         <option key={lvl} value={lvl}>{lvl}</option>
                       ))}
@@ -851,7 +851,7 @@ export const ScholarshipSelectionStep: React.FC<StepProps> = ({ onNext, onBack: 
                   <div>
                     <label htmlFor="field" className="block text-xs font-medium text-slate-700 mb-1.5">
                       <BookOpen className="h-3 w-3 inline mr-1" />
-                      Field of Study
+                      {t('scholarshipSelection.filters.fieldOfStudy')}
                     </label>
                     <select
                       id="field"
@@ -859,7 +859,7 @@ export const ScholarshipSelectionStep: React.FC<StepProps> = ({ onNext, onBack: 
                       onChange={(e) => setSelectedField(e.target.value)}
                       className="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-600 focus:border-blue-600 text-sm"
                     >
-                      <option value="all">All Fields</option>
+                      <option value="all">{t('scholarshipSelection.filters.allFields')}</option>
                       {uniqueFields.map((field) => (
                         <option key={field} value={field}>{field}</option>
                       ))}
@@ -870,7 +870,7 @@ export const ScholarshipSelectionStep: React.FC<StepProps> = ({ onNext, onBack: 
                   <div>
                     <label htmlFor="delivery" className="block text-xs font-medium text-slate-700 mb-1.5">
                       <Monitor className="h-3 w-3 inline mr-1" />
-                      Learning Mode
+                      {t('scholarshipSelection.filters.deliveryMode')}
                     </label>
                     <select
                       id="delivery"
@@ -878,7 +878,7 @@ export const ScholarshipSelectionStep: React.FC<StepProps> = ({ onNext, onBack: 
                       onChange={(e) => setSelectedDeliveryMode(e.target.value)}
                       className="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-600 focus:border-blue-600 text-sm"
                     >
-                      <option value="all">All Modes</option>
+                      <option value="all">{t('scholarshipSelection.filters.allDeliveryModes')}</option>
                       {uniqueDeliveryModes.map((mode) => (
                         <option key={mode} value={mode}>{getDeliveryModeLabel(mode)}</option>
                       ))}
@@ -889,7 +889,7 @@ export const ScholarshipSelectionStep: React.FC<StepProps> = ({ onNext, onBack: 
                   <div>
                     <label htmlFor="work" className="block text-xs font-medium text-slate-700 mb-1.5">
                       <Briefcase className="h-3 w-3 inline mr-1" />
-                      Work Options
+                      {t('scholarshipSelection.filters.workPermission')}
                     </label>
                     <select
                       id="work"
@@ -897,7 +897,7 @@ export const ScholarshipSelectionStep: React.FC<StepProps> = ({ onNext, onBack: 
                       onChange={(e) => setSelectedWorkPermission(e.target.value)}
                       className="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-600 focus:border-blue-600 text-sm"
                     >
-                      <option value="all">Any Work Permission</option>
+                      <option value="all">{t('scholarshipSelection.filters.allWorkPermissions')}</option>
                       {uniqueWorkPermissions.map((wp) => (
                         <option key={wp} value={wp}>{wp}</option>
                       ))}
@@ -908,12 +908,12 @@ export const ScholarshipSelectionStep: React.FC<StepProps> = ({ onNext, onBack: 
                   <div>
                     <label htmlFor="min-value" className="block text-xs font-medium text-slate-700 mb-1.5">
                       <DollarSign className="h-3 w-3 inline mr-1" />
-                      Min Value
+                      {t('scholarshipSelection.filters.minValue')}
                     </label>
                     <input
                       id="min-value"
                       type="number"
-                      placeholder="Min"
+                      placeholder={t('scholarshipSelection.filters.minPlaceholder')}
                       value={minValue}
                       onChange={(e) => {
                         const value = e.target.value;
@@ -929,12 +929,12 @@ export const ScholarshipSelectionStep: React.FC<StepProps> = ({ onNext, onBack: 
                   <div>
                   <label htmlFor="max-value" className="block text-xs font-medium text-slate-700 mb-1.5">
                     <DollarSign className="h-3 w-3 inline mr-1" />
-                    Max Value
+                    {t('scholarshipSelection.filters.maxValue')}
                   </label>
                     <input
                       id="max-value"
                       type="number"
-                      placeholder="Max"
+                      placeholder={t('scholarshipSelection.filters.maxPlaceholder')}
                       value={maxValue}
                       onChange={(e) => {
                         const value = e.target.value;
@@ -950,12 +950,12 @@ export const ScholarshipSelectionStep: React.FC<StepProps> = ({ onNext, onBack: 
                 <div>
                   <label htmlFor="deadline-days" className="block text-xs font-medium text-slate-700 mb-1.5">
                     <Calendar className="h-3 w-3 inline mr-1" />
-                    Deadline (days)
+                    {t('scholarshipSelection.filters.deadlineDays')}
                   </label>
                   <input
                     id="deadline-days"
                     type="number"
-                    placeholder="Min days left"
+                    placeholder={t('scholarshipSelection.filters.deadlinePlaceholder')}
                     value={deadlineDays}
                     onChange={(e) => {
                       const value = e.target.value;
@@ -974,11 +974,11 @@ export const ScholarshipSelectionStep: React.FC<StepProps> = ({ onNext, onBack: 
           {/* Scholarships Grid */}
           <div>
             <div className="mb-4 flex items-center justify-between">
-              <h3 className="text-lg font-semibold text-white">
-                Available Scholarships
+              <h3 className="text-lg font-semibold text-slate-900">
+                {t('scholarshipSelection.grid.title')}
                 {sortedScholarships.length > 0 && (
-                  <span className="text-sm font-normal text-white/70 ml-2">
-                    ({sortedScholarships.length} {sortedScholarships.length === 1 ? 'option' : 'options'})
+                  <span className="text-sm font-normal text-slate-900 ml-2">
+                    ({sortedScholarships.length} {t(sortedScholarships.length === 1 ? 'scholarshipSelection.grid.option_count' : 'scholarshipSelection.grid.option_count_plural')})
                   </span>
                 )}
               </h3>
@@ -1004,8 +1004,8 @@ export const ScholarshipSelectionStep: React.FC<StepProps> = ({ onNext, onBack: 
           {sortedScholarships.length === 0 && !loading && (
             <div className="text-center py-12 bg-gray-50 rounded-lg border-2 border-dashed border-gray-300">
               <Award className="w-16 h-16 mx-auto mb-4 text-gray-400" />
-              <h3 className="text-lg font-semibold text-gray-900 mb-2">No scholarships found</h3>
-              <p className="text-gray-600 mb-4">Try adjusting your filters to see more options.</p>
+              <h3 className="text-lg font-semibold text-gray-900 mb-2">{t('scholarshipSelection.grid.noResults.title')}</h3>
+              <p className="text-gray-600 mb-4">{t('scholarshipSelection.grid.noResults.description')}</p>
               {hasActiveFilters && (
                 <button
                   onClick={clearFilters}
@@ -1026,10 +1026,10 @@ export const ScholarshipSelectionStep: React.FC<StepProps> = ({ onNext, onBack: 
                 disabled={currentPage === 1}
                 className="px-4 py-2 rounded-lg font-medium transition-all bg-white border border-slate-300 text-slate-700 hover:bg-slate-50 disabled:opacity-50 disabled:cursor-not-allowed"
               >
-                Previous
+                {t('scholarshipsPage.pagination.previous')}
               </button>
-              <span className="px-4 py-2 text-sm text-white/70">
-                Page {currentPage} of {totalPages}
+              <span className="px-4 py-2 text-sm text-slate-900">
+                {t('scholarshipsPage.pagination.page')} {currentPage} {t('scholarshipsPage.pagination.of')} {totalPages}
               </span>
               <button
                 type="button"
@@ -1037,7 +1037,7 @@ export const ScholarshipSelectionStep: React.FC<StepProps> = ({ onNext, onBack: 
                 disabled={currentPage === totalPages}
                 className="px-4 py-2 rounded-lg font-medium transition-all bg-white border border-slate-300 text-slate-700 hover:bg-slate-50 disabled:opacity-50 disabled:cursor-not-allowed"
               >
-                Next
+                {t('scholarshipsPage.pagination.next')}
               </button>
             </div>
           )}
@@ -1049,7 +1049,7 @@ export const ScholarshipSelectionStep: React.FC<StepProps> = ({ onNext, onBack: 
               disabled={selectedIds.size === 0}
               className="w-full bg-blue-600 text-white py-4 px-6 rounded-lg hover:bg-blue-700 transition-all font-bold text-base disabled:opacity-50 disabled:cursor-not-allowed shadow-lg flex items-center justify-center space-x-2 disabled:bg-gray-400"
             >
-              <span>Continue ({selectedIds.size} selected)</span>
+              <span>{t(selectedIds.size === 1 ? 'scholarshipSelection.continueWithCount' : 'scholarshipSelection.continueWithCount_plural', { count: selectedIds.size })}</span>
             </button>
           </div>
 
@@ -1060,7 +1060,7 @@ export const ScholarshipSelectionStep: React.FC<StepProps> = ({ onNext, onBack: 
               disabled={selectedIds.size === 0}
               className="w-full bg-blue-600 text-white py-3.5 px-6 rounded-lg hover:bg-blue-700 transition-all font-bold text-base disabled:opacity-50 disabled:cursor-not-allowed shadow-md flex items-center justify-center space-x-2 disabled:bg-gray-400"
             >
-              <span>Continue ({selectedIds.size} selected)</span>
+              <span>{t(selectedIds.size === 1 ? 'scholarshipSelection.continueWithCount' : 'scholarshipSelection.continueWithCount_plural', { count: selectedIds.size })}</span>
             </button>
           </div>
         </div>

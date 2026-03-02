@@ -1049,7 +1049,8 @@
       "internalFeesAvailable": "Tarifas Internas de la Universidad Disponibles",
       "internalFeesNotice": "Esta beca puede tener tarifas internas adicionales de la universidad. Estas tarifas serán visibles después del pago de la Tarifa de Proceso de Selección.",
       "universityInternalFees": "Tarifas Internas de la Universidad",
-      "viewUniversityFeesPage": "Ver Página de Tarifas de la Universidad"
+      "viewUniversityFeesPage": "Ver Página de Tarifas de la Universidad",
+      "days": "días"
     }
   },
   "universitiesPage": {
@@ -2318,6 +2319,8 @@
         "level": "Nivel",
         "deadline": "Fecha Límite",
         "daysLeft": "días restantes",
+        "days": "días",
+        "scholarshipDiscount": "Descuento de Beca",
         "showDetails": "Ver Detalles",
         "show": "Ver",
         "view": "Ver",
@@ -3866,6 +3869,90 @@
     "3800Expired": "Not Available for application",
     "3800Expiring": "Last hours to apply! Deadline expires tomorrow (November 6th)",
     "3800ExpiringShort": "El plazo expira mañana"
+  },
+  "scholarshipSelection": {
+    "header": {
+      "title": "Selección de Becas",
+      "subtitle": "Navegue por las becas y seleccione en cuáles le gustaría inscribirse. Es necesario elegir al menos una para continuar."
+    },
+    "errors": {
+      "loadError": "Error al cargar las becas. Inténtalo de nuevo.",
+      "alreadyLocked": "Ya has pasado por la revisión de becas. No es posible cambiar la selección.",
+      "updateError": "Error al actualizar la selección. Inténtalo de nuevo.",
+      "selectRequired": "Por favor, seleccione al menos una beca para continuar. Haga clic en las tarjetas de beca arriba para añadirlas a su selección."
+    },
+    "review": {
+      "title": "Revise sus Becas Seleccionadas",
+      "warningTitle": "Importante: Esta es una elección definitiva",
+      "warningDescription": "Al confirmar, ya no podrá cambiar las becas elegidas. Revise cuidadosamente su selección a continuación antes de continuar.",
+      "unknownUniversity": "Universidad Desconocida",
+      "backButton": "Volver a la Selección",
+      "continueButton": "Confirmar y Continuar",
+      "removeButton": "Eliminar Selección"
+    },
+    "completed": {
+      "title": "Selección de Becas",
+      "subtitle": "Selección de becas completada con éxito.",
+      "cardTitle": "Etapa Completada",
+      "cardText": "Ya has seleccionado tus becas y pasado por la revisión. Esta etapa está completa.",
+      "continueButton": "Continuar"
+    },
+    "grid": {
+      "title": "Becas Disponibles",
+      "option_count": "opción",
+      "option_count_plural": "opciones",
+      "noResults": {
+        "title": "No se encontraron becas",
+        "description": "Intente ajustar sus filtros para ver más opciones.",
+        "clearButton": "Limpiar todos los filtros"
+      }
+    },
+    "filters": {
+      "title": "Filtrar Becas",
+      "searchPlaceholder": "Buscar beca...",
+      "searchKeyword": "Palabra clave",
+      "university": "Universidad",
+      "allUniversities": "Todas las Universidades",
+      "studyLevel": "Nivel de Estudio",
+      "allLevels": "Todos los Niveles",
+      "fieldOfStudy": "Área de Estudio",
+      "allFields": "Todas las Áreas de Estudio",
+      "deliveryMode": "Modalidad",
+      "allDeliveryModes": "Todas las Modalidades",
+      "deliveryModeOptions": {
+        "online": "Online",
+        "in_person": "Presencial",
+        "hybrid": "Híbrido",
+        "mixed": "Mixto"
+      },
+      "workPermission": "Permiso de Trabajo",
+      "allWorkPermissions": "Todos los Permisos",
+      "scholarshipValue": "Valor de la Beca",
+      "minValue": "Valor Mínimo",
+      "maxValue": "Valor Máximo",
+      "deadlineDays": "Plazo (dias)",
+      "minPlaceholder": "Mín",
+      "maxPlaceholder": "Máx",
+      "deadlinePlaceholder": "Mín días restantes",
+      "apply": "Aplicar Filtros",
+      "clear": "Limpiar",
+      "activeBadge": "Activo"
+    },
+    "confirmationModal": {
+      "title": "Confirmar Selección",
+      "description": "Al confirmar, ya no podrás cambiar las becas seleccionadas. Por favor, revisa cuidadosamente tu selección antes de continuar.",
+      "confirm": "Confirmar y Continuar",
+      "cancel": "Revisar de Nuevo"
+    },
+    "quickGuide": {
+      "title": "Guía rápida:",
+      "step1": "<strong>Haz clic en cualquier tarjeta de beca</strong> para añadirla a tu selección",
+      "step2": "<strong>Selecciona tantas como quieras</strong> - puedes elegir múltiples opciones",
+      "step3": "<strong>Usa filtros</strong> para buscar por universidad o valor de la beca",
+      "step4": "<strong>Haz clic en \"Continuar\"</strong> una vez que hayas seleccionado al menos una beca"
+    },
+    "continueWithCount": "Continuar ({{count}} seleccionada)",
+    "continueWithCount_plural": "Continuar ({{count}} seleccionadas)"
   },
   "rapidRegistration": {
     "title": "Registro y Pago",
