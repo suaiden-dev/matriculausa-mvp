@@ -14,7 +14,6 @@ import { supabase } from '../../../lib/supabase';
 import { calculateCardAmountWithFees, calculatePIXAmountWithFees, getExchangeRate } from '../../../utils/stripeFeeCalculator';
 import { StepProps } from '../types';
 import { ZelleCheckout } from '../../../components/ZelleCheckout';
-import { IdentityPhotoUpload } from '../../../components/IdentityPhotoUpload';
 import { useStudentLogs } from '../../../hooks/useStudentLogs';
 import {
   Drawer,
@@ -84,173 +83,61 @@ const ParcelowIcon = ({ className }: { className?: string }) => (
 const MobileTermsView: React.FC<{
   activeTerm: Term | null;
   loadingTerms: boolean;
-  hasScrolledToBottom: boolean;
-  termsContentRef: React.RefObject<HTMLDivElement>;
-  handleTermsScroll: () => void;
-  handleTermsAccept: () => void;
   setShowTermsInDrawer: (value: boolean) => void;
-  identityPhotoPath: string | null;
-  setIdentityPhotoPath: (path: string | null) => void;
-  setIdentityPhotoName: (name: string | null) => void;
-  userId: string | undefined;
-  studentId: string | undefined;
-  logAction: any;
   t: any;
 }> = ({
   activeTerm,
   loadingTerms,
-  hasScrolledToBottom,
-  termsContentRef,
-  handleTermsScroll,
-  handleTermsAccept,
   setShowTermsInDrawer,
-  identityPhotoPath,
-  setIdentityPhotoPath,
-  setIdentityPhotoName,
-  userId,
-  studentId,
-  logAction,
   t
 }) => {
-  const [page, setPage] = React.useState<'terms' | 'selfie'>('terms');
-
   return (
-  <div className="space-y-4 bg-white min-h-full flex flex-col">
-    {/* Header */}
-    <div className="flex items-center gap-3 pb-4 border-b border-gray-200">
-      <button
-        onClick={() => {
-          if (page === 'selfie') {
-            setPage('terms');
-          } else {
-            setShowTermsInDrawer(false);
-          }
-        }}
-        className="p-2 hover:bg-gray-100 rounded-full transition-colors"
-      >
-        <ArrowLeft className="w-5 h-5 text-gray-600" />
-      </button>
-      <h3 className="text-lg font-semibold text-gray-900">
-        {page === 'selfie'
-          ? t('selectionFeeStep.identityVerification')
-          : (activeTerm ? activeTerm.title : t('preCheckoutModal.termsAndConditions.title'))
-        }
-      </h3>
+    <div className="space-y-4 bg-white min-h-full flex flex-col">
+      {/* Header */}
+      <div className="flex items-center gap-3 pb-4 border-b border-gray-200">
+        <button
+          onClick={() => setShowTermsInDrawer(false)}
+          className="p-2 hover:bg-gray-100 rounded-full transition-colors"
+        >
+          <ArrowLeft className="w-5 h-5 text-gray-600" />
+        </button>
+        <h3 className="text-lg font-semibold text-gray-900">
+          {activeTerm ? activeTerm.title : t('preCheckoutModal.termsAndConditions.title')}
+        </h3>
+      </div>
+
+      {/* Terms Content */}
+      {loadingTerms ? (
+        <div className="flex-1 flex items-center justify-center p-6">
+          <div className="text-center">
+            <div className="w-12 h-12 border-4 border-blue-200 border-t-blue-600 rounded-full animate-spin mx-auto mb-4"></div>
+            <p className="text-slate-600 text-sm">{t('preCheckoutModal.loading')}</p>
+          </div>
+        </div>
+      ) : activeTerm ? (
+        <>
+          <div 
+            className="flex-1 overflow-y-auto prose prose-sm max-w-none prose-headings:text-gray-900 prose-p:text-gray-600 mb-6"
+            dangerouslySetInnerHTML={{ __html: activeTerm.content }}
+          />
+
+          <div className="border-t border-gray-200 bg-gray-50 p-4 -mx-4 -mb-4 rounded-b-2xl mt-4">
+            <button
+              onClick={() => setShowTermsInDrawer(false)}
+              className="w-full py-3 px-4 rounded-xl font-semibold bg-blue-600 text-white hover:bg-blue-700 shadow-lg text-sm"
+            >
+              {t('preCheckoutModal.closeTerms') || 'Fechar'}
+            </button>
+          </div>
+        </>
+      ) : (
+        <div className="flex-1 flex items-center justify-center p-6">
+          <div className="text-center">
+            <p className="text-slate-600 text-sm">{t('preCheckoutModal.noTermsFound')}</p>
+          </div>
+        </div>
+      )}
     </div>
-
-    {/* PAGE 1: Terms Content */}
-    {page === 'terms' && (
-      <>
-        {loadingTerms ? (
-          <div className="flex-1 flex items-center justify-center p-6">
-            <div className="text-center">
-              <div className="w-12 h-12 border-4 border-blue-200 border-t-blue-600 rounded-full animate-spin mx-auto mb-4"></div>
-              <p className="text-slate-600 text-sm">{t('preCheckoutModal.loading')}</p>
-            </div>
-          </div>
-        ) : activeTerm ? (
-          <>
-            <div 
-              ref={termsContentRef}
-              onScroll={handleTermsScroll}
-              className="flex-1 overflow-y-auto prose prose-sm max-w-none prose-headings:text-gray-900 prose-p:text-gray-600 mb-6"
-              dangerouslySetInnerHTML={{ __html: activeTerm.content }}
-            />
-
-
-            <div className="border-t border-gray-200 bg-gray-50 p-4 -mx-4 -mb-4 rounded-b-2xl mt-4">
-              <button
-                onClick={() => setPage('selfie')}
-                disabled={!hasScrolledToBottom}
-                className={`w-full py-3 px-4 rounded-xl font-semibold transition-all text-sm ${
-                  hasScrolledToBottom
-                    ? 'bg-blue-600 text-white hover:bg-blue-700 shadow-lg'
-                    : 'bg-slate-300 text-slate-500 cursor-not-allowed'
-                }`}
-              >
-                {hasScrolledToBottom
-                  ? t('preCheckoutModal.confirmReading') || 'Confirmar Leitura'
-                  : t('preCheckoutModal.scrollToBottomFirst')
-                }
-              </button>
-            </div>
-          </>
-        ) : (
-          <div className="flex-1 flex items-center justify-center p-6">
-            <div className="text-center">
-              <p className="text-slate-600 text-sm">{t('preCheckoutModal.noTermsFound')}</p>
-            </div>
-          </div>
-        )}
-      </>
-    )}
-
-    {/* PAGE 2: Selfie Upload */}
-    {page === 'selfie' && (
-      <>
-        <div className="flex-1">
-          <div className="bg-gray-50 rounded-2xl pt-1 pb-4 px-4 sm:pt-2 sm:pb-6 sm:px-6 border border-gray-100 shadow-sm">
-            <div className="text-center mb-3">
-              <h4 className="text-xl font-black text-gray-900 mb-1 uppercase tracking-tight">
-                {t('selectionFeeStep.identityVerification')}
-              </h4>
-              <p className="text-xs text-gray-600 font-medium leading-relaxed">
-                {t('selectionFeeStep.identityVerificationSubtitle')}
-              </p>
-            </div>
-
-            <IdentityPhotoUpload
-              initialPhotoPath={identityPhotoPath || undefined}
-              onUploadSuccess={async (filePath, fileName) => {
-                setIdentityPhotoPath(filePath);
-                setIdentityPhotoName(fileName);
-                if (logAction && studentId && userId) {
-                  try {
-                    await logAction(
-                      'identity_photo_upload',
-                      `Identity photo uploaded by student during terms acceptance`,
-                      userId,
-                      'student',
-                      {
-                        student_id: studentId,
-                        file_path: filePath,
-                        file_name: fileName,
-                        uploaded_at: new Date().toISOString(),
-                        term_id: activeTerm?.id
-                      }
-                    );
-                  } catch (logError) {
-                    console.error('⚠️ [SelectionFeeStep] Erro ao logar upload de foto:', logError);
-                  }
-                }
-              }}
-              onUploadError={(error) => {
-                console.error('Erro ao fazer upload:', error);
-              }}
-              onRemove={() => {
-                setIdentityPhotoPath(null);
-                setIdentityPhotoName(null);
-              }}
-            />
-          </div>
-        </div>
-
-        <div className="border-t border-gray-200 bg-gray-50 p-4 -mx-4 -mb-4 rounded-b-2xl mt-4">
-          <button
-            onClick={handleTermsAccept}
-            disabled={!identityPhotoPath}
-            className={`w-full py-3 px-4 rounded-xl font-semibold transition-all text-sm ${
-              identityPhotoPath
-                ? 'bg-blue-600 text-white hover:bg-blue-700 shadow-lg'
-                : 'bg-slate-300 text-slate-500 cursor-not-allowed'
-            }`}
-          >
-            {t('preCheckoutModal.acceptTerms') || 'Aceitar e Confirmar'}
-          </button>
-        </div>
-      </>
-    )}
-  </div>
   );
 };
 
@@ -263,7 +150,7 @@ export const SelectionFeeStep: React.FC<StepProps> = ({ onNext }) => {
   const { recordTermAcceptance, checkTermAcceptance } = useTermsAcceptance();
   const { recordAffiliateTermAcceptance, checkIfUserHasAffiliate } = useAffiliateTermsAcceptance();
   const { activeDiscount, hasUsedReferralCode } = useReferralCode();
-  const { logAction } = useStudentLogs(userProfile?.id || '');
+  useStudentLogs(userProfile?.id || '');
   
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -278,19 +165,9 @@ export const SelectionFeeStep: React.FC<StepProps> = ({ onNext }) => {
   const [hasAcceptedTermsInDB, setHasAcceptedTermsInDB] = useState(false); // Flag para indicar se já aceitou no banco
   const [showTermsModal, setShowTermsModal] = useState(false);
   const [showTermsInDrawer, setShowTermsInDrawer] = useState(false);
-  const [hasScrolledToBottom, setHasScrolledToBottom] = useState(false);
   const [activeTerm, setActiveTerm] = useState<Term | null>(null);
   const [loadingTerms, setLoadingTerms] = useState(false);
-  const [userClickedCheckbox, setUserClickedCheckbox] = useState(false);
-  const [termsModalPage, setTermsModalPage] = useState<'terms' | 'selfie'>('terms');
-  const termsContentRef = useRef<HTMLDivElement>(null);
-
-  // Identity Photo States
-  const [identityPhotoPath, setIdentityPhotoPath] = useState<string | null>(null);
-  const [identityPhotoName, setIdentityPhotoName] = useState<string | null>(null);
-
-  // Mobile detection
-  const [isMobile, setIsMobile] = useState(false);
+  // Exchange rate for PIX
 
   // Exchange rate for PIX
   const [exchangeRate, setExchangeRate] = useState<number | null>(null);
@@ -329,17 +206,7 @@ export const SelectionFeeStep: React.FC<StepProps> = ({ onNext }) => {
   } | null>(null);
   const promotionalCouponInputRef = useRef<HTMLInputElement>(null);
 
-  // Mobile detection
-  useEffect(() => {
-    const checkMobile = () => {
-      setIsMobile(window.innerWidth < 640);
-    };
-    
-    checkMobile();
-    window.addEventListener('resize', checkMobile);
-    
-    return () => window.removeEventListener('resize', checkMobile);
-  }, []);
+  // Buscar taxa de câmbio para PIX
 
   // Buscar taxa de câmbio para PIX
   useEffect(() => {
@@ -396,40 +263,6 @@ export const SelectionFeeStep: React.FC<StepProps> = ({ onNext }) => {
     }
   };
 
-  // Handle terms scroll and check if content needs scrolling
-  const handleTermsScroll = useCallback(() => {
-    if (termsContentRef.current) {
-      const { scrollTop, scrollHeight, clientHeight } = termsContentRef.current;
-      const isAtBottom = scrollTop + clientHeight >= scrollHeight - 10;
-      setHasScrolledToBottom(isAtBottom);
-    }
-  }, []);
-
-
-  // After terms content renders in the modal, check if the container actually needs scroll.
-  // We wait for the next animation frame + a small delay to ensure the HTML content
-  // (injected via dangerouslySetInnerHTML) has fully painted before measuring.
-  useEffect(() => {
-    if (!showTermsModal || loadingTerms || !activeTerm || termsModalPage !== 'terms') return;
-
-    let raf: number;
-    const timer = setTimeout(() => {
-      raf = requestAnimationFrame(() => {
-        if (termsContentRef.current) {
-          const { scrollHeight, clientHeight } = termsContentRef.current;
-          // Only auto-allow if content genuinely fits without scrolling
-          if (scrollHeight <= clientHeight) {
-            setHasScrolledToBottom(true);
-          }
-        }
-      });
-    }, 300);
-
-    return () => {
-      clearTimeout(timer);
-      cancelAnimationFrame(raf);
-    };
-  }, [showTermsModal, loadingTerms, activeTerm, termsModalPage]);
 
   // Handle terms modal open
   const handleTermsClick = async () => {
@@ -450,72 +283,27 @@ export const SelectionFeeStep: React.FC<StepProps> = ({ onNext }) => {
     }
     
     setShowTermsModal(true);
-    setHasScrolledToBottom(false);
-    setTermsModalPage('terms');
   };
 
-  // Handle terms acceptance
-  const handleTermsAccept = async () => {
-    if (hasScrolledToBottom) {
-      // Validate identity photo
-      if (!identityPhotoPath) {
-        alert(t('preCheckoutModal.uploadPhotoRequired') || 'Por favor, envie uma selfie com seu documento para continuar.');
-        return;
-      }
-
-      try {
-        if (activeTerm) {
-          const affiliateAdminId = await checkIfUserHasAffiliate();
-          
-          if (affiliateAdminId) {
-            await recordAffiliateTermAcceptance(activeTerm.id, 'checkout_terms', affiliateAdminId);
-          } else {
-            await recordTermAcceptance(activeTerm.id, 'checkout_terms');
-          }
-
-          // Save identity photo to the acceptance record
-          const { data: termAcceptance } = await supabase
-            .from('comprehensive_term_acceptance')
-            .select('id')
-            .eq('user_id', user?.id)
-            .eq('term_id', activeTerm.id)
-            .eq('term_type', 'checkout_terms')
-            .order('accepted_at', { ascending: false })
-            .limit(1)
-            .maybeSingle();
-
-          if (termAcceptance) {
-            await supabase
-              .from('comprehensive_term_acceptance')
-              .update({
-                identity_photo_path: identityPhotoPath,
-                identity_photo_name: identityPhotoName,
-                identity_photo_status: 'pending'
-              })
-              .eq('id', termAcceptance.id);
-          }
-
-          // Log the action is handled by the upload component
-        }
+  // Handle terms acceptance immediately
+  const handleTermsAcceptRecord = async () => {
+    try {
+      if (activeTerm && !termsAccepted) {
+        const affiliateAdminId = await checkIfUserHasAffiliate();
         
-        setTermsAccepted(true);
-        setHasAcceptedTermsInDB(true); // Mark as accepted in DB
-        
-        if (isMobile) {
-          setShowTermsInDrawer(false);
+        if (affiliateAdminId) {
+          await recordAffiliateTermAcceptance(activeTerm.id, 'checkout_terms', affiliateAdminId);
         } else {
-          setShowTermsModal(false);
+          await recordTermAcceptance(activeTerm.id, 'checkout_terms');
         }
-      } catch (error) {
-        console.error('Erro ao registrar aceitação dos termos:', error);
+
         setTermsAccepted(true);
-        
-        if (isMobile) {
-          setShowTermsInDrawer(false);
-        } else {
-          setShowTermsModal(false);
-        }
+        setHasAcceptedTermsInDB(true);
       }
+    } catch (error) {
+      console.error('Erro ao registrar aceitação dos termos:', error);
+      // Fallback local se falhar o banco
+      setTermsAccepted(true);
     }
   };
 
@@ -1120,28 +908,21 @@ export const SelectionFeeStep: React.FC<StepProps> = ({ onNext }) => {
   // Handle checkbox change
   const handleCheckboxChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
     // Se já aceitou os termos no banco, não permite desmarcar
-    if (hasAcceptedTermsInDB && !e.target.checked) {
+    if (hasAcceptedTermsInDB) {
       e.preventDefault();
       return;
     }
     
-    setUserClickedCheckbox(true);
-    
     if (e.target.checked) {
-      if (isMobile) {
-        setShowTermsInDrawer(true);
+      // Registrar imediatamente no banco
+      setLoading(true);
+      if (!activeTerm) {
         await loadActiveTerms();
-      } else {
-        handleTermsClick();
       }
+      await handleTermsAcceptRecord();
+      setLoading(false);
     } else {
-      // Só permite desmarcar se não foi aceito no banco ainda
-      if (!hasAcceptedTermsInDB) {
-        setTermsAccepted(false);
-        setHasScrolledToBottom(false);
-        setShowTermsModal(false);
-        setShowTermsInDrawer(false);
-      }
+      setTermsAccepted(false);
     }
   };
 
@@ -1164,15 +945,6 @@ export const SelectionFeeStep: React.FC<StepProps> = ({ onNext }) => {
 
     checkExistingAcceptance();
   }, [user?.id, checkTermAcceptance]);
-
-
-
-  // Reset scroll state when showing terms in drawer
-  useEffect(() => {
-    if (showTermsInDrawer) {
-      setHasScrolledToBottom(false);
-    }
-  }, [showTermsInDrawer]);
 
   // Usar usePaymentBlocked para verificar pagamentos pendentes
   useEffect(() => {
@@ -1835,7 +1607,7 @@ export const SelectionFeeStep: React.FC<StepProps> = ({ onNext }) => {
 
           {/* Terms acceptance section */}
           <div className="mb-8">
-            <div className="flex items-center space-x-3 p-3 bg-gray-50 border border-gray-100 rounded-lg group/terms hover:bg-gray-100/50 transition-colors duration-300 shadow-sm">
+            <div className="flex items-center space-x-3 p-4 bg-gray-50 border border-gray-100 rounded-xl group/terms hover:bg-gray-100/50 transition-colors duration-300 shadow-sm">
               <label htmlFor="termsAccepted" className={`checkbox-container ${hasAcceptedTermsInDB ? 'cursor-not-allowed opacity-75' : 'cursor-pointer'} flex-shrink-0`}>
                 <input
                   id="termsAccepted"
@@ -1848,10 +1620,17 @@ export const SelectionFeeStep: React.FC<StepProps> = ({ onNext }) => {
                 />
                 <div className="checkmark border-gray-300" />
               </label>
-              <label htmlFor="termsAccepted" className={`text-xs sm:text-sm text-gray-600 leading-relaxed flex-1 ${hasAcceptedTermsInDB ? 'cursor-default' : 'cursor-pointer'} group-hover/terms:text-gray-900 transition-colors`}>
+              <div className="text-xs sm:text-sm text-gray-600 leading-relaxed flex-1 cursor-default group-hover/terms:text-gray-900 transition-colors">
                 <span className="text-red-500 font-bold mr-1">*</span>
-                {t('preCheckoutModal.acceptContractTerms') || 'Eu aceito os termos e condições do contrato de prestação de serviços.'}
-              </label>
+                Eu aceito os {' '}
+                <span 
+                  onClick={handleTermsClick}
+                  className="text-blue-600 font-bold hover:underline cursor-pointer"
+                >
+                  {t('preCheckoutModal.termsAndConditions.title') || 'termos e condições'}
+                </span>
+                {' '} do contrato de prestação de serviços.
+              </div>
             </div>
           </div>
 
@@ -2148,7 +1927,7 @@ export const SelectionFeeStep: React.FC<StepProps> = ({ onNext }) => {
     </div>
 
       {/* Terms and Conditions Modal for desktop */}
-      {showTermsModal && userClickedCheckbox && ReactDOM.createPortal(
+      {showTermsModal && ReactDOM.createPortal(
         <div className="fixed inset-0 z-[10020] flex items-center justify-center bg-black bg-opacity-50 p-2 sm:p-4">
           <Dialog open={showTermsModal} onClose={() => setShowTermsModal(false)} className="relative z-[10021]">
             <div className="fixed inset-0 bg-black/60 backdrop-blur-sm z-[10020]" aria-hidden="true" />
@@ -2175,134 +1954,36 @@ export const SelectionFeeStep: React.FC<StepProps> = ({ onNext }) => {
                   </div>
                 </div>
 
-                {/* PAGE 1: Terms Content */}
-                {termsModalPage === 'terms' && (
-                  <div
-                    ref={termsContentRef}
-                    onScroll={handleTermsScroll}
-                    className="flex-1 overflow-y-auto p-6 sm:p-10 scrollbar-thin scrollbar-thumb-gray-200 scrollbar-track-transparent"
-                  >
-                    {loadingTerms ? (
-                      <div className="flex flex-col items-center justify-center py-20">
-                        <div className="w-16 h-16 border-4 border-blue-500/20 border-t-blue-600 rounded-full animate-spin mb-4"></div>
-                        <p className="text-gray-400 font-bold uppercase tracking-widest text-xs">{t('preCheckoutModal.loading')}</p>
-                      </div>
-                    ) : activeTerm ? (
-                      <>
-                        <div 
-                          className="prose prose-blue max-w-none prose-headings:font-black prose-headings:uppercase prose-headings:tracking-tight prose-p:text-gray-600 prose-p:leading-relaxed prose-strong:text-gray-900"
-                          dangerouslySetInnerHTML={{ __html: activeTerm?.content || '' }}
-                        />
-                        
-
-                      </>
-                    ) : (
-                      <div className="flex flex-col items-center justify-center py-20 text-gray-400">
-                        <AlertCircle className="w-12 h-12 mb-4 opacity-20" />
-                        <p className="font-bold uppercase tracking-widest text-xs">{t('preCheckoutModal.noTermsFound')}</p>
-                      </div>
-                    )}
-                  </div>
-                )}
-
-                {/* PAGE 2: Selfie Upload */}
-                {termsModalPage === 'selfie' && (
-                  <div className="flex-1 overflow-y-auto p-4 sm:p-6">
-                    <div className="max-w-3xl mx-auto">
-                      <div className="bg-gray-50 rounded-3xl pt-2 pb-6 px-6 sm:pt-4 sm:pb-10 sm:px-10 border border-gray-100 shadow-sm">
-                        <div className="text-center mb-4">
-                          <h4 className="text-2xl font-black text-gray-900 mb-1 uppercase tracking-tight">
-                            {t('selectionFeeStep.main.identityVerification')}
-                          </h4>
-                          <p className="text-base text-gray-600 font-medium">
-                            {t('selectionFeeStep.main.identityVerificationSubtitle')}
-                          </p>
-                        </div>
-
-                        <IdentityPhotoUpload
-                          initialPhotoPath={identityPhotoPath || undefined}
-                          onUploadSuccess={async (filePath, fileName) => {
-                            setIdentityPhotoPath(filePath);
-                            setIdentityPhotoName(fileName);
-                            if (logAction && userProfile?.id && user?.id) {
-                              try {
-                                await logAction(
-                                  'identity_photo_upload',
-                                  `Identity photo uploaded by student during terms acceptance (desktop)`,
-                                  user.id,
-                                  'student',
-                                  {
-                                    student_id: userProfile.id,
-                                    file_path: filePath,
-                                    file_name: fileName,
-                                    uploaded_at: new Date().toISOString(),
-                                    term_id: activeTerm?.id
-                                  }
-                                );
-                              } catch (logError) {
-                                console.error('⚠️ [SelectionFeeStep] Erro ao logar upload de foto:', logError);
-                              }
-                            }
-                          }}
-                          onUploadError={(error) => {
-                            console.error('Erro ao fazer upload:', error);
-                          }}
-                          onRemove={() => {
-                            setIdentityPhotoPath(null);
-                            setIdentityPhotoName(null);
-                          }}
-                        />
-                      </div>
+                {/* Terms Content */}
+                <div
+                  className="flex-1 overflow-y-auto p-6 sm:p-10 scrollbar-thin scrollbar-thumb-gray-200 scrollbar-track-transparent"
+                >
+                  {loadingTerms ? (
+                    <div className="flex flex-col items-center justify-center py-20">
+                      <div className="w-16 h-16 border-4 border-blue-500/20 border-t-blue-600 rounded-full animate-spin mb-4"></div>
+                      <p className="text-gray-400 font-bold uppercase tracking-widest text-xs">{t('preCheckoutModal.loading')}</p>
                     </div>
-                  </div>
-                )}
+                  ) : activeTerm ? (
+                    <div 
+                      className="prose prose-blue max-w-none prose-headings:font-black prose-headings:uppercase prose-headings:tracking-tight prose-p:text-gray-600 prose-p:leading-relaxed prose-strong:text-gray-900"
+                      dangerouslySetInnerHTML={{ __html: activeTerm?.content || '' }}
+                    />
+                  ) : (
+                    <div className="flex flex-col items-center justify-center py-20 text-gray-400">
+                      <AlertCircle className="w-12 h-12 mb-4 opacity-20" />
+                      <p className="font-bold uppercase tracking-widest text-xs">{t('preCheckoutModal.noTermsFound')}</p>
+                    </div>
+                  )}
+                </div>
 
                 <div className="border-t border-gray-100 bg-gray-50/80 backdrop-blur-md p-6 sm:p-8 flex-shrink-0">
-                  <div className="flex flex-col sm:flex-row gap-4 max-w-2xl mx-auto">
-                    {termsModalPage === 'terms' ? (
-                      <>
-                        <button
-                          onClick={() => setShowTermsModal(false)}
-                          className="flex-[1] px-8 py-4 bg-gray-200/50 text-gray-600 rounded-2xl font-black uppercase tracking-widest text-sm hover:bg-gray-200 transition-all active:scale-95"
-                        >
-                          {t('preCheckoutModal.closeTerms') || 'Fechar'}
-                        </button>
-                        <button
-                          onClick={() => setTermsModalPage('selfie')}
-                          disabled={!hasScrolledToBottom}
-                          className={`flex-[2] px-10 py-4 rounded-2xl font-black uppercase tracking-widest text-sm transition-all shadow-xl active:scale-95 ${
-                            hasScrolledToBottom
-                              ? 'bg-blue-600 text-white hover:bg-blue-500 shadow-blue-500/25 hover:shadow-blue-500/40'
-                              : 'bg-gray-200 text-gray-400 cursor-not-allowed border border-gray-100'
-                          }`}
-                        >
-                          {hasScrolledToBottom
-                            ? t('preCheckoutModal.confirmReading') || 'Confirmar Leitura'
-                            : t('preCheckoutModal.scrollToBottomFirst')
-                          }
-                        </button>
-                      </>
-                    ) : (
-                      <>
-                        <button
-                          onClick={() => setTermsModalPage('terms')}
-                          className="flex-[1] px-8 py-4 bg-gray-200/50 text-gray-600 rounded-2xl font-black uppercase tracking-widest text-sm hover:bg-gray-200 transition-all active:scale-95"
-                        >
-                          {t('selectionFeeStep.main.back')}
-                        </button>
-                        <button
-                          onClick={handleTermsAccept}
-                          disabled={!identityPhotoPath}
-                          className={`flex-[2] px-10 py-4 rounded-2xl font-black uppercase tracking-widest text-sm transition-all shadow-xl active:scale-95 ${
-                            identityPhotoPath
-                              ? 'bg-blue-600 text-white hover:bg-blue-500 shadow-blue-500/25 hover:shadow-blue-500/40'
-                              : 'bg-gray-200 text-gray-400 cursor-not-allowed border border-gray-100'
-                          }`}
-                        >
-                          {t('preCheckoutModal.acceptTerms') || 'Aceitar e Confirmar'}
-                        </button>
-                      </>
-                    )}
+                  <div className="flex justify-center max-w-xs mx-auto">
+                    <button
+                      onClick={() => setShowTermsModal(false)}
+                      className="w-full px-8 py-4 bg-blue-600 text-white rounded-2xl font-black uppercase tracking-widest text-sm hover:bg-blue-700 transition-all shadow-xl active:scale-95 shadow-blue-500/20"
+                    >
+                      {t('common.close') || 'Fechar'}
+                    </button>
                   </div>
                 </div>
               </Dialog.Panel>
@@ -2332,16 +2013,6 @@ export const SelectionFeeStep: React.FC<StepProps> = ({ onNext }) => {
                 setShowTermsInDrawer={setShowTermsInDrawer}
                 activeTerm={activeTerm}
                 loadingTerms={loadingTerms}
-                hasScrolledToBottom={hasScrolledToBottom}
-                termsContentRef={termsContentRef}
-                handleTermsScroll={handleTermsScroll}
-                handleTermsAccept={handleTermsAccept}
-                identityPhotoPath={identityPhotoPath}
-                setIdentityPhotoPath={setIdentityPhotoPath}
-                setIdentityPhotoName={setIdentityPhotoName}
-                userId={user?.id}
-                studentId={userProfile?.id}
-                logAction={logAction}
                 t={t}
               />
             </div>

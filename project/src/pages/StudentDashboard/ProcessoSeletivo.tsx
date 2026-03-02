@@ -366,7 +366,7 @@ const ProcessoSeletivo = () => {
                 newAnswers[q.id] = Math.floor(Math.random() * 1000).toString();
             } else if (q.type === 'date') {
                 newAnswers[q.id] = '2023-01-01';
-            } else if ((q.type === 'radio' || q.type === 'select' || q.type === 'truefalse') && q.options) {
+            } else if ((q.type === 'radio' || q.type === 'truefalse') && q.options) {
                 // Tenta achar a correta para garantir aprovação
                 const correctOption = q.options.find(opt => typeof opt === 'object' && opt.correct === true);
 
@@ -493,7 +493,7 @@ const ProcessoSeletivo = () => {
                                 <Button
                                     variant="outline"
                                     onClick={handleBack}
-                                    className="w-full sm:w-auto gap-2 text-slate-600 border-slate-200 hover:bg-slate-50 rounded-xl px-6 h-12 font-medium"
+                                    className="w-full sm:w-auto gap-2 text-slate-600 border-slate-200 bg-transparent hover:bg-slate-100 hover:text-slate-900 rounded-xl px-6 h-12 font-medium transition-all"
                                 >
                                     <ArrowLeft className="w-4 h-4" />
                                     {t('selectionSurvey.back')}
@@ -512,17 +512,19 @@ const ProcessoSeletivo = () => {
 
                                 {currentSection === sections.length - 1 ? (
                                     <Button
+                                        variant="ghost"
                                         onClick={handleSubmit}
                                         disabled={isSaving}
-                                        className="w-full sm:w-auto gap-2 bg-blue-600 hover:bg-blue-700 text-white rounded-xl px-10 py-6 text-lg shadow-lg shadow-blue-200 transition-all hover:-translate-y-1"
+                                        className="w-full sm:w-auto gap-2 bg-blue-600 hover:bg-blue-700 text-white rounded-xl px-10 py-6 text-lg shadow-xl shadow-blue-500/20 transition-all hover:-translate-y-1"
                                     >
                                         {isSaving ? t('selectionSurvey.submitting') : t('selectionSurvey.finish')}
                                         <ArrowRight className="w-4 h-4" />
                                     </Button>
                                 ) : (
                                     <Button
+                                        variant="ghost"
                                         onClick={handleNext}
-                                        className="w-full sm:w-auto gap-2 bg-slate-900 hover:bg-slate-800 text-white rounded-xl px-10 py-6 text-lg transition-all hover:-translate-y-1"
+                                        className="w-full sm:w-auto gap-2 bg-blue-600 hover:bg-blue-700 text-white rounded-xl px-10 py-6 text-lg shadow-xl shadow-blue-500/20 transition-all hover:-translate-y-1"
                                     >
                                         {t('selectionSurvey.nextSection')}
                                         <ArrowRight className="w-4 h-4" />

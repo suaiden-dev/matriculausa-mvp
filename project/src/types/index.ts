@@ -2,7 +2,7 @@ export interface User {
   id: string;
   email: string;
   name: string;
-  role: 'student' | 'school' | 'admin' | 'affiliate_admin' | 'seller';
+  role: "student" | "school" | "admin" | "affiliate_admin" | "seller";
   avatar?: string;
   hasPaidProcess?: boolean;
 }
@@ -44,8 +44,8 @@ export interface Scholarship {
   deadline: string;
   requirements: string[];
   field_of_study: string;
-  level: 'undergraduate' | 'graduate' | 'doctorate' | string;
-  delivery_mode?: 'in_person' | 'hybrid' | 'online' | string; // Course Modality
+  level: "undergraduate" | "graduate" | "doctorate" | string;
+  delivery_mode?: "in_person" | "hybrid" | "online" | string; // Course Modality
   eligibility: string[];
   benefits: string[];
   is_exclusive: boolean;
@@ -102,7 +102,14 @@ export interface Application {
   id: string;
   scholarship_id: string;
   student_id: string;
-  status: 'pending' | 'approved' | 'rejected' | 'under_review' | 'pending_scholarship_fee' | 'enrolled' | 'selected';
+  status:
+    | "pending"
+    | "approved"
+    | "rejected"
+    | "under_review"
+    | "pending_scholarship_fee"
+    | "enrolled"
+    | "selected";
   applied_at: string;
   documents: string[];
   notes?: string;
@@ -111,7 +118,7 @@ export interface Application {
   is_application_fee_paid?: boolean;
   is_scholarship_fee_paid?: boolean;
   // Acceptance letter fields
-  acceptance_letter_status?: 'pending' | 'sent' | 'signed' | 'approved';
+  acceptance_letter_status?: "pending" | "sent" | "signed" | "approved";
   acceptance_letter_url?: string | null;
   acceptance_letter_signed_url?: string | null;
   acceptance_letter_sent_at?: string | null;
@@ -121,9 +128,9 @@ export interface Application {
 
 export interface AuthContextType {
   user: User | null;
-  login: (email: string, password: string, role: User['role']) => Promise<void>;
+  login: (email: string, password: string, role: User["role"]) => Promise<void>;
   logout: () => void;
-  register: (userData: Omit<User, 'id'>) => Promise<void>;
+  register: (userData: Omit<User, "id">) => Promise<void>;
   isAuthenticated: boolean;
 }
 
@@ -148,7 +155,7 @@ export interface UserProfile {
   stripe_customer_id: string | null;
   stripe_payment_intent_id: string | null;
   university_id?: string | null;
-  documents_status?: 'pending' | 'analyzing' | 'approved' | 'rejected';
+  documents_status?: "pending" | "analyzing" | "approved" | "rejected";
   documents_uploaded?: boolean;
   selected_scholarship_id?: string | null;
   has_paid_college_enrollment_fee?: boolean;
@@ -156,14 +163,14 @@ export interface UserProfile {
   i20_control_fee_due_date?: string | null;
   i20_control_fee_payment_intent_id?: string | null;
   is_scholarship_fee_paid: boolean;
-  enrollment_status?: 'pending' | 'enrolled' | 'rejected' | 'waitlisted';
+  enrollment_status?: "pending" | "enrolled" | "rejected" | "waitlisted";
   avatar_url?: string | null;
   dependents?: number; // New field in user_profiles
   scholarship_package_id?: string | null; // Package ID for seller students
   seller_referral_code?: string | null; // Referral code from seller
   affiliate_code?: string | null; // Friend referral code
-  system_type?: 'legacy' | 'simplified'; // System type inherited from seller
-
+  system_type?: "legacy" | "simplified"; // System type inherited from seller
+  selection_survey_passed?: boolean;
 }
 
 export interface EmailAttachment {
@@ -189,7 +196,7 @@ export interface Email {
   isStarred?: boolean;
   hasAttachments: boolean;
   attachments?: EmailAttachment[];
-  priority: 'high' | 'normal' | 'low';
+  priority: "high" | "normal" | "low";
   labels?: string[];
   avatar?: string;
 }
@@ -287,7 +294,7 @@ export interface AffiliateReferral {
   affiliate_code: string;
   payment_amount: number;
   credits_earned: number;
-  status: 'pending' | 'completed' | 'cancelled';
+  status: "pending" | "completed" | "cancelled";
   payment_session_id?: string;
   created_at: string;
   completed_at?: string;
@@ -306,7 +313,7 @@ export interface MatriculacoinCredits {
 export interface MatriculacoinTransaction {
   id: string;
   user_id: string;
-  type: 'earned' | 'spent' | 'expired' | 'refunded';
+  type: "earned" | "spent" | "expired" | "refunded";
   amount: number;
   description?: string;
   reference_id?: string;
@@ -346,7 +353,7 @@ export interface TuitionRedemption {
   discount_id: string;
   cost_coins_paid: number;
   discount_amount: number;
-  status: 'pending' | 'confirmed' | 'cancelled' | 'expired';
+  status: "pending" | "confirmed" | "cancelled" | "expired";
   redeemed_at: string;
   confirmed_at?: string;
   expires_at?: string;
@@ -400,7 +407,7 @@ export interface TuitionRedemptionResult {
 }
 
 // Payouts
-export type PayoutMethod = 'zelle' | 'bank_transfer' | 'stripe';
+export type PayoutMethod = "zelle" | "bank_transfer" | "stripe";
 
 export interface UniversityPayoutRequest {
   id: string;
@@ -410,7 +417,7 @@ export interface UniversityPayoutRequest {
   amount_usd: number;
   payout_method: PayoutMethod;
   payout_details_preview: any | null;
-  status: 'pending' | 'approved' | 'paid' | 'rejected' | 'cancelled';
+  status: "pending" | "approved" | "paid" | "rejected" | "cancelled";
   admin_notes?: string | null;
   approved_by?: string | null;
   approved_at?: string | null;
@@ -429,7 +436,7 @@ export interface PayoutInvoice {
   issued_at: string;
   due_at?: string | null;
   total_usd: number;
-  status: 'issued' | 'voided';
+  status: "issued" | "voided";
   created_at: string;
 }
 

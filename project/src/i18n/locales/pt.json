@@ -1723,7 +1723,18 @@
     "apply": "Candidatar-se",
     "viewDetails": "Ver Detalhes",
     "deadline": "Prazo",
-    "amount": "Valor"
+    "amount": "Valor",
+    "support": "Suporte",
+    "expirationDate": "Data de expiração do status/I-94",
+    "name": "Nome",
+    "email": "Email",
+    "profile": "Perfil",
+    "section": "Seção",
+    "of": "de",
+    "active": "ativo",
+    "language": "Português",
+    "welcome": "Bem-vindo",
+    "finish": "Finalizar"
   },
   "profileRequiredModal": {
     "cpfMissing": {
@@ -1805,7 +1816,7 @@
       "subtitle": "Você pagou com sucesso a taxa do processo seletivo.",
       "paidTitle": "Pagamento Confirmado",
       "paidSubtitle": "Seu pagamento foi confirmado com segurança.",
-      "continue": "Continuar para a Próxima Etapa"
+      "continue": "Continuar"
     }
   },
   "studentDashboard": {
@@ -4371,38 +4382,21 @@
       }
     }
   },
-  "common": {
-    "yes": "Sim",
-    "no": "Não",
-    "expirationDate": "Data de expiração do status/I-94",
-    "name": "Nome",
-    "email": "Email",
-    "profile": "Perfil",
-    "section": "Seção",
-    "of": "de",
-    "loading": "Carregando...",
-    "success": "Sucesso",
-    "error": "Erro",
-    "filter": "Filtro",
-    "active": "ativo",
-    "apply": "Aplicar",
-    "language": "Português",
-    "featured": "Destaque",
-    "exclusive": "Exclusivo",
-    "showMore": "ver mais",
-    "learnMore": "Saiba mais",
-    "search": "Buscar",
-    "support": "Suporte",
-    "welcome": "Bem-vindo",
-    "close": "Fechar"
-  },
   "selectionSurvey": {
-    "title": "Questionário de Alinhamento",
-    "subtitle": "Responda com atenção. Para ser aprovado e liberar seu dashboard, você precisa atingir no mínimo <0>80% de acerto</0> nas questões objetivas.",
+    "identityVerification": "Verificação de Identidade",
+    "identityVerificationHeader": "Validar sua Identidade",
+    "identityVerificationSubtitle": "Para garantir a segurança do processo seletivo, precisamos de uma selfie com seu documento antes de iniciar o questionário.",
+    "startSurvey": "Próximo Passo",
+    "toastPhotoSuccess": "Foto enviada com sucesso!",
+    "toastPhotoError": "Erro ao enviar foto. Tente novamente.",
+    "securityNotice": "Seus dados estão protegidos e criptografados",
+    "profilesIdentified": "Perfil Identificado",
+    "title": "Questionário",
+    "subtitle": "Responda com atenção. Para ser aprovado e continuar seu processo, você precisa atingir no mínimo <0>80% de acerto</0> nas questões.",
     "mandatoryBadge": "Processo Seletivo Obrigatório",
     "nextSection": "Próxima Seção",
     "back": "Voltar",
-    "finish": "Finalizar e Ver Resultado",
+    "finish": "Finalizar",
     "finishBtn": "Finalizar",
     "submitting": "Enviando...",
     "sections": {
@@ -4426,7 +4420,7 @@
       "score": "Sua Pontuação:",
       "minRequired": "Mínimo necessário: 80%",
       "ctaDashboard": "Escolher Bolsas",
-      "ctaDescription": "Agora você pode acessar todas as funcionalidades e escolher as bolsas de estudo do seu interesse.",
+      "ctaDescription": "Agora você pode acessar continuar seu processo e escolher as bolsas de estudo do seu interesse.",
       "failed": "Não foi desta vez",
       "failedMessage": "Você não atingiu a pontuação mínima de 80% necessária para aprovação.",
       "failedAdvice": "Não desanime! Revise suas respostas com calma e tente novamente.",
@@ -4814,5 +4808,4 @@
         "prompt": "\"Eu entendo que meu resultado depende da minha disciplina. Se eu não seguir o plano, eu posso prejudicar meu status e meu projeto.\""
       }
     }
-  }
-}
+  }}

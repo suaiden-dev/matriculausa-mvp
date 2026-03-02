@@ -1851,7 +1851,7 @@
       "subtitle": "Ha pagado con éxito la tarifa del proceso de selección.",
       "paidTitle": "Pago Confirmado",
       "paidSubtitle": "Su pago ha sido confirmado con éxito.",
-      "continue": "Continuar al Siguiente Paso"
+      "continue": "Continuar"
     }
   },
   "studentDashboard": {
@@ -4051,15 +4051,24 @@
     "search": "Buscar",
     "support": "Soporte",
     "welcome": "Bienvenido",
-    "close": "Cerrar"
+    "close": "Cerrar",
+    "finish": "Finalizar"
   },
   "selectionSurvey": {
-    "title": "Cuestionario de Alineación",
-    "subtitle": "Responda con atención. Para ser aprobado y liberar su panel, debe alcanzar al menos un <0>80% de aciertos</0> en las preguntas objetivas.",
+    "identityVerification": "Verificación de Identidad",
+    "identityVerificationHeader": "Validar su Identidad",
+    "identityVerificationSubtitle": "Para garantizar la seguridad del proceso de selección, necesitamos una selfie con su documento antes de comenzar el cuestionario.",
+    "startSurvey": "Próximo Paso",
+    "toastPhotoSuccess": "¡Foto subida con éxito!",
+    "toastPhotoError": "Error al subir foto. Inténtelo de nuevo.",
+    "securityNotice": "Sus datos están protegidos y cifrados",
+    "profilesIdentified": "Perfil Identificado",
+    "title": "Cuestionario",
+    "subtitle": "Responda con atención. Para ser aprobado y continuar su proceso, debe alcanzar al menos un <0>80% de aciertos</0> en las preguntas.",
     "mandatoryBadge": "Proceso de Selección Obligatorio",
     "nextSection": "Siguiente Sección",
     "back": "Volver",
-    "finish": "Finalizar y Ver Resultado",
+    "finish": "Finalizar",
     "finishBtn": "Finalizar",
     "submitting": "Enviando...",
     "sections": {
@@ -4083,7 +4092,7 @@
       "score": "Su Puntuación:",
       "minRequired": "Mínimo necesario: 80%",
       "ctaDashboard": "Elegir Becas",
-      "ctaDescription": "Ahora puedes acceder a todas las funciones y elegir las becas de tu interés.",
+      "ctaDescription": "Ahora puedes continuar tu proceso y elegir las becas de tu interés.",
       "failed": "No ha sido esta vez",
       "failedMessage": "No alcanzó la puntuación mínima del 80% necesaria para la aprobación.",
       "failedAdvice": "Recomendamos que revise los materiales de apoyo e intente de nuevo.",

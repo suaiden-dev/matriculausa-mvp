@@ -1719,7 +1719,17 @@
     "viewDetails": "View Details",
     "deadline": "Deadline",
     "amount": "Amount",
-    "support": "Support"
+    "support": "Support",
+    "expirationDate": "Status/I-94 expiration date",
+    "name": "Name",
+    "email": "Email",
+    "profile": "Profile",
+    "section": "Section",
+    "of": "of",
+    "active": "active",
+    "language": "English",
+    "welcome": "Welcome",
+    "finish": "Finish"
   },
   "profileRequiredModal": {
     "cpfMissing": {
@@ -1801,7 +1811,7 @@
       "subtitle": "You have successfully paid the selection process fee.",
       "paidTitle": "Payment Confirmed",
       "paidSubtitle": "Your payment has been successfully confirmed.",
-      "continue": "Continue to the Next Step"
+      "continue": "Continue"
     }
   },
   "studentDashboard": {
@@ -4317,38 +4327,21 @@
       }
     }
   },
-  "common": {
-    "yes": "Yes",
-    "no": "No",
-    "expirationDate": "Status/I-94 expiration date",
-    "name": "Name",
-    "email": "Email",
-    "profile": "Profile",
-    "section": "Section",
-    "of": "of",
-    "loading": "Loading...",
-    "success": "Success",
-    "error": "Error",
-    "filter": "Filter",
-    "active": "active",
-    "apply": "Apply",
-    "language": "English",
-    "featured": "Featured",
-    "exclusive": "Exclusive",
-    "showMore": "show more",
-    "learnMore": "Learn more",
-    "search": "Search",
-    "support": "Support",
-    "welcome": "Welcome",
-    "close": "Close"
-  },
   "selectionSurvey": {
-    "title": "Alignment Questionnaire",
-    "subtitle": "Answer carefully. To pass and unlock your dashboard, you must achieve at least <0>80% correct</0> on objective questions.",
+    "identityVerification": "Identity Verification",
+    "identityVerificationHeader": "Validate Your Identity",
+    "identityVerificationSubtitle": "To ensure the security of the selection process, we need a selfie with your document before starting the questionnaire.",
+    "startSurvey": "Next Step",
+    "toastPhotoSuccess": "Photo uploaded successfully!",
+    "toastPhotoError": "Error uploading photo. Please try again.",
+    "securityNotice": "Your data is protected and encrypted",
+    "profilesIdentified": "Profile Identified",
+    "title": "Questionnaire",
+    "subtitle": "Answer carefully. To pass and continue your process, you must achieve at least <0>80% correct</0> on objective questions.",
     "mandatoryBadge": "Mandatory Selection Process",
     "nextSection": "Next Section",
     "back": "Back",
-    "finish": "Finish and See Results",
+    "finish": "Finish",
     "finishBtn": "Finish",
     "submitting": "Submitting...",
     "sections": {
@@ -4372,7 +4365,7 @@
       "score": "Your Score:",
       "minRequired": "Minimum required: 80%",
       "ctaDashboard": "Choose Scholarships",
-      "ctaDescription": "Now you can access all features and choose the scholarships you are interested in.",
+      "ctaDescription": "Now you can continue your process and choose the scholarships you are interested in.",
       "failed": "Not this time",
       "failedMessage": "You didn't reach the minimum score of 80% required for approval.",
       "failedAdvice": "We recommend reviewing the support materials and trying again.",

@@ -14,7 +14,7 @@ export const useOnboardingProgress = () => {
   const getSavedStep = useCallback((): OnboardingStep | null => {
     // Usar apenas localStorage por enquanto (campo no banco não existe ainda)
     const savedStep = window.localStorage.getItem(ONBOARDING_STEP_KEY);
-    const validSteps: OnboardingStep[] = ['welcome', 'selection_fee', 'scholarship_selection', 'process_type', 'documents_upload', 'payment', 'scholarship_fee', 'my_applications', 'completed'];
+    const validSteps: OnboardingStep[] = ['welcome', 'selection_fee', 'selection_survey', 'scholarship_selection', 'process_type', 'documents_upload', 'payment', 'scholarship_fee', 'my_applications', 'completed'];
     if (savedStep && validSteps.includes(savedStep as OnboardingStep)) {
       return savedStep as OnboardingStep;
     }
@@ -30,12 +30,13 @@ export const useOnboardingProgress = () => {
   const [state, setState] = useState<OnboardingState>(() => {
     // Inicializar com step do localStorage se existir (síncrono)
     const savedStep = window.localStorage.getItem(ONBOARDING_STEP_KEY);
-    const validSteps: OnboardingStep[] = ['welcome', 'selection_fee', 'scholarship_selection', 'process_type', 'documents_upload', 'payment', 'scholarship_fee', 'my_applications', 'completed'];
+    const validSteps: OnboardingStep[] = ['welcome', 'selection_fee', 'selection_survey', 'scholarship_selection', 'process_type', 'documents_upload', 'payment', 'scholarship_fee', 'my_applications', 'completed'];
     const initialStep = savedStep && validSteps.includes(savedStep as OnboardingStep) ? savedStep as OnboardingStep : 'welcome';
     
     return {
       currentStep: initialStep,
       selectionFeePaid: false,
+      selectionSurveyPassed: false,
       scholarshipsSelected: false,
       processTypeSelected: false,
       documentsUploaded: false,
@@ -92,6 +93,9 @@ export const useOnboardingProgress = () => {
             selectionFeePaid = true;
         }
       }
+
+      // 1.5 Verificar Selection Survey
+      const selectionSurveyPassed = userProfile.selection_survey_passed || false;
 
       // 2. Verificar se há bolsas selecionadas (cart ou aplicações)
       // IMPORTANTE: Só considerar bolsas selecionadas se o usuário já pagou a taxa de seleção
@@ -248,7 +252,7 @@ export const useOnboardingProgress = () => {
 
       // Verificar se é um novo usuário (sem nenhum progresso E sem step salvo)
       // Se há step salvo, significa que o usuário já interagiu com o onboarding
-      const isNewUser = !selectionFeePaid && !scholarshipsSelected && !processTypeSelected && !documentsUploaded && !savedStep;
+      const isNewUser = !selectionFeePaid && !selectionSurveyPassed && !scholarshipsSelected && !processTypeSelected && !documentsUploaded && !savedStep;
       
       let currentStep: OnboardingStep;
       
@@ -274,6 +278,8 @@ export const useOnboardingProgress = () => {
         
         if (!selectionFeePaid) {
           maxAllowedStep = 'selection_fee';
+        } else if (!selectionSurveyPassed) {
+          maxAllowedStep = 'selection_survey';
         } else if (!scholarshipsSelected) {
           maxAllowedStep = 'scholarship_selection';
         } else if (!processTypeSelected) {
@@ -291,7 +297,7 @@ export const useOnboardingProgress = () => {
 
         // Se o step salvo é mais avançado que o permitido, usar o permitido
         // Caso contrário, respeitar o desejo do usuário (permitir voltar)
-        const allSteps: OnboardingStep[] = ['welcome', 'selection_fee', 'scholarship_selection', 'process_type', 'documents_upload', 'payment', 'scholarship_fee', 'my_applications', 'completed'];
+        const allSteps: OnboardingStep[] = ['welcome', 'selection_fee', 'selection_survey', 'scholarship_selection', 'process_type', 'documents_upload', 'payment', 'scholarship_fee', 'my_applications', 'completed'];
         const savedIdx = allSteps.indexOf(savedStep);
         const maxIdx = allSteps.indexOf(maxAllowedStep);
         
@@ -300,6 +306,8 @@ export const useOnboardingProgress = () => {
         // Se não há step salvo e não é novo usuário, calcular baseado no progresso
         if (!selectionFeePaid) {
           currentStep = 'selection_fee';
+        } else if (!selectionSurveyPassed) {
+          currentStep = 'selection_survey';
         } else if (!scholarshipsSelected) {
           currentStep = 'scholarship_selection';
         } else if (!processTypeSelected) {
@@ -332,6 +340,7 @@ export const useOnboardingProgress = () => {
       setState({
         currentStep,
         selectionFeePaid,
+        selectionSurveyPassed,
         scholarshipsSelected,
         processTypeSelected,
         documentsUploaded,
@@ -371,6 +380,9 @@ export const useOnboardingProgress = () => {
       switch (step) {
         case 'selection_fee':
           updates.selectionFeePaid = true;
+          break;
+        case 'selection_survey':
+          updates.selectionSurveyPassed = true;
           break;
         case 'scholarship_selection':
           updates.scholarshipsSelected = true;

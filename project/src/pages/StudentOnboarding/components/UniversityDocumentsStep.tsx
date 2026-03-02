@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { 
   AlertCircle, Award, Info, Home, FolderOpen, GraduationCap, Download, 
-  ShieldCheck, RefreshCw, ArrowRight, LayoutDashboard, Building, MapPin, 
+  ShieldCheck, ArrowRight, LayoutDashboard, Building, MapPin, 
   Star, Eye, CheckCircle2, Clock, Mail, Phone, Globe, ExternalLink 
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
@@ -217,11 +217,6 @@ export const UniversityDocumentsStep: React.FC<StepProps> = ({ onBack }) => {
       {/* Header Premium */}
       <div className="flex flex-col md:flex-row md:items-end justify-between gap-6">
         <div className="space-y-3">
-          <div className="flex items-center gap-3">
-            <div className="px-3 py-1 bg-blue-500/20 border border-blue-500/30 rounded-full">
-              <span className="text-[10px] font-black text-blue-400 uppercase tracking-widest">Passo Final</span>
-            </div>
-          </div>
           <h2 className="text-4xl md:text-6xl font-black text-slate-900 uppercase tracking-tighter leading-none">
             Minha <span className="text-blue-600">Aplicação</span>
           </h2>
@@ -338,8 +333,8 @@ export const UniversityDocumentsStep: React.FC<StepProps> = ({ onBack }) => {
                        },
                        { 
                          title: 'Recebimento da Carta de Aceite', 
-                         status: applicationDetails.acceptance_letter_url ? 'Disponível' : 'Liberação Pendente', 
-                         variant: applicationDetails.acceptance_letter_url ? 'success' : 'error',
+                         status: applicationDetails.acceptance_letter_url ? 'Disponível' : 'Liberação em Andamento', 
+                         variant: applicationDetails.acceptance_letter_url ? 'success' : 'warning',
                          tab: 'acceptance' 
                        }
                      ].map((step, i) => {
@@ -820,7 +815,7 @@ export const UniversityDocumentsStep: React.FC<StepProps> = ({ onBack }) => {
                 
                 {/* Header Card */}
                 <div className="bg-slate-50 px-8 py-10 md:p-12 border-b border-slate-100">
-                  <div className="flex flex-col md:flex-row items-center justify-between gap-8">
+                  <div className="flex flex-col md:flex-row md:items-center justify-between gap-8">
                     <div className="flex items-center gap-6">
                       <div className="w-20 h-20 bg-blue-600 rounded-[2rem] flex items-center justify-center shadow-xl shadow-blue-500/20 transition-transform">
                         <Award className="w-10 h-10 text-white" />
@@ -828,6 +823,24 @@ export const UniversityDocumentsStep: React.FC<StepProps> = ({ onBack }) => {
                       <div className="text-center md:text-left">
                         <h2 className="text-3xl font-black text-gray-900 uppercase tracking-tighter leading-none mb-2">Carta de <span className="text-blue-600">Aceite</span></h2>
                       </div>
+                    </div>
+
+                    <div className={`flex items-center gap-2 px-5 py-2.5 rounded-2xl text-[10px] font-black uppercase tracking-widest border shadow-sm transition-all duration-500 ${
+                      applicationDetails.acceptance_letter_url 
+                        ? 'bg-emerald-50 border-emerald-200 text-emerald-700' 
+                        : 'bg-amber-50 border-amber-200 text-amber-700'
+                    }`}>
+                      {applicationDetails.acceptance_letter_url ? (
+                        <>
+                          <CheckCircle2 className="w-4 h-4" />
+                          Disponível
+                        </>
+                      ) : (
+                        <>
+                          <Clock className="w-4 h-4" />
+                          Liberação em Andamento
+                        </>
+                      )}
                     </div>
                   </div>
                 </div>
@@ -854,16 +867,8 @@ export const UniversityDocumentsStep: React.FC<StepProps> = ({ onBack }) => {
 
                     <div className="space-y-8">
                        {/* Status indicator block */}
-                       {!applicationDetails.acceptance_letter_url ? (
-                         <div className="flex flex-col items-center justify-center gap-4 bg-amber-50 border-2 border-amber-200 rounded-[2rem] p-8 shadow-sm">
-                           <div className="w-16 h-16 bg-amber-100 border-2 border-amber-200 rounded-2xl flex items-center justify-center shadow-inner">
-                             <RefreshCw className="w-8 h-8 text-amber-500 animate-spin" style={{ animationDuration: '3s' }} />
-                           </div>
-                           <span className="text-[10px] font-black text-amber-600 uppercase tracking-widest text-center">Liberação em Andamento</span>
-                           <p className="text-xs text-amber-600 text-center font-medium">A universidade está processando sua carta oficial e ela aparecerá aqui automaticamente em breve.</p>
-                         </div>
-                       ) : (
-                         <div className="bg-emerald-50 border-2 border-emerald-200 rounded-[2rem] p-8 flex flex-col items-center justify-center gap-6">
+                       {applicationDetails.acceptance_letter_url && (
+                         <div className="bg-emerald-50 border-2 border-emerald-200 rounded-[2rem] p-8 flex flex-col items-center justify-center gap-6 animate-in fade-in zoom-in duration-500">
                            <div className="w-16 h-16 bg-emerald-100 border-2 border-emerald-200 rounded-2xl flex items-center justify-center animate-bounce-slow">
                              <Award className="w-8 h-8 text-emerald-600" />
                            </div>

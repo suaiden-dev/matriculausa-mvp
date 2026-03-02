@@ -12,6 +12,7 @@ import { DocumentsUploadStep } from './components/DocumentsUploadStep';
 import { PaymentStep } from './components/PaymentStep'; // Payment step component
 import { ScholarshipFeeStep } from './components/ScholarshipFeeStep';
 import { UniversityDocumentsStep } from './components/UniversityDocumentsStep';
+import { SelectionSurveyStep } from './components/SelectionSurveyStep';
 import { OnboardingStep } from './types';
 import PaymentSuccessOverlay from '../../components/PaymentSuccessOverlay';
 import CustomLoading from '../../components/CustomLoading';
@@ -36,6 +37,7 @@ const StudentOnboarding: React.FC = () => {
     const steps: OnboardingStep[] = [
       'welcome',
       'selection_fee',
+      'selection_survey',
       'scholarship_selection',
       'process_type',
       'documents_upload',
@@ -55,6 +57,7 @@ const StudentOnboarding: React.FC = () => {
     const steps: OnboardingStep[] = [
       'welcome',
       'selection_fee',
+      'selection_survey',
       'scholarship_selection',
       'process_type',
       'documents_upload',
@@ -121,7 +124,7 @@ const StudentOnboarding: React.FC = () => {
   useEffect(() => {
     const stepParam = searchParams.get('step');
     if (stepParam) {
-      const validSteps: OnboardingStep[] = ['welcome', 'selection_fee', 'scholarship_selection', 'process_type', 'documents_upload', 'payment', 'scholarship_fee', 'my_applications'];
+      const validSteps: OnboardingStep[] = ['welcome', 'selection_fee', 'selection_survey', 'scholarship_selection', 'process_type', 'documents_upload', 'payment', 'scholarship_fee', 'my_applications'];
       if (validSteps.includes(stepParam as OnboardingStep)) {
         window.localStorage.setItem('onboarding_current_step', stepParam);
         if (stepParam === 'welcome') {
@@ -331,6 +334,7 @@ const StudentOnboarding: React.FC = () => {
   const allSteps: OnboardingStep[] = [
     'welcome',
     'selection_fee',
+    'selection_survey',
     'scholarship_selection',
     'process_type',
     'documents_upload',
@@ -344,6 +348,7 @@ const StudentOnboarding: React.FC = () => {
   const completedSteps: OnboardingStep[] = [];
   if (currentIdx > allSteps.indexOf('welcome')) completedSteps.push('welcome');
   if (state.selectionFeePaid && currentIdx > allSteps.indexOf('selection_fee')) completedSteps.push('selection_fee');
+  if (state.selectionSurveyPassed && currentIdx > allSteps.indexOf('selection_survey')) completedSteps.push('selection_survey');
   if (state.scholarshipsSelected && currentIdx > allSteps.indexOf('scholarship_selection')) completedSteps.push('scholarship_selection');
   if (state.processTypeSelected && currentIdx > allSteps.indexOf('process_type')) completedSteps.push('process_type');
   if (state.documentsUploaded && currentIdx > allSteps.indexOf('documents_upload')) completedSteps.push('documents_upload');
@@ -357,6 +362,8 @@ const StudentOnboarding: React.FC = () => {
         return <WelcomeStep onNext={handleNext} onBack={handleBack} />;
       case 'selection_fee':
         return <SelectionFeeStep onNext={handleNext} onBack={handleBack} />;
+      case 'selection_survey':
+        return <SelectionSurveyStep onNext={handleNext} onBack={handleBack} />;
       case 'scholarship_selection':
         return <ScholarshipSelectionStep onNext={handleNext} onBack={handleBack} />;
       case 'process_type':
