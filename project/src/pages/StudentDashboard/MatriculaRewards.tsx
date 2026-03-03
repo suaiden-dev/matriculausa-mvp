@@ -11,16 +11,13 @@ import {
   Mail,
   GraduationCap,
   Bell,
-  Check,
   ChevronLeft,
-  ChevronRight
+  ChevronRight,
+  Link2
 } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 import { useAuth } from '../../hooks/useAuth';
 import { supabase } from '../../lib/supabase';
-import { 
-  AffiliateStats 
-} from '../../types';
 import { Link } from 'react-router-dom';
 import { Card } from '../../components/ui/Card';
 import { Alert, AlertDescription, AlertTitle } from '../../components/ui/Alert';
@@ -65,6 +62,7 @@ const MatriculaRewards: React.FC = () => {
   const [notificationStatus, setNotificationStatus] = useState<Record<string, 'loading' | 'success' | 'none'>>({});
   const [cooldownRemaining, setCooldownRemaining] = useState<Record<string, number>>({});
   const [currentPage, setCurrentPage] = useState(1);
+  const [copiedLink, setCopiedLink] = useState(false);
   const [universitiesPerPage] = useState(9); // 3x3 grid
   const [searchTerm, setSearchTerm] = useState('');
   const [referralsPage, setReferralsPage] = useState(1);
@@ -116,8 +114,22 @@ const MatriculaRewards: React.FC = () => {
     }
   };
 
+  const copyLinkToClipboard = async (text: string) => {
+    try {
+      await navigator.clipboard.writeText(text);
+      setCopiedLink(true);
+      setTimeout(() => setCopiedLink(false), 2000);
+    } catch (error) {
+      console.error('Erro ao copiar link:', error);
+    }
+  };
+
   const getShareUrl = (code: string) => {
     return `${window.location.origin}?ref=${code}`;
+  };
+
+  const getRegistrationUrl = (code: string) => {
+    return `${window.location.origin}/selection-fee-registration?ref=${code}`;
   };
 
   const shareToSocialMedia = async (platform: string, url: string, text: string) => {
@@ -320,22 +332,24 @@ const MatriculaRewards: React.FC = () => {
           <div className="absolute top-4 left-0 w-full h-0.5 bg-slate-200 -z-10" />
           {stages.map((stage, idx) => {
             const isCompleted = !!stage.date;
+            
             return (
-              <div key={stage.id} className="flex flex-col items-center">
-                <div className={`w-8 h-8 rounded-full flex items-center justify-center border-2 transition-all duration-300 ${isCompleted ? 'bg-green-600 border-green-600 shadow-sm' : 'bg-white border-slate-300'}`}>
+              <div key={idx} className="flex flex-col items-center relative z-10 flex-1">
+                <div className={`w-7 h-7 sm:w-8 sm:h-8 rounded-full flex items-center justify-center border-2 transition-all duration-300 ${isCompleted ? 'bg-green-600 border-green-600 shadow-sm' : 'bg-white border-slate-300'}`}>
                   {isCompleted ? (
-                    <Check className="h-4 w-4 text-white" />
+                    <CheckCircle className="h-3.5 w-3.5 sm:h-4 sm:w-4 text-white" />
                   ) : (
-                    <span className="text-[10px] font-bold text-slate-400">{idx + 1}</span>
+                    <div className="h-1.5 w-1.5 sm:h-2 sm:w-2 rounded-full bg-slate-300" />
                   )}
                 </div>
+                
                 <div className="mt-2 text-center">
-                  <p className={`text-[10px] font-bold max-w-[60px] leading-tight ${isCompleted ? 'text-green-700' : 'text-slate-400'}`}>
+                  <p className={`text-[9px] sm:text-[10px] font-bold max-w-[50px] sm:max-w-[60px] leading-tight ${isCompleted ? 'text-green-700' : 'text-slate-400'}`}>
                     {stage.label}
                   </p>
                   {stage.date && (
-                    <p className="text-[8px] text-slate-400 mt-0.5">
-                      {new Date(stage.date).toLocaleDateString()}
+                    <p className="text-[8px] sm:text-[9px] text-slate-400 mt-0.5">
+                      {formatDate(stage.date)}
                     </p>
                   )}
                 </div>
@@ -410,45 +424,78 @@ const MatriculaRewards: React.FC = () => {
         {/* Hero / Balance */}
         <Card className="relative overflow-hidden">
           <div className="absolute inset-0 bg-gradient-to-r from-blue-600/10 via-indigo-600/10 to-purple-600/10" />
-          <div className="relative z-10 grid gap-6 p-6 md:grid-cols-3 md:items-center">
+          <div className="relative z-10 grid gap-4 sm:gap-6 p-4 sm:p-6 md:grid-cols-3 md:items-center">
             <div className="md:col-span-2">
-              <h1 className="text-2xl md:text-3xl font-bold text-slate-900">{t('matriculaRewards.title')}</h1>
-              <p className="text-slate-600 mt-1">{t('matriculaRewards.subtitle')}</p>
-              <div className="mt-4 inline-flex items-baseline gap-2 rounded-xl bg-slate-100 px-4 py-2">
-                <span className="text-sm font-medium text-slate-600">{t('matriculaRewards.balance')}</span>
-                <span className="text-3xl font-extrabold text-slate-900">{formatCoins(credits?.balance || 0)}</span>
-                <span className="text-sm text-slate-500">{t('matriculaRewards.coins')}</span>
+              <h1 className="text-xl sm:text-2xl md:text-3xl font-bold text-slate-900">{t('matriculaRewards.title')}</h1>
+              <p className="text-sm sm:text-base text-slate-600 mt-1">{t('matriculaRewards.subtitle')}</p>
+              <div className="mt-4 inline-flex items-baseline gap-2 rounded-xl bg-slate-100 px-3 py-1.5 sm:px-4 sm:py-2">
+                <span className="text-xs sm:text-sm font-medium text-slate-600">{t('matriculaRewards.balance')}</span>
+                <span className="text-2xl sm:text-3xl font-extrabold text-slate-900">{formatCoins(credits?.balance || 0)}</span>
+                <span className="text-xs sm:text-sm text-slate-500">{t('matriculaRewards.coins')}</span>
               </div>
               
               {/* Referral Code - Integrated in Hero */}
               {affiliateCode && (
                 <div className="mt-6 max-w-lg">
-                  <div className="bg-white rounded-xl border-2 border-blue-200 p-4 shadow-lg">
-                    <div className="flex items-center justify-between gap-3">
-                      <div className="flex items-center gap-3 flex-1 min-w-0">
-                        <div className="w-10 h-10 bg-blue-100 rounded-full flex items-center justify-center flex-shrink-0">
-                          <Gift className="h-5 w-5 text-blue-600" />
+                  <div className="bg-white rounded-xl border-2 border-blue-200 p-3 sm:p-4 shadow-md">
+                    <div className="flex items-center justify-between gap-2">
+                      <div className="flex items-center gap-2 sm:gap-3 flex-1 min-w-0">
+                        <div className="w-8 h-8 sm:w-10 sm:h-10 bg-blue-100 rounded-full flex items-center justify-center flex-shrink-0">
+                          <Gift className="h-4 w-4 sm:h-5 sm:w-5 text-blue-600" />
                         </div>
                         <div className="flex-1 min-w-0">
-                          <p className="text-xs font-medium text-slate-500 mb-1">Seu código</p>
-                          <p className="text-xl font-bold tracking-wide text-slate-900 font-mono break-all">
+                          <p className="text-[10px] font-medium text-slate-500">Seu código</p>
+                          <p className="text-lg sm:text-xl font-bold tracking-wide text-slate-900 font-mono truncate">
                             {affiliateCode.code}
                           </p>
                         </div>
                       </div>
                       <button
-                        onClick={() => copyToClipboard(getShareUrl(affiliateCode.code))}
-                        className="flex items-center gap-2 bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-lg font-medium transition-all duration-200 shadow-md hover:shadow-lg flex-shrink-0"
+                        onClick={() => copyToClipboard(affiliateCode.code)}
+                        className="flex items-center gap-1.5 bg-blue-600 hover:bg-blue-700 text-white px-3 py-1.5 rounded-lg font-medium transition-all duration-200 shadow-sm text-sm flex-shrink-0"
                       >
                         {copied ? (
                           <>
-                            <CheckCircle className="h-4 w-4" />
-                            <span className="hidden sm:inline text-sm">Copiado!</span>
+                            <CheckCircle className="h-3.5 w-3.5" />
+                            <span>{t('common.copied')}</span>
                           </>
                         ) : (
                           <>
-                            <Copy className="h-4 w-4" />
-                            <span className="hidden sm:inline text-sm">Copiar</span>
+                            <Copy className="h-3.5 w-3.5" />
+                            <span>{t('common.copy')}</span>
+                          </>
+                        )}
+                      </button>
+                    </div>
+                  </div>
+
+                  {/* Referral Link - New Element */}
+                  <div className="bg-white rounded-xl border-2 border-indigo-200 p-3 sm:p-4 shadow-md mt-2">
+                    <div className="flex items-center justify-between gap-2">
+                      <div className="flex items-center gap-2 sm:gap-3 flex-1 min-w-0">
+                        <div className="w-8 h-8 sm:w-10 sm:h-10 bg-indigo-100 rounded-full flex items-center justify-center flex-shrink-0">
+                          <Link2 className="h-4 w-4 sm:h-5 sm:w-5 text-indigo-600" />
+                        </div>
+                        <div className="flex-1 min-w-0">
+                          <p className="text-[10px] font-medium text-slate-500">Seu link</p>
+                          <p className="text-xs sm:text-sm font-medium text-slate-600 truncate font-mono">
+                            {getRegistrationUrl(affiliateCode.code)}
+                          </p>
+                        </div>
+                      </div>
+                      <button
+                        onClick={() => copyLinkToClipboard(getRegistrationUrl(affiliateCode.code))}
+                        className="flex items-center gap-1.5 bg-indigo-600 hover:bg-indigo-700 text-white px-3 py-1.5 rounded-lg font-medium transition-all duration-200 shadow-sm text-sm flex-shrink-0"
+                      >
+                        {copiedLink ? (
+                          <>
+                            <CheckCircle className="h-3.5 w-3.5" />
+                            <span>{t('common.copied')}</span>
+                          </>
+                        ) : (
+                          <>
+                            <Copy className="h-3.5 w-3.5" />
+                            <span>{t('common.copy')}</span>
                           </>
                         )}
                       </button>
@@ -555,32 +602,32 @@ const MatriculaRewards: React.FC = () => {
             {referrals.length ? (
               <div className="space-y-4">
                 {referrals.slice((referralsPage - 1) * referralsPerPage, referralsPage * referralsPerPage).map(referral => (
-                  <div key={referral.id} className="rounded-xl border border-slate-200 bg-white p-4 shadow-sm hover:shadow-md transition-shadow">
-                    <div className="flex items-center justify-between">
-                      <div className="flex items-center gap-3">
-                        <div className="h-10 w-10 rounded-full bg-blue-50 flex items-center justify-center">
-                          <Users className="h-5 w-5 text-blue-600" />
+                  <div key={referral.id} className="rounded-xl border border-slate-200 bg-white p-3 sm:p-4 shadow-sm hover:shadow-md transition-shadow">
+                    <div className="flex items-center justify-between gap-2">
+                      <div className="flex items-center gap-2 sm:gap-3 min-w-0">
+                        <div className="h-8 w-8 sm:h-10 sm:w-10 rounded-full bg-blue-50 flex items-center justify-center flex-shrink-0">
+                          <Users className="h-4 w-4 sm:h-5 sm:w-5 text-blue-600" />
                         </div>
-                        <div>
-                          <p className="font-bold text-slate-900">
+                        <div className="min-w-0">
+                          <p className="font-bold text-slate-900 text-sm sm:text-base truncate">
                             {referral.referred_user?.full_name 
                               ? referral.referred_user.full_name
                               : t('matriculaRewards.referralNumber', { id: referral.id.slice(0, 8) })
                             }
                           </p>
-                          <p className="text-xs text-slate-500">{t('matriculaRewards.invitedOn', { date: formatDate(referral.created_at) })}</p>
+                          <p className="text-[10px] sm:text-xs text-slate-500 truncate">{t('matriculaRewards.invitedOn', { date: formatDate(referral.created_at) })}</p>
                         </div>
                       </div>
-                      <div className="text-right">
-                        <div className={`inline-flex items-center gap-1 px-2 py-1 rounded-full text-[10px] font-bold uppercase tracking-wider ${referral.i20_paid_at ? 'bg-green-100 text-green-700' : 'bg-yellow-100 text-yellow-700'}`}>
+                      <div className="flex-shrink-0">
+                        <div className={`inline-flex items-center gap-1 px-1.5 sm:px-2 py-0.5 sm:py-1 rounded-full text-[8px] sm:text-[10px] font-bold uppercase tracking-wider ${referral.i20_paid_at ? 'bg-green-100 text-green-700' : 'bg-yellow-100 text-yellow-700'}`}>
                           {referral.i20_paid_at ? (
                             <>
-                              <CheckCircle className="h-3 w-3" />
-                              {t('matriculaRewards.completed')} (+180)
+                              <CheckCircle className="h-2.5 w-2.5 sm:h-3 sm:w-3" />
+                              <span className="hidden xs:inline">{t('matriculaRewards.completed')}</span> (+180)
                             </>
                           ) : (
                             <>
-                              <Clock className="h-3 w-3" />
+                              <Clock className="h-2.5 w-2.5 sm:h-3 sm:w-3" />
                               {t('matriculaRewards.inProgress')}
                             </>
                           )}
@@ -626,24 +673,26 @@ const MatriculaRewards: React.FC = () => {
             {transactions.length ? (
               <ul className="space-y-3">
                 {transactions.slice(0,5).map(tx => (
-                  <li key={tx.id} className="flex items-center justify-between rounded-lg border border-slate-100 bg-slate-50 p-3">
-                    <div className="flex items-center gap-3">
-                      <span className={`inline-flex h-8 w-8 items-center justify-center rounded-full ${tx.type==='earned'?'bg-green-100 text-green-600':tx.type==='spent'?'bg-red-100 text-red-600':'bg-yellow-100 text-yellow-600'}`}>
-                        {tx.type==='earned'?<TrendingUp className="h-4 w-4"/>:tx.type==='spent'?<DollarSign className="h-4 w-4"/>:<Clock className="h-4 w-4"/>}
+                  <li key={tx.id} className="flex items-center justify-between rounded-lg border border-slate-100 bg-slate-50 p-2 sm:p-3 overflow-hidden">
+                    <div className="flex items-center gap-2 sm:gap-3 min-w-0">
+                      <span className={`inline-flex h-7 w-7 sm:h-8 sm:w-8 items-center justify-center rounded-full flex-shrink-0 ${tx.type==='earned'?'bg-green-100 text-green-600':tx.type==='spent'?'bg-red-100 text-red-600':'bg-yellow-100 text-yellow-600'}`}>
+                        {tx.type==='earned'?<TrendingUp className="h-3.5 w-3.5 sm:h-4 sm:w-4"/>:tx.type==='spent'?<DollarSign className="h-3.5 w-3.5 sm:h-4 sm:w-4"/>:<Clock className="h-3.5 w-3.5 sm:h-4 sm:w-4"/>}
                       </span>
-                      <div>
-                        <p className="font-medium text-slate-900">
+                      <div className="min-w-0">
+                        <p className="font-medium text-slate-900 text-sm sm:text-base truncate">
                           {tx.description 
                             ? removeEmailFromDescription(tx.description, tx.referred_user_name)
                             : (tx.type === 'earned' ? t('matriculaRewards.earned') : tx.type === 'spent' ? t('matriculaRewards.spent') : t('matriculaRewards.pending'))
                           }
                         </p>
-                        <p className="text-xs text-slate-500">{formatDate(tx.created_at)}</p>
+                        <p className="text-[10px] sm:text-xs text-slate-500">{formatDate(tx.created_at)}</p>
                       </div>
                     </div>
-                    <div className="text-right">
-                      <p className={`${tx.type==='earned'?'text-green-600':tx.type==='spent'?'text-red-600':'text-yellow-600'} font-semibold`}>{tx.type==='earned'?'+':tx.type==='spent'?'-':''}{formatCoins(tx.amount)}</p>
-                      <p className="text-xs text-slate-500">Balance: {formatCoins(tx.balance_after)}</p>
+                    <div className="text-right flex-shrink-0 ml-2">
+                      <p className={`${tx.type==='earned'?'text-green-600':tx.type==='spent'?'text-red-600':'text-yellow-600'} font-semibold text-sm sm:text-base`}>
+                        {tx.type==='earned'?'+':tx.type==='spent'?'-':''}{formatCoins(tx.amount)}
+                      </p>
+                      <p className="text-[10px] text-slate-500">Bal: {formatCoins(tx.balance_after)}</p>
                     </div>
                   </li>
                 ))}
