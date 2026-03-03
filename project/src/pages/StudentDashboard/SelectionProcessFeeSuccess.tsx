@@ -30,17 +30,17 @@ const SelectionProcessFeeSuccess: React.FC = () => {
   const pollPixPaymentStatus = async () => {
     const maxAttempts = 30; // 5 minutos (10s * 30)
     let attempts = 0;
-    
+
     const poll = async () => {
       // Se já foi verificado, parar polling
       if (hasVerified) {
         console.log('[PIX] Já foi verificado, parando polling');
         return;
       }
-      
+
       attempts++;
       console.log(`[PIX] Tentativa ${attempts}/${maxAttempts} - Verificando se webhook processou PIX...`);
-      
+
       try {
         const SUPABASE_PROJECT_URL = import.meta.env.VITE_SUPABASE_URL;
         const EDGE_FUNCTION_ENDPOINT = `${SUPABASE_PROJECT_URL}/functions/v1/verify-stripe-session-selection-process-fee`;
@@ -54,7 +54,7 @@ const SelectionProcessFeeSuccess: React.FC = () => {
         } catch (e) {
           token = null;
         }
-        
+
         const response = await fetch(EDGE_FUNCTION_ENDPOINT, {
           method: 'POST',
           headers: {
@@ -63,10 +63,10 @@ const SelectionProcessFeeSuccess: React.FC = () => {
           },
           body: JSON.stringify({ sessionId }),
         });
-        
+
         const data = await response.json();
         console.log(`[PIX] Resposta da API (tentativa ${attempts}):`, data);
-        
+
         // Extrair informações do pagamento
         // Priorizar gross_amount_usd (valor bruto que o aluno realmente pagou), senão usar final_amount ou amount_paid
         if (data.gross_amount_usd !== null && data.gross_amount_usd !== undefined) {
@@ -76,16 +76,16 @@ const SelectionProcessFeeSuccess: React.FC = () => {
         } else if (data.amount_paid) {
           setPaidAmount(data.amount_paid);
         }
-        
+
         // Verificar se há erro de sessão não encontrada
         if (data.error && data.error.includes('Session not found')) {
           console.log('[PIX] ⚠️ Sessão não encontrada - pode ter expirado ou sido processada');
           // Se a sessão não foi encontrada, assumir que foi processada com sucesso
           localStorage.removeItem('last_payment_method');
-          navigate('/student/dashboard/scholarships');
+          navigate('/student/dashboard/selection-survey');
           return;
         }
-        
+
         // Se for PIX e estiver completo, mostrar animação de sucesso
         if (data.payment_method === 'pix' && data.status === 'complete') {
           console.log('[PIX] ✅ Webhook processou PIX! Mostrando animação...');
@@ -98,43 +98,43 @@ const SelectionProcessFeeSuccess: React.FC = () => {
           // Aguardar 6 segundos e então redirecionar
           setTimeout(() => {
             localStorage.removeItem('last_payment_method');
-            navigate('/student/dashboard/scholarships');
+            navigate('/student/dashboard/selection-survey');
           }, 6000);
           return;
         }
-        
+
         // Se não for PIX, processar normalmente
         if (data.payment_method !== 'pix' && data.status === 'complete') {
           console.log('[PIX] Pagamento não-PIX confirmado, processando normalmente...');
           setLoading(false);
           setAnimationSuccess(true);
           setShowAnimation(true);
-          
+
           // Aguardar 6 segundos e então redirecionar
           setTimeout(() => {
-            navigate('/student/dashboard/scholarships');
+            navigate('/student/dashboard/selection-survey');
           }, 6000);
           return;
         }
-        
+
         if (attempts >= maxAttempts) {
           console.log('[PIX] ⏰ Timeout após 5 minutos - Mostrando erro...');
           setLoading(false);
           setAnimationSuccess(false);
           setShowAnimation(true);
-          
+
           // Aguardar 6 segundos antes de redirecionar
           setTimeout(() => {
             localStorage.removeItem('last_payment_method');
-            navigate('/student/dashboard/scholarships');
+            navigate('/student/dashboard/selection-survey');
           }, 6000);
           return;
         }
-        
+
         // Aguardar 10 segundos antes da próxima tentativa
         console.log(`[PIX] ⏳ Aguardando webhook processar... (${attempts}/${maxAttempts})`);
         setTimeout(poll, 10000);
-        
+
       } catch (error) {
         console.error('[PIX] ❌ Erro no polling:', error);
         if (attempts >= maxAttempts) {
@@ -142,10 +142,10 @@ const SelectionProcessFeeSuccess: React.FC = () => {
           setLoading(false);
           setAnimationSuccess(false);
           setShowAnimation(true);
-          
+
           setTimeout(() => {
             localStorage.removeItem('last_payment_method');
-            navigate('/student/dashboard/scholarships');
+            navigate('/student/dashboard/selection-survey');
           }, 6000);
         } else {
           console.log(`[PIX] ⏳ Tentando novamente em 10s... (${attempts}/${maxAttempts})`);
@@ -153,7 +153,7 @@ const SelectionProcessFeeSuccess: React.FC = () => {
         }
       }
     };
-    
+
     poll();
   };
 
@@ -207,7 +207,7 @@ const SelectionProcessFeeSuccess: React.FC = () => {
             setHasVerified(true);
 
             setTimeout(() => {
-              navigate('/student/dashboard/scholarships');
+              navigate('/student/dashboard/selection-survey');
             }, 6000);
             return;
           }
@@ -220,7 +220,7 @@ const SelectionProcessFeeSuccess: React.FC = () => {
           setShowAnimation(true);
 
           setTimeout(() => {
-            navigate('/student/dashboard/scholarships');
+            navigate('/student/dashboard/selection-survey');
           }, 6000);
           return;
         }
@@ -235,7 +235,7 @@ const SelectionProcessFeeSuccess: React.FC = () => {
           setShowAnimation(true);
 
           setTimeout(() => {
-            navigate('/student/dashboard/scholarships');
+            navigate('/student/dashboard/selection-survey');
           }, 6000);
         } else {
           setTimeout(poll, 10000);
@@ -252,7 +252,7 @@ const SelectionProcessFeeSuccess: React.FC = () => {
       console.log('[Payment] Verificação já em andamento, ignorando chamada duplicada');
       return;
     }
-    
+
     // Aguardar usuário estar carregado
     if (!user) {
       console.log('[Payment] Aguardando autenticação do usuário...');
@@ -263,7 +263,7 @@ const SelectionProcessFeeSuccess: React.FC = () => {
       console.log('[Payment] Verificação já foi executada, ignorando chamada duplicada do React Strict Mode');
       return;
     }
-    
+
     hasRunRef.current = true;
 
     // Detectar se é pagamento Parcelow ou Stripe
@@ -274,14 +274,14 @@ const SelectionProcessFeeSuccess: React.FC = () => {
       verifyParcelowPayment();
       return;
     }
-    
+
     // Fallback: se tiver payment_method=parcelow explicitamente
     if (paymentMethod === 'parcelow' && reference) {
       console.log('[Parcelow] Pagamento Parcelow detectado (via payment_method), iniciando verificação...');
       verifyParcelowPayment();
       return;
     }
-    
+
     const verifySession = async () => {
       if (!sessionId) {
         setError('Session ID not found in URL.');
@@ -315,7 +315,7 @@ const SelectionProcessFeeSuccess: React.FC = () => {
         } catch (e) {
           token = null;
         }
-        
+
         const response = await fetch(EDGE_FUNCTION_ENDPOINT, {
           method: 'POST',
           headers: {
@@ -324,10 +324,10 @@ const SelectionProcessFeeSuccess: React.FC = () => {
           },
           body: JSON.stringify({ sessionId }),
         });
-        
+
         const data = await response.json();
         console.log('[PIX] Resposta da verificação:', data);
-        
+
         // Extrair informações do pagamento
         // Priorizar gross_amount_usd (valor bruto que o aluno realmente pagou), senão usar final_amount ou amount_paid
         if (data.gross_amount_usd !== null && data.gross_amount_usd !== undefined) {
@@ -337,21 +337,21 @@ const SelectionProcessFeeSuccess: React.FC = () => {
         } else if (data.amount_paid) {
           setPaidAmount(data.amount_paid);
         }
-        
+
         // Verificar se há erro de sessão não encontrada
         if (data.error && data.error.includes('Session not found')) {
           console.log('[PIX] ⚠️ Sessão não encontrada na verificação inicial - assumindo sucesso');
           setLoading(false);
           setAnimationSuccess(true);
           setShowAnimation(true);
-          
+
           setTimeout(() => {
             localStorage.removeItem('last_payment_method');
-            navigate('/student/dashboard/scholarships');
+            navigate('/student/dashboard/selection-survey');
           }, 6000);
           return;
         }
-        
+
         // Se PIX já foi pago, mostrar animação de sucesso
         if (data.payment_method === 'pix' && data.status === 'complete') {
           console.log('[PIX] PIX já foi pago! Mostrando animação...');
@@ -359,16 +359,16 @@ const SelectionProcessFeeSuccess: React.FC = () => {
           setAnimationSuccess(true);
           setShowAnimation(true);
           setHasVerified(true);
-          
+
           setTimeout(() => {
             localStorage.removeItem('last_payment_method');
-            const redirectUrl = data.redirect_url || '/student/dashboard/scholarships';
+            const redirectUrl = data.redirect_url || '/student/dashboard/selection-survey';
             console.log('[PIX] Redirecionando para:', redirectUrl);
             navigate(redirectUrl);
           }, 6000);
           return;
         }
-        
+
         // Se não for PIX, processar normalmente
         if (data.payment_method !== 'pix' && data.status === 'complete') {
           console.log('[PIX] Pagamento não-PIX confirmado, processando normalmente...');
@@ -376,17 +376,17 @@ const SelectionProcessFeeSuccess: React.FC = () => {
           setLoading(false);
           setAnimationSuccess(true);
           setShowAnimation(true);
-          
+
           setTimeout(() => {
-            navigate('/student/dashboard/scholarships');
+            navigate('/student/dashboard/selection-survey');
           }, 6000);
           return;
         }
-        
+
         // Se ainda não foi pago, iniciar polling
         console.log('[PIX] PIX ainda não foi pago, iniciando polling...');
         await pollPixPaymentStatus();
-        
+
       } catch (error) {
         console.error('[PIX] Erro na verificação inicial:', error);
         // Em caso de erro, iniciar polling mesmo assim
@@ -408,10 +408,10 @@ const SelectionProcessFeeSuccess: React.FC = () => {
       {/* Conteúdo principal - só mostra se ainda está carregando */}
       {loading ? (
         <div className="bg-white rounded-2xl shadow-lg p-10 max-w-md w-full flex flex-col items-center">
-          <CustomLoading 
-            color="green" 
-            title={t('successPages.selectionProcessFee.verifying')} 
-            message={t('successPages.selectionProcessFee.pleaseWait')} 
+          <CustomLoading
+            color="green"
+            title={t('successPages.selectionProcessFee.verifying')}
+            message={t('successPages.selectionProcessFee.pleaseWait')}
           />
         </div>
       ) : error ? (
@@ -421,12 +421,12 @@ const SelectionProcessFeeSuccess: React.FC = () => {
           </svg>
           <h1 className="text-3xl font-bold text-red-700 mb-2">{t('successPages.selectionProcessFee.errorTitle')}</h1>
           <p className="text-slate-700 mb-6 text-center">
-            {t('successPages.selectionProcessFee.errorMessage')}<br/>
+            {t('successPages.selectionProcessFee.errorMessage')}<br />
             {t('successPages.selectionProcessFee.errorRetry')}
           </p>
-          <button 
-            className="bg-blue-600 text-white px-6 py-3 rounded-xl font-bold hover:bg-blue-700 transition-all duration-300" 
-            onClick={() => navigate('/student/dashboard/scholarships')}
+          <button
+            className="bg-blue-600 text-white px-6 py-3 rounded-xl font-bold hover:bg-blue-700 transition-all duration-300"
+            onClick={() => navigate('/student/dashboard/selection-survey')}
           >
             {t('successPages.selectionProcessFee.button')}
           </button>
@@ -435,7 +435,7 @@ const SelectionProcessFeeSuccess: React.FC = () => {
         /* Overlay com animação */
         <PaymentSuccessOverlay
           isSuccess={animationSuccess}
-          title={animationSuccess 
+          title={animationSuccess
             ? t('successPages.selectionProcessFee.title')
             : t('successPages.selectionProcessFee.errorTitle')
           }

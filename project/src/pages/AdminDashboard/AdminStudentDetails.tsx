@@ -11,6 +11,7 @@ import { generateTermAcceptancePDF, StudentTermAcceptanceData } from '../../util
 // Lazy loading dos componentes das abas
 const DocumentsView = lazy(() => import('../../components/EnhancedStudentTracking/DocumentsView'));
 const AdminScholarshipSelection = lazy(() => import('../../components/AdminDashboard/AdminScholarshipSelection'));
+const SelectionSurveyView = lazy(() => import('../../components/AdminDashboard/SelectionSurveyView'));
 const StudentLogsView = lazy(() => import('../../components/AdminDashboard/StudentLogsView'));
 
 // Componente de loading para as abas
@@ -33,19 +34,18 @@ const TabLoadingSkeleton: React.FC = () => (
 // Função simples de toast
 const showToast = (message: string, type: 'success' | 'error' = 'success') => {
   const toast = document.createElement('div');
-  toast.className = `fixed top-4 right-4 z-50 px-4 py-2 rounded-lg text-white font-medium transition-all duration-300 ${
-    type === 'success' ? 'bg-green-500' : 'bg-red-500'
-  }`;
+  toast.className = `fixed top-4 right-4 z-50 px-4 py-2 rounded-lg text-white font-medium transition-all duration-300 ${type === 'success' ? 'bg-green-500' : 'bg-red-500'
+    }`;
   toast.textContent = message;
   document.body.appendChild(toast);
-  
+
   setTimeout(() => {
     toast.style.opacity = '0';
     toast.style.transform = 'translateX(100%)';
     setTimeout(() => document.body.removeChild(toast), 300);
   }, 3000);
 };
-import { 
+import {
   User,
   Eye,
   FileText,
@@ -130,37 +130,37 @@ const AdminStudentDetails: React.FC = () => {
   const [student, setStudent] = useState<StudentRecord | null>(null);
   const [loading, setLoading] = useState(true);
   const [loadingSecondaryData, setLoadingSecondaryData] = useState(false);
-  const [expandedApps, setExpandedApps] = useState<{[key: string]: boolean}>({});
+  const [expandedApps, setExpandedApps] = useState<{ [key: string]: boolean }>({});
   const [dependents, setDependents] = useState<number>(0);
-  const [approvingDocs, setApprovingDocs] = useState<{[key: string]: boolean}>({});
-  const [rejectingDocs, setRejectingDocs] = useState<{[key: string]: boolean}>({});
-  const [uploadingDocs, setUploadingDocs] = useState<{[key: string]: boolean}>({});
+  const [approvingDocs, setApprovingDocs] = useState<{ [key: string]: boolean }>({});
+  const [rejectingDocs, setRejectingDocs] = useState<{ [key: string]: boolean }>({});
+  const [uploadingDocs, setUploadingDocs] = useState<{ [key: string]: boolean }>({});
   const [showRejectDocModal, setShowRejectDocModal] = useState(false);
-  const [rejectDocData, setRejectDocData] = useState<{applicationId: string, docType: string} | null>(null);
+  const [rejectDocData, setRejectDocData] = useState<{ applicationId: string, docType: string } | null>(null);
   const [rejectDocReason, setRejectDocReason] = useState('');
   const [isEditing, setIsEditing] = useState(false);
   const [savingProfile, setSavingProfile] = useState(false);
-  const [editingFees, setEditingFees] = useState<{[key: string]: number} | null>(null);
+  const [editingFees, setEditingFees] = useState<{ [key: string]: number } | null>(null);
   const [savingFees, setSavingFees] = useState(false);
-  const [markingAsPaid, setMarkingAsPaid] = useState<{[key: string]: boolean}>({});
+  const [markingAsPaid, setMarkingAsPaid] = useState<{ [key: string]: boolean }>({});
   const [approvingStudent, setApprovingStudent] = useState(false);
   const [rejectingStudent, setRejectingStudent] = useState(false);
   const [showRejectStudentModal, setShowRejectStudentModal] = useState(false);
   const [rejectStudentReason, setRejectStudentReason] = useState('');
   const [pendingRejectAppId, setPendingRejectAppId] = useState<string | null>(null);
-  const [activeTab, setActiveTab] = useState<'overview' | 'documents' | 'scholarships' | 'logs'>('overview');
+  const [activeTab, setActiveTab] = useState<'overview' | 'documents' | 'survey' | 'scholarships' | 'logs'>('overview');
   const [documentRequests, setDocumentRequests] = useState<any[]>([]);
   const [loadingDocuments, setLoadingDocuments] = useState(false);
-  const [uploadingDocumentRequest, setUploadingDocumentRequest] = useState<{[key: string]: boolean}>({});
-  const [approvingDocumentRequest, setApprovingDocumentRequest] = useState<{[key: string]: boolean}>({});
-  const [rejectingDocumentRequest, setRejectingDocumentRequest] = useState<{[key: string]: boolean}>({});
-  const [deletingDocumentRequest, setDeletingDocumentRequest] = useState<{[key: string]: boolean}>({});
+  const [uploadingDocumentRequest, setUploadingDocumentRequest] = useState<{ [key: string]: boolean }>({});
+  const [approvingDocumentRequest, setApprovingDocumentRequest] = useState<{ [key: string]: boolean }>({});
+  const [rejectingDocumentRequest, setRejectingDocumentRequest] = useState<{ [key: string]: boolean }>({});
+  const [deletingDocumentRequest, setDeletingDocumentRequest] = useState<{ [key: string]: boolean }>({});
   const [isEditingProcessType, setIsEditingProcessType] = useState(false);
   const [editingProcessType, setEditingProcessType] = useState('');
   const [savingProcessType, setSavingProcessType] = useState(false);
   // Estado para modal de visualização de documentos
   const [previewUrl, setPreviewUrl] = useState<string | null>(null);
-  
+
   // Debug: Log do estado previewUrl
   React.useEffect(() => {
     console.log('🔍 [ADMIN] previewUrl state changed:', previewUrl);
@@ -197,7 +197,7 @@ const AdminStudentDetails: React.FC = () => {
   const [editingPaymentMethod, setEditingPaymentMethod] = useState<string | null>(null);
   const [newPaymentMethod, setNewPaymentMethod] = useState<'stripe' | 'zelle' | 'manual'>('manual');
   const [savingPaymentMethod, setSavingPaymentMethod] = useState(false);
-  
+
   // Estados para seleção de aplicação quando há múltiplas aprovadas
   const [selectedApplicationId, setSelectedApplicationId] = useState<string | null>(null);
   const [editingApplicationId, setEditingApplicationId] = useState<string | null>(null);
@@ -218,7 +218,7 @@ const AdminStudentDetails: React.FC = () => {
     due_date: '',
     attachment: null
   });
-  
+
   // Estados para edição de template
   const [showEditTemplateModal, setShowEditTemplateModal] = useState(false);
   const [editingTemplateRequestId, setEditingTemplateRequestId] = useState<string | null>(null);
@@ -228,11 +228,11 @@ const AdminStudentDetails: React.FC = () => {
   // Upload de Acceptance Letter (Admin) - Removido pois agora está no DocumentsView
   const [isProgressExpanded, setIsProgressExpanded] = useState(false);
   const [i20Deadline, setI20Deadline] = useState<Date | null>(null);
-  
+
   // Estados para termos aceitos
   const [termAcceptances, setTermAcceptances] = useState<TermAcceptance[]>([]);
   const [loadingTermAcceptances, setLoadingTermAcceptances] = useState(false);
-  
+
   // Estados para formulário de transferência
   const [transferFormFile, setTransferFormFile] = useState<File | null>(null);
   const [uploadingTransferForm, setUploadingTransferForm] = useState(false);
@@ -256,7 +256,7 @@ const AdminStudentDetails: React.FC = () => {
 
   const { getFeeAmount, formatFeeAmount, hasOverride, userSystemType } = useFeeConfig(student?.user_id);
   const { logAction } = useStudentLogs(student?.student_id || '');
-  
+
   // Estado para valores reais pagos (para mostrar ao invés de valores esperados quando já pagos)
   const [realPaidAmounts, setRealPaidAmounts] = useState<{
     selection_process?: number;
@@ -270,7 +270,7 @@ const AdminStudentDetails: React.FC = () => {
   const fetchTermAcceptances = async (userId: string) => {
     try {
       setLoadingTermAcceptances(true);
-      
+
       // Buscar aceitações do estudante
       const { data: acceptances, error: acceptancesError } = await supabase
         .from('comprehensive_term_acceptance')
@@ -297,14 +297,14 @@ const AdminStudentDetails: React.FC = () => {
       // Buscar informações do usuário se não estiver disponível
       let userEmail = student?.student_email;
       let userFullName = student?.student_name;
-      
+
       if (!userEmail || !userFullName) {
         const { data: userProfile, error: userError } = await supabase
           .from('user_profiles')
           .select('email, full_name')
           .eq('user_id', userId)
           .single();
-          
+
         if (!userError && userProfile) {
           userEmail = userEmail || userProfile.email;
           userFullName = userFullName || userProfile.full_name;
@@ -348,10 +348,10 @@ const AdminStudentDetails: React.FC = () => {
 
   const handleDeleteDocumentRequest = async (requestId: string) => {
     if (!student) return;
-    
+
     try {
       setDeletingDocumentRequest(prev => ({ ...prev, [`delete-${requestId}`]: true }));
-      
+
       // Primeiro, deletar todos os uploads relacionados ao request
       const { error: deleteUploadsError } = await supabase
         .from('document_request_uploads')
@@ -384,7 +384,7 @@ const AdminStudentDetails: React.FC = () => {
 
       // Recarregar document requests
       await fetchDocumentRequests();
-      
+
     } catch (error: any) {
       console.error('Error deleting document request:', error);
       showToast(`Failed to delete document request: ${error.message}`, 'error');
@@ -418,7 +418,7 @@ const AdminStudentDetails: React.FC = () => {
 
       // Atualizar o estado local
       setStudent(prev => prev ? { ...prev, student_process_type: editingProcessType } : null);
-      
+
       setIsEditingProcessType(false);
       showToast('Tipo de processo atualizado com sucesso');
 
@@ -604,28 +604,28 @@ const AdminStudentDetails: React.FC = () => {
         .select('fee_type, amount, gross_amount_usd, payment_method, payment_date')
         .eq('user_id', userId)
         .order('payment_date', { ascending: false }); // Mais recente primeiro
-      
+
       if (error) throw error;
-      
+
       const amounts: typeof realPaidAmounts = {};
-      
+
       // Processar cada pagamento, usando o mais recente para cada fee_type
       payments?.forEach(payment => {
         // ✅ PRIORIDADE: Usar gross_amount_usd quando disponível (valor bruto em USD)
         // Se não tiver, usar amount (mas pode estar em BRL para PIX, então verificar)
-        let amountUSD = payment.gross_amount_usd 
+        let amountUSD = payment.gross_amount_usd
           ? Number(payment.gross_amount_usd)
           : Number(payment.amount);
-        
+
         // Se não tem gross_amount_usd e o valor é muito alto, provavelmente é BRL
         // Não usar esse valor para evitar mostrar valores incorretos
         if (!payment.gross_amount_usd && amountUSD > 1000 && payment.payment_method === 'stripe') {
           console.log(`[AdminDashboard] Ignorando valor provavelmente BRL para ${payment.fee_type}: ${amountUSD}`);
           return;
         }
-        
+
         const feeType = payment.fee_type as keyof typeof amounts;
-        
+
         // Só definir se ainda não foi definido (usar o mais recente, que vem primeiro devido ao order)
         if (feeType === 'selection_process' && !amounts.selection_process) {
           amounts.selection_process = amountUSD;
@@ -637,7 +637,7 @@ const AdminStudentDetails: React.FC = () => {
           amounts.i20_control = amountUSD;
         }
       });
-      
+
       console.log('✅ [AdminStudentDetails] Real paid amounts loaded:', amounts);
       setRealPaidAmounts(amounts);
     } catch (error) {
@@ -663,8 +663,8 @@ const AdminStudentDetails: React.FC = () => {
       }
 
       // Buscar aplicação com acceptance letter
-      const appWithLetter = studentData.all_applications?.find(app => 
-        app.acceptance_letter_sent_at && 
+      const appWithLetter = studentData.all_applications?.find(app =>
+        app.acceptance_letter_sent_at &&
         (app.acceptance_letter_status === 'sent' || app.acceptance_letter_status === 'approved')
       );
 
@@ -687,14 +687,14 @@ const AdminStudentDetails: React.FC = () => {
   // Função para encontrar o passo atual
   const getCurrentStep = () => {
     if (!student) return null;
-    
+
     for (let i = 0; i < steps.length; i++) {
       const status = getStepStatus(student, steps[i].key);
       if (status === 'in_progress' || status === 'pending') {
         return { step: steps[i], index: i, status };
       }
     }
-    
+
     // Se todos estão completos, retorna o último
     return { step: steps[steps.length - 1], index: steps.length - 1, status: 'completed' };
   };
@@ -703,20 +703,20 @@ const AdminStudentDetails: React.FC = () => {
   useEffect(() => {
     const loadCriticalData = async () => {
       if (!profileId) return; // Guard clause
-      
+
       try {
         setLoading(true);
-        
+
         // ✅ OTIMIZAÇÃO: Tentar usar RPC consolidada primeiro (reduz de múltiplas queries para 1)
         let s: any = null;
         let useRpc = true;
-        
+
         try {
           const { data: rpcData, error: rpcError } = await supabase.rpc(
             'get_admin_student_full_details',
             { target_profile_id: profileId }
           );
-          
+
           if (!rpcError && rpcData) {
             // RPC retorna jsonb, converter para objeto se necessário
             if (typeof rpcData === 'string') {
@@ -729,10 +729,10 @@ const AdminStudentDetails: React.FC = () => {
             } else {
               s = rpcData;
             }
-            
+
             if (s && s.id) {
               console.log('✅ [PERFORMANCE] Usando RPC consolidada para carregar dados do estudante');
-              
+
               // 🔍 LOG: Verificar se é a Stephanie quando vem do RPC
               const isStephanieRpc = s.email === 'stephaniecriistine25@gmail.com';
               if (isStephanieRpc) {
@@ -743,7 +743,7 @@ const AdminStudentDetails: React.FC = () => {
                 console.log('🔍 [STEPHANIE DEBUG] Tem scholarship_applications?', !!s.scholarship_applications);
                 console.log('🔍 [STEPHANIE DEBUG] Tipo de scholarship_applications:', typeof s.scholarship_applications);
                 console.log('🔍 [STEPHANIE DEBUG] Número de applications:', Array.isArray(s.scholarship_applications) ? s.scholarship_applications.length : 'NÃO É ARRAY');
-                
+
                 if (Array.isArray(s.scholarship_applications)) {
                   console.log('🔍 [STEPHANIE DEBUG] Applications do RPC:', s.scholarship_applications.map((app: any) => ({
                     id: app.id,
@@ -771,12 +771,12 @@ const AdminStudentDetails: React.FC = () => {
           console.warn('⚠️ [PERFORMANCE] RPC não disponível, usando query original como fallback:', rpcError);
           useRpc = false;
         }
-        
+
         // Fallback: usar query original se RPC não funcionou
         if (!useRpc || !s) {
-        const { data, error } = await supabase
-          .from('user_profiles')
-          .select(`
+          const { data, error } = await supabase
+            .from('user_profiles')
+            .select(`
             id,
             user_id,
             full_name,
@@ -833,10 +833,10 @@ const AdminStudentDetails: React.FC = () => {
               )
             )
           `)
-          .eq('id', profileId)
-          .single();
+            .eq('id', profileId)
+            .single();
 
-        if (error) throw error;
+          if (error) throw error;
           s = data;
         }
 
@@ -859,13 +859,13 @@ const AdminStudentDetails: React.FC = () => {
         let lockedApplication = null;
         let activeApplication = null;
         if (s.scholarship_applications && s.scholarship_applications.length > 0) {
-          
+
           if (isStephanie) {
             console.log('🔍 [STEPHANIE DEBUG] ==========================================');
             console.log('🔍 [STEPHANIE DEBUG] Email:', s.email);
             console.log('🔍 [STEPHANIE DEBUG] Total applications:', s.scholarship_applications.length);
           }
-          
+
           console.log('🔍 [ADMIN STUDENT DETAILS] scholarship_applications:', s.scholarship_applications.map((app: any) => ({
             id: app.id,
             status: app.status,
@@ -873,16 +873,16 @@ const AdminStudentDetails: React.FC = () => {
             is_scholarship_fee_paid: app.is_scholarship_fee_paid,
             scholarship_title: app.scholarships?.title
           })));
-          
+
           if (isStephanie) {
             console.log('🔍 [STEPHANIE DEBUG] Full scholarship_applications data:', JSON.stringify(s.scholarship_applications, null, 2));
           }
-          
+
           // Priorizar aplicação enrolled, depois approved com application fee pago, depois approved
           const enrolledApp = s.scholarship_applications.find((app: any) => app.status === 'enrolled');
           const approvedWithFeeApp = s.scholarship_applications.find((app: any) => app.status === 'approved' && app.is_application_fee_paid);
           const anyApprovedApp = s.scholarship_applications.find((app: any) => app.status === 'approved');
-          
+
           if (isStephanie) {
             console.log('🔍 [STEPHANIE DEBUG] enrolledApp:', {
               found: !!enrolledApp,
@@ -904,16 +904,16 @@ const AdminStudentDetails: React.FC = () => {
               status: anyApprovedApp?.status
             });
           }
-          
+
           lockedApplication = enrolledApp || approvedWithFeeApp || anyApprovedApp;
-          
+
           console.log('🔍 DEBUG lockedApplication selection:', {
             enrolledApp: enrolledApp?.id,
             approvedWithFeeApp: approvedWithFeeApp?.id,
             anyApprovedApp: anyApprovedApp?.id,
             finalLockedApp: lockedApplication?.id
           });
-          
+
           if (isStephanie) {
             console.log('🔍 [STEPHANIE DEBUG] final lockedApplication:', {
               id: lockedApplication?.id,
@@ -923,7 +923,7 @@ const AdminStudentDetails: React.FC = () => {
               payment_status: lockedApplication?.payment_status
             });
           }
-          
+
           // Se não há aplicação locked, buscar a aplicação mais recente para o student_process_type
           if (!lockedApplication) {
             activeApplication = s.scholarship_applications
@@ -960,7 +960,7 @@ const AdminStudentDetails: React.FC = () => {
           applied_at: lockedApplication?.applied_at || null,
           is_application_fee_paid: (() => {
             const isStephanie = s.email === 'stephaniecriistine25@gmail.com';
-            
+
             // ✅ CORREÇÃO: Priorizar aplicação enrolled, depois verificar outras
             if (enrolledApp && enrolledApp.is_application_fee_paid) {
               if (isStephanie) {
@@ -985,7 +985,7 @@ const AdminStudentDetails: React.FC = () => {
           })(),
           is_scholarship_fee_paid: (() => {
             const isStephanie = s.email === 'stephaniecriistine25@gmail.com';
-            
+
             // ✅ CORREÇÃO: Priorizar aplicação enrolled, depois usar lockedApplication
             if (enrolledApp && enrolledApp.is_scholarship_fee_paid) {
               if (isStephanie) {
@@ -1020,8 +1020,8 @@ const AdminStudentDetails: React.FC = () => {
             const enrolledWithFee = s.scholarship_applications?.find((app: any) => app.status === 'enrolled' && app.is_application_fee_paid);
             const paidApplication = enrolledWithFee || s.scholarship_applications?.find((app: any) => app.is_application_fee_paid);
             if (paidApplication?.scholarships) {
-              const scholarship = Array.isArray(paidApplication.scholarships) 
-                ? paidApplication.scholarships[0] 
+              const scholarship = Array.isArray(paidApplication.scholarships)
+                ? paidApplication.scholarships[0]
                 : paidApplication.scholarships;
               return scholarship?.title || null;
             }
@@ -1031,11 +1031,11 @@ const AdminStudentDetails: React.FC = () => {
             // Buscar aplicação que teve Application Fee pago
             const paidApplication = s.scholarship_applications?.find((app: any) => app.is_application_fee_paid);
             if (paidApplication?.scholarships) {
-              const scholarship = Array.isArray(paidApplication.scholarships) 
-                ? paidApplication.scholarships[0] 
+              const scholarship = Array.isArray(paidApplication.scholarships)
+                ? paidApplication.scholarships[0]
                 : paidApplication.scholarships;
-              const university = Array.isArray(scholarship?.universities) 
-                ? scholarship.universities[0] 
+              const university = Array.isArray(scholarship?.universities)
+                ? scholarship.universities[0]
                 : scholarship?.universities;
               return university?.name || null;
             }
@@ -1059,7 +1059,7 @@ const AdminStudentDetails: React.FC = () => {
           })),
           timestamp: new Date().toISOString()
         });
-        
+
         // Verificar se há aplicações rejeitadas
         const rejectedApps = formatted.all_applications.filter((app: any) => app.status === 'rejected');
         if (rejectedApps.length > 0) {
@@ -1071,10 +1071,10 @@ const AdminStudentDetails: React.FC = () => {
         } else {
           console.log('ℹ️ [ADMIN STUDENT DETAILS] Nenhuma aplicação rejeitada encontrada');
         }
-        
+
         setStudent(formatted);
         setDependents(Number(s.dependents || 0));
-        
+
         // Processar notas do admin - converter de string para array se necessário
         if (s.admin_notes) {
           try {
@@ -1110,7 +1110,7 @@ const AdminStudentDetails: React.FC = () => {
         } else {
           setAdminNotes([]);
         }
-        
+
         // Calcular deadline do I-20 (dados críticos)
         calculateI20Deadline(formatted);
       } catch (e) {
@@ -1129,10 +1129,10 @@ const AdminStudentDetails: React.FC = () => {
 
       try {
         setLoadingSecondaryData(true);
-        
+
         // ✅ OTIMIZAÇÃO: Tentar usar RPC consolidada primeiro (reduz múltiplas queries para 1)
         let useRpc = true;
-        
+
         try {
           const { data: rpcData, error: rpcError } = await supabase.rpc(
             'get_admin_student_secondary_data',
@@ -1145,7 +1145,7 @@ const AdminStudentDetails: React.FC = () => {
           if (!rpcError && rpcData) {
             // RPC retorna jsonb, processar os dados
             const data = typeof rpcData === 'string' ? JSON.parse(rpcData) : rpcData;
-            
+
             // Processar term acceptances
             if (data.term_acceptances && Array.isArray(data.term_acceptances)) {
               setTermAcceptances(data.term_acceptances);
@@ -1156,7 +1156,7 @@ const AdminStudentDetails: React.FC = () => {
             // Processar referral info
             if (data.referral_info && data.referral_info !== 'null' && data.referral_info !== null) {
               // Se for string JSON, fazer parse
-              const referralData = typeof data.referral_info === 'string' 
+              const referralData = typeof data.referral_info === 'string'
                 ? (data.referral_info === 'null' ? null : JSON.parse(data.referral_info))
                 : data.referral_info;
               setReferralInfo(referralData);
@@ -1202,21 +1202,21 @@ const AdminStudentDetails: React.FC = () => {
           // 1. Buscar termos aceitos pelo estudante
           if (student.user_id) {
             secondaryPromises.push(
-              fetchTermAcceptances(student.user_id).then(() => {})
+              fetchTermAcceptances(student.user_id).then(() => { })
             );
           }
 
           // 2. Buscar informações de referência
           if (student.seller_referral_code) {
             secondaryPromises.push(
-              fetchReferralInfo(student.seller_referral_code).then(() => {})
+              fetchReferralInfo(student.seller_referral_code).then(() => { })
             );
-        }
-        
+          }
+
           // 3. Buscar valores reais pagos de individual_fee_payments
           if (student.user_id) {
             secondaryPromises.push(
-              fetchRealPaidAmounts(student.user_id).then(() => {})
+              fetchRealPaidAmounts(student.user_id).then(() => { })
             );
           }
 
@@ -1243,25 +1243,25 @@ const AdminStudentDetails: React.FC = () => {
   useEffect(() => {
     const fetchTransferFormUploads = async () => {
       if (!student) return;
-      
+
       // Encontrar aplicação transfer
       const transferApp = getTransferApplication();
-      
+
       if (!transferApp) return;
-      
+
       const { data, error } = await supabase
         .from('transfer_form_uploads')
         .select('*')
         .eq('application_id', transferApp.id)
         .order('uploaded_at', { ascending: false });
-      
+
       if (!error && data) {
         setTransferFormUploads(data);
       } else if (error) {
         console.error('Erro ao buscar transfer form uploads:', error);
       }
     };
-    
+
     fetchTransferFormUploads();
   }, [student]);
 
@@ -1269,7 +1269,7 @@ const AdminStudentDetails: React.FC = () => {
   useEffect(() => {
     const fetchPendingZellePayments = async () => {
       if (!student?.user_id) return;
-      
+
       try {
         const { data, error } = await supabase
           .from('zelle_payments')
@@ -1288,7 +1288,7 @@ const AdminStudentDetails: React.FC = () => {
         console.error('Error fetching pending Zelle payments:', error);
       }
     };
-    
+
     fetchPendingZellePayments();
   }, [student]);
 
@@ -1316,8 +1316,8 @@ const AdminStudentDetails: React.FC = () => {
         // Só aparece para alunos com process_type = 'transfer'
         if (st.student_process_type !== 'transfer') return 'skipped';
         // Verificar se existe um documento de transfer form aprovado
-        const transferApp = st.all_applications?.find((app: any) => 
-          app.student_process_type === 'transfer' && 
+        const transferApp = st.all_applications?.find((app: any) =>
+          app.student_process_type === 'transfer' &&
           (app.transfer_form_status === 'approved' || app.transfer_form_status === 'sent')
         );
         return transferApp ? 'completed' : 'pending';
@@ -1398,37 +1398,37 @@ const AdminStudentDetails: React.FC = () => {
   const handleRejectDocument = async (applicationId: string, docType: string, reason: string) => {
     if (!isPlatformAdmin || !student) return;
     if (!approveableTypes.has(docType)) return;
-    
+
     const k = `${applicationId}:${docType}`;
     setRejectingDocs(p => ({ ...p, [k]: true }));
-    
+
     try {
       const targetApp = student.all_applications?.find((a: any) => a.id === applicationId);
       if (!targetApp) return;
-      
+
       const currentDocs: any[] = Array.isArray(targetApp.documents) ? targetApp.documents : [];
-      const newDocuments = currentDocs.map((d: any) => 
-        d?.type === docType ? { 
-          ...d, 
-          status: 'rejected', 
+      const newDocuments = currentDocs.map((d: any) =>
+        d?.type === docType ? {
+          ...d,
+          status: 'rejected',
           rejected_at: new Date().toISOString(),
           rejection_reason: reason,
           rejected_by: user?.id
         } : d
       );
-      
+
       const { data: updated, error } = await supabase
         .from('scholarship_applications')
         .update({ documents: newDocuments, updated_at: new Date().toISOString() })
         .eq('id', applicationId)
         .select('id, documents')
         .single();
-      
+
       if (error) {
         console.error('Erro ao rejeitar documento:', error);
         return;
       }
-      
+
       setStudent(prev => {
         if (!prev) return prev;
         const updatedApps = (prev.all_applications || []).map((a: any) =>
@@ -1436,7 +1436,7 @@ const AdminStudentDetails: React.FC = () => {
         );
         return { ...prev, all_applications: updatedApps } as any;
       });
-      
+
       // Log da ação
       try {
         await supabase.rpc('log_student_action', {
@@ -1458,19 +1458,19 @@ const AdminStudentDetails: React.FC = () => {
 
       // ENVIAR NOTIFICAÇÕES PARA O ALUNO
       console.log('📤 [handleRejectDocument] Enviando notificações de rejeição para o aluno...');
-      
+
       try {
         // Buscar nome do admin
 
 
-      // 1. ENVIAR EMAIL VIA WEBHOOK (payload idêntico ao da universidade)
-      const rejectionPayload = {
-        tipo_notf: "Changes Requested",
-        email_aluno: student.student_email,
-        nome_aluno: student.student_name,
-        email_universidade: user?.email,
-        o_que_enviar: `Your document <strong>${docType}</strong> for the request <strong>${docType}</strong> has been rejected. Reason: <strong>${reason}</strong>. Please review and upload a corrected version.`
-      };
+        // 1. ENVIAR EMAIL VIA WEBHOOK (payload idêntico ao da universidade)
+        const rejectionPayload = {
+          tipo_notf: "Changes Requested",
+          email_aluno: student.student_email,
+          nome_aluno: student.student_name,
+          email_universidade: user?.email,
+          o_que_enviar: `Your document <strong>${docType}</strong> for the request <strong>${docType}</strong> has been rejected. Reason: <strong>${reason}</strong>. Please review and upload a corrected version.`
+        };
 
         console.log('📤 [handleRejectDocument] Payload de rejeição:', rejectionPayload);
 
@@ -1494,7 +1494,7 @@ const AdminStudentDetails: React.FC = () => {
 
       // 2. ENVIAR NOTIFICAÇÃO IN-APP PARA O ALUNO (SINO)
       console.log('📤 [handleRejectDocument] Enviando notificação in-app para o aluno...');
-      
+
       try {
         // Obter labels amigáveis para os documentos
         const docLabels: Record<string, string> = {
@@ -1503,16 +1503,16 @@ const AdminStudentDetails: React.FC = () => {
           funds_proof: 'Proof of Funds',
         };
         const docLabel = docLabels[docType] || docType;
-        
+
         // Usar Edge Function que tem service role para criar notificação
         const { data: { session } } = await supabase.auth.getSession();
         const accessToken = session?.access_token;
-        
+
         if (!accessToken) {
           console.error('❌ [handleRejectDocument] Access token não encontrado');
           return;
         }
-        
+
         // Preparar payload - usar user_id (UUID) que a Edge Function vai converter para student_id
         // A Edge Function busca o student_id (user_profiles.id) a partir do user_id
         const notificationPayload = {
@@ -1521,7 +1521,7 @@ const AdminStudentDetails: React.FC = () => {
           message: `Your ${docLabel} document has been rejected. Reason: ${reason}. Please review and upload a corrected version.`,
           link: '/student/dashboard/applications',
         };
-        
+
         const response = await fetch(`${import.meta.env.VITE_SUPABASE_FUNCTIONS_URL}/create-student-notification`, {
           method: 'POST',
           headers: {
@@ -1530,7 +1530,7 @@ const AdminStudentDetails: React.FC = () => {
           },
           body: JSON.stringify(notificationPayload),
         });
-        
+
         if (!response.ok) {
           const errorText = await response.text();
           console.error('❌ [handleRejectDocument] Erro ao criar notificação:', response.status, errorText);
@@ -1541,12 +1541,12 @@ const AdminStudentDetails: React.FC = () => {
         console.error('❌ [handleRejectDocument] Erro ao enviar notificação in-app:', notificationError);
         // Não falhar o processo se a notificação in-app falhar
       }
-      
+
       // Fechar modal e limpar dados
       setShowRejectDocModal(false);
       setRejectDocData(null);
       setRejectDocReason('');
-      
+
     } catch (error: any) {
       console.error('Erro ao rejeitar documento:', error);
     } finally {
@@ -1591,7 +1591,7 @@ const AdminStudentDetails: React.FC = () => {
           seller_referral_code: student.seller_referral_code
         })
         .eq('id', student.student_id);
-      
+
       if (error) throw error;
       setIsEditing(false);
     } catch (error) {
@@ -1603,7 +1603,7 @@ const AdminStudentDetails: React.FC = () => {
 
   const handleAddNote = async () => {
     if (!student || !newNoteContent.trim()) return;
-    
+
     setSavingNotes(true);
     try {
       const newNote = {
@@ -1615,7 +1615,7 @@ const AdminStudentDetails: React.FC = () => {
       };
 
       const updatedNotes = [newNote, ...adminNotes];
-      
+
       const { error } = await supabase
         .from('user_profiles')
         .update({
@@ -1625,7 +1625,7 @@ const AdminStudentDetails: React.FC = () => {
         .eq('id', student.student_id);
 
       if (error) throw error;
-      
+
       setAdminNotes(updatedNotes);
       setNewNoteContent('');
       setStudent(prev => prev ? { ...prev, admin_notes: JSON.stringify(updatedNotes) } : prev);
@@ -1648,15 +1648,15 @@ const AdminStudentDetails: React.FC = () => {
 
   const handleSaveEditNote = async () => {
     if (!student || !editingNoteId || !editingNoteContent.trim()) return;
-    
+
     setSavingNotes(true);
     try {
-      const updatedNotes = adminNotes.map(note => 
-        note.id === editingNoteId 
+      const updatedNotes = adminNotes.map(note =>
+        note.id === editingNoteId
           ? { ...note, content: editingNoteContent.trim() }
           : note
       );
-      
+
       const { error } = await supabase
         .from('user_profiles')
         .update({
@@ -1666,7 +1666,7 @@ const AdminStudentDetails: React.FC = () => {
         .eq('id', student.student_id);
 
       if (error) throw error;
-      
+
       setAdminNotes(updatedNotes);
       setEditingNoteId(null);
       setEditingNoteContent('');
@@ -1692,11 +1692,11 @@ const AdminStudentDetails: React.FC = () => {
 
   const confirmDeleteNote = async () => {
     if (!student || !deletingNoteId) return;
-    
+
     setSavingNotes(true);
     try {
       const updatedNotes = adminNotes.filter(note => note.id !== deletingNoteId);
-      
+
       const { error } = await supabase
         .from('user_profiles')
         .update({
@@ -1706,7 +1706,7 @@ const AdminStudentDetails: React.FC = () => {
         .eq('id', student.student_id);
 
       if (error) throw error;
-      
+
       setAdminNotes(updatedNotes);
       setStudent(prev => prev ? { ...prev, admin_notes: JSON.stringify(updatedNotes) } : prev);
       showToast('Note deleted successfully');
@@ -1727,15 +1727,15 @@ const AdminStudentDetails: React.FC = () => {
 
   const handleUpdatePaymentMethod = async (feeType: 'selection_process' | 'application' | 'scholarship' | 'i20_control') => {
     if (!student || !isPlatformAdmin) return;
-    
+
     setSavingPaymentMethod(true);
     try {
       if (feeType === 'selection_process' || feeType === 'i20_control') {
         // Atualizar na tabela user_profiles
-        const fieldName = feeType === 'selection_process' 
-          ? 'selection_process_fee_payment_method' 
+        const fieldName = feeType === 'selection_process'
+          ? 'selection_process_fee_payment_method'
           : 'i20_control_fee_payment_method';
-        
+
         const { error } = await supabase
           .from('user_profiles')
           .update({ [fieldName]: newPaymentMethod })
@@ -1762,26 +1762,26 @@ const AdminStudentDetails: React.FC = () => {
         }
       } else if (feeType === 'application' || feeType === 'scholarship') {
         // Atualizar na tabela scholarship_applications
-        const fieldName = feeType === 'application' 
-          ? 'application_fee_payment_method' 
+        const fieldName = feeType === 'application'
+          ? 'application_fee_payment_method'
           : 'scholarship_fee_payment_method';
-        
+
         // Usar a aplicação específica que foi selecionada para edição
         let targetApplicationId = editingApplicationId;
-        
+
         if (!targetApplicationId) {
           // Fallback: buscar aplicação aprovada ou mais recente
-        const { data: applications, error: fetchError } = await supabase
-          .from('scholarship_applications')
-          .select('id, status')
-          .eq('student_id', student.student_id)
-          .order('created_at', { ascending: false });
+          const { data: applications, error: fetchError } = await supabase
+            .from('scholarship_applications')
+            .select('id, status')
+            .eq('student_id', student.student_id)
+            .order('created_at', { ascending: false });
 
-        if (fetchError) throw fetchError;
+          if (fetchError) throw fetchError;
 
-        const targetApplication = applications?.find(app => app.status === 'approved') || applications?.[0];
-        if (!targetApplication) {
-          throw new Error('No application found for this student');
+          const targetApplication = applications?.find(app => app.status === 'approved') || applications?.[0];
+          if (!targetApplication) {
+            throw new Error('No application found for this student');
           }
           targetApplicationId = targetApplication.id;
         }
@@ -1816,7 +1816,7 @@ const AdminStudentDetails: React.FC = () => {
       setEditingPaymentMethod(null);
       setEditingApplicationId(null);
       showToast(`Payment method updated to ${newPaymentMethod}`, 'success');
-      
+
       // Recarregar dados do estudante
       window.location.reload();
     } catch (error: any) {
@@ -1829,17 +1829,17 @@ const AdminStudentDetails: React.FC = () => {
 
   const startEditingFees = () => {
     if (!student) return;
-    
+
     // Calcular valores atuais considerando dependentes e overrides
     // ✅ CORREÇÃO: Para simplified, Selection Process Fee é fixo ($350), sem dependentes
     // Dependentes só afetam Application Fee ($100 por dependente)
     const systemType = student?.system_type || 'legacy';
     const dependentsExtra = systemType === 'simplified' ? 0 : (dependents * 150); // $150 por dependente apenas no Selection Process (legacy)
     const baseSelectionProcess = Number(getFeeAmount('selection_process')); // Valor base dinâmico
-    const currentSelectionProcess = hasOverride('selection_process') 
-      ? getFeeAmount('selection_process') 
+    const currentSelectionProcess = hasOverride('selection_process')
+      ? getFeeAmount('selection_process')
       : baseSelectionProcess + dependentsExtra;
-    
+
     // Debug para jolie8862@uorak.com
     if (student.user_id === '935e0eec-82c6-4a70-b013-e85dde6e63f7') {
       console.log('🔍 [AdminStudentDetails] jolie8862@uorak.com - Fee calculation:', {
@@ -1853,7 +1853,7 @@ const AdminStudentDetails: React.FC = () => {
         i20ControlFee: getFeeAmount('i20_control_fee')
       });
     }
-    
+
     setEditingFees({
       selection_process: currentSelectionProcess,
       scholarship: getFeeAmount('scholarship_fee'),
@@ -1873,7 +1873,7 @@ const AdminStudentDetails: React.FC = () => {
 
       // Criar tabela se não existir
       const { error: createTableError } = await supabase.rpc('create_user_fee_overrides_table_if_not_exists');
-      
+
       if (createTableError) {
         console.warn('Erro ao criar tabela, tentando continuar:', createTableError);
       }
@@ -1951,14 +1951,14 @@ const AdminStudentDetails: React.FC = () => {
 
   const startEditingPaymentMethod = (feeType: 'application' | 'scholarship') => {
     const approvedApps = student?.all_applications?.filter((app: any) => app.status === 'approved') || [];
-    
+
     if (approvedApps.length === 1) {
       // Usar a única aplicação aprovada
       const app = approvedApps[0];
       setEditingPaymentMethod(feeType);
       setEditingApplicationId(app.id);
-      const currentMethod = feeType === 'application' 
-        ? app.application_fee_payment_method 
+      const currentMethod = feeType === 'application'
+        ? app.application_fee_payment_method
         : app.scholarship_fee_payment_method;
       setNewPaymentMethod((currentMethod as 'stripe' | 'zelle' | 'manual') || 'manual');
     } else {
@@ -1968,8 +1968,8 @@ const AdminStudentDetails: React.FC = () => {
       if (app) {
         setEditingPaymentMethod(feeType);
         setEditingApplicationId(app.id);
-        const currentMethod = feeType === 'application' 
-          ? app.application_fee_payment_method 
+        const currentMethod = feeType === 'application'
+          ? app.application_fee_payment_method
           : app.scholarship_fee_payment_method;
         setNewPaymentMethod((currentMethod as 'stripe' | 'zelle' | 'manual') || 'manual');
       }
@@ -1980,19 +1980,19 @@ const AdminStudentDetails: React.FC = () => {
     if (!pendingPayment) return;
 
     let { feeType, applicationId } = pendingPayment;
-    
+
     console.log('🔍 DEBUG confirmPayment START:', {
       feeType,
       originalApplicationId: applicationId,
       selectedApplicationId,
       pendingPayment
     });
-    
+
     // Para Application Fee, sempre verificar se há seleção manual
     if (feeType === 'application') {
       const approvedApps = student?.all_applications?.filter((app: any) => app.status === 'approved') || [];
       console.log('🔍 DEBUG approvedApps:', approvedApps.map(app => ({ id: app.id, title: app.scholarships?.title })));
-      
+
       if (approvedApps.length > 1) {
         // Com múltiplas aplicações, SEMPRE usar a selecionada
         if (selectedApplicationId) {
@@ -2008,13 +2008,13 @@ const AdminStudentDetails: React.FC = () => {
         console.log('🔍 DEBUG Using single approved app:', approvedApps[0].id);
       }
     }
-    
+
     console.log('🔍 DEBUG confirmPayment FINAL:', {
       feeType,
       finalApplicationId: applicationId,
       selectedPaymentMethod
     });
-    
+
     await markFeeAsPaid(feeType, applicationId, selectedPaymentMethod);
     setShowPaymentModal(false);
     setPendingPayment(null);
@@ -2038,8 +2038,8 @@ const AdminStudentDetails: React.FC = () => {
         // ✅ CORREÇÃO: Para simplified, Selection Process Fee é fixo ($350), sem dependentes
         // Dependentes só afetam Application Fee ($100 por dependente)
         const systemType = student?.system_type || 'legacy';
-        const paymentAmount = systemType === 'simplified' 
-          ? base 
+        const paymentAmount = systemType === 'simplified'
+          ? base
           : base + (student?.dependents || 0) * 150;
         const paymentDate = new Date().toISOString();
         const paymentMethod = (method || 'manual') as 'stripe' | 'zelle' | 'manual';
@@ -2064,7 +2064,7 @@ const AdminStudentDetails: React.FC = () => {
         // Marcar selection process fee como pago
         const { error } = await supabase
           .from('user_profiles')
-          .update({ 
+          .update({
             has_paid_selection_process_fee: true,
             selection_process_fee_payment_method: method || 'manual'
           })
@@ -2094,13 +2094,13 @@ const AdminStudentDetails: React.FC = () => {
       } else if (feeType === 'application') {
         // Marcar application fee como pago na scholarship_applications
         let targetApplicationId = applicationId;
-        
+
         console.log('🔍 DEBUG Application Fee Payment:', {
           receivedApplicationId: applicationId,
           targetApplicationId: targetApplicationId,
           studentId: student.student_id
         });
-        
+
         // Se não foi fornecido applicationId, buscar a aplicação aprovada ou mais recente
         if (!targetApplicationId) {
           const { data: applications, error: fetchError } = await supabase
@@ -2113,11 +2113,11 @@ const AdminStudentDetails: React.FC = () => {
 
           // Se há uma aplicação aprovada, usar ela; senão usar a mais recente
           const targetApplication = applications?.find(app => app.status === 'approved') || applications?.[0];
-          
+
           if (!targetApplication) {
             throw new Error('No application found for this student');
           }
-          
+
           targetApplicationId = targetApplication.id;
         }
 
@@ -2140,10 +2140,10 @@ const AdminStudentDetails: React.FC = () => {
         // Calcular o valor do pagamento
         let paymentAmount: number;
         if (applicationData?.scholarships) {
-          const scholarship = Array.isArray(applicationData.scholarships) 
-            ? applicationData.scholarships[0] 
+          const scholarship = Array.isArray(applicationData.scholarships)
+            ? applicationData.scholarships[0]
             : applicationData.scholarships;
-          
+
           if (scholarship?.application_fee_amount) {
             paymentAmount = Number(scholarship.application_fee_amount);
           } else {
@@ -2211,19 +2211,19 @@ const AdminStudentDetails: React.FC = () => {
         // Atualizar estado local com a bolsa comprometida
         setStudent(prev => {
           if (!prev) return prev;
-          
+
           const updatedStudent = { ...prev, is_application_fee_paid: true };
-          
+
           // Se conseguimos buscar os dados da aplicação, atualizar scholarship_title e university_name
           if (updatedApplication?.scholarships) {
-            const scholarship = Array.isArray(updatedApplication.scholarships) 
-              ? updatedApplication.scholarships[0] 
+            const scholarship = Array.isArray(updatedApplication.scholarships)
+              ? updatedApplication.scholarships[0]
               : updatedApplication.scholarships;
-            
+
             if (scholarship) {
               updatedStudent.scholarship_title = scholarship.title;
-              const university = Array.isArray(scholarship.universities) 
-                ? scholarship.universities[0] 
+              const university = Array.isArray(scholarship.universities)
+                ? scholarship.universities[0]
                 : scholarship.universities;
               updatedStudent.university_name = university?.name;
               console.log('🔍 DEBUG Updated committed scholarship:', {
@@ -2232,7 +2232,7 @@ const AdminStudentDetails: React.FC = () => {
               });
             }
           }
-          
+
           return updatedStudent;
         });
 
@@ -2256,7 +2256,7 @@ const AdminStudentDetails: React.FC = () => {
       } else if (feeType === 'scholarship') {
         // Marcar scholarship fee como pago na scholarship_applications
         let targetApplicationId = applicationId;
-        
+
         // Se não foi fornecido applicationId, buscar a aplicação aprovada ou mais recente
         if (!targetApplicationId) {
           const { data: applications, error: fetchError } = await supabase
@@ -2269,11 +2269,11 @@ const AdminStudentDetails: React.FC = () => {
 
           // Se há uma aplicação aprovada, usar ela; senão usar a mais recente
           const targetApplication = applications?.find(app => app.status === 'approved') || applications?.[0];
-          
+
           if (!targetApplication) {
             throw new Error('No application found for this student');
           }
-          
+
           targetApplicationId = targetApplication.id;
         }
 
@@ -2355,7 +2355,7 @@ const AdminStudentDetails: React.FC = () => {
         // Marcar I-20 control fee como pago
         const { error } = await supabase
           .from('user_profiles')
-          .update({ 
+          .update({
             has_paid_i20_control_fee: true,
             i20_control_fee_payment_method: method || 'manual'
           })
@@ -2391,9 +2391,9 @@ const AdminStudentDetails: React.FC = () => {
       showToast(`${feeType === 'selection_process' ? 'Selection Process Fee' : feeType === 'application' ? 'Application Fee' : feeType === 'scholarship' ? 'Scholarship Fee' : 'I-20 Control Fee'} marked as paid successfully!`, 'success');
     } catch (error) {
       console.error(`Error marking ${feeType} as paid:`, error);
-      const feeName = feeType === 'selection_process' ? 'Selection Process Fee' : 
-                     feeType === 'application' ? 'Application Fee' :
-                     feeType === 'scholarship' ? 'Scholarship Fee' : 'I-20 Control Fee';
+      const feeName = feeType === 'selection_process' ? 'Selection Process Fee' :
+        feeType === 'application' ? 'Application Fee' :
+          feeType === 'scholarship' ? 'Scholarship Fee' : 'I-20 Control Fee';
       showToast(`Error marking ${feeName} as paid`, 'error');
     } finally {
       setMarkingAsPaid(prev => ({ ...prev, [key]: false }));
@@ -2403,10 +2403,10 @@ const AdminStudentDetails: React.FC = () => {
 
   const approveApplication = async (applicationId: string) => {
     if (!student || !isPlatformAdmin) return;
-    
+
     try {
       setApprovingStudent(true);
-      
+
       const { error: updateError } = await supabase
         .from('scholarship_applications')
         .update({ status: 'approved' })
@@ -2444,14 +2444,14 @@ const AdminStudentDetails: React.FC = () => {
             email_universidade: user?.email,
             o_que_enviar: `Congratulations, you have been selected for the scholarship.`
           };
-          
+
           try {
             const webhookResponse = await fetch('https://nwh.suaiden.com/webhook/notfmatriculausa', {
               method: 'POST',
               headers: { 'Content-Type': 'application/json' },
               body: JSON.stringify(webhookPayload),
             });
-            
+
             if (!webhookResponse.ok) {
               const webhookErrorText = await webhookResponse.text();
               console.error('Webhook error:', webhookErrorText);
@@ -2490,7 +2490,7 @@ const AdminStudentDetails: React.FC = () => {
 
       // Atualizar o estado local
       setStudent(prev => prev ? { ...prev, application_status: 'approved' } : prev);
-      
+
       // Log the action
       try {
         await logAction(
@@ -2509,7 +2509,7 @@ const AdminStudentDetails: React.FC = () => {
       }
 
       window.location.reload();
-      
+
       showToast('Application approved successfully! The student will be notified.', 'success');
     } catch (error: any) {
       console.error('Error approving application:', error);
@@ -2526,7 +2526,7 @@ const AdminStudentDetails: React.FC = () => {
       reason: rejectStudentReason,
       timestamp: new Date().toISOString()
     });
-    
+
     if (!student || !isPlatformAdmin) {
       console.log('❌ [REJECT APPLICATION] Rejeição bloqueada:', {
         hasStudent: !!student,
@@ -2535,28 +2535,28 @@ const AdminStudentDetails: React.FC = () => {
       });
       return;
     }
-    
+
     try {
       setRejectingStudent(true);
       console.log('🔄 [REJECT APPLICATION] Atualizando status no banco de dados...');
-      
+
       const { data: updateData, error: updateError } = await supabase
         .from('scholarship_applications')
         .update({ status: 'rejected', notes: rejectStudentReason || null })
         .eq('id', applicationId)
         .select();
-      
+
       if (updateError) {
         console.error('❌ [REJECT APPLICATION] Erro ao atualizar banco de dados:', updateError);
         throw updateError;
       }
-      
+
       console.log('✅ [REJECT APPLICATION] Status atualizado com sucesso:', updateData);
-      
+
       setShowRejectStudentModal(false);
       setRejectStudentReason('');
       setPendingRejectAppId(null);
-      
+
       // Log the action
       try {
         console.log('📝 [REJECT APPLICATION] Registrando log da ação...');
@@ -2579,7 +2579,7 @@ const AdminStudentDetails: React.FC = () => {
 
       console.log('🔄 [REJECT APPLICATION] Recarregando página para atualizar dados...');
       window.location.reload();
-      
+
       showToast('Application rejected successfully.', 'success');
     } catch (error: any) {
       console.error('❌ [REJECT APPLICATION] Erro crítico ao rejeitar aplicação:', error);
@@ -2601,18 +2601,18 @@ const AdminStudentDetails: React.FC = () => {
       console.log('🚫 [ADMIN] No student data available');
       return;
     }
-    
+
     console.log('🔍 [ADMIN] Starting fetchDocumentRequests for student:', student.user_id);
     console.log('🔍 [ADMIN] Student applications:', student.all_applications);
-    
+
     setLoadingDocuments(true);
     try {
       // Buscar document requests específicos para as aplicações do estudante
       const applicationIds = student.all_applications?.map(app => app.id) || [];
       console.log('🔍 [ADMIN] Application IDs:', applicationIds);
-      
+
       let allRequests: any[] = [];
-      
+
       // Buscar requests específicos para cada aplicação
       if (applicationIds.length > 0) {
         console.log('🔍 [ADMIN] Fetching specific requests for applications...');
@@ -2629,13 +2629,13 @@ const AdminStudentDetails: React.FC = () => {
         console.log('✅ [ADMIN] Specific requests found:', specificRequests);
         allRequests = [...allRequests, ...(specificRequests || [])];
       }
-      
+
       // Buscar requests globais da universidade
       const universityIds = student.all_applications?.map(app => app.scholarships?.university_id).filter(Boolean) || [];
       const uniqueUniversityIds = [...new Set(universityIds)];
-      
+
       console.log('🔍 [ADMIN] University IDs found:', uniqueUniversityIds);
-      
+
       // Buscar requests globais das universidades específicas
       if (uniqueUniversityIds.length > 0) {
         console.log('🔍 [ADMIN] Fetching global requests for universities...');
@@ -2653,18 +2653,18 @@ const AdminStudentDetails: React.FC = () => {
         console.log('✅ [ADMIN] Global requests found for specific universities:', globalRequests);
         allRequests = [...allRequests, ...(globalRequests || [])];
       }
-      
+
       console.log('🔍 [ADMIN] Total requests found:', allRequests.length);
       console.log('🔍 [ADMIN] All requests:', allRequests);
-      
+
       // ✅ CORREÇÃO: Buscar uploads separadamente e filtrar por estudante
       if (allRequests.length > 0) {
         const requestIds = allRequests.map(req => req.id);
         const studentUserId = student.user_id; // user_id do estudante
-        
+
         console.log('🔍 [ADMIN] Request IDs to search uploads for:', requestIds);
         console.log('🔍 [ADMIN] Filtering uploads by student user ID:', studentUserId);
-        
+
         const { data: uploads, error: uploadsError } = await supabase
           .from('document_request_uploads')
           .select(`
@@ -2674,7 +2674,7 @@ const AdminStudentDetails: React.FC = () => {
           `)
           .in('document_request_id', requestIds)
           .eq('uploaded_by', studentUserId); // ✅ Filtrar apenas uploads deste estudante
-        
+
         if (uploadsError) {
           console.error('❌ [ADMIN] Error fetching uploads:', uploadsError);
           console.error('❌ [ADMIN] Uploads error details:', {
@@ -2686,17 +2686,17 @@ const AdminStudentDetails: React.FC = () => {
         } else {
           console.log('✅ [ADMIN] Uploads found for this student:', uploads);
           console.log('✅ [ADMIN] Number of uploads found:', uploads?.length || 0);
-          
+
           // Estruturar os requests com seus uploads
           const requestsWithUploads = allRequests.map(request => {
             const requestUploads = uploads?.filter(upload => upload.document_request_id === request.id) || [];
             console.log(`🔍 [ADMIN] Request ${request.id} (${request.title}) has ${requestUploads.length} uploads`);
             return {
-            ...request,
+              ...request,
               document_request_uploads: requestUploads
             };
           });
-          
+
           console.log('✅ [ADMIN] Final requests with uploads:', requestsWithUploads);
           setDocumentRequests(requestsWithUploads);
           return; // Sair da função aqui
@@ -2704,7 +2704,7 @@ const AdminStudentDetails: React.FC = () => {
       } else {
         console.log('⚠️ [ADMIN] No document requests found for this student');
       }
-      
+
       // Se não há requests ou uploads, definir como array vazio
       console.log('🔍 [ADMIN] Setting empty document requests');
       setDocumentRequests(allRequests);
@@ -2740,19 +2740,19 @@ const AdminStudentDetails: React.FC = () => {
   // Função para salvar template editado
   const handleSaveTemplate = async () => {
     if (!editingTemplateRequestId || !editingTemplateFile) return;
-    
+
     try {
       setUploadingTemplate(true);
-      
+
       // Upload do template para o storage
       const sanitized = editingTemplateFile.name.replace(/[^a-zA-Z0-9._-]/g, '_');
       const storagePath = `templates/${Date.now()}_${sanitized}`;
       const { data: uploadData, error: uploadError } = await supabase.storage
         .from('document-attachments')
         .upload(storagePath, editingTemplateFile);
-      
+
       if (uploadError) throw uploadError;
-      
+
       // Obter URL pública
       const { data: { publicUrl } } = supabase.storage
         .from('document-attachments')
@@ -2941,12 +2941,12 @@ const AdminStudentDetails: React.FC = () => {
     console.log('🔍 [ADMIN] Opening document:', doc);
     console.log('🔍 [ADMIN] file_url:', doc.file_url);
     console.log('🔍 [ADMIN] Current previewUrl:', previewUrl);
-    
+
     if (doc.file_url) {
       // Sempre atualizar para forçar re-render
       setPreviewUrl(doc.file_url);
       console.log('🔍 [ADMIN] Set previewUrl to:', doc.file_url);
-      
+
       // Verificar se o modal está sendo renderizado
       setTimeout(() => {
         const modal = document.querySelector('.document-viewer-overlay');
@@ -2965,14 +2965,14 @@ const AdminStudentDetails: React.FC = () => {
 
   const handleDownloadDocument = async (doc: any) => {
     if (!doc.file_url) return;
-    
+
     try {
       // Fazer download direto sem abrir nova aba
       const response = await fetch(doc.file_url);
       if (!response.ok) {
         throw new Error('Failed to download document: ' + response.statusText);
       }
-      
+
       const blob = await response.blob();
       const url = URL.createObjectURL(blob);
       const link = document.createElement('a');
@@ -2990,29 +2990,29 @@ const AdminStudentDetails: React.FC = () => {
 
   const handleUploadDocumentRequest = async (requestId: string, file: File) => {
     if (!student || !isPlatformAdmin) return;
-    
+
     const key = `request-${requestId}`;
     setUploadingDocumentRequest(prev => ({ ...prev, [key]: true }));
-    
+
     try {
       // Upload do arquivo para o Supabase Storage
       const fileExt = file.name.split('.').pop();
       const fileName = `${Date.now()}-${Math.random().toString(36).substring(2)}.${fileExt}`;
       const filePath = `${student.student_id}/${requestId}/${fileName}`;
-      
+
       const { error: uploadError } = await supabase.storage
         .from('student-documents')
         .upload(filePath, file);
-      
+
       if (uploadError) throw uploadError;
-      
+
       // Obter URL pública
       const { data: { publicUrl } } = supabase.storage
         .from('student-documents')
         .getPublicUrl(filePath);
-      
+
       if (!publicUrl) throw new Error('Uploaded file is not accessible');
-      
+
       // Inserir registro na tabela document_request_uploads
       const { error: insertError } = await supabase
         .from('document_request_uploads')
@@ -3023,12 +3023,12 @@ const AdminStudentDetails: React.FC = () => {
           status: 'under_review',
           uploaded_at: new Date().toISOString()
         });
-      
+
       if (insertError) throw insertError;
-      
+
       // Recarregar document requests para mostrar o novo upload
       await fetchDocumentRequests();
-      
+
       // Log: Upload feito pelo admin para um document request
       try {
         await logAction(
@@ -3057,15 +3057,15 @@ const AdminStudentDetails: React.FC = () => {
 
   const handleApproveDocumentRequest = async (uploadId: string) => {
     if (!isPlatformAdmin) return;
-    
+
     const key = `approve-${uploadId}`;
     setApprovingDocumentRequest(prev => ({ ...prev, [key]: true }));
-    
+
     try {
       console.log('🔍 [APPROVE] Approving document upload:', uploadId);
       console.log('🔍 [APPROVE] Current user ID:', user?.id);
       console.log('🔍 [APPROVE] Is platform admin:', isPlatformAdmin);
-      
+
       const { data, error } = await supabase
         .from('document_request_uploads')
         .update({
@@ -3075,14 +3075,14 @@ const AdminStudentDetails: React.FC = () => {
         })
         .eq('id', uploadId)
         .select();
-      
+
       if (error) throw error;
-      
+
       console.log('✅ [APPROVE] Document approved successfully:', data);
-      
+
       // Recarregar document requests para mostrar a mudança
       await fetchDocumentRequests();
-      
+
       // Log the action
       try {
         await logAction(
@@ -3099,7 +3099,7 @@ const AdminStudentDetails: React.FC = () => {
       } catch (logError) {
         console.error('Failed to log action:', logError);
       }
-      
+
       showToast('Document approved successfully!', 'success');
     } catch (error: any) {
       console.error('❌ [APPROVE] Error approving document:', error);
@@ -3111,16 +3111,16 @@ const AdminStudentDetails: React.FC = () => {
 
   const handleRejectDocumentRequest = async (uploadId: string, reason: string) => {
     if (!isPlatformAdmin) return;
-    
+
     const key = `reject-${uploadId}`;
     setRejectingDocumentRequest(prev => ({ ...prev, [key]: true }));
-    
+
     try {
       console.log('🔍 [REJECT] Rejecting document upload:', uploadId);
       console.log('🔍 [REJECT] Reason:', reason);
       console.log('🔍 [REJECT] Current user ID:', user?.id);
       console.log('🔍 [REJECT] Is platform admin:', isPlatformAdmin);
-      
+
       const { data, error } = await supabase
         .from('document_request_uploads')
         .update({
@@ -3131,14 +3131,14 @@ const AdminStudentDetails: React.FC = () => {
         })
         .eq('id', uploadId)
         .select();
-      
+
       if (error) throw error;
-      
+
       console.log('✅ [REJECT] Document rejected successfully:', data);
-      
+
       // Recarregar document requests para mostrar a mudança
       await fetchDocumentRequests();
-      
+
       // Log the action
       try {
         await logAction(
@@ -3156,7 +3156,7 @@ const AdminStudentDetails: React.FC = () => {
       } catch (logError) {
         console.error('Failed to log action:', logError);
       }
-      
+
       showToast('Document rejected successfully!', 'success');
     } catch (error: any) {
       console.error('❌ [REJECT] Error rejecting document:', error);
@@ -3234,18 +3234,18 @@ const AdminStudentDetails: React.FC = () => {
   // Função para enviar formulário de transferência
   const handleUploadTransferForm = async () => {
     if (!isPlatformAdmin || !student || !transferFormFile) return;
-    
+
     try {
       setUploadingTransferForm(true);
-      
+
       // Encontrar aplicação do aluno transfer
       const transferApp = getTransferApplication();
-      
+
       if (!transferApp) {
         showToast('No transfer application found for this student', 'error');
         return;
       }
-      
+
       // Se já existe um formulário, deletar o arquivo anterior
       if (transferApp.transfer_form_url) {
         try {
@@ -3260,23 +3260,23 @@ const AdminStudentDetails: React.FC = () => {
           // Continuar mesmo se não conseguir deletar o arquivo antigo
         }
       }
-      
+
       // Sanitizar nome do arquivo
       const sanitized = sanitizeFileName(transferFormFile.name);
       const storagePath = `transfer-forms/${Date.now()}_${sanitized}`;
-      
+
       // Upload para Supabase Storage (upsert para substituir se existir)
       const { data: uploadData, error: uploadError } = await supabase.storage
         .from('document-attachments')
         .upload(storagePath, transferFormFile, { upsert: true });
-        
+
       if (uploadError) throw uploadError;
-      
+
       // Obter URL pública
       const { data: { publicUrl } } = supabase.storage
         .from('document-attachments')
         .getPublicUrl(uploadData?.path || storagePath);
-      
+
       // Atualizar a aplicação com o formulário de transferência
       const { error: updateError } = await supabase
         .from('scholarship_applications')
@@ -3286,15 +3286,15 @@ const AdminStudentDetails: React.FC = () => {
           transfer_form_sent_at: new Date().toISOString()
         })
         .eq('id', transferApp.id);
-        
+
       if (updateError) throw updateError;
-      
+
       const isReplacement = transferApp.transfer_form_url ? 'replaced' : 'sent';
       showToast(`Transfer form ${isReplacement} successfully!`, 'success');
-      
+
       // Não limpar o arquivo selecionado - deixar o usuário decidir quando cancelar
       // setTransferFormFile(null);
-      
+
       // Recarregar dados do estudante
       if (profileId) {
         const { data: s, error } = await supabase
@@ -3407,8 +3407,8 @@ const AdminStudentDetails: React.FC = () => {
               // Buscar aplicação que teve Application Fee pago
               const paidApplication = s.scholarship_applications?.find((app: any) => app.is_application_fee_paid);
               if (paidApplication?.scholarships) {
-                const scholarship = Array.isArray(paidApplication.scholarships) 
-                  ? paidApplication.scholarships[0] 
+                const scholarship = Array.isArray(paidApplication.scholarships)
+                  ? paidApplication.scholarships[0]
                   : paidApplication.scholarships;
                 return scholarship?.title || null;
               }
@@ -3418,11 +3418,11 @@ const AdminStudentDetails: React.FC = () => {
               // Buscar aplicação que teve Application Fee pago
               const paidApplication = s.scholarship_applications?.find((app: any) => app.is_application_fee_paid);
               if (paidApplication?.scholarships) {
-                const scholarship = Array.isArray(paidApplication.scholarships) 
-                  ? paidApplication.scholarships[0] 
+                const scholarship = Array.isArray(paidApplication.scholarships)
+                  ? paidApplication.scholarships[0]
                   : paidApplication.scholarships;
-                const university = Array.isArray(scholarship?.universities) 
-                  ? scholarship.universities[0] 
+                const university = Array.isArray(scholarship?.universities)
+                  ? scholarship.universities[0]
                   : scholarship?.universities;
                 return university?.name || null;
               }
@@ -3437,7 +3437,7 @@ const AdminStudentDetails: React.FC = () => {
           });
         }
       }
-      
+
     } catch (error: any) {
       console.error('Error uploading transfer form:', error);
       showToast(error.message || 'Failed to upload transfer form', 'error');
@@ -3449,10 +3449,10 @@ const AdminStudentDetails: React.FC = () => {
   // Funções para gerenciar uploads do transfer form
   // Função utilitária para encontrar a aplicação transfer correta (priorizando a que tem application fee paga)
   const getTransferApplication = () => {
-    const transferApps = student?.all_applications?.filter((app: any) => 
+    const transferApps = student?.all_applications?.filter((app: any) =>
       app.student_process_type === 'transfer'
     ) || [];
-    
+
     // Priorizar aplicação com application fee paga
     return transferApps.find((app: any) => app.is_application_fee_paid) || transferApps[0];
   };
@@ -3503,32 +3503,32 @@ const AdminStudentDetails: React.FC = () => {
     try {
       const { error } = await supabase
         .from('transfer_form_uploads')
-        .update({ 
+        .update({
           status: 'approved',
           reviewed_at: new Date().toISOString(),
           reviewed_by: user?.id
         })
         .eq('id', uploadId);
-      
+
       if (error) throw error;
-      
+
       // Recarregar uploads
       const transferApp = getTransferApplication();
-      
+
       if (transferApp) {
         const { data: newUploads } = await supabase
           .from('transfer_form_uploads')
           .select('*')
           .eq('application_id', transferApp.id)
           .order('uploaded_at', { ascending: false });
-        
+
         if (newUploads) {
           setTransferFormUploads(newUploads);
         }
       }
-      
+
       showToast('Transfer form approved successfully!', 'success');
-      
+
     } catch (error: any) {
       console.error('Erro ao aprovar transfer form:', error);
       showToast('Error approving transfer form: ' + error.message, 'error');
@@ -3539,33 +3539,33 @@ const AdminStudentDetails: React.FC = () => {
     try {
       const { error } = await supabase
         .from('transfer_form_uploads')
-        .update({ 
+        .update({
           status: 'rejected',
           rejection_reason: reason,
           reviewed_at: new Date().toISOString(),
           reviewed_by: user?.id
         })
         .eq('id', uploadId);
-      
+
       if (error) throw error;
-      
+
       // Recarregar uploads
       const transferApp = getTransferApplication();
-      
+
       if (transferApp) {
         const { data: newUploads } = await supabase
           .from('transfer_form_uploads')
           .select('*')
           .eq('application_id', transferApp.id)
           .order('uploaded_at', { ascending: false });
-        
+
         if (newUploads) {
           setTransferFormUploads(newUploads);
         }
       }
-      
+
       showToast('Transfer form rejected successfully!', 'success');
-      
+
     } catch (error: any) {
       console.error('Erro ao rejeitar transfer form:', error);
       showToast('Error rejecting transfer form: ' + error.message, 'error');
@@ -3696,8 +3696,8 @@ const AdminStudentDetails: React.FC = () => {
           </div>
         </div>
       </div>
-      </div>
-    );
+    </div>
+  );
 
   if (loading || !student) {
     return <SkeletonLoader />;
@@ -3712,7 +3712,7 @@ const AdminStudentDetails: React.FC = () => {
           <p className="text-sm text-blue-700">Carregando informações adicionais...</p>
         </div>
       )}
-      
+
       <div className="flex items-center justify-between">
         <div>
           <h1 className="text-2xl font-bold text-slate-900">Student Details</h1>
@@ -3745,41 +3745,46 @@ const AdminStudentDetails: React.FC = () => {
           <nav className="flex space-x-8 px-6">
             <button
               onClick={() => setActiveTab('overview')}
-              className={`py-4 px-1 border-b-2 font-medium text-sm ${
-                activeTab === 'overview'
-                  ? 'border-[#05294E] text-[#05294E]'
-                  : 'border-transparent text-slate-500 hover:text-slate-700 hover:border-slate-300'
-              }`}
+              className={`py-4 px-1 border-b-2 font-medium text-sm ${activeTab === 'overview'
+                ? 'border-[#05294E] text-[#05294E]'
+                : 'border-transparent text-slate-500 hover:text-slate-700 hover:border-slate-300'
+                }`}
             >
               Overview
             </button>
             <button
               onClick={() => setActiveTab('documents')}
-              className={`py-4 px-1 border-b-2 font-medium text-sm ${
-                activeTab === 'documents'
-                  ? 'border-[#05294E] text-[#05294E]'
-                  : 'border-transparent text-slate-500 hover:text-slate-700 hover:border-slate-300'
-              }`}
+              className={`py-4 px-1 border-b-2 font-medium text-sm ${activeTab === 'documents'
+                ? 'border-[#05294E] text-[#05294E]'
+                : 'border-transparent text-slate-500 hover:text-slate-700 hover:border-slate-300'
+                }`}
             >
               Documents
             </button>
             <button
               onClick={() => setActiveTab('scholarships')}
-              className={`py-4 px-1 border-b-2 font-medium text-sm ${
-                activeTab === 'scholarships'
-                  ? 'border-[#05294E] text-[#05294E]'
-                  : 'border-transparent text-slate-500 hover:text-slate-700 hover:border-slate-300'
-              }`}
+              className={`py-4 px-1 border-b-2 font-medium text-sm ${activeTab === 'scholarships'
+                ? 'border-[#05294E] text-[#05294E]'
+                : 'border-transparent text-slate-500 hover:text-slate-700 hover:border-slate-300'
+                }`}
             >
               Scholarships
             </button>
             <button
+              onClick={() => setActiveTab('survey')}
+              className={`py-4 px-1 border-b-2 font-medium text-sm ${activeTab === 'survey'
+                ? 'border-[#05294E] text-[#05294E]'
+                : 'border-transparent text-slate-500 hover:text-slate-700 hover:border-slate-300'
+                }`}
+            >
+              Selection Survey
+            </button>
+            <button
               onClick={() => setActiveTab('logs')}
-              className={`py-4 px-1 border-b-2 font-medium text-sm ${
-                activeTab === 'logs'
-                  ? 'border-[#05294E] text-[#05294E]'
-                  : 'border-transparent text-slate-500 hover:text-slate-700 hover:border-slate-300'
-              }`}
+              className={`py-4 px-1 border-b-2 font-medium text-sm ${activeTab === 'logs'
+                ? 'border-[#05294E] text-[#05294E]'
+                : 'border-transparent text-slate-500 hover:text-slate-700 hover:border-slate-300'
+                }`}
             >
               Activity Log
             </button>
@@ -3818,1547 +3823,1528 @@ const AdminStudentDetails: React.FC = () => {
       )}
 
       {activeTab === 'overview' && (
-      <div className="grid grid-cols-1 lg:grid-cols-12 gap-8">
-        <div className="lg:col-span-8 space-y-6">
-          <div className="bg-white rounded-2xl shadow-sm border border-slate-200">
-            <div className="bg-gradient-to-r rounded-t-2xl from-[#05294E] to-[#0a4a7a] px-6 py-4">
-              <div className="flex items-center justify-between">
-              <h2 className="text-xl font-semibold text-white flex items-center">
-                <User className="w-6 h-6 mr-3" />
-                Student Information
-              </h2>
-                {canEditProfile && (
-                  <div className="flex items-center space-x-2">
-                    {isEditing ? (
-                      <>
-                        <button
-                          onClick={handleSaveProfile}
-                          disabled={savingProfile}
-                          className="px-3 py-1 bg-[#05294E] hover:bg-[#05294E]/90 text-white text-sm rounded-lg flex items-center space-x-1"
-                        >
-                          <Save className="w-4 h-4" />
-                          <span>{savingProfile ? 'Saving...' : 'Save'}</span>
-                        </button>
-                        <button
-                          onClick={() => setIsEditing(false)}
-                          className="px-3 py-1 bg-slate-600 hover:bg-slate-700 text-white text-sm rounded-lg flex items-center space-x-1"
-                        >
-                          <X className="w-4 h-4" />
-                          <span>Cancel</span>
-                        </button>
-                      </>
-                    ) : (
-                      <button
-                        onClick={() => setIsEditing(true)}
-                        className="px-3 py-1 bg-white/20 hover:bg-white/30 text-white text-sm rounded-lg flex items-center space-x-1"
-                      >
-                        <Edit3 className="w-4 h-4" />
-                        <span>Edit</span>
-                      </button>
-                    )}
-            </div>
-                )}
-              </div>
-            </div>
-            <div className="p-6 space-y-6">
-              {/* Personal & Contact Information */}
-              <div className="bg-slate-50 rounded-xl p-4">
-                <h3 className="text-lg font-semibold text-slate-900 mb-4 flex items-center">
-                  <User className="w-5 h-5 mr-2 text-[#05294E]" />
-                  Personal & Contact Information
-                </h3>
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                    <div>
-                      <dt className="text-sm font-medium text-slate-600">Full Name</dt>
-                    {isEditing ? (
-                      <input
-                        value={student.student_name}
-                        onChange={(e) => setStudent(prev => prev ? { ...prev, student_name: e.target.value } : prev)}
-                        className="mt-1 w-full px-3 py-2 border border-slate-300 rounded-lg text-sm"
-                      />
-                    ) : (
-                      <dd className="text-base font-semibold text-slate-900 mt-1">{student.student_name}</dd>
-                    )}
-                    </div>
-                    <div>
-                      <dt className="text-sm font-medium text-slate-600">Email</dt>
-                    {isEditing ? (
-                      <input
-                        type="email"
-                        value={student.student_email}
-                        onChange={(e) => setStudent(prev => prev ? { ...prev, student_email: e.target.value } : prev)}
-                        className="mt-1 w-full px-3 py-2 border border-slate-300 rounded-lg text-sm"
-                      />
-                    ) : (
-                      <dd className="text-base text-slate-900 mt-1">{student.student_email}</dd>
-                    )}
-                    </div>
-                    <div>
-                    <dt className="text-sm font-medium text-slate-600">Phone</dt>
-                    {isEditing ? (
-                      <input
-                        value={student.phone || ''}
-                        onChange={(e) => setStudent(prev => prev ? { ...prev, phone: e.target.value } : prev)}
-                        className="mt-1 w-full px-3 py-2 border border-slate-300 rounded-lg text-sm"
-                      />
-                    ) : (
-                      <dd className="text-base text-slate-900 mt-1">{student.phone || 'Not provided'}</dd>
-                    )}
-                    </div>
-                      <div>
-                    <dt className="text-sm font-medium text-slate-600">Country</dt>
-                    {isEditing ? (
-                      <input
-                        value={student.country || ''}
-                        onChange={(e) => setStudent(prev => prev ? { ...prev, country: e.target.value } : prev)}
-                        className="mt-1 w-full px-3 py-2 border border-slate-300 rounded-lg text-sm"
-                      />
-                    ) : (
-                      <dd className="text-base text-slate-900 mt-1">{student.country || 'Not provided'}</dd>
-                    )}
-                      </div>
-                </div>
-              </div>
-
-              {/* Academic Information */}
-              <div className="bg-slate-50 rounded-xl p-4">
-                <h3 className="text-lg font-semibold text-slate-900 mb-4 flex items-center">
-                  <Award className="w-5 h-5 mr-2 text-[#05294E]" />
-                  Academic Information
-                </h3>
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                  <div>
-                    <dt className="text-sm font-medium text-slate-600">Field of Interest</dt>
-                    {isEditing ? (
-                      <input
-                        value={student.field_of_interest || ''}
-                        onChange={(e) => setStudent(prev => prev ? { ...prev, field_of_interest: e.target.value } : prev)}
-                        className="mt-1 w-full px-3 py-2 border border-slate-300 rounded-lg text-sm"
-                      />
-                    ) : (
-                      <dd className="text-base text-slate-900 mt-1">{student.field_of_interest || 'Not provided'}</dd>
-                    )}
-                  </div>
-                  <div>
-                    <dt className="text-sm font-medium text-slate-600">Academic Level</dt>
-                    {isEditing ? (
-                      <select
-                        value={student.academic_level || ''}
-                        onChange={(e) => setStudent(prev => prev ? { ...prev, academic_level: e.target.value } : prev)}
-                        className="mt-1 w-full px-3 py-2 border border-slate-300 rounded-lg text-sm"
-                      >
-                        <option value="">Select level</option>
-                        <option value="high_school">High School</option>
-                        <option value="bachelor">Bachelor's</option>
-                        <option value="master">Master's</option>
-                        <option value="phd">PhD</option>
-                      </select>
-                    ) : (
-                      <dd className="text-base text-slate-900 mt-1">{student.academic_level || 'Not provided'}</dd>
-                    )}
-                </div>
-                  <div>
-                    <dt className="text-sm font-medium text-slate-600">GPA</dt>
-                    {isEditing ? (
-                      <input
-                        type="number"
-                        step="0.01"
-                        min="0"
-                        max="4"
-                        value={student.gpa || ''}
-                        onChange={(e) => setStudent(prev => prev ? { ...prev, gpa: e.target.value ? Number(e.target.value) : null } : prev)}
-                        className="mt-1 w-full px-3 py-2 border border-slate-300 rounded-lg text-sm"
-                      />
-                    ) : (
-                      <dd className="text-base text-slate-900 mt-1">{student.gpa ? student.gpa.toFixed(2) : 'Not provided'}</dd>
-                    )}
-                  </div>
-                  <div>
-                    <dt className="text-sm font-medium text-slate-600">English Proficiency</dt>
-                    {isEditing ? (
-                      <select
-                        value={student.english_proficiency || ''}
-                        onChange={(e) => setStudent(prev => prev ? { ...prev, english_proficiency: e.target.value } : prev)}
-                        className="mt-1 w-full px-3 py-2 border border-slate-300 rounded-lg text-sm"
-                      >
-                        <option value="">Select level</option>
-                        <option value="beginner">Beginner</option>
-                        <option value="intermediate">Intermediate</option>
-                        <option value="advanced">Advanced</option>
-                        <option value="native">Native</option>
-                      </select>
-                    ) : (
-                      <dd className="text-base text-slate-900 mt-1">{student.english_proficiency || 'Not provided'}</dd>
-                    )}
-                  </div>
-                  <div>
-                    <dt className="text-sm font-medium text-slate-600">Student Process Type</dt>
-                    <dd className="text-base text-slate-900 mt-1 capitalize">
-                      {isEditingProcessType ? (
-                        <div className="flex items-center gap-2">
-                          <select
-                            value={editingProcessType}
-                            onChange={(e) => setEditingProcessType(e.target.value)}
-                            className="px-3 py-1 border border-slate-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
-                            disabled={savingProcessType}
-                          >
-                            <option value="initial">Initial</option>
-                            <option value="transfer">Transfer</option>
-                            <option value="change_of_status">Change of Status</option>
-                            <option value="enrolled">Enrolled</option>
-                          </select>
+        <div className="grid grid-cols-1 lg:grid-cols-12 gap-8">
+          <div className="lg:col-span-8 space-y-6">
+            <div className="bg-white rounded-2xl shadow-sm border border-slate-200">
+              <div className="bg-gradient-to-r rounded-t-2xl from-[#05294E] to-[#0a4a7a] px-6 py-4">
+                <div className="flex items-center justify-between">
+                  <h2 className="text-xl font-semibold text-white flex items-center">
+                    <User className="w-6 h-6 mr-3" />
+                    Student Information
+                  </h2>
+                  {canEditProfile && (
+                    <div className="flex items-center space-x-2">
+                      {isEditing ? (
+                        <>
                           <button
-                            onClick={handleSaveProcessType}
-                            disabled={savingProcessType}
-                            className="p-1 text-green-600 hover:bg-green-50 rounded transition-colors disabled:opacity-50"
-                            title="Save"
+                            onClick={handleSaveProfile}
+                            disabled={savingProfile}
+                            className="px-3 py-1 bg-[#05294E] hover:bg-[#05294E]/90 text-white text-sm rounded-lg flex items-center space-x-1"
                           >
-                            {savingProcessType ? (
-                              <svg className="w-4 h-4 animate-spin" fill="none" viewBox="0 0 24 24">
-                                <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
-                                <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
-                              </svg>
-                            ) : (
-                              <Save className="w-4 h-4" />
-                            )}
+                            <Save className="w-4 h-4" />
+                            <span>{savingProfile ? 'Saving...' : 'Save'}</span>
                           </button>
                           <button
-                            onClick={handleCancelProcessType}
-                            disabled={savingProcessType}
-                            className="p-1 text-red-600 hover:bg-red-50 rounded transition-colors disabled:opacity-50"
-                            title="Cancel"
+                            onClick={() => setIsEditing(false)}
+                            className="px-3 py-1 bg-slate-600 hover:bg-slate-700 text-white text-sm rounded-lg flex items-center space-x-1"
                           >
                             <X className="w-4 h-4" />
+                            <span>Cancel</span>
                           </button>
-                        </div>
+                        </>
                       ) : (
-                        <div className="flex items-center gap-2">
-                          <span>{student.student_process_type || 'Not defined'}</span>
-                          <button
-                            onClick={handleEditProcessType}
-                            className="p-1 text-blue-600 hover:bg-blue-50 rounded transition-colors"
-                            title="Edit Process Type"
-                          >
-                            <Edit3 className="w-4 h-4" />
-                          </button>
-                        </div>
-                      )}
-                    </dd>
-                  </div>
-                </div>
-              </div>
-
-              {/* Financial & Scholarship Information */}
-              <div className="bg-slate-50 rounded-xl p-4">
-                <h3 className="text-lg font-semibold text-slate-900 mb-4 flex items-center">
-                  <CreditCard className="w-5 h-5 mr-2 text-[#05294E]" />
-                  Financial & Scholarship Information
-                </h3>
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                  <div>
-                    <dt className="text-sm font-medium text-slate-600">Dependents</dt>
-                    {isEditing ? (
-                      <input
-                        type="number"
-                        min="0"
-                        value={dependents}
-                        onChange={(e) => setDependents(Math.max(0, Number(e.target.value || 0)))}
-                        className="mt-1 w-full px-3 py-2 border border-slate-300 rounded-lg text-sm"
-                      />
-                    ) : (
-                      <dd className="text-base text-slate-900 mt-1">{dependents}</dd>
-                    )}
-                  </div>
-                  <div>
-                    <dt className="text-sm font-medium text-slate-600">Desired Scholarship Range</dt>
-                    {isEditing ? (
-                      <input
-                        type="number"
-                        min="0"
-                        value={student.desired_scholarship_range || ''}
-                        onChange={(e) => setStudent(prev => prev ? { ...prev, desired_scholarship_range: e.target.value ? Number(e.target.value) : null } : prev)}
-                        className="mt-1 w-full px-3 py-2 border border-slate-300 rounded-lg text-sm"
-                      />
-                    ) : (
-                      <dd className="text-base text-slate-900 mt-1">{student.desired_scholarship_range ? `$${student.desired_scholarship_range.toLocaleString()}` : 'Not specified'}</dd>
-                    )}
-                  </div>
-                </div>
-              </div>
-
-              {/* System & Status Information */}
-              <div className="bg-slate-50 rounded-xl p-4">
-                <h3 className="text-lg font-semibold text-slate-900 mb-4 flex items-center">
-                  <Clock className="w-5 h-5 mr-2 text-[#05294E]" />
-                  System & Status Information
-                </h3>
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                  <div>
-                    <dt className="text-sm font-medium text-slate-600">Registration Date</dt>
-                    <dd className="text-base text-slate-900 mt-1">{new Date(student.student_created_at).toLocaleDateString()}</dd>
-                  </div>
-                  <div>
-                  <dt className="text-sm font-medium text-slate-600">Current Status</dt>
-                    <div className="flex items-center space-x-2 mt-1">
-                    <div className={`w-2 h-2 rounded-full ${
-                      student.is_locked ? 'bg-green-500' :
-                        student.application_status === 'approved' ? 'bg-blue-500' :
-                        student.application_status === 'under_review' ? 'bg-yellow-500' :
-                      student.total_applications > 0 ? 'bg-orange-500' : 'bg-gray-500'
-                    }`}></div>
-                    <span className="text-sm font-medium">
-                      {student.is_locked ? 'Scholarship Selected' :
-                          student.application_status === 'approved' ? 'Approved - Pending Payment' :
-                          student.application_status === 'under_review' ? 'Under Review' :
-                        student.total_applications > 0 ? 'Applications Submitted' : 'No Applications Yet'}
-                    </span>
-                  </div>
-                </div>
-                  {student.seller_referral_code && (
-                    <div className="md:col-span-2">
-                      <dt className="text-sm font-medium text-slate-600">Referral Code</dt>
-                      {isEditing ? (
-                        <input
-                          value={student.seller_referral_code}
-                          onChange={(e) => setStudent(prev => prev ? { ...prev, seller_referral_code: e.target.value } : prev)}
-                          className="mt-1 w-full px-3 py-2 border border-slate-300 rounded-lg text-sm font-mono"
-                        />
-                      ) : (
-                        <div className="mt-1 space-y-2">
-                          <dd className="text-base text-slate-900 font-mono bg-slate-200 px-3 py-2 rounded-lg">{student.seller_referral_code}</dd>
-                          {referralInfo && (
-                            <div className="bg-blue-50 border border-blue-200 rounded-lg p-3">
-                              <div className="flex items-center space-x-2 mb-2">
-                                <div className={`w-2 h-2 rounded-full ${
-                                  referralInfo.type === 'seller' ? 'bg-green-500' :
-                                  referralInfo.type === 'affiliate' ? 'bg-blue-500' :
-                                  'bg-purple-500'
-                                }`}></div>
-                                <span className="text-sm font-medium text-slate-700">
-                                  {referralInfo.type === 'seller' ? 'Seller' :
-                                   referralInfo.type === 'affiliate' ? 'Affiliate' :
-                                   (referralInfo.isRewards ? 'Student Referral (Rewards)' : 'Student')} Referral
-                                </span>
-              </div>
-                              <div className="text-sm text-slate-600">
-                                <div className="font-medium">{referralInfo.name || 'Unknown'}</div>
-                                <div className="text-slate-500">{referralInfo.email || 'No email'}</div>
-                                {referralInfo.type === 'seller' && (referralInfo.affiliateName || referralInfo.affiliateEmail) && (
-                                  <div className="mt-2 pl-3 border-l-2 border-blue-200">
-                                    <div className="text-xs text-slate-500 mb-1">Affiliate</div>
-                                    <div className="text-sm font-medium text-slate-700">{referralInfo.affiliateName || 'Unknown'}</div>
-                                    <div className="text-sm text-slate-500">{referralInfo.affiliateEmail || 'No email'}</div>
-                                  </div>
-                                )}
-                              </div>
-                            </div>
-                          )}
-                          {!referralInfo && (
-                            <div className="bg-slate-50 border border-slate-200 rounded-lg p-3">
-                              <div className="text-sm text-slate-500">
-                                <div className="flex items-center space-x-2">
-                                  <div className="w-2 h-2 rounded-full bg-slate-400"></div>
-                                  <span>Referral source not found</span>
-                                </div>
-                              </div>
-                            </div>
-                          )}
-                        </div>
+                        <button
+                          onClick={() => setIsEditing(true)}
+                          className="px-3 py-1 bg-white/20 hover:bg-white/30 text-white text-sm rounded-lg flex items-center space-x-1"
+                        >
+                          <Edit3 className="w-4 h-4" />
+                          <span>Edit</span>
+                        </button>
                       )}
                     </div>
                   )}
                 </div>
               </div>
-
-              {/* Admin Notes - Only for Platform Admins */}
-              {isPlatformAdmin && (
+              <div className="p-6 space-y-6">
+                {/* Personal & Contact Information */}
                 <div className="bg-slate-50 rounded-xl p-4">
-              <div className="mb-4 flex items-center justify-between">
-                <h3 className="text-lg font-semibold text-slate-900 flex items-center">
-                  <FileText className="w-5 h-5 mr-2 text-[#05294E]" />
-                  Admin Notes
-                </h3>
-                <button
-                  onClick={() => setIsAddingNote(true)}
-                  className="px-3 py-1 bg-[#05294E] hover:bg-[#05294E]/90 text-white text-sm rounded-lg flex items-center space-x-1"
-                >
-                  <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" /></svg>
-                  <span>New Note</span>
-                </button>
-              </div>
-                  <div className="space-y-4">
-                    {/* Formulário para adicionar nova nota */}
-                    {isAddingNote && (
-                    <div className="bg-white border border-slate-200 rounded-lg p-4">
-                      <label className="block text-sm font-medium text-slate-700 mb-2">
-                        Add a new note
-                      </label>
-                      <textarea
-                        value={newNoteContent}
-                        onChange={(e) => setNewNoteContent(e.target.value)}
-                        placeholder="Enter your note about this student..."
-                        className="w-full px-3 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-[#05294E] focus:border-[#05294E] resize-none"
-                        rows={3}
-                        disabled={savingNotes}
-                      />
-                      <div className="flex items-center justify-between mt-3">
-                        <p className="text-xs text-slate-500">
-                          These notes are only visible to platform administrators.
-                        </p>
-                        <div className="flex items-center space-x-2">
-                          <button
-                            onClick={() => { setIsAddingNote(false); setNewNoteContent(''); }}
-                            disabled={savingNotes}
-                            className="px-4 py-2 bg-slate-600 hover:bg-slate-700 text-white text-sm rounded-lg flex items-center space-x-2 disabled:opacity-50 disabled:cursor-not-allowed"
-                          >
-                            <span>Cancel</span>
-                          </button>
-                          <button
-                            onClick={async () => { await handleAddNote(); setIsAddingNote(false); }}
-                            disabled={savingNotes || !newNoteContent.trim()}
-                            className="px-4 py-2 bg-[#05294E] hover:bg-[#05294E]/90 text-white text-sm rounded-lg flex items-center space-x-2 disabled:opacity-50 disabled:cursor-not-allowed"
-                          >
-                            <Save className="w-4 h-4" />
-                            <span>{savingNotes ? 'Adding...' : 'Add Note'}</span>
-                          </button>
-                        </div>
+                  <h3 className="text-lg font-semibold text-slate-900 mb-4 flex items-center">
+                    <User className="w-5 h-5 mr-2 text-[#05294E]" />
+                    Personal & Contact Information
+                  </h3>
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <div>
+                      <dt className="text-sm font-medium text-slate-600">Full Name</dt>
+                      {isEditing ? (
+                        <input
+                          value={student.student_name}
+                          onChange={(e) => setStudent(prev => prev ? { ...prev, student_name: e.target.value } : prev)}
+                          className="mt-1 w-full px-3 py-2 border border-slate-300 rounded-lg text-sm"
+                        />
+                      ) : (
+                        <dd className="text-base font-semibold text-slate-900 mt-1">{student.student_name}</dd>
+                      )}
+                    </div>
+                    <div>
+                      <dt className="text-sm font-medium text-slate-600">Email</dt>
+                      {isEditing ? (
+                        <input
+                          type="email"
+                          value={student.student_email}
+                          onChange={(e) => setStudent(prev => prev ? { ...prev, student_email: e.target.value } : prev)}
+                          className="mt-1 w-full px-3 py-2 border border-slate-300 rounded-lg text-sm"
+                        />
+                      ) : (
+                        <dd className="text-base text-slate-900 mt-1">{student.student_email}</dd>
+                      )}
+                    </div>
+                    <div>
+                      <dt className="text-sm font-medium text-slate-600">Phone</dt>
+                      {isEditing ? (
+                        <input
+                          value={student.phone || ''}
+                          onChange={(e) => setStudent(prev => prev ? { ...prev, phone: e.target.value } : prev)}
+                          className="mt-1 w-full px-3 py-2 border border-slate-300 rounded-lg text-sm"
+                        />
+                      ) : (
+                        <dd className="text-base text-slate-900 mt-1">{student.phone || 'Not provided'}</dd>
+                      )}
+                    </div>
+                    <div>
+                      <dt className="text-sm font-medium text-slate-600">Country</dt>
+                      {isEditing ? (
+                        <input
+                          value={student.country || ''}
+                          onChange={(e) => setStudent(prev => prev ? { ...prev, country: e.target.value } : prev)}
+                          className="mt-1 w-full px-3 py-2 border border-slate-300 rounded-lg text-sm"
+                        />
+                      ) : (
+                        <dd className="text-base text-slate-900 mt-1">{student.country || 'Not provided'}</dd>
+                      )}
+                    </div>
+                  </div>
+                </div>
+
+                {/* Academic Information */}
+                <div className="bg-slate-50 rounded-xl p-4">
+                  <h3 className="text-lg font-semibold text-slate-900 mb-4 flex items-center">
+                    <Award className="w-5 h-5 mr-2 text-[#05294E]" />
+                    Academic Information
+                  </h3>
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <div>
+                      <dt className="text-sm font-medium text-slate-600">Field of Interest</dt>
+                      {isEditing ? (
+                        <input
+                          value={student.field_of_interest || ''}
+                          onChange={(e) => setStudent(prev => prev ? { ...prev, field_of_interest: e.target.value } : prev)}
+                          className="mt-1 w-full px-3 py-2 border border-slate-300 rounded-lg text-sm"
+                        />
+                      ) : (
+                        <dd className="text-base text-slate-900 mt-1">{student.field_of_interest || 'Not provided'}</dd>
+                      )}
+                    </div>
+                    <div>
+                      <dt className="text-sm font-medium text-slate-600">Academic Level</dt>
+                      {isEditing ? (
+                        <select
+                          value={student.academic_level || ''}
+                          onChange={(e) => setStudent(prev => prev ? { ...prev, academic_level: e.target.value } : prev)}
+                          className="mt-1 w-full px-3 py-2 border border-slate-300 rounded-lg text-sm"
+                        >
+                          <option value="">Select level</option>
+                          <option value="high_school">High School</option>
+                          <option value="bachelor">Bachelor's</option>
+                          <option value="master">Master's</option>
+                          <option value="phd">PhD</option>
+                        </select>
+                      ) : (
+                        <dd className="text-base text-slate-900 mt-1">{student.academic_level || 'Not provided'}</dd>
+                      )}
+                    </div>
+                    <div>
+                      <dt className="text-sm font-medium text-slate-600">GPA</dt>
+                      {isEditing ? (
+                        <input
+                          type="number"
+                          step="0.01"
+                          min="0"
+                          max="4"
+                          value={student.gpa || ''}
+                          onChange={(e) => setStudent(prev => prev ? { ...prev, gpa: e.target.value ? Number(e.target.value) : null } : prev)}
+                          className="mt-1 w-full px-3 py-2 border border-slate-300 rounded-lg text-sm"
+                        />
+                      ) : (
+                        <dd className="text-base text-slate-900 mt-1">{student.gpa ? student.gpa.toFixed(2) : 'Not provided'}</dd>
+                      )}
+                    </div>
+                    <div>
+                      <dt className="text-sm font-medium text-slate-600">English Proficiency</dt>
+                      {isEditing ? (
+                        <select
+                          value={student.english_proficiency || ''}
+                          onChange={(e) => setStudent(prev => prev ? { ...prev, english_proficiency: e.target.value } : prev)}
+                          className="mt-1 w-full px-3 py-2 border border-slate-300 rounded-lg text-sm"
+                        >
+                          <option value="">Select level</option>
+                          <option value="beginner">Beginner</option>
+                          <option value="intermediate">Intermediate</option>
+                          <option value="advanced">Advanced</option>
+                          <option value="native">Native</option>
+                        </select>
+                      ) : (
+                        <dd className="text-base text-slate-900 mt-1">{student.english_proficiency || 'Not provided'}</dd>
+                      )}
+                    </div>
+                    <div>
+                      <dt className="text-sm font-medium text-slate-600">Student Process Type</dt>
+                      <dd className="text-base text-slate-900 mt-1 capitalize">
+                        {isEditingProcessType ? (
+                          <div className="flex items-center gap-2">
+                            <select
+                              value={editingProcessType}
+                              onChange={(e) => setEditingProcessType(e.target.value)}
+                              className="px-3 py-1 border border-slate-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+                              disabled={savingProcessType}
+                            >
+                              <option value="initial">Initial</option>
+                              <option value="transfer">Transfer</option>
+                              <option value="change_of_status">Change of Status</option>
+                              <option value="enrolled">Enrolled</option>
+                            </select>
+                            <button
+                              onClick={handleSaveProcessType}
+                              disabled={savingProcessType}
+                              className="p-1 text-green-600 hover:bg-green-50 rounded transition-colors disabled:opacity-50"
+                              title="Save"
+                            >
+                              {savingProcessType ? (
+                                <svg className="w-4 h-4 animate-spin" fill="none" viewBox="0 0 24 24">
+                                  <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+                                  <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                                </svg>
+                              ) : (
+                                <Save className="w-4 h-4" />
+                              )}
+                            </button>
+                            <button
+                              onClick={handleCancelProcessType}
+                              disabled={savingProcessType}
+                              className="p-1 text-red-600 hover:bg-red-50 rounded transition-colors disabled:opacity-50"
+                              title="Cancel"
+                            >
+                              <X className="w-4 h-4" />
+                            </button>
+                          </div>
+                        ) : (
+                          <div className="flex items-center gap-2">
+                            <span>{student.student_process_type || 'Not defined'}</span>
+                            <button
+                              onClick={handleEditProcessType}
+                              className="p-1 text-blue-600 hover:bg-blue-50 rounded transition-colors"
+                              title="Edit Process Type"
+                            >
+                              <Edit3 className="w-4 h-4" />
+                            </button>
+                          </div>
+                        )}
+                      </dd>
+                    </div>
+                  </div>
+                </div>
+
+                {/* Financial & Scholarship Information */}
+                <div className="bg-slate-50 rounded-xl p-4">
+                  <h3 className="text-lg font-semibold text-slate-900 mb-4 flex items-center">
+                    <CreditCard className="w-5 h-5 mr-2 text-[#05294E]" />
+                    Financial & Scholarship Information
+                  </h3>
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <div>
+                      <dt className="text-sm font-medium text-slate-600">Dependents</dt>
+                      {isEditing ? (
+                        <input
+                          type="number"
+                          min="0"
+                          value={dependents}
+                          onChange={(e) => setDependents(Math.max(0, Number(e.target.value || 0)))}
+                          className="mt-1 w-full px-3 py-2 border border-slate-300 rounded-lg text-sm"
+                        />
+                      ) : (
+                        <dd className="text-base text-slate-900 mt-1">{dependents}</dd>
+                      )}
+                    </div>
+                    <div>
+                      <dt className="text-sm font-medium text-slate-600">Desired Scholarship Range</dt>
+                      {isEditing ? (
+                        <input
+                          type="number"
+                          min="0"
+                          value={student.desired_scholarship_range || ''}
+                          onChange={(e) => setStudent(prev => prev ? { ...prev, desired_scholarship_range: e.target.value ? Number(e.target.value) : null } : prev)}
+                          className="mt-1 w-full px-3 py-2 border border-slate-300 rounded-lg text-sm"
+                        />
+                      ) : (
+                        <dd className="text-base text-slate-900 mt-1">{student.desired_scholarship_range ? `$${student.desired_scholarship_range.toLocaleString()}` : 'Not specified'}</dd>
+                      )}
+                    </div>
+                  </div>
+                </div>
+
+                {/* System & Status Information */}
+                <div className="bg-slate-50 rounded-xl p-4">
+                  <h3 className="text-lg font-semibold text-slate-900 mb-4 flex items-center">
+                    <Clock className="w-5 h-5 mr-2 text-[#05294E]" />
+                    System & Status Information
+                  </h3>
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <div>
+                      <dt className="text-sm font-medium text-slate-600">Registration Date</dt>
+                      <dd className="text-base text-slate-900 mt-1">{new Date(student.student_created_at).toLocaleDateString()}</dd>
+                    </div>
+                    <div>
+                      <dt className="text-sm font-medium text-slate-600">Current Status</dt>
+                      <div className="flex items-center space-x-2 mt-1">
+                        <div className={`w-2 h-2 rounded-full ${student.is_locked ? 'bg-green-500' :
+                          student.application_status === 'approved' ? 'bg-blue-500' :
+                            student.application_status === 'under_review' ? 'bg-yellow-500' :
+                              student.total_applications > 0 ? 'bg-orange-500' : 'bg-gray-500'
+                          }`}></div>
+                        <span className="text-sm font-medium">
+                          {student.is_locked ? 'Scholarship Selected' :
+                            student.application_status === 'approved' ? 'Approved - Pending Payment' :
+                              student.application_status === 'under_review' ? 'Under Review' :
+                                student.total_applications > 0 ? 'Applications Submitted' : 'No Applications Yet'}
+                        </span>
                       </div>
                     </div>
-                    )}
-
-                    {/* Lista de notas existentes */}
-                    <div className="space-y-3">
-                      {adminNotes.length > 0 ? (
-                        <div className="space-y-3">
-                          {adminNotes.map((note, index) => (
-                            <div key={note.id} className="bg-white border border-slate-200 rounded-lg p-4">
-                              <div className="flex items-start justify-between mb-2">
-                                <div className="flex items-center space-x-2">
-                                  <div className="w-2 h-2 bg-[#05294E] rounded-full flex-shrink-0 mt-2"></div>
-                                  <div>
-                                    <p className="text-sm font-medium text-slate-900">{note.created_by_name}</p>
-                                    <p className="text-xs text-slate-500">
-                                      {new Date(note.created_at).toLocaleString('pt-BR', {
-                                        year: 'numeric',
-                                        month: '2-digit',
-                                        day: '2-digit',
-                                        hour: '2-digit',
-                                        minute: '2-digit'
-                                      })}
-                                    </p>
-                                  </div>
-                                </div>
-                                <div className="flex items-center space-x-2">
-                                  <span className="text-xs text-slate-400 bg-slate-100 px-2 py-1 rounded-full">
-                                    #{adminNotes.length - index}
+                    {student.seller_referral_code && (
+                      <div className="md:col-span-2">
+                        <dt className="text-sm font-medium text-slate-600">Referral Code</dt>
+                        {isEditing ? (
+                          <input
+                            value={student.seller_referral_code}
+                            onChange={(e) => setStudent(prev => prev ? { ...prev, seller_referral_code: e.target.value } : prev)}
+                            className="mt-1 w-full px-3 py-2 border border-slate-300 rounded-lg text-sm font-mono"
+                          />
+                        ) : (
+                          <div className="mt-1 space-y-2">
+                            <dd className="text-base text-slate-900 font-mono bg-slate-200 px-3 py-2 rounded-lg">{student.seller_referral_code}</dd>
+                            {referralInfo && (
+                              <div className="bg-blue-50 border border-blue-200 rounded-lg p-3">
+                                <div className="flex items-center space-x-2 mb-2">
+                                  <div className={`w-2 h-2 rounded-full ${referralInfo.type === 'seller' ? 'bg-green-500' :
+                                    referralInfo.type === 'affiliate' ? 'bg-blue-500' :
+                                      'bg-purple-500'
+                                    }`}></div>
+                                  <span className="text-sm font-medium text-slate-700">
+                                    {referralInfo.type === 'seller' ? 'Seller' :
+                                      referralInfo.type === 'affiliate' ? 'Affiliate' :
+                                        (referralInfo.isRewards ? 'Student Referral (Rewards)' : 'Student')} Referral
                                   </span>
-                                  <div className="flex items-center space-x-1">
-                                    <button
-                                      onClick={() => handleEditNote(note.id)}
-                                      disabled={savingNotes || editingNoteId === note.id}
-                                      className="p-1 text-slate-400 hover:text-blue-600 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
-                                      title="Edit note"
-                                    >
-                                      <Edit3 className="w-4 h-4" />
-                                    </button>
-                                    <button
-                                      onClick={() => handleDeleteNote(note.id)}
-                                      disabled={savingNotes || editingNoteId === note.id}
-                                      className="p-1 text-slate-400 hover:text-red-600 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
-                                      title="Delete note"
-                                    >
-                                      <X className="w-4 h-4" />
-                                    </button>
+                                </div>
+                                <div className="text-sm text-slate-600">
+                                  <div className="font-medium">{referralInfo.name || 'Unknown'}</div>
+                                  <div className="text-slate-500">{referralInfo.email || 'No email'}</div>
+                                  {referralInfo.type === 'seller' && (referralInfo.affiliateName || referralInfo.affiliateEmail) && (
+                                    <div className="mt-2 pl-3 border-l-2 border-blue-200">
+                                      <div className="text-xs text-slate-500 mb-1">Affiliate</div>
+                                      <div className="text-sm font-medium text-slate-700">{referralInfo.affiliateName || 'Unknown'}</div>
+                                      <div className="text-sm text-slate-500">{referralInfo.affiliateEmail || 'No email'}</div>
+                                    </div>
+                                  )}
+                                </div>
+                              </div>
+                            )}
+                            {!referralInfo && (
+                              <div className="bg-slate-50 border border-slate-200 rounded-lg p-3">
+                                <div className="text-sm text-slate-500">
+                                  <div className="flex items-center space-x-2">
+                                    <div className="w-2 h-2 rounded-full bg-slate-400"></div>
+                                    <span>Referral source not found</span>
                                   </div>
                                 </div>
                               </div>
-                              
-                              {/* Conteúdo da nota - modo visualização ou edição */}
-                              {editingNoteId === note.id ? (
-                                <div className="ml-4 space-y-3">
-                                  <textarea
-                                    value={editingNoteContent}
-                                    onChange={(e) => setEditingNoteContent(e.target.value)}
-                                    className="w-full px-3 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-[#05294E] focus:border-[#05294E] resize-none text-sm"
-                                    rows={3}
-                                    disabled={savingNotes}
-                                  />
+                            )}
+                          </div>
+                        )}
+                      </div>
+                    )}
+                  </div>
+                </div>
+
+                {/* Admin Notes - Only for Platform Admins */}
+                {isPlatformAdmin && (
+                  <div className="bg-slate-50 rounded-xl p-4">
+                    <div className="mb-4 flex items-center justify-between">
+                      <h3 className="text-lg font-semibold text-slate-900 flex items-center">
+                        <FileText className="w-5 h-5 mr-2 text-[#05294E]" />
+                        Admin Notes
+                      </h3>
+                      <button
+                        onClick={() => setIsAddingNote(true)}
+                        className="px-3 py-1 bg-[#05294E] hover:bg-[#05294E]/90 text-white text-sm rounded-lg flex items-center space-x-1"
+                      >
+                        <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" /></svg>
+                        <span>New Note</span>
+                      </button>
+                    </div>
+                    <div className="space-y-4">
+                      {/* Formulário para adicionar nova nota */}
+                      {isAddingNote && (
+                        <div className="bg-white border border-slate-200 rounded-lg p-4">
+                          <label className="block text-sm font-medium text-slate-700 mb-2">
+                            Add a new note
+                          </label>
+                          <textarea
+                            value={newNoteContent}
+                            onChange={(e) => setNewNoteContent(e.target.value)}
+                            placeholder="Enter your note about this student..."
+                            className="w-full px-3 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-[#05294E] focus:border-[#05294E] resize-none"
+                            rows={3}
+                            disabled={savingNotes}
+                          />
+                          <div className="flex items-center justify-between mt-3">
+                            <p className="text-xs text-slate-500">
+                              These notes are only visible to platform administrators.
+                            </p>
+                            <div className="flex items-center space-x-2">
+                              <button
+                                onClick={() => { setIsAddingNote(false); setNewNoteContent(''); }}
+                                disabled={savingNotes}
+                                className="px-4 py-2 bg-slate-600 hover:bg-slate-700 text-white text-sm rounded-lg flex items-center space-x-2 disabled:opacity-50 disabled:cursor-not-allowed"
+                              >
+                                <span>Cancel</span>
+                              </button>
+                              <button
+                                onClick={async () => { await handleAddNote(); setIsAddingNote(false); }}
+                                disabled={savingNotes || !newNoteContent.trim()}
+                                className="px-4 py-2 bg-[#05294E] hover:bg-[#05294E]/90 text-white text-sm rounded-lg flex items-center space-x-2 disabled:opacity-50 disabled:cursor-not-allowed"
+                              >
+                                <Save className="w-4 h-4" />
+                                <span>{savingNotes ? 'Adding...' : 'Add Note'}</span>
+                              </button>
+                            </div>
+                          </div>
+                        </div>
+                      )}
+
+                      {/* Lista de notas existentes */}
+                      <div className="space-y-3">
+                        {adminNotes.length > 0 ? (
+                          <div className="space-y-3">
+                            {adminNotes.map((note, index) => (
+                              <div key={note.id} className="bg-white border border-slate-200 rounded-lg p-4">
+                                <div className="flex items-start justify-between mb-2">
                                   <div className="flex items-center space-x-2">
+                                    <div className="w-2 h-2 bg-[#05294E] rounded-full flex-shrink-0 mt-2"></div>
+                                    <div>
+                                      <p className="text-sm font-medium text-slate-900">{note.created_by_name}</p>
+                                      <p className="text-xs text-slate-500">
+                                        {new Date(note.created_at).toLocaleString('pt-BR', {
+                                          year: 'numeric',
+                                          month: '2-digit',
+                                          day: '2-digit',
+                                          hour: '2-digit',
+                                          minute: '2-digit'
+                                        })}
+                                      </p>
+                                    </div>
+                                  </div>
+                                  <div className="flex items-center space-x-2">
+                                    <span className="text-xs text-slate-400 bg-slate-100 px-2 py-1 rounded-full">
+                                      #{adminNotes.length - index}
+                                    </span>
+                                    <div className="flex items-center space-x-1">
+                                      <button
+                                        onClick={() => handleEditNote(note.id)}
+                                        disabled={savingNotes || editingNoteId === note.id}
+                                        className="p-1 text-slate-400 hover:text-blue-600 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                                        title="Edit note"
+                                      >
+                                        <Edit3 className="w-4 h-4" />
+                                      </button>
+                                      <button
+                                        onClick={() => handleDeleteNote(note.id)}
+                                        disabled={savingNotes || editingNoteId === note.id}
+                                        className="p-1 text-slate-400 hover:text-red-600 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                                        title="Delete note"
+                                      >
+                                        <X className="w-4 h-4" />
+                                      </button>
+                                    </div>
+                                  </div>
+                                </div>
+
+                                {/* Conteúdo da nota - modo visualização ou edição */}
+                                {editingNoteId === note.id ? (
+                                  <div className="ml-4 space-y-3">
+                                    <textarea
+                                      value={editingNoteContent}
+                                      onChange={(e) => setEditingNoteContent(e.target.value)}
+                                      className="w-full px-3 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-[#05294E] focus:border-[#05294E] resize-none text-sm"
+                                      rows={3}
+                                      disabled={savingNotes}
+                                    />
+                                    <div className="flex items-center space-x-2">
+                                      <button
+                                        onClick={handleSaveEditNote}
+                                        disabled={savingNotes || !editingNoteContent.trim()}
+                                        className="px-3 py-1 bg-green-600 hover:bg-green-700 text-white text-sm rounded-lg flex items-center space-x-1 disabled:opacity-50 disabled:cursor-not-allowed"
+                                      >
+                                        <Save className="w-3 h-3" />
+                                        <span>{savingNotes ? 'Saving...' : 'Save'}</span>
+                                      </button>
+                                      <button
+                                        onClick={handleCancelEditNote}
+                                        disabled={savingNotes}
+                                        className="px-3 py-1 bg-slate-600 hover:bg-slate-700 text-white text-sm rounded-lg flex items-center space-x-1 disabled:opacity-50 disabled:cursor-not-allowed"
+                                      >
+                                        <X className="w-3 h-3" />
+                                        <span>Cancel</span>
+                                      </button>
+                                    </div>
+                                  </div>
+                                ) : (
+                                  <p className="text-slate-900 text-sm whitespace-pre-wrap ml-4">
+                                    {note.content}
+                                  </p>
+                                )}
+                              </div>
+                            ))}
+                          </div>
+                        ) : (
+                          <div className="text-center py-6">
+                            <FileText className="w-8 h-8 text-slate-300 mx-auto mb-2" />
+                            <p className="text-slate-500 text-sm">No notes added yet</p>
+                            <p className="text-xs text-slate-400 mt-1">Add your first note above</p>
+                          </div>
+                        )}
+                      </div>
+                    </div>
+                  </div>
+                )}
+              </div>
+            </div>
+
+            {student.scholarship_title && student.is_application_fee_paid ? (
+              <div className="bg-white rounded-2xl shadow-sm border border-slate-200">
+                <div className="bg-gradient-to-r rounded-t-2xl from-slate-700 to-slate-800 px-6 py-4">
+                  <h2 className="text-xl font-semibold text-white flex items-center">
+                    <Award className="w-6 h-6 mr-3" />
+                    Selected Scholarship
+                  </h2>
+                </div>
+                <div className="p-6 space-y-3">
+                  <div>
+                    <dt className="text-sm font-medium text-slate-600">Scholarship Program</dt>
+                    <dd className="text-lg font-semibold text-slate-900">{student.scholarship_title}</dd>
+                  </div>
+                  <div>
+                    <dt className="text-sm font-medium text-slate-600">University</dt>
+                    <dd className="text-lg font-semibold text-slate-900 flex items-center"><Building className="w-4 h-4 mr-1" />{student.university_name}</dd>
+                  </div>
+                  <div>
+                    <dt className="text-sm font-medium text-slate-600">Course</dt>
+                    <dd className="text-base font-semibold text-slate-900">
+                      {(() => {
+                        const paidApplication = (student.all_applications || []).find((app: any) => app.is_application_fee_paid);
+                        const scholarship = paidApplication?.scholarships
+                          ? (Array.isArray(paidApplication.scholarships) ? paidApplication.scholarships[0] : paidApplication.scholarships)
+                          : null;
+                        return scholarship?.field_of_study || 'N/A';
+                      })()}
+                    </dd>
+                  </div>
+                  <div>
+                    <dt className="text-sm font-medium text-slate-600">Annual Value (with Scholarship)</dt>
+                    <dd className="text-base font-semibold text-slate-900">
+                      {(() => {
+                        const paidApplication = (student.all_applications || []).find((app: any) => app.is_application_fee_paid);
+                        const scholarship = paidApplication?.scholarships
+                          ? (Array.isArray(paidApplication.scholarships) ? paidApplication.scholarships[0] : paidApplication.scholarships)
+                          : null;
+                        const v = scholarship?.annual_value_with_scholarship;
+                        return typeof v === 'number' ? `$${v.toLocaleString()}` : (v ? `$${Number(v).toLocaleString()}` : 'N/A');
+                      })()}
+                    </dd>
+                  </div>
+                </div>
+              </div>
+            ) : null}
+
+            {/* Documents */}
+            <div className="bg-white rounded-2xl shadow-sm border border-slate-200">
+              <div className="bg-gradient-to-r rounded-t-2xl from-[#05294E] to-[#0a4a7a] px-6 py-4">
+                <h2 className="text-xl font-semibold text-white flex items-center">
+                  <FileText className="w-6 h-6 mr-3" />
+                  Student Documents
+                </h2>
+              </div>
+              <div className="p-6">
+                {(() => {
+                  const allApplications = student.all_applications || [];
+                  if (allApplications.length === 0) {
+                    return (
+                      <div className="text-center py-8">
+                        <div className="mx-auto w-16 h-16 bg-slate-100 rounded-full flex items-center justify-center mb-4">
+                          <FileText className="w-8 h-8 text-slate-400" />
+                        </div>
+                        <h3 className="text-lg font-medium text-slate-900 mb-2">No Applications Yet</h3>
+                      </div>
+                    );
+                  }
+                  return (
+                    <div className="space-y-4">
+                      {allApplications
+                        .sort((a: any, b: any) => {
+                          // Aplicações aprovadas primeiro
+                          if (a.status === 'approved' && b.status !== 'approved') return -1;
+                          if (b.status === 'approved' && a.status !== 'approved') return 1;
+                          return 0;
+                        })
+                        .map((app: any, i: number) => {
+                          const appKey = app.id || `app-${i}`;
+                          const isExpanded = expandedApps[appKey] || false;
+
+                          return (
+                            <div key={appKey} className={`border rounded-xl overflow-hidden ${app.status === 'approved'
+                              ? 'border-green-200 bg-green-50'
+                              : app.status === 'rejected'
+                                ? 'border-red-200 bg-red-50'
+                                : 'border-slate-200'
+                              }`}>
+                              <button onClick={() => setExpandedApps(p => ({ ...p, [appKey]: !isExpanded }))} className={`w-full px-4 py-3 transition-colors text-left flex items-center justify-between ${app.status === 'approved'
+                                ? 'bg-green-50 hover:bg-green-100'
+                                : app.status === 'rejected'
+                                  ? 'bg-red-50 hover:bg-red-100'
+                                  : 'bg-slate-50 hover:bg-slate-100'
+                                }`}>
+                                <div className="flex items-center space-x-3">
+                                  {app.status === 'approved' && (
+                                    <div className="w-2 h-2 bg-green-500 rounded-full flex-shrink-0"></div>
+                                  )}
+                                  {app.status === 'rejected' && (
+                                    <div className="w-2 h-2 bg-red-500 rounded-full flex-shrink-0"></div>
+                                  )}
+                                  <div>
+                                    <h4 className="font-semibold text-slate-900 flex items-center space-x-2">
+                                      <span>{app.scholarships?.title || 'Scholarship Application'}</span>
+                                      {app.status === 'approved' && (
+                                        <span className="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-green-100 text-green-800">
+                                          Approved
+                                        </span>
+                                      )}
+                                    </h4>
+                                    <p className="text-sm text-slate-600">{app.scholarships?.universities?.name || 'University'} • {app.documents ? app.documents.length : 0} documents</p>
+                                    <div className="mt-1 text-xs text-slate-700">
+                                      <div>
+                                        <span className="text-slate-500">Course:</span>{' '}
+                                        <span className="font-medium">{(() => {
+                                          const scholarship = app.scholarships ? (Array.isArray(app.scholarships) ? app.scholarships[0] : app.scholarships) : null;
+                                          return scholarship?.field_of_study || 'N/A';
+                                        })()}</span>
+                                      </div>
+                                      <div>
+                                        <span className="text-slate-500">Annual Value:</span>{' '}
+                                        <span className="font-medium">{(() => {
+                                          const scholarship = app.scholarships ? (Array.isArray(app.scholarships) ? app.scholarships[0] : app.scholarships) : null;
+                                          const v = scholarship?.annual_value_with_scholarship;
+                                          return typeof v === 'number' ? `$${v.toLocaleString()}` : (v ? `$${Number(v).toLocaleString()}` : 'N/A');
+                                        })()}</span>
+                                      </div>
+                                    </div>
+                                  </div>
+                                </div>
+                                <svg className={`w-5 h-5 text-slate-400 transition-transform ${isExpanded ? 'rotate-180' : ''}`} fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" /></svg>
+                              </button>
+                              {isExpanded && (
+                                <div className="p-4 bg-white border-t border-slate-200">
+                                  {app.documents && app.documents.length > 0 ? (
+                                    <div className="grid gap-3">
+                                      {app.documents.map((doc: any, docIndex: number) => (
+                                        <div key={`${app.id}-${doc.type}-${docIndex}`} className="border border-slate-200 rounded-lg p-4">
+                                          <div className="flex flex-col md:flex-row items-start justify-between gap-2 mb-3">
+                                            <div className="flex-1 min-w-0">
+                                              <div className="flex items-center space-x-2 mb-1">
+                                                <h5 className="font-semibold text-slate-900 text-sm">{(doc.type || '').replace('_', ' ').replace(/^./, (c: string) => c.toUpperCase())}</h5>
+                                              </div>
+                                              <p className="text-xs text-slate-600 mb-2">Document submitted by student</p>
+                                            </div>
+                                            <div className="flex items-center flex-wrap gap-1 ml-0 md:ml-3 flex-shrink-0 justify-start md:justify-end w-full md:w-auto">
+                                              <button
+                                                onClick={() => handleViewDocument({
+                                                  file_url: doc.url,
+                                                  filename: doc.url.split('/').pop() || `${doc.type}.pdf`
+                                                })}
+                                                className="text-xs text-[#05294E] hover:text-[#05294E]/80 font-medium flex items-center space-x-1 transition-colors px-2 py-1 border border-[#05294E] rounded-md hover:bg-[#05294E]/5"
+                                              >
+                                                <Eye className="w-3 h-3" />
+                                                <span className="hidden md:inline">View</span>
+                                              </button>
+                                              {canUniversityManage && (
+                                                <label className="text-xs text-slate-600 hover:text-slate-800 font-medium flex items-center space-x-1 transition-colors px-2 py-1 border border-slate-300 rounded-md hover:bg-slate-50 cursor-pointer">
+                                                  <input
+                                                    type="file"
+                                                    accept="application/pdf,image/*"
+                                                    className="hidden"
+                                                    onChange={(e) => {
+                                                      const f = e.target.files?.[0];
+                                                      if (f) handleUploadOrReplaceDocument(app.id, doc.type, f);
+                                                    }}
+                                                  />
+                                                  <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 4v16h16M8 12l3 3 5-7" /></svg>
+                                                  <span className="hidden md:inline">{uploadingDocs[`${app.id}:${doc.type}`] ? 'Uploading...' : 'Replace'}</span>
+                                                </label>
+                                              )}
+                                              {isPlatformAdmin && ['passport', 'funds_proof', 'diploma'].includes(doc.type) && (doc.status || '').toLowerCase() !== 'approved' && (
+                                                (doc.status || '').toLowerCase() !== 'rejected' ||
+                                                (doc.status || '').toLowerCase() === 'rejected' && doc.uploaded_at && doc.rejected_at && new Date(doc.uploaded_at) > new Date(doc.rejected_at)
+                                              ) && (
+                                                  <>
+                                                    <button
+                                                      onClick={() => handleApproveDocument(app.id, doc.type)}
+                                                      disabled={!!approvingDocs[`${app.id}:${doc.type}`]}
+                                                      className={`text-xs font-medium flex items-center space-x-1 transition-colors px-2 py-1 rounded-md border ${approvingDocs[`${app.id}:${doc.type}`] ? 'text-slate-400 border-slate-200 bg-slate-50' : 'text-green-700 border-green-300 hover:bg-green-50'}`}
+                                                    >
+                                                      <CheckCircle className="w-3 h-3" />
+                                                      <span className="hidden md:inline">Approve</span>
+                                                    </button>
+                                                    <button
+                                                      onClick={() => openRejectDocModal(app.id, doc.type)}
+                                                      disabled={!!rejectingDocs[`${app.id}:${doc.type}`]}
+                                                      className={`text-xs font-medium flex items-center space-x-1 transition-colors px-2 py-1 rounded-md border ${rejectingDocs[`${app.id}:${doc.type}`] ? 'text-slate-400 border-slate-200 bg-slate-50' : 'text-red-700 border-red-300 hover:bg-red-50'}`}
+                                                    >
+                                                      <XCircle className="w-3 h-3" />
+                                                      <span className="hidden md:inline">Reject</span>
+                                                    </button>
+                                                  </>
+                                                )}
+                                            </div>
+                                          </div>
+                                          <div className="flex flex-wrap items-center gap-2">
+                                            <span className={`inline-flex items-center px-2 py-1 rounded-md text-xs font-medium ${(doc.status || 'pending').toLowerCase() === 'approved' ? 'text-green-700 bg-green-100' :
+                                              (doc.status || 'pending').toLowerCase() === 'under_review' ? 'text-blue-700 bg-blue-100' :
+                                                (doc.status || 'pending').toLowerCase() === 'changes_requested' ? 'text-red-700 bg-red-100' :
+                                                  'text-amber-700 bg-amber-100'
+                                              }`}>
+                                              {(doc.status || 'pending').replace('_', ' ').replace(/^./, (c: string) => c.toUpperCase())}
+                                            </span>
+                                            {doc.uploaded_at && (
+                                              <span className="text-xs text-slate-500 bg-slate-100 px-2 py-1 rounded-md">Uploaded {new Date(doc.uploaded_at).toLocaleDateString()}</span>
+                                            )}
+                                            {doc.approved_at && (
+                                              <span className="text-xs text-green-600 bg-green-50 px-2 py-1 rounded-md">Approved {new Date(doc.approved_at).toLocaleDateString()}</span>
+                                            )}
+                                            {doc.rejected_at && (
+                                              <span className="text-xs text-red-600 bg-red-50 px-2 py-1 rounded-md">Rejected {new Date(doc.rejected_at).toLocaleDateString()}</span>
+                                            )}
+                                            {doc.rejection_reason && (
+                                              <span className="text-xs text-red-600 bg-red-50 px-2 py-1 rounded-md">
+                                                <span className="font-medium">Reason:</span> {doc.rejection_reason}
+                                              </span>
+                                            )}
+                                            {doc.changes_requested_at && (
+                                              <span className="text-xs text-red-600 bg-red-50 px-2 py-1 rounded-md">Changes Requested {new Date(doc.changes_requested_at).toLocaleDateString()}</span>
+                                            )}
+                                          </div>
+
+                                          {/* Exibir justificativa quando status for "changes_requested" */}
+                                          {doc.status === 'changes_requested' && doc.review_notes && (
+                                            <div className="mt-3 p-3 bg-red-50 border border-red-200 rounded-lg">
+                                              <div className="flex items-start space-x-2">
+                                                <div className="flex-shrink-0">
+                                                  <svg className="w-4 h-4 text-red-500 mt-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-2.5L13.732 4c-.77-.833-1.732-.833-2.5 0L4.268 18.5c-.77.833.192 2.5 1.732 2.5z" />
+                                                  </svg>
+                                                </div>
+                                                <div className="flex-1">
+                                                  <h5 className="text-sm font-medium text-red-800 mb-1">University Feedback</h5>
+                                                  <p className="text-sm text-red-700">{doc.review_notes}</p>
+                                                </div>
+                                              </div>
+                                            </div>
+                                          )}
+                                        </div>
+                                      ))}
+                                    </div>
+                                  ) : (
+                                    <div className="text-center py-6">
+                                      <div className="mx-auto w-12 h-12 bg-slate-100 rounded-full flex items-center justify-center mb-3">
+                                        <FileText className="w-6 h-6 text-slate-400" />
+                                      </div>
+                                      <h4 className="text-sm font-medium text-slate-900 mb-1">No Documents Submitted</h4>
+                                      <p className="text-xs text-slate-500">Student has not uploaded any documents yet.</p>
+                                    </div>
+                                  )}
+
+                                  {/* Application Approval Section - Only for Platform Admins */}
+                                  {isPlatformAdmin && (
+                                    <div className={`mt-4 p-4 rounded-lg border ${app.status === 'approved'
+                                      ? 'bg-green-50 border-green-200'
+                                      : 'bg-slate-50 border-slate-200'
+                                      }`}>
+                                      <div className="flex items-center justify-between mb-3">
+                                        <div>
+                                          <h4 className="font-semibold text-slate-900">Application Approval</h4>
+                                          <p className="text-sm text-slate-600">
+                                            {app.status === 'approved'
+                                              ? 'This application has been approved.'
+                                              : 'You can approve this application regardless of document status.'
+                                            }
+                                          </p>
+                                        </div>
+                                        {app.status === 'approved' && (
+                                          <div className="flex items-center space-x-1 text-green-600">
+                                            <CheckCircle className="w-4 h-4" />
+                                            <span className="text-sm font-medium">Approved</span>
+                                          </div>
+                                        )}
+                                      </div>
+                                      <div className="flex flex-col sm:flex-row gap-2">
+                                        <button
+                                          onClick={() => {
+                                            setPendingRejectAppId(app.id);
+                                            setShowRejectStudentModal(true);
+                                          }}
+                                          disabled={approvingStudent || rejectingStudent || app.status === 'approved' || app.status === 'rejected' || app.status === 'enrolled'}
+                                          className={`px-4 py-2 rounded-lg font-medium border transition-colors text-center text-sm ${app.status === 'rejected'
+                                            ? 'bg-red-100 text-red-700 border-red-300 cursor-not-allowed'
+                                            : 'text-red-600 border-red-200 hover:bg-red-50 disabled:opacity-50 disabled:cursor-not-allowed'
+                                            }`}
+                                        >
+                                          {app.status === 'approved' ? 'Application Approved' : app.status === 'rejected' ? 'Application Rejected' : app.status === 'enrolled' ? 'Application Enrolled' : 'Reject Application'}
+                                        </button>
+                                        <button
+                                          disabled={approvingStudent || rejectingStudent || app.status === 'approved' || app.status === 'rejected' || app.status === 'enrolled'}
+                                          onClick={() => approveApplication(app.id)}
+                                          className={`px-4 py-2 rounded-lg font-medium text-white transition-colors text-center text-sm ${app.status === 'approved' || app.status === 'enrolled'
+                                            ? 'bg-green-600 hover:bg-green-700 cursor-not-allowed'
+                                            : app.status === 'rejected'
+                                              ? 'bg-red-600 hover:bg-red-700 cursor-not-allowed'
+                                              : 'bg-[#05294E] hover:bg-[#041f38] disabled:opacity-50 disabled:cursor-not-allowed'
+                                            }`}
+                                        >
+                                          {app.status === 'approved' ? 'Approved' : app.status === 'rejected' ? 'Rejected' : app.status === 'enrolled' ? 'Enrolled' : (approvingStudent ? 'Approving...' : 'Approve Application')}
+                                        </button>
+                                      </div>
+                                    </div>
+                                  )}
+                                </div>
+                              )}
+                            </div>
+                          );
+                        })}
+                    </div>
+                  );
+                })()}
+              </div>
+            </div>
+
+          </div>
+
+          <div className="lg:col-span-4 space-y-6">
+            <div className="bg-white rounded-2xl shadow-sm border border-slate-200">
+              <div className="px-6 py-4 border-b border-slate-200">
+                <h2 className="text-xl font-semibold text-slate-900">Application Progress</h2>
+              </div>
+              <div className="p-6">
+                {/* Current Step Display */}
+                {(() => {
+                  const currentStep = getCurrentStep();
+                  if (!currentStep) return null;
+
+                  const { step, index, status } = currentStep;
+                  const isCompleted = status === 'completed';
+                  const isInProgress = status === 'in_progress';
+                  const isRejected = status === 'rejected';
+
+                  return (
+                    <div className={`p-4 rounded-xl border-2 transition-all duration-200 ${isCompleted ? 'border-green-200 bg-green-50' :
+                      isInProgress ? 'border-blue-200 bg-blue-50' :
+                        isRejected ? 'border-red-200 bg-red-50' :
+                          'border-slate-200 bg-slate-50'
+                      }`}>
+                      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 mb-2">
+                        <div className="flex items-center space-x-3">
+                          <div className={`w-8 h-8 rounded-full flex items-center justify-center text-xs font-semibold flex-shrink-0 ${isCompleted ? 'bg-green-500 text-white' :
+                            isInProgress ? 'bg-blue-500 text-white' :
+                              isRejected ? 'bg-red-500 text-white' :
+                                'bg-slate-300 text-slate-600'
+                            }`}>
+                            {isCompleted ? '✓' : index + 1}
+                          </div>
+                          <div className="min-w-0 flex-1">
+                            <h3 className={`text-sm sm:text-base font-semibold ${isCompleted ? 'text-green-900' :
+                              isInProgress ? 'text-blue-900' :
+                                isRejected ? 'text-red-900' :
+                                  'text-slate-700'
+                              }`}>
+                              {step.label}
+                            </h3>
+                            <p className={`text-xs sm:text-sm ${isCompleted ? 'text-green-700' :
+                              isInProgress ? 'text-blue-700' :
+                                isRejected ? 'text-red-700' :
+                                  'text-slate-500'
+                              }`}>
+                              {(() => {
+                                switch (step.key) {
+                                  case 'selection_fee': return 'Student pays the initial application fee';
+                                  case 'apply': return 'Student submits scholarship application';
+                                  case 'review': return 'University reviews the application';
+                                  case 'application_fee': return 'Student pays the application fee';
+                                  case 'scholarship_fee': return 'Student pays the scholarship fee';
+                                  case 'acceptance_letter': return 'University sends acceptance letter';
+                                  case 'transfer_form': return 'University sends transfer form (for transfer students)';
+                                  case 'i20_fee': return 'Student pays I-20 control fee';
+                                  case 'enrollment': return 'Student enrolls in the program';
+                                  default: return 'Process step';
+                                }
+                              })()}
+                            </p>
+                          </div>
+                        </div>
+                        <div className="flex items-center space-x-2 sm:space-x-3 flex-wrap">
+                          <div className={`px-2 sm:px-3 py-1 rounded-full text-xs font-medium ${isCompleted ? 'bg-green-100 text-green-700' :
+                            isInProgress ? 'bg-blue-100 text-blue-700' :
+                              isRejected ? 'bg-red-100 text-red-700' :
+                                'bg-slate-100 text-slate-500'
+                            }`}>
+                            {isCompleted ? 'Completed' :
+                              isInProgress ? 'In Progress' :
+                                isRejected ? 'Rejected' :
+                                  'Pending'}
+                          </div>
+                          {isInProgress && (
+                            <div className="flex items-center space-x-1 sm:space-x-2">
+                              <div className="w-2 h-2 bg-blue-500 rounded-full animate-pulse"></div>
+                              <span className="text-xs text-blue-600 font-medium">Active</span>
+                            </div>
+                          )}
+                        </div>
+                      </div>
+                    </div>
+                  );
+                })()}
+
+                {/* Expand/Collapse Button */}
+                <div className="mt-4 flex justify-center">
+                  <button
+                    onClick={() => setIsProgressExpanded(!isProgressExpanded)}
+                    className="flex items-center space-x-2 px-3 sm:px-4 py-2 text-xs sm:text-sm font-medium text-slate-600 hover:text-slate-900 hover:bg-slate-50 rounded-lg transition-all duration-200"
+                  >
+                    <span className="whitespace-nowrap">{isProgressExpanded ? 'Show Less' : 'View All Steps'}</span>
+                    <svg
+                      className={`w-3 h-3 sm:w-4 sm:h-4 transition-transform duration-200 ${isProgressExpanded ? 'rotate-180' : ''}`}
+                      fill="none"
+                      stroke="currentColor"
+                      viewBox="0 0 24 24"
+                    >
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
+                    </svg>
+                  </button>
+                </div>
+
+                {/* Expanded Timeline */}
+                <div className={`overflow-hidden transition-all duration-500 ease-in-out ${isProgressExpanded ? 'max-h-[2000px] opacity-100' : 'max-h-0 opacity-0'
+                  }`}>
+                  <div className="mt-6 pt-6 border-t border-slate-200">
+                    <div className="relative">
+                      {/* Timeline Line */}
+                      <div className="absolute left-4 sm:left-6 top-0 bottom-0 w-0.5 bg-slate-200"></div>
+
+                      {/* Steps */}
+                      <div className="space-y-4 sm:space-y-6">
+                        {steps.map((step) => {
+                          const status = getStepStatus(student, step.key);
+                          const isCompleted = status === 'completed';
+                          const isInProgress = status === 'in_progress';
+                          const isRejected = status === 'rejected';
+
+                          return (
+                            <div key={step.key} className="relative flex items-start">
+                              {/* Timeline Dot */}
+                              <div className={`relative z-10 flex-shrink-0 w-8 h-8 sm:w-12 sm:h-12 rounded-full border-2 sm:border-4 border-white shadow-sm flex items-center justify-center ${isCompleted ? 'bg-green-500' :
+                                isInProgress ? 'bg-blue-500' :
+                                  isRejected ? 'bg-red-500' :
+                                    'bg-slate-300'
+                                }`}>
+                                <div className={`w-1.5 h-1.5 sm:w-2 sm:h-2 rounded-full ${isCompleted ? 'bg-white' :
+                                  isInProgress ? 'bg-white' :
+                                    isRejected ? 'bg-white' :
+                                      'bg-slate-100'
+                                  }`}></div>
+                              </div>
+
+                              {/* Content Card */}
+                              <div className="ml-4 sm:ml-6 flex-1 min-w-0">
+                                <div className={`p-3 sm:p-4 rounded-lg border transition-all duration-200 ${isCompleted ? 'border-green-200 bg-green-50' :
+                                  isInProgress ? 'border-blue-200 bg-blue-50' :
+                                    isRejected ? 'border-red-200 bg-red-50' :
+                                      'border-slate-200 bg-slate-50'
+                                  }`}>
+                                  <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2">
+                                    <h4 className={`text-sm font-semibold ${isCompleted ? 'text-green-900' :
+                                      isInProgress ? 'text-blue-900' :
+                                        isRejected ? 'text-red-900' :
+                                          'text-slate-700'
+                                      }`}>
+                                      {step.label}
+                                    </h4>
+                                    <div className={`px-2 py-1 rounded-full text-xs font-medium self-start sm:self-auto ${isCompleted ? 'bg-green-100 text-green-700' :
+                                      isInProgress ? 'bg-blue-100 text-blue-700' :
+                                        isRejected ? 'bg-red-100 text-red-700' :
+                                          'bg-slate-100 text-slate-500'
+                                      }`}>
+                                      {isCompleted ? 'Done' :
+                                        isInProgress ? 'Active' :
+                                          isRejected ? 'Failed' :
+                                            'Waiting'}
+                                    </div>
+                                  </div>
+                                </div>
+                              </div>
+                            </div>
+                          );
+                        })}
+                      </div>
+                    </div>
+                  </div>
+                </div>
+
+                {/* Progress Summary */}
+                <div className="mt-6 p-3 sm:p-4 bg-slate-50 rounded-xl">
+                  <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2 mb-3">
+                    <span className="text-sm font-medium text-slate-700">Overall Progress</span>
+                    <span className="text-sm font-semibold text-slate-900">
+                      {(() => {
+                        const completedSteps = steps.filter(step => getStepStatus(student, step.key) === 'completed').length;
+                        const percentage = Math.round((completedSteps / steps.length) * 100);
+                        return `${percentage}% Complete`;
+                      })()}
+                    </span>
+                  </div>
+                  <div className="w-full bg-slate-200 rounded-full h-2 sm:h-3">
+                    <div
+                      className="bg-[#05294E] h-2 sm:h-3 rounded-full transition-all duration-700 ease-out"
+                      style={{
+                        width: `${(steps.filter(step => getStepStatus(student, step.key) === 'completed').length / steps.length) * 100}%`
+                      }}
+                    />
+                  </div>
+                  <div className="mt-2 text-xs text-slate-500">
+                    {(() => {
+                      const completedSteps = steps.filter(step => getStepStatus(student, step.key) === 'completed').length;
+                      return `${completedSteps} of ${steps.length} steps completed`;
+                    })()}
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            <div className="bg-white rounded-2xl shadow-sm border border-slate-200">
+              <div className="bg-gradient-to-r rounded-t-2xl from-green-600 to-green-700 px-6 py-4">
+                <div className="flex items-center justify-between">
+                  <h2 className="text-xl font-semibold text-white flex items-center">
+                    <CreditCard className="w-6 h-6 mr-3" />
+                    Payment Status
+                  </h2>
+                  {canEditFees && (
+                    <div className="flex items-center space-x-2">
+                      {editingFees ? (
+                        <>
+                          <button
+                            onClick={saveFeeOverrides}
+                            disabled={savingFees}
+                            className="px-3 py-1 bg-[#05294E] hover:bg-[#05294E]/90 text-white text-sm rounded-lg flex items-center space-x-1"
+                          >
+                            <Save className="w-4 h-4" />
+                            <span>{savingFees ? 'Saving...' : 'Save'}</span>
+                          </button>
+                          <button
+                            onClick={cancelEditingFees}
+                            className="px-3 py-1 bg-slate-600 hover:bg-slate-700 text-white text-sm rounded-lg flex items-center space-x-1"
+                          >
+                            <X className="w-4 h-4" />
+                            <span>Cancel</span>
+                          </button>
+                        </>
+                      ) : (
+                        <button
+                          onClick={startEditingFees}
+                          className="px-3 py-1 bg-white/20 hover:bg-white/30 text-white text-sm rounded-lg flex items-center space-x-1"
+                        >
+                          <Edit3 className="w-4 h-4" />
+                          <span>Edit Fees</span>
+                        </button>
+                      )}
+                      {(hasOverride('selection_process') || hasOverride('scholarship_fee') || hasOverride('i20_control_fee')) && !editingFees && (
+                        <button
+                          onClick={resetFeesToDefault}
+                          disabled={savingFees}
+                          className="px-3 py-1 bg-slate-500 hover:bg-slate-600 text-white text-sm rounded-lg flex items-center space-x-1"
+                        >
+                          <X className="w-4 h-4" />
+                          <span>Reset</span>
+                        </button>
+                      )}
+                    </div>
+                  )}
+                </div>
+              </div>
+              <div className="p-6 space-y-4">
+                <div className="bg-slate-50 rounded-xl p-4">
+                  <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-4">
+                    <div className="flex-1">
+                      <dt className="text-sm font-medium text-slate-600">Selection Process Fee</dt>
+                      <dd className="text-sm text-slate-500 mt-1">Required to start applications</dd>
+                      {editingFees ? (
+                        <div className="mt-2">
+                          <input
+                            type="number"
+                            value={editingFees.selection_process}
+                            onChange={(e) => setEditingFees(prev => prev ? { ...prev, selection_process: Number(e.target.value) } : null)}
+                            className="w-32 px-3 py-2 border border-slate-300 rounded-lg text-sm"
+                            min="0"
+                            step="0.01"
+                          />
+                        </div>
+                      ) : (
+                        <dd className="text-sm font-semibold text-slate-700 mt-1 flex items-center">
+                          {(() => {
+                            // Se o pagamento já foi feito, mostrar o valor REAL pago ao invés do esperado
+                            if (student?.has_paid_selection_process_fee && realPaidAmounts.selection_process) {
+                              return formatFeeAmount(realPaidAmounts.selection_process);
+                            }
+
+                            // Caso contrário, calcular valor esperado (para exibição antes do pagamento)
+                            const hasCustomOverride = hasOverride('selection_process');
+                            const base = Number(getFeeAmount('selection_process'));
+                            // ✅ CORREÇÃO: Para simplified, Selection Process Fee é fixo ($350), sem dependentes
+                            // Dependentes só afetam Application Fee ($100 por dependente)
+                            const systemType = student?.system_type || 'legacy';
+                            const finalAmount = hasCustomOverride
+                              ? getFeeAmount('selection_process')
+                              : (systemType === 'simplified' ? base : base + dependents * 150);
+                            const formatted = formatFeeAmount(finalAmount);
+
+                            if (student?.user_id === '935e0eec-82c6-4a70-b013-e85dde6e63f7') {
+                              console.log('🔍 [AdminStudentDetails] jolie8862@uorak.com - Selection Process Fee display:', {
+                                hasCustomOverride,
+                                base,
+                                dependents,
+                                finalAmount,
+                                formatted
+                              });
+                            }
+
+                            return formatted;
+                          })()}
+                          {hasOverride('selection_process') && (
+                            <span className="ml-2 text-xs text-blue-500">(custom)</span>
+                          )}
+                        </dd>
+                      )}
+                    </div>
+                    <div className="flex flex-col gap-3">
+                      {student.has_paid_selection_process_fee ? (
+                        <div className="flex flex-col gap-3">
+                          <div className="flex items-center space-x-2">
+                            <CheckCircle className="h-5 w-5 text-green-600" />
+                            <span className="text-sm font-medium text-green-600">Paid</span>
+                          </div>
+                          {isPlatformAdmin && (
+                            <div className="flex flex-col gap-3">
+                              {editingPaymentMethod === 'selection_process' ? (
+                                <div className="flex flex-col gap-3">
+                                  <select
+                                    value={newPaymentMethod}
+                                    onChange={(e) => setNewPaymentMethod(e.target.value as 'stripe' | 'zelle' | 'manual')}
+                                    className="text-sm px-3 py-2 border border-slate-300 rounded-lg w-full max-w-[150px]"
+                                    disabled={savingPaymentMethod}
+                                  >
+                                    <option value="manual">Outside</option>
+                                    <option value="stripe">Stripe</option>
+                                    <option value="zelle">Zelle</option>
+                                  </select>
+                                  <div className="flex items-center gap-2">
                                     <button
-                                      onClick={handleSaveEditNote}
-                                      disabled={savingNotes || !editingNoteContent.trim()}
-                                      className="px-3 py-1 bg-green-600 hover:bg-green-700 text-white text-sm rounded-lg flex items-center space-x-1 disabled:opacity-50 disabled:cursor-not-allowed"
+                                      onClick={() => handleUpdatePaymentMethod('selection_process')}
+                                      disabled={savingPaymentMethod}
+                                      className="px-4 py-2 bg-green-600 hover:bg-green-700 text-white text-sm rounded-lg flex items-center space-x-2"
                                     >
-                                      <Save className="w-3 h-3" />
-                                      <span>{savingNotes ? 'Saving...' : 'Save'}</span>
+                                      <Save className="w-4 h-4" />
+                                      <span>{savingPaymentMethod ? 'Saving...' : 'Save'}</span>
                                     </button>
                                     <button
-                                      onClick={handleCancelEditNote}
-                                      disabled={savingNotes}
-                                      className="px-3 py-1 bg-slate-600 hover:bg-slate-700 text-white text-sm rounded-lg flex items-center space-x-1 disabled:opacity-50 disabled:cursor-not-allowed"
+                                      onClick={() => setEditingPaymentMethod(null)}
+                                      className="px-4 py-2 bg-slate-600 hover:bg-slate-700 text-white text-sm rounded-lg flex items-center space-x-2"
                                     >
-                                      <X className="w-3 h-3" />
+                                      <X className="w-4 h-4" />
                                       <span>Cancel</span>
                                     </button>
                                   </div>
                                 </div>
                               ) : (
-                                <p className="text-slate-900 text-sm whitespace-pre-wrap ml-4">
-                                  {note.content}
-                                </p>
+                                <button
+                                  onClick={() => {
+                                    setEditingPaymentMethod('selection_process');
+                                    setNewPaymentMethod((student.selection_process_fee_payment_method as 'stripe' | 'zelle' | 'manual') || 'manual');
+                                  }}
+                                  className="px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white text-sm rounded-lg flex items-center space-x-2 w-fit"
+                                >
+                                  <Edit3 className="w-4 h-4" />
+                                  <span>Edit Method</span>
+                                </button>
                               )}
                             </div>
-                          ))}
+                          )}
                         </div>
                       ) : (
-                        <div className="text-center py-6">
-                          <FileText className="w-8 h-8 text-slate-300 mx-auto mb-2" />
-                          <p className="text-slate-500 text-sm">No notes added yet</p>
-                          <p className="text-xs text-slate-400 mt-1">Add your first note above</p>
+                        <div className="flex flex-col gap-3">
+                          <div className="flex items-center space-x-2">
+                            <XCircle className="h-5 w-5 text-red-600" />
+                            <span className="text-sm font-medium text-red-600">Not Paid</span>
+                          </div>
+                          {isPlatformAdmin && (
+                            <button
+                              onClick={() => openPaymentModal('selection_process')}
+                              disabled={markingAsPaid[`${student.student_id}:selection_process`]}
+                              className="px-4 py-2 bg-[#05294E] hover:bg-[#05294E]/90 text-white text-sm rounded-lg flex items-center space-x-2 w-fit"
+                            >
+                              <CheckCircle className="w-4 h-4" />
+                              <span>{markingAsPaid[`${student.student_id}:selection_process`] ? 'Marking...' : 'Mark as Paid'}</span>
+                            </button>
+                          )}
                         </div>
                       )}
                     </div>
                   </div>
                 </div>
-              )}
-            </div>
-          </div>
+                <div className="bg-slate-50 rounded-xl p-4">
+                  <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-4">
+                    <div className="flex-1">
+                      <dt className="text-sm font-medium text-slate-600">Application Fee</dt>
+                      <dd className="text-sm text-slate-500 mt-1">Paid after scholarship approval</dd>
+                      {student.is_application_fee_paid ? (
+                        <dd className="text-sm font-semibold text-slate-700 mt-1">
+                          {(() => {
+                            // ✅ CORREÇÃO: Priorizar aplicação enrolled com fee pago
+                            const enrolledApp = student.all_applications?.find((app: any) => app.status === 'enrolled' && app.is_application_fee_paid);
+                            const paidApplication = enrolledApp || student.all_applications?.find((app: any) => app.is_application_fee_paid);
+                            if (paidApplication?.scholarships) {
+                              const scholarship = Array.isArray(paidApplication.scholarships)
+                                ? paidApplication.scholarships[0]
+                                : paidApplication.scholarships;
 
-          {student.scholarship_title && student.is_application_fee_paid ? (
-            <div className="bg-white rounded-2xl shadow-sm border border-slate-200">
-              <div className="bg-gradient-to-r rounded-t-2xl from-slate-700 to-slate-800 px-6 py-4">
-                <h2 className="text-xl font-semibold text-white flex items-center">
-                  <Award className="w-6 h-6 mr-3" />
-                  Selected Scholarship
-                </h2>
-              </div>
-              <div className="p-6 space-y-3">
-                <div>
-                  <dt className="text-sm font-medium text-slate-600">Scholarship Program</dt>
-                  <dd className="text-lg font-semibold text-slate-900">{student.scholarship_title}</dd>
-                </div>
-                <div>
-                  <dt className="text-sm font-medium text-slate-600">University</dt>
-                  <dd className="text-lg font-semibold text-slate-900 flex items-center"><Building className="w-4 h-4 mr-1" />{student.university_name}</dd>
-                </div>
-                <div>
-                  <dt className="text-sm font-medium text-slate-600">Course</dt>
-                  <dd className="text-base font-semibold text-slate-900">
-                    {(() => {
-                      const paidApplication = (student.all_applications || []).find((app: any) => app.is_application_fee_paid);
-                      const scholarship = paidApplication?.scholarships
-                        ? (Array.isArray(paidApplication.scholarships) ? paidApplication.scholarships[0] : paidApplication.scholarships)
-                        : null;
-                      return scholarship?.field_of_study || 'N/A';
-                    })()}
-                  </dd>
-                </div>
-                <div>
-                  <dt className="text-sm font-medium text-slate-600">Annual Value (with Scholarship)</dt>
-                  <dd className="text-base font-semibold text-slate-900">
-                    {(() => {
-                      const paidApplication = (student.all_applications || []).find((app: any) => app.is_application_fee_paid);
-                      const scholarship = paidApplication?.scholarships
-                        ? (Array.isArray(paidApplication.scholarships) ? paidApplication.scholarships[0] : paidApplication.scholarships)
-                        : null;
-                      const v = scholarship?.annual_value_with_scholarship;
-                      return typeof v === 'number' ? `$${v.toLocaleString()}` : (v ? `$${Number(v).toLocaleString()}` : 'N/A');
-                    })()}
-                  </dd>
-                </div>
-              </div>
-            </div>
-          ) : null}
+                              let baseAmount = scholarship?.application_fee_amount ? Number(scholarship.application_fee_amount) : getFeeAmount('application_fee');
+                              const systemType = userSystemType || 'legacy';
+                              const studentDependents = dependents || Number(student.dependents || 0);
 
-          {/* Documents */}
-          <div className="bg-white rounded-2xl shadow-sm border border-slate-200">
-            <div className="bg-gradient-to-r rounded-t-2xl from-[#05294E] to-[#0a4a7a] px-6 py-4">
-              <h2 className="text-xl font-semibold text-white flex items-center">
-                <FileText className="w-6 h-6 mr-3" />
-                Student Documents
-              </h2>
-            </div>
-            <div className="p-6">
-              {(() => {
-                const allApplications = student.all_applications || [];
-                if (allApplications.length === 0) {
-                  return (
-                    <div className="text-center py-8">
-                      <div className="mx-auto w-16 h-16 bg-slate-100 rounded-full flex items-center justify-center mb-4">
-                        <FileText className="w-8 h-8 text-slate-400" />
-                      </div>
-                      <h3 className="text-lg font-medium text-slate-900 mb-2">No Applications Yet</h3>
+                              // Adicionar $100 por dependente apenas para sistema legacy
+                              if (systemType === 'legacy' && studentDependents > 0) {
+                                baseAmount += studentDependents * 100;
+                              }
+
+                              return formatFeeAmount(baseAmount);
+                            }
+                            return 'Fee paid';
+                          })()}
+                        </dd>
+                      ) : (
+                        <div className="mt-1">
+                          <dd className="text-sm font-semibold text-slate-700">Varies by scholarship</dd>
+                          <div className="text-xs text-slate-500">+ $100 per dependent (applied at checkout)</div>
+                        </div>
+                      )}
                     </div>
-                  );
-                }
-                return (
-                  <div className="space-y-4">
-                    {allApplications
-                      .sort((a: any, b: any) => {
-                        // Aplicações aprovadas primeiro
-                        if (a.status === 'approved' && b.status !== 'approved') return -1;
-                        if (b.status === 'approved' && a.status !== 'approved') return 1;
-                        return 0;
-                      })
-                      .map((app: any, i: number) => {
-                      const appKey = app.id || `app-${i}`;
-                      const isExpanded = expandedApps[appKey] || false;
-                      
-                      return (
-                        <div key={appKey} className={`border rounded-xl overflow-hidden ${
-                          app.status === 'approved' 
-                            ? 'border-green-200 bg-green-50' 
-                            : app.status === 'rejected'
-                            ? 'border-red-200 bg-red-50'
-                            : 'border-slate-200'
-                        }`}>
-                          <button onClick={() => setExpandedApps(p => ({ ...p, [appKey]: !isExpanded }))} className={`w-full px-4 py-3 transition-colors text-left flex items-center justify-between ${
-                            app.status === 'approved' 
-                              ? 'bg-green-50 hover:bg-green-100' 
-                              : app.status === 'rejected'
-                              ? 'bg-red-50 hover:bg-red-100'
-                              : 'bg-slate-50 hover:bg-slate-100'
-                          }`}>
-                            <div className="flex items-center space-x-3">
-                              {app.status === 'approved' && (
-                                <div className="w-2 h-2 bg-green-500 rounded-full flex-shrink-0"></div>
-                              )}
-                              {app.status === 'rejected' && (
-                                <div className="w-2 h-2 bg-red-500 rounded-full flex-shrink-0"></div>
-                              )}
-                            <div>
-                                <h4 className="font-semibold text-slate-900 flex items-center space-x-2">
-                                  <span>{app.scholarships?.title || 'Scholarship Application'}</span>
-                                  {app.status === 'approved' && (
-                                    <span className="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-green-100 text-green-800">
-                                      Approved
-                                    </span>
-                                  )}
-                                </h4>
-                              <p className="text-sm text-slate-600">{app.scholarships?.universities?.name || 'University'} • {app.documents ? app.documents.length : 0} documents</p>
-                              <div className="mt-1 text-xs text-slate-700">
-                                <div>
-                                  <span className="text-slate-500">Course:</span>{' '}
-                                  <span className="font-medium">{(() => {
-                                    const scholarship = app.scholarships ? (Array.isArray(app.scholarships) ? app.scholarships[0] : app.scholarships) : null;
-                                    return scholarship?.field_of_study || 'N/A';
-                                  })()}</span>
-                                </div>
-                                <div>
-                                  <span className="text-slate-500">Annual Value:</span>{' '}
-                                  <span className="font-medium">{(() => {
-                                    const scholarship = app.scholarships ? (Array.isArray(app.scholarships) ? app.scholarships[0] : app.scholarships) : null;
-                                    const v = scholarship?.annual_value_with_scholarship;
-                                    return typeof v === 'number' ? `$${v.toLocaleString()}` : (v ? `$${Number(v).toLocaleString()}` : 'N/A');
-                                  })()}</span>
-                                </div>
-                              </div>
-                              </div>
-                            </div>
-                            <svg className={`w-5 h-5 text-slate-400 transition-transform ${isExpanded ? 'rotate-180' : ''}`} fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" /></svg>
-                          </button>
-                          {isExpanded && (
-                            <div className="p-4 bg-white border-t border-slate-200">
-                              {app.documents && app.documents.length > 0 ? (
-                                <div className="grid gap-3">
-                                  {app.documents.map((doc: any, docIndex: number) => (
-                                  <div key={`${app.id}-${doc.type}-${docIndex}`} className="border border-slate-200 rounded-lg p-4">
-                                    <div className="flex flex-col md:flex-row items-start justify-between gap-2 mb-3">
-                                      <div className="flex-1 min-w-0">
-                                        <div className="flex items-center space-x-2 mb-1">
-                                          <h5 className="font-semibold text-slate-900 text-sm">{(doc.type || '').replace('_',' ').replace(/^./, (c: string) => c.toUpperCase())}</h5>
-                                        </div>
-                                        <p className="text-xs text-slate-600 mb-2">Document submitted by student</p>
-                                      </div>
-                                      <div className="flex items-center flex-wrap gap-1 ml-0 md:ml-3 flex-shrink-0 justify-start md:justify-end w-full md:w-auto">
-                                        <button
-                                          onClick={() => handleViewDocument({
-                                            file_url: doc.url,
-                                            filename: doc.url.split('/').pop() || `${doc.type}.pdf`
-                                          })}
-                                          className="text-xs text-[#05294E] hover:text-[#05294E]/80 font-medium flex items-center space-x-1 transition-colors px-2 py-1 border border-[#05294E] rounded-md hover:bg-[#05294E]/5"
-                                        >
-                                          <Eye className="w-3 h-3" />
-                                          <span className="hidden md:inline">View</span>
-                                        </button>
-                                        {canUniversityManage && (
-                                          <label className="text-xs text-slate-600 hover:text-slate-800 font-medium flex items-center space-x-1 transition-colors px-2 py-1 border border-slate-300 rounded-md hover:bg-slate-50 cursor-pointer">
-                                            <input
-                                              type="file"
-                                              accept="application/pdf,image/*"
-                                              className="hidden"
-                                              onChange={(e) => {
-                                                const f = e.target.files?.[0];
-                                                if (f) handleUploadOrReplaceDocument(app.id, doc.type, f);
-                                              }}
-                                            />
-                                            <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 4v16h16M8 12l3 3 5-7" /></svg>
-                                            <span className="hidden md:inline">{uploadingDocs[`${app.id}:${doc.type}`] ? 'Uploading...' : 'Replace'}</span>
-                                          </label>
-                                        )}
-                                        {isPlatformAdmin && ['passport','funds_proof','diploma'].includes(doc.type) && (doc.status || '').toLowerCase() !== 'approved' && (
-                                          (doc.status || '').toLowerCase() !== 'rejected' || 
-                                          (doc.status || '').toLowerCase() === 'rejected' && doc.uploaded_at && doc.rejected_at && new Date(doc.uploaded_at) > new Date(doc.rejected_at)
-                                        ) && (
-                                          <>
-                                            <button
-                                              onClick={() => handleApproveDocument(app.id, doc.type)}
-                                              disabled={!!approvingDocs[`${app.id}:${doc.type}`]}
-                                              className={`text-xs font-medium flex items-center space-x-1 transition-colors px-2 py-1 rounded-md border ${approvingDocs[`${app.id}:${doc.type}`] ? 'text-slate-400 border-slate-200 bg-slate-50' : 'text-green-700 border-green-300 hover:bg-green-50'}`}
-                                            >
-                                              <CheckCircle className="w-3 h-3" />
-                                              <span className="hidden md:inline">Approve</span>
-                                            </button>
-                                            <button
-                                              onClick={() => openRejectDocModal(app.id, doc.type)}
-                                              disabled={!!rejectingDocs[`${app.id}:${doc.type}`]}
-                                              className={`text-xs font-medium flex items-center space-x-1 transition-colors px-2 py-1 rounded-md border ${rejectingDocs[`${app.id}:${doc.type}`] ? 'text-slate-400 border-slate-200 bg-slate-50' : 'text-red-700 border-red-300 hover:bg-red-50'}`}
-                                            >
-                                              <XCircle className="w-3 h-3" />
-                                              <span className="hidden md:inline">Reject</span>
-                                            </button>
-                                          </>
-                                        )}
-                                      </div>
-                                    </div>
-                                    <div className="flex flex-wrap items-center gap-2">
-                                      <span className={`inline-flex items-center px-2 py-1 rounded-md text-xs font-medium ${
-                                        (doc.status || 'pending').toLowerCase() === 'approved' ? 'text-green-700 bg-green-100' :
-                                        (doc.status || 'pending').toLowerCase() === 'under_review' ? 'text-blue-700 bg-blue-100' :
-                                        (doc.status || 'pending').toLowerCase() === 'changes_requested' ? 'text-red-700 bg-red-100' :
-                                        'text-amber-700 bg-amber-100'
-                                      }`}>
-                                        {(doc.status || 'pending').replace('_',' ').replace(/^./, (c: string) => c.toUpperCase())}
-                                      </span>
-                                      {doc.uploaded_at && (
-                                        <span className="text-xs text-slate-500 bg-slate-100 px-2 py-1 rounded-md">Uploaded {new Date(doc.uploaded_at).toLocaleDateString()}</span>
-                                      )}
-                                      {doc.approved_at && (
-                                        <span className="text-xs text-green-600 bg-green-50 px-2 py-1 rounded-md">Approved {new Date(doc.approved_at).toLocaleDateString()}</span>
-                                      )}
-                                      {doc.rejected_at && (
-                                        <span className="text-xs text-red-600 bg-red-50 px-2 py-1 rounded-md">Rejected {new Date(doc.rejected_at).toLocaleDateString()}</span>
-                                      )}
-                                      {doc.rejection_reason && (
-                                        <span className="text-xs text-red-600 bg-red-50 px-2 py-1 rounded-md">
-                                          <span className="font-medium">Reason:</span> {doc.rejection_reason}
-                                        </span>
-                                      )}
-                                      {doc.changes_requested_at && (
-                                        <span className="text-xs text-red-600 bg-red-50 px-2 py-1 rounded-md">Changes Requested {new Date(doc.changes_requested_at).toLocaleDateString()}</span>
-                                      )}
-                                    </div>
-                                    
-                                    {/* Exibir justificativa quando status for "changes_requested" */}
-                                    {doc.status === 'changes_requested' && doc.review_notes && (
-                                      <div className="mt-3 p-3 bg-red-50 border border-red-200 rounded-lg">
-                                        <div className="flex items-start space-x-2">
-                                          <div className="flex-shrink-0">
-                                            <svg className="w-4 h-4 text-red-500 mt-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-2.5L13.732 4c-.77-.833-1.732-.833-2.5 0L4.268 18.5c-.77.833.192 2.5 1.732 2.5z" />
-                                            </svg>
-                                          </div>
-                                          <div className="flex-1">
-                                            <h5 className="text-sm font-medium text-red-800 mb-1">University Feedback</h5>
-                                            <p className="text-sm text-red-700">{doc.review_notes}</p>
-                                          </div>
-                                        </div>
-                                      </div>
-                                    )}
+                    <div className="flex flex-col gap-3">
+                      {student.is_application_fee_paid ? (
+                        <div className="flex flex-col gap-3">
+                          <div className="flex items-center space-x-2">
+                            <CheckCircle className="h-5 w-5 text-green-600" />
+                            <span className="text-sm font-medium text-green-600">Paid</span>
+                          </div>
+                          {isPlatformAdmin && (
+                            <div className="flex flex-col gap-3">
+                              {editingPaymentMethod === 'application' ? (
+                                <div className="flex flex-col gap-3">
+                                  <select
+                                    value={newPaymentMethod}
+                                    onChange={(e) => setNewPaymentMethod(e.target.value as 'stripe' | 'zelle' | 'manual')}
+                                    className="text-sm px-3 py-2 border border-slate-300 rounded-lg w-full max-w-[150px]"
+                                    disabled={savingPaymentMethod}
+                                  >
+                                    <option value="manual">Outside</option>
+                                    <option value="stripe">Stripe</option>
+                                    <option value="zelle">Zelle</option>
+                                  </select>
+                                  <div className="flex items-center gap-2">
+                                    <button
+                                      onClick={() => handleUpdatePaymentMethod('application')}
+                                      disabled={savingPaymentMethod}
+                                      className="px-4 py-2 bg-green-600 hover:bg-green-700 text-white text-sm rounded-lg flex items-center space-x-2"
+                                    >
+                                      <Save className="w-4 h-4" />
+                                      <span>{savingPaymentMethod ? 'Saving...' : 'Save'}</span>
+                                    </button>
+                                    <button
+                                      onClick={() => setEditingPaymentMethod(null)}
+                                      className="px-4 py-2 bg-slate-600 hover:bg-slate-700 text-white text-sm rounded-lg flex items-center space-x-2"
+                                    >
+                                      <X className="w-4 h-4" />
+                                      <span>Cancel</span>
+                                    </button>
                                   </div>
-                                ))}
                                 </div>
                               ) : (
-                                <div className="text-center py-6">
-                                  <div className="mx-auto w-12 h-12 bg-slate-100 rounded-full flex items-center justify-center mb-3">
-                                    <FileText className="w-6 h-6 text-slate-400" />
-                                  </div>
-                                  <h4 className="text-sm font-medium text-slate-900 mb-1">No Documents Submitted</h4>
-                                  <p className="text-xs text-slate-500">Student has not uploaded any documents yet.</p>
-                                </div>
-                              )}
-                              
-                              {/* Application Approval Section - Only for Platform Admins */}
-                              {isPlatformAdmin && (
-                                <div className={`mt-4 p-4 rounded-lg border ${
-                                  app.status === 'approved' 
-                                    ? 'bg-green-50 border-green-200' 
-                                    : 'bg-slate-50 border-slate-200'
-                                }`}>
-                                  <div className="flex items-center justify-between mb-3">
-                                    <div>
-                                      <h4 className="font-semibold text-slate-900">Application Approval</h4>
-                                      <p className="text-sm text-slate-600">
-                                        {app.status === 'approved' 
-                                          ? 'This application has been approved.' 
-                                          : 'You can approve this application regardless of document status.'
-                                        }
-                                      </p>
-                                    </div>
-                                    {app.status === 'approved' && (
-                                      <div className="flex items-center space-x-1 text-green-600">
-                                        <CheckCircle className="w-4 h-4" />
-                                        <span className="text-sm font-medium">Approved</span>
-                                      </div>
-                                    )}
-                                  </div>
-                                  <div className="flex flex-col sm:flex-row gap-2">
-                                    <button
-                                      onClick={() => {
-                                        setPendingRejectAppId(app.id);
-                                        setShowRejectStudentModal(true);
-                                      }}
-                                      disabled={approvingStudent || rejectingStudent || app.status === 'approved' || app.status === 'rejected' || app.status === 'enrolled'}
-                                      className={`px-4 py-2 rounded-lg font-medium border transition-colors text-center text-sm ${
-                                        app.status === 'rejected' 
-                                          ? 'bg-red-100 text-red-700 border-red-300 cursor-not-allowed' 
-                                          : 'text-red-600 border-red-200 hover:bg-red-50 disabled:opacity-50 disabled:cursor-not-allowed'
-                                      }`}
-                                    >
-                                      {app.status === 'approved' ? 'Application Approved' : app.status === 'rejected' ? 'Application Rejected' : app.status === 'enrolled' ? 'Application Enrolled' : 'Reject Application'}
-                                    </button>
-                                    <button
-                                      disabled={approvingStudent || rejectingStudent || app.status === 'approved' || app.status === 'rejected' || app.status === 'enrolled'}
-                                      onClick={() => approveApplication(app.id)}
-                                      className={`px-4 py-2 rounded-lg font-medium text-white transition-colors text-center text-sm ${
-                                        app.status === 'approved' || app.status === 'enrolled'
-                                          ? 'bg-green-600 hover:bg-green-700 cursor-not-allowed'
-                                          : app.status === 'rejected'
-                                          ? 'bg-red-600 hover:bg-red-700 cursor-not-allowed'
-                                          : 'bg-[#05294E] hover:bg-[#041f38] disabled:opacity-50 disabled:cursor-not-allowed'
-                                      }`}
-                                    >
-                                      {app.status === 'approved' ? 'Approved' : app.status === 'rejected' ? 'Rejected' : app.status === 'enrolled' ? 'Enrolled' : (approvingStudent ? 'Approving...' : 'Approve Application')}
-                                    </button>
-                                  </div>
-                                </div>
+                                <button
+                                  onClick={() => startEditingPaymentMethod('application')}
+                                  className="px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white text-sm rounded-lg flex items-center space-x-2 w-fit"
+                                >
+                                  <Edit3 className="w-4 h-4" />
+                                  <span>Edit Method</span>
+                                </button>
                               )}
                             </div>
                           )}
                         </div>
-                      );
-                    })}
-                  </div>
-                );
-              })()}
-            </div>
-          </div>
-
-        </div>
-
-        <div className="lg:col-span-4 space-y-6">
-          <div className="bg-white rounded-2xl shadow-sm border border-slate-200">
-            <div className="px-6 py-4 border-b border-slate-200">
-              <h2 className="text-xl font-semibold text-slate-900">Application Progress</h2>
-            </div>
-            <div className="p-6">
-              {/* Current Step Display */}
-              {(() => {
-                const currentStep = getCurrentStep();
-                if (!currentStep) return null;
-                
-                const { step, index, status } = currentStep;
-                const isCompleted = status === 'completed';
-                const isInProgress = status === 'in_progress';
-                const isRejected = status === 'rejected';
-                
-                  return (
-                  <div className={`p-4 rounded-xl border-2 transition-all duration-200 ${
-                    isCompleted ? 'border-green-200 bg-green-50' :
-                    isInProgress ? 'border-blue-200 bg-blue-50' :
-                    isRejected ? 'border-red-200 bg-red-50' :
-                    'border-slate-200 bg-slate-50'
-                  }`}>
-                    <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 mb-2">
-                      <div className="flex items-center space-x-3">
-                        <div className={`w-8 h-8 rounded-full flex items-center justify-center text-xs font-semibold flex-shrink-0 ${
-                          isCompleted ? 'bg-green-500 text-white' :
-                          isInProgress ? 'bg-blue-500 text-white' :
-                          isRejected ? 'bg-red-500 text-white' :
-                          'bg-slate-300 text-slate-600'
-                        }`}>
-                          {isCompleted ? '✓' : index + 1}
-                        </div>
-                        <div className="min-w-0 flex-1">
-                          <h3 className={`text-sm sm:text-base font-semibold ${
-                            isCompleted ? 'text-green-900' :
-                            isInProgress ? 'text-blue-900' :
-                            isRejected ? 'text-red-900' :
-                            'text-slate-700'
-                          }`}>
-                            {step.label}
-                          </h3>
-                          <p className={`text-xs sm:text-sm ${
-                            isCompleted ? 'text-green-700' :
-                            isInProgress ? 'text-blue-700' :
-                            isRejected ? 'text-red-700' :
-                            'text-slate-500'
-                          }`}>
-                            {(() => {
-                              switch (step.key) {
-                                case 'selection_fee': return 'Student pays the initial application fee';
-                                case 'apply': return 'Student submits scholarship application';
-                                case 'review': return 'University reviews the application';
-                                case 'application_fee': return 'Student pays the application fee';
-                                case 'scholarship_fee': return 'Student pays the scholarship fee';
-                                case 'acceptance_letter': return 'University sends acceptance letter';
-                                case 'transfer_form': return 'University sends transfer form (for transfer students)';
-                                case 'i20_fee': return 'Student pays I-20 control fee';
-                                case 'enrollment': return 'Student enrolls in the program';
-                                default: return 'Process step';
-                              }
-                            })()}
-                          </p>
-                      </div>
-                      </div>
-                      <div className="flex items-center space-x-2 sm:space-x-3 flex-wrap">
-                        <div className={`px-2 sm:px-3 py-1 rounded-full text-xs font-medium ${
-                          isCompleted ? 'bg-green-100 text-green-700' :
-                          isInProgress ? 'bg-blue-100 text-blue-700' :
-                          isRejected ? 'bg-red-100 text-red-700' :
-                          'bg-slate-100 text-slate-500'
-                        }`}>
-                          {isCompleted ? 'Completed' :
-                           isInProgress ? 'In Progress' :
-                           isRejected ? 'Rejected' :
-                           'Pending'}
-                        </div>
-                        {isInProgress && (
-                          <div className="flex items-center space-x-1 sm:space-x-2">
-                            <div className="w-2 h-2 bg-blue-500 rounded-full animate-pulse"></div>
-                            <span className="text-xs text-blue-600 font-medium">Active</span>
+                      ) : (
+                        <div className="flex flex-col gap-3">
+                          <div className="flex items-center space-x-2">
+                            <XCircle className="h-5 w-5 text-red-600" />
+                            <span className="text-sm font-medium text-red-600">Not Paid</span>
                           </div>
-                        )}
-                      </div>
+                          {isPlatformAdmin && (() => {
+                            // ✅ CORREÇÃO: Priorizar aplicação enrolled, depois approved
+                            const enrolledApp = student.all_applications?.find((app: any) => app.status === 'enrolled');
+                            const approvedApp = enrolledApp || student.all_applications?.find((app: any) => app.status === 'approved');
+                            return approvedApp && (
+                              <button
+                                onClick={() => openPaymentModal('application', approvedApp.id)}
+                                disabled={markingAsPaid[`${student.student_id}:application`]}
+                                className="px-4 py-2 bg-[#05294E] hover:bg-[#05294E]/90 text-white text-sm rounded-lg flex items-center space-x-2 w-fit"
+                              >
+                                <CheckCircle className="w-4 h-4" />
+                                <span>{markingAsPaid[`${student.student_id}:application`] ? 'Marking...' : 'Mark as Paid'}</span>
+                              </button>
+                            );
+                          })()}
+                        </div>
+                      )}
                     </div>
                   </div>
-                );
-              })()}
-              
-              {/* Expand/Collapse Button */}
-              <div className="mt-4 flex justify-center">
-                <button
-                  onClick={() => setIsProgressExpanded(!isProgressExpanded)}
-                  className="flex items-center space-x-2 px-3 sm:px-4 py-2 text-xs sm:text-sm font-medium text-slate-600 hover:text-slate-900 hover:bg-slate-50 rounded-lg transition-all duration-200"
-                >
-                  <span className="whitespace-nowrap">{isProgressExpanded ? 'Show Less' : 'View All Steps'}</span>
-                  <svg 
-                    className={`w-3 h-3 sm:w-4 sm:h-4 transition-transform duration-200 ${isProgressExpanded ? 'rotate-180' : ''}`} 
-                    fill="none" 
-                    stroke="currentColor" 
-                    viewBox="0 0 24 24"
-                  >
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
-                  </svg>
-                </button>
-              </div>
-              
-              {/* Expanded Timeline */}
-              <div className={`overflow-hidden transition-all duration-500 ease-in-out ${
-                isProgressExpanded ? 'max-h-[2000px] opacity-100' : 'max-h-0 opacity-0'
-              }`}>
-                <div className="mt-6 pt-6 border-t border-slate-200">
-                  <div className="relative">
-                    {/* Timeline Line */}
-                    <div className="absolute left-4 sm:left-6 top-0 bottom-0 w-0.5 bg-slate-200"></div>
-                    
-                    {/* Steps */}
-                    <div className="space-y-4 sm:space-y-6">
-                      {steps.map((step) => {
-                        const status = getStepStatus(student, step.key);
-                        const isCompleted = status === 'completed';
-                        const isInProgress = status === 'in_progress';
-                        const isRejected = status === 'rejected';
-                        
-                        return (
-                          <div key={step.key} className="relative flex items-start">
-                            {/* Timeline Dot */}
-                            <div className={`relative z-10 flex-shrink-0 w-8 h-8 sm:w-12 sm:h-12 rounded-full border-2 sm:border-4 border-white shadow-sm flex items-center justify-center ${
-                              isCompleted ? 'bg-green-500' :
-                              isInProgress ? 'bg-blue-500' :
-                              isRejected ? 'bg-red-500' :
-                              'bg-slate-300'
-                            }`}>
-                              <div className={`w-1.5 h-1.5 sm:w-2 sm:h-2 rounded-full ${
-                                isCompleted ? 'bg-white' :
-                                isInProgress ? 'bg-white' :
-                                isRejected ? 'bg-white' :
-                                'bg-slate-100'
-                              }`}></div>
-                            </div>
-                            
-                            {/* Content Card */}
-                            <div className="ml-4 sm:ml-6 flex-1 min-w-0">
-                              <div className={`p-3 sm:p-4 rounded-lg border transition-all duration-200 ${
-                                isCompleted ? 'border-green-200 bg-green-50' :
-                                isInProgress ? 'border-blue-200 bg-blue-50' :
-                                isRejected ? 'border-red-200 bg-red-50' :
-                                'border-slate-200 bg-slate-50'
-                              }`}>
-                                <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2">
-                                  <h4 className={`text-sm font-semibold ${
-                                    isCompleted ? 'text-green-900' :
-                                    isInProgress ? 'text-blue-900' :
-                                    isRejected ? 'text-red-900' :
-                                    'text-slate-700'
-                                  }`}>
-                                    {step.label}
-                                  </h4>
-                                  <div className={`px-2 py-1 rounded-full text-xs font-medium self-start sm:self-auto ${
-                                    isCompleted ? 'bg-green-100 text-green-700' :
-                                    isInProgress ? 'bg-blue-100 text-blue-700' :
-                                    isRejected ? 'bg-red-100 text-red-700' :
-                                    'bg-slate-100 text-slate-500'
-                                  }`}>
-                                    {isCompleted ? 'Done' :
-                                     isInProgress ? 'Active' :
-                                     isRejected ? 'Failed' :
-                                     'Waiting'}
+                </div>
+                <div className="bg-slate-50 rounded-xl p-4">
+                  <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-4">
+                    <div className="flex-1">
+                      <dt className="text-sm font-medium text-slate-600">Scholarship Fee</dt>
+                      <dd className="text-sm text-slate-500 mt-1">Paid after application fee</dd>
+                      {editingFees ? (
+                        <div className="mt-2">
+                          <input
+                            type="number"
+                            value={editingFees.scholarship}
+                            onChange={(e) => setEditingFees(prev => prev ? { ...prev, scholarship: Number(e.target.value) } : null)}
+                            className="w-32 px-3 py-2 border border-slate-300 rounded-lg text-sm"
+                            min="0"
+                            step="0.01"
+                          />
+                        </div>
+                      ) : (
+                        <dd className="text-sm font-semibold text-slate-700 mt-1 flex items-center">
+                          {formatFeeAmount(getFeeAmount('scholarship_fee'))}
+                          {hasOverride('scholarship_fee') && (
+                            <span className="ml-2 text-xs text-blue-500">(custom)</span>
+                          )}
+                        </dd>
+                      )}
+                    </div>
+                    <div className="flex flex-col gap-3">
+                      {(() => {
+                        const isStephanie = student.student_email === 'stephaniecriistine25@gmail.com';
+                        if (isStephanie) {
+                          console.log('🔍 [STEPHANIE DEBUG] Rendering Scholarship Fee:', {
+                            student_is_scholarship_fee_paid: student.is_scholarship_fee_paid,
+                            all_applications: student.all_applications?.map((app: any) => ({
+                              id: app.id,
+                              status: app.status,
+                              is_scholarship_fee_paid: app.is_scholarship_fee_paid
+                            }))
+                          });
+                        }
+                        return null;
+                      })()}
+                      {student.is_scholarship_fee_paid ? (
+                        <div className="flex flex-col gap-3">
+                          <div className="flex items-center space-x-2">
+                            <CheckCircle className="h-5 w-5 text-green-600" />
+                            <span className="text-sm font-medium text-green-600">Paid</span>
+                          </div>
+                          {isPlatformAdmin && (
+                            <div className="flex flex-col gap-3">
+                              {editingPaymentMethod === 'scholarship' ? (
+                                <div className="flex flex-col gap-3">
+                                  <select
+                                    value={newPaymentMethod}
+                                    onChange={(e) => setNewPaymentMethod(e.target.value as 'stripe' | 'zelle' | 'manual')}
+                                    className="text-sm px-3 py-2 border border-slate-300 rounded-lg w-full max-w-[150px]"
+                                    disabled={savingPaymentMethod}
+                                  >
+                                    <option value="manual">Outside</option>
+                                    <option value="stripe">Stripe</option>
+                                    <option value="zelle">Zelle</option>
+                                  </select>
+                                  <div className="flex items-center gap-2">
+                                    <button
+                                      onClick={() => handleUpdatePaymentMethod('scholarship')}
+                                      disabled={savingPaymentMethod}
+                                      className="px-4 py-2 bg-green-600 hover:bg-green-700 text-white text-sm rounded-lg flex items-center space-x-2"
+                                    >
+                                      <Save className="w-4 h-4" />
+                                      <span>{savingPaymentMethod ? 'Saving...' : 'Save'}</span>
+                                    </button>
+                                    <button
+                                      onClick={() => setEditingPaymentMethod(null)}
+                                      className="px-4 py-2 bg-slate-600 hover:bg-slate-700 text-white text-sm rounded-lg flex items-center space-x-2"
+                                    >
+                                      <X className="w-4 h-4" />
+                                      <span>Cancel</span>
+                                    </button>
                                   </div>
                                 </div>
-                              </div>
+                              ) : (
+                                <button
+                                  onClick={() => startEditingPaymentMethod('scholarship')}
+                                  className="px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white text-sm rounded-lg flex items-center space-x-2 w-fit"
+                                >
+                                  <Edit3 className="w-4 h-4" />
+                                  <span>Edit Method</span>
+                                </button>
+                              )}
                             </div>
+                          )}
+                        </div>
+                      ) : (
+                        <div className="flex flex-col gap-3">
+                          <div className="flex items-center space-x-2">
+                            <XCircle className="h-5 w-5 text-red-600" />
+                            <span className="text-sm font-medium text-red-600">Not Paid</span>
                           </div>
-                  );
-                })}
+                          {isPlatformAdmin && (() => {
+                            // ✅ CORREÇÃO: Priorizar aplicação enrolled, depois approved
+                            const enrolledApp = student.all_applications?.find((app: any) => app.status === 'enrolled');
+                            const approvedApp = enrolledApp || student.all_applications?.find((app: any) => app.status === 'approved');
+                            return approvedApp && (
+                              <button
+                                onClick={() => openPaymentModal('scholarship', approvedApp.id)}
+                                disabled={markingAsPaid[`${student.student_id}:scholarship`]}
+                                className="px-4 py-2 bg-[#05294E] hover:bg-[#05294E]/90 text-white text-sm rounded-lg flex items-center space-x-2 w-fit"
+                              >
+                                <CheckCircle className="w-4 h-4" />
+                                <span>{markingAsPaid[`${student.student_id}:scholarship`] ? 'Marking...' : 'Mark as Paid'}</span>
+                              </button>
+                            );
+                          })()}
+                        </div>
+                      )}
                     </div>
                   </div>
                 </div>
-              </div>
-              
-              {/* Progress Summary */}
-              <div className="mt-6 p-3 sm:p-4 bg-slate-50 rounded-xl">
-                <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2 mb-3">
-                  <span className="text-sm font-medium text-slate-700">Overall Progress</span>
-                  <span className="text-sm font-semibold text-slate-900">
-                    {(() => {
-                      const completedSteps = steps.filter(step => getStepStatus(student, step.key) === 'completed').length;
-                      const percentage = Math.round((completedSteps / steps.length) * 100);
-                      return `${percentage}% Complete`;
-                    })()}
-                  </span>
-                </div>
-                <div className="w-full bg-slate-200 rounded-full h-2 sm:h-3">
-                  <div 
-                    className="bg-[#05294E] h-2 sm:h-3 rounded-full transition-all duration-700 ease-out"
-                    style={{ 
-                      width: `${(steps.filter(step => getStepStatus(student, step.key) === 'completed').length / steps.length) * 100}%` 
-                    }}
-                  />
-                </div>
-                <div className="mt-2 text-xs text-slate-500">
-                  {(() => {
-                    const completedSteps = steps.filter(step => getStepStatus(student, step.key) === 'completed').length;
-                    return `${completedSteps} of ${steps.length} steps completed`;
-                  })()}
-                </div>
-              </div>
-            </div>
-          </div>
-
-          <div className="bg-white rounded-2xl shadow-sm border border-slate-200">
-            <div className="bg-gradient-to-r rounded-t-2xl from-green-600 to-green-700 px-6 py-4">
-              <div className="flex items-center justify-between">
-              <h2 className="text-xl font-semibold text-white flex items-center">
-                <CreditCard className="w-6 h-6 mr-3" />
-                Payment Status
-              </h2>
-                {canEditFees && (
-                  <div className="flex items-center space-x-2">
-                    {editingFees ? (
-                      <>
-                        <button
-                          onClick={saveFeeOverrides}
-                          disabled={savingFees}
-                          className="px-3 py-1 bg-[#05294E] hover:bg-[#05294E]/90 text-white text-sm rounded-lg flex items-center space-x-1"
-                        >
-                          <Save className="w-4 h-4" />
-                          <span>{savingFees ? 'Saving...' : 'Save'}</span>
-                        </button>
-                        <button
-                          onClick={cancelEditingFees}
-                          className="px-3 py-1 bg-slate-600 hover:bg-slate-700 text-white text-sm rounded-lg flex items-center space-x-1"
-                        >
-                          <X className="w-4 h-4" />
-                          <span>Cancel</span>
-                        </button>
-                      </>
-                    ) : (
-                      <button
-                        onClick={startEditingFees}
-                        className="px-3 py-1 bg-white/20 hover:bg-white/30 text-white text-sm rounded-lg flex items-center space-x-1"
-                      >
-                        <Edit3 className="w-4 h-4" />
-                        <span>Edit Fees</span>
-                      </button>
-                    )}
-                    {(hasOverride('selection_process') || hasOverride('scholarship_fee') || hasOverride('i20_control_fee')) && !editingFees && (
-                      <button
-                        onClick={resetFeesToDefault}
-                        disabled={savingFees}
-                        className="px-3 py-1 bg-slate-500 hover:bg-slate-600 text-white text-sm rounded-lg flex items-center space-x-1"
-                      >
-                        <X className="w-4 h-4" />
-                        <span>Reset</span>
-                      </button>
-                    )}
-                  </div>
-                )}
-              </div>
-            </div>
-            <div className="p-6 space-y-4">
-              <div className="bg-slate-50 rounded-xl p-4">
-                <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-4">
-                  <div className="flex-1">
-                    <dt className="text-sm font-medium text-slate-600">Selection Process Fee</dt>
-                    <dd className="text-sm text-slate-500 mt-1">Required to start applications</dd>
-                    {editingFees ? (
-                      <div className="mt-2">
-                        <input
-                          type="number"
-                          value={editingFees.selection_process}
-                          onChange={(e) => setEditingFees(prev => prev ? { ...prev, selection_process: Number(e.target.value) } : null)}
-                          className="w-32 px-3 py-2 border border-slate-300 rounded-lg text-sm"
-                          min="0"
-                          step="0.01"
-                        />
-                      </div>
-                    ) : (
-                      <dd className="text-sm font-semibold text-slate-700 mt-1 flex items-center">
-                        {(() => {
-                      // Se o pagamento já foi feito, mostrar o valor REAL pago ao invés do esperado
-                      if (student?.has_paid_selection_process_fee && realPaidAmounts.selection_process) {
-                        return formatFeeAmount(realPaidAmounts.selection_process);
-                      }
-                      
-                      // Caso contrário, calcular valor esperado (para exibição antes do pagamento)
-                      const hasCustomOverride = hasOverride('selection_process');
-                      const base = Number(getFeeAmount('selection_process'));
-                      // ✅ CORREÇÃO: Para simplified, Selection Process Fee é fixo ($350), sem dependentes
-                      // Dependentes só afetam Application Fee ($100 por dependente)
-                      const systemType = student?.system_type || 'legacy';
-                      const finalAmount = hasCustomOverride 
-                        ? getFeeAmount('selection_process') 
-                        : (systemType === 'simplified' ? base : base + dependents * 150);
-                      const formatted = formatFeeAmount(finalAmount);
-                      
-                      if (student?.user_id === '935e0eec-82c6-4a70-b013-e85dde6e63f7') {
-                        console.log('🔍 [AdminStudentDetails] jolie8862@uorak.com - Selection Process Fee display:', { 
-                          hasCustomOverride, 
-                          base, 
-                          dependents, 
-                          finalAmount, 
-                          formatted 
-                        });
-                      }
-                      
-                      return formatted;
-                        })()}
-                        {hasOverride('selection_process') && (
-                          <span className="ml-2 text-xs text-blue-500">(custom)</span>
-                        )}
-                      </dd>
-                    )}
-                  </div>
-                  <div className="flex flex-col gap-3">
-                     {student.has_paid_selection_process_fee ? (
-                      <div className="flex flex-col gap-3">
-                        <div className="flex items-center space-x-2">
-                          <CheckCircle className="h-5 w-5 text-green-600" />
-                          <span className="text-sm font-medium text-green-600">Paid</span>
+                <div className="bg-slate-50 rounded-xl p-4">
+                  <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-4">
+                    <div className="flex-1">
+                      <dt className="text-sm font-medium text-slate-600">I-20 Control Fee</dt>
+                      <dd className="text-sm text-slate-500 mt-1">Final step for enrollment</dd>
+                      {editingFees ? (
+                        <div className="mt-2">
+                          <input
+                            type="number"
+                            value={editingFees.i20_control}
+                            onChange={(e) => setEditingFees(prev => prev ? { ...prev, i20_control: Number(e.target.value) } : null)}
+                            className="w-32 px-3 py-2 border border-slate-300 rounded-lg text-sm"
+                            min="0"
+                            step="0.01"
+                          />
                         </div>
-                        {isPlatformAdmin && (
-                          <div className="flex flex-col gap-3">
-                            {editingPaymentMethod === 'selection_process' ? (
-                              <div className="flex flex-col gap-3">
-                                <select
-                                  value={newPaymentMethod}
-                                  onChange={(e) => setNewPaymentMethod(e.target.value as 'stripe' | 'zelle' | 'manual')}
-                                  className="text-sm px-3 py-2 border border-slate-300 rounded-lg w-full max-w-[150px]"
-                                  disabled={savingPaymentMethod}
-                                >
-                                  <option value="manual">Outside</option>
-                                  <option value="stripe">Stripe</option>
-                                  <option value="zelle">Zelle</option>
-                                </select>
-                                <div className="flex items-center gap-2">
-                                  <button
-                                    onClick={() => handleUpdatePaymentMethod('selection_process')}
-                                    disabled={savingPaymentMethod}
-                                    className="px-4 py-2 bg-green-600 hover:bg-green-700 text-white text-sm rounded-lg flex items-center space-x-2"
-                                  >
-                                    <Save className="w-4 h-4" />
-                                    <span>{savingPaymentMethod ? 'Saving...' : 'Save'}</span>
-                                  </button>
-                                  <button
-                                    onClick={() => setEditingPaymentMethod(null)}
-                                    className="px-4 py-2 bg-slate-600 hover:bg-slate-700 text-white text-sm rounded-lg flex items-center space-x-2"
-                                  >
-                                    <X className="w-4 h-4" />
-                                    <span>Cancel</span>
-                                  </button>
-                                </div>
-                              </div>
-                            ) : (
-                              <button
-                                onClick={() => {
-                                  setEditingPaymentMethod('selection_process');
-                                  setNewPaymentMethod((student.selection_process_fee_payment_method as 'stripe' | 'zelle' | 'manual') || 'manual');
-                                }}
-                                className="px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white text-sm rounded-lg flex items-center space-x-2 w-fit"
-                              >
-                                <Edit3 className="w-4 h-4" />
-                                <span>Edit Method</span>
-                              </button>
-                            )}
+                      ) : (
+                        <dd className="text-sm font-semibold text-slate-700 mt-1 flex items-center">
+                          {formatFeeAmount(getFeeAmount('i20_control_fee'))}
+                          {hasOverride('i20_control_fee') && (
+                            <span className="ml-2 text-xs text-blue-500">(custom)</span>
+                          )}
+                        </dd>
+                      )}
+                    </div>
+                    <div className="flex flex-col gap-3">
+                      {student.has_paid_i20_control_fee ? (
+                        <div className="flex flex-col gap-3">
+                          <div className="flex items-center space-x-2">
+                            <CheckCircle className="h-5 w-5 text-green-600" />
+                            <span className="text-sm font-medium text-green-600">Paid</span>
                           </div>
-                        )}
-                      </div>
-                    ) : (
-                       <div className="flex flex-col gap-3">
-                        <div className="flex items-center space-x-2">
-                          <XCircle className="h-5 w-5 text-red-600" />
-                          <span className="text-sm font-medium text-red-600">Not Paid</span>
-                        </div>
-                         {isPlatformAdmin && (
-                           <button
-                             onClick={() => openPaymentModal('selection_process')}
-                             disabled={markingAsPaid[`${student.student_id}:selection_process`]}
-                             className="px-4 py-2 bg-[#05294E] hover:bg-[#05294E]/90 text-white text-sm rounded-lg flex items-center space-x-2 w-fit"
-                           >
-                             <CheckCircle className="w-4 h-4" />
-                             <span>{markingAsPaid[`${student.student_id}:selection_process`] ? 'Marking...' : 'Mark as Paid'}</span>
-                           </button>
-                         )}
-                      </div>
-                    )}
-                  </div>
-                </div>
-              </div>
-              <div className="bg-slate-50 rounded-xl p-4">
-                <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-4">
-                  <div className="flex-1">
-                    <dt className="text-sm font-medium text-slate-600">Application Fee</dt>
-                    <dd className="text-sm text-slate-500 mt-1">Paid after scholarship approval</dd>
-                    {student.is_application_fee_paid ? (
-                      <dd className="text-sm font-semibold text-slate-700 mt-1">
-                        {(() => {
-                          // ✅ CORREÇÃO: Priorizar aplicação enrolled com fee pago
-                          const enrolledApp = student.all_applications?.find((app: any) => app.status === 'enrolled' && app.is_application_fee_paid);
-                          const paidApplication = enrolledApp || student.all_applications?.find((app: any) => app.is_application_fee_paid);
-                          if (paidApplication?.scholarships) {
-                            const scholarship = Array.isArray(paidApplication.scholarships)
-                              ? paidApplication.scholarships[0]
-                              : paidApplication.scholarships;
-                            
-                            let baseAmount = scholarship?.application_fee_amount ? Number(scholarship.application_fee_amount) : getFeeAmount('application_fee');
-                            const systemType = userSystemType || 'legacy';
-                            const studentDependents = dependents || Number(student.dependents || 0);
-                            
-                            // Adicionar $100 por dependente apenas para sistema legacy
-                            if (systemType === 'legacy' && studentDependents > 0) {
-                              baseAmount += studentDependents * 100;
-                            }
-                            
-                            return formatFeeAmount(baseAmount);
-                          }
-                          return 'Fee paid';
-                        })()}
-                      </dd>
-                    ) : (
-                      <div className="mt-1">
-                        <dd className="text-sm font-semibold text-slate-700">Varies by scholarship</dd>
-                        <div className="text-xs text-slate-500">+ $100 per dependent (applied at checkout)</div>
-                      </div>
-                    )}
-                  </div>
-                  <div className="flex flex-col gap-3">
-                    {student.is_application_fee_paid ? (
-                      <div className="flex flex-col gap-3">
-                        <div className="flex items-center space-x-2">
-                          <CheckCircle className="h-5 w-5 text-green-600" />
-                          <span className="text-sm font-medium text-green-600">Paid</span>
-                        </div>
-                        {isPlatformAdmin && (
-                          <div className="flex flex-col gap-3">
-                            {editingPaymentMethod === 'application' ? (
-                              <div className="flex flex-col gap-3">
-                                <select
-                                  value={newPaymentMethod}
-                                  onChange={(e) => setNewPaymentMethod(e.target.value as 'stripe' | 'zelle' | 'manual')}
-                                  className="text-sm px-3 py-2 border border-slate-300 rounded-lg w-full max-w-[150px]"
-                                  disabled={savingPaymentMethod}
-                                >
-                                  <option value="manual">Outside</option>
-                                  <option value="stripe">Stripe</option>
-                                  <option value="zelle">Zelle</option>
-                                </select>
-                                <div className="flex items-center gap-2">
-                                  <button
-                                    onClick={() => handleUpdatePaymentMethod('application')}
+                          {isPlatformAdmin && (
+                            <div className="flex flex-col gap-3">
+                              {editingPaymentMethod === 'i20_control' ? (
+                                <div className="flex flex-col gap-3">
+                                  <select
+                                    value={newPaymentMethod}
+                                    onChange={(e) => setNewPaymentMethod(e.target.value as 'stripe' | 'zelle' | 'manual')}
+                                    className="text-sm px-3 py-2 border border-slate-300 rounded-lg w-full max-w-[150px]"
                                     disabled={savingPaymentMethod}
-                                    className="px-4 py-2 bg-green-600 hover:bg-green-700 text-white text-sm rounded-lg flex items-center space-x-2"
                                   >
-                                    <Save className="w-4 h-4" />
-                                    <span>{savingPaymentMethod ? 'Saving...' : 'Save'}</span>
-                                  </button>
-                                  <button
-                                    onClick={() => setEditingPaymentMethod(null)}
-                                    className="px-4 py-2 bg-slate-600 hover:bg-slate-700 text-white text-sm rounded-lg flex items-center space-x-2"
-                                  >
-                                    <X className="w-4 h-4" />
-                                    <span>Cancel</span>
-                                  </button>
+                                    <option value="manual">Outside</option>
+                                    <option value="stripe">Stripe</option>
+                                    <option value="zelle">Zelle</option>
+                                  </select>
+                                  <div className="flex items-center gap-2">
+                                    <button
+                                      onClick={() => handleUpdatePaymentMethod('i20_control')}
+                                      disabled={savingPaymentMethod}
+                                      className="px-4 py-2 bg-green-600 hover:bg-green-700 text-white text-sm rounded-lg flex items-center space-x-2"
+                                    >
+                                      <Save className="w-4 h-4" />
+                                      <span>{savingPaymentMethod ? 'Saving...' : 'Save'}</span>
+                                    </button>
+                                    <button
+                                      onClick={() => setEditingPaymentMethod(null)}
+                                      className="px-4 py-2 bg-slate-600 hover:bg-slate-700 text-white text-sm rounded-lg flex items-center space-x-2"
+                                    >
+                                      <X className="w-4 h-4" />
+                                      <span>Cancel</span>
+                                    </button>
+                                  </div>
                                 </div>
-                              </div>
-                            ) : (
-                              <button
-                                onClick={() => startEditingPaymentMethod('application')}
-                                className="px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white text-sm rounded-lg flex items-center space-x-2 w-fit"
-                              >
-                                <Edit3 className="w-4 h-4" />
-                                <span>Edit Method</span>
-                              </button>
-                            )}
-                          </div>
-                        )}
-                      </div>
-                    ) : (
-                      <div className="flex flex-col gap-3">
-                        <div className="flex items-center space-x-2">
-                          <XCircle className="h-5 w-5 text-red-600" />
-                          <span className="text-sm font-medium text-red-600">Not Paid</span>
-                        </div>
-                         {isPlatformAdmin && (() => {
-                           // ✅ CORREÇÃO: Priorizar aplicação enrolled, depois approved
-                           const enrolledApp = student.all_applications?.find((app: any) => app.status === 'enrolled');
-                           const approvedApp = enrolledApp || student.all_applications?.find((app: any) => app.status === 'approved');
-                           return approvedApp && (
-                             <button
-                               onClick={() => openPaymentModal('application', approvedApp.id)}
-                               disabled={markingAsPaid[`${student.student_id}:application`]}
-                               className="px-4 py-2 bg-[#05294E] hover:bg-[#05294E]/90 text-white text-sm rounded-lg flex items-center space-x-2 w-fit"
-                             >
-                               <CheckCircle className="w-4 h-4" />
-                               <span>{markingAsPaid[`${student.student_id}:application`] ? 'Marking...' : 'Mark as Paid'}</span>
-                             </button>
-                           );
-                         })()}
-                      </div>
-                    )}
-                  </div>
-                </div>
-              </div>
-              <div className="bg-slate-50 rounded-xl p-4">
-                <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-4">
-                  <div className="flex-1">
-                    <dt className="text-sm font-medium text-slate-600">Scholarship Fee</dt>
-                    <dd className="text-sm text-slate-500 mt-1">Paid after application fee</dd>
-                    {editingFees ? (
-                      <div className="mt-2">
-                        <input
-                          type="number"
-                          value={editingFees.scholarship}
-                          onChange={(e) => setEditingFees(prev => prev ? { ...prev, scholarship: Number(e.target.value) } : null)}
-                          className="w-32 px-3 py-2 border border-slate-300 rounded-lg text-sm"
-                          min="0"
-                          step="0.01"
-                        />
-                      </div>
-                    ) : (
-                      <dd className="text-sm font-semibold text-slate-700 mt-1 flex items-center">
-                        {formatFeeAmount(getFeeAmount('scholarship_fee'))}
-                        {hasOverride('scholarship_fee') && (
-                          <span className="ml-2 text-xs text-blue-500">(custom)</span>
-                        )}
-                      </dd>
-                    )}
-                  </div>
-                  <div className="flex flex-col gap-3">
-                    {(() => {
-                      const isStephanie = student.student_email === 'stephaniecriistine25@gmail.com';
-                      if (isStephanie) {
-                        console.log('🔍 [STEPHANIE DEBUG] Rendering Scholarship Fee:', {
-                          student_is_scholarship_fee_paid: student.is_scholarship_fee_paid,
-                          all_applications: student.all_applications?.map((app: any) => ({
-                            id: app.id,
-                            status: app.status,
-                            is_scholarship_fee_paid: app.is_scholarship_fee_paid
-                          }))
-                        });
-                      }
-                      return null;
-                    })()}
-                    {student.is_scholarship_fee_paid ? (
-                      <div className="flex flex-col gap-3">
-                        <div className="flex items-center space-x-2">
-                          <CheckCircle className="h-5 w-5 text-green-600" />
-                          <span className="text-sm font-medium text-green-600">Paid</span>
-                        </div>
-                        {isPlatformAdmin && (
-                          <div className="flex flex-col gap-3">
-                            {editingPaymentMethod === 'scholarship' ? (
-                              <div className="flex flex-col gap-3">
-                                <select
-                                  value={newPaymentMethod}
-                                  onChange={(e) => setNewPaymentMethod(e.target.value as 'stripe' | 'zelle' | 'manual')}
-                                  className="text-sm px-3 py-2 border border-slate-300 rounded-lg w-full max-w-[150px]"
-                                  disabled={savingPaymentMethod}
+                              ) : (
+                                <button
+                                  onClick={() => {
+                                    setEditingPaymentMethod('i20_control');
+                                    setNewPaymentMethod((student.i20_control_fee_payment_method as 'stripe' | 'zelle' | 'manual') || 'manual');
+                                  }}
+                                  className="px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white text-sm rounded-lg flex items-center space-x-2 w-fit"
                                 >
-                                  <option value="manual">Outside</option>
-                                  <option value="stripe">Stripe</option>
-                                  <option value="zelle">Zelle</option>
-                                </select>
-                                <div className="flex items-center gap-2">
-                                  <button
-                                    onClick={() => handleUpdatePaymentMethod('scholarship')}
-                                    disabled={savingPaymentMethod}
-                                    className="px-4 py-2 bg-green-600 hover:bg-green-700 text-white text-sm rounded-lg flex items-center space-x-2"
-                                  >
-                                    <Save className="w-4 h-4" />
-                                    <span>{savingPaymentMethod ? 'Saving...' : 'Save'}</span>
-                                  </button>
-                                  <button
-                                    onClick={() => setEditingPaymentMethod(null)}
-                                    className="px-4 py-2 bg-slate-600 hover:bg-slate-700 text-white text-sm rounded-lg flex items-center space-x-2"
-                                  >
-                                    <X className="w-4 h-4" />
-                                    <span>Cancel</span>
-                                  </button>
-                                </div>
-                              </div>
-                            ) : (
-                              <button
-                                onClick={() => startEditingPaymentMethod('scholarship')}
-                                className="px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white text-sm rounded-lg flex items-center space-x-2 w-fit"
-                              >
-                                <Edit3 className="w-4 h-4" />
-                                <span>Edit Method</span>
-                              </button>
-                            )}
+                                  <Edit3 className="w-4 h-4" />
+                                  <span>Edit Method</span>
+                                </button>
+                              )}
+                            </div>
+                          )}
+                        </div>
+                      ) : (
+                        <div className="flex flex-col gap-3">
+                          <div className="flex items-center space-x-2">
+                            <XCircle className="h-5 w-5 text-red-600" />
+                            <span className="text-sm font-medium text-red-600">Not Paid</span>
                           </div>
-                        )}
-                      </div>
-                    ) : (
-                      <div className="flex flex-col gap-3">
-                        <div className="flex items-center space-x-2">
-                          <XCircle className="h-5 w-5 text-red-600" />
-                          <span className="text-sm font-medium text-red-600">Not Paid</span>
-                        </div>
-                         {isPlatformAdmin && (() => {
-                           // ✅ CORREÇÃO: Priorizar aplicação enrolled, depois approved
-                           const enrolledApp = student.all_applications?.find((app: any) => app.status === 'enrolled');
-                           const approvedApp = enrolledApp || student.all_applications?.find((app: any) => app.status === 'approved');
-                           return approvedApp && (
-                             <button
-                               onClick={() => openPaymentModal('scholarship', approvedApp.id)}
-                               disabled={markingAsPaid[`${student.student_id}:scholarship`]}
-                               className="px-4 py-2 bg-[#05294E] hover:bg-[#05294E]/90 text-white text-sm rounded-lg flex items-center space-x-2 w-fit"
-                             >
-                               <CheckCircle className="w-4 h-4" />
-                               <span>{markingAsPaid[`${student.student_id}:scholarship`] ? 'Marking...' : 'Mark as Paid'}</span>
-                             </button>
-                           );
-                         })()}
-                      </div>
-                    )}
-                  </div>
-                </div>
-              </div>
-              <div className="bg-slate-50 rounded-xl p-4">
-                <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-4">
-                  <div className="flex-1">
-                    <dt className="text-sm font-medium text-slate-600">I-20 Control Fee</dt>
-                    <dd className="text-sm text-slate-500 mt-1">Final step for enrollment</dd>
-                    {editingFees ? (
-                      <div className="mt-2">
-                        <input
-                          type="number"
-                          value={editingFees.i20_control}
-                          onChange={(e) => setEditingFees(prev => prev ? { ...prev, i20_control: Number(e.target.value) } : null)}
-                          className="w-32 px-3 py-2 border border-slate-300 rounded-lg text-sm"
-                          min="0"
-                          step="0.01"
-                        />
-                      </div>
-                    ) : (
-                      <dd className="text-sm font-semibold text-slate-700 mt-1 flex items-center">
-                        {formatFeeAmount(getFeeAmount('i20_control_fee'))}
-                        {hasOverride('i20_control_fee') && (
-                          <span className="ml-2 text-xs text-blue-500">(custom)</span>
-                        )}
-                      </dd>
-                    )}
-                  </div>
-                  <div className="flex flex-col gap-3">
-                     {student.has_paid_i20_control_fee ? (
-                      <div className="flex flex-col gap-3">
-                        <div className="flex items-center space-x-2">
-                          <CheckCircle className="h-5 w-5 text-green-600" />
-                          <span className="text-sm font-medium text-green-600">Paid</span>
-                        </div>
-                        {isPlatformAdmin && (
-                          <div className="flex flex-col gap-3">
-                            {editingPaymentMethod === 'i20_control' ? (
-                              <div className="flex flex-col gap-3">
-                                <select
-                                  value={newPaymentMethod}
-                                  onChange={(e) => setNewPaymentMethod(e.target.value as 'stripe' | 'zelle' | 'manual')}
-                                  className="text-sm px-3 py-2 border border-slate-300 rounded-lg w-full max-w-[150px]"
-                                  disabled={savingPaymentMethod}
-                                >
-                                  <option value="manual">Outside</option>
-                                  <option value="stripe">Stripe</option>
-                                  <option value="zelle">Zelle</option>
-                                </select>
-                                <div className="flex items-center gap-2">
-                                  <button
-                                    onClick={() => handleUpdatePaymentMethod('i20_control')}
-                                    disabled={savingPaymentMethod}
-                                    className="px-4 py-2 bg-green-600 hover:bg-green-700 text-white text-sm rounded-lg flex items-center space-x-2"
-                                  >
-                                    <Save className="w-4 h-4" />
-                                    <span>{savingPaymentMethod ? 'Saving...' : 'Save'}</span>
-                                  </button>
-                                  <button
-                                    onClick={() => setEditingPaymentMethod(null)}
-                                    className="px-4 py-2 bg-slate-600 hover:bg-slate-700 text-white text-sm rounded-lg flex items-center space-x-2"
-                                  >
-                                    <X className="w-4 h-4" />
-                                    <span>Cancel</span>
-                                  </button>
-                                </div>
-                              </div>
-                            ) : (
-                              <button
-                                onClick={() => {
-                                  setEditingPaymentMethod('i20_control');
-                                  setNewPaymentMethod((student.i20_control_fee_payment_method as 'stripe' | 'zelle' | 'manual') || 'manual');
-                                }}
-                                className="px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white text-sm rounded-lg flex items-center space-x-2 w-fit"
-                              >
-                                <Edit3 className="w-4 h-4" />
-                                <span>Edit Method</span>
-                              </button>
-                            )}
-                          </div>
-                        )}
-                      </div>
-                    ) : (
-                       <div className="flex flex-col gap-3">
-                        <div className="flex items-center space-x-2">
-                          <XCircle className="h-5 w-5 text-red-600" />
-                          <span className="text-sm font-medium text-red-600">Not Paid</span>
-                        </div>
                           {isPlatformAdmin && (() => {
                             // Guardas: só pode marcar I-20 se SP Fee pago e scholarship fee paga
                             // Se o aluno já está enrolled, permitir marcar I-20 como pago independente dos outros fees
                             const isEnrolled = student.application_status === 'enrolled';
-                            
+
                             // Se está enrolled, pode marcar I-20 independente dos outros fees
                             // Se não está enrolled, precisa ter SP fee pago e scholarship fee paga
                             const canMarkI20 = isEnrolled || (student.has_paid_selection_process_fee && student.is_scholarship_fee_paid);
-                            
+
                             return (
                               <button
                                 onClick={() => openPaymentModal('i20_control')}
@@ -5371,130 +5357,130 @@ const AdminStudentDetails: React.FC = () => {
                               </button>
                             );
                           })()}
-                      </div>
-                    )}
+                        </div>
+                      )}
+                    </div>
                   </div>
                 </div>
               </div>
             </div>
-          </div>
 
-          {/* I-20 Deadline Timer */}
-          {i20Deadline && !student.has_paid_i20_control_fee && (
-            <div className="bg-white rounded-2xl shadow-sm border border-slate-200">
-              <div className="p-6">
-                <AdminI20DeadlineTimer 
-                  deadline={i20Deadline} 
-                  hasPaid={student.has_paid_i20_control_fee}
-                  studentName={student.student_name}
-                />
+            {/* I-20 Deadline Timer */}
+            {i20Deadline && !student.has_paid_i20_control_fee && (
+              <div className="bg-white rounded-2xl shadow-sm border border-slate-200">
+                <div className="p-6">
+                  <AdminI20DeadlineTimer
+                    deadline={i20Deadline}
+                    hasPaid={student.has_paid_i20_control_fee}
+                    studentName={student.student_name}
+                  />
+                </div>
               </div>
-            </div>
-          )}
+            )}
 
-          {/* Term Acceptance History */}
-          <div className="bg-white rounded-2xl shadow-sm border border-slate-200">
-            <div className="bg-gradient-to-r rounded-t-2xl from-blue-600 to-blue-700 px-6 py-4">
-              <h2 className="text-xl font-semibold text-white flex items-center">
-                <FileText className="w-6 h-6 mr-3" />
-                Term Acceptance History
-              </h2>
-            </div>
-            <div className="p-6">
-              {loadingTermAcceptances ? (
-                <div className="flex items-center justify-center p-8">
-                  <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600"></div>
-                </div>
-              ) : termAcceptances.length === 0 ? (
-                <div className="text-center py-8 text-gray-500">
-                  <FileText className="w-16 h-16 mx-auto mb-4 text-gray-300" />
-                  <p className="text-lg">No terms accepted yet</p>
-                  <p className="text-sm text-gray-400 mt-2">
-                    This student hasn't accepted any terms yet.
-                  </p>
-                </div>
-              ) : (
-                <div className="space-y-4">
-                  {termAcceptances.map((acceptance) => (
-                    <div key={acceptance.id} className="border border-slate-200 rounded-lg p-4 hover:bg-slate-50 transition-colors">
-                      <div className="flex items-start justify-between gap-4">
-                        <div className="flex-1 min-w-0">
-                          <div className="flex items-center space-x-3 mb-3">
-                            <div className="flex-shrink-0 h-8 w-8">
-                              <div className="h-8 w-8 rounded-full bg-green-100 flex items-center justify-center">
-                                <FileText className="w-4 h-4 text-green-600" />
+            {/* Term Acceptance History */}
+            <div className="bg-white rounded-2xl shadow-sm border border-slate-200">
+              <div className="bg-gradient-to-r rounded-t-2xl from-blue-600 to-blue-700 px-6 py-4">
+                <h2 className="text-xl font-semibold text-white flex items-center">
+                  <FileText className="w-6 h-6 mr-3" />
+                  Term Acceptance History
+                </h2>
+              </div>
+              <div className="p-6">
+                {loadingTermAcceptances ? (
+                  <div className="flex items-center justify-center p-8">
+                    <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600"></div>
+                  </div>
+                ) : termAcceptances.length === 0 ? (
+                  <div className="text-center py-8 text-gray-500">
+                    <FileText className="w-16 h-16 mx-auto mb-4 text-gray-300" />
+                    <p className="text-lg">No terms accepted yet</p>
+                    <p className="text-sm text-gray-400 mt-2">
+                      This student hasn't accepted any terms yet.
+                    </p>
+                  </div>
+                ) : (
+                  <div className="space-y-4">
+                    {termAcceptances.map((acceptance) => (
+                      <div key={acceptance.id} className="border border-slate-200 rounded-lg p-4 hover:bg-slate-50 transition-colors">
+                        <div className="flex items-start justify-between gap-4">
+                          <div className="flex-1 min-w-0">
+                            <div className="flex items-center space-x-3 mb-3">
+                              <div className="flex-shrink-0 h-8 w-8">
+                                <div className="h-8 w-8 rounded-full bg-green-100 flex items-center justify-center">
+                                  <FileText className="w-4 h-4 text-green-600" />
+                                </div>
+                              </div>
+                              <div className="min-w-0 flex-1">
+                                <h3 className="text-sm font-medium text-gray-900 truncate">
+                                  {acceptance.term_title || 'N/A'}
+                                </h3>
+                                <p className="text-sm text-gray-500 capitalize truncate">
+                                  {acceptance.term_type.replace(/_/g, ' ')}
+                                </p>
                               </div>
                             </div>
-                            <div className="min-w-0 flex-1">
-                              <h3 className="text-sm font-medium text-gray-900 truncate">
-                                {acceptance.term_title || 'N/A'}
-                              </h3>
-                              <p className="text-sm text-gray-500 capitalize truncate">
-                                {acceptance.term_type.replace(/_/g, ' ')}
-                              </p>
-                            </div>
-                          </div>
-                          
-                          <div className="space-y-2">
-                            <div className="flex items-center text-sm text-gray-600">
-                              <Calendar className="w-4 h-4 mr-2 text-gray-400 flex-shrink-0" />
-                              <span className="truncate">
-                                Accepted: {new Date(acceptance.accepted_at).toLocaleString('pt-BR')}
-                              </span>
-                            </div>
-                            <div className="flex items-center text-sm text-gray-600">
-                              <Globe className="w-4 h-4 mr-2 text-gray-400 flex-shrink-0" />
-                              <span className="truncate" title={acceptance.ip_address || 'N/A'}>
-                                IP: {acceptance.ip_address || 'N/A'}
-                              </span>
-                            </div>
-                            {acceptance.user_agent && (
-                              <div className="flex items-start text-sm text-gray-600">
-                                <Users className="w-4 h-4 mr-2 text-gray-400 flex-shrink-0 mt-0.5" />
-                                <span className="truncate" title={acceptance.user_agent}>
-                                  {acceptance.user_agent.length > 80 
-                                    ? acceptance.user_agent.substring(0, 80) + '...' 
-                                    : acceptance.user_agent
-                                  }
+
+                            <div className="space-y-2">
+                              <div className="flex items-center text-sm text-gray-600">
+                                <Calendar className="w-4 h-4 mr-2 text-gray-400 flex-shrink-0" />
+                                <span className="truncate">
+                                  Accepted: {new Date(acceptance.accepted_at).toLocaleString('pt-BR')}
                                 </span>
                               </div>
-                            )}
+                              <div className="flex items-center text-sm text-gray-600">
+                                <Globe className="w-4 h-4 mr-2 text-gray-400 flex-shrink-0" />
+                                <span className="truncate" title={acceptance.ip_address || 'N/A'}>
+                                  IP: {acceptance.ip_address || 'N/A'}
+                                </span>
+                              </div>
+                              {acceptance.user_agent && (
+                                <div className="flex items-start text-sm text-gray-600">
+                                  <Users className="w-4 h-4 mr-2 text-gray-400 flex-shrink-0 mt-0.5" />
+                                  <span className="truncate" title={acceptance.user_agent}>
+                                    {acceptance.user_agent.length > 80
+                                      ? acceptance.user_agent.substring(0, 80) + '...'
+                                      : acceptance.user_agent
+                                    }
+                                  </span>
+                                </div>
+                              )}
+                            </div>
+                          </div>
+
+                          <div className="flex-shrink-0">
+                            <button
+                              onClick={() => {
+                                const pdfData: StudentTermAcceptanceData = {
+                                  student_name: acceptance.user_full_name || 'N/A',
+                                  student_email: acceptance.user_email || 'N/A',
+                                  term_title: acceptance.term_title || 'N/A',
+                                  accepted_at: new Date(acceptance.accepted_at).toLocaleString('en-US'),
+                                  ip_address: acceptance.ip_address || 'N/A',
+                                  user_agent: acceptance.user_agent || 'N/A',
+                                  country: 'N/A',
+                                  affiliate_code: undefined,
+                                  term_content: acceptance.term_content || ''
+                                };
+                                generateTermAcceptancePDF(pdfData);
+                              }}
+                              className="inline-flex items-center px-3 py-1 rounded-md text-xs font-medium bg-blue-600 text-white hover:bg-blue-700 transition-colors"
+                              title="Download PDF certificate"
+                            >
+                              <Download className="h-3 w-3 mr-1" />
+                              PDF
+                            </button>
                           </div>
                         </div>
-                        
-                        <div className="flex-shrink-0">
-                          <button
-                            onClick={() => {
-                              const pdfData: StudentTermAcceptanceData = {
-                                student_name: acceptance.user_full_name || 'N/A',
-                                student_email: acceptance.user_email || 'N/A',
-                                term_title: acceptance.term_title || 'N/A',
-                                accepted_at: new Date(acceptance.accepted_at).toLocaleString('en-US'),
-                                ip_address: acceptance.ip_address || 'N/A',
-                                user_agent: acceptance.user_agent || 'N/A',
-                                country: 'N/A',
-                                affiliate_code: undefined,
-                                term_content: acceptance.term_content || ''
-                              };
-                              generateTermAcceptancePDF(pdfData);
-                            }}
-                            className="inline-flex items-center px-3 py-1 rounded-md text-xs font-medium bg-blue-600 text-white hover:bg-blue-700 transition-colors"
-                            title="Download PDF certificate"
-                          >
-                            <Download className="h-3 w-3 mr-1" />
-                            PDF
-                          </button>
-                        </div>
                       </div>
-                    </div>
-                  ))}
-                </div>
-              )}
+                    ))}
+                  </div>
+                )}
+              </div>
             </div>
-          </div>
 
+          </div>
         </div>
-      </div>
       )}
 
       {/* Modal para recusar aluno na bolsa */}
@@ -5663,12 +5649,12 @@ const AdminStudentDetails: React.FC = () => {
                   </div>
                 </div>
               </div>
-              
+
               <div className="p-6">
                 {(() => {
                   // Encontrar aplicação transfer
                   const transferApp = getTransferApplication();
-                  
+
                   if (transferApp?.transfer_form_url) {
                     // Formulário já enviado
                     return (
@@ -5691,7 +5677,7 @@ const AdminStudentDetails: React.FC = () => {
                             <p className="text-sm text-slate-500 break-words">
                               Sent on {transferApp.transfer_form_sent_at ? new Date(transferApp.transfer_form_sent_at).toLocaleDateString('pt-BR') : 'N/A'}
                             </p>
-                            
+
                             <div className="flex flex-col sm:flex-row gap-2 mt-3">
                               <button
                                 onClick={() => handleViewDocument({
@@ -5702,7 +5688,7 @@ const AdminStudentDetails: React.FC = () => {
                               >
                                 View
                               </button>
-                              
+
                               <button
                                 onClick={() => handleDownloadDocument({
                                   file_url: transferApp.transfer_form_url,
@@ -5712,7 +5698,7 @@ const AdminStudentDetails: React.FC = () => {
                               >
                                 Download
                               </button>
-                              
+
                               {isPlatformAdmin && (
                                 <button
                                   onClick={() => {
@@ -5738,7 +5724,7 @@ const AdminStudentDetails: React.FC = () => {
                             </div>
                           </div>
                         </div>
-                        
+
                         {/* Seção de upload para substituição */}
                         {isPlatformAdmin && (transferFormFile || uploadingTransferForm) && (
                           <div className="mt-6 bg-blue-50 border border-blue-200 rounded-2xl p-6">
@@ -5748,7 +5734,7 @@ const AdminStudentDetails: React.FC = () => {
                               </svg>
                               {uploadingTransferForm ? 'Uploading Transfer Form...' : 'Replace Transfer Form'}
                             </h4>
-                            
+
                             <div className="space-y-4">
                               {uploadingTransferForm ? (
                                 <div className="text-center py-4">
@@ -5780,7 +5766,7 @@ const AdminStudentDetails: React.FC = () => {
                                       Selected: {transferFormFile?.name || 'Unknown file'}
                                     </p>
                                   </div>
-                                  
+
                                   <div className="flex gap-3">
                                     <button
                                       onClick={handleUploadTransferForm}
@@ -5789,7 +5775,7 @@ const AdminStudentDetails: React.FC = () => {
                                     >
                                       Replace Transfer Form
                                     </button>
-                                    
+
                                     <button
                                       onClick={() => setTransferFormFile(null)}
                                       className="bg-slate-200 hover:bg-slate-300 text-slate-700 px-4 py-2 rounded-lg font-medium"
@@ -5822,13 +5808,13 @@ const AdminStudentDetails: React.FC = () => {
                               </svg>
                               Student Uploads
                             </h4>
-                            
+
                             <div className="space-y-4">
                               {transferFormUploads.map((upload) => {
                                 const statusColor = upload.status === 'approved' ? 'bg-green-100 text-green-800 border-green-200' :
-                                                  upload.status === 'rejected' ? 'bg-red-100 text-red-800 border-red-200' :
-                                                  'bg-yellow-100 text-yellow-800 border-yellow-200';
-                                
+                                  upload.status === 'rejected' ? 'bg-red-100 text-red-800 border-red-200' :
+                                    'bg-yellow-100 text-yellow-800 border-yellow-200';
+
                                 return (
                                   <div key={upload.id} className="bg-white border border-slate-200 rounded-lg p-4">
                                     <div className="flex items-center justify-between mb-3">
@@ -5851,14 +5837,14 @@ const AdminStudentDetails: React.FC = () => {
                                         {upload.status.replace('_', ' ').replace(/\b\w/g, (l: string) => l.toUpperCase())}
                                       </span>
                                     </div>
-                                    
+
                                     {upload.rejection_reason && (
                                       <div className="mb-3 p-3 bg-red-50 border border-red-200 rounded-lg">
                                         <p className="text-sm font-medium text-red-600 mb-1">Rejection reason:</p>
                                         <p className="text-sm text-red-700">{upload.rejection_reason}</p>
                                       </div>
                                     )}
-                                    
+
                                     <div className="flex gap-2">
                                       <button
                                         className="text-blue-600 hover:text-blue-800 text-sm font-medium hover:underline"
@@ -5888,7 +5874,7 @@ const AdminStudentDetails: React.FC = () => {
                                       >
                                         Download
                                       </button>
-                                      
+
                                       {upload.status === 'under_review' && isPlatformAdmin && (
                                         <>
                                           <button
@@ -5931,12 +5917,12 @@ const AdminStudentDetails: React.FC = () => {
                             {transferFormFile ? 'Replace Transfer Form' : 'Transfer Form Not Sent'}
                           </h4>
                           <p className="text-slate-500 max-w-md mx-auto mb-6">
-                            {transferFormFile 
+                            {transferFormFile
                               ? 'Select a new file to replace the current transfer form.'
                               : 'Upload and send the transfer form for this transfer student.'
                             }
                           </p>
-                          
+
                           {isPlatformAdmin && (
                             <div className="space-y-4">
                               <div>
@@ -5964,7 +5950,7 @@ const AdminStudentDetails: React.FC = () => {
                                   </p>
                                 )}
                               </div>
-                              
+
                               <button
                                 onClick={handleUploadTransferForm}
                                 disabled={!transferFormFile || uploadingTransferForm}
@@ -5995,41 +5981,51 @@ const AdminStudentDetails: React.FC = () => {
             </div>
           ) : (
             <Suspense fallback={<TabLoadingSkeleton />}>
-            <DocumentsView
-              studentDocuments={[]}
-              documentRequests={documentRequests}
-              scholarshipApplication={(() => {
-                // Priorizar aplicação com application fee pago (aplicação ativa)
-                const apps = student?.all_applications || [];
-                const paidApp = apps.find(app => app.is_application_fee_paid);
-                return paidApp || apps[0];
-              })()}
-              studentId={student?.user_id}
-              onViewDocument={handleViewDocument}
-              onDownloadDocument={handleDownloadDocument}
-              onUploadDocument={handleUploadDocumentRequest}
-              onApproveDocument={handleApproveDocumentRequest}
-              onRejectDocument={handleRejectDocumentRequest}
-              onEditTemplate={handleEditTemplate}
-              onDeleteDocumentRequest={handleDeleteDocumentRequest}
-              isAdmin={isPlatformAdmin}
-              uploadingStates={uploadingDocumentRequest}
-              approvingStates={approvingDocumentRequest}
-              rejectingStates={rejectingDocumentRequest}
-              deletingStates={deletingDocumentRequest}
-            />
+              <DocumentsView
+                studentDocuments={[]}
+                documentRequests={documentRequests}
+                scholarshipApplication={(() => {
+                  // Priorizar aplicação com application fee pago (aplicação ativa)
+                  const apps = student?.all_applications || [];
+                  const paidApp = apps.find(app => app.is_application_fee_paid);
+                  return paidApp || apps[0];
+                })()}
+                studentId={student?.user_id}
+                onViewDocument={handleViewDocument}
+                onDownloadDocument={handleDownloadDocument}
+                onUploadDocument={handleUploadDocumentRequest}
+                onApproveDocument={handleApproveDocumentRequest}
+                onRejectDocument={handleRejectDocumentRequest}
+                onEditTemplate={handleEditTemplate}
+                onDeleteDocumentRequest={handleDeleteDocumentRequest}
+                isAdmin={isPlatformAdmin}
+                uploadingStates={uploadingDocumentRequest}
+                approvingStates={approvingDocumentRequest}
+                rejectingStates={rejectingDocumentRequest}
+                deletingStates={deletingDocumentRequest}
+              />
             </Suspense>
           )}
         </div>
-        )}
+      )}
 
       {activeTab === 'scholarships' && student && (
         <div className="space-y-6">
           <Suspense fallback={<TabLoadingSkeleton />}>
-          <AdminScholarshipSelection
-            studentProfileId={student.student_id}
-            studentUserId={student.user_id}
-          />
+            <AdminScholarshipSelection
+              studentProfileId={student.student_id}
+              studentUserId={student.user_id}
+            />
+          </Suspense>
+        </div>
+      )}
+
+      {activeTab === 'survey' && student && (
+        <div className="space-y-6">
+          <Suspense fallback={<TabLoadingSkeleton />}>
+            <SelectionSurveyView
+              userId={student.user_id}
+            />
           </Suspense>
         </div>
       )}
@@ -6037,10 +6033,10 @@ const AdminStudentDetails: React.FC = () => {
       {activeTab === 'logs' && student && (
         <div className="p-6">
           <Suspense fallback={<TabLoadingSkeleton />}>
-          <StudentLogsView 
-            studentId={student.student_id} 
-            studentName={student.student_name} 
-          />
+            <StudentLogsView
+              studentId={student.student_id}
+              studentName={student.student_name}
+            />
           </Suspense>
         </div>
       )}
@@ -6057,11 +6053,11 @@ const AdminStudentDetails: React.FC = () => {
                 Delete Note
               </h3>
             </div>
-            
+
             <p className="text-sm text-slate-600 mb-6">
               Are you sure you want to delete this note? This action cannot be undone.
             </p>
-            
+
             <div className="flex space-x-3">
               <button
                 onClick={cancelDeleteNote}
@@ -6101,7 +6097,7 @@ const AdminStudentDetails: React.FC = () => {
                 <XCircle className="w-6 h-6" />
               </button>
             </div>
-            
+
             <div className="mb-4">
               <p className="text-sm text-gray-600 mb-2">
                 Document: <span className="font-medium">{rejectDocData?.docType}</span>
@@ -6119,7 +6115,7 @@ const AdminStudentDetails: React.FC = () => {
                 required
               />
             </div>
-            
+
             <div className="flex justify-end space-x-3">
               <button
                 onClick={() => {
@@ -6160,7 +6156,7 @@ const AdminStudentDetails: React.FC = () => {
                 <XCircle className="w-6 h-6" />
               </button>
             </div>
-            
+
             <div className="mb-4">
               <label htmlFor="rejectNotes" className="block text-sm font-medium text-gray-700 mb-2">
                 Rejection Reason *
@@ -6175,7 +6171,7 @@ const AdminStudentDetails: React.FC = () => {
                 required
               />
             </div>
-            
+
             <div className="flex justify-end space-x-3">
               <button
                 onClick={() => {
@@ -6317,7 +6313,7 @@ const AdminStudentDetails: React.FC = () => {
                 Confirm Payment
               </h3>
             </div>
-            
+
             <p className="text-sm text-slate-600 mb-6">
               Are you sure you want to mark the <strong>{pendingPayment.feeName}</strong> as paid?
             </p>
@@ -6358,7 +6354,7 @@ const AdminStudentDetails: React.FC = () => {
                 </div>
               );
             })()}
-            
+
             <div className="mb-6">
               <label className="block text-sm font-medium text-slate-700 mb-2">
                 Payment Method
@@ -6373,7 +6369,7 @@ const AdminStudentDetails: React.FC = () => {
                 <option value="manual">Outside</option>
               </select>
             </div>
-            
+
             <div className="flex space-x-3">
               <button
                 onClick={() => {
@@ -6389,9 +6385,9 @@ const AdminStudentDetails: React.FC = () => {
                 onClick={confirmPayment}
                 disabled={
                   markingAsPaid[`${student?.student_id}:${pendingPayment.feeType}`] ||
-                  (pendingPayment.feeType === 'application' && 
-                   (student?.all_applications?.filter((app: any) => app.status === 'approved') || []).length > 1 && 
-                   !selectedApplicationId)
+                  (pendingPayment.feeType === 'application' &&
+                    (student?.all_applications?.filter((app: any) => app.status === 'approved') || []).length > 1 &&
+                    !selectedApplicationId)
                 }
                 className="flex-1 px-4 py-2 bg-[#05294E] text-white rounded-lg hover:bg-[#041f38] disabled:opacity-50 transition-colors flex items-center justify-center space-x-2"
               >
@@ -6405,19 +6401,19 @@ const AdminStudentDetails: React.FC = () => {
         </div>
       )}
 
-      
+
       {/* Modal de visualização de documentos */}
       {previewUrl && (
         <>
           {console.log('🔍 [ADMIN] Rendering modal with URL:', previewUrl)}
           {console.log('🔍 [ADMIN] previewUrl is truthy:', !!previewUrl)}
           {console.log('🔍 [ADMIN] About to render DocumentViewerModal')}
-          <DocumentViewerModal 
-            documentUrl={previewUrl} 
+          <DocumentViewerModal
+            documentUrl={previewUrl}
             onClose={() => {
               console.log('🔍 [ADMIN] Closing modal');
               setPreviewUrl(null);
-            }} 
+            }}
           />
         </>
       )}
@@ -6534,7 +6530,7 @@ const AdminI20DeadlineTimer: React.FC<AdminI20DeadlineTimerProps> = ({ deadline,
   const getIcon = () => {
     const now = new Date();
     const timeDiff = deadline.getTime() - now.getTime();
-    const daysLeft = Math.floor(timeDiff / (1000 * 60 * 60 * 24)); 
+    const daysLeft = Math.floor(timeDiff / (1000 * 60 * 60 * 24));
 
     if (timeDiff <= 0) {
       return <AlertTriangle className="w-5 h-5" />;
@@ -6557,7 +6553,7 @@ const AdminI20DeadlineTimer: React.FC<AdminI20DeadlineTimerProps> = ({ deadline,
           I-20 Control Fee Deadline - {studentName}
         </h3>
       </div>
-      
+
       <div className="space-y-3">
         <div className="flex items-center justify-between">
           <div className="flex items-center space-x-2">
@@ -6572,7 +6568,7 @@ const AdminI20DeadlineTimer: React.FC<AdminI20DeadlineTimerProps> = ({ deadline,
             {isExpired ? 'Expired' : 'Active'}
           </div>
         </div>
-        
+
         <div className={`text-sm ${styles.textColor}`}>
           <div className="font-medium mb-1">Deadline:</div>
           <div>{deadline.toLocaleString('en-US', {
@@ -6583,7 +6579,7 @@ const AdminI20DeadlineTimer: React.FC<AdminI20DeadlineTimerProps> = ({ deadline,
             minute: '2-digit'
           })}</div>
         </div>
-        
+
         <div className={`text-sm ${styles.textColor}`}>
           <div className="font-medium mb-1">Admin Status:</div>
           <div>{getStatusMessage()}</div>

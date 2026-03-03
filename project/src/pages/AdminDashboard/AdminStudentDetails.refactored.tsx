@@ -53,6 +53,8 @@ const DocumentsView = lazy(() => import('../../components/EnhancedStudentTrackin
 const AdminScholarshipSelection = lazy(() => import('../../components/AdminDashboard/AdminScholarshipSelection'));
 const StudentLogsView = lazy(() => import('../../components/AdminDashboard/StudentLogsView'));
 
+const SelectionSurveyView = lazy(() => import('../../components/AdminDashboard/SelectionSurveyView'));
+
 // Tab Loading Skeleton
 const TabLoadingSkeleton: React.FC = () => (
   <div className="space-y-6 animate-pulse">
@@ -473,7 +475,7 @@ const AdminStudentDetails: React.FC = () => {
   // Ler parâmetro 'tab' da URL e definir aba inicial
   useEffect(() => {
     const tabParam = searchParams.get('tab');
-    if (tabParam && ['overview', 'documents', 'scholarships', 'logs'].includes(tabParam)) {
+    if (tabParam && ['overview', 'documents', 'scholarships', 'survey', 'logs'].includes(tabParam)) {
       setActiveTab(tabParam as TabId);
     }
   }, [searchParams]);
@@ -3425,6 +3427,17 @@ const AdminStudentDetails: React.FC = () => {
             studentUserId={student?.user_id || ''}
           />
         </Suspense>
+      )}
+
+      {/* Selection Survey Tab */}
+      {activeTab === 'survey' && (
+        <div className="space-y-6">
+          <Suspense fallback={<TabLoadingSkeleton />}>
+            <SelectionSurveyView
+              userId={student?.user_id || ''}
+            />
+          </Suspense>
+        </div>
       )}
 
       {/* Logs Tab */}
