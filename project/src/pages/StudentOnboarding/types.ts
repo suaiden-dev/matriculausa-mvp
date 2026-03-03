@@ -1,5 +1,4 @@
 export type OnboardingStep =
-  | "welcome"
   | "selection_fee"
   | "selection_survey"
   | "scholarship_selection"

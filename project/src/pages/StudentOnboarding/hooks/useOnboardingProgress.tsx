@@ -14,7 +14,7 @@ export const useOnboardingProgress = () => {
   const getSavedStep = useCallback((): OnboardingStep | null => {
     // Usar apenas localStorage por enquanto (campo no banco não existe ainda)
     const savedStep = window.localStorage.getItem(ONBOARDING_STEP_KEY);
-    const validSteps: OnboardingStep[] = ['welcome', 'selection_fee', 'selection_survey', 'scholarship_selection', 'process_type', 'documents_upload', 'payment', 'scholarship_fee', 'my_applications', 'completed'];
+    const validSteps: OnboardingStep[] = ['selection_fee', 'selection_survey', 'scholarship_selection', 'process_type', 'documents_upload', 'payment', 'scholarship_fee', 'my_applications', 'completed'];
     if (savedStep && validSteps.includes(savedStep as OnboardingStep)) {
       return savedStep as OnboardingStep;
     }
@@ -30,8 +30,8 @@ export const useOnboardingProgress = () => {
   const [state, setState] = useState<OnboardingState>(() => {
     // Inicializar com step do localStorage se existir (síncrono)
     const savedStep = window.localStorage.getItem(ONBOARDING_STEP_KEY);
-    const validSteps: OnboardingStep[] = ['welcome', 'selection_fee', 'selection_survey', 'scholarship_selection', 'process_type', 'documents_upload', 'payment', 'scholarship_fee', 'my_applications', 'completed'];
-    const initialStep = savedStep && validSteps.includes(savedStep as OnboardingStep) ? savedStep as OnboardingStep : 'welcome';
+    const validSteps: OnboardingStep[] = ['selection_fee', 'selection_survey', 'scholarship_selection', 'process_type', 'documents_upload', 'payment', 'scholarship_fee', 'my_applications', 'completed'];
+    const initialStep = savedStep && validSteps.includes(savedStep as OnboardingStep) ? savedStep as OnboardingStep : 'selection_fee';
     
     return {
       currentStep: initialStep,
@@ -250,10 +250,6 @@ export const useOnboardingProgress = () => {
       const savedStepLog = window.localStorage.getItem(ONBOARDING_STEP_KEY);
       console.log('[OnboardingDebug] Calculating step. savedStep from localStorage:', savedStepLog);
 
-      // Verificar se é um novo usuário (sem nenhum progresso E sem step salvo)
-      // Se há step salvo, significa que o usuário já interagiu com o onboarding
-      const isNewUser = !selectionFeePaid && !selectionSurveyPassed && !scholarshipsSelected && !processTypeSelected && !documentsUploaded && !savedStep;
-      
       let currentStep: OnboardingStep;
       
       const urlParams = new URLSearchParams(window.location.search);
@@ -265,16 +261,9 @@ export const useOnboardingProgress = () => {
         window.localStorage.removeItem(ONBOARDING_STEP_KEY);
       } else if (onboardingCompleted && isForcingPortal) {
         currentStep = 'my_applications';
-      } else if (isNewUser) {
-        // Novo usuário (sem progresso E sem step salvo) sempre começa na página de welcome
-        currentStep = 'welcome';
-      } else if (savedStep === 'welcome' && !selectionFeePaid && !scholarshipsSelected) {
-        // Se o step salvo é 'welcome' e não há progresso, manter em 'welcome'
-        // Isso permite que o usuário veja a página de welcome quando acessa via URL
-        currentStep = 'welcome';
       } else if (savedStep && savedStep !== 'completed') {
         // Se há um step salvo e não está completado, calcular o máximo permitido
-        let maxAllowedStep: OnboardingStep = 'welcome';
+        let maxAllowedStep: OnboardingStep = 'selection_fee';
         
         if (!selectionFeePaid) {
           maxAllowedStep = 'selection_fee';
@@ -297,7 +286,7 @@ export const useOnboardingProgress = () => {
 
         // Se o step salvo é mais avançado que o permitido, usar o permitido
         // Caso contrário, respeitar o desejo do usuário (permitir voltar)
-        const allSteps: OnboardingStep[] = ['welcome', 'selection_fee', 'selection_survey', 'scholarship_selection', 'process_type', 'documents_upload', 'payment', 'scholarship_fee', 'my_applications', 'completed'];
+        const allSteps: OnboardingStep[] = ['selection_fee', 'selection_survey', 'scholarship_selection', 'process_type', 'documents_upload', 'payment', 'scholarship_fee', 'my_applications', 'completed'];
         const savedIdx = allSteps.indexOf(savedStep);
         const maxIdx = allSteps.indexOf(maxAllowedStep);
         

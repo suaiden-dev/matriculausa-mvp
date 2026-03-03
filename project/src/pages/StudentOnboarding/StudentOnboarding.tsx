@@ -4,7 +4,6 @@ import { ArrowLeft, Bell, Clock } from 'lucide-react';
 import { useAuth } from '../../hooks/useAuth';
 import { useOnboardingProgress } from './hooks/useOnboardingProgress';
 import { StepIndicator } from './components/StepIndicator';
-import { WelcomeStep } from './components/WelcomeStep';
 import { SelectionFeeStep } from './components/SelectionFeeStep';
 import { ScholarshipSelectionStep } from './components/ScholarshipSelectionStep';
 import { ProcessTypeStep } from './components/ProcessTypeStep';
@@ -35,7 +34,6 @@ const StudentOnboarding: React.FC = () => {
 
   const handleNext = useCallback(() => {
     const steps: OnboardingStep[] = [
-      'welcome',
       'selection_fee',
       'selection_survey',
       'scholarship_selection',
@@ -55,7 +53,6 @@ const StudentOnboarding: React.FC = () => {
 
   const handleBack = useCallback(() => {
     const steps: OnboardingStep[] = [
-      'welcome',
       'selection_fee',
       'selection_survey',
       'scholarship_selection',
@@ -124,16 +121,12 @@ const StudentOnboarding: React.FC = () => {
   useEffect(() => {
     const stepParam = searchParams.get('step');
     if (stepParam) {
-      const validSteps: OnboardingStep[] = ['welcome', 'selection_fee', 'selection_survey', 'scholarship_selection', 'process_type', 'documents_upload', 'payment', 'scholarship_fee', 'my_applications'];
+      const validSteps: OnboardingStep[] = ['selection_fee', 'selection_survey', 'scholarship_selection', 'process_type', 'documents_upload', 'payment', 'scholarship_fee', 'my_applications'];
       if (validSteps.includes(stepParam as OnboardingStep)) {
         window.localStorage.setItem('onboarding_current_step', stepParam);
-        if (stepParam === 'welcome') {
-          goToStep('welcome');
-        } else {
-          setTimeout(() => {
-            goToStep(stepParam as OnboardingStep);
-          }, 100);
-        }
+        setTimeout(() => {
+          goToStep(stepParam as OnboardingStep);
+        }, 100);
       }
     }
   }, [searchParams, goToStep]);
@@ -332,7 +325,6 @@ const StudentOnboarding: React.FC = () => {
 
 
   const allSteps: OnboardingStep[] = [
-    'welcome',
     'selection_fee',
     'selection_survey',
     'scholarship_selection',
@@ -346,7 +338,6 @@ const StudentOnboarding: React.FC = () => {
   const currentIdx = allSteps.indexOf(state.currentStep);
 
   const completedSteps: OnboardingStep[] = [];
-  if (currentIdx > allSteps.indexOf('welcome')) completedSteps.push('welcome');
   if (state.selectionFeePaid && currentIdx > allSteps.indexOf('selection_fee')) completedSteps.push('selection_fee');
   if (state.selectionSurveyPassed && currentIdx > allSteps.indexOf('selection_survey')) completedSteps.push('selection_survey');
   if (state.scholarshipsSelected && currentIdx > allSteps.indexOf('scholarship_selection')) completedSteps.push('scholarship_selection');
@@ -358,8 +349,6 @@ const StudentOnboarding: React.FC = () => {
 
   const renderStep = () => {
     switch (state.currentStep) {
-      case 'welcome':
-        return <WelcomeStep onNext={handleNext} onBack={handleBack} />;
       case 'selection_fee':
         return <SelectionFeeStep onNext={handleNext} onBack={handleBack} />;
       case 'selection_survey':
@@ -377,7 +366,7 @@ const StudentOnboarding: React.FC = () => {
       case 'my_applications':
         return <UniversityDocumentsStep onNext={handleNext} onBack={handleBack} />;
       default:
-        return <WelcomeStep onNext={handleNext} onBack={handleBack} />;
+        return <SelectionFeeStep onNext={handleNext} onBack={handleBack} />;
     }
   };
 
@@ -421,7 +410,7 @@ const StudentOnboarding: React.FC = () => {
       {/* Removido padrão diagonal de logos no fundo */}
       
       <div className="w-full max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 xl:px-12 py-4 sm:py-6 lg:py-8 flex-1 flex flex-col relative z-10">
-        {state.currentStep !== 'welcome' && (
+        {true && (
           <div className="mb-4 sm:mb-6 flex justify-between items-center">
             <button
               onClick={handleBack}
@@ -498,7 +487,7 @@ const StudentOnboarding: React.FC = () => {
           </div>
         )}
 
-        {state.currentStep !== 'welcome' && state.currentStep !== 'my_applications' && (
+        {state.currentStep !== 'my_applications' && (
           <div className="mb-6 sm:mb-8">
             <StepIndicator currentStep={state.currentStep} completedSteps={completedSteps} />
           </div>
