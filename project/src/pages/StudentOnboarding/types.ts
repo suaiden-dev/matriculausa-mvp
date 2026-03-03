@@ -1,5 +1,6 @@
 export type OnboardingStep =
   | "selection_fee"
+  | "identity_verification"
   | "selection_survey"
   | "scholarship_selection"
   | "process_type"

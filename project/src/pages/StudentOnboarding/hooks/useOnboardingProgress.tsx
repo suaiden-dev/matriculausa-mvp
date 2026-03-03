@@ -14,7 +14,7 @@ export const useOnboardingProgress = () => {
   const getSavedStep = useCallback((): OnboardingStep | null => {
     // Usar apenas localStorage por enquanto (campo no banco não existe ainda)
     const savedStep = window.localStorage.getItem(ONBOARDING_STEP_KEY);
-    const validSteps: OnboardingStep[] = ['selection_fee', 'selection_survey', 'scholarship_selection', 'process_type', 'documents_upload', 'payment', 'scholarship_fee', 'my_applications', 'completed'];
+    const validSteps: OnboardingStep[] = ['selection_fee', 'identity_verification', 'selection_survey', 'scholarship_selection', 'process_type', 'documents_upload', 'payment', 'scholarship_fee', 'my_applications', 'completed'];
     if (savedStep && validSteps.includes(savedStep as OnboardingStep)) {
       return savedStep as OnboardingStep;
     }
@@ -30,7 +30,7 @@ export const useOnboardingProgress = () => {
   const [state, setState] = useState<OnboardingState>(() => {
     // Inicializar com step do localStorage se existir (síncrono)
     const savedStep = window.localStorage.getItem(ONBOARDING_STEP_KEY);
-    const validSteps: OnboardingStep[] = ['selection_fee', 'selection_survey', 'scholarship_selection', 'process_type', 'documents_upload', 'payment', 'scholarship_fee', 'my_applications', 'completed'];
+    const validSteps: OnboardingStep[] = ['selection_fee', 'identity_verification', 'selection_survey', 'scholarship_selection', 'process_type', 'documents_upload', 'payment', 'scholarship_fee', 'my_applications', 'completed'];
     const initialStep = savedStep && validSteps.includes(savedStep as OnboardingStep) ? savedStep as OnboardingStep : 'selection_fee';
     
     return {
@@ -94,7 +94,19 @@ export const useOnboardingProgress = () => {
         }
       }
 
-      // 1.5 Verificar Selection Survey
+      // 1.5 Verificar Identity Verification (selfie)
+      let identityVerified = false;
+      {
+        const { data: photoAcceptance } = await supabase
+          .from('comprehensive_term_acceptance')
+          .select('identity_photo_path')
+          .eq('user_id', user.id)
+          .not('identity_photo_path', 'is', null)
+          .maybeSingle();
+        identityVerified = !!photoAcceptance?.identity_photo_path;
+      }
+
+      // 1.6 Verificar Selection Survey
       const selectionSurveyPassed = userProfile.selection_survey_passed || false;
 
       // 2. Verificar se há bolsas selecionadas (cart ou aplicações)
@@ -267,6 +279,8 @@ export const useOnboardingProgress = () => {
         
         if (!selectionFeePaid) {
           maxAllowedStep = 'selection_fee';
+        } else if (!identityVerified) {
+          maxAllowedStep = 'identity_verification';
         } else if (!selectionSurveyPassed) {
           maxAllowedStep = 'selection_survey';
         } else if (!scholarshipsSelected) {
@@ -286,7 +300,7 @@ export const useOnboardingProgress = () => {
 
         // Se o step salvo é mais avançado que o permitido, usar o permitido
         // Caso contrário, respeitar o desejo do usuário (permitir voltar)
-        const allSteps: OnboardingStep[] = ['selection_fee', 'selection_survey', 'scholarship_selection', 'process_type', 'documents_upload', 'payment', 'scholarship_fee', 'my_applications', 'completed'];
+        const allSteps: OnboardingStep[] = ['selection_fee', 'identity_verification', 'selection_survey', 'scholarship_selection', 'process_type', 'documents_upload', 'payment', 'scholarship_fee', 'my_applications', 'completed'];
         const savedIdx = allSteps.indexOf(savedStep);
         const maxIdx = allSteps.indexOf(maxAllowedStep);
         
@@ -295,6 +309,8 @@ export const useOnboardingProgress = () => {
         // Se não há step salvo e não é novo usuário, calcular baseado no progresso
         if (!selectionFeePaid) {
           currentStep = 'selection_fee';
+        } else if (!identityVerified) {
+          currentStep = 'identity_verification';
         } else if (!selectionSurveyPassed) {
           currentStep = 'selection_survey';
         } else if (!scholarshipsSelected) {

@@ -12,6 +12,7 @@ import { PaymentStep } from './components/PaymentStep'; // Payment step componen
 import { ScholarshipFeeStep } from './components/ScholarshipFeeStep';
 import { UniversityDocumentsStep } from './components/UniversityDocumentsStep';
 import { SelectionSurveyStep } from './components/SelectionSurveyStep';
+import { IdentityVerificationStep } from './components/IdentityVerificationStep';
 import { OnboardingStep } from './types';
 import PaymentSuccessOverlay from '../../components/PaymentSuccessOverlay';
 import CustomLoading from '../../components/CustomLoading';
@@ -35,6 +36,7 @@ const StudentOnboarding: React.FC = () => {
   const handleNext = useCallback(() => {
     const steps: OnboardingStep[] = [
       'selection_fee',
+      'identity_verification',
       'selection_survey',
       'scholarship_selection',
       'process_type',
@@ -54,6 +56,7 @@ const StudentOnboarding: React.FC = () => {
   const handleBack = useCallback(() => {
     const steps: OnboardingStep[] = [
       'selection_fee',
+      'identity_verification',
       'selection_survey',
       'scholarship_selection',
       'process_type',
@@ -121,7 +124,7 @@ const StudentOnboarding: React.FC = () => {
   useEffect(() => {
     const stepParam = searchParams.get('step');
     if (stepParam) {
-      const validSteps: OnboardingStep[] = ['selection_fee', 'selection_survey', 'scholarship_selection', 'process_type', 'documents_upload', 'payment', 'scholarship_fee', 'my_applications'];
+      const validSteps: OnboardingStep[] = ['selection_fee', 'identity_verification', 'selection_survey', 'scholarship_selection', 'process_type', 'documents_upload', 'payment', 'scholarship_fee', 'my_applications'];
       if (validSteps.includes(stepParam as OnboardingStep)) {
         window.localStorage.setItem('onboarding_current_step', stepParam);
         setTimeout(() => {
@@ -334,6 +337,7 @@ const StudentOnboarding: React.FC = () => {
     'scholarship_fee',
     'my_applications',
   ];
+  // identity_verification é um passo fantasma — não aparece na trilha visual
 
   const currentIdx = allSteps.indexOf(state.currentStep);
 
@@ -351,6 +355,8 @@ const StudentOnboarding: React.FC = () => {
     switch (state.currentStep) {
       case 'selection_fee':
         return <SelectionFeeStep onNext={handleNext} onBack={handleBack} />;
+      case 'identity_verification':
+        return <IdentityVerificationStep onNext={handleNext} onBack={handleBack} />;
       case 'selection_survey':
         return <SelectionSurveyStep onNext={handleNext} onBack={handleBack} />;
       case 'scholarship_selection':
@@ -489,7 +495,10 @@ const StudentOnboarding: React.FC = () => {
 
         {state.currentStep !== 'my_applications' && (
           <div className="mb-6 sm:mb-8">
-            <StepIndicator currentStep={state.currentStep} completedSteps={completedSteps} />
+            <StepIndicator 
+              currentStep={state.currentStep === 'identity_verification' ? 'selection_survey' : state.currentStep} 
+              completedSteps={completedSteps} 
+            />
           </div>
         )}
 

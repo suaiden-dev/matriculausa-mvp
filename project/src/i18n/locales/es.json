@@ -1789,12 +1789,12 @@
   "selectionFeeStep": {
     "main": {
       "title": "Tarifa del Proceso de Selección",
-      "subtitle": "Asegura tu lugar pagando la tarifa del proceso de selección",
+      "subtitle": "Esta tarifa cubre el procesamiento de su solicitud, la evaluación de documentos y el soporte inicial para su proceso de estudio.",
       "headerTitle": "Tarifa del Proceso de Selección",
       "headerSubtitle": "Matricula USA - Tarifa única",
       "description": "Esta tarifa cubre el procesamiento de su solicitud, la evaluación de documentos y el apoyo inicial para su viaje de estudios en los Estados Unidos.",
       "identityVerification": "Verificación de Identidad",
-      "identityVerificationSubtitle": "Por favor, envíe una selfie con su documento",
+      "identityVerificationSubtitle": "Este paso es obligatorio",
       "discountApplied": "Descuento Aplicado",
       "couponApplied": "Cupón {{coupon}} Aplicado",
       "methods": {
@@ -4088,7 +4088,7 @@
     "copyright": "© 2026 Matrícula USA • Proceso de Selección de Estudiantes",
     "results": {
       "congratulations": "¡Felicidades!",
-      "passedMessage": "¡Ha sido aprobado en el proceso de selección y está un paso más cerca de su sueño!",
+      "passedMessage": "Usted es apto para proceder a la selección de becas e está un paso más cerca de su sueño",
       "score": "Su Puntuación:",
       "minRequired": "Mínimo necesario: 80%",
       "ctaDashboard": "Elegir Becas",

@@ -1754,12 +1754,12 @@
   "selectionFeeStep": {
     "main": {
       "title": "Taxa do Processo Seletivo",
-      "subtitle": "Garanta sua vaga pagando a taxa do processo seletivo",
+      "subtitle": "Esta taxa cobre o processamento de sua candidatura, avaliação de documentos e suporte inicial para o seu processo de estudo.",
       "headerTitle": "Taxa do Processo Seletivo",
       "headerSubtitle": "Matrícula USA - Taxa única",
       "description": "Esta taxa cobre o processamento de sua candidatura, avaliação de documentos e suporte inicial para o seu processo de estudo nos Estados Unidos.",
       "identityVerification": "Verificação de Identidade",
-      "identityVerificationSubtitle": "Por favor, envie uma selfie com seu documento",
+      "identityVerificationSubtitle": "Esta etapa é obrigatória",
       "discountApplied": "Desconto Aplicado",
       "couponApplied": "Cupom {{coupon}} Aplicado",
       "methods": {
@@ -4416,7 +4416,7 @@
     "copyright": "© 2026 Matrícula USA • Processo Seletivo de Alunos",
     "results": {
       "congratulations": "Parabéns!",
-      "passedMessage": "Você foi aprovado no processo seletivo e está um passo mais próximo do seu sonho!",
+      "passedMessage": "Você esta apto a prosseguir para a seleção de bolsas e esta um passo mais proximo do seu sonho",
       "score": "Sua Pontuação:",
       "minRequired": "Mínimo necessário: 80%",
       "ctaDashboard": "Escolher Bolsas",

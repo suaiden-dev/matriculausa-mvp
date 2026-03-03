@@ -1749,12 +1749,12 @@
   "selectionFeeStep": {
     "main": {
       "title": "Selection Process Fee",
-      "subtitle": "Secure your spot by paying the selection process fee",
+      "subtitle": "This fee covers the processing of your application, document evaluation, and initial support for your study process.",
       "headerTitle": "Selection Process Fee",
       "headerSubtitle": "Matricula USA - One-time fee",
       "description": "This fee covers your application processing, document evaluation, and initial support for your study journey in the United States.",
       "identityVerification": "Identity Verification",
-      "identityVerificationSubtitle": "Please provide a selfie with your document",
+      "identityVerificationSubtitle": "This step is mandatory",
       "discountApplied": "Discount Applied",
       "couponApplied": "Coupon {{coupon}} Applied",
       "methods": {
@@ -4361,7 +4361,7 @@
     "copyright": "© 2026 Matrícula USA • Student Selection Process",
     "results": {
       "congratulations": "Congratulations!",
-      "passedMessage": "You have passed the selection process and are one step closer to your dream!",
+      "passedMessage": "You are eligible to proceed to scholarship selection and are one step closer to your dream",
       "score": "Your Score:",
       "minRequired": "Minimum required: 80%",
       "ctaDashboard": "Choose Scholarships",

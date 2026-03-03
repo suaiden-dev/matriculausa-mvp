@@ -28,13 +28,13 @@ const ProcessoSeletivo = () => {
         return saved ? JSON.parse(saved) : {};
     });
     const [errors, setErrors] = useState<Record<number, string>>({});
+    const { user, userProfile, refetchUserProfile } = useAuth();
+    const navigate = useNavigate();
+
     const [submitted, setSubmitted] = useState(() => {
         return localStorage.getItem('survey_submitted') === 'true';
     });
     const [isSaving, setIsSaving] = useState(false);
-
-    const { user, userProfile, refetchUserProfile } = useAuth();
-    const navigate = useNavigate();
 
     // Pré-preencher dados do perfil se disponíveis
     useEffect(() => {

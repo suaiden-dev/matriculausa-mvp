@@ -8,6 +8,7 @@ interface IdentityPhotoUploadProps {
   onUploadError?: (error: string) => void;
   onRemove?: () => void;
   initialPhotoPath?: string;
+  variant?: 'default' | 'large';
 }
 
 const ALLOWED_TYPES = ['image/jpeg', 'image/jpg', 'image/png'];
@@ -17,7 +18,8 @@ export const IdentityPhotoUpload: React.FC<IdentityPhotoUploadProps> = ({
   onUploadSuccess,
   onUploadError,
   onRemove,
-  initialPhotoPath
+  initialPhotoPath,
+  variant = 'default'
 }) => {
   const { t } = useTranslation();
   const [preview, setPreview] = useState<string | null>(null);
@@ -174,24 +176,27 @@ export const IdentityPhotoUpload: React.FC<IdentityPhotoUploadProps> = ({
   return (
     <div className="space-y-4">
       {/* Imagem de ajuda */}
-      <div className="bg-blue-50 rounded-xl p-4 border border-blue-200">
-        <div className="flex items-start gap-3">
-          <Camera className="w-5 h-5 text-blue-600 mt-0.5 flex-shrink-0" />
-          <div className="flex-1">
-            <h4 className="font-semibold text-gray-900 mb-2 text-sm">
-              {t('components.identityPhotoUpload.titleInstructions')}
-            </h4>
-            <p className="text-xs text-gray-600 mb-3">
-              {t('components.identityPhotoUpload.instructions')}
-            </p>
-            <div className="flex justify-center">
-              <img 
-                src="/helpselfie.png" 
-                alt={t('components.identityPhotoUpload.exampleAlt')} 
-                className="max-w-full h-auto rounded-lg border-2 border-blue-300 shadow-sm"
-                style={{ maxHeight: '200px' }}
-              />
+      <div className={`bg-blue-50 rounded-xl border border-blue-200 ${variant === 'large' ? 'p-5 md:p-6' : 'p-4'}`}>
+        <div className={`flex items-start gap-4 ${variant === 'large' ? 'flex-col md:flex-row justify-between md:items-center' : 'flex-col'}`}>
+          
+          <div className="flex items-start gap-3 flex-1">
+            <Camera className={`text-blue-600 mt-0.5 flex-shrink-0 ${variant === 'large' ? 'w-6 h-6' : 'w-5 h-5'}`} />
+            <div>
+              <h4 className={`font-semibold text-gray-900 mb-2 ${variant === 'large' ? 'text-lg md:text-xl tracking-tight' : 'text-sm'}`}>
+                {t('components.identityPhotoUpload.titleInstructions')}
+              </h4>
+              <p className={`text-gray-600 ${variant === 'large' ? 'text-sm md:text-base leading-relaxed mb-4 md:mb-0' : 'text-xs mb-3'}`}>
+                {t('components.identityPhotoUpload.instructions')}
+              </p>
             </div>
+          </div>
+
+          <div className={`flex justify-center ${variant === 'large' ? 'w-full md:w-5/12 lg:w-4/12 flex-shrink-0 relative' : 'w-full'}`}>
+            <img 
+              src="/helpselfie.png" 
+              alt={t('components.identityPhotoUpload.exampleAlt')} 
+              className={`max-w-full h-auto rounded-lg border-2 border-blue-300 shadow-sm ${variant === 'large' ? 'max-h-[200px] md:max-h-[250px] object-contain' : 'max-h-[200px]'}`}
+            />
           </div>
         </div>
       </div>
@@ -238,11 +243,11 @@ export const IdentityPhotoUpload: React.FC<IdentityPhotoUploadProps> = ({
         </div>
       ) : (
         <div className="relative">
-          <div className="border-2 border-green-300 rounded-xl overflow-hidden bg-gray-50">
+          <div className="border-2 border-green-300 rounded-xl overflow-hidden bg-gray-50 flex justify-center items-center py-4 px-2 md:py-6">
             <img
               src={preview || undefined}
               alt={t('components.identityPhotoUpload.previewAlt')}
-              className="w-full h-auto max-h-96 object-contain"
+              className="max-w-full h-auto max-h-[200px] md:max-h-[280px] object-contain rounded-md"
             />
           </div>
           <div className="mt-3 flex items-center justify-between">

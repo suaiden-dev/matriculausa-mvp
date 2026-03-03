@@ -533,13 +533,6 @@ const Overview: React.FC<OverviewProps> = ({
             {/* Status do Onboarding acima da trilha - Layout Pílula Integrado */}
             {!userProfile?.onboarding_completed && (
               <div className="flex items-center justify-center gap-2 md:gap-4 mb-4 animate-fade-in bg-white/5 backdrop-blur-xl border border-white/10 rounded-full py-2 px-4 md:px-6 w-fit mx-auto shadow-[0_10px_30px_rgba(0,0,0,0.2)] ring-1 ring-white/10">
-                <div className="relative flex items-center">
-                  <span className="bg-amber-400 text-black text-[9px] md:text-[10px] font-black px-2 md:px-3 py-0.5 rounded-full uppercase tracking-tighter shadow-lg shadow-amber-400/20">
-                    {t('studentDashboard.progressBar.onboardingBanner.actionRequired')}
-                  </span>
-                  <span className="absolute -top-0.5 -right-0.5 w-2.5 h-2.5 bg-amber-400 rounded-full animate-ping opacity-75" />
-                </div>
-                <div className="w-px h-4 bg-white/20 hidden xs:block" />
                 <p className="text-white text-[10px] md:text-sm font-bold tracking-tight opacity-90 drop-shadow-md">
                   {isOnboardingStarted 
                     ? t('studentDashboard.progressBar.onboardingBanner.stoppedAt', { step: currentStepLabel })

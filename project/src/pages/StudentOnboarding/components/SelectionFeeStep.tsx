@@ -913,16 +913,19 @@ export const SelectionFeeStep: React.FC<StepProps> = ({ onNext }) => {
       return;
     }
     
-    if (e.target.checked) {
-      // Registrar imediatamente no banco
+    const isChecked = e.target.checked;
+    
+    // Atualiza o estado visual imediatamente
+    setTermsAccepted(isChecked);
+    
+    if (isChecked) {
+      // Registrar no banco de dados em background (ou aguardando, mas o UI já está atualizado)
       setLoading(true);
       if (!activeTerm) {
         await loadActiveTerms();
       }
       await handleTermsAcceptRecord();
       setLoading(false);
-    } else {
-      setTermsAccepted(false);
     }
   };
 
@@ -1346,38 +1349,8 @@ export const SelectionFeeStep: React.FC<StepProps> = ({ onNext }) => {
         <div className="bg-white border border-gray-100 rounded-[2.5rem] p-6 md:p-10 shadow-2xl relative overflow-hidden">
           <div className="absolute top-0 right-0 w-64 h-64 bg-blue-500/5 rounded-full blur-[80px] -mr-32 -mt-32 pointer-events-none" />
           
-          <div className="flex flex-col md:flex-row md:items-center justify-between mb-8 space-y-6 md:space-y-0 relative z-10">
-            <div className="flex items-center space-x-4">
-              <div>
-                <h3 className="text-2xl font-black text-gray-900 uppercase tracking-tight">{t('selectionFeeStep.main.headerTitle')}</h3>
-                <p className="text-xs font-bold text-gray-400 uppercase tracking-widest mt-1">{t('selectionFeeStep.main.headerSubtitle')}</p>
-              </div>
-            </div>
-            <div className="text-left md:text-right">
-              {computedBasePrice < selectionFeeAmount ? (
-                <div className="flex flex-col md:items-end">
-                  <div className="text-xl line-through text-gray-300 font-bold">{originalFormattedAmount}</div>
-                  <div className="text-4xl md:text-5xl font-black text-emerald-500 tracking-tighter">{formattedAmount}</div>
-                  <div className="inline-flex items-center bg-emerald-50 border border-emerald-100 px-3 py-1 rounded-full mt-2">
-                    <CheckCircle className="w-3 h-3 text-emerald-500 mr-2" />
-                    <span className="text-[10px] text-emerald-500 font-black uppercase tracking-widest">
-                      {promotionalCouponValidation?.isValid 
-                        ? t('selectionFeeStep.main.couponApplied', { coupon: promotionalCoupon })
-                        : t('selectionFeeStep.main.discountApplied')}
-                    </span>
-                  </div>
-                </div>
-              ) : (
-                <div className="text-4xl md:text-5xl font-black text-gray-900 tracking-tighter">{formattedAmount}</div>
-              )}
-            </div>
-          </div>
 
-          <div className="bg-gray-50 rounded-2xl p-5 mb-8 border border-gray-100">
-            <p className="text-sm md:text-base text-gray-600 leading-relaxed font-medium">
-              {t('selectionFeeStep.main.description')}
-            </p>
-          </div>
+
 
           {/* Matricula Rewards / Referral Code Section */}
           {/* Mostrar seção sempre, exceto se tiver seller_referral_code */}
@@ -1775,7 +1748,27 @@ export const SelectionFeeStep: React.FC<StepProps> = ({ onNext }) => {
                 </div>
               )}
                
-              <p className="text-xs font-black text-gray-400 uppercase tracking-[0.2em] mb-4 px-2">{t('selectionFeeStep.main.selectMethod')}</p>
+              <div className="flex items-end justify-between mb-4 px-2">
+                <p className="text-xs font-black text-gray-400 uppercase tracking-[0.2em]">{t('selectionFeeStep.main.selectMethod')}</p>
+                <div className="text-right">
+                  {computedBasePrice < selectionFeeAmount ? (
+                    <div className="flex flex-col items-end">
+                      <div className="text-sm line-through text-gray-300 font-bold mb-0.5">{originalFormattedAmount}</div>
+                      <div className="text-3xl md:text-4xl font-black text-emerald-500 tracking-tighter leading-none">{formattedAmount}</div>
+                      <div className="inline-flex items-center mt-1.5 opacity-90">
+                        <CheckCircle className="w-3 h-3 text-emerald-500 mr-1.5" />
+                        <span className="text-[10px] text-emerald-500 font-black uppercase tracking-widest">
+                          {promotionalCouponValidation?.isValid 
+                            ? t('selectionFeeStep.main.couponApplied', { coupon: promotionalCoupon })
+                            : t('selectionFeeStep.main.discountApplied')}
+                        </span>
+                      </div>
+                    </div>
+                  ) : (
+                    <div className="text-3xl md:text-4xl font-black text-gray-900 tracking-tighter leading-none">{formattedAmount}</div>
+                  )}
+                </div>
+              </div>
                
               {paymentMethods.map((method) => {
                 const Icon = method.icon;

@@ -24,10 +24,20 @@ export const SelectionSurveyStep: React.FC<StepProps> = ({ onNext }) => {
         return saved ? JSON.parse(saved) : {};
     });
     const [errors, setErrors] = useState<Record<number, string>>({});
-    const [submitted, setSubmitted] = useState(false);
+    const [submitted, setSubmitted] = useState<boolean>(() => {
+        return localStorage.getItem('onboarding_survey_submitted') === 'true';
+    });
     const [isSaving, setIsSaving] = useState(false);
-    
+
     const { user, userProfile, refetchUserProfile } = useAuth();
+
+    // Se o usuário já passou no banco de dados, queremos mostrar a tela de resultados
+    useEffect(() => {
+        if (userProfile?.selection_survey_passed) {
+            setSubmitted(true);
+            localStorage.setItem('onboarding_survey_submitted', 'true');
+        }
+    }, [userProfile?.selection_survey_passed]);
 
     const isLocalhost = window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1';
 
@@ -75,9 +85,17 @@ export const SelectionSurveyStep: React.FC<StepProps> = ({ onNext }) => {
         localStorage.setItem('onboarding_survey_extra_answers', JSON.stringify(extraAnswers));
     }, [extraAnswers]);
 
+    // Persistir submit status
+    useEffect(() => {
+        if (submitted) {
+            localStorage.setItem('onboarding_survey_submitted', 'true');
+        }
+    }, [submitted]);
+
     const clearDraft = useCallback(() => {
         localStorage.removeItem('onboarding_survey_answers');
         localStorage.removeItem('onboarding_survey_extra_answers');
+        localStorage.removeItem('onboarding_survey_submitted');
     }, []);
 
     const currentQuestions = useMemo(() => {
@@ -122,6 +140,41 @@ export const SelectionSurveyStep: React.FC<StepProps> = ({ onNext }) => {
         return isValid;
     }, [currentQuestions, answers]);
 
+    const checkSectionComplete = useCallback((sectionIndex: number) => {
+        const section = sections[sectionIndex];
+        const questionsInSection = questions.filter(q => q.id >= section.range[0] && q.id <= section.range[1]);
+        return questionsInSection.every(q => {
+            let isVisible = true;
+            if (q.conditionalOn) {
+                const parentAnswer = answers[q.conditionalOn.questionId];
+                isVisible = parentAnswer === q.conditionalOn.value;
+            }
+            if (!isVisible) return true;
+            if (q.required && !answers[q.id]) return false;
+            
+            // Lógica específica para a pergunta de graduação (id 4)
+            if (q.required && q.id === 4) {
+                const answer = answers[q.id];
+                if (['Sim', 'Yes', 'Sí', 'sim', 'yes', 'sí'].includes(answer)) {
+                    if (!answers[-4] || !answers[-41]) return false;
+                }
+            }
+            return true;
+        });
+    }, [answers, questions]);
+
+    const scrollToTop = () => {
+        setTimeout(() => {
+            const element = document.getElementById('survey-top');
+            if (element) {
+                // Rola suavemente até o container principal do questionário
+                element.scrollIntoView({ behavior: 'smooth', block: 'start' });
+            } else {
+                window.scrollTo({ top: 0, behavior: 'smooth' });
+            }
+        }, 100);
+    };
+
     const handleNext = useCallback(() => {
         if (!validateSection()) {
             toast.error(t('selectionSurvey.toastErrorFields'));
@@ -129,17 +182,25 @@ export const SelectionSurveyStep: React.FC<StepProps> = ({ onNext }) => {
         }
 
         if (currentSection < sections.length - 1) {
-            setCurrentSection((prev) => prev + 1);
-            window.scrollTo({ top: 0, behavior: 'smooth' });
+            const nextIndex = currentSection + 1;
+            setCurrentSection(nextIndex);
+            
+            if (!checkSectionComplete(nextIndex)) {
+                scrollToTop();
+            }
         }
-    }, [currentSection, validateSection, sections.length, t]);
+    }, [currentSection, validateSection, sections.length, t, checkSectionComplete]);
 
     const handleBack = useCallback(() => {
         if (currentSection > 0) {
-            setCurrentSection((prev) => prev - 1);
-            window.scrollTo({ top: 0, behavior: 'smooth' });
+            const backIndex = currentSection - 1;
+            setCurrentSection(backIndex);
+            
+            if (!checkSectionComplete(backIndex)) {
+                scrollToTop();
+            }
         }
-    }, [currentSection]);
+    }, [currentSection, checkSectionComplete]);
 
     const handleAnswer = useCallback((questionId: number, value: string) => {
         setAnswers((prev) => ({ ...prev, [questionId]: value }));
@@ -210,13 +271,14 @@ export const SelectionSurveyStep: React.FC<StepProps> = ({ onNext }) => {
     }, [validateSection, answers, extraAnswers, user, userProfile, refetchUserProfile, t]);
 
     const handleRestart = useCallback(() => {
+        clearDraft();
         setAnswers({});
         setExtraAnswers({});
         setErrors({});
         setCurrentSection(0);
         setSubmitted(false);
         window.scrollTo({ top: 0, behavior: 'smooth' });
-    }, []);
+    }, [clearDraft]);
 
     const handleEdit = useCallback(() => {
         setSubmitted(false);
@@ -225,9 +287,11 @@ export const SelectionSurveyStep: React.FC<StepProps> = ({ onNext }) => {
     }, []);
 
     const handleFinish = useCallback(() => {
-        clearDraft();
+        // Não limpa o draft das respostas ao avançar, para que se o usuário
+        // voltar ao passo ainda veja a pontuação correta.
+        // clearDraft só é chamado no handleRestart (refazer do zero).
         onNext();
-    }, [onNext, clearDraft]);
+    }, [onNext]);
 
     const handleSkip = useCallback(async () => {
         if (!isLocalhost) return;
@@ -271,7 +335,7 @@ export const SelectionSurveyStep: React.FC<StepProps> = ({ onNext }) => {
 
 
     return (
-        <div className="max-w-4xl mx-auto px-4 py-8">
+        <div id="survey-top" className="max-w-4xl mx-auto w-full space-y-8 sm:space-y-10 pb-12">
             <div className="mb-10 text-left">
                 <h1 className="text-3xl md:text-5xl font-black text-gray-900 uppercase tracking-tighter mb-4 leading-none">
                     {t('selectionSurvey.title')}
@@ -286,16 +350,18 @@ export const SelectionSurveyStep: React.FC<StepProps> = ({ onNext }) => {
                 </p>
             </div>
 
-            <div className="bg-white rounded-[2.5rem] p-8 sm:p-12 shadow-2xl shadow-blue-500/5 border border-gray-100">
+            <div className="bg-white border border-gray-100 rounded-[2.5rem] p-6 md:p-10 shadow-2xl relative overflow-hidden">
+                <div className="absolute top-0 right-0 w-64 h-64 bg-blue-500/5 rounded-full blur-[80px] -mr-32 -mt-32 pointer-events-none" />
 
-                <ProgressBar 
-                    currentSection={currentSection} 
-                    completedSections={[]} 
-                />
+                <div className="relative z-10">
+                    <ProgressBar 
+                        currentSection={currentSection} 
+                        completedSections={[]} 
+                    />
 
-                <div className="mt-8 space-y-8 sm:space-y-10">
-                    {currentQuestions.map((q) => (
-                        <QuestionField
+                    <div className="mt-8 space-y-8 sm:space-y-10">
+                        {currentQuestions.map((q) => (
+                            <QuestionField
                             key={q.id}
                             question={q}
                             value={answers[q.id]}
@@ -366,5 +432,6 @@ export const SelectionSurveyStep: React.FC<StepProps> = ({ onNext }) => {
                 </div>
             </div>
         </div>
+    </div>
     );
 };
