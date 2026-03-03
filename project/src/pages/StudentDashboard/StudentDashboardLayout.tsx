@@ -77,16 +77,21 @@ const StudentDashboardLayout: React.FC<StudentDashboardLayoutProps> = ({
 
   // Lógica para abrir o modal de selfie automaticamente
   useEffect(() => {
+    // Agora o modal pode aparecer em qualquer página do dashboard (exceto possivelmente o próprio questionário para não atrapalhar)
+    // Mas seguindo a instrução: se não tiver foto, aparece o modal.
+    const isSurveyPage = location.pathname.includes('selection-survey');
+    
     if (userProfile?.has_paid_selection_process_fee && 
+        !isSurveyPage && // Mantemos apenas para não sobrepor o questionário ativamente
         identityPhotoStatus === null && 
         !identityPhotoLoading && 
         !hasAutoOpenedSelfie.current) {
       
-      console.log('✨ [StudentDashboardLayout] Abrindo modal de selfie automaticamente');
+      console.log('✨ [StudentDashboardLayout] Abrindo modal de selfie automaticamente (Se não houver foto)');
       setIsSelfieModalOpen(true);
       hasAutoOpenedSelfie.current = true;
     }
-  }, [userProfile?.has_paid_selection_process_fee, identityPhotoStatus, identityPhotoLoading]);
+  }, [userProfile?.has_paid_selection_process_fee, identityPhotoStatus, identityPhotoLoading, location.pathname]);
 
   // Use context count if it's been updated, otherwise use server count
   const displayChatUnreadCount = contextChatUnreadCount > 0 ? contextChatUnreadCount : serverChatUnreadCount;
@@ -250,6 +255,9 @@ const StudentDashboardLayout: React.FC<StudentDashboardLayoutProps> = ({
   }
 
 
+  const isSelectionSurveyPage = location.pathname.includes('selection-survey');
+  const showSidebar = !isSelectionSurveyPage;
+
   return (
     <div className="h-screen flex flex-col lg:flex-row w-full overflow-hidden">
       {/* Sidebar */}
@@ -257,6 +265,7 @@ const StudentDashboardLayout: React.FC<StudentDashboardLayoutProps> = ({
         className={`fixed inset-y-0 left-0 z-50 w-72 bg-white shadow-xl transform transition-transform duration-300 ease-in-out lg:translate-x-0 lg:fixed lg:inset-y-0 lg:left-0
         h-screen flex flex-col overflow-y-auto
         ${sidebarOpen ? 'translate-x-0' : '-translate-x-full'}
+        ${!showSidebar ? 'hidden lg:hidden' : ''}
         `}
         style={{ transitionProperty: 'transform, box-shadow', transitionDuration: '300ms', WebkitOverflowScrolling: 'touch' as any }}
       >
@@ -381,19 +390,21 @@ const StudentDashboardLayout: React.FC<StudentDashboardLayoutProps> = ({
       <div
         id="student-dashboard-content"
         ref={scrollContainerRef}
-        className="flex-1 ml-0 lg:ml-72 overflow-x-hidden h-screen overflow-y-auto"
+        className={`flex-1 ml-0 overflow-x-hidden h-screen overflow-y-auto ${showSidebar ? 'lg:ml-72' : ''}`}
       >
         {/* Header */}
         <header className="bg-white border-b border-slate-200 py-1 sticky top-0 z-50 pt-3 pl-3 pr-3 sm:px-6 lg:px-10">
           <div className="flex items-center justify-between">
             <div className="flex items-center space-x-3 sm:space-x-4">
-              <button
-                onClick={() => setSidebarOpen(!sidebarOpen)}
-                className="lg:hidden p-2 rounded-lg text-slate-400 hover:text-slate-600 hover:bg-slate-100 transition-colors flex-shrink-0"
-                aria-label="Open sidebar"
-              >
-                <Menu className="h-5 w-5" />
-              </button>
+              {showSidebar && (
+                <button
+                  onClick={() => setSidebarOpen(!sidebarOpen)}
+                  className="lg:hidden p-2 rounded-lg text-slate-400 hover:text-slate-600 hover:bg-slate-100 transition-colors flex-shrink-0"
+                  aria-label="Open sidebar"
+                >
+                  <Menu className="h-5 w-5" />
+                </button>
+              )}
               <div className="min-w-0 flex-1">
                 <h1 className="text-lg sm:text-xl lg:text-2xl font-bold text-slate-900 truncate">{t('studentDashboard.title')}</h1>
                 <p className="text-xs sm:text-sm text-slate-500 truncate">{t('studentDashboard.subtitle')}</p>

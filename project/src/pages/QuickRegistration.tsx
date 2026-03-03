@@ -102,7 +102,7 @@ const QuickRegistration: React.FC = () => {
       full_name: '',
       email: '',
       phone: '',
-      dependents: 0,
+      dependents: '',
       password: '',
       confirm_password: '',
       termsAccepted: false,
@@ -453,7 +453,7 @@ const QuickRegistration: React.FC = () => {
     setFormData((prev: any) => ({
       ...prev,
       [name]: type === 'checkbox' ? (e.target as HTMLInputElement).checked : 
-               name === 'dependents' ? parseInt(value) : value
+               name === 'dependents' ? (value === '' ? '' : parseInt(value)) : value
     }));
   };
 
@@ -461,7 +461,11 @@ const QuickRegistration: React.FC = () => {
     e.preventDefault();
 
     if (userProfile?.has_paid_selection_process_fee) {
-      navigate('/student/dashboard');
+      if (!userProfile?.selection_survey_passed) {
+        navigate('/student/dashboard/selection-survey');
+      } else {
+        navigate('/student/dashboard');
+      }
       return;
     }
 
@@ -495,7 +499,13 @@ const QuickRegistration: React.FC = () => {
     }
 
     if (formData.password !== formData.confirm_password) {
-      setError(t('rapidRegistration.form.error.passwordsNotMatch') || 'As senhas nÃ£o coincidem');
+      setError(t('rapidRegistration.form.error.passwordsNotMatch') || 'As senhas não coincidem');
+      setLoading(false);
+      return;
+    }
+
+    if (formData.dependents === '') {
+      setError('Por favor, selecione o número de dependentes.');
       setLoading(false);
       return;
     }
@@ -669,7 +679,7 @@ const QuickRegistration: React.FC = () => {
             <ZelleCheckout 
               amount={currentFee}
               feeType="selection_process"
-              onSuccess={() => navigate('/student/dashboard')}
+              onSuccess={() => navigate('/student/dashboard/selection-survey')}
             />
           </div>
         </div>
@@ -772,6 +782,7 @@ const QuickRegistration: React.FC = () => {
                     {/* Dependents Selector */}
                     <div className="flex flex-col">
                       <label className="block text-sm font-bold text-slate-700 mb-2 px-1 leading-tight">
+                        <span className="text-[#D0151C] font-bold mr-1">*</span>
                         {t('rapidRegistration.form.dependents')} 
                         <span className="block text-[10px] font-normal text-slate-400 mt-0.5">
                         {t('rapidRegistration.form.dependentsSubtitle') || 'Family members (spouse and/or children)'}
@@ -787,20 +798,22 @@ const QuickRegistration: React.FC = () => {
                         <select
                           id="dependents"
                           name="dependents"
-                          value={formData.dependents || 0}
+                          value={formData.dependents}
                           disabled={isRegistered}
+                          required
                           onChange={(e) => {
-                            const value = parseInt(e.target.value) || 0;
+                            const value = e.target.value === '' ? '' : parseInt(e.target.value);
                             setFormData((prev: any) => ({ ...prev, dependents: value }));
                           }}
-                          className="appearance-none block w-full pl-12 pr-12 py-3.5 border border-slate-200 rounded-2xl outline-none focus:outline-none focus:ring-2 focus:ring-[#05294E] focus:border-[#05294E] text-slate-900 bg-slate-50/50 transition-all duration-300 text-sm sm:text-base cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed"
+                          className={`appearance-none block w-full pl-12 pr-12 py-3.5 border border-slate-200 rounded-2xl outline-none focus:outline-none focus:ring-2 focus:ring-[#05294E] focus:border-[#05294E] ${formData.dependents === '' ? 'text-slate-400' : 'text-slate-900'} bg-slate-50/50 transition-all duration-300 text-sm sm:text-base cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed`}
                         >
-                          <option value={0}>{t('rapidRegistration.form.dependentOptions.count', { count: 0 })}</option>
-                          <option value={1}>{t('rapidRegistration.form.dependentOptions.count', { count: 1 })}</option>
-                          <option value={2}>{t('rapidRegistration.form.dependentOptions.count', { count: 2 })}</option>
-                          <option value={3}>{t('rapidRegistration.form.dependentOptions.count', { count: 3 })}</option>
-                          <option value={4}>{t('rapidRegistration.form.dependentOptions.count', { count: 4 })}</option>
-                          <option value={5}>{t('rapidRegistration.form.dependentOptions.count', { count: 5 })}</option>
+                          <option value="" disabled hidden className="text-slate-400">{t('common.select', 'Selecione')}</option>
+                          <option value={0} className="text-slate-900">{t('rapidRegistration.form.dependentOptions.count', { count: 0 })}</option>
+                          <option value={1} className="text-slate-900">{t('rapidRegistration.form.dependentOptions.count', { count: 1 })}</option>
+                          <option value={2} className="text-slate-900">{t('rapidRegistration.form.dependentOptions.count', { count: 2 })}</option>
+                          <option value={3} className="text-slate-900">{t('rapidRegistration.form.dependentOptions.count', { count: 3 })}</option>
+                          <option value={4} className="text-slate-900">{t('rapidRegistration.form.dependentOptions.count', { count: 4 })}</option>
+                          <option value={5} className="text-slate-900">{t('rapidRegistration.form.dependentOptions.count', { count: 5 })}</option>
                         </select>
                       </div>
                     </div>
@@ -1229,11 +1242,15 @@ const QuickRegistration: React.FC = () => {
                 </h3>
 
                 <div className="space-y-6 mb-8 relative z-10">
-                  <div className="flex justify-between items-end">
-                    <span className="text-slate-900 font-bold uppercase tracking-widest text-xs mb-1">
-                      {t('rapidRegistration.sidebar.total')}
+                  <div className="flex flex-col">
+                    <span className="text-lg sm:text-xl font-black text-slate-900 leading-none whitespace-nowrap mb-6">
+                      Taxa do Processo Seletivo
                     </span>
-                    <div className="text-right">
+                    <div className="flex justify-between items-end">
+                      <span className="text-slate-500 font-bold uppercase tracking-widest text-[10px]">
+                        {t('rapidRegistration.sidebar.total')}
+                      </span>
+                      <div className="text-right">
                       {isCouponValid && (
                         <span className="text-sm line-through block text-slate-300 font-bold mb-1">
                           {originalFormattedAmount}
@@ -1251,6 +1268,7 @@ const QuickRegistration: React.FC = () => {
                         </div>
                       )}
                     </div>
+                  </div>
                   </div>
                   
                   <div className="bg-slate-50 rounded-2xl p-5 border border-slate-100">

@@ -366,7 +366,7 @@ const ProcessoSeletivo = () => {
                 newAnswers[q.id] = Math.floor(Math.random() * 1000).toString();
             } else if (q.type === 'date') {
                 newAnswers[q.id] = '2023-01-01';
-            } else if ((q.type === 'radio' || q.type === 'select' || q.type === 'truefalse') && q.options) {
+            } else if (([ 'radio', 'select', 'truefalse' ] as string[]).includes(q.type) && q.options) {
                 // Tenta achar a correta para garantir aprovação
                 const correctOption = q.options.find(opt => typeof opt === 'object' && opt.correct === true);
 

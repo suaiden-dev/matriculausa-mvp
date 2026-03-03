@@ -4074,8 +4074,8 @@
     }
   },
   "rapidRegistration": {
-    "title": "Início do Processo de Seleção",
-    "subtitle": "Complete seu registro e inicie seu processo de seleção",
+    "title": "Começo do Processo Seletivo",
+    "subtitle": "Complete seu registro e inicie seu processo seletivo aqui no MatriculaUSA",
     "form": {
       "title": "Informações Pessoais",
       "fullName": "Nome Completo",
@@ -4113,7 +4113,7 @@
       "currentFee": "Total a Pagar Agora",
       "dependentsFee": "Taxa de Dependentes",
       "couponApplied": "Cupom Aplicado",
-      "feeExplanation": "A Taxa do Processo de Seleção (US$400.00) é o primeiro pagamento obrigatório na plataforma MatriculaUSA. Ela desbloqueia seu acesso completo para visualizar todas as bolsas e iniciar seu processo de candidatura.",
+      "feeExplanation": "A Taxa do Processo Seletivo (US$400.00) é o primeiro pagamento obrigatório na plataforma MatriculaUSA. Ela desbloqueia seu acesso completo para visualizar todas as bolsas e iniciar seu processo de candidatura.",
       "refundAssuranceTitle": "Garantia de Reembolso",
       "refundAssuranceText": "Caso nao seja aceito em nenhuma universidade a taxa de processo seletivo é 100% reembolsavel.",
       "futureFeesTitle": "Taxas Futuras",
