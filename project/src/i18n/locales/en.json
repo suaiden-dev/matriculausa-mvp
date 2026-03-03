@@ -1687,7 +1687,18 @@
         "connectionError": "Error validating coupon. Check your connection and try again."
       },
       "registrationFailed": "Registration Failed",
-      "emailAlreadyRegistered": "This email is already registered. Please sign in or use another email."
+      "emailAlreadyRegistered": "This email is already registered. Please sign in or use another email.",
+      "identityVerificationModal": {
+        "title": "Identity Verification",
+        "subtitle": "For your security and compliance, we need a quick selfie holding your document.",
+        "cameraHelp": "Take a selfie holding your ID document next to your face. Make sure both are legible.",
+        "successTitle": "Photo Uploaded!",
+        "successMessage": "Thank you! Our team will review your photo shortly. You can now explore the dashboard.",
+        "submitButton": "Upload Photo",
+        "skipButton": "Do it later",
+        "submitting": "Uploading...",
+        "description": "As part of our security process, we request a photo of you holding an official identification document (Passport or ID)."
+      }
     }
   },
   "ssoCallback": {

@@ -1620,7 +1620,18 @@
       "invalidEmail": "Digite um endereço de email válido.",
       "signupDisabled": "Novos registros estão atualmente desabilitados. Entre em contato com o suporte.",
       "registrationFailed": "Falha no Registro",
-      "emailAlreadyRegistered": "Este email já está cadastrado. Faça login ou use outro email."
+      "emailAlreadyRegistered": "Este email já está cadastrado. Faça login ou use outro email.",
+      "identityVerificationModal": {
+        "title": "Verificação de Identidade",
+        "subtitle": "Para sua segurança e conformidade, precisamos de uma selfie rápida segurando seu documento.",
+        "cameraHelp": "Tire uma selfie segurando seu documento de identidade ao lado do seu rosto. Certifique-se de que ambos estejam legíveis.",
+        "successTitle": "Foto Enviada!",
+        "successMessage": "Obrigado! Nossa equipe revisará sua foto em breve. Você já pode explorar o dashboard.",
+        "submitButton": "Enviar Foto",
+        "skipButton": "Fazer depois",
+        "submitting": "Enviando...",
+        "description": "Como parte do nosso processo de segurança, solicitamos uma foto sua segurando um documento de identificação oficial (Passaporte ou RG)."
+      }
     }
   },
   "ssoCallback": {
@@ -3086,6 +3097,9 @@
     "parcelowInstallmentPreview": "ou em até {{count}}x"
   },
   "preCheckoutModal": {
+    "acceptPrefix": "Eu aceito os ",
+    "termsAndConditionsLink": "termos e condições",
+    "acceptSuffix": " do contrato de prestação de serviços.",
     "securePayment": "Pagamento Seguro",
     "securePaymentProcess": "Processo de Pagamento Seguro",
     "closeModal": "Fechar modal",
@@ -4110,7 +4124,7 @@
         "count_one": "1 Dependente",
         "count_other": "{{count}} Dependentes"
       },
-      "termsAcceptedBadge": "Termos Visualizados e Aceitos",
+      "termsAcceptedBadge": "Termos Aceitos",
       "password": "Senha",
       "terms": "Eu aceito os Termos e Condições",
       "submit": "Confirmar Registro",
