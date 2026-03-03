@@ -1843,43 +1843,6 @@
     "viewProfile": "View Profile",
     "applyNow": "Apply Now"
   },
-  "common": {
-    "loading": "Loading...",
-    "error": "Error",
-    "success": "Success",
-    "save": "Save",
-    "cancel": "Cancel",
-    "confirm": "Confirm",
-    "delete": "Delete",
-    "edit": "Edit",
-    "view": "View",
-    "back": "Back",
-    "next": "Next",
-    "previous": "Previous",
-    "submit": "Submit",
-    "close": "Close",
-    "search": "Search",
-    "filter": "Filter",
-    "clear": "Clear",
-    "refresh": "Refresh",
-    "download": "Download",
-    "upload": "Upload",
-    "required": "Required",
-    "optional": "Optional",
-    "yes": "Yes",
-    "no": "No",
-    "showMore": "Show More",
-    "showLess": "Show Less",
-    "readMore": "Read More",
-    "learnMore": "Learn More",
-    "featured": "Featured",
-    "exclusive": "Exclusive",
-    "apply": "Apply",
-    "viewDetails": "View Details",
-    "deadline": "Deadline",
-    "amount": "Amount",
-    "support": "Support"
-  },
   "profileRequiredModal": {
     "cpfMissing": {
       "title": "CPF Requerido",
@@ -3553,7 +3516,7 @@
     "jobs": {
       "badge": "Available Jobs",
       "title": "List of <span class=\"text-[#05294E]\">Opportunities</span>",
-      "lastUpdated": "Last updated: September 8, 2025",
+      "lastUpdated": "Última actualización: 18 de febrero de 2026",
       "filters": {
         "allJobs": "All Jobs",
         "healthcare": "Healthcare",
@@ -3857,6 +3820,450 @@
         "invalidMethod": "Método de pago inválido.",
         "notAuthenticated": "Usuario no autenticado.",
         "generationFailed": "Error al generar el enlace de pago. Por favor, inténtelo de nuevo."
+      }
+    }
+  },
+  "common": {
+    "yes": "Sí",
+    "no": "No",
+    "expirationDate": "Fecha de vencimiento",
+    "name": "Nombre",
+    "email": "Correo electrónico",
+    "profile": "Perfil",
+    "section": "Sección",
+    "of": "de",
+    "loading": "Cargando...",
+    "success": "Éxito",
+    "error": "Error",
+    "filter": "Filtro",
+    "active": "activo",
+    "apply": "Aplicar",
+    "language": "Español",
+    "featured": "Destacado",
+    "exclusive": "Exclusivo",
+    "showMore": "ver más",
+    "learnMore": "Saber más",
+    "search": "Buscar",
+    "support": "Soporte",
+    "welcome": "Bienvenido",
+    "close": "Cerrar"
+  },
+  "selectionSurvey": {
+    "title": "Cuestionario de Alineación",
+    "subtitle": "Responda con atención. Para ser aprobado y liberar su panel, debe alcanzar al menos un <0>80% de aciertos</0> en las preguntas objetivas.",
+    "mandatoryBadge": "Proceso de Selección Obligatorio",
+    "nextSection": "Siguiente Sección",
+    "back": "Volver",
+    "finish": "Finalizar y Ver Resultado",
+    "finishBtn": "Finalizar",
+    "submitting": "Enviando...",
+    "sections": {
+      "A": "Identificación y Perfil",
+      "B": "Pasaporte, Documentos y Línea de Tiempo",
+      "C": "Fondos, Costos y Responsabilidad Financiera",
+      "D": "Reglas de la F-1 e Estatus Legal",
+      "E": "Universidad, Desempeño y Mentalidad"
+    },
+    "sectionsInfo": "Responda todas las preguntas obligatorias para continuar.",
+    "required": "Este campo es obligatorio",
+    "toastErrorFields": "Por favor, complete todos los campos obligatorios antes de continuar.",
+    "toastErrorAuth": "Usuario no autenticado.",
+    "toastSuccess": "¡Proceso de Selección completado con éxito!",
+    "toastErrorScore": "Lamentablemente no alcanzó la puntuación mínima. Intente de nuevo.",
+    "toastErrorSave": "Error al guardar sus respuestas. Por favor, intente de nuevo.",
+    "copyright": "© 2026 Matrícula USA • Proceso de Selección de Estudiantes",
+    "results": {
+      "congratulations": "¡Felicidades!",
+      "passedMessage": "¡Ha sido aprobado en el proceso de selección y está un paso más cerca de su sueño!",
+      "score": "Su Puntuación:",
+      "minRequired": "Mínimo necesario: 80%",
+      "ctaDashboard": "Elegir Becas",
+      "ctaDescription": "Ahora puedes acceder a todas las funciones y elegir las becas de tu interés.",
+      "failed": "No ha sido esta vez",
+      "failedMessage": "No alcanzó la puntuación mínima del 80% necesaria para la aprobación.",
+      "failedAdvice": "Recomendamos que revise los materiales de apoyo e intente de nuevo.",
+      "ctaRetry": "Intentar de Nuevo",
+      "ctaEdit": "Revisar Respuestas",
+      "correct": "Correctas",
+      "incorrect": "Incorrectas",
+      "neutral": "Otras",
+      "of": "de",
+      "summary": "Resumen de la Solicitud"
+    },
+    "questions": {
+      "1": {
+        "text": "Nombre completo (igual que en el pasaporte)",
+        "placeholder": "Tu nombre completo"
+      },
+      "2": {
+        "text": "Correo electrónico",
+        "placeholder": "tu@correo.com"
+      },
+      "3": {
+        "text": "WhatsApp (con código de país)",
+        "placeholder": "+34 600 000 000"
+      },
+      "4": {
+        "text": "¿Se encuentra actualmente en los EE. UU.?",
+        "extraLabel": "¿Estatus actual?"
+      },
+      "5": {
+        "text": "¿Cuál es su perfil hoy?",
+        "options": {
+          "initial": "Inicial (fuera de EE. UU. y va a solicitar visa/entrar con F-1)",
+          "cos": "COS (Cambio de Estatus: está en EE. UU. y va a cambiar a F-1)",
+          "transfer": "Transfer (ya tiene/tuvo I-20 y va a transferir de escuela)",
+          "nao_sei": "No lo sé (necesito orientación)"
+        }
+      },
+      "6": {
+        "text": "¿Cuál es su objetivo principal con el programa?",
+        "options": {
+          "a": "Estudiar y evolucionar académicamente",
+          "b": "Solo \"quedarme en EE. UU.\" (sin estudiar de verdad)",
+          "c": "Trabajar ilegalmente",
+          "d": "\"Cualquier cosa sirve\""
+        }
+      },
+      "7": {
+        "text": "¿Tiene disponibilidad mínima de estudio semanal?",
+        "options": {
+          "a": "Menos de 5h/semana",
+          "b": "5–9h/semana",
+          "c": "10–15h/semana",
+          "d": "16h+ / semana"
+        }
+      },
+      "8": {
+        "text": "¿Cuál es su nivel de inglés hoy?",
+        "options": {
+          "iniciante": "Principiante",
+          "basico": "Básico",
+          "intermediario": "Intermedio",
+          "avancado": "Avanzado"
+        }
+      },
+      "9": {
+        "text": "¿Ha estudiado en college/universidad antes?",
+        "extraLabel": "¿Qué curso y en qué país?"
+      },
+      "10": {
+        "text": "¿Está dispuesto a seguir las reglas de la visa F-1 incluso cuando sea inconveniente?",
+        "options": {
+          "a": "Sí",
+          "b": "Depende",
+          "c": "No"
+        }
+      },
+      "11": {
+        "text": "¿Tiene un pasaporte válido?",
+        "extraLabel": "Previsión de emisión"
+      },
+      "12": {
+        "text": "Fecha de vencimiento del pasaporte"
+      },
+      "13": {
+        "text": "¿Puede enviar una copia del pasaporte cuando se le solicite?",
+        "options": {
+          "a": "Sí",
+          "b": "No"
+        }
+      },
+      "14": {
+        "text": "¿Tiene comprobante de finalización de educación secundaria o superior?",
+        "options": {
+          "a": "Sí, puedo enviarlo",
+          "b": "Lo tengo, pero no sé dónde está",
+          "c": "No lo tengo"
+        }
+      },
+      "15": {
+        "text": "¿Puede organizar sus documentos en una carpeta y mantener todo actualizado?",
+        "options": {
+          "a": "Sí",
+          "b": "No"
+        }
+      },
+      "16": {
+        "text": "¿En cuánto tiempo desea iniciar el programa?",
+        "options": {
+          "a": "0–30 días",
+          "b": "31–60 días",
+          "c": "61–90 días",
+          "d": "90+ días"
+        }
+      },
+      "17": {
+        "text": "¿Puede participar en una entrevista de alineación con el equipo?",
+        "options": {
+          "a": "Sí",
+          "b": "No"
+        }
+      },
+      "18": {
+        "text": "¿Entiende que el proceso tiene etapas y que \"saltarse etapas\" retrasa y puede poner todo en riesgo?",
+        "options": {
+          "a": "Sí",
+          "b": "No"
+        }
+      },
+      "19": {
+        "text": "¿Revisa su correo electrónico diariamente?",
+        "options": {
+          "a": "Sí, todos los días",
+          "b": "Algunas veces por semana",
+          "c": "Raramente"
+        }
+      },
+      "20": {
+        "text": "¿Qué suele pasar en su vida si retrasa documentos o pagos?",
+        "placeholder": "Describa brevemente..."
+      },
+      "21": {
+        "text": "¿Por qué se requiere el comprobante de fondos?",
+        "options": {
+          "a": "Porque el gobierno quiere meterse en su vida",
+          "b": "Porque la escuela quiere meterse en su vida",
+          "c": "Porque debe demostrar a inmigración y a la universidad que puede pagar el curso y el costo de vida por al menos 1 año",
+          "d": "Ninguna de las anteriores"
+        }
+      },
+      "22": {
+        "text": "El comprobante de fondos sirve para:",
+        "options": {
+          "a": "Demostrar capacidad financiera y reducir el riesgo de violación de estatus",
+          "b": "Garantizar que trabajará en los EE. UU.",
+          "c": "Sustituir el pasaporte",
+          "d": "Evitar la entrevista en el consulado"
+        }
+      },
+      "23": {
+        "text": "Para el solicitante principal, ¿qué valor mínimo debe estar preparado para demostrar?",
+        "options": {
+          "a": "$5,000",
+          "b": "$10,000",
+          "c": "Aproximadamente $22,000",
+          "d": "$100,000"
+        }
+      },
+      "24": {
+        "text": "Por cada dependiente adicional, ¿cuál es el valor mínimo aproximado?",
+        "options": {
+          "a": "$1,000",
+          "b": "$5,000",
+          "c": "$15,000",
+          "d": "No es necesario demostrar"
+        }
+      },
+      "25": {
+        "text": "¿El comprobante de fondos debe estar a su nombre?",
+        "options": {
+          "a": "Siempre debe estar a mi nombre",
+          "b": "Puede ser de un patrocinador, siempre que sea demostrable y consistente",
+          "c": "Puede ser de palabra",
+          "d": "No existe el comprobante de fondos"
+        }
+      },
+      "26": {
+        "text": "¿Puede organizar el valor necesario (suyo o de patrocinador) para demostrar?",
+        "extraLabel": "¿Cuántos meses?",
+        "options": {
+          "a": "Sí",
+          "b": "No",
+          "c": "Aún no, pero puedo en X meses"
+        }
+      },
+      "27": {
+        "text": "¿Entiende que la matrícula (tuition) y las tarifas del proceso son cosas diferentes?",
+        "options": {
+          "a": "Sí",
+          "b": "No"
+        }
+      },
+      "28": {
+        "text": "Si tiene una beca, el objetivo es reducir la matrícula; esto no elimina su responsabilidad de pagar y mantener el estatus.",
+        "options": {
+          "verdadeiro": "Verdadero",
+          "falso": "Falso"
+        }
+      },
+      "29": {
+        "text": "¿Qué forma de pago le resulta más fácil?",
+        "options": {
+          "a": "Al contado",
+          "b": "En cuotas",
+          "c": "Depende del plan"
+        }
+      },
+      "30": {
+        "text": "¿Cuál es su presupuesto anual aproximado para la matrícula + costos del proceso?",
+        "placeholder": "Valor en USD"
+      },
+      "31": {
+        "text": "El objetivo de la visa F-1 es:",
+        "options": {
+          "a": "Estudiar en una institución autorizada",
+          "b": "Trabajar a tiempo completo",
+          "c": "Viajar como turista",
+          "d": "Vivir sin vínculo académico"
+        }
+      },
+      "32": {
+        "text": "El I-20 es:",
+        "options": {
+          "a": "Un documento de la escuela que demuestra elegibilidad/inscripción y respalda el estatus F-1",
+          "b": "Un tipo de pasaporte",
+          "c": "Una visa pegada en el pasaporte",
+          "d": "Un contrato de alquiler"
+        }
+      },
+      "33": {
+        "text": "\"Mantener el estatus\" significa:",
+        "options": {
+          "a": "Cumplir con las reglas, asistencia, carga mínima y obligaciones del programa",
+          "b": "No pagar nada y aparecer solo a veces",
+          "c": "Cambiar de escuela sin avisar",
+          "d": "Trabajar sin autorización"
+        }
+      },
+      "34": {
+        "text": "Si falto mucho y dejo de estudiar, puedo:",
+        "options": {
+          "a": "Poner mi estatus en riesgo y tener consecuencias migratorias",
+          "b": "No pasa nada",
+          "c": "Obtener un \"descuento\"",
+          "d": "Recibir la green card"
+        }
+      },
+      "35": {
+        "text": "Para cualquier decisión crítica (viaje, mudanza, pausa), debo:",
+        "options": {
+          "a": "Consultar a la escuela/DSO y seguir las instrucciones",
+          "b": "Decidir solo y luego avisar",
+          "c": "Preguntar a amigos",
+          "d": "Ignorar las reglas"
+        }
+      },
+      "36": {
+        "text": "COS (Cambio de Estatus) es:",
+        "options": {
+          "a": "Cambiar de estatus estando en los EE. UU.",
+          "b": "Comprar un boleto y entrar como turista",
+          "c": "Transferir de escuela con I-20",
+          "d": "Renovar el pasaporte"
+        }
+      },
+      "37": {
+        "text": "Transfer es:",
+        "options": {
+          "a": "Cambiar/transferir SEVIS/I-20 de una escuela a otra",
+          "b": "Hacer turismo en otro estado",
+          "c": "Cambiar de trabajo",
+          "d": "Cambiar de número de teléfono"
+        }
+      },
+      "38": {
+        "text": "Inicial es:",
+        "options": {
+          "a": "Proceso para quienes están fuera de los EE. UU. y entrarán con F-1",
+          "b": "Quien ya está estudiando y quiere transferir",
+          "c": "Quien está cambiando de estatus dentro de los EE. UU.",
+          "d": "Quien no quiere estudiar"
+        }
+      },
+      "39": {
+        "text": "Trabajar sin autorización con F-1 es:",
+        "options": {
+          "a": "Un riesgo serio y puede perjudicar el estatus",
+          "b": "Permitido siempre",
+          "c": "Recomendado por la escuela",
+          "d": "Necesario para emitir el I-20"
+        }
+      },
+      "40": {
+        "text": "Si estoy confundido sobre una regla de la F-1, debo:",
+        "options": {
+          "a": "Preguntar oficialmente a la escuela/DSO o al equipo responsable",
+          "b": "Ignorar y seguir la intuición",
+          "c": "Preguntar en un grupo de WhatsApp aleatorio",
+          "d": "Hacerlo a mi manera"
+        }
+      },
+      "41": {
+        "text": "Ser un estudiante \"profesional\" significa:",
+        "options": {
+          "a": "Cumplir plazos, asistencia, comunicación clara y consistencia",
+          "b": "Aparecer solo cuando se puede",
+          "c": "No leer correos y reclamar después",
+          "d": "Pedir excepciones siempre"
+        }
+      },
+      "42": {
+        "text": "Para no perder plazos en EE. UU., el mejor hábito es:",
+        "options": {
+          "a": "Usar calendario + recordatorios + revisar el correo diariamente",
+          "b": "Confiar en la memoria",
+          "c": "Esperar a que alguien avise",
+          "d": "Resolver solo cuando sea urgente"
+        }
+      },
+      "43": {
+        "text": "Si tengo dificultades en una materia, primero debo:",
+        "options": {
+          "a": "Buscar tutor/horario de consulta/asesor pronto",
+          "b": "Desaparecer y faltar",
+          "c": "Esperar a reprobar",
+          "d": "Culpar a la escuela"
+        }
+      },
+      "44": {
+        "text": "El networking en la universidad, de forma correcta, sirve para:",
+        "options": {
+          "a": "Abrir puertas académicas y profesionales dentro de las reglas",
+          "b": "Conseguir \"trucos\" para burlar las reglas",
+          "c": "Evitar estudiar",
+          "d": "No sirve para nada"
+        }
+      },
+      "45": {
+        "text": "¿Qué suele llevar a más personas al fracaso: la falta de inteligencia o la falta de consistencia?",
+        "options": {
+          "a": "Falta de consistencia",
+          "b": "Falta de inteligencia",
+          "c": "Suerte",
+          "d": "No lo sé"
+        }
+      },
+      "46": {
+        "text": "¿Cuál es su prioridad más importante ahora?",
+        "options": {
+          "a": "Valor",
+          "b": "Flexibilidad de tiempo",
+          "c": "Autorización de trabajo"
+        }
+      },
+      "47": {
+        "text": "¿Acepta recibir comentarios y ser corregido durante el proceso y el programa?",
+        "options": {
+          "a": "Sí",
+          "b": "No"
+        }
+      },
+      "48": {
+        "text": "Compromiso mínimo: \"Me comprometo a mantener la asistencia, cumplir con los plazos y seguir las reglas de la F-1.\"",
+        "options": {
+          "concordo": "De acuerdo",
+          "nao_concordo": "En desacuerdo"
+        }
+      },
+      "49": {
+        "text": "Escriba su plan de estudio semanal (días + horas)",
+        "placeholder": "Describa sus días y horarios de estudio..."
+      },
+      "50": {
+        "text": "Declaración final",
+        "placeholder": "Escriba su declaración...",
+        "prompt": "\"Entiendo que mi resultado depende de mi disciplina. Si no sigo el plan, puedo perjudicar mi estatus y mi proyecto.\""
       }
     }
   }

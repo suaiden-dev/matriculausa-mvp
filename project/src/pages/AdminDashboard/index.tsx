@@ -7,7 +7,6 @@ import AdminDashboardLayout from './AdminDashboardLayout';
 import Overview from './Overview';
 import UniversityManagement from './UniversityManagement';
 import UniversityDetails from './UniversityDetails';
-import UniversityFinancialManagement from './UniversityFinancialManagement';
 import UsersHub from './UsersHub';
 import ScholarshipManagement from './ScholarshipManagement';
 import AdminScholarshipEdit from './AdminScholarshipEdit';
@@ -29,8 +28,6 @@ import TermsManagement from './TermsManagement';
 import CouponManagement from './CouponManagement';
 import NewsletterManagement from './NewsletterManagement';
 import AffiliateManagement from './AffiliateManagement';
-import AdminChatPage from './AdminChatPage';
-import AdminStudentDetails from './AdminStudentDetails';
 import AdminStudentDetailsRefactored from './AdminStudentDetails.refactored';
 import SystemSettings from './SystemSettings';
 import { Dialog } from '@headlessui/react';
@@ -59,6 +56,7 @@ interface UserProfile {
   applications_count: number;
   created_at: string;
   last_active: string;
+  selection_survey_passed?: boolean;
 }
 
 interface Application {

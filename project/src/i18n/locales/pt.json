@@ -1699,42 +1699,6 @@
     "viewProfile": "Ver Perfil",
     "applyNow": "Candidatar-se"
   },
-  "common": {
-    "loading": "Carregando...",
-    "error": "Erro",
-    "success": "Sucesso",
-    "save": "Salvar",
-    "cancel": "Cancelar",
-    "confirm": "Confirmar",
-    "delete": "Excluir",
-    "edit": "Editar",
-    "view": "Visualizar",
-    "back": "Voltar",
-    "next": "Próximo",
-    "previous": "Anterior",
-    "submit": "Enviar",
-    "close": "Fechar",
-    "search": "Buscar",
-    "filter": "Filtrar",
-    "clear": "Limpar",
-    "refresh": "Atualizar",
-    "download": "Baixar",
-    "upload": "Enviar",
-    "required": "Obrigatório",
-    "optional": "Opcional",
-    "yes": "Sim",
-    "no": "Não",
-    "showMore": "Mostrar Mais",
-    "showLess": "Mostrar Menos",
-    "readMore": "Ler Mais",
-    "learnMore": "Saiba Mais",
-    "featured": "Destaque",
-    "exclusive": "Exclusiva",
-    "apply": "Candidatar-se",
-    "viewDetails": "Ver Detalhes",
-    "deadline": "Prazo",
-    "amount": "Valor"
-  },
   "profileRequiredModal": {
     "cpfMissing": {
       "title": "CPF Necessário",
@@ -3891,7 +3855,7 @@
     "jobs": {
       "badge": "Empregos Disponíveis",
       "title": "Lista de <span class=\"text-[#05294E]\">Oportunidades</span>",
-      "lastUpdated": "Última atualização: 8 de setembro de 2025",
+      "lastUpdated": "Última atualização: 18 de fevereiro de 2026",
       "filters": {
         "allJobs": "Todos os Empregos",
         "healthcare": "Saúde",
@@ -4110,8 +4074,8 @@
     }
   },
   "rapidRegistration": {
-    "title": "Início do Processo de Seleção",
-    "subtitle": "Complete seu registro e inicie seu processo de seleção",
+    "title": "Começo do Processo Seletivo",
+    "subtitle": "Complete seu registro e inicie seu processo seletivo aqui no MatriculaUSA",
     "form": {
       "title": "Informações Pessoais",
       "fullName": "Nome Completo",
@@ -4149,7 +4113,7 @@
       "currentFee": "Total a Pagar Agora",
       "dependentsFee": "Taxa de Dependentes",
       "couponApplied": "Cupom Aplicado",
-      "feeExplanation": "A Taxa do Processo de Seleção (US$400.00) é o primeiro pagamento obrigatório na plataforma MatriculaUSA. Ela desbloqueia seu acesso completo para visualizar todas as bolsas e iniciar seu processo de candidatura.",
+      "feeExplanation": "A Taxa do Processo Seletivo (US$400.00) é o primeiro pagamento obrigatório na plataforma MatriculaUSA. Ela desbloqueia seu acesso completo para visualizar todas as bolsas e iniciar seu processo de candidatura.",
       "refundAssuranceTitle": "Garantia de Reembolso",
       "refundAssuranceText": "Caso nao seja aceito em nenhuma universidade a taxa de processo seletivo é 100% reembolsavel.",
       "futureFeesTitle": "Taxas Futuras",
@@ -4283,6 +4247,450 @@
       "uploadFailed": "Falha ao carregar a confirmação do pagamento",
       "alreadyPending": "Você já tem um pagamento em processamento. Por favor, aguarde a revisão.",
       "checkingStatus": "Verificando status do pagamento..."
+    }
+  },
+  "common": {
+    "yes": "Sim",
+    "no": "Não",
+    "expirationDate": "Data de expiração do status/I-94",
+    "name": "Nome",
+    "email": "Email",
+    "profile": "Perfil",
+    "section": "Seção",
+    "of": "de",
+    "loading": "Carregando...",
+    "success": "Sucesso",
+    "error": "Erro",
+    "filter": "Filtro",
+    "active": "ativo",
+    "apply": "Aplicar",
+    "language": "Português",
+    "featured": "Destaque",
+    "exclusive": "Exclusivo",
+    "showMore": "ver mais",
+    "learnMore": "Saiba mais",
+    "search": "Buscar",
+    "support": "Suporte",
+    "welcome": "Bem-vindo",
+    "close": "Fechar"
+  },
+  "selectionSurvey": {
+    "title": "Questionário de Alinhamento",
+    "subtitle": "Responda com atenção. Para ser aprovado e liberar seu dashboard, você precisa atingir no mínimo <0>80% de acerto</0> nas questões objetivas.",
+    "mandatoryBadge": "Processo Seletivo Obrigatório",
+    "nextSection": "Próxima Seção",
+    "back": "Voltar",
+    "finish": "Finalizar e Ver Resultado",
+    "finishBtn": "Finalizar",
+    "submitting": "Enviando...",
+    "sections": {
+      "A": "Identificação e Perfil",
+      "B": "Passaporte, Documentos e Linha do Tempo",
+      "C": "Fundos, Custos e Responsabilidade Financeira",
+      "D": "Regras do F-1 e Status Legal",
+      "E": "Universidade, Performance e Mentalidade"
+    },
+    "sectionsInfo": "Responda todas as perguntas obrigatórias para continuar.",
+    "required": "Este campo é obrigatório",
+    "toastErrorFields": "Por favor, preencha todos os campos obrigatórios antes de continuar.",
+    "toastErrorAuth": "Usuário não autenticado.",
+    "toastSuccess": "Processo Seletivo concluído com sucesso!",
+    "toastErrorScore": "Infelizmente você não atingiu a pontuação mínima. Tente novamente.",
+    "toastErrorSave": "Erro ao salvar suas respostas. Por favor, tente novamente.",
+    "copyright": "© 2026 Matrícula USA • Processo Seletivo de Alunos",
+    "results": {
+      "congratulations": "Parabéns!",
+      "passedMessage": "Você foi aprovado no processo seletivo e está um passo mais próximo do seu sonho!",
+      "score": "Sua Pontuação:",
+      "minRequired": "Mínimo necessário: 80%",
+      "ctaDashboard": "Escolher Bolsas",
+      "ctaDescription": "Agora você pode acessar todas as funcionalidades e escolher as bolsas de estudo do seu interesse.",
+      "failed": "Não foi desta vez",
+      "failedMessage": "Você não atingiu a pontuação mínima de 80% necessária para aprovação.",
+      "failedAdvice": "Não desanime! Revise suas respostas com calma e tente novamente.",
+      "ctaRetry": "Tentar Novamente",
+      "correct": "Corretas",
+      "incorrect": "Incorretas",
+      "neutral": "Outras",
+      "of": "de",
+      "summary": "Resumo da Candidatura"
+    },
+    "questions": {
+      "1": {
+        "text": "Nome completo (igual ao passaporte)",
+        "placeholder": "Seu nome completo"
+      },
+      "2": {
+        "text": "Email",
+        "placeholder": "seu@email.com"
+      },
+      "3": {
+        "text": "WhatsApp (com DDI)",
+        "placeholder": "+55 11 99999-9999"
+      },
+      "4": {
+        "text": "Você está atualmente nos EUA?",
+        "extraLabel": "Qual status atual?",
+        "placeholder": "Ex: B1/B2, F-1, etc."
+      },
+      "5": {
+        "text": "Qual é o seu perfil hoje?",
+        "options": {
+          "initial": "Initial (fora dos EUA e vai solicitar o visto/entrar com F-1)",
+          "cos": "COS (Change of Status: está nos EUA e vai mudar para F-1)",
+          "transfer": "Transfer (já tem/teve I-20 e vai transferir de escola)",
+          "nao_sei": "Não sei (preciso de orientação)"
+        }
+      },
+      "6": {
+        "text": "Qual é o seu objetivo principal com o programa?",
+        "options": {
+          "a": "Estudar e evoluir academicamente",
+          "b": "Só \"ficar nos EUA\" (sem estudar de verdade)",
+          "c": "Trabalhar ilegalmente",
+          "d": "\"Qualquer coisa serve\""
+        }
+      },
+      "7": {
+        "text": "Você tem disponibilidade mínima de estudo semanal?",
+        "options": {
+          "a": "Menos de 5h/semana",
+          "b": "5–9h/semana",
+          "c": "10–15h/semana",
+          "d": "16h+ / semana"
+        }
+      },
+      "8": {
+        "text": "Qual é o seu nível de inglês hoje?",
+        "options": {
+          "iniciante": "Iniciante",
+          "basico": "Básico",
+          "intermediario": "Intermediário",
+          "avancado": "Avançado"
+        }
+      },
+      "9": {
+        "text": "Você já estudou em college/universidade antes?",
+        "extraLabel": "Qual curso e em que país?"
+      },
+      "10": {
+        "text": "Você está disposto a seguir regras do visto F-1 mesmo quando for inconveniente?",
+        "options": {
+          "a": "Sim",
+          "b": "Depende",
+          "c": "Não"
+        }
+      },
+      "11": {
+        "text": "Você tem passaporte válido?",
+        "extraLabel": "Previsão para emitir"
+      },
+      "12": {
+        "text": "Data de validade do passaporte"
+      },
+      "13": {
+        "text": "Você consegue enviar cópia do passaporte (foto + dados) quando solicitado?",
+        "options": {
+          "a": "Sim",
+          "b": "Não"
+        }
+      },
+      "14": {
+        "text": "Você tem comprovação de conclusão do ensino médio ou superior?",
+        "options": {
+          "a": "Sim, consigo enviar",
+          "b": "Tenho, mas não sei onde está",
+          "c": "Não tenho"
+        }
+      },
+      "15": {
+        "text": "Você consegue organizar seus documentos em uma pasta (Google Drive/Dropbox) e manter tudo atualizado?",
+        "options": {
+          "a": "Sim",
+          "b": "Não"
+        }
+      },
+      "16": {
+        "text": "Em quanto tempo você quer iniciar o programa?",
+        "options": {
+          "a": "0–30 dias",
+          "b": "31–60 dias",
+          "c": "61–90 dias",
+          "d": "90+ dias"
+        }
+      },
+      "17": {
+        "text": "Você pode participar de uma entrevista de alinhamento com a equipe?",
+        "options": {
+          "a": "Sim",
+          "b": "Não"
+        }
+      },
+      "18": {
+        "text": "Você entende que o processo tem etapas e que \"pular etapas\" atrasa e pode colocar tudo em risco?",
+        "options": {
+          "a": "Sim",
+          "b": "Não"
+        }
+      },
+      "19": {
+        "text": "Você checa email diariamente?",
+        "options": {
+          "a": "Sim, todo dia",
+          "b": "Algumas vezes por semana",
+          "c": "Raramente"
+        }
+      },
+      "20": {
+        "text": "Se você atrasar documentos/pagamentos, o que costuma acontecer na sua vida?",
+        "placeholder": "Descreva brevemente..."
+      },
+      "21": {
+        "text": "A prova de fundos é exigida por quê?",
+        "options": {
+          "a": "Porque o governo quer se meter na sua vida",
+          "b": "Porque a escola quer se meter na sua vida",
+          "c": "Porque você precisa comprovar para imigração e universidade que consegue pagar curso e custo de vida por pelo menos 1 ano",
+          "d": "Nenhuma das acima"
+        }
+      },
+      "22": {
+        "text": "A prova de fundos serve para:",
+        "options": {
+          "a": "Demonstrar capacidade financeira e reduzir risco de violação de status",
+          "b": "Garantir que você vai trabalhar nos EUA",
+          "c": "Substituir passaporte",
+          "d": "Evitar entrevista no consulado"
+        }
+      },
+      "23": {
+        "text": "Para o aplicante principal, qual valor mínimo você deve estar preparado para comprovar?",
+        "options": {
+          "a": "$5,000",
+          "b": "$10,000",
+          "c": "Aproximadamente $22,000",
+          "d": "$100,000"
+        }
+      },
+      "24": {
+        "text": "Para cada dependente adicional, qual valor mínimo aproximado?",
+        "options": {
+          "a": "$1,000",
+          "b": "$5,000",
+          "c": "$15,000",
+          "d": "Não precisa comprovar"
+        }
+      },
+      "25": {
+        "text": "A prova de fundos precisa estar no seu nome?",
+        "options": {
+          "a": "Sempre precisa ser no meu nome",
+          "b": "Pode ser de patrocinador, desde que seja comprovável e consistente",
+          "c": "Pode ser só \"de boca\"",
+          "d": "Não existe prova de fundos"
+        }
+      },
+      "26": {
+        "text": "Você tem como organizar o valor necessário (seu ou patrocinador) para comprovar?",
+        "extraLabel": "Quantos meses?",
+        "options": {
+          "a": "Sim",
+          "b": "Não",
+          "c": "Ainda não, mas consigo em X meses"
+        }
+      },
+      "27": {
+        "text": "Você entende que tuition e taxas do processo são coisas diferentes?",
+        "options": {
+          "a": "Sim",
+          "b": "Não"
+        }
+      },
+      "28": {
+        "text": "Se você tiver bolsa, o objetivo é reduzir a tuition — isso não elimina sua responsabilidade de pagar e manter o status.",
+        "options": {
+          "verdadeiro": "Verdadeiro",
+          "falso": "Falso"
+        }
+      },
+      "29": {
+        "text": "Qual forma de pagamento você consegue fazer com mais facilidade?",
+        "options": {
+          "a": "À vista",
+          "b": "Parcelado",
+          "c": "Depende do plano"
+        }
+      },
+      "30": {
+        "text": "Qual é seu orçamento anual aproximado para tuition + custos do processo?",
+        "placeholder": "Valor em USD"
+      },
+      "31": {
+        "text": "O objetivo do visto F-1 é:",
+        "options": {
+          "a": "Estudar em instituição autorizada",
+          "b": "Trabalhar full-time",
+          "c": "Viajar como turista",
+          "d": "Morar sem vínculo acadêmico"
+        }
+      },
+      "32": {
+        "text": "O I-20 é:",
+        "options": {
+          "a": "Um documento da escola que comprova elegibilidade/inscrição e sustenta o status F-1",
+          "b": "Um tipo de passaporte",
+          "c": "Um visto colado no passaporte",
+          "d": "Um contrato de aluguel"
+        }
+      },
+      "33": {
+        "text": "\"Manter status\" significa:",
+        "options": {
+          "a": "Cumprir regras, frequência, carga mínima e obrigações do programa",
+          "b": "Não pagar nada e só aparecer às vezes",
+          "c": "Trocar de escola sem avisar",
+          "d": "Trabalhar sem autorização"
+        }
+      },
+      "34": {
+        "text": "Se eu faltar muito e parar de estudar, posso:",
+        "options": {
+          "a": "Colocar meu status em risco e ter consequências imigratórias",
+          "b": "Não acontecer nada",
+          "c": "Ganhar um \"desconto\"",
+          "d": "Receber green card"
+        }
+      },
+      "35": {
+        "text": "Para qualquer decisão crítica (viagem, mudança, pausa), eu devo:",
+        "options": {
+          "a": "Consultar a escola/DSO e seguir orientação",
+          "b": "Decidir sozinho e depois avisar",
+          "c": "Perguntar para amigos",
+          "d": "Ignorar regras"
+        }
+      },
+      "36": {
+        "text": "COS (Change of Status) é:",
+        "options": {
+          "a": "Mudar de status estando nos EUA",
+          "b": "Comprar passagem e entrar como turista",
+          "c": "Transferir de escola com I-20",
+          "d": "Renovar passaporte"
+        }
+      },
+      "37": {
+        "text": "Transfer é:",
+        "options": {
+          "a": "Trocar/transferir SEVIS/I-20 de uma escola para outra",
+          "b": "Fazer turismo em outro estado",
+          "c": "Mudar de emprego",
+          "d": "Trocar de número de telefone"
+        }
+      },
+      "38": {
+        "text": "Initial é:",
+        "options": {
+          "a": "Processo para quem está fora dos EUA e vai entrar com F-1",
+          "b": "Quem já está estudando e quer transferir",
+          "c": "Quem está mudando de status dentro dos EUA",
+          "d": "Quem não quer estudar"
+        }
+      },
+      "39": {
+        "text": "Trabalhar sem autorização enquanto F-1 é:",
+        "options": {
+          "a": "Um risco sério e pode prejudicar o status",
+          "b": "Permitido sempre",
+          "c": "Recomendado pela escola",
+          "d": "Necessário para emitir I-20"
+        }
+      },
+      "40": {
+        "text": "Se eu estiver confuso sobre uma regra do F-1, eu devo:",
+        "options": {
+          "a": "Perguntar oficialmente para a escola/DSO ou equipe responsável",
+          "b": "Ignorar e seguir a intuição",
+          "c": "Perguntar em grupo de WhatsApp aleatório",
+          "d": "Fazer do meu jeito"
+        }
+      },
+      "41": {
+        "text": "Ser um aluno \"profissional\" significa:",
+        "options": {
+          "a": "Cumprir prazos, frequência, comunicação clara e consistência",
+          "b": "Aparecer só quando dá",
+          "c": "Não ler emails e reclamar depois",
+          "d": "Pedir exceções sempre"
+        }
+      },
+      "42": {
+        "text": "Para não perder prazos nos EUA, o melhor hábito é:",
+        "options": {
+          "a": "Usar calendário + lembretes + checar email diariamente",
+          "b": "Confiar na memória",
+          "c": "Esperar alguém avisar",
+          "d": "Resolver só quando vira urgente"
+        }
+      },
+      "43": {
+        "text": "Se eu estiver com dificuldade em uma matéria, eu devo primeiro:",
+        "options": {
+          "a": "Buscar tutor/office hours/advisor cedo",
+          "b": "Sumir e faltar",
+          "c": "Esperar reprovar",
+          "d": "Culpar a escola"
+        }
+      },
+      "44": {
+        "text": "Networking na universidade, de forma correta, serve para:",
+        "options": {
+          "a": "Abrir portas acadêmicas e profissionais dentro das regras",
+          "b": "Conseguir \"jeitinho\" para burlar regras",
+          "c": "Evitar estudar",
+          "d": "Não serve pra nada"
+        }
+      },
+      "45": {
+        "text": "O que costuma levar mais gente a falhar: falta de inteligência ou falta de consistência?",
+        "options": {
+          "a": "Falta de consistência",
+          "b": "Falta de inteligência",
+          "c": "Sorte",
+          "d": "Não sei"
+        }
+      },
+      "46": {
+        "text": "Qual é a prioridade mais importante para você agora?",
+        "options": {
+          "a": "Valor",
+          "b": "Flexibilidade de tempo",
+          "c": "Autorização de trabalho"
+        }
+      },
+      "47": {
+        "text": "Você aceita receber feedback e ser corrigido durante o processo e durante o programa?",
+        "options": {
+          "a": "Sim",
+          "b": "Não"
+        }
+      },
+      "48": {
+        "text": "Compromisso mínimo: \"Eu me comprometo a manter frequência, cumprir prazos e seguir regras do F-1.\"",
+        "options": {
+          "concordo": "Concordo",
+          "nao_concordo": "Não concordo"
+        }
+      },
+      "49": {
+        "text": "Escreva seu plano de estudo semanal (dias + horas)",
+        "placeholder": "Descreva seus dias e horários de estudo..."
+      },
+      "50": {
+        "text": "Declaração final",
+        "placeholder": "Escreva sua declaração...",
+        "prompt": "\"Eu entendo que meu resultado depende da minha disciplina. Se eu não seguir o plano, eu posso prejudicar meu status e meu projeto.\""
+      }
     }
   }
 }

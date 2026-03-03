@@ -1,6 +1,6 @@
 import React from 'react';
 
-export type TabId = 'overview' | 'documents' | 'scholarships' | 'logs';
+export type TabId = 'overview' | 'documents' | 'scholarships' | 'survey' | 'logs';
 
 interface Tab {
   id: TabId;
@@ -16,6 +16,7 @@ const TABS: Tab[] = [
   { id: 'overview', label: 'Overview' },
   { id: 'documents', label: 'Documents' },
   { id: 'scholarships', label: 'Scholarships' },
+  { id: 'survey', label: 'Selection Survey' },
   { id: 'logs', label: 'Activity Log' },
 ];
 
@@ -35,11 +36,10 @@ const StudentDetailsTabNavigation: React.FC<StudentDetailsTabNavigationProps> = 
             <button
               key={tab.id}
               onClick={() => onTabChange(tab.id)}
-              className={`py-4 px-1 border-b-2 font-medium text-sm ${
-                activeTab === tab.id
+              className={`py-4 px-1 border-b-2 font-medium text-sm ${activeTab === tab.id
                   ? 'border-[#05294E] text-[#05294E]'
                   : 'border-transparent text-slate-500 hover:text-slate-700 hover:border-slate-300'
-              }`}
+                }`}
             >
               {tab.label}
             </button>

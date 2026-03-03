@@ -1766,43 +1766,6 @@
     "viewProfile": "View Profile",
     "applyNow": "Apply Now"
   },
-  "common": {
-    "loading": "Loading...",
-    "error": "Error",
-    "success": "Success",
-    "save": "Save",
-    "cancel": "Cancel",
-    "confirm": "Confirm",
-    "delete": "Delete",
-    "edit": "Edit",
-    "view": "View",
-    "back": "Back",
-    "next": "Next",
-    "previous": "Previous",
-    "submit": "Submit",
-    "close": "Close",
-    "search": "Search",
-    "filter": "Filter",
-    "clear": "Clear",
-    "refresh": "Refresh",
-    "download": "Download",
-    "upload": "Upload",
-    "required": "Required",
-    "optional": "Optional",
-    "yes": "Yes",
-    "no": "No",
-    "showMore": "Show More",
-    "showLess": "Show Less",
-    "readMore": "Read More",
-    "learnMore": "Learn More",
-    "featured": "Featured",
-    "exclusive": "Exclusive",
-    "apply": "Apply",
-    "viewDetails": "View Details",
-    "deadline": "Deadline",
-    "amount": "Amount",
-    "support": "Support"
-  },
   "profileRequiredModal": {
     "cpfMissing": {
       "title": "CPF Required",
@@ -3852,7 +3815,7 @@
     "jobs": {
       "badge": "Available Jobs",
       "title": "List of <span class=\"text-[#05294E]\">Opportunities</span>",
-      "lastUpdated": "Last updated: September 8, 2025",
+      "lastUpdated": "Last updated: February 18, 2026",
       "filters": {
         "allJobs": "All Jobs",
         "healthcare": "Healthcare",
@@ -4157,6 +4120,450 @@
         "invalidMethod": "Invalid payment method.",
         "notAuthenticated": "User not authenticated.",
         "generationFailed": "Failed to generate payment link. Please try again."
+      }
+    }
+  },
+  "common": {
+    "yes": "Yes",
+    "no": "No",
+    "expirationDate": "Status/I-94 expiration date",
+    "name": "Name",
+    "email": "Email",
+    "profile": "Profile",
+    "section": "Section",
+    "of": "of",
+    "loading": "Loading...",
+    "success": "Success",
+    "error": "Error",
+    "filter": "Filter",
+    "active": "active",
+    "apply": "Apply",
+    "language": "English",
+    "featured": "Featured",
+    "exclusive": "Exclusive",
+    "showMore": "show more",
+    "learnMore": "Learn more",
+    "search": "Search",
+    "support": "Support",
+    "welcome": "Welcome",
+    "close": "Close"
+  },
+  "selectionSurvey": {
+    "title": "Alignment Questionnaire",
+    "subtitle": "Answer carefully. To pass and unlock your dashboard, you must achieve at least <0>80% correct</0> on objective questions.",
+    "mandatoryBadge": "Mandatory Selection Process",
+    "nextSection": "Next Section",
+    "back": "Back",
+    "finish": "Finish and See Results",
+    "finishBtn": "Finish",
+    "submitting": "Submitting...",
+    "sections": {
+      "A": "Identity and Profile",
+      "B": "Passport, Documents, and Timeline",
+      "C": "Funds, Costs, and Financial Responsibility",
+      "D": "F-1 Rules and Legal Status",
+      "E": "University, Performance, and Mindset"
+    },
+    "sectionsInfo": "Answer all mandatory questions to continue.",
+    "required": "This field is required",
+    "toastErrorFields": "Please fill in all mandatory fields before continuing.",
+    "toastErrorAuth": "User not authenticated.",
+    "toastSuccess": "Selection Process successfully completed!",
+    "toastErrorScore": "Unfortunately you didn't reach the minimum score. Try again.",
+    "toastErrorSave": "Error saving your answers. Please try again.",
+    "copyright": "© 2026 Matrícula USA • Student Selection Process",
+    "results": {
+      "congratulations": "Congratulations!",
+      "passedMessage": "You have passed the selection process and are one step closer to your dream!",
+      "score": "Your Score:",
+      "minRequired": "Minimum required: 80%",
+      "ctaDashboard": "Choose Scholarships",
+      "ctaDescription": "Now you can access all features and choose the scholarships you are interested in.",
+      "failed": "Not this time",
+      "failedMessage": "You didn't reach the minimum score of 80% required for approval.",
+      "failedAdvice": "We recommend reviewing the support materials and trying again.",
+      "ctaRetry": "Try Again",
+      "ctaEdit": "Review Answers",
+      "correct": "Correct",
+      "incorrect": "Incorrect",
+      "neutral": "Other",
+      "of": "of",
+      "summary": "Application Summary"
+    },
+    "questions": {
+      "1": {
+        "text": "Full name (as on passport)",
+        "placeholder": "Your full name"
+      },
+      "2": {
+        "text": "Email",
+        "placeholder": "your@email.com"
+      },
+      "3": {
+        "text": "WhatsApp (with country code)",
+        "placeholder": "+1 123 456-7890"
+      },
+      "4": {
+        "text": "Are you currently in the US?",
+        "extraLabel": "Current status?"
+      },
+      "5": {
+        "text": "What is your current profile?",
+        "options": {
+          "initial": "Initial (outside the US, applying for visa/entry with F-1)",
+          "cos": "COS (Change of Status: in the US, changing to F-1 status)",
+          "transfer": "Transfer (has/had I-20 and will transfer schools)",
+          "nao_sei": "I don't know (I need guidance)"
+        }
+      },
+      "6": {
+        "text": "What is your main goal with the program?",
+        "options": {
+          "a": "Study and evolve academically",
+          "b": "Just \"stay in the US\" (without real study)",
+          "c": "Work illegally",
+          "d": "\"Anything works\""
+        }
+      },
+      "7": {
+        "text": "Do you have minimum weekly study availability?",
+        "options": {
+          "a": "Less than 5h/week",
+          "b": "5-9h/week",
+          "c": "10-15h/week",
+          "d": "16h+/week"
+        }
+      },
+      "8": {
+        "text": "What is your English level today?",
+        "options": {
+          "iniciante": "Beginner",
+          "basico": "Basic",
+          "intermediario": "Intermediate",
+          "avancado": "Advanced"
+        }
+      },
+      "9": {
+        "text": "Have you studied in college/university before?",
+        "extraLabel": "What course and in which country?"
+      },
+      "10": {
+        "text": "Are you willing to follow F-1 visa rules even when inconvenient?",
+        "options": {
+          "a": "Yes",
+          "b": "Depends",
+          "c": "No"
+        }
+      },
+      "11": {
+        "text": "Do you have a valid passport?",
+        "extraLabel": "Estimated issue date"
+      },
+      "12": {
+        "text": "Passport expiration date"
+      },
+      "13": {
+        "text": "Can you send a copy of your passport when requested?",
+        "options": {
+          "a": "Yes",
+          "b": "No"
+        }
+      },
+      "14": {
+        "text": "Do you have proof of high school or higher education completion?",
+        "options": {
+          "a": "Yes, I can send it",
+          "b": "I have it, but I don't know where",
+          "c": "I don't have it"
+        }
+      },
+      "15": {
+        "text": "Can you organize your documents in a folder and keep them updated?",
+        "options": {
+          "a": "Yes",
+          "b": "No"
+        }
+      },
+      "16": {
+        "text": "How soon do you want to start the program?",
+        "options": {
+          "a": "0–30 days",
+          "b": "31–60 days",
+          "c": "61–90 days",
+          "d": "90+ days"
+        }
+      },
+      "17": {
+        "text": "Can you participate in an alignment interview with the team?",
+        "options": {
+          "a": "Yes",
+          "b": "No"
+        }
+      },
+      "18": {
+        "text": "Do you understand that the process has steps and skipping them causes delays and risks?",
+        "options": {
+          "a": "Yes",
+          "b": "No"
+        }
+      },
+      "19": {
+        "text": "Do you check your email daily?",
+        "options": {
+          "a": "Yes, every day",
+          "b": "A few times a week",
+          "c": "Rarely"
+        }
+      },
+      "20": {
+        "text": "What usually happens if you delay documents or payments?",
+        "placeholder": "Describe briefly..."
+      },
+      "21": {
+        "text": "Why is proof of funds required?",
+        "options": {
+          "a": "Because the government wants to interfere",
+          "b": "Because the school wants to interfere",
+          "c": "Because you must prove you can pay tuition and living costs for at least 1 year",
+          "d": "None of the above"
+        }
+      },
+      "22": {
+        "text": "Proof of funds serves to:",
+        "options": {
+          "a": "Demonstrate financial capacity and reduce status violation risk",
+          "b": "Ensure you will work in the US",
+          "c": "Replace passport",
+          "d": "Avoid consulate interview"
+        }
+      },
+      "23": {
+        "text": "For the main applicant, what is the minimum value you must prove?",
+        "options": {
+          "a": "$5,000",
+          "b": "$10,000",
+          "c": "Approximately $22,000",
+          "d": "$100,000"
+        }
+      },
+      "24": {
+        "text": "For each additional dependent, what is the approximate minimum value?",
+        "options": {
+          "a": "$1,000",
+          "b": "$5,000",
+          "c": "$15,000",
+          "d": "No need to prove"
+        }
+      },
+      "25": {
+        "text": "Does the proof of funds need to be in your name?",
+        "options": {
+          "a": "Always must be in my name",
+          "b": "Can be from a sponsor, if provable and consistent",
+          "c": "Can be just verbal",
+          "d": "Proof of funds doesn't exist"
+        }
+      },
+      "26": {
+        "text": "Can you arrange the necessary amount (yours or sponsor) for proof?",
+        "extraLabel": "How many months?",
+        "options": {
+          "a": "Yes",
+          "b": "No",
+          "c": "Not yet, but in X months"
+        }
+      },
+      "27": {
+        "text": "Do you understand that tuition and process fees are different things?",
+        "options": {
+          "a": "Yes",
+          "b": "No"
+        }
+      },
+      "28": {
+        "text": "If you have a scholarship, the goal is to reduce tuition — it doesn't eliminate your responsibility to pay and maintain status.",
+        "options": {
+          "verdadeiro": "True",
+          "falso": "False"
+        }
+      },
+      "29": {
+        "text": "Which payment method is easiest for you?",
+        "options": {
+          "a": "One-time payment",
+          "b": "Installments",
+          "c": "Depends on the plan"
+        }
+      },
+      "30": {
+        "text": "What is your approximate annual budget for tuition + process costs?",
+        "placeholder": "Value in USD"
+      },
+      "31": {
+        "text": "The goal of the F-1 visa is:",
+        "options": {
+          "a": "Study at an authorized institution",
+          "b": "Work full-time",
+          "c": "Travel as a tourist",
+          "d": "Live without academic link"
+        }
+      },
+      "32": {
+        "text": "The I-20 is:",
+        "options": {
+          "a": "A school document proving eligibility/enrollment and sustaining F-1 status",
+          "b": "A type of passport",
+          "c": "A visa stuck in the passport",
+          "d": "A rental agreement"
+        }
+      },
+      "33": {
+        "text": "\"Maintaining status\" means:",
+        "options": {
+          "a": "Comply with rules, attendance, minimum load, and program obligations",
+          "b": "Pay nothing and show up sometimes",
+          "c": "Change schools without notice",
+          "d": "Work without authorization"
+        }
+      },
+      "34": {
+        "text": "If I miss lots of classes and stop studying, I can:",
+        "options": {
+          "a": "Risk my status and face immigration consequences",
+          "b": "Nothing happens",
+          "c": "Get a \"discount\"",
+          "d": "Receive a green card"
+        }
+      },
+      "35": {
+        "text": "For any critical decisions (travel, move, break), I should:",
+        "options": {
+          "a": "Consult the school/DSO and follow guidance",
+          "b": "Decide alone and then notify",
+          "c": "Ask friends",
+          "d": "Ignore rules"
+        }
+      },
+      "36": {
+        "text": "COS (Change of Status) is:",
+        "options": {
+          "a": "Change status while in the US",
+          "b": "Buy a ticket and enter as a tourist",
+          "c": "Transfer schools with I-20",
+          "d": "Renew passport"
+        }
+      },
+      "37": {
+        "text": "Transfer is:",
+        "options": {
+          "a": "Change/transfer SEVIS/I-20 from one school to another",
+          "b": "Sightseeing in another state",
+          "c": "Change jobs",
+          "d": "Change phone number"
+        }
+      },
+      "38": {
+        "text": "Initial is:",
+        "options": {
+          "a": "Process for those outside the US entering with F-1",
+          "b": "Those already studying who want to transfer",
+          "c": "Those changing status within the US",
+          "d": "Those who don't want to study"
+        }
+      },
+      "39": {
+        "text": "Working without authorization while F-1 is:",
+        "options": {
+          "a": "A serious risk that can harm status",
+          "b": "Always allowed",
+          "c": "Recommended by the school",
+          "d": "Necessary for I-20 issue"
+        }
+      },
+      "40": {
+        "text": "If I'm confused about an F-1 rule, I should:",
+        "options": {
+          "a": "Officially ask the school/DSO or team",
+          "b": "Ignore and follow intuition",
+          "c": "Ask in a random WhatsApp group",
+          "d": "Do it my way"
+        }
+      },
+      "41": {
+        "text": "Being a \"professional\" student means:",
+        "options": {
+          "a": "Meet deadlines, attendance, clear communication, and consistency",
+          "b": "Showing up only when possible",
+          "c": "Not reading emails and complaining later",
+          "d": "Always asking for exceptions"
+        }
+      },
+      "42": {
+        "text": "To not miss deadlines in the US, the best habit is:",
+        "options": {
+          "a": "Use calendar + reminders + check email daily",
+          "b": "Trust memory",
+          "c": "Wait for someone to notify",
+          "d": "Resolve only when urgent"
+        }
+      },
+      "43": {
+        "text": "If I'm struggling with a subject, I should first:",
+        "options": {
+          "a": "Seek tutor/office hours/advisor early",
+          "b": "Disappear and miss classes",
+          "c": "Wait to fail",
+          "d": "Blame the school"
+        }
+      },
+      "44": {
+        "text": "Networking at university, correctly, serves to:",
+        "options": {
+          "a": "Open academic and professional doors within rules",
+          "b": "Finding \"shortcuts\" to bypass rules",
+          "c": "Avoid studying",
+          "d": "Serve for nothing"
+        }
+      },
+      "45": {
+        "text": "What usually leads to failure: lack of intelligence or lack of consistency?",
+        "options": {
+          "a": "Lack of consistency",
+          "b": "Lack of intelligence",
+          "c": "Luck",
+          "d": "I don't know"
+        }
+      },
+      "46": {
+        "text": "What is your most important priority right now?",
+        "options": {
+          "a": "Cost",
+          "b": "Time flexibility",
+          "c": "Work authorization"
+        }
+      },
+      "47": {
+        "text": "Do you accept feedback and correction during the process and program?",
+        "options": {
+          "a": "Yes",
+          "b": "No"
+        }
+      },
+      "48": {
+        "text": "Minimum commitment: \"I commit to maintain attendance, meet deadlines, and follow F-1 rules.\"",
+        "options": {
+          "concordo": "I agree",
+          "nao_concordo": "I don't agree"
+        }
+      },
+      "49": {
+        "text": "Write your weekly study plan (days + hours)",
+        "placeholder": "Describe your study days and times..."
+      },
+      "50": {
+        "text": "Final declaration",
+        "placeholder": "Write your declaration...",
+        "prompt": "\"I understand that my result depends on my discipline. If I don't follow the plan, I can harm my status and my project.\""
       }
     }
   }

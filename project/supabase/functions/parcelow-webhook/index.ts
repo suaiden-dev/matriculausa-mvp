@@ -641,6 +641,43 @@ Deno.serve(async (req: Request) => {
     const payload = await req.json();
     const event = payload.event;
     const parcelowOrder = payload.order;
+    const reference = parcelowOrder?.reference || '';
+
+    // =========================================================================
+    // 🔀 INÍCIO DO COMPONENTE DE ROTEAMENTO MULTI-PROJETO (SUAIDEN)
+    // =========================================================================
+    // Se a referência for da Aplikei, encaminhamos e não processamos mais nada.
+    if (reference.startsWith('APK_')) {
+      console.log(`[router] Detectada ordem da Aplikei: ${reference}. Redirecionando...`);
+      
+      const APLIKEI_WEBHOOK_URL = "https://nkhblkilekfpqhyuhrrj.supabase.co/functions/v1/parcelow-webhook";
+      
+      try {
+        const response = await fetch(APLIKEI_WEBHOOK_URL, {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+            "Authorization": req.headers.get("Authorization") || ""
+          },
+          body: JSON.stringify(payload)
+        });
+        
+        const resultText = await response.text();
+        console.log(`[router] Resposta da Aplikei (Status: ${response.status}):`, resultText);
+        
+        return new Response(resultText, { 
+          status: response.status,
+          headers: { 'Content-Type': 'application/json' }
+        });
+        
+      } catch (err) {
+        console.error("[router] ❌ Falha crítica de conexão ao repassar webhook para Aplikei:", err);
+        return new Response(JSON.stringify({ error: "Routing failed, but received" }), { status: 200 });
+      }
+    }
+    // =========================================================================
+    // 🔀 FIM DO COMPONENTE DE ROTEAMENTO
+    // =========================================================================
 
     if (!parcelowOrder || !parcelowOrder.id) {
       console.error('[parcelow-webhook] ❌ Payload inválido: falta order.id');
@@ -650,7 +687,6 @@ Deno.serve(async (req: Request) => {
     // 1. Identificar userId: primeiro por email do cliente; se não encontrar, por reference/order_id do pedido
     // (Parcelow pode enviar email vinculado ao CPF de outro pagamento fora do sistema)
     const clientEmail = parcelowOrder.client?.email ?? '';
-    const reference = parcelowOrder.reference || '';
 
     let userId: string | null = null;
     let payment: any = null;

@@ -51,6 +51,7 @@ interface UserProfile {
   applications_count: number;
   created_at: string;
   last_active: string;
+  selection_survey_passed?: boolean;
 }
 
 interface AdminLog {
