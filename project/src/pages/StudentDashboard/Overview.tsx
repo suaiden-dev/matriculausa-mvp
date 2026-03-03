@@ -24,7 +24,6 @@ import { StripeCheckout } from '../../components/StripeCheckout';
 import { useAuth } from '../../hooks/useAuth';
 import { useReferralCode } from '../../hooks/useReferralCode';
 import { ProgressBar } from '../../components/ProgressBar';
-import StepByStepGuide from '../../components/OnboardingTour/StepByStepGuide';
 import { useStepByStepGuide } from '../../hooks/useStepByStepGuide';
 import { supabase } from '../../lib/supabase';
 import { useQueryClient } from '@tanstack/react-query';
@@ -71,7 +70,7 @@ const Overview: React.FC<OverviewProps> = ({
   const { activeDiscount } = useReferralCode();
   const { userFeeOverrides } = useFeeConfig(user?.id);
   const { selectionProcessFeeAmount, scholarshipFeeAmount, i20ControlFeeAmount } = useDynamicFees();
-  const { isGuideOpen, openGuide, closeGuide } = useStepByStepGuide();
+  const { openGuide } = useStepByStepGuide();
   const { isBlocked, pendingPayment, loading: paymentBlockedLoading } = usePaymentBlocked();
   const [visibleApplications, setVisibleApplications] = useState(5); // Mostrar 5 inicialmente
   
@@ -1090,10 +1089,6 @@ const Overview: React.FC<OverviewProps> = ({
           </div>
         </div>
       </div>
-
-      {/* Step By Step Guide Modal */}
-      <StepByStepGuide isOpen={isGuideOpen} onClose={closeGuide} />
-
     </div>
   );
 };

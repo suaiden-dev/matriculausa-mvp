@@ -22,6 +22,8 @@ import { useStudentChatUnreadCount } from '../../hooks/useStudentChatUnreadCount
 import { useUnreadMessages } from '../../contexts/UnreadMessagesContext';
 import NotificationsModal from '../../components/NotificationsModal';
 import LanguageSelector from '../../components/LanguageSelector';
+import { IdentityVerificationModal } from '../../components/IdentityVerificationModal';
+import { useIdentityPhotoStatusQuery } from '../../hooks/useStudentDashboardQueries';
 // import { StripeCheckout } from '../../components/StripeCheckout';
 // import StepByStepButton from '../../components/OnboardingTour/StepByStepButton';
 
@@ -41,7 +43,7 @@ const StudentDashboardLayout: React.FC<StudentDashboardLayoutProps> = ({
   const { t, i18n } = useTranslation();
   const location = useLocation();
   const navigate = useNavigate();
-  const { logout } = useAuth();
+  const { logout, userProfile } = useAuth();
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const [userMenuOpen, setUserMenuOpen] = useState(false);
   const [showNotif, setShowNotif] = useState(false);
@@ -67,6 +69,24 @@ const StudentDashboardLayout: React.FC<StudentDashboardLayoutProps> = ({
   // Hook para mensagens não lidas do chat admin-estudante
   const { unreadCount: serverChatUnreadCount, markStudentMessagesAsRead } = useStudentChatUnreadCount();
   const { unreadCount: contextChatUnreadCount, resetUnreadCount } = useUnreadMessages();
+
+  // Foto de identidade
+  const { data: identityPhotoStatus, isPending: identityPhotoLoading, refetch: refetchIdentityStatus } = useIdentityPhotoStatusQuery(user?.id);
+  const [isSelfieModalOpen, setIsSelfieModalOpen] = useState(false);
+  const hasAutoOpenedSelfie = useRef(false);
+
+  // Lógica para abrir o modal de selfie automaticamente
+  useEffect(() => {
+    if (userProfile?.has_paid_selection_process_fee && 
+        identityPhotoStatus === null && 
+        !identityPhotoLoading && 
+        !hasAutoOpenedSelfie.current) {
+      
+      console.log('✨ [StudentDashboardLayout] Abrindo modal de selfie automaticamente');
+      setIsSelfieModalOpen(true);
+      hasAutoOpenedSelfie.current = true;
+    }
+  }, [userProfile?.has_paid_selection_process_fee, identityPhotoStatus, identityPhotoLoading]);
 
   // Use context count if it's been updated, otherwise use server count
   const displayChatUnreadCount = contextChatUnreadCount > 0 ? contextChatUnreadCount : serverChatUnreadCount;
@@ -474,6 +494,16 @@ const StudentDashboardLayout: React.FC<StudentDashboardLayoutProps> = ({
         }}
         onMarkAllAsRead={markAllAsRead}
         onClearAll={clearAll}
+      />
+
+      {/* Modal de Verificação de Identidade (Selfie) */}
+      <IdentityVerificationModal 
+        isOpen={isSelfieModalOpen}
+        onClose={() => setIsSelfieModalOpen(false)}
+        onSuccess={() => {
+          console.log('✅ [DashboardLayout] Selfie enviada com sucesso!');
+          refetchIdentityStatus();
+        }}
       />
     </div>
   );

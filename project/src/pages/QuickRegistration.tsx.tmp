@@ -1,4 +1,4 @@
-﻿import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { useTranslation } from 'react-i18next';
 import { useNavigate, useLocation } from 'react-router-dom';
 import { useAuth } from '../hooks/useAuth';
@@ -188,6 +188,8 @@ const QuickRegistration: React.FC = () => {
   const [showTermsModal, setShowTermsModal] = useState(false);
   const [activeTerm, setActiveTerm] = useState<Term | null>(null);
   const [loadingTerms, setLoadingTerms] = useState(false);
+  const [hasScrolledToBottom, setHasScrolledToBottom] = useState(false);
+  const termsContentRef = useRef<HTMLDivElement>(null);
 
   // Fees with Stripe fees
   const [exchangeRate, setExchangeRate] = useState<number | null>(null);
@@ -197,14 +199,14 @@ const QuickRegistration: React.FC = () => {
   // Constants
   const baseFee = getFeeAmount('selection_process');
   
-  // Calcular preÃ§o final com desconto (LÃ³gica da SelectionFeeStep)
+  // Calcular preço final com desconto (Lógica da SelectionFeeStep)
   const currentFee = (() => {
     // 1. Cupom promocional tem prioridade
     if (promotionalCouponValidation?.isValid && promotionalCouponValidation.finalAmount !== undefined) {
       return promotionalCouponValidation.finalAmount;
     }
     
-    // 2. CÃ³digo validado e aplicado
+    // 2. Código validado e aplicado
     if ((isCouponValid || codeApplied) && validationResult?.isValid) {
       const discount = validationResult.discountAmount || 50;
       return Math.max(baseFee - discount, 0);
@@ -290,7 +292,7 @@ const QuickRegistration: React.FC = () => {
         return;
       }
 
-      // Se jÃ¡ estiver logado/registrado, podemos aplicar no banco
+      // Se já estiver logado/registrado, podemos aplicar no banco
       if (isRegistered && supabaseUser?.id && supabaseUser?.email) {
         const { data: result, error: validationError } = await supabase
           .rpc('validate_and_apply_referral_code', {
@@ -300,7 +302,7 @@ const QuickRegistration: React.FC = () => {
           });
 
         if (validationError || !result?.success) {
-          const errorMessage = validationError?.message || result?.error || t('preCheckoutModal.errorValidating') || 'Erro ao validar cÃ³digo';
+          const errorMessage = validationError?.message || result?.error || t('preCheckoutModal.errorValidating') || 'Erro ao validar código';
           setValidationResult({
             isValid: false,
             message: errorMessage
@@ -309,7 +311,7 @@ const QuickRegistration: React.FC = () => {
         }
       }
 
-      // Se for apenas prÃ©-registro, validamos localmente para a UI
+      // Se for apenas pré-registro, validamos localmente para a UI
       setValidationResult({
         isValid: true,
         message: t('preCheckoutModal.validCode') || 'Valid code! $50 discount applied',
@@ -447,6 +449,34 @@ const QuickRegistration: React.FC = () => {
     setShowTermsModal(true);
   };
 
+  const handleTermsAccept = async () => {
+    setFormData((prev: any) => ({ ...prev, termsAccepted: true }));
+    setShowTermsModal(false);
+  };
+
+
+  const handleTermsScroll = () => {
+    if (termsContentRef.current) {
+      const { scrollTop, scrollHeight, clientHeight } = termsContentRef.current;
+      if (scrollTop + clientHeight >= scrollHeight - 5) {
+        setHasScrolledToBottom(true);
+      }
+    }
+  };
+
+  useEffect(() => {
+    if (activeTerm && showTermsModal) {
+      const timer = setTimeout(() => {
+        if (termsContentRef.current) {
+          const { scrollHeight, clientHeight } = termsContentRef.current;
+          if (scrollHeight <= clientHeight) {
+            setHasScrolledToBottom(true);
+          }
+        }
+      }, 500);
+      return () => clearTimeout(timer);
+    }
+  }, [activeTerm, showTermsModal]);
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) => {
     const { name, value, type } = e.target;
@@ -460,6 +490,7 @@ const QuickRegistration: React.FC = () => {
   const handleRegisterAndPay = async (e: React.FormEvent) => {
     e.preventDefault();
 
+    // Se já tiver pago, redireciona ao clicar em pagar
     if (userProfile?.has_paid_selection_process_fee) {
       navigate('/student/dashboard');
       return;
@@ -471,7 +502,7 @@ const QuickRegistration: React.FC = () => {
       try {
         if (selectedMethod === 'parcelow') {
           if (!formData.cpf || formData.cpf.length < 14) {
-            throw new Error(t('rapidRegistration.payment.cpf.error') || 'CPF Ã© obrigatÃ³rio para pagamento via Parcelow.');
+            throw new Error(t('rapidRegistration.payment.cpf.error') || 'CPF é obrigatório para pagamento via Parcelow.');
           }
           // Update profile if CPF is missing
           if (!userProfile?.cpf_document || userProfile.cpf_document !== formData.cpf) {
@@ -485,7 +516,7 @@ const QuickRegistration: React.FC = () => {
           setShowZelleCheckout(true);
           setLoading(false);
         } else {
-          throw new Error(t('rapidRegistration.payment.error.invalidMethod') || 'MÃ©todo de pagamento invÃ¡lido.');
+          throw new Error(t('rapidRegistration.payment.error.invalidMethod') || 'Método de pagamento inválido.');
         }
       } catch (err: any) {
         setError(err.message || 'Error occurred');
@@ -495,19 +526,19 @@ const QuickRegistration: React.FC = () => {
     }
 
     if (formData.password !== formData.confirm_password) {
-      setError(t('rapidRegistration.form.error.passwordsNotMatch') || 'As senhas nÃ£o coincidem');
+      setError(t('rapidRegistration.form.error.passwordsNotMatch') || 'As senhas não coincidem');
       setLoading(false);
       return;
     }
 
     if (!formData.termsAccepted) {
-      setError(t('rapidRegistration.form.error.terms') || 'VocÃª deve aceitar os termos');
+      setError(t('rapidRegistration.form.error.terms') || 'Você deve aceitar os termos');
       setLoading(false);
       return;
     }
 
     if (selectedMethod === 'parcelow' && (!formData.cpf || formData.cpf.length < 14)) {
-      setError(t('rapidRegistration.payment.cpf.error') || 'CPF Ã© obrigatÃ³rio para pagamento via Parcelow.');
+      setError(t('rapidRegistration.payment.cpf.error') || 'CPF é obrigatório para pagamento via Parcelow.');
       setLoading(false);
       return;
     }
@@ -551,7 +582,7 @@ const QuickRegistration: React.FC = () => {
         setShowZelleCheckout(true);
         setLoading(false);
       } else {
-        throw new Error(t('rapidRegistration.payment.error.invalidMethod') || 'MÃ©todo de pagamento invÃ¡lido.');
+        throw new Error(t('rapidRegistration.payment.error.invalidMethod') || 'Método de pagamento inválido.');
       }
 
     } catch (err: any) {
@@ -566,7 +597,7 @@ const QuickRegistration: React.FC = () => {
       const { data: sessionData } = await supabase.auth.getSession();
       const token = sessionData.session?.access_token;
       
-      if (!token) throw new Error(t('rapidRegistration.payment.error.notAuthenticated', 'UsuÃ¡rio nÃ£o autenticado.'));
+      if (!token) throw new Error(t('rapidRegistration.payment.error.notAuthenticated', 'Usuário não autenticado.'));
 
       let apiUrl = `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/stripe-checkout-selection-process-fee`;
       if (method === 'parcelow') {
@@ -592,6 +623,22 @@ const QuickRegistration: React.FC = () => {
         payment_method: method
       };
 
+      console.log('[DEBUG] Payment Request:', {
+        apiUrl,
+        method,
+        body: {
+          price_id: STRIPE_PRODUCTS.selectionProcess.priceId,
+          amount: currentFee,
+          payment_method: method,
+          success_url: `${window.location.origin}/student/dashboard/selection-process-fee-success?session_id={CHECKOUT_SESSION_ID}`,
+          cancel_url: window.location.href,
+          mode: 'payment',
+          payment_type: 'selection_process',
+          fee_type: 'selection_process',
+          metadata: paymentMetadata
+        }
+      });
+
       const response = await fetch(apiUrl, {
         method: 'POST',
         headers: {
@@ -616,6 +663,7 @@ const QuickRegistration: React.FC = () => {
       });
 
       const data = await response.json();
+      console.log('[DEBUG] Payment Response:', data);
 
       const paymentUrl = data.session_url || data.url || data.checkout_url;
 
@@ -625,6 +673,7 @@ const QuickRegistration: React.FC = () => {
         throw new Error(data.error || t('rapidRegistration.payment.error.generationFailed', 'Falha ao gerar link de pagamento. Tente novamente.'));
       }
     } catch (err: any) {
+      console.error('[DEBUG] Payment Catch Error:', err);
       console.error('Payment redirect failed:', err);
       throw err;
     }
@@ -632,7 +681,7 @@ const QuickRegistration: React.FC = () => {
 
   const getButtonText = () => {
     const methodNames: Record<string, string> = {
-      stripe: t('rapidRegistration.payment.methods.stripe', 'CartÃ£o de CrÃ©dito'),
+      stripe: t('rapidRegistration.payment.methods.stripe', 'Cartão de Crédito'),
       pix: t('rapidRegistration.payment.methods.pix', 'PIX'),
       parcelow: t('rapidRegistration.payment.methods.parcelow', 'Parcelow'),
       zelle: t('rapidRegistration.payment.methods.zelle', 'Zelle')
@@ -693,7 +742,7 @@ const QuickRegistration: React.FC = () => {
           {/* Left: Registration Form */}
           <div className="lg:col-span-2 space-y-8">
             <form id="registration-form" onSubmit={handleRegisterAndPay} className="space-y-8">
-              {/* SeÃ§Ã£o 1: InformaÃ§Ãµes da Conta & Termos */}
+              {/* Seção 1: Informações da Conta & Termos */}
               <div className="bg-white rounded-3xl shadow-xl border border-slate-200 p-8 relative overflow-hidden">
                 <div className="absolute top-0 right-0 w-32 h-32 bg-blue-50 rounded-full -mr-16 -mt-16 opacity-50"></div>
                 
@@ -879,7 +928,7 @@ const QuickRegistration: React.FC = () => {
 
                   </div>
 
-                  {/* SeÃ§Ã£o Agrupada: Cupons e Termos (Coladinhos) */}
+                  {/* Seção Agrupada: Cupons e Termos (Coladinhos) */}
                   <div className="mt-6 pt-6 border-t border-slate-100 space-y-2">
                     {!userProfile?.seller_referral_code && !codeApplied && (
                       <div className="relative z-10">
@@ -918,11 +967,11 @@ const QuickRegistration: React.FC = () => {
                               }
                             }}
                           >
-                            {t('preCheckoutModal.haveReferralCode') || 'Eu tenho um cÃ³digo de indicaÃ§Ã£o'}
+                            {t('preCheckoutModal.haveReferralCode') || 'Eu tenho um código de indicação'}
                           </label>
                         </div>
 
-                        {/* Ãrea de Input de Cupons */}
+                        {/* Área de Input de Cupons */}
                         {(hasReferralCode || promotionalCouponValidation?.isValid || codeApplied) && (
                           <div className="grid grid-cols-1 md:grid-cols-2 gap-8 pt-4 pb-2">
                             {/* ... (Referral e Promo Columns mantidos) */}
@@ -930,7 +979,7 @@ const QuickRegistration: React.FC = () => {
                             <div className="space-y-4">
                               <h4 className="text-xs font-black text-slate-400 uppercase tracking-widest flex items-center">
                                 <Ticket className="w-3 h-3 mr-2" />
-                                {t('preCheckoutModal.referralCode') || 'CÃ³digo de IndicaÃ§Ã£o'}
+                                {t('preCheckoutModal.referralCode') || 'Código de Indicação'}
                               </h4>
                               
                               <div className="flex gap-2">
@@ -943,7 +992,7 @@ const QuickRegistration: React.FC = () => {
                                         setCouponCode(e.target.value.toUpperCase());
                                       }
                                     }}
-                                    placeholder={t('preCheckoutModal.placeholder') || 'Digite o cÃ³digo'}
+                                    placeholder={t('preCheckoutModal.placeholder') || 'Digite o código'}
                                     readOnly={codeApplied}
                                     className="w-full px-5 py-3.5 bg-slate-50 border border-slate-200 rounded-xl outline-none focus:outline-none focus:ring-2 focus:ring-[#05294E]/20 focus:border-[#05294E] transition-all text-center font-black text-slate-900 text-lg tracking-[0.2em] placeholder:text-slate-300 disabled:opacity-50"
                                   />
@@ -1011,7 +1060,7 @@ const QuickRegistration: React.FC = () => {
                                       type="text"
                                       value={promotionalCoupon}
                                       onChange={(e) => setPromotionalCoupon(e.target.value.toUpperCase())}
-                                      placeholder="Digite o cÃ³digo"
+                                      placeholder="Digite o código"
                                       className="w-full px-5 py-3.5 bg-slate-50 border border-slate-200 rounded-xl outline-none focus:outline-none focus:ring-2 focus:ring-[#05294E]/20 focus:border-[#05294E] transition-all text-center font-black text-slate-900 text-lg tracking-[0.2em] placeholder:text-slate-300"
                                     />
                                   </div>
@@ -1069,20 +1118,21 @@ const QuickRegistration: React.FC = () => {
                         />
                       </div>
                       <div className="flex-1">
-                        <div 
-                          className="text-sm text-gray-700 leading-relaxed block font-medium"
+                        <label 
+                          htmlFor="termsAccepted"
+                          className="text-sm text-gray-700 leading-relaxed block font-medium cursor-pointer"
                         >
                           <span className="text-[#D0151C] font-bold mr-1">*</span>
                           {t('preCheckoutModal.acceptPrefix', 'Eu aceito os ')}
                           <button 
                             type="button"
                             onClick={(e) => handleTermsClick(e)}
-                            className="text-blue-600 hover:text-blue-800 underline font-bold px-1"
+                            className="text-blue-600 hover:text-blue-800 underline font-bold"
                           >
                             {t('preCheckoutModal.termsAndConditionsLink', 'termos e condições')}
                           </button>
                           {t('preCheckoutModal.acceptSuffix', ' do contrato de prestação de serviços.')}
-                        </div>
+                        </label>
                         {formData.termsAccepted && (
                           <span className="text-[10px] text-emerald-600 font-bold uppercase tracking-widest flex items-center mt-1">
                             <CheckCircle2 className="w-3 h-3 mr-1" />
@@ -1095,7 +1145,7 @@ const QuickRegistration: React.FC = () => {
                 </div>
               </div>
 
-              {/* SeÃ§Ã£o 2: MÃ©todo de Pagamento */}
+              {/* Seção 2: Método de Pagamento */}
               <div className="bg-white rounded-3xl shadow-xl border border-slate-200 p-8 relative overflow-hidden">
                 <div className="absolute top-0 right-0 w-32 h-32 bg-blue-50 rounded-full -mr-16 -mt-16 opacity-50"></div>
                 
@@ -1328,7 +1378,7 @@ const QuickRegistration: React.FC = () => {
                           {activeTerm?.title || t('preCheckoutModal.termsAndConditions.title')}
                         </Dialog.Title>
                         <p className="text-xs font-bold text-slate-400 uppercase tracking-[0.2em] mt-1">
-                          {t('rapidRegistration.terms.contractSubtitle') || 'Contrato de PrestaÃ§Ã£o de ServiÃ§os'}
+                          {t('rapidRegistration.terms.contractSubtitle') || 'Contrato de Prestação de Serviços'}
                         </p>
                       </div>
                       <button
@@ -1343,6 +1393,8 @@ const QuickRegistration: React.FC = () => {
                    {/* Content */}
                    <div className="flex-1 overflow-hidden px-8 py-4 flex flex-col min-h-0">
                        <div 
+                         ref={termsContentRef}
+                         onScroll={handleTermsScroll}
                          className="flex-1 overflow-y-auto pr-4 scrollbar-thin scrollbar-thumb-slate-200 scrollbar-track-transparent"
                        >
                          {loadingTerms ? (
@@ -1363,15 +1415,6 @@ const QuickRegistration: React.FC = () => {
                          )}
                        </div>
 
-                      <div className="mt-4 pt-4 border-t border-slate-100 flex justify-center flex-shrink-0">
-                        <button
-                          type="button"
-                          className="w-full sm:w-auto px-12 py-4 bg-slate-100 text-slate-600 rounded-2xl font-black uppercase tracking-widest text-xs hover:bg-slate-200 transition-all active:scale-95"
-                          onClick={() => setShowTermsModal(false)}
-                        >
-                          {t('preCheckoutModal.closeTerms', 'Fechar')}
-                        </button>
-                      </div>
                    </div>
                 </Dialog.Panel>
               </Transition.Child>
