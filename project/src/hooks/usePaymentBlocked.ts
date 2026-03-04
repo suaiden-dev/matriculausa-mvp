@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import { supabase } from "../lib/supabase";
 import { useAuth } from "./useAuth";
 
@@ -11,19 +11,37 @@ interface ZellePayment {
   admin_notes?: string | null;
 }
 
+interface RejectedPayment {
+  id: string;
+  fee_type: string;
+  amount: number;
+  status: string;
+  admin_notes: string | null;
+  created_at: string;
+}
+
+interface ApprovedPayment {
+  id: string;
+  fee_type: string;
+  amount: number;
+  status: string;
+  created_at: string;
+}
+
 interface PaymentBlockedState {
   isBlocked: boolean;
   pendingPayment: ZellePayment | null;
-  rejectedPayment: ZellePayment | null;
-  approvedPayment: ZellePayment | null;
+  rejectedPayment: RejectedPayment | null;
+  approvedPayment: ApprovedPayment | null;
   totalPending: number;
   loading: boolean;
   error: string | null;
+  refetch: () => void;
 }
 
 export const usePaymentBlocked = (): PaymentBlockedState => {
   const { user } = useAuth();
-  const [state, setState] = useState<PaymentBlockedState>({
+  const [state, setState] = useState<Omit<PaymentBlockedState, "refetch">>({
     isBlocked: false,
     pendingPayment: null,
     rejectedPayment: null,
@@ -33,101 +51,116 @@ export const usePaymentBlocked = (): PaymentBlockedState => {
     error: null,
   });
 
-  useEffect(() => {
+  const checkPayments = useCallback(async () => {
     if (!user?.id) {
       setState((prev) => ({ ...prev, loading: false }));
       return;
     }
 
-    const checkPendingPayments = async () => {
-      try {
-        setState((prev) => ({ ...prev, loading: true, error: null }));
+    try {
+      setState((prev) => ({ ...prev, loading: true, error: null }));
 
-        const { data, error } = await supabase.rpc(
-          "check_pending_zelle_payments",
-          {
-            p_user_id: user.id,
-          },
-        );
+      const { data: paymentData, error: paymentError } = await supabase.rpc(
+        "check_zelle_payments_status",
+        {
+          p_user_id: user.id,
+        },
+      );
 
-        if (error) {
-          console.error("Error checking pending payments:", error);
-          setState((prev) => ({
-            ...prev,
-            loading: false,
-            error: "Failed to check payment status",
-          }));
-          return;
-        }
-
-        if (data && data.length > 0) {
-          const result = data[0];
-
-          // Buscar pagamentos rejeitados e aprovados recentes
-          const [rejectedRes, approvedRes] = await Promise.all([
-            supabase
-              .from("zelle_payments")
-              .select("id, fee_type, amount, status, created_at, admin_notes")
-              .eq("user_id", user.id)
-              .eq("status", "rejected")
-              .order("created_at", { ascending: false })
-              .limit(1)
-              .maybeSingle(),
-            supabase
-              .from("zelle_payments")
-              .select("id, fee_type, amount, status, created_at, admin_notes")
-              .eq("user_id", user.id)
-              .in("status", ["approved", "verified"])
-              .order("created_at", { ascending: false })
-              .limit(1)
-              .maybeSingle(),
-          ]);
-
-          setState({
-            isBlocked: result.has_pending_payment,
-            pendingPayment: result.has_pending_payment
-              ? {
-                id: result.pending_payment_id,
-                fee_type: result.pending_payment_fee_type,
-                amount: result.pending_payment_amount,
-                status: result.pending_payment_status,
-                created_at: result.pending_payment_created_at,
-              }
-              : null,
-            rejectedPayment: rejectedRes.data || null,
-            approvedPayment: approvedRes.data || null,
-            totalPending: result.total_pending,
-            loading: false,
-            error: null,
-          });
-        } else {
-          setState({
-            isBlocked: false,
-            pendingPayment: null,
-            rejectedPayment: null,
-            approvedPayment: null,
-            totalPending: 0,
-            loading: false,
-            error: null,
-          });
-        }
-      } catch (error) {
-        console.error("Error in checkPendingPayments:", error);
+      if (paymentError) {
+        console.error("Error checking payment status:", paymentError);
         setState((prev) => ({
           ...prev,
           loading: false,
-          error: "An unexpected error occurred",
+          error: "Failed to check payment status",
         }));
+        return;
       }
-    };
 
-    checkPendingPayments();
+      let pendingPayment: ZellePayment | null = null;
+      let rejectedPayment: RejectedPayment | null = null;
+      let approvedPayment: ApprovedPayment | null = null;
+      let isBlocked = false;
+      let totalPending = 0;
 
-    // Refresh every 30 seconds to check for status updates
-    const interval = setInterval(checkPendingPayments, 30000);
+      if (paymentData && paymentData.length > 0) {
+        const result = paymentData[0];
 
-    return () => clearInterval(interval);
+        isBlocked = result.has_pending_payment;
+        totalPending = result.total_pending;
+
+        if (
+          result.has_pending_payment && result.pending_payment_id &&
+          result.pending_payment_id !== "00000000-0000-0000-0000-000000000000"
+        ) {
+          pendingPayment = {
+            id: result.pending_payment_id,
+            fee_type: result.pending_payment_fee_type || "",
+            amount: result.pending_payment_amount,
+            status: result.pending_payment_status || "pending",
+            created_at: result.pending_payment_created_at,
+          };
+        }
+
+        if (
+          result.has_rejected_payment && result.rejected_payment_id &&
+          result.rejected_payment_id !== "00000000-0000-0000-0000-000000000000"
+        ) {
+          rejectedPayment = {
+            id: result.rejected_payment_id,
+            fee_type: result.rejected_payment_fee_type || "",
+            amount: result.rejected_payment_amount,
+            status: result.rejected_payment_status || "rejected",
+            admin_notes: result.rejected_payment_admin_notes || null,
+            created_at: result.rejected_payment_created_at,
+          };
+        }
+
+        if (
+          result.has_approved_payment && result.approved_payment_id &&
+          result.approved_payment_id !== "00000000-0000-0000-0000-000000000000"
+        ) {
+          approvedPayment = {
+            id: result.approved_payment_id,
+            fee_type: result.approved_payment_fee_type || "",
+            amount: result.approved_payment_amount,
+            status: result.approved_payment_status || "approved",
+            created_at: result.approved_payment_created_at,
+          };
+        }
+      }
+
+      setState({
+        isBlocked,
+        pendingPayment,
+        rejectedPayment,
+        approvedPayment,
+        totalPending,
+        loading: false,
+        error: null,
+      });
+    } catch (error) {
+      console.error("Error in checkPayments:", error);
+      setState((prev) => ({
+        ...prev,
+        loading: false,
+        error: "An unexpected error occurred",
+      }));
+    }
   }, [user?.id]);
 
-  return state;
+  useEffect(() => {
+    checkPayments();
+
+    // Polling a cada 60 segundos
+    const interval = setInterval(() => {
+      checkPayments();
+    }, 60000);
+
+    return () => {
+      clearInterval(interval);
+    };
+  }, [checkPayments]);
+
+  return { ...state, refetch: checkPayments };
 };

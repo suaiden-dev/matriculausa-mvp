@@ -1,4 +1,4 @@
-import React, { useEffect, useState, useRef } from 'react';
+import React, { useEffect, useState } from 'react';
 import { Link, useSearchParams } from 'react-router-dom';
 import { 
   Award, 
@@ -11,29 +11,22 @@ import {
   ArrowUpRight,
   Calendar,
   Building,
-  CreditCard,
-  Tag,
   Route,
   XCircle
 } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 import { useFeeConfig } from '../../hooks/useFeeConfig';
 import { useDynamicFees } from '../../hooks/useDynamicFees';
-import { usePaymentBlocked } from '../../hooks/usePaymentBlocked';
-import { StripeCheckout } from '../../components/StripeCheckout';
+
+import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../../hooks/useAuth';
 import { useReferralCode } from '../../hooks/useReferralCode';
-import { ProgressBar } from '../../components/ProgressBar';
 import { useStepByStepGuide } from '../../hooks/useStepByStepGuide';
 import { supabase } from '../../lib/supabase';
-import { useQueryClient } from '@tanstack/react-query';
-import { 
-  useStudentDocumentsQuery, 
-  useStudentPaidAmountsQuery, 
-  usePromotionalCouponQuery, 
-  useIdentityPhotoStatusQuery 
-} from '../../hooks/useStudentDashboardQueries';
-import { invalidateStudentDashboardDocuments, invalidateStudentDashboardCoupons } from '../../lib/queryKeys';
+import { ProgressBar } from '../../components/ProgressBar';
+import StepByStepGuide from '../../components/OnboardingTour/StepByStepGuide';
+
+import { getGrossPaidAmounts } from '../../utils/paymentConverter';
 import './Overview.css'; // Adicionar um arquivo de estilos dedicado para padronização visual
 
 // Componente de skeleton para valores de taxa
@@ -62,28 +55,50 @@ const Overview: React.FC<OverviewProps> = ({
   recentApplications = []
 }) => {
   const { t } = useTranslation();
-  const queryClient = useQueryClient();
+  const navigate = useNavigate();
   const [searchParams, setSearchParams] = useSearchParams();
-  const paymentButtonRef = useRef<HTMLButtonElement>(null);
 
   const { user, userProfile, refetchUserProfile } = useAuth();
   const { activeDiscount } = useReferralCode();
   const { userFeeOverrides } = useFeeConfig(user?.id);
   const { selectionProcessFeeAmount, scholarshipFeeAmount, i20ControlFeeAmount } = useDynamicFees();
-  const { openGuide } = useStepByStepGuide();
-  const { isBlocked, pendingPayment, loading: paymentBlockedLoading } = usePaymentBlocked();
+  const { isGuideOpen, openGuide, closeGuide } = useStepByStepGuide();
+  
+
+  
+  // Verificar se há step de onboarding salvo no localStorage
+  const savedOnboardingStep = React.useMemo(() => {
+    if (typeof window === 'undefined') return null;
+    const savedStep = window.localStorage.getItem('onboarding_current_step');
+    const validSteps = ['welcome', 'selection_fee', 'scholarship_selection', 'process_type', 'documents_upload', 'payment', 'scholarship_fee', 'my_applications', 'completed'];
+    
+    if (!savedStep || !validSteps.includes(savedStep)) return null;
+
+    // Se o usuário não pagou a taxa de seleção, ele não deve conseguir avançar além desse ponto via localStorage antigo
+    if (userProfile && !userProfile.has_paid_selection_process_fee) {
+      const stepsAfterSelection = ['scholarship_selection', 'process_type', 'documents_upload', 'payment', 'scholarship_fee', 'my_applications', 'waiting_approval', 'completed'];
+      if (stepsAfterSelection.includes(savedStep)) {
+        return 'welcome';
+      }
+    }
+
+    return savedStep;
+  }, [userProfile]);
+  
+  const hasSavedOnboardingStep = savedOnboardingStep !== null;
+  const isOnboardingStarted = hasSavedOnboardingStep && savedOnboardingStep !== 'welcome';
+  
+  // Mapear step para label amigável
+  const currentStepLabel = React.useMemo(() => {
+    if (!savedOnboardingStep) return null;
+    return t(`studentDashboard.progressBar.onboardingBanner.stepLabels.${savedOnboardingStep}`, { defaultValue: savedOnboardingStep });
+  }, [savedOnboardingStep, t]);
+  
   const [visibleApplications, setVisibleApplications] = useState(5); // Mostrar 5 inicialmente
-  
-  // React Query hooks para dados com cache
-  // isPending = sem dados no cache ainda (primeira carga)
-  // isFetching = buscando em background (pode ter dados em cache)
-  const { data: studentDocuments = [], isPending: documentsLoading } = useStudentDocumentsQuery(user?.id);
-  const { data: realPaidAmounts = {}, isPending: loadingPaidAmounts } = useStudentPaidAmountsQuery(user?.id);
-  const { data: selectionProcessPromotionalCoupon } = usePromotionalCouponQuery(user?.id, 'selection_process');
-  const { data: identityPhotoStatus, isPending: identityPhotoLoading } = useIdentityPhotoStatusQuery(user?.id);
-  
-  // Verificar se há pagamento Zelle pendente do tipo selection_process
-  const hasPendingSelectionProcessPayment = isBlocked && pendingPayment && pendingPayment.fee_type === 'selection_process';
+  const [documentsLoading, setDocumentsLoading] = useState(true);
+  const [studentDocuments, setStudentDocuments] = useState<any[]>([]);
+  const [realPaidAmounts, setRealPaidAmounts] = useState<Record<string, number>>({});
+  const [loadingPaidAmounts, setLoadingPaidAmounts] = useState(false);
   
   const hasMoreApplications = recentApplications.length > visibleApplications;
   const displayedApplications = recentApplications.slice(0, visibleApplications);
@@ -91,6 +106,39 @@ const Overview: React.FC<OverviewProps> = ({
   const handleLoadMore = () => {
     setVisibleApplications(prev => Math.min(prev + 5, recentApplications.length));
   };
+
+  // Função para buscar documentos do estudante
+  const fetchStudentDocuments = React.useCallback(async () => {
+    if (!user?.id) {
+      setDocumentsLoading(false);
+      return;
+    }
+
+    try {
+      const { data, error } = await supabase
+        .from('student_documents')
+        .select('*')
+        .eq('user_id', user.id)
+        .order('uploaded_at', { ascending: false });
+
+      if (error) {
+        console.error('Erro ao buscar documentos:', error);
+        setStudentDocuments([]);
+      } else {
+        setStudentDocuments(data || []);
+      }
+    } catch (error) {
+      console.error('Erro ao buscar documentos:', error);
+      setStudentDocuments([]);
+    } finally {
+      setDocumentsLoading(false);
+    }
+  }, [user?.id]);
+
+  // Buscar documentos do estudante
+  useEffect(() => {
+    fetchStudentDocuments();
+  }, [fetchStudentDocuments]);
 
   // Configurar real-time subscription para atualizações de documentos
   useEffect(() => {
@@ -107,9 +155,8 @@ const Overview: React.FC<OverviewProps> = ({
           filter: `user_id=eq.${user.id}`
         },
         () => {
-          // Invalidar cache do React Query quando houver mudanças
-          console.log('[Overview] Realtime: Invalidando cache de documentos');
-          invalidateStudentDashboardDocuments(queryClient);
+          // Refetch documentos quando houver mudanças
+          fetchStudentDocuments();
         }
       )
       .subscribe();
@@ -117,7 +164,7 @@ const Overview: React.FC<OverviewProps> = ({
     return () => {
       supabase.removeChannel(channel);
     };
-  }, [user?.id, queryClient]);
+  }, [user?.id, fetchStudentDocuments]);
 
   // Refetch perfil quando necessário (ex: após atualização)
   useEffect(() => {
@@ -126,73 +173,39 @@ const Overview: React.FC<OverviewProps> = ({
     }
   }, [user?.id, refetchUserProfile]);
 
-  // Atualizar dados quando o componente receber foco (ex: ao voltar da página de perfil)
+  // Atualizar documentos quando o componente receber foco (ex: ao voltar da página de perfil)
   useEffect(() => {
     const handleFocus = () => {
       if (user?.id && !documentsLoading) {
-        console.log('[Overview] Window focus: Invalidando caches');
-        invalidateStudentDashboardDocuments(queryClient);
+        fetchStudentDocuments();
         refetchUserProfile();
       }
     };
 
     window.addEventListener('focus', handleFocus);
     return () => window.removeEventListener('focus', handleFocus);
-  }, [user?.id, documentsLoading, refetchUserProfile, queryClient]);
+  }, [user?.id, documentsLoading, refetchUserProfile, fetchStudentDocuments]);
 
-  // Ouvir eventos de validação de cupom promocional
-  useEffect(() => {
-    const handleCouponValidation = (event: CustomEvent) => {
-      const feeType = event.detail?.fee_type || 'selection_process';
-      if (feeType === 'selection_process') {
-        console.log('[Overview] Cupom validado - invalidando cache');
-        invalidateStudentDashboardCoupons(queryClient);
-      }
-    };
 
-    const handleCouponRemoved = () => {
-      console.log('[Overview] Cupom removido - invalidando cache');
-      invalidateStudentDashboardCoupons(queryClient);
-    };
 
-    window.addEventListener('promotionalCouponValidated', handleCouponValidation as EventListener);
-    window.addEventListener('promotionalCouponRemoved', handleCouponRemoved);
-    
-    return () => {
-      window.removeEventListener('promotionalCouponValidated', handleCouponValidation as EventListener);
-      window.removeEventListener('promotionalCouponRemoved', handleCouponRemoved);
-    };
-  }, [queryClient]);
-
-  // Abertura automática do modal de pagamento via query param ou fallback localStorage
+  // Redirecionamento automático para o onboarding via query param ou fallback localStorage
   useEffect(() => {
     const shouldOpenModal = searchParams.get('openModal') || localStorage.getItem('pending_open_modal');
     
-    if (shouldOpenModal === 'selection_process' && !paymentBlockedLoading && paymentButtonRef.current) {
-      console.log('[Overview] Comando para abrir modal detectado:', searchParams.get('openModal') ? 'Query Param' : 'LocalStorage');
+    if (shouldOpenModal === 'selection_process') {
+      console.log('[Overview] Redirecionando para onboarding:', searchParams.get('openModal') ? 'Query Param' : 'LocalStorage');
       
-      // Aguardar um momento para garantir que o componente está totalmente renderizado
-      const timer = setTimeout(() => {
-        // Simular clique no botão de pagamento
-        paymentButtonRef.current?.click();
-        
-        // Limpar o parâmetro da URL e o localStorage
-        if (searchParams.get('openModal')) {
-          searchParams.delete('openModal');
-          setSearchParams(searchParams, { replace: true });
-        }
-        localStorage.removeItem('pending_open_modal');
-        
-        // Scroll suave até o card de pagamento
-        const paymentCard = document.getElementById('selection-process-payment');
-        if (paymentCard) {
-          paymentCard.scrollIntoView({ behavior: 'smooth', block: 'center' });
-        }
-      }, 800);
+      // Limpar o parâmetro da URL e o localStorage
+      if (searchParams.get('openModal')) {
+        searchParams.delete('openModal');
+        setSearchParams(searchParams, { replace: true });
+      }
+      localStorage.removeItem('pending_open_modal');
       
-      return () => clearTimeout(timer);
+      // Redirecionar para o fluxo de onboarding
+      navigate('/student/onboarding?step=selection_fee');
     }
-  }, [searchParams, setSearchParams, paymentBlockedLoading]);
+  }, [searchParams, setSearchParams, navigate]);
 
   const getStatusColor = (status: string) => {
     switch (status) {
@@ -243,8 +256,8 @@ const Overview: React.FC<OverviewProps> = ({
     const requiredDocTypes = ['passport', 'diploma', 'funds_proof'];
     const uploadedDocTypes = new Set(
       studentDocuments
-        .filter((doc: any) => doc.file_url && doc.status !== 'rejected')
-        .map((doc: any) => doc.type)
+        .filter(doc => doc.file_url && doc.status !== 'rejected')
+        .map(doc => doc.type)
     );
     
     return requiredDocTypes.every(type => uploadedDocTypes.has(type));
@@ -286,17 +299,36 @@ const Overview: React.FC<OverviewProps> = ({
   const hasApplicationFeePaid = recentApplications.some(app => app.is_application_fee_paid);
   const hasScholarshipFeePaid = recentApplications.some(app => app.is_scholarship_fee_paid);
 
-  // React Query hook já busca valores pagos automaticamente com cache
+  // Buscar valores reais pagos de individual_fee_payments
+  useEffect(() => {
+    const fetchRealPaidAmounts = async () => {
+      if (!user?.id) return;
+
+      setLoadingPaidAmounts(true);
+      try {
+        const amounts = await getGrossPaidAmounts(user.id, ['selection_process', 'scholarship', 'i20_control', 'application']);
+        setRealPaidAmounts(amounts);
+        console.log('[Overview] Valores reais pagos carregados:', amounts);
+      } catch (error) {
+        console.error('[Overview] Erro ao buscar valores reais pagos:', error);
+        setRealPaidAmounts({});
+      } finally {
+        setLoadingPaidAmounts(false);
+      }
+    };
+
+    fetchRealPaidAmounts();
+  }, [user?.id, userProfile?.has_paid_selection_process_fee, hasApplicationFeePaid, hasScholarshipFeePaid, userProfile?.has_paid_i20_control_fee]);
 
   // Base fee amounts with user overrides - usar valores do useDynamicFees
   const selectionBase = selectionProcessFeeAmount || 0;
   const scholarshipBase = scholarshipFeeAmount || 0;
   const i20Base = i20ControlFeeAmount || 0;
 
-  // Verificar se as taxas estão carregando (só verdadeiro na primeira carga sem cache)
-  const isFeesLoading = (selectionProcessFeeAmount === undefined || 
-                        scholarshipFeeAmount === undefined || 
-                        i20ControlFeeAmount === undefined) && !userProfile;
+  // Verificar se as taxas estão carregando
+  const isFeesLoading = selectionProcessFeeAmount === undefined || 
+                       scholarshipFeeAmount === undefined || 
+                       i20ControlFeeAmount === undefined;
 
   // ✅ CORREÇÃO: selectionBase já vem com dependentes calculados do useDynamicFees
   // Não recalcular dependentes aqui para evitar duplicação
@@ -310,35 +342,23 @@ const Overview: React.FC<OverviewProps> = ({
   const i20WithDependents = i20Base + i20Extra;
 
   // Valores das taxas para o ProgressBar (Application fee é variável)
-  // ✅ CORREÇÃO: Aplicar desconto na barra de progresso se houver activeDiscount ou cupom promocional
-  const selectionFeeWithDiscount = (() => {
-    // Prioridade: cupom promocional > activeDiscount
-    if (selectionProcessPromotionalCoupon) {
-      return selectionProcessPromotionalCoupon.finalAmount;
-    }
-    if (activeDiscount?.has_discount) {
-      return Math.max(selectionWithDependents - (activeDiscount.discount_amount || 0), 0);
-    }
-    return selectionWithDependents;
-  })();
+  // ✅ CORREÇÃO: Aplicar desconto na barra de progresso se houver activeDiscount
+  const selectionFeeWithDiscount = activeDiscount?.has_discount 
+    ? Math.max(selectionWithDependents - (activeDiscount.discount_amount || 0), 0)
+    : selectionWithDependents;
 
-  // ✅ CORREÇÃO: Prioridade: Valor real pago > Override > Valor esperado
+  // ✅ CORREÇÃO: Prioridade: Override > Valor real pago > Valor esperado
   const getSelectionProcessFeeDisplay = () => {
-    // Só mostrar skeleton se não houver dados em cache E estiver carregando pela primeira vez
-    if (loadingPaidAmounts && !realPaidAmounts) return <FeeSkeleton />;
+    if (loadingPaidAmounts) return <FeeSkeleton />;
     
-    // PRIORIDADE 1 (MÁXIMA): Valor real pago quando já foi pago
-    // Se já foi pago, usar o valor realmente pago (gross_amount_usd ou amount)
-    // Isso tem prioridade sobre overrides, pois representa o valor efetivamente pago
-    if (userProfile?.has_paid_selection_process_fee && realPaidAmounts?.selection_process !== undefined && realPaidAmounts.selection_process > 0) {
-      console.log('🔍 [Overview] Selection Process Fee - Usando valor real pago:', realPaidAmounts.selection_process);
-      return `$${realPaidAmounts.selection_process.toFixed(2)}`;
+    // PRIORIDADE 1: Override (MÁXIMA PRIORIDADE)
+    if (userFeeOverrides?.selection_process_fee !== undefined) {
+      return `$${userFeeOverrides.selection_process_fee.toFixed(2)}`;
     }
     
-    // PRIORIDADE 2: Override (só usado se ainda não foi pago)
-    if (userFeeOverrides?.selection_process_fee !== undefined) {
-      console.log('🔍 [Overview] Selection Process Fee - Usando override:', userFeeOverrides.selection_process_fee);
-      return `$${userFeeOverrides.selection_process_fee.toFixed(2)}`;
+    // PRIORIDADE 2: Valor real pago quando já foi pago
+    if (userProfile?.has_paid_selection_process_fee && realPaidAmounts?.selection_process !== undefined && realPaidAmounts.selection_process > 0) {
+      return `$${realPaidAmounts.selection_process.toFixed(2)}`;
     }
     
     // PRIORIDADE 3: Valor esperado (com desconto se aplicável)
@@ -346,8 +366,7 @@ const Overview: React.FC<OverviewProps> = ({
   };
 
   const getScholarshipFeeDisplay = () => {
-    // Só mostrar skeleton se não houver dados em cache E estiver carregando pela primeira vez
-    if (loadingPaidAmounts && !realPaidAmounts) return <FeeSkeleton />;
+    if (loadingPaidAmounts) return <FeeSkeleton />;
     
     // PRIORIDADE 1: Override (MÁXIMA PRIORIDADE)
     if (userFeeOverrides?.scholarship_fee !== undefined) {
@@ -364,8 +383,7 @@ const Overview: React.FC<OverviewProps> = ({
   };
 
   const getI20ControlFeeDisplay = () => {
-    // Só mostrar skeleton se não houver dados em cache E estiver carregando pela primeira vez
-    if (loadingPaidAmounts && !realPaidAmounts) return <FeeSkeleton />;
+    if (loadingPaidAmounts) return <FeeSkeleton />;
     
     // PRIORIDADE 1: Override (MÁXIMA PRIORIDADE)
     if (userFeeOverrides?.i20_control_fee !== undefined) {
@@ -389,150 +407,103 @@ const Overview: React.FC<OverviewProps> = ({
   ];
 
   // Lógica da barra de progresso dinâmica
-  let steps = [];
-  if (!userProfile?.has_paid_selection_process_fee) {
-    // Só pagou (ou está pagando) a Selection Process Fee
-    steps = [
-      {
-        label: t('studentDashboard.progressBar.selectionProcessFee'),
-        description: t('studentDashboard.progressBar.payApplicationFee'),
-        completed: false,
-        current: true,
-      },
-      {
-        label: t('studentDashboard.progressBar.applicationFee'),
-        description: t('studentDashboard.progressBar.payApplicationFee'),
-        completed: false,
-        current: false,
-      },
-      {
-        label: t('studentDashboard.progressBar.scholarshipFee'),
-        description: t('studentDashboard.progressBar.payScholarshipFee'),
-        completed: false,
-        current: false,
-      },
-      {
-        label: t('studentDashboard.progressBar.i20ControlFee'),
-        description: t('studentDashboard.progressBar.payI20Fee'),
-        completed: false,
-        current: false,
-      },
-    ];
-  } else if (!hasApplicationFeePaid) {
-    // Pagou só a Selection Process Fee
-    steps = [
-      {
+  const getStep1State = () => {
+    // Se onboarding concluído
+    if (userProfile?.onboarding_completed) {
+      return {
         label: t('studentDashboard.progressBar.selectionProcessFee'),
         description: t('studentDashboard.progressBar.completed'),
         completed: true,
-        current: false,
-      },
-      {
-        label: t('studentDashboard.progressBar.applicationFee'),
-        description: t('studentDashboard.progressBar.payApplicationFee'),
-        completed: false,
-        current: true,
-      },
-      {
-        label: t('studentDashboard.progressBar.scholarshipFee'),
-        description: t('studentDashboard.progressBar.payScholarshipFee'),
-        completed: false,
-        current: false,
-      },
-      {
-        label: t('studentDashboard.progressBar.i20ControlFee'),
-        description: t('studentDashboard.progressBar.payI20Fee'),
-        completed: false,
-        current: false,
-      },
-    ];
-  } else if (!hasScholarshipFeePaid) {
-    // Pagou Application Fee
-    steps = [
-      {
-        label: t('studentDashboard.progressBar.selectionProcessFee'),
-        description: t('studentDashboard.progressBar.completed'),
-        completed: true,
-        current: false,
-      },
-      {
-        label: t('studentDashboard.progressBar.applicationFee'),
-        description: t('studentDashboard.progressBar.completed'),
-        completed: true,
-        current: false,
-      },
-      {
-        label: t('studentDashboard.progressBar.scholarshipFee'),
-        description: t('studentDashboard.progressBar.payScholarshipFee'),
-        completed: false,
-        current: true,
-      },
-      {
-        label: t('studentDashboard.progressBar.i20ControlFee'),
-        description: t('studentDashboard.progressBar.payI20Fee'),
-        completed: false,
-        current: false,
-      },
-    ];
-  } else if (!userProfile?.has_paid_i20_control_fee) {
-    // Pagou Scholarship Fee, mas não I-20 Control Fee
-    steps = [
-      {
-        label: t('studentDashboard.progressBar.selectionProcessFee'),
-        description: t('studentDashboard.progressBar.completed'),
-        completed: true,
-        current: false,
-      },
-      {
-        label: t('studentDashboard.progressBar.applicationFee'),
-        description: t('studentDashboard.progressBar.completed'),
-        completed: true,
-        current: false,
-      },
-      {
-        label: t('studentDashboard.progressBar.scholarshipFee'),
-        description: t('studentDashboard.progressBar.completed'),
-        completed: true,
-        current: false,
-      },
-      {
-        label: t('studentDashboard.progressBar.i20ControlFee'),
-        description: t('studentDashboard.progressBar.payI20Fee'),
-        completed: false,
-        current: true,
-      },
-    ];
-  } else {
-    // Pagou tudo
-    steps = [
-      {
-        label: t('studentDashboard.progressBar.selectionProcessFee'),
-        description: t('studentDashboard.progressBar.completed'),
-        completed: true,
-        current: false,
-      },
-      {
-        label: t('studentDashboard.progressBar.applicationFee'),
-        description: t('studentDashboard.progressBar.completed'),
-        completed: true,
-        current: false,
-      },
-      {
-        label: t('studentDashboard.progressBar.scholarshipFee'),
-        description: t('studentDashboard.progressBar.completed'),
-        completed: true,
-        current: false,
-      },
-      {
-        label: t('studentDashboard.progressBar.i20ControlFee'),
-        description: t('studentDashboard.progressBar.completed'),
-        completed: true,
-        current: false,
-      },
-    ];
+        current: false
+      };
+    }
+
+    // Se ainda está no onboarding ou não pagou
+    return {
+      label: t('studentDashboard.progressBar.selectionProcessFee'),
+      description: t('studentDashboard.progressBar.payApplicationFee'),
+      completed: !!userProfile?.has_paid_selection_process_fee,
+      current: !userProfile?.has_paid_selection_process_fee || !userProfile?.onboarding_completed
+    };
+  };
+
+  const step1 = getStep1State();
+  
+  let steps = [
+    step1,
+    {
+      label: t('studentDashboard.progressBar.applicationFee'),
+      description: t('studentDashboard.progressBar.payApplicationFee'),
+      completed: false,
+      current: false,
+    },
+    {
+      label: t('studentDashboard.progressBar.scholarshipFee'),
+      description: t('studentDashboard.progressBar.payScholarshipFee'),
+      completed: false,
+      current: false,
+    },
+    {
+      label: t('studentDashboard.progressBar.i20ControlFee'),
+      description: t('studentDashboard.progressBar.payI20Fee'),
+      completed: false,
+      current: false,
+    },
+  ];
+
+  // Ajustar status dos passos subsequentes baseado no primeiro
+  if (step1.completed) {
+    if (!hasApplicationFeePaid) {
+      steps[1].current = true;
+    } else if (!hasScholarshipFeePaid) {
+      steps[1].completed = true;
+      steps[2].current = true;
+    } else if (!userProfile?.has_paid_i20_control_fee) {
+      steps[1].completed = true;
+      steps[2].completed = true;
+      steps[3].current = true;
+    } else {
+      steps[1].completed = true;
+      steps[2].completed = true;
+      steps[3].completed = true;
+    }
+  } else if (userProfile?.has_paid_selection_process_fee) {
+    // Se pagou a taxa mas ainda está no onboarding, o passo 1 é atual (já definido no getStep1State)
+    // Mas os outros passos já não podem ser "current"
   }
 
-  const allCompleted = steps.every(step => step.completed);
+
+  // Cálculo do progresso visual para a trilha animada
+  const calculateVisualProgress = () => {
+    // 1. Prioridade para pagamentos confirmados (posições fixas nos nós)
+    if (userProfile?.has_paid_i20_control_fee) return 3;
+    if (hasScholarshipFeePaid) return 3; // Se pagou a bolsa, o próximo passo é o I-20 (nó 3)
+    if (hasApplicationFeePaid) return 2; // Se pagou a aplicação, o próximo passo é a bolsa (nó 2)
+
+    // 2. Se o onboarding foi concluído mas ainda não pagou a taxa de aplicação
+    if (userProfile?.onboarding_completed) return 1;
+
+    // 3. Se ainda não pagou nem a primeira taxa (Taxa de Seleção)
+    if (!userProfile?.has_paid_selection_process_fee) return 0;
+
+    // 4. Progresso granular durante o onboarding (entre o nó 0 e nó 1)
+    const onboardingProgressMap: Record<string, number> = {
+      'welcome': 0,
+      'selection_fee': 0,
+      'scholarship_selection': 0.2,
+      'process_type': 0.4,
+      'documents_upload': 0.6,
+      'payment': 1, // 'payment' no onboarding é a Taxa de Aplicação (nó 1)
+      'scholarship_fee': 1.25,
+      'university_documents': 1.5,
+      'waiting_approval': 1.75, // Quase chegando na liberação da taxa da bolsa
+      'completed': 2
+    };
+
+    return onboardingProgressMap[savedOnboardingStep || ''] || 0.5;
+  };
+
+  const visualProgress = calculateVisualProgress();
 
   return (
     <div className="overview-dashboard-container pt-2">
@@ -542,31 +513,6 @@ const Overview: React.FC<OverviewProps> = ({
       
       {/* Alerta de desconto duplicado removido para evitar repetição com a mensagem de boas‑vindas */}
       
-      {/* Identity Photo Status Banner - Only show if rejected */}
-      {!identityPhotoLoading && identityPhotoStatus === 'rejected' && (
-        <div className="mb-6 rounded-2xl p-4 border-2 bg-red-50 border-red-200">
-          <div className="flex items-start justify-between">
-            <div className="flex items-start space-x-3 flex-1">
-              <XCircle className="w-6 h-6 text-red-600 mt-0.5 flex-shrink-0" />
-              <div className="flex-1">
-                <h3 className="font-semibold mb-1 text-red-800">
-                  Identity Photo Rejected
-                </h3>
-                <p className="text-sm text-red-700">
-                  Your identity photo has been rejected. Please review the reason and upload a new photo.
-                </p>
-              </div>
-            </div>
-            <Link
-              to="/student/dashboard/identity-verification"
-              className="ml-4 px-4 py-2 rounded-lg font-medium text-sm transition-colors bg-red-600 hover:bg-red-700 text-white"
-            >
-              View Details
-            </Link>
-          </div>
-        </div>
-      )}
-
       {/* Welcome Message / Hero */}
       <div className="bg-gradient-to-r from-blue-600 to-indigo-700 rounded-2xl p-4 sm:p-6 md:p-6 text-white relative overflow-hidden ring-1 ring-white/10 shadow-xl">
         <div className="absolute inset-0 bg-black/10"></div>
@@ -583,105 +529,50 @@ const Overview: React.FC<OverviewProps> = ({
           </div>
 
           {/* Progress Bar dentro do bloco azul */}
-          <div className="text-center text-white/90 text-sm md:text-base font-medium mb-1">
-            {allCompleted ? t('studentDashboard.progressBar.allStepsCompleted') : t('studentDashboard.progressBar.title')}
-          </div>
           <div className="mb-2 md:mb-4">
-            <ProgressBar steps={steps} feeValues={dynamicFeeValues} />
+            {/* Status do Onboarding acima da trilha - Layout Pílula Integrado */}
+            {!userProfile?.onboarding_completed && (
+              <div className="flex items-center justify-center gap-2 md:gap-4 mb-4 animate-fade-in bg-white/5 backdrop-blur-xl border border-white/10 rounded-full py-2 px-4 md:px-6 w-fit mx-auto shadow-[0_10px_30px_rgba(0,0,0,0.2)] ring-1 ring-white/10">
+                <p className="text-white text-[10px] md:text-sm font-bold tracking-tight opacity-90 drop-shadow-md">
+                  {isOnboardingStarted 
+                    ? t('studentDashboard.progressBar.onboardingBanner.stoppedAt', { step: currentStepLabel })
+                    : t('studentDashboard.progressBar.onboardingBanner.startNow')}
+                </p>
+              </div>
+            )}
+            <ProgressBar 
+              steps={steps} 
+              feeValues={dynamicFeeValues}
+              applicationId={recentApplications?.[0]?.id || null}
+              isSelectionProcessUnlocked={true} // Sempre liberada
+              isApplicationFeeUnlocked={userProfile?.has_paid_selection_process_fee || false}
+              isScholarshipFeeUnlocked={hasApplicationFeePaid}
+              isI20Unlocked={hasScholarshipFeePaid}
+              progress={visualProgress}
+            />
           </div>
 
-          {userProfile && !userProfile.has_paid_selection_process_fee && (
-            <div className="bg-white/10 backdrop-blur-sm border border-white/30 rounded-xl p-4 sm:p-6 mb-4">
-              <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between space-y-3 sm:space-y-0 mb-3 sm:mb-4">
-                <div className="flex items-center">
-                  <CreditCard className="h-4 w-4 sm:h-5 sm:w-5 text-white mr-2 sm:mr-3" />
-                  <div>
-                    <h3 className="text-base sm:text-lg md:text-xl font-bold text-white">{t('studentDashboard.selectionProcess.title')}</h3>
-                    <p className="text-blue-100 text-xs sm:text-sm">{t('studentDashboard.selectionProcess.completeApplicationProcess')}</p>
-                  </div>
-                </div>
-                <div className="text-left sm:text-right">
-                  {isFeesLoading ? (
-                    <div className="inline-block w-24 h-6 bg-white/30 rounded animate-pulse" />
-                  ) : selectionProcessPromotionalCoupon ? (
-                    <div className="flex flex-col sm:text-center">
-                      <div className="text-lg sm:text-xl md:text-2xl font-bold text-white line-through">${selectionWithDependents}</div>
-                      <div className="text-base sm:text-lg md:text-xl font-bold text-green-300">
-                        ${selectionProcessPromotionalCoupon.finalAmount.toFixed(2)}
-                      </div>
-                      <div className="flex items-center sm:justify-center mt-1">
-                        <Tag className="h-3 w-3 text-green-300 mr-1" />
-                        <span className="text-xs text-green-300 font-medium">
-                          {t('studentDashboard.recentApplications.couponApplied')} -${selectionProcessPromotionalCoupon.discountAmount.toFixed(2)}
-                        </span>
-                      </div>
-                    </div>
-                  ) : activeDiscount?.has_discount ? (
-                    <div className="flex flex-col sm:text-center">
-                      <div className="text-lg sm:text-xl md:text-2xl font-bold text-white line-through">${selectionWithDependents}</div>
-                      <div className="text-base sm:text-lg md:text-xl font-bold text-green-300">
-                        ${Math.max(selectionWithDependents - (activeDiscount.discount_amount || 0), 0)}
-                      </div>
-                      <div className="flex items-center sm:justify-center mt-1">
-                        <Tag className="h-3 w-3 text-green-300 mr-1" />
-                        <span className="text-xs text-green-300 font-medium">
-                          {t('studentDashboard.recentApplications.couponApplied')} -${activeDiscount.discount_amount}
-                        </span>
-                      </div>
-                    </div>
-                  ) : (
-                    <div className="text-lg sm:text-xl md:text-2xl font-bold text-white">${selectionWithDependents}</div>
-                  )}
-                </div>
-              </div>
-              <p className="text-blue-100 text-xs sm:text-sm mb-3 sm:mb-4 leading-relaxed">
-                {t('studentDashboard.selectionProcess.description')}
-                {(selectionProcessPromotionalCoupon || activeDiscount?.has_discount) && (
-                  <span className="block mt-1 text-green-300 font-medium">
-                    {t('studentDashboard.selectionProcess.discountApplied')}
-                  </span>
-                )}
-              </p>
+          {/* Botão de Continuar/Iniciar Onboarding - Estilo Vidro Simplificado */}
+          {(!userProfile?.onboarding_completed || recentApplications.length > 0) && (
+            <button
+              onClick={() => {
+                const targetStep = userProfile?.onboarding_completed ? 'my_applications' : (savedOnboardingStep || 'welcome');
+                navigate(`/student/onboarding?step=${targetStep}`);
+              }}
+              className="max-w-md mx-auto w-full group relative overflow-hidden bg-white/10 backdrop-blur-xl border border-white/20 rounded-2xl p-4 transition-all duration-500 hover:bg-white/20 hover:border-white/40 hover:scale-[1.05] active:scale-[0.95] shadow-[0_20px_40px_rgba(0,0,0,0.2)] flex items-center justify-center text-center"
+            >
+              {/* Background Glows animadas */}
+              <div className="absolute top-0 right-0 -mr-16 -mt-16 w-48 h-48 bg-blue-500/20 rounded-full blur-[80px] group-hover:bg-blue-400/30 transition-colors duration-700" />
+              <div className="absolute bottom-0 left-0 -ml-16 -mb-16 w-32 h-32 bg-indigo-500/15 rounded-full blur-[60px] group-hover:bg-indigo-400/25 transition-colors duration-700" />
               
-              {/* Botão de pagamento sempre visível */}
-              {hasPendingSelectionProcessPayment ? (
-                <div className="w-full sm:w-auto bg-amber-50 border-2 border-amber-200 rounded-xl p-3 sm:p-4">
-                  <div className="flex items-center justify-center">
-                    <Clock className="h-4 w-4 sm:h-5 sm:w-5 text-amber-600 mr-2 animate-spin" />
-                    <span className="text-xs sm:text-sm font-semibold text-amber-800">
-                      {t('studentDashboard.selectionProcess.processingZellePayment')}
-                    </span>
-                  </div>
-                  <p className="text-xs text-amber-700 mt-1 text-center">
-                    {t('studentDashboard.selectionProcess.pendingPaymentMessage')}
-                  </p>
-                </div>
-              ) : (
-                <StripeCheckout 
-                  ref={paymentButtonRef}
-                  productId="selectionProcess"
-                  feeType="selection_process"
-                  paymentType="selection_process"
-                  buttonText={t('studentDashboard.selectionProcess.startButton')}
-                  className="w-full sm:w-auto bg-blue-600 hover:bg-blue-700 text-white font-semibold py-3 sm:py-3 px-4 sm:px-6 rounded-xl shadow-lg hover:shadow-xl transition-all duration-200 transform hover:scale-105 cursor-pointer border-2 border-white text-sm sm:text-base disabled:opacity-50 disabled:cursor-not-allowed"
-                  successUrl={`${window.location.origin}/student/dashboard/selection-process-fee-success?session_id={CHECKOUT_SESSION_ID}`}
-                  cancelUrl={`${window.location.origin}/student/dashboard/selection-process-fee-error`}
-                  disabled={paymentBlockedLoading}
-                />
-              )}
-              
-              {/* Aviso para usuários com seller_referral_code */}
-              {/* {userProfile.seller_referral_code && userProfile.seller_referral_code.trim() !== '' && (
-                <div className="mt-3 text-center">
-                  <div className="inline-flex items-center space-x-2 bg-amber-500/20 border border-amber-300/30 rounded-lg px-3 py-2">
-                    <Target className="h-4 w-4 text-amber-300" />
-                    <span className="text-amber-200 text-xs">
-                      {t('studentDashboard.selectionProcess.sellerReferralCodeInfo')}
-                    </span>
-                  </div>
-                </div>
-              )} */}
-            </div>
+              <h3 className="relative text-lg md:text-xl font-black text-white uppercase tracking-widest leading-tight">
+                {userProfile?.onboarding_completed 
+                  ? t('studentDashboard.progressBar.onboardingBanner.documentsPortal')
+                  : (isOnboardingStarted 
+                    ? t('studentDashboard.progressBar.onboardingBanner.continueProcess') 
+                    : t('studentDashboard.progressBar.onboardingBanner.startProcess'))}
+              </h3>
+            </button>
           )}
           {/* Removed three unused mini-cards (Discover/Apply/Track) as requested */}
         </div>
@@ -1089,6 +980,10 @@ const Overview: React.FC<OverviewProps> = ({
           </div>
         </div>
       </div>
+
+      {/* Step By Step Guide Modal */}
+      <StepByStepGuide isOpen={isGuideOpen} onClose={closeGuide} />
+
     </div>
   );
 };

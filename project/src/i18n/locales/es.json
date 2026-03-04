@@ -1,121 +1,4 @@
 {
-  "preCheckoutModal": {
-    "securePayment": "Pago Seguro",
-    "securePaymentProcess": "Proceso de Pago Seguro",
-    "closeModal": "Cerrar modal",
-    "securePaymentGateway": "Pasarela de Pago Segura",
-    "totalAmount": "Monto Total",
-    "referralCode": "Código de Referencia",
-    "yourReferralCode": "Su Código de Referencia",
-    "enterReferralCode": "Ingrese su código de referencia para obtener un descuento",
-    "haveReferralCode": "Tengo un código de descuento",
-    "loading": "Cargando...",
-    "noTermsFound": "No se encontraron términos.",
-    "confirmReading": "Confirmar Lectura",
-    "scrollToBottomFirst": "Lea hasta el final",
-    "acceptTerms": "Aceptar y Confirmar",
-    "uploadPhotoRequired": "Por favor, envíe una selfie con su documento para continuar.",
-    "uploadPhoto": "Enviar Selfie con Documento",
-    "usingYourReferralCode": "Usando su código de referencia",
-    "placeholder": "Ingrese el código",
-    "validate": "Validar",
-    "validating": "Validando...",
-    "pleaseEnterCode": "Por favor, ingrese un código",
-    "invalidCode": "Código inválido o inactivo",
-    "selfReferral": "No puede usar su propio código de referencia",
-    "alreadyUsedCode": "Ya ha usado um código de referencia anteriormente",
-    "validCode": "¡Código válido! Descuento de $50 aplicado",
-    "errorValidating": "Error al validar el código",
-    "codeAlreadyUsed": "Código ya utilizado",
-    "discountAlreadyApplied": "Su descuento ya ha sido aplicado anteriormente",
-    "continueWithoutCode": "Continuar sin código",
-    "goToPayment": "Ir al pago",
-    "applyCodeAndContinue": "Aplicar código y continuar",
-    "processingPayment": "Procesando Pago...",
-    "mustAcceptTerms": "Debe aceptar los términos y condiciones antes de continuar",
-    "termsAndConditions": {
-      "title": "Términos y Condiciones",
-      "termsOfUse": "Términos de Uso",
-      "and": "y",
-      "privacyPolicy": "Política de Privacidad",
-      "description": "antes de proceder con el pago"
-    },
-    "closeTerms": "Cerrar",
-    "acceptContractTerms": "Acepto los términos y condiciones del contrato",
-    "cancel": "Cancelar"
-  },
-  "zelleComponent": {
-    "instructions": {
-      "title": "Instrucciones de Pago con Zelle",
-      "subtitle": "Siga estos pasos para completar su pago a través de Zelle",
-      "detailsTitle": "Detalles del Pago Zelle",
-      "detailsSubtitle": "Envíe el pago al destinatario indicado abajo",
-      "recipientEmail": "Correo electrónico del destinatario",
-      "paymentAmount": "Monto del Pago",
-      "youSaved": "¡Usted ahorró {{amount}}!",
-      "important": "Importante",
-      "importantNote": "Asegúrese de enviar el monto exacto de <strong>{{amount}}</strong> a <strong>{{email}}</strong> a través de Zelle. Cualquier discrepancia retrasará el procesamiento de su pago.",
-      "uploadTitle": "Subir Captura de Pantalla de Confirmación de Pago *",
-      "clickToUpload": "Haga clic para subir o arrastre y suelte",
-      "fileFormats": "PNG, JPG hasta 5MB",
-      "selectFile": "Seleccionar Archivo",
-      "remove": "Eliminar",
-      "changeFile": "Cambiar Archivo",
-      "submitPayment": "Enviar Pago",
-      "processing": "Procesando...",
-      "paymentProcessing": "Procesamiento de Pago..."
-    },
-    "analyzing": {
-      "title": "Analizando Pago...",
-      "subtitle": "Su confirmación de pago está siendo validada automáticamente por nuestro sistema de IA."
-    },
-    "underReview": {
-      "title": "Pago Bajo Revisión",
-      "subtitle": "Su comprobante de pago requiere verificación adicional. Nuestro equipo lo revisará en un plazo de 48 horas.",
-      "notification": "Se le notificará una vez que se complete la revisión. Por favor, no envíe otro pago."
-    },
-    "success": {
-      "title": "¡Pago Aprobado con Éxito!",
-      "subtitle": "Su pago por Zelle ha sido procesado e aprobado. Ahora puede proceder con los siguientes pasos.",
-      "detailsTitle": "Detalles del Pago:",
-      "originalAmount": "Monto Original:",
-      "discountApplied": "Descuento Aplicado:",
-      "finalAmount": "Monto Final:",
-      "youSavedSuccess": "¡Usted ahorró!",
-      "amount": "Monto:",
-      "feeType": "Tipo de Tarifa:",
-      "paymentId": "ID de Pago:",
-      "submitted": "Enviado:",
-      "nextStepsTitle": "¿Qué pasa después?",
-      "stepUploaded": "Confirmación de pago subida",
-      "stepApproved": "Pago aprobado con éxito",
-      "stepProceeding": "Procediendo al siguiente paso automáticamente"
-    },
-    "rejected": {
-      "title": "Pago Rechazado",
-      "subtitle": "Su comprobante de pago no fue aprobado. Por favor, revise el motivo abajo y suba una nueva confirmación de pago.",
-      "reasonTitle": "Motivo del Rechazo:",
-      "defaultReason": "El pago fue rechazado por el administrador. Por favor, suba una nueva captura de pantalla de confirmación de pago",
-      "uploadNew": "Subir Nuevo Comprobante",
-      "uploadNewNote": "Haga clic en el botón de arriba para subir una nueva captura de pantalla de confirmación de pago"
-    },
-    "uploadModal": {
-      "uploadingTitle": "Subiendo Documento...",
-      "uploadingMessage": "Por favor, espere mientras subimos su confirmación de pago",
-      "sendingTitle": "Enviando para Verificación...",
-      "sendingMessage": "Su comprobante de pago está siendo enviado para validación automática",
-      "analyzingTitle": "Analizando Pago...",
-      "analyzingMessage": "Nuestra IA está validando su confirmación de pago"
-    },
-    "errors": {
-      "fileSize": "El tamaño del archivo debe ser inferior a 5MB",
-      "fileType": "Por favor, seleccione un archivo de imagen (JPG, PNG, etc.)",
-      "uploadRequired": "Por favor, suba una captura de pantalla de su confirmación de pago",
-      "uploadFailed": "Error al subir la confirmación del pago",
-      "alreadyPending": "Ya tiene un pago en proceso. Por favor, espere a la revisión.",
-      "checkingStatus": "Verificando estado del pago..."
-    }
-  },
   "stepByStepGuide": {
     "title": "Step-by-Step Guide",
     "subtitle": "How the application process works",
@@ -162,13 +45,13 @@
     "previewNotAvailable": "Preview not available"
   },
   "nav": {
-    "home": "Inicio",
-    "howItWorks": "Cómo Funciona",
-    "scholarships": "Becas",
+    "home": "Home",
+    "howItWorks": "How It Works",
+    "scholarships": "Scholarships",
     "universities": "Universidades",
-    "forUniversities": "Para Universidades",
-    "about": "Sobre Nosotros",
-    "contact": "Contacto",
+    "forUniversities": "For Universities",
+    "about": "About",
+    "contact": "Contact",
     "faq": "FAQ",
     "login": "Iniciar Sesión",
     "getStarted": "Comenzar",
@@ -1167,7 +1050,8 @@
       "internalFeesAvailable": "Tarifas Internas de la Universidad Disponibles",
       "internalFeesNotice": "Esta beca puede tener tarifas internas adicionales de la universidad. Estas tarifas serán visibles después del pago de la Tarifa de Proceso de Selección.",
       "universityInternalFees": "Tarifas Internas de la Universidad",
-      "viewUniversityFeesPage": "Ver Página de Tarifas de la Universidad"
+      "viewUniversityFeesPage": "Ver Página de Tarifas de la Universidad",
+      "days": "días"
     }
   },
   "universitiesPage": {
@@ -1768,6 +1652,50 @@
       "weakPassword": "La contraseña es demasiado débil. Por favor, elige una contraseña más fuerte.",
       "invalidEmail": "Por favor, introduce una dirección de correo electrónico válida.",
       "signupDisabled": "Los nuevos registros están deshabilitados actualmente. Por favor, ponte en contacto con el soporte.",
+      "preCheckoutModal": {
+        "noTermsFound": "No se encontraron términos",
+        "securePayment": "Pago Seguro",
+        "closeModal": "Cerrar modal",
+        "closeTerms": "Cerrar términos",
+        "totalAmount": "Monto total",
+        "securePaymentGateway": "Pasarela de pago segura",
+        "promotionalCoupon": {
+          "title": "Cupón Promocional",
+          "enterCode": "Ingrese el código",
+          "validate": "Validar",
+          "validating": "Validando...",
+          "remove": "Eliminar cupón",
+          "applied": "de descuento",
+          "discountedValue": "Valor con descuento",
+          "originalValue": "(original)",
+          "enterCodePlease": "Por favor, ingrese el código del cupón",
+          "successMessage": "¡Cupón {{code}} aplicado! Descuento de ${{amount}} aplicado."
+        },
+        "referralCode": "Código de Referencia",
+        "codeAlreadyUsed": "Código ya utilizado",
+        "discountAlreadyApplied": "Descuento ya aplicado a su cuenta",
+        "haveReferralCode": "¿Tienes un código de referencia de amigo?",
+        "placeholder": "Ingrese el código aquí",
+        "validating": "Validando...",
+        "validate": "Validar Código",
+        "acceptContractTerms": "He leído y acepto los términos y condiciones del contrato",
+        "processingPayment": "Procesando...",
+        "applyCodeAndContinue": "Aplicar Código y Continuar",
+        "goToPayment": "Ir al Pago",
+        "termsAndConditions": {
+          "title": "Términos y Condiciones"
+        },
+        "scrollToBottomFirst": "Desplázate hasta abajo para aceptar",
+        "readingTerms": "Leyendo términos...",
+        "acceptTerms": "Aceptar Términos",
+        "cancel": "Cancelar",
+        "loading": "Cargando...",
+        "validCode": "¡Código de referencia válido! Recibirás $50 de descuento en la tarifa del proceso de selección.",
+        "pleaseEnterCode": "Por favor, ingrese un código",
+        "sellerReferralCodeBlocked": "Los usuarios con código de vendedor no pueden usar códigos de descuento adicionales.",
+        "errorValidating": "Error al validar código. Inténtelo de nuevo.",
+        "mustAcceptTerms": "Debe aceptar los términos y condiciones para continuar."
+      },
       "errors": {
         "serverError": "Error al conectar con el servidor",
         "tryAgain": "Por favor, inténtelo de nuevo",
@@ -1858,6 +1786,74 @@
     },
     "notNow": "Ahora No"
   },
+  "selectionFeeStep": {
+    "main": {
+      "title": "Tarifa del Proceso de Selección",
+      "subtitle": "Esta tarifa cubre el procesamiento de su solicitud, la evaluación de documentos y el soporte inicial para su proceso de estudio.",
+      "headerTitle": "Tarifa del Proceso de Selección",
+      "headerSubtitle": "Matricula USA - Tarifa única",
+      "description": "Esta tarifa cubre el procesamiento de su solicitud, la evaluación de documentos y el apoyo inicial para su viaje de estudios en los Estados Unidos.",
+      "identityVerification": "Verificación de Identidad",
+      "identityVerificationSubtitle": "Este paso es obligatorio",
+      "discountApplied": "Descuento Aplicado",
+      "couponApplied": "Cupón {{coupon}} Aplicado",
+      "methods": {
+        "stripe": "Tarjeta de Crédito"
+      },
+      "paymentProcessing": {
+        "title": "Procesando Pago",
+        "subtitle": "Por favor, espere mientras procesamos su pago..."
+      },
+      "zellePayment": "Pago Zelle",
+      "zelleProcessing": {
+        "title": "Procesando Pago Zelle",
+        "subtitle": "Su pago Zelle está siendo verificado."
+      },
+      "zelleUnavailable": "Zelle no está disponible en este momento",
+      "parcelowInstallments": "Hasta 12x",
+      "parcelowVerification": "Verificación Parcelow",
+      "cpfPlaceholder": "Ingrese su CPF",
+      "goToPayment": "Ir al Pago",
+      "selectMethod": "Seleccione el Método de Pago",
+      "serviceContract": "Contrato de Servicio",
+      "back": "Volver",
+      "referralCode": {
+        "title": "Código de Referencia",
+        "subtitle": "¿Tienes un código de amigo? ¡Ingrésalo aquí para obtener un descuento!",
+        "placeholder": "Ingrese Código",
+        "validate": "Validar Código",
+        "applied": "Código aplicado con éxito",
+        "discount": "Descuento:",
+        "originalPrice": "Precio Original:",
+        "totalFinal": "Total Final:"
+      },
+      "promotionalCoupon": {
+        "title": "Cupón Promocional",
+        "subtitle": "Ingrese su código de cupón promocional",
+        "placeholder": "Ingrese el código",
+        "validating": "Validando...",
+        "remove": "Eliminar Cupón",
+        "applied": "Cupón aplicado",
+        "couponApplied": "Cupón aplicado con éxito",
+        "discount": "Descuento:",
+        "originalPrice": "Precio Original:",
+        "totalFinal": "Total Final:"
+      },
+      "processingFees": {
+        "card": "* Pueden incluirse cargos por procesamiento",
+        "pix": "* Pueden incluirse cargos por procesamiento",
+        "parcelow": "* Se aplicarán cargos de operador y procesamiento de plataforma",
+        "zelle": "* El procesamiento puede tardar hasta 48 horas"
+      }
+    },
+    "paid": {
+      "title": "Tarifa de Solicitud Pagada",
+      "subtitle": "Ha pagado con éxito la tarifa del proceso de selección.",
+      "paidTitle": "Pago Confirmado",
+      "paidSubtitle": "Su pago ha sido confirmado con éxito.",
+      "continue": "Continuar"
+    }
+  },
   "studentDashboard": {
     "title": "Panel del Estudiante",
     "subtitle": "Gestiona tus solicitudes de beca",
@@ -1873,7 +1869,28 @@
       "payApplicationFee": "Paga la Tarifa de Solicitud para aplicar a una beca específica.",
       "payScholarshipFee": "Paga la Tarifa de Beca para confirmar tu solicitud de beca.",
       "payI20Fee": "Paga la Tarifa de Control I-20 para iniciar tu proceso de validación de documentos e I-20.",
-      "daysRemaining": "Tienes 10 días después de la tarifa de beca."
+      "daysRemaining": "Tienes 10 días después de la tarifa de beca.",
+      "onboardingBanner": {
+        "actionRequired": "ACCIÓN REQUERIDA",
+        "stoppedAt": "Se detuvo en: {{step}}",
+        "startNow": "Empezar Ahora",
+        "documentsPortal": "Portal de Documentos",
+        "continueProcess": "Continuar Proceso",
+        "startProcess": "Iniciar Proceso",
+        "stepLabels": {
+          "welcome": "Bienvenido",
+          "selection_fee": "Tarifa de Selección",
+          "scholarship_selection": "Selección de Becas",
+          "process_type": "Tipo de Proceso",
+          "documents_upload": "Envío de Documentos",
+          "payment": "Pago",
+          "scholarship_fee": "Tarifa de Beca",
+          "university_documents": "Documentos de la Universidad",
+          "waiting_approval": "Esperando Aprobación",
+          "completed": "Completado",
+          "my_applications": "Mis Solicitudes"
+        }
+      }
     },
     "stepByStepTour": {
       "title": "Tour Paso a Paso",
@@ -2266,6 +2283,8 @@
         "level": "Nivel",
         "deadline": "Fecha Límite",
         "daysLeft": "días restantes",
+        "days": "días",
+        "scholarshipDiscount": "Descuento de Beca",
         "showDetails": "Ver Detalles",
         "show": "Ver",
         "view": "Ver",
@@ -2317,6 +2336,64 @@
           "paidDescription": "Tu pago ha sido confirmado. Continúa siguiendo el progreso de tu solicitud.",
           "paidDate": "Fecha de pago:",
           "viewDetails": "Ver Detalles del Pago"
+        }
+      },
+      "chat": {
+        "title": "Chat de la Solicitud",
+        "subtitle": "Comunícate directamente con la universidad",
+        "placeholder": "Escribe tu mensaje...",
+        "sendButton": "Enviar",
+        "attachFile": "Adjuntar archivo",
+        "fileUploaded": "Archivo adjunto: {{fileName}}",
+        "messageSent": "Mensaje enviado con éxito",
+        "messageError": "Error al enviar el mensaje. Inténtalo de nuevo.",
+        "noMessages": "Aún no hay mensajes. ¡Inicia una conversación!",
+        "loading": "Cargando mensajes...",
+        "sending": "Enviando...",
+        "online": "En línea",
+        "lastSeen": "Visto por última vez {{time}}",
+        "typing": "Escribiendo...",
+        "messageStatus": {
+          "sent": "Enviado",
+          "delivered": "Entregado",
+          "read": "Leído"
+        },
+        "actions": {
+          "markAsRead": "Marcar como leído",
+          "deleteMessage": "Eliminar mensaje",
+          "downloadAttachment": "Descargar archivo adjunto"
+        },
+        "edit": {
+          "placeholder": "Edita tu mensaje...",
+          "save": "Guardar",
+          "cancel": "Cancelar"
+        },
+        "attachment": {
+          "label": "Archivo adjunto",
+          "remove": "Eliminar"
+        }
+      },
+      "studentChat": {
+        "header": {
+          "title": "Equipo de Soporte",
+          "responseTime": "Tiempo de respuesta: 1-2 horas hábiles",
+          "helpTooltip": "¿Cómo funciona el chat?"
+        },
+        "guide": {
+          "title": "Chatea con el equipo de soporte",
+          "subtitle": "Este chat te conecta directamente con el equipo de soporte. Úsalo para preguntas sobre becas, documentos y el progreso de tu solicitud. Evita compartir datos confidenciales (contraseñas o números de tarjeta).",
+          "supportsAttachments": "Envía mensajes y archivos adjuntos",
+          "businessHours": "Respuestas durante horario laboral",
+          "historySaved": "El historial de conversación se guarda",
+          "ctaStart": "Entendido",
+          "ctaLater": "Ahora no"
+        },
+        "input": {
+          "placeholder": "Escribe tu mensaje..."
+        },
+        "recipientLabel": {
+          "student": "Estudiante",
+          "support": "Administración"
         }
       },
       "details": {
@@ -2783,6 +2860,43 @@
       "iofNote": "Esta es una compra internacional. IOF del 3,5% será agregado por Stripe."
     }
   },
+  "preCheckoutModal": {
+    "loading": "Cargando...",
+    "noTermsFound": "No se encontraron términos.",
+    "confirmReading": "Confirmar Lectura",
+    "scrollToBottomFirst": "Lea hasta el final",
+    "acceptTerms": "Aceptar y Confirmar",
+    "uploadPhotoRequired": "Por favor, envíe una selfie con su documento para continuar.",
+    "uploadPhoto": "Enviar Selfie con Documento",
+    "haveReferralCode": "¿Tengo un código de referido?",
+    "usingYourReferralCode": "Usando su código de referencia",
+    "placeholder": "Ingrese el código",
+    "validate": "Validar",
+    "validating": "Validando...",
+    "pleaseEnterCode": "Por favor, ingrese un código",
+    "invalidCode": "Código inválido o inactivo",
+    "selfReferral": "No puede usar su propio código de referencia",
+    "alreadyUsedCode": "Ya ha usado um código de referencia anteriormente",
+    "validCode": "¡Código válido! Descuento de $50 aplicado",
+    "errorValidating": "Error al validar el código",
+    "codeAlreadyUsed": "Código ya utilizado",
+    "discountAlreadyApplied": "Su descuento ya ha sido aplicado anteriormente",
+    "continueWithoutCode": "Continuar sin código",
+    "goToPayment": "Ir al pago",
+    "applyCodeAndContinue": "Aplicar código y continuar",
+    "processingPayment": "Procesando Pago...",
+    "mustAcceptTerms": "Debe aceptar los términos y condiciones antes de continuar",
+    "termsAndConditions": {
+      "title": "Términos y Condiciones",
+      "termsOfUse": "Términos de Uso",
+      "and": "y",
+      "privacyPolicy": "Política de Privacidad",
+      "description": "antes de proceder con el pago"
+    },
+    "closeTerms": "Cerrar",
+    "acceptContractTerms": "Acepto los términos y condiciones del contrato",
+    "cancel": "Cancelar"
+  },
   "footer": {
     "company": {
       "title": "Empresa",
@@ -2880,7 +2994,7 @@
         "processErrorRetry": "Error al procesar la solicitud de desuscripción. Por favor, intenta nuevamente."
       }
     },
-    "copyright": "© 2024 Matrícula USA. All rights reserved."
+    "copyright": "© 2026 Matrícula USA. All rights reserved."
   },
   "matriculaRewardsLanding": {
     "badge": "New Rewards Program",
@@ -2913,7 +3027,7 @@
         "description": "See what your account would look like with some referrals",
         "referralCode": {
           "title": "Your Referral Code",
-          "code": "MTR2024",
+          "code": "MTR2026",
           "copy": "Copy Code",
           "copied": "Copied!",
           "loginToGetCode": "Login to get your referral code"
@@ -3289,7 +3403,7 @@
       ]
     },
     "socialProof": {
-      "title": "More than 150 students approved in 2024 alone",
+      "title": "More than 150 students approved in 2026 alone",
       "subtitle": "See what our students are saying about their experience",
       "ctaButton": "BE THE NEXT APPROVED",
       "statistics": {
@@ -3720,6 +3834,90 @@
     "3800Expiring": "Last hours to apply! Deadline expires tomorrow (November 6th)",
     "3800ExpiringShort": "El plazo expira mañana"
   },
+  "scholarshipSelection": {
+    "header": {
+      "title": "Selección de Becas",
+      "subtitle": "Navegue por las becas y seleccione en cuáles le gustaría inscribirse. Es necesario elegir al menos una para continuar."
+    },
+    "errors": {
+      "loadError": "Error al cargar las becas. Inténtalo de nuevo.",
+      "alreadyLocked": "Ya has pasado por la revisión de becas. No es posible cambiar la selección.",
+      "updateError": "Error al actualizar la selección. Inténtalo de nuevo.",
+      "selectRequired": "Por favor, seleccione al menos una beca para continuar. Haga clic en las tarjetas de beca arriba para añadirlas a su selección."
+    },
+    "review": {
+      "title": "Revise sus Becas Seleccionadas",
+      "warningTitle": "Importante: Esta es una elección definitiva",
+      "warningDescription": "Al confirmar, ya no podrá cambiar las becas elegidas. Revise cuidadosamente su selección a continuación antes de continuar.",
+      "unknownUniversity": "Universidad Desconocida",
+      "backButton": "Volver a la Selección",
+      "continueButton": "Confirmar y Continuar",
+      "removeButton": "Eliminar Selección"
+    },
+    "completed": {
+      "title": "Selección de Becas",
+      "subtitle": "Selección de becas completada con éxito.",
+      "cardTitle": "Etapa Completada",
+      "cardText": "Ya has seleccionado tus becas y pasado por la revisión. Esta etapa está completa.",
+      "continueButton": "Continuar"
+    },
+    "grid": {
+      "title": "Becas Disponibles",
+      "option_count": "opción",
+      "option_count_plural": "opciones",
+      "noResults": {
+        "title": "No se encontraron becas",
+        "description": "Intente ajustar sus filtros para ver más opciones.",
+        "clearButton": "Limpiar todos los filtros"
+      }
+    },
+    "filters": {
+      "title": "Filtrar Becas",
+      "searchPlaceholder": "Buscar beca...",
+      "searchKeyword": "Palabra clave",
+      "university": "Universidad",
+      "allUniversities": "Todas las Universidades",
+      "studyLevel": "Nivel de Estudio",
+      "allLevels": "Todos los Niveles",
+      "fieldOfStudy": "Área de Estudio",
+      "allFields": "Todas las Áreas de Estudio",
+      "deliveryMode": "Modalidad",
+      "allDeliveryModes": "Todas las Modalidades",
+      "deliveryModeOptions": {
+        "online": "Online",
+        "in_person": "Presencial",
+        "hybrid": "Híbrido",
+        "mixed": "Mixto"
+      },
+      "workPermission": "Permiso de Trabajo",
+      "allWorkPermissions": "Todos los Permisos",
+      "scholarshipValue": "Valor de la Beca",
+      "minValue": "Valor Mínimo",
+      "maxValue": "Valor Máximo",
+      "deadlineDays": "Plazo (dias)",
+      "minPlaceholder": "Mín",
+      "maxPlaceholder": "Máx",
+      "deadlinePlaceholder": "Mín días restantes",
+      "apply": "Aplicar Filtros",
+      "clear": "Limpiar",
+      "activeBadge": "Activo"
+    },
+    "confirmationModal": {
+      "title": "Confirmar Selección",
+      "description": "Al confirmar, ya no podrás cambiar las becas seleccionadas. Por favor, revisa cuidadosamente tu selección antes de continuar.",
+      "confirm": "Confirmar y Continuar",
+      "cancel": "Revisar de Nuevo"
+    },
+    "quickGuide": {
+      "title": "Guía rápida:",
+      "step1": "<strong>Haz clic en cualquier tarjeta de beca</strong> para añadirla a tu selección",
+      "step2": "<strong>Selecciona tantas como quieras</strong> - puedes elegir múltiples opciones",
+      "step3": "<strong>Usa filtros</strong> para buscar por universidad o valor de la beca",
+      "step4": "<strong>Haz clic en \"Continuar\"</strong> una vez que hayas seleccionado al menos una beca"
+    },
+    "continueWithCount": "Continuar ({{count}} seleccionada)",
+    "continueWithCount_plural": "Continuar ({{count}} seleccionadas)"
+  },
   "rapidRegistration": {
     "title": "Registro y Pago",
     "subtitle": "Complete su registro e inicie su proceso de selección",
@@ -3758,17 +3956,11 @@
       "title": "Resumen de Pago",
       "total": "Total",
       "currentFee": "Total a Pagar Ahora",
-      "dependentsFee": "Tarifa de Dependientes",
-      "feeExplanation": "La Tarifa del Proceso de Selección ($400.00) es el primer pago obligatorio en la plataforma MatriculaUSA. Desbloquea su acceso completo para ver todas las becas e iniciar su proceso de solicitud.",
-      "refundAssuranceTitle": "Garantía de Reembolso",
-      "refundAssuranceText": "Si no es aceptado en ninguna universidad, la tarifa del proceso de selección es 100% reembolsable.",
+      "feeExplanation": "La Tarifa del Proceso de Selección ($400.00) es el primer pago obligatorio en la plataforma MatriculaUSA. Desbloquea su acceso completo para ver todas las becas e iniciar su proceso de solicitud. Esta tarifa es final y se le reembolsará si no es aceptado en ninguna universidad.",
       "futureFeesTitle": "Tarifas Futuras",
       "enrollmentFee": "Tarifa de Matrícula",
       "scholarshipFee": "Tarifa de Beca",
       "i20Fee": "Tarifa de Control I-20",
-      "enrollmentFeeTooltip": "La Tarifa de Matrícula varía según la universidad y es un pago necesario para procesar formalmente su solicitud después de haber sido aceptado. Este monto confirma su intención de inscribirse y es gestionado directamente por la plataforma.",
-      "scholarshipFeeTooltip": "La Tarifa de Beca se cobra cuando procede con la solicitud de la beca elegida. Esta tarifa cubre los costos de procesamiento de la plataforma.",
-      "i20FeeTooltip": "La Tarifa de Control I-20 es un pago obligatorio y esencial para solicitar la visa de estudiante F-1. Es la tarifa final para la liberación de su carta de aceptación de beca y tiene una ventana de pago de 10 días.",
       "futureFeesNote": "Las tarifas futuras son estimaciones y varían según la universidad."
     },
     "terms": {
@@ -3778,14 +3970,7 @@
       "selfieStep1": "Sostenga su documento al lado de su cara",
       "selfieStep2": "Asegúrese de que todo sea legible",
       "clickToTakeSelfie": "Haga clic para tomar su selfie",
-      "selfieFormats": "JPG o PNG • MÁX 5MB",
-      "photoCaptured": "¡Foto capturada!",
-      "removeChange": "Eliminar/Cambiar",
-      "backToTerms": "Volver a los Términos",
-      "confirmReading": "Confirmar Lectura",
-      "scrollToBottom": "Lea hasta el final",
-      "acceptAndConfirm": "Aceptar y Confirmar",
-      "close": "Cerrar"
+      "selfieFormats": "JPG o PNG • MÁX 5MB"
     },
     "coupons": {
       "promotionalLabel": "Cupón Promocional"
@@ -3823,6 +4008,26 @@
       }
     }
   },
+  "components": {
+    "identityPhotoUpload": {
+      "titleInstructions": "Cómo tomar la foto correcta",
+      "instructions": "Tómate una selfie sosteniendo un documento con foto (pasaporte, DNI, licencia de conducir u otros) al lado de tu cara. Asegúrate de que tanto tu cara como el documento sean claramente visibles.",
+      "exampleAlt": "Ejemplo de foto com documento",
+      "uploading": "Subiendo foto...",
+      "clickToUpload": "Haz clic para subir la foto",
+      "fileTypes": "JPG o PNG (máximo 5MB)",
+      "success": "Foto subida con éxito",
+      "preview": "Vista previa de la foto",
+      "previewAlt": "Vista previa de la foto de identidad",
+      "remove": "Eliminar",
+      "errors": {
+        "onlyImages": "Solo se permiten archivos JPG y PNG",
+        "maxSize": "El archivo debe tener un máximo de 5MB",
+        "generic": "Error al subir la foto",
+        "unauthenticated": "Usuario no autenticado"
+      }
+    }
+  },
   "common": {
     "yes": "Sí",
     "no": "No",
@@ -3846,15 +4051,24 @@
     "search": "Buscar",
     "support": "Soporte",
     "welcome": "Bienvenido",
-    "close": "Cerrar"
+    "close": "Cerrar",
+    "finish": "Finalizar"
   },
   "selectionSurvey": {
-    "title": "Cuestionario de Alineación",
-    "subtitle": "Responda con atención. Para ser aprobado y liberar su panel, debe alcanzar al menos un <0>80% de aciertos</0> en las preguntas objetivas.",
+    "identityVerification": "Verificación de Identidad",
+    "identityVerificationHeader": "Validar su Identidad",
+    "identityVerificationSubtitle": "Para garantizar la seguridad del proceso de selección, necesitamos una selfie con su documento antes de comenzar el cuestionario.",
+    "startSurvey": "Próximo Paso",
+    "toastPhotoSuccess": "¡Foto subida con éxito!",
+    "toastPhotoError": "Error al subir foto. Inténtelo de nuevo.",
+    "securityNotice": "Sus datos están protegidos y cifrados",
+    "profilesIdentified": "Perfil Identificado",
+    "title": "Cuestionario",
+    "subtitle": "Responda con atención. Para ser aprobado y continuar su proceso, debe alcanzar al menos un <0>80% de aciertos</0> en las preguntas.",
     "mandatoryBadge": "Proceso de Selección Obligatorio",
     "nextSection": "Siguiente Sección",
     "back": "Volver",
-    "finish": "Finalizar y Ver Resultado",
+    "finish": "Finalizar",
     "finishBtn": "Finalizar",
     "submitting": "Enviando...",
     "sections": {
@@ -3874,11 +4088,11 @@
     "copyright": "© 2026 Matrícula USA • Proceso de Selección de Estudiantes",
     "results": {
       "congratulations": "¡Felicidades!",
-      "passedMessage": "¡Ha sido aprobado en el proceso de selección y está un paso más cerca de su sueño!",
+      "passedMessage": "Usted es apto para proceder a la selección de becas e está un paso más cerca de su sueño",
       "score": "Su Puntuación:",
       "minRequired": "Mínimo necesario: 80%",
       "ctaDashboard": "Elegir Becas",
-      "ctaDescription": "Ahora puedes acceder a todas las funciones y elegir las becas de tu interés.",
+      "ctaDescription": "Ahora puedes continuar tu proceso y elegir las becas de tu interés.",
       "failed": "No ha sido esta vez",
       "failedMessage": "No alcanzó la puntuación mínima del 80% necesaria para la aprobación.",
       "failedAdvice": "Recomendamos que revise los materiales de apoyo e intente de nuevo.",

@@ -67,6 +67,15 @@ export interface UserProfile {
   // Onboarding completion status
   onboarding_completed?: boolean;
 
+  // CPF Document
+  cpf_document?: string;
+
+  // Onboarding completion status
+  onboarding_completed?: boolean;
+
+  // Questionário de seleção
+  selection_survey_passed?: boolean;
+
   // ... outras colunas se existirem
 }
 

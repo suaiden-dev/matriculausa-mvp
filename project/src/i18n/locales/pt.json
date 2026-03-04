@@ -1620,18 +1620,7 @@
       "invalidEmail": "Digite um endereço de email válido.",
       "signupDisabled": "Novos registros estão atualmente desabilitados. Entre em contato com o suporte.",
       "registrationFailed": "Falha no Registro",
-      "emailAlreadyRegistered": "Este email já está cadastrado. Faça login ou use outro email.",
-      "identityVerificationModal": {
-        "title": "Verificação de Identidade",
-        "subtitle": "Para sua segurança e conformidade, precisamos de uma selfie rápida segurando seu documento.",
-        "cameraHelp": "Tire uma selfie segurando seu documento de identidade ao lado do seu rosto. Certifique-se de que ambos estejam legíveis.",
-        "successTitle": "Foto Enviada!",
-        "successMessage": "Obrigado! Nossa equipe revisará sua foto em breve. Você já pode explorar o dashboard.",
-        "submitButton": "Enviar Foto",
-        "skipButton": "Fazer depois",
-        "submitting": "Enviando...",
-        "description": "Como parte do nosso processo de segurança, solicitamos uma foto sua segurando um documento de identificação oficial (Passaporte ou RG)."
-      }
+      "emailAlreadyRegistered": "Este email já está cadastrado. Faça login ou use outro email."
     }
   },
   "ssoCallback": {
@@ -1699,6 +1688,54 @@
     "viewProfile": "Ver Perfil",
     "applyNow": "Candidatar-se"
   },
+  "common": {
+    "loading": "Carregando...",
+    "error": "Erro",
+    "success": "Sucesso",
+    "save": "Salvar",
+    "cancel": "Cancelar",
+    "confirm": "Confirmar",
+    "delete": "Excluir",
+    "edit": "Editar",
+    "view": "Visualizar",
+    "back": "Voltar",
+    "next": "Próximo",
+    "previous": "Anterior",
+    "submit": "Enviar",
+    "close": "Fechar",
+    "search": "Buscar",
+    "filter": "Filtrar",
+    "clear": "Limpar",
+    "refresh": "Atualizar",
+    "download": "Baixar",
+    "upload": "Enviar",
+    "required": "Obrigatório",
+    "optional": "Opcional",
+    "yes": "Sim",
+    "no": "Não",
+    "showMore": "Mostrar Mais",
+    "showLess": "Mostrar Menos",
+    "changeFile": "Alterar Arquivo",
+    "readMore": "Ler Mais",
+    "learnMore": "Saiba Mais",
+    "featured": "Destaque",
+    "exclusive": "Exclusiva",
+    "apply": "Candidatar-se",
+    "viewDetails": "Ver Detalhes",
+    "deadline": "Prazo",
+    "amount": "Valor",
+    "support": "Suporte",
+    "expirationDate": "Data de expiração do status/I-94",
+    "name": "Nome",
+    "email": "Email",
+    "profile": "Perfil",
+    "section": "Seção",
+    "of": "de",
+    "active": "ativo",
+    "language": "Português",
+    "welcome": "Bem-vindo",
+    "finish": "Finalizar"
+  },
   "profileRequiredModal": {
     "cpfMissing": {
       "title": "CPF Necessário",
@@ -1713,6 +1750,74 @@
       "buttonCompleteProfile": "Completar Perfil"
     },
     "notNow": "Agora Não"
+  },
+  "selectionFeeStep": {
+    "main": {
+      "title": "Taxa do Processo Seletivo",
+      "subtitle": "Esta taxa cobre o processamento de sua candidatura, avaliação de documentos e suporte inicial para o seu processo de estudo.",
+      "headerTitle": "Taxa do Processo Seletivo",
+      "headerSubtitle": "Matrícula USA - Taxa única",
+      "description": "Esta taxa cobre o processamento de sua candidatura, avaliação de documentos e suporte inicial para o seu processo de estudo nos Estados Unidos.",
+      "identityVerification": "Verificação de Identidade",
+      "identityVerificationSubtitle": "Esta etapa é obrigatória",
+      "discountApplied": "Desconto Aplicado",
+      "couponApplied": "Cupom {{coupon}} Aplicado",
+      "methods": {
+        "stripe": "Cartão de Crédito"
+      },
+      "paymentProcessing": {
+        "title": "Processando Pagamento",
+        "subtitle": "Por favor, aguarde enquanto processamos o seu pagamento..."
+      },
+      "zellePayment": "Pagamento Zelle",
+      "zelleProcessing": {
+        "title": "Processando Pagamento Zelle",
+        "subtitle": "Seu pagamento Zelle está sendo verificado."
+      },
+      "zelleUnavailable": "Zelle não está disponível no momento",
+      "parcelowInstallments": "Em até 12x",
+      "parcelowVerification": "Verificação Parcelow",
+      "cpfPlaceholder": "Digite seu CPF",
+      "goToPayment": "Ir para Pagamento",
+      "selectMethod": "Selecione o Método de Pagamento",
+      "serviceContract": "Contrato de Serviço",
+      "back": "Voltar",
+      "referralCode": {
+        "title": "Código de Indicação",
+        "subtitle": "Tem um código de amigo? Digite aqui para ganhar desconto!",
+        "placeholder": "Inserir Código",
+        "validate": "Validar Código",
+        "applied": "Código aplicado com sucesso",
+        "discount": "Desconto:",
+        "originalPrice": "Preço Original:",
+        "totalFinal": "Total Final:"
+      },
+      "promotionalCoupon": {
+        "title": "Cupom Promocional",
+        "subtitle": "Digite seu cupom de desconto promocional",
+        "placeholder": "Inserir código",
+        "validating": "Validando...",
+        "remove": "Remover Cupom",
+        "applied": "Cupom aplicado",
+        "couponApplied": "Cupom aplicado com sucesso",
+        "discount": "Desconto:",
+        "originalPrice": "Preço Original:",
+        "totalFinal": "Total Final:"
+      },
+      "processingFees": {
+        "card": "* Podem incluir taxas de processamento",
+        "pix": "* Podem incluir taxas de processamento",
+        "parcelow": "* Taxas de operadora e processamento da plataforma",
+        "zelle": "* Processamento pode levar até 48 horas"
+      }
+    },
+    "paid": {
+      "title": "Taxa de Matrícula Paga",
+      "subtitle": "Você pagou com sucesso a taxa do processo seletivo.",
+      "paidTitle": "Pagamento Confirmado",
+      "paidSubtitle": "Seu pagamento foi confirmado com segurança.",
+      "continue": "Continuar"
+    }
   },
   "studentDashboard": {
     "title": "Painel do Estudante",
@@ -1730,6 +1835,27 @@
       "payScholarshipFee": "Pague a Taxa de Bolsa para confirmar sua candidatura de bolsa.",
       "payI20Fee": "Pague a Taxa de Controle I-20 para iniciar seu processo de validação I-20 e documentos.",
       "daysRemaining": "Você tem 10 dias após a taxa de bolsa.",
+      "onboardingBanner": {
+        "actionRequired": "AÇÃO NECESSÁRIA",
+        "stoppedAt": "Parou em: {{step}}",
+        "startNow": "Começar Agora",
+        "documentsPortal": "Portal de Documentos",
+        "continueProcess": "Continuar Processo",
+        "startProcess": "Iniciar Processo",
+        "stepLabels": {
+          "welcome": "Bem-vindo",
+          "selection_fee": "Taxa de Seleção",
+          "scholarship_selection": "Seleção de Bolsas",
+          "process_type": "Tipo de Processo",
+          "documents_upload": "Envio de Documentos",
+          "payment": "Pagamento",
+          "scholarship_fee": "Taxa de Bolsa",
+          "university_documents": "Documentos da Universidade",
+          "waiting_approval": "Aguardando Aprovação",
+          "completed": "Concluído",
+          "my_applications": "Minhas Candidaturas"
+        }
+      },
       "onboarding": {
         "payFee": "Pagar Taxa de Seleção",
         "payFeeDesc": "Inicie seu processo pagando a taxa de seleção.",
@@ -2464,7 +2590,7 @@
       },
       "i20ControlFee": {
         "title": "Taxa de Controle I-20",
-        "description": "O I-20 é o Certificado de Elegibilidade oficial emitido pela universidade que comprova seu status de estudante nos EUA.",
+        "description": "O I-20 é uma taxa essencial para visto de estudantes F-1, alem disso é uma taxa obrigatória para a liberação da sua carta de aceite pela faculdade. Esta taxa tem um prazo máximo de 10 dias para pagamento.",
         "deadlineInfo": "Prazo: 10 dias após pagamento da Taxa da Bolsa.",
         "timerInfo": "Tempo restante para pagamento:",
         "paymentInfo": "Garante processamento correto do seu I-20 pela universidade.",
@@ -3061,9 +3187,6 @@
     "parcelowInstallmentPreview": "ou em até {{count}}x"
   },
   "preCheckoutModal": {
-    "acceptPrefix": "Eu aceito os ",
-    "termsAndConditionsLink": "termos e condições",
-    "acceptSuffix": " do contrato de prestação de serviços.",
     "securePayment": "Pagamento Seguro",
     "securePaymentProcess": "Processo de Pagamento Seguro",
     "closeModal": "Fechar modal",
@@ -3211,7 +3334,7 @@
         "processErrorRetry": "Erro ao processar cancelamento de inscrição. Por favor, tente novamente."
       }
     },
-    "copyright": "© 2024 Matrícula USA. Todos os direitos reservados."
+    "copyright": "© 2026 Matrícula USA. Todos os direitos reservados."
   },
   "matriculaRewardsLanding": {
     "badge": "Novo Programa de Recompensas",
@@ -3244,7 +3367,7 @@
         "description": "Veja como seria sua conta com algumas indicações",
         "referralCode": {
           "title": "Seu Código de Referência",
-          "code": "MTR2024",
+          "code": "MTR2026",
           "copy": "Copiar Código",
           "copied": "Copiado!",
           "loginToGetCode": "Faça login para obter seu código de referência"
@@ -3620,7 +3743,7 @@
       ]
     },
     "socialProof": {
-      "title": "Mais de 150 alunos aprovados só em 2024",
+      "title": "Mais de 150 alunos aprovados só em 2026",
       "subtitle": "Veja o que nossos alunos estão dizendo sobre sua experiência",
       "ctaButton": "SER O PRÓXIMO APROVADO",
       "statistics": {
@@ -4066,16 +4189,92 @@
     }
   },
   "scholarshipSelection": {
+    "header": {
+      "title": "Escolha de Bolsas",
+      "subtitle": "Navegue pelas bolsas e selecione quais gostaria de se matricular. É necessário escolher ao menos uma para prosseguir."
+    },
+    "errors": {
+      "loadError": "Erro ao carregar bolsas. Tente novamente.",
+      "alreadyLocked": "Você já passou pela revisão de bolsas. Não é possível alterar a seleção.",
+      "updateError": "Erro ao atualizar seleção. Tente novamente.",
+      "selectRequired": "Por favor, selecione ao menos uma bolsa para continuar. Clique nos cards de bolsa acima para adicioná-los à sua seleção."
+    },
+    "review": {
+      "title": "Revise suas Bolsas Selecionadas",
+      "warningTitle": "Importante: Esta é uma escolha definitiva",
+      "warningDescription": "Ao confirmar, você não poderá mais alterar as bolsas escolhidas. Revise cuidadosamente sua seleção abaixo antes de prosseguir.",
+      "unknownUniversity": "Universidade Desconhecida",
+      "backButton": "Voltar para Seleção",
+      "continueButton": "Confirmar e Continuar",
+      "removeButton": "Remover Seleção"
+    },
+    "completed": {
+      "title": "Escolha de Bolsas",
+      "subtitle": "Seleção de bolsas concluída com sucesso.",
+      "cardTitle": "Etapa Concluída",
+      "cardText": "Você já selecionou suas bolsas e passou pela revisão. Esta etapa está completa.",
+      "continueButton": "Continuar"
+    },
+    "grid": {
+      "title": "Bolsas Disponíveis",
+      "option_count": "opção",
+      "option_count_plural": "opções",
+      "noResults": {
+        "title": "Nenhuma bolsa encontrada",
+        "description": "Tente ajustar seus filtros para ver mais opções.",
+        "clearButton": "Limpar todos os filtros"
+      }
+    },
+    "filters": {
+      "title": "Filtrar Bolsas",
+      "searchPlaceholder": "Buscar bolsa...",
+      "searchKeyword": "Palavra-chave",
+      "university": "Universidade",
+      "allUniversities": "Todas as Universidades",
+      "studyLevel": "Nível de Estudo",
+      "allLevels": "Todos os Níveis",
+      "fieldOfStudy": "Área de Estudo",
+      "allFields": "Todas as Áreas de Estudo",
+      "deliveryMode": "Modalidade",
+      "allDeliveryModes": "Todas as Modalidades",
+      "deliveryModeOptions": {
+        "online": "Online",
+        "in_person": "Presencial",
+        "hybrid": "Híbrido",
+        "mixed": "Misto"
+      },
+      "workPermission": "Permissão de Trabalho",
+      "allWorkPermissions": "Todas as Permissões",
+      "scholarshipValue": "Valor da Bolsa",
+      "minValue": "Valor Mínimo",
+      "maxValue": "Valor Máximo",
+      "deadlineDays": "Prazo (dias)",
+      "minPlaceholder": "Mín",
+      "maxPlaceholder": "Máx",
+      "deadlinePlaceholder": "Mín dias restantes",
+      "apply": "Aplicar Filtros",
+      "clear": "Limpar",
+      "activeBadge": "Ativo"
+    },
     "confirmationModal": {
       "title": "Confirmar Seleção",
       "description": "Ao confirmar, você não poderá mais alterar as bolsas escolhidas. Revise cuidadosamente sua seleção antes de prosseguir.",
       "confirm": "Confirmar e Prosseguir",
       "cancel": "Revisar Novamente"
-    }
+    },
+    "quickGuide": {
+      "title": "Guia rápido:",
+      "step1": "<strong>Clique em qualquer card de bolsa</strong> para adicioná-lo à sua seleção",
+      "step2": "<strong>Selecione quantas quiser</strong> - você pode escolher múltiplas opções",
+      "step3": "<strong>Use filtros</strong> para buscar por universidade ou valor da bolsa",
+      "step4": "<strong>Clique em \"Continuar\"</strong> após selecionar ao menos uma bolsa"
+    },
+    "continueWithCount": "Continuar ({{count}} selecionada)",
+    "continueWithCount_plural": "Continuar ({{count}} selecionadas)"
   },
   "rapidRegistration": {
-    "title": "Começo do Processo Seletivo",
-    "subtitle": "Complete seu registro e inicie seu processo seletivo aqui no MatriculaUSA",
+    "title": "Registro e Pagamento",
+    "subtitle": "Complete seu registro e inicie seu processo seletivo",
     "form": {
       "title": "Informações Pessoais",
       "fullName": "Nome Completo",
@@ -4088,7 +4287,7 @@
         "count_one": "1 Dependente",
         "count_other": "{{count}} Dependentes"
       },
-      "termsAcceptedBadge": "Termos Aceitos",
+      "termsAcceptedBadge": "Termos Visualizados e Aceitos",
       "password": "Senha",
       "terms": "Eu aceito os Termos e Condições",
       "submit": "Confirmar Registro",
@@ -4111,19 +4310,12 @@
       "title": "Resumo do Pagamento",
       "total": "Total",
       "currentFee": "Total a Pagar Agora",
-      "dependentsFee": "Taxa de Dependentes",
-      "couponApplied": "Cupom Aplicado",
-      "feeExplanation": "A Taxa do Processo Seletivo (US$400.00) é o primeiro pagamento obrigatório na plataforma MatriculaUSA. Ela desbloqueia seu acesso completo para visualizar todas as bolsas e iniciar seu processo de candidatura.",
-      "refundAssuranceTitle": "Garantia de Reembolso",
-      "refundAssuranceText": "Caso nao seja aceito em nenhuma universidade a taxa de processo seletivo é 100% reembolsavel.",
+      "feeExplanation": "A Taxa de Processo de Seleção (US$400.00) é o primeiro pagamento obrigatório na plataforma MatriculaUSA. Ela desbloqueia seu acesso completo para visualizar todas as bolsas e iniciar seu processo de candidatura. Esta taxa é final e você será reembolsado caso não seja aceito em nenhuma universidade.",
       "futureFeesTitle": "Taxas Futuras",
       "enrollmentFee": "Taxa de Matrícula",
       "scholarshipFee": "Taxa da Bolsa",
       "i20Fee": "Taxa de Controle I-20",
-      "enrollmentFeeTooltip": "A Taxa de Matrícula varia por universidade e é um pagamento necessário para processar formalmente sua candidatura após você ter sido aceito. Este valor confirma sua intenção de se matricular e é gerenciado diretamente pela plataforma.",
-      "scholarshipFeeTooltip": "A Taxa da Bolsa é cobrada quando você prossegue com a candidatura da bolsa escolhida. Esta taxa cobre custos de processamento da plataforma.",
-      "i20FeeTooltip": "A Taxa de Controle I-20 é um pagamento obrigatório e essencial para solicitar o visto de estudante F-1. É a taxa final para a liberação da carta de aceite da sua bolsa e possui uma janela de pagamento de 10 dias.",
-      "futureFeesNote": "Estas taxas são estimativas e podem variar por universidade."
+      "futureFeesNote": "As taxas futuras são estimativas e variam por universidade."
     },
     "terms": {
       "contractSubtitle": "Contrato de Prestação de Serviços",
@@ -4132,14 +4324,7 @@
       "selfieStep1": "Segure seu documento ao lado do rosto",
       "selfieStep2": "Certifique-se de que tudo está legível",
       "clickToTakeSelfie": "Clique para tirar sua selfie",
-      "selfieFormats": "JPG ou PNG • MÁX 5MB",
-      "photoCaptured": "Foto capturada!",
-      "removeChange": "Remover/Trocar",
-      "backToTerms": "Voltar para os Termos",
-      "confirmReading": "Confirmar Leitura",
-      "scrollToBottom": "Leia até o final",
-      "acceptAndConfirm": "Aceitar e Confirmar",
-      "close": "Fechar"
+      "selfieFormats": "JPG ou PNG • MÁX 5MB"
     },
     "coupons": {
       "promotionalLabel": "Cupom Promocional"
@@ -4177,110 +4362,41 @@
       }
     }
   },
-  "zelleComponent": {
-    "instructions": {
-      "title": "Instruções de Pagamento via Zelle",
-      "subtitle": "Siga estas etapas para concluir seu pagamento via Zelle",
-      "detailsTitle": "Detalhes do Pagamento Zelle",
-      "detailsSubtitle": "Envie o pagamento para o destinatário abaixo",
-      "recipientEmail": "E-mail do Destinatário",
-      "paymentAmount": "Valor do Pagamento",
-      "youSaved": "Você economizou {{amount}}!",
-      "important": "Importante",
-      "importantNote": "Certifique-se de enviar o valor exato de <strong>{{amount}}</strong> para <strong>{{email}}</strong> via Zelle. Qualquer discrepância atrasará o processamento do seu pagamento.",
-      "uploadTitle": "Carregar Captura de Tela de Confirmação de Pagamento *",
-      "clickToUpload": "Clique para carregar ou arraste e solte",
-      "fileFormats": "PNG, JPG até 5MB",
-      "selectFile": "Selecionar Arquivo",
+  "components": {
+    "identityPhotoUpload": {
+      "titleInstructions": "Como tirar a foto correta",
+      "instructions": "Tire uma selfie segurando um documento com foto (passaporte, RG, CNH ou outros) ao lado do seu rosto. Certifique-se de que tanto seu rosto quanto o documento estejam claramente visíveis.",
+      "exampleAlt": "Exemplo de foto com documento",
+      "uploading": "Enviando foto...",
+      "clickToUpload": "Clique para fazer upload da foto",
+      "fileTypes": "JPG ou PNG (máximo 5MB)",
+      "success": "Foto enviada com sucesso",
+      "preview": "Preview da foto",
+      "previewAlt": "Preview da foto de identidade",
       "remove": "Remover",
-      "changeFile": "Alterar Arquivo",
-      "submitPayment": "Enviar Pagamento",
-      "processing": "Processando...",
-      "paymentProcessing": "Processamento de Pagamento..."
-    },
-    "analyzing": {
-      "title": "Analisando Pagamento...",
-      "subtitle": "Sua confirmação de pagamento está sendo validada automaticamente pelo nosso sistema de IA."
-    },
-    "underReview": {
-      "title": "Pagamento em Revisão",
-      "subtitle": "Seu comprovante de pagamento requer verificação adicional. Nossa equipe irá revisá-lo em até 48 horas.",
-      "notification": "Você será notificado assim que a revisão for concluída. Por favor, não envie outro pagamento."
-    },
-    "success": {
-      "title": "Pagamento Aprovado com Sucesso!",
-      "subtitle": "Seu pagamento Zelle foi processado e aprovado. Você pode agora prosseguir com as próximas etapas.",
-      "detailsTitle": "Detalhes do Pagamento:",
-      "originalAmount": "Valor Original:",
-      "discountApplied": "Desconto Aplicado:",
-      "finalAmount": "Valor Final:",
-      "youSavedSuccess": "Você economizou!",
-      "amount": "Valor:",
-      "feeType": "Tipo de Taxa:",
-      "paymentId": "ID do Pagamento:",
-      "submitted": "Enviado em:",
-      "nextStepsTitle": "O que acontece agora?",
-      "stepUploaded": "Confirmação de pagamento carregada",
-      "stepApproved": "Pagamento aprovado com sucesso",
-      "stepProceeding": "Prosseguindo para a próxima etapa automaticamente"
-    },
-    "rejected": {
-      "title": "Pagamento Rejeitado",
-      "subtitle": "Seu comprovante de pagamento não foi aprovado. Por favor, revise o motivo abaixo e carregue uma nova confirmação de pagamento.",
-      "reasonTitle": "Motivo da Rejeição:",
-      "defaultReason": "O pagamento foi rejeitado pelo administrador. Por favor, carregue uma nova confirmação de pagamento.",
-      "uploadNew": "Carregar Novo Comprovante de Pagamento",
-      "uploadNewNote": "Clique no botão acima para carregar uma nova captura de tela de confirmação de pagamento"
-    },
-    "uploadModal": {
-      "uploadingTitle": "Carregando Documento...",
-      "uploadingMessage": "Por favor, aguarde enquanto carregamos sua confirmação de pagamento",
-      "sendingTitle": "Enviando para Verificação...",
-      "sendingMessage": "Seu comprovante de pagamento está sendo enviado para validação automática",
-      "analyzingTitle": "Analisando Pagamento...",
-      "analyzingMessage": "Nossa IA está validando sua confirmação de pagamento"
-    },
-    "errors": {
-      "fileSize": "O tamanho do arquivo deve ser inferior a 5MB",
-      "fileType": "Por favor, selecione um arquivo de imagem (JPG, PNG, etc.)",
-      "uploadRequired": "Por favor, carregue uma captura de tela da sua confirmação de pagamento",
-      "uploadFailed": "Falha ao carregar a confirmação do pagamento",
-      "alreadyPending": "Você já tem um pagamento em processamento. Por favor, aguarde a revisão.",
-      "checkingStatus": "Verificando status do pagamento..."
+      "errors": {
+        "onlyImages": "Apenas arquivos JPG e PNG são permitidos",
+        "maxSize": "O arquivo deve ter no máximo 5MB",
+        "generic": "Erro ao fazer upload da foto",
+        "unauthenticated": "Usuário não autenticado"
+      }
     }
   },
-  "common": {
-    "yes": "Sim",
-    "no": "Não",
-    "expirationDate": "Data de expiração do status/I-94",
-    "name": "Nome",
-    "email": "Email",
-    "profile": "Perfil",
-    "section": "Seção",
-    "of": "de",
-    "loading": "Carregando...",
-    "success": "Sucesso",
-    "error": "Erro",
-    "filter": "Filtro",
-    "active": "ativo",
-    "apply": "Aplicar",
-    "language": "Português",
-    "featured": "Destaque",
-    "exclusive": "Exclusivo",
-    "showMore": "ver mais",
-    "learnMore": "Saiba mais",
-    "search": "Buscar",
-    "support": "Suporte",
-    "welcome": "Bem-vindo",
-    "close": "Fechar"
-  },
   "selectionSurvey": {
-    "title": "Questionário de Alinhamento",
-    "subtitle": "Responda com atenção. Para ser aprovado e liberar seu dashboard, você precisa atingir no mínimo <0>80% de acerto</0> nas questões objetivas.",
+    "identityVerification": "Verificação de Identidade",
+    "identityVerificationHeader": "Validar sua Identidade",
+    "identityVerificationSubtitle": "Para garantir a segurança do processo seletivo, precisamos de uma selfie com seu documento antes de iniciar o questionário.",
+    "startSurvey": "Próximo Passo",
+    "toastPhotoSuccess": "Foto enviada com sucesso!",
+    "toastPhotoError": "Erro ao enviar foto. Tente novamente.",
+    "securityNotice": "Seus dados estão protegidos e criptografados",
+    "profilesIdentified": "Perfil Identificado",
+    "title": "Questionário",
+    "subtitle": "Responda com atenção. Para ser aprovado e continuar seu processo, você precisa atingir no mínimo <0>80% de acerto</0> nas questões.",
     "mandatoryBadge": "Processo Seletivo Obrigatório",
     "nextSection": "Próxima Seção",
     "back": "Voltar",
-    "finish": "Finalizar e Ver Resultado",
+    "finish": "Finalizar",
     "finishBtn": "Finalizar",
     "submitting": "Enviando...",
     "sections": {
@@ -4300,11 +4416,11 @@
     "copyright": "© 2026 Matrícula USA • Processo Seletivo de Alunos",
     "results": {
       "congratulations": "Parabéns!",
-      "passedMessage": "Você foi aprovado no processo seletivo e está um passo mais próximo do seu sonho!",
+      "passedMessage": "Você esta apto a prosseguir para a seleção de bolsas e esta um passo mais proximo do seu sonho",
       "score": "Sua Pontuação:",
       "minRequired": "Mínimo necessário: 80%",
       "ctaDashboard": "Escolher Bolsas",
-      "ctaDescription": "Agora você pode acessar todas as funcionalidades e escolher as bolsas de estudo do seu interesse.",
+      "ctaDescription": "Agora você pode acessar continuar seu processo e escolher as bolsas de estudo do seu interesse.",
       "failed": "Não foi desta vez",
       "failedMessage": "Você não atingiu a pontuação mínima de 80% necessária para aprovação.",
       "failedAdvice": "Não desanime! Revise suas respostas com calma e tente novamente.",
@@ -4692,5 +4808,4 @@
         "prompt": "\"Eu entendo que meu resultado depende da minha disciplina. Se eu não seguir o plano, eu posso prejudicar meu status e meu projeto.\""
       }
     }
-  }
-}
+  }}

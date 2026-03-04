@@ -789,55 +789,8 @@ const ScholarshipBrowser: React.FC<ScholarshipBrowserProps> = ({
 
     // SEGUNDO: Verificar se já pagou a selection process fee
     if (!userProfile?.has_paid_selection_process_fee) {
-      // User has not paid selection process fee, checking for active discount
-
-      // SEGUNDO: Verificar se já tem desconto ativo
-      setIsCheckingDiscount(true);
-      try {
-        const { data: sessionData } = await supabase.auth.getSession();
-        const token = sessionData.session?.access_token;
-
-        if (!token) {
-          // No token, showing referral code modal
-          setSelectedScholarshipForCheckout(scholarship);
-          setShowPreCheckoutModal(true);
-          return;
-        }
-
-        // Verificar se já há desconto ativo usando função RPC
-        // Verificando desconto ativo
-        const { data: result, error } = await supabase.rpc('get_user_active_discount', {
-          user_id_param: user.id
-        });
-
-        if (error) {
-          console.error('❌ Erro ao verificar desconto:', error);
-          // Em caso de erro, mostrar modal por segurança
-          setSelectedScholarshipForCheckout(scholarship);
-          setShowPreCheckoutModal(true);
-          return;
-        }
-
-        // Resultado da verificação obtido
-
-        if (result && result.has_discount) {
-          // Usuário já tem desconto ativo, indo direto para Stripe
-          // Se já tem desconto, ir direto para Stripe
-          proceedToStripeDirectly();
-        } else {
-          // Sem desconto ativo, mostrando modal para código de referência
-          // Se não tem desconto, mostrar modal
-          setSelectedScholarshipForCheckout(scholarship);
-          setShowPreCheckoutModal(true);
-        }
-      } catch (error) {
-        console.error('❌ Erro ao verificar desconto:', error);
-        // Em caso de erro, mostrar modal por segurança
-        setSelectedScholarshipForCheckout(scholarship);
-        setShowPreCheckoutModal(true);
-      } finally {
-        setIsCheckingDiscount(false);
-      }
+      // Redirecionar para o onboarding ao invés de abrir o modal
+      navigate('/student/onboarding?step=selection_fee');
       return;
     }
 
@@ -1614,125 +1567,126 @@ const ScholarshipBrowser: React.FC<ScholarshipBrowserProps> = ({
                           </div>
                         )}
 
-                        {/* Deadline */}
-                        <div className="flex items-center justify-between p-3 bg-white rounded-lg border border-slate-200">
-                          <div className="flex items-center">
-                            <Clock className="h-3 w-3 text-red-500" />
-                            <span className="text-xs font-medium text-slate-600 ml-2">{t('studentDashboard.findScholarships.scholarshipCard.deadline')}</span>
-                          </div>
-                          {is3800Scholarship(scholarship) ? (
-                            <ScholarshipCountdownTimer scholarship={scholarship} />
-                          ) : (
-                            <span className="text-xs font-semibold text-slate-700">
-                              {getDaysUntilDeadlineDisplay(scholarship.deadline)} {t('studentDashboard.findScholarships.scholarshipCard.daysLeft')}
-                            </span>
-                          )}
+                      {/* Deadline */}
+                      <div className="flex items-center justify-between p-3 bg-white rounded-lg border border-slate-200">
+                        <div className="flex items-center">
+                          <Clock className="h-3 w-3 text-red-500" />
+                                                      <span className="text-xs font-medium text-slate-600 ml-2">{t('studentDashboard.findScholarships.scholarshipCard.deadline')}</span>
                         </div>
-                      </div>
-
-                      {/* Action Buttons */}
-                      <div className="mt-auto">
-                        <div className="flex gap-3 items-stretch">
-                          {/* Show Details Button */}
-                          <div className="flex-shrink-0" onMouseEnter={(e) => e.stopPropagation()}>
-                            <button
-                              type="button"
-                              onClick={() => openScholarshipModal(scholarship)}
-                              className="w-full h-12 px-3 sm:px-4 rounded-2xl font-bold text-xs sm:text-sm flex items-center justify-center bg-gradient-to-r from-blue-500 to-blue-600 text-white hover:from-blue-600 hover:to-blue-700 transition-all duration-300 shadow-lg hover:shadow-xl transform hover:scale-105 hover:-translate-y-1 focus:outline-none focus:ring-2 focus:ring-blue-500/50 focus:ring-offset-2"
-                              title="View scholarship details"
-                              aria-label="View scholarship details"
-                            >
-                              <span className="hidden sm:inline">{t('studentDashboard.findScholarships.scholarshipCard.show')}</span>
-                              <span className="sm:hidden">{t('studentDashboard.findScholarships.scholarshipCard.view')}</span>
-                              <span className="hidden sm:inline ml-1">{t('studentDashboard.findScholarships.scholarshipCard.details')}</span>
-                            </button>
-                          </div>
-
-                          {alreadyApplied || isBlocked ? (
-                            <button
-                              disabled
-                              className={`flex-1 h-12 px-4 rounded-2xl font-semibold cursor-not-allowed flex items-center justify-center ${isBlocked ? 'bg-slate-300 text-slate-500' : 'bg-green-100 text-green-700'
-                                }`}
-                            >
-                              {isBlocked ? (
-                                <>
-                                  <AlertTriangle className="h-4 w-4 mr-2" />
-                                  {t('scholarshipDeadline.3800Expired')}
-                                </>
-                              ) : (
-                                <>
-                                  <CheckCircle className="h-4 w-4 mr-2" />
-                                  {t('studentDashboard.findScholarships.scholarshipCard.alreadyApplied')}
-                                </>
-                              )}
-                            </button>
-                          ) : inCart ? (
-                            <button
-                              type="button"
-                              onClick={() => removeFromCart(scholarship.id, user?.id || '')}
-                              className="flex-1 h-12 px-4 rounded-2xl font-semibold hover:bg-red-200 transition-colors flex items-center justify-center bg-red-100 text-red-700"
-                            >
-                              <Trash2 className="h-4 w-4 mr-2" />
-                              {t('studentDashboard.findScholarships.scholarshipCard.deselect')}
-                            </button>
-                          ) : (
-                            <button
-                              type="button"
-                              onClick={async () => {
-                                if (alreadyApplied || isBlocked) return;
-
-                                if (inCart) {
-                                  if (user) removeFromCart(scholarship.id, user.id);
-                                } else {
-                                  // ANIMAÇÃO: voar para o chapéu (apenas se já pagou a taxa)
-                                  if (userProfile?.has_paid_selection_process_fee) {
-                                    const hat = document.getElementById('floating-cart-hat');
-                                    const cardElement = scholarshipRefs.current.get(scholarship.id);
-                                    if (cardElement && hat) {
-                                      const from = cardElement.getBoundingClientRect();
-                                      const to = hat.getBoundingClientRect();
-                                      setFlyingCard({ card: scholarship, from, to });
-                                      setAnimating(true);
-                                      setTimeout(() => {
-                                        setAnimating(false);
-                                        setFlyingCard(null);
-                                      }, 1100);
-                                    }
-                                  }
-                                  // Usar a nova função que verifica desconto antes de adicionar ao carrinho
-                                  checkDiscountAndProceed(scholarship);
-                                }
-                              }}
-                              ref={(el) => {
-                                if (el) buttonRefs.current.set(scholarship.id, el);
-                              }}
-                              className={`flex-1 h-12 px-4 sm:px-6 rounded-2xl font-bold text-xs lg:text-sm uppercase tracking-wide flex items-center justify-center group-hover:shadow-2xl transform group-hover:scale-105 transition-all duration-300 relative overflow-hidden active:scale-95 focus:outline-none focus:ring-2 focus:ring-[#05294E]/50 focus:ring-offset-2 ${inCart
-                                ? 'bg-gradient-to-r from-red-500 to-red-600 text-white hover:from-red-600 hover:to-red-700'
-                                : 'bg-gradient-to-r from-[#05294E] via-[#05294E] to-slate-700 text-white hover:from-[#041f3a] hover:to-slate-600'
-                                } ${alreadyApplied || isBlocked ? 'bg-slate-300 text-slate-500 cursor-not-allowed hover:scale-100' : ''}`}
-                              disabled={alreadyApplied || isBlocked || isCheckingDiscount}
-                            >
-                              <div className="absolute inset-0 bg-gradient-to-r from-white/0 via-white/25 to-white/0 transform -skew-x-12 -translate-x-full group-hover:translate-x-full transition-transform duration-1000"></div>
-                              <Award className="h-5 w-5 sm:h-6 sm:w-6 mr-2 relative z-10 group-hover:scale-110 transition-transform text-white" aria-hidden="true" />
-                              <span className="relative z-10">
-                                {alreadyApplied ? t('studentDashboard.findScholarships.scholarshipCard.alreadyApplied') : inCart ? t('studentDashboard.findScholarships.scholarshipCard.deselect') : (
-                                  isCheckingDiscount ? t('studentDashboard.findScholarships.scholarshipCard.checking') : t('studentDashboard.findScholarships.scholarshipCard.selectScholarship')
-                                )}
-                              </span>
-                              {!alreadyApplied && !isCheckingDiscount && <ArrowRight className="h-5 w-5 sm:h-6 sm:w-6 ml-2 group-hover:translate-x-1 transition-transform relative z-10 text-white" aria-hidden="true" />}
-                              {!alreadyApplied && isCheckingDiscount && (
-                                <div className="w-3 h-3 sm:w-4 sm:h-4 ml-2 border-2 border-white border-t-transparent rounded-full animate-spin relative z-10"></div>
-                              )}
-                            </button>
-                          )}
-                        </div>
+                        {is3800Scholarship(scholarship) ? (
+                          <ScholarshipCountdownTimer scholarship={scholarship} />
+                        ) : (
+                          <span className="text-xs font-semibold text-slate-700">
+                            {getDaysUntilDeadlineDisplay(scholarship.deadline)} {t('studentDashboard.findScholarships.scholarshipCard.daysLeft')}
+                          </span>
+                        )}
                       </div>
                     </div>
-                  </motion.div>
-                );
-              })}
-            </div>
+                      
+                                         {/* Action Buttons */}
+                     <div className="mt-auto">
+                       <div className="flex gap-3 items-stretch">
+                         {/* Show Details Button */}
+                         <div className="flex-shrink-0" onMouseEnter={(e) => e.stopPropagation()}>
+                           <button
+                             type="button"
+                             onClick={() => openScholarshipModal(scholarship)}
+                             className="w-full h-12 px-3 sm:px-4 rounded-2xl font-bold text-xs sm:text-sm flex items-center justify-center bg-gradient-to-r from-blue-500 to-blue-600 text-white hover:from-blue-600 hover:to-blue-700 transition-all duration-300 shadow-lg hover:shadow-xl transform hover:scale-105 hover:-translate-y-1 focus:outline-none focus:ring-2 focus:ring-blue-500/50 focus:ring-offset-2"
+                             title="View scholarship details"
+                             aria-label="View scholarship details"
+                           >
+                             <span className="hidden sm:inline">{t('studentDashboard.findScholarships.scholarshipCard.show')}</span>
+                             <span className="sm:hidden">{t('studentDashboard.findScholarships.scholarshipCard.view')}</span>
+                             <span className="hidden sm:inline ml-1">{t('studentDashboard.findScholarships.scholarshipCard.details')}</span>
+                           </button>
+                         </div>
+                         
+                         {alreadyApplied || isBlocked ? (
+                           <button
+                             disabled
+                             className={`flex-1 h-12 px-4 rounded-2xl font-semibold cursor-not-allowed flex items-center justify-center ${
+                               isBlocked ? 'bg-slate-300 text-slate-500' : 'bg-green-100 text-green-700'
+                             }`}
+                           >
+                             {isBlocked ? (
+                               <>
+                                 <AlertTriangle className="h-4 w-4 mr-2" />
+                                 {t('scholarshipDeadline.3800Expired')}
+                               </>
+                             ) : (
+                               <>
+                                 <CheckCircle className="h-4 w-4 mr-2" />
+                                 {t('studentDashboard.findScholarships.scholarshipCard.alreadyApplied')}
+                               </>
+                             )}
+                           </button>
+                         ) : inCart ? (
+                           <button
+                             type="button"
+                             onClick={() => removeFromCart(scholarship.id, user?.id || '')}
+                             className="flex-1 h-12 px-4 rounded-2xl font-semibold hover:bg-red-200 transition-colors flex items-center justify-center bg-red-100 text-red-700"
+                           >
+                             <Trash2 className="h-4 w-4 mr-2" />
+                             {t('studentDashboard.findScholarships.scholarshipCard.deselect')}
+                           </button>
+                         ) : (
+                           <button
+                             type="button"
+                             onClick={async () => {
+                               if (alreadyApplied || isBlocked) return;
+                               
+                               if (inCart) {
+                                 if (user) removeFromCart(scholarship.id, user.id);
+                               } else {
+                                 // ANIMAÇÃO: voar para o chapéu (apenas se já pagou a taxa)
+                                 if (userProfile?.has_paid_selection_process_fee) {
+                                   const hat = document.getElementById('floating-cart-hat');
+                                   const cardElement = scholarshipRefs.current.get(scholarship.id);
+                          if (cardElement && hat) {
+                            const from = cardElement.getBoundingClientRect();
+                            const to = hat.getBoundingClientRect();
+                            setFlyingCard({ card: scholarship, from, to });
+                            setAnimating(true);
+                            setTimeout(() => {
+                              setAnimating(false);
+                              setFlyingCard(null);
+                            }, 1100);
+                          }
+                        }
+                        // Usar a nova função que verifica desconto antes de adicionar ao carrinho
+                        checkDiscountAndProceed(scholarship);
+                      }
+                    }}
+                             ref={(el) => {
+                               if (el) buttonRefs.current.set(scholarship.id, el);
+                             }}
+                             className={`flex-1 h-12 px-4 sm:px-6 rounded-2xl font-bold text-xs lg:text-sm uppercase tracking-wide flex items-center justify-center group-hover:shadow-2xl transform group-hover:scale-105 transition-all duration-300 relative overflow-hidden active:scale-95 focus:outline-none focus:ring-2 focus:ring-[#05294E]/50 focus:ring-offset-2 ${
+                                inCart 
+                                  ? 'bg-gradient-to-r from-blue-600 to-blue-700 text-white hover:from-blue-700 hover:to-blue-800 shadow-md' 
+                                  : 'bg-gradient-to-r from-blue-400 to-blue-500 text-white hover:from-blue-500 hover:to-blue-600'
+                              } ${alreadyApplied || isBlocked ? 'bg-slate-300 text-slate-500 cursor-not-allowed hover:scale-100' : ''}`}
+                             disabled={alreadyApplied || isBlocked || isCheckingDiscount}
+                           >
+                             <div className="absolute inset-0 bg-gradient-to-r from-white/0 via-white/25 to-white/0 transform -skew-x-12 -translate-x-full group-hover:translate-x-full transition-transform duration-1000"></div>
+                             <span className="relative z-10">
+                               {alreadyApplied ? t('studentDashboard.findScholarships.scholarshipCard.alreadyApplied') : inCart ? 'Remove from Selection' : (
+                                 isCheckingDiscount ? t('studentDashboard.findScholarships.scholarshipCard.checking') : t('studentDashboard.findScholarships.scholarshipCard.selectScholarship')
+                               )}
+                             </span>
+                             {!alreadyApplied && !isCheckingDiscount && <ArrowRight className="h-5 w-5 sm:h-6 sm:w-6 ml-2 group-hover:translate-x-1 transition-transform relative z-10 text-white" aria-hidden="true" />}
+                             {!alreadyApplied && isCheckingDiscount && (
+                               <div className="w-3 h-3 sm:w-4 sm:h-4 ml-2 border-2 border-white border-t-transparent rounded-full animate-spin relative z-10"></div>
+                             )}
+                           </button>
+                         )}
+                       </div>
+                     </div>
+                  </div>
+                </motion.div>
+              );
+            })}
           </div>
+        </div>
         )
       )}
 
@@ -1961,10 +1915,11 @@ const ScholarshipBrowser: React.FC<ScholarshipBrowserProps> = ({
                         ref={(el) => {
                           if (el) buttonRefs.current.set(scholarship.id, el);
                         }}
-                        className={`flex-1 h-12 px-4 sm:px-6 rounded-2xl font-bold text-xs lg:text-sm uppercase tracking-wide flex items-center justify-center group-hover:shadow-2xl transform group-hover:scale-105 transition-all duration-300 relative overflow-hidden active:scale-95 focus:outline-none focus:ring-2 focus:ring-[#05294E]/50 focus:ring-offset-2 ${inCart
-                          ? 'bg-gradient-to-r from-red-500 to-red-600 text-white hover:from-red-600 hover:to-red-700'
-                          : 'bg-gradient-to-r from-[#05294E] via-[#05294E] to-slate-700 text-white hover:from-[#041f3a] hover:to-slate-600'
-                          } ${alreadyApplied ? 'bg-slate-300 text-slate-500 cursor-not-allowed hover:scale-100' : ''}`}
+                        className={`flex-1 h-12 px-4 sm:px-6 rounded-2xl font-bold text-xs lg:text-sm uppercase tracking-wide flex items-center justify-center group-hover:shadow-2xl transform group-hover:scale-105 transition-all duration-300 relative overflow-hidden active:scale-95 focus:outline-none focus:ring-2 focus:ring-[#05294E]/50 focus:ring-offset-2 ${
+                           inCart 
+                             ? 'bg-gradient-to-r from-blue-600 to-blue-700 text-white hover:from-blue-700 hover:to-blue-800 shadow-md' 
+                             : 'bg-gradient-to-r from-blue-400 to-blue-500 text-white hover:from-blue-500 hover:to-blue-600'
+                         } ${alreadyApplied ? 'bg-slate-300 text-slate-500 cursor-not-allowed hover:scale-100' : ''}`}
                         onClick={async () => {
                           if (alreadyApplied || isBlocked) return;
 
@@ -1992,17 +1947,17 @@ const ScholarshipBrowser: React.FC<ScholarshipBrowserProps> = ({
                         }}
                         disabled={alreadyApplied || isCheckingDiscount}
                       >
-                        <div className="absolute inset-0 bg-gradient-to-r from-white/0 via-white/25 to-white/0 transform -skew-x-12 -translate-x-full group-hover:translate-x-full transition-transform duration-1000"></div>
-                        <Award className="h-5 w-5 sm:h-6 sm:w-6 mr-2 relative z-10 group-hover:scale-110 transition-transform text-white" aria-hidden="true" />
-                        <span className="relative z-10">
-                          {alreadyApplied ? t('studentDashboard.findScholarships.scholarshipCard.alreadyApplied') : inCart ? t('studentDashboard.findScholarships.scholarshipCard.deselect') : (
-                            isCheckingDiscount ? t('studentDashboard.findScholarships.scholarshipCard.checking') : t('studentDashboard.findScholarships.scholarshipCard.selectScholarship')
-                          )}
-                        </span>
-                        {!alreadyApplied && !isCheckingDiscount && <ArrowRight className="h-5 w-5 sm:h-6 sm:w-6 ml-2 group-hover:translate-x-1 transition-transform relative z-10 text-white" aria-hidden="true" />}
-                        {!alreadyApplied && isCheckingDiscount && (
-                          <div className="w-3 h-3 sm:w-4 sm:h-4 ml-2 border-2 border-white border-t-transparent rounded-full animate-spin relative z-10"></div>
-                        )}
+                                         <div className="absolute inset-0 bg-gradient-to-r from-white/0 via-white/25 to-white/0 transform -skew-x-12 -translate-x-full group-hover:translate-x-full transition-transform duration-1000"></div>
+                       <Award className="h-5 w-5 sm:h-6 sm:w-6 mr-2 relative z-10 group-hover:scale-110 transition-transform text-white" aria-hidden="true" />
+                       <span className="relative z-10">
+                         {alreadyApplied ? t('studentDashboard.findScholarships.scholarshipCard.alreadyApplied') : inCart ? 'Remove from Selection' : (
+                           isCheckingDiscount ? t('studentDashboard.findScholarships.scholarshipCard.checking') : t('studentDashboard.findScholarships.scholarshipCard.selectScholarship')
+                         )}
+                       </span>
+                       {!alreadyApplied && !isCheckingDiscount && <ArrowRight className="h-5 w-5 sm:h-6 sm:w-6 ml-2 group-hover:translate-x-1 transition-transform relative z-10 text-white" aria-hidden="true" />}
+                       {!alreadyApplied && isCheckingDiscount && (
+                         <div className="w-3 h-3 sm:w-4 sm:h-4 ml-2 border-2 border-white border-t-transparent rounded-full animate-spin relative z-10"></div>
+                       )}
                       </button>
                     )}
                   </div>

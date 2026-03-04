@@ -114,6 +114,7 @@ const MyApplications: React.FC = () => {
     }));
   };
 
+  /*
   // Função para verificar se há documentos pendentes (mover para antes das outras funções)
   const hasPendingDocuments = (application: ApplicationWithScholarship) => {
     const docs = parseApplicationDocuments((application as any).documents);
@@ -121,6 +122,7 @@ const MyApplications: React.FC = () => {
       doc.status === 'pending' || doc.status === 'under_review' || doc.status === 'changes_requested'
     );
   };
+  */
 
 
 
@@ -512,6 +514,7 @@ const MyApplications: React.FC = () => {
 
 
 
+  /*
   // Estilo para status dos documentos (nível do documento, não da aplicação)
   const getDocBadgeClasses = (status: string) => {
     const s = (status || '').toLowerCase();
@@ -520,6 +523,7 @@ const MyApplications: React.FC = () => {
     if (s === 'under_review') return 'bg-amber-100 text-amber-700 border border-amber-200';
     return 'bg-slate-100 text-slate-700 border border-slate-200';
   };
+  */
 
   const docKey = (applicationId: string, type: string) => `${applicationId}:${type}`;
 
@@ -702,7 +706,7 @@ const MyApplications: React.FC = () => {
     );
   }
 
-  const hasSelectedScholarship = false;
+
 
   const getLevelColor = (level: any) => {
     switch (level.toLowerCase()) {
@@ -759,7 +763,7 @@ const MyApplications: React.FC = () => {
   };
 
   // Função para processar checkout Stripe
-  const handleStripeCheckout = async (exchangeRate?: number) => {
+  const handleStripeCheckout = async () => {
     if (!pendingApplication) return;
 
     try {
@@ -920,6 +924,7 @@ const MyApplications: React.FC = () => {
     }
   };
 
+  /*
   // Função para processar checkout Zelle
   const handleZelleCheckout = async () => {
     if (!pendingApplication) return;
@@ -941,7 +946,9 @@ const MyApplications: React.FC = () => {
       console.error('Erro ao processar checkout Zelle:', error);
     }
   };
+  */
 
+  /*
   // Função para notificar universidade quando Application Fee for paga
   const notifyUniversityApplicationFeePaid = async (application: ApplicationWithScholarship) => {
     try {
@@ -1017,6 +1024,7 @@ const MyApplications: React.FC = () => {
       console.error('Erro ao notificar universidade sobre Scholarship Fee:', error);
     }
   };
+  */
 
   // Função para processar checkout Stripe da Scholarship Fee
   const handleScholarshipFeeCheckout = async (exchangeRate?: number) => {
@@ -1187,6 +1195,174 @@ const MyApplications: React.FC = () => {
 
     } catch (error) {
       console.error('Erro ao processar checkout PIX para scholarship fee:', error);
+      setShowScholarshipFeeModal(true);
+    } finally {
+      setIsProcessingScholarshipFeeCheckout(false);
+    }
+  };
+
+  // Função para processar checkout Parcelow (Application Fee)
+  const handleParcelowCheckout = async () => {
+    if (!pendingApplication) return;
+    
+    try {
+      setIsProcessingCheckout(true);
+      
+      const baseAmount = getApplicationFeeWithDependents(pendingApplication.scholarships?.application_fee_amount || 35000);
+      const finalAmount = (window as any).__checkout_final_amount || baseAmount;
+      const promotionalCoupon = (window as any).__checkout_promotional_coupon || null;
+      
+      console.log('Iniciando checkout Parcelow para application fee:', {
+        applicationId: pendingApplication.id,
+        scholarshipId: pendingApplication.scholarship_id,
+        baseAmount,
+        finalAmount,
+      });
+      
+      const { data: sessionData } = await supabase.auth.getSession();
+      const token = sessionData.session?.access_token;
+      
+      if (!token) {
+        throw new Error('Usuário não autenticado');
+      }
+
+      const parcelowUrl = `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/parcelow-checkout-application-fee`;
+      
+      const response = await fetch(parcelowUrl, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${token}`
+        },
+        body: JSON.stringify({
+          amount: finalAmount,
+          fee_type: 'application_fee',
+          metadata: {
+            application_id: pendingApplication.id,
+            selected_scholarship_id: pendingApplication.scholarship_id,
+            fee_type: 'application_fee',
+            amount: finalAmount,
+            application_fee_amount: finalAmount,
+            original_amount: baseAmount,
+            final_amount: finalAmount,
+            promotional_coupon: promotionalCoupon
+          },
+          promotional_coupon: promotionalCoupon,
+          scholarships_ids: [pendingApplication.scholarship_id],
+        }),
+      });
+
+      if (!response.ok) {
+        let errorData: any = {};
+        try {
+          errorData = await response.json();
+        } catch {
+          throw new Error('Erro ao criar sessão Parcelow');
+        }
+        
+        if (errorData.error === 'document_number_required') {
+          alert('CPF é obrigatório para pagamento via Parcelow. Por favor, atualize seu perfil.');
+          setIsProcessingCheckout(false);
+          return;
+        }
+        
+        throw new Error(errorData.message || errorData.error || 'Erro ao criar sessão Parcelow');
+      }
+
+      const data = await response.json();
+      if (data.checkout_url) {
+        console.log('[Parcelow] Redirecionando para:', data.checkout_url);
+        window.location.href = data.checkout_url;
+      } else {
+        throw new Error('URL de checkout Parcelow não encontrada');
+      }
+      
+    } catch (error) {
+      console.error('Erro ao processar checkout Parcelow:', error);
+      setShowConfirmationModal(true);
+    } finally {
+      setIsProcessingCheckout(false);
+    }
+  };
+
+  // Função para processar checkout Parcelow (Scholarship Fee)
+  const handleScholarshipFeeParcelowCheckout = async () => {
+    if (!pendingScholarshipFeeApplication) return;
+    
+    try {
+      setIsProcessingScholarshipFeeCheckout(true);
+      
+      const baseAmount = getFeeAmount('scholarship_fee');
+      const finalAmount = (window as any).__checkout_final_amount || baseAmount;
+      const promotionalCoupon = (window as any).__checkout_promotional_coupon || null;
+      
+      console.log('Iniciando checkout Parcelow para scholarship fee:', {
+        applicationId: pendingScholarshipFeeApplication.id,
+        scholarshipId: pendingScholarshipFeeApplication.scholarship_id,
+        baseAmount,
+        finalAmount,
+      });
+      
+      const { data: sessionData } = await supabase.auth.getSession();
+      const token = sessionData.session?.access_token;
+      
+      if (!token) {
+        throw new Error('Usuário não autenticado');
+      }
+
+      const parcelowUrl = `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/parcelow-checkout-scholarship-fee`;
+      
+      const response = await fetch(parcelowUrl, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${token}`
+        },
+        body: JSON.stringify({
+          amount: finalAmount,
+          fee_type: 'scholarship_fee',
+          metadata: {
+            application_id: pendingScholarshipFeeApplication.id,
+            selected_scholarship_id: pendingScholarshipFeeApplication.scholarship_id,
+            fee_type: 'scholarship_fee',
+            amount: finalAmount,
+            scholarship_fee_amount: finalAmount,
+            original_amount: baseAmount,
+            final_amount: finalAmount,
+            promotional_coupon: promotionalCoupon
+          },
+          promotional_coupon: promotionalCoupon,
+          scholarships_ids: [pendingScholarshipFeeApplication.scholarship_id],
+        }),
+      });
+
+      if (!response.ok) {
+        let errorData: any = {};
+        try {
+          errorData = await response.json();
+        } catch {
+          throw new Error('Erro ao criar sessão Parcelow');
+        }
+        
+        if (errorData.error === 'document_number_required') {
+          alert('CPF é obrigatório para pagamento via Parcelow. Por favor, atualize seu perfil.');
+          setIsProcessingScholarshipFeeCheckout(false);
+          return;
+        }
+        
+        throw new Error(errorData.message || errorData.error || 'Erro ao criar sessão Parcelow');
+      }
+
+      const data = await response.json();
+      if (data.checkout_url) {
+        console.log('[Parcelow] Redirecionando para:', data.checkout_url);
+        window.location.href = data.checkout_url;
+      } else {
+        throw new Error('URL de checkout Parcelow não encontrada');
+      }
+      
+    } catch (error) {
+      console.error('Erro ao processar checkout Parcelow para scholarship fee:', error);
       setShowScholarshipFeeModal(true);
     } finally {
       setIsProcessingScholarshipFeeCheckout(false);
@@ -1827,19 +2003,19 @@ const MyApplications: React.FC = () => {
                                       </button>
 
                                       <div
-                                        className={`transition-all duration-300 ease-in-out ${openChecklists[application.id]
-                                            ? 'max-h-[5000px] opacity-100'
-                                            : 'max-h-0 opacity-0 overflow-hidden'
-                                          }`}
-                                      >
-                                        <div className="space-y-3 pt-2">
-                                          {/* Required Documents */}
-                                          {allDocuments.map((doc) => {
-                                            const status = (doc.status || '').toLowerCase();
-                                            const isApproved = status === 'approved';
-                                            const isRejected = status === 'changes_requested' || status === 'rejected';
-                                            const isUnderReview = status === 'under_review';
-                                            const isPending = !isApproved && !isRejected && !isUnderReview;
+                                      className={`transition-all duration-300 ease-in-out ${openChecklists[application.id]
+                                          ? 'max-h-[5000px] opacity-100'
+                                          : 'max-h-0 opacity-0 overflow-hidden'
+                                      }`}
+                                   >
+                                     <div className="space-y-3 pt-2">
+                                       {/* Required Documents */}
+                                       {allDocuments.map((doc) => {
+                                         const status = (doc.status || '').toLowerCase();
+                                         const isApproved = status === 'approved';
+                                         const isRejected = status === 'changes_requested' || status === 'rejected';
+                                         const isUnderReview = status === 'under_review';
+                                         // const isPending = !isApproved && !isRejected && !isUnderReview;
 
                                             return (
                                               <div key={doc.type} className={`bg-white rounded-xl border-2 p-2 sm:p-4 hover:border-slate-300 transition-all duration-200 w-full max-w-full overflow-visible ${isRejected ? 'border-red-500' : 'border-slate-200'}`}>
@@ -1968,120 +2144,124 @@ const MyApplications: React.FC = () => {
                                             );
                                           })}
 
-                                          {/* University Additional Requests */}
-                                          {reqUploads.length > 0 && (
-                                            <div className="bg-gradient-to-br from-slate-50 to-blue-50 rounded-xl border-2 border-slate-200 p-4">
-                                              <h5 className="text-sm font-bold text-slate-900 mb-3 flex items-center">
-                                                <Building className="h-4 w-4 mr-2 text-blue-600" />
-                                                {t('studentDashboard.myApplications.documents.universityAdditionalRequests')}
-                                              </h5>
-                                              <div className="space-y-2">
-                                                {reqUploads.map((req, idx) => {
-                                                  const status = (req.status || '').toLowerCase();
-                                                  const isApproved = status === 'approved';
-                                                  const isRejected = status === 'rejected';
-                                                  const isUnderReview = status === 'under_review';
+                                       {/* University Additional Requests */}
+                                       {reqUploads.length > 0 && (
+                                         <div className="bg-gradient-to-br from-slate-50 to-blue-50 rounded-xl border-2 border-slate-200 p-4">
+                                           <h5 className="text-sm font-bold text-slate-900 mb-3 flex items-center">
+                                             <Building className="h-4 w-4 mr-2 text-blue-600" />
+                                             {t('studentDashboard.myApplications.documents.universityAdditionalRequests')}
+                                           </h5>
+                                           <div className="space-y-2">
+                                             {reqUploads.map((req, idx) => {
+                                               const status = (req.status || '').toLowerCase();
+                                               const isApproved = status === 'approved';
+                                               const isRejected = status === 'rejected';
+                                               // const isUnderReview = status === 'under_review';
+                                               
+                                               return (
+                                                 <div key={idx} className="bg-white rounded-lg border border-slate-200 p-3">
+                                                    <div className="flex flex-col gap-1.5">
+                                                      <div className="flex items-center">
+                                                       <div className={`w-4 h-4 rounded-full border flex items-center justify-center mr-2 ${
+                                                         isApproved 
+                                                           ? 'bg-green-100 border-green-400' 
+                                                           : isRejected 
+                                                             ? 'bg-red-100 border-red-400'
+                                                             : 'bg-amber-100 border-amber-400'
+                                                       }`}>
+                                                         {isApproved ? (
+                                                           <CheckCircle className="h-3 w-3 text-green-600" />
+                                                         ) : isRejected ? (
+                                                           <XCircle className="h-3 w-3 text-red-600" />
+                                                         ) : (
+                                                           <Clock className="h-3 w-3 text-amber-600" />
+                                                         )}
+                                                       </div>
+                                                       <span className="font-medium text-slate-900 text-xs">
+                                                         <TruncatedText
+                                                           text={req.title}
+                                                           maxLength={35}
+                                                           className="font-medium text-slate-900 text-xs"
+                                                           showTooltip={true}
+                                                           tooltipPosition="top"
+                                                         />
+                                                       </span>
+                                                     </div>
+                                                     <span className={`px-2 py-1 rounded-full text-xs font-bold ${
+                                                       isApproved 
+                                                         ? 'bg-green-100 text-green-700' 
+                                                         : isRejected 
+                                                           ? 'bg-red-100 text-red-700'
+                                                           : 'bg-amber-100 text-amber-700'
+                                                     }`}>
+                                                       {isApproved ? t('studentDashboard.myApplications.documents.status.approved') : isRejected ? t('studentDashboard.myApplications.documents.status.changesNeeded') : t('studentDashboard.myApplications.documents.status.underReview')}
+                                                     </span>
+                                                   </div>
+                                                   {isRejected && (req.rejection_reason || req.review_notes) && (
+                                                     <div className="mt-2 p-3 text-xs text-red-700 bg-red-50 border border-red-200 rounded-lg">
+                                                       <strong className="block mb-1">{t('studentDashboard.myApplications.documents.review')}</strong>
+                                                       <TruncatedText
+                                                         text={req.rejection_reason || req.review_notes || ''}
+                                                         maxLength={120}
+                                                         className="text-xs text-red-700 leading-relaxed"
+                                                         showTooltip={true}
+                                                         tooltipPosition="top"
+                                                       />
+                                                     </div>
+                                                   )}
+                                                 </div>
+                                               );
+                                             })}
+                                           </div>
+                                         </div>
+                                       )}
+                                     </div>
+                                   </div>
+                                 </div>
+                              );
+                            })()}
+                          </div>
+                        </div>
+                      );
+                    })}
+                  </div>
+                </section>
+              );
+            })()}
+          </div>
+        </>
+      )}
+      
+      {/* Modal de confirmação para Application Fee */}
+      {pendingApplication && (
+        <ScholarshipConfirmationModal
+          isOpen={showConfirmationModal}
+          onClose={() => setShowConfirmationModal(false)}
+          scholarship={pendingApplication.scholarships!}
+          onStripeCheckout={handleStripeCheckout}
+          onPixCheckout={handlePixCheckout}
+          onParcelowCheckout={handleParcelowCheckout}
+          isProcessing={isProcessingCheckout}
+          applicationId={pendingApplication.id}
+        />
+      )}
 
-                                                  return (
-                                                    <div key={idx} className="bg-white rounded-lg border border-slate-200 p-3">
-                                                      <div className="flex flex-col gap-1.5">
-                                                        <div className="flex items-center">
-                                                          <div className={`w-4 h-4 rounded-full border flex items-center justify-center mr-2 ${isApproved
-                                                              ? 'bg-green-100 border-green-400'
-                                                              : isRejected
-                                                                ? 'bg-red-100 border-red-400'
-                                                                : 'bg-amber-100 border-amber-400'
-                                                            }`}>
-                                                            {isApproved ? (
-                                                              <CheckCircle className="h-3 w-3 text-green-600" />
-                                                            ) : isRejected ? (
-                                                              <XCircle className="h-3 w-3 text-red-600" />
-                                                            ) : (
-                                                              <Clock className="h-3 w-3 text-amber-600" />
-                                                            )}
-                                                          </div>
-                                                          <span className="font-medium text-slate-900 text-xs">
-                                                            <TruncatedText
-                                                              text={req.title}
-                                                              maxLength={35}
-                                                              className="font-medium text-slate-900 text-xs"
-                                                              showTooltip={true}
-                                                              tooltipPosition="top"
-                                                            />
-                                                          </span>
-                                                        </div>
-                                                        <span className={`px-2 py-1 rounded-full text-xs font-bold ${isApproved
-                                                            ? 'bg-green-100 text-green-700'
-                                                            : isRejected
-                                                              ? 'bg-red-100 text-red-700'
-                                                              : 'bg-amber-100 text-amber-700'
-                                                          }`}>
-                                                          {isApproved ? t('studentDashboard.myApplications.documents.status.approved') : isRejected ? t('studentDashboard.myApplications.documents.status.changesNeeded') : t('studentDashboard.myApplications.documents.status.underReview')}
-                                                        </span>
-                                                      </div>
-                                                      {isRejected && (req.rejection_reason || req.review_notes) && (
-                                                        <div className="mt-2 p-3 text-xs text-red-700 bg-red-50 border border-red-200 rounded-lg">
-                                                          <strong className="block mb-1">{t('studentDashboard.myApplications.documents.review')}</strong>
-                                                          <TruncatedText
-                                                            text={req.rejection_reason || req.review_notes || ''}
-                                                            maxLength={120}
-                                                            className="text-xs text-red-700 leading-relaxed"
-                                                            showTooltip={true}
-                                                            tooltipPosition="top"
-                                                          />
-                                                        </div>
-                                                      )}
-                                                    </div>
-                                                  );
-                                                })}
-                                              </div>
-                                            </div>
-                                          )}
-                                        </div>
-                                      </div>
-                                    </div>
-                                  );
-                                })()}
-                              </div>
-                            </div>
-                          );
-                        })}
-                      </div>
-                    </section>
-                  );
-                })()}
-              </div>
-            </>
-          )}
-
-          {/* Modal de confirmação para Application Fee */}
-          {pendingApplication && (
-            <ScholarshipConfirmationModal
-              isOpen={showConfirmationModal}
-              onClose={() => setShowConfirmationModal(false)}
-              scholarship={pendingApplication.scholarships!}
-              onStripeCheckout={handleStripeCheckout}
-              onPixCheckout={handlePixCheckout}
-              isProcessing={isProcessingCheckout}
-              applicationId={pendingApplication.id}
-            />
-          )}
-
-          {/* Modal de confirmação para Scholarship Fee */}
-          {pendingScholarshipFeeApplication && (
-            <ScholarshipConfirmationModal
-              isOpen={showScholarshipFeeModal}
-              onClose={() => setShowScholarshipFeeModal(false)}
-              scholarship={pendingScholarshipFeeApplication.scholarships!}
-              onStripeCheckout={handleScholarshipFeeCheckout}
-              onPixCheckout={handleScholarshipFeePixCheckout}
-              isProcessing={isProcessingScholarshipFeeCheckout}
-              feeType="scholarship_fee"
-              applicationId={pendingScholarshipFeeApplication.id}
-            />
-          )}
-        </div>
+      {/* Modal de confirmação para Scholarship Fee */}
+      {pendingScholarshipFeeApplication && (
+        <ScholarshipConfirmationModal
+          isOpen={showScholarshipFeeModal}
+          onClose={() => setShowScholarshipFeeModal(false)}
+          scholarship={pendingScholarshipFeeApplication.scholarships!}
+          onStripeCheckout={handleScholarshipFeeCheckout}
+          onPixCheckout={handleScholarshipFeePixCheckout}
+          onParcelowCheckout={handleScholarshipFeeParcelowCheckout}
+          isProcessing={isProcessingScholarshipFeeCheckout}
+          feeType="scholarship_fee"
+          applicationId={pendingScholarshipFeeApplication.id}
+        />
+      )}
       </div>
+    </div>
     </>
   );
 };

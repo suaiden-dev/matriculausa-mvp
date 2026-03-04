@@ -1,120 +1,4 @@
 {
-  "preCheckoutModal": {
-    "noTermsFound": "No terms found",
-    "securePayment": "Secure Payment",
-    "closeModal": "Close modal",
-    "closeTerms": "Close terms",
-    "totalAmount": "Total amount",
-    "securePaymentGateway": "Secure payment gateway",
-    "promotionalCoupon": {
-      "title": "Promotional Coupon",
-      "enterCode": "Enter code",
-      "validate": "Validate",
-      "validating": "Validating...",
-      "remove": "Remove coupon",
-      "applied": "discount",
-      "discountedValue": "Discounted value",
-      "originalValue": "(original)",
-      "enterCodePlease": "Please enter the coupon code",
-      "successMessage": "Coupon {{code}} applied! Discount of ${{amount}} applied."
-    },
-    "referralCode": "Referral Code",
-    "codeAlreadyUsed": "Code already used",
-    "discountAlreadyApplied": "Discount already applied to your account",
-    "haveReferralCode": "Do you have a friend referral code?",
-    "placeholder": "Enter code here",
-    "validating": "Validating...",
-    "validate": "Validate Code",
-    "acceptContractTerms": "I have read and accept the contract terms and conditions",
-    "processingPayment": "Processing...",
-    "applyCodeAndContinue": "Apply Code and Continue",
-    "goToPayment": "Go to Payment",
-    "termsAndConditions": {
-      "title": "Terms and Conditions"
-    },
-    "scrollToBottomFirst": "Scroll to bottom to accept",
-    "readingTerms": "Reading terms...",
-    "acceptTerms": "Accept Terms",
-    "cancel": "Cancel",
-    "loading": "Loading...",
-    "validCode": "Valid referral code! You will receive $50 discount on the selection process fee.",
-    "pleaseEnterCode": "Please enter a code",
-    "sellerReferralCodeBlocked": "Users with seller code cannot use additional discount codes.",
-    "errorValidating": "Error validating code. Please try again.",
-    "mustAcceptTerms": "You must accept the terms and conditions to continue."
-  },
-  "zelleComponent": {
-    "instructions": {
-      "title": "Zelle Payment Instructions",
-      "subtitle": "Follow these steps to complete your payment via Zelle",
-      "detailsTitle": "Zelle Payment Details",
-      "detailsSubtitle": "Send payment to the recipient below",
-      "recipientEmail": "Recipient Email",
-      "paymentAmount": "Payment Amount",
-      "youSaved": "You saved {{amount}}!",
-      "important": "Important",
-      "importantNote": "Make sure to send the exact amount of <strong>{{amount}}</strong> to <strong>{{email}}</strong> via Zelle. Any discrepancy will delay your payment processing.",
-      "uploadTitle": "Upload Payment Confirmation Screenshot *",
-      "clickToUpload": "Click to upload or drag and drop",
-      "fileFormats": "PNG, JPG up to 5MB",
-      "selectFile": "Select File",
-      "remove": "Remove",
-      "changeFile": "Change File",
-      "submitPayment": "Submit Payment",
-      "processing": "Processing...",
-      "paymentProcessing": "Payment Processing..."
-    },
-    "analyzing": {
-      "title": "Analyzing Payment...",
-      "subtitle": "Your payment confirmation is being automatically validated by our AI system."
-    },
-    "underReview": {
-      "title": "Payment Under Review",
-      "subtitle": "Your payment proof requires additional verification. Our team will review it within 48 hours.",
-      "notification": "You will be notified once the review is complete. Please do not submit another payment."
-    },
-    "success": {
-      "title": "Payment Approved Successfully!",
-      "subtitle": "Your Zelle payment has been processed and approved. You can now proceed with the next steps.",
-      "detailsTitle": "Payment Details:",
-      "originalAmount": "Original Amount:",
-      "discountApplied": "Discount Applied:",
-      "finalAmount": "Final Amount:",
-      "youSavedSuccess": "You saved!",
-      "amount": "Amount:",
-      "feeType": "Fee Type:",
-      "paymentId": "Payment ID:",
-      "submitted": "Submitted:",
-      "nextStepsTitle": "What happens next?",
-      "stepUploaded": "Payment confirmation uploaded",
-      "stepApproved": "Payment approved successfully",
-      "stepProceeding": "Proceeding to next step automatically"
-    },
-    "rejected": {
-      "title": "Payment Rejected",
-      "subtitle": "Your payment proof was not approved. Please review the reason below and upload a new payment confirmation.",
-      "reasonTitle": "Rejection Reason:",
-      "defaultReason": "Payment was rejected by admin. Please upload a new payment confirmation.",
-      "uploadNew": "Upload New Payment Proof",
-      "uploadNewNote": "Click the button above to upload a new payment confirmation screenshot"
-    },
-    "uploadModal": {
-      "uploadingTitle": "Uploading Document...",
-      "uploadingMessage": "Please wait while we upload your payment confirmation",
-      "sendingTitle": "Sending for Verification...",
-      "sendingMessage": "Your payment proof is being sent for automatic validation",
-      "analyzingTitle": "Analyzing Payment...",
-      "analyzingMessage": "Our AI is validating your payment confirmation"
-    },
-    "errors": {
-      "fileSize": "File size must be less than 5MB",
-      "fileType": "Please select an image file (JPG, PNG, etc.)",
-      "uploadRequired": "Please upload a screenshot of your payment confirmation",
-      "uploadFailed": "Failed to upload payment confirmation",
-      "alreadyPending": "You already have a payment being processed. Please wait for it to be reviewed.",
-      "checkingStatus": "Checking payment status..."
-    }
-  },
   "stepByStepGuide": {
     "title": "Step-by-Step Guide",
     "subtitle": "How the application process works",
@@ -1680,6 +1564,50 @@
       "weakPassword": "Password is too weak. Please choose a stronger password.",
       "invalidEmail": "Please enter a valid email address.",
       "signupDisabled": "New registrations are currently disabled. Please contact support.",
+      "preCheckoutModal": {
+        "noTermsFound": "No terms found",
+        "securePayment": "Secure Payment",
+        "closeModal": "Close modal",
+        "closeTerms": "Close terms",
+        "totalAmount": "Total amount",
+        "securePaymentGateway": "Secure payment gateway",
+        "promotionalCoupon": {
+          "title": "Promotional Coupon",
+          "enterCode": "Enter code",
+          "validate": "Validate",
+          "validating": "Validating...",
+          "remove": "Remove coupon",
+          "applied": "discount",
+          "discountedValue": "Discounted value",
+          "originalValue": "(original)",
+          "enterCodePlease": "Please enter the coupon code",
+          "successMessage": "Coupon {{code}} applied! Discount of ${{amount}} applied."
+        },
+        "referralCode": "Referral Code",
+        "codeAlreadyUsed": "Code already used",
+        "discountAlreadyApplied": "Discount already applied to your account",
+        "haveReferralCode": "Do you have a friend referral code?",
+        "placeholder": "Enter code here",
+        "validating": "Validating...",
+        "validate": "Validate Code",
+        "acceptContractTerms": "I have read and accept the contract terms and conditions",
+        "processingPayment": "Processing...",
+        "applyCodeAndContinue": "Apply Code and Continue",
+        "goToPayment": "Go to Payment",
+        "termsAndConditions": {
+          "title": "Terms and Conditions"
+        },
+        "scrollToBottomFirst": "Scroll to bottom to accept",
+        "readingTerms": "Reading terms...",
+        "acceptTerms": "Accept Terms",
+        "cancel": "Cancel",
+        "loading": "Loading...",
+        "validCode": "Valid referral code! You will receive $50 discount on the selection process fee.",
+        "pleaseEnterCode": "Please enter a code",
+        "sellerReferralCodeBlocked": "Users with seller code cannot use additional discount codes.",
+        "errorValidating": "Error validating code. Please try again.",
+        "mustAcceptTerms": "You must accept the terms and conditions to continue."
+      },
       "errors": {
         "serverError": "Error connecting to server",
         "tryAgain": "Please try again",
@@ -1687,18 +1615,7 @@
         "connectionError": "Error validating coupon. Check your connection and try again."
       },
       "registrationFailed": "Registration Failed",
-      "emailAlreadyRegistered": "This email is already registered. Please sign in or use another email.",
-      "identityVerificationModal": {
-        "title": "Identity Verification",
-        "subtitle": "For your security and compliance, we need a quick selfie holding your document.",
-        "cameraHelp": "Take a selfie holding your ID document next to your face. Make sure both are legible.",
-        "successTitle": "Photo Uploaded!",
-        "successMessage": "Thank you! Our team will review your photo shortly. You can now explore the dashboard.",
-        "submitButton": "Upload Photo",
-        "skipButton": "Do it later",
-        "submitting": "Uploading...",
-        "description": "As part of our security process, we request a photo of you holding an official identification document (Passport or ID)."
-      }
+      "emailAlreadyRegistered": "This email is already registered. Please sign in or use another email."
     }
   },
   "ssoCallback": {
@@ -1766,6 +1683,54 @@
     "viewProfile": "View Profile",
     "applyNow": "Apply Now"
   },
+  "common": {
+    "loading": "Loading...",
+    "error": "Error",
+    "success": "Success",
+    "save": "Save",
+    "cancel": "Cancel",
+    "confirm": "Confirm",
+    "delete": "Delete",
+    "edit": "Edit",
+    "view": "View",
+    "back": "Back",
+    "next": "Next",
+    "previous": "Previous",
+    "submit": "Submit",
+    "close": "Close",
+    "search": "Search",
+    "filter": "Filter",
+    "clear": "Clear",
+    "refresh": "Refresh",
+    "download": "Download",
+    "upload": "Upload",
+    "required": "Required",
+    "optional": "Optional",
+    "yes": "Yes",
+    "no": "No",
+    "showMore": "Show More",
+    "showLess": "Show Less",
+    "changeFile": "Change File",
+    "readMore": "Read More",
+    "learnMore": "Learn More",
+    "featured": "Featured",
+    "exclusive": "Exclusive",
+    "apply": "Apply",
+    "viewDetails": "View Details",
+    "deadline": "Deadline",
+    "amount": "Amount",
+    "support": "Support",
+    "expirationDate": "Status/I-94 expiration date",
+    "name": "Name",
+    "email": "Email",
+    "profile": "Profile",
+    "section": "Section",
+    "of": "of",
+    "active": "active",
+    "language": "English",
+    "welcome": "Welcome",
+    "finish": "Finish"
+  },
   "profileRequiredModal": {
     "cpfMissing": {
       "title": "CPF Required",
@@ -1780,6 +1745,74 @@
       "buttonCompleteProfile": "Complete Profile"
     },
     "notNow": "Not Now"
+  },
+  "selectionFeeStep": {
+    "main": {
+      "title": "Selection Process Fee",
+      "subtitle": "This fee covers the processing of your application, document evaluation, and initial support for your study process.",
+      "headerTitle": "Selection Process Fee",
+      "headerSubtitle": "Matricula USA - One-time fee",
+      "description": "This fee covers your application processing, document evaluation, and initial support for your study journey in the United States.",
+      "identityVerification": "Identity Verification",
+      "identityVerificationSubtitle": "This step is mandatory",
+      "discountApplied": "Discount Applied",
+      "couponApplied": "Coupon {{coupon}} Applied",
+      "methods": {
+        "stripe": "Credit Card"
+      },
+      "paymentProcessing": {
+        "title": "Processing Payment",
+        "subtitle": "Please wait while we process your payment..."
+      },
+      "zellePayment": "Zelle Payment",
+      "zelleProcessing": {
+        "title": "Zelle Payment Processing",
+        "subtitle": "Your Zelle payment is currently being verified."
+      },
+      "zelleUnavailable": "Zelle is currently unavailable",
+      "parcelowInstallments": "Up to 12x",
+      "parcelowVerification": "Parcelow Verification",
+      "cpfPlaceholder": "Enter your CPF",
+      "goToPayment": "Go to Payment",
+      "selectMethod": "Select Payment Method",
+      "serviceContract": "Service Contract",
+      "back": "Back",
+      "referralCode": {
+        "title": "Referral Code",
+        "subtitle": "Got a friend's code? Enter it here for a discount!",
+        "placeholder": "Enter Referral Code",
+        "validate": "Validate Code",
+        "applied": "Code applied successfully",
+        "discount": "Discount:",
+        "originalPrice": "Original Price:",
+        "totalFinal": "Final Total:"
+      },
+      "promotionalCoupon": {
+        "title": "Promotional Coupon",
+        "subtitle": "Enter your promotional coupon code",
+        "placeholder": "Enter code",
+        "validating": "Validating...",
+        "remove": "Remove Coupon",
+        "applied": "Coupon applied",
+        "couponApplied": "Coupon applied successfully",
+        "discount": "Discount:",
+        "originalPrice": "Original Price:",
+        "totalFinal": "Final Total:"
+      },
+      "processingFees": {
+        "card": "* May include processing fees",
+        "pix": "* May include processing fees",
+        "parcelow": "* Operator and platform fees may apply",
+        "zelle": "* Processing can take up to 48 hours"
+      }
+    },
+    "paid": {
+      "title": "Application Fee Paid",
+      "subtitle": "You have successfully paid the selection process fee.",
+      "paidTitle": "Payment Confirmed",
+      "paidSubtitle": "Your payment has been successfully confirmed.",
+      "continue": "Continue"
+    }
   },
   "studentDashboard": {
     "title": "Student Dashboard",
@@ -1797,6 +1830,27 @@
       "payScholarshipFee": "Pay the Scholarship Fee to confirm your scholarship application.",
       "payI20Fee": "Pay the I-20 Control Fee to start your I-20 and document validation process.",
       "daysRemaining": "You have 10 days after the scholarship fee.",
+      "onboardingBanner": {
+        "actionRequired": "ACTION REQUIRED",
+        "stoppedAt": "Stopped at: {{step}}",
+        "startNow": "Start Now",
+        "documentsPortal": "Documents Portal",
+        "continueProcess": "Continue Process",
+        "startProcess": "Start Process",
+        "stepLabels": {
+          "welcome": "Welcome",
+          "selection_fee": "Selection Fee",
+          "scholarship_selection": "Scholarship Selection",
+          "process_type": "Process Type",
+          "documents_upload": "Documents Upload",
+          "payment": "Payment",
+          "scholarship_fee": "Scholarship Fee",
+          "university_documents": "University Documents",
+          "waiting_approval": "Waiting Approval",
+          "completed": "Completed",
+          "my_applications": "My Applications"
+        }
+      },
       "onboarding": {
         "payFee": "Pay Selection Fee",
         "payFeeDesc": "Start your process by paying the selection fee.",
@@ -1992,6 +2046,8 @@
         "level": "Level",
         "deadline": "Deadline",
         "daysLeft": "days left",
+        "days": "days",
+        "scholarshipDiscount": "Scholarship Discount",
         "showDetails": "Show Details",
         "show": "Show",
         "view": "View",
@@ -3078,6 +3134,64 @@
     "parcelowFeesNote": "* Provider and platform processing fees will be applied",
     "parcelowInstallmentPreview": "or in up to {{count}} installments"
   },
+  "preCheckoutModal": {
+    "securePayment": "Secure Payment",
+    "securePaymentProcess": "Secure Payment Process",
+    "closeModal": "Close modal",
+    "securePaymentGateway": "Secure Payment Gateway",
+    "totalAmount": "Total Amount",
+    "referralCode": "Referral Code",
+    "yourReferralCode": "Your Referral Code",
+    "enterReferralCode": "Enter your referral code to get a discount",
+    "haveReferralCode": "I have a discount code",
+    "usingYourReferralCode": "Using the referral code you used during registration",
+    "placeholder": "Enter code",
+    "validate": "Validate",
+    "validating": "Validating...",
+    "pleaseEnterCode": "Please enter a code",
+    "invalidCode": "Invalid or inactive code",
+    "selfReferral": "You cannot use your own referral code",
+    "alreadyUsedCode": "You have already used a referral code previously",
+    "sellerReferralCodeBlocked": "You cannot use Matricula Rewards codes because you have a seller referral code",
+    "sellerReferralCodeBlockedTitle": "Matricula Rewards Blocked",
+    "sellerReferralCodeBlockedMessage": "You cannot use Matricula Rewards codes because you registered with a seller referral code. This is a system restriction to prevent conflicts between different referral systems.",
+    "sellerReferralCodeInfoTitle": "Seller Referral Code Detected",
+    "sellerReferralCodeInfoMessage": "You registered with a seller referral code, so Matricula Rewards codes are not available. You can still proceed with payment at the regular price.",
+    "validCode": "Valid code! $50 discount applied",
+    "errorValidating": "Error validating code",
+    "codeAlreadyUsed": "Code already used",
+    "discountAlreadyApplied": "Your discount has already been applied previously",
+    "continueWithoutCode": "Continue without code",
+    "goToPayment": "Go to payment",
+    "applyCodeAndContinue": "Apply code and continue",
+    "processingPayment": "Processing Payment...",
+    "mustAcceptTerms": "You must accept the terms and conditions before continuing",
+    "mustEnterValidCode": "You must enter a valid code before continuing",
+    "termsAndConditions": {
+      "title": "Terms and Conditions",
+      "termsOfUse": "Terms of Use",
+      "and": "and",
+      "privacyPolicy": "Privacy Policy",
+      "description": "before proceeding with payment"
+    },
+    "closeTerms": "Close terms",
+    "loading": "Loading...",
+    "noTermsFound": "No terms found.",
+    "confirmReading": "Confirm Reading",
+    "scrollToBottomFirst": "Read to the end",
+    "acceptTerms": "Accept and Confirm",
+    "uploadPhotoRequired": "Please upload a selfie with your document to continue.",
+    "uploadPhoto": "Upload Selfie with Document",
+    "acceptContractTerms": "I accept the service contract terms and conditions",
+    "promotionalCoupon": {
+      "title": "Selection Process Fee",
+      "discountedValue": "Discounted Value",
+      "originalValue": "Original Value",
+      "applied": "Applied",
+      "successMessage": "Code {{code}} applied! You saved ${{amount}}",
+      "enterCodePlease": "Please enter a promotional code."
+    }
+  },
   "footer": {
     "company": {
       "title": "Company",
@@ -3175,7 +3289,7 @@
         "processErrorRetry": "Error processing unsubscribe request. Please try again."
       }
     },
-    "copyright": "© 2024 Matrícula USA. All rights reserved."
+    "copyright": "© 2026 Matrícula USA. All rights reserved."
   },
   "matriculaRewardsLanding": {
     "badge": "New Rewards Program",
@@ -3208,7 +3322,7 @@
         "description": "See what your account would look like with some referrals",
         "referralCode": {
           "title": "Your Referral Code",
-          "code": "MTR2024",
+          "code": "MTR2026",
           "copy": "Copy Code",
           "copied": "Copied!",
           "loginToGetCode": "Login to get your referral code"
@@ -3584,7 +3698,7 @@
       ]
     },
     "socialProof": {
-      "title": "More than 150 students approved in 2024 alone",
+      "title": "More than 150 students approved in 2026 alone",
       "subtitle": "See what our students are saying about their experience",
       "ctaButton": "BE THE NEXT APPROVED",
       "statistics": {
@@ -4019,6 +4133,90 @@
     "3800Expiring": "Last hours to apply! Deadline expires tomorrow (November 6th)",
     "3800ExpiringShort": "Deadline expires tomorrow"
   },
+  "scholarshipSelection": {
+    "header": {
+      "title": "Scholarship Selection",
+      "subtitle": "Browse through the scholarships and select which ones you would like to enroll in. You must choose at least one to proceed."
+    },
+    "errors": {
+      "loadError": "Error loading scholarships. Please try again.",
+      "alreadyLocked": "You have already passed the scholarship review. It is not possible to change the selection.",
+      "updateError": "Error updating selection. Please try again.",
+      "selectRequired": "Please select at least one scholarship to continue. Click on the scholarship cards above to add them to your selection."
+    },
+    "review": {
+      "title": "Review Your Selected Scholarships",
+      "warningTitle": "Important: This is a definitive choice",
+      "warningDescription": "By confirming, you will no longer be able to change the chosen scholarships. Please carefully review your selection below before proceeding.",
+      "unknownUniversity": "Unknown University",
+      "backButton": "Back to Selection",
+      "continueButton": "Confirm and Continue",
+      "removeButton": "Remove Selection"
+    },
+    "completed": {
+      "title": "Scholarship Selection",
+      "subtitle": "Scholarship selection successfully completed.",
+      "cardTitle": "Step Completed",
+      "cardText": "You have already selected your scholarships and passed the review. This step is complete.",
+      "continueButton": "Continue"
+    },
+    "grid": {
+      "title": "Available Scholarships",
+      "option_count": "option",
+      "option_count_plural": "options",
+      "noResults": {
+        "title": "No scholarships found",
+        "description": "Try adjusting your filters to see more options.",
+        "clearButton": "Clear all filters"
+      }
+    },
+    "filters": {
+      "title": "Filter Scholarships",
+      "searchPlaceholder": "Search scholarship...",
+      "searchKeyword": "Search Keyword",
+      "university": "University",
+      "allUniversities": "All Universities",
+      "studyLevel": "Study Level",
+      "allLevels": "All Levels",
+      "fieldOfStudy": "Field of Study",
+      "allFields": "All Fields of Study",
+      "deliveryMode": "Delivery Mode",
+      "allDeliveryModes": "All Delivery Modes",
+      "deliveryModeOptions": {
+        "online": "Online",
+        "in_person": "In Person",
+        "hybrid": "Hybrid",
+        "mixed": "Mixed"
+      },
+      "workPermission": "Work Permission",
+      "allWorkPermissions": "All Permissions",
+      "scholarshipValue": "Scholarship Value",
+      "minValue": "Min Value",
+      "maxValue": "Max Value",
+      "deadlineDays": "Deadline (days)",
+      "minPlaceholder": "Min",
+      "maxPlaceholder": "Max",
+      "deadlinePlaceholder": "Min days left",
+      "apply": "Apply Filters",
+      "clear": "Clear",
+      "activeBadge": "Active"
+    },
+    "confirmationModal": {
+      "title": "Confirm Selection",
+      "description": "By confirming, you will no longer be able to change your selected scholarships. Please carefully review your selection before proceeding.",
+      "confirm": "Confirm and Proceed",
+      "cancel": "Review Again"
+    },
+    "quickGuide": {
+      "title": "Quick guide:",
+      "step1": "<strong>Click any scholarship card</strong> to add it to your selection",
+      "step2": "<strong>Select as many as you want</strong> - you can choose multiple options",
+      "step3": "<strong>Use filters</strong> to search by university or scholarship value",
+      "step4": "<strong>Click \"Continue\"</strong> once you've selected at least one scholarship"
+    },
+    "continueWithCount": "Continue ({{count}} selected)",
+    "continueWithCount_plural": "Continue ({{count}} selected)"
+  },
   "rapidRegistration": {
     "title": "Registration and Payment",
     "subtitle": "Complete your registration and start your application process",
@@ -4057,19 +4255,12 @@
       "title": "Payment Summary",
       "total": "Total",
       "currentFee": "Total to Pay Now",
-      "dependentsFee": "Dependents Fee",
-      "couponApplied": "Coupon Applied",
-      "feeExplanation": "The Selection Process Fee ($400.00) is the first mandatory payment on the MatriculaUSA platform. It unlocks your full access to view all scholarships and start your application process.",
-      "refundAssuranceTitle": "Refund Guarantee",
-      "refundAssuranceText": "If you are not accepted by any university, the selection process fee is 100% refundable.",
+      "feeExplanation": "The Selection Process Fee ($400.00) is the first mandatory payment on the MatriculaUSA platform. It unlocks your full access to view all scholarships and start your application process. This fee is final and you will be refunded if not accepted to any university.",
       "futureFeesTitle": "Future Fees",
       "enrollmentFee": "Enrollment Fee",
       "scholarshipFee": "Scholarship Fee",
       "i20Fee": "I-20 Control Fee",
-      "enrollmentFeeTooltip": "The Enrollment Fee varies by university and is a mandatory payment to formally process your application after you have been accepted. This amount confirms your intention to enroll and is managed directly by the platform.",
-      "scholarshipFeeTooltip": "The Scholarship Fee is charged when you proceed with the application for your chosen scholarship. This fee covers platform processing costs.",
-      "i20FeeTooltip": "The I-20 Control Fee is a mandatory and essential payment to apply for the F-1 student visa. It is the final fee for the release of your scholarship acceptance letter and has a 10-day payment window.",
-      "futureFeesNote": "These fees are estimates and may vary by university."
+      "futureFeesNote": "Future fees are estimates and vary by university."
     },
     "terms": {
       "contractSubtitle": "Service Provision Agreement",
@@ -4078,14 +4269,7 @@
       "selfieStep1": "Hold your ID next to your face",
       "selfieStep2": "Make sure everything is legible",
       "clickToTakeSelfie": "Click to take your selfie",
-      "selfieFormats": "JPG or PNG • MAX 5MB",
-      "photoCaptured": "Photo captured!",
-      "removeChange": "Remove/Change",
-      "backToTerms": "Back to Terms",
-      "confirmReading": "Confirm Reading",
-      "scrollToBottom": "Read until the end",
-      "acceptAndConfirm": "Accept and Confirm",
-      "close": "Close"
+      "selfieFormats": "JPG or PNG • MAX 5MB"
     },
     "coupons": {
       "promotionalLabel": "Promotional Coupon"
@@ -4123,38 +4307,41 @@
       }
     }
   },
-  "common": {
-    "yes": "Yes",
-    "no": "No",
-    "expirationDate": "Status/I-94 expiration date",
-    "name": "Name",
-    "email": "Email",
-    "profile": "Profile",
-    "section": "Section",
-    "of": "of",
-    "loading": "Loading...",
-    "success": "Success",
-    "error": "Error",
-    "filter": "Filter",
-    "active": "active",
-    "apply": "Apply",
-    "language": "English",
-    "featured": "Featured",
-    "exclusive": "Exclusive",
-    "showMore": "show more",
-    "learnMore": "Learn more",
-    "search": "Search",
-    "support": "Support",
-    "welcome": "Welcome",
-    "close": "Close"
+  "components": {
+    "identityPhotoUpload": {
+      "titleInstructions": "How to take the correct photo",
+      "instructions": "Take a selfie holding a photo ID (passport, ID card, driver's license, or others) next to your face. Make sure both your face and the document are clearly visible.",
+      "exampleAlt": "Example photo with document",
+      "uploading": "Uploading photo...",
+      "clickToUpload": "Click to upload photo",
+      "fileTypes": "JPG or PNG (max 5MB)",
+      "success": "Photo uploaded successfully",
+      "preview": "Photo preview",
+      "previewAlt": "Identity photo preview",
+      "remove": "Remove",
+      "errors": {
+        "onlyImages": "Only JPG and PNG files are allowed",
+        "maxSize": "The file must be at most 5MB",
+        "generic": "Error uploading photo",
+        "unauthenticated": "User not authenticated"
+      }
+    }
   },
   "selectionSurvey": {
-    "title": "Alignment Questionnaire",
-    "subtitle": "Answer carefully. To pass and unlock your dashboard, you must achieve at least <0>80% correct</0> on objective questions.",
+    "identityVerification": "Identity Verification",
+    "identityVerificationHeader": "Validate Your Identity",
+    "identityVerificationSubtitle": "To ensure the security of the selection process, we need a selfie with your document before starting the questionnaire.",
+    "startSurvey": "Next Step",
+    "toastPhotoSuccess": "Photo uploaded successfully!",
+    "toastPhotoError": "Error uploading photo. Please try again.",
+    "securityNotice": "Your data is protected and encrypted",
+    "profilesIdentified": "Profile Identified",
+    "title": "Questionnaire",
+    "subtitle": "Answer carefully. To pass and continue your process, you must achieve at least <0>80% correct</0> on objective questions.",
     "mandatoryBadge": "Mandatory Selection Process",
     "nextSection": "Next Section",
     "back": "Back",
-    "finish": "Finish and See Results",
+    "finish": "Finish",
     "finishBtn": "Finish",
     "submitting": "Submitting...",
     "sections": {
@@ -4174,11 +4361,11 @@
     "copyright": "© 2026 Matrícula USA • Student Selection Process",
     "results": {
       "congratulations": "Congratulations!",
-      "passedMessage": "You have passed the selection process and are one step closer to your dream!",
+      "passedMessage": "You are eligible to proceed to scholarship selection and are one step closer to your dream",
       "score": "Your Score:",
       "minRequired": "Minimum required: 80%",
       "ctaDashboard": "Choose Scholarships",
-      "ctaDescription": "Now you can access all features and choose the scholarships you are interested in.",
+      "ctaDescription": "Now you can continue your process and choose the scholarships you are interested in.",
       "failed": "Not this time",
       "failedMessage": "You didn't reach the minimum score of 80% required for approval.",
       "failedAdvice": "We recommend reviewing the support materials and trying again.",

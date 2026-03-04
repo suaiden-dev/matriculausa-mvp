@@ -48,7 +48,7 @@ const DocumentRequestsCard: React.FC<DocumentRequestsCardProps> = ({
   // Debug: verificar se studentType está chegando corretamente
   const [requests, setRequests] = useState<DocumentRequest[]>([]);
   const [uploads, setUploads] = useState<{ [requestId: string]: DocumentRequestUpload[] }>({});
-  const [, setLoading] = useState(true);
+
   const [showNewModal, setShowNewModal] = useState(false);
   const [newRequest, setNewRequest] = useState({ title: '', description: '', due_date: '', attachment: null as File | null });
   const [error, setError] = useState<string | null>(null);
@@ -201,7 +201,6 @@ const DocumentRequestsCard: React.FC<DocumentRequestsCardProps> = ({
 
   // 2. Buscar logo da universidade junto com o universityId
   const fetchRequests = useCallback(async () => {
-    setLoading(true);
     setError(null);
     try {
       // Buscar a aplicação para obter o university_id e logo
@@ -215,7 +214,7 @@ const DocumentRequestsCard: React.FC<DocumentRequestsCardProps> = ({
       if (Array.isArray(appData.scholarships) && appData.scholarships.length > 0) {
         universityId = appData.scholarships[0]?.university_id;
       } else if (appData.scholarships && typeof appData.scholarships === 'object') {
-        universityId = appData.scholarships.university_id;
+        universityId = (appData.scholarships as any).university_id;
       }
       setUniversityId(universityId); // garantir que o estado global é atualizado
       // console.log('[DEBUG] appData:', appData);
@@ -263,7 +262,6 @@ const DocumentRequestsCard: React.FC<DocumentRequestsCardProps> = ({
       const uniqueRequests = allRequests.filter((req, idx, arr) => arr.findIndex(r => r.id === req.id) === idx);
       // console.log('[DocumentRequestsCard] uniqueRequests:', uniqueRequests.length, uniqueRequests);
       setRequests(uniqueRequests);
-      setLoading(false);
       // Buscar uploads para cada request
       if (uniqueRequests.length > 0) {
         const ids = uniqueRequests.map((r: any) => r.id);
@@ -308,7 +306,6 @@ const DocumentRequestsCard: React.FC<DocumentRequestsCardProps> = ({
     } catch (e: any) {
       setError('Failed to fetch document requests: ' + (e.message || e));
       setRequests([]);
-      setLoading(false);
     }
   }, [applicationId, isSchool, studentType]);
 
@@ -370,7 +367,7 @@ const DocumentRequestsCard: React.FC<DocumentRequestsCardProps> = ({
       }
       setShowNewModal(false);
       setNewRequest({ title: '', description: '', due_date: '', attachment: null });
-      fetchRequests();
+      await fetchRequests();
     } catch (e: any) {
       setError('Unexpected error: ' + (e.message || e));
     } finally {
@@ -380,6 +377,10 @@ const DocumentRequestsCard: React.FC<DocumentRequestsCardProps> = ({
 
 
   const handleFileSelect = (requestId: string, file: File | null) => {
+    if (file && file.type !== 'application/pdf') {
+      alert(t('studentDashboard.documentRequests.errors.onlyPdfAllowed') || 'Only PDF files are allowed.');
+      return;
+    }
     setSelectedFiles((prev: typeof selectedFiles) => ({ ...prev, [requestId]: file }));
   };
 
@@ -454,6 +455,7 @@ const DocumentRequestsCard: React.FC<DocumentRequestsCardProps> = ({
           // Fallback: usar admin padrão
           console.log('[NOTIFICAÇÃO ADMIN] ⚠️ Nenhum admin encontrado, usando fallback');
           admins = [{
+            user_id: 'fallback-admin',
             email: 'admin@matriculausa.com',
             full_name: 'Admin MatriculaUSA',
             phone: ''
@@ -462,6 +464,7 @@ const DocumentRequestsCard: React.FC<DocumentRequestsCardProps> = ({
       } catch (error) {
         console.error('[NOTIFICAÇÃO ADMIN] ❌ Erro ao buscar admins:', error);
         admins = [{
+          user_id: 'fallback-admin',
           email: 'admin@matriculausa.com',
           full_name: 'Admin MatriculaUSA',
           phone: ''
@@ -723,7 +726,9 @@ const DocumentRequestsCard: React.FC<DocumentRequestsCardProps> = ({
             }
 
             if (globalRequestData?.universities) {
-              const university = globalRequestData.universities;
+              const university = Array.isArray(globalRequestData.universities) 
+                ? globalRequestData.universities[0] 
+                : globalRequestData.universities as any;
               const emailUniversidade = university.contact?.admissionsEmail || university.contact?.email || '';
 
               if (emailUniversidade) {
@@ -812,6 +817,7 @@ const DocumentRequestsCard: React.FC<DocumentRequestsCardProps> = ({
                 scholarships!inner(
                   title,
                   universities!inner(
+                    id,
                     name,
                     contact
                   )
@@ -825,9 +831,15 @@ const DocumentRequestsCard: React.FC<DocumentRequestsCardProps> = ({
               return;
             }
 
-            if (applicationData?.scholarships?.universities) {
-              const university = (applicationData.scholarships as any).universities;
-              const scholarship = applicationData.scholarships;
+            const scholarship = Array.isArray(applicationData?.scholarships)
+              ? applicationData?.scholarships[0]
+              : applicationData?.scholarships;
+
+            if (scholarship?.universities) {
+              const university = Array.isArray(scholarship.universities)
+                ? scholarship.universities[0]
+                : scholarship.universities;
+              // const scholarship is already defined above
               const emailUniversidade = university.contact?.admissionsEmail || university.contact?.email || '';
 
               // Buscar dados do aluno através do contexto de autenticação (mesma abordagem do documento global)
@@ -972,7 +984,9 @@ const DocumentRequestsCard: React.FC<DocumentRequestsCardProps> = ({
             // console.log('[NOVO UPLOAD] Documento global - usando dados da universidade diretamente');
 
             if (requestData?.universities) {
-              const university = requestData.universities;
+              const university = Array.isArray(requestData.universities)
+                ? requestData.universities[0]
+                : requestData.universities as any;
               const emailUniversidade = university.contact?.admissionsEmail || university.contact?.email || '';
 
               if (emailUniversidade) {
@@ -1061,6 +1075,7 @@ const DocumentRequestsCard: React.FC<DocumentRequestsCardProps> = ({
                 scholarships!inner(
                   title,
                   universities!inner(
+                    id,
                     name,
                     contact
                   )
@@ -1074,9 +1089,15 @@ const DocumentRequestsCard: React.FC<DocumentRequestsCardProps> = ({
               return;
             }
 
-            if (applicationData?.scholarships?.universities) {
-              const university = (applicationData.scholarships as any).universities;
-              const scholarship = applicationData.scholarships;
+            const scholarship = Array.isArray(applicationData?.scholarships)
+              ? applicationData?.scholarships[0]
+              : applicationData?.scholarships;
+
+            if (scholarship?.universities) {
+              const university = Array.isArray(scholarship.universities)
+                ? scholarship.universities[0]
+                : scholarship.universities;
+              // const scholarship is already defined above
               const emailUniversidade = university.contact?.admissionsEmail || university.contact?.email || '';
 
               if (emailUniversidade) {
@@ -1159,10 +1180,10 @@ const DocumentRequestsCard: React.FC<DocumentRequestsCardProps> = ({
 
       // Chamar callback de logging se fornecido
       if (onDocumentUploaded) {
-        onDocumentUploaded(requestId, file.name, isResubmission || false);
+        await onDocumentUploaded(requestId, file.name, isResubmission || false);
       }
-
-      fetchRequests();
+      
+      await fetchRequests();
     } finally {
       setUploading(prev => ({ ...prev, [requestId]: false }));
     }
@@ -1289,7 +1310,7 @@ const DocumentRequestsCard: React.FC<DocumentRequestsCardProps> = ({
         try {
           const documentTitle = Array.isArray(uploadData.document_requests)
             ? uploadData.document_requests[0]?.title
-            : uploadData.document_requests?.title;
+            : (uploadData.document_requests as any)?.title;
 
           const { data: { session } } = await supabase.auth.getSession();
           const accessToken = session?.access_token;
@@ -1321,7 +1342,7 @@ const DocumentRequestsCard: React.FC<DocumentRequestsCardProps> = ({
         }
       }
 
-      fetchRequests();
+      await fetchRequests();
     } catch (e: any) {
       setError('Unexpected error while approving: ' + (e.message || e));
     }
@@ -1361,15 +1382,15 @@ const DocumentRequestsCard: React.FC<DocumentRequestsCardProps> = ({
         console.log('[REJEIÇÃO] 🔔 Enviando notificação para o aluno', {
           uploaded_by: uploadData.uploaded_by,
           documentTitle: Array.isArray(uploadData.document_requests)
-            ? uploadData.document_requests[0]?.title
-            : uploadData.document_requests?.title,
+            ? (uploadData.document_requests as any)[0]?.title
+            : (uploadData.document_requests as any)?.title,
           notes
         });
 
         try {
           const documentTitle = Array.isArray(uploadData.document_requests)
             ? uploadData.document_requests[0]?.title
-            : uploadData.document_requests?.title;
+            : (uploadData.document_requests as any)?.title;
 
           const notificationMessage = notes
             ? `Your document "${documentTitle || 'document'}" has been rejected. Reason: ${notes}`
@@ -1422,7 +1443,7 @@ const DocumentRequestsCard: React.FC<DocumentRequestsCardProps> = ({
         console.warn('[REJEIÇÃO] ⚠️ uploadData.uploaded_by não encontrado', uploadData);
       }
 
-      fetchRequests();
+      await fetchRequests();
     } catch (e: any) {
       setError('Unexpected error while rejecting: ' + (e.message || e));
     }
@@ -1569,7 +1590,10 @@ const DocumentRequestsCard: React.FC<DocumentRequestsCardProps> = ({
         console.error('[TRANSFER FORM] ❌ Erro ao enviar notificação para admins:', notifyError);
         // Não falhar o processo se a notificação falhar
       }
-
+      if (onDocumentUploaded) {
+        await onDocumentUploaded('transfer_form', selectedTransferFormFile.name, isResubmission);
+      }
+      
     } catch (error: any) {
       console.error('Erro ao fazer upload do transfer form:', error);
       setError('Erro ao fazer upload do formulário: ' + error.message);
@@ -1791,9 +1815,14 @@ const DocumentRequestsCard: React.FC<DocumentRequestsCardProps> = ({
                       )}
                     </div>
                   </div>
-                  <button className="px-2 py-1 sm:px-3 sm:py-1.5 bg-blue-50 text-blue-700 border border-blue-200 rounded-lg text-xs sm:text-sm font-medium hover:bg-blue-100 transition-colors flex-shrink-0 ml-2">
-                    Open
-                  </button>
+                  {!isSchool && (
+                    <button 
+                      onClick={() => document.getElementById(`file-upload-${req.id}`)?.click()}
+                      className="px-2 py-1 sm:px-3 sm:py-1.5 bg-blue-50 text-blue-700 border border-blue-200 rounded-lg text-xs sm:text-sm font-medium hover:bg-blue-100 transition-colors flex-shrink-0 ml-2"
+                    >
+                      Open
+                    </button>
+                  )}
                 </div>
 
                 {/* Student uploads for this request */}
@@ -1912,6 +1941,7 @@ const DocumentRequestsCard: React.FC<DocumentRequestsCardProps> = ({
                         <input
                           id={`file-upload-${req.id}`}
                           type="file"
+                          accept=".pdf,application/pdf"
                           className="sr-only"
                           onChange={e => handleFileSelect(req.id, e.target.files ? e.target.files[0] : null)}
                         />
@@ -2135,17 +2165,18 @@ const DocumentRequestsCard: React.FC<DocumentRequestsCardProps> = ({
                     <svg className="w-4 h-4" fill="none" stroke="currentColor" strokeWidth={2} viewBox="0 0 24 24">
                       <path strokeLinecap="round" strokeLinejoin="round" d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
                     </svg>
-                    <span>{t('studentDashboard.documentRequests.actions.uploadTransferForm')}</span>
-                    <input
-                      id="transfer-form-upload"
-                      type="file"
-                      title={t('studentDashboard.documentRequests.actions.selectTransferFormTitle')}
-                      placeholder={t('studentDashboard.documentRequests.forms.chooseFile')}
-                      onChange={e => handleFileSelect('transfer_form', e.target.files ? e.target.files[0] : null)}
-                      className="sr-only"
-                    />
-                  </label>
-                  {selectedFiles['transfer_form'] && (
+                 <span>{t('studentDashboard.documentRequests.actions.uploadTransferForm')}</span>
+                <input
+                  id="transfer-form-upload"
+                  type="file"
+                  accept=".pdf,application/pdf"
+                  title={t('studentDashboard.documentRequests.actions.selectTransferFormTitle')}
+                  placeholder={t('studentDashboard.documentRequests.forms.chooseFile')}
+                  onChange={e => handleFileSelect('transfer_form', e.target.files ? e.target.files[0] : null)}
+                  className="sr-only"
+                />
+              </label>
+              {selectedFiles['transfer_form'] && (
                     <div className="text-sm text-slate-600 flex-1 min-w-0">
                       <TruncatedText
                         text={selectedFiles['transfer_form']?.name || ''}
@@ -2556,8 +2587,16 @@ const DocumentRequestsCard: React.FC<DocumentRequestsCardProps> = ({
                             <span>Select Filled Form</span>
                             <input
                               type="file"
+                              accept=".pdf,application/pdf"
                               className="sr-only"
-                              onChange={e => setSelectedTransferFormFile(e.target.files ? e.target.files[0] : null)}
+                              onChange={e => {
+                                const file = e.target.files ? e.target.files[0] : null;
+                                if (file && file.type !== 'application/pdf') {
+                                  alert(t('studentDashboard.documentRequests.errors.onlyPdfAllowed') || 'Only PDF files are allowed.');
+                                  return;
+                                }
+                                setSelectedTransferFormFile(file);
+                              }}
                             />
                           </label>
 
@@ -2838,7 +2877,7 @@ const DocumentRequestsCard: React.FC<DocumentRequestsCardProps> = ({
                     }
                     setShowNewModal(false);
                     setNewRequest({ title: '', description: '', due_date: '', attachment: null });
-                    fetchRequests();
+                    await fetchRequests();
                   } catch (e: any) {
                     setError('Unexpected error: ' + (e.message || e));
                   } finally {

@@ -74,21 +74,32 @@ const PendingDocumentsOverview: React.FC = () => {
         try {
             setLoading(prev => ({ ...prev, studentDocuments: true }));
             // Buscar documentos de estudantes
-            const { data, error } = await supabase
+            let query = supabase
                 .from('student_documents')
                 .select(`
           *,
-          user_profiles:user_id (
+          user_profiles:user_id!inner (
             full_name, 
             email, 
             id, 
             user_id,
+            documents_status,
+            has_paid_selection_process_fee,
             scholarship_applications(id, status)
           )
         `)
-                .eq('status', 'pending')
+                .in('status', ['pending', 'under_review'])
+                .neq('user_profiles.documents_status', 'approved')
+                .eq('user_profiles.has_paid_selection_process_fee', true);
+
+            // Filtrar emails de teste diretamente na query se não estiver em dev
+            if (!isDevelopment) {
+                query = query.not('user_profiles.email', 'ilike', '%@uorak.com%');
+            }
+
+            const { data, error } = await query
                 .order('uploaded_at', { ascending: false })
-                .limit(10); // Limite inicial
+                .limit(50);
 
             if (!error && data) {
                 // Filtrar usuários de teste e usuários com status 'enrolled'
@@ -102,7 +113,13 @@ const PendingDocumentsOverview: React.FC = () => {
                     const hasEnrolledApplication = doc.user_profiles?.scholarship_applications?.some(
                         (app: { id: string; status: string }) => app.status === 'enrolled'
                     );
-                    
+
+                    // Filtrar usuários que ainda não selecionaram nenhuma bolsa
+                    const hasApplications = doc.user_profiles?.scholarship_applications && doc.user_profiles.scholarship_applications.length > 0;
+                    if (!hasApplications) {
+                        return false;
+                    }
+
                     return !hasEnrolledApplication;
                 });
                 
@@ -120,22 +137,33 @@ const PendingDocumentsOverview: React.FC = () => {
         try {
             setLoading(prev => ({ ...prev, documentRequests: true }));
             // Buscar uploads de requests pendentes
-            const { data, error } = await supabase
+            let query = supabase
                 .from('document_request_uploads')
                 .select(`
           *,
-          user_profiles:uploaded_by (
+          user_profiles:uploaded_by!inner (
             full_name, 
             email, 
             id, 
             user_id,
+            documents_status,
+            has_paid_selection_process_fee,
             scholarship_applications(id, status)
           ),
           document_requests:document_request_id (title)
         `)
                 .in('status', ['pending', 'under_review'])
+                .neq('user_profiles.documents_status', 'approved')
+                .eq('user_profiles.has_paid_selection_process_fee', true);
+
+            // Filtrar emails de teste diretamente na query se não estiver em dev
+            if (!isDevelopment) {
+                query = query.not('user_profiles.email', 'ilike', '%@uorak.com%');
+            }
+
+            const { data, error } = await query
                 .order('uploaded_at', { ascending: false })
-                .limit(10);
+                .limit(50);
 
             if (!error && data) {
                 // Filtrar usuários de teste e usuários com status 'enrolled'
@@ -149,7 +177,13 @@ const PendingDocumentsOverview: React.FC = () => {
                     const hasEnrolledApplication = req.user_profiles?.scholarship_applications?.some(
                         (app: { id: string; status: string }) => app.status === 'enrolled'
                     );
-                    
+
+                    // Filtrar usuários que ainda não selecionaram nenhuma bolsa
+                    const hasApplications = req.user_profiles?.scholarship_applications && req.user_profiles.scholarship_applications.length > 0;
+                    if (!hasApplications) {
+                        return false;
+                    }
+
                     return !hasEnrolledApplication;
                 });
                 
@@ -176,10 +210,10 @@ const PendingDocumentsOverview: React.FC = () => {
     const getProfileLink = (profileData: any, fallbackId: string) => {
         // Se temos os dados do profile populados
         if (profileData && profileData.id) {
-            return `/admin/dashboard/students/${profileData.id}?tab=documents`;
+            return `/admin/dashboard/students/${profileData.id}?tab=overview`;
         }
         // Caso contrário, fallback para o ID que temos na foreign key
-        return `/admin/dashboard/students/${fallbackId}?tab=documents`;
+        return `/admin/dashboard/students/${fallbackId}?tab=overview`;
     };
 
     // Real-time subscriptions para atualizar automaticamente quando novos documentos chegam
@@ -193,8 +227,7 @@ const PendingDocumentsOverview: React.FC = () => {
                 {
                     event: '*', // INSERT, UPDATE, DELETE
                     schema: 'public',
-                    table: 'student_documents',
-                    filter: 'status=eq.pending'
+                    table: 'student_documents'
                 },
                 () => {
                     // Recarregar documentos quando houver mudanças

@@ -100,9 +100,9 @@ export const useTermsAcceptance = () => {
   const recordTermAcceptance = useCallback(async (
     termId: string,
     termType: TermType,
-    p_user_id?: string,
+    userId?: string,
   ): Promise<boolean> => {
-    const targetUserId = p_user_id || user?.id;
+    const targetUserId = userId || user?.id;
     if (!targetUserId) return false;
 
     setLoading(true);
@@ -125,7 +125,6 @@ export const useTermsAcceptance = () => {
 
       // Term acceptance recorded successfully
       // Note: Notification with PDF will be sent after successful payment, not here
-
       return success;
     } catch (error: any) {
       console.error("Error recording term acceptance:", error);

@@ -5,12 +5,6 @@ import { supabase } from '../../../lib/supabase';
 
 interface PaymentStatusCardProps {
   student: StudentRecord;
-  fees: {
-    selection_process: number;
-    application: number;
-    scholarship: number;
-    i20_control: number;
-  };
   realPaidAmounts: Record<string, number>;
   loadingPaidAmounts?: Record<string, boolean>;
   editingFees: any;
@@ -22,12 +16,6 @@ interface PaymentStatusCardProps {
   dependents: number;
   hasOverride: (feeType: string) => boolean;
   userSystemType?: 'legacy' | 'simplified' | null;
-  userFeeOverrides?: {
-    selection_process_fee?: number;
-    application_fee?: number;
-    scholarship_fee?: number;
-    i20_control_fee?: number;
-  } | null;
   hasMatriculaRewardsDiscount?: boolean;
   onStartEditFees: () => void;
   onSaveEditFees: () => Promise<void>;
@@ -51,7 +39,6 @@ interface PaymentStatusCardProps {
 const PaymentStatusCard: React.FC<PaymentStatusCardProps> = React.memo((props) => {
   const {
     student,
-    fees,
     realPaidAmounts,
     loadingPaidAmounts = {},
     editingFees,
@@ -63,7 +50,6 @@ const PaymentStatusCard: React.FC<PaymentStatusCardProps> = React.memo((props) =
     dependents,
     hasOverride,
     userSystemType,
-    userFeeOverrides,
     hasMatriculaRewardsDiscount,
     onStartEditFees,
     onSaveEditFees,
@@ -419,7 +405,24 @@ const PaymentStatusCard: React.FC<PaymentStatusCardProps> = React.memo((props) =
                 </dd>
               ) : (
                 <div className="mt-1">
-                  <dd className="text-sm font-semibold text-slate-700">Varies by scholarship</dd>
+                  <dd className="text-sm font-semibold text-slate-700">
+                    {(() => {
+                      // Tentar buscar valor da bolsa selecionada
+                      const activeApp = student.all_applications?.find((app: any) => app.status !== 'rejected');
+                      const scholarship = activeApp?.scholarships ? (Array.isArray(activeApp.scholarships) ? activeApp.scholarships[0] : activeApp.scholarships) : null;
+                      
+                      if (scholarship?.application_fee_amount) {
+                        let amount = Number(scholarship.application_fee_amount);
+                        // Adicionar $100 por dependente para sistema legacy
+                        if (dependents > 0 && (userSystemType || 'legacy') === 'legacy') {
+                          amount += dependents * 100;
+                        }
+                        return formatFeeAmount(amount);
+                      }
+                      
+                      return 'Varies by scholarship';
+                    })()}
+                  </dd>
                 </div>
               )}
             </div>
@@ -556,6 +559,14 @@ const PaymentStatusCard: React.FC<PaymentStatusCardProps> = React.memo((props) =
                     // ✅ PRIORIDADE 2: Se for do affiliate admin "contato@brantimmigration.com", usar valor fixo $900
                     if (isBrantImmigrationAffiliate) {
                       return formatFeeAmount(900);
+                    }
+                    
+                    // ✅ NOVO: Tentar buscar valor específico da bolsa selecionada
+                    const activeApp = student.all_applications?.find((app: any) => app.status !== 'rejected');
+                    const scholarship = activeApp?.scholarships ? (Array.isArray(activeApp.scholarships) ? activeApp.scholarships[0] : activeApp.scholarships) : null;
+                    
+                    if (scholarship?.scholarship_fee_amount) {
+                      return formatFeeAmount(Number(scholarship.scholarship_fee_amount));
                     }
                     
                     // Caso contrário, mostrar valor esperado

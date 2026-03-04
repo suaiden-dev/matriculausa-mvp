@@ -135,45 +135,37 @@ All colors MUST be HSL.
 
   /* Resto do CSS existente */
   h1 {
-    font-family: 'Lato', sans-serif;
+    font-family: "Lato", sans-serif;
   }
 
   h2 {
-    font-family: 'Lato', sans-serif;
+    font-family: "Lato", sans-serif;
   }
 }
 
 @layer utilities {
   .gradient-primary {
-    background: linear-gradient(
-      135deg,
-      hsl(var(--primary)) 0%,
-      hsl(var(--secondary)) 100%
-    );
+    background: linear-gradient(135deg,
+        hsl(var(--primary)) 0%,
+        hsl(var(--secondary)) 100%);
   }
 
   .gradient-teal-purple {
-    background: linear-gradient(
-      135deg,
-      hsl(var(--teal)) 0%,
-      hsl(var(--purple)) 100%
-    );
+    background: linear-gradient(135deg,
+        hsl(var(--teal)) 0%,
+        hsl(var(--purple)) 100%);
   }
 
   .gradient-coral-gold {
-    background: linear-gradient(
-      135deg,
-      hsl(var(--coral)) 0%,
-      hsl(var(--gold)) 100%
-    );
+    background: linear-gradient(135deg,
+        hsl(var(--coral)) 0%,
+        hsl(var(--gold)) 100%);
   }
 
   .text-gradient {
-    background: linear-gradient(
-      135deg,
-      hsl(var(--primary)) 0%,
-      hsl(var(--secondary)) 100%
-    );
+    background: linear-gradient(135deg,
+        hsl(var(--primary)) 0%,
+        hsl(var(--secondary)) 100%);
     -webkit-background-clip: text;
     -webkit-text-fill-color: transparent;
     background-clip: text;
@@ -286,7 +278,7 @@ All colors MUST be HSL.
   }
 
   /* Garantir que o modal esteja acima de todos os outros elementos */
-  .document-viewer-overlay > div {
+  .document-viewer-overlay>div {
     z-index: 10000 !important;
     position: relative !important;
     transform: translateZ(0) !important;
@@ -295,7 +287,7 @@ All colors MUST be HSL.
 
   /* Forçar o overlay a cobrir toda a viewport */
   .document-viewer-overlay::before {
-    content: '';
+    content: "";
     position: fixed !important;
     top: 0 !important;
     left: 0 !important;
@@ -395,7 +387,7 @@ All colors MUST be HSL.
 }
 
 .tab-scroll-container::after {
-  content: '';
+  content: "";
   position: absolute;
   right: 0;
   top: 0;
@@ -457,13 +449,15 @@ All colors MUST be HSL.
 
 /* Sombra esquerda - degradê da esquerda para a direita */
 .horizontal-scroll-fade::before {
-  content: '';
+  content: "";
   position: absolute;
   top: 0;
   left: 0;
   bottom: 0;
   width: 50px;
-  background: linear-gradient(to right, #FFFFFF 20%, rgba(255, 255, 255, 0) 100%);
+  background: linear-gradient(to right,
+      #ffffff 20%,
+      rgba(255, 255, 255, 0) 100%);
   pointer-events: none;
   z-index: 5;
   opacity: 0;
@@ -472,13 +466,15 @@ All colors MUST be HSL.
 
 /* Sombra direita - degradê da direita para a esquerda */
 .horizontal-scroll-fade::after {
-  content: '';
+  content: "";
   position: absolute;
   top: 0;
   right: 0;
   bottom: 0;
   width: 50px;
-  background: linear-gradient(to left, #FFFFFF 20%, rgba(255, 255, 255, 0) 100%);
+  background: linear-gradient(to left,
+      #ffffff 20%,
+      rgba(255, 255, 255, 0) 100%);
   pointer-events: none;
   z-index: 5;
   opacity: 1;
@@ -503,29 +499,41 @@ All colors MUST be HSL.
 /* Ajustes para diferentes fundos */
 .horizontal-scroll-fade.bg-gray-50::before,
 .horizontal-scroll-fade.bg-gray-50::after {
-  background: linear-gradient(to right, #f9fafb 20%, rgba(249, 250, 251, 0) 100%);
+  background: linear-gradient(to right,
+      #f9fafb 20%,
+      rgba(249, 250, 251, 0) 100%);
 }
 
 .horizontal-scroll-fade.bg-gray-50::after {
-  background: linear-gradient(to left, #f9fafb 20%, rgba(249, 250, 251, 0) 100%);
+  background: linear-gradient(to left,
+      #f9fafb 20%,
+      rgba(249, 250, 251, 0) 100%);
 }
 
 .horizontal-scroll-fade.bg-gray-100::before,
 .horizontal-scroll-fade.bg-gray-100::after {
-  background: linear-gradient(to right, #f3f4f6 20%, rgba(243, 244, 246, 0) 100%);
+  background: linear-gradient(to right,
+      #f3f4f6 20%,
+      rgba(243, 244, 246, 0) 100%);
 }
 
 .horizontal-scroll-fade.bg-gray-100::after {
-  background: linear-gradient(to left, #f3f4f6 20%, rgba(243, 244, 246, 0) 100%);
+  background: linear-gradient(to left,
+      #f3f4f6 20%,
+      rgba(243, 244, 246, 0) 100%);
 }
 
 .horizontal-scroll-fade.bg-white::before,
 .horizontal-scroll-fade.bg-white::after {
-  background: linear-gradient(to right, #FFFFFF 20%, rgba(255, 255, 255, 0) 100%);
+  background: linear-gradient(to right,
+      #ffffff 20%,
+      rgba(255, 255, 255, 0) 100%);
 }
 
 .horizontal-scroll-fade.bg-white::after {
-  background: linear-gradient(to left, #FFFFFF 20%, rgba(255, 255, 255, 0) 100%);
+  background: linear-gradient(to left,
+      #ffffff 20%,
+      rgba(255, 255, 255, 0) 100%);
 }
 
 /* Animação para notificações customizadas */
@@ -534,6 +542,7 @@ All colors MUST be HSL.
     opacity: 0;
     transform: translateY(-10px);
   }
+
   to {
     opacity: 1;
     transform: translateY(0);
@@ -544,11 +553,80 @@ All colors MUST be HSL.
   animation: fadeIn 0.3s ease-out;
 }
 
-/* Remove default black outline from PhoneInput inside Quick Registration */
-.quick-registration-phone .PhoneInputInput,
-.quick-registration-phone .PhoneInputInput:focus {
-  outline: none !important;
-  box-shadow: none !important;
-  border: none !important;
-  background: transparent !important;
+/* Garantir que apenas cards expandidos mostrem conteúdo */
+[data-expanded="false"] {
+  display: none !important;
+  visibility: hidden !important;
+  height: 0 !important;
+  overflow: hidden !important;
+}
+
+/* Isolar conteúdo expandido de scholarship cards */
+[id^="scholarship-details-"]:not([data-expanded="true"]) {
+  display: none !important;
+  visibility: hidden !important;
+  height: 0 !important;
+  overflow: hidden !important;
+}
+
+/* Garantir que cada card seja isolado no grid */
+[id^="scholarship-card-wrapper-"] {
+  position: relative;
+  isolation: isolate;
+}
+
+/* Garantir que conteúdo expandido fique dentro do card */
+[id^="scholarship-card-wrapper-"] [id^="scholarship-details-"] {
+  position: relative;
+  z-index: 1;
+}
+
+/* Custom Scrollbar for better UI integration */
+.custom-scrollbar::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
+}
+
+.custom-scrollbar::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+.custom-scrollbar::-webkit-scrollbar-thumb {
+  background-color: rgba(156, 163, 175, 0.3);
+  border-radius: 20px;
+}
+
+.custom-scrollbar::-webkit-scrollbar-thumb:hover {
+  background-color: rgba(107, 114, 128, 0.5);
+}
+
+/* Quick Registration Phone Input Styling */
+.quick-registration-phone {
+  display: flex !important;
+  align-items: center;
+}
+
+.quick-registration-phone .PhoneInputCountry {
+  margin-right: 0.75rem;
+  display: flex;
+  align-items: center;
+}
+
+.quick-registration-phone .PhoneInputInput {
+  flex: 1;
+  outline: none;
+  background: transparent;
+  border: none;
+  font-size: 1rem;
+  color: #111827;
+  /* text-gray-900 */
+}
+
+.quick-registration-phone .PhoneInputInput::placeholder {
+  color: #9ca3af;
+  /* text-gray-400 */
+}
+
+.quick-registration-phone .PhoneInputCountrySelect {
+  cursor: pointer;
 }

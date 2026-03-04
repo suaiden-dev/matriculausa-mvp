@@ -196,12 +196,12 @@ export const ZellePaymentFlow: React.FC<ZellePaymentFlowProps> = ({
     <>
       {/* Botão Principal */}
       <button
-        onClick={isBlocked && pendingPayment ? undefined : handleStartPayment}
-        disabled={loading || paymentBlockedLoading || (isBlocked && pendingPayment)}
-        className={`${className} ${(loading || paymentBlockedLoading || (isBlocked && pendingPayment)) ? 'opacity-50 cursor-not-allowed' : ''}`}
+        onClick={(isBlocked && pendingPayment) ? undefined : handleStartPayment}
+        disabled={loading || paymentBlockedLoading || !!(isBlocked && pendingPayment)}
+        className={`${className} ${(loading || paymentBlockedLoading || !!(isBlocked && pendingPayment)) ? 'opacity-50 cursor-not-allowed' : ''}`}
       >
         {loading ? t('zelleCheckout.processing') : 
-         paymentBlockedLoading ? 'Checking...' : 
+         paymentBlockedLoading ? t('zelleWaiting.analyzingPayment') : 
          (isBlocked && pendingPayment) ? t('zelleCheckout.processing') : 
          buttonText}
       </button>
@@ -224,7 +224,7 @@ export const ZellePaymentFlow: React.FC<ZellePaymentFlowProps> = ({
           <div className="bg-white rounded-lg max-w-2xl w-full max-h-[90vh] overflow-y-auto">
             <div className="p-6">
               <div className="flex justify-between items-center mb-6">
-                <h2 className="text-xl font-semibold text-gray-900">Zelle Payment</h2>
+                <h2 className="text-xl font-semibold text-gray-900">{t('zelleCheckout.title')}</h2>
                 <button
                   onClick={handleCloseZelleCheckout}
                   className="text-gray-400 hover:text-gray-600"

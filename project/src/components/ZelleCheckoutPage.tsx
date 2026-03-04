@@ -551,7 +551,7 @@ export const ZelleCheckoutPage: React.FC<ZelleCheckoutPageProps> = ({
 
       // Gerar ID único para o pagamento (será usado pelo n8n para criar o registro)
       console.log('💾 [ZelleCheckout] Gerando ID único para o pagamento...');
-      const realPaymentId = crypto.randomUUID();
+      const realPaymentId = generateUUID();
       console.log('✅ [ZelleCheckout] ID gerado:', realPaymentId);
 
       // Enviar webhook para n8n

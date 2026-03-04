@@ -1,11 +1,8 @@
 import React from 'react';
-import { useNavigate } from 'react-router-dom';
-import { CheckCircle, DollarSign, Award, FileText, Lock, Clock } from 'lucide-react';
+import { CheckCircle, DollarSign, FileText, Lock, Clock, Sparkles } from 'lucide-react';
 import { useFeeConfig } from '../hooks/useFeeConfig';
 import { useAuth } from '../hooks/useAuth';
 import { useDynamicFees } from '../hooks/useDynamicFees';
-import { useTranslation } from 'react-i18next';
-import { supabase } from '../lib/supabase';
 
 interface Step {
   label: string;
@@ -16,247 +13,282 @@ interface Step {
 
 interface ProgressBarProps {
   steps: Step[];
-  feeValues?: string[];
+  feeValues?: (string | React.ReactNode)[];
+  applicationId?: string | null;
+  isSelectionProcessUnlocked?: boolean;
+  isApplicationFeeUnlocked?: boolean;
+  isScholarshipFeeUnlocked?: boolean;
+  isI20Unlocked?: boolean;
+  progress?: number; // 0 to steps.length-1
 }
 
 const getStepColor = (completed: boolean, current: boolean) => {
-  if (completed) return 'from-green-400 to-green-600 border-green-500 text-white shadow-green-200';
-  if (current) return 'from-yellow-300 to-yellow-500 border-yellow-400 text-white shadow-yellow-200 animate-pulse';
-  return 'from-slate-200 to-slate-300 border-slate-300 text-slate-400';
+  if (completed) return 'bg-gradient-to-br from-emerald-400 to-emerald-600 border-emerald-300 shadow-[0_0_15px_rgba(52,211,153,0.4)]';
+  if (current) return 'bg-gradient-to-br from-amber-300 to-amber-500 border-amber-200 shadow-[0_0_20px_rgba(251,191,36,0.5)] animate-pulse';
+  return 'bg-white/10 backdrop-blur-md border-white/20 text-white/40';
 };
 
 const getStepIcon = (idx: number, completed: boolean, current: boolean) => {
-  if (completed) return <CheckCircle className="h-7 w-7 text-white" />;
+  if (completed) return <CheckCircle className="h-6 w-6 md:h-7 md:w-7 text-white" />;
   if (current) {
-    if (idx === 1) return <DollarSign className="h-7 w-7 text-white" />;
-    if (idx === 2) return <Award className="h-7 w-7 text-white" />;
-    if (idx === 3) return <FileText className="h-7 w-7 text-white" />;
-    return <Clock className="h-7 w-7 text-white" />;
+    if (idx === 0) return <DollarSign className="h-6 w-6 md:h-7 md:w-7 text-white" />;
+    if (idx === 1) return <DollarSign className="h-6 w-6 md:h-7 md:w-7 text-white" />;
+    if (idx === 2) return <DollarSign className="h-6 w-6 md:h-7 md:w-7 text-white" />;
+    if (idx === 3) return <FileText className="h-6 w-6 md:h-7 md:w-7 text-white" />;
+    return <Clock className="h-6 w-6 md:h-7 md:w-7 text-white" />;
   }
-  return <Lock className="h-7 w-7 text-slate-400" />;
+  return <Lock className="h-6 w-6 md:h-7 md:w-7 text-white/30" />;
 };
 
-// Componente de skeleton para valores de taxa
 const FeeSkeleton = () => (
   <div className="animate-pulse">
-    <div className="h-4 bg-gray-300 rounded w-16"></div>
+    <div className="h-3 md:h-4 bg-white/20 rounded w-12 md:w-16"></div>
   </div>
 );
 
-export const ProgressBar: React.FC<ProgressBarProps> = ({ steps, feeValues: customFeeValues }) => {
-  const { t } = useTranslation();
-  const navigate = useNavigate();
-  const { user, userProfile } = useAuth();
+// Imports removidos: useNavigate
+
+export const ProgressBar: React.FC<ProgressBarProps> = ({ 
+  steps, 
+  feeValues: customFeeValues,
+  progress: customProgress
+}) => {
+  const { user } = useAuth();
   const { getFeeAmount } = useFeeConfig(user?.id);
   const { selectionProcessFee, scholarshipFee, i20ControlFee } = useDynamicFees();
-  const currentIdx = steps.findIndex(step => step.current);
+  const pathRef = React.useRef<SVGPathElement>(null);
+  const [ready, setReady] = React.useState(false);
+  const [pathLength, setPathLength] = React.useState(0);
 
-  // Função para determinar a rota baseada no índice do step
-  const getStepRoute = (idx: number): string | null => {
-    // Application Fee (índice 1) -> browse scholarships (escolher bolsas)
-    if (idx === 1) return '/student/dashboard/scholarships';
-    // Scholarship Fee (índice 2) -> my application
-    if (idx === 2) return '/student/dashboard/applications';
-    // I-20 Control Fee (índice 3) -> será determinado dinamicamente
-    if (idx === 3) return null; // Retornar null para processar assincronamente
-    return null;
-  };
-
-  // Função para lidar com o clique no step
-  const handleStepClick = async (idx: number, step: Step) => {
-    // Só permite clique se não estiver completo
-    if (!step.completed) {
-      // I-20 Control Fee (índice 3) - lógica especial
-      if (idx === 3) {
-        // Verificar se já pagou a scholarship fee
-        if (!userProfile?.id) {
-          // Se não tem userProfile, redirecionar para applications
-          navigate('/student/dashboard/applications');
-          return;
-        }
-
-        try {
-          // Buscar aplicação com scholarship fee paga
-          const { data: applications, error } = await supabase
-            .from('scholarship_applications')
-            .select('id')
-            .eq('student_id', userProfile.id)
-            .eq('is_scholarship_fee_paid', true)
-            .order('updated_at', { ascending: false })
-            .limit(1)
-            .maybeSingle();
-
-          if (error) {
-            console.error('Erro ao buscar aplicação:', error);
-            // Em caso de erro, redirecionar para applications
-            navigate('/student/dashboard/applications');
-            return;
-          }
-
-          if (applications && applications.id) {
-            // Se encontrou aplicação com scholarship fee paga, redirecionar para detalhes
-            navigate(`/student/dashboard/application/${applications.id}/chat`);
-          } else {
-            // Se não encontrou, redirecionar para applications
-            navigate('/student/dashboard/applications');
-          }
-        } catch (error) {
-          console.error('Erro ao processar clique no I-20 Control Fee:', error);
-          // Em caso de erro, redirecionar para applications
-          navigate('/student/dashboard/applications');
-        }
-        return;
-      }
-
-      // Para outros steps, usar rota direta
-      const route = getStepRoute(idx);
-      if (route) {
-        navigate(route);
-      }
+  React.useEffect(() => {
+    if (pathRef.current) {
+      setPathLength(pathRef.current.getTotalLength());
+      // Delay pequeno mas suficiente para garantir que o navegador processe o posicionamento inicial
+      // sem a classe de transição ativa.
+      const timer = setTimeout(() => {
+        setReady(true);
+      }, 100);
+      return () => clearTimeout(timer);
     }
-  };
-  
-  // Verificar se as taxas estão carregando
+  }, []);
+
+  // Funções de navegação removidas
+
   const isFeesLoading = !selectionProcessFee || !scholarshipFee || !i20ControlFee;
   
-  // Valores padrão das taxas usando useDynamicFees (usados quando não há valores customizados)
   const defaultFeeValues = [
-    selectionProcessFee || `$${getFeeAmount('selection_process')}`, // Selection Process Fee
-    t('feeValues.asPerUniversity'), // Application Fee (sempre variável)
-    scholarshipFee || `$${getFeeAmount('scholarship_fee')}`, // Scholarship Fee
-    i20ControlFee || `$${getFeeAmount('i20_control_fee')}`, // I-20 Control Fee
+    selectionProcessFee || `$${getFeeAmount('selection_process')}`,
+    'As per university',
+    scholarshipFee || `$${getFeeAmount('scholarship_fee')}`,
+    i20ControlFee || `$${getFeeAmount('i20_control_fee')}`,
   ];
   
-  // Debug para loida4121@uorak.com
-  if (user?.email === 'loida4121@uorak.com') {
-    console.log('🔍 [ProgressBar] Debug valores:', {
-      customFeeValues,
-      defaultFeeValues,
-      selectionProcessFee,
-      isFeesLoading
-    });
-  }
-  
-  // Usar valores customizados se fornecidos, senão usar os padrão
   const feeValues = customFeeValues || defaultFeeValues;
-  
-  // Debug qual array está sendo usado
-  if (user?.email === 'loida4121@uorak.com') {
-    console.log('🔍 [ProgressBar] Array sendo usado:', {
-      usingCustom: !!customFeeValues,
-      feeValues,
-      'customFeeValues[0]': customFeeValues?.[0],
-      'defaultFeeValues[0]': defaultFeeValues?.[0]
-    });
-  }
-  
-  // Para a application fee (índice 1), usar mensagem genérica se não houver valor específico
   const displayFeeValues = feeValues.map((value, index) => {
-    if (index === 1 && value === '$350.00') {
-      return t('feeValues.asPerUniversity'); // Mensagem genérica para application fee
-    }
+    if (index === 1 && value === '$350.00') return 'As per university';
     return value;
   });
+
+  // Calculate generic progress based on steps if not provided
+  const calculateProgress = () => {
+    if (customProgress !== undefined) return customProgress;
+    
+    const lastCompletedIdx = [...steps].reverse().findIndex(s => s.completed);
+    if (lastCompletedIdx !== -1) {
+      const idx = steps.length - 1 - lastCompletedIdx;
+      // If next step is current, maybe we are at that index
+      if (idx + 1 < steps.length && steps[idx+1].current) return idx + 0.5;
+      return idx;
+    }
+    
+    const currentIdx = steps.findIndex(s => s.current);
+    return currentIdx !== -1 ? currentIdx : 0;
+  };
+
+  const progress = calculateProgress();
+  const progressRatio = progress / (steps.length - 1);
   
-  // Debug final para loida4121@uorak.com
-  if (user?.email === 'loida4121@uorak.com') {
-    console.log('🔍 [ProgressBar] Valores finais displayFeeValues:', displayFeeValues);
-  }
+  // Get point on path for the sparkle
+  const getPointAtProgress = () => {
+    if (!pathRef.current || pathLength === 0) return { x: 50, y: 75 };
+    const point = pathRef.current.getPointAtLength(pathLength * progressRatio);
+    return { x: point.x, y: point.y };
+  };
+
+  const sparklePos = getPointAtProgress();
+
   return (
-    <div className="w-full flex flex-col items-center pb-8 md:pb-16 mb-4 md:mb-8">
-      {/* Desktop: horizontal, Mobile: vertical */}
-      <div className="w-full">
-        <div className="hidden md:flex relative w-full max-w-2xl mx-auto overflow-x-auto scrollbar-thin scrollbar-thumb-blue-200 scrollbar-track-blue-50">
-          <div className="flex items-center w-full justify-between px-2 gap-4 md:gap-6 lg:gap-8 py-4">
-            {/* Linha de conexão */}
-            <div className="absolute top-1/2 left-0 right-0 z-0 h-2 flex items-center pointer-events-none select-none">
-              <div className="w-full h-2 rounded-full bg-gradient-to-r from-green-400 via-yellow-300 to-slate-300 opacity-60" />
-            </div>
-            {steps.map((step, idx) => {
-              const route = getStepRoute(idx);
-              // I-20 Control Fee (índice 3) sempre é clicável se não estiver completo
-              const isClickable = !step.completed && (route !== null || idx === 3);
-              return (
-                <React.Fragment key={idx}>
-                  {/* Seta animada antes da etapa atual */}
-                  {idx === currentIdx && idx !== 0 && (
-                    <span className="z-10 mx-2 flex items-center animate-bounce" aria-label="Next step">
-                      <svg width="32" height="32" viewBox="0 0 32 32" fill="none" xmlns="http://www.w3.org/2000/svg">
-                        <path d="M8 16H24" stroke="#FACC15" strokeWidth="3" strokeLinecap="round"/>
-                        <path d="M18 10L24 16L18 22" stroke="#FACC15" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round"/>
-                      </svg>
-                    </span>
-                  )}
-                  <div 
-                    className={`flex flex-col items-center min-w-[80px] md:min-w-[90px] z-10 ${isClickable ? 'cursor-pointer' : ''}`}
-                    onClick={() => handleStepClick(idx, step)}
-                  >
-                    <div className={`w-10 h-10 md:w-12 md:h-12 flex items-center justify-center rounded-full border-4 font-bold text-lg mb-1 transition-all duration-300 shadow-xl bg-gradient-to-br ${getStepColor(step.completed, step.current)} ${isClickable ? 'hover:scale-110 hover:shadow-2xl' : ''}`}
-                      style={{ boxShadow: step.current ? '0 0 0 4px #fde68a55' : undefined }}>
-                      {getStepIcon(idx, step.completed, step.current)}
-                    </div>
-                  </div>
-                </React.Fragment>
-              );
-            })}
+    <div className="w-full relative pt-0 pb-6 md:pt-0 md:pb-10">
+      {/* Desktop Version */}
+      <div className="hidden md:block w-full max-w-4xl mx-auto px-4">
+        <div className="relative h-40 md:h-56 flex items-center justify-between">
+          {/* Sinuous SVG Path - Refatorado para visibilidade e precisão */}
+          <svg 
+            viewBox="0 0 1000 150" 
+            className="absolute top-1/2 left-0 w-full h-48 -translate-y-1/2 z-0 pointer-events-none overflow-visible" 
+            preserveAspectRatio="none"
+          >
+            <defs>
+              <linearGradient id="lineGradient" x1="0%" y1="0%" x2="100%" y2="0%">
+                <stop offset="0%" stopColor="#34D399" />
+                <stop offset="50%" stopColor="#FBBF24" />
+                <stop offset="100%" stopColor="#6366F1" />
+              </linearGradient>
+              <filter id="glow" x="-20%" y="-20%" width="140%" height="140%">
+                <feGaussianBlur stdDeviation="2" result="blur" />
+                <feComposite in="SourceGraphic" in2="blur" operator="over" />
+              </filter>
+              
+              {/* Máscara para preenchimento progressivo */}
+              <mask id="progressMask">
+                <path 
+                  d="M 50 75 C 125 50, 275 50, 350 75 S 575 100, 650 75 S 875 50, 950 75" 
+                  fill="none" 
+                  stroke="white" 
+                  strokeWidth="10" 
+                  strokeLinecap="round"
+                  strokeDasharray={pathLength || 1000}
+                  strokeDashoffset={(pathLength || 1000) * (1 - progressRatio)}
+                  className={ready ? "transition-all duration-1000 ease-in-out" : ""}
+                />
+              </mask>
+            </defs>
+
+            {/* Linha de fundo (rastro) */}
+            <path 
+              d="M 50 75 C 125 50, 275 50, 350 75 S 575 100, 650 75 S 875 50, 950 75" 
+              fill="none" 
+              stroke="white" 
+              strokeOpacity="0.05" 
+              strokeWidth="10" 
+              strokeLinecap="round"
+            />
+            
+            {/* Linha animada principal com efeito pontilhado e máscara de progresso */}
+            <path 
+              ref={pathRef}
+              d="M 50 75 C 125 50, 275 50, 350 75 S 575 100, 650 75 S 875 50, 950 75" 
+              fill="none" 
+              stroke="url(#lineGradient)" 
+              strokeWidth="5" 
+              strokeLinecap="round" 
+              mask="url(#progressMask)"
+              className={`opacity-90 animate-dash ${ready ? "visible" : "invisible"}`}
+              filter="url(#glow)"
+            />
+            
+          </svg>
+
+          {/* Marcador animado fora do SVG para evitar distorção de aspecto */}
+          <div 
+            className={`absolute z-20 pointer-events-none flex items-center justify-center transition-all duration-1000 ease-in-out ${
+              ready && (progress % 1 !== 0) ? "opacity-100 scale-100" : "opacity-0 scale-50"
+            }`}
+            style={{ 
+              left: `${(sparklePos.x / 1000) * 100}%`, 
+              top: `calc(${(sparklePos.y / 150) * 100}% + 4px)`,
+              transform: 'translate(-50%, -50%)',
+              willChange: 'left, top'
+            }}
+          >
+             <div className="relative flex items-center justify-center w-10 h-10">
+                <div className="absolute inset-0 rounded-full bg-amber-400 animate-ping opacity-20" />
+                <div className="relative text-amber-400 drop-shadow-[0_0_10px_rgba(251,191,36,0.8)]">
+                   <Sparkles className="w-7 h-7 animate-spin-slower" />
+                </div>
+             </div>
           </div>
-        </div>
-        {/* Mobile: vertical/empilhado */}
-        <div className="flex flex-col gap-3 md:hidden w-full">
+
+
+
           {steps.map((step, idx) => {
-            const route = getStepRoute(idx);
-            // I-20 Control Fee (índice 3) sempre é clicável se não estiver completo
-            const isClickable = !step.completed && (route !== null || idx === 3);
             return (
               <div 
                 key={idx} 
-                onClick={() => handleStepClick(idx, step)}
-                className={`flex items-center gap-3 rounded-xl p-3 shadow-md border-2 ${step.completed ? 'bg-green-500/90 border-green-400' : step.current ? 'bg-yellow-400/90 border-yellow-300 animate-pulse' : 'bg-slate-200/80 border-slate-300'} transition-all ${isClickable ? 'cursor-pointer hover:shadow-lg hover:scale-[1.02] active:scale-[0.98]' : ''}`}
+                className={`group relative flex flex-col items-center z-10 transition-all duration-500`}
               >
-                <div className={`w-11 h-11 flex items-center justify-center rounded-full border-4 font-bold text-lg ${step.completed ? 'border-green-400 bg-green-500' : step.current ? 'border-yellow-300 bg-yellow-400' : 'border-slate-300 bg-slate-200'}`}>
+                {/* Step Circle with Glassmorphism */}
+                <div className={`w-14 h-14 md:w-16 md:h-16 flex items-center justify-center rounded-2xl border-2 transition-all duration-500 shadow-lg ${getStepColor(step.completed, step.current)}`}>
                   {getStepIcon(idx, step.completed, step.current)}
                 </div>
-                <div className="flex flex-col flex-1">
-                  <div className="text-sm font-bold text-[#05294E]">{step.label}</div>
-                  <div className="text-xs font-bold text-blue-700">
+
+                {/* Labels Visible on Bottom */}
+                <div className="absolute top-full mt-3 flex flex-col items-center w-32 md:w-40 text-center pointer-events-none">
+                  <span className={`text-[10px] md:text-xs font-black uppercase tracking-widest mt-1 ${step.completed ? 'text-emerald-400' : step.current ? 'text-amber-300' : 'text-white/30'}`}>
+                    {step.label}
+                  </span>
+                  <span className="text-[9px] md:text-[11px] font-bold text-white/50 mt-0.5">
                     {isFeesLoading && idx !== 1 ? <FeeSkeleton /> : displayFeeValues[idx]}
-                  </div>
-                  <div className="text-xs text-slate-700 leading-tight">{step.description}</div>
+                  </span>
                 </div>
               </div>
             );
           })}
         </div>
       </div>
-      {/* Linha de textos das etapas, centralizada e alinhada com os círculos (desktop) */}
-      <div className="hidden md:flex w-full max-w-2xl mx-auto justify-between px-2 gap-4 md:gap-6 lg:gap-8 mt-4">
+
+      {/* Mobile Version: Vertical Connection */}
+      <div className="md:hidden w-full flex flex-col gap-8 px-4 relative">
+        {/* Vertical Line for Mobile */}
+        <div className="absolute left-10 top-10 bottom-10 w-[2px] bg-white/5 opacity-20 z-0" />
+        <div 
+          className={`absolute left-10 top-10 w-[2px] bg-gradient-to-b from-emerald-500 via-amber-400 to-indigo-500 z-0 ${ready ? "transition-all duration-1000 ease-in-out opacity-100" : "opacity-0"}`} 
+          style={{ height: `calc(${progressRatio * 100}% - 20px)` }}
+        />
+        
         {steps.map((step, idx) => {
-          const route = getStepRoute(idx);
-          // I-20 Control Fee (índice 3) sempre é clicável se não estiver completo
-          const isClickable = !step.completed && (route !== null || idx === 3);
           return (
             <div 
-              key={idx} 
-              onClick={() => handleStepClick(idx, step)}
-              className={`flex flex-col items-center min-w-[80px] md:min-w-[90px] text-center ${isClickable ? 'cursor-pointer hover:scale-105 transition-transform duration-200' : ''}`}
+              key={idx}
+              className={`relative flex items-center gap-4 p-4 rounded-3xl border transition-all duration-300 z-10 ${step.current ? 'bg-amber-500/10 border-amber-500/40' : 'bg-white/5 border-white/10 backdrop-blur-md'}`}
             >
-              <div className="flex flex-col items-center w-full">
-                <div className="text-xs md:text-sm font-bold mb-0.5 text-white whitespace-nowrap drop-shadow-sm tracking-wide">
-                  {step.label}
-                </div>
-                <div className="text-[11px] md:text-sm font-bold text-yellow-300 mb-0.5">
-                  {isFeesLoading && idx !== 1 ? <FeeSkeleton /> : displayFeeValues[idx]}
-                </div>
-                <div className="text-[10px] md:text-xs text-blue-100 max-w-[90px] md:max-w-[120px] leading-tight mb-1 font-medium">
-                  {step.description}
-                </div>
+              <div className={`w-12 h-12 flex-shrink-0 flex items-center justify-center rounded-2xl border-2 ${getStepColor(step.completed, step.current)}`}>
+                {getStepIcon(idx, step.completed, step.current)}
               </div>
+              
+              <div className="flex flex-col">
+                <span className={`text-xs font-black uppercase tracking-wider ${step.completed ? 'text-emerald-400' : step.current ? 'text-amber-400' : 'text-white/30'}`}>
+                  {step.label}
+                </span>
+                <span className="text-[10px] font-bold text-white/50">
+                  {isFeesLoading && idx !== 1 ? '---' : displayFeeValues[idx]}
+                </span>
+                <p className="text-[11px] text-white/70 leading-relaxed mt-1">{step.description}</p>
+              </div>
+
+              {step.current && (
+                <div className="ml-auto">
+                  <div className="w-2 h-2 rounded-full bg-amber-400 animate-ping" />
+                </div>
+              )}
             </div>
           );
         })}
       </div>
+
+      <style>{`
+        @keyframes dash {
+          to {
+            stroke-dashoffset: -1000;
+          }
+        }
+        .animate-dash {
+          stroke-dasharray: 12;
+          animation: dash 60s linear infinite;
+        }
+        .animate-spin-slow {
+          animation: spin 3s linear infinite;
+        }
+        .animate-spin-slower {
+          animation: spin 6s linear infinite;
+        }
+        @keyframes spin {
+          from { transform: rotate(0deg); }
+          to { transform: rotate(360deg); }
+        }
+      `}</style>
     </div>
   );
 };
 
-export default ProgressBar; 
+export default ProgressBar;

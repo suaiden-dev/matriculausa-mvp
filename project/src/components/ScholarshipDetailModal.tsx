@@ -1,4 +1,4 @@
-import React, { useEffect } from 'react';
+import React from 'react';
 import { createPortal } from 'react-dom';
 import { useTranslation } from 'react-i18next';
 import type { UserProfile } from '../hooks/useAuth';
@@ -14,7 +14,6 @@ import {
   GraduationCap,
   Monitor,
   MapPin,
-  Briefcase,
   Globe,
   FileText,
   CheckCircle,
@@ -42,7 +41,6 @@ const ScholarshipDetailModal: React.FC<ScholarshipDetailModalProps> = ({
   isOpen,
   onClose,
   userProfile,
-  user,
   userRole
 }) => {
   const { t } = useTranslation();

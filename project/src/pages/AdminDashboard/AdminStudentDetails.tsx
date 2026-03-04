@@ -98,6 +98,7 @@ interface StudentRecord {
   scholarship_fee_payment_method?: string | null;
   acceptance_letter_status: string | null;
   student_process_type: string | null;
+  system_type?: string | null;
   payment_status: string | null;
   scholarship_title: string | null;
   university_name: string | null;
@@ -858,6 +859,7 @@ const AdminStudentDetails: React.FC = () => {
 
         let lockedApplication = null;
         let activeApplication = null;
+        let enrolledApp = null;
         if (s.scholarship_applications && s.scholarship_applications.length > 0) {
 
           if (isStephanie) {
@@ -879,7 +881,7 @@ const AdminStudentDetails: React.FC = () => {
           }
 
           // Priorizar aplicação enrolled, depois approved com application fee pago, depois approved
-          const enrolledApp = s.scholarship_applications.find((app: any) => app.status === 'enrolled');
+          enrolledApp = s.scholarship_applications.find((app: any) => app.status === 'enrolled');
           const approvedWithFeeApp = s.scholarship_applications.find((app: any) => app.status === 'approved' && app.is_application_fee_paid);
           const anyApprovedApp = s.scholarship_applications.find((app: any) => app.status === 'approved');
 
@@ -2426,6 +2428,28 @@ const AdminStudentDetails: React.FC = () => {
 
       if (profileUpdateError) {
         console.error('Erro ao atualizar documents_status:', profileUpdateError);
+      }
+
+      // Marcar todos os documentos individuais como aprovados para limpar o overview de admins
+      try {
+        await Promise.all([
+          supabase
+            .from('student_documents')
+            .update({ status: 'approved', approved_at: new Date().toISOString() })
+            .eq('user_id', student.user_id)
+            .eq('status', 'pending'),
+          supabase
+            .from('document_request_uploads')
+            .update({ 
+               status: 'approved', 
+               reviewed_at: new Date().toISOString(),
+               reviewed_by: user?.id
+            })
+            .eq('uploaded_by', student.user_id)
+            .in('status', ['pending', 'under_review'])
+        ]);
+      } catch (docUpdateError) {
+        console.error('Erro ao atualizar documentos individuais:', docUpdateError);
       }
 
       // Webhook e notificação

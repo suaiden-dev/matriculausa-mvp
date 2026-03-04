@@ -260,7 +260,8 @@ const AdminStudentDetails: React.FC = () => {
       has_paid_application: boolean;
       has_paid_scholarship: boolean;
       has_paid_i20: boolean;
-    }
+    },
+    applications?: any[]
   ): Record<string, number> => {
     const normalized: Record<string, number> = {};
 
@@ -340,11 +341,21 @@ const AdminStudentDetails: React.FC = () => {
     } else if (paymentFlags?.has_paid_scholarship) {
       // ✅ NOVO: Fallback para pagamentos legados
       console.log(`[AdminStudentDetails] 💡 Pagamento legado detectado para scholarship - calculando valor esperado`);
-      const expectedScholarship = sysType === 'simplified' ? 900 : 900;
-      if (feeOverrides?.scholarship_fee !== undefined) {
-        normalized.scholarship = feeOverrides.scholarship_fee;
+      
+      // Tentar buscar valor específico da bolsa
+      const enrolledApp = applications?.find((app: any) => app.status === 'enrolled' && app.is_scholarship_fee_paid);
+      const paidApp = enrolledApp || applications?.find((app: any) => app.is_scholarship_fee_paid);
+      const scholarship = paidApp?.scholarships ? (Array.isArray(paidApp.scholarships) ? paidApp.scholarships[0] : paidApp.scholarships) : null;
+      
+      if (scholarship?.scholarship_fee_amount) {
+        normalized.scholarship = Number(scholarship.scholarship_fee_amount);
       } else {
-        normalized.scholarship = expectedScholarship;
+        const expectedScholarship = sysType === 'simplified' ? 550 : 900;
+        if (feeOverrides?.scholarship_fee !== undefined) {
+          normalized.scholarship = feeOverrides.scholarship_fee;
+        } else {
+          normalized.scholarship = expectedScholarship;
+        }
       }
     }
 
@@ -394,7 +405,19 @@ const AdminStudentDetails: React.FC = () => {
     } else if (paymentFlags?.has_paid_application) {
       // ✅ NOVO: Fallback para pagamentos legados
       console.log(`[AdminStudentDetails] 💡 Pagamento legado detectado para application - calculando valor esperado`);
-      const expectedApplicationFee = feeAmountFn('application_fee');
+      
+      // Tentar buscar valor específico da bolsa
+      const enrolledApp = applications?.find((app: any) => app.status === 'enrolled' && app.is_application_fee_paid);
+      const paidApp = enrolledApp || applications?.find((app: any) => app.is_application_fee_paid);
+      const scholarship = paidApp?.scholarships ? (Array.isArray(paidApp.scholarships) ? paidApp.scholarships[0] : paidApp.scholarships) : null;
+      
+      let expectedApplicationFee: number;
+      if (scholarship?.application_fee_amount) {
+        expectedApplicationFee = Number(scholarship.application_fee_amount);
+      } else {
+        expectedApplicationFee = feeAmountFn('application_fee');
+      }
+      
       normalized.application = expectedApplicationFee;
       if (dependents > 0) {
         normalized.application += dependents * 100;
@@ -750,7 +773,8 @@ const AdminStudentDetails: React.FC = () => {
             has_paid_application: student.is_application_fee_paid,
             has_paid_scholarship: student.is_scholarship_fee_paid,
             has_paid_i20: student.has_paid_i20_control_fee
-          }
+          },
+          student.all_applications
         );
 
         console.log('[AdminStudentDetails] 🔍 DEBUG - Resultado da normalização:', {
@@ -1414,7 +1438,14 @@ const AdminStudentDetails: React.FC = () => {
           getFeeAmount,
           student?.dependents || 0,
           hasMatriculaRewardsDiscount,
-          hasMatrFromSellerCode
+          hasMatrFromSellerCode,
+          {
+            has_paid_selection: student.has_paid_selection_process_fee,
+            has_paid_application: student.is_application_fee_paid,
+            has_paid_scholarship: student.is_scholarship_fee_paid,
+            has_paid_i20: student.has_paid_i20_control_fee
+          },
+          student.all_applications
         );
 
         setRealPaidAmounts(normalizedAmounts);
@@ -2266,6 +2297,29 @@ const AdminStudentDetails: React.FC = () => {
 
       if (profileUpdateError) {
         console.error('Erro ao atualizar documents_status:', profileUpdateError);
+      }
+
+      // Marcar todos os documentos individuais como aprovados para limpar o overview de admins
+      try {
+        await Promise.all([
+          supabase
+            .from('student_documents')
+            .update({ status: 'approved', approved_at: new Date().toISOString() })
+            .eq('user_id', student.user_id)
+            .eq('status', 'pending'),
+          supabase
+            .from('document_request_uploads')
+            .update({ 
+               status: 'approved', 
+               reviewed_at: new Date().toISOString(),
+               reviewed_by: user?.id
+            })
+            .eq('uploaded_by', student.user_id)
+            .in('status', ['pending', 'under_review'])
+        ]);
+        console.log('✅ [APPROVE] Documentos individuais marcados como aprovados');
+      } catch (docUpdateError) {
+        console.error('⚠️ [APPROVE] Erro ao atualizar documentos individuais:', docUpdateError);
       }
 
       // Webhook e notificação
@@ -3257,12 +3311,6 @@ const AdminStudentDetails: React.FC = () => {
             <Suspense fallback={<div className="animate-pulse bg-slate-100 h-64 rounded-2xl"></div>}>
               <PaymentStatusCard
                 student={student}
-                fees={{
-                  selection_process: getFeeAmount('selection_process'),
-                  application: getFeeAmount('application_fee'),
-                  scholarship: getFeeAmount('scholarship_fee'),
-                  i20_control: getFeeAmount('i20_control_fee'),
-                }}
                 realPaidAmounts={realPaidAmounts}
                 loadingPaidAmounts={loadingPaidAmounts}
                 editingFees={editingFees}
@@ -3274,7 +3322,6 @@ const AdminStudentDetails: React.FC = () => {
                 dependents={dependents}
                 hasOverride={hasOverride}
                 userSystemType={userSystemType}
-                userFeeOverrides={userFeeOverrides}
                 hasMatriculaRewardsDiscount={hasMatriculaRewardsDiscount}
                 onStartEditFees={handleStartEditFees}
                 onSaveEditFees={handleSaveEditFees}
