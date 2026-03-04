@@ -728,7 +728,7 @@ const QuickRegistration: React.FC = () => {
           {/* Left: Registration Form */}
           <div className="lg:col-span-2 space-y-8">
             <form id="registration-form" onSubmit={handleRegisterAndPay} className="space-y-8">
-              {/* SeÃ§Ã£o 1: InformaÃ§Ãµes da Conta & Termos */}
+              {/* Seção 1: Informações da Conta & Termos */}
               <div className="bg-white rounded-3xl shadow-xl border border-slate-200 p-8 relative overflow-hidden">
                 <div className="absolute top-0 right-0 w-32 h-32 bg-blue-50 rounded-full -mr-16 -mt-16 opacity-50"></div>
                 
@@ -1270,7 +1270,7 @@ const QuickRegistration: React.FC = () => {
                 <div className="space-y-6 mb-8 relative z-10">
                   <div className="flex flex-col">
                     <span className="text-lg sm:text-xl font-black text-slate-900 leading-none whitespace-nowrap mb-6">
-                      Taxa do Processo Seletivo
+                      {t('rapidRegistration.sidebar.selectionFee', 'Taxa do Processo Seletivo')}
                     </span>
                     <div className="flex justify-between items-end">
                       <span className="text-slate-500 font-bold uppercase tracking-widest text-[10px]">

@@ -1,5 +1,8 @@
 {
   "preCheckoutModal": {
+    "acceptPrefix": "I accept the ",
+    "termsAndConditionsLink": "Terms and Conditions",
+    "acceptSuffix": " of the service provision contract.",
     "noTermsFound": "No terms found",
     "securePayment": "Secure Payment",
     "closeModal": "Close modal",
@@ -2862,6 +2865,7 @@
     "totalEarnings": "Total Earnings",
     "yourReferralCode": "Your Referral Code",
     "yourCode": "Your Code",
+    "yourLink": "Your Link",
     "copyLink": "Copy Link",
     "linkCopied": "Link Copied",
     "shareWithFriends": "Share with Friends",
@@ -4055,6 +4059,7 @@
     },
     "sidebar": {
       "title": "Payment Summary",
+      "selectionFee": "Selection Process Fee",
       "total": "Total",
       "currentFee": "Total to Pay Now",
       "dependentsFee": "Dependents Fee",
@@ -4124,6 +4129,9 @@
     }
   },
   "common": {
+    "select": "Select",
+    "copy": "Copy",
+    "copied": "Copied!",
     "yes": "Yes",
     "no": "No",
     "expirationDate": "Status/I-94 expiration date",
