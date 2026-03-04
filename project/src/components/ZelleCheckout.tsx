@@ -1,5 +1,6 @@
 import React, { useState, useRef } from 'react';
 import { Upload, DollarSign, CheckCircle, AlertCircle, X } from 'lucide-react';
+import { useTranslation } from 'react-i18next';
 import { useAuth } from '../hooks/useAuth';
 import { usePaymentBlocked } from '../hooks/usePaymentBlocked';
 import { supabase } from '../lib/supabase';
@@ -41,7 +42,13 @@ export const ZelleCheckout: React.FC<ZelleCheckoutProps> = ({
   const isLocalhost = config.isDevelopment();
 
   const [loading, setLoading] = useState(false);
-  const [step, setStep] = useState<'instructions' | 'analyzing' | 'success' | 'under_review' | 'rejected'>('instructions');
+  const [step, setStep] = useState<'instructions' | 'upload' | 'analyzing' | 'success' | 'under_review' | 'rejected'>('instructions');
+  const [paymentDetails, setPaymentDetails] = useState({
+    confirmationCode: '',
+    paymentDate: '',
+    recipientEmail: '',
+    recipientName: ''
+  });
 
   const [comprovanteFile, setComprovanteFile] = useState<File | null>(null);
   const [comprovantePreview, setComprovantePreview] = useState<string | null>(null);
@@ -198,6 +205,10 @@ export const ZelleCheckout: React.FC<ZelleCheckoutProps> = ({
   };
 
 
+  const handleInputChange = (field: keyof typeof paymentDetails, value: string) => {
+    setPaymentDetails(prev => ({ ...prev, [field]: value }));
+  };
+
   const handleSubmit = async () => {
     if (!validatePaymentDetails()) return;
 
@@ -215,7 +226,8 @@ export const ZelleCheckout: React.FC<ZelleCheckoutProps> = ({
       }
 
       // Enviar apenas para n8n - sem INSERT direto no banco
-      const tempPaymentId = await sendToN8n(comprovanteUrl);
+      const tempPaymentId = generateUUID();
+      await sendToN8n(comprovanteUrl, tempPaymentId);
       setZellePaymentId(tempPaymentId);
 
       // Move to success step
@@ -379,158 +391,158 @@ export const ZelleCheckout: React.FC<ZelleCheckoutProps> = ({
               I've Made the Payment - Continue
             </button>
           </div>
+        </div>
       )}
 
-          {step === 'upload' && (
-            <div className="space-y-6">
-              <div className="text-center">
-                <h3 className="text-xl font-semibold text-gray-900 mb-2">
-                  Upload Payment Confirmation
-                </h3>
-                <p className="text-gray-600">
-                  Please provide the payment details and upload a screenshot
-                </p>
-              </div>
+      {step === 'upload' && (
+        <div className="space-y-6">
+          <div className="text-center">
+            <h3 className="text-xl font-semibold text-gray-900 mb-2">
+              Upload Payment Confirmation
+            </h3>
+            <p className="text-gray-600">
+              Please provide the payment details and upload a screenshot
+            </p>
+          </div>
 
-              {error && (
-                <div className="bg-red-50 border border-red-200 rounded-lg p-4">
-                  <div className="flex items-center">
-                    <X className="w-5 h-5 text-red-500 mr-2" />
-                    <span className="text-red-700">{error}</span>
-                  </div>
-                </div>
-              )}
-
-              <div className="space-y-4">
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-2">
-                    Confirmation Code *
-                  </label>
-                  <input
-                    type="text"
-                    value={paymentDetails.confirmationCode}
-                    onChange={(e) => handleInputChange('confirmationCode', e.target.value)}
-                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
-                    placeholder="Enter the confirmation code from your Zelle payment"
-                  />
-                </div>
-
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-2">
-                    Payment Date *
-                  </label>
-                  <input
-                    type="date"
-                    value={paymentDetails.paymentDate}
-                    onChange={(e) => handleInputChange('paymentDate', e.target.value)}
-                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
-                  />
-                </div>
-
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-2">
-                    Recipient Email *
-                  </label>
-                  <input
-                    type="email"
-                    value={paymentDetails.recipientEmail}
-                    onChange={(e) => handleInputChange('recipientEmail', e.target.value)}
-                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
-                    placeholder="Email address of the Zelle recipient"
-                  />
-                </div>
-
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-2">
-                    Recipient Name *
-                  </label>
-                  <input
-                    type="text"
-                    value={paymentDetails.recipientName}
-                    onChange={(e) => handleInputChange('recipientName', e.target.value)}
-                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
-                    placeholder="Full name of the Zelle recipient"
-                  />
-                </div>
-
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-2">
-                    Payment Confirmation Screenshot *
-                  </label>
-                  <div className="border-2 border-dashed border-gray-300 rounded-lg p-6 text-center hover:border-gray-400 transition-colors">
-                    {comprovantePreview ? (
-                      <div className="space-y-4">
-                        <img
-                          src={comprovantePreview}
-                          alt="Payment confirmation preview"
-                          className="max-w-full h-48 object-contain mx-auto rounded-lg border border-gray-200"
-                        />
-                        <div className="flex items-center justify-center space-x-2">
-                          <button
-                            onClick={() => {
-                              setComprovanteFile(null);
-                              setComprovantePreview(null);
-                            }}
-                            className="text-red-600 hover:text-red-700 text-sm font-medium"
-                          >
-                            Remove
-                          </button>
-                          <span className="text-gray-500">|</span>
-                          <button
-                            onClick={() => fileInputRef.current?.click()}
-                            className="text-blue-600 hover:text-blue-700 text-sm font-medium"
-                          >
-                            Change File
-                          </button>
-                        </div>
-                      </div>
-                    ) : (
-                      <div>
-                        <Upload className="w-12 h-12 text-gray-400 mx-auto mb-4" />
-                        <p className="text-gray-600 mb-2">
-                          Click to upload or drag and drop
-                        </p>
-                        <p className="text-sm text-gray-500">
-                          PNG, JPG up to 5MB
-                        </p>
-                        <button
-                          onClick={() => fileInputRef.current?.click()}
-                          className="mt-4 bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700 transition-colors"
-                        >
-                          Select File
-                        </button>
-                      </div>
-                    )}
-                    <input
-                      ref={fileInputRef}
-                      type="file"
-                      accept="image/*"
-                      onChange={handleFileSelect}
-                      className="hidden"
-                    />
-                  </div>
-                </div>
-              </div>
-
-              <div className="flex space-x-3">
-                <button
-                  onClick={() => setStep('instructions')}
-                  className="flex-1 bg-gray-200 text-gray-700 py-3 px-4 rounded-lg hover:bg-gray-300 transition-colors font-medium"
-                >
-                  Back
-                </button>
-                <button
-                  onClick={handleSubmit}
-                  disabled={loading}
-                  className="flex-1 bg-blue-600 text-white py-3 px-4 rounded-lg hover:bg-blue-700 transition-colors font-medium disabled:opacity-50 disabled:cursor-not-allowed"
-                >
-                  {loading ? 'Processing...' : 'Submit Payment'}
-                </button>
+          {error && (
+            <div className="bg-red-50 border border-red-200 rounded-lg p-4">
+              <div className="flex items-center">
+                <X className="w-5 h-5 text-red-500 mr-2" />
+                <span className="text-red-700">{error}</span>
               </div>
             </div>
           )}
 
+          <div className="space-y-4">
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-2">
+                Confirmation Code *
+              </label>
+              <input
+                type="text"
+                value={paymentDetails.confirmationCode}
+                onChange={(e) => handleInputChange('confirmationCode', e.target.value)}
+                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                placeholder="Enter the confirmation code from your Zelle payment"
+              />
+            </div>
+
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-2">
+                Payment Date *
+              </label>
+              <input
+                type="date"
+                value={paymentDetails.paymentDate}
+                onChange={(e) => handleInputChange('paymentDate', e.target.value)}
+                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+              />
+            </div>
+
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-2">
+                Recipient Email *
+              </label>
+              <input
+                type="email"
+                value={paymentDetails.recipientEmail}
+                onChange={(e) => handleInputChange('recipientEmail', e.target.value)}
+                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                placeholder="Email address of the Zelle recipient"
+              />
+            </div>
+
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-2">
+                Recipient Name *
+              </label>
+              <input
+                type="text"
+                value={paymentDetails.recipientName}
+                onChange={(e) => handleInputChange('recipientName', e.target.value)}
+                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                placeholder="Full name of the Zelle recipient"
+              />
+            </div>
+
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-2">
+                Payment Confirmation Screenshot *
+              </label>
+              <div className="border-2 border-dashed border-gray-300 rounded-lg p-6 text-center hover:border-gray-400 transition-colors">
+                {comprovantePreview ? (
+                  <div className="space-y-4">
+                    <img
+                      src={comprovantePreview}
+                      alt="Payment confirmation preview"
+                      className="max-w-full h-48 object-contain mx-auto rounded-lg border border-gray-200"
+                    />
+                    <div className="flex items-center justify-center space-x-2">
+                      <button
+                        onClick={() => {
+                          setComprovanteFile(null);
+                          setComprovantePreview(null);
+                        }}
+                        className="text-red-600 hover:text-red-700 text-sm font-medium"
+                      >
+                        Remove
+                      </button>
+                      <span className="text-gray-500">|</span>
+                      <button
+                        onClick={() => fileInputRef.current?.click()}
+                        className="text-blue-600 hover:text-blue-700 text-sm font-medium"
+                      >
+                        Change File
+                      </button>
+                    </div>
+                  </div>
+                ) : (
+                  <div>
+                    <Upload className="w-12 h-12 text-gray-400 mx-auto mb-4" />
+                    <p className="text-gray-600 mb-2">
+                      Click to upload or drag and drop
+                    </p>
+                    <p className="text-sm text-gray-500">
+                      PNG, JPG up to 5MB
+                    </p>
+                    <button
+                      onClick={() => fileInputRef.current?.click()}
+                      className="mt-4 bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700 transition-colors"
+                    >
+                      Select File
+                    </button>
+                  </div>
+                )}
+                <input
+                  ref={fileInputRef}
+                  type="file"
+                  accept="image/*"
+                  onChange={handleFileSelect}
+                  className="hidden"
+                />
+              </div>
+            </div>
+          </div>
+
+          <div className="flex space-x-3">
+            <button
+              onClick={() => setStep('instructions')}
+              className="flex-1 bg-gray-200 text-gray-700 py-3 px-4 rounded-lg hover:bg-gray-300 transition-colors font-medium"
+            >
+              Back
+            </button>
+            <button
+              onClick={handleSubmit}
+              disabled={loading}
+              className="flex-1 bg-blue-600 text-white py-3 px-4 rounded-lg hover:bg-blue-700 transition-colors font-medium disabled:opacity-50 disabled:cursor-not-allowed"
+            >
+              {loading ? 'Processing...' : 'Submit Payment'}
+            </button>
+          </div>
         </div>
-    </>
+      )}
+
+    </div>
   );
 };
