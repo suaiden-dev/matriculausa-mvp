@@ -2929,6 +2929,7 @@
     "totalEarnings": "Total Ganho",
     "yourReferralCode": "Seu Código de Indicação",
     "yourCode": "Seu Código",
+    "yourLink": "Seu Link",
     "copyLink": "Copiar Link",
     "linkCopied": "Link Copiado",
     "shareWithFriends": "Compartilhar com Amigos",
@@ -3187,6 +3188,9 @@
     "parcelowInstallmentPreview": "ou em até {{count}}x"
   },
   "preCheckoutModal": {
+    "acceptPrefix": "Eu aceito os ",
+    "termsAndConditionsLink": "Termos e Condições",
+    "acceptSuffix": " do contrato de prestação de serviços.",
     "securePayment": "Pagamento Seguro",
     "securePaymentProcess": "Processo de Pagamento Seguro",
     "closeModal": "Fechar modal",
@@ -4308,6 +4312,7 @@
     },
     "sidebar": {
       "title": "Resumo do Pagamento",
+      "selectionFee": "Taxa do Processo Seletivo",
       "total": "Total",
       "currentFee": "Total a Pagar Agora",
       "feeExplanation": "A Taxa de Processo de Seleção (US$400.00) é o primeiro pagamento obrigatório na plataforma MatriculaUSA. Ela desbloqueia seu acesso completo para visualizar todas as bolsas e iniciar seu processo de candidatura. Esta taxa é final e você será reembolsado caso não seja aceito em nenhuma universidade.",
@@ -4374,13 +4379,89 @@
       "preview": "Preview da foto",
       "previewAlt": "Preview da foto de identidade",
       "remove": "Remover",
-      "errors": {
-        "onlyImages": "Apenas arquivos JPG e PNG são permitidos",
-        "maxSize": "O arquivo deve ter no máximo 5MB",
-        "generic": "Erro ao fazer upload da foto",
-        "unauthenticated": "Usuário não autenticado"
-      }
+      "changeFile": "Alterar Arquivo",
+      "submitPayment": "Enviar Pagamento",
+      "processing": "Processando...",
+      "paymentProcessing": "Processamento de Pagamento..."
+    },
+    "analyzing": {
+      "title": "Analisando Pagamento...",
+      "subtitle": "Sua confirmação de pagamento está sendo validada automaticamente pelo nosso sistema de IA."
+    },
+    "underReview": {
+      "title": "Pagamento em Revisão",
+      "subtitle": "Seu comprovante de pagamento requer verificação adicional. Nossa equipe irá revisá-lo em até 48 horas.",
+      "notification": "Você será notificado assim que a revisão for concluída. Por favor, não envie outro pagamento."
+    },
+    "success": {
+      "title": "Pagamento Aprovado com Sucesso!",
+      "subtitle": "Seu pagamento Zelle foi processado e aprovado. Você pode agora prosseguir com as próximas etapas.",
+      "detailsTitle": "Detalhes do Pagamento:",
+      "originalAmount": "Valor Original:",
+      "discountApplied": "Desconto Aplicado:",
+      "finalAmount": "Valor Final:",
+      "youSavedSuccess": "Você economizou!",
+      "amount": "Valor:",
+      "feeType": "Tipo de Taxa:",
+      "paymentId": "ID do Pagamento:",
+      "submitted": "Enviado em:",
+      "nextStepsTitle": "O que acontece agora?",
+      "stepUploaded": "Confirmação de pagamento carregada",
+      "stepApproved": "Pagamento aprovado com sucesso",
+      "stepProceeding": "Prosseguindo para a próxima etapa automaticamente"
+    },
+    "rejected": {
+      "title": "Pagamento Rejeitado",
+      "subtitle": "Seu comprovante de pagamento não foi aprovado. Por favor, revise o motivo abaixo e carregue uma nova confirmação de pagamento.",
+      "reasonTitle": "Motivo da Rejeição:",
+      "defaultReason": "O pagamento foi rejeitado pelo administrador. Por favor, carregue uma nova confirmação de pagamento.",
+      "uploadNew": "Carregar Novo Comprovante de Pagamento",
+      "uploadNewNote": "Clique no botão acima para carregar uma nova captura de tela de confirmação de pagamento"
+    },
+    "uploadModal": {
+      "uploadingTitle": "Carregando Documento...",
+      "uploadingMessage": "Por favor, aguarde enquanto carregamos sua confirmação de pagamento",
+      "sendingTitle": "Enviando para Verificação...",
+      "sendingMessage": "Seu comprovante de pagamento está sendo enviado para validação automática",
+      "analyzingTitle": "Analisando Pagamento...",
+      "analyzingMessage": "Nossa IA está validando sua confirmação de pagamento"
+    },
+    "errors": {
+      "fileSize": "O tamanho do arquivo deve ser inferior a 5MB",
+      "fileType": "Por favor, selecione um arquivo de imagem (JPG, PNG, etc.)",
+      "uploadRequired": "Por favor, carregue uma captura de tela da sua confirmação de pagamento",
+      "uploadFailed": "Falha ao carregar a confirmação do pagamento",
+      "alreadyPending": "Você já tem um pagamento em processamento. Por favor, aguarde a revisão.",
+      "checkingStatus": "Verificando status do pagamento..."
     }
+  },
+  "common": {
+    "select": "Selecione",
+    "copy": "Copiar",
+    "copied": "Copiado!",
+    "yes": "Sim",
+    "no": "Não",
+    "expirationDate": "Data de expiração do status/I-94",
+    "name": "Nome",
+    "email": "Email",
+    "profile": "Perfil",
+    "section": "Seção",
+    "of": "de",
+    "loading": "Carregando...",
+    "success": "Sucesso",
+    "error": "Erro",
+    "filter": "Filtro",
+    "active": "ativo",
+    "apply": "Aplicar",
+    "language": "Português",
+    "featured": "Destaque",
+    "exclusive": "Exclusivo",
+    "showMore": "ver mais",
+    "learnMore": "Saiba mais",
+    "search": "Buscar",
+    "support": "Suporte",
+    "welcome": "Bem-vindo",
+    "close": "Fechar"
   },
   "selectionSurvey": {
     "identityVerification": "Verificação de Identidade",
@@ -4808,4 +4889,5 @@
         "prompt": "\"Eu entendo que meu resultado depende da minha disciplina. Se eu não seguir o plano, eu posso prejudicar meu status e meu projeto.\""
       }
     }
-  }}
+  }
+}

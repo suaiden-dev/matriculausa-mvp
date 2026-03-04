@@ -1,4 +1,123 @@
 {
+  "preCheckoutModal": {
+    "acceptPrefix": "I accept the ",
+    "termsAndConditionsLink": "Terms and Conditions",
+    "acceptSuffix": " of the service provision contract.",
+    "noTermsFound": "No terms found",
+    "securePayment": "Secure Payment",
+    "closeModal": "Close modal",
+    "closeTerms": "Close terms",
+    "totalAmount": "Total amount",
+    "securePaymentGateway": "Secure payment gateway",
+    "promotionalCoupon": {
+      "title": "Promotional Coupon",
+      "enterCode": "Enter code",
+      "validate": "Validate",
+      "validating": "Validating...",
+      "remove": "Remove coupon",
+      "applied": "discount",
+      "discountedValue": "Discounted value",
+      "originalValue": "(original)",
+      "enterCodePlease": "Please enter the coupon code",
+      "successMessage": "Coupon {{code}} applied! Discount of ${{amount}} applied."
+    },
+    "referralCode": "Referral Code",
+    "codeAlreadyUsed": "Code already used",
+    "discountAlreadyApplied": "Discount already applied to your account",
+    "haveReferralCode": "Do you have a friend referral code?",
+    "placeholder": "Enter code here",
+    "validating": "Validating...",
+    "validate": "Validate Code",
+    "acceptContractTerms": "I have read and accept the contract terms and conditions",
+    "processingPayment": "Processing...",
+    "applyCodeAndContinue": "Apply Code and Continue",
+    "goToPayment": "Go to Payment",
+    "termsAndConditions": {
+      "title": "Terms and Conditions"
+    },
+    "scrollToBottomFirst": "Scroll to bottom to accept",
+    "readingTerms": "Reading terms...",
+    "acceptTerms": "Accept Terms",
+    "cancel": "Cancel",
+    "loading": "Loading...",
+    "validCode": "Valid referral code! You will receive $50 discount on the selection process fee.",
+    "pleaseEnterCode": "Please enter a code",
+    "sellerReferralCodeBlocked": "Users with seller code cannot use additional discount codes.",
+    "errorValidating": "Error validating code. Please try again.",
+    "mustAcceptTerms": "You must accept the terms and conditions to continue."
+  },
+  "zelleComponent": {
+    "instructions": {
+      "title": "Zelle Payment Instructions",
+      "subtitle": "Follow these steps to complete your payment via Zelle",
+      "detailsTitle": "Zelle Payment Details",
+      "detailsSubtitle": "Send payment to the recipient below",
+      "recipientEmail": "Recipient Email",
+      "paymentAmount": "Payment Amount",
+      "youSaved": "You saved {{amount}}!",
+      "important": "Important",
+      "importantNote": "Make sure to send the exact amount of <strong>{{amount}}</strong> to <strong>{{email}}</strong> via Zelle. Any discrepancy will delay your payment processing.",
+      "uploadTitle": "Upload Payment Confirmation Screenshot *",
+      "clickToUpload": "Click to upload or drag and drop",
+      "fileFormats": "PNG, JPG up to 5MB",
+      "selectFile": "Select File",
+      "remove": "Remove",
+      "changeFile": "Change File",
+      "submitPayment": "Submit Payment",
+      "processing": "Processing...",
+      "paymentProcessing": "Payment Processing..."
+    },
+    "analyzing": {
+      "title": "Analyzing Payment...",
+      "subtitle": "Your payment confirmation is being automatically validated by our AI system."
+    },
+    "underReview": {
+      "title": "Payment Under Review",
+      "subtitle": "Your payment proof requires additional verification. Our team will review it within 48 hours.",
+      "notification": "You will be notified once the review is complete. Please do not submit another payment."
+    },
+    "success": {
+      "title": "Payment Approved Successfully!",
+      "subtitle": "Your Zelle payment has been processed and approved. You can now proceed with the next steps.",
+      "detailsTitle": "Payment Details:",
+      "originalAmount": "Original Amount:",
+      "discountApplied": "Discount Applied:",
+      "finalAmount": "Final Amount:",
+      "youSavedSuccess": "You saved!",
+      "amount": "Amount:",
+      "feeType": "Fee Type:",
+      "paymentId": "Payment ID:",
+      "submitted": "Submitted:",
+      "nextStepsTitle": "What happens next?",
+      "stepUploaded": "Payment confirmation uploaded",
+      "stepApproved": "Payment approved successfully",
+      "stepProceeding": "Proceeding to next step automatically"
+    },
+    "rejected": {
+      "title": "Payment Rejected",
+      "subtitle": "Your payment proof was not approved. Please review the reason below and upload a new payment confirmation.",
+      "reasonTitle": "Rejection Reason:",
+      "defaultReason": "Payment was rejected by admin. Please upload a new payment confirmation.",
+      "uploadNew": "Upload New Payment Proof",
+      "uploadNewNote": "Click the button above to upload a new payment confirmation screenshot"
+    },
+    "uploadModal": {
+      "uploadingTitle": "Uploading Document...",
+      "uploadingMessage": "Please wait while we upload your payment confirmation",
+      "sendingTitle": "Sending for Verification...",
+      "sendingMessage": "Your payment proof is being sent for automatic validation",
+      "analyzingTitle": "Analyzing Payment...",
+      "analyzingMessage": "Our AI is validating your payment confirmation"
+    },
+    "errors": {
+      "fileSize": "File size must be less than 5MB",
+      "fileType": "Please select an image file (JPG, PNG, etc.)",
+      "uploadRequired": "Please upload a screenshot of your payment confirmation",
+      "uploadFailed": "Failed to upload payment confirmation",
+      "alreadyPending": "You already have a payment being processed. Please wait for it to be reviewed.",
+      "checkingStatus": "Checking payment status..."
+    }
+  },
   "stepByStepGuide": {
     "title": "Step-by-Step Guide",
     "subtitle": "How the application process works",
@@ -2918,6 +3037,7 @@
     "totalEarnings": "Total Earnings",
     "yourReferralCode": "Your Referral Code",
     "yourCode": "Your Code",
+    "yourLink": "Your Link",
     "copyLink": "Copy Link",
     "linkCopied": "Link Copied",
     "shareWithFriends": "Share with Friends",
@@ -4253,6 +4373,7 @@
     },
     "sidebar": {
       "title": "Payment Summary",
+      "selectionFee": "Selection Process Fee",
       "total": "Total",
       "currentFee": "Total to Pay Now",
       "feeExplanation": "The Selection Process Fee ($400.00) is the first mandatory payment on the MatriculaUSA platform. It unlocks your full access to view all scholarships and start your application process. This fee is final and you will be refunded if not accepted to any university.",
@@ -4307,25 +4428,33 @@
       }
     }
   },
-  "components": {
-    "identityPhotoUpload": {
-      "titleInstructions": "How to take the correct photo",
-      "instructions": "Take a selfie holding a photo ID (passport, ID card, driver's license, or others) next to your face. Make sure both your face and the document are clearly visible.",
-      "exampleAlt": "Example photo with document",
-      "uploading": "Uploading photo...",
-      "clickToUpload": "Click to upload photo",
-      "fileTypes": "JPG or PNG (max 5MB)",
-      "success": "Photo uploaded successfully",
-      "preview": "Photo preview",
-      "previewAlt": "Identity photo preview",
-      "remove": "Remove",
-      "errors": {
-        "onlyImages": "Only JPG and PNG files are allowed",
-        "maxSize": "The file must be at most 5MB",
-        "generic": "Error uploading photo",
-        "unauthenticated": "User not authenticated"
-      }
-    }
+  "common": {
+    "select": "Select",
+    "copy": "Copy",
+    "copied": "Copied!",
+    "yes": "Yes",
+    "no": "No",
+    "expirationDate": "Status/I-94 expiration date",
+    "name": "Name",
+    "email": "Email",
+    "profile": "Profile",
+    "section": "Section",
+    "of": "of",
+    "loading": "Loading...",
+    "success": "Success",
+    "error": "Error",
+    "filter": "Filter",
+    "active": "active",
+    "apply": "Apply",
+    "language": "English",
+    "featured": "Featured",
+    "exclusive": "Exclusive",
+    "showMore": "show more",
+    "learnMore": "Learn more",
+    "search": "Search",
+    "support": "Support",
+    "welcome": "Welcome",
+    "close": "Close"
   },
   "selectionSurvey": {
     "identityVerification": "Identity Verification",
