@@ -52,7 +52,7 @@ const ZelleIcon = ({ className }: { className?: string }) => (
 const StripeIcon = ({ className }: { className?: string }) => (
   <div className={`${className} flex items-center justify-center bg-[#635bff] rounded-lg overflow-hidden shadow-sm shadow-[#635bff]/20`}>
     <span 
-      className="text-white font-black text-[28px] leading-[0] select-none"
+      className="text-white font-black text-[20px] sm:text-[28px] leading-[0] select-none"
       style={{ 
         fontFamily: 'system-ui, -apple-system, sans-serif',
         transform: 'translateY(-1.5px)' 
@@ -573,10 +573,33 @@ const QuickRegistration: React.FC = () => {
 
   const handlePaymentCheckout = async (method: 'stripe' | 'pix' | 'parcelow') => {
     try {
-      const { data: sessionData } = await supabase.auth.getSession();
-      const token = sessionData.session?.access_token;
+      let sessionData = null;
+      let token = null;
+
+      // 🎯 CORREÇÃO SAFARI: Lógica de retentativa para obter a sessão
+      // Em alguns navegadores (como Safari Mobile), o getSession pode retornar nulo 
+      // imediatamente após um login/registro automático devido a race conditions de armazenamento.
+      for (let i = 0; i < 5; i++) {
+        const { data } = await supabase.auth.getSession();
+        if (data?.session?.access_token) {
+          sessionData = data;
+          token = data.session.access_token;
+          console.log(`✅ [QuickRegistration] Sessão obtida na tentativa ${i + 1}`);
+          break;
+        }
+        
+        if (i < 4) {
+          console.log(`⏳ [QuickRegistration] Sessão não encontrada, tentando novamente em ${(i + 1) * 500}ms... (Tentativa ${i + 1}/5)`);
+          await new Promise(resolve => setTimeout(resolve, (i + 1) * 500));
+        }
+      }
       
-      if (!token) throw new Error(t('rapidRegistration.payment.error.notAuthenticated', 'UsuÃ¡rio nÃ£o autenticado.'));
+      if (!token || !sessionData?.session) {
+        console.error('❌ [QuickRegistration] Falha crítica: Sessão não encontrada após 5 tentativas');
+        throw new Error(t('rapidRegistration.payment.error.notAuthenticated', 'Usuário não autenticado.'));
+      }
+
+      const sessionUser = sessionData.session.user;
 
       let apiUrl = `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/stripe-checkout-selection-process-fee`;
       if (method === 'parcelow') {
@@ -585,9 +608,9 @@ const QuickRegistration: React.FC = () => {
 
       // Metadata estruturado para o webhook e tracking
       const paymentMetadata = {
-        student_id: sessionData.session?.user?.id,
-        user_id: sessionData.session?.user?.id,
-        email: sessionData.session?.user?.email,
+        student_id: sessionUser.id,
+        user_id: sessionUser.id,
+        email: sessionUser.email,
         full_name: formData.full_name,
         phone: formData.phone,
         country: formData.country,
@@ -619,8 +642,8 @@ const QuickRegistration: React.FC = () => {
           fee_type: 'selection_process',
           metadata: paymentMetadata,
           // Campos no root para compatibilidade
-          user_id: sessionData.session?.user?.id,
-          email: sessionData.session?.user?.email,
+          user_id: sessionUser.id,
+          email: sessionUser.email,
           cpf: formData.cpf
         })
       });
@@ -698,6 +721,8 @@ const QuickRegistration: React.FC = () => {
             {t('rapidRegistration.subtitle')}
           </p>
         </div>
+
+
 
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
           {/* Left: Registration Form */}
@@ -1136,54 +1161,56 @@ const QuickRegistration: React.FC = () => {
                             type="button"
                             disabled={isDisabled}
                             onClick={() => setSelectedMethod(method.id)}
-                            className={`w-full p-6 rounded-2xl border-2 transition-all duration-300 text-left relative overflow-hidden group/method ${
+                            className={`w-full pl-2 pr-5 py-4 sm:p-6 rounded-2xl border-2 transition-all duration-300 text-left relative overflow-hidden group/method ${
                               isSelected
                                 ? 'border-blue-500 bg-blue-50 shadow-[0_0_30px_rgba(59,130,246,0.1)]'
                                 : 'border-gray-100 bg-gray-50 hover:border-gray-200 hover:bg-white'
                             } ${isDisabled ? 'opacity-40 cursor-not-allowed grayscale' : 'cursor-pointer hover:scale-[1.01] active:scale-[0.99]'}`}
                           >
-                            <div className="flex items-center space-x-5 relative z-10">
-                              <div className="flex-shrink-0 w-14 h-14 flex items-center justify-center rounded-xl bg-white border border-gray-100 transition-transform duration-500 group-hover/method:scale-110 shadow-sm">
-                                <Icon className="w-10 h-10 text-gray-700" />
-                              </div>
-                              <div className="flex-1 min-w-0">
-                                <div className="flex items-center justify-between">
-                                  <div className="flex flex-col">
-                                    <h4 className="text-lg font-black text-gray-900 uppercase tracking-tight">{method.name}</h4>
-                                    {method.id === 'stripe' && (
-                                      <span className="text-[10px] font-bold text-gray-400 mt-1 uppercase tracking-wide leading-tight">{t('rapidRegistration.payment.notes.processingFees')}</span>
-                                    )}
-                                    {method.id === 'pix' && (
-                                      <span className="text-[10px] font-bold text-gray-400 mt-1 uppercase tracking-wide leading-tight">{t('rapidRegistration.payment.notes.processingFees')}</span>
-                                    )}
-                                    {method.id === 'parcelow' && (
-                                      <span className="text-[10px] font-bold text-gray-400 mt-1 uppercase tracking-wide leading-tight max-w-[200px] sm:max-w-none">{t('rapidRegistration.payment.notes.parcelowFees')}</span>
-                                    )}
-                                    {method.id === 'zelle' && (
-                                      <span className="text-[10px] font-bold text-gray-400 mt-1 uppercase tracking-wide leading-tight flex items-center gap-1">
-                                        <AlertCircle className="w-3 h-3 flex-shrink-0" />
-                                    {t('rapidRegistration.payment.notes.zelleTime')}
-                                      </span>
-                                    )}
+                            <div className="flex flex-col relative z-10 w-full">
+                              <div className="flex items-center justify-between w-full">
+                                <div className="flex items-center space-x-2 sm:space-x-5">
+                                  <div className="flex-shrink-0 w-10 h-10 sm:w-14 sm:h-14 flex items-center justify-center rounded-xl bg-white border border-gray-100 transition-transform duration-500 group-hover/method:scale-110 shadow-sm">
+                                    <Icon className="w-6 h-6 sm:w-10 sm:h-10 text-gray-700" />
                                   </div>
-                                  <div className="flex items-center gap-3">
-                                    {method.id === 'stripe' && (
-                                      <span className="text-grey-900 text-lg font-black px-2">${cardAmountWithFees.toFixed(2)}</span>
-                                    )}
-                                    {method.id === 'pix' && exchangeRate && (
-                                      <span className="text-grey-900 text-lg font-black px-2">R$ {pixAmountWithFees.toFixed(2)}</span>
-                                    )}
-                                    {method.id === 'parcelow' && (
-                                      <div className="flex flex-col items-end">
-                                        <span className="text-grey-900 text-lg font-black px-2">${currentFee.toFixed(2)}</span>
-                                         <span className="text-xs font-bold text-black mt-1 whitespace-nowrap">{t('rapidRegistration.payment.installment')}</span>
-                                      </div>
-                                    )}
-                                    {method.id === 'zelle' && (
-                                      <span className="text-grey-900 text-lg font-black px-2">${currentFee.toFixed(2)}</span>
-                                    )}
-                                  </div>
+                                  <h4 className="text-base sm:text-lg font-black text-gray-900 uppercase tracking-tight">{method.name}</h4>
                                 </div>
+                                <div className="flex items-center gap-1 sm:gap-3">
+                                  {method.id === 'stripe' && (
+                                    <span className="text-grey-900 text-base sm:text-lg font-black px-1 sm:px-2">${cardAmountWithFees.toFixed(2)}</span>
+                                  )}
+                                  {method.id === 'pix' && exchangeRate && (
+                                    <span className="text-grey-900 text-base sm:text-lg font-black px-1 sm:px-2">R$ {pixAmountWithFees.toFixed(2)}</span>
+                                  )}
+                                  {method.id === 'parcelow' && (
+                                    <div className="flex flex-col items-end">
+                                      <span className="text-grey-900 text-base sm:text-lg font-black px-1 sm:px-2">${currentFee.toFixed(2)}</span>
+                                      <span className="text-[10px] sm:text-xs font-bold text-black mt-0.5 whitespace-nowrap">{t('rapidRegistration.payment.installment')}</span>
+                                    </div>
+                                  )}
+                                  {method.id === 'zelle' && (
+                                    <span className="text-grey-900 text-base sm:text-lg font-black px-1 sm:px-2">${currentFee.toFixed(2)}</span>
+                                  )}
+                                </div>
+                              </div>
+                              
+                              {/* Rodapé do método - Notas e observações */}
+                              <div className="mt-2 sm:mt-1 sm:pl-[68px]">
+                                {method.id === 'stripe' && (
+                                  <span className="text-[9px] sm:text-[10px] font-bold text-gray-400 uppercase tracking-wide leading-tight block">{t('rapidRegistration.payment.notes.processingFees')}</span>
+                                )}
+                                {method.id === 'pix' && (
+                                  <span className="text-[9px] sm:text-[10px] font-bold text-gray-400 uppercase tracking-wide leading-tight block">{t('rapidRegistration.payment.notes.processingFees')}</span>
+                                )}
+                                {method.id === 'parcelow' && (
+                                  <span className="text-[9px] sm:text-[10px] font-bold text-gray-400 uppercase tracking-wide leading-tight block">{t('rapidRegistration.payment.notes.parcelowFees')}</span>
+                                )}
+                                {method.id === 'zelle' && (
+                                  <span className="text-[9px] sm:text-[10px] font-bold text-gray-400 uppercase tracking-wide leading-tight flex items-center gap-1">
+                                    <AlertCircle className="w-3 h-3 flex-shrink-0" />
+                                    {t('rapidRegistration.payment.notes.zelleTime')}
+                                  </span>
+                                )}
                               </div>
                             </div>
                           </button>
@@ -1192,25 +1219,24 @@ const QuickRegistration: React.FC = () => {
                           {method.id === 'parcelow' && isSelected && (
                             <div className="mt-2 ml-4 mr-4 animate-in fade-in slide-in-from-top-2 duration-300">
                               <div className="bg-blue-50/50 p-4 rounded-2xl border border-blue-100/50">
-                                <label className="block text-[10px] font-black text-blue-900/60 uppercase tracking-widest mb-2 leading-tight flex items-center gap-2">
-                                  <AlertCircle className="w-3 h-3 flex-shrink-0" />
+                                <label className="block text-[10px] font-black text-blue-900/60 uppercase tracking-widest mb-2 leading-tight">
                                   {t('rapidRegistration.payment.cpf.label')}
                                 </label>
-                                <div className="relative">
-                                  <input
-                                    type="text"
-                                    name="cpf"
-                                    required
-                                    disabled={loading}
-                                    value={formData.cpf}
-                                    onChange={(e) => {
-                                      const formatted = formatCPF(e.target.value);
-                                      setFormData((prev: any) => ({ ...prev, cpf: formatted }));
-                                    }}
-                                    placeholder={t('rapidRegistration.payment.cpf.placeholder')}
-                                    className="block w-1/2 pl-11 pr-4 py-3 border border-blue-200/50 rounded-xl outline-none focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 text-sm font-bold text-slate-900 bg-white transition-all duration-300 disabled:opacity-50 disabled:cursor-not-allowed"
-                                  />
-                                </div>
+                                  <div className="relative">
+                                    <input
+                                      type="text"
+                                      name="cpf"
+                                      required
+                                      disabled={loading}
+                                      value={formData.cpf}
+                                      onChange={(e) => {
+                                        const formatted = formatCPF(e.target.value);
+                                        setFormData((prev: any) => ({ ...prev, cpf: formatted }));
+                                      }}
+                                      placeholder={t('rapidRegistration.payment.cpf.placeholder')}
+                                      className="block w-full px-4 py-3 border border-blue-200/50 rounded-xl outline-none focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 text-sm font-bold text-slate-900 bg-white transition-all duration-300 disabled:opacity-50 disabled:cursor-not-allowed"
+                                    />
+                                  </div>
                               </div>
                             </div>
                           )}
