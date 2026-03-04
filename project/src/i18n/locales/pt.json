@@ -2803,6 +2803,7 @@
     "totalEarnings": "Total Ganho",
     "yourReferralCode": "Seu Código de Indicação",
     "yourCode": "Seu Código",
+    "yourLink": "Seu Link",
     "copyLink": "Copiar Link",
     "linkCopied": "Link Copiado",
     "shareWithFriends": "Compartilhar com Amigos",
@@ -3062,7 +3063,7 @@
   },
   "preCheckoutModal": {
     "acceptPrefix": "Eu aceito os ",
-    "termsAndConditionsLink": "termos e condições",
+    "termsAndConditionsLink": "Termos e Condições",
     "acceptSuffix": " do contrato de prestação de serviços.",
     "securePayment": "Pagamento Seguro",
     "securePaymentProcess": "Processo de Pagamento Seguro",
@@ -4109,6 +4110,7 @@
     },
     "sidebar": {
       "title": "Resumo do Pagamento",
+      "selectionFee": "Taxa do Processo Seletivo",
       "total": "Total",
       "currentFee": "Total a Pagar Agora",
       "dependentsFee": "Taxa de Dependentes",
@@ -4250,6 +4252,9 @@
     }
   },
   "common": {
+    "select": "Selecione",
+    "copy": "Copiar",
+    "copied": "Copiado!",
     "yes": "Sim",
     "no": "Não",
     "expirationDate": "Data de expiração do status/I-94",

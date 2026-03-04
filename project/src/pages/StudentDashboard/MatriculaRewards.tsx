@@ -444,8 +444,8 @@ const MatriculaRewards: React.FC = () => {
                           <Gift className="h-4 w-4 sm:h-5 sm:w-5 text-blue-600" />
                         </div>
                         <div className="flex-1 min-w-0">
-                          <p className="text-[10px] font-medium text-slate-500">Seu código</p>
-                          <p className="text-lg sm:text-xl font-bold tracking-wide text-slate-900 font-mono truncate">
+                          <p className="text-[10px] font-medium text-slate-500">{t('matriculaRewards.yourCode')}</p>
+                          <p className="text-lg sm:text-xl font-bold tracking-wide text-slate-900 font-mono">
                             {affiliateCode.code}
                           </p>
                         </div>
@@ -477,9 +477,9 @@ const MatriculaRewards: React.FC = () => {
                           <Link2 className="h-4 w-4 sm:h-5 sm:w-5 text-indigo-600" />
                         </div>
                         <div className="flex-1 min-w-0">
-                          <p className="text-[10px] font-medium text-slate-500">Seu link</p>
-                          <p className="text-xs sm:text-sm font-medium text-slate-600 truncate font-mono">
-                            {getRegistrationUrl(affiliateCode.code)}
+                          <p className="text-[10px] font-medium text-slate-500">{t('matriculaRewards.yourLink')}</p>
+                          <p className="text-xs sm:text-sm font-medium text-slate-600 break-all font-mono">
+                            {getRegistrationUrl(affiliateCode.code).replace(/^https?:\/\//, '')}
                           </p>
                         </div>
                       </div>
@@ -535,7 +535,7 @@ const MatriculaRewards: React.FC = () => {
           <Card className="p-6">
             <div className="text-center mb-4">
               <h2 className="text-lg font-semibold text-slate-900 mb-2">
-                Compartilhar com amigos
+                {t('matriculaRewards.shareWithFriends')}
               </h2>
               <p className="text-slate-600 text-sm">
                 {t('matriculaRewards.shareDescription')}
