@@ -264,7 +264,7 @@ const ScholarshipCardFullComponent: React.FC<ScholarshipCardFullProps> = ({
           {!scholarship.is_active || isBlocked ? (
             <button
               disabled
-              className="w-full h-9 px-3 rounded-lg font-semibold cursor-not-allowed flex items-center justify-center bg-slate-300 text-slate-500 opacity-60 text-xs"
+              className="w-full h-10 px-3 rounded-xl font-semibold cursor-not-allowed flex items-center justify-center bg-slate-300 text-slate-500 opacity-60 text-sm"
             >
               <AlertTriangle className="h-3 w-3 mr-1.5" />
               {isBlocked ? t('scholarshipDeadline.3800Expired') : t('scholarshipsPage.scholarshipCard.notAvailable')}
@@ -277,7 +277,7 @@ const ScholarshipCardFullComponent: React.FC<ScholarshipCardFullProps> = ({
                 onToggle();
               }}
               disabled={isLocked}
-              className={`group/btn w-full h-10 px-4 rounded-xl font-bold text-xs sm:text-sm flex items-center justify-center transition-all duration-300 relative overflow-hidden backdrop-blur-md border border-white/20 shadow-lg hover:shadow-xl ${
+              className={`group/btn w-full h-10 px-4 rounded-xl font-bold text-sm flex items-center justify-center transition-all duration-300 relative overflow-hidden backdrop-blur-md border border-white/20 shadow-lg hover:shadow-xl ${
                 isLocked
                   ? 'bg-slate-300/80 text-slate-500 cursor-not-allowed'
                   : isSelected

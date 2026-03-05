@@ -417,25 +417,7 @@ export const UniversityDocumentsStep: React.FC<StepProps> = ({ onBack }) => {
 
 
 
-              <div className="md:col-span-12 bg-white rounded-[3rem] p-8 md:p-16 shadow-2xl shadow-blue-900/5 border border-slate-200 relative overflow-hidden">
-                <div className="absolute top-0 right-0 w-96 h-96 bg-blue-500/5 rounded-full blur-[120px] -mr-48 -mt-48" />
-                <h4 className="text-2xl font-black text-gray-900 uppercase tracking-tight mb-8 relative z-10 flex items-center gap-3">
-                  <div className="w-10 h-10 bg-blue-50 rounded-xl flex items-center justify-center">
-                    <ArrowRight className="w-5 h-5 text-blue-600" />
-                  </div>
-                  O que acontece agora?
-                </h4>
-                <div className="space-y-4 relative z-10">
-                   {(t('studentDashboard.applicationChatPage.i20ControlFee.paymentSuccess.nextStepsList', { returnObjects: true }) as string[]).map((step, index) => (
-                     <div key={index} className="flex items-center gap-5 p-6 bg-slate-50 rounded-2xl border border-slate-200 hover:bg-white hover:border-blue-200 hover:shadow-lg hover:shadow-blue-500/5 transition-all">
-                        <div className="w-10 h-10 bg-blue-600 rounded-xl flex items-center justify-center font-black text-white shadow-lg shadow-blue-500/20 flex-shrink-0">
-                          {index + 1}
-                        </div>
-                        <p className="text-sm font-bold text-slate-700 leading-tight uppercase tracking-tight">{step}</p>
-                     </div>
-                   ))}
-                </div>
-              </div>
+
           </div>
           )}
 
@@ -618,7 +600,14 @@ export const UniversityDocumentsStep: React.FC<StepProps> = ({ onBack }) => {
                                       }`}>
                                         <div className="w-1.5 h-1.5 rounded-full bg-current" />
                                       </div>
-                                      <span className="text-xs font-bold text-slate-700 uppercase tracking-tight">{doc.label}</span>
+                                      <div className="flex flex-col">
+                                        <span className="text-xs font-bold text-slate-700 uppercase tracking-tight">{doc.label}</span>
+                                        {docData?.uploaded_at && (
+                                          <span className="text-[10px] text-slate-500 font-medium mt-0.5">
+                                            Enviado em: {new Date(docData.uploaded_at).toLocaleDateString('pt-BR')}
+                                          </span>
+                                        )}
+                                      </div>
                                     </div>
                                     <div className="flex items-center gap-3">
                                       {fileUrl && (

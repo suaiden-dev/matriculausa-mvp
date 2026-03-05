@@ -58,7 +58,7 @@ const ZelleIcon = ({ className }: { className?: string }) => (
 const StripeIcon = ({ className }: { className?: string }) => (
   <div className={`${className} flex items-center justify-center bg-[#635bff] rounded-lg overflow-hidden shadow-sm shadow-[#635bff]/20`}>
     <span 
-      className="text-white font-black text-[28px] leading-[0] select-none"
+      className="text-white font-black text-[22px] sm:text-[28px] leading-[0] select-none"
       style={{ 
         fontFamily: 'system-ui, -apple-system, sans-serif',
         transform: 'translateY(-1.5px)' // Puxando para cima para compensar o peso da fonte
@@ -1306,7 +1306,7 @@ export const SelectionFeeStep: React.FC<StepProps> = ({ onNext }) => {
     return (
       <div className="space-y-10 pb-12 max-w-4xl mx-auto px-4">
         {/* Header */}
-        <div className="text-center md:text-left space-y-4">
+        <div className="text-left space-y-4">
           <h2 className="text-3xl md:text-5xl font-black text-slate-900 uppercase tracking-tighter leading-none">{t('selectionFeeStep.paid.title')}</h2>
           <p className="text-lg md:text-xl text-slate-600 font-medium max-w-2xl mt-2">{t('selectionFeeStep.paid.subtitle')}</p>
         </div>
@@ -1337,7 +1337,7 @@ export const SelectionFeeStep: React.FC<StepProps> = ({ onNext }) => {
     <div className="space-y-8 sm:space-y-10 pb-12">
       {/* Payment Section */}
       <div className="space-y-6">
-        <div className="text-center md:text-left">
+        <div className="text-left">
           <h2 className="text-3xl md:text-5xl font-black text-slate-900 mb-3 uppercase tracking-tighter">
             {t('selectionFeeStep.main.title')}
           </h2>
@@ -1346,7 +1346,7 @@ export const SelectionFeeStep: React.FC<StepProps> = ({ onNext }) => {
           </p>
         </div>
 
-        <div className="bg-white border border-gray-100 rounded-[2.5rem] p-6 md:p-10 shadow-2xl relative overflow-hidden">
+        <div className="bg-white border border-gray-100 rounded-[2.0rem] sm:rounded-[2.5rem] p-3 sm:p-6 md:p-10 shadow-2xl relative overflow-hidden">
           <div className="absolute top-0 right-0 w-64 h-64 bg-blue-500/5 rounded-full blur-[80px] -mr-32 -mt-32 pointer-events-none" />
           
 
@@ -1384,7 +1384,7 @@ export const SelectionFeeStep: React.FC<StepProps> = ({ onNext }) => {
                         />
                         <div className="checkmark" />
                       </label>
-                      <label htmlFor="hasReferralCode" className="text-sm text-gray-700 leading-relaxed cursor-pointer flex-1">
+                      <label htmlFor="hasReferralCode" className="text-sm sm:text-base font-medium text-gray-700 leading-relaxed cursor-pointer flex-1">
                         {t('preCheckoutModal.haveReferralCode') || 'Eu tenho um código de indicação'}
                       </label>
                     </div>
@@ -1579,8 +1579,8 @@ export const SelectionFeeStep: React.FC<StepProps> = ({ onNext }) => {
 
 
           {/* Terms acceptance section */}
-          <div className="mb-8">
-            <div className="flex items-center space-x-3 p-4 bg-gray-50 border border-gray-100 rounded-xl group/terms hover:bg-gray-100/50 transition-colors duration-300 shadow-sm">
+          <div className="mb-12">
+            <div className="flex items-center space-x-3 p-3 bg-gray-50 rounded-lg group/terms hover:bg-gray-100/50 transition-colors duration-300">
               <label htmlFor="termsAccepted" className={`checkbox-container ${hasAcceptedTermsInDB ? 'cursor-not-allowed opacity-75' : 'cursor-pointer'} flex-shrink-0`}>
                 <input
                   id="termsAccepted"
@@ -1593,7 +1593,7 @@ export const SelectionFeeStep: React.FC<StepProps> = ({ onNext }) => {
                 />
                 <div className="checkmark border-gray-300" />
               </label>
-              <div className="text-xs sm:text-sm text-gray-600 leading-relaxed flex-1 cursor-default group-hover/terms:text-gray-900 transition-colors">
+              <div className="text-sm sm:text-base font-medium text-gray-700 leading-relaxed flex-1 cursor-default group-hover/terms:text-gray-900 transition-colors">
                 <span className="text-red-500 font-bold mr-1">*</span>
                 Eu aceito os {' '}
                 <span 
@@ -1680,9 +1680,9 @@ export const SelectionFeeStep: React.FC<StepProps> = ({ onNext }) => {
               </div>
             </div>
           ) : showZelleCheckout ? (
-            <div className="space-y-6 bg-white border border-gray-100 rounded-3xl p-6 shadow-xl relative overflow-hidden">
-              <div className="absolute top-0 right-0 w-32 h-32 bg-blue-500/5 rounded-full blur-[40px] -mr-16 -mt-16 pointer-events-none" />
-              <div className="flex items-center justify-between mb-2 relative z-10">
+            <div className="space-y-6 sm:bg-white sm:border sm:border-gray-100 sm:rounded-3xl py-4 pb-1 sm:p-6 sm:shadow-xl relative overflow-hidden sm:mx-0">
+              <div className="hidden sm:block absolute top-0 right-0 w-32 h-32 bg-blue-500/5 rounded-full blur-[40px] -mr-16 -mt-16 pointer-events-none" />
+              <div className="flex items-center justify-between mb-2 relative z-10 sm:px-0">
                 <h3 className="text-xl font-black text-gray-900 uppercase tracking-tight">{t('selectionFeeStep.main.zellePayment')}</h3>
                 
                 {!isZelleProcessing && (
@@ -1748,13 +1748,16 @@ export const SelectionFeeStep: React.FC<StepProps> = ({ onNext }) => {
                 </div>
               )}
                
-              <div className="flex items-end justify-between mb-4 px-2">
-                <p className="text-xs font-black text-gray-400 uppercase tracking-[0.2em]">{t('selectionFeeStep.main.selectMethod')}</p>
-                <div className="text-right">
+              <div className="flex flex-col sm:flex-row sm:items-end justify-between mb-8 px-2 gap-2 sm:gap-4">
+                <h3 className="text-xl font-black text-gray-900 uppercase tracking-tight w-full sm:w-auto text-left">{t('selectionFeeStep.main.selectMethod')}</h3>
+                <div className="text-right flex-shrink-0 self-end sm:self-auto">
                   {computedBasePrice < selectionFeeAmount ? (
                     <div className="flex flex-col items-end">
                       <div className="text-sm line-through text-gray-300 font-bold mb-0.5">{originalFormattedAmount}</div>
-                      <div className="text-3xl md:text-4xl font-black text-emerald-500 tracking-tighter leading-none">{formattedAmount}</div>
+                      <div className="flex items-baseline gap-2">
+                        <span className="text-xs font-black text-slate-900 uppercase tracking-widest mb-0.5">Total</span>
+                        <div className="text-2xl md:text-4xl font-black text-emerald-500 tracking-tighter leading-none">{formattedAmount}</div>
+                      </div>
                       <div className="inline-flex items-center mt-1.5 opacity-90">
                         <CheckCircle className="w-3 h-3 text-emerald-500 mr-1.5" />
                         <span className="text-[10px] text-emerald-500 font-black uppercase tracking-widest">
@@ -1765,7 +1768,10 @@ export const SelectionFeeStep: React.FC<StepProps> = ({ onNext }) => {
                       </div>
                     </div>
                   ) : (
-                    <div className="text-3xl md:text-4xl font-black text-gray-900 tracking-tighter leading-none">{formattedAmount}</div>
+                    <div className="flex items-baseline justify-end gap-2">
+                      <span className="text-xs font-black text-slate-900 uppercase tracking-widest mb-0.5">Total</span>
+                      <div className="text-2xl md:text-4xl font-black text-gray-900 tracking-tighter leading-none">{formattedAmount}</div>
+                    </div>
                   )}
                 </div>
               </div>
@@ -1784,74 +1790,77 @@ export const SelectionFeeStep: React.FC<StepProps> = ({ onNext }) => {
                     <button
                       onClick={() => handleCheckout(method.id)}
                       disabled={isDisabled}
-                      className={`w-full p-6 rounded-2xl border-2 transition-all duration-300 text-left relative overflow-hidden group/method ${
+                      className={`w-full pl-0 pr-2 py-4 sm:p-6 rounded-2xl border-2 transition-all duration-300 text-left relative overflow-hidden group/method ${
                         isSelected
                           ? 'border-blue-100 bg-blue-50 shadow-[0_0_30px_rgba(59,130,246,0.1)]'
                           : 'border-gray-100 bg-gray-50 hover:border-gray-200 hover:bg-white'
                       } ${isDisabled ? 'opacity-40 cursor-not-allowed grayscale' : 'cursor-pointer hover:scale-[1.01] active:scale-[0.99]'}`}
                     >
-                      <div className="flex items-center space-x-5 relative z-10">
-                        <div className={`flex-shrink-0 w-14 h-14 flex items-center justify-center rounded-xl bg-white border border-gray-100 transition-transform duration-500 group-hover/method:scale-110 shadow-sm`}>
-                          <Icon className="w-10 h-10 text-gray-700" />
+                      <div className="flex items-center space-x-0.5 sm:space-x-5 relative z-10">
+                        <div className={`flex-shrink-0 w-12 h-12 sm:w-14 sm:h-14 flex items-center justify-center rounded-xl bg-white border border-gray-100 transition-transform duration-500 group-hover/method:scale-110 shadow-sm`}>
+                          <Icon className="w-8 h-8 sm:w-10 sm:h-10 text-gray-700" />
                         </div>
                         
                         <div className="flex-1 min-w-0">
-                          <div className="flex items-center justify-between">
-                            <div className="flex flex-col">
-                                <h4 className="text-lg font-black text-gray-900 uppercase tracking-tight">
-                                  {method.name}
-                                </h4>
-                                {method.id === 'stripe' && (
-                                  <span className="text-[10px] font-bold text-gray-400 mt-1 uppercase tracking-wide leading-tight">{t('selectionFeeStep.main.processingFees.card')}</span>
-                                )}
-                                {method.id === 'pix' && (
-                                  <span className="text-[10px] font-bold text-gray-400 mt-1 uppercase tracking-wide leading-tight">{t('selectionFeeStep.main.processingFees.pix')}</span>
-                                )}
-                                {method.id === 'parcelow' && (
-                                  <span className="text-[10px] font-bold text-gray-400 mt-1 uppercase tracking-wide leading-tight max-w-[200px] sm:max-w-none">{t('selectionFeeStep.main.processingFees.parcelow')}</span>
-                                )}
-                                {method.id === 'zelle' && (
-                                  <span className="text-[10px] font-bold text-gray-400 mt-1 uppercase tracking-wide leading-tight flex items-center gap-1">
-                                    <AlertCircle className="w-3 h-3 flex-shrink-0" />
-                                    {t('selectionFeeStep.main.processingFees.zelle')}
+                          <div className="flex flex-col w-full">
+                            <div className="flex items-center justify-between w-full">
+                              <h4 className="text-base sm:text-lg font-black text-gray-900 uppercase tracking-tight">
+                                {method.name}
+                              </h4>
+
+                              <div className="flex items-center gap-3">
+                                {method.id === 'stripe' && cardAmountWithFees > 0 && (
+                                  <span className="text-grey-900 text-lg font-black px-2">
+                                    ${cardAmountWithFees.toFixed(2)}
                                   </span>
                                 )}
-                              </div>
-
-                            <div className="flex items-center gap-3">
-                              {method.id === 'stripe' && cardAmountWithFees > 0 && (
-                                <span className="text-grey-900 text-lg font-black px-2">
-                                  ${cardAmountWithFees.toFixed(2)}
-                                </span>
-                              )}
-                              {method.id === 'parcelow' && computedBasePrice > 0 && (
-                                <div className="flex flex-col items-end">
+                                {method.id === 'parcelow' && computedBasePrice > 0 && (
+                                  <div className="flex flex-col items-end">
+                                     <span className="text-grey-900 text-lg font-black px-2">
+                                       ${computedBasePrice.toFixed(2)}
+                                     </span>
+                                    <span className="text-[10px] font-bold text-slate-900 mt-1 block uppercase tracking-widest leading-tight">
+                                      {t('selectionFeeStep.main.parcelowInstallments')}
+                                    </span>
+                                  </div>
+                                )}
+                                {method.id === 'pix' && pixAmountWithFees > 0 && exchangeRate && (
+                                   <span className="text-grey-900 text-lg font-black px-2">
+                                     R$ {pixAmountWithFees.toFixed(2)}
+                                   </span>
+                                )}
+                                {method.id === 'zelle' && computedBasePrice > 0 && (
                                    <span className="text-grey-900 text-lg font-black px-2">
                                      ${computedBasePrice.toFixed(2)}
                                    </span>
-                                  <span className="text-[10px] font-bold text-slate-900 mt-1 block uppercase tracking-widest leading-tight">
-                                    {t('selectionFeeStep.main.parcelowInstallments')}
-                                  </span>
-                                </div>
+                                )}
+                                
+                                {isProcessing && (
+                                  <Loader2 className="w-5 h-5 text-blue-500 animate-spin flex-shrink-0" />
+                                )}
+                                {isSelected && !loading && (
+                                  <div className="bg-blue-500 rounded-full p-1 shadow-[0_0_15px_rgba(59,130,246,0.3)]">
+                                    <CheckCircle className="w-4 h-4 text-white" />
+                                  </div>
+                                )}
+                              </div>
+                            </div>
+                            
+                            <div className="mt-1">
+                              {method.id === 'stripe' && (
+                                <span className="text-[10px] font-bold text-gray-400 block uppercase tracking-wide leading-tight">{t('selectionFeeStep.main.processingFees.card')}</span>
                               )}
-                              {method.id === 'pix' && pixAmountWithFees > 0 && exchangeRate && (
-                                 <span className="text-grey-900 text-lg font-black px-2">
-                                   R$ {pixAmountWithFees.toFixed(2)}
-                                 </span>
+                              {method.id === 'pix' && (
+                                <span className="text-[10px] font-bold text-gray-400 block uppercase tracking-wide leading-tight">{t('selectionFeeStep.main.processingFees.pix')}</span>
                               )}
-                              {method.id === 'zelle' && computedBasePrice > 0 && (
-                                 <span className="text-grey-900 text-lg font-black px-2">
-                                   ${computedBasePrice.toFixed(2)}
-                                 </span>
+                              {method.id === 'parcelow' && (
+                                <span className="text-[10px] font-bold text-gray-400 block uppercase tracking-wide leading-tight">{t('selectionFeeStep.main.processingFees.parcelow')}</span>
                               )}
-                              
-                              {isProcessing && (
-                                <Loader2 className="w-5 h-5 text-blue-500 animate-spin flex-shrink-0" />
-                              )}
-                              {isSelected && !loading && (
-                                <div className="bg-blue-500 rounded-full p-1 shadow-[0_0_15px_rgba(59,130,246,0.3)]">
-                                  <CheckCircle className="w-4 h-4 text-white" />
-                                </div>
+                              {method.id === 'zelle' && (
+                                <span className="text-[10px] font-bold text-gray-400 flex items-center gap-1 uppercase tracking-wide leading-tight">
+                                  <AlertCircle className="w-3 h-3 flex-shrink-0" />
+                                  {t('selectionFeeStep.main.processingFees.zelle')}
+                                </span>
                               )}
                             </div>
                           </div>

@@ -33,6 +33,7 @@ const LayoutContent: React.FC<LayoutProps> = ({ children }) => {
                        location.pathname.includes('/inbox') ||
                        location.pathname === '/smart-assistant' ||
                        location.pathname.includes('/applications') ||
+                       location.pathname.includes('/onboarding') ||
                        isModalOpen; // 🎯 NOVA CONDIÇÃO: esconder quando modal está aberto
   
   // Debug log

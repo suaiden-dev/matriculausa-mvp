@@ -354,11 +354,7 @@ const AuthRedirect: React.FC<{ children: React.ReactNode }> = ({ children }) => 
         setCheckingUniversity(false);
       }
 
-      // VERIFICAÇÃO ADICIONAL PARA ESTUDANTES - redirecionar da home para o dashboard
-      if (user.role === 'student' && currentPath === '/') {
-        navigate('/student/dashboard', { replace: true });
-        return;
-      }
+
     };
 
     // Executar imediatamente, sem delay desnecessário

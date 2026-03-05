@@ -524,7 +524,7 @@ export const ScholarshipSelectionStep: React.FC<StepProps> = ({ onNext, onBack: 
     return (
       <div className="space-y-6">
         <div className="bg-gradient-to-br from-blue-50 via-indigo-50 to-purple-50 rounded-xl p-5 sm:p-6 border border-blue-100">
-        <div className="text-center">
+          <div className="text-left">
             <h2 className="text-2xl sm:text-3xl font-bold text-gray-900 mb-2">{t('scholarshipSelection.header.title')}</h2>
             <p className="text-base sm:text-lg text-gray-700 font-medium">{t('scholarshipSelection.header.subtitle')}</p>
           </div>
@@ -659,7 +659,7 @@ export const ScholarshipSelectionStep: React.FC<StepProps> = ({ onNext, onBack: 
     return (
       <div className="space-y-10 pb-12 max-w-4xl mx-auto px-4">
         {/* Header */}
-        <div className="text-center md:text-left space-y-4">
+        <div className="text-left space-y-4">
           <h2 className="text-3xl md:text-5xl font-black text-slate-900 uppercase tracking-tighter leading-none">{t('scholarshipSelection.completed.title')}</h2>
           <p className="text-lg md:text-xl text-slate-600 font-medium max-w-2xl mt-2">{t('scholarshipSelection.completed.subtitle')}</p>
         </div>
@@ -698,7 +698,7 @@ export const ScholarshipSelectionStep: React.FC<StepProps> = ({ onNext, onBack: 
         <div className="space-y-6 pb-24 sm:pb-6">
           {/* Header Section */}
           <div>
-            <div className="text-center md:text-left mb-8 space-y-4">
+            <div className="text-left mb-8 space-y-4">
               <h2 className="text-3xl md:text-5xl font-black text-slate-900 uppercase tracking-tighter leading-none">
                 {t('scholarshipSelection.header.title')}
               </h2>
@@ -1043,11 +1043,11 @@ export const ScholarshipSelectionStep: React.FC<StepProps> = ({ onNext, onBack: 
           )}
 
           {/* Fixed Continue Button - Mobile */}
-          <div className="fixed bottom-0 left-0 right-0 bg-white shadow-xl z-50 p-4 sm:hidden">
+          <div className="fixed bottom-6 left-4 right-4 z-50 sm:hidden">
             <button
               onClick={handleContinue}
               disabled={selectedIds.size === 0}
-              className="w-full bg-blue-600 text-white py-4 px-6 rounded-lg hover:bg-blue-700 transition-all font-bold text-base disabled:opacity-50 disabled:cursor-not-allowed shadow-lg flex items-center justify-center space-x-2 disabled:bg-gray-400"
+              className="w-full !bg-blue-600 hover:!bg-blue-700 text-white py-4 px-6 rounded-2xl font-black uppercase tracking-widest text-sm shadow-xl shadow-blue-500/20 active:scale-95 disabled:!bg-slate-300 disabled:text-slate-500 disabled:cursor-not-allowed flex items-center justify-center space-x-2 transition-all"
             >
               <span>{t(selectedIds.size === 1 ? 'scholarshipSelection.continueWithCount' : 'scholarshipSelection.continueWithCount_plural', { count: selectedIds.size })}</span>
             </button>

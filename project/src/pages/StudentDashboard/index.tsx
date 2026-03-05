@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useCallback } from 'react';
-import { Routes, Route, useNavigate, useLocation } from 'react-router-dom';
+import { Routes, Route } from 'react-router-dom';
 import { supabase } from '../../lib/supabase';
 import { Scholarship } from '../../types';
 import { useAuth } from '../../hooks/useAuth';
@@ -11,7 +11,7 @@ import Overview from './Overview';
 import ScholarshipBrowser from './ScholarshipBrowser';
 import MyApplications from './MyApplications';
 import ProfileManagement from './ProfileManagement';
-import { GraduationCap } from 'lucide-react';
+
 import { useCartStore } from '../../stores/applicationStore';
 import DocumentsAndScholarshipChoice from './DocumentsAndScholarshipChoice';
 import CollegeEnrollmentCheckout from './CollegeEnrollmentCheckout';
@@ -66,7 +66,6 @@ interface Application {
 }
 
 const StudentDashboard: React.FC = () => {
-  const location = useLocation();
   const queryClient = useQueryClient();
   const [scholarships, setScholarships] = useState<Scholarship[]>([]);
   const [applications, setApplications] = useState<Application[]>([]);
@@ -74,8 +73,7 @@ const StudentDashboard: React.FC = () => {
   const { user, userProfile } = useAuth();
   const [dashboardLoading, setDashboardLoading] = useState(true);
   const [hasLoadedData, setHasLoadedData] = useState(false);
-  const { cart, fetchCart } = useCartStore();
-  const navigate = useNavigate();
+  const { fetchCart } = useCartStore();
   const [dashboardError, setDashboardError] = useState<string | null>(null);
   const [recentApplications, setRecentApplications] = useState<Application[]>([]);
 
@@ -331,79 +329,9 @@ const StudentDashboard: React.FC = () => {
     availableScholarships: scholarships.length
   };
 
-  const isChatRoute = location.pathname.startsWith('/student/dashboard/chat');
-
   return (
     <StudentDashboardLayout user={user} profile={profile} loading={dashboardLoading}>
-      {/* Área de proteção para o botão */}
-      <div className="floating-cart-area" />
-      {/* Botão do Carrinho */}
-      {!isChatRoute && (
-        <div
-          style={{
-            position: 'fixed',
-            bottom: '20px',
-            right: '20px',
-            zIndex: 99999,
-            display: 'flex',
-            alignItems: 'center',
-            justifyContent: 'center'
-          }}
-        >
-          <button
-            onClick={() => navigate('/student/dashboard/cart')}
-            style={{
-              backgroundColor: '#05294E',
-              color: 'white',
-              borderRadius: '50%',
-              width: '60px',
-              height: '60px',
-              display: 'flex',
-              alignItems: 'center',
-              justifyContent: 'center',
-              border: '3px solid white',
-              boxShadow: '0 8px 32px rgba(5, 41, 78, 0.3)',
-              cursor: 'pointer',
-              transition: 'all 0.2s ease',
-              position: 'relative',
-              zIndex: 99999,
-              minWidth: '60px',
-              minHeight: '60px',
-              outline: 'none'
-            }}
-            onMouseDown={(e) => e.currentTarget.style.transform = 'scale(0.95)'}
-            onMouseUp={(e) => e.currentTarget.style.transform = 'scale(1)'}
-            onTouchStart={(e) => e.currentTarget.style.transform = 'scale(0.95)'}
-            onTouchEnd={(e) => e.currentTarget.style.transform = 'scale(1)'}
-            aria-label={`Cart with ${cart.length} items`}
-          >
-            <GraduationCap style={{ width: '28px', height: '28px', color: 'white' }} />
-            {cart.length > 0 && (
-              <span
-                style={{
-                  position: 'absolute',
-                  top: '-8px',
-                  right: '-8px',
-                  backgroundColor: '#ef4444',
-                  color: 'white',
-                  borderRadius: '50%',
-                  width: '28px',
-                  height: '28px',
-                  display: 'flex',
-                  alignItems: 'center',
-                  justifyContent: 'center',
-                  fontSize: '14px',
-                  fontWeight: 'bold',
-                  border: '2px solid white',
-                  zIndex: 100000
-                }}
-              >
-                {cart.length > 99 ? '99+' : cart.length}
-              </span>
-            )}
-          </button>
-        </div>
-      )}
+      {/* Área de proteção para o botão foi removida */}
       <Routes>
         <Route
           index

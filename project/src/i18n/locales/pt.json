@@ -1760,6 +1760,16 @@
       "description": "Esta taxa cobre o processamento de sua candidatura, avaliação de documentos e suporte inicial para o seu processo de estudo nos Estados Unidos.",
       "identityVerification": "Verificação de Identidade",
       "identityVerificationSubtitle": "Esta etapa é obrigatória",
+      "identity": {
+        "success": "Foto enviada com sucesso!",
+        "error": "Erro ao salvar foto. Tente novamente.",
+        "continue": "Continuar",
+        "sending": "Enviando...",
+        "sendPhoto": "Enviar Foto",
+        "completed": "Verificação Concluída",
+        "completedTitle": "Verificação concluída!",
+        "alreadySent": "Sua foto de identificação já foi enviada. Você pode prosseguir para o questionário."
+      },
       "discountApplied": "Desconto Aplicado",
       "couponApplied": "Cupom {{coupon}} Aplicado",
       "methods": {
@@ -1843,17 +1853,32 @@
         "continueProcess": "Continuar Processo",
         "startProcess": "Iniciar Processo",
         "stepLabels": {
-          "welcome": "Bem-vindo",
-          "selection_fee": "Taxa de Seleção",
-          "scholarship_selection": "Seleção de Bolsas",
-          "process_type": "Tipo de Processo",
-          "documents_upload": "Envio de Documentos",
-          "payment": "Pagamento",
-          "scholarship_fee": "Taxa de Bolsa",
-          "university_documents": "Documentos da Universidade",
-          "waiting_approval": "Aguardando Aprovação",
-          "completed": "Concluído",
-          "my_applications": "Minhas Candidaturas"
+          "selection_fee": "Taxa do Processo Seletivo",
+          "identity_verification": "Verificação de Identidade",
+          "selection_survey": "Questionário de Perfil",
+          "scholarship_selection": "Seleção de Bolsas e Instituição",
+          "process_type": "Situação do Visto",
+          "documents_upload": "Documentação e Escolha final",
+          "payment": "Taxa de Matrícula",
+          "scholarship_fee": "Taxa da Bolsa",
+          "university_documents": "Minha Aplicação",
+          "waiting_approval": "Carta de Aceitação e I-20",
+          "completed": "Finalizado",
+          "my_applications": "Dashboard"
+        },
+        "stepDescriptions": {
+          "selection_fee": "Esta taxa cobre o processamento de sua candidatura, avaliação de documentos e suporte inicial para o seu processo de estudo.",
+          "identity_verification": "Para garantir a segurança do processo seletivo, valide sua identidade com uma selfie e seu documento.",
+          "selection_survey": "Responda com atenção. Para ser aprovado e continuar seu processo, você precisa atingir no mínimo 80% de acerto.",
+          "scholarship_selection": "Navegue pelas bolsas e selecione quais gostaria de se matricular. É necessário escolher ao menos uma para prosseguir.",
+          "process_type": "Selecione a opção que melhor descreve sua situação atual em relação ao visto americano.",
+          "documents_upload": "Envie seus documentos básicos (Passaporte, Diploma e Extrato) em inglês para análise da universidade.",
+          "payment": "Garanta sua vaga pagando a taxa de matrícula da instituição escolhida.",
+          "scholarship_fee": "Esta taxa é o compromisso final com a bolsa ou faculdade selecionada.",
+          "university_documents": "Revise os detalhes da sua universidade e envie a documentação obrigatória.",
+          "waiting_approval": "Acompanhe a emissão da sua Carta de Aceitação e o processo do formulário I-20.",
+          "my_applications": "Visualize o progresso das suas candidaturas e documentos.",
+          "completed": "Parabéns! Seu processo de onboarding foi concluído com sucesso."
         }
       },
       "onboarding": {
@@ -2155,7 +2180,7 @@
       "fundsProof": "Comprovante de Fundos",
       "fundsProofDescription": "Faça upload de extratos bancários ou documentos financeiros. É necessário um mínimo de $22.000 USD, mais $5.000 USD para cada dependente.",
       "documents": "documentos",
-      "dragDropFiles": "Arraste e solte arquivos PDF aqui ou clique para selecionar",
+      "dragDropFiles": "Solte arquivos ou clique para selecionar",
       "onlyPdfSupported": "Apenas arquivos PDF são suportados para múltiplos documentos",
       "addMoreDocuments": "Adicionar mais documentos",
       "documentLimitExceeded": "Limite de {{limit}} documentos excedido",
@@ -2191,7 +2216,7 @@
       "title": "Envio de Documentos",
       "subtitle": "Precisamos de alguns documentos para verificar sua elegibilidade e processar sua candidatura.",
       "importantNotice": "Certifique-se que os documentos enviados estão claramente visíveis e legíveis. Certifique-se também de que os documentos enviados estão exclusivamente em <boldUnderline>Inglês</boldUnderline>, se não tiver os documentos traduzidos recomendamos os serviços de traduções de documentos de nosso parceiro <link>Lush America Translations</link>.",
-      "uploadAndContinue": "Fazer Upload e Continuar",
+      "uploadAndContinue": "Dar Upload",
       "uploadingDocuments": "Fazendo Upload dos Documentos...",
       "aiAnalysisInProgress": "Análise por IA em Andamento..."
     },
@@ -2252,10 +2277,7 @@
         "approved": "aprovadas",
         "applications": "aplicações"
       },
-      "importantNotice": {
-        "title": "Importante:",
-        "description": "Você pode escolher apenas uma bolsa. Depois de pagar a Taxa de Aplicação por uma bolsa, outras opções serão desabilitadas."
-      },
+
       "paymentStatus": {
         "title": "Status do Pagamento",
         "applicationFee": "Taxa de Matrícula",
@@ -2304,109 +2326,7 @@
       },
       "loading": "Carregando suas aplicações...",
       "error": "Erro: {{message}}",
-      "statusDescriptions": {
-        "documentsApprovedByUniversity": {
-          "title": "Documentos Aprovados pela Universidade",
-          "description": "Ótimas notícias! Sua aplicação foi aprovada, mas alguns documentos ainda precisam de atenção.",
-          "nextSteps": [
-            "Complete qualquer upload de documento pendente",
-            "Pague a taxa de matrícula para garantir sua vaga",
-            "Prepare-se para a próxima fase da matrícula"
-          ]
-        },
-        "applicationApprovedPaymentRequired": {
-          "title": "Aplicação Aprovada - Pagamento Necessário",
-          "description": "Parabéns! Sua aplicação foi totalmente aprovada. O próximo passo é pagar a taxa de matrícula.",
-          "nextSteps": [
-            "Pague a taxa de matrícula para garantir sua bolsa",
-            "Complete o processo de matrícula",
-            "Prepare-se para sua jornada acadêmica"
-          ]
-        },
-        "applicationFeePaidScholarshipFeeRequired": {
-          "title": "Taxa de Matrícula Paga - Taxa da Bolsa Necessária",
-          "description": "Excelente! Sua taxa de matrícula foi confirmada. Agora pague a taxa da bolsa para finalizar sua matrícula.",
-          "nextSteps": [
-            "Pague a taxa da bolsa para completar a matrícula",
-            "Receba a confirmação final",
-            "Comece seu programa acadêmico"
-          ]
-        },
-        "scholarshipFeePaidI20Required": {
-          "title": "Taxa da Bolsa Paga - Documentos Pendentes",
-          "description": "Ótimo! Sua taxa da bolsa foi confirmada. Agora você precisa enviar as requisições de documentos pendentes solicitadas pela universidade.",
-          "nextSteps": [
-            "Envie as requisições de documentos pendentes",
-            "Aguarde a aprovação dos documentos pela universidade",
-            "Pague a I-20 Control Fee para poder receber a carta de aceite",
-            "Receba a carta de aceite da universidade"
-          ]
-        },
-        "allFeesPaidWaitingAcceptanceLetter": {
-          "title": "Todas as Taxas Pagas - Aguardando Carta de Aceite",
-          "description": "Excelente! Todas as taxas foram pagas com sucesso. Agora você está aguardando a universidade enviar sua carta de aceite oficial.",
-          "nextSteps": [
-            "Aguarde a universidade enviar sua carta de aceite",
-            "Verifique regularmente a seção de documentos",
-            "Complete sua matrícula após receber a carta"
-          ]
-        },
-        "fullyEnrolled": {
-          "title": "Totalmente Matriculado!",
-          "description": "Perfeito! Você completou com sucesso todos os requisitos e está oficialmente matriculado.",
-          "nextSteps": [
-            "Acesse seu portal do estudante",
-            "Revise o cronograma de aulas",
-            "Conecte-se com orientadores acadêmicos"
-          ]
-        },
-        "applicationNotSelected": {
-          "title": "Aplicação Não Selecionada",
-          "description": "Infelizmente, sua aplicação não foi selecionada para esta oportunidade de bolsa.",
-          "nextSteps": [
-            "Revise outras bolsas disponíveis",
-            "Considere melhorar sua aplicação",
-            "Aplique para programas diferentes"
-          ]
-        },
-        "applicationUnderReview": {
-          "title": "Aplicação em Revisão",
-          "description": "Sua aplicação está sendo avaliada pela universidade. Este processo geralmente leva 2-4 semanas.",
-          "nextSteps": [
-            "Aguarde a decisão da universidade",
-            "Monitore seu email para notificações importantes",
-            "Verifique o status da aplicação regularmente",
-            "Seja paciente durante o processo de revisão"
-          ]
-        },
-        "applicationFeeConfirmed": {
-          "title": "Taxa de Matrícula Confirmada",
-          "description": "Sua taxa de matrícula foi recebida e confirmada. Você agora é elegível para a bolsa.",
-          "nextSteps": [
-            "Pague a taxa da bolsa para completar a matrícula",
-            "Envie quaisquer documentos restantes",
-            "Prepare-se para o início do seu programa"
-          ]
-        },
-        "documentsUnderUniversityReview": {
-          "title": "Documentos em Revisão pela Universidade",
-          "description": "Sua aplicação foi enviada com todos os documentos necessários. A universidade está atualmente revisando seus materiais.",
-          "nextSteps": [
-            "Aguarde a revisão dos documentos pela universidade",
-            "Monitore seu email para notificações",
-            "Verifique o status da aplicação regularmente"
-          ]
-        },
-        "applicationSubmitted": {
-          "title": "Aplicação Enviada",
-          "description": "Sua aplicação foi enviada com sucesso e está aguardando revisão inicial.",
-          "nextSteps": [
-            "Aguarde a revisão dos documentos",
-            "Monitore o status da aplicação",
-            "Prepare-se para os próximos passos"
-          ]
-        }
-      },
+
       "statusLabels": {
         "approvedByUniversity": "APROVADA PELA UNIVERSIDADE",
         "approved": "APROVADA",
@@ -2415,7 +2335,7 @@
         "underReview": "EM REVISÃO",
         "pendingScholarshipFee": "PENDENTE TAXA DA BOLSA"
       },
-      "nextSteps": "Próximos Passos:",
+
       "rejectionReason": "Motivo:",
       "scholarshipDetails": {
         "annualScholarshipValue": "Valor Anual da Bolsa",
@@ -2426,9 +2346,7 @@
       "rejectedApplication": {
         "reason": "Motivo:"
       },
-      "statusDetails": {
-        "title": "Detalhes do Status"
-      },
+
       "status": {
         "applicationNotSelected": "Candidatura Não Selecionada",
         "applied": "Candidatado",
@@ -4205,7 +4123,7 @@
       "warningDescription": "Ao confirmar, você não poderá mais alterar as bolsas escolhidas. Revise cuidadosamente sua seleção abaixo antes de prosseguir.",
       "unknownUniversity": "Universidade Desconhecida",
       "backButton": "Voltar para Seleção",
-      "continueButton": "Confirmar e Continuar",
+      "continueButton": "Continuar",
       "removeButton": "Remover Seleção"
     },
     "completed": {
@@ -4259,7 +4177,7 @@
     "confirmationModal": {
       "title": "Confirmar Seleção",
       "description": "Ao confirmar, você não poderá mais alterar as bolsas escolhidas. Revise cuidadosamente sua seleção antes de prosseguir.",
-      "confirm": "Confirmar e Prosseguir",
+      "confirm": "Confirmar",
       "cancel": "Revisar Novamente"
     },
     "quickGuide": {

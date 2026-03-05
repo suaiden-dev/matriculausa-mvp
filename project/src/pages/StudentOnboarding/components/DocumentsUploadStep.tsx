@@ -509,7 +509,7 @@ export const DocumentsUploadStep: React.FC<StepProps> = ({ onNext }) => {
     });
   };
 
-  const parseApplicationDocuments = (documents: any): { type: string; status?: string; review_notes?: string; rejection_reason?: string }[] => {
+  const parseApplicationDocuments = (documents: any): { type: string; status?: string; review_notes?: string; rejection_reason?: string; uploaded_at?: string }[] => {
     if (!Array.isArray(documents)) return [];
     if (documents.length === 0) return [];
     if (typeof documents[0] === 'string') {
@@ -519,7 +519,8 @@ export const DocumentsUploadStep: React.FC<StepProps> = ({ onNext }) => {
       type: d.type, 
       status: d.status, 
       review_notes: d.review_notes,
-      rejection_reason: d.rejection_reason
+      rejection_reason: d.rejection_reason,
+      uploaded_at: d.uploaded_at
     }));
   };
 
@@ -536,7 +537,7 @@ export const DocumentsUploadStep: React.FC<StepProps> = ({ onNext }) => {
       return (
         <div className="space-y-10 pb-12 max-w-4xl mx-auto px-4">
           {/* Header */}
-          <div className="text-center md:text-left space-y-4">
+          <div className="text-left space-y-4">
             <h2 className="text-3xl md:text-5xl font-black text-slate-900 uppercase tracking-tighter leading-none">
               Escolha sua Universidade
             </h2>
@@ -601,7 +602,7 @@ export const DocumentsUploadStep: React.FC<StepProps> = ({ onNext }) => {
         >
           <div className="space-y-10 max-w-5xl mx-auto pb-12 px-4">
             {/* Header Outside Container */}
-            <div className="text-center md:text-left space-y-4 animate-in fade-in slide-in-from-top-10 duration-1000">
+            <div className="text-left space-y-4 animate-in fade-in slide-in-from-top-10 duration-1000">
               <h2 className="text-3xl md:text-5xl font-black text-slate-900 uppercase tracking-tighter leading-none">
                 {isApproved ? 'Escolha sua Universidade' : 'Candidaturas em Análise'}
               </h2>
@@ -618,12 +619,12 @@ export const DocumentsUploadStep: React.FC<StepProps> = ({ onNext }) => {
               <div className="absolute top-0 right-0 w-80 h-80 bg-blue-500/5 rounded-full blur-[100px] -mr-40 -mt-40 pointer-events-none" />
               
               <div className="relative z-10 space-y-10">
-                <div className="flex items-center justify-between border-b border-gray-50 pb-6">
-                  <h3 className="text-2xl font-black text-gray-900 uppercase tracking-tight flex items-center gap-3">
-                    <GraduationCap className="w-8 h-8 text-blue-600" />
+                <div className="flex flex-col sm:flex-row sm:items-center justify-between border-b border-gray-50 pb-6 gap-4">
+                  <h3 className="text-2xl font-black text-gray-900 uppercase tracking-tight flex items-center gap-3 whitespace-nowrap">
+                    <GraduationCap className="w-8 h-8 text-blue-600 flex-shrink-0" />
                     Suas Bolsas
                   </h3>
-                  <span className="bg-blue-50 text-blue-600 px-5 py-2 rounded-2xl text-[10px] font-black uppercase tracking-widest border border-blue-100">
+                  <span className="w-fit bg-blue-50 text-blue-600 px-5 py-2 rounded-2xl text-[10px] font-black uppercase tracking-widest border border-blue-100">
                     {applications.length} Candidaturas
                   </span>
                 </div>
@@ -658,16 +659,11 @@ export const DocumentsUploadStep: React.FC<StepProps> = ({ onNext }) => {
                             'border-slate-300 cursor-default opacity-80'
                           }`}
                         >
-                          {/* Selected Check Badge */}
-                          {isSelected && (
-                            <div className="absolute top-4 right-4 z-20 bg-blue-600 text-white p-1.5 rounded-full shadow-lg animate-in zoom-in duration-300">
-                              <CheckCircle className="w-5 h-5" />
-                            </div>
-                          )}
+                          {/* Selected Check Badge Removido */}
 
                           {/* Status Badge */}
-                          {/* Status Badge */}
-                          <div className="absolute top-4 right-14 z-10">
+                          {/* Status Badge - Desktop Absolute, Mobile Hidden */}
+                          <div className="hidden sm:block absolute top-4 right-4 z-10">
                             <div className={`px-3 py-1.5 rounded-xl text-xs font-black uppercase tracking-widest shadow-sm backdrop-blur-md border ${
                               isAppApproved ? 'bg-emerald-500/90 text-white border-emerald-400' :
                               app.status === 'rejected' ? 'bg-red-500/90 text-white border-red-400' :
@@ -677,10 +673,19 @@ export const DocumentsUploadStep: React.FC<StepProps> = ({ onNext }) => {
                             </div>
                           </div>
 
-
-
                           {/* Card Content */}
                           <div className="p-4 sm:p-5 flex-1 flex flex-col">
+                            {/* Status Badge - Mobile Inline */}
+                            <div className="sm:hidden mb-4 self-end">
+                              <div className={`px-3 py-1.5 rounded-xl text-xs font-black uppercase tracking-widest shadow-sm backdrop-blur-md border inline-block ${
+                                isAppApproved ? 'bg-emerald-500/90 text-white border-emerald-400' :
+                                app.status === 'rejected' ? 'bg-red-500/90 text-white border-red-400' :
+                                'bg-amber-500/90 text-white border-amber-400'
+                              }`}>
+                                {isAppApproved ? 'Aprovada' : app.status === 'rejected' ? 'Reprovada' : 'Em Análise'}
+                              </div>
+                            </div>
+
                             <div className="flex gap-4 items-center mb-4">
                               {scholarship?.image_url || scholarship?.universities?.logo_url ? (
                                 <div className="w-28 h-28 bg-white rounded-[2rem] flex items-center justify-center flex-shrink-0 overflow-hidden relative border border-gray-100/50 shadow-sm">
@@ -699,7 +704,7 @@ export const DocumentsUploadStep: React.FC<StepProps> = ({ onNext }) => {
                               
                               <div className="flex-1 min-w-0">
                                 {/* Title */}
-                                <h4 className="text-lg font-bold text-slate-900 mb-0.5 leading-tight group-hover:text-[#05294E] transition-colors pr-20">
+                                <h4 className="text-lg font-bold text-slate-900 mb-0.5 leading-tight group-hover:text-[#05294E] transition-colors pr-0 sm:pr-20">
                                   {scholarship?.title}
                                 </h4>
                                 
@@ -829,6 +834,11 @@ export const DocumentsUploadStep: React.FC<StepProps> = ({ onNext }) => {
                                                     }`}>
                                                       {isApprovedStatus ? 'Aprovado' : isRejectedStatus ? 'Rejeitado' : isUnderReviewStatus ? 'Em Análise' : 'Pendente'}
                                                     </span>
+                                                    {docData?.uploaded_at && (
+                                                      <span className="text-[10px] text-slate-500 font-medium ml-2">
+                                                        Enviado em: {new Date(docData.uploaded_at).toLocaleDateString('pt-BR')}
+                                                      </span>
+                                                    )}
                                                     {isRejectedStatus && (
                                                       <span className="text-[9px] font-bold text-red-600 uppercase tracking-tight italic opacity-70">
                                                         • Importante: Documentos rejeitados podem ser reenviados para uma nova análise.
@@ -974,7 +984,7 @@ export const DocumentsUploadStep: React.FC<StepProps> = ({ onNext }) => {
 
   return (
     <div className="space-y-10 pb-24 sm:pb-12 max-w-4xl mx-auto">
-      <div className="text-center md:text-left space-y-4 px-4">
+      <div className="text-left space-y-4 px-4">
         <h2 className="text-3xl md:text-5xl font-black text-slate-900 uppercase tracking-tighter leading-none">
           {t('studentDashboard.documentsUploadStep.title')}
         </h2>
@@ -983,7 +993,7 @@ export const DocumentsUploadStep: React.FC<StepProps> = ({ onNext }) => {
         </p>
       </div>
 
-      <div className="bg-white border border-gray-100 rounded-[2.5rem] p-6 md:p-12 shadow-2xl relative overflow-hidden mx-4">
+      <div className="bg-white border border-gray-100 rounded-[2rem] md:rounded-[2.5rem] p-5 md:p-12 shadow-2xl relative overflow-hidden mx-4">
         {/* Background Decoration */}
         <div className="absolute top-0 right-0 w-80 h-80 bg-blue-500/5 rounded-full blur-[100px] -mr-40 -mt-40 pointer-events-none" />
         
@@ -997,11 +1007,11 @@ export const DocumentsUploadStep: React.FC<StepProps> = ({ onNext }) => {
 
           <div className="relative overflow-hidden mb-6">
             <div className="relative z-10">
-              <h4 className="text-lg font-black text-gray-900 uppercase tracking-tight mb-2">
+              <h4 className="text-base md:text-lg font-black text-gray-900 uppercase tracking-tight mb-2">
                 Instruções Importantes
               </h4>
-              <div className="text-gray-800 font-medium leading-relaxed relative z-[20]">
-                Garanta que os documentos enviados estejam totalmente legíveis e <strong>exclusivamente em inglês</strong>. Caso precise de tradução, recomendamos os serviços do nosso parceiro <a href="https://lushamerica.com/" target="_blank" rel="noopener noreferrer" className="text-blue-600 font-black hover:text-blue-800 underline transition-all cursor-pointer relative z-[50]" style={{textDecoration: 'none'}}>Lush America Translations</a>.
+              <div className="text-gray-700 md:text-gray-800 font-medium text-sm md:text-base leading-relaxed relative z-[20] text-justify">
+                Garanta que os documentos enviados estejam totalmente legíveis e <strong>exclusivamente em inglês</strong>. Caso precise de tradução certificada e de qualidade, recomendamos os serviços do nosso parceiro <a href="https://lushamerica.com/" target="_blank" rel="noopener noreferrer" className="text-blue-600 font-black hover:text-blue-800 underline transition-all cursor-pointer relative z-[50]">Lush America Translations</a>.
               </div>
             </div>
           </div>
@@ -1015,25 +1025,25 @@ export const DocumentsUploadStep: React.FC<StepProps> = ({ onNext }) => {
                 const documentLimit = getDocumentLimit();
                 
                 return (
-                  <div key={doc.key} className={`p-6 md:p-8 rounded-[2rem] border-2 transition-all duration-300 ${hasError ? 'border-red-100 bg-red-50/30' : fundsFiles.length > 0 ? 'border-emerald-100 bg-emerald-50/20' : 'border-slate-50 bg-slate-50/50 hover:border-blue-100 group'}`}>
+                  <div key={doc.key} className={`p-5 md:p-8 rounded-[1.5rem] md:rounded-[2rem] border-2 transition-all duration-300 ${hasError ? 'border-red-100 bg-red-50/30' : fundsFiles.length > 0 ? 'border-emerald-100 bg-emerald-50/20' : 'border-slate-50 bg-slate-50/50 hover:border-blue-100 group'}`}>
                     <div className="flex flex-col md:flex-row gap-6">
 
                       <div className="flex-1 space-y-4">
-                        <div className="flex items-center justify-between">
-                          <div className="flex items-center gap-3">
-                            <h3 className="text-xl font-black text-gray-900 uppercase tracking-tight">{DOCUMENT_LABELS[doc.key]}</h3>
-                            {fundsFiles.length > 0 && <CheckCircle className="w-5 h-5 text-emerald-500" />}
+                        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+                          <div className="flex items-center gap-2 md:gap-3">
+                            <h3 className="text-lg md:text-xl font-black text-gray-900 uppercase tracking-tight whitespace-nowrap">{DOCUMENT_LABELS[doc.key]}</h3>
+                            {fundsFiles.length > 0 && <CheckCircle className="w-4 h-4 md:w-5 md:h-5 text-emerald-500" />}
                           </div>
-                          <span className="px-3 py-1 bg-blue-50 text-blue-600 text-[10px] font-black uppercase rounded-full tracking-widest border border-blue-100">{fundsFiles.length}/{documentLimit} {t('common.files', 'Arquivos')}</span>
+                          <span className="w-fit px-3 py-1 bg-blue-50 text-blue-600 text-[10px] font-black uppercase rounded-full tracking-widest border border-blue-100">{fundsFiles.length}/{documentLimit} {t('common.files', 'Arquivos')}</span>
                         </div>
                         <p className="text-gray-500 font-medium text-sm leading-relaxed">{DOCUMENT_DESCRIPTIONS[doc.key]}</p>
                         
                         <div className="space-y-4">
                           <div className="relative group/upload">
                             <input type="file" accept="application/pdf" multiple onChange={(e) => handleFundsFileAdd(Array.from(e.target.files || []))} className="absolute inset-0 w-full h-full opacity-0 cursor-pointer z-20" disabled={isLocked || uploading || analyzing} />
-                            <div className={`border-2 border-dashed rounded-2xl p-8 text-center transition-all bg-white group-hover/upload:bg-blue-50/30 ${hasError ? 'border-red-300' : 'border-blue-200 group-hover/upload:border-blue-400'}`}>
-                              <Upload className={`w-10 h-10 mx-auto mb-3 group-hover/upload:scale-110 transition-transform ${hasError ? 'text-red-400' : 'text-blue-400'}`} />
-                              <p className={`text-sm font-black uppercase tracking-widest ${hasError ? 'text-red-700' : 'text-blue-700'}`}>
+                            <div className={`border-2 border-dashed rounded-2xl p-6 md:p-8 text-center transition-all bg-white group-hover/upload:bg-blue-50/30 ${hasError ? 'border-red-300' : 'border-blue-200 group-hover/upload:border-blue-400'}`}>
+                              <Upload className={`w-8 h-8 md:w-10 md:h-10 mx-auto mb-2 md:mb-3 group-hover/upload:scale-110 transition-transform ${hasError ? 'text-red-400' : 'text-blue-400'}`} />
+                              <p className={`text-xs md:text-sm font-black uppercase tracking-widest ${hasError ? 'text-red-700' : 'text-blue-700'}`}>
                                 {hasError ? fieldErrors[doc.key] : t('studentDashboard.documentsAndScholarshipChoice.dragDropFiles')}
                               </p>
                               <p className="text-[10px] text-gray-400 font-bold uppercase tracking-widest mt-2">{processType} Limit: {documentLimit} {t('studentDashboard.documentsAndScholarshipChoice.documents')} (Max 10MB Total)</p>
@@ -1062,13 +1072,13 @@ export const DocumentsUploadStep: React.FC<StepProps> = ({ onNext }) => {
 
               const hasFile = files[doc.key] as File;
               return (
-                <div key={doc.key} className={`p-6 md:p-8 rounded-[2rem] border-2 transition-all duration-300 ${hasError ? 'border-red-100 bg-red-50/30' : hasFile ? 'border-emerald-100 bg-emerald-50/20' : 'border-slate-50 bg-slate-50/50 hover:border-blue-100 group'}`}>
+                <div key={doc.key} className={`p-5 md:p-8 rounded-[1.5rem] md:rounded-[2rem] border-2 transition-all duration-300 ${hasError ? 'border-red-100 bg-red-50/30' : hasFile ? 'border-emerald-100 bg-emerald-50/20' : 'border-slate-50 bg-slate-50/50 hover:border-blue-100 group'}`}>
                   <div className="flex flex-col md:flex-row gap-6">
 
                     <div className="flex-1 space-y-4">
                       <div className="flex items-center justify-between">
-                        <h3 className="text-xl font-black text-gray-900 uppercase tracking-tight">{DOCUMENT_LABELS[doc.key]}</h3>
-                        {hasFile && <CheckCircle className="w-5 h-5 text-emerald-500" />}
+                        <h3 className="text-lg md:text-xl font-black text-gray-900 uppercase tracking-tight">{DOCUMENT_LABELS[doc.key]}</h3>
+                        {hasFile && <CheckCircle className="w-4 h-4 md:w-5 md:h-5 text-emerald-500" />}
                       </div>
                       <p className="text-gray-500 font-medium text-sm leading-relaxed">{DOCUMENT_DESCRIPTIONS[doc.key]}</p>
                       
@@ -1095,21 +1105,21 @@ export const DocumentsUploadStep: React.FC<StepProps> = ({ onNext }) => {
             <button
               onClick={handleUpload}
               disabled={!allFilesSelected || uploading || analyzing || mergingPdfs}
-              className="w-full bg-blue-600 text-white py-6 rounded-2xl hover:bg-blue-700 transition-all font-black uppercase tracking-[0.3em] text-xs shadow-xl shadow-blue-500/20 disabled:opacity-50 flex items-center justify-center gap-3 hover:scale-[1.01] active:scale-95"
+              className="w-full bg-blue-600 text-white py-4 sm:py-6 px-4 rounded-2xl hover:bg-blue-700 transition-all font-black uppercase tracking-widest sm:tracking-[0.3em] text-[10px] sm:text-xs shadow-xl shadow-blue-500/20 disabled:opacity-50 flex flex-col sm:flex-row items-center justify-center gap-2 sm:gap-3 hover:scale-[1.01] active:scale-95"
             >
               {(uploading || mergingPdfs) ? (
                 <>
-                  <Loader2 className="w-6 h-6 animate-spin" />
-                  <span>{t('studentDashboard.documentsUploadStep.uploadingDocuments')}</span>
+                  <Loader2 className="w-5 h-5 sm:w-6 sm:h-6 animate-spin flex-shrink-0" />
+                  <span className="text-center">{t('studentDashboard.documentsUploadStep.uploadingDocuments')}</span>
                 </>
               ) : analyzing ? (
                 <>
-                  <RefreshCw className="w-6 h-6 animate-spin" />
-                  <span>{t('studentDashboard.documentsUploadStep.aiAnalysisInProgress')}</span>
+                  <RefreshCw className="w-5 h-5 sm:w-6 sm:h-6 animate-spin flex-shrink-0" />
+                  <span className="text-center">{t('studentDashboard.documentsUploadStep.aiAnalysisInProgress')}</span>
                 </>
               ) : (
                 <>
-                  <span>{t('studentDashboard.documentsUploadStep.uploadAndContinue')}</span>
+                  <span className="text-center">{t('studentDashboard.documentsUploadStep.uploadAndContinue')}</span>
                 </>
               )}
             </button>
@@ -1136,12 +1146,6 @@ export const DocumentsUploadStep: React.FC<StepProps> = ({ onNext }) => {
         </div>
       )}
 
-      {/* Fixed Continue Button Mobile */}
-      <div className="fixed bottom-0 left-0 right-0 bg-white border-t border-gray-100 shadow-2xl z-50 p-4 sm:hidden">
-        <button onClick={handleUpload} disabled={!allFilesSelected || uploading || analyzing || mergingPdfs} className="w-full bg-blue-600 text-white py-4 rounded-xl font-black uppercase tracking-widest text-xs shadow-lg flex items-center justify-center gap-2 disabled:opacity-50">
-          {uploading || analyzing ? <Loader2 className="w-5 h-5 animate-spin" /> : <span>{t('studentDashboard.documentsUploadStep.uploadAndContinue')}</span>}
-        </button>
-      </div>
     </div>
   );
 };

@@ -103,7 +103,7 @@ export const ProcessTypeStep: React.FC<StepProps> = ({ onNext }) => {
     return (
       <div className="space-y-10 pb-12 max-w-4xl mx-auto px-4">
         {/* Header */}
-        <div className="text-center md:text-left space-y-4">
+        <div className="text-left space-y-4">
           <h2 className="text-3xl md:text-5xl font-black text-slate-900 uppercase tracking-tighter leading-none">Tipo de Processo</h2>
           <p className="text-lg md:text-xl text-slate-600 font-medium max-w-2xl mt-2">Tipo de processo selecionado com sucesso.</p>
         </div>
@@ -133,7 +133,7 @@ export const ProcessTypeStep: React.FC<StepProps> = ({ onNext }) => {
   return (
     <div className="space-y-10 pb-12 max-w-5xl mx-auto px-4">
       {/* Header */}
-      <div className="text-center md:text-left space-y-4">
+      <div className="text-left space-y-4">
         <h2 className="text-3xl md:text-5xl font-black text-slate-900 uppercase tracking-tighter leading-none">
           Situação do Visto
         </h2>
@@ -150,7 +150,7 @@ export const ProcessTypeStep: React.FC<StepProps> = ({ onNext }) => {
       )}
 
       {/* Main White Container */}
-      <div className="bg-white rounded-[2.5rem] shadow-2xl border border-gray-100 overflow-hidden relative p-8 md:p-12">
+      <div className="bg-white rounded-[2.5rem] shadow-2xl border border-gray-100 overflow-hidden relative p-6 md:p-12">
         <div className="absolute top-0 right-0 w-64 h-64 bg-slate-500/5 rounded-full blur-[80px] -mr-32 -mt-32 pointer-events-none" />
         
         <div className="relative z-10 space-y-8">
@@ -183,7 +183,7 @@ export const ProcessTypeStep: React.FC<StepProps> = ({ onNext }) => {
                 <div
                   key={option.value}
                   onClick={() => !isLocked && handleSelect(option.value as ProcessType)}
-                  className={`group relative p-8 rounded-[2rem] border transition-all duration-300 cursor-pointer overflow-hidden ${
+                  className={`group relative p-5 md:p-8 rounded-[1.5rem] md:rounded-[2rem] border transition-all duration-300 cursor-pointer overflow-hidden ${
                     isSelected
                       ? 'bg-blue-600 border-blue-400 shadow-xl shadow-blue-500/30 scale-[1.02]'
                       : 'bg-slate-50 border-slate-200 hover:bg-slate-100 hover:border-blue-200 hover:scale-[1.01]'
@@ -194,34 +194,26 @@ export const ProcessTypeStep: React.FC<StepProps> = ({ onNext }) => {
                      <div className="absolute top-0 right-0 w-96 h-96 bg-white/20 rounded-full blur-[100px] -mr-32 -mt-32 pointer-events-none" />
                   )}
 
-                  <div className="relative z-10 flex flex-col md:flex-row items-center gap-8">
+                  <div className="relative z-10 flex flex-col md:flex-row items-center gap-4 md:gap-8">
                     {/* Icon Box */}
-                    <div className={`w-20 h-20 rounded-3xl flex items-center justify-center flex-shrink-0 transition-all duration-500 ${
+                    <div className={`w-14 h-14 md:w-20 md:h-20 rounded-2xl md:rounded-3xl flex items-center justify-center flex-shrink-0 transition-all duration-500 ${
                       isSelected 
                         ? 'bg-white text-blue-600 shadow-xl rotate-3' 
                         : 'bg-white text-slate-400 shadow-sm border border-slate-100 group-hover:text-blue-600 group-hover:scale-110'
                     }`}>
-                      <OptionIcon className={`w-10 h-10 ${isSelected ? 'scale-110' : ''} transition-transform duration-300`} />
+                      <OptionIcon className={`w-7 h-7 md:w-10 md:h-10 ${isSelected ? 'scale-110' : ''} transition-transform duration-300`} />
                     </div>
 
                     {/* Content */}
                     <div className="flex-1 text-center md:text-left space-y-2">
-                      <h3 className={`text-lg md:text-xl font-black uppercase tracking-tight ${isSelected ? 'text-white' : 'text-gray-900'}`}>
+                      <h3 className={`text-base md:text-xl font-black uppercase tracking-tight ${isSelected ? 'text-white' : 'text-gray-900'}`}>
                         {option.label}
                       </h3>
-                      <p className={`text-base font-medium leading-relaxed ${isSelected ? 'text-blue-100' : 'text-slate-500'}`}>
+                      <p className={`text-sm md:text-base font-medium leading-relaxed ${isSelected ? 'text-blue-100' : 'text-slate-500'}`}>
                         {option.description}
                       </p>
                     </div>
 
-                    {/* Selection Indicator */}
-                    <div className={`w-10 h-10 rounded-full border-2 flex items-center justify-center transition-all duration-300 ${
-                      isSelected
-                        ? 'bg-white border-white scale-110'
-                        : 'border-slate-200 bg-white group-hover:border-blue-200'
-                    }`}>
-                      {isSelected && <CheckCircle className="w-6 h-6 text-blue-600" />}
-                    </div>
                   </div>
                 </div>
               );
@@ -233,10 +225,10 @@ export const ProcessTypeStep: React.FC<StepProps> = ({ onNext }) => {
             <button
               onClick={handleContinue}
               disabled={!selectedType || saving || isLocked}
-              className="group relative px-10 py-5 bg-blue-600 text-white rounded-2xl font-black uppercase tracking-widest text-sm hover:bg-blue-700 transition-all disabled:opacity-50 disabled:cursor-not-allowed shadow-xl shadow-blue-500/20 hover:shadow-2xl hover:-translate-y-1 active:translate-y-0 overflow-hidden"
+              className="group relative w-full sm:w-auto px-10 py-4 md:py-5 bg-blue-600 text-white rounded-2xl font-black uppercase tracking-widest text-sm hover:bg-blue-700 transition-all disabled:opacity-50 disabled:cursor-not-allowed shadow-xl shadow-blue-500/20 hover:shadow-2xl hover:-translate-y-1 active:translate-y-0 overflow-hidden"
             >
               <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/20 to-transparent translate-x-[-200%] group-hover:translate-x-[200%] transition-transform duration-700 ease-in-out" />
-              <div className="flex items-center gap-3 relative z-10">
+            <div className="flex items-center justify-center gap-3 relative z-10">
                 {saving ? (
                   <>
                     <Loader2 className="w-5 h-5 animate-spin text-white" />
@@ -245,7 +237,6 @@ export const ProcessTypeStep: React.FC<StepProps> = ({ onNext }) => {
                 ) : (
                   <>
                     <span>Continuar</span>
-                    <CheckCircle className="w-5 h-5 text-white" />
                   </>
                 )}
               </div>

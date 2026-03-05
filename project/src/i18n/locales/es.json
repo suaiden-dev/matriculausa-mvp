@@ -1795,6 +1795,16 @@
       "description": "Esta tarifa cubre el procesamiento de su solicitud, la evaluación de documentos y el apoyo inicial para su viaje de estudios en los Estados Unidos.",
       "identityVerification": "Verificación de Identidad",
       "identityVerificationSubtitle": "Este paso es obligatorio",
+      "identity": {
+        "success": "¡Foto enviada con éxito!",
+        "error": "Error al guardar foto. Inténtalo de nuevo.",
+        "continue": "Continuar",
+        "sending": "Enviando...",
+        "sendPhoto": "Enviar Foto",
+        "completed": "Verificación Completada",
+        "completedTitle": "¡Verificación completada!",
+        "alreadySent": "Su foto de identidad ya ha sido enviada. Puede continuar con el cuestionario."
+      },
       "discountApplied": "Descuento Aplicado",
       "couponApplied": "Cupón {{coupon}} Aplicado",
       "methods": {
@@ -1889,6 +1899,20 @@
           "waiting_approval": "Esperando Aprobación",
           "completed": "Completado",
           "my_applications": "Mis Solicitudes"
+        },
+        "stepDescriptions": {
+          "selection_fee": "Paga la tarifa para desbloquear el acceso a las becas.",
+          "identity_verification": "Verifica tu identidad para continuar el proceso.",
+          "selection_survey": "Responde el cuestionario de selección con al menos 80% de aciertos.",
+          "scholarship_selection": "Elige las becas a las que deseas aplicar.",
+          "process_type": "Indica tu tipo de proceso (Inicial, Transferencia o COS).",
+          "documents_upload": "Envía tu pasaporte, diploma y comprobante de fondos.",
+          "payment": "Paga la tarifa de matrícula para asegurar tu lugar.",
+          "scholarship_fee": "Paga la tarifa de beca para confirmar tu inscripción.",
+          "university_documents": "Envía los documentos requeridos por la universidad.",
+          "waiting_approval": "Tus documentos están en revisión. Plazo de 48h.",
+          "my_applications": "Sigue tus documentos y la carta de aceptación.",
+          "completed": "¡Proceso completado con éxito!"
         }
       }
     },
@@ -1964,6 +1988,14 @@
       "diplomaProcessError": "Error de procesamiento de diploma",
       "fundsValidationError": "Error de validación de fondos"
     },
+    "documentsUploadStep": {
+      "title": "Envío de Documentos",
+      "subtitle": "Necesitamos algunos documentos para verificar su elegibilidad y procesar su solicitud.",
+      "importantNotice": "Asegúrese de que los documentos enviados sean claramente visibles y legibles. Asegúrese también de que los documentos enviados estén exclusivamente en <boldUnderline>Inglés</boldUnderline>, si no tiene los documentos traducidos le recomendamos los servicios de traducción de documentos de nuestro socio <link>Lush America Translations</link>.",
+      "uploadAndContinue": "Subir",
+      "uploadingDocuments": "Subiendo Documentos...",
+      "aiAnalysisInProgress": "Análisis por IA en Progreso..."
+    },
     "myApplications": {
       "title": "Mis Solicitudes",
       "subtitle": "Rastrea el progreso de todas tus solicitudes de beca",
@@ -2000,10 +2032,7 @@
         "approved": "aprobadas",
         "applications": "solicitudes"
       },
-      "importantNotice": {
-        "title": "Importante:",
-        "description": "Solo puedes elegir una beca. Después de pagar la Tarifa de Solicitud para una beca, las otras opciones se deshabilitarán."
-      },
+
       "paymentStatus": {
         "title": "Estado del Pago",
         "applicationFee": "Tarifa de Solicitud",
@@ -2042,7 +2071,7 @@
         "viewDetails": "Ver Detalles de la Solicitud"
       },
       "confirmationModal": {
-        "title": "Confirma Tu Selección de Beca",
+        "title": "Confirma Tu Selección",
         "importantDecision": "Decisión Importante",
         "description": "Al proceder con este pago, estás haciendo de esta tu elección final de beca. Esta acción no se puede deshacer.",
         "willRemoveOthers": "Esto eliminará {{count}} otra solicitud aprobada:",
@@ -2052,109 +2081,6 @@
       },
       "loading": "Cargando tus solicitudes...",
       "error": "Error: {{message}}",
-      "statusDescriptions": {
-        "documentsApprovedByUniversity": {
-          "title": "Documentos Aprobados por la Universidad",
-          "description": "¡Excelentes noticias! Tu solicitud ha sido aprobada, pero algunos documentos aún necesitan atención.",
-          "nextSteps": [
-            "Completa cualquier carga de documento pendiente",
-            "Paga la tarifa de solicitud para asegurar tu lugar",
-            "Prepárate para la siguiente fase de inscripción"
-          ]
-        },
-        "applicationApprovedPaymentRequired": {
-          "title": "Solicitud Aprobada - Pago Requerido",
-          "description": "¡Felicitaciones! Tu solicitud ha sido completamente aprobada. El siguiente paso es pagar la tarifa de solicitud.",
-          "nextSteps": [
-            "Paga la tarifa de solicitud para asegurar tu beca",
-            "Completa el proceso de inscripción",
-            "Prepárate para tu jornada académica"
-          ]
-        },
-        "applicationFeePaidScholarshipFeeRequired": {
-          "title": "Tarifa de Solicitud Pagada - Tarifa de Beca Requerida",
-          "description": "¡Excelente! Tu tarifa de solicitud ha sido confirmada. Ahora paga la tarifa de beca para finalizar tu inscripción.",
-          "nextSteps": [
-            "Paga la tarifa de beca para completar la inscripción",
-            "Recibe la confirmación final",
-            "Comienza tu programa académico"
-          ]
-        },
-        "scholarshipFeePaidI20Required": {
-          "title": "Tarifa de Beca Pagada - Documentos Pendientes",
-          "description": "¡Excelente! Tu tarifa de beca ha sido confirmada. Ahora necesitas enviar las solicitudes de documentos pendientes solicitadas por la universidad.",
-          "nextSteps": [
-            "Envía las solicitudes de documentos pendientes",
-            "Espera la aprobación de los documentos por la universidad",
-            "Paga la I-20 Control Fee para poder recibir la carta de aceptación",
-            "Recibe la carta de aceptación de la universidad"
-          ]
-        },
-        "allFeesPaidWaitingAcceptanceLetter": {
-          "title": "Todas las Tarifas Pagadas - Esperando Carta de Aceptación",
-          "description": "¡Excelente! Todas las tarifas han sido pagadas exitosamente. Ahora estás esperando que la universidad envíe tu carta de aceptación oficial.",
-          "nextSteps": [
-            "Espera que la universidad envíe tu carta de aceptación",
-            "Revisa regularmente la sección de documentos",
-            "Completa tu inscripción después de recibir la carta"
-          ]
-        },
-        "fullyEnrolled": {
-          "title": "¡Totalmente Inscrito!",
-          "description": "¡Perfecto! Has completado exitosamente todos los requisitos y estás oficialmente inscrito.",
-          "nextSteps": [
-            "Accede a tu portal estudiantil",
-            "Revisa el horario de clases",
-            "Conéctate con asesores académicos"
-          ]
-        },
-        "applicationNotSelected": {
-          "title": "Solicitud No Seleccionada",
-          "description": "Desafortunadamente, tu solicitud no fue seleccionada para esta oportunidad de beca.",
-          "nextSteps": [
-            "Revisa otras becas disponibles",
-            "Considera mejorar tu solicitud",
-            "Aplica para diferentes programas"
-          ]
-        },
-        "applicationUnderReview": {
-          "title": "Solicitud en Revisión",
-          "description": "Tu solicitud está siendo evaluada actualmente por la universidad. Este proceso típicamente toma 2-4 semanas.",
-          "nextSteps": [
-            "Espera la decisión de la universidad",
-            "Monitorea tu correo electrónico para notificaciones importantes",
-            "Verifica el estado de la solicitud regularmente",
-            "Ten paciencia durante el proceso de revisión"
-          ]
-        },
-        "applicationFeeConfirmed": {
-          "title": "Tarifa de Solicitud Confirmada",
-          "description": "Tu tarifa de solicitud ha sido recibida y confirmada. Ahora eres elegible para la beca.",
-          "nextSteps": [
-            "Paga la tarifa de beca para completar la inscripción",
-            "Envía cualquier documento restante",
-            "Prepárate para el inicio de tu programa"
-          ]
-        },
-        "documentsUnderUniversityReview": {
-          "title": "Documentos en Revisión por la Universidad",
-          "description": "Tu solicitud ha sido enviada con todos los documentos requeridos. La universidad está revisando actualmente tus materiales.",
-          "nextSteps": [
-            "Espera la revisión de documentos por la universidad",
-            "Monitorea tu correo electrónico para notificaciones",
-            "Verifica el estado de la solicitud regularmente"
-          ]
-        },
-        "applicationSubmitted": {
-          "title": "Solicitud Enviada",
-          "description": "Tu solicitud ha sido enviada exitosamente y está esperando la revisión inicial.",
-          "nextSteps": [
-            "Espera la revisión de documentos",
-            "Monitorea el estado de la solicitud",
-            "Prepárate para los siguientes pasos"
-          ]
-        }
-      },
       "statusLabels": {
         "approvedByUniversity": "APROBADA POR LA UNIVERSIDAD",
         "approved": "APROBADA",
@@ -2162,9 +2088,19 @@
         "pending": "PENDIENTE",
         "underReview": "EN REVISIÓN",
         "pendingScholarshipFee": "TARIFA DE BECA PENDIENTE"
-      },
-      "nextSteps": "Siguientes Pasos:"
+      }
     },
+
+
+
+
+
+
+
+
+
+
+
     "recentApplications": {
       "title": "Solicitudes Recientes",
       "subtitle": "Revisa el progreso de tus solicitudes más recientes",
@@ -3851,7 +3787,7 @@
       "warningDescription": "Al confirmar, ya no podrá cambiar las becas elegidas. Revise cuidadosamente su selección a continuación antes de continuar.",
       "unknownUniversity": "Universidad Desconocida",
       "backButton": "Volver a la Selección",
-      "continueButton": "Confirmar y Continuar",
+      "continueButton": "Continuar",
       "removeButton": "Eliminar Selección"
     },
     "completed": {

@@ -1628,7 +1628,7 @@ export const ZelleCheckout: React.FC<ZelleCheckoutProps> = ({
       {/* Modal de Upload */}
       <UploadModal />
       
-    <div className={`bg-white border border-gray-200 rounded-lg p-4 sm:p-6 ${className}`}>
+    <div className={`bg-transparent sm:bg-white sm:border sm:border-gray-200 sm:rounded-lg p-0 sm:p-6 ${className}`}>
       {/* IMPORTANTE: Só mostrar instruções se NÃO estiver processando e NÃO tiver pagamento pendente */}
       {/* Se há pagamento pendente, os estados analyzing/under_review já foram renderizados acima */}
       {step === 'instructions' && !isProcessing && !isBlocked && !blockedPendingPayment && (
@@ -1643,7 +1643,7 @@ export const ZelleCheckout: React.FC<ZelleCheckoutProps> = ({
           </div>
 
           {/* Zelle Payment Information - Estilo igual ao ZelleCheckoutPage */}
-          <div className="bg-gray-50 rounded-lg border border-gray-200 p-4 sm:p-6">
+          <div className="bg-gray-50 rounded-lg border border-gray-200 p-3 sm:p-6">
             <div className="flex items-center gap-2 sm:gap-3 mb-3 sm:mb-4">
               <div className="w-8 h-8 sm:w-10 sm:h-10 bg-gray-100 rounded-lg flex items-center justify-center flex-shrink-0">
                 <DollarSign className="w-4 h-4 sm:w-5 sm:h-5 text-gray-600" />
@@ -1701,7 +1701,7 @@ export const ZelleCheckout: React.FC<ZelleCheckoutProps> = ({
           </div>
 
           {/* Upload Section - Integrado na primeira parte */}
-          <div className="bg-gray-50 border border-gray-200 rounded-lg p-3 sm:p-4">
+          <div className="bg-gray-50 border border-gray-200 rounded-lg p-3 sm:p-4 mt-2 sm:mt-0">
             <h4 className="font-medium text-sm sm:text-base text-gray-900 mb-2 sm:mb-3 flex items-center">
               <Upload className="w-4 h-4 sm:w-5 sm:h-5 mr-2 text-gray-600 flex-shrink-0" />
               <span>{t('zelleCheckout.uploadReceiptDescription') || 'Upload Payment Confirmation Screenshot'} *</span>
