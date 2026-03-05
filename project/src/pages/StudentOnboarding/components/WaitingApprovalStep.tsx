@@ -78,7 +78,8 @@ export const WaitingApprovalStep: React.FC<StepProps> = ({ onComplete }) => {
   const [showZelleCheckout, setShowZelleCheckout] = useState(false);
 
   // Derived state
-  const hasPaidI20 = !!(userProfile && (userProfile as any).has_paid_i20_control_fee);
+  const isNewFlowUser = !!(userProfile as any)?.placement_fee_flow;
+  const hasPaidI20 = isNewFlowUser || !!(userProfile && (userProfile as any).has_paid_i20_control_fee);
   const i20PaidAt = (userProfile as any)?.i20_paid_at || null;
 
   // Acceptance letter states
@@ -113,9 +114,10 @@ export const WaitingApprovalStep: React.FC<StepProps> = ({ onComplete }) => {
       if (error) {
         console.error('[WaitingApprovalStep] Error fetching application:', error);
       } else if (data && data.length > 0) {
-        // Segurança: ocultar URL da carta se I-20 não foi pago
+        // Segurança: ocultar URL da carta se I-20 não foi pago (exceto se for novo fluxo)
         const app = data[0] as ApplicationWithScholarship;
-        if (!(userProfile as any)?.has_paid_i20_control_fee) {
+        const isNewFlow = !!(userProfile as any)?.placement_fee_flow;
+        if (!isNewFlow && !(userProfile as any)?.has_paid_i20_control_fee) {
           app.acceptance_letter_url = null;
         }
         setApplication(app);
@@ -128,7 +130,7 @@ export const WaitingApprovalStep: React.FC<StepProps> = ({ onComplete }) => {
       setLoading(false);
       setRefreshing(false);
     }
-  }, [userProfile?.id, (userProfile as any)?.has_paid_i20_control_fee]);
+  }, [userProfile?.id, hasPaidI20]);
 
   useEffect(() => {
     fetchApplication();
@@ -378,10 +380,12 @@ export const WaitingApprovalStep: React.FC<StepProps> = ({ onComplete }) => {
             <span className="text-[10px] font-black text-blue-600 uppercase tracking-widest">Último Passo do Onboarding</span>
           </div>
           <h2 className="text-4xl md:text-6xl font-black text-slate-900 uppercase tracking-tighter leading-none">
-            Carta de Aceitação & I-20
+            {isNewFlowUser ? 'Carta de Aceitação' : 'Carta de Aceitação & I-20'}
           </h2>
           <p className="text-lg md:text-xl text-slate-600 font-medium max-w-2xl">
-            Pague a taxa I-20 e faça o download da sua carta de aceitação para garantir sua vaga.
+            {isNewFlowUser
+              ? 'Visualize e faça o download da sua carta de aceitação da universidade.'
+              : 'Pague a taxa I-20 e faça o download da sua carta de aceitação para garantir sua vaga.'}
           </p>
         </div>
 
@@ -408,7 +412,7 @@ export const WaitingApprovalStep: React.FC<StepProps> = ({ onComplete }) => {
         </div>
       ) : showZelleCheckout ? (
         <div className="max-w-4xl mx-auto">
-          <button 
+          <button
             onClick={() => setShowZelleCheckout(false)}
             className="mb-8 flex items-center text-slate-600 hover:text-slate-900 transition-all gap-3 group"
           >
@@ -439,11 +443,10 @@ export const WaitingApprovalStep: React.FC<StepProps> = ({ onComplete }) => {
 
           {/* Main Content - Application Card */}
           <div className="lg:col-span-8">
-            <div className={`bg-white rounded-[2.5rem] shadow-2xl border relative overflow-hidden transition-all duration-500 ${
-              hasPaidI20 
-                ? 'border-emerald-500/30 ring-1 ring-emerald-500/20' 
-                : 'border-gray-100'
-            }`}>
+            <div className={`bg-white rounded-[2.5rem] shadow-2xl border relative overflow-hidden transition-all duration-500 ${hasPaidI20
+              ? 'border-emerald-500/30 ring-1 ring-emerald-500/20'
+              : 'border-gray-100'
+              }`}>
 
               {/* Application Header with decorative blobs */}
               <div className="relative overflow-hidden">
@@ -492,121 +495,122 @@ export const WaitingApprovalStep: React.FC<StepProps> = ({ onComplete }) => {
                   </div>
 
                   {/* I-20 Info Section */}
-                  <div className="bg-gradient-to-br from-blue-50/80 to-indigo-50/50 rounded-[2rem] border border-blue-100 p-6 sm:p-8 mb-8">
-                    <div className="flex items-center gap-3 mb-5">
-                      <div className="w-10 h-10 bg-blue-100 rounded-2xl flex items-center justify-center border border-blue-200">
-                        <Info className="w-5 h-5 text-blue-600" />
-                      </div>
-                      <h4 className="text-gray-900 text-xs font-black uppercase tracking-widest">O que é a Taxa I-20?</h4>
-                    </div>
-                    <p className="text-gray-600 text-sm leading-relaxed mb-5 font-medium">
-                      O formulário <strong className="text-gray-900">I-20</strong> é o documento oficial emitido pela universidade que confirma sua aceitação no programa. É <strong className="text-gray-900">essencial</strong> para solicitar o visto F-1.
-                    </p>
-                    <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
-                      {[
-                        { icon: Shield, title: 'Valida sua matrícula', desc: 'Comprova sua aceitação na universidade' },
-                        { icon: FileText, title: 'Necessário para o Visto', desc: 'Obrigatório para aplicar ao visto F-1' },
-                        { icon: Award, title: 'Garante sua vaga', desc: 'Sua vaga fica oficialmente assegurada' },
-                      ].map((item, i) => (
-                        <div key={i} className="flex items-start gap-3 bg-white/80 rounded-2xl p-4 border border-blue-100/50">
-                          <div className="w-8 h-8 bg-blue-100 rounded-xl flex items-center justify-center flex-shrink-0">
-                            <item.icon className="w-4 h-4 text-blue-600" />
-                          </div>
-                          <div>
-                            <p className="font-black text-gray-900 text-xs uppercase tracking-tight">{item.title}</p>
-                            <p className="text-[10px] text-gray-500 font-bold uppercase tracking-tight mt-0.5">{item.desc}</p>
-                          </div>
+                  {!isNewFlowUser && (
+                    <div className="bg-gradient-to-br from-blue-50/80 to-indigo-50/50 rounded-[2rem] border border-blue-100 p-6 sm:p-8 mb-8">
+                      <div className="flex items-center gap-3 mb-5">
+                        <div className="w-10 h-10 bg-blue-100 rounded-2xl flex items-center justify-center border border-blue-200">
+                          <Info className="w-5 h-5 text-blue-600" />
                         </div>
-                      ))}
+                        <h4 className="text-gray-900 text-xs font-black uppercase tracking-widest">O que é a Taxa I-20?</h4>
+                      </div>
+                      <p className="text-gray-600 text-sm leading-relaxed mb-5 font-medium">
+                        O formulário <strong className="text-gray-900">I-20</strong> é o documento oficial emitido pela universidade que confirma sua aceitação no programa. É <strong className="text-gray-900">essencial</strong> para solicitar o visto F-1.
+                      </p>
+                      <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+                        {[
+                          { icon: Shield, title: 'Valida sua matrícula', desc: 'Comprova sua aceitação na universidade' },
+                          { icon: FileText, title: 'Necessário para o Visto', desc: 'Obrigatório para aplicar ao visto F-1' },
+                          { icon: Award, title: 'Garante sua vaga', desc: 'Sua vaga fica oficialmente assegurada' },
+                        ].map((item, i) => (
+                          <div key={i} className="flex items-start gap-3 bg-white/80 rounded-2xl p-4 border border-blue-100/50">
+                            <div className="w-8 h-8 bg-blue-100 rounded-xl flex items-center justify-center flex-shrink-0">
+                              <item.icon className="w-4 h-4 text-blue-600" />
+                            </div>
+                            <div>
+                              <p className="font-black text-gray-900 text-xs uppercase tracking-tight">{item.title}</p>
+                              <p className="text-[10px] text-gray-500 font-bold uppercase tracking-tight mt-0.5">{item.desc}</p>
+                            </div>
+                          </div>
+                        ))}
+                      </div>
                     </div>
-                  </div>
+                  )}
 
                   {/* I-20 Fee Payment Section */}
-                  <div className={`group relative rounded-[2rem] p-8 transition-all duration-500 mb-8 ${
-                    hasPaidI20
+                  {!isNewFlowUser && (
+                    <div className={`group relative rounded-[2rem] p-8 transition-all duration-500 mb-8 ${hasPaidI20
                       ? 'bg-emerald-50/50 border border-emerald-500/30 ring-1 ring-emerald-500/20'
                       : 'bg-gray-50 border border-gray-200 hover:border-gray-300 hover:bg-white hover:shadow-xl'
-                  }`}>
-                    {hasPaidI20 && (
-                      <div className="absolute -top-3 -right-3 w-10 h-10 bg-emerald-500 rounded-full flex items-center justify-center shadow-lg shadow-emerald-500/40 z-20 border-4 border-white">
-                        <CheckCircle className="w-5 h-5 text-white" />
-                      </div>
-                    )}
-
-                    <div className="flex flex-col gap-6">
-                      <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
-                        <div className="flex items-center gap-4">
-                          <div className={`w-14 h-14 rounded-2xl flex items-center justify-center border ${
-                            hasPaidI20 
-                              ? 'bg-emerald-100 border-emerald-200' 
-                              : 'bg-amber-50 border-amber-200'
-                          }`}>
-                            {hasPaidI20 ? (
-                              <CheckCircle className="w-7 h-7 text-emerald-600" />
-                            ) : (
-                              <Clock className="w-7 h-7 text-amber-600" />
-                            )}
-                          </div>
-                          <div>
-                            <h4 className="text-xl font-black text-gray-900 uppercase tracking-tight">
-                              I-20 Control Fee
-                            </h4>
-                            <p className="text-[10px] font-black uppercase tracking-widest text-gray-400 mt-0.5">
-                              {hasPaidI20 ? 'Pagamento Confirmado' : 'Pagamento Pendente'}
-                            </p>
-                          </div>
+                      }`}>
+                      {hasPaidI20 && (
+                        <div className="absolute -top-3 -right-3 w-10 h-10 bg-emerald-500 rounded-full flex items-center justify-center shadow-lg shadow-emerald-500/40 z-20 border-4 border-white">
+                          <CheckCircle className="w-5 h-5 text-white" />
                         </div>
-                        <div className="flex flex-col md:items-end">
-                          <span className="text-[10px] font-black text-gray-400 uppercase tracking-[0.2em]">Valor</span>
-                          <span className="text-4xl font-black text-gray-900 tracking-tighter">
-                            {i20ControlFee || formatAmount(i20Amount)}
-                          </span>
-                        </div>
-                      </div>
-
-                      {hasPaidI20 ? (
-                        <div className="flex items-center gap-4 bg-emerald-50 border border-emerald-100 px-6 py-4 rounded-[2rem]">
-                          <div className="w-12 h-12 bg-emerald-100 rounded-2xl flex items-center justify-center border border-emerald-200">
-                            <CheckCircle className="w-6 h-6 text-emerald-600" />
-                          </div>
-                          <div>
-                            <div className="text-emerald-700 font-black uppercase tracking-widest text-sm">Pagamento Confirmado</div>
-                            <p className="text-emerald-600/80 text-xs font-medium uppercase tracking-tight mt-0.5">
-                              {i20PaidAt ? `Pago em ${formatDate(i20PaidAt)}` : 'Sua taxa foi processada com sucesso.'}
-                            </p>
-                          </div>
-                        </div>
-                      ) : (
-                        <>
-                          <p className="text-gray-500 text-sm font-medium">
-                            Pague a taxa I-20 Control Fee para liberar o download da sua carta de aceitação da universidade.
-                          </p>
-                          <button
-                            onClick={handlePayI20Click}
-                            className="w-full bg-gradient-to-r from-blue-600 to-blue-700 text-white py-6 rounded-3xl font-black uppercase tracking-[0.3em] text-xs transition-all flex items-center justify-center gap-3 group/btn relative overflow-hidden shadow-2xl hover:shadow-blue-500/20 hover:scale-[1.02] active:scale-95"
-                          >
-                            <Sparkles className="w-4 h-4 relative z-10" />
-                            <span className="relative z-10">Pagar Agora</span>
-                            <ArrowRight className="w-4 h-4 relative z-10 transition-transform duration-500 group-hover/btn:translate-x-1" />
-                          </button>
-
-                          {i20Error && (
-                            <div className="bg-red-50 border border-red-200 rounded-2xl p-4 text-red-700 text-xs font-bold flex items-center gap-2">
-                              <AlertCircle className="w-4 h-4 flex-shrink-0" />
-                              {i20Error}
-                            </div>
-                          )}
-                        </>
                       )}
+
+                      <div className="flex flex-col gap-6">
+                        <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
+                          <div className="flex items-center gap-4">
+                            <div className={`w-14 h-14 rounded-2xl flex items-center justify-center border ${hasPaidI20
+                              ? 'bg-emerald-100 border-emerald-200'
+                              : 'bg-amber-50 border-amber-200'
+                              }`}>
+                              {hasPaidI20 ? (
+                                <CheckCircle className="w-7 h-7 text-emerald-600" />
+                              ) : (
+                                <Clock className="w-7 h-7 text-amber-600" />
+                              )}
+                            </div>
+                            <div>
+                              <h4 className="text-xl font-black text-gray-900 uppercase tracking-tight">
+                                I-20 Control Fee
+                              </h4>
+                              <p className="text-[10px] font-black uppercase tracking-widest text-gray-400 mt-0.5">
+                                {hasPaidI20 ? 'Pagamento Confirmado' : 'Pagamento Pendente'}
+                              </p>
+                            </div>
+                          </div>
+                          <div className="flex flex-col md:items-end">
+                            <span className="text-[10px] font-black text-gray-400 uppercase tracking-[0.2em]">Valor</span>
+                            <span className="text-4xl font-black text-gray-900 tracking-tighter">
+                              {i20ControlFee || formatAmount(i20Amount)}
+                            </span>
+                          </div>
+                        </div>
+
+                        {hasPaidI20 ? (
+                          <div className="flex items-center gap-4 bg-emerald-50 border border-emerald-100 px-6 py-4 rounded-[2rem]">
+                            <div className="w-12 h-12 bg-emerald-100 rounded-2xl flex items-center justify-center border border-emerald-200">
+                              <CheckCircle className="w-6 h-6 text-emerald-600" />
+                            </div>
+                            <div>
+                              <div className="text-emerald-700 font-black uppercase tracking-widest text-sm">Pagamento Confirmado</div>
+                              <p className="text-emerald-600/80 text-xs font-medium uppercase tracking-tight mt-0.5">
+                                {i20PaidAt ? `Pago em ${formatDate(i20PaidAt)}` : 'Sua taxa foi processada com sucesso.'}
+                              </p>
+                            </div>
+                          </div>
+                        ) : (
+                          <>
+                            <p className="text-gray-500 text-sm font-medium">
+                              Pague a taxa I-20 Control Fee para liberar o download da sua carta de aceitação da universidade.
+                            </p>
+                            <button
+                              onClick={handlePayI20Click}
+                              className="w-full bg-gradient-to-r from-blue-600 to-blue-700 text-white py-6 rounded-3xl font-black uppercase tracking-[0.3em] text-xs transition-all flex items-center justify-center gap-3 group/btn relative overflow-hidden shadow-2xl hover:shadow-blue-500/20 hover:scale-[1.02] active:scale-95"
+                            >
+                              <Sparkles className="w-4 h-4 relative z-10" />
+                              <span className="relative z-10">Pagar Agora</span>
+                              <ArrowRight className="w-4 h-4 relative z-10 transition-transform duration-500 group-hover/btn:translate-x-1" />
+                            </button>
+
+                            {i20Error && (
+                              <div className="bg-red-50 border border-red-200 rounded-2xl p-4 text-red-700 text-xs font-bold flex items-center gap-2">
+                                <AlertCircle className="w-4 h-4 flex-shrink-0" />
+                                {i20Error}
+                              </div>
+                            )}
+                          </>
+                        )}
+                      </div>
                     </div>
-                  </div>
+                  )}
 
                   {/* Acceptance Letter Section */}
-                  <div className={`group relative rounded-[2rem] p-8 transition-all duration-500 ${
-                    canDownloadLetter
-                      ? 'bg-emerald-50/50 border border-emerald-500/30 ring-1 ring-emerald-500/20'
-                      : 'bg-gray-50 border border-gray-200'
-                  }`}>
+                  <div className={`group relative rounded-[2rem] p-8 transition-all duration-500 ${canDownloadLetter
+                    ? 'bg-emerald-50/50 border border-emerald-500/30 ring-1 ring-emerald-500/20'
+                    : 'bg-gray-50 border border-gray-200'
+                    }`}>
                     {canDownloadLetter && (
                       <div className="absolute -top-3 -right-3 w-10 h-10 bg-emerald-500 rounded-full flex items-center justify-center shadow-lg shadow-emerald-500/40 z-20 border-4 border-white">
                         <Download className="w-5 h-5 text-white" />
@@ -615,11 +619,10 @@ export const WaitingApprovalStep: React.FC<StepProps> = ({ onComplete }) => {
 
                     <div className="flex flex-col gap-6">
                       <div className="flex items-center gap-4">
-                        <div className={`w-14 h-14 rounded-2xl flex items-center justify-center border ${
-                          canDownloadLetter 
-                            ? 'bg-emerald-100 border-emerald-200' 
-                            : 'bg-gray-100 border-gray-200'
-                        }`}>
+                        <div className={`w-14 h-14 rounded-2xl flex items-center justify-center border ${canDownloadLetter
+                          ? 'bg-emerald-100 border-emerald-200'
+                          : 'bg-gray-100 border-gray-200'
+                          }`}>
                           {canDownloadLetter ? (
                             <Download className="w-7 h-7 text-emerald-600" />
                           ) : (
@@ -741,33 +744,33 @@ export const WaitingApprovalStep: React.FC<StepProps> = ({ onComplete }) => {
 
                 <div className="space-y-6">
                   {/* Step 1: I-20 Payment */}
-                  <div className="flex items-center gap-4">
-                    <div className={`w-10 h-10 rounded-2xl flex items-center justify-center border ${
-                      hasPaidI20 
-                        ? 'bg-emerald-500/30 border-emerald-400/40' 
+                  {!isNewFlowUser && (
+                    <div className="flex items-center gap-4">
+                      <div className={`w-10 h-10 rounded-2xl flex items-center justify-center border ${hasPaidI20
+                        ? 'bg-emerald-500/30 border-emerald-400/40'
                         : 'bg-white/10 border-white/20'
-                    }`}>
-                      {hasPaidI20 ? (
-                        <CheckCircle className="w-5 h-5 text-emerald-300" />
-                      ) : (
-                        <Clock className="w-5 h-5 text-white/60" />
-                      )}
+                        }`}>
+                        {hasPaidI20 ? (
+                          <CheckCircle className="w-5 h-5 text-emerald-300" />
+                        ) : (
+                          <Clock className="w-5 h-5 text-white/60" />
+                        )}
+                      </div>
+                      <div className="flex-1">
+                        <p className="text-[10px] font-black uppercase tracking-widest text-white/80">Pagar Taxa I-20</p>
+                        <p className="text-[10px] font-bold text-white/40 uppercase tracking-tight mt-0.5">
+                          {hasPaidI20 ? 'Concluído ✓' : 'Pendente'}
+                        </p>
+                      </div>
                     </div>
-                    <div className="flex-1">
-                      <p className="text-[10px] font-black uppercase tracking-widest text-white/80">Pagar Taxa I-20</p>
-                      <p className="text-[10px] font-bold text-white/40 uppercase tracking-tight mt-0.5">
-                        {hasPaidI20 ? 'Concluído ✓' : 'Pendente'}
-                      </p>
-                    </div>
-                  </div>
+                  )}
 
                   {/* Step 2: Acceptance Letter */}
                   <div className="flex items-center gap-4">
-                    <div className={`w-10 h-10 rounded-2xl flex items-center justify-center border ${
-                      canDownloadLetter 
-                        ? 'bg-emerald-500/30 border-emerald-400/40' 
-                        : 'bg-white/10 border-white/20'
-                    }`}>
+                    <div className={`w-10 h-10 rounded-2xl flex items-center justify-center border ${canDownloadLetter
+                      ? 'bg-emerald-500/30 border-emerald-400/40'
+                      : 'bg-white/10 border-white/20'
+                      }`}>
                       {canDownloadLetter ? (
                         <Download className="w-5 h-5 text-emerald-300" />
                       ) : (
@@ -795,12 +798,14 @@ export const WaitingApprovalStep: React.FC<StepProps> = ({ onComplete }) => {
 
                   <div className="h-px bg-white/20 my-2" />
 
-                  <div className="flex flex-col md:flex-row md:items-end justify-between gap-2">
-                    <span className="text-[10px] font-black uppercase tracking-widest text-white/70 mb-1">Taxa I-20</span>
-                    <span className="text-5xl font-black text-white tracking-tighter leading-none">
-                      {i20ControlFee || formatAmount(i20Amount)}
-                    </span>
-                  </div>
+                  {!isNewFlowUser && (
+                    <div className="flex flex-col md:flex-row md:items-end justify-between gap-2">
+                      <span className="text-[10px] font-black uppercase tracking-widest text-white/70 mb-1">Taxa I-20</span>
+                      <span className="text-5xl font-black text-white tracking-tighter leading-none">
+                        {i20ControlFee || formatAmount(i20Amount)}
+                      </span>
+                    </div>
+                  )}
                 </div>
 
                 <div className="space-y-4 pt-4">

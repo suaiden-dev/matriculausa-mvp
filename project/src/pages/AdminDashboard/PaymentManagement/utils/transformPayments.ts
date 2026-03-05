@@ -8,7 +8,7 @@ interface TransformInputs {
   userSystemTypesMap: Map<string, string>;
   individualPaymentDates: Map<string, Map<string, string>>;
   getFeeAmount: (key: 'i20_control_fee' | 'application_fee') => number;
-  realPaymentAmounts?: Map<string, { selection_process?: number; scholarship?: number; i20_control?: number; application?: number }>;
+  realPaymentAmounts?: Map<string, { selection_process?: number; scholarship?: number; i20_control?: number; application?: number; placement?: number }>;
 }
 
 export function transformPaymentsToRecordsAndStats({
@@ -24,7 +24,7 @@ export function transformPaymentsToRecordsAndStats({
   const paymentRecords: PaymentRecord[] = [];
 
   // Mapas para evitar duplicação de taxas globais
-  const globalFeesProcessed: { [userId: string]: { selection_process: boolean; i20_control: boolean; application_fee: boolean } } = {};
+  const globalFeesProcessed: { [userId: string]: { selection_process: boolean; i20_control: boolean; application_fee: boolean; placement_fee: boolean } } = {};
 
   // Applications → registros
   applications?.forEach((app: any) => {
@@ -35,6 +35,13 @@ export function transformPaymentsToRecordsAndStats({
 
     const studentName = student.full_name || 'Unknown Student';
     const studentEmail = student.email || '';
+    if (studentEmail.includes('chieko998')) {
+      console.log(`🔍 [PaymentManagement] Processing app for ${studentEmail}:`, {
+        placement_fee_flow: student.placement_fee_flow,
+        is_placement_fee_paid: student.is_placement_fee_paid,
+        has_user_id: !!student.user_id
+      });
+    }
     const universityName = university.name || 'Unknown University';
     const scholarshipTitle = scholarship.title || 'Unknown Scholarship';
     if (!studentName || !universityName) return;
@@ -187,7 +194,7 @@ export function transformPaymentsToRecordsAndStats({
         seller_referral_code: student.seller_referral_code,
         scholarships_ids: scholarship.id ? [scholarship.id] : [],
       } as PaymentRecord);
-      if (!globalFeesProcessed[student.user_id]) globalFeesProcessed[student.user_id] = { selection_process: false, i20_control: false, application_fee: false };
+      if (!globalFeesProcessed[student.user_id]) globalFeesProcessed[student.user_id] = { selection_process: false, i20_control: false, application_fee: false, placement_fee: false };
       globalFeesProcessed[student.user_id].selection_process = true;
     }
 
@@ -212,12 +219,12 @@ export function transformPaymentsToRecordsAndStats({
         seller_referral_code: student.seller_referral_code,
         scholarships_ids: scholarship.id ? [scholarship.id] : [],
       } as PaymentRecord);
-      if (!globalFeesProcessed[student.user_id]) globalFeesProcessed[student.user_id] = { selection_process: false, i20_control: false, application_fee: false };
+      if (!globalFeesProcessed[student.user_id]) globalFeesProcessed[student.user_id] = { selection_process: false, i20_control: false, application_fee: false, placement_fee: false };
       globalFeesProcessed[student.user_id].application_fee = true;
     }
 
-    // Scholarship Fee (não criar para bolsa específica ignorada)
-    if (app.is_scholarship_fee_paid && scholarship.id !== '31c9b8e6-af11-4462-8494-c79854f3f66e') {
+    // Scholarship Fee (não criar para bolsa específica ignorada nem para placement_fee_flow)
+    if (app.is_scholarship_fee_paid && scholarship.id !== '31c9b8e6-af11-4462-8494-c79854f3f66e' && !student.placement_fee_flow) {
       paymentRecords.push({
         id: `${app.id}-scholarship`,
         student_id: student.id,
@@ -240,7 +247,7 @@ export function transformPaymentsToRecordsAndStats({
     }
 
     // I-20 Control (global)
-    if (student.has_paid_i20_control_fee && !globalFeesProcessed[student.user_id]?.i20_control) {
+    if (student.has_paid_i20_control_fee && !globalFeesProcessed[student.user_id]?.i20_control && !student.placement_fee_flow) {
       paymentRecords.push({
         id: `${student.user_id}-i20`,
         student_id: student.id,
@@ -260,8 +267,46 @@ export function transformPaymentsToRecordsAndStats({
         seller_referral_code: student.seller_referral_code,
         scholarships_ids: scholarship.id ? [scholarship.id] : [],
       } as PaymentRecord);
-      if (!globalFeesProcessed[student.user_id]) globalFeesProcessed[student.user_id] = { selection_process: false, i20_control: false, application_fee: false };
+      if (!globalFeesProcessed[student.user_id]) globalFeesProcessed[student.user_id] = { selection_process: false, i20_control: false, application_fee: false, placement_fee: false };
       globalFeesProcessed[student.user_id].i20_control = true;
+    }
+
+    // Placement Fee (novo fluxo)
+    if (student.placement_fee_flow && student.is_placement_fee_paid && !globalFeesProcessed[student.user_id]?.placement_fee) {
+      let placementFeeAmount: number;
+      
+      // Try resolving placement amount via expected fallback from config/realPaid overrides
+      if (realPaid?.placement !== undefined && realPaid.placement > 0) {
+        placementFeeAmount = Math.round(realPaid.placement * 100);
+      } else if (userOverrides.placement_fee !== undefined) {
+        placementFeeAmount = Math.round(userOverrides.placement_fee * 100);
+      } else {
+        // Fallback or fetched if it wasn't pre-resolved.
+        placementFeeAmount = 145000;
+      }
+
+      paymentRecords.push({
+        id: `${student.user_id}-placement`,
+        student_id: student.id,
+        student_name: studentName,
+        student_email: studentEmail,
+        university_id: university.id,
+        university_name: universityName,
+        scholarship_id: scholarship.id,
+        scholarship_title: scholarshipTitle,
+        field_of_study: scholarship?.field_of_study || null,
+        fee_type: 'placement',
+        amount: placementFeeAmount,
+        status: 'paid',
+        payment_date: individualPaymentDates.get(student.user_id)?.get('placement') || student.last_payment_date || app.paid_at || app.created_at,
+        created_at: app.created_at,
+        payment_method: student.placement_fee_payment_method || 'manual',
+        seller_referral_code: student.seller_referral_code,
+        scholarships_ids: scholarship.id ? [scholarship.id] : [],
+      } as PaymentRecord);
+      
+      if (!globalFeesProcessed[student.user_id]) globalFeesProcessed[student.user_id] = { selection_process: false, i20_control: false, application_fee: false, placement_fee: false };
+      globalFeesProcessed[student.user_id].placement_fee = true;
     }
   });
 
@@ -294,6 +339,7 @@ export function transformPaymentsToRecordsAndStats({
       if (payment.fee_type === 'selection_process_fee') return 'selection_process';
       if (payment.fee_type === 'scholarship_fee') return 'scholarship';
       if (payment.fee_type === 'i20_control_fee') return 'i20_control_fee';
+      if (payment.fee_type === 'placement_fee') return 'placement';
       return payment.fee_type_global;
     }));
 
@@ -354,7 +400,7 @@ export function transformPaymentsToRecordsAndStats({
       } as PaymentRecord);
     }
 
-    if (paidFeeTypes.has('scholarship')) {
+    if (paidFeeTypes.has('scholarship') && !student.placement_fee_flow) {
       const scholarshipPayment = userZellePayments.find((p: any) => p.fee_type_global === 'scholarship' || p.fee_type === 'scholarship_fee');
       paymentRecords.push({
         id: `zelle-${scholarshipPayment.id}-scholarship`,
@@ -382,7 +428,7 @@ export function transformPaymentsToRecordsAndStats({
       } as PaymentRecord);
     }
 
-    if (paidFeeTypes.has('i20_control_fee')) {
+    if (paidFeeTypes.has('i20_control_fee') && !student.placement_fee_flow) {
       const i20Payment = userZellePayments.find((p: any) => p.fee_type_global === 'i20_control_fee' || p.fee_type === 'i20_control_fee');
       paymentRecords.push({
         id: `zelle-${i20Payment.id}-i20`,
@@ -535,6 +581,18 @@ export function transformPaymentsToRecordsAndStats({
       }
     }
 
+    // Placement Fee - Prioridade: valor real pago (se razoável) > override > cálculo fixo
+    let placementFee: number;
+    const expectedPlacementValue = 1450;
+    
+    if (realPaid?.placement !== undefined && realPaid.placement > 0) {
+      placementFee = Math.round(realPaid.placement * 100);
+    } else if (userOverrides.placement_fee !== undefined) {
+      placementFee = Math.round(userOverrides.placement_fee * 100);
+    } else {
+      placementFee = expectedPlacementValue * 100;
+    }
+
     if (stripeUser.has_paid_selection_process_fee) {
       paymentRecords.push({
         id: `stripe-${stripeUser.user_id}-selection`,
@@ -579,7 +637,7 @@ export function transformPaymentsToRecordsAndStats({
       } as PaymentRecord);
     }
 
-    if (stripeUser.is_scholarship_fee_paid) {
+    if (stripeUser.is_scholarship_fee_paid && !stripeUser.placement_fee_flow) {
       paymentRecords.push({
         id: `stripe-${stripeUser.user_id}-scholarship`,
         student_id: stripeUser.id,
@@ -601,7 +659,7 @@ export function transformPaymentsToRecordsAndStats({
       } as PaymentRecord);
     }
 
-    if (stripeUser.has_paid_i20_control_fee) {
+    if (stripeUser.has_paid_i20_control_fee && !stripeUser.placement_fee_flow) {
       paymentRecords.push({
         id: `stripe-${stripeUser.user_id}-i20`,
         student_id: stripeUser.id,
@@ -618,6 +676,28 @@ export function transformPaymentsToRecordsAndStats({
         payment_date: individualPaymentDates.get(stripeUser.user_id)?.get('i20_control') || stripeUser.last_payment_date || stripeUser.created_at,
         created_at: stripeUser.created_at,
         payment_method: stripeUser.i20_control_fee_payment_method || 'manual',
+        seller_referral_code: stripeUser.seller_referral_code,
+        scholarships_ids: [],
+      } as PaymentRecord);
+    }
+
+    if (stripeUser.is_placement_fee_paid && stripeUser.placement_fee_flow) {
+      paymentRecords.push({
+        id: `stripe-${stripeUser.user_id}-placement`,
+        student_id: stripeUser.id,
+        student_name: studentName,
+        student_email: studentEmail,
+        university_id: '00000000-0000-0000-0000-000000000000',
+        university_name: 'No University Selected',
+        scholarship_id: '00000000-0000-0000-0000-000000000000',
+        scholarship_title: 'No Scholarship Selected',
+        field_of_study: null,
+        fee_type: 'placement',
+        amount: placementFee,
+        status: 'paid',
+        payment_date: individualPaymentDates.get(stripeUser.user_id)?.get('placement') || stripeUser.last_payment_date || stripeUser.created_at,
+        created_at: stripeUser.created_at,
+        payment_method: stripeUser.placement_fee_payment_method || 'manual',
         seller_referral_code: stripeUser.seller_referral_code,
         scholarships_ids: [],
       } as PaymentRecord);

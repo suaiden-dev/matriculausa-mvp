@@ -19,6 +19,8 @@ export interface StudentRecord {
   student_created_at: string;
   has_paid_selection_process_fee: boolean;
   has_paid_i20_control_fee: boolean;
+  placement_fee_flow?: boolean;
+  is_placement_fee_paid?: boolean;
   selection_process_fee_payment_method?: string | null;
   i20_control_fee_payment_method?: string | null;
   seller_referral_code: string | null;
@@ -66,7 +68,7 @@ export const useStudentDetails = (profileId: string | undefined) => {
 
       // Try RPC first for better performance
       let s: any = null;
-      let useRpc = true;
+      let useRpc = false; // DESABILITADO TEMPORARIAMENTE para forçar o retorno do placement_fee_flow do select
 
       try {
         const { data: rpcData, error: rpcError } = await supabase.rpc(
@@ -114,6 +116,8 @@ export const useStudentDetails = (profileId: string | undefined) => {
             created_at,
             has_paid_selection_process_fee,
             has_paid_i20_control_fee,
+            placement_fee_flow,
+            is_placement_fee_paid,
             selection_process_fee_payment_method,
             i20_control_fee_payment_method,
             role,
@@ -188,6 +192,8 @@ export const useStudentDetails = (profileId: string | undefined) => {
         student_created_at: s.created_at,
         has_paid_selection_process_fee: s.has_paid_selection_process_fee,
         has_paid_i20_control_fee: s.has_paid_i20_control_fee,
+        placement_fee_flow: s.placement_fee_flow,
+        is_placement_fee_paid: s.is_placement_fee_paid,
         selection_process_fee_payment_method: s.selection_process_fee_payment_method,
         i20_control_fee_payment_method: s.i20_control_fee_payment_method,
         seller_referral_code: s.seller_referral_code,

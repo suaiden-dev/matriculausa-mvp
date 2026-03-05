@@ -9,12 +9,12 @@ const ONBOARDING_STEP_KEY = 'onboarding_current_step';
 export const useOnboardingProgress = () => {
   const { user, userProfile } = useAuth();
   const { fetchCart } = useCartStore();
-  
+
   // Função para obter step salvo (apenas localStorage por enquanto)
   const getSavedStep = useCallback((): OnboardingStep | null => {
     // Usar apenas localStorage por enquanto (campo no banco não existe ainda)
     const savedStep = window.localStorage.getItem(ONBOARDING_STEP_KEY);
-    const validSteps: OnboardingStep[] = ['selection_fee', 'identity_verification', 'selection_survey', 'scholarship_selection', 'process_type', 'documents_upload', 'payment', 'scholarship_fee', 'my_applications', 'completed'];
+    const validSteps: OnboardingStep[] = ['selection_fee', 'identity_verification', 'selection_survey', 'scholarship_selection', 'process_type', 'documents_upload', 'payment', 'scholarship_fee', 'placement_fee', 'my_applications', 'completed'];
     if (savedStep && validSteps.includes(savedStep as OnboardingStep)) {
       return savedStep as OnboardingStep;
     }
@@ -30,9 +30,9 @@ export const useOnboardingProgress = () => {
   const [state, setState] = useState<OnboardingState>(() => {
     // Inicializar com step do localStorage se existir (síncrono)
     const savedStep = window.localStorage.getItem(ONBOARDING_STEP_KEY);
-    const validSteps: OnboardingStep[] = ['selection_fee', 'identity_verification', 'selection_survey', 'scholarship_selection', 'process_type', 'documents_upload', 'payment', 'scholarship_fee', 'my_applications', 'completed'];
+    const validSteps: OnboardingStep[] = ['selection_fee', 'identity_verification', 'selection_survey', 'scholarship_selection', 'process_type', 'documents_upload', 'payment', 'scholarship_fee', 'placement_fee', 'my_applications', 'completed'];
     const initialStep = savedStep && validSteps.includes(savedStep as OnboardingStep) ? savedStep as OnboardingStep : 'selection_fee';
-    
+
     return {
       currentStep: initialStep,
       selectionFeePaid: false,
@@ -43,6 +43,7 @@ export const useOnboardingProgress = () => {
       documentsApproved: false,
       applicationFeePaid: false,
       scholarshipFeePaid: false,
+      placementFeePaid: false,
       universityDocumentsUploaded: false,
       onboardingCompleted: false,
     };
@@ -75,22 +76,22 @@ export const useOnboardingProgress = () => {
           .eq('fee_type', 'selection_process_fee') // Ajustado para corresponder ao enum exato se necessário, geralmente é 'selection_process' ou similar
           .in('status', ['approved', 'verified'])
           .limit(1);
-        
+
         // Tenta buscar também como 'selection_process' caso o enum varie
         if (!zelleSelection || zelleSelection.length === 0) {
-             const { data: zelleSelectionV2 } = await supabase
+          const { data: zelleSelectionV2 } = await supabase
             .from('zelle_payments')
             .select('id')
             .eq('user_id', userProfile.id)
             .eq('fee_type', 'selection_process')
             .in('status', ['approved', 'verified'])
             .limit(1);
-            
-            if (zelleSelectionV2 && zelleSelectionV2.length > 0) {
-                selectionFeePaid = true;
-            }
-        } else {
+
+          if (zelleSelectionV2 && zelleSelectionV2.length > 0) {
             selectionFeePaid = true;
+          }
+        } else {
+          selectionFeePaid = true;
         }
       }
 
@@ -114,31 +115,31 @@ export const useOnboardingProgress = () => {
       // Isso evita marcar como concluído quando há dados antigos no carrinho
       let scholarshipsSelected = false;
       let applications: any[] | null = null;
-      
+
       // Sempre buscar aplicações para verificar process type, mas só considerar bolsas selecionadas se pagou a taxa
       const { data: appsData } = await supabase
         .from('scholarship_applications')
         .select('id, scholarship_id, student_process_type')
         .eq('student_id', userProfile.id)
         .limit(1);
-      
+
       applications = appsData;
-      
+
       if (selectionFeePaid) {
         await fetchCart(user.id);
         // Aguardar um pouco para o cart ser atualizado
         await new Promise(resolve => setTimeout(resolve, 100));
         const { cart: currentCart } = useCartStore.getState();
         const hasCartItems = currentCart.length > 0;
-        
+
         scholarshipsSelected = hasCartItems || (applications && applications.length > 0) || !!userProfile.selected_scholarship_id;
       }
 
       // 3. Verificar Process Type - considerar aplicações OU localStorage (fallback)
       const userProcessTypeKey = `studentProcessType_${userProfile.id}`;
       const storedProcessType = window.localStorage.getItem(userProcessTypeKey) || window.localStorage.getItem('studentProcessType');
-      
-      const processTypeSelected = 
+
+      const processTypeSelected =
         (applications && applications.length > 0 && !!applications[0].student_process_type) ||
         (userProfile.documents_uploaded || false) ||
         (!!storedProcessType && ['initial', 'transfer', 'change_of_status'].includes(storedProcessType) && selectionFeePaid && scholarshipsSelected && getSavedStep() !== 'scholarship_selection' && getSavedStep() !== 'selection_fee');
@@ -160,7 +161,7 @@ export const useOnboardingProgress = () => {
         .eq('student_id', userProfile.id)
         .eq('is_application_fee_paid', true)
         .limit(1);
-      
+
       let applicationFeePaid = (appFeeApplications && appFeeApplications.length > 0) || userProfile.is_application_fee_paid || false;
 
       // Se não estiver marcado como pago, verificar se há pagamento Zelle aprovado
@@ -172,24 +173,26 @@ export const useOnboardingProgress = () => {
           .eq('fee_type', 'application_fee')
           .in('status', ['approved', 'verified'])
           .limit(1);
-        
+
         if (zelleApplication && zelleApplication.length > 0) {
-            applicationFeePaid = true;
+          applicationFeePaid = true;
         }
       }
 
-      // 6. Verificar Scholarship Fee
+      // 6. Verificar Scholarship Fee (legado) OU Placement Fee (novo fluxo)
+      const isNewFlowUser = !!(userProfile as any)?.placement_fee_flow;
+
       const { data: scholarshipFeeApplications } = await supabase
         .from('scholarship_applications')
         .select('is_scholarship_fee_paid')
         .eq('student_id', userProfile.id)
         .eq('is_scholarship_fee_paid', true)
         .limit(1);
-      
+
       let scholarshipFeePaid = (scholarshipFeeApplications && scholarshipFeeApplications.length > 0) || false;
 
-       // Se não estiver marcado como pago, verificar se há pagamento Zelle aprovado
-       if (!scholarshipFeePaid) {
+      // Se não estiver marcado como pago, verificar se há pagamento Zelle aprovado
+      if (!scholarshipFeePaid) {
         const { data: zelleScholarship } = await supabase
           .from('zelle_payments')
           .select('id')
@@ -197,12 +200,45 @@ export const useOnboardingProgress = () => {
           .eq('fee_type', 'scholarship_fee')
           .in('status', ['approved', 'verified'])
           .limit(1);
-        
+
         if (zelleScholarship && zelleScholarship.length > 0) {
-            scholarshipFeePaid = true;
+          scholarshipFeePaid = true;
         }
-        if (zelleScholarship && zelleScholarship.length > 0) {
-            scholarshipFeePaid = true;
+      }
+
+      // Verificar Placement Fee (novo fluxo) - via is_placement_fee_paid, Stripe ou Zelle
+      let placementFeePaid = false;
+      if (isNewFlowUser) {
+        // 1. Verificar campo direto no perfil (atualizado pela edge function)
+        if ((userProfile as any)?.is_placement_fee_paid === true) {
+          placementFeePaid = true;
+        }
+
+        // 2. Verificar pagamento Stripe em individual_fee_payments
+        if (!placementFeePaid) {
+          const { data: stripePlacement } = await supabase
+            .from('individual_fee_payments')
+            .select('id')
+            .eq('user_id', userProfile.user_id)
+            .eq('fee_type', 'placement_fee')
+            .limit(1);
+          if (stripePlacement && stripePlacement.length > 0) {
+            placementFeePaid = true;
+          }
+        }
+
+        // 3. Verificar pagamento Zelle
+        if (!placementFeePaid) {
+          const { data: zellePlacement } = await supabase
+            .from('zelle_payments')
+            .select('id')
+            .eq('user_id', userProfile.id)
+            .eq('fee_type', 'placement_fee')
+            .in('status', ['approved', 'verified'])
+            .limit(1);
+          if (zellePlacement && zellePlacement.length > 0) {
+            placementFeePaid = true;
+          }
         }
       }
 
@@ -220,7 +256,7 @@ export const useOnboardingProgress = () => {
           .eq('student_id', userProfile.id)
           .order('created_at', { ascending: false })
           .limit(1);
-        
+
         const activeApp = activeApps?.[0];
         const universityId = (activeApp?.scholarships as any)?.university_id;
 
@@ -228,7 +264,7 @@ export const useOnboardingProgress = () => {
           let reqQuery = supabase
             .from('document_requests')
             .select('id', { count: 'exact', head: true });
-          
+
           if (universityId) {
             reqQuery = reqQuery.or(`scholarship_application_id.eq.${activeApp.id},and(university_id.eq.${universityId},is_global.eq.true)`);
           } else {
@@ -246,7 +282,7 @@ export const useOnboardingProgress = () => {
               .from('document_request_uploads')
               .select('id', { count: 'exact', head: true })
               .eq('uploaded_by', userProfile.user_id);
-            
+
             universityDocumentsUploaded = (uploadsCount || 0) > 0;
           }
         } else {
@@ -263,7 +299,7 @@ export const useOnboardingProgress = () => {
       console.log('[OnboardingDebug] Calculating step. savedStep from localStorage:', savedStepLog);
 
       let currentStep: OnboardingStep;
-      
+
       const urlParams = new URLSearchParams(window.location.search);
       const isForcingPortal = urlParams.get('step') === 'my_applications';
 
@@ -274,37 +310,46 @@ export const useOnboardingProgress = () => {
       } else if (onboardingCompleted && isForcingPortal) {
         currentStep = 'my_applications';
       } else if (savedStep && savedStep !== 'completed') {
-        // Se há um step salvo e não está completado, calcular o máximo permitido
-        let maxAllowedStep: OnboardingStep = 'selection_fee';
-        
-        if (!selectionFeePaid) {
-          maxAllowedStep = 'selection_fee';
-        } else if (!identityVerified) {
-          maxAllowedStep = 'identity_verification';
-        } else if (!selectionSurveyPassed) {
-          maxAllowedStep = 'selection_survey';
-        } else if (!scholarshipsSelected) {
-          maxAllowedStep = 'scholarship_selection';
-        } else if (!processTypeSelected) {
-          maxAllowedStep = 'process_type';
-        } else if (!documentsUploaded || !documentsApproved) {
-          maxAllowedStep = 'documents_upload';
-        } else if (!applicationFeePaid) {
-          const selectedAppId = window.localStorage.getItem('selected_application_id');
-          maxAllowedStep = selectedAppId ? 'payment' : 'documents_upload';
-        } else if (!scholarshipFeePaid) {
-          maxAllowedStep = 'scholarship_fee';
+        // Se o usuário é do novo fluxo mas tem scholarship_fee salvo no localStorage, limpar
+        if (isNewFlowUser && savedStep === 'scholarship_fee') {
+          window.localStorage.removeItem(ONBOARDING_STEP_KEY);
+          currentStep = 'placement_fee';
+          // Forçar re-cálculo sem o step salvo
         } else {
-          maxAllowedStep = 'my_applications';
-        }
+          // Se há um step salvo e não está completado, calcular o máximo permitido
+          let maxAllowedStep: OnboardingStep = 'selection_fee';
 
-        // Se o step salvo é mais avançado que o permitido, usar o permitido
-        // Caso contrário, respeitar o desejo do usuário (permitir voltar)
-        const allSteps: OnboardingStep[] = ['selection_fee', 'identity_verification', 'selection_survey', 'scholarship_selection', 'process_type', 'documents_upload', 'payment', 'scholarship_fee', 'my_applications', 'completed'];
-        const savedIdx = allSteps.indexOf(savedStep);
-        const maxIdx = allSteps.indexOf(maxAllowedStep);
-        
-        currentStep = savedIdx > maxIdx ? maxAllowedStep : savedStep;
+          if (!selectionFeePaid) {
+            maxAllowedStep = 'selection_fee';
+          } else if (!identityVerified) {
+            maxAllowedStep = 'identity_verification';
+          } else if (!selectionSurveyPassed) {
+            maxAllowedStep = 'selection_survey';
+          } else if (!scholarshipsSelected) {
+            maxAllowedStep = 'scholarship_selection';
+          } else if (!processTypeSelected) {
+            maxAllowedStep = 'process_type';
+          } else if (!documentsUploaded || !documentsApproved) {
+            maxAllowedStep = 'documents_upload';
+          } else if (!applicationFeePaid) {
+            const selectedAppId = window.localStorage.getItem('selected_application_id');
+            maxAllowedStep = selectedAppId ? 'payment' : 'documents_upload';
+          } else if (isNewFlowUser && !placementFeePaid) {
+            maxAllowedStep = 'placement_fee';
+          } else if (!isNewFlowUser && !scholarshipFeePaid) {
+            maxAllowedStep = 'scholarship_fee';
+          } else {
+            maxAllowedStep = 'my_applications';
+          }
+
+          // Se o step salvo é mais avançado que o permitido, usar o permitido
+          // Caso contrário, respeitar o desejo do usuário (permitir voltar)
+          const allSteps: OnboardingStep[] = ['selection_fee', 'identity_verification', 'selection_survey', 'scholarship_selection', 'process_type', 'documents_upload', 'payment', 'scholarship_fee', 'placement_fee', 'my_applications', 'completed'];
+          const savedIdx = allSteps.indexOf(savedStep);
+          const maxIdx = allSteps.indexOf(maxAllowedStep);
+
+          currentStep = savedIdx > maxIdx ? maxAllowedStep : savedStep;
+        }
       } else {
         // Se não há step salvo e não é novo usuário, calcular baseado no progresso
         if (!selectionFeePaid) {
@@ -327,10 +372,12 @@ export const useOnboardingProgress = () => {
           } else {
             currentStep = 'documents_upload';
           }
-        } else if (!scholarshipFeePaid) {
+        } else if (isNewFlowUser && !placementFeePaid) {
+          currentStep = 'placement_fee';
+        } else if (!isNewFlowUser && !scholarshipFeePaid) {
           currentStep = 'scholarship_fee';
         } else if (!onboardingCompleted) {
-          // Sempre passar pelo university_documents antes de reach completed
+          // Sempre passar pelo my_applications antes de reach completed
           currentStep = 'my_applications';
         } else {
           currentStep = 'completed';
@@ -352,10 +399,11 @@ export const useOnboardingProgress = () => {
         documentsApproved,
         applicationFeePaid,
         scholarshipFeePaid,
+        placementFeePaid,
         universityDocumentsUploaded,
         onboardingCompleted,
       });
-      
+
       // Salvar step atual
       saveStep(currentStep);
     } catch (error) {
@@ -365,7 +413,7 @@ export const useOnboardingProgress = () => {
         setLoading(false);
       }
     }
-  }, [user?.id, userProfile?.id, userProfile?.has_paid_selection_process_fee, userProfile?.documents_uploaded, userProfile?.documents_status, userProfile?.is_application_fee_paid, userProfile?.onboarding_completed, fetchCart, getSavedStep, saveStep]);
+  }, [user?.id, userProfile?.id, userProfile?.has_paid_selection_process_fee, userProfile?.documents_uploaded, userProfile?.documents_status, userProfile?.is_application_fee_paid, userProfile?.onboarding_completed, (userProfile as any)?.placement_fee_flow, fetchCart, getSavedStep, saveStep]);
 
   useEffect(() => {
     checkProgress();
@@ -381,7 +429,7 @@ export const useOnboardingProgress = () => {
     // Atualizar estado local
     setState(prev => {
       const updates: Partial<OnboardingState> = {};
-      
+
       switch (step) {
         case 'selection_fee':
           updates.selectionFeePaid = true;
@@ -401,6 +449,9 @@ export const useOnboardingProgress = () => {
         case 'payment':
           updates.applicationFeePaid = true;
           break;
+        case 'placement_fee':
+          updates.placementFeePaid = true;
+          break;
         case 'scholarship_fee':
           updates.scholarshipFeePaid = true;
           break;
@@ -411,7 +462,7 @@ export const useOnboardingProgress = () => {
           updates.onboardingCompleted = true;
           break;
       }
-      
+
       return { ...prev, ...updates };
     });
 

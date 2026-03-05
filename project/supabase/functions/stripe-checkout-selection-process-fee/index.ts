@@ -224,6 +224,7 @@ Deno.serve(async (req) => {
     // Monta o metadata mínimo
     // NOTA: metadata pode conter exchange_rate do frontend, vamos preservá-lo
     const sessionMetadata: any = {
+      project: "matricula_usa",
       ...metadata, // Primeiro o metadata recebido
       student_id: user.id,
       fee_type: "selection_process",

@@ -30,7 +30,7 @@ export const useAdminStudentActions = () => {
   // Mark fee as paid
   const markFeeAsPaid = useCallback(async (
     userId: string,
-    feeType: 'selection_process' | 'application' | 'scholarship' | 'i20_control',
+    feeType: 'selection_process' | 'application' | 'scholarship' | 'i20_control' | 'placement',
     amount: number,
     paymentMethod: string,
     applicationId?: string
@@ -60,13 +60,21 @@ export const useAdminStudentActions = () => {
 
         if (error) throw error;
       } else if (applicationId) {
-        // Application or scholarship fee
-        const fieldName = feeType === 'application' 
-          ? 'is_application_fee_paid'
-          : 'is_scholarship_fee_paid';
-        const methodField = feeType === 'application'
-          ? 'application_fee_payment_method'
-          : 'scholarship_fee_payment_method';
+        // Application, scholarship or placement fee
+        let fieldName, methodField;
+        
+        if (feeType === 'application') {
+          fieldName = 'is_application_fee_paid';
+          methodField = 'application_fee_payment_method';
+        } else if (feeType === 'scholarship') {
+          fieldName = 'is_scholarship_fee_paid';
+          methodField = 'scholarship_fee_payment_method';
+        } else if (feeType === 'placement') {
+          fieldName = 'is_placement_fee_paid';
+          methodField = 'placement_fee_payment_method';
+        } else {
+          throw new Error('Invalid feeType for application context');
+        }
 
         const { error } = await supabase
           .from('scholarship_applications')
@@ -77,10 +85,22 @@ export const useAdminStudentActions = () => {
           .eq('id', applicationId);
 
         if (error) throw error;
+
+        // Extra: Update placement flow payment tracking globally (if needed) but usually UI queries via applications table
+        if (feeType === 'placement') {
+          // Também marcar no user_profile como fallback se o projeto usar
+          const { error: profileError } = await supabase
+            .from('user_profiles')
+            .update({ 
+               is_placement_fee_paid: true 
+            })
+            .eq('user_id', userId);
+        }
+
       } else {
-        // Se é application ou scholarship fee mas não tem applicationId, retornar erro
-        if (feeType === 'application' || feeType === 'scholarship') {
-          throw new Error('Application ID is required for application and scholarship fees');
+        // Se é application, scholarship, ou placement fee mas não tem applicationId, retornar erro
+        if (feeType === 'application' || feeType === 'scholarship' || feeType === 'placement') {
+          throw new Error('Application ID is required for application, scholarship and placement fees');
         }
       }
 

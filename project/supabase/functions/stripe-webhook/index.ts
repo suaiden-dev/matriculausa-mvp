@@ -583,6 +583,29 @@ Deno.serve(async (req: Request) => {
       Object.keys(event.data || {}),
     );
 
+    // --- TRAVA DE SEGURANÇA ---
+    // Verifica se o evento pertence a este projeto.
+    // Se for do 'aplikei' ou estiver vazio, o evento é ignorado com sucesso.
+    const stripeObject = event.data?.object;
+    const metadata = stripeObject?.metadata;
+
+    if (
+      event.type.startsWith("checkout.session.") ||
+      event.type.startsWith("payment_intent.")
+    ) {
+      if (!metadata || metadata.project !== "matricula_usa") {
+        console.log(
+          `[IGNORADO] Evento de outro projeto ou sem identificação (Projeto: ${
+            metadata?.project || "N/A"
+          })`,
+        );
+        return new Response(JSON.stringify({ received: true, ignored: true }), {
+          status: 200,
+        });
+      }
+    }
+    // --------------------------
+
     // Processar eventos de checkout para cartões e PIX
     if (event.type === "checkout.session.completed") {
       console.log("[stripe-webhook] Processando checkout.session.completed...");
@@ -1724,16 +1747,10 @@ async function handleCheckoutSessionCompleted(session: any, stripe: any) {
             const exchangeRate = parseFloat(session.metadata.exchange_rate);
             if (exchangeRate > 0) {
               paymentAmount = paymentAmountRaw / exchangeRate;
-          // Converter BRL para USD se necessário (sempre registrar em USD)
-          let paymentAmount = paymentAmountRaw;
-          if (currency === "BRL" && session.metadata?.exchange_rate) {
-            const exchangeRate = parseFloat(session.metadata.exchange_rate);
-            if (exchangeRate > 0) {
-              paymentAmount = paymentAmountRaw / exchangeRate;
             }
           }
 
-          const { data: insertResult, error: insertError } = await supabase.rpc(
+          const { error: insertError } = await supabase.rpc(
             "insert_individual_fee_payment",
             {
               p_user_id: userId,
@@ -1752,12 +1769,9 @@ async function handleCheckoutSessionCompleted(session: any, stripe: any) {
               "[Individual Fee Payment] Warning: Could not record fee payment:",
               insertError,
             );
-          } else {
-          if (insertError) {
-            // Error logged silently
           }
         } catch (recordError) {
-          // Error handled
+          console.error("[Individual Fee Payment] Error recording payment:", recordError);
         }
       }
     }

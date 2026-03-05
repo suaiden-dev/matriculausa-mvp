@@ -20,6 +20,9 @@ export interface StudentRecord {
   student_created_at: string;
   has_paid_selection_process_fee: boolean;
   has_paid_i20_control_fee: boolean;
+  placement_fee_flow?: boolean;
+  is_placement_fee_paid?: boolean;
+  placement_fee_amount?: number | string | null;
   selection_process_fee_payment_method?: string | null;
   i20_control_fee_payment_method?: string | null;
   seller_referral_code: string | null;
@@ -84,7 +87,7 @@ export interface TermAcceptance {
 }
 
 export interface PendingPayment {
-  fee_type: 'selection_process' | 'application' | 'scholarship' | 'i20_control';
+  fee_type: 'selection_process' | 'application' | 'scholarship' | 'i20_control' | 'placement';
   payment_method: 'stripe' | 'zelle' | 'manual';
   amount?: number;
   scholarship_id?: string | null;

@@ -1,12 +1,12 @@
 import React, { useEffect, useState } from 'react';
 import { Link, useSearchParams } from 'react-router-dom';
-import { 
-  Award, 
-  FileText, 
-  CheckCircle, 
-  Clock, 
-  Search, 
-  Target, 
+import {
+  Award,
+  FileText,
+  CheckCircle,
+  Clock,
+  Search,
+  Target,
   BookOpen,
   ArrowUpRight,
   Calendar,
@@ -51,7 +51,7 @@ interface OverviewProps {
 }
 
 const Overview: React.FC<OverviewProps> = ({
-  stats, 
+  stats,
   recentApplications = []
 }) => {
   const { t } = useTranslation();
@@ -63,15 +63,15 @@ const Overview: React.FC<OverviewProps> = ({
   const { userFeeOverrides } = useFeeConfig(user?.id);
   const { selectionProcessFeeAmount, scholarshipFeeAmount, i20ControlFeeAmount } = useDynamicFees();
   const { isGuideOpen, openGuide, closeGuide } = useStepByStepGuide();
-  
 
-  
+
+
   // Verificar se há step de onboarding salvo no localStorage
   const savedOnboardingStep = React.useMemo(() => {
     if (typeof window === 'undefined') return null;
     const savedStep = window.localStorage.getItem('onboarding_current_step');
     const validSteps = ['welcome', 'selection_fee', 'scholarship_selection', 'process_type', 'documents_upload', 'payment', 'scholarship_fee', 'my_applications', 'completed'];
-    
+
     if (!savedStep || !validSteps.includes(savedStep)) return null;
 
     // Se o usuário não pagou a taxa de seleção, ele não deve conseguir avançar além desse ponto via localStorage antigo
@@ -84,25 +84,25 @@ const Overview: React.FC<OverviewProps> = ({
 
     return savedStep;
   }, [userProfile]);
-  
+
   const hasSavedOnboardingStep = savedOnboardingStep !== null;
   const isOnboardingStarted = hasSavedOnboardingStep && savedOnboardingStep !== 'welcome';
-  
+
   // Mapear step para label amigável
   const currentStepLabel = React.useMemo(() => {
     if (!savedOnboardingStep) return null;
     return t(`studentDashboard.progressBar.onboardingBanner.stepLabels.${savedOnboardingStep}`, { defaultValue: savedOnboardingStep });
   }, [savedOnboardingStep, t]);
-  
+
   const [visibleApplications, setVisibleApplications] = useState(5); // Mostrar 5 inicialmente
   const [documentsLoading, setDocumentsLoading] = useState(true);
   const [studentDocuments, setStudentDocuments] = useState<any[]>([]);
   const [realPaidAmounts, setRealPaidAmounts] = useState<Record<string, number>>({});
   const [loadingPaidAmounts, setLoadingPaidAmounts] = useState(false);
-  
+
   const hasMoreApplications = recentApplications.length > visibleApplications;
   const displayedApplications = recentApplications.slice(0, visibleApplications);
-  
+
   const handleLoadMore = () => {
     setVisibleApplications(prev => Math.min(prev + 5, recentApplications.length));
   };
@@ -191,17 +191,17 @@ const Overview: React.FC<OverviewProps> = ({
   // Redirecionamento automático para o onboarding via query param ou fallback localStorage
   useEffect(() => {
     const shouldOpenModal = searchParams.get('openModal') || localStorage.getItem('pending_open_modal');
-    
+
     if (shouldOpenModal === 'selection_process') {
       console.log('[Overview] Redirecionando para onboarding:', searchParams.get('openModal') ? 'Query Param' : 'LocalStorage');
-      
+
       // Limpar o parâmetro da URL e o localStorage
       if (searchParams.get('openModal')) {
         searchParams.delete('openModal');
         setSearchParams(searchParams, { replace: true });
       }
       localStorage.removeItem('pending_open_modal');
-      
+
       // Redirecionar para o fluxo de onboarding
       navigate('/student/onboarding?step=selection_fee');
     }
@@ -252,14 +252,14 @@ const Overview: React.FC<OverviewProps> = ({
 
   const checkDocumentsUploaded = (): boolean => {
     if (documentsLoading) return false;
-    
+
     const requiredDocTypes = ['passport', 'diploma', 'funds_proof'];
     const uploadedDocTypes = new Set(
       studentDocuments
         .filter(doc => doc.file_url && doc.status !== 'rejected')
         .map(doc => doc.type)
     );
-    
+
     return requiredDocTypes.every(type => uploadedDocTypes.has(type));
   };
 
@@ -299,6 +299,10 @@ const Overview: React.FC<OverviewProps> = ({
   const hasApplicationFeePaid = recentApplications.some(app => app.is_application_fee_paid);
   const hasScholarshipFeePaid = recentApplications.some(app => app.is_scholarship_fee_paid);
 
+  // Verificar se é usuário do novo fluxo (placement_fee_flow)
+  const isPlacementFeeFlow = !!(userProfile as any)?.placement_fee_flow;
+  const hasPlacementFeePaid = !!(userProfile as any)?.is_placement_fee_paid;
+
   // Buscar valores reais pagos de individual_fee_payments
   useEffect(() => {
     const fetchRealPaidAmounts = async () => {
@@ -306,7 +310,10 @@ const Overview: React.FC<OverviewProps> = ({
 
       setLoadingPaidAmounts(true);
       try {
-        const amounts = await getGrossPaidAmounts(user.id, ['selection_process', 'scholarship', 'i20_control', 'application']);
+        const feeTypes = (isPlacementFeeFlow
+          ? ['selection_process', 'application', 'placement']
+          : ['selection_process', 'scholarship', 'i20_control', 'application']) as ('selection_process' | 'scholarship' | 'i20_control' | 'application' | 'placement')[];
+        const amounts = await getGrossPaidAmounts(user.id, feeTypes);
         setRealPaidAmounts(amounts);
         console.log('[Overview] Valores reais pagos carregados:', amounts);
       } catch (error) {
@@ -318,7 +325,7 @@ const Overview: React.FC<OverviewProps> = ({
     };
 
     fetchRealPaidAmounts();
-  }, [user?.id, userProfile?.has_paid_selection_process_fee, hasApplicationFeePaid, hasScholarshipFeePaid, userProfile?.has_paid_i20_control_fee]);
+  }, [user?.id, isPlacementFeeFlow, userProfile?.has_paid_selection_process_fee, hasApplicationFeePaid, hasScholarshipFeePaid, userProfile?.has_paid_i20_control_fee, hasPlacementFeePaid]);
 
   // Base fee amounts with user overrides - usar valores do useDynamicFees
   const selectionBase = selectionProcessFeeAmount || 0;
@@ -326,14 +333,14 @@ const Overview: React.FC<OverviewProps> = ({
   const i20Base = i20ControlFeeAmount || 0;
 
   // Verificar se as taxas estão carregando
-  const isFeesLoading = selectionProcessFeeAmount === undefined || 
-                       scholarshipFeeAmount === undefined || 
-                       i20ControlFeeAmount === undefined;
+  const isFeesLoading = selectionProcessFeeAmount === undefined ||
+    scholarshipFeeAmount === undefined ||
+    i20ControlFeeAmount === undefined;
 
   // ✅ CORREÇÃO: selectionBase já vem com dependentes calculados do useDynamicFees
   // Não recalcular dependentes aqui para evitar duplicação
   const hasI20Override = userFeeOverrides?.i20_control_fee !== undefined;
-  
+
   // I-20 nunca tem dependentes, então não precisa de cálculo extra
   const i20Extra = hasI20Override ? 0 : 0;
 
@@ -343,68 +350,84 @@ const Overview: React.FC<OverviewProps> = ({
 
   // Valores das taxas para o ProgressBar (Application fee é variável)
   // ✅ CORREÇÃO: Aplicar desconto na barra de progresso se houver activeDiscount
-  const selectionFeeWithDiscount = activeDiscount?.has_discount 
+  const selectionFeeWithDiscount = activeDiscount?.has_discount
     ? Math.max(selectionWithDependents - (activeDiscount.discount_amount || 0), 0)
     : selectionWithDependents;
 
   // ✅ CORREÇÃO: Prioridade: Override > Valor real pago > Valor esperado
   const getSelectionProcessFeeDisplay = () => {
     if (loadingPaidAmounts) return <FeeSkeleton />;
-    
+
     // PRIORIDADE 1: Override (MÁXIMA PRIORIDADE)
     if (userFeeOverrides?.selection_process_fee !== undefined) {
       return `$${userFeeOverrides.selection_process_fee.toFixed(2)}`;
     }
-    
+
     // PRIORIDADE 2: Valor real pago quando já foi pago
     if (userProfile?.has_paid_selection_process_fee && realPaidAmounts?.selection_process !== undefined && realPaidAmounts.selection_process > 0) {
       return `$${realPaidAmounts.selection_process.toFixed(2)}`;
     }
-    
+
     // PRIORIDADE 3: Valor esperado (com desconto se aplicável)
     return `$${typeof selectionFeeWithDiscount === 'number' ? selectionFeeWithDiscount.toFixed(2) : selectionFeeWithDiscount}`;
   };
 
   const getScholarshipFeeDisplay = () => {
     if (loadingPaidAmounts) return <FeeSkeleton />;
-    
+
     // PRIORIDADE 1: Override (MÁXIMA PRIORIDADE)
     if (userFeeOverrides?.scholarship_fee !== undefined) {
       return `$${userFeeOverrides.scholarship_fee.toFixed(2)}`;
     }
-    
+
     // PRIORIDADE 2: Valor real pago quando já foi pago
     if (hasScholarshipFeePaid && realPaidAmounts?.scholarship !== undefined && realPaidAmounts.scholarship > 0) {
       return `$${realPaidAmounts.scholarship.toFixed(2)}`;
     }
-    
+
     // PRIORIDADE 3: Valor esperado
     return `$${typeof scholarshipBase === 'number' ? scholarshipBase.toFixed(2) : scholarshipBase}`;
   };
 
   const getI20ControlFeeDisplay = () => {
     if (loadingPaidAmounts) return <FeeSkeleton />;
-    
+
     // PRIORIDADE 1: Override (MÁXIMA PRIORIDADE)
     if (userFeeOverrides?.i20_control_fee !== undefined) {
       return `$${userFeeOverrides.i20_control_fee.toFixed(2)}`;
     }
-    
+
     // PRIORIDADE 2: Valor real pago quando já foi pago
     if (userProfile?.has_paid_i20_control_fee && realPaidAmounts?.i20_control !== undefined && realPaidAmounts.i20_control > 0) {
       return `$${realPaidAmounts.i20_control.toFixed(2)}`;
     }
-    
+
     // PRIORIDADE 3: Valor esperado
     return `$${typeof i20WithDependents === 'number' ? i20WithDependents.toFixed(2) : i20WithDependents}`;
   };
 
-  const dynamicFeeValues = [
-    isFeesLoading ? '...' : String(getSelectionProcessFeeDisplay()), // Selection Process Fee (valor real pago ou esperado)
-    t('feeValues.asPerUniversity'), // Application Fee (variável - não mostra valor específico)
-    isFeesLoading ? '...' : String(getScholarshipFeeDisplay()), // Scholarship Fee (valor real pago ou esperado)
-    isFeesLoading ? '...' : String(getI20ControlFeeDisplay()), // I-20 Control Fee (valor real pago ou esperado)
-  ];
+  // Placement Fee display (novo fluxo)
+  const getPlacementFeeDisplay = () => {
+    if (loadingPaidAmounts) return <FeeSkeleton />;
+    if (hasPlacementFeePaid && realPaidAmounts?.placement !== undefined && realPaidAmounts.placement > 0) {
+      return `$${realPaidAmounts.placement.toFixed(2)}`;
+    }
+    // Valor estimado: exibe placeholder pois depende da anuidade da bolsa
+    return t('feeValues.asPerScholarship', { defaultValue: 'Conforme bolsa' });
+  };
+
+  const dynamicFeeValues = isPlacementFeeFlow
+    ? [
+      isFeesLoading ? '...' : String(getSelectionProcessFeeDisplay()),
+      t('feeValues.asPerUniversity'),
+      String(getPlacementFeeDisplay()),
+    ]
+    : [
+      isFeesLoading ? '...' : String(getSelectionProcessFeeDisplay()),
+      t('feeValues.asPerUniversity'),
+      isFeesLoading ? '...' : String(getScholarshipFeeDisplay()),
+      isFeesLoading ? '...' : String(getI20ControlFeeDisplay()),
+    ];
 
   // Lógica da barra de progresso dinâmica
   const getStep1State = () => {
@@ -428,75 +451,112 @@ const Overview: React.FC<OverviewProps> = ({
   };
 
   const step1 = getStep1State();
-  
-  let steps = [
-    step1,
-    {
-      label: t('studentDashboard.progressBar.applicationFee'),
-      description: t('studentDashboard.progressBar.payApplicationFee'),
-      completed: false,
-      current: false,
-    },
-    {
-      label: t('studentDashboard.progressBar.scholarshipFee'),
-      description: t('studentDashboard.progressBar.payScholarshipFee'),
-      completed: false,
-      current: false,
-    },
-    {
-      label: t('studentDashboard.progressBar.i20ControlFee'),
-      description: t('studentDashboard.progressBar.payI20Fee'),
-      completed: false,
-      current: false,
-    },
-  ];
+
+  let steps = isPlacementFeeFlow
+    ? [
+      step1,
+      {
+        label: t('studentDashboard.progressBar.applicationFee'),
+        description: t('studentDashboard.progressBar.payApplicationFee'),
+        completed: false,
+        current: false,
+      },
+      {
+        label: t('studentDashboard.progressBar.placementFee', { defaultValue: 'Placement Fee' }),
+        description: t('studentDashboard.progressBar.payPlacementFee', { defaultValue: 'Pagar Placement Fee' }),
+        completed: false,
+        current: false,
+      },
+    ]
+    : [
+      step1,
+      {
+        label: t('studentDashboard.progressBar.applicationFee'),
+        description: t('studentDashboard.progressBar.payApplicationFee'),
+        completed: false,
+        current: false,
+      },
+      {
+        label: t('studentDashboard.progressBar.scholarshipFee'),
+        description: t('studentDashboard.progressBar.payScholarshipFee'),
+        completed: false,
+        current: false,
+      },
+      {
+        label: t('studentDashboard.progressBar.i20ControlFee'),
+        description: t('studentDashboard.progressBar.payI20Fee'),
+        completed: false,
+        current: false,
+      },
+    ];
 
   // Ajustar status dos passos subsequentes baseado no primeiro
   if (step1.completed) {
-    if (!hasApplicationFeePaid) {
-      steps[1].current = true;
-    } else if (!hasScholarshipFeePaid) {
-      steps[1].completed = true;
-      steps[2].current = true;
-    } else if (!userProfile?.has_paid_i20_control_fee) {
-      steps[1].completed = true;
-      steps[2].completed = true;
-      steps[3].current = true;
+    if (isPlacementFeeFlow) {
+      // Fluxo novo: selection -> application -> placement
+      if (!hasApplicationFeePaid) {
+        steps[1].current = true;
+      } else if (!hasPlacementFeePaid) {
+        steps[1].completed = true;
+        steps[2].current = true;
+      } else {
+        steps[1].completed = true;
+        steps[2].completed = true;
+      }
     } else {
-      steps[1].completed = true;
-      steps[2].completed = true;
-      steps[3].completed = true;
+      // Fluxo legado: selection -> application -> scholarship -> i20
+      if (!hasApplicationFeePaid) {
+        steps[1].current = true;
+      } else if (!hasScholarshipFeePaid) {
+        steps[1].completed = true;
+        steps[2].current = true;
+      } else if (!userProfile?.has_paid_i20_control_fee) {
+        steps[1].completed = true;
+        steps[2].completed = true;
+        steps[3].current = true;
+      } else {
+        steps[1].completed = true;
+        steps[2].completed = true;
+        steps[3].completed = true;
+      }
     }
-  } else if (userProfile?.has_paid_selection_process_fee) {
-    // Se pagou a taxa mas ainda está no onboarding, o passo 1 é atual (já definido no getStep1State)
-    // Mas os outros passos já não podem ser "current"
   }
 
 
   // Cálculo do progresso visual para a trilha animada
   const calculateVisualProgress = () => {
-    // 1. Prioridade para pagamentos confirmados (posições fixas nos nós)
+    if (isPlacementFeeFlow) {
+      // Fluxo novo: 0 = início, 1 = app fee paga, 2 = placement fee paga
+      if (hasPlacementFeePaid) return 2;
+      if (hasApplicationFeePaid) return 1;
+      if (userProfile?.onboarding_completed) return 1;
+      if (!userProfile?.has_paid_selection_process_fee) return 0;
+
+      const onboardingProgressMap: Record<string, number> = {
+        'welcome': 0, 'selection_fee': 0, 'scholarship_selection': 0.2,
+        'process_type': 0.4, 'documents_upload': 0.6,
+        'payment': 1, 'placement_fee': 1.25, 'completed': 2
+      };
+      return onboardingProgressMap[savedOnboardingStep || ''] || 0.5;
+    }
+
+    // Fluxo legado
     if (userProfile?.has_paid_i20_control_fee) return 3;
-    if (hasScholarshipFeePaid) return 3; // Se pagou a bolsa, o próximo passo é o I-20 (nó 3)
-    if (hasApplicationFeePaid) return 2; // Se pagou a aplicação, o próximo passo é a bolsa (nó 2)
-
-    // 2. Se o onboarding foi concluído mas ainda não pagou a taxa de aplicação
+    if (hasScholarshipFeePaid) return 3;
+    if (hasApplicationFeePaid) return 2;
     if (userProfile?.onboarding_completed) return 1;
-
-    // 3. Se ainda não pagou nem a primeira taxa (Taxa de Seleção)
     if (!userProfile?.has_paid_selection_process_fee) return 0;
 
-    // 4. Progresso granular durante o onboarding (entre o nó 0 e nó 1)
     const onboardingProgressMap: Record<string, number> = {
       'welcome': 0,
       'selection_fee': 0,
       'scholarship_selection': 0.2,
       'process_type': 0.4,
       'documents_upload': 0.6,
-      'payment': 1, // 'payment' no onboarding é a Taxa de Aplicação (nó 1)
+      'payment': 1,
       'scholarship_fee': 1.25,
       'university_documents': 1.5,
-      'waiting_approval': 1.75, // Quase chegando na liberação da taxa da bolsa
+      'waiting_approval': 1.75,
       'completed': 2
     };
 
@@ -508,11 +568,11 @@ const Overview: React.FC<OverviewProps> = ({
   return (
     <div className="overview-dashboard-container pt-2">
 
-      
+
       {/* Mensagem de boas‑vindas movida para o hero */}
-      
+
       {/* Alerta de desconto duplicado removido para evitar repetição com a mensagem de boas‑vindas */}
-      
+
       {/* Welcome Message / Hero */}
       <div className="bg-gradient-to-r from-blue-600 to-indigo-700 rounded-2xl p-4 sm:p-6 md:p-6 text-white relative overflow-hidden ring-1 ring-white/10 shadow-xl">
         <div className="absolute inset-0 bg-black/10"></div>
@@ -534,14 +594,14 @@ const Overview: React.FC<OverviewProps> = ({
             {!userProfile?.onboarding_completed && (
               <div className="flex items-center justify-center gap-2 md:gap-4 mb-4 animate-fade-in bg-white/5 backdrop-blur-xl border border-white/10 rounded-full py-2 px-4 md:px-6 w-fit mx-auto shadow-[0_10px_30px_rgba(0,0,0,0.2)] ring-1 ring-white/10">
                 <p className="text-white text-[10px] md:text-sm font-bold tracking-tight opacity-90 drop-shadow-md">
-                  {isOnboardingStarted 
+                  {isOnboardingStarted
                     ? t('studentDashboard.progressBar.onboardingBanner.stoppedAt', { step: currentStepLabel })
                     : t('studentDashboard.progressBar.onboardingBanner.startNow')}
                 </p>
               </div>
             )}
-            <ProgressBar 
-              steps={steps} 
+            <ProgressBar
+              steps={steps}
               feeValues={dynamicFeeValues}
               applicationId={recentApplications?.[0]?.id || null}
               isSelectionProcessUnlocked={true} // Sempre liberada
@@ -564,12 +624,12 @@ const Overview: React.FC<OverviewProps> = ({
               {/* Background Glows animadas */}
               <div className="absolute top-0 right-0 -mr-16 -mt-16 w-48 h-48 bg-blue-500/20 rounded-full blur-[80px] group-hover:bg-blue-400/30 transition-colors duration-700" />
               <div className="absolute bottom-0 left-0 -ml-16 -mb-16 w-32 h-32 bg-indigo-500/15 rounded-full blur-[60px] group-hover:bg-indigo-400/25 transition-colors duration-700" />
-              
+
               <h3 className="relative text-lg md:text-xl font-black text-white uppercase tracking-widest leading-tight">
-                {userProfile?.onboarding_completed 
+                {userProfile?.onboarding_completed
                   ? t('studentDashboard.progressBar.onboardingBanner.documentsPortal')
-                  : (isOnboardingStarted 
-                    ? t('studentDashboard.progressBar.onboardingBanner.continueProcess') 
+                  : (isOnboardingStarted
+                    ? t('studentDashboard.progressBar.onboardingBanner.continueProcess')
                     : t('studentDashboard.progressBar.onboardingBanner.startProcess'))}
               </h3>
             </button>
@@ -580,7 +640,7 @@ const Overview: React.FC<OverviewProps> = ({
 
       {/* Stats Cards */}
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
-        <div 
+        <div
           onClick={(e) => {
             e.preventDefault();
             e.stopPropagation();
@@ -730,7 +790,7 @@ const Overview: React.FC<OverviewProps> = ({
                 <div className="text-slate-500 text-xs">{t('studentDashboard.recentApplications.totalApplications')}</div>
               </div>
             </div>
-            
+
             {recentApplications.length === 0 ? (
               <div className="text-center py-6 sm:py-8">
                 <div className="w-16 h-16 sm:w-20 sm:h-20 bg-slate-100 rounded-full flex items-center justify-center mx-auto mb-4">
@@ -751,7 +811,7 @@ const Overview: React.FC<OverviewProps> = ({
                 {displayedApplications.map((app) => {
                   const scholarship = app.scholarship || app.scholarships;
                   const StatusIcon = getStatusIcon(app.status);
-                  
+
                   return (
                     <div key={app.id} className="group bg-slate-50 rounded-2xl p-3 sm:p-4 border border-slate-200 hover:border-slate-300 hover:shadow-md transition-all duration-300">
                       <div className="flex flex-col sm:flex-row sm:items-start gap-3 sm:gap-5">
@@ -759,10 +819,10 @@ const Overview: React.FC<OverviewProps> = ({
                         <div className="flex-shrink-0 self-center sm:self-start">
                           {scholarship?.universities?.logo_url ? (
                             <div className="relative">
-                              <img 
-                                src={scholarship.universities.logo_url} 
-                                alt={scholarship.universities.name} 
-                                className="w-36 h-20 sm:w-20 sm:h-20 rounded-2xl object-cover border-2 border-slate-200 bg-white shadow-lg hover:shadow-xl transition-all duration-300" 
+                              <img
+                                src={scholarship.universities.logo_url}
+                                alt={scholarship.universities.name}
+                                className="w-36 h-20 sm:w-20 sm:h-20 rounded-2xl object-cover border-2 border-slate-200 bg-white shadow-lg hover:shadow-xl transition-all duration-300"
                                 onError={(e) => {
                                   // Fallback para ícone se a imagem falhar
                                   e.currentTarget.style.display = 'none';
@@ -779,7 +839,7 @@ const Overview: React.FC<OverviewProps> = ({
                             </div>
                           )}
                         </div>
-                        
+
                         {/* Content */}
                         <div className="flex-1 min-w-0">
                           <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between mb-2 sm:mb-3 gap-2 sm:gap-0">
@@ -797,13 +857,13 @@ const Overview: React.FC<OverviewProps> = ({
                                 {app.status.replace('_', ' ').replace(/\b\w/g, (l: string) => l.toUpperCase())}
                               </span>
                               <span className="sm:hidden">
-                                {app.status === 'approved' ? t('studentDashboard.recentApplications.status.approved') : 
-                                 app.status === 'under_review' ? t('studentDashboard.recentApplications.status.under_review') : 
-                                 t('studentDashboard.recentApplications.status.pending')}
+                                {app.status === 'approved' ? t('studentDashboard.recentApplications.status.approved') :
+                                  app.status === 'under_review' ? t('studentDashboard.recentApplications.status.under_review') :
+                                    t('studentDashboard.recentApplications.status.pending')}
                               </span>
                             </div>
                           </div>
-                          
+
                           {/* Tags */}
                           <div className="flex flex-wrap items-center gap-1.5 sm:gap-2 mb-2 sm:mb-3">
                             {scholarship?.level && (
@@ -817,24 +877,24 @@ const Overview: React.FC<OverviewProps> = ({
                               </span>
                             )}
                           </div>
-                          
+
                           {/* Dates and Details */}
                           <div className="flex flex-col sm:flex-row sm:flex-wrap sm:items-center gap-2 sm:gap-4 text-xs sm:text-sm text-slate-500">
                             <div className="flex items-center gap-1">
                               <Calendar className="w-3 h-3 sm:w-4 sm:h-4 flex-shrink-0" />
-                              <span>{t('studentDashboard.recentApplications.applied')} {new Date(app.applied_at).toLocaleDateString('en-US', { 
-                                month: 'short', 
-                                day: 'numeric', 
-                                year: 'numeric' 
+                              <span>{t('studentDashboard.recentApplications.applied')} {new Date(app.applied_at).toLocaleDateString('en-US', {
+                                month: 'short',
+                                day: 'numeric',
+                                year: 'numeric'
                               })}</span>
                             </div>
                             {scholarship?.deadline && (
                               <div className="flex items-center gap-1">
                                 <Clock className="w-3 h-3 sm:w-4 sm:h-4 flex-shrink-0" />
-                                <span>{t('studentDashboard.recentApplications.deadline')} {new Date(scholarship.deadline).toLocaleDateString('en-US', { 
-                                  month: 'short', 
-                                  day: 'numeric', 
-                                  year: 'numeric' 
+                                <span>{t('studentDashboard.recentApplications.deadline')} {new Date(scholarship.deadline).toLocaleDateString('en-US', {
+                                  month: 'short',
+                                  day: 'numeric',
+                                  year: 'numeric'
                                 })}</span>
                               </div>
                             )}
@@ -844,18 +904,18 @@ const Overview: React.FC<OverviewProps> = ({
                     </div>
                   );
                 })}
-                
+
                 {/* Load More & View All */}
                 {recentApplications.length > 0 && (
                   <div className="text-center space-y-3 sm:space-y-4">
                     {/* Contador de Applications */}
                     <div className="text-xs sm:text-sm text-slate-600">
-                      {t('studentDashboard.recentApplications.showingApplications', { 
-                        count: displayedApplications.length, 
-                        total: recentApplications.length 
+                      {t('studentDashboard.recentApplications.showingApplications', {
+                        count: displayedApplications.length,
+                        total: recentApplications.length
                       })}
                     </div>
-                    
+
                     {/* Load More Button */}
                     {hasMoreApplications && (
                       <button
@@ -868,7 +928,7 @@ const Overview: React.FC<OverviewProps> = ({
                         {t('studentDashboard.recentApplications.loadMoreApplications')}
                       </button>
                     )}
-                    
+
                     {/* View All Link */}
                     <Link
                       to="/student/dashboard/applications"
@@ -893,32 +953,32 @@ const Overview: React.FC<OverviewProps> = ({
               <Target className="h-4 w-4 sm:h-5 sm:w-5 text-blue-500 mr-2" />
               {t('studentDashboard.profileStatus.title')}
             </h3>
-            
+
             <div className="space-y-3 sm:space-y-4">
               <div className="flex items-center justify-between">
                 <span className="text-sm font-medium text-slate-700">{t('studentDashboard.profileStatus.basicInformation')}</span>
                 {basicInfoComplete ? (
-                <CheckCircle className="h-4 w-4 sm:h-5 sm:w-5 text-green-500" />
+                  <CheckCircle className="h-4 w-4 sm:h-5 sm:w-5 text-green-500" />
                 ) : (
                   <Clock className="h-4 w-4 sm:h-5 sm:w-5 text-yellow-500" />
                 )}
               </div>
-              
+
               <div className="flex items-center justify-between">
                 <span className="text-sm font-medium text-slate-700">{t('studentDashboard.profileStatus.academicDetails')}</span>
                 {academicDetailsComplete ? (
                   <CheckCircle className="h-4 w-4 sm:h-5 sm:w-5 text-green-500" />
                 ) : (
-                <Clock className="h-4 w-4 sm:h-5 sm:w-5 text-yellow-500" />
+                  <Clock className="h-4 w-4 sm:h-5 sm:w-5 text-yellow-500" />
                 )}
               </div>
-              
+
               <div className="flex items-center justify-between">
                 <span className="text-sm font-medium text-slate-700">{t('studentDashboard.profileStatus.documentsUploaded')}</span>
                 {documentsComplete ? (
                   <CheckCircle className="h-4 w-4 sm:h-5 sm:w-5 text-green-500" />
                 ) : (
-                <Clock className="h-4 w-4 sm:h-5 sm:w-5 text-yellow-500" />
+                  <Clock className="h-4 w-4 sm:h-5 sm:w-5 text-yellow-500" />
                 )}
               </div>
             </div>
@@ -937,17 +997,17 @@ const Overview: React.FC<OverviewProps> = ({
                 </Link>
               </div>
             ) : (
-            <div className="mt-4 sm:mt-6 p-3 sm:p-4 bg-gradient-to-r from-blue-50 to-blue-100 rounded-xl border border-blue-200">
-              <p className="text-sm font-medium text-blue-800 mb-2">
-                {t('studentDashboard.profileStatus.completeProfile')}
-              </p>
-              <Link
-                to="/student/dashboard/profile"
-                className="text-sm font-bold text-blue-700 hover:text-blue-800 transition-colors"
-              >
-                {t('studentDashboard.profileStatus.completeNow')} →
-              </Link>
-            </div>
+              <div className="mt-4 sm:mt-6 p-3 sm:p-4 bg-gradient-to-r from-blue-50 to-blue-100 rounded-xl border border-blue-200">
+                <p className="text-sm font-medium text-blue-800 mb-2">
+                  {t('studentDashboard.profileStatus.completeProfile')}
+                </p>
+                <Link
+                  to="/student/dashboard/profile"
+                  className="text-sm font-bold text-blue-700 hover:text-blue-800 transition-colors"
+                >
+                  {t('studentDashboard.profileStatus.completeNow')} →
+                </Link>
+              </div>
             )}
           </div>
 

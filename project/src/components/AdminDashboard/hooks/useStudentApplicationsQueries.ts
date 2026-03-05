@@ -26,6 +26,8 @@ interface StudentRecord {
   university_name: string | null;
   reviewed_at: string | null;
   reviewed_by: string | null;
+  placement_fee_flow?: boolean;
+  is_placement_fee_paid?: boolean;
   is_locked: boolean;
   total_applications: number;
   all_applications: any[];
@@ -51,6 +53,8 @@ export function useStudentsQuery() {
           updated_at,
           has_paid_selection_process_fee,
           has_paid_i20_control_fee,
+          placement_fee_flow,
+          is_placement_fee_paid,
           role,
           seller_referral_code,
           scholarship_applications (
@@ -136,6 +140,8 @@ export function useStudentsQuery() {
           student_created_at: student.created_at,
           has_paid_selection_process_fee: student.has_paid_selection_process_fee || false,
           has_paid_i20_control_fee: student.has_paid_i20_control_fee || false,
+          placement_fee_flow: student.placement_fee_flow || false,
+          is_placement_fee_paid: student.is_placement_fee_paid || false,
           seller_referral_code: student.seller_referral_code || null,
           // Dados da aplicação só aparecem se locked
           application_id: lockedApplication?.id || null,

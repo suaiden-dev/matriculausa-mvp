@@ -10,6 +10,7 @@ import { ProcessTypeStep } from './components/ProcessTypeStep';
 import { DocumentsUploadStep } from './components/DocumentsUploadStep';
 import { PaymentStep } from './components/PaymentStep'; // Payment step component
 import { ScholarshipFeeStep } from './components/ScholarshipFeeStep';
+import { PlacementFeeStep } from './components/PlacementFeeStep';
 import { UniversityDocumentsStep } from './components/UniversityDocumentsStep';
 import { SelectionSurveyStep } from './components/SelectionSurveyStep';
 import { IdentityVerificationStep } from './components/IdentityVerificationStep';
@@ -22,7 +23,7 @@ import { useSmartPollingNotifications } from '../../hooks/useSmartPollingNotific
 import NotificationsModal from '../../components/NotificationsModal';
 
 const StudentOnboarding: React.FC = () => {
-  const { user, loading: authLoading } = useAuth();
+  const { user, userProfile, loading: authLoading } = useAuth();
   const navigate = useNavigate();
   const [searchParams, setSearchParams] = useSearchParams();
   const processingPaymentRef = React.useRef<string | null>(null);
@@ -33,8 +34,11 @@ const StudentOnboarding: React.FC = () => {
   const [showNotif, setShowNotif] = useState(false);
   const [showNotificationsModal, setShowNotificationsModal] = useState(false);
 
-  const handleNext = useCallback(() => {
-    const steps: OnboardingStep[] = [
+  // Determina o array de steps com base no tipo de fluxo do usuário
+  const isNewFlowUser = !!(userProfile as any)?.placement_fee_flow;
+
+  const getOrderedSteps = useCallback((): OnboardingStep[] => {
+    const base: OnboardingStep[] = [
       'selection_fee',
       'identity_verification',
       'selection_survey',
@@ -42,36 +46,28 @@ const StudentOnboarding: React.FC = () => {
       'process_type',
       'documents_upload',
       'payment',
-      'scholarship_fee',
+      isNewFlowUser ? 'placement_fee' : 'scholarship_fee',
       'my_applications',
-      'completed'
+      'completed',
     ];
+    return base;
+  }, [isNewFlowUser]);
 
+  const handleNext = useCallback(() => {
+    const steps = getOrderedSteps();
     const currentIndex = steps.indexOf(state.currentStep);
     if (currentIndex < steps.length - 1) {
       goToStep(steps[currentIndex + 1]);
     }
-  }, [state.currentStep, goToStep]);
+  }, [state.currentStep, goToStep, getOrderedSteps]);
 
   const handleBack = useCallback(() => {
-    const steps: OnboardingStep[] = [
-      'selection_fee',
-      'identity_verification',
-      'selection_survey',
-      'scholarship_selection',
-      'process_type',
-      'documents_upload',
-      'payment',
-      'scholarship_fee',
-      'my_applications',
-      'completed'
-    ];
-
+    const steps = getOrderedSteps();
     const currentIndex = steps.indexOf(state.currentStep);
     if (currentIndex > 0) {
       goToStep(steps[currentIndex - 1]);
     }
-  }, [state.currentStep, goToStep]);
+  }, [state.currentStep, goToStep, getOrderedSteps]);
 
   // Notifications logic
   const {
@@ -124,7 +120,7 @@ const StudentOnboarding: React.FC = () => {
   useEffect(() => {
     const stepParam = searchParams.get('step');
     if (stepParam) {
-      const validSteps: OnboardingStep[] = ['selection_fee', 'identity_verification', 'selection_survey', 'scholarship_selection', 'process_type', 'documents_upload', 'payment', 'scholarship_fee', 'my_applications'];
+      const validSteps: OnboardingStep[] = ['selection_fee', 'identity_verification', 'selection_survey', 'scholarship_selection', 'process_type', 'documents_upload', 'payment', 'scholarship_fee', 'placement_fee', 'my_applications'];
       if (validSteps.includes(stepParam as OnboardingStep)) {
         window.localStorage.setItem('onboarding_current_step', stepParam);
         setTimeout(() => {
@@ -154,7 +150,7 @@ const StudentOnboarding: React.FC = () => {
       document.documentElement.scrollTo({ top: 0, behavior: 'smooth' });
       document.body.scrollTo({ top: 0, behavior: 'smooth' });
     }, 100);
-    
+
     return () => clearTimeout(timer);
   }, [state.currentStep]);
 
@@ -188,11 +184,11 @@ const StudentOnboarding: React.FC = () => {
             if (stepParam === 'payment' || stepParam === 'scholarship_fee') {
               handleNext();
             } else {
-                const cleanUrl = new URL(window.location.href);
-                cleanUrl.searchParams.delete('payment');
-                cleanUrl.searchParams.delete('session_id');
-                cleanUrl.searchParams.delete('pix_payment');
-                window.location.href = cleanUrl.toString();
+              const cleanUrl = new URL(window.location.href);
+              cleanUrl.searchParams.delete('payment');
+              cleanUrl.searchParams.delete('session_id');
+              cleanUrl.searchParams.delete('pix_payment');
+              window.location.href = cleanUrl.toString();
             }
           }, 4000);
         }, 10000); // Aguarda 10 segundos extras antes da aba de sucesso
@@ -200,7 +196,7 @@ const StudentOnboarding: React.FC = () => {
         // Fluxo Stripe Normal / Stripe PIX
         let pollCount = 0;
         const MAX_POLLS = 10; // Max 30 segundos
-        
+
         const verifyStripeSession = async () => {
           pollCount++;
           try {
@@ -211,6 +207,8 @@ const StudentOnboarding: React.FC = () => {
               edgeFunctionName = 'verify-stripe-session-application-fee';
             } else if (stepParam === 'scholarship_fee' || stepParam === 'completed') {
               edgeFunctionName = 'verify-stripe-session-scholarship-fee';
+            } else if (stepParam === 'placement_fee') {
+              edgeFunctionName = 'verify-stripe-session-placement-fee';
             } else if (stepParam === 'my_applications') {
               edgeFunctionName = 'verify-stripe-session-i20-control-fee';
             }
@@ -222,7 +220,7 @@ const StudentOnboarding: React.FC = () => {
 
             const SUPABASE_PROJECT_URL = import.meta.env.VITE_SUPABASE_URL;
             const EDGE_FUNCTION_ENDPOINT = `${SUPABASE_PROJECT_URL}/functions/v1/${edgeFunctionName}`;
-            
+
             let token = null;
             try {
               const raw = localStorage.getItem(`sb-${SUPABASE_PROJECT_URL.split('//')[1].split('.')[0]}-auth-token`);
@@ -248,7 +246,7 @@ const StudentOnboarding: React.FC = () => {
             if (data.status === 'complete' || data.success) {
               setIsVerifyingPayment(false);
               setShowPaymentAnimation(true);
-              
+
               // Limpar parâmetros da URL de forma reativa
               const newParams = new URLSearchParams(searchParams);
               newParams.delete('payment');
@@ -258,15 +256,15 @@ const StudentOnboarding: React.FC = () => {
 
               setTimeout(() => {
                 setShowPaymentAnimation(false);
-                if (stepParam === 'payment' || stepParam === 'scholarship_fee') {
+                if (stepParam === 'payment' || stepParam === 'scholarship_fee' || stepParam === 'placement_fee') {
                   handleNext();
                 } else {
                   // Se for selection_fee ou outro, o OnboardingProgress vai decidir o próximo passo após o reload
-                    const cleanUrl = new URL(window.location.href);
-                cleanUrl.searchParams.delete('payment');
-                cleanUrl.searchParams.delete('session_id');
-                cleanUrl.searchParams.delete('pix_payment');
-                window.location.href = cleanUrl.toString();
+                  const cleanUrl = new URL(window.location.href);
+                  cleanUrl.searchParams.delete('payment');
+                  cleanUrl.searchParams.delete('session_id');
+                  cleanUrl.searchParams.delete('pix_payment');
+                  window.location.href = cleanUrl.toString();
                 }
               }, 4000);
             } else if ((data.status === 'open' || data.status === 'pending') && pollCount < MAX_POLLS) {
@@ -281,7 +279,7 @@ const StudentOnboarding: React.FC = () => {
               setSearchParams(newParams, { replace: true });
               // Para garantir que o progress veja o real atual, força render ou reload.
               if (pollCount >= MAX_POLLS) {
-                  const cleanUrl = new URL(window.location.href);
+                const cleanUrl = new URL(window.location.href);
                 cleanUrl.searchParams.delete('payment');
                 cleanUrl.searchParams.delete('session_id');
                 cleanUrl.searchParams.delete('pix_payment');
@@ -327,6 +325,9 @@ const StudentOnboarding: React.FC = () => {
 
 
 
+  const feeStep = isNewFlowUser ? 'placement_fee' : 'scholarship_fee';
+  const feeStepLabel = isNewFlowUser ? 'Placement Fee' : 'Taxa da Bolsa';
+
   const allSteps: OnboardingStep[] = [
     'selection_fee',
     'selection_survey',
@@ -334,10 +335,20 @@ const StudentOnboarding: React.FC = () => {
     'process_type',
     'documents_upload',
     'payment',
-    'scholarship_fee',
+    feeStep,
     'my_applications',
   ];
   // identity_verification é um passo fantasma — não aparece na trilha visual
+
+  const visualSteps: { key: OnboardingStep; label: string }[] = [
+    { key: 'selection_fee', label: 'Taxa do Processo Seletivo' },
+    { key: 'selection_survey', label: 'Questionário' },
+    { key: 'scholarship_selection', label: 'Escolha de Bolsas' },
+    { key: 'process_type', label: 'Tipo de Processo' },
+    { key: 'documents_upload', label: 'Documentos' },
+    { key: 'payment', label: 'Taxa de Matrícula' },
+    { key: feeStep, label: feeStepLabel },
+  ];
 
   const currentIdx = allSteps.indexOf(state.currentStep);
 
@@ -348,7 +359,8 @@ const StudentOnboarding: React.FC = () => {
   if (state.processTypeSelected && currentIdx > allSteps.indexOf('process_type')) completedSteps.push('process_type');
   if (state.documentsUploaded && currentIdx > allSteps.indexOf('documents_upload')) completedSteps.push('documents_upload');
   if (state.applicationFeePaid && currentIdx > allSteps.indexOf('payment')) completedSteps.push('payment');
-  if (state.scholarshipFeePaid && currentIdx > allSteps.indexOf('scholarship_fee')) completedSteps.push('scholarship_fee');
+  const feeStepPaid = isNewFlowUser ? state.placementFeePaid : state.scholarshipFeePaid;
+  if (feeStepPaid && currentIdx > allSteps.indexOf(feeStep)) completedSteps.push(feeStep);
   if (state.universityDocumentsUploaded && currentIdx > allSteps.indexOf('my_applications')) completedSteps.push('my_applications');
 
   const renderStep = () => {
@@ -369,6 +381,8 @@ const StudentOnboarding: React.FC = () => {
         return <PaymentStep onNext={handleNext} onBack={handleBack} />;
       case 'scholarship_fee':
         return <ScholarshipFeeStep onNext={handleNext} onBack={handleBack} />;
+      case 'placement_fee':
+        return <PlacementFeeStep onNext={handleNext} onBack={handleBack} />;
       case 'my_applications':
         return <UniversityDocumentsStep onNext={handleNext} onBack={handleBack} />;
       default:
@@ -391,14 +405,15 @@ const StudentOnboarding: React.FC = () => {
     let translationKey = 'selectionProcessFee';
     if (stepParam === 'payment') translationKey = 'applicationFee';
     else if (stepParam === 'scholarship_fee') translationKey = 'scholarshipFee';
+    else if (stepParam === 'placement_fee') translationKey = 'scholarshipFee'; // reutiliza chave de tradução
     else if (stepParam === 'my_applications') translationKey = 'i20ControlFee';
 
     return (
       <div className="flex-1 flex items-center justify-center bg-slate-300">
-        <CustomLoading 
-          color="green" 
-          title={t(`successPages.${translationKey}.verifying`)} 
-          message={t(`successPages.${translationKey}.pleaseWait`)} 
+        <CustomLoading
+          color="green"
+          title={t(`successPages.${translationKey}.verifying`)}
+          message={t(`successPages.${translationKey}.pleaseWait`)}
         />
       </div>
     );
@@ -408,13 +423,13 @@ const StudentOnboarding: React.FC = () => {
     <div className="flex-1 w-full flex flex-col relative">
       {/* Background Camada Base (Chumbo + Blur) - Fixo para não afetar scroll */}
       <div className="fixed inset-0 bg-slate-300/80 backdrop-blur-3xl z-0 pointer-events-none" />
-      
+
       {/* Background blobs decorativos */}
       {/* Background blobs decorativos removidos parcialmente */}
       <div className="fixed bottom-0 left-0 -ml-20 -mb-20 w-[60vw] h-[60vw] max-w-[600px] max-h-[600px] bg-slate-600/20 rounded-full blur-[120px] pointer-events-none z-0" />
-      
+
       {/* Removido padrão diagonal de logos no fundo */}
-      
+
       <div className="w-full max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 xl:px-12 py-4 sm:py-6 lg:py-8 flex-1 flex flex-col relative z-10">
         {true && (
           <div className="mb-4 sm:mb-6 flex justify-between items-center">
@@ -495,9 +510,10 @@ const StudentOnboarding: React.FC = () => {
 
         {state.currentStep !== 'my_applications' && (
           <div className="mb-6 sm:mb-8">
-            <StepIndicator 
-              currentStep={state.currentStep === 'identity_verification' ? 'selection_survey' : state.currentStep} 
-              completedSteps={completedSteps} 
+            <StepIndicator
+              currentStep={state.currentStep === 'identity_verification' ? 'selection_survey' : state.currentStep}
+              completedSteps={completedSteps}
+              steps={visualSteps}
             />
           </div>
         )}

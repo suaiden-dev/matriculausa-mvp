@@ -9,7 +9,7 @@ import { config } from '../lib/config';
 import { getN8nProxyUrl } from '../utils/storageProxy';
 
 interface ZelleCheckoutProps {
-  feeType: 'selection_process' | 'application_fee' | 'enrollment_fee' | 'scholarship_fee' | 'i20_control_fee';
+  feeType: 'selection_process' | 'application_fee' | 'enrollment_fee' | 'scholarship_fee' | 'i20_control_fee' | 'placement_fee';
   amount: number;
   scholarshipsIds?: string[];
   onSuccess?: () => void;
@@ -62,6 +62,14 @@ export const ZelleCheckout: React.FC<ZelleCheckoutProps> = ({
   const [uploadProgress, setUploadProgress] = useState(0);
 
   const fileInputRef = useRef<HTMLInputElement>(null);
+  const stepRef = useRef(step);
+  const paymentStatusRef = useRef(paymentStatus);
+  const zellePaymentIdRef = useRef(zellePaymentId);
+  const rejectionReasonRef = useRef(rejectionReason);
+  const isProcessingRef = useRef(isProcessing);
+  const lastProcessedPaymentIdRef = useRef<string | null>(null);
+  const lastProcessedRejectedIdRef = useRef<string | null>(null);
+  const lastDataKeyRef = useRef<string | null>(null);
 
   const handleFileSelect = (event: React.ChangeEvent<HTMLInputElement>) => {
     const file = event.target.files?.[0];

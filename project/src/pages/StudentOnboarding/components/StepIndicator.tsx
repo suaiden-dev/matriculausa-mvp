@@ -5,9 +5,10 @@ import { OnboardingStep } from '../types';
 interface StepIndicatorProps {
   currentStep: OnboardingStep;
   completedSteps: OnboardingStep[];
+  steps?: { key: OnboardingStep; label: string }[];
 }
 
-const STEPS: { key: OnboardingStep; label: string }[] = [
+const DEFAULT_STEPS: { key: OnboardingStep; label: string }[] = [
   { key: 'selection_fee', label: 'Taxa do Processo Seletivo' },
   { key: 'selection_survey', label: 'Questionário' },
   { key: 'scholarship_selection', label: 'Escolha de Bolsas' },
@@ -17,7 +18,8 @@ const STEPS: { key: OnboardingStep; label: string }[] = [
   { key: 'scholarship_fee', label: 'Taxa da Bolsa' },
 ];
 
-export const StepIndicator: React.FC<StepIndicatorProps> = ({ currentStep, completedSteps }) => {
+export const StepIndicator: React.FC<StepIndicatorProps> = ({ currentStep, completedSteps, steps }) => {
+  const STEPS = steps || DEFAULT_STEPS;
   const currentStepIndex = STEPS.findIndex(s => s.key === currentStep);
   const totalSteps = STEPS.length;
 
@@ -41,7 +43,7 @@ export const StepIndicator: React.FC<StepIndicatorProps> = ({ currentStep, compl
       <div className="hidden lg:flex items-center justify-between mt-4 relative">
         {/* Linha de conexão de fundo */}
         <div className="absolute top-4 left-0 w-full h-[1px] bg-gray-200 z-0" />
-        
+
         {STEPS.map((step, index) => {
           const isCompleted = completedSteps.includes(step.key);
           const isCurrent = step.key === currentStep;
@@ -50,9 +52,8 @@ export const StepIndicator: React.FC<StepIndicatorProps> = ({ currentStep, compl
           return (
             <div
               key={step.key}
-              className={`flex flex-col items-center flex-1 z-10 transition-all duration-500 ${
-                isCurrent ? 'scale-110' : ''
-              }`}
+              className={`flex flex-col items-center flex-1 z-10 transition-all duration-500 ${isCurrent ? 'scale-110' : ''
+                }`}
             >
               <div className="mb-3 relative">
                 {isCompleted || isPast ? (

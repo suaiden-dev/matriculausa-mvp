@@ -62,6 +62,7 @@ Deno.serve(async (req) => {
 
     let applicationId = null;
     let sessionMetadata = {
+      project: 'matricula_usa',
       student_id: user.id,
       fee_type: fee_type,
       payment_type: fee_type,

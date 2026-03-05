@@ -639,7 +639,7 @@ export async function getRealPaidAmount(
 export async function getGrossPaidAmounts(
   userId: string,
   feeTypes:
-    ("selection_process" | "scholarship" | "i20_control" | "application")[],
+    ("selection_process" | "scholarship" | "i20_control" | "application" | "placement")[],
 ): Promise<Record<string, number>> {
   try {
     const { data: payments, error } = await supabase
@@ -679,6 +679,8 @@ export async function getGrossPaidAmounts(
         ? "i20_control"
         : payment.fee_type === "application"
         ? "application"
+        : payment.fee_type === "placement"
+        ? "placement"
         : null;
 
       if (feeTypeKey) {

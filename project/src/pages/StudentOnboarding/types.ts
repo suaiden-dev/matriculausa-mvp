@@ -7,6 +7,7 @@ export type OnboardingStep =
   | "documents_upload"
   | "payment"
   | "scholarship_fee"
+  | "placement_fee"
   | "my_applications"
   | "completed";
 
@@ -20,6 +21,7 @@ export interface OnboardingState {
   documentsApproved: boolean;
   applicationFeePaid: boolean;
   scholarshipFeePaid: boolean;
+  placementFeePaid: boolean;
   universityDocumentsUploaded: boolean;
   onboardingCompleted: boolean;
 }
