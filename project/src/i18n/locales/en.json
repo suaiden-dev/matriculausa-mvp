@@ -443,6 +443,7 @@
     },
     "details": {
       "analyzing": "Our team is verifying your receipt. This may take a few minutes.",
+      "analyzingAi": "Our AI is validating your payment confirmation",
       "approved": "Your payment has been verified and approved successfully.",
       "rejected": "Your receipt was not approved. Please check that all information is visible.",
       "error": "An error occurred while verifying your payment. Please try again.",
@@ -451,7 +452,12 @@
     "actions": {
       "tryAgain": "Try Again",
       "contactSupport": "Contact Support",
-      "backToCheckout": "Back to Dashboard"
+      "backToCheckout": "Back to Dashboard",
+      "uploadingDocument": "Uploading Document...",
+      "uploadingWait": "Please wait while we upload your payment confirmation",
+      "sendingDocument": "Sending for Verification...",
+      "sendingWait": "Your payment proof is being sent for automatic validation",
+      "analyzingWait": "Please wait while we analyze your payment proof"
     },
     "redirecting": "Redirecting to success page...",
     "analysisTime": "Analysis time: ~40 seconds",
@@ -465,6 +471,57 @@
       "default": "If the process takes longer than 2 minutes, please contact support.",
       "underReview": "Your payment is under review. Please wait for verification."
     }
+  },
+  "paymentStep": {
+    "loading": "Loading your applications...",
+    "title": "Enrollment Fee",
+    "securePaymentBadge": "Secure & Encrypted Payment",
+    "subtitleAllPaid": "All enrollment fees have been processed. Click the button below to complete your onboarding.",
+    "subtitlePending": "Pay the enrollment fee for your selected scholarship to officially confirm your choice and secure your spot.",
+    "completedTitle": "Step Completed",
+    "completedSubtitle": "The enrollment fee for your scholarship has already been processed. This step is complete.",
+    "completedTitle2": "The enrollment fee has been successfully processed.",
+    "continue": "Continue",
+    "enrollmentFeeLabel": "Enrollment Fee",
+    "feeWithoutDependents": "Fee without dependents:",
+    "dependentsSingular": "dependent (+$100 each):",
+    "dependentsPlural": "dependents (+$100 each):",
+    "creditCard": "Credit Card",
+    "creditCardFees": "* May include processing fees",
+    "pixFees": "* May include processing fees",
+    "parcelowFees": "* May include operator and platform processing fees",
+    "parcelowInstallments": "Up to 12 installments",
+    "zelleNoFees": "No Fees",
+    "zelleProcessingTime": "Processing may take up to 48 hours",
+    "parcelowCpfTitle": "Mandatory Parcelow Verification",
+    "parcelowCpfPlaceholder": "Enter your CPF (000.000.000-00)",
+    "parcelowCpfInvalid": "Invalid CPF. Please enter all 11 digits.",
+    "parcelowCpfError": "Error saving CPF. Please try again.",
+    "goToPayment": "Go to payment",
+    "zellePendingTitle": "Zelle Payment Under Review",
+    "zellePendingMessage": "You have already initiated a Zelle payment. Please wait for confirmation before using another method. This can take up to 48 hours.",
+    "paymentConfirmed": "Payment Confirmed",
+    "paymentConfirmedSubtitle": "This fee has already been successfully processed.",
+    "noApplications": "No active applications",
+    "noApplicationsMessage": "You have not selected any scholarships yet. Go back and select at least one to proceed.",
+    "backToSelection": "Back to Selection"
+  },
+  "zelleModal": {
+    "finalAmount": "Final Amount:",
+    "feeType": "Fee Type:",
+    "paymentId": "Payment ID:",
+    "submitted": "Submitted:",
+    "paymentUnderReview": "Payment Under Review",
+    "paymentUnderReviewMessage": "You will be notified once the review is complete. Please do not submit another payment.",
+    "rejectionReason": "Rejection Reason:",
+    "paymentDetails": "Payment Details:",
+    "originalAmount": "Original Amount:",
+    "discountApplied": "Discount Applied:",
+    "amount": "Amount:",
+    "uploadNewProof": "Upload New Payment Proof",
+    "uploadNewProofHint": "Click the button above to upload a new payment confirmation screenshot",
+    "removeFile": "Remove",
+    "changeFile": "Change File"
   },
   "zelleSuccess": {
     "title": "Zelle Payment Successful!",
@@ -2170,11 +2227,11 @@
       "insufficientFundsError": "Insufficient funds detected. The minimum required balance is $22,000 USD.",
       "diplomaDamagedError": "The diploma appears to be damaged or unclear. Please upload a clear, undamaged copy.",
       "passport": "Passport",
-      "passportDescription": "Valid passport document",
+      "passportDescription": "Upload a clear photo or scan of your passport.",
       "diploma": "High School Diploma",
-      "diplomaDescription": "Official high school diploma or certificate",
+      "diplomaDescription": "Upload your high school diploma or equivalent.",
       "fundsProof": "Proof of Funds",
-      "fundsProofDescription": "Bank statement or financial documentation",
+      "fundsProofDescription": "Upload bank statements or financial documents. A minimum of $22,000 USD is required, plus $5,000 USD for each dependent.",
       "documents": "documents",
       "dragDropFiles": "Drop files or click to select",
       "onlyPdfSupported": "Only PDF files are supported for multiple documents",
@@ -4676,6 +4733,109 @@
         "text": "Final declaration",
         "placeholder": "Write your declaration...",
         "prompt": "\"I understand that my result depends on my discipline. If I don't follow the plan, I can harm my status and my project.\""
+      }
+    }
+  },
+  "studentOnboarding": {
+    "stepper": {
+      "step": "Step",
+      "of": "of",
+      "initiating": "Initiating",
+      "steps": {
+        "selectionFee": "Selection Process Fee",
+        "selectionSurvey": "Survey",
+        "scholarshipSelection": "Scholarship Selection",
+        "processType": "Process Type",
+        "documentsUpload": "Documents",
+        "payment": "Enrollment Fee",
+        "scholarshipFee": "Scholarship Fee"
+      }
+    },
+    "processType": {
+      "title": "Visa Situation",
+      "subtitle": "Select the option that best describes your current situation regarding the US visa.",
+      "lockedError": "You have already passed the review. It is not possible to change the process type.",
+      "selectTypeError": "Please select a process type",
+      "authError": "User not authenticated",
+      "saveError": "Error saving selection. Please try again.",
+      "completed": {
+        "title": "Process Type",
+        "subtitle": "Process type successfully selected.",
+        "status": "Step Completed",
+        "description": "You have already selected your process type and passed the review. This step is complete."
+      },
+      "continueButton": "Continue",
+      "saving": "Saving...",
+      "options": {
+        "initial": {
+          "label": "First F-1 Visa (Initial)",
+          "description": "You have never had an F-1 student visa or are applying for the first time."
+        },
+        "transfer": {
+          "label": "F-1 Visa Transfer",
+          "description": "You already have an active F-1 visa and wish to transfer from another school in the US."
+        },
+        "changeOfStatus": {
+          "label": "Change of Status",
+          "description": "You have another type of visa (B-2, H-1B, etc.) and wish to change to F-1."
+        }
+      }
+    },
+    "documentsUpload": {
+      "approvedApps": {
+        "title": "Select your University",
+        "subtitle": "Step completed successfully.",
+        "scholarshipConfirmed": "Scholarship Confirmed!",
+        "scholarshipSelectedPre": "You have selected the scholarship ",
+        "scholarshipSelectedPost": " and the application fee has been paid.",
+        "continue": "Continue"
+      },
+      "review": {
+        "title": "Applications Under Review",
+        "subtitle": "Your documents are being reviewed. You can track the status of each scholarship below.",
+        "titleApproved": "Congratulations! You have been accepted. Select the university below to proceed with the payment."
+      },
+      "cards": {
+        "yourScholarships": "Your Scholarships",
+        "applications": "{{count}} Applications",
+        "status": {
+          "approved": "Approved",
+          "rejected": "Rejected",
+          "underReview": "Under Review",
+          "pending": "Pending",
+          "isApproved": "Approved",
+          "isRejected": "Rejected",
+          "isReview": "Under Review"
+        },
+        "reason": "Reason:",
+        "verifyDocuments": "Verify Documents",
+        "sentOn": "Sent on: {{date}}",
+        "rejectionNote": "Important: Rejected documents can be resubmitted for a new analysis.",
+        "selectNewFile": "Select New File",
+        "selected": "✓ Selected",
+        "clickToSelect": "Click to select",
+        "originalValue": "Original value",
+        "withScholarship": "With Scholarship",
+        "perYear": "/ year",
+        "university": "University"
+      },
+      "actions": {
+        "selectScholarship": "Select Scholarship",
+        "selectAScholarship": "Select a Scholarship",
+        "confirmSelectionModal": {
+          "title": "Confirm Selection",
+          "description": "This decision is final. By confirming, you will no longer be able to change the scholarship selected for this application process.",
+          "cancel": "Cancel",
+          "confirm": "Confirm"
+        }
+      },
+      "instructions": {
+        "title": "Important Instructions",
+        "descriptionPre": "Ensure that the submitted documents are completely legible and ",
+        "descriptionStrong": "exclusively in English",
+        "descriptionMid": ". If you need certified and quality translation, we recommend the services of our partner ",
+        "descriptionLink": "Lush America Translations",
+        "descriptionPost": "."
       }
     }
   }

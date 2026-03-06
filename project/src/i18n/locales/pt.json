@@ -443,6 +443,7 @@
     },
     "details": {
       "analyzing": "Nossa equipe está verificando seu comprovante. Isso pode levar alguns minutos.",
+      "analyzingAi": "Nossa IA está validando seu comprovante de pagamento",
       "approved": "Seu pagamento foi verificado e aprovado com sucesso.",
       "rejected": "Seu comprovante não foi aprovado. Verifique se todas as informações estão visíveis.",
       "error": "Ocorreu um erro ao verificar seu pagamento. Tente novamente.",
@@ -451,7 +452,12 @@
     "actions": {
       "tryAgain": "Tentar Novamente",
       "contactSupport": "Contatar Suporte",
-      "backToCheckout": "Voltar ao Dashboard"
+      "backToCheckout": "Voltar ao Dashboard",
+      "uploadingDocument": "Enviando Documento...",
+      "uploadingWait": "Aguarde enquanto fazemos o upload do seu comprovante de pagamento",
+      "sendingDocument": "Enviando para Verificação...",
+      "sendingWait": "Seu comprovante está sendo enviado para validação automática",
+      "analyzingWait": "Aguarde enquanto analisamos seu comprovante"
     },
     "redirecting": "Redirecionando para página de sucesso...",
     "analysisTime": "Tempo de análise: ~40 segundos",
@@ -465,6 +471,57 @@
       "default": "Se o processo demorar mais de 2 minutos, entre em contato com o suporte.",
       "underReview": "Seu pagamento está em análise. Aguarde a verificação."
     }
+  },
+  "paymentStep": {
+    "loading": "Carregando suas aplicações...",
+    "title": "Taxa de Matrícula",
+    "securePaymentBadge": "Pagamento Seguro & Criptografado",
+    "subtitleAllPaid": "Toda a taxa de matrícula foi processada. Clique no botão abaixo para concluir seu onboarding.",
+    "subtitlePending": "Pague a taxa de matrícula da bolsa selecionada para confirmar oficialmente sua escolha e garantir sua vaga.",
+    "completedTitle": "Etapa Concluída",
+    "completedSubtitle": "A taxa de matrícula da sua bolsa já foi processada. Esta etapa está completa.",
+    "completedTitle2": "A taxa de matrícula foi processada com sucesso.",
+    "continue": "Continuar",
+    "enrollmentFeeLabel": "Taxa de Matrícula",
+    "feeWithoutDependents": "Taxa sem dependentes:",
+    "dependentsSingular": "dependente (+$100 cada):",
+    "dependentsPlural": "dependentes (+$100 cada):",
+    "creditCard": "Cartão de Crédito",
+    "creditCardFees": "* Podem incluir taxas de processamento",
+    "pixFees": "* Podem incluir taxas de processamento",
+    "parcelowFees": "* Podem incluir taxas de operadora e processamento da plataforma",
+    "parcelowInstallments": "Até 12x no cartão",
+    "zelleNoFees": "Sem Taxas",
+    "zelleProcessingTime": "Processamento pode levar até 48 horas",
+    "parcelowCpfTitle": "Verificação Obrigatória Parcelow",
+    "parcelowCpfPlaceholder": "Digite seu CPF (000.000.000-00)",
+    "parcelowCpfInvalid": "CPF inválido. Digite os 11 dígitos.",
+    "parcelowCpfError": "Erro ao salvar CPF. Tente novamente.",
+    "goToPayment": "Ir ao pagamento",
+    "zellePendingTitle": "Pagamento Zelle em Análise",
+    "zellePendingMessage": "Você já iniciou um pagamento via Zelle. Aguarde a confirmação antes de usar outro método. Isso pode levar até 48 horas.",
+    "paymentConfirmed": "Pagamento Confirmado",
+    "paymentConfirmedSubtitle": "Esta taxa já foi processada com sucesso.",
+    "noApplications": "Nenhuma aplicação ativa",
+    "noApplicationsMessage": "Você ainda não selecionou nenhuma bolsa de estudos. Volte e selecione ao menos uma para prosseguir.",
+    "backToSelection": "Voltar para Seleção"
+  },
+  "zelleModal": {
+    "finalAmount": "Valor Final:",
+    "feeType": "Tipo de Taxa:",
+    "paymentId": "ID do Pagamento:",
+    "submitted": "Enviado em:",
+    "paymentUnderReview": "Pagamento em Análise",
+    "paymentUnderReviewMessage": "Você será notificado assim que a análise for concluída. Por favor, não envie outro pagamento.",
+    "rejectionReason": "Motivo da Rejeição:",
+    "paymentDetails": "Detalhes do Pagamento:",
+    "originalAmount": "Valor Original:",
+    "discountApplied": "Desconto Aplicado:",
+    "amount": "Valor:",
+    "uploadNewProof": "Enviar Novo Comprovante",
+    "uploadNewProofHint": "Clique no botão acima para enviar uma nova captura de tela do comprovante de pagamento",
+    "removeFile": "Remover",
+    "changeFile": "Alterar Arquivo"
   },
   "zelleSuccess": {
     "title": "Pagamento Zelle Realizado com Sucesso!",
@@ -2176,7 +2233,7 @@
       "passport": "Passaporte",
       "passportDescription": "Faça upload de uma foto ou digitalização nítida do seu passaporte.",
       "diploma": "Diploma do Ensino Médio",
-      "diplomaDescription": "Diploma oficial do ensino médio ou certificado",
+      "diplomaDescription": "Faça upload do seu diploma do ensino médio ou equivalente.",
       "fundsProof": "Comprovante de Fundos",
       "fundsProofDescription": "Faça upload de extratos bancários ou documentos financeiros. É necessário um mínimo de $22.000 USD, mais $5.000 USD para cada dependente.",
       "documents": "documentos",
@@ -4726,4 +4783,108 @@
         "prompt": "\"Eu entendo que meu resultado depende da minha disciplina. Se eu não seguir o plano, eu posso prejudicar meu status e meu projeto.\""
       }
     }
-  }}
+  },
+  "studentOnboarding": {
+    "stepper": {
+      "step": "Passo",
+      "of": "de",
+      "initiating": "Iniciando",
+      "steps": {
+        "selectionFee": "Taxa do Processo Seletivo",
+        "selectionSurvey": "Questionário",
+        "scholarshipSelection": "Escolha de Bolsas",
+        "processType": "Tipo de Processo",
+        "documentsUpload": "Documentos",
+        "payment": "Taxa de Matrícula",
+        "scholarshipFee": "Taxa da Bolsa"
+      }
+    },
+    "processType": {
+      "title": "Situação do Visto",
+      "subtitle": "Selecione a opção que melhor descreve sua situação atual em relação ao visto americano.",
+      "lockedError": "Você já passou pela revisão. Não é possível alterar o tipo de processo.",
+      "selectTypeError": "Por favor, selecione um tipo de processo",
+      "authError": "Usuário não autenticado",
+      "saveError": "Erro ao salvar a seleção. Por favor, tente novamente.",
+      "completed": {
+        "title": "Tipo de Processo",
+        "subtitle": "Tipo de processo selecionado com sucesso.",
+        "status": "Etapa Concluída",
+        "description": "Você já selecionou seu tipo de processo e passou pela revisão. Esta etapa está completa."
+      },
+      "continueButton": "Continuar",
+      "saving": "Salvando...",
+      "options": {
+        "initial": {
+          "label": "Primeiro Visto F-1 (Inicial)",
+          "description": "Você nunca teve um visto de estudante F-1 ou está aplicando pela primeira vez."
+        },
+        "transfer": {
+          "label": "Transferência de Visto F-1",
+          "description": "Você já possui um visto F-1 ativo e deseja se transferir de outra escola nos EUA."
+        },
+        "changeOfStatus": {
+          "label": "Mudança de Status (Change of Status)",
+          "description": "Você possui outro tipo de visto (B-2, H-1B, etc.) e deseja alterar para F-1."
+        }
+      }
+    },
+    "documentsUpload": {
+      "approvedApps": {
+        "title": "Escolha sua Universidade",
+        "subtitle": "Etapa concluída com sucesso.",
+        "scholarshipConfirmed": "Bolsa Confirmada!",
+        "scholarshipSelectedPre": "Você selecionou a bolsa ",
+        "scholarshipSelectedPost": " e a taxa de aplicação já foi paga.",
+        "continue": "Continuar"
+      },
+      "review": {
+        "title": "Candidaturas em Análise",
+        "subtitle": "Seus documentos estão sendo revisados. Você pode acompanhar o status de cada bolsa abaixo.",
+        "titleApproved": "Parabéns! Você foi aceito. Selecione abaixo a universidade para seguir com o pagamento."
+      },
+      "cards": {
+        "yourScholarships": "Suas Bolsas",
+        "applications": "{{count}} Candidaturas",
+        "status": {
+          "approved": "Aprovada",
+          "rejected": "Reprovada",
+          "underReview": "Em Análise",
+          "pending": "Pendente",
+          "isApproved": "Aprovado",
+          "isRejected": "Rejeitado",
+          "isReview": "Em Análise"
+        },
+        "reason": "Motivo:",
+        "verifyDocuments": "Verificar Documentos",
+        "sentOn": "Enviado em: {{date}}",
+        "rejectionNote": "Importante: Documentos rejeitados podem ser reenviados para uma nova análise.",
+        "selectNewFile": "Selecionar Novo Arquivo",
+        "selected": "✓ Selecionado",
+        "clickToSelect": "Clique para selecionar",
+        "originalValue": "Valor original",
+        "withScholarship": "Com Bolsa",
+        "perYear": "/ ano",
+        "university": "Universidade"
+      },
+      "actions": {
+        "selectScholarship": "Selecionar Bolsa",
+        "selectAScholarship": "Selecione uma Bolsa",
+        "confirmSelectionModal": {
+          "title": "Confirmar Seleção",
+          "description": "Esta decisão é definitiva. Ao confirmar, você não poderá mais alterar a bolsa escolhida para este processo seletivo.",
+          "cancel": "Cancelar",
+          "confirm": "Confirmar"
+        }
+      },
+      "instructions": {
+        "title": "Instruções Importantes",
+        "descriptionPre": "Garanta que os documentos enviados estejam totalmente legíveis e ",
+        "descriptionStrong": "exclusivamente em inglês",
+        "descriptionMid": ". Caso precise de tradução certificada e de qualidade, recomendamos os serviços do nosso parceiro ",
+        "descriptionLink": "Lush America Translations",
+        "descriptionPost": "."
+      }
+    }
+  }
+}

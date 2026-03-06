@@ -11,6 +11,7 @@ import {
   Loader2
 } from 'lucide-react';
 import { ZelleCheckout } from '../../../components/ZelleCheckout';
+import { useTranslation } from 'react-i18next';
 
 import { useFeeConfig } from '../../../hooks/useFeeConfig';
 import { calculateCardAmountWithFees, getExchangeRate, calculatePIXTotalWithIOF } from '../../../utils/stripeFeeCalculator';
@@ -87,11 +88,10 @@ export const PaymentStep: React.FC<StepProps> = ({ onNext, onBack }) => {
   const { userProfile } = useAuth();
   const { getFeeAmount, formatFeeAmount, userDependents } = useFeeConfig(userProfile?.user_id);
   const { isBlocked, pendingPayment, refetch: refetchPaymentStatus } = usePaymentBlocked();
+  const { t } = useTranslation();
 
   const [applications, setApplications] = useState<ApplicationWithScholarship[]>([]);
   const [loading, setLoading] = useState(true);
-  // const [refreshing, setRefreshing] = useState(false);
-  // const [error, setError] = useState<string | null>(null);
   const [exchangeRate, setExchangeRate] = useState<number>(0);
 
   const [isProcessingCheckout, setIsProcessingCheckout] = useState<string | null>(null);
@@ -162,12 +162,6 @@ export const PaymentStep: React.FC<StepProps> = ({ onNext, onBack }) => {
   // Detecta se há um Zelle pendente do tipo application_fee
   const hasZellePendingApplicationFee = isBlocked && pendingPayment?.fee_type === 'application_fee';
 
-
-  /* const handleRefresh = () => {
-    setRefreshing(true);
-    fetchApplications();
-  }; */
-
   // Formatar CPF enquanto digita (000.000.000-00)
   const formatCpf = (value: string) => {
     const digits = value.replace(/\D/g, '').slice(0, 11);
@@ -181,7 +175,7 @@ export const PaymentStep: React.FC<StepProps> = ({ onNext, onBack }) => {
   const saveCpfAndCheckout = async () => {
     const cleaned = inlineCpf.replace(/\D/g, '');
     if (cleaned.length !== 11) {
-      setCpfError('CPF inválido. Digite os 11 dígitos.');
+      setCpfError(t('paymentStep.parcelowCpfInvalid'));
       return;
     }
     if (!pendingParcelowApp) return;
@@ -204,7 +198,7 @@ export const PaymentStep: React.FC<StepProps> = ({ onNext, onBack }) => {
       // Chamar checkout normalmente agora que CPF está salvo (pulando a checagem no estado local)
       processCheckout(pendingParcelowApp, 'parcelow', true);
     } catch (err: any) {
-      setCpfError('Erro ao salvar CPF. Tente novamente.');
+      setCpfError(t('paymentStep.parcelowCpfError'));
       console.error('[PaymentStep] Erro ao salvar CPF inline:', err);
     } finally {
       setSavingCpf(false);
@@ -290,7 +284,7 @@ export const PaymentStep: React.FC<StepProps> = ({ onNext, onBack }) => {
     return (
       <div className="flex flex-col items-center justify-center py-20 min-h-[400px]">
         <RefreshCw className="w-12 h-12 text-blue-500 animate-spin mb-6" />
-        <p className="text-white/60 font-bold uppercase tracking-widest text-sm">Carregando suas aplicações...</p>
+        <p className="text-white/60 font-bold uppercase tracking-widest text-sm">{t('paymentStep.loading')}</p>
       </div>
     );
   }
@@ -299,8 +293,8 @@ export const PaymentStep: React.FC<StepProps> = ({ onNext, onBack }) => {
     return (
       <div className="space-y-10 pb-12 max-w-4xl mx-auto px-4">
         <div className="text-left space-y-4">
-          <h2 className="text-3xl md:text-5xl font-black text-slate-900 uppercase tracking-tighter leading-none">Taxa de Matrícula</h2>
-          <p className="text-lg md:text-xl text-slate-600 font-medium max-w-2xl mt-2">A taxa de matrícula foi processada com sucesso.</p>
+          <h2 className="text-3xl md:text-5xl font-black text-slate-900 uppercase tracking-tighter leading-none">{t('paymentStep.title')}</h2>
+          <p className="text-lg md:text-xl text-slate-600 font-medium max-w-2xl mt-2">{t('paymentStep.completedTitle2')}</p>
         </div>
 
         <div className="bg-white rounded-[2.5rem] p-8 md:p-10 relative overflow-hidden">
@@ -310,13 +304,13 @@ export const PaymentStep: React.FC<StepProps> = ({ onNext, onBack }) => {
             <div className="w-20 h-20 bg-emerald-500/20 rounded-full flex items-center justify-center mx-auto mb-6 border border-emerald-500/30">
               <CheckCircle className="w-12 h-12 text-emerald-400" />
             </div>
-            <h3 className="text-3xl font-black text-gray-900 mb-3 uppercase tracking-tight">Etapa Concluída</h3>
-            <p className="text-gray-500 mb-8 font-medium">A taxa de matrícula da sua bolsa já foi processada. Esta etapa está completa.</p>
+            <h3 className="text-3xl font-black text-gray-900 mb-3 uppercase tracking-tight">{t('paymentStep.completedTitle')}</h3>
+            <p className="text-gray-500 mb-8 font-medium">{t('paymentStep.completedSubtitle')}</p>
             <button
               onClick={onNext}
               className="w-full max-w-xs bg-blue-600 text-white py-4 px-8 rounded-xl hover:bg-blue-700 transition-all font-bold uppercase tracking-widest shadow-lg shadow-blue-500/20 hover:scale-105 active:scale-95 mx-auto"
             >
-              Continuar
+              {t('paymentStep.continue')}
             </button>
           </div>
         </div>
@@ -331,15 +325,15 @@ export const PaymentStep: React.FC<StepProps> = ({ onNext, onBack }) => {
         <div className="text-left space-y-4">
           <div className="inline-flex items-center bg-blue-500/10 border border-blue-500/20 px-4 py-2 rounded-full mb-2">
             <Shield className="w-4 h-4 text-blue-600 mr-2" />
-            <span className="text-[10px] font-black text-blue-600 uppercase tracking-widest">Pagamento Seguro & Criptografado</span>
+            <span className="text-[10px] font-black text-blue-600 uppercase tracking-widest">{t('paymentStep.securePaymentBadge')}</span>
           </div>
           <h2 className="text-4xl md:text-6xl font-black text-slate-900 uppercase tracking-tighter leading-none">
-            Taxa de Matrícula
+            {t('paymentStep.title')}
           </h2>
           <p className="text-lg md:text-xl text-slate-600 font-medium max-w-2xl">
             {allPaid 
-              ? 'Toda a taxa de matrícula foi processada. Clique no botão abaixo para concluir seu onboarding.' 
-              : 'Pague a taxa de matrícula da bolsa selecionada para confirmar oficialmente sua escolha e garantir sua vaga.'}
+              ? t('paymentStep.subtitleAllPaid')
+              : t('paymentStep.subtitlePending')}
           </p>
         </div>
         
@@ -403,16 +397,16 @@ export const PaymentStep: React.FC<StepProps> = ({ onNext, onBack }) => {
 
                         <div className="flex flex-col md:items-end">
                           <div className="flex items-center gap-3 mb-4">
-                            <span className="text-[10px] font-black text-gray-500 uppercase tracking-[0.2em]">Taxa de Matrícula</span>
+                            <span className="text-[10px] font-black text-gray-500 uppercase tracking-[0.2em]">{t('paymentStep.enrollmentFeeLabel')}</span>
                           </div>
                           {userDependents > 0 && (
                             <div className="text-right mb-3 flex flex-col items-end gap-1.5 border-b border-slate-100 pb-3 w-full md:w-auto">
                               <p className="text-xs font-bold text-slate-900 uppercase tracking-tight flex justify-between w-full gap-8">
-                                <span>Taxa sem dependentes:</span>
+                                <span>{t('paymentStep.feeWithoutDependents')}</span>
                                 <span>{formatFeeAmount(baseAmount - (userDependents * 100))}</span>
                               </p>
                               <p className="text-xs font-bold text-blue-600 uppercase tracking-tight flex justify-between w-full gap-8">
-                                <span>{userDependents} {userDependents === 1 ? 'dependente' : 'dependentes'} (+$100 cada):</span>
+                                <span>{userDependents} {userDependents === 1 ? t('paymentStep.dependentsSingular') : t('paymentStep.dependentsPlural')}</span>
                                 <span>+ {formatFeeAmount(userDependents * 100)}</span>
                               </p>
                             </div>
@@ -435,9 +429,9 @@ export const PaymentStep: React.FC<StepProps> = ({ onNext, onBack }) => {
                                 <AlertCircle className="w-5 h-5 text-amber-600" />
                               </div>
                               <div>
-                                <p className="text-sm font-black text-amber-700 uppercase tracking-tight">Pagamento Zelle em Análise</p>
+                                <p className="text-sm font-black text-amber-700 uppercase tracking-tight">{t('paymentStep.zellePendingTitle')}</p>
                                 <p className="text-xs text-amber-600/80 font-medium mt-0.5 leading-relaxed">
-                                  Você já iniciou um pagamento via Zelle. Aguarde a confirmação antes de usar outro método. Isso pode levar até 48 horas.
+                                  {t('paymentStep.zellePendingMessage')}
                                 </p>
                               </div>
                             </div>
@@ -476,8 +470,8 @@ export const PaymentStep: React.FC<StepProps> = ({ onNext, onBack }) => {
                                     <StripeIcon className="w-9 h-9" />
                                   </div>
                                   <div>
-                                    <div className="font-black text-slate-900 text-base uppercase tracking-tight">Cartão de Crédito</div>
-                                    <div className="hidden md:block text-[10px] font-bold text-slate-400 mt-1 uppercase tracking-wide leading-tight">* Podem incluir taxas de processamento</div>
+                                    <div className="font-black text-slate-900 text-base uppercase tracking-tight">{t('paymentStep.creditCard')}</div>
+                                    <div className="hidden md:block text-[10px] font-bold text-slate-400 mt-1 uppercase tracking-wide leading-tight">{t('paymentStep.creditCardFees')}</div>
                                   </div>
                                 </div>
                                 <div className="text-right shrink-0">
@@ -487,7 +481,7 @@ export const PaymentStep: React.FC<StepProps> = ({ onNext, onBack }) => {
                                 </div>
                               </div>
                               <div className="md:hidden mt-3 text-[10px] font-bold text-slate-400 uppercase tracking-wide leading-tight">
-                                * Podem incluir taxas de processamento
+                                {t('paymentStep.creditCardFees')}
                               </div>
                               {isProcessingCheckout === `${app.id}_stripe` && (
                                 <div className="absolute inset-0 bg-white/80 backdrop-blur-sm rounded-[2rem] flex items-center justify-center z-10">
@@ -509,7 +503,7 @@ export const PaymentStep: React.FC<StepProps> = ({ onNext, onBack }) => {
                                   </div>
                                   <div>
                                     <div className="font-black text-slate-900 text-base uppercase tracking-tight">PIX</div>
-                                    <div className="hidden md:block text-[10px] font-bold text-slate-400 mt-1 uppercase tracking-wide leading-tight">* Podem incluir taxas de processamento</div>
+                                    <div className="hidden md:block text-[10px] font-bold text-slate-400 mt-1 uppercase tracking-wide leading-tight">{t('paymentStep.pixFees')}</div>
                                   </div>
                                 </div>
                                 <div className="text-right shrink-0">
@@ -519,7 +513,7 @@ export const PaymentStep: React.FC<StepProps> = ({ onNext, onBack }) => {
                                 </div>
                               </div>
                               <div className="md:hidden mt-3 text-[10px] font-bold text-slate-400 uppercase tracking-wide leading-tight">
-                                * Podem incluir taxas de processamento
+                                {t('paymentStep.pixFees')}
                               </div>
                               {isProcessingCheckout === `${app.id}_pix` && (
                                 <div className="absolute inset-0 bg-white/80 backdrop-blur-sm rounded-[2rem] flex items-center justify-center z-10">
@@ -542,18 +536,18 @@ export const PaymentStep: React.FC<StepProps> = ({ onNext, onBack }) => {
                                     </div>
                                     <div>
                                       <div className="font-black text-slate-900 text-base uppercase tracking-tight">Parcelow</div>
-                                      <div className="hidden md:block text-[10px] font-bold text-slate-400 mt-1 uppercase tracking-wide leading-tight">* Podem incluir taxas de operadora e processamento da plataforma</div>
+                                      <div className="hidden md:block text-[10px] font-bold text-slate-400 mt-1 uppercase tracking-wide leading-tight">{t('paymentStep.parcelowFees')}</div>
                                     </div>
                                   </div>
                                   <div className="text-right flex flex-col items-end shrink-0">
                                     <div className="text-slate-900 text-xl font-black uppercase tracking-tight">
                                       {formatFeeAmount(cardAmount)}
                                     </div>
-                                    <span className="text-[10px] font-bold text-slate-900 mt-1 block uppercase tracking-widest leading-tight">Até 12x no cartão</span>
+                                    <span className="text-[10px] font-bold text-slate-900 mt-1 block uppercase tracking-widest leading-tight">{t('paymentStep.parcelowInstallments')}</span>
                                   </div>
                                 </div>
                                 <div className="md:hidden mt-3 text-[10px] font-bold text-slate-400 uppercase tracking-wide leading-tight">
-                                  * Podem incluir taxas de operadora e processamento da plataforma
+                                  {t('paymentStep.parcelowFees')}
                                 </div>
                                 {isProcessingCheckout === `${app.id}_parcelow` && (
                                   <div className="absolute inset-0 bg-white/80 backdrop-blur-sm rounded-[2rem] flex items-center justify-center z-10">
@@ -569,7 +563,7 @@ export const PaymentStep: React.FC<StepProps> = ({ onNext, onBack }) => {
                                     <div className="flex-initial sm:w-[300px]">
                                       <p className="text-[11px] font-black text-blue-700 uppercase tracking-widest mb-2 flex items-center gap-2">
                                         <Shield className="w-3 h-3" />
-                                        Verificação Obrigatória Parcelow
+                                        {t('paymentStep.parcelowCpfTitle')}
                                       </p>
                                       <div className="relative">
                                         <input
@@ -579,7 +573,7 @@ export const PaymentStep: React.FC<StepProps> = ({ onNext, onBack }) => {
                                             setInlineCpf(formatCpf(e.target.value));
                                             setCpfError(null);
                                           }}
-                                          placeholder="Digite seu CPF (000.000.000-00)"
+                                          placeholder={t('paymentStep.parcelowCpfPlaceholder')}
                                           maxLength={14}
                                           className="w-full px-4 py-3 rounded-xl border border-blue-200 text-sm font-bold text-gray-900 focus:outline-none focus:ring-2 focus:ring-blue-500 bg-white transition-all shadow-sm"
                                         />
@@ -590,7 +584,7 @@ export const PaymentStep: React.FC<StepProps> = ({ onNext, onBack }) => {
                                       disabled={savingCpf || inlineCpf.replace(/\D/g, '').length !== 11}
                                       className="sm:mt-6 px-8 py-3 rounded-xl bg-blue-600 text-white text-sm font-black hover:bg-blue-700 transition-all disabled:opacity-50 disabled:cursor-not-allowed whitespace-nowrap flex items-center justify-center gap-2 shadow-lg shadow-blue-500/25 active:scale-95"
                                     >
-                                      {savingCpf ? <Loader2 className="w-4 h-4 animate-spin" /> : 'Ir ao pagamento'}
+                                      {savingCpf ? <Loader2 className="w-4 h-4 animate-spin" /> : t('paymentStep.goToPayment')}
                                     </button>
                                   </div>
                                   {cpfError && (
@@ -623,7 +617,7 @@ export const PaymentStep: React.FC<StepProps> = ({ onNext, onBack }) => {
                                       <div className="font-black text-slate-900 text-base uppercase tracking-tight">Zelle</div>
                                       <div className="hidden md:flex text-[10px] font-bold text-slate-500 mt-1 uppercase tracking-wide leading-tight items-center gap-1">
                                         <AlertCircle className="w-3 h-3" />
-                                        Processamento pode levar até 48 horas
+                                        {t('paymentStep.zelleProcessingTime')}
                                       </div>
                                     </div>
                                   </div>
@@ -632,13 +626,13 @@ export const PaymentStep: React.FC<StepProps> = ({ onNext, onBack }) => {
                                       <div className="text-slate-900 text-xl font-black uppercase tracking-tight">
                                         {formatFeeAmount(baseAmount)}
                                       </div>
-                                      <span className="text-[10px] font-bold text-slate-900 mt-1 block uppercase tracking-widest">Sem Taxas</span>
+                                      <span className="text-[10px] font-bold text-slate-900 mt-1 block uppercase tracking-widest">{t('paymentStep.zelleNoFees')}</span>
                                     </div>
                                   </div>
                                 </div>
                                 <div className="md:hidden mt-3 text-[10px] font-bold text-slate-500 uppercase tracking-wide leading-tight flex items-center gap-1">
                                   <AlertCircle className="w-3 h-3" />
-                                  Processamento pode levar até 48 horas
+                                  {t('paymentStep.zelleProcessingTime')}
                                 </div>
                               </button>
 
@@ -676,8 +670,8 @@ export const PaymentStep: React.FC<StepProps> = ({ onNext, onBack }) => {
                           <CheckCircle className="w-6 h-6 text-emerald-600" />
                         </div>
                         <div>
-                          <div className="text-emerald-700 font-black uppercase tracking-widest text-sm">Pagamento Confirmado</div>
-                          <p className="text-emerald-600/80 text-xs font-medium uppercase tracking-tight mt-0.5">Esta taxa já foi processada com sucesso.</p>
+                          <div className="text-emerald-700 font-black uppercase tracking-widest text-sm">{t('paymentStep.paymentConfirmed')}</div>
+                          <p className="text-emerald-600/80 text-xs font-medium uppercase tracking-tight mt-0.5">{t('paymentStep.paymentConfirmedSubtitle')}</p>
                         </div>
                       </div>
                     )}
@@ -691,13 +685,13 @@ export const PaymentStep: React.FC<StepProps> = ({ onNext, onBack }) => {
                 <div className="w-24 h-24 bg-white rounded-full flex items-center justify-center mb-4 shadow-sm border border-gray-100">
                   <AlertCircle className="w-12 h-12 text-gray-300" />
                 </div>
-                <h3 className="text-2xl font-black text-gray-900 uppercase tracking-tight">Nenhuma aplicação ativa</h3>
-                <p className="text-gray-500 font-medium max-w-sm">Você ainda não selecionou nenhuma bolsa de estudos. Volte e selecione ao menos uma para prosseguir.</p>
+                <h3 className="text-2xl font-black text-gray-900 uppercase tracking-tight">{t('paymentStep.noApplications')}</h3>
+                <p className="text-gray-500 font-medium max-w-sm">{t('paymentStep.noApplicationsMessage')}</p>
                 <button 
                   onClick={onBack}
                   className="mt-6 px-8 py-3 bg-white border border-gray-200 rounded-2xl text-gray-900 font-black uppercase tracking-widest text-xs hover:bg-gray-50 transition-all shadow-sm"
                 >
-                  Voltar para Seleção
+                  {t('paymentStep.backToSelection')}
                 </button>
               </div>
             )}

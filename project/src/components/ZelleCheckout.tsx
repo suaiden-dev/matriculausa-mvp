@@ -1397,7 +1397,7 @@ export const ZelleCheckout: React.FC<ZelleCheckoutProps> = ({
                   <span className="font-medium">-${(metadata.original_amount - amount).toFixed(2)} USD</span>
                 </div>
                 <div className="flex justify-between pt-2 border-t border-gray-200">
-                  <span className="font-semibold">Final Amount:</span>
+                  <span className="font-semibold">{t('zelleModal.finalAmount')}</span>
                   <span className="font-bold text-green-700">${amount.toFixed(2)} USD</span>
                 </div>
               </div>
@@ -1408,18 +1408,18 @@ export const ZelleCheckout: React.FC<ZelleCheckoutProps> = ({
               </div>
             )}
             <div className="flex justify-between pt-2 border-t border-gray-200">
-              <span>Fee Type:</span>
+              <span>{t('zelleModal.feeType')}</span>
               <span className="font-medium">{feeType.replace('_', ' ')}</span>
             </div>
             {(zellePaymentId || blockedPendingPayment?.id) && (
               <div className="flex justify-between pt-2 border-t border-gray-200">
-                <span>Payment ID:</span>
+                <span>{t('zelleModal.paymentId')}</span>
                 <span className="font-mono text-xs">{zellePaymentId || blockedPendingPayment?.id}</span>
               </div>
             )}
             {blockedPendingPayment?.created_at && (
               <div className="flex justify-between pt-2 border-t border-gray-200">
-                <span>Submitted:</span>
+                <span>{t('zelleModal.submitted')}</span>
                 <span className="font-medium">{new Date(blockedPendingPayment.created_at).toLocaleString()}</span>
               </div>
             )}
@@ -1434,10 +1434,10 @@ export const ZelleCheckout: React.FC<ZelleCheckoutProps> = ({
             </div>
             <div>
               <p className="text-xs sm:text-sm text-blue-800 font-medium mb-1">
-                Payment Under Review
+                {t('zelleModal.paymentUnderReview')}
               </p>
               <p className="text-xs sm:text-sm text-blue-700">
-                You will be notified once the review is complete. Please do not submit another payment.
+                {t('zelleModal.paymentUnderReviewMessage')}
               </p>
             </div>
           </div>
@@ -1477,7 +1477,7 @@ export const ZelleCheckout: React.FC<ZelleCheckoutProps> = ({
             <div className="flex items-start gap-3">
               <AlertCircle className="w-5 h-5 sm:w-6 sm:h-6 text-red-500 flex-shrink-0 mt-0.5" />
               <div className="flex-1">
-                <h4 className="font-bold text-gray-900 mb-2 text-sm sm:text-base">Rejection Reason:</h4>
+            <h4 className="font-bold text-gray-900 mb-2 text-sm sm:text-base">{t('zelleModal.rejectionReason')}</h4>
                 <p className="text-sm sm:text-base text-gray-800 bg-red-50 p-3 rounded-lg border border-red-200 font-medium">
                   {rejectionReason}
                 </p>
@@ -1494,36 +1494,36 @@ export const ZelleCheckout: React.FC<ZelleCheckoutProps> = ({
 
         {/* Payment Details */}
         <div className="bg-white rounded-lg border border-gray-200 p-3 sm:p-4 mb-4">
-          <h4 className="font-semibold text-gray-800 mb-3 text-sm sm:text-base">Payment Details:</h4>
+          <h4 className="font-semibold text-gray-800 mb-3 text-sm sm:text-base">{t('zelleModal.paymentDetails')}</h4>
           <div className="space-y-2 text-xs sm:text-sm text-gray-600">
             {metadata?.discount_applied && metadata?.original_amount ? (
               <div className="space-y-1">
                 <div className="flex justify-between">
-                  <span>Original Amount:</span>
+                  <span>{t('zelleModal.originalAmount')}</span>
                   <span className="font-medium">${metadata.original_amount.toFixed(2)} USD</span>
                 </div>
                 <div className="flex justify-between text-green-600">
-                  <span>Discount Applied:</span>
+                  <span>{t('zelleModal.discountApplied')}</span>
                   <span className="font-medium">-$50.00 USD</span>
                 </div>
                 <div className="flex justify-between pt-2 border-t border-gray-200">
-                  <span className="font-semibold">Final Amount:</span>
+                  <span className="font-semibold">{t('zelleModal.finalAmount')}</span>
                   <span className="font-bold text-green-700">${amount.toFixed(2)} USD</span>
                 </div>
               </div>
             ) : (
               <div className="flex justify-between">
-                <span className="font-semibold">Amount:</span>
+                <span className="font-semibold">{t('zelleModal.amount')}</span>
                 <span className="font-bold text-gray-900">${amount.toFixed(2)} USD</span>
               </div>
             )}
             <div className="flex justify-between pt-2 border-t border-gray-200">
-              <span>Fee Type:</span>
+              <span>{t('zelleModal.feeType')}</span>
               <span className="font-medium">{feeType.replace('_', ' ')}</span>
             </div>
             {zellePaymentId && (
               <div className="flex justify-between pt-2 border-t border-gray-200">
-                <span>Payment ID:</span>
+                <span>{t('zelleModal.paymentId')}</span>
                 <span className="font-mono text-xs">{zellePaymentId}</span>
               </div>
             )}
@@ -1558,10 +1558,10 @@ export const ZelleCheckout: React.FC<ZelleCheckoutProps> = ({
             }}
             className="w-full bg-red-600 text-white py-3 sm:py-4 px-6 rounded-lg hover:bg-red-700 transition-colors font-semibold text-base sm:text-lg shadow-lg hover:shadow-xl transform hover:-translate-y-0.5"
           >
-            Upload New Payment Proof
+            {t('zelleModal.uploadNewProof')}
           </button>
           <p className="text-xs sm:text-sm text-center text-gray-600">
-            Click the button above to upload a new payment confirmation screenshot
+            {t('zelleModal.uploadNewProofHint')}
           </p>
 
           {isLocalhost && (
@@ -1597,15 +1597,15 @@ export const ZelleCheckout: React.FC<ZelleCheckoutProps> = ({
               <div className="space-y-1">
                 <div><strong>{t('zelleCheckout.originalAmount')}:</strong> ${metadata.original_amount.toFixed(2)} USD</div>
                 <div><strong>{t('zelleCheckout.discountApplied')}:</strong> -${(metadata.original_amount - amount).toFixed(2)} USD</div>
-                <div><strong>Final Amount:</strong> <span className="font-bold text-green-700">${amount.toFixed(2)} USD</span></div>
+                <div><strong>{t('zelleModal.finalAmount')}</strong> <span className="font-bold text-green-700">${amount.toFixed(2)} USD</span></div>
                 <div className="text-green-600 font-medium">🎉 {t('zelleCheckout.savings') || 'You saved'} ${(metadata.original_amount - amount).toFixed(2)}!</div>
               </div>
             ) : (
               <div><strong>{t('zelleCheckout.amount')}:</strong> ${amount.toFixed(2)} USD</div>
             )}
-            <div><strong>Fee Type:</strong> {feeType.replace('_', ' ')}</div>
+            <div><strong>{t('zelleModal.feeType')}</strong> {feeType.replace('_', ' ')}</div>
             {zellePaymentId && (
-              <div><strong>Payment ID:</strong> {zellePaymentId}</div>
+              <div><strong>{t('zelleModal.paymentId')}</strong> {zellePaymentId}</div>
             )}
           </div>
         </div>
@@ -1733,14 +1733,14 @@ export const ZelleCheckout: React.FC<ZelleCheckoutProps> = ({
                       }}
                       className="text-red-600 hover:text-red-700 text-xs sm:text-sm font-medium"
                     >
-                      Remove
+                      {t('zelleModal.removeFile')}
                     </button>
                     <span className="text-gray-500 hidden sm:inline">|</span>
                     <button
                       onClick={() => fileInputRef.current?.click()}
                       className="text-blue-600 hover:text-blue-700 text-xs sm:text-sm font-medium"
                     >
-                      Change File
+                      {t('zelleModal.changeFile')}
                     </button>
                   </div>
                 </div>

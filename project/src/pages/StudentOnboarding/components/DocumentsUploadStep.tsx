@@ -539,10 +539,10 @@ export const DocumentsUploadStep: React.FC<StepProps> = ({ onNext }) => {
           {/* Header */}
           <div className="text-left space-y-4">
             <h2 className="text-3xl md:text-5xl font-black text-slate-900 uppercase tracking-tighter leading-none">
-              Escolha sua Universidade
+              {t('studentOnboarding.documentsUpload.approvedApps.title')}
             </h2>
             <p className="text-lg md:text-xl text-slate-600 font-medium max-w-2xl mt-2">
-              Etapa concluída com sucesso.
+              {t('studentOnboarding.documentsUpload.approvedApps.subtitle')}
             </p>
           </div>
 
@@ -555,16 +555,18 @@ export const DocumentsUploadStep: React.FC<StepProps> = ({ onNext }) => {
                 <CheckCircle className="w-12 h-12 text-emerald-500" />
               </div>
               <h3 className="text-3xl font-black text-gray-900 mb-4 uppercase tracking-tight">
-                Bolsa Confirmada!
+                {t('studentOnboarding.documentsUpload.approvedApps.scholarshipConfirmed')}
               </h3>
               <p className="text-gray-500 mb-8 font-medium text-lg max-w-lg mx-auto">
-                Você selecionou a bolsa <span className="text-blue-600 font-bold">{paidApplication.scholarships?.title}</span> e a taxa de aplicação já foi paga.
+                {t('studentOnboarding.documentsUpload.approvedApps.scholarshipSelectedPre')}
+                <span className="text-blue-600 font-bold">{paidApplication.scholarships?.title}</span>
+                {t('studentOnboarding.documentsUpload.approvedApps.scholarshipSelectedPost')}
               </p>
               <button
                 onClick={onNext}
                 className="w-full max-w-xs bg-blue-600 text-white py-4 px-8 rounded-xl hover:bg-blue-700 transition-all font-bold uppercase tracking-widest shadow-lg shadow-blue-500/20 hover:scale-105 active:scale-95 mx-auto flex items-center justify-center gap-2 group"
               >
-                <span>Continuar</span>
+                <span>{t('studentOnboarding.documentsUpload.approvedApps.continue')}</span>
                 <ArrowRight className="w-5 h-5 group-hover:translate-x-1 transition-transform" />
               </button>
             </div>
@@ -604,12 +606,12 @@ export const DocumentsUploadStep: React.FC<StepProps> = ({ onNext }) => {
             {/* Header Outside Container */}
             <div className="text-left space-y-4 animate-in fade-in slide-in-from-top-10 duration-1000">
               <h2 className="text-3xl md:text-5xl font-black text-slate-900 uppercase tracking-tighter leading-none">
-                {isApproved ? 'Escolha sua Universidade' : 'Candidaturas em Análise'}
+                {isApproved ? t('studentOnboarding.documentsUpload.approvedApps.title') : t('studentOnboarding.documentsUpload.review.title')}
               </h2>
               <p className="text-lg md:text-xl text-slate-600 font-medium max-w-2xl mt-2">
                 {isApproved 
-                  ? 'Parabéns! Você foi aceito. Selecione abaixo a universidade para seguir com o pagamento.' 
-                  : 'Seus documentos estão sendo revisados. Você pode acompanhar o status de cada bolsa abaixo.'}
+                  ? t('studentOnboarding.documentsUpload.review.titleApproved') 
+                  : t('studentOnboarding.documentsUpload.review.subtitle')}
               </p>
             </div>
 
@@ -622,10 +624,10 @@ export const DocumentsUploadStep: React.FC<StepProps> = ({ onNext }) => {
                 <div className="flex flex-col sm:flex-row sm:items-center justify-between border-b border-gray-50 pb-6 gap-4">
                   <h3 className="text-2xl font-black text-gray-900 uppercase tracking-tight flex items-center gap-3 whitespace-nowrap">
                     <GraduationCap className="w-8 h-8 text-blue-600 flex-shrink-0" />
-                    Suas Bolsas
+                    {t('studentOnboarding.documentsUpload.cards.yourScholarships')}
                   </h3>
                   <span className="w-fit bg-blue-50 text-blue-600 px-5 py-2 rounded-2xl text-[10px] font-black uppercase tracking-widest border border-blue-100">
-                    {applications.length} Candidaturas
+                    {t('studentOnboarding.documentsUpload.cards.applications').replace('{{count}}', applications.length.toString())}
                   </span>
                 </div>
 
@@ -669,7 +671,7 @@ export const DocumentsUploadStep: React.FC<StepProps> = ({ onNext }) => {
                               app.status === 'rejected' ? 'bg-red-500/90 text-white border-red-400' :
                               'bg-amber-500/90 text-white border-amber-400'
                             }`}>
-                              {isAppApproved ? 'Aprovada' : app.status === 'rejected' ? 'Reprovada' : 'Em Análise'}
+                              {isAppApproved ? t('studentOnboarding.documentsUpload.cards.status.approved') : app.status === 'rejected' ? t('studentOnboarding.documentsUpload.cards.status.rejected') : t('studentOnboarding.documentsUpload.cards.status.underReview')}
                             </div>
                           </div>
 
@@ -682,7 +684,7 @@ export const DocumentsUploadStep: React.FC<StepProps> = ({ onNext }) => {
                                 app.status === 'rejected' ? 'bg-red-500/90 text-white border-red-400' :
                                 'bg-amber-500/90 text-white border-amber-400'
                               }`}>
-                                {isAppApproved ? 'Aprovada' : app.status === 'rejected' ? 'Reprovada' : 'Em Análise'}
+                                {isAppApproved ? t('studentOnboarding.documentsUpload.cards.status.approved') : app.status === 'rejected' ? t('studentOnboarding.documentsUpload.cards.status.rejected') : t('studentOnboarding.documentsUpload.cards.status.underReview')}
                               </div>
                             </div>
 
@@ -710,7 +712,7 @@ export const DocumentsUploadStep: React.FC<StepProps> = ({ onNext }) => {
                                 
                                 {/* University Name */}
                                 <p className="text-sm sm:text-base font-medium text-slate-500 truncate">
-                                  {scholarship?.universities?.name || 'Universidade'}
+                                  {scholarship?.universities?.name || t('studentOnboarding.documentsUpload.cards.university')}
                                 </p>
                               </div>
                             </div>
@@ -728,14 +730,14 @@ export const DocumentsUploadStep: React.FC<StepProps> = ({ onNext }) => {
                              <div className="mb-3 p-3 bg-slate-50 rounded-xl border border-slate-200">
                                {scholarship?.original_annual_value && (
                                  <div className="flex items-center justify-between mb-1.5 pb-1.5 border-b border-slate-200">
-                                   <span className="text-xs text-slate-500 font-medium">Valor original</span>
+                                   <span className="text-xs text-slate-500 font-medium">{t('studentOnboarding.documentsUpload.cards.originalValue')}</span>
                                    <span className="text-xs font-semibold text-slate-500 line-through">
                                      ${Number(scholarship.original_annual_value).toLocaleString('en-US')}
                                    </span>
                                  </div>
                                )}
                                <div className="flex items-center justify-between">
-                                 <span className="text-xs text-slate-500 font-medium">Com Bolsa</span>
+                                 <span className="text-xs text-slate-500 font-medium">{t('studentOnboarding.documentsUpload.cards.withScholarship')}</span>
                                  <div className="flex items-center">
                                    <span className="font-bold text-green-700 text-base sm:text-lg">
                                      ${scholarship?.annual_value_with_scholarship 
@@ -744,7 +746,7 @@ export const DocumentsUploadStep: React.FC<StepProps> = ({ onNext }) => {
                                          ? Number(scholarship.amount).toLocaleString('en-US') 
                                          : 'N/A'}
                                    </span>
-                                   <span className="text-[10px] text-green-600 font-semibold ml-1">/ ano</span>
+                                   <span className="text-[10px] text-green-600 font-semibold ml-1">{t('studentOnboarding.documentsUpload.cards.perYear')}</span>
                                  </div>
                                </div>
                              </div>
@@ -753,7 +755,7 @@ export const DocumentsUploadStep: React.FC<StepProps> = ({ onNext }) => {
                              {app.status === 'rejected' && app.notes && (
                                <div className="mb-3 p-3 bg-red-50 border border-red-100 rounded-xl">
                                  <p className="text-xs text-red-600 font-bold uppercase tracking-tight leading-relaxed">
-                                   <span className="text-red-400 block mb-0.5">Motivo:</span>
+                                   <span className="text-red-400 block mb-0.5">{t('studentOnboarding.documentsUpload.cards.reason')}</span>
                                    {app.notes}
                                  </p>
                                </div>
@@ -781,7 +783,7 @@ export const DocumentsUploadStep: React.FC<StepProps> = ({ onNext }) => {
                                        )}
                                      </div>
                                      <span className={`text-sm font-bold uppercase tracking-tight ${showAmberAlert ? 'text-amber-900' : 'text-slate-700'}`}>
-                                       Verificar Documentos
+                                       {t('studentOnboarding.documentsUpload.cards.verifyDocuments')}
                                      </span>
                                      {showAmberAlert && (
                                        <span className="flex h-2 w-2 rounded-full bg-amber-500 ml-1 shadow-sm shadow-amber-200" />
@@ -832,16 +834,16 @@ export const DocumentsUploadStep: React.FC<StepProps> = ({ onNext }) => {
                                                       isUnderReviewStatus ? 'bg-blue-100 text-blue-700' :
                                                       'bg-amber-100 text-amber-700'
                                                     }`}>
-                                                      {isApprovedStatus ? 'Aprovado' : isRejectedStatus ? 'Rejeitado' : isUnderReviewStatus ? 'Em Análise' : 'Pendente'}
+                                                      {isApprovedStatus ? t('studentOnboarding.documentsUpload.cards.status.isApproved') : isRejectedStatus ? t('studentOnboarding.documentsUpload.cards.status.isRejected') : isUnderReviewStatus ? t('studentOnboarding.documentsUpload.cards.status.isReview') : t('studentOnboarding.documentsUpload.cards.status.pending')}
                                                     </span>
                                                     {docData?.uploaded_at && (
                                                       <span className="text-[10px] text-slate-500 font-medium ml-2">
-                                                        Enviado em: {new Date(docData.uploaded_at).toLocaleDateString('pt-BR')}
+                                                        {t('studentOnboarding.documentsUpload.cards.sentOn').replace('{{date}}', new Date(docData.uploaded_at).toLocaleDateString('pt-BR'))}
                                                       </span>
                                                     )}
                                                     {isRejectedStatus && (
                                                       <span className="text-[9px] font-bold text-red-600 uppercase tracking-tight italic opacity-70">
-                                                        • Importante: Documentos rejeitados podem ser reenviados para uma nova análise.
+                                                        {t('studentOnboarding.documentsUpload.cards.rejectionNote')}
                                                       </span>
                                                     )}
                                                   </div>
@@ -921,7 +923,7 @@ export const DocumentsUploadStep: React.FC<StepProps> = ({ onNext }) => {
                                      ? 'bg-blue-600 text-white shadow-lg shadow-blue-500/20' 
                                      : 'bg-slate-100 text-slate-400 group-hover:bg-blue-50 group-hover:text-blue-600'
                                  }`}>
-                                   {isSelected ? '✓ Selecionado' : 'Clique para selecionar'}
+                                   {isSelected ? t('studentOnboarding.documentsUpload.cards.selected') : t('studentOnboarding.documentsUpload.cards.clickToSelect')}
                                  </div>
                               </div>
                             )}
@@ -939,7 +941,7 @@ export const DocumentsUploadStep: React.FC<StepProps> = ({ onNext }) => {
                       disabled={!selectedAppId}
                       className="w-full max-w-md bg-blue-600 text-white px-10 py-6 rounded-[2rem] font-black uppercase tracking-[0.3em] text-sm hover:bg-blue-700 transition-all shadow-2xl shadow-blue-500/40 hover:scale-105 active:scale-95 flex items-center justify-center space-x-4 disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:scale-100 group"
                     >
-                      <span className="relative z-10">{!selectedAppId ? 'Selecione uma Bolsa' : 'Selecionar Bolsa'}</span>
+                      <span className="relative z-10">{!selectedAppId ? t('studentOnboarding.documentsUpload.actions.selectAScholarship') : t('studentOnboarding.documentsUpload.actions.selectScholarship')}</span>
                     </button>
                   </div>
                 )}
@@ -956,9 +958,9 @@ export const DocumentsUploadStep: React.FC<StepProps> = ({ onNext }) => {
                 <AlertTriangle className="w-12 h-12 text-red-600" />
               </div>
               <div className="space-y-4">
-                <h2 className="text-3xl font-black text-gray-900 uppercase tracking-tight">Confirmar Seleção</h2>
+                <h2 className="text-3xl font-black text-gray-900 uppercase tracking-tight">{t('studentOnboarding.documentsUpload.actions.confirmSelectionModal.title')}</h2>
                 <p className="text-gray-500 font-medium text-lg leading-relaxed">
-                  Esta decisão é definitiva. Ao confirmar, você não poderá mais alterar a bolsa escolhida para este processo seletivo.
+                  {t('studentOnboarding.documentsUpload.actions.confirmSelectionModal.description')}
                 </p>
               </div>
               <div className="flex gap-4">
@@ -966,13 +968,13 @@ export const DocumentsUploadStep: React.FC<StepProps> = ({ onNext }) => {
                   onClick={() => setShowConfirmModal(false)} 
                   className="flex-1 bg-gray-100 text-gray-500 py-5 rounded-2xl font-black uppercase tracking-widest text-sm hover:bg-gray-200 transition-all"
                 >
-                  Cancelar
+                  {t('studentOnboarding.documentsUpload.actions.confirmSelectionModal.cancel')}
                 </button>
                 <button 
                   onClick={handleConfirmSelection} 
                   className="flex-1 bg-blue-600 text-white py-5 rounded-2xl font-black uppercase tracking-widest text-sm hover:bg-blue-700 transition-all shadow-xl shadow-blue-500/20 hover:scale-105"
                 >
-                  Confirmar
+                  {t('studentOnboarding.documentsUpload.actions.confirmSelectionModal.confirm')}
                 </button>
               </div>
             </div>
@@ -1008,10 +1010,14 @@ export const DocumentsUploadStep: React.FC<StepProps> = ({ onNext }) => {
           <div className="relative overflow-hidden mb-6">
             <div className="relative z-10">
               <h4 className="text-base md:text-lg font-black text-gray-900 uppercase tracking-tight mb-2">
-                Instruções Importantes
+                {t('studentOnboarding.documentsUpload.instructions.title')}
               </h4>
               <div className="text-gray-700 md:text-gray-800 font-medium text-sm md:text-base leading-relaxed relative z-[20] text-justify">
-                Garanta que os documentos enviados estejam totalmente legíveis e <strong>exclusivamente em inglês</strong>. Caso precise de tradução certificada e de qualidade, recomendamos os serviços do nosso parceiro <a href="https://lushamerica.com/" target="_blank" rel="noopener noreferrer" className="text-blue-600 font-black hover:text-blue-800 underline transition-all cursor-pointer relative z-[50]">Lush America Translations</a>.
+                {t('studentOnboarding.documentsUpload.instructions.descriptionPre')}
+                <strong>{t('studentOnboarding.documentsUpload.instructions.descriptionStrong')}</strong>
+                {t('studentOnboarding.documentsUpload.instructions.descriptionMid')}
+                <a href="https://lushamerica.com/" target="_blank" rel="noopener noreferrer" className="text-blue-600 font-black hover:text-blue-800 underline transition-all cursor-pointer relative z-[50]">{t('studentOnboarding.documentsUpload.instructions.descriptionLink')}</a>
+                {t('studentOnboarding.documentsUpload.instructions.descriptionPost')}
               </div>
             </div>
           </div>

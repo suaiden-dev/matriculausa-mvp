@@ -274,7 +274,7 @@ const StudentDashboardLayout: React.FC<StudentDashboardLayoutProps> = ({
                 </div>
                 <div className="flex-1 min-w-0">
                   <h3 className="font-semibold text-slate-900 truncate text-sm sm:text-base">{profile?.name || user?.name}</h3>
-                  <p className="text-xs sm:text-sm text-slate-500 truncate">{t('studentDashboard.title').replace(' Dashboard', '')}</p>
+                  <p className="text-xs sm:text-sm text-slate-500 truncate">Painel do Estudante</p>
                 </div>
               </div>
             </div>

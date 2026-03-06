@@ -1,5 +1,6 @@
 import React from 'react';
 import { CheckCircle } from 'lucide-react';
+import { useTranslation } from 'react-i18next';
 import { OnboardingStep } from '../types';
 
 interface StepIndicatorProps {
@@ -7,17 +8,19 @@ interface StepIndicatorProps {
   completedSteps: OnboardingStep[];
 }
 
-const STEPS: { key: OnboardingStep; label: string }[] = [
-  { key: 'selection_fee', label: 'Taxa do Processo Seletivo' },
-  { key: 'selection_survey', label: 'Questionário' },
-  { key: 'scholarship_selection', label: 'Escolha de Bolsas' },
-  { key: 'process_type', label: 'Tipo de Processo' },
-  { key: 'documents_upload', label: 'Documentos' },
-  { key: 'payment', label: 'Taxa de Matrícula' },
-  { key: 'scholarship_fee', label: 'Taxa da Bolsa' },
-];
-
 export const StepIndicator: React.FC<StepIndicatorProps> = ({ currentStep, completedSteps }) => {
+  const { t } = useTranslation();
+
+  const STEPS: { key: OnboardingStep; label: string }[] = [
+    { key: 'selection_fee', label: t('studentOnboarding.stepper.steps.selectionFee') },
+    { key: 'selection_survey', label: t('studentOnboarding.stepper.steps.selectionSurvey') },
+    { key: 'scholarship_selection', label: t('studentOnboarding.stepper.steps.scholarshipSelection') },
+    { key: 'process_type', label: t('studentOnboarding.stepper.steps.processType') },
+    { key: 'documents_upload', label: t('studentOnboarding.stepper.steps.documentsUpload') },
+    { key: 'payment', label: t('studentOnboarding.stepper.steps.payment') },
+    { key: 'scholarship_fee', label: t('studentOnboarding.stepper.steps.scholarshipFee') },
+  ];
+
   const currentStepIndex = STEPS.findIndex(s => s.key === currentStep);
   const totalSteps = STEPS.length;
 
@@ -33,8 +36,8 @@ export const StepIndicator: React.FC<StepIndicatorProps> = ({ currentStep, compl
 
       {/* Step labels - simplified for mobile */}
       <div className="flex items-center justify-between text-xs sm:text-sm text-gray-500 mb-6 px-1">
-        <span className="font-bold tracking-widest uppercase">Passo {currentStepIndex + 1} de {totalSteps}</span>
-        <span className="font-black text-gray-900 uppercase tracking-tight">{STEPS[currentStepIndex]?.label || 'Iniciando'}</span>
+        <span className="font-bold tracking-widest uppercase">{t('studentOnboarding.stepper.step')} {currentStepIndex + 1} {t('studentOnboarding.stepper.of')} {totalSteps}</span>
+        <span className="font-black text-gray-900 uppercase tracking-tight">{STEPS[currentStepIndex]?.label || t('studentOnboarding.stepper.initiating')}</span>
       </div>
 
       {/* Desktop: Show all steps */}

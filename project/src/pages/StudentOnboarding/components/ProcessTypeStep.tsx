@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { CheckCircle, Loader2, Plane, ArrowRightLeft, FileSpreadsheet } from 'lucide-react';
 import { useAuth } from '../../../hooks/useAuth';
 import { supabase } from '../../../lib/supabase';
+import { useTranslation } from 'react-i18next';
 import { StepProps, ProcessType } from '../types';
 
 export const ProcessTypeStep: React.FC<StepProps> = ({ onNext }) => {
@@ -10,6 +11,7 @@ export const ProcessTypeStep: React.FC<StepProps> = ({ onNext }) => {
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [isLocked, setIsLocked] = useState(false);
+  const { t } = useTranslation();
 
   useEffect(() => {
     if (!userProfile?.id) return;
@@ -42,7 +44,7 @@ export const ProcessTypeStep: React.FC<StepProps> = ({ onNext }) => {
 
   const handleSelect = (type: ProcessType) => {
     if (isLocked) {
-      setError('Você já passou pela revisão. Não é possível alterar o tipo de processo.');
+      setError(t('studentOnboarding.processType.lockedError'));
       return;
     }
     setSelectedType(type);
@@ -51,12 +53,12 @@ export const ProcessTypeStep: React.FC<StepProps> = ({ onNext }) => {
 
   const handleContinue = async () => {
     if (!selectedType) {
-      setError('Please select a process type');
+      setError(t('studentOnboarding.processType.selectTypeError'));
       return;
     }
 
     if (!user?.id || !userProfile?.id) {
-      setError('User not authenticated');
+      setError(t('studentOnboarding.processType.authError'));
       return;
     }
 
@@ -90,7 +92,7 @@ export const ProcessTypeStep: React.FC<StepProps> = ({ onNext }) => {
       onNext();
     } catch (err: any) {
       console.error('Error saving process type:', err);
-      setError('Error saving selection. Please try again.');
+      setError(t('studentOnboarding.processType.saveError'));
     } finally {
       setSaving(false);
     }
@@ -104,8 +106,8 @@ export const ProcessTypeStep: React.FC<StepProps> = ({ onNext }) => {
       <div className="space-y-10 pb-12 max-w-4xl mx-auto px-4">
         {/* Header */}
         <div className="text-left space-y-4">
-          <h2 className="text-3xl md:text-5xl font-black text-slate-900 uppercase tracking-tighter leading-none">Tipo de Processo</h2>
-          <p className="text-lg md:text-xl text-slate-600 font-medium max-w-2xl mt-2">Tipo de processo selecionado com sucesso.</p>
+          <h2 className="text-3xl md:text-5xl font-black text-slate-900 uppercase tracking-tighter leading-none">{t('studentOnboarding.processType.completed.title')}</h2>
+          <p className="text-lg md:text-xl text-slate-600 font-medium max-w-2xl mt-2">{t('studentOnboarding.processType.completed.subtitle')}</p>
         </div>
 
         {/* Main White Container */}
@@ -116,13 +118,13 @@ export const ProcessTypeStep: React.FC<StepProps> = ({ onNext }) => {
             <div className="w-20 h-20 bg-emerald-500/20 rounded-full flex items-center justify-center mx-auto mb-6 border border-emerald-500/30">
               <CheckCircle className="w-12 h-12 text-emerald-400" />
             </div>
-            <h3 className="text-3xl font-black text-gray-900 mb-3 uppercase tracking-tight">Etapa Concluída</h3>
-            <p className="text-gray-500 mb-8 font-medium">Você já selecionou seu tipo de processo e passou pela revisão. Esta etapa está completa.</p>
+            <h3 className="text-3xl font-black text-gray-900 mb-3 uppercase tracking-tight">{t('studentOnboarding.processType.completed.status')}</h3>
+            <p className="text-gray-500 mb-8 font-medium">{t('studentOnboarding.processType.completed.description')}</p>
             <button
               onClick={onNext}
               className="w-full max-w-xs bg-blue-600 text-white py-4 px-8 rounded-xl hover:bg-blue-700 transition-all font-bold uppercase tracking-widest shadow-lg shadow-blue-500/20 hover:scale-105 active:scale-95 mx-auto"
             >
-              Continuar
+              {t('studentOnboarding.processType.continueButton')}
             </button>
           </div>
         </div>
@@ -135,10 +137,10 @@ export const ProcessTypeStep: React.FC<StepProps> = ({ onNext }) => {
       {/* Header */}
       <div className="text-left space-y-4">
         <h2 className="text-3xl md:text-5xl font-black text-slate-900 uppercase tracking-tighter leading-none">
-          Situação do Visto
+          {t('studentOnboarding.processType.title')}
         </h2>
         <p className="text-lg md:text-xl text-slate-600 font-medium max-w-2xl leading-relaxed">
-          Selecione a opção que melhor descreve sua situação atual em relação ao visto americano.
+          {t('studentOnboarding.processType.subtitle')}
         </p>
       </div>
 
@@ -159,20 +161,20 @@ export const ProcessTypeStep: React.FC<StepProps> = ({ onNext }) => {
             {[
               {
                 value: 'initial',
-                label: "Primeiro Visto F-1 (Inicial)",
-                description: 'Você nunca teve um visto de estudante F-1 ou está aplicando pela primeira vez.',
+                label: t('studentOnboarding.processType.options.initial.label'),
+                description: t('studentOnboarding.processType.options.initial.description'),
                 icon: Plane
               },
               {
                 value: 'transfer',
-                label: "Transferência de Visto F-1",
-                description: 'Você já possui um visto F-1 ativo e deseja se transferir de outra escola nos EUA.',
+                label: t('studentOnboarding.processType.options.transfer.label'),
+                description: t('studentOnboarding.processType.options.transfer.description'),
                 icon: ArrowRightLeft
               },
               {
                 value: 'change_of_status',
-                label: "Mudança de Status (Change of Status)",
-                description: 'Você possui outro tipo de visto (B-2, H-1B, etc.) e deseja alterar para F-1.',
+                label: t('studentOnboarding.processType.options.changeOfStatus.label'),
+                description: t('studentOnboarding.processType.options.changeOfStatus.description'),
                 icon: FileSpreadsheet
               }
             ].map((option) => {
@@ -232,11 +234,11 @@ export const ProcessTypeStep: React.FC<StepProps> = ({ onNext }) => {
                 {saving ? (
                   <>
                     <Loader2 className="w-5 h-5 animate-spin text-white" />
-                    <span>Salvando...</span>
+                    <span>{t('studentOnboarding.processType.saving')}</span>
                   </>
                 ) : (
                   <>
-                    <span>Continuar</span>
+                    <span>{t('studentOnboarding.processType.continueButton')}</span>
                   </>
                 )}
               </div>

@@ -258,7 +258,7 @@ export const UniversityDocumentsStep: React.FC<StepProps> = ({ onBack }) => {
                   <div className="relative z-10 grid grid-cols-1 lg:grid-cols-12 gap-12">
                     <div className="lg:col-span-8">
                       <div className="flex items-center gap-4 mb-8">
-                        <div className="w-16 h-16 bg-blue-600 rounded-2xl flex items-center justify-center shadow-lg shadow-blue-500/20">
+                        <div className="hidden md:flex w-16 h-16 bg-blue-600 rounded-2xl items-center justify-center shadow-lg shadow-blue-500/20">
                           <LayoutDashboard className="w-8 h-8 text-white" />
                         </div>
                         <div>
@@ -382,7 +382,7 @@ export const UniversityDocumentsStep: React.FC<StepProps> = ({ onBack }) => {
                          <div 
                            key={i} 
                            onClick={() => isClickable && setActiveTab(step.tab as any)}
-                           className={`flex items-center justify-between p-4 rounded-xl border transition-all cursor-pointer hover:shadow-lg ${styles.container}`}
+                           className={`flex flex-col sm:flex-row sm:items-center justify-between p-4 rounded-xl border transition-all cursor-pointer hover:shadow-lg gap-3 ${styles.container}`}
                          >
                             {/* Emerald Shine effect */}
                             {isLetterAvailable && (
@@ -403,7 +403,7 @@ export const UniversityDocumentsStep: React.FC<StepProps> = ({ onBack }) => {
                                )}
                              </div>
                            </div>
-                           <div className="flex items-center gap-2 relative z-10">
+                           <div className="flex items-center gap-2 relative z-10 sm:ml-0 ml-[52px]">
                               <div className={`w-2 h-2 rounded-full ${styles.indicator}`} />
                               <span className={`text-[10px] font-black uppercase tracking-widest ${styles.status}`}>{step.status}</span>
                               {isLetterAvailable && <ArrowRight className="w-4 h-4 text-emerald-600 ml-2 group-hover:translate-x-1 transition-transform" />}
