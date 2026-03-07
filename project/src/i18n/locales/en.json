@@ -490,7 +490,7 @@
     "creditCardFees": "* May include processing fees",
     "pixFees": "* May include processing fees",
     "parcelowFees": "* May include operator and platform processing fees",
-    "parcelowInstallments": "Up to 12 installments",
+    "parcelowInstallments": "Up to 12x",
     "zelleNoFees": "No Fees",
     "zelleProcessingTime": "Processing may take up to 48 hours",
     "parcelowCpfTitle": "Mandatory Parcelow Verification",
@@ -2245,7 +2245,7 @@
       "noFileChosen": "No file chosen",
       "continueToManualReview": "Continue to Manual Review",
       "uploadDocuments": "Upload and Analyze Documents",
-      "uploadingDocuments": "Uploading Documents...",
+      "uploadingDocuments": "Sending documents...",
       "analyzingDocuments": "Analyzing Documents...",
       "documentsApprovedTitle": "Documents Approved! ✅",
       "documentsApprovedDescription": "Excellent! Your documents have been approved and you're ready to proceed with the application fee payment.",
@@ -2269,8 +2269,8 @@
       "title": "Document Upload",
       "subtitle": "We need some documents to verify your eligibility and process your application.",
       "importantNotice": "Make sure that the submitted documents are clearly visible and legible. Also make sure that the submitted documents are exclusively in <boldUnderline>English</boldUnderline>, if you don't have the documents translated we recommend the document translation services of our partner <link>Lush America Translations</link>.",
-      "uploadAndContinue": "Upload",
-      "uploadingDocuments": "Uploading Documents...",
+      "uploadAndContinue": "Send documents",
+      "uploadingDocuments": "Sending documents...",
       "aiAnalysisInProgress": "AI Analysis in Progress..."
     },
     "manualReview": {
@@ -2654,6 +2654,100 @@
         "paymentRedirectError": "Error redirecting to payment."
       }
     },
+    "myApplicationStep": {
+      "header": {
+        "my": "My",
+        "application": "Application"
+      },
+      "tabs": {
+        "acceptanceLetter": "Acceptance Letter"
+      },
+      "loading": "Loading management portal...",
+      "noApplication": {
+        "title": "No Application Found",
+        "description": "You don't have an active application yet. Please go back to the previous step or contact support."
+      },
+      "back": "Back",
+      "welcome": {
+        "congratsMessage": "Congratulations {{name}},<br/> you have been <approved>approved</approved> at <university>{{university}}</university>",
+        "almostDone": "You're almost there! In this final step, you can review the details of the university you chose and submit the required documentation. Once everything is in order, your Acceptance Letter will be available right here for you to download.",
+        "sendDocuments": "Submit Documents",
+        "requestedDocs": "Requested documents",
+        "scholarshipDetails": "Scholarship Details",
+        "requirementsValues": "Requirements and values",
+        "needHelp": "Need Help?",
+        "mentorsReady": "Our mentors are ready to help with any questions about this process.",
+        "talkToSupport": "Talk to Support",
+        "nextSteps": "Next Steps",
+        "documentSubmission": "Document Submission",
+        "acceptanceLetterReceipt": "Acceptance Letter Receipt",
+        "documentAvailable": "Document Available",
+        "status": {
+          "completed": "Completed",
+          "underReview": "Under Review",
+          "actionRequired": "Action Required",
+          "available": "Available",
+          "inProgress": "Release in Progress"
+        }
+      },
+      "details": {
+        "universityPartner": "University Partner",
+        "inPerson": "In-Person",
+        "online": "Online",
+        "exclusive": "Exclusive",
+        "level": "Level",
+        "mode": "Mode",
+        "deadline": "Deadline",
+        "scholarshipDetails": "Scholarship Details",
+        "scholarshipTitle": "Scholarship Title",
+        "courseField": "Course / Field of Study",
+        "enrollmentFee": "Enrollment Fee",
+        "internalFees": "Institutional Internal Fees",
+        "internalFeesNote": "These fees are reported by the university and paid directly to them. They are not part of Matricula USA's mentoring service.",
+        "oneTimePayment": "One-Time Payment",
+        "studentDocuments": "Student Documents",
+        "diploma": "Diploma / Certificate (High School)",
+        "passport": "Passport (Color Copy)",
+        "bankStatement": "Bank Statement (Financial Statement)",
+        "submittedOn": "Submitted on:",
+        "view": "View",
+        "download": "Download",
+        "finance": {
+          "originalAnnualCost": "Original Annual Cost",
+          "withExclusiveScholarship": "With Exclusive Scholarship",
+          "perYear": "/year",
+          "perCredit": "Per Credit",
+          "guaranteedAnnualSavings": "Guaranteed Annual Savings",
+          "financialSummary": "Financial Summary"
+        },
+        "institution": {
+          "title": "Institution",
+          "email": "Email",
+          "phone": "Phone",
+          "website": "Website"
+        }
+      },
+      "documents": {
+        "title": "Document Submission",
+        "subtitle": "Submit the documents requested by the university for review and final approval."
+      },
+      "acceptance": {
+        "letterOf": "Acceptance",
+        "acceptance": "Letter",
+        "available": "Available",
+        "inProgress": "Release in Progress",
+        "successConfirmation": "Your Confirmation of Success",
+        "description": "The Acceptance Letter is the official document issued by the university confirming your admission. It contains important details about your program and is essential for the visa process.",
+        "officialNote": "This document is officially issued by the university after reviewing your documentation.",
+        "documentAvailable": "Document Available",
+        "readyToDownload": "Your acceptance letter is ready to download!",
+        "downloadPdf": "Download PDF"
+      },
+      "errors": {
+        "viewDocument": "Error viewing document",
+        "downloadDocument": "Error downloading document"
+      }
+    },
     "notifications": {
       "documentRejected": {
         "title": "Document Rejected",
@@ -2725,7 +2819,8 @@
         "yourUploads": "Your uploads:",
         "uploading": "Uploading...",
         "upload": "Upload",
-        "uploadNewFile": "Upload new file",
+        "uploadNewFile": "Select file",
+        "removeFile": "Remove file",
         "failedToDownloadFile": "Failed to download file.",
         "failedToApproveDocument": "Failed to approve the document:",
         "failedToRejectDocument": "Failed to reject the document:",
@@ -4783,7 +4878,7 @@
     },
     "documentsUpload": {
       "approvedApps": {
-        "title": "Select your University",
+        "title": "Select your Scholarship",
         "subtitle": "Step completed successfully.",
         "scholarshipConfirmed": "Scholarship Confirmed!",
         "scholarshipSelectedPre": "You have selected the scholarship ",

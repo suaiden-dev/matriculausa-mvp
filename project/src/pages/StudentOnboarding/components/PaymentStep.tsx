@@ -294,7 +294,6 @@ export const PaymentStep: React.FC<StepProps> = ({ onNext, onBack }) => {
       <div className="space-y-10 pb-12 max-w-4xl mx-auto px-4">
         <div className="text-left space-y-4">
           <h2 className="text-3xl md:text-5xl font-black text-slate-900 uppercase tracking-tighter leading-none">{t('paymentStep.title')}</h2>
-          <p className="text-lg md:text-xl text-slate-600 font-medium max-w-2xl mt-2">{t('paymentStep.completedTitle2')}</p>
         </div>
 
         <div className="bg-white rounded-[2.5rem] p-8 md:p-10 relative overflow-hidden">
@@ -352,7 +351,7 @@ export const PaymentStep: React.FC<StepProps> = ({ onNext, onBack }) => {
               return (
                 <div 
                   key={app.id}
-                  className={`group relative bg-white border rounded-[2rem] p-8 transition-all ${
+                  className={`group relative bg-white border rounded-[2rem] px-4 py-8 md:p-8 transition-all ${
                     app.is_application_fee_paid 
                       ? 'border-emerald-500/30 ring-1 ring-emerald-500/20 bg-white' 
                       : 'border-slate-200 hover:border-slate-300 shadow-sm hover:shadow-xl'
@@ -365,11 +364,10 @@ export const PaymentStep: React.FC<StepProps> = ({ onNext, onBack }) => {
                   )}
 
                   <div className="flex flex-col gap-8">
-                    {/* Header Application */}
                     <div className="flex flex-col md:flex-row md:items-center justify-between gap-6">
-                      <div className="flex items-center space-x-6">
+                      <div className="flex flex-col md:flex-row md:items-center gap-6">
                         {app.scholarships?.image_url || app.scholarships?.universities?.logo_url ? (
-                          <div className="w-28 h-28 bg-white rounded-[2rem] flex items-center justify-center border border-gray-100/50 overflow-hidden shadow-sm flex-shrink-0 group-hover:scale-105 transition-transform duration-500">
+                          <div className="w-28 h-28 bg-white rounded-[2rem] flex items-center justify-center border border-gray-100/50 overflow-hidden shadow-sm flex-shrink-0 group-hover:scale-105 transition-transform duration-500 mx-auto md:mx-0">
                             <img 
                               src={app.scholarships.image_url || app.scholarships.universities?.logo_url || ''} 
                               alt="" 
@@ -378,43 +376,43 @@ export const PaymentStep: React.FC<StepProps> = ({ onNext, onBack }) => {
                             />
                           </div>
                         ) : (
-                          <div className="w-28 h-28 bg-slate-50 rounded-[2rem] flex items-center justify-center flex-shrink-0">
+                          <div className="w-28 h-28 bg-slate-50 rounded-[2rem] flex items-center justify-center flex-shrink-0 mx-auto md:mx-0">
                             <Building className="w-16 h-16 text-slate-300" />
                           </div>
                         )}
-                        <div className="min-w-0 flex-1">
-                          <div className="flex items-center gap-3 mb-1">
+                        <div className="min-w-0 flex-1 text-center md:text-left">
+                          <div className="mb-1">
                             <h3 className="text-2xl font-black text-gray-900 uppercase tracking-tight">
                               {app.scholarships?.title || 'Scholarship'}
                             </h3>
                           </div>
-                          <p className="text-sm text-gray-500 font-bold uppercase tracking-widest flex items-center gap-2">
+                          <p className="text-sm text-gray-500 font-bold uppercase tracking-widest flex items-center justify-center md:justify-start gap-2">
                             <Building className="w-3 h-3" />
                             {app.scholarships?.universities?.name || 'University'}
                           </p>
                         </div>
                       </div>
 
-                        <div className="flex flex-col md:items-end">
-                          <div className="flex items-center gap-3 mb-4">
-                            <span className="text-[10px] font-black text-gray-500 uppercase tracking-[0.2em]">{t('paymentStep.enrollmentFeeLabel')}</span>
-                          </div>
-                          {userDependents > 0 && (
-                            <div className="text-right mb-3 flex flex-col items-end gap-1.5 border-b border-slate-100 pb-3 w-full md:w-auto">
-                              <p className="text-xs font-bold text-slate-900 uppercase tracking-tight flex justify-between w-full gap-8">
-                                <span>{t('paymentStep.feeWithoutDependents')}</span>
-                                <span>{formatFeeAmount(baseAmount - (userDependents * 100))}</span>
-                              </p>
-                              <p className="text-xs font-bold text-blue-600 uppercase tracking-tight flex justify-between w-full gap-8">
-                                <span>{userDependents} {userDependents === 1 ? t('paymentStep.dependentsSingular') : t('paymentStep.dependentsPlural')}</span>
-                                <span>+ {formatFeeAmount(userDependents * 100)}</span>
-                              </p>
-                            </div>
-                          )}
-                          <div className="text-4xl font-black text-slate-900 tracking-tighter">
-                            {formatFeeAmount(baseAmount)}
-                          </div>
+                      <div className="flex flex-col items-center md:items-end">
+                        <div className="flex items-center gap-3 mb-4 md:mb-2">
+                          <span className="text-[10px] font-black text-gray-500 uppercase tracking-[0.2em]">{t('paymentStep.enrollmentFeeLabel')}</span>
                         </div>
+                        {userDependents > 0 && (
+                          <div className="text-center md:text-right mb-3 flex flex-col items-center md:items-end gap-1.5 border-b border-slate-100 pb-3 w-full md:w-auto">
+                            <p className="text-xs font-bold text-slate-900 uppercase tracking-tight flex justify-between w-full gap-8">
+                              <span>{t('paymentStep.feeWithoutDependents')}</span>
+                              <span>{formatFeeAmount(baseAmount - (userDependents * 100))}</span>
+                            </p>
+                            <p className="text-xs font-bold text-blue-600 uppercase tracking-tight flex justify-between w-full gap-8">
+                              <span>{userDependents} {userDependents === 1 ? t('paymentStep.dependentsSingular') : t('paymentStep.dependentsPlural')}</span>
+                              <span>+ {formatFeeAmount(userDependents * 100)}</span>
+                            </p>
+                          </div>
+                        )}
+                        <div className="text-4xl font-black text-slate-900 tracking-tighter">
+                          {formatFeeAmount(baseAmount)}
+                        </div>
+                      </div>
                     </div>
 
                     {/* Payment Options List */}
@@ -462,10 +460,10 @@ export const PaymentStep: React.FC<StepProps> = ({ onNext, onBack }) => {
                             <button
                               onClick={() => processCheckout(app, 'stripe')}
                               disabled={!!isProcessingCheckout}
-                              className="group/btn relative bg-white border border-gray-200 p-5 rounded-[2rem] text-left hover:scale-[1.01] active:scale-95 transition-all shadow-sm hover:shadow-md disabled:opacity-50 hover:border-blue-600/30 hover:bg-blue-50/10 block w-full"
+                              className="group/btn relative bg-white border border-gray-200 px-4 py-5 md:p-5 rounded-[2rem] text-left hover:scale-[1.01] active:scale-95 transition-all shadow-sm hover:shadow-md disabled:opacity-50 hover:border-blue-600/30 hover:bg-blue-50/10 block w-full"
                             >
                               <div className="flex items-center justify-between w-full">
-                                <div className="flex items-center gap-4 sm:gap-5">
+                                <div className="flex items-center gap-4 sm:gap-5 -ml-1 md:ml-0">
                                   <div className="w-14 h-14 flex items-center justify-center bg-slate-50 rounded-2xl group-hover/btn:bg-slate-100 transition-colors shrink-0">
                                     <StripeIcon className="w-9 h-9" />
                                   </div>
@@ -480,7 +478,7 @@ export const PaymentStep: React.FC<StepProps> = ({ onNext, onBack }) => {
                                   </div>
                                 </div>
                               </div>
-                              <div className="md:hidden mt-3 text-[10px] font-bold text-slate-400 uppercase tracking-wide leading-tight">
+                              <div className="md:hidden mt-1.5 text-[10px] font-bold text-slate-400 uppercase tracking-wide leading-tight">
                                 {t('paymentStep.creditCardFees')}
                               </div>
                               {isProcessingCheckout === `${app.id}_stripe` && (
@@ -494,10 +492,10 @@ export const PaymentStep: React.FC<StepProps> = ({ onNext, onBack }) => {
                             <button
                               onClick={() => processCheckout(app, 'pix')}
                               disabled={!!isProcessingCheckout}
-                              className="group/btn relative bg-white border border-gray-200 p-5 rounded-[2rem] text-left hover:scale-[1.01] active:scale-95 transition-all shadow-sm hover:shadow-md disabled:opacity-50 hover:border-blue-600/30 hover:bg-blue-50/10 block w-full"
+                              className="group/btn relative bg-white border border-gray-200 px-4 py-5 md:p-5 rounded-[2rem] text-left hover:scale-[1.01] active:scale-95 transition-all shadow-sm hover:shadow-md disabled:opacity-50 hover:border-blue-600/30 hover:bg-blue-50/10 block w-full"
                             >
                               <div className="flex items-center justify-between w-full">
-                                <div className="flex items-center gap-4 sm:gap-5">
+                                <div className="flex items-center gap-4 sm:gap-5 -ml-1 md:ml-0">
                                   <div className="w-14 h-14 flex items-center justify-center bg-slate-50 rounded-2xl group-hover/btn:bg-slate-100 transition-colors shrink-0">
                                     <PixIcon className="w-9 h-9" />
                                   </div>
@@ -512,7 +510,7 @@ export const PaymentStep: React.FC<StepProps> = ({ onNext, onBack }) => {
                                   </div>
                                 </div>
                               </div>
-                              <div className="md:hidden mt-3 text-[10px] font-bold text-slate-400 uppercase tracking-wide leading-tight">
+                              <div className="md:hidden mt-1.5 text-[10px] font-bold text-slate-400 uppercase tracking-wide leading-tight">
                                 {t('paymentStep.pixFees')}
                               </div>
                               {isProcessingCheckout === `${app.id}_pix` && (
@@ -527,10 +525,10 @@ export const PaymentStep: React.FC<StepProps> = ({ onNext, onBack }) => {
                               <button
                                 onClick={() => processCheckout(app, 'parcelow')}
                                 disabled={!!isProcessingCheckout}
-                                className="group/btn relative bg-white border border-gray-200 p-5 rounded-[2rem] text-left hover:scale-[1.01] active:scale-95 transition-all shadow-sm hover:shadow-md disabled:opacity-50 hover:border-blue-600/30 hover:bg-blue-50/10 block w-full"
+                                className="group/btn relative bg-white border border-gray-200 px-4 py-5 md:p-5 rounded-[2rem] text-left hover:scale-[1.01] active:scale-95 transition-all shadow-sm hover:shadow-md disabled:opacity-50 hover:border-blue-600/30 hover:bg-blue-50/10 block w-full"
                               >
                                 <div className="flex items-center justify-between w-full">
-                                  <div className="flex items-center gap-4 sm:gap-5">
+                                  <div className="flex items-center gap-4 sm:gap-5 -ml-1 md:ml-0">
                                     <div className="w-14 h-14 flex items-center justify-center bg-slate-50 rounded-2xl group-hover/btn:bg-slate-100 transition-colors px-2 shrink-0">
                                       <ParcelowIcon className="w-full h-10" />
                                     </div>
@@ -546,7 +544,7 @@ export const PaymentStep: React.FC<StepProps> = ({ onNext, onBack }) => {
                                     <span className="text-[10px] font-bold text-slate-900 mt-1 block uppercase tracking-widest leading-tight">{t('paymentStep.parcelowInstallments')}</span>
                                   </div>
                                 </div>
-                                <div className="md:hidden mt-3 text-[10px] font-bold text-slate-400 uppercase tracking-wide leading-tight">
+                                <div className="md:hidden mt-1.5 text-[10px] font-bold text-slate-400 uppercase tracking-wide leading-tight">
                                   {t('paymentStep.parcelowFees')}
                                 </div>
                                 {isProcessingCheckout === `${app.id}_parcelow` && (
@@ -602,14 +600,14 @@ export const PaymentStep: React.FC<StepProps> = ({ onNext, onBack }) => {
                               <button
                                 onClick={() => handleZelleClick(app)}
                                 disabled={!!isProcessingCheckout}
-                                className={`group/btn relative bg-white border p-5 text-left hover:scale-[1.01] active:scale-[0.99] transition-all shadow-sm hover:shadow-md disabled:opacity-50 hover:border-blue-600/30 hover:bg-blue-50/10 block w-full ${
+                                className={`group/btn relative bg-white border px-4 py-5 md:p-5 text-left hover:scale-[1.01] active:scale-[0.99] transition-all shadow-sm hover:shadow-md disabled:opacity-50 hover:border-blue-600/30 hover:bg-blue-50/10 block w-full ${
                                   zelleActiveApp?.id === app.id
                                     ? 'rounded-t-[2rem] border-slate-200 border-b-0 bg-slate-50/30'
                                     : 'rounded-[2rem] border-gray-200'
                                 }`}
                               >
                                 <div className="flex items-center justify-between w-full">
-                                  <div className="flex items-center gap-4 sm:gap-5">
+                                  <div className="flex items-center gap-4 sm:gap-5 -ml-1 md:ml-0">
                                     <div className="w-14 h-14 flex items-center justify-center bg-slate-50 rounded-2xl group-hover/btn:bg-slate-100 transition-colors shrink-0">
                                       <ZelleIcon className="w-9 h-9" />
                                     </div>
@@ -630,7 +628,7 @@ export const PaymentStep: React.FC<StepProps> = ({ onNext, onBack }) => {
                                     </div>
                                   </div>
                                 </div>
-                                <div className="md:hidden mt-3 text-[10px] font-bold text-slate-500 uppercase tracking-wide leading-tight flex items-center gap-1">
+                                <div className="md:hidden mt-1.5 text-[10px] font-bold text-slate-500 uppercase tracking-wide leading-tight flex items-center gap-1">
                                   <AlertCircle className="w-3 h-3" />
                                   {t('paymentStep.zelleProcessingTime')}
                                 </div>

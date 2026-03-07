@@ -1308,7 +1308,6 @@ export const SelectionFeeStep: React.FC<StepProps> = ({ onNext }) => {
         {/* Header */}
         <div className="text-left space-y-4">
           <h2 className="text-3xl md:text-5xl font-black text-slate-900 uppercase tracking-tighter leading-none">{t('selectionFeeStep.paid.title')}</h2>
-          <p className="text-lg md:text-xl text-slate-600 font-medium max-w-2xl mt-2">{t('selectionFeeStep.paid.subtitle')}</p>
         </div>
 
         {/* Main White Container */}
@@ -1598,7 +1597,7 @@ export const SelectionFeeStep: React.FC<StepProps> = ({ onNext }) => {
                 Eu aceito os {' '}
                 <span 
                   onClick={handleTermsClick}
-                  className="text-blue-600 font-bold hover:underline cursor-pointer"
+                  className="text-blue-600 font-bold underline hover:text-blue-700 cursor-pointer"
                 >
                   {t('preCheckoutModal.termsAndConditions.title') || 'termos e condições'}
                 </span>
@@ -1790,47 +1789,47 @@ export const SelectionFeeStep: React.FC<StepProps> = ({ onNext }) => {
                     <button
                       onClick={() => handleCheckout(method.id)}
                       disabled={isDisabled}
-                      className={`w-full pl-0 pr-2 py-4 sm:p-6 rounded-2xl border-2 transition-all duration-300 text-left relative overflow-hidden group/method ${
+                      className={`w-full px-4 py-4 sm:p-6 rounded-2xl border-2 transition-all duration-300 text-left relative overflow-hidden group/method ${
                         isSelected
                           ? 'border-blue-100 bg-blue-50 shadow-[0_0_30px_rgba(59,130,246,0.1)]'
                           : 'border-gray-100 bg-gray-50 hover:border-gray-200 hover:bg-white'
                       } ${isDisabled ? 'opacity-40 cursor-not-allowed grayscale' : 'cursor-pointer hover:scale-[1.01] active:scale-[0.99]'}`}
                     >
-                      <div className="flex items-center space-x-0.5 sm:space-x-5 relative z-10">
+                      <div className="flex items-center gap-3 sm:gap-5 relative z-10">
                         <div className={`flex-shrink-0 w-12 h-12 sm:w-14 sm:h-14 flex items-center justify-center rounded-xl bg-white border border-gray-100 transition-transform duration-500 group-hover/method:scale-110 shadow-sm`}>
                           <Icon className="w-8 h-8 sm:w-10 sm:h-10 text-gray-700" />
                         </div>
                         
                         <div className="flex-1 min-w-0">
                           <div className="flex flex-col w-full">
-                            <div className="flex items-center justify-between w-full">
+                            <div className="flex items-end justify-between w-full">
                               <h4 className="text-base sm:text-lg font-black text-gray-900 uppercase tracking-tight">
                                 {method.name}
                               </h4>
 
-                              <div className="flex items-center gap-3">
+                              <div className="flex items-end gap-3 flex-shrink-0">
                                 {method.id === 'stripe' && cardAmountWithFees > 0 && (
-                                  <span className="text-grey-900 text-lg font-black px-2">
+                                  <span className="text-gray-900 text-lg font-black">
                                     ${cardAmountWithFees.toFixed(2)}
                                   </span>
                                 )}
                                 {method.id === 'parcelow' && computedBasePrice > 0 && (
                                   <div className="flex flex-col items-end">
-                                     <span className="text-grey-900 text-lg font-black px-2">
-                                       ${computedBasePrice.toFixed(2)}
-                                     </span>
-                                    <span className="text-[10px] font-bold text-slate-900 mt-1 block uppercase tracking-widest leading-tight">
+                                    <span className="text-[10px] font-bold text-slate-900 mb-0.5 block uppercase tracking-widest leading-tight">
                                       {t('selectionFeeStep.main.parcelowInstallments')}
+                                    </span>
+                                    <span className="text-gray-900 text-lg font-black">
+                                      ${computedBasePrice.toFixed(2)}
                                     </span>
                                   </div>
                                 )}
                                 {method.id === 'pix' && pixAmountWithFees > 0 && exchangeRate && (
-                                   <span className="text-grey-900 text-lg font-black px-2">
+                                   <span className="text-gray-900 text-lg font-black">
                                      R$ {pixAmountWithFees.toFixed(2)}
                                    </span>
                                 )}
                                 {method.id === 'zelle' && computedBasePrice > 0 && (
-                                   <span className="text-grey-900 text-lg font-black px-2">
+                                   <span className="text-gray-900 text-lg font-black">
                                      ${computedBasePrice.toFixed(2)}
                                    </span>
                                 )}

@@ -661,7 +661,6 @@ export const ScholarshipSelectionStep: React.FC<StepProps> = ({ onNext, onBack: 
         {/* Header */}
         <div className="text-left space-y-4">
           <h2 className="text-3xl md:text-5xl font-black text-slate-900 uppercase tracking-tighter leading-none">{t('scholarshipSelection.completed.title')}</h2>
-          <p className="text-lg md:text-xl text-slate-600 font-medium max-w-2xl mt-2">{t('scholarshipSelection.completed.subtitle')}</p>
         </div>
 
         {/* Main White Container */}

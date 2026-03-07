@@ -123,13 +123,11 @@ export const IdentityVerificationStep: React.FC<IdentityVerificationStepProps> =
     return (
       <div className="space-y-8 sm:space-y-10 pb-12 max-w-4xl mx-auto px-4">
         {/* Header */}
-        <div className="text-center md:text-left space-y-4">
+        <div className="text-left space-y-4">
           <h2 className="text-3xl md:text-5xl font-black text-slate-900 uppercase tracking-tighter leading-none">
             {t('selectionFeeStep.main.identityVerification')}
           </h2>
-          <p className="text-lg md:text-xl text-slate-600 font-medium max-w-2xl mt-2">
-            {t('selectionFeeStep.main.identity.completed')}
-          </p>
+        
         </div>
 
         {/* Main White Container */}

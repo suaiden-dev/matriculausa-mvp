@@ -1310,7 +1310,7 @@ const MyApplications: React.FC = () => {
 
           {/* TODO: FUTURE_REMOVAL - Hiding guidance per user request */}
           {true && (
-            <div className="bg-white rounded-3xl shadow-lg border border-slate-200 p-4 sm:p-6 lg:p-8 mb-8">
+            <div className="hidden bg-white rounded-3xl shadow-lg border border-slate-200 p-4 sm:p-6 lg:p-8 mb-8">
               {/* Important Notice */}
               <div className="mb-6 p-4 bg-gradient-to-r from-blue-50 to-indigo-50 rounded-2xl border border-blue-200">
                 <div className="flex items-start">

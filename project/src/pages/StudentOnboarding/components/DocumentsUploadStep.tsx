@@ -15,6 +15,7 @@ import {
   XCircle,
   AlertTriangle,
   Send,
+  Eye,
 } from 'lucide-react';
 
 import { useAuth } from '../../../hooks/useAuth';
@@ -24,6 +25,7 @@ import { StepProps } from '../types';
 import { useCartStore } from '../../../stores/applicationStore';
 import { getN8nProxyUrl } from '../../../utils/storageProxy';
 import TruncatedText from '../../../components/TruncatedText';
+import ScholarshipDetailModal from '../../../components/ScholarshipDetailModal';
 
 import { PencilLoader } from '../../../components/PencilLoader';
 
@@ -55,6 +57,8 @@ export const DocumentsUploadStep: React.FC<StepProps> = ({ onNext }) => {
   const [uploadingFiles, setUploadingFiles] = useState<Record<string, boolean>>({});
   const [openChecklists, setOpenChecklists] = useState<Record<string, boolean>>({});
   const [showConfirmModal, setShowConfirmModal] = useState(false);
+  const [isDetailModalOpen, setIsDetailModalOpen] = useState(false);
+  const [selectedScholarshipForModal, setSelectedScholarshipForModal] = useState<any>(null);
   const topRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
@@ -509,6 +513,12 @@ export const DocumentsUploadStep: React.FC<StepProps> = ({ onNext }) => {
     });
   };
 
+  const handleOpenDetailModal = (e: React.MouseEvent, scholarship: any) => {
+    e.stopPropagation();
+    setSelectedScholarshipForModal(scholarship);
+    setIsDetailModalOpen(true);
+  };
+
   const parseApplicationDocuments = (documents: any): { type: string; status?: string; review_notes?: string; rejection_reason?: string; uploaded_at?: string }[] => {
     if (!Array.isArray(documents)) return [];
     if (documents.length === 0) return [];
@@ -541,9 +551,6 @@ export const DocumentsUploadStep: React.FC<StepProps> = ({ onNext }) => {
             <h2 className="text-3xl md:text-5xl font-black text-slate-900 uppercase tracking-tighter leading-none">
               {t('studentOnboarding.documentsUpload.approvedApps.title')}
             </h2>
-            <p className="text-lg md:text-xl text-slate-600 font-medium max-w-2xl mt-2">
-              {t('studentOnboarding.documentsUpload.approvedApps.subtitle')}
-            </p>
           </div>
 
           {/* Success Card */}
@@ -608,11 +615,6 @@ export const DocumentsUploadStep: React.FC<StepProps> = ({ onNext }) => {
               <h2 className="text-3xl md:text-5xl font-black text-slate-900 uppercase tracking-tighter leading-none">
                 {isApproved ? t('studentOnboarding.documentsUpload.approvedApps.title') : t('studentOnboarding.documentsUpload.review.title')}
               </h2>
-              <p className="text-lg md:text-xl text-slate-600 font-medium max-w-2xl mt-2">
-                {isApproved 
-                  ? t('studentOnboarding.documentsUpload.review.titleApproved') 
-                  : t('studentOnboarding.documentsUpload.review.subtitle')}
-              </p>
             </div>
 
             {/* Main Standard White Container */}
@@ -636,50 +638,42 @@ export const DocumentsUploadStep: React.FC<StepProps> = ({ onNext }) => {
                     <Loader2 className="w-12 h-12 text-blue-500 animate-spin" />
                   </div>
                 ) : (
-                  <div className="flex flex-col gap-4">
-                    {applications.map((app) => {
-                      const isAppApproved = app.status === 'approved' || app.status === 'enrolled';
-                      const isSelected = selectedAppId === app.id;
-                      const scholarship = app.scholarships;
-                      const appDocs = parseApplicationDocuments(app.documents);
-                      const hasDocumentIssues = app.status !== 'rejected' && appDocs.some(d => 
-                        ['rejected', 'changes_requested'].includes(d.status?.toLowerCase() || '')
-                      );
-                      const showAmberAlert = hasDocumentIssues;
-                      
-                      return (
-                        <div 
-                          key={app.id} 
-                          onClick={() => {
-                            if (!isAppApproved) return;
-                            setSelectedAppId(selectedAppId === app.id ? null : app.id);
-                          }}
-                          className={`group relative bg-white rounded-2xl sm:rounded-3xl shadow-sm hover:shadow-md transition-all duration-300 overflow-hidden border-2 hover:-translate-y-0.5 transform-gpu ${
-                            isSelected ? 'border-blue-500 bg-blue-50/10 shadow-blue-500/10 cursor-pointer' : 
-                            app.status === 'rejected' ? 'border-red-500 bg-red-50/30' :
-                            isAppApproved ? 'border-slate-300 hover:border-blue-300 cursor-pointer' : 
-                            'border-slate-300 cursor-default opacity-80'
-                          }`}
-                        >
-                          {/* Selected Check Badge Removido */}
+                    <div className="flex flex-col gap-4">
+                      {applications.map((app) => {
+                        const isAppApproved = app.status === 'approved' || app.status === 'enrolled';
+                        const isSelected = selectedAppId === app.id;
+                        const scholarship = app.scholarships;
+                        const appDocs = parseApplicationDocuments(app.documents);
+                        const hasDocumentIssues = app.status !== 'rejected' && appDocs.some(d => 
+                          ['rejected', 'changes_requested'].includes(d.status?.toLowerCase() || '')
+                        );
+                        const showAmberAlert = hasDocumentIssues;
 
-                          {/* Status Badge */}
-                          {/* Status Badge - Desktop Absolute, Mobile Hidden */}
-                          <div className="hidden sm:block absolute top-4 right-4 z-10">
-                            <div className={`px-3 py-1.5 rounded-xl text-xs font-black uppercase tracking-widest shadow-sm backdrop-blur-md border ${
-                              isAppApproved ? 'bg-emerald-500/90 text-white border-emerald-400' :
-                              app.status === 'rejected' ? 'bg-red-500/90 text-white border-red-400' :
-                              'bg-amber-500/90 text-white border-amber-400'
-                            }`}>
-                              {isAppApproved ? t('studentOnboarding.documentsUpload.cards.status.approved') : app.status === 'rejected' ? t('studentOnboarding.documentsUpload.cards.status.rejected') : t('studentOnboarding.documentsUpload.cards.status.underReview')}
-                            </div>
-                          </div>
-
-                          {/* Card Content */}
-                          <div className="p-4 sm:p-5 flex-1 flex flex-col">
-                            {/* Status Badge - Mobile Inline */}
-                            <div className="sm:hidden mb-4 self-end">
-                              <div className={`px-3 py-1.5 rounded-xl text-xs font-black uppercase tracking-widest shadow-sm backdrop-blur-md border inline-block ${
+                        return (
+                          <div 
+                            key={app.id} 
+                            onClick={() => {
+                              if (!isAppApproved) return;
+                              setSelectedAppId(selectedAppId === app.id ? null : app.id);
+                            }}
+                            className={`group relative bg-white rounded-2xl sm:rounded-3xl shadow-sm hover:shadow-md transition-all duration-300 overflow-hidden border-2 hover:-translate-y-0.5 transform-gpu ${
+                              isSelected ? 'border-blue-500 bg-blue-50/10 shadow-blue-500/10 cursor-pointer' : 
+                              app.status === 'rejected' ? 'border-red-500 bg-red-50/30' :
+                              isAppApproved ? 'border-slate-300 hover:border-blue-300 cursor-pointer' : 
+                              'border-slate-300 cursor-default opacity-80'
+                            }`}
+                          >
+                            {/* Status Badge & View Details */}
+                            <div className="hidden sm:flex items-center gap-2 absolute top-4 right-4 z-20">
+                              <button
+                                type="button"
+                                onClick={(e) => handleOpenDetailModal(e, scholarship)}
+                                className="bg-white/90 p-2.5 rounded-xl shadow-lg border border-slate-200 text-blue-600 hover:text-blue-700 hover:scale-110 transition-all backdrop-blur-md"
+                                title={t('scholarshipsPage.scholarshipCard.details')}
+                              >
+                                <Eye className="w-5 h-5" />
+                              </button>
+                              <div className={`px-3 py-1.5 rounded-xl text-xs font-black uppercase tracking-widest shadow-sm backdrop-blur-md border ${
                                 isAppApproved ? 'bg-emerald-500/90 text-white border-emerald-400' :
                                 app.status === 'rejected' ? 'bg-red-500/90 text-white border-red-400' :
                                 'bg-amber-500/90 text-white border-amber-400'
@@ -688,250 +682,275 @@ export const DocumentsUploadStep: React.FC<StepProps> = ({ onNext }) => {
                               </div>
                             </div>
 
-                            <div className="flex gap-4 items-center mb-4">
-                              {scholarship?.image_url || scholarship?.universities?.logo_url ? (
-                                <div className="w-28 h-28 bg-white rounded-[2rem] flex items-center justify-center flex-shrink-0 overflow-hidden relative border border-gray-100/50 shadow-sm">
-                                  <img 
-                                    src={scholarship?.image_url || scholarship?.universities?.logo_url} 
-                                    alt="" 
-                                    className="w-full h-full object-contain transform scale-100 p-2"
-                                    onError={(e) => { (e.target as HTMLImageElement).parentElement!.style.display = 'none'; }}
-                                  />
+                            {/* Card Content */}
+                            <div className="p-4 sm:p-5 flex-1 flex flex-col">
+                              {/* Status Badge & View Details - Mobile Inline */}
+                              <div className="sm:hidden mb-4 self-end flex items-center gap-2">
+                                <button
+                                  type="button"
+                                  onClick={(e) => handleOpenDetailModal(e, scholarship)}
+                                  className="bg-white/90 p-2 rounded-xl shadow-sm border border-slate-200 text-blue-600 hover:text-blue-700 transition-all"
+                                >
+                                  <Eye className="w-3.5 h-3.5" />
+                                </button>
+                                <div className={`px-3 py-1.5 rounded-xl text-xs font-black uppercase tracking-widest shadow-sm backdrop-blur-md border inline-block ${
+                                  isAppApproved ? 'bg-emerald-500/90 text-white border-emerald-400' :
+                                  app.status === 'rejected' ? 'bg-red-500/90 text-white border-red-400' :
+                                  'bg-amber-500/90 text-white border-amber-400'
+                                }`}>
+                                  {isAppApproved ? t('studentOnboarding.documentsUpload.cards.status.approved') : app.status === 'rejected' ? t('studentOnboarding.documentsUpload.cards.status.rejected') : t('studentOnboarding.documentsUpload.cards.status.underReview')}
                                 </div>
-                              ) : (
-                                <div className="w-28 h-28 bg-slate-50 rounded-[2rem] flex items-center justify-center flex-shrink-0">
-                                  <Building className="w-16 h-16 text-slate-300" />
+                              </div>
+
+                              <div className="flex gap-4 items-center mb-4">
+                                <div className="relative group/image flex-shrink-0">
+                                  {scholarship?.image_url || scholarship?.universities?.logo_url ? (
+                                    <div className="w-28 h-28 bg-white rounded-[2rem] flex items-center justify-center overflow-hidden border border-gray-100/50 shadow-sm relative">
+                                      <img 
+                                        src={scholarship?.image_url || scholarship?.universities?.logo_url} 
+                                        alt="" 
+                                        className="w-full h-full object-contain transform scale-100 p-2 group-hover/image:scale-110 transition-transform duration-500"
+                                        onError={(e) => { (e.target as HTMLImageElement).parentElement!.style.display = 'none'; }}
+                                      />
+                                    </div>
+                                  ) : (
+                                    <div className="w-28 h-28 bg-slate-50 rounded-[2rem] flex items-center justify-center border border-gray-100/50 relative">
+                                      <Building className="w-16 h-16 text-slate-300" />
+                                    </div>
+                                  )}
+                                  
+
+                                </div>
+                                
+                                <div className="flex-1 min-w-0">
+                                  {/* Title */}
+                                  <h4 className="text-lg font-bold text-slate-900 mb-0.5 leading-tight group-hover:text-[#05294E] transition-colors pr-0 sm:pr-20">
+                                    {scholarship?.title}
+                                  </h4>
+                                  
+                                  {/* University Name */}
+                                  <p className="text-sm sm:text-base font-medium text-slate-500 truncate">
+                                    {scholarship?.universities?.name || t('studentOnboarding.documentsUpload.cards.university')}
+                                  </p>
+                                </div>
+                              </div>
+
+                              {/* Field of Study Badge */}
+                              {scholarship?.field_of_study && (
+                                <div className="flex items-center mb-3">
+                                  <span className="px-2 py-0.5 rounded-md text-xs font-semibold text-slate-600 bg-slate-100 border border-slate-200">
+                                    {scholarship.field_of_study}
+                                  </span>
                                 </div>
                               )}
-                              
-                              <div className="flex-1 min-w-0">
-                                {/* Title */}
-                                <h4 className="text-lg font-bold text-slate-900 mb-0.5 leading-tight group-hover:text-[#05294E] transition-colors pr-0 sm:pr-20">
-                                  {scholarship?.title}
-                                </h4>
-                                
-                                {/* University Name */}
-                                <p className="text-sm sm:text-base font-medium text-slate-500 truncate">
-                                  {scholarship?.universities?.name || t('studentOnboarding.documentsUpload.cards.university')}
-                                </p>
-                              </div>
-                            </div>
 
-                            {/* Field of Study Badge */}
-                            {scholarship?.field_of_study && (
-                              <div className="flex items-center mb-3">
-                                <span className="px-2 py-0.5 rounded-md text-xs font-semibold text-slate-600 bg-slate-100 border border-slate-200">
-                                  {scholarship.field_of_study}
-                                </span>
-                              </div>
-                            )}
+                               {/* Financial Info */}
+                               <div className="mb-3 p-3 bg-slate-50 rounded-xl border border-slate-200">
+                                 {scholarship?.original_annual_value && (
+                                   <div className="flex items-center justify-between mb-1.5 pb-1.5 border-b border-slate-200">
+                                     <span className="text-xs text-slate-500 font-medium">{t('studentOnboarding.documentsUpload.cards.originalValue')}</span>
+                                     <span className="text-xs font-semibold text-slate-500 line-through">
+                                       ${Number(scholarship.original_annual_value).toLocaleString('en-US')}
+                                     </span>
+                                   </div>
+                                 )}
+                                 <div className="flex items-center justify-between">
+                                   <span className="text-xs text-slate-500 font-medium">{t('studentOnboarding.documentsUpload.cards.withScholarship')}</span>
+                                   <div className="flex items-center">
+                                     <span className="font-bold text-green-700 text-base sm:text-lg">
+                                       ${scholarship?.annual_value_with_scholarship 
+                                         ? Number(scholarship.annual_value_with_scholarship).toLocaleString('en-US') 
+                                         : scholarship?.amount 
+                                           ? Number(scholarship.amount).toLocaleString('en-US') 
+                                           : 'N/A'}
+                                     </span>
+                                     <span className="text-[10px] text-green-600 font-semibold ml-1">{t('studentOnboarding.documentsUpload.cards.perYear')}</span>
+                                   </div>
+                                 </div>
+                               </div>
 
-                             {/* Financial Info */}
-                             <div className="mb-3 p-3 bg-slate-50 rounded-xl border border-slate-200">
-                               {scholarship?.original_annual_value && (
-                                 <div className="flex items-center justify-between mb-1.5 pb-1.5 border-b border-slate-200">
-                                   <span className="text-xs text-slate-500 font-medium">{t('studentOnboarding.documentsUpload.cards.originalValue')}</span>
-                                   <span className="text-xs font-semibold text-slate-500 line-through">
-                                     ${Number(scholarship.original_annual_value).toLocaleString('en-US')}
-                                   </span>
+                               {/* Rejection Notes */}
+                               {app.status === 'rejected' && app.notes && (
+                                 <div className="mb-3 p-3 bg-red-50 border border-red-100 rounded-xl">
+                                   <p className="text-xs text-red-600 font-bold uppercase tracking-tight leading-relaxed">
+                                     <span className="text-red-400 block mb-0.5">{t('studentOnboarding.documentsUpload.cards.reason')}</span>
+                                     {app.notes}
+                                   </p>
                                  </div>
                                )}
-                               <div className="flex items-center justify-between">
-                                 <span className="text-xs text-slate-500 font-medium">{t('studentOnboarding.documentsUpload.cards.withScholarship')}</span>
-                                 <div className="flex items-center">
-                                   <span className="font-bold text-green-700 text-base sm:text-lg">
-                                     ${scholarship?.annual_value_with_scholarship 
-                                       ? Number(scholarship.annual_value_with_scholarship).toLocaleString('en-US') 
-                                       : scholarship?.amount 
-                                         ? Number(scholarship.amount).toLocaleString('en-US') 
-                                         : 'N/A'}
-                                   </span>
-                                   <span className="text-[10px] text-green-600 font-semibold ml-1">{t('studentOnboarding.documentsUpload.cards.perYear')}</span>
-                                 </div>
-                               </div>
-                             </div>
 
-                             {/* Rejection Notes */}
-                             {app.status === 'rejected' && app.notes && (
-                               <div className="mb-3 p-3 bg-red-50 border border-red-100 rounded-xl">
-                                 <p className="text-xs text-red-600 font-bold uppercase tracking-tight leading-relaxed">
-                                   <span className="text-red-400 block mb-0.5">{t('studentOnboarding.documentsUpload.cards.reason')}</span>
-                                   {app.notes}
-                                 </p>
-                               </div>
-                             )}
-
-                            {/* Documents Checklist for Non-Approved Applications */}
-                            {!isAppApproved && (
-                              <div className="mb-4">
-                                <button
-                                  onClick={(e) => { 
-                                    e.stopPropagation(); 
-                                    if (app.id) toggleChecklist(app.id); 
-                                  }}
-                                  className={`w-full flex items-center justify-between p-3 rounded-xl transition-all border group/btn ${
-                                    showAmberAlert 
-                                      ? 'bg-amber-50 border-amber-200 hover:bg-amber-100 shadow-sm shadow-amber-100' 
-                                      : 'bg-slate-50 border-slate-200 hover:bg-slate-100'
-                                  }`}
-                                >
-                                   <div className="flex items-center gap-2">
-                                     <div className="relative">
-                                       <FileText className={`w-4 h-4 ${showAmberAlert ? 'text-amber-600' : 'text-blue-600'}`} />
+                              {/* Documents Checklist for Non-Approved Applications */}
+                              {!isAppApproved && (
+                                <div className="mb-4">
+                                  <button
+                                    onClick={(e) => { 
+                                      e.stopPropagation(); 
+                                      if (app.id) toggleChecklist(app.id); 
+                                    }}
+                                    className={`w-full flex items-center justify-between p-3 rounded-xl transition-all border group/btn ${
+                                      showAmberAlert 
+                                        ? 'bg-amber-50 border-amber-200 hover:bg-amber-100 shadow-sm shadow-amber-100' 
+                                        : 'bg-slate-50 border-slate-200 hover:bg-slate-100'
+                                    }`}
+                                  >
+                                     <div className="flex items-center gap-2">
+                                       <div className="relative">
+                                         <FileText className={`w-4 h-4 ${showAmberAlert ? 'text-amber-600' : 'text-blue-600'}`} />
+                                         {showAmberAlert && (
+                                           <span className="absolute -top-1 -right-1 w-2 h-2 bg-amber-500 rounded-full border border-white animate-pulse" />
+                                         )}
+                                       </div>
+                                       <span className={`text-sm font-bold uppercase tracking-tight ${showAmberAlert ? 'text-amber-900' : 'text-slate-700'}`}>
+                                         {t('studentOnboarding.documentsUpload.cards.verifyDocuments')}
+                                       </span>
                                        {showAmberAlert && (
-                                         <span className="absolute -top-1 -right-1 w-2 h-2 bg-amber-500 rounded-full border border-white animate-pulse" />
+                                         <span className="flex h-2 w-2 rounded-full bg-amber-500 ml-1 shadow-sm shadow-amber-200" />
                                        )}
                                      </div>
-                                     <span className={`text-sm font-bold uppercase tracking-tight ${showAmberAlert ? 'text-amber-900' : 'text-slate-700'}`}>
-                                       {t('studentOnboarding.documentsUpload.cards.verifyDocuments')}
-                                     </span>
-                                     {showAmberAlert && (
-                                       <span className="flex h-2 w-2 rounded-full bg-amber-500 ml-1 shadow-sm shadow-amber-200" />
-                                     )}
-                                   </div>
-                                  <ChevronDown className={`w-4 h-4 transition-transform ${showAmberAlert ? 'text-amber-400' : 'text-slate-400'} ${app.id && openChecklists[app.id] ? 'rotate-180' : ''}`} />
-                                </button>
+                                    <ChevronDown className={`w-4 h-4 transition-transform ${showAmberAlert ? 'text-amber-400' : 'text-slate-400'} ${app.id && openChecklists[app.id] ? 'rotate-180' : ''}`} />
+                                  </button>
 
-                                {app.id && openChecklists[app.id] && (
-                                  <div className="mt-3 space-y-3 animate-in fade-in slide-in-from-top-2 duration-300">
-                                    {[
-                                      { type: 'passport', label: DOCUMENT_LABELS.passport },
-                                      { type: 'diploma', label: DOCUMENT_LABELS.diploma },
-                                      { type: 'funds_proof', label: DOCUMENT_LABELS.funds_proof }
-                                    ].map(docInfo => {
-                                      const docData = appDocs.find(d => d.type === docInfo.type);                                          const status = (docData?.status || 'pending').toLowerCase();
-                                          const isRejectedStatus = status === 'changes_requested' || status === 'rejected';
-                                          const isApprovedStatus = status === 'approved';
-                                          const isUnderReviewStatus = status === 'under_review';
-                                          const key = docKey(app.id, docInfo.type);
-                                          const selectedFile = selectedFiles[key];
-                                          const isUploading = uploadingFiles[key];
+                                  {app.id && openChecklists[app.id] && (
+                                    <div className="mt-3 space-y-3 animate-in fade-in slide-in-from-top-2 duration-300">
+                                      {[
+                                        { type: 'passport', label: DOCUMENT_LABELS.passport },
+                                        { type: 'diploma', label: DOCUMENT_LABELS.diploma },
+                                        { type: 'funds_proof', label: DOCUMENT_LABELS.funds_proof }
+                                      ].map(docInfo => {
+                                        const docData = appDocs.find(d => d.type === docInfo.type);
+                                        const status = (docData?.status || 'pending').toLowerCase();
+                                        const isRejectedStatus = status === 'changes_requested' || status === 'rejected';
+                                        const isApprovedStatus = status === 'approved';
+                                        const isUnderReviewStatus = status === 'under_review';
+                                        const key = docKey(app.id, docInfo.type);
+                                        const selectedFile = selectedFiles[key];
+                                        const isUploading = uploadingFiles[key];
 
-                                          return (
-                                            <div key={docInfo.type} className={`p-3 rounded-xl border-2 transition-all ${
-                                              isRejectedStatus ? 'border-red-100 bg-red-50/30' : 
-                                              isUnderReviewStatus ? 'border-blue-100 bg-blue-50/30' :
-                                              isApprovedStatus ? 'border-emerald-100 bg-emerald-50/30' :
-                                              'border-amber-100 bg-amber-50/30'
-                                            }`}>
-                                              <div className="flex items-start justify-between gap-3">
-                                                <div className="flex-1 min-w-0">
-                                                  <div className="flex items-center gap-2 mb-1">
-                                                    <div className={`w-5 h-5 rounded-full flex-shrink-0 flex items-center justify-center border ${
-                                                      isApprovedStatus ? 'bg-emerald-100 border-emerald-400 text-emerald-600' : 
-                                                      isRejectedStatus ? 'bg-red-100 border-red-400 text-red-600' : 
-                                                      isUnderReviewStatus ? 'bg-blue-100 border-blue-400 text-blue-600' :
-                                                      'bg-amber-100 border-amber-400 text-amber-600'
-                                                    }`}>
-                                                      {isApprovedStatus ? <CheckCircle className="w-3 h-3" /> : isRejectedStatus ? <XCircle className="w-3 h-3" /> : <Clock className="w-3 h-3" />}
-                                                    </div>
-                                                    <h5 className="text-xs font-bold text-slate-900 truncate">{docInfo.label}</h5>
+                                        return (
+                                          <div key={docInfo.type} className={`p-3 rounded-xl border-2 transition-all ${
+                                            isRejectedStatus ? 'border-red-100 bg-red-50/30' : 
+                                            isUnderReviewStatus ? 'border-blue-100 bg-blue-50/30' :
+                                            isApprovedStatus ? 'border-emerald-100 bg-emerald-50/30' :
+                                            'border-amber-100 bg-amber-50/30'
+                                          }`}>
+                                            <div className="flex items-start justify-between gap-3">
+                                              <div className="flex-1 min-w-0">
+                                                <div className="flex items-center gap-2 mb-1">
+                                                  <div className={`w-5 h-5 rounded-full flex-shrink-0 flex items-center justify-center border ${
+                                                    isApprovedStatus ? 'bg-emerald-100 border-emerald-400 text-emerald-600' : 
+                                                    isRejectedStatus ? 'bg-red-100 border-red-400 text-red-600' : 
+                                                    isUnderReviewStatus ? 'bg-blue-100 border-blue-400 text-blue-600' :
+                                                    'bg-amber-100 border-amber-400 text-amber-600'
+                                                  }`}>
+                                                    {isApprovedStatus ? <CheckCircle className="w-3 h-3" /> : isRejectedStatus ? <XCircle className="w-3 h-3" /> : <Clock className="w-3 h-3" />}
                                                   </div>
-                                                  <div className="flex flex-wrap items-center gap-2">
-                                                    <span className={`inline-block px-2 py-0.5 rounded-full text-[9px] font-black uppercase tracking-widest ${
-                                                      isApprovedStatus ? 'bg-emerald-100 text-emerald-700' : 
-                                                      isRejectedStatus ? 'bg-red-100 text-red-700' : 
-                                                      isUnderReviewStatus ? 'bg-blue-100 text-blue-700' :
-                                                      'bg-amber-100 text-amber-700'
-                                                    }`}>
-                                                      {isApprovedStatus ? t('studentOnboarding.documentsUpload.cards.status.isApproved') : isRejectedStatus ? t('studentOnboarding.documentsUpload.cards.status.isRejected') : isUnderReviewStatus ? t('studentOnboarding.documentsUpload.cards.status.isReview') : t('studentOnboarding.documentsUpload.cards.status.pending')}
+                                                  <h5 className="text-xs font-bold text-slate-900 truncate">{docInfo.label}</h5>
+                                                </div>
+                                                <div className="flex flex-wrap items-center gap-2">
+                                                  <span className={`inline-block px-2 py-0.5 rounded-full text-[9px] font-black uppercase tracking-widest ${
+                                                    isApprovedStatus ? 'bg-emerald-100 text-emerald-700' : 
+                                                    isRejectedStatus ? 'bg-red-100 text-red-700' : 
+                                                    isUnderReviewStatus ? 'bg-blue-100 text-blue-700' :
+                                                    'bg-amber-100 text-amber-700'
+                                                  }`}>
+                                                    {isApprovedStatus ? t('studentOnboarding.documentsUpload.cards.status.isApproved') : isRejectedStatus ? t('studentOnboarding.documentsUpload.cards.status.isRejected') : isUnderReviewStatus ? t('studentOnboarding.documentsUpload.cards.status.isReview') : t('studentOnboarding.documentsUpload.cards.status.pending')}
+                                                  </span>
+                                                  {docData?.uploaded_at && (
+                                                    <span className="text-[10px] text-slate-500 font-medium ml-2">
+                                                      {t('studentOnboarding.documentsUpload.cards.sentOn').replace('{{date}}', new Date(docData.uploaded_at).toLocaleDateString('pt-BR'))}
                                                     </span>
-                                                    {docData?.uploaded_at && (
-                                                      <span className="text-[10px] text-slate-500 font-medium ml-2">
-                                                        {t('studentOnboarding.documentsUpload.cards.sentOn').replace('{{date}}', new Date(docData.uploaded_at).toLocaleDateString('pt-BR'))}
-                                                      </span>
-                                                    )}
-                                                    {isRejectedStatus && (
-                                                      <span className="text-[9px] font-bold text-red-600 uppercase tracking-tight italic opacity-70">
-                                                        {t('studentOnboarding.documentsUpload.cards.rejectionNote')}
-                                                      </span>
-                                                    )}
-                                                  </div>
-                                                  
-                                                  {isRejectedStatus && (docData?.rejection_reason || docData?.review_notes) && (
-                                                    <div className="mt-2">
-                                                      <TruncatedText
-                                                        text={docData.rejection_reason || docData.review_notes || ''}
-                                                        maxLength={100}
-                                                        className="text-[10px] text-red-600 font-medium leading-relaxed italic"
-                                                        showTooltip={true}
-                                                      />
-                                                    </div>
+                                                  )}
+                                                  {isRejectedStatus && (
+                                                    <span className="text-[9px] font-bold text-red-600 uppercase tracking-tight italic opacity-70">
+                                                      {t('studentOnboarding.documentsUpload.cards.rejectionNote')}
+                                                    </span>
                                                   )}
                                                 </div>
+                                                
+                                                {isRejectedStatus && (docData?.rejection_reason || docData?.review_notes) && (
+                                                  <div className="mt-2">
+                                                    <TruncatedText
+                                                      text={docData.rejection_reason || docData.review_notes || ''}
+                                                      maxLength={100}
+                                                      className="text-[10px] text-red-600 font-medium leading-relaxed italic"
+                                                      showTooltip={true}
+                                                    />
+                                                  </div>
+                                                )}
                                               </div>
+                                            </div>
 
-                                              {isRejectedStatus && (
-                                                <div className="mt-3 space-y-2" onClick={(e) => e.stopPropagation()}>
-                                                  {!selectedFile ? (
-                                                    <label className="flex w-1/2 cursor-pointer bg-white border-2 border-dashed border-blue-200 hover:border-blue-400 hover:bg-blue-50 p-1.5 rounded-lg text-center transition-all group/upload items-center justify-center">
-                                                      <span className="text-[10px] font-black text-blue-600 uppercase tracking-widest flex items-center justify-center gap-2">
-                                                        <Upload className="w-3 h-3 group-hover/upload:scale-110 transition-transform" />
-                                                        Selecionar Novo Arquivo
-                                                      </span>
-                                                      <input
-                                                        type="file"
-                                                        className="hidden"
-                                                        accept="application/pdf,image/*"
-                                                        onChange={(e) => handleSelectAppDocFile(app.id, docInfo.type, e.target.files?.[0] || null)}
-                                                      />
-                                                    </label>
-                                                  ) : (
-                                                    <div className="flex items-center gap-2 w-1/2">
-                                                      <div className="flex-1 bg-blue-50 border border-blue-200 rounded-lg p-1.5 flex items-center justify-between min-w-0">
-                                                        <span className="text-[10px] font-bold text-blue-700 truncate mr-2">{selectedFile.name}</span>
-                                                        <button 
-                                                          onClick={() => handleSelectAppDocFile(app.id, docInfo.type, null)}
-                                                          className="text-blue-400 hover:text-red-500 transition-colors"
-                                                        >
-                                                          <X className="w-3 h-3" />
-                                                        </button>
-                                                      </div>
-                                                      <button
-                                                        onClick={() => handleUploadAppDoc(app.id, docInfo.type)}
-                                                        disabled={isUploading}
-                                                        className="bg-blue-600 text-white py-2 px-4 rounded-lg hover:bg-blue-700 disabled:opacity-50 transition-all shadow-md shadow-blue-500/20 flex items-center justify-center min-w-[48px] min-h-[32px]"
+                                            {isRejectedStatus && (
+                                              <div className="mt-3 space-y-2" onClick={(e) => e.stopPropagation()}>
+                                                {!selectedFile ? (
+                                                  <label className="flex w-1/2 cursor-pointer bg-white border-2 border-dashed border-blue-200 hover:border-blue-400 hover:bg-blue-50 p-1.5 rounded-lg text-center transition-all group/upload items-center justify-center">
+                                                    <span className="text-[10px] font-black text-blue-600 uppercase tracking-widest flex items-center justify-center gap-2">
+                                                      <Upload className="w-3 h-3 group-hover/upload:scale-110 transition-transform" />
+                                                      Selecionar Novo Arquivo
+                                                    </span>
+                                                    <input
+                                                      type="file"
+                                                      className="hidden"
+                                                      accept="application/pdf,image/*"
+                                                      onChange={(e) => handleSelectAppDocFile(app.id, docInfo.type, e.target.files?.[0] || null)}
+                                                    />
+                                                  </label>
+                                                ) : (
+                                                  <div className="flex items-center gap-2 w-1/2">
+                                                    <div className="flex-1 bg-blue-50 border border-blue-200 rounded-lg p-1.5 flex items-center justify-between min-w-0">
+                                                      <span className="text-[10px] font-bold text-blue-700 truncate mr-2">{selectedFile.name}</span>
+                                                      <button 
+                                                        onClick={() => handleSelectAppDocFile(app.id, docInfo.type, null)}
+                                                        className="text-blue-400 hover:text-red-500 transition-colors"
                                                       >
-                                                        {isUploading ? <Loader2 className="w-3 h-3 animate-spin" /> : <Send className="w-3 h-3" />}
+                                                        <X className="w-3 h-3" />
                                                       </button>
                                                     </div>
-                                                  )}
-                                                </div>
-                                              )}
-                                            </div>
-                                          );
-                                    })}
-                                  </div>
-                                )}
-                              </div>
-                            )}
+                                                    <button
+                                                      onClick={() => handleUploadAppDoc(app.id, docInfo.type)}
+                                                      disabled={isUploading}
+                                                      className="bg-blue-600 text-white py-2 px-4 rounded-lg hover:bg-blue-700 disabled:opacity-50 transition-all shadow-md shadow-blue-500/20 flex items-center justify-center min-w-[48px] min-h-[32px]"
+                                                    >
+                                                      {isUploading ? <Loader2 className="w-3 h-3 animate-spin" /> : <Send className="w-3 h-3" />}
+                                                    </button>
+                                                  </div>
+                                                )}
+                                              </div>
+                                            )}
+                                          </div>
+                                        );
+                                      })}
+                                    </div>
+                                  )}
+                                </div>
+                              )}
 
-                            {/* Date */}
-                            <div className="mt-auto pt-3 border-t border-slate-100">
-                              <div className="flex items-center justify-between">
-                                 <div className="flex items-center text-slate-400 text-xs font-bold uppercase tracking-widest">
-                                  {new Date(app.applied_at).toLocaleDateString('pt-BR', { month: 'short', day: 'numeric', year: 'numeric' })}
+                              {/* Date */}
+                              <div className="mt-auto pt-3 border-t border-slate-100">
+                                <div className="flex items-center justify-between">
+                                   <div className="flex items-center text-slate-400 text-xs font-bold uppercase tracking-widest">
+                                    {new Date(app.applied_at).toLocaleDateString('pt-BR', { month: 'short', day: 'numeric', year: 'numeric' })}
+                                  </div>
                                 </div>
                               </div>
-                            </div>
 
-                            {/* Select Button */}
-                            {isAppApproved && (
-                              <div className="mt-3">
-                                 <div className={`w-full text-center py-2.5 rounded-xl text-sm font-black uppercase tracking-widest transition-all duration-300 ${
-                                   isSelected 
-                                     ? 'bg-blue-600 text-white shadow-lg shadow-blue-500/20' 
-                                     : 'bg-slate-100 text-slate-400 group-hover:bg-blue-50 group-hover:text-blue-600'
-                                 }`}>
-                                   {isSelected ? t('studentOnboarding.documentsUpload.cards.selected') : t('studentOnboarding.documentsUpload.cards.clickToSelect')}
-                                 </div>
-                              </div>
-                            )}
+                              {/* Select Button */}
+                              {isAppApproved && (
+                                <div className="mt-3">
+                                   <div className={`w-full text-center py-2.5 rounded-xl text-sm font-black uppercase tracking-widest transition-all duration-300 ${
+                                     isSelected 
+                                       ? 'bg-blue-600 text-white shadow-lg shadow-blue-500/20' 
+                                       : 'bg-slate-100 text-slate-400 group-hover:bg-blue-50 group-hover:text-blue-600'
+                                   }`}>
+                                     {isSelected ? t('studentOnboarding.documentsUpload.cards.selected') : t('studentOnboarding.documentsUpload.cards.clickToSelect')}
+                                   </div>
+                                </div>
+                              )}
+                            </div>
                           </div>
-                        </div>
-                      );
-                    })}
-                  </div>
+                        );
+                      })}
+                    </div>
                 )}
 
                 {approvedApps.length > 0 && (
@@ -979,6 +998,17 @@ export const DocumentsUploadStep: React.FC<StepProps> = ({ onNext }) => {
               </div>
             </div>
           </div>
+        )}
+
+        {/* Scholarship Detail Modal */}
+        {selectedScholarshipForModal && (
+          <ScholarshipDetailModal
+            isOpen={isDetailModalOpen}
+            onClose={() => setIsDetailModalOpen(false)}
+            scholarship={selectedScholarshipForModal}
+            userProfile={userProfile}
+            userRole={userProfile?.role}
+          />
         )}
       </>
     );

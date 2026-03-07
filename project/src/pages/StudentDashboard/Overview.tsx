@@ -10,7 +10,6 @@ import {
   BookOpen,
   ArrowUpRight,
   Calendar,
-  Building,
   Route,
   XCircle
 } from 'lucide-react';
@@ -384,7 +383,7 @@ const Overview: React.FC<OverviewProps> = ({
           }}
           role="button"
           tabIndex={0}
-          className="bg-gradient-to-br from-blue-50 to-indigo-50 p-6 rounded-2xl shadow-md border-2 border-blue-300 hover:border-blue-400 hover:shadow-lg transition-all duration-300 flex flex-col justify-between cursor-pointer group relative overflow-hidden"
+          className="hidden bg-gradient-to-br from-blue-50 to-indigo-50 p-6 rounded-2xl shadow-md border-2 border-blue-300 hover:border-blue-400 hover:shadow-lg transition-all duration-300 flex flex-col justify-between cursor-pointer group relative overflow-hidden"
         >
           <div className="relative z-10 pointer-events-none">
             <div className="flex items-center justify-between mb-4">
@@ -402,7 +401,7 @@ const Overview: React.FC<OverviewProps> = ({
           </div>
         </div>
 
-        <div className="bg-white p-6 rounded-2xl shadow-sm border border-slate-200 hover:shadow-md transition-shadow">
+        <div className="hidden bg-white p-6 rounded-2xl shadow-sm border border-slate-200 hover:shadow-md transition-shadow">
           <div className="flex items-center justify-between">
             <div>
               <p className="text-sm font-medium text-slate-500 mb-1">{t('studentDashboard.stats.myApplications')}</p>
@@ -418,7 +417,7 @@ const Overview: React.FC<OverviewProps> = ({
           </div>
         </div>
 
-        <div className="bg-white p-6 rounded-2xl shadow-sm border border-slate-200 hover:shadow-md transition-shadow">
+        <div className="hidden bg-white p-6 rounded-2xl shadow-sm border border-slate-200 hover:shadow-md transition-shadow">
           <div className="flex items-center justify-between">
             <div>
               <p className="text-sm font-medium text-slate-500 mb-1">{t('studentDashboard.stats.approved')}</p>
@@ -434,7 +433,7 @@ const Overview: React.FC<OverviewProps> = ({
           </div>
         </div>
 
-        <div className="bg-white p-6 rounded-2xl shadow-sm border border-slate-200 hover:shadow-md transition-shadow">
+        <div className="hidden bg-white p-6 rounded-2xl shadow-sm border border-slate-200 hover:shadow-md transition-shadow">
           <div className="flex items-center justify-between">
             <div>
               <p className="text-sm font-medium text-slate-500 mb-1">{t('studentDashboard.stats.pending')}</p>
@@ -546,25 +545,26 @@ const Overview: React.FC<OverviewProps> = ({
                       <div className="flex flex-col sm:flex-row sm:items-start gap-3 sm:gap-5">
                         {/* University Logo */}
                         <div className="flex-shrink-0 self-center sm:self-start">
-                          {scholarship?.universities?.logo_url ? (
+                          {scholarship?.image_url || scholarship?.universities?.logo_url ? (
                             <div className="relative">
                               <img 
-                                src={scholarship.universities.logo_url} 
-                                alt={scholarship.universities.name} 
-                                className="w-36 h-20 sm:w-20 sm:h-20 rounded-2xl object-cover border-2 border-slate-200 bg-white shadow-lg hover:shadow-xl transition-all duration-300" 
+                                src={scholarship.image_url || scholarship.universities.logo_url} 
+                                alt={scholarship?.universities?.name || 'University'} 
+                                className="w-16 h-16 sm:w-20 sm:h-20 rounded-2xl object-contain border-2 border-slate-200 bg-white shadow-lg hover:shadow-xl transition-all duration-300" 
                                 onError={(e) => {
                                   // Fallback para ícone se a imagem falhar
                                   e.currentTarget.style.display = 'none';
                                   e.currentTarget.nextElementSibling?.classList.remove('hidden');
+                                  e.currentTarget.nextElementSibling?.classList.add('flex');
                                 }}
                               />
                               <div className="hidden w-16 h-16 sm:w-20 sm:h-20 bg-gradient-to-br from-blue-500 to-indigo-600 rounded-2xl items-center justify-center border-2 border-slate-200 shadow-lg">
-                                <Building className="w-8 h-8 sm:w-10 sm:h-10 text-white" />
+                                <Award className="w-8 h-8 sm:w-10 sm:h-10 text-white" />
                               </div>
                             </div>
                           ) : (
                             <div className="w-16 h-16 sm:w-20 sm:h-20 bg-gradient-to-br from-blue-500 to-indigo-600 rounded-2xl flex items-center justify-center border-2 border-slate-200 shadow-lg">
-                              <Building className="w-8 h-8 sm:w-10 sm:h-10 text-white" />
+                              <Award className="w-8 h-8 sm:w-10 sm:h-10 text-white" />
                             </div>
                           )}
                         </div>

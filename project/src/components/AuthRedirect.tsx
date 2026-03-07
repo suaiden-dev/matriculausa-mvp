@@ -241,8 +241,12 @@ const AuthRedirect: React.FC<{ children: React.ReactNode }> = ({ children }) => 
             return;
           }
           
-          // Redirecionar para home após registro/login (sem redirecionamento automático para onboarding)
-          navigate('/', { replace: true });
+          // Redirecionar para dashboard se for registro novo, senão para home
+          if (currentPath === '/register' || currentPath === '/auth') {
+            navigate('/student/dashboard', { replace: true });
+          } else {
+            navigate('/', { replace: true });
+          }
           return;
         }
         

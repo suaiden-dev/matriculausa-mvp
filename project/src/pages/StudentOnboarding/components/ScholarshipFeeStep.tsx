@@ -8,9 +8,11 @@ import {
   RefreshCw,
   Building,
   Shield,
-  Loader2
+  Loader2,
+  Eye
 } from 'lucide-react';
 import { ZelleCheckout } from '../../../components/ZelleCheckout';
+import ScholarshipDetailModal from '../../../components/ScholarshipDetailModal';
 
 import { useFeeConfig } from '../../../hooks/useFeeConfig';
 import { calculateCardAmountWithFees, getExchangeRate, calculatePIXTotalWithIOF } from '../../../utils/stripeFeeCalculator';
@@ -87,8 +89,7 @@ import { usePaymentBlocked } from '../../../hooks/usePaymentBlocked';
 
 export const ScholarshipFeeStep: React.FC<StepProps> = ({ onNext, onBack }) => {
   const { userProfile } = useAuth();
-  /* const { t } = useTranslation(); */
-  useTranslation();
+  const { t } = useTranslation();
   const { getFeeAmount, formatFeeAmount } = useFeeConfig(userProfile?.user_id);
   const { isBlocked, pendingPayment, refetch: refetchPaymentStatus } = usePaymentBlocked();
 
@@ -106,6 +107,14 @@ export const ScholarshipFeeStep: React.FC<StepProps> = ({ onNext, onBack }) => {
   const [savingCpf, setSavingCpf] = useState(false);
   const [cpfError, setCpfError] = useState<string | null>(null);
   const [pendingParcelowApp, setPendingParcelowApp] = useState<ApplicationWithScholarship | null>(null);
+
+  const [isDetailModalOpen, setIsDetailModalOpen] = useState(false);
+  const [selectedScholarshipForModal, setSelectedScholarshipForModal] = useState<any | null>(null);
+
+  const handleOpenDetailModal = (scholarship: any) => {
+    setSelectedScholarshipForModal(scholarship);
+    setIsDetailModalOpen(true);
+  };
 
   const fetchApplications = useCallback(async () => {
     if (!userProfile?.id) return;
@@ -310,7 +319,7 @@ export const ScholarshipFeeStep: React.FC<StepProps> = ({ onNext, onBack }) => {
       <div className="space-y-10 pb-12 max-w-4xl mx-auto px-4">
         <div className="text-center md:text-left space-y-4">
           <h2 className="text-3xl md:text-5xl font-black text-slate-900 uppercase tracking-tighter leading-none">Taxa da Bolsa</h2>
-          <p className="text-lg md:text-xl text-slate-600 font-medium max-w-2xl mt-2">Pagamento da bolsa confirmado! Você está pronto para avançar.</p>
+        
         </div>
 
         <div className="bg-white border border-emerald-500/30 ring-1 ring-emerald-500/20 rounded-[2.5rem] p-8 md:p-10 shadow-2xl relative overflow-hidden">
@@ -374,22 +383,37 @@ export const ScholarshipFeeStep: React.FC<StepProps> = ({ onNext, onBack }) => {
                     </div>
                   )}
 
+                  <div className="absolute top-6 right-6 z-20 flex items-center gap-2">
+                    <button
+                      type="button"
+                      onClick={(e) => {
+                        e.preventDefault();
+                        e.stopPropagation();
+                        handleOpenDetailModal(app.scholarships);
+                      }}
+                      className="bg-white/90 p-2.5 rounded-xl shadow-lg border border-slate-200 text-blue-600 hover:text-blue-700 hover:scale-110 transition-all backdrop-blur-md"
+                      title={t('scholarshipsPage.scholarshipCard.details')}
+                    >
+                      <Eye className="w-5 h-5" />
+                    </button>
+                  </div>
+
                   <div className="flex flex-col gap-8">
                     <div className="flex flex-col md:flex-row md:items-center justify-between gap-6">
                       <div className="flex items-center space-x-6">
                         {app.scholarships?.image_url || app.scholarships?.universities?.logo_url ? (
-                          <div className="w-28 h-28 bg-white rounded-[2rem] flex items-center justify-center border border-gray-100/50 overflow-hidden shadow-sm flex-shrink-0 group-hover:scale-105 transition-transform duration-500">
+                          <div className="w-28 h-28 bg-white rounded-[2rem] flex items-center justify-center border border-gray-100/50 overflow-hidden shadow-sm flex-shrink-0 relative group/image">
                             <img 
                               src={app.scholarships.image_url || app.scholarships.universities?.logo_url || ''} 
                               alt="" 
-                              className="w-full h-full object-contain p-2"
+                              className="w-full h-full object-contain p-2 group-hover:scale-110 transition-transform duration-500"
                               onError={(e) => { (e.target as HTMLImageElement).parentElement!.style.display = 'none'; }}
                             />
-                          </div>
+                            </div>
                         ) : (
-                          <div className="w-28 h-28 bg-slate-50 rounded-[2rem] flex items-center justify-center flex-shrink-0">
+                          <div className="w-28 h-28 bg-slate-50 rounded-[2rem] flex items-center justify-center flex-shrink-0 relative group/image">
                             <Building className="w-16 h-16 text-slate-300" />
-                          </div>
+                            </div>
                         )}
                         <div className="min-w-0 flex-1">
                           <div className="flex items-center gap-3 mb-1">
@@ -467,7 +491,7 @@ export const ScholarshipFeeStep: React.FC<StepProps> = ({ onNext, onBack }) => {
                                 </div>
                                 <div>
                                   <div className="font-black text-slate-900 text-base uppercase tracking-tight">Cartão de Crédito</div>
-                                  <div className="text-[10px] font-bold text-slate-400 mt-1 uppercase tracking-wide leading-tight">* Podem incluir taxas de processamento</div>
+                                  <div className="text-[10px] font-bold text-slate-400 mt-0.5 sm:mt-1 uppercase tracking-wide leading-tight">* Podem incluir taxas de processamento</div>
                                 </div>
                               </div>
                               <div className="text-right">
@@ -494,7 +518,7 @@ export const ScholarshipFeeStep: React.FC<StepProps> = ({ onNext, onBack }) => {
                                 </div>
                                 <div>
                                   <div className="font-black text-slate-900 text-base uppercase tracking-tight">PIX</div>
-                                  <div className="text-[10px] font-bold text-slate-400 mt-1 uppercase tracking-wide leading-tight">* Podem incluir taxas de processamento</div>
+                                  <div className="text-[10px] font-bold text-slate-400 mt-0.5 sm:mt-1 uppercase tracking-wide leading-tight">* Podem incluir taxas de processamento</div>
                                 </div>
                               </div>
                               <div className="text-right">
@@ -522,7 +546,7 @@ export const ScholarshipFeeStep: React.FC<StepProps> = ({ onNext, onBack }) => {
                                   </div>
                                   <div>
                                     <div className="font-black text-slate-900 text-base uppercase tracking-tight">Parcelow</div>
-                                    <div className="text-[10px] font-bold text-slate-400 mt-1 uppercase tracking-wide leading-tight">* Podem incluir taxas de operadora e processamento da plataforma</div>
+                                    <div className="text-[10px] font-bold text-slate-400 mt-0.5 sm:mt-1 uppercase tracking-wide leading-tight">* Podem incluir taxas de operadora e processamento da plataforma</div>
                                   </div>
                                 </div>
                                 <div className="text-right flex flex-col items-end">
@@ -596,7 +620,7 @@ export const ScholarshipFeeStep: React.FC<StepProps> = ({ onNext, onBack }) => {
                                   </div>
                                   <div>
                                     <div className="font-black text-slate-900 text-base uppercase tracking-tight">Zelle</div>
-                                    <div className="text-[10px] font-bold text-slate-500 mt-1 uppercase tracking-wide leading-tight flex items-center gap-1">
+                                    <div className="text-[10px] font-bold text-slate-500 mt-0.5 sm:mt-1 uppercase tracking-wide leading-tight flex items-center gap-1">
                                       <AlertCircle className="w-3 h-3" />
                                       Processamento pode levar até 48 horas
                                     </div>
@@ -673,6 +697,16 @@ export const ScholarshipFeeStep: React.FC<StepProps> = ({ onNext, onBack }) => {
         </div>
       </div>
 
+      {/* Scholarship Detail Modal */}
+      {selectedScholarshipForModal && (
+        <ScholarshipDetailModal
+          isOpen={isDetailModalOpen}
+          onClose={() => setIsDetailModalOpen(false)}
+          scholarship={selectedScholarshipForModal}
+          userProfile={userProfile}
+          userRole={userProfile?.role}
+        />
+      )}
     </div>
   );
 };

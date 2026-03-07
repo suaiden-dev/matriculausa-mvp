@@ -160,9 +160,18 @@ const StudentDashboard: React.FC = () => {
         setApplications([]);
         setDashboardError('Error fetching applications.');
       } else {
-        setApplications(applicationsData as Application[]);
+        // Normalizar dados da universidade (garantir que seja objeto, não array)
+        const formattedApplications = (applicationsData || []).map((app: any) => {
+          const scholarship = app.scholarship || app.scholarships;
+          if (scholarship && Array.isArray(scholarship.universities)) {
+            scholarship.universities = scholarship.universities[0];
+          }
+          return app;
+        }) as Application[];
+
+        setApplications(formattedApplications);
         // Recentes: últimas 5
-        const sorted = [...(applicationsData as Application[])].sort((a, b) => new Date(b.applied_at).getTime() - new Date(a.applied_at).getTime());
+        const sorted = [...formattedApplications].sort((a, b) => new Date(b.applied_at).getTime() - new Date(a.applied_at).getTime());
         setRecentApplications(sorted.slice(0, 5));
       }
       // Buscar perfil real do Supabase

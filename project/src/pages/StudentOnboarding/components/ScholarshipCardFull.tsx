@@ -4,7 +4,8 @@ import {
   Clock, 
   AlertTriangle,
   Star,
-  GraduationCap
+  GraduationCap,
+  Eye
 } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 import { 
@@ -83,7 +84,7 @@ const ScholarshipCardFullComponent: React.FC<ScholarshipCardFullProps> = ({
             src={scholarship.image_url}
             alt={scholarship.title}
             onError={() => setBrokenImage(true)}
-            className="w-full h-full object-contain p-4 group-hover:scale-110 transition-transform duration-700"
+            className="w-full h-full object-contain p-4 group-hover:scale-[1.02] transition-transform duration-700"
           />
         ) : (
           <div className="flex items-center justify-center w-full h-full text-slate-400">
@@ -105,13 +106,28 @@ const ScholarshipCardFullComponent: React.FC<ScholarshipCardFullProps> = ({
             </div>
           )}
 
-          {/* Featured/Highlighted Badge */}
-          {scholarship.is_highlighted && (
-            <div className="bg-gradient-to-r from-yellow-400 to-orange-500 text-white px-3 py-1.5 rounded-lg text-xs font-black flex items-center shadow-lg uppercase tracking-wider">
-              <Star className="h-3.5 w-3.5 mr-1.5 fill-current" />
-              {t('common.featured')}
+          <div className="flex flex-col items-end gap-2">
+            <div className="flex items-center gap-2">
+              <button
+                type="button"
+                onClick={(e) => {
+                  e.preventDefault();
+                  e.stopPropagation();
+                  onViewDetails?.();
+                }}
+                className="bg-white/90 p-2.5 rounded-xl shadow-lg border border-slate-100 text-blue-600 hover:text-blue-700 hover:scale-110 transition-all backdrop-blur-sm"
+                title={t('scholarshipsPage.scholarshipCard.details') || 'View Full Details'}
+              >
+                <Eye className="w-5 h-5" />
+              </button>
+              {scholarship.is_highlighted && (
+                <div className="bg-gradient-to-r from-yellow-400 to-orange-500 text-white px-3 py-1.5 rounded-xl text-xs font-black flex items-center shadow-lg uppercase tracking-wider h-9">
+                  <Star className="h-3.5 w-3.5 mr-1.5 fill-current" />
+                  {t('common.featured')}
+                </div>
+              )}
             </div>
-          )}
+          </div>
         </div>
       </div>
       
