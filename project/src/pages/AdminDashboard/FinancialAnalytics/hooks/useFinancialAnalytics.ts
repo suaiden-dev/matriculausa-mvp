@@ -145,9 +145,8 @@ export function useFinancialAnalytics() {
       });
       
       // Filtrar paymentRecords para remover pagamentos 'manual'
-      const filteredPaymentRecords = paymentRecords.filter((record: any) => 
-        record.payment_method && record.payment_method !== 'manual'
-      );
+      // Mostrar todas as transações (incluindo manuais) para bater com os totais do dashboard
+      const filteredPaymentRecords = paymentRecords;
       
       // Transformar paymentRecords em transactions (formato esperado pela tabela)
       const transactionsWithNames = filteredPaymentRecords.map((record: any) => {
@@ -255,6 +254,8 @@ export function useFinancialAnalytics() {
           standardAmount = 900;
         } else if (feeType === 'application') {
           standardAmount = 350 + (dependents * 100);
+        } else if (feeType === 'placement') {
+          standardAmount = (record.amount || 0) / 100;
         }
 
         // Se não encontrou valor padrão, usar o amount do record (já em centavos, converter para dólares)
@@ -311,6 +312,7 @@ export function useFinancialAnalytics() {
           override_application: individualPayment?.override_application || null,
           override_scholarship: individualPayment?.override_scholarship || null,
           override_i20: individualPayment?.override_i20 || null,
+          override_placement: individualPayment?.override_placement || record.override_placement || null,
           coupon_code: individualPayment?.coupon_code || null,
           coupon_name: individualPayment?.coupon_name || null,
           discount_amount: individualPayment?.discount_amount || null,

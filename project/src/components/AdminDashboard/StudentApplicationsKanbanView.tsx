@@ -4,9 +4,9 @@ import KanbanColumn from './KanbanColumn';
 import {
   APPLICATION_FLOW_STAGES,
   getCurrentStage,
+  getStepStatus,
   ApplicationFlowStageKey
 } from '../../utils/applicationFlowStages';
-// Imports removed
 import { StudentRecord } from './StudentApplicationsView';
 
 interface StudentApplicationsKanbanViewProps {
@@ -44,6 +44,7 @@ const StudentApplicationsKanbanView: React.FC<StudentApplicationsKanbanViewProps
     // Distribute students to their last completed stages
     displayStudents.forEach(student => {
       let lastCompletedStage: ApplicationFlowStageKey | null = null;
+      const { stage: currentStage } = getCurrentStage(student as any);
 
       for (const stageDef of APPLICATION_FLOW_STAGES) {
         // Pular transfer_form se não for transfer student
@@ -51,8 +52,11 @@ const StudentApplicationsKanbanView: React.FC<StudentApplicationsKanbanViewProps
           continue;
         }
 
-        // Usamos a lógica de status para ver se completou este degrau
-        const { stage: currentStage } = getCurrentStage(student as any);
+        // Pular se o aluno pulou este estágio (ex: no flow de placement_fee)
+        const stepStatus = getStepStatus(student as any, stageDef.key);
+        if (stepStatus === 'skipped') {
+          continue;
+        }
 
         // Se este é o estágio atual (pendente), então o anterior foi o último completado
         if (currentStage === stageDef.key) {
@@ -79,17 +83,7 @@ const StudentApplicationsKanbanView: React.FC<StudentApplicationsKanbanViewProps
   };
 
   // Filter out stages that should be hidden
-  const visibleStages = APPLICATION_FLOW_STAGES.filter(stage => {
-    // Hide enrollment column as requested
-    if (stage.key === 'enrollment') return false;
-
-    // Always show non-transfer stages
-    if (!stage.requiresTransfer) return true;
-
-    // For transfer stages, only show if there are transfer students in that stage
-    const studentsInStage = studentsByStage.get(stage.key) || [];
-    return studentsInStage.length > 0;
-  });
+  const visibleStages = APPLICATION_FLOW_STAGES.filter(stage => stage.key !== 'enrollment');
 
   return (
     <div className="h-full flex flex-col">
@@ -125,7 +119,7 @@ const StudentApplicationsKanbanView: React.FC<StudentApplicationsKanbanViewProps
       </div>
 
       {/* Empty State */}
-      {students.length === 0 && (
+      {displayStudents.length === 0 && (
         <div className="flex-1 flex items-center justify-center">
           <div className="text-center py-12">
             <div className="text-gray-400 mb-4">

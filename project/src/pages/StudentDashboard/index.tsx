@@ -18,7 +18,6 @@ import CollegeEnrollmentCheckout from './CollegeEnrollmentCheckout';
 import CartPage from './CartPage';
 import ScholarshipFeeSuccess from './ScholarshipFeeSuccess';
 import ScholarshipFeeError from './ScholarshipFeeError';
-import SelectionProcessFeeSuccess from './SelectionProcessFeeSuccess';
 import SelectionProcessFeeError from './SelectionProcessFeeError';
 import ApplicationFeeSuccess from './ApplicationFeeSuccess';
 import ApplicationFeeError from './ApplicationFeeError';
@@ -34,9 +33,6 @@ import { ZelleCheckoutPage } from '../../components/ZelleCheckoutPage';
 import I20ControlFeeSuccess from './I20ControlFeeSuccess';
 import I20ControlFeeError from './I20ControlFeeError';
 import IdentityVerification from './IdentityVerification';
-import ProcessoSeletivo from './ProcessoSeletivo';
-
-
 interface StudentProfile {
   id: string;
   name: string;
@@ -490,7 +486,6 @@ const StudentDashboard: React.FC = () => {
         <Route path="college-enrollment-checkout" element={<CollegeEnrollmentCheckout />} />
         <Route path="/scholarship-fee-success" element={<ScholarshipFeeSuccess />} />
         <Route path="/scholarship-fee-error" element={<ScholarshipFeeError />} />
-        <Route path="/selection-process-fee-success" element={<SelectionProcessFeeSuccess />} />
         <Route path="/selection-process-fee-error" element={<SelectionProcessFeeError />} />
         <Route path="/application-fee-success" element={<ApplicationFeeSuccess />} />
         <Route path="/application-fee-error" element={<ApplicationFeeError />} />
@@ -502,8 +497,6 @@ const StudentDashboard: React.FC = () => {
         <Route path="manual-review" element={<ManualReview />} />
         <Route path="zelle-payment" element={<ZelleCheckoutPage />} />
         <Route path="identity-verification" element={<IdentityVerification />} />
-        <Route path="selection-survey" element={<ProcessoSeletivo />} />
-
       </Routes>
 
       {/* Fase 5: Modal de Parabéns para Código de Referência */}

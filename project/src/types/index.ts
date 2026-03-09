@@ -66,6 +66,7 @@ export interface Scholarship {
   work_permissions?: string[];
   // Novos campos para taxas dinâmicas
   application_fee_amount?: number;
+  placement_fee_amount?: number;
   scholarship_fee_amount?: number;
   internal_fees?: any[];
   is_stripe_connect_enabled?: boolean;

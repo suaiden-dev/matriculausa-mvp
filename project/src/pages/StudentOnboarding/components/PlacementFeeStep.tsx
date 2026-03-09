@@ -8,6 +8,8 @@ import {
     RefreshCw,
     Building,
     Shield,
+    X,
+    Loader2
 } from 'lucide-react';
 import { ZelleCheckout } from '../../../components/ZelleCheckout';
 import { useFeeConfig } from '../../../hooks/useFeeConfig';
@@ -25,6 +27,7 @@ interface ApplicationWithScholarship {
         title: string;
         level: string;
         annual_value_with_scholarship: number;
+        placement_fee_amount?: number | null;
         image_url: string | null;
         universities: {
             id: string;
@@ -86,6 +89,10 @@ export const PlacementFeeStep: React.FC<StepProps> = ({ onNext, onBack }) => {
     const [exchangeRate, setExchangeRate] = useState<number>(0);
     const [isProcessingCheckout, setIsProcessingCheckout] = useState<string | null>(null);
     const [zelleActiveApp, setZelleActiveApp] = useState<ApplicationWithScholarship | null>(null);
+    const [showInlineCpf, setShowInlineCpf] = useState<string | null>(null);
+    const [inlineCpf, setInlineCpf] = useState('');
+    const [savingCpf, setSavingCpf] = useState(false);
+    const [cpfError, setCpfError] = useState<string | null>(null);
 
     // Se is_placement_fee_paid já está true no perfil, avançar automaticamente
     const isAlreadyPaid = !!(userProfile as any)?.is_placement_fee_paid;
@@ -150,7 +157,8 @@ export const PlacementFeeStep: React.FC<StepProps> = ({ onNext, onBack }) => {
             if (!token) throw new Error('User not authenticated');
 
             const annualValue = application.scholarships?.annual_value_with_scholarship || 0;
-            const placementFeeAmount = getPlacementFee(annualValue);
+            const placementFeeAmountCustom = application.scholarships?.placement_fee_amount as number | undefined | null;
+            const placementFeeAmount = getPlacementFee(annualValue, placementFeeAmountCustom ? Number(placementFeeAmountCustom) : null);
 
             let apiUrl = `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/stripe-checkout-placement-fee`;
             if (method === 'parcelow') {
@@ -197,9 +205,44 @@ export const PlacementFeeStep: React.FC<StepProps> = ({ onNext, onBack }) => {
         } catch (err: any) {
             console.error(`[PlacementFeeStep] Error processing ${method} checkout:`, err);
             alert(err.message || 'Erro ao processar pagamento. Tente novamente.');
-        } finally {
-            setIsProcessingCheckout(null);
         }
+    };
+
+    const saveCpfAndCheckout = async (application: ApplicationWithScholarship) => {
+        const cleaned = inlineCpf.replace(/\D/g, '');
+        if (cleaned.length !== 11) {
+            setCpfError('CPF deve ter 11 dígitos');
+            return;
+        }
+
+        try {
+            setSavingCpf(true);
+            setCpfError(null);
+
+            const { error: updateError } = await supabase
+                .from('user_profiles')
+                .update({ cpf_document: cleaned })
+                .eq('user_id', userProfile?.user_id);
+
+            if (updateError) throw updateError;
+
+            // Se salvou com sucesso, limpa o estado inline e prossegue
+            setShowInlineCpf(null);
+            await processCheckout(application, 'parcelow');
+        } catch (err: any) {
+            console.error('[PlacementFeeStep] Error saving CPF:', err);
+            setCpfError('Erro ao salvar CPF. Tente novamente.');
+        } finally {
+            setSavingCpf(false);
+        }
+    };
+
+    const handleParcelowClick = (app: ApplicationWithScholarship) => {
+        if (!(userProfile as any)?.cpf_document) {
+            setShowInlineCpf(app.id);
+            return;
+        }
+        processCheckout(app, 'parcelow');
     };
 
     const handleZelleClick = (application: ApplicationWithScholarship) => {
@@ -268,7 +311,8 @@ export const PlacementFeeStep: React.FC<StepProps> = ({ onNext, onBack }) => {
                     <div className="lg:col-span-12 space-y-6">
                         {applications.map((app) => {
                             const annualValue = app.scholarships?.annual_value_with_scholarship || 0;
-                            const baseAmount = getPlacementFee(annualValue);
+                            const placementFeeAmount = app.scholarships?.placement_fee_amount as number | undefined | null;
+                            const baseAmount = getPlacementFee(annualValue, placementFeeAmount ? Number(placementFeeAmount) : null);
                             const cardAmount = calculateCardAmountWithFees(baseAmount);
                             const pixInfo = calculatePIXTotalWithIOF(baseAmount, exchangeRate);
 
@@ -352,7 +396,7 @@ export const PlacementFeeStep: React.FC<StepProps> = ({ onNext, onBack }) => {
                                                                     selected_scholarship_id: app.scholarship_id,
                                                                     annual_tuition: annualValue
                                                                 }}
-                                                                onSuccess={() => { setZelleActiveApp(null); onNext(); }}
+                                                                isPendingVerification={hasZellePendingPlacementFee}
                                                                 onProcessingChange={(isProcessing) => { if (isProcessing) refetchPaymentStatus(); }}
                                                             />
                                                         </div>
@@ -374,9 +418,7 @@ export const PlacementFeeStep: React.FC<StepProps> = ({ onNext, onBack }) => {
                                                                     <div className="text-[10px] font-bold text-slate-400 mt-1 uppercase tracking-wide">* Podem incluir taxas de processamento</div>
                                                                 </div>
                                                             </div>
-                                                            <div className="text-right">
-                                                                <div className="text-slate-900 text-xl font-black uppercase tracking-tight">{formatFeeAmount(cardAmount)}</div>
-                                                            </div>
+                                                            <div className="text-slate-900 text-xl font-black uppercase tracking-tight">{formatFeeAmount(cardAmount, true)}</div>
                                                             {isProcessingCheckout === `${app.id}_stripe` && (
                                                                 <div className="absolute inset-0 bg-white/80 backdrop-blur-sm rounded-[2rem] flex items-center justify-center z-10">
                                                                     <RefreshCw className="w-8 h-8 text-blue-600 animate-spin" />
@@ -412,30 +454,74 @@ export const PlacementFeeStep: React.FC<StepProps> = ({ onNext, onBack }) => {
                                                         </button>
 
                                                         {/* Parcelow */}
-                                                        <button
-                                                            onClick={() => processCheckout(app, 'parcelow')}
-                                                            disabled={!!isProcessingCheckout}
-                                                            className="group/btn relative bg-white border border-gray-200 p-5 rounded-[2rem] text-left hover:scale-[1.01] active:scale-95 transition-all shadow-sm hover:shadow-md disabled:opacity-50 flex items-center justify-between"
-                                                        >
-                                                            <div className="flex items-center gap-5">
-                                                                <div className="w-14 h-14 flex items-center justify-center bg-slate-50 rounded-2xl px-2">
-                                                                    <ParcelowIcon className="w-full h-10" />
+                                                        <div className="flex flex-col gap-0 border border-gray-100 rounded-[2rem] overflow-hidden bg-white shadow-sm ring-1 ring-slate-100/50">
+                                                            <button
+                                                                onClick={() => handleParcelowClick(app)}
+                                                                disabled={!!isProcessingCheckout}
+                                                                className={`group/btn relative bg-white p-5 text-left hover:scale-[1.01] active:scale-95 transition-all disabled:opacity-50 flex items-center justify-between ${showInlineCpf === app.id ? 'border-b border-gray-100 rounded-t-[2rem]' : 'rounded-[2rem]'}`}
+                                                            >
+                                                                <div className="flex items-center gap-5">
+                                                                    <div className="w-14 h-14 flex items-center justify-center bg-slate-50 rounded-2xl px-2">
+                                                                        <ParcelowIcon className="w-full h-10" />
+                                                                    </div>
+                                                                    <div>
+                                                                        <div className="font-black text-slate-900 text-base uppercase tracking-tight">Parcelow</div>
+                                                                        <div className="text-[10px] font-bold text-slate-400 mt-1 uppercase tracking-wide">* Podem incluir taxas da operadora</div>
+                                                                    </div>
                                                                 </div>
-                                                                <div>
-                                                                    <div className="font-black text-slate-900 text-base uppercase tracking-tight">Parcelow</div>
-                                                                    <div className="text-[10px] font-bold text-slate-400 mt-1 uppercase tracking-wide">* Podem incluir taxas da operadora</div>
-                                                                </div>
-                                                            </div>
-                                                            <div className="text-right flex flex-col items-end">
-                                                                <div className="text-slate-900 text-xl font-black uppercase tracking-tight">{formatFeeAmount(cardAmount)}</div>
-                                                                <span className="text-[10px] font-bold text-slate-900 mt-1 block uppercase tracking-widest">Até 12x no cartão</span>
-                                                            </div>
-                                                            {isProcessingCheckout === `${app.id}_parcelow` && (
-                                                                <div className="absolute inset-0 bg-white/80 backdrop-blur-sm rounded-[2rem] flex items-center justify-center z-10">
-                                                                    <RefreshCw className="w-8 h-8 text-orange-500 animate-spin" />
+                                                                <div className="text-slate-900 text-xl font-black uppercase tracking-tight">{formatFeeAmount(baseAmount, true)}</div>
+                                                                {isProcessingCheckout === `${app.id}_parcelow` && (
+                                                                    <div className="absolute inset-0 bg-white/80 backdrop-blur-sm rounded-[2rem] flex items-center justify-center z-10">
+                                                                        <RefreshCw className="w-8 h-8 text-orange-500 animate-spin" />
+                                                                    </div>
+                                                                )}
+                                                            </button>
+
+                                                            {showInlineCpf === app.id && (
+                                                                <div className="p-6 bg-slate-50 border-t border-gray-100 animate-in fade-in slide-in-from-top-2 duration-300">
+                                                                    <div className="flex items-center justify-between mb-4">
+                                                                        <h4 className="text-xs font-black text-slate-900 uppercase tracking-widest">Informe seu CPF para Parcelow</h4>
+                                                                        <button onClick={() => setShowInlineCpf(null)} title="Fechar">
+                                                                            <X className="w-4 h-4 text-slate-400 hover:text-slate-600" />
+                                                                        </button>
+                                                                    </div>
+                                                                    <div className="space-y-4">
+                                                                        <div className="relative">
+                                                                            <input
+                                                                                type="text"
+                                                                                placeholder="000.000.000-00"
+                                                                                value={inlineCpf}
+                                                                                onChange={(e) => {
+                                                                                    // Máscara básica de CPF
+                                                                                    const val = e.target.value.replace(/\D/g, '').substring(0, 11);
+                                                                                    setInlineCpf(val);
+                                                                                    if (cpfError) setCpfError(null);
+                                                                                }}
+                                                                                className={`w-full bg-white border ${cpfError ? 'border-red-300 ring-4 ring-red-500/10' : 'border-slate-200'} rounded-xl px-4 py-3 text-lg font-bold text-slate-900 tracking-widest focus:ring-4 focus:ring-blue-500/10 focus:border-blue-500/50 outline-none transition-all placeholder:text-slate-300`}
+                                                                            />
+                                                                            {savingCpf && (
+                                                                                <div className="absolute right-3 top-3">
+                                                                                    <Loader2 className="w-6 h-6 text-blue-500 animate-spin" />
+                                                                                </div>
+                                                                            )}
+                                                                        </div>
+                                                                        {cpfError && (
+                                                                            <p className="text-[10px] font-black text-red-500 uppercase tracking-widest flex items-center gap-2">
+                                                                                <AlertCircle className="w-3 h-3" />
+                                                                                {cpfError}
+                                                                            </p>
+                                                                        )}
+                                                                        <button
+                                                                            onClick={() => saveCpfAndCheckout(app)}
+                                                                            disabled={savingCpf || inlineCpf.replace(/\D/g, '').length !== 11}
+                                                                            className="w-full bg-slate-900 text-white py-3.5 rounded-xl font-bold uppercase tracking-widest text-xs hover:bg-slate-800 transition-all shadow-lg active:scale-95 disabled:opacity-50 disabled:grayscale disabled:scale-100"
+                                                                        >
+                                                                            Continuar para Pagamento
+                                                                        </button>
+                                                                    </div>
                                                                 </div>
                                                             )}
-                                                        </button>
+                                                        </div>
 
                                                         {/* Zelle */}
                                                         <div className="flex flex-col">
@@ -476,7 +562,7 @@ export const PlacementFeeStep: React.FC<StepProps> = ({ onNext, onBack }) => {
                                                                             selected_scholarship_id: app.scholarship_id,
                                                                             annual_tuition: annualValue
                                                                         }}
-                                                                        onSuccess={() => { setZelleActiveApp(null); onNext(); }}
+                                                                        isPendingVerification={hasZellePendingPlacementFee}
                                                                         onProcessingChange={(isProcessing) => { if (isProcessing) refetchPaymentStatus(); }}
                                                                     />
                                                                 </div>

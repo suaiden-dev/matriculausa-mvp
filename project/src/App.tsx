@@ -4,6 +4,7 @@ import { HelmetProvider } from 'react-helmet-async';
 import { QueryClientProvider } from '@tanstack/react-query';
 import { queryClient } from './lib/reactQuery';
 import { AuthProvider } from './hooks/useAuth';
+import { PaymentBlockedProvider } from './contexts/PaymentBlockedContext';
 import { UnreadMessagesProvider } from './contexts/UnreadMessagesContext';
 import Layout from './components/Layout';
 import AuthRedirect from './components/AuthRedirect';
@@ -111,6 +112,7 @@ const AppContent = () => {
         <Route path="/seller/register" element={<SellerRegistration />} />
         <Route path="/student/register" element={<SellerStudentRegistration />} />
         <Route path="/scholarships" element={<Scholarships />} />
+        <Route path="/selection-fee-registration" element={<QuickRegistration />} />
         <Route path="/schools" element={<Universities />} />
         <Route path="/schools/:slug" element={<UniversityDetail />} />
         <Route path="/how-it-works" element={<HowItWorks />} />
@@ -193,12 +195,14 @@ const App: React.FC = () => {
       <QueryClientProvider client={queryClient}>
         <Router>
           <AuthProvider>
-            <UnreadMessagesProvider>
-              <AuthRedirect>
-                <AppContent />
-                <Toaster position="top-right" />
-              </AuthRedirect>
-            </UnreadMessagesProvider>
+            <PaymentBlockedProvider>
+              <UnreadMessagesProvider>
+                <AuthRedirect>
+                  <AppContent />
+                  <Toaster position="top-right" />
+                </AuthRedirect>
+              </UnreadMessagesProvider>
+            </PaymentBlockedProvider>
           </AuthProvider>
         </Router>
       </QueryClientProvider>

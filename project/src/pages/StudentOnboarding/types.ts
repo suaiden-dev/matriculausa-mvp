@@ -24,6 +24,7 @@ export interface OnboardingState {
   placementFeePaid: boolean;
   universityDocumentsUploaded: boolean;
   onboardingCompleted: boolean;
+  isNewFlowUser: boolean;
 }
 
 export interface OnboardingProgress {

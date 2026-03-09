@@ -538,22 +538,79 @@ Deno.serve(async (req) => {
         "[stripe-checkout-selection-process-fee] ⚠️ ATENÇÃO: Não inclui dependentes - usar amount do frontend",
       );
     } else {
-      // Usar preço fixo do Stripe
+      // Sem amount do frontend e sem pacote: buscar taxa padrão via perfil do usuário
+      // NUNCA usar price_id fixo — sempre criar price_data dinâmico
+      console.log(
+        "[stripe-checkout-selection-process-fee] ⚠️ Sem amount e sem pacote — buscando taxa padrão do perfil do usuário",
+      );
+
+      let defaultSelectionFee = 400; // Fallback final legacy
+
+      try {
+        const { data: profileData } = await supabase
+          .from("user_profiles")
+          .select("system_type")
+          .eq("user_id", user.id)
+          .single();
+
+        if (profileData?.system_type === "simplified") {
+          defaultSelectionFee = 350;
+        } else {
+          defaultSelectionFee = 400;
+        }
+
+        console.log(
+          "[stripe-checkout-selection-process-fee] 👤 system_type do perfil:",
+          profileData?.system_type,
+          "→ taxa:",
+          defaultSelectionFee,
+        );
+      } catch (profileErr) {
+        console.error(
+          "[stripe-checkout-selection-process-fee] ❌ Erro ao buscar perfil, usando $400 como fallback:",
+          profileErr,
+        );
+      }
+
+      const baseAmount = defaultSelectionFee;
+      let grossAmountInCents: number;
+
+      if (payment_method === "pix") {
+        grossAmountInCents = calculatePIXAmountWithFees(baseAmount, exchangeRate);
+      } else {
+        grossAmountInCents = calculateCardAmountWithFees(baseAmount);
+      }
+
+      sessionMetadata.base_amount = baseAmount.toString();
+      sessionMetadata.gross_amount = (grossAmountInCents / 100).toString();
+      sessionMetadata.fee_amount = ((grossAmountInCents / 100) - baseAmount).toString();
+      sessionMetadata.markup_enabled = "true";
+      sessionMetadata.amount_source = "profile_default";
+
       sessionConfig.line_items = [
         {
-          price: price_id,
+          price_data: {
+            currency: payment_method === "pix" ? "brl" : "usd",
+            product_data: {
+              name: "Selection Process Fee",
+              description: "Selection Process Fee",
+            },
+            unit_amount: grossAmountInCents,
+          },
           quantity: 1,
         },
       ];
+
       console.log(
-        "[stripe-checkout-selection-process-fee] ⚠️ USANDO PRICE_ID PADRÃO",
+        "[stripe-checkout-selection-process-fee] 💰 USANDO PREÇO PADRÃO DINÂMICO (sem amount do frontend, sem pacote)",
       );
       console.log(
-        "[stripe-checkout-selection-process-fee] ⚠️ Motivo: Usuário não tem pacote ou pacote não encontrado",
+        "[stripe-checkout-selection-process-fee] 💰 Valor base:",
+        baseAmount,
       );
       console.log(
-        "[stripe-checkout-selection-process-fee] ⚠️ Price ID:",
-        price_id,
+        "[stripe-checkout-selection-process-fee] 💰 Valor final (cobrado do aluno):",
+        grossAmountInCents / 100,
       );
     }
 

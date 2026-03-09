@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { ArrowLeft, CreditCard, Upload, X } from 'lucide-react';
+import { ArrowLeft, CreditCard, Upload, X, AlertCircle } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 import { supabase } from '../lib/supabase';
 import { getN8nProxyUrl } from '../utils/storageProxy';
@@ -8,6 +8,8 @@ import { useAuth } from '../hooks/useAuth';
 import { useSearchParams } from 'react-router-dom';
 import { useFeeConfig } from '../hooks/useFeeConfig';
 import { useDynamicFees } from '../hooks/useDynamicFees';
+import { usePaymentBlocked } from '../hooks/usePaymentBlocked';
+import { generateUUID } from '../utils/uuid';
 import { sendTermAcceptanceNotificationAfterPayment } from '../pages/AdminDashboard/PaymentManagement/data/services/notificationsService';
 
 interface ZelleCheckoutPageProps {
@@ -47,8 +49,9 @@ export const ZelleCheckoutPage: React.FC<ZelleCheckoutPageProps> = ({
   const navigate = useNavigate();
   const [searchParams] = useSearchParams();
   const { user, userProfile } = useAuth();
-  const { getFeeAmount, userFeeOverrides, loading: feeLoading } = useFeeConfig(user?.id);
+  const { getFeeAmount, loading: feeLoading } = useFeeConfig(user?.id);
   const { selectionProcessFee, scholarshipFee, i20ControlFee, hasSellerPackage, packageName } = useDynamicFees();
+  const { isBlocked, pendingPayment } = usePaymentBlocked();
   const [selectedFile, setSelectedFile] = useState<File | null>(null);
   const [previewUrl, setPreviewUrl] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
@@ -57,7 +60,7 @@ export const ZelleCheckoutPage: React.FC<ZelleCheckoutPageProps> = ({
 
   // Estado para desconto ativo
   const [activeDiscount, setActiveDiscount] = useState<any>(null);
-  
+
   // Estado para cupom promocional da Scholarship Fee
   const [scholarshipFeePromotionalCoupon, setScholarshipFeePromotionalCoupon] = useState<{
     discountAmount: number;
@@ -80,7 +83,7 @@ export const ZelleCheckoutPage: React.FC<ZelleCheckoutPageProps> = ({
   useEffect(() => {
     const checkActiveDiscount = async () => {
       if (!user) return;
-      
+
       try {
         const { data: discountData, error: discountError } = await supabase
           .rpc('get_user_active_discount', {
@@ -107,18 +110,18 @@ export const ZelleCheckoutPage: React.FC<ZelleCheckoutPageProps> = ({
     const hasSellerReferralCode = userProfile?.seller_referral_code && userProfile.seller_referral_code.trim() !== '';
     const isLegacySystem = userProfile?.system_type === 'legacy';
     const canUsePromotionalCoupon = hasSellerReferralCode && isLegacySystem;
-    
+
     if (!canUsePromotionalCoupon) {
       setScholarshipFeePromotionalCoupon(null);
       setI20ControlFeePromotionalCoupon(null);
       return;
     }
-    
+
     // Carregar cupom para scholarship_fee
     if (normalizedFeeType !== 'scholarship_fee') {
       setScholarshipFeePromotionalCoupon(null);
     }
-    
+
     // Carregar cupom para i20_control_fee
     if (normalizedFeeType !== 'i20_control') {
       setI20ControlFeePromotionalCoupon(null);
@@ -132,7 +135,7 @@ export const ZelleCheckoutPage: React.FC<ZelleCheckoutPageProps> = ({
           const couponData = JSON.parse(savedCoupon);
           // Verificar se o cupom ainda é válido (menos de 24 horas)
           const isExpired = Date.now() - couponData.timestamp > 24 * 60 * 60 * 1000;
-          
+
           if (!isExpired && couponData.validation && couponData.validation.isValid) {
             setScholarshipFeePromotionalCoupon({
               discountAmount: couponData.validation.discountAmount || 0,
@@ -155,18 +158,18 @@ export const ZelleCheckoutPage: React.FC<ZelleCheckoutPageProps> = ({
     };
 
     checkPromotionalCoupon();
-    
+
     // Carregar cupom para i20_control_fee
     const checkI20PromotionalCoupon = () => {
       if (normalizedFeeType !== 'i20_control') return;
-      
+
       try {
         const savedCoupon = localStorage.getItem('__promotional_coupon_i20_control_fee');
         if (savedCoupon) {
           const couponData = JSON.parse(savedCoupon);
           // Verificar se o cupom ainda é válido (menos de 24 horas)
           const isExpired = Date.now() - couponData.timestamp > 24 * 60 * 60 * 1000;
-          
+
           if (!isExpired && couponData.validation && couponData.validation.isValid) {
             setI20ControlFeePromotionalCoupon({
               discountAmount: couponData.validation.discountAmount || 0,
@@ -187,25 +190,25 @@ export const ZelleCheckoutPage: React.FC<ZelleCheckoutPageProps> = ({
         setI20ControlFeePromotionalCoupon(null);
       }
     };
-    
+
     checkI20PromotionalCoupon();
-    
+
     // Verificar periodicamente e ouvir eventos
     const interval = setInterval(() => {
       checkPromotionalCoupon();
       checkI20PromotionalCoupon();
     }, 1000);
-    
+
     // Ouvir eventos de validação de cupom do modal
     const handleCouponValidation = (event: CustomEvent) => {
       if (event.detail?.isValid && event.detail?.discountAmount) {
         if (normalizedFeeType === 'scholarship_fee') {
-        const baseAmount = scholarshipFee ? parseFloat(scholarshipFee.replace('$', '')) : 0;
-        setScholarshipFeePromotionalCoupon({
-          discountAmount: event.detail.discountAmount,
-          finalAmount: event.detail.finalAmount || (baseAmount - event.detail.discountAmount),
-          code: (window as any).__checkout_promotional_coupon || 'BLACK'
-        });
+          const baseAmount = scholarshipFee ? parseFloat(scholarshipFee.replace('$', '')) : 0;
+          setScholarshipFeePromotionalCoupon({
+            discountAmount: event.detail.discountAmount,
+            finalAmount: event.detail.finalAmount || (baseAmount - event.detail.discountAmount),
+            code: (window as any).__checkout_promotional_coupon || 'BLACK'
+          });
         } else if (normalizedFeeType === 'i20_control') {
           const baseAmount = i20ControlFee ? parseFloat(i20ControlFee.replace('$', '')) : 0;
           setI20ControlFeePromotionalCoupon({
@@ -217,9 +220,9 @@ export const ZelleCheckoutPage: React.FC<ZelleCheckoutPageProps> = ({
       } else {
         // Se o cupom foi removido, limpar estado
         if (normalizedFeeType === 'scholarship_fee') {
-        const savedCoupon = localStorage.getItem('__promotional_coupon_scholarship_fee');
-        if (!savedCoupon) {
-          setScholarshipFeePromotionalCoupon(null);
+          const savedCoupon = localStorage.getItem('__promotional_coupon_scholarship_fee');
+          if (!savedCoupon) {
+            setScholarshipFeePromotionalCoupon(null);
           }
         } else if (normalizedFeeType === 'i20_control') {
           const savedCoupon = localStorage.getItem('__promotional_coupon_i20_control_fee');
@@ -231,7 +234,7 @@ export const ZelleCheckoutPage: React.FC<ZelleCheckoutPageProps> = ({
     };
 
     window.addEventListener('promotionalCouponValidated', handleCouponValidation as EventListener);
-    
+
     return () => {
       clearInterval(interval);
       window.removeEventListener('promotionalCouponValidated', handleCouponValidation as EventListener);
@@ -242,7 +245,7 @@ export const ZelleCheckoutPage: React.FC<ZelleCheckoutPageProps> = ({
   const amount = searchParams.get('amount') || getFeeAmount('selection_process').toString();
   const scholarshipsIds = searchParams.get('scholarshipsIds') || '';
   const applicationFeeAmount = searchParams.get('applicationFeeAmount') ? parseFloat(searchParams.get('applicationFeeAmount')!) : undefined;
-  
+
   // Guardar resolução de bolsa/aplicação para uso em múltiplos pontos do fluxo
   let resolvedScholarshipId: string | null = null;
 
@@ -263,7 +266,7 @@ export const ZelleCheckoutPage: React.FC<ZelleCheckoutPageProps> = ({
         // ✅ Priorizar valor da URL se estiver presente (já vem com desconto aplicado)
         if (!selectionProcessFee) return 0; // Aguardar carregamento
         const base = parseFloat(selectionProcessFee.replace('$', ''));
-        
+
         // Se há valor na URL e é diferente do base, usar o valor da URL (já tem desconto aplicado)
         if (normalizedFeeType === 'selection_process') {
           const amountFromUrl = searchParams.get('amount');
@@ -275,7 +278,7 @@ export const ZelleCheckoutPage: React.FC<ZelleCheckoutPageProps> = ({
             }
           }
         }
-        
+
         // Aplicar desconto de referral code se houver
         const discount = (activeDiscount && feeType === 'selection_process') ? (activeDiscount.discount_amount || 0) : 0;
         return Math.max(0, base - discount);
@@ -314,7 +317,7 @@ export const ZelleCheckoutPage: React.FC<ZelleCheckoutPageProps> = ({
       // ✅ Priorizar valor da URL se estiver presente (já vem com desconto aplicado)
       amount: (() => {
         const baseAmount = scholarshipFee ? parseFloat(scholarshipFee.replace('$', '')) : 0;
-        
+
         // Se há valor na URL e é diferente do base, usar o valor da URL (já tem desconto aplicado)
         if (normalizedFeeType === 'scholarship_fee') {
           const amountFromUrl = searchParams.get('amount') || searchParams.get('scholarshipFeeAmount');
@@ -326,13 +329,13 @@ export const ZelleCheckoutPage: React.FC<ZelleCheckoutPageProps> = ({
             }
           }
         }
-        
+
         // Se há cupom promocional no localStorage, usar o valor do cupom
         if (scholarshipFeePromotionalCoupon && normalizedFeeType === 'scholarship_fee') {
           console.log('[ZelleCheckoutPage] ✅ Usando valor do cupom promocional:', scholarshipFeePromotionalCoupon.finalAmount);
           return scholarshipFeePromotionalCoupon.finalAmount;
         }
-        
+
         return baseAmount;
       })(),
       description: `${t('feeDescriptions.scholarshipFee')}${hasSellerPackage ? ` (${packageName})` : ''}${scholarshipFeePromotionalCoupon && normalizedFeeType === 'scholarship_fee' ? ` (Cupom ${scholarshipFeePromotionalCoupon.code} - $${scholarshipFeePromotionalCoupon.discountAmount.toFixed(2)} desconto)` : ''}`,
@@ -341,10 +344,10 @@ export const ZelleCheckoutPage: React.FC<ZelleCheckoutPageProps> = ({
     {
       type: 'i20_control',
       amount: (() => {
-      // ✅ CORREÇÃO: Usar sempre useDynamicFees que já considera system_type
+        // ✅ CORREÇÃO: Usar sempre useDynamicFees que já considera system_type
         if (!i20ControlFee) return 0; // Aguardar carregamento
         const baseAmount = parseFloat(i20ControlFee.replace('$', ''));
-        
+
         // Se há valor na URL e é diferente do base, usar o valor da URL (já tem desconto aplicado)
         if (normalizedFeeType === 'i20_control') {
           const amountFromUrl = searchParams.get('amount') || searchParams.get('i20ControlFeeAmount');
@@ -356,13 +359,13 @@ export const ZelleCheckoutPage: React.FC<ZelleCheckoutPageProps> = ({
             }
           }
         }
-        
+
         // Se há cupom promocional no localStorage, usar o valor do cupom
         if (i20ControlFeePromotionalCoupon && normalizedFeeType === 'i20_control') {
           console.log('[ZelleCheckoutPage] ✅ Usando valor do cupom promocional:', i20ControlFeePromotionalCoupon.finalAmount);
           return i20ControlFeePromotionalCoupon.finalAmount;
         }
-        
+
         return baseAmount;
       })(),
       description: `${t('feeDescriptions.i20ControlFee')}${hasSellerPackage ? ` (${packageName})` : ''}${i20ControlFeePromotionalCoupon && normalizedFeeType === 'i20_control' ? ` (Cupom ${i20ControlFeePromotionalCoupon.code} - $${i20ControlFeePromotionalCoupon.discountAmount.toFixed(2)} desconto)` : ''}`,
@@ -371,7 +374,10 @@ export const ZelleCheckoutPage: React.FC<ZelleCheckoutPageProps> = ({
   ];
 
   const currentFee = feeInfo.find(fee => fee.type === normalizedFeeType) || feeInfo[0];
-  
+
+  // Detecta se há um Zelle pendente do tipo atual
+  const hasZellePending = isBlocked && pendingPayment?.fee_type === normalizedFeeType;
+
   console.log('🔍 [ZelleCheckoutPage] currentFee:', currentFee);
   // Controlar skeleton até que o cálculo dinâmico estabilize
   useEffect(() => {
@@ -387,30 +393,30 @@ export const ZelleCheckoutPage: React.FC<ZelleCheckoutPageProps> = ({
       // Verificar se as taxas estão carregadas baseado no system_type
       const isFeesLoaded = (() => {
         // Verificar se as taxas estão definidas e não vazias
-        const feesDefined = selectionProcessFee && selectionProcessFee.trim() !== '' && 
-                           scholarshipFee && scholarshipFee.trim() !== '' && 
-                           i20ControlFee && i20ControlFee.trim() !== '';
-        
+        const feesDefined = selectionProcessFee && selectionProcessFee.trim() !== '' &&
+          scholarshipFee && scholarshipFee.trim() !== '' &&
+          i20ControlFee && i20ControlFee.trim() !== '';
+
         // Verificar se não está carregando baseado no system_type
-        const notLoading = userProfile?.system_type === 'simplified' 
+        const notLoading = userProfile?.system_type === 'simplified'
           ? true // useDynamicFees já gerencia o loading interno
           : !feeLoading;
-        
+
         const loaded = notLoading && feesDefined;
-        
-        console.log('  [isFeesLoaded] ->', loaded, { 
+
+        console.log('  [isFeesLoaded] ->', loaded, {
           systemType: userProfile?.system_type,
           feeLoading,
           feesDefined,
           notLoading,
-          selectionProcessFee: selectionProcessFee, 
-          scholarshipFee: scholarshipFee, 
-          i20ControlFee: i20ControlFee 
+          selectionProcessFee: selectionProcessFee,
+          scholarshipFee: scholarshipFee,
+          i20ControlFee: i20ControlFee
         });
-        
+
         return loaded;
       })();
-      
+
       if (user !== undefined && isFeesLoaded) {
         console.log('✅ [ZelleCheckoutPage] setFeesLoading(false) chamado!');
         setFeesLoading(false);
@@ -466,15 +472,15 @@ export const ZelleCheckoutPage: React.FC<ZelleCheckoutPageProps> = ({
     console.log('💰 [ZelleCheckout] Tipo de taxa:', feeType);
     console.log('💵 [ZelleCheckout] Valor:', amount);
     console.log('🔄 [ZelleCheckout] Estado de loading atual:', loading);
-    
+
     // Proteção contra duplo clique
     if (loading) {
       console.log('⚠️ [ZelleCheckout] Já está processando, ignorando duplo clique');
       return;
     }
-    
+
     console.log('✅ [ZelleCheckout] Iniciando processamento...');
-    
+
     if (!selectedFile) {
       console.log('❌ [ZelleCheckout] Nenhum arquivo selecionado');
       onError?.('Please select a payment confirmation screenshot');
@@ -490,16 +496,16 @@ export const ZelleCheckoutPage: React.FC<ZelleCheckoutPageProps> = ({
     // Definir loading como true IMEDIATAMENTE para evitar duplicação
     console.log('🔄 [ZelleCheckout] Definindo loading como true');
     setLoading(true);
-    
+
     console.log('🚀 [ZelleCheckout] Iniciando upload do arquivo:', selectedFile.name);
     try {
       // Upload do arquivo para Supabase Storage
       const fileName = `zelle-payment-${Date.now()}.${selectedFile.name.split('.').pop()}`;
       const filePath = `zelle-payments/${user?.id}/${fileName}`;
-      
+
       console.log('📁 [ZelleCheckout] Tentando upload para:', filePath);
       console.log('🪣 [ZelleCheckout] Bucket: zelle_comprovantes');
-      
+
       const { data: uploadData, error: uploadError } = await supabase.storage
         .from('zelle_comprovantes')
         .upload(filePath, selectedFile);
@@ -522,7 +528,7 @@ export const ZelleCheckoutPage: React.FC<ZelleCheckoutPageProps> = ({
       // Verificar se já existe um pagamento similar recente (últimos 30 segundos) para evitar duplicação
       console.log('🔍 [ZelleCheckout] Verificando pagamentos duplicados...');
       const thirtySecondsAgo = new Date(Date.now() - 30000).toISOString();
-      
+
       // Verificar duplicação mais abrangente - qualquer pagamento do mesmo usuário com mesmo valor e tipo
       const { data: existingPayment, error: checkError } = await supabase
         .from('zelle_payments')
@@ -534,13 +540,13 @@ export const ZelleCheckoutPage: React.FC<ZelleCheckoutPageProps> = ({
         .order('created_at', { ascending: false })
         .limit(1);
 
-      console.log('🔍 [ZelleCheckout] Verificação de duplicação:', { 
-        existingPayment, 
-        checkError, 
-        userId: user?.id, 
+      console.log('🔍 [ZelleCheckout] Verificação de duplicação:', {
+        existingPayment,
+        checkError,
+        userId: user?.id,
         amount: currentFee.amount,
         feeType: normalizedFeeType, // ✅ Adicionar tipo de taxa nos logs
-        thirtySecondsAgo 
+        thirtySecondsAgo
       });
 
       if (existingPayment && existingPayment.length > 0) {
@@ -557,11 +563,11 @@ export const ZelleCheckoutPage: React.FC<ZelleCheckoutPageProps> = ({
       // Enviar webhook para n8n
       const imageUrl = `${import.meta.env.VITE_SUPABASE_URL}/storage/v1/object/public/zelle_comprovantes/${uploadData.path}`;
       const proxiedImageUrl = getN8nProxyUrl(imageUrl);
-      
+
       // Payload padronizado para o webhook
       const webhookId = Math.random().toString(36).substr(2, 9);
       console.log('📤 [ZelleCheckout] Criando webhook payload - ID:', webhookId);
-      
+
       const webhookPayload: WebhookPayload = {
         user_id: user?.id,
         image_url: proxiedImageUrl,
@@ -571,7 +577,7 @@ export const ZelleCheckoutPage: React.FC<ZelleCheckoutPageProps> = ({
         timestamp: new Date().toISOString(),
         payment_id: realPaymentId // ID real do pagamento
       };
-      
+
       // Adicionar cupom promocional ao payload se aplicável
       if (normalizedFeeType === 'scholarship_fee' && scholarshipFeePromotionalCoupon) {
         (webhookPayload as any).promotional_coupon = scholarshipFeePromotionalCoupon.code;
@@ -604,7 +610,7 @@ export const ZelleCheckoutPage: React.FC<ZelleCheckoutPageProps> = ({
         console.log('🔍 [ZelleCheckout] Buscando scholarship_application_id para taxa de bolsa');
         console.log('🔍 [ZelleCheckout] scholarshipsIds:', scholarshipsIds);
         console.log('🔍 [ZelleCheckout] user.id:', user?.id);
-        
+
         if (scholarshipsIds) {
           // Se temos scholarshipsIds, buscar a candidatura correspondente
           const { data: applicationData } = await supabase
@@ -613,7 +619,7 @@ export const ZelleCheckoutPage: React.FC<ZelleCheckoutPageProps> = ({
             .eq('student_id', user?.id)
             .in('scholarship_id', scholarshipsIds.split(','))
             .limit(1);
-          
+
           if (applicationData && applicationData[0]) {
             webhookPayload.scholarship_application_id = applicationData[0].id;
             if ((applicationData[0] as any).scholarship_id) {
@@ -636,7 +642,7 @@ export const ZelleCheckoutPage: React.FC<ZelleCheckoutPageProps> = ({
       }
 
       console.log('📤 [ZelleCheckout] Enviando webhooks para n8n:', webhookPayload);
-      
+
       // Buscar nome completo e telefone do usuário
       let userName = user?.email || 'Usuário';
       let userPhone = '';
@@ -646,14 +652,14 @@ export const ZelleCheckoutPage: React.FC<ZelleCheckoutPageProps> = ({
           .select('full_name, phone')
           .eq('user_id', user?.id)
           .single();
-        
+
         if (userProfile?.full_name) {
           userName = userProfile.full_name;
           console.log('✅ [ZelleCheckout] Nome do usuário encontrado:', userName);
         } else {
           console.log('⚠️ [ZelleCheckout] Nome completo não encontrado, usando email');
         }
-        
+
         if (userProfile?.phone) {
           userPhone = userProfile.phone;
           console.log('✅ [ZelleCheckout] Telefone do usuário encontrado:', userPhone);
@@ -671,13 +677,13 @@ export const ZelleCheckoutPage: React.FC<ZelleCheckoutPageProps> = ({
         const hostname = window.location.hostname;
         // Apenas considerar desenvolvimento se for realmente localhost
         // Staging (staging-matriculausa.netlify.app) e produção não devem filtrar
-        const isLocalhost = hostname === 'localhost' || 
-                           hostname === '127.0.0.1' || 
-                           hostname === '0.0.0.0' ||
-                           hostname.includes('localhost');
+        const isLocalhost = hostname === 'localhost' ||
+          hostname === '127.0.0.1' ||
+          hostname === '0.0.0.0' ||
+          hostname.includes('localhost');
         return isLocalhost;
       })();
-      
+
       // Emails a serem filtrados em ambiente de desenvolvimento
       const devBlockedEmails = [
         'luizedmiola@gmail.com',
@@ -685,16 +691,16 @@ export const ZelleCheckoutPage: React.FC<ZelleCheckoutPageProps> = ({
         'fsuaiden@gmail.com',
         'rayssathefuture@gmail.com'
       ];
-      
+
       // Buscar todos os administradores do sistema
       let admins: Array<{ email: string; full_name: string; phone: string }> = [];
-      
+
       try {
         const { data: adminProfiles, error: adminProfileError } = await supabase
           .from('user_profiles')
           .select('email, full_name, phone')
           .eq('role', 'admin');
-        
+
         if (adminProfiles && !adminProfileError && adminProfiles.length > 0) {
           admins = adminProfiles
             .filter(admin => admin.email) // Apenas admins com email
@@ -703,7 +709,7 @@ export const ZelleCheckoutPage: React.FC<ZelleCheckoutPageProps> = ({
               full_name: admin.full_name || 'Admin MatriculaUSA',
               phone: admin.phone || ''
             }));
-          
+
           // Filtrar emails bloqueados em desenvolvimento
           if (isDevelopment) {
             const beforeFilter = admins.length;
@@ -712,7 +718,7 @@ export const ZelleCheckoutPage: React.FC<ZelleCheckoutPageProps> = ({
               console.log(`[ZelleCheckout] Filtrados ${beforeFilter - admins.length} admin(s) em ambiente de desenvolvimento`);
             }
           }
-          
+
           console.log(`✅ [ZelleCheckout] Encontrados ${admins.length} admin(s)${isDevelopment ? ' (filtrados para dev)' : ''}:`, admins.map(a => a.email));
         } else {
           // Fallback: usar admin padrão se não encontrar nenhum
@@ -741,9 +747,9 @@ export const ZelleCheckoutPage: React.FC<ZelleCheckoutPageProps> = ({
             name: 'Zelle Validator'
           }
         ];
-        
+
         console.log('📤 [ZelleCheckout] Enviando webhooks em paralelo...');
-        
+
         // Enviar webhooks em paralelo
         const results = await Promise.allSettled(
           webhooks.map(async (webhook) => {
@@ -756,11 +762,11 @@ export const ZelleCheckoutPage: React.FC<ZelleCheckoutPageProps> = ({
                 },
                 body: JSON.stringify(webhook.payload),
               });
-              
+
               if (!response.ok) {
                 throw new Error(`${webhook.name} failed: ${response.status} ${response.statusText}`);
               }
-              
+
               console.log(`✅ [ZelleCheckout] ${webhook.name} enviado com sucesso!`);
               return { success: true, webhook: webhook.name, response };
             } catch (error) {
@@ -769,7 +775,7 @@ export const ZelleCheckoutPage: React.FC<ZelleCheckoutPageProps> = ({
             }
           })
         );
-        
+
         // Log dos resultados
         results.forEach((result, index) => {
           if (result.status === 'fulfilled') {
@@ -782,61 +788,61 @@ export const ZelleCheckoutPage: React.FC<ZelleCheckoutPageProps> = ({
             console.error(`❌ [ZelleCheckout] ${webhooks[index].name}: Erro inesperado`);
           }
         });
-        
+
         return results;
       };
 
       // Enviar webhooks
       const webhookResults = await sendWebhooks();
-      
+
       // Verificar se pelo menos o webhook do Zelle foi enviado com sucesso
-      const zelleWebhookSuccess = webhookResults[0]?.status === 'fulfilled' && 
-                                 webhookResults[0]?.value?.success;
-      
+      const zelleWebhookSuccess = webhookResults[0]?.status === 'fulfilled' &&
+        webhookResults[0]?.value?.success;
+
       if (!zelleWebhookSuccess) {
         console.warn('❌ [ZelleCheckout] Webhook do Zelle não foi enviado, mas o pagamento foi registrado');
       } else {
         console.log('✅ [ZelleCheckout] Webhook do Zelle enviado com sucesso!');
-        
+
         // Capturar e mostrar a resposta do n8n (apenas do webhook do Zelle)
         try {
           const zelleWebhookResult = webhookResults[0];
           if (zelleWebhookResult?.status === 'fulfilled' && zelleWebhookResult.value?.response) {
             const responseText = await zelleWebhookResult.value.response.text();
             console.log('📥 [ZelleCheckout] Resposta bruta do n8n:', responseText);
-            
+
             // Tentar fazer parse da resposta JSON
             try {
               const responseJson = JSON.parse(responseText);
               console.log('📥 [ZelleCheckout] Resposta JSON do n8n:', responseJson);
-            
+
               // Verificar se tem o campo 'response' que você mencionou
               if (responseJson.response) {
                 console.log('🎯 [ZelleCheckout] RESPOSTA DO N8N:', responseJson.response);
                 console.log('🎯 [ZelleCheckout] Tipo da resposta:', typeof responseJson.response);
-                
+
                 // Verificar se a resposta é especificamente "The proof of payment is valid"
                 const response = responseJson.response.toLowerCase();
                 const isPositiveResponse = response === 'the proof of payment is valid.';
-                
+
                 // ✅ SEMPRE atualizar o pagamento no banco com a imagem e resposta do n8n
                 console.log('💾 [ZelleCheckout] Atualizando pagamento no banco com resultado do n8n...');
 
                 try {
                   // Aguardar um pouco para o n8n processar e criar o registro
                   await new Promise(resolve => setTimeout(resolve, 2000)); // 2 segundos de delay
-                  
+
                   // Buscar o pagamento mais recente do usuário para este tipo de taxa
                   // Tentar várias vezes se não encontrar
                   let recentPayment = null;
                   let findError = null;
                   let attempts = 0;
                   const maxAttempts = 5;
-                  
+
                   while (attempts < maxAttempts && !recentPayment) {
                     attempts++;
                     console.log(`🔍 [ZelleCheckout] Tentativa ${attempts}/${maxAttempts} de buscar pagamento...`);
-                    
+
                     // Primeiro tentar buscar com fee_type específico
                     let { data, error } = await supabase
                       .from('zelle_payments')
@@ -860,7 +866,7 @@ export const ZelleCheckoutPage: React.FC<ZelleCheckoutPageProps> = ({
                         .order('created_at', { ascending: false })
                         .limit(1)
                         .single();
-                      
+
                       if (!errorByAmount && dataByAmount) {
                         data = dataByAmount;
                         error = null;
@@ -874,12 +880,12 @@ export const ZelleCheckoutPage: React.FC<ZelleCheckoutPageProps> = ({
                       await new Promise(resolve => setTimeout(resolve, 1000)); // 1 segundo de delay
                       continue;
                     }
-                    
+
                     if (error) {
                       findError = error;
                       break;
                     }
-                    
+
                     recentPayment = data;
                   }
 
@@ -923,12 +929,12 @@ export const ZelleCheckoutPage: React.FC<ZelleCheckoutPageProps> = ({
                     console.error('❌ [ZelleCheckout] Erro ao atualizar pagamento:', updateError);
                   } else {
                     console.log('✅ [ZelleCheckout] Pagamento atualizado com sucesso:', updateResult);
-                    
+
                     // ✅ Enviar notificação para TODOS os admins quando o pagamento ficar pendente de aprovação
                     // Isso acontece quando o status é 'pending_verification' (não foi aprovado automaticamente)
                     if (!isPositiveResponse && updateResult && updateResult[0]?.status === 'pending_verification') {
                       console.log(`📧 [ZelleCheckout] Pagamento ficou pendente - enviando notificação para ${admins.length} admin(s)...`);
-                      
+
                       // Enviar notificação para todos os admins em paralelo
                       const adminNotificationPromises = admins.map(async (admin) => {
                         const adminNotificationPayload = {
@@ -945,9 +951,9 @@ export const ZelleCheckoutPage: React.FC<ZelleCheckoutPageProps> = ({
                           amount: currentFee.amount,
                           uploaded_at: new Date().toISOString()
                         };
-                        
+
                         console.log(`📧 [ZelleCheckout] Enviando notificação para admin ${admin.email}:`, adminNotificationPayload);
-                        
+
                         try {
                           const adminNotificationResponse = await fetch('https://nwh.suaiden.com/webhook/notfmatriculausa', {
                             method: 'POST',
@@ -956,7 +962,7 @@ export const ZelleCheckoutPage: React.FC<ZelleCheckoutPageProps> = ({
                             },
                             body: JSON.stringify(adminNotificationPayload),
                           });
-                          
+
                           if (adminNotificationResponse.ok) {
                             const adminResult = await adminNotificationResponse.text();
                             console.log(`✅ [ZelleCheckout] Notificação para ADMIN ${admin.email} enviada com sucesso:`, adminResult);
@@ -968,7 +974,7 @@ export const ZelleCheckoutPage: React.FC<ZelleCheckoutPageProps> = ({
                           console.error(`❌ [ZelleCheckout] Erro ao enviar notificação para ADMIN ${admin.email}:`, error);
                         }
                       });
-                      
+
                       // Aguardar todas as notificações serem enviadas
                       await Promise.allSettled(adminNotificationPromises);
                       console.log(`✅ [ZelleCheckout] Todas as notificações para admins processadas!`);
@@ -997,7 +1003,7 @@ export const ZelleCheckoutPage: React.FC<ZelleCheckoutPageProps> = ({
                           },
                           body: JSON.stringify(studentNotificationPayload),
                         });
-                        
+
                         if (studentNotificationResponse.ok) {
                           console.log('✅ [ZelleCheckout] Notificação para aluno enviada com sucesso!');
                         } else {
@@ -1013,7 +1019,7 @@ export const ZelleCheckoutPage: React.FC<ZelleCheckoutPageProps> = ({
                 } catch (updateError) {
                   console.error('❌ [ZelleCheckout] Erro ao processar pagamento:', updateError);
                 }
-                
+
                 // Armazenar a resposta do n8n no localStorage para a página de waiting
                 localStorage.setItem(`n8n_response_${realPaymentId}`, JSON.stringify(responseJson));
                 localStorage.setItem('latest_n8n_response', JSON.stringify(responseJson));
@@ -1021,7 +1027,7 @@ export const ZelleCheckoutPage: React.FC<ZelleCheckoutPageProps> = ({
                 console.log('💾 [ZelleCheckout] Chave:', `n8n_response_${realPaymentId}`);
                 console.log('💾 [ZelleCheckout] Valor:', JSON.stringify(responseJson));
               }
-              
+
               // Verificar outros campos possíveis
               if (responseJson.status) {
                 console.log('📊 [ZelleCheckout] Status do n8n:', responseJson.status);
@@ -1032,7 +1038,7 @@ export const ZelleCheckoutPage: React.FC<ZelleCheckoutPageProps> = ({
               if (responseJson.confidence) {
                 console.log('🎯 [ZelleCheckout] Confiança da análise:', responseJson.confidence);
               }
-              
+
             } catch (jsonError) {
               console.log('⚠️ [ZelleCheckout] Resposta não é JSON válido:', jsonError);
               console.log('⚠️ [ZelleCheckout] Resposta como texto:', responseText);
@@ -1073,7 +1079,7 @@ export const ZelleCheckoutPage: React.FC<ZelleCheckoutPageProps> = ({
               {t('zelleCheckout.backToPaymentSelection')}
             </button>
           </div>
-          
+
           <div className="text-center">
             <h1 className="text-3xl font-bold text-gray-900 mb-2">
               {t('zelleCheckout.title')}
@@ -1156,7 +1162,7 @@ export const ZelleCheckoutPage: React.FC<ZelleCheckoutPageProps> = ({
                       <code className="text-sm font-mono text-gray-900">pay@matriculausa.com</code>
                     </div>
                   </div>
-                  
+
                   <div className="mt-3 p-3 bg-blue-50 border-l-4 border-blue-500 rounded-r-lg">
                     <p className="text-xs text-blue-900 font-medium">{t('zelleCheckout.zellePaymentDetails.important')}</p>
                     <p className="text-xs text-blue-800 mt-1">
@@ -1170,14 +1176,14 @@ export const ZelleCheckoutPage: React.FC<ZelleCheckoutPageProps> = ({
             {/* Payment Instructions */}
             <div className="bg-white rounded-lg border border-gray-200 p-6">
               <h3 className="text-lg font-semibold text-gray-900 mb-6">{t('zelleCheckout.instructions')}</h3>
-              
+
               <form onSubmit={handleSubmit} className="space-y-6">
                 {/* Instruções Consolidadas */}
                 <div className="bg-gray-50 border border-gray-200 rounded-lg p-6">
                   <h4 className="font-medium text-gray-900 mb-4">
                     {t('zelleCheckout.steps.title')}
                   </h4>
-                  
+
                   <ol className="space-y-3 text-gray-700">
                     <li className="flex items-start gap-3">
                       <span className="w-5 h-5 bg-gray-200 text-gray-700 rounded-full flex items-center justify-center text-sm font-medium flex-shrink-0">1</span>
@@ -1210,62 +1216,85 @@ export const ZelleCheckoutPage: React.FC<ZelleCheckoutPageProps> = ({
                   <label className="block text-sm font-medium text-gray-700 mb-2">
                     {t('zelleCheckout.uploadReceipt')}
                   </label>
-                  <div 
-                    className={`border-2 border-dashed rounded-lg p-6 text-center transition-all duration-300 ${
-                      isDragging 
-                        ? 'border-blue-500 bg-blue-50 scale-[1.02]' 
+
+                  {hasZellePending ? (
+                    <div className="bg-amber-50 border border-amber-200 rounded-lg p-6 text-center space-y-3">
+                      <div className="w-12 h-12 bg-amber-100 rounded-full flex items-center justify-center mx-auto">
+                        <AlertCircle className="w-6 h-6 text-amber-600" />
+                      </div>
+                      <div className="space-y-1">
+                        <p className="font-bold text-amber-900 uppercase tracking-tight">
+                          Pagamento em Análise
+                        </p>
+                        <p className="text-sm text-amber-800 leading-relaxed">
+                          Você já enviou um comprovante para esta taxa. Aguarde a validação antes de enviar um novo.
+                        </p>
+                      </div>
+                      <button
+                        type="button"
+                        onClick={() => navigate(`/checkout/zelle/waiting?payment_id=${pendingPayment.id}&fee_type=${normalizedFeeType}`)}
+                        className="text-amber-700 font-bold uppercase tracking-widest text-xs border-b border-amber-700/30 hover:border-amber-700 transition-all pb-0.5"
+                      >
+                        Ver status do pagamento atual
+                      </button>
+                    </div>
+                  ) : (
+                    <div
+                      className={`border-2 border-dashed rounded-lg p-6 text-center transition-all duration-300 ${isDragging
+                        ? 'border-blue-500 bg-blue-50 scale-[1.02]'
                         : 'border-gray-300 hover:border-gray-400'
-                    }`}
-                    onDragOver={handleDragOver}
-                    onDragLeave={handleDragLeave}
-                    onDrop={handleDrop}
-                  >
-                    <input
-                      type="file"
-                      accept="image/*"
-                      onChange={handleFileSelect}
-                      className="hidden"
-                      id="file-upload"
-                      name="payment-screenshot"
-                    />
-                    <label htmlFor="file-upload" className="cursor-pointer">
-                      {previewUrl ? (
-                        <div className="relative">
-                          <img
-                            src={previewUrl}
-                            alt="Payment confirmation"
-                            className="max-w-full max-h-64 mx-auto rounded-lg"
-                          />
-                          <button
-                            type="button"
-                            onClick={() => {
-                              setSelectedFile(null);
-                              setPreviewUrl(null);
-                            }}
-                            className="absolute top-2 right-2 bg-red-500 text-white rounded-full p-1 hover:bg-red-600 transition-colors"
-                          >
-                            <X className="w-4 h-4" />
-                          </button>
-                        </div>
-                      ) : (
-                        <div>
-                          <Upload className="w-10 h-10 text-gray-400 mx-auto mb-3" />
-                          <p className="text-gray-600 mb-2">
-                            {t('zelleCheckout.dragAndDrop')}
-                          </p>
-                          <p className="text-sm text-gray-500">
-                            {t('zelleCheckout.supportedFormats')}
-                          </p>
-                        </div>
-                      )}
-                    </label>
-                  </div>
+                        }`}
+                      onDragOver={handleDragOver}
+                      onDragLeave={handleDragLeave}
+                      onDrop={handleDrop}
+                    >
+                      <input
+                        type="file"
+                        accept="image/*"
+                        onChange={handleFileSelect}
+                        className="hidden"
+                        id="file-upload"
+                        name="payment-screenshot"
+                      />
+                      <label htmlFor="file-upload" className="cursor-pointer">
+                        {previewUrl ? (
+                          <div className="relative">
+                            <img
+                              src={previewUrl}
+                              alt="Payment confirmation"
+                              className="max-w-full max-h-64 mx-auto rounded-lg"
+                            />
+                            <button
+                              type="button"
+                              onClick={() => {
+                                setSelectedFile(null);
+                                setPreviewUrl(null);
+                              }}
+                              className="absolute top-2 right-2 bg-red-500 text-white rounded-full p-1 hover:bg-red-600 transition-colors"
+                            >
+                              <X className="w-4 h-4" />
+                            </button>
+                          </div>
+                        ) : (
+                          <div>
+                            <Upload className="w-10 h-10 text-gray-400 mx-auto mb-3" />
+                            <p className="text-gray-600 mb-2">
+                              {t('zelleCheckout.dragAndDrop')}
+                            </p>
+                            <p className="text-sm text-gray-500">
+                              {t('zelleCheckout.supportedFormats')}
+                            </p>
+                          </div>
+                        )}
+                      </label>
+                    </div>
+                  )}
                 </div>
 
                 {/* Submit Button */}
                 <button
                   type="submit"
-                  disabled={loading || !selectedFile}
+                  disabled={loading || !selectedFile || hasZellePending}
                   className="w-full bg-gray-900 text-white py-3 px-6 rounded-lg font-medium hover:bg-gray-800 disabled:bg-gray-300 disabled:cursor-not-allowed transition-colors"
                 >
                   {loading ? (
@@ -1291,7 +1320,7 @@ export const ZelleCheckoutPage: React.FC<ZelleCheckoutPageProps> = ({
           <div className="lg:col-span-1">
             <div className="bg-gray-50 rounded-lg border border-gray-200 p-6 sticky top-8">
               <h3 className="text-lg font-medium text-gray-900 mb-4">{t('zelleCheckout.importantInfo.title')}</h3>
-              
+
               <div className="space-y-4">
                 <div className="flex items-start gap-3">
                   <div className="w-4 h-4 bg-green-100 rounded-full flex items-center justify-center mt-0.5">
@@ -1304,7 +1333,7 @@ export const ZelleCheckoutPage: React.FC<ZelleCheckoutPageProps> = ({
                     </p>
                   </div>
                 </div>
-                
+
                 <div className="flex items-start gap-3">
                   <div className="w-4 h-4 bg-yellow-100 rounded-full flex items-center justify-center mt-0.5">
                     <div className="w-2 h-2 bg-yellow-500 rounded-full"></div>
@@ -1316,7 +1345,7 @@ export const ZelleCheckoutPage: React.FC<ZelleCheckoutPageProps> = ({
                     </p>
                   </div>
                 </div>
-                
+
                 <div className="flex items-start gap-3">
                   <div className="w-4 h-4 bg-blue-100 rounded-full flex items-center justify-center mt-0.5">
                     <div className="w-2 h-2 bg-blue-500 rounded-full"></div>

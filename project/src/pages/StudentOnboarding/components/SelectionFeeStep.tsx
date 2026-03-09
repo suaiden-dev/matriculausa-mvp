@@ -36,30 +36,30 @@ interface Term {
 // Componente SVG para o logo do PIX (oficial)
 const PixIcon = ({ className }: { className?: string }) => (
   <svg className={className} xmlns="http://www.w3.org/2000/svg" viewBox="0 0 48 48">
-    <path fill="#4db6ac" d="M11.9,12h-0.68l8.04-8.04c2.62-2.61,6.86-2.61,9.48,0L36.78,12H36.1c-1.6,0-3.11,0.62-4.24,1.76l-6.8,6.77c-0.59,0.59-1.53,0.59-2.12,0l-6.8-6.77C15.01,12.62,13.5,12,11.9,12z"/>
-    <path fill="#4db6ac" d="M36.1,36h0.68l-8.04,8.04c-2.62,2.61-6.86,2.61-9.48,0L11.22,36h0.68c1.6,0,3.11-0.62,4.24-1.76l6.8-6.77c0.59-0.59,1.53-0.59,2.12,0l6.8,6.77C32.99,35.38,34.5,36,36.1,36z"/>
-    <path fill="#4db6ac" d="M44.04,28.74L38.78,34H36.1c-1.07,0-2.07-0.42-2.83-1.17l-6.8-6.78c-1.36-1.36-3.58-1.36-4.94,0l-6.8,6.78C13.97,33.58,12.97,34,11.9,34H9.22l-5.26-5.26c-2.61-2.62-2.61-6.86,0-9.48L9.22,14h2.68c1.07,0,2.07,0.42,2.83,1.17l6.8,6.78c0.68,0.68,1.58,1.02,2.47,1.02s1.79-0.34,2.47-1.02l6.8-6.78C34.03,14.42,35.03,14,36.1,14h2.68l5.26,5.26C46.65,21.88,46.65,26.12,44.04,28.74z"/>
+    <path fill="#4db6ac" d="M11.9,12h-0.68l8.04-8.04c2.62-2.61,6.86-2.61,9.48,0L36.78,12H36.1c-1.6,0-3.11,0.62-4.24,1.76l-6.8,6.77c-0.59,0.59-1.53,0.59-2.12,0l-6.8-6.77C15.01,12.62,13.5,12,11.9,12z" />
+    <path fill="#4db6ac" d="M36.1,36h0.68l-8.04,8.04c-2.62,2.61-6.86,2.61-9.48,0L11.22,36h0.68c1.6,0,3.11-0.62,4.24-1.76l6.8-6.77c0.59-0.59,1.53-0.59,2.12,0l6.8,6.77C32.99,35.38,34.5,36,36.1,36z" />
+    <path fill="#4db6ac" d="M44.04,28.74L38.78,34H36.1c-1.07,0-2.07-0.42-2.83-1.17l-6.8-6.78c-1.36-1.36-3.58-1.36-4.94,0l-6.8,6.78C13.97,33.58,12.97,34,11.9,34H9.22l-5.26-5.26c-2.61-2.62-2.61-6.86,0-9.48L9.22,14h2.68c1.07,0,2.07,0.42,2.83,1.17l6.8,6.78c0.68,0.68,1.58,1.02,2.47,1.02s1.79-0.34,2.47-1.02l6.8-6.78C34.03,14.42,35.03,14,36.1,14h2.68l5.26,5.26C46.65,21.88,46.65,26.12,44.04,28.74z" />
   </svg>
 );
 
 // Componente SVG para o logo do Zelle (oficial)
 const ZelleIcon = ({ className }: { className?: string }) => (
   <svg className={className} xmlns="http://www.w3.org/2000/svg" viewBox="0 0 48 48">
-    <path fill="#a0f" d="M35,42H13c-3.866,0-7-3.134-7-7V13c0-3.866,3.134-7,7-7h22c3.866,0,7,3.134,7,7v22C42,38.866,38.866,42,35,42z"/>
-    <path fill="#fff" d="M17.5,18.5h14c0.552,0,1-0.448,1-1V15c0-0.552-0.448-1-1-1h-14c-0.552,0-1,0.448-1,1v2.5C16.5,18.052,16.948,18.5,17.5,18.5z"/>
-    <path fill="#fff" d="M17,34.5h14.5c0.552,0,1-0.448,1-1V31c0-0.552-0.448-1-1-1H17c-0.552,0-1,0.448-1,1v2.5C16,34.052,16.448,34.5,17,34.5z"/>
-    <path fill="#fff" d="M22.25,11v6c0,0.276,0.224,0.5,0.5,0.5h3.5c0.276,0,0.5-0.224,0.5-0.5v-6c0-0.276-0.224-0.5-0.5-0.5h-3.5C22.474,10.5,22.25,10.724,22.25,11z"/>
-    <path fill="#fff" d="M22.25,32v6c0,0.276,0.224,0.5,0.5,0.5h3.5c0.276,0,0.5-0.224,0.5-0.5v-6c0-0.276-0.224-0.5-0.5-0.5h-3.5C22.474,31.5,22.25,31.724,22.25,32z"/>
-    <path fill="#fff" d="M16.578,30.938H22l10.294-12.839c0.178-0.222,0.019-0.552-0.266-0.552H26.5L16.275,30.298C16.065,30.553,16.247,30.938,16.578,30.938z"/>
+    <path fill="#a0f" d="M35,42H13c-3.866,0-7-3.134-7-7V13c0-3.866,3.134-7,7-7h22c3.866,0,7,3.134,7,7v22C42,38.866,38.866,42,35,42z" />
+    <path fill="#fff" d="M17.5,18.5h14c0.552,0,1-0.448,1-1V15c0-0.552-0.448-1-1-1h-14c-0.552,0-1,0.448-1,1v2.5C16.5,18.052,16.948,18.5,17.5,18.5z" />
+    <path fill="#fff" d="M17,34.5h14.5c0.552,0,1-0.448,1-1V31c0-0.552-0.448-1-1-1H17c-0.552,0-1,0.448-1,1v2.5C16,34.052,16.448,34.5,17,34.5z" />
+    <path fill="#fff" d="M22.25,11v6c0,0.276,0.224,0.5,0.5,0.5h3.5c0.276,0,0.5-0.224,0.5-0.5v-6c0-0.276-0.224-0.5-0.5-0.5h-3.5C22.474,10.5,22.25,10.724,22.25,11z" />
+    <path fill="#fff" d="M22.25,32v6c0,0.276,0.224,0.5,0.5,0.5h3.5c0.276,0,0.5-0.224,0.5-0.5v-6c0-0.276-0.224-0.5-0.5-0.5h-3.5C22.474,31.5,22.25,31.724,22.25,32z" />
+    <path fill="#fff" d="M16.578,30.938H22l10.294-12.839c0.178-0.222,0.019-0.552-0.266-0.552H26.5L16.275,30.298C16.065,30.553,16.247,30.938,16.578,30.938z" />
   </svg>
 );
 
 // Componente para o logo do Stripe (estilo S logo)
 const StripeIcon = ({ className }: { className?: string }) => (
   <div className={`${className} flex items-center justify-center bg-[#635bff] rounded-lg overflow-hidden shadow-sm shadow-[#635bff]/20`}>
-    <span 
+    <span
       className="text-white font-black text-[28px] leading-[0] select-none"
-      style={{ 
+      style={{
         fontFamily: 'system-ui, -apple-system, sans-serif',
         transform: 'translateY(-1.5px)' // Puxando para cima para compensar o peso da fonte
       }}
@@ -71,10 +71,10 @@ const StripeIcon = ({ className }: { className?: string }) => (
 
 const ParcelowIcon = ({ className }: { className?: string }) => (
   <div className={`${className} flex items-center justify-center bg-white rounded-lg overflow-hidden p-0.5 shadow-sm border border-gray-100`}>
-    <img 
-      src="/parcelow_share.webp" 
-      alt="Parcelow" 
-      className="w-full h-full object-contain scale-110" 
+    <img
+      src="/parcelow_share.webp"
+      alt="Parcelow"
+      className="w-full h-full object-contain scale-110"
     />
   </div>
 );
@@ -91,73 +91,74 @@ const MobileTermsView: React.FC<{
   setShowTermsInDrawer,
   t
 }) => {
-  return (
-    <div className="space-y-4 bg-white min-h-full flex flex-col">
-      {/* Header */}
-      <div className="flex items-center gap-3 pb-4 border-b border-gray-200">
-        <button
-          onClick={() => setShowTermsInDrawer(false)}
-          className="p-2 hover:bg-gray-100 rounded-full transition-colors"
-        >
-          <ArrowLeft className="w-5 h-5 text-gray-600" />
-        </button>
-        <h3 className="text-lg font-semibold text-gray-900">
-          {activeTerm ? activeTerm.title : t('preCheckoutModal.termsAndConditions.title')}
-        </h3>
+    return (
+      <div className="space-y-4 bg-white min-h-full flex flex-col">
+        {/* Header */}
+        <div className="flex items-center gap-3 pb-4 border-b border-gray-200">
+          <button
+            onClick={() => setShowTermsInDrawer(false)}
+            className="p-2 hover:bg-gray-100 rounded-full transition-colors"
+          >
+            <ArrowLeft className="w-5 h-5 text-gray-600" />
+          </button>
+          <h3 className="text-lg font-semibold text-gray-900">
+            {activeTerm ? activeTerm.title : t('preCheckoutModal.termsAndConditions.title')}
+          </h3>
+        </div>
+
+        {/* Terms Content */}
+        {loadingTerms ? (
+          <div className="flex-1 flex items-center justify-center p-6">
+            <div className="text-center">
+              <div className="w-12 h-12 border-4 border-blue-200 border-t-blue-600 rounded-full animate-spin mx-auto mb-4"></div>
+              <p className="text-slate-600 text-sm">{t('preCheckoutModal.loading')}</p>
+            </div>
+          </div>
+        ) : activeTerm ? (
+          <>
+            <div
+              className="flex-1 overflow-y-auto prose prose-sm max-w-none prose-headings:text-gray-900 prose-p:text-gray-600 mb-6"
+              dangerouslySetInnerHTML={{ __html: activeTerm.content }}
+            />
+
+            <div className="border-t border-gray-200 bg-gray-50 p-4 -mx-4 -mb-4 rounded-b-2xl mt-4">
+              <button
+                onClick={() => setShowTermsInDrawer(false)}
+                className="w-full py-3 px-4 rounded-xl font-semibold bg-blue-600 text-white hover:bg-blue-700 shadow-lg text-sm"
+              >
+                {t('preCheckoutModal.closeTerms') || 'Fechar'}
+              </button>
+            </div>
+          </>
+        ) : (
+          <div className="flex-1 flex items-center justify-center p-6">
+            <div className="text-center">
+              <p className="text-slate-600 text-sm">{t('preCheckoutModal.noTermsFound')}</p>
+            </div>
+          </div>
+        )}
       </div>
-
-      {/* Terms Content */}
-      {loadingTerms ? (
-        <div className="flex-1 flex items-center justify-center p-6">
-          <div className="text-center">
-            <div className="w-12 h-12 border-4 border-blue-200 border-t-blue-600 rounded-full animate-spin mx-auto mb-4"></div>
-            <p className="text-slate-600 text-sm">{t('preCheckoutModal.loading')}</p>
-          </div>
-        </div>
-      ) : activeTerm ? (
-        <>
-          <div 
-            className="flex-1 overflow-y-auto prose prose-sm max-w-none prose-headings:text-gray-900 prose-p:text-gray-600 mb-6"
-            dangerouslySetInnerHTML={{ __html: activeTerm.content }}
-          />
-
-          <div className="border-t border-gray-200 bg-gray-50 p-4 -mx-4 -mb-4 rounded-b-2xl mt-4">
-            <button
-              onClick={() => setShowTermsInDrawer(false)}
-              className="w-full py-3 px-4 rounded-xl font-semibold bg-blue-600 text-white hover:bg-blue-700 shadow-lg text-sm"
-            >
-              {t('preCheckoutModal.closeTerms') || 'Fechar'}
-            </button>
-          </div>
-        </>
-      ) : (
-        <div className="flex-1 flex items-center justify-center p-6">
-          <div className="text-center">
-            <p className="text-slate-600 text-sm">{t('preCheckoutModal.noTermsFound')}</p>
-          </div>
-        </div>
-      )}
-    </div>
-  );
-};
+    );
+  };
 
 export const SelectionFeeStep: React.FC<StepProps> = ({ onNext }) => {
   const { t } = useTranslation();
   const navigate = useNavigate();
   const { user, userProfile, refetchUserProfile } = useAuth();
   const { getFeeAmount, formatFeeAmount } = useFeeConfig(user?.id);
-  const { isBlocked, pendingPayment, loading: paymentBlockedLoading, refetch: refetchPaymentStatus } = usePaymentBlocked();
+  const { isBlocked, pendingPayment, rejectedPayment, approvedPayment, loading: paymentBlockedLoading, refetch: refetchPaymentStatus } = usePaymentBlocked();
   const { recordTermAcceptance, checkTermAcceptance } = useTermsAcceptance();
   const { recordAffiliateTermAcceptance, checkIfUserHasAffiliate } = useAffiliateTermsAcceptance();
   const { activeDiscount, hasUsedReferralCode } = useReferralCode();
   useStudentLogs(userProfile?.id || '');
-  
+
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [selectedMethod, setSelectedMethod] = useState<'stripe' | 'zelle' | 'pix' | 'parcelow' | null>(null);
   const [showZelleCheckout, setShowZelleCheckout] = useState(false);
   const [zellePaymentSubmitted, setZellePaymentSubmitted] = useState(false);
   const [isZelleProcessing, setIsZelleProcessing] = useState(false);
+  const hasProcessedApproval = useRef(false);
   const pollingIntervalRef = useRef<NodeJS.Timeout | null>(null);
 
   // Terms acceptance states
@@ -183,7 +184,7 @@ export const SelectionFeeStep: React.FC<StepProps> = ({ onNext }) => {
   } | null>(null);
   const [hasReferralCode, setHasReferralCode] = useState(false);
   const [showCodeStep, setShowCodeStep] = useState(false);
-  
+
   // CPF validation modal state (mantido para possível uso futuro)
   const [showCpfModal, setShowCpfModal] = useState<boolean>(false);
   const [codeApplied, setCodeApplied] = useState(false);
@@ -223,7 +224,7 @@ export const SelectionFeeStep: React.FC<StepProps> = ({ onNext }) => {
   const loadActiveTerms = async () => {
     try {
       setLoadingTerms(true);
-      
+
       const { data, error } = await supabase
         .from('application_terms')
         .select('*')
@@ -241,7 +242,7 @@ export const SelectionFeeStep: React.FC<StepProps> = ({ onNext }) => {
         setActiveTerm(data[0]);
         return true;
       }
-      
+
       // Se não há termos ativos, criar um termo padrão
       const defaultTerm = {
         id: 'default-checkout-terms',
@@ -267,7 +268,7 @@ export const SelectionFeeStep: React.FC<StepProps> = ({ onNext }) => {
   // Handle terms modal open
   const handleTermsClick = async () => {
     const hasTerms = await loadActiveTerms();
-    
+
     if (!hasTerms) {
       const defaultTerm = {
         id: 'default-checkout-terms',
@@ -281,7 +282,7 @@ export const SelectionFeeStep: React.FC<StepProps> = ({ onNext }) => {
       };
       setActiveTerm(defaultTerm);
     }
-    
+
     setShowTermsModal(true);
   };
 
@@ -290,7 +291,7 @@ export const SelectionFeeStep: React.FC<StepProps> = ({ onNext }) => {
     try {
       if (activeTerm && !termsAccepted) {
         const affiliateAdminId = await checkIfUserHasAffiliate();
-        
+
         if (affiliateAdminId) {
           await recordAffiliateTermAcceptance(activeTerm.id, 'checkout_terms', affiliateAdminId);
         } else {
@@ -391,7 +392,7 @@ export const SelectionFeeStep: React.FC<StepProps> = ({ onNext }) => {
         });
         return;
       }
-      
+
       setValidationResult({
         isValid: true,
         message: t('preCheckoutModal.validCode') || 'Valid code! $50 discount applied',
@@ -437,7 +438,7 @@ export const SelectionFeeStep: React.FC<StepProps> = ({ onNext }) => {
 
   // Verificar se usuário tem seller_referral_code
   const hasSellerReferralCode = userProfile?.seller_referral_code && userProfile.seller_referral_code.trim() !== '';
-  
+
   // Verificar se usuário já tem affiliate_code (friend code) do registro
   const hasAffiliateCode = userProfile?.affiliate_code && userProfile.affiliate_code.trim() !== '';
 
@@ -448,20 +449,20 @@ export const SelectionFeeStep: React.FC<StepProps> = ({ onNext }) => {
         console.log('🔍 [SelectionFeeStep] Sem user.id, não buscando código');
         return;
       }
-      
+
       console.log('🔍 [SelectionFeeStep] Verificando condições para buscar código:', {
         hasActiveDiscount: activeDiscount?.has_discount,
         activeDiscountCode: activeDiscount?.affiliate_code,
         hasDiscountCode: !!discountCode,
         codeApplied
       });
-      
+
       // Se já tem activeDiscount, não precisa buscar
       if (activeDiscount?.has_discount && activeDiscount.affiliate_code) {
         console.log('🔍 [SelectionFeeStep] Já tem activeDiscount, não precisa buscar');
         return;
       }
-      
+
       // Se já tem código no estado, não precisa buscar
       if (discountCode && codeApplied) {
         console.log('🔍 [SelectionFeeStep] Já tem código no estado, não precisa buscar');
@@ -488,7 +489,7 @@ export const SelectionFeeStep: React.FC<StepProps> = ({ onNext }) => {
             .eq('user_id', user.id)
             .order('created_at', { ascending: false })
             .limit(1);
-          
+
           if (!anyStatusError && anyStatusData && anyStatusData.length > 0) {
             data = anyStatusData;
             error = null;
@@ -535,7 +536,7 @@ export const SelectionFeeStep: React.FC<StepProps> = ({ onNext }) => {
       hasDiscount: activeDiscount?.has_discount,
       affiliateCode: activeDiscount?.affiliate_code
     });
-    
+
     if (activeDiscount?.has_discount && activeDiscount.affiliate_code) {
       console.log('✅ [SelectionFeeStep] Restaurando código aplicado via activeDiscount:', activeDiscount.affiliate_code);
       // Restaurar estado do código aplicado
@@ -571,10 +572,10 @@ export const SelectionFeeStep: React.FC<StepProps> = ({ onNext }) => {
   useEffect(() => {
     const restorePromotionalCoupon = async () => {
       if (!user?.id) return;
-      
+
       try {
         console.log('[SelectionFeeStep] Buscando cupom promocional aplicado...');
-        
+
         const { data: couponRecords, error } = await supabase
           .from('promotional_coupon_usage')
           .select('*')
@@ -597,7 +598,7 @@ export const SelectionFeeStep: React.FC<StepProps> = ({ onNext }) => {
         if (validationRecords && validationRecords.length > 0) {
           const latestRecord = validationRecords[0];
           console.log('[SelectionFeeStep] ✅ Cupom promocional encontrado, restaurando:', latestRecord.coupon_code);
-          
+
           // Restaurar estado do cupom
           setPromotionalCoupon(latestRecord.coupon_code);
           setPromotionalCouponValidation({
@@ -607,11 +608,11 @@ export const SelectionFeeStep: React.FC<StepProps> = ({ onNext }) => {
             finalAmount: latestRecord.final_amount,
             couponId: latestRecord.coupon_id
           });
-          
+
           // Salvar no window para checkout
           (window as any).__checkout_promotional_coupon = latestRecord.coupon_code;
           (window as any).__checkout_final_amount = latestRecord.final_amount;
-          
+
           console.log('[SelectionFeeStep] Estado do cupom promocional restaurado com sucesso');
         } else {
           console.log('[SelectionFeeStep] Nenhum cupom promocional válido encontrado');
@@ -723,7 +724,7 @@ export const SelectionFeeStep: React.FC<StepProps> = ({ onNext }) => {
         });
         return;
       }
-      
+
       setValidationResult({
         isValid: true,
         message: t('preCheckoutModal.validCode') || 'Valid code! $50 discount applied',
@@ -754,7 +755,7 @@ export const SelectionFeeStep: React.FC<StepProps> = ({ onNext }) => {
 
     const normalizedCode = promotionalCoupon.trim().toUpperCase();
     const normalizedFeeType = 'selection_process';
-    
+
     setIsValidatingPromotionalCoupon(true);
     setPromotionalCouponValidation(null);
 
@@ -785,7 +786,7 @@ export const SelectionFeeStep: React.FC<StepProps> = ({ onNext }) => {
       } else {
         discountAmount = result.discount_value;
       }
-      
+
       discountAmount = Math.min(discountAmount, selectionFeeAmount);
       const finalAmount = Math.max(0, selectionFeeAmount - discountAmount);
 
@@ -796,9 +797,9 @@ export const SelectionFeeStep: React.FC<StepProps> = ({ onNext }) => {
         finalAmount: finalAmount,
         couponId: result.id
       };
-      
+
       setPromotionalCouponValidation(validationData);
-      
+
       // ✅ Registrar uso do cupom no banco de dados via Edge Function
       try {
         const { data: sessionData } = await supabase.auth.getSession();
@@ -833,7 +834,7 @@ export const SelectionFeeStep: React.FC<StepProps> = ({ onNext }) => {
         console.warn('[SelectionFeeStep] ⚠️ Aviso: Erro ao registrar uso do cupom:', recordError);
         // Não quebra o fluxo - continua normalmente mesmo se o registro falhar
       }
-      
+
       // Salvar no window para checkout
       (window as any).__checkout_promotional_coupon = normalizedCode;
       (window as any).__checkout_final_amount = finalAmount;
@@ -852,9 +853,9 @@ export const SelectionFeeStep: React.FC<StepProps> = ({ onNext }) => {
   // Função para remover cupom promocional aplicado
   const removePromotionalCoupon = async () => {
     if (!promotionalCoupon.trim() || !user?.id) return;
-    
+
     console.log('[SelectionFeeStep] Removendo cupom promocional...');
-    
+
     try {
       const { data: sessionData } = await supabase.auth.getSession();
       const token = sessionData.session?.access_token;
@@ -877,7 +878,7 @@ export const SelectionFeeStep: React.FC<StepProps> = ({ onNext }) => {
       });
 
       const result = await response.json();
-      
+
       if (!result.success) {
         console.warn('[SelectionFeeStep] ⚠️ Aviso: Não foi possível remover o cupom do banco:', result.error);
         // Continuar mesmo se falhar no banco - remover localmente
@@ -888,20 +889,20 @@ export const SelectionFeeStep: React.FC<StepProps> = ({ onNext }) => {
       console.warn('[SelectionFeeStep] ⚠️ Aviso: Erro ao remover cupom do banco:', error);
       // Continuar mesmo se falhar - remover localmente
     }
-    
+
     // Limpar estados locais
     setPromotionalCoupon('');
     setPromotionalCouponValidation(null);
     setIsValidatingPromotionalCoupon(false);
-    
+
     // Limpar window
     delete (window as any).__promotional_coupon_validation;
     delete (window as any).__checkout_promotional_coupon;
     delete (window as any).__checkout_final_amount;
-    
+
     // Limpar localStorage se existir
     localStorage.removeItem('__promotional_coupon_selection_process');
-    
+
     console.log('[SelectionFeeStep] Cupom removido com sucesso');
   };
 
@@ -912,12 +913,12 @@ export const SelectionFeeStep: React.FC<StepProps> = ({ onNext }) => {
       e.preventDefault();
       return;
     }
-    
+
     const isChecked = e.target.checked;
-    
+
     // Atualiza o estado visual imediatamente
     setTermsAccepted(isChecked);
-    
+
     if (isChecked) {
       // Registrar no banco de dados em background (ou aguardando, mas o UI já está atualizado)
       setLoading(true);
@@ -933,7 +934,7 @@ export const SelectionFeeStep: React.FC<StepProps> = ({ onNext }) => {
   useEffect(() => {
     const checkExistingAcceptance = async () => {
       if (!user?.id) return;
-      
+
       try {
         const hasAccepted = await checkTermAcceptance('checkout_terms');
         if (hasAccepted) {
@@ -950,34 +951,38 @@ export const SelectionFeeStep: React.FC<StepProps> = ({ onNext }) => {
   }, [user?.id, checkTermAcceptance]);
 
   // Usar usePaymentBlocked para verificar pagamentos pendentes
+  // MONITORAR APROVAÇÃO AUTOMÁTICA
   useEffect(() => {
-    console.log('🔍 [SelectionFeeStep] Verificando estado de bloqueio:', {
-      isBlocked,
-      hasPendingPayment: !!pendingPayment,
-      paymentBlockedLoading,
-      pendingPaymentFeeType: pendingPayment?.fee_type
-    });
+    if (approvedPayment && approvedPayment.fee_type === 'selection_process' && !hasProcessedApproval.current) {
+      console.log('✅ [SelectionFeeStep] Pagamento Zelle aprovado detectado!', approvedPayment);
+      hasProcessedApproval.current = true;
 
+      const proceed = async () => {
+        // 1. Atualizar o perfil do usuário para garantir que has_paid_selection_process_fee esteja true
+        await refetchUserProfile();
+
+        // 2. Limpar estados locais de checkout
+        setZellePaymentSubmitted(false);
+        setShowZelleCheckout(false);
+
+        // 3. Avançar para a próxima tela
+        onNext();
+      };
+
+      proceed();
+    }
+  }, [approvedPayment, refetchUserProfile, onNext]);
+  useEffect(() => {
     // Se está carregando, aguardar
     if (paymentBlockedLoading) {
-      console.log('⏳ [SelectionFeeStep] Aguardando verificação de pagamentos pendentes...');
       return;
     }
 
     // Se há pagamento pendente, mostrar checkout automaticamente
     if (isBlocked && pendingPayment) {
-      console.log('🚫 [SelectionFeeStep] Pagamento pendente detectado:', {
-        id: pendingPayment.id,
-        status: pendingPayment.status,
-        fee_type: pendingPayment.fee_type
-      });
-      
       setIsZelleProcessing(true);
       setShowZelleCheckout(true);
       setSelectedMethod('zelle');
-      console.log('🔄 [SelectionFeeStep] Mostrando checkout Zelle automaticamente');
-    } else {
-      console.log('✅ [SelectionFeeStep] Nenhum pagamento pendente');
     }
   }, [isBlocked, pendingPayment, paymentBlockedLoading]);
 
@@ -990,51 +995,35 @@ export const SelectionFeeStep: React.FC<StepProps> = ({ onNext }) => {
 
   // Calcular preço final com desconto
   const computedBasePrice = (() => {
-    console.log('💰 [SelectionFeeStep] Calculando preço:', {
-      selectionFeeAmount,
-      activeDiscount,
-      hasActiveDiscount: activeDiscount?.has_discount,
-      validationResult,
-      codeApplied,
-      discountCode,
-      promotionalCouponValidation
-    });
-
     // 1. Cupom promocional tem prioridade
     if (promotionalCouponValidation?.isValid && promotionalCouponValidation.finalAmount !== undefined) {
-      console.log('💰 [SelectionFeeStep] Aplicando cupom promocional:', { 
-        finalAmount: promotionalCouponValidation.finalAmount 
-      });
       return promotionalCouponValidation.finalAmount;
     }
-    
+
     // 2. Depois verifica activeDiscount (referral code)
     if (activeDiscount?.has_discount) {
       // Se já tem desconto ativo, aplicar desconto
       const discount = activeDiscount.discount_amount || 50;
       const finalPrice = Math.max(selectionFeeAmount - discount, 0);
-      console.log('💰 [SelectionFeeStep] Aplicando desconto via activeDiscount:', { discount, finalPrice });
       return finalPrice;
     }
-    
+
     // 3. Código validado e aplicado
     if (validationResult?.isValid && codeApplied) {
       // Se código foi validado e aplicado, aplicar desconto de $50
       const finalPrice = Math.max(selectionFeeAmount - 50, 0);
-      console.log('💰 [SelectionFeeStep] Aplicando desconto via código validado:', { finalPrice });
       return finalPrice;
     }
-    
-    console.log('💰 [SelectionFeeStep] Sem desconto, usando preço original:', selectionFeeAmount);
+
     return selectionFeeAmount;
   })();
 
-  const formattedAmount = computedBasePrice && !isNaN(computedBasePrice) 
-    ? formatFeeAmount(computedBasePrice) 
+  const formattedAmount = computedBasePrice && !isNaN(computedBasePrice)
+    ? formatFeeAmount(computedBasePrice)
     : '$0.00';
-  
-  const originalFormattedAmount = selectionFeeAmount && !isNaN(selectionFeeAmount) 
-    ? formatFeeAmount(selectionFeeAmount) 
+
+  const originalFormattedAmount = selectionFeeAmount && !isNaN(selectionFeeAmount)
+    ? formatFeeAmount(selectionFeeAmount)
     : '$0.00';
 
   // Calcular valores com taxas do Stripe/PIX para exibição
@@ -1058,14 +1047,14 @@ export const SelectionFeeStep: React.FC<StepProps> = ({ onNext }) => {
     pollingIntervalRef.current = setInterval(async () => {
       attempts++;
       await refetchUserProfile();
-      
+
       // Verificar se o pagamento foi processado
       const { data: updatedProfile } = await supabase
         .from('user_profiles')
         .select('has_paid_selection_process_fee')
         .eq('user_id', user.id)
         .single();
-      
+
       if (updatedProfile?.has_paid_selection_process_fee) {
         if (pollingIntervalRef.current) {
           clearInterval(pollingIntervalRef.current);
@@ -1080,8 +1069,6 @@ export const SelectionFeeStep: React.FC<StepProps> = ({ onNext }) => {
           pollingIntervalRef.current = null;
         }
         setZellePaymentSubmitted(false);
-        // Mesmo que não tenha sido aprovado ainda, mostrar mensagem
-        setError('Payment submitted successfully. It will be processed shortly. You can continue once it\'s approved.');
       }
     }, 2000); // Verificar a cada 2 segundos
 
@@ -1204,11 +1191,11 @@ export const SelectionFeeStep: React.FC<StepProps> = ({ onNext }) => {
 
       // Determinar qual Edge Function chamar
       let apiUrl = `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/stripe-checkout-selection-process-fee`;
-      
+
       if (paymentMethod === 'parcelow') {
         apiUrl = `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/parcelow-checkout-selection-process`;
       }
-      
+
       // Determinar código de desconto a ser enviado
       const discountCodeToSend = (() => {
         if (activeDiscount?.has_discount && activeDiscount.affiliate_code) {
@@ -1256,9 +1243,9 @@ export const SelectionFeeStep: React.FC<StepProps> = ({ onNext }) => {
       }
 
       const data = await response.json();
-      
+
       const redirectUrl = data.session_url || data.checkout_url;
-      
+
       if (redirectUrl) {
         window.location.href = redirectUrl;
       } else {
@@ -1314,7 +1301,7 @@ export const SelectionFeeStep: React.FC<StepProps> = ({ onNext }) => {
         {/* Main White Container */}
         <div className="bg-white border border-emerald-500/30 ring-1 ring-emerald-500/20 rounded-[2.5rem] p-8 md:p-10 shadow-2xl relative overflow-hidden">
           <div className="absolute top-0 right-0 w-64 h-64 bg-blue-500/5 rounded-full blur-[80px] -mr-32 -mt-32 pointer-events-none" />
-          
+
           <div className="relative z-10 text-center py-4">
             <div className="w-20 h-20 bg-emerald-500/20 rounded-full flex items-center justify-center mx-auto mb-6 border border-emerald-500/30">
               <CheckCircle className="w-12 h-12 text-emerald-400" />
@@ -1348,13 +1335,13 @@ export const SelectionFeeStep: React.FC<StepProps> = ({ onNext }) => {
 
         <div className="bg-white border border-gray-100 rounded-[2.5rem] p-6 md:p-10 shadow-2xl relative overflow-hidden">
           <div className="absolute top-0 right-0 w-64 h-64 bg-blue-500/5 rounded-full blur-[80px] -mr-32 -mt-32 pointer-events-none" />
-          
+
 
 
 
           {/* Matricula Rewards / Referral Code Section */}
-          {/* Mostrar seção sempre, exceto se tiver seller_referral_code */}
-          {!hasSellerReferralCode ? (
+          {/* Mostrar seção sempre, exceto se tiver seller_referral_code e se NÃO estiver bloqueado por pagamento pendente */}
+          {!isBlocked && !hasSellerReferralCode ? (
             <div className="mb-6 space-y-4">
 
               {/* Mostrar campo de código sempre */}
@@ -1403,7 +1390,7 @@ export const SelectionFeeStep: React.FC<StepProps> = ({ onNext }) => {
                             {t('selectionFeeStep.main.referralCode.subtitle')}
                           </p>
                         </div>
-                        
+
                         <div className="space-y-4">
                           <div className="flex flex-col sm:flex-row gap-2">
                             <div className="relative flex-1 group/input">
@@ -1432,11 +1419,10 @@ export const SelectionFeeStep: React.FC<StepProps> = ({ onNext }) => {
                               <button
                                 onClick={validateDiscountCode}
                                 disabled={isValidating || !discountCode.trim()}
-                                className={`px-6 py-3.5 rounded-xl font-black uppercase tracking-widest text-sm transition-all shadow-xl active:scale-95 whitespace-nowrap sm:w-auto w-full ${
-                                  isValidating || !discountCode.trim()
-                                    ? 'bg-gray-100 text-gray-400 border border-gray-200 cursor-not-allowed'
-                                    : 'bg-blue-600 text-white hover:bg-blue-700 border border-blue-500/50 shadow-[0_0_20px_rgba(37,99,235,0.2)]'
-                                }`}
+                                className={`px-6 py-3.5 rounded-xl font-black uppercase tracking-widest text-sm transition-all shadow-xl active:scale-95 whitespace-nowrap sm:w-auto w-full ${isValidating || !discountCode.trim()
+                                  ? 'bg-gray-100 text-gray-400 border border-gray-200 cursor-not-allowed'
+                                  : 'bg-blue-600 text-white hover:bg-blue-700 border border-blue-500/50 shadow-[0_0_20px_rgba(37,99,235,0.2)]'
+                                  }`}
                               >
                                 {isValidating ? (
                                   <div className="flex items-center space-x-2 justify-center">
@@ -1450,7 +1436,7 @@ export const SelectionFeeStep: React.FC<StepProps> = ({ onNext }) => {
                             )}
                           </div>
                         </div>
-                        
+
                         {validationResult && !validationResult.isValid && (
                           <p className="text-sm text-red-600 text-center">
                             {validationResult.message}
@@ -1473,7 +1459,7 @@ export const SelectionFeeStep: React.FC<StepProps> = ({ onNext }) => {
                           {promotionalCouponValidation?.isValid ? (
                             <div className="bg-emerald-500/10 border border-emerald-500/20 rounded-2xl p-6 space-y-4 shadow-inner relative overflow-hidden">
                               <div className="absolute top-0 right-0 w-32 h-32 bg-emerald-500/5 rounded-full blur-[40px] -mr-16 -mt-16 pointer-events-none" />
-                              
+
                               <div className="flex items-center justify-between relative z-10">
                                 <div className="flex items-center space-x-3">
                                   <div className="w-10 h-10 bg-emerald-50 rounded-xl flex items-center justify-center border border-emerald-100">
@@ -1542,11 +1528,10 @@ export const SelectionFeeStep: React.FC<StepProps> = ({ onNext }) => {
                                 <button
                                   onClick={validatePromotionalCoupon}
                                   disabled={isValidatingPromotionalCoupon || !promotionalCoupon.trim()}
-                                  className={`px-6 py-3.5 rounded-xl font-black uppercase tracking-widest text-sm transition-all shadow-xl active:scale-95 whitespace-nowrap sm:w-auto w-full ${
-                                    isValidatingPromotionalCoupon || !promotionalCoupon.trim()
-                                      ? 'bg-gray-100 text-gray-400 border border-gray-200 cursor-not-allowed'
-                                      : 'bg-blue-600 text-white hover:bg-blue-700 border border-blue-500/50 shadow-[0_0_20px_rgba(37,99,235,0.2)]'
-                                  }`}
+                                  className={`px-6 py-3.5 rounded-xl font-black uppercase tracking-widest text-sm transition-all shadow-xl active:scale-95 whitespace-nowrap sm:w-auto w-full ${isValidatingPromotionalCoupon || !promotionalCoupon.trim()
+                                    ? 'bg-gray-100 text-gray-400 border border-gray-200 cursor-not-allowed'
+                                    : 'bg-blue-600 text-white hover:bg-blue-700 border border-blue-500/50 shadow-[0_0_20px_rgba(37,99,235,0.2)]'
+                                    }`}
                                 >
                                   {isValidatingPromotionalCoupon ? (
                                     <div className="flex items-center justify-center space-x-2">
@@ -1558,7 +1543,7 @@ export const SelectionFeeStep: React.FC<StepProps> = ({ onNext }) => {
                                   )}
                                 </button>
                               </div>
-                              
+
                               {promotionalCouponValidation && !promotionalCouponValidation.isValid && (
                                 <div className="bg-red-500/10 border border-red-500/20 rounded-xl p-4 flex items-center space-x-3 backdrop-blur-md">
                                   <AlertCircle className="w-5 h-5 text-red-500 flex-shrink-0" />
@@ -1578,34 +1563,36 @@ export const SelectionFeeStep: React.FC<StepProps> = ({ onNext }) => {
 
 
 
-          {/* Terms acceptance section */}
-          <div className="mb-8">
-            <div className="flex items-center space-x-3 p-4 bg-gray-50 border border-gray-100 rounded-xl group/terms hover:bg-gray-100/50 transition-colors duration-300 shadow-sm">
-              <label htmlFor="termsAccepted" className={`checkbox-container ${hasAcceptedTermsInDB ? 'cursor-not-allowed opacity-75' : 'cursor-pointer'} flex-shrink-0`}>
-                <input
-                  id="termsAccepted"
-                  name="termsAccepted"
-                  type="checkbox"
-                  checked={termsAccepted}
-                  onChange={handleCheckboxChange}
-                  disabled={hasAcceptedTermsInDB}
-                  className="custom-checkbox"
-                />
-                <div className="checkmark border-gray-300" />
-              </label>
-              <div className="text-xs sm:text-sm text-gray-600 leading-relaxed flex-1 cursor-default group-hover/terms:text-gray-900 transition-colors">
-                <span className="text-red-500 font-bold mr-1">*</span>
-                Eu aceito os {' '}
-                <span 
-                  onClick={handleTermsClick}
-                  className="text-blue-600 font-bold hover:underline cursor-pointer"
-                >
-                  {t('preCheckoutModal.termsAndConditions.title') || 'termos e condições'}
-                </span>
-                {' '} do contrato de prestação de serviços.
+          {/* Terms acceptance section - ocultar se já tiver pagamento pendente */}
+          {!isBlocked && (
+            <div className="mb-8">
+              <div className="flex items-center space-x-3 p-4 bg-gray-50 border border-gray-100 rounded-xl group/terms hover:bg-gray-100/50 transition-colors duration-300 shadow-sm">
+                <label htmlFor="termsAccepted" className={`checkbox-container ${hasAcceptedTermsInDB ? 'cursor-not-allowed opacity-75' : 'cursor-pointer'} flex-shrink-0`}>
+                  <input
+                    id="termsAccepted"
+                    name="termsAccepted"
+                    type="checkbox"
+                    checked={termsAccepted}
+                    onChange={handleCheckboxChange}
+                    disabled={hasAcceptedTermsInDB}
+                    className="custom-checkbox"
+                  />
+                  <div className="checkmark border-gray-300" />
+                </label>
+                <div className="text-xs sm:text-sm text-gray-600 leading-relaxed flex-1 cursor-default group-hover/terms:text-gray-900 transition-colors">
+                  <span className="text-red-500 font-bold mr-1">*</span>
+                  Eu aceito os {' '}
+                  <span
+                    onClick={handleTermsClick}
+                    className="text-blue-600 font-bold hover:underline cursor-pointer"
+                  >
+                    {t('preCheckoutModal.termsAndConditions.title') || 'termos e condições'}
+                  </span>
+                  {' '} do contrato de prestação de serviços.
+                </div>
               </div>
             </div>
-          </div>
+          )}
 
           {error && (
             <div className="mb-6 p-4 bg-red-50 border-2 border-red-200 rounded-lg">
@@ -1616,7 +1603,7 @@ export const SelectionFeeStep: React.FC<StepProps> = ({ onNext }) => {
           {/* Skeleton Loading enquanto verifica pagamentos pendentes */}
           {/* Condicional Principal: Loading -> Zelle -> Lista de Métodos */}
           {/* Condicional Principal: Loading -> Zelle Bloqueado -> Lista de Métodos */}
-          {paymentBlockedLoading ? (
+          {paymentBlockedLoading && !isBlocked && (!rejectedPayment || rejectedPayment.id === undefined) ? (
             <div className="space-y-4 animate-pulse">
               <div className="h-5 w-48 bg-gray-200 rounded mb-4"></div>
               {[1, 2, 3].map((i) => (
@@ -1624,8 +1611,8 @@ export const SelectionFeeStep: React.FC<StepProps> = ({ onNext }) => {
                   <div className="flex items-center space-x-4">
                     <div className="w-12 h-12 bg-gray-200 rounded"></div>
                     <div className="flex-1 space-y-2">
-                       <div className="h-5 w-32 bg-gray-200 rounded"></div>
-                       <div className="h-4 w-48 bg-gray-200 rounded"></div>
+                      <div className="h-5 w-32 bg-gray-200 rounded"></div>
+                      <div className="h-4 w-48 bg-gray-200 rounded"></div>
                     </div>
                   </div>
                 </div>
@@ -1660,20 +1647,15 @@ export const SelectionFeeStep: React.FC<StepProps> = ({ onNext }) => {
                     ...(validationResult?.isValid && codeApplied && discountCode.trim() ? { discount_code: discountCode.trim().toUpperCase() } : {}),
                     promotional_coupon: (window as any).__checkout_promotional_coupon || null
                   }}
-                  onSuccess={() => {
-                    console.log('✅ [SelectionFeeStep] Pagamento Zelle aprovado');
-                    setZellePaymentSubmitted(false);
-                    setShowZelleCheckout(false);
-                    setIsZelleProcessing(false);
-                    onNext(); 
-                  }}
+                  isPendingVerification={hasZellePendingSelectionFee}
                   onError={(error) => {
                     setError(error);
                     setZellePaymentSubmitted(false);
                     setIsZelleProcessing(false);
                   }}
-                  onProcessingChange={(isProcessing) => {
+                  onProcessingChange={(isProcessing: boolean) => {
                     setIsZelleProcessing(isProcessing);
+                    setZellePaymentSubmitted(isProcessing);
                     if (isProcessing) refetchPaymentStatus();
                   }}
                 />
@@ -1684,7 +1666,7 @@ export const SelectionFeeStep: React.FC<StepProps> = ({ onNext }) => {
               <div className="absolute top-0 right-0 w-32 h-32 bg-blue-500/5 rounded-full blur-[40px] -mr-16 -mt-16 pointer-events-none" />
               <div className="flex items-center justify-between mb-2 relative z-10">
                 <h3 className="text-xl font-black text-gray-900 uppercase tracking-tight">{t('selectionFeeStep.main.zellePayment')}</h3>
-                
+
                 {!isZelleProcessing && (
                   <button
                     onClick={() => {
@@ -1699,7 +1681,7 @@ export const SelectionFeeStep: React.FC<StepProps> = ({ onNext }) => {
                   </button>
                 )}
               </div>
-              
+
               <ZelleCheckout
                 feeType="selection_process"
                 amount={computedBasePrice}
@@ -1712,20 +1694,15 @@ export const SelectionFeeStep: React.FC<StepProps> = ({ onNext }) => {
                   ...(validationResult?.isValid && codeApplied && discountCode.trim() ? { discount_code: discountCode.trim().toUpperCase() } : {}),
                   promotional_coupon: (window as any).__checkout_promotional_coupon || null
                 }}
-                onSuccess={() => {
-                  console.log('✅ [SelectionFeeStep] Pagamento Zelle aprovado');
-                  setZellePaymentSubmitted(false);
-                  setShowZelleCheckout(false);
-                  setIsZelleProcessing(false);
-                  onNext(); 
-                }}
+                isPendingVerification={hasZellePendingSelectionFee}
                 onError={(error) => {
                   setError(error);
                   setZellePaymentSubmitted(false);
                   setIsZelleProcessing(false);
                 }}
-                onProcessingChange={(isProcessing) => {
+                onProcessingChange={(isProcessing: boolean) => {
                   setIsZelleProcessing(isProcessing);
+                  setZellePaymentSubmitted(isProcessing);
                   if (isProcessing) refetchPaymentStatus();
                 }}
               />
@@ -1747,7 +1724,7 @@ export const SelectionFeeStep: React.FC<StepProps> = ({ onNext }) => {
                   </div>
                 </div>
               )}
-               
+
               <div className="flex items-end justify-between mb-4 px-2">
                 <p className="text-xs font-black text-gray-400 uppercase tracking-[0.2em]">{t('selectionFeeStep.main.selectMethod')}</p>
                 <div className="text-right">
@@ -1758,7 +1735,7 @@ export const SelectionFeeStep: React.FC<StepProps> = ({ onNext }) => {
                       <div className="inline-flex items-center mt-1.5 opacity-90">
                         <CheckCircle className="w-3 h-3 text-emerald-500 mr-1.5" />
                         <span className="text-[10px] text-emerald-500 font-black uppercase tracking-widest">
-                          {promotionalCouponValidation?.isValid 
+                          {promotionalCouponValidation?.isValid
                             ? t('selectionFeeStep.main.couponApplied', { coupon: promotionalCoupon })
                             : t('selectionFeeStep.main.discountApplied')}
                         </span>
@@ -1769,54 +1746,53 @@ export const SelectionFeeStep: React.FC<StepProps> = ({ onNext }) => {
                   )}
                 </div>
               </div>
-               
+
               {paymentMethods.map((method) => {
                 const Icon = method.icon;
                 const isSelected = selectedMethod === method.id;
                 const isProcessing = loading && isSelected;
-                const isDisabled = !!loading || 
-                  !termsAccepted || 
+                const isDisabled = !!loading ||
+                  !termsAccepted ||
                   (hasReferralCode && !(validationResult?.isValid) && !activeDiscount?.has_discount) ||
                   (!!isBlocked && !!pendingPayment && method.id !== 'zelle');
-                
+
                 return (
                   <div key={method.id} className="w-full flex flex-col">
                     <button
                       onClick={() => handleCheckout(method.id)}
                       disabled={isDisabled}
-                      className={`w-full p-6 rounded-2xl border-2 transition-all duration-300 text-left relative overflow-hidden group/method ${
-                        isSelected
-                          ? 'border-blue-100 bg-blue-50 shadow-[0_0_30px_rgba(59,130,246,0.1)]'
-                          : 'border-gray-100 bg-gray-50 hover:border-gray-200 hover:bg-white'
-                      } ${isDisabled ? 'opacity-40 cursor-not-allowed grayscale' : 'cursor-pointer hover:scale-[1.01] active:scale-[0.99]'}`}
+                      className={`w-full p-6 rounded-2xl border-2 transition-all duration-300 text-left relative overflow-hidden group/method ${isSelected
+                        ? 'border-blue-100 bg-blue-50 shadow-[0_0_30px_rgba(59,130,246,0.1)]'
+                        : 'border-gray-100 bg-gray-50 hover:border-gray-200 hover:bg-white'
+                        } ${isDisabled ? 'opacity-40 cursor-not-allowed grayscale' : 'cursor-pointer hover:scale-[1.01] active:scale-[0.99]'}`}
                     >
                       <div className="flex items-center space-x-5 relative z-10">
                         <div className={`flex-shrink-0 w-14 h-14 flex items-center justify-center rounded-xl bg-white border border-gray-100 transition-transform duration-500 group-hover/method:scale-110 shadow-sm`}>
                           <Icon className="w-10 h-10 text-gray-700" />
                         </div>
-                        
+
                         <div className="flex-1 min-w-0">
                           <div className="flex items-center justify-between">
                             <div className="flex flex-col">
-                                <h4 className="text-lg font-black text-gray-900 uppercase tracking-tight">
-                                  {method.name}
-                                </h4>
-                                {method.id === 'stripe' && (
-                                  <span className="text-[10px] font-bold text-gray-400 mt-1 uppercase tracking-wide leading-tight">{t('selectionFeeStep.main.processingFees.card')}</span>
-                                )}
-                                {method.id === 'pix' && (
-                                  <span className="text-[10px] font-bold text-gray-400 mt-1 uppercase tracking-wide leading-tight">{t('selectionFeeStep.main.processingFees.pix')}</span>
-                                )}
-                                {method.id === 'parcelow' && (
-                                  <span className="text-[10px] font-bold text-gray-400 mt-1 uppercase tracking-wide leading-tight max-w-[200px] sm:max-w-none">{t('selectionFeeStep.main.processingFees.parcelow')}</span>
-                                )}
-                                {method.id === 'zelle' && (
-                                  <span className="text-[10px] font-bold text-gray-400 mt-1 uppercase tracking-wide leading-tight flex items-center gap-1">
-                                    <AlertCircle className="w-3 h-3 flex-shrink-0" />
-                                    {t('selectionFeeStep.main.processingFees.zelle')}
-                                  </span>
-                                )}
-                              </div>
+                              <h4 className="text-lg font-black text-gray-900 uppercase tracking-tight">
+                                {method.name}
+                              </h4>
+                              {method.id === 'stripe' && (
+                                <span className="text-[10px] font-bold text-gray-400 mt-1 uppercase tracking-wide leading-tight">{t('selectionFeeStep.main.processingFees.card')}</span>
+                              )}
+                              {method.id === 'pix' && (
+                                <span className="text-[10px] font-bold text-gray-400 mt-1 uppercase tracking-wide leading-tight">{t('selectionFeeStep.main.processingFees.pix')}</span>
+                              )}
+                              {method.id === 'parcelow' && (
+                                <span className="text-[10px] font-bold text-gray-400 mt-1 uppercase tracking-wide leading-tight max-w-[200px] sm:max-w-none">{t('selectionFeeStep.main.processingFees.parcelow')}</span>
+                              )}
+                              {method.id === 'zelle' && (
+                                <span className="text-[10px] font-bold text-gray-400 mt-1 uppercase tracking-wide leading-tight flex items-center gap-1">
+                                  <AlertCircle className="w-3 h-3 flex-shrink-0" />
+                                  {t('selectionFeeStep.main.processingFees.zelle')}
+                                </span>
+                              )}
+                            </div>
 
                             <div className="flex items-center gap-3">
                               {method.id === 'stripe' && cardAmountWithFees > 0 && (
@@ -1826,25 +1802,25 @@ export const SelectionFeeStep: React.FC<StepProps> = ({ onNext }) => {
                               )}
                               {method.id === 'parcelow' && computedBasePrice > 0 && (
                                 <div className="flex flex-col items-end">
-                                   <span className="text-grey-900 text-lg font-black px-2">
-                                     ${computedBasePrice.toFixed(2)}
-                                   </span>
+                                  <span className="text-grey-900 text-lg font-black px-2">
+                                    ${computedBasePrice.toFixed(2)}
+                                  </span>
                                   <span className="text-[10px] font-bold text-slate-900 mt-1 block uppercase tracking-widest leading-tight">
                                     {t('selectionFeeStep.main.parcelowInstallments')}
                                   </span>
                                 </div>
                               )}
                               {method.id === 'pix' && pixAmountWithFees > 0 && exchangeRate && (
-                                 <span className="text-grey-900 text-lg font-black px-2">
-                                   R$ {pixAmountWithFees.toFixed(2)}
-                                 </span>
+                                <span className="text-grey-900 text-lg font-black px-2">
+                                  R$ {pixAmountWithFees.toFixed(2)}
+                                </span>
                               )}
                               {method.id === 'zelle' && computedBasePrice > 0 && (
-                                 <span className="text-grey-900 text-lg font-black px-2">
-                                   ${computedBasePrice.toFixed(2)}
-                                 </span>
+                                <span className="text-grey-900 text-lg font-black px-2">
+                                  ${computedBasePrice.toFixed(2)}
+                                </span>
                               )}
-                              
+
                               {isProcessing && (
                                 <Loader2 className="w-5 h-5 text-blue-500 animate-spin flex-shrink-0" />
                               )}
@@ -1872,26 +1848,26 @@ export const SelectionFeeStep: React.FC<StepProps> = ({ onNext }) => {
                     {method.id === 'parcelow' && showInlineCpf && (
                       <div className="p-6 bg-blue-50 border-2 border-blue-100 rounded-2xl mt-4 space-y-4 animate-fadeIn relative z-0 shadow-[0_15px_30px_rgba(59,130,246,0.1)]">
                         <div className="flex flex-col sm:flex-row sm:items-center gap-4">
-                            <div className="flex-initial sm:w-[300px]">
-                              <p className="text-[11px] font-black text-blue-700 uppercase tracking-widest mb-2 flex items-center gap-2">
-                                <Shield className="w-3 h-3" />
-                                {t('selectionFeeStep.main.parcelowVerification')}
-                              </p>
-                              <div className="relative">
-                                <input
-                                  type="text"
-                                  value={inlineCpf}
-                                  onChange={(e) => {
-                                    setInlineCpf(formatCpf(e.target.value));
-                                    setCpfError(null);
-                                  }}
-                                  placeholder={t('selectionFeeStep.main.cpfPlaceholder')}
-                                  maxLength={14}
-                                   className="w-full px-4 py-3 rounded-xl border border-blue-200 text-sm font-bold text-gray-900 focus:outline-none focus:ring-2 focus:ring-blue-500 bg-white transition-all shadow-sm"
-                                />
-                              </div>
-                           </div>
-                           <button
+                          <div className="flex-initial sm:w-[300px]">
+                            <p className="text-[11px] font-black text-blue-700 uppercase tracking-widest mb-2 flex items-center gap-2">
+                              <Shield className="w-3 h-3" />
+                              {t('selectionFeeStep.main.parcelowVerification')}
+                            </p>
+                            <div className="relative">
+                              <input
+                                type="text"
+                                value={inlineCpf}
+                                onChange={(e) => {
+                                  setInlineCpf(formatCpf(e.target.value));
+                                  setCpfError(null);
+                                }}
+                                placeholder={t('selectionFeeStep.main.cpfPlaceholder')}
+                                maxLength={14}
+                                className="w-full px-4 py-3 rounded-xl border border-blue-200 text-sm font-bold text-gray-900 focus:outline-none focus:ring-2 focus:ring-blue-500 bg-white transition-all shadow-sm"
+                              />
+                            </div>
+                          </div>
+                          <button
                             onClick={saveCpfAndCheckout}
                             disabled={savingCpf || inlineCpf.replace(/\D/g, '').length !== 11}
                             className="sm:mt-6 px-8 py-3 rounded-xl bg-blue-600 text-white text-sm font-black hover:bg-blue-700 transition-all disabled:opacity-50 disabled:cursor-not-allowed whitespace-nowrap flex items-center justify-center gap-2 shadow-lg shadow-blue-500/25 active:scale-95"
@@ -1914,10 +1890,10 @@ export const SelectionFeeStep: React.FC<StepProps> = ({ onNext }) => {
 
 
 
-          </div>
-        )}
+            </div>
+          )}
+        </div>
       </div>
-    </div>
 
       {/* Terms and Conditions Modal for desktop */}
       {showTermsModal && ReactDOM.createPortal(
@@ -1928,7 +1904,7 @@ export const SelectionFeeStep: React.FC<StepProps> = ({ onNext }) => {
               <Dialog.Panel className="w-full max-w-4xl bg-white/90 backdrop-blur-xl rounded-[2.5rem] shadow-[0_32px_64px_-16px_rgba(0,0,0,0.3)] overflow-hidden relative max-h-[90dvh] flex flex-col">
                 <div className="relative bg-gradient-to-br from-blue-600/90 via-blue-700/90 to-indigo-800/90 text-white p-6 sm:p-8 flex-shrink-0 border-b border-white/10">
                   <div className="absolute top-0 right-0 w-64 h-64 bg-white/10 rounded-full blur-[80px] -mr-32 -mt-32 pointer-events-none" />
-                  
+
                   <button
                     onClick={() => setShowTermsModal(false)}
                     className="absolute top-4 right-4 p-2.5 hover:bg-white/20 rounded-2xl transition-all duration-300 group/close z-50"
@@ -1936,7 +1912,7 @@ export const SelectionFeeStep: React.FC<StepProps> = ({ onNext }) => {
                   >
                     <X className="w-6 h-6 group-hover/close:rotate-90 transition-transform duration-500" />
                   </button>
-                  
+
                   <div className="flex items-center gap-4 relative z-10">
                     <div>
                       <Dialog.Title className="text-2xl sm:text-3xl font-black uppercase tracking-tighter">
@@ -1957,7 +1933,7 @@ export const SelectionFeeStep: React.FC<StepProps> = ({ onNext }) => {
                       <p className="text-gray-400 font-bold uppercase tracking-widest text-xs">{t('preCheckoutModal.loading')}</p>
                     </div>
                   ) : activeTerm ? (
-                    <div 
+                    <div
                       className="prose prose-blue max-w-none prose-headings:font-black prose-headings:uppercase prose-headings:tracking-tight prose-p:text-gray-600 prose-p:leading-relaxed prose-strong:text-gray-900"
                       dangerouslySetInnerHTML={{ __html: activeTerm?.content || '' }}
                     />
@@ -2000,7 +1976,7 @@ export const SelectionFeeStep: React.FC<StepProps> = ({ onNext }) => {
                 </DrawerTitle>
               </div>
             </DrawerHeader>
-            
+
             <div className="flex-1 overflow-y-auto p-4 bg-white">
               <MobileTermsView
                 setShowTermsInDrawer={setShowTermsInDrawer}

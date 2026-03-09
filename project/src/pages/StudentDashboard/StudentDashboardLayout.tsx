@@ -75,23 +75,7 @@ const StudentDashboardLayout: React.FC<StudentDashboardLayoutProps> = ({
   const [isSelfieModalOpen, setIsSelfieModalOpen] = useState(false);
   const hasAutoOpenedSelfie = useRef(false);
 
-  // Lógica para abrir o modal de selfie automaticamente
-  useEffect(() => {
-    // Agora o modal pode aparecer em qualquer página do dashboard (exceto possivelmente o próprio questionário para não atrapalhar)
-    // Mas seguindo a instrução: se não tiver foto, aparece o modal.
-    const isSurveyPage = location.pathname.includes('selection-survey');
-    
-    if (userProfile?.has_paid_selection_process_fee && 
-        !isSurveyPage && // Mantemos apenas para não sobrepor o questionário ativamente
-        identityPhotoStatus === null && 
-        !identityPhotoLoading && 
-        !hasAutoOpenedSelfie.current) {
-      
-      console.log('✨ [StudentDashboardLayout] Abrindo modal de selfie automaticamente (Se não houver foto)');
-      setIsSelfieModalOpen(true);
-      hasAutoOpenedSelfie.current = true;
-    }
-  }, [userProfile?.has_paid_selection_process_fee, identityPhotoStatus, identityPhotoLoading, location.pathname]);
+  // Removido auto-opening da selfie - agora ocorre organicamente no Onboarding
 
   // Use context count if it's been updated, otherwise use server count
   const displayChatUnreadCount = contextChatUnreadCount > 0 ? contextChatUnreadCount : serverChatUnreadCount;
@@ -114,23 +98,20 @@ const StudentDashboardLayout: React.FC<StudentDashboardLayoutProps> = ({
   const paidAt = profile?.selection_process_paid_at ? new Date(profile.selection_process_paid_at) : null;
   const isExemptedByLegacy = profile?.selection_process_fee_paid && (!paidAt || paidAt < SURVEY_THRESHOLD_DATE);
 
-  // Redirecionamento obrigatório para o questionário do processo seletivo
+  // Redirecionamento obrigatório unificado: Se pagou e não completou as etapas de base (onboarding)
   useEffect(() => {
     // Se o usuário está isento por ser um pagamento antigo, não redireciona
     if (isExemptedByLegacy) return;
 
-    // Se o usuário pagou a taxa do processo seletivo mas ainda não passou na pesquisa,
-    // e não está na rota da pesquisa, redireciona para lá.
     if (
       !loading &&
       profile?.selection_process_fee_paid &&
       !profile?.selection_survey_passed &&
-      !location.pathname.includes('selection-survey') &&
-      !location.pathname.includes('selection-process-fee-success') &&
+      !location.pathname.includes('onboarding') &&
       !location.pathname.includes('selection-process-fee-error')
     ) {
-      console.log('🔒 Redirecionando para o Questionário do Processo Seletivo...');
-      navigate('/student/dashboard/selection-survey');
+      console.log('🔒 Redirecionando para o fluxo unificado de Onboarding do Aluno...');
+      navigate('/student/onboarding');
     }
   }, [profile, loading, location.pathname, navigate, isExemptedByLegacy]);
 
@@ -244,19 +225,9 @@ const StudentDashboardLayout: React.FC<StudentDashboardLayoutProps> = ({
     // Em modo restrito, removemos quase tudo
     const allowedIds = ['chat', 'profile', 'rewards'];
     displayedSidebarItems = allSidebarItems.filter(item => allowedIds.includes(item.id));
-
-    // Adicionar o item do Processo Seletivo no topo
-    displayedSidebarItems.unshift({
-      id: 'selection-survey',
-      label: t('selectionSurvey.title') || 'Processo Seletivo',
-      icon: FileText,
-      path: '/student/dashboard/selection-survey'
-    });
   }
 
-
-  const isSelectionSurveyPage = location.pathname.includes('selection-survey');
-  const showSidebar = !isSelectionSurveyPage;
+  const showSidebar = true; // Sidebar sempre exibe os permitidos, visto que sem obrigações concluídas ele sequer fica no Dashboard
 
   return (
     <div className="h-screen flex flex-col lg:flex-row w-full overflow-hidden">
@@ -334,9 +305,7 @@ const StudentDashboardLayout: React.FC<StudentDashboardLayoutProps> = ({
                     className={`group flex items-center justify-between px-3 sm:px-4 py-2.5 sm:py-3 rounded-xl font-medium transition-all duration-200 
                       ${isActive
                         ? 'bg-blue-600 text-white shadow-lg'
-                        : isSelectionSurveyLink
-                          ? 'bg-amber-50 text-amber-700 border border-amber-200 animate-pulse hover:bg-amber-100'
-                          : 'text-slate-600 hover:text-slate-900 hover:bg-slate-100'
+                        : 'text-slate-600 hover:text-slate-900 hover:bg-slate-100'
                       }`}
                     onClick={() => {
                       if (window.innerWidth < 1024) setSidebarOpen(false);
@@ -352,8 +321,7 @@ const StudentDashboardLayout: React.FC<StudentDashboardLayoutProps> = ({
                       <div className="relative">
                         <Icon className={`h-4 w-4 sm:h-5 sm:w-5 
                             ${isActive ? 'text-white' : ''} 
-                            ${!isActive && !isSelectionSurveyLink ? 'text-slate-500' : ''}
-                            ${!isActive && isSelectionSurveyLink ? 'text-amber-600' : ''}
+                            ${!isActive ? 'text-slate-500' : ''}
                         `} />
 
                         {item.id === 'chat' && displayChatUnreadCount > 0 && (
@@ -583,7 +551,7 @@ const StudentDashboardLayout: React.FC<StudentDashboardLayoutProps> = ({
       />
 
       {/* Modal de Verificação de Identidade (Selfie) */}
-      <IdentityVerificationModal 
+      <IdentityVerificationModal
         isOpen={isSelfieModalOpen}
         onClose={() => setIsSelfieModalOpen(false)}
         onSuccess={() => {

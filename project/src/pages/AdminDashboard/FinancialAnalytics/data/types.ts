@@ -61,7 +61,7 @@ export interface FinancialDataInputs {
   stripeUsers: any[];
   overridesMap: { [key: string]: any };
   userSystemTypesMap: Map<string, string>;
-  realPaymentAmounts: Map<string, { selection_process?: number; scholarship?: number; i20_control?: number; application?: number }>;
+  realPaymentAmounts: Map<string, { selection_process?: number; scholarship?: number; i20_control?: number; application?: number; placement?: number }>;
   individualPaymentDates: Map<string, Map<string, string>>;
   getFeeAmount: (key: 'i20_control_fee' | 'application_fee') => number;
 }
@@ -87,7 +87,7 @@ export interface LoadedFinancialData {
   stripeUsers: any[];
   overridesMap: { [key: string]: any };
   userSystemTypesMap: Map<string, string>;
-  realPaymentAmounts: Map<string, { selection_process?: number; scholarship?: number; i20_control?: number; application?: number }>;
+  realPaymentAmounts: Map<string, { selection_process?: number; scholarship?: number; i20_control?: number; application?: number; placement?: number }>;
   individualFeePayments: any[];
   individualPaymentDates: Map<string, Map<string, string>>;
 }

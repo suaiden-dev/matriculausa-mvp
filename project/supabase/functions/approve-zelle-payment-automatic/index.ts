@@ -49,7 +49,9 @@ Deno.serve(async (req: Request) => {
         'application_fee': 'application_fee',
         'applicationfee': 'application_fee',
         'scholarship_fee': 'scholarship_fee',
-        'scholarshipfee': 'scholarship_fee'
+        'scholarshipfee': 'scholarship_fee',
+        'placement': 'placement_fee',
+        'placementfee': 'placement_fee'
       };
       
       return mapping[normalized] || normalized;
@@ -316,6 +318,67 @@ Deno.serve(async (req: Request) => {
         console.error('❌ [approve-zelle-payment-automatic] Erro ao processar Matricula Rewards:', rewardsError);
       }
       // --- FIM MATRICULA REWARDS ---
+
+    } else if (normalizedFeeTypeGlobal === 'placement_fee') {
+      console.log('🎯 [approve-zelle-payment-automatic] Atualizando is_placement_fee_paid...')
+      
+      const { data: updateData, error: profileError } = await supabaseClient
+        .from('user_profiles')
+        .update({ 
+          is_placement_fee_paid: true,
+          placement_fee_payment_method: 'zelle',
+          updated_at: new Date().toISOString()
+        })
+        .eq('user_id', user_id)
+        .select()
+
+      if (profileError) {
+        console.error('❌ [approve-zelle-payment-automatic] Erro ao marcar is_placement_fee_paid:', profileError)
+        throw profileError
+      }
+
+      console.log('✅ [approve-zelle-payment-automatic] is_placement_fee_paid marcado como true')
+      
+      // Registrar pagamento na tabela individual_fee_payments
+      try {
+        const { data: feePaymentData, error: feePaymentError } = await supabaseClient.rpc('insert_individual_fee_payment', {
+          p_user_id: user_id,
+          p_fee_type: 'placement_fee',
+          p_amount: paymentAmount,
+          p_payment_date: new Date().toISOString(),
+          p_payment_method: 'zelle',
+          p_payment_intent_id: null,
+          p_stripe_charge_id: null,
+          p_zelle_payment_id: paymentId
+        });
+
+        if (feePaymentError) {
+          console.warn('[Individual Fee Payment] Warning: Could not record fee payment:', feePaymentError);
+        } else {
+          console.log('[Individual Fee Payment] Placement fee recorded successfully:', feePaymentData);
+        }
+      } catch (recordError) {
+        console.warn('[Individual Fee Payment] Warning: Failed to record individual fee payment:', recordError);
+      }
+
+      // Log the payment action
+      try {
+        await supabaseClient.rpc('log_student_action', {
+          p_student_id: updateData[0]?.id,
+          p_action_type: 'fee_payment',
+          p_action_description: `Placement Fee paid via Zelle (${temp_payment_id})`,
+          p_performed_by: user_id,
+          p_performed_by_type: 'student',
+          p_metadata: {
+            fee_type: 'placement_fee',
+            payment_method: 'zelle',
+            temp_payment_id: temp_payment_id,
+            payment_id: paymentId
+          }
+        });
+      } catch (logError) {
+        console.error('Failed to log payment action:', logError);
+      }
 
     } else if (normalizedFeeTypeGlobal === 'i20_control_fee' || normalizedFeeTypeGlobal === 'i20_control') {
       console.log('🎯 [approve-zelle-payment-automatic] Atualizando has_paid_i20_control_fee...')
@@ -729,16 +792,20 @@ Deno.serve(async (req: Request) => {
         console.error('❌ [approve-zelle-payment-automatic] Erro ao buscar dados do usuário:', userError)
         // Continuar mesmo com erro, pois a aprovação já foi feita
       } else {
+        // Determinar tipo_notf baseado no fee_type para Zelle
+        let tipoNotfAluno = "Pagamento aprovado";
+
         // Payload para notificar o aluno sobre a aprovação
         const approvalPayload = {
-          tipo_notf: "Payment automatically approved",
+          tipo_notf: tipoNotfAluno,
           email_aluno: userProfile.email,
           nome_aluno: userProfile.full_name,
           email_universidade: "",
-          o_que_enviar: `Your ${normalizedFeeTypeGlobal} payment has been automatically approved by the system!`,
+          o_que_enviar: `Your ${normalizedFeeTypeGlobal.replace(/_/g, ' ')} payment has been automatically approved by the system!`,
           payment_id: paymentId,
           fee_type: normalizedFeeTypeGlobal,
-          approved_by: "Automatic System"
+          approved_by: "Automatic System",
+          payment_method: "zelle"
         }
 
         console.log('📤 [approve-zelle-payment-automatic] Payload de aprovação:', approvalPayload)
@@ -820,8 +887,14 @@ Deno.serve(async (req: Request) => {
 
         // NOTIFICAÇÃO PARA ADMIN
         try {
+          // Determinar tipo_notf para Admin
+          let tipoNotfAdmin = "Pagamento de aluno aprovado automaticamente";
+          if (normalizedFeeTypeGlobal === 'placement_fee') {
+            tipoNotfAdmin = "Pagamento de Placement Fee confirmado - Admin";
+          }
+
           const adminNotificationPayload = {
-            tipo_notf: "Pagamento de aluno aprovado automaticamente",
+            tipo_notf: tipoNotfAdmin,
             email_admin: "admin@matriculausa.com",
             nome_admin: "Admin MatriculaUSA",
             email_aluno: userProfileData?.email || "",
@@ -869,8 +942,14 @@ Deno.serve(async (req: Request) => {
                 affiliateAdminPhone = affiliateAdminProfile?.phone || "";
             }
             
+            // Determinar tipo_notf para Affiliate Admin
+            let tipoNotfAffiliate = "Pagamento de aluno do seu seller aprovado automaticamente";
+            if (normalizedFeeTypeGlobal === 'placement_fee') {
+              tipoNotfAffiliate = "Pagamento de Placement Fee confirmado - Affiliate Admin";
+            }
+            
             const affiliateAdminNotificationPayload = {
-              tipo_notf: "Pagamento de aluno do seu seller aprovado automaticamente",
+              tipo_notf: tipoNotfAffiliate,
               email_affiliate_admin: affiliateAdminEmail,
               nome_affiliate_admin: affiliateAdminName,
               phone_affiliate_admin: affiliateAdminPhone,
@@ -912,8 +991,14 @@ Deno.serve(async (req: Request) => {
 
         // NOTIFICAÇÃO PARA SELLER
         try {
+          // Determinar tipo_notf para Seller
+          let tipoNotfSeller = "Pagamento do seu aluno aprovado automaticamente";
+          if (normalizedFeeTypeGlobal === 'placement_fee') {
+            tipoNotfSeller = "Pagamento de Placement Fee confirmado - Seller";
+          }
+
           const sellerNotificationPayload = {
-            tipo_notf: "Pagamento do seu aluno aprovado automaticamente",
+            tipo_notf: tipoNotfSeller,
             email_seller: sellerData.email,
             nome_seller: sellerData.name,
             phone_seller: sellerPhone || "",

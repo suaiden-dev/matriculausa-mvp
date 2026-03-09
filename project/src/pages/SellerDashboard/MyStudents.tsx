@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState as useStateReact, useEffect, useState } from 'react';
 import {
   GraduationCap,
   Search,
@@ -17,9 +17,8 @@ import {
 } from 'lucide-react';
 import { supabase } from '../../lib/supabase';
 import SellerI20DeadlineTimer from '../../components/SellerI20DeadlineTimer';
-import { useFeeConfig } from '../../hooks/useFeeConfig';
-import { useState as useStateReact, useEffect } from 'react';
 import { getDisplayAmounts } from '../../utils/paymentConverter';
+import { formatCurrency } from '../../utils/currency';
 
 interface Student {
   id: string;
@@ -83,7 +82,6 @@ const MyStudents: React.FC<MyStudentsProps> = ({ students, onRefresh, onViewStud
   console.log('🚨🚨🚨 [MYSTUDENTS_RENDER] MyStudents component rendered with students:', students.length);
   console.log('🚨🚨🚨 [MYSTUDENTS_RENDER] Students emails:', students.map(s => s.email));
 
-  const { getFeeAmount } = useFeeConfig(); // Usar sem parâmetro para valores padrão, será usado para overrides específicos por estudante
   const [currentPage, setCurrentPage] = useState(1);
   const [showAdvancedFilters, setShowAdvancedFilters] = useState(false);
   const [universities, setUniversities] = useState<University[]>([]);
@@ -619,12 +617,6 @@ const MyStudents: React.FC<MyStudentsProps> = ({ students, onRefresh, onViewStud
     });
   };
 
-  const formatCurrency = (amount: number) => {
-    return new Intl.NumberFormat('en-US', {
-      style: 'currency',
-      currency: 'USD'
-    }).format(amount || 0);
-  };
 
   const formatDate = (dateString: string) => {
     return new Date(dateString).toLocaleDateString('en-US');
@@ -721,8 +713,8 @@ const MyStudents: React.FC<MyStudentsProps> = ({ students, onRefresh, onViewStud
   const calculateStudentTotalPaid = (student: Student): number => {
     let total = 0;
     // ✅ CORREÇÃO: Usar valores reais pagos quando disponíveis, senão calcular com fallback
-    const realPaid = studentRealPaidAmounts[student.id] || studentRealPaidAmounts[student.user_id] || {};
-    const studentId = student.id || student.user_id;
+    const realPaid = studentRealPaidAmounts[student.id] || {};
+    const studentId = student.id;
     const deps = studentDependents[studentId] || 0;
     const systemType = studentSystemTypes[studentId] || 'legacy';
     const overrides = studentFeeOverrides[student.id] || {};
@@ -1027,8 +1019,8 @@ const MyStudents: React.FC<MyStudentsProps> = ({ students, onRefresh, onViewStud
                 <button
                   onClick={() => setShowAdvancedFilters(!showAdvancedFilters)}
                   className={`px-4 py-3 rounded-xl font-medium transition-colors duration-200 flex items-center gap-2 ${showAdvancedFilters
-                      ? 'bg-[#05294E] text-white'
-                      : 'bg-slate-100 text-slate-700 hover:bg-slate-200'
+                    ? 'bg-[#05294E] text-white'
+                    : 'bg-slate-100 text-slate-700 hover:bg-slate-200'
                     }`}
                 >
                   <FilterIcon className="h-4 w-4" />
@@ -1145,8 +1137,8 @@ const MyStudents: React.FC<MyStudentsProps> = ({ students, onRefresh, onViewStud
                       <button
                         onClick={() => setFilters(prev => ({ ...prev, sortOrder: 'desc' }))}
                         className={`px-3 py-2 rounded-lg font-medium transition-colors ${filters.sortOrder === 'desc'
-                            ? 'bg-[#05294E] text-white'
-                            : 'bg-slate-100 text-slate-700 hover:bg-slate-200'
+                          ? 'bg-[#05294E] text-white'
+                          : 'bg-slate-100 text-slate-700 hover:bg-slate-200'
                           }`}
                       >
                         <TrendingDown className="h-4 w-4" />
@@ -1154,8 +1146,8 @@ const MyStudents: React.FC<MyStudentsProps> = ({ students, onRefresh, onViewStud
                       <button
                         onClick={() => setFilters(prev => ({ ...prev, sortOrder: 'asc' }))}
                         className={`px-3 py-2 rounded-lg font-medium transition-colors ${filters.sortOrder === 'asc'
-                            ? 'bg-[#05294E] text-white'
-                            : 'bg-slate-100 text-slate-700 hover:bg-slate-200'
+                          ? 'bg-[#05294E] text-white'
+                          : 'bg-slate-100 text-slate-700 hover:bg-slate-200'
                           }`}
                       >
                         <TrendingUp className="h-4 w-4" />
@@ -1286,12 +1278,12 @@ const MyStudents: React.FC<MyStudentsProps> = ({ students, onRefresh, onViewStud
 
                       <div className="flex flex-col items-end gap-2">
                         <span className={`inline-flex items-center px-2 py-1 text-xs font-medium rounded-full ${student.status === 'active' || student.status === 'registered' || student.status === 'enrolled' || student.status === 'completed'
-                            ? 'bg-green-100 text-green-800'
-                            : student.status === 'pending' || student.status === 'processing'
-                              ? 'bg-yellow-100 text-yellow-800'
-                              : student.status === 'dropped' || student.status === 'cancelled'
-                                ? 'bg-red-100 text-red-800'
-                                : 'bg-gray-100 text-gray-800'
+                          ? 'bg-green-100 text-green-800'
+                          : student.status === 'pending' || student.status === 'processing'
+                            ? 'bg-yellow-100 text-yellow-800'
+                            : student.status === 'dropped' || student.status === 'cancelled'
+                              ? 'bg-red-100 text-red-800'
+                              : 'bg-gray-100 text-gray-800'
                           }`}>
                           {student.status === 'active' ? 'Active' :
                             student.status === 'registered' ? 'Registered' :
@@ -1334,9 +1326,9 @@ const MyStudents: React.FC<MyStudentsProps> = ({ students, onRefresh, onViewStud
                               <span
                                 key={index}
                                 className={`inline-flex items-center px-2 py-1 text-xs font-medium rounded-full ${fee.color === 'red' ? 'text-red-700 bg-red-100' :
-                                    fee.color === 'orange' ? 'text-orange-700 bg-orange-100' :
-                                      fee.color === 'blue' ? 'text-blue-700 bg-blue-100' :
-                                        'text-gray-700 bg-gray-100'
+                                  fee.color === 'orange' ? 'text-orange-700 bg-orange-100' :
+                                    fee.color === 'blue' ? 'text-blue-700 bg-blue-100' :
+                                      'text-gray-700 bg-gray-100'
                                   }`}
                               >
                                 {fee.name}
@@ -1469,8 +1461,8 @@ const MyStudents: React.FC<MyStudentsProps> = ({ students, onRefresh, onViewStud
                           key={pageNumber}
                           onClick={() => goToPage(pageNumber)}
                           className={`inline-flex items-center px-3 py-1 border rounded-md text-sm font-medium focus:outline-none focus:ring-2 focus:ring-[#05294E] ${currentPage === pageNumber
-                              ? 'border-[#05294E] bg-[#05294E] text-white'
-                              : 'border-slate-300 text-slate-700 bg-white hover:bg-slate-50'
+                            ? 'border-[#05294E] bg-[#05294E] text-white'
+                            : 'border-slate-300 text-slate-700 bg-white hover:bg-slate-50'
                             }`}
                         >
                           {pageNumber}

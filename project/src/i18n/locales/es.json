@@ -1,17 +1,5 @@
 {
   "preCheckoutModal": {
-    "acceptPrefix": "Acepto los ",
-    "termsAndConditionsLink": "Términos y Condiciones",
-    "acceptSuffix": " del contrato de prestación de servicios.",
-    "securePayment": "Pago Seguro",
-    "securePaymentProcess": "Proceso de Pago Seguro",
-    "closeModal": "Cerrar modal",
-    "securePaymentGateway": "Pasarela de Pago Segura",
-    "totalAmount": "Monto Total",
-    "referralCode": "Código de Referencia",
-    "yourReferralCode": "Su Código de Referencia",
-    "enterReferralCode": "Ingrese su código de referencia para obtener un descuento",
-    "haveReferralCode": "Tengo un código de descuento",
     "loading": "Cargando...",
     "noTermsFound": "No se encontraron términos.",
     "confirmReading": "Confirmar Lectura",
@@ -19,6 +7,7 @@
     "acceptTerms": "Aceptar y Confirmar",
     "uploadPhotoRequired": "Por favor, envíe una selfie con su documento para continuar.",
     "uploadPhoto": "Enviar Selfie con Documento",
+    "haveReferralCode": "¿Tengo un código de referido?",
     "usingYourReferralCode": "Usando su código de referencia",
     "placeholder": "Ingrese el código",
     "validate": "Validar",
@@ -1967,7 +1956,7 @@
       }
     },
     "paid": {
-      "title": "Tarifa de Solicitud Pagada",
+      "title": "Tarifa del Proceso de Selección Pagada",
       "subtitle": "Ha pagado con éxito la tarifa del proceso de selección.",
       "paidTitle": "Pago Confirmado",
       "paidSubtitle": "Su pago ha sido confirmado con éxito.",
@@ -1984,10 +1973,12 @@
       "selectionProcessFee": "Tarifa de Proceso de Selección",
       "applicationFee": "Tarifa de Solicitud",
       "scholarshipFee": "Tarifa de Beca",
+      "placementFee": "Placement Fee",
       "i20ControlFee": "Tarifa de Control I-20",
       "completed": "¡Completado!",
       "payApplicationFee": "Paga la Tarifa de Solicitud para aplicar a una beca específica.",
       "payScholarshipFee": "Paga la Tarifa de Beca para confirmar tu solicitud de beca.",
+      "payPlacementFee": "Paga la Placement Fee para proceder con tu solicitud.",
       "payI20Fee": "Paga la Tarifa de Control I-20 para iniciar tu proceso de validación de documentos e I-20.",
       "daysRemaining": "Tienes 10 días después de la tarifa de beca.",
       "onboardingBanner": {
@@ -2981,43 +2972,6 @@
       "iofNote": "Esta es una compra internacional. IOF del 3,5% será agregado por Stripe."
     }
   },
-  "preCheckoutModal": {
-    "loading": "Cargando...",
-    "noTermsFound": "No se encontraron términos.",
-    "confirmReading": "Confirmar Lectura",
-    "scrollToBottomFirst": "Lea hasta el final",
-    "acceptTerms": "Aceptar y Confirmar",
-    "uploadPhotoRequired": "Por favor, envíe una selfie con su documento para continuar.",
-    "uploadPhoto": "Enviar Selfie con Documento",
-    "haveReferralCode": "¿Tengo un código de referido?",
-    "usingYourReferralCode": "Usando su código de referencia",
-    "placeholder": "Ingrese el código",
-    "validate": "Validar",
-    "validating": "Validando...",
-    "pleaseEnterCode": "Por favor, ingrese un código",
-    "invalidCode": "Código inválido o inactivo",
-    "selfReferral": "No puede usar su propio código de referencia",
-    "alreadyUsedCode": "Ya ha usado um código de referencia anteriormente",
-    "validCode": "¡Código válido! Descuento de $50 aplicado",
-    "errorValidating": "Error al validar el código",
-    "codeAlreadyUsed": "Código ya utilizado",
-    "discountAlreadyApplied": "Su descuento ya ha sido aplicado anteriormente",
-    "continueWithoutCode": "Continuar sin código",
-    "goToPayment": "Ir al pago",
-    "applyCodeAndContinue": "Aplicar código y continuar",
-    "processingPayment": "Procesando Pago...",
-    "mustAcceptTerms": "Debe aceptar los términos y condiciones antes de continuar",
-    "termsAndConditions": {
-      "title": "Términos y Condiciones",
-      "termsOfUse": "Términos de Uso",
-      "and": "y",
-      "privacyPolicy": "Política de Privacidad",
-      "description": "antes de proceder con el pago"
-    },
-    "closeTerms": "Cerrar",
-    "acceptContractTerms": "Acepto los términos y condiciones del contrato",
-    "cancel": "Cancelar"
-  },
   "footer": {
     "company": {
       "title": "Empresa",
@@ -3657,59 +3611,25 @@
     }
   },
   "successPages": {
-    "pixPayment": {
-      "processing": "Processing PIX Payment",
-      "message": "Your PIX payment has been received and is being processed. You will be redirected automatically in a few seconds.",
-      "verifying": "Verifying payment...",
-      "pleaseWait": "Please wait..."
-    },
-    "selectionProcessFee": {
-      "title": "Selection Process Fee Payment Successful!",
-      "description": "Your payment of {{amount}} was processed successfully.",
-      "message": "You now have access to all scholarships and can apply freely.",
-      "button": "Go to Scholarships",
-      "verifying": "Verifying your payment...",
-      "pleaseWait": "Please wait while we confirm your transaction. This may take a moment.",
-      "errorTitle": "Selection Process Fee Payment Error",
-      "errorMessage": "There was a problem processing your payment.",
-      "errorRetry": "Please try again. If the error persists, contact support."
+    "placementFee": {
+      "verifying": "Verificando Placement Fee",
+      "pleaseWait": "Su pago está siendo procesado."
     },
     "scholarshipFee": {
-      "title": "Scholarship Fee Payment Successful!",
-      "description": "Your payment of {{amount}} was processed successfully.",
-      "message": "Your application will now proceed to the next step.",
-      "button": "Go to View Details",
-      "verifying": "Verifying your payment...",
-      "pleaseWait": "Please wait while we confirm your payment.",
-      "errorTitle": "Payment Processing Error",
-      "errorMessage": "There was a problem processing your payment.",
-      "errorRetry": "Please try again or contact support."
+      "verifying": "Verificando Tarifa de Beca",
+      "pleaseWait": "Su pago está siendo procesado."
     },
     "applicationFee": {
-      "title": "Application Fee Payment Successful!",
-      "description": "Your payment of {{amount}} was processed successfully.",
-      "message": "Your application will now proceed to the next step.",
-      "button": "Go to My Applications",
-      "verifying": "Verifying Payment...",
-      "pleaseWait": "Please wait while we confirm your transaction. This may take a moment.",
-      "errorTitle": "Verification Failed",
-      "errorMessage": "There was a problem verifying your payment. Please contact support.",
-      "errorDetails": "Error details:"
+      "verifying": "Verificando Tarifa de Solicitud",
+      "pleaseWait": "Su pago está siendo procesado."
     },
-    "common": {
-      "redirecting": "Redirecting in a moment...",
-      "paymentProcessedAmount": "¡Su pago fue procesado exitosamente!",
-      "paymentError": "There was a problem processing your payment."
+    "selectionProcessFee": {
+      "verifying": "Verificando Tarifa del Proceso de Selección",
+      "pleaseWait": "Su pago está siendo procesado."
     },
     "i20ControlFee": {
-      "title": "I-20 Control Fee Payment Successful!",
-      "message": "Your I-20 document will be processed and sent to you soon.",
-      "button": "Back to My Applications",
-      "verifying": "Verifying Payment...",
-      "pleaseWait": "Please wait while we confirm your payment.",
-      "errorTitle": "I-20 Control Fee Payment Error",
-      "errorMessage": "There was a problem processing your payment.",
-      "errorRetry": "Please try again. If the error persists, contact support."
+      "verifying": "Verificando Tarifa de Control I-20",
+      "pleaseWait": "Su pago está siendo procesado."
     }
   },
   "eb3Jobs": {

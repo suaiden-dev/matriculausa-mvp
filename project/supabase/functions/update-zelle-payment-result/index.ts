@@ -72,8 +72,8 @@ Deno.serve(async (req) => {
       finalStatus = 'approved';
       adminNotes = 'Payment automatically approved by n8n validation';
     } else if (n8n_response === 'invalid') {
-      finalStatus = 'rejected';
-      adminNotes = 'Payment automatically rejected by n8n validation';
+      finalStatus = 'pending_verification';
+      adminNotes = 'Payment flagged as invalid by n8n validation - requires manual review';
     } else {
       finalStatus = 'pending_verification';
       adminNotes = `Payment requires manual review. n8n response: ${n8n_response}`;

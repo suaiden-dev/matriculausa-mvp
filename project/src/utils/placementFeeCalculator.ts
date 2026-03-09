@@ -32,11 +32,17 @@ const PLACEMENT_FEE_TABLE: PlacementFeeEntry[] = [
 
 /**
  * Calcula o valor da Placement Fee com base no valor anual da bolsa selecionada.
+ * Se customFeeAmount for fornecido, ele tem prioridade absoluta.
  * 
  * @param annualScholarshipValue - Valor anual da bolsa (annual_value_with_scholarship)
+ * @param customFeeAmount - Valor opcional específico cadastrado (placement_fee_amount)
  * @returns Valor da Placement Fee em dólares
  */
-export function getPlacementFee(annualScholarshipValue: number): number {
+export function getPlacementFee(annualScholarshipValue: number, customFeeAmount?: number | null): number {
+  if (customFeeAmount !== undefined && customFeeAmount !== null && customFeeAmount > 0) {
+    return customFeeAmount;
+  }
+
   // Ordenar da menor para maior e retornar o fee do primeiro range que abrange o valor
   const sorted = [...PLACEMENT_FEE_TABLE].sort((a, b) => a.maxTuition - b.maxTuition);
 
@@ -60,7 +66,10 @@ export function formatPlacementFee(amount: number): string {
 /**
  * Retorna a descrição do intervalo de tuition para um determinado valor de fee.
  */
-export function getPlacementFeeTierLabel(annualScholarshipValue: number): string {
-  const fee = getPlacementFee(annualScholarshipValue);
+export function getPlacementFeeTierLabel(annualScholarshipValue: number, customFeeAmount?: number | null): string {
+  const fee = getPlacementFee(annualScholarshipValue, customFeeAmount);
+  if (customFeeAmount && customFeeAmount > 0) {
+    return `Placement Fee: $${fee} (Valor Fixo da Bolsa)`;
+  }
   return `Placement Fee: $${fee} (Bolsa com valor anual de $${annualScholarshipValue.toLocaleString()})`;
 }

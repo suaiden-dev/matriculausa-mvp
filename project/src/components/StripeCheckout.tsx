@@ -90,7 +90,7 @@ export const StripeCheckout = React.forwardRef<HTMLButtonElement, StripeCheckout
     const final = systemType === 'legacy' && deps > 0 ? base + deps * 100 : base;
     return final;
   };
-  
+
   if (!product) {
     console.error(`Product '${productId}' não encontrado em stripe-config.ts. Verifique se o nome está correto e padronizado.`);
     return <p className="text-red-500">Erro: Produto Stripe não encontrado. Contate o suporte.</p>;
@@ -106,7 +106,7 @@ export const StripeCheckout = React.forwardRef<HTMLButtonElement, StripeCheckout
     // Este método será chamado pelo PreCheckoutModal após a verificação dos termos
     // Guardar valor final selecionado (se fornecido) para PaymentMethodSelector
     if (typeof finalAmount === 'number') {
-      ;(window as any).__checkout_final_amount = finalAmount;
+      ; (window as any).__checkout_final_amount = finalAmount;
     }
     setShowPaymentMethodSelector(true);
   };
@@ -118,7 +118,7 @@ export const StripeCheckout = React.forwardRef<HTMLButtonElement, StripeCheckout
     try {
       const { data: sessionData } = await supabase.auth.getSession();
       const token = sessionData.session?.access_token;
-      
+
       if (!token) {
         console.log('🔍 [StripeCheckout] Sem token, mostrando modal');
         if (feeType === 'scholarship_fee') {
@@ -146,7 +146,7 @@ export const StripeCheckout = React.forwardRef<HTMLButtonElement, StripeCheckout
       }
 
       console.log('🔍 [StripeCheckout] Resultado da verificação:', result);
-      
+
       // CORREÇÃO: Para selection_process fee, SEMPRE mostrar o modal de verificação
       // Isso garante consistência no comportamento
       if (feeType === 'selection_process') {
@@ -159,7 +159,7 @@ export const StripeCheckout = React.forwardRef<HTMLButtonElement, StripeCheckout
         console.log('🔍 [StripeCheckout] 🎯 Outros tipos: mostrando modal padrão');
         setShowPreCheckoutModal(true);
       }
-      
+
       // Se há desconto ativo, vamos armazenar para usar depois
       if (result && result.has_discount) {
         console.log('🔍 [StripeCheckout] ✅ Desconto ativo encontrado, será aplicado automaticamente');
@@ -181,26 +181,26 @@ export const StripeCheckout = React.forwardRef<HTMLButtonElement, StripeCheckout
   // Removido fluxo legado de aplicação de código aqui; agora o código é tratado no PreCheckoutModal
 
   const [currentExchangeRate, setCurrentExchangeRate] = useState<number | undefined>(undefined);
-  
+
   const handlePaymentMethodSelect = async (method: string, exchangeRate?: number) => {
     console.log('🔍 [StripeCheckout] handlePaymentMethodSelect chamado com método:', method, 'exchangeRate:', exchangeRate);
     console.log('🔍 [StripeCheckout] Estado anterior - selectedPaymentMethod:', selectedPaymentMethod);
     setSelectedPaymentMethod(method as 'stripe' | 'zelle' | 'pix' | 'parcelow');
-    
+
     // Salvar taxa de câmbio se for PIX
     if (method === 'pix' && exchangeRate) {
       setCurrentExchangeRate(exchangeRate);
       console.log('[PIX] Taxa de câmbio recebida do PaymentMethodSelector:', exchangeRate);
     }
-    
+
     console.log('🔍 [StripeCheckout] ✅ selectedPaymentMethod definido como:', method);
-    
+
     // Salvar método de pagamento no localStorage para PIX
     if (method === 'pix') {
       localStorage.setItem('last_payment_method', 'pix');
       console.log('[PIX] Método de pagamento salvo no localStorage');
     }
-    
+
     // Aguarda um frame para permitir o paint do overlay de loading do selector
     await new Promise<void>((resolve) => {
       if (typeof window !== 'undefined' && 'requestAnimationFrame' in window) {
@@ -209,21 +209,21 @@ export const StripeCheckout = React.forwardRef<HTMLButtonElement, StripeCheckout
         setTimeout(() => resolve(), 0);
       }
     });
-    
+
     if (method === 'stripe') {
       // Para Stripe, continuar com o fluxo normal
       console.log('🔍 [StripeCheckout] 🚀 Iniciando checkout Stripe...');
       handleCheckout('stripe');
-        } else if (method === 'pix') {
-          // Para PIX, usar mesma edge function mas com parâmetro PIX
-          console.log('🔍 [StripeCheckout] 🇧🇷 PIX selecionado, iniciando checkout PIX...');
-          console.log('[PIX] 🎯 PIX selecionado no frontend');
-          console.log('[PIX] 💰 Valor USD:', (window as any).__checkout_final_amount || 'calculando...');
-          console.log('[PIX] 🔗 URL atual:', window.location.href);
-          // Passar taxa de câmbio diretamente para evitar problema de timing com estado
-          console.log('[PIX] 🚀 Chamando handleCheckout com método PIX e taxa de câmbio:', exchangeRate);
-          handleCheckout('pix', exchangeRate);
-        } else if (method === 'zelle') {
+    } else if (method === 'pix') {
+      // Para PIX, usar mesma edge function mas com parâmetro PIX
+      console.log('🔍 [StripeCheckout] 🇧🇷 PIX selecionado, iniciando checkout PIX...');
+      console.log('[PIX] 🎯 PIX selecionado no frontend');
+      console.log('[PIX] 💰 Valor USD:', (window as any).__checkout_final_amount || 'calculando...');
+      console.log('[PIX] 🔗 URL atual:', window.location.href);
+      // Passar taxa de câmbio diretamente para evitar problema de timing com estado
+      console.log('[PIX] 🚀 Chamando handleCheckout com método PIX e taxa de câmbio:', exchangeRate);
+      handleCheckout('pix', exchangeRate);
+    } else if (method === 'zelle') {
       console.log('🔍 [StripeCheckout]  Zelle selecionado, redirecionando para checkout...');
       // ✅ CORREÇÃO: Priorizar valor com desconto do PreCheckoutModal se disponível
       const getDynamicAmount = () => {
@@ -233,7 +233,7 @@ export const StripeCheckout = React.forwardRef<HTMLButtonElement, StripeCheckout
           console.log('🔍 [StripeCheckout] ✅ Usando valor com desconto do PreCheckoutModal:', finalAmountFromWindow);
           return finalAmountFromWindow.toString();
         }
-        
+
         // Caso contrário, calcular valor base
         if (feeType === 'selection_process') {
           // ✅ CORREÇÃO: Usar sempre os valores do useDynamicFees que já consideram o system_type
@@ -268,12 +268,12 @@ export const StripeCheckout = React.forwardRef<HTMLButtonElement, StripeCheckout
         amount: amountToUse,
         scholarshipsIds: scholarshipsIds?.join(',') || ''
       });
-      
+
       // Se for scholarship_fee, adicionar parâmetro específico
       if (feeType === 'scholarship_fee') {
         params.append('scholarshipFeeAmount', amountToUse);
       }
-      
+
       console.log('🔍 [StripeCheckout] Navegando para Zelle com valor:', amountToUse);
       window.location.href = `/checkout/zelle?${params.toString()}`;
     } else if (method === 'parcelow') {
@@ -313,11 +313,11 @@ export const StripeCheckout = React.forwardRef<HTMLButtonElement, StripeCheckout
           finalExchangeRate = 5.6; // Fallback
         }
       }
-      
+
       if (paymentMethod === 'pix' && finalExchangeRate) {
         console.log('[StripeCheckout] 💱 Taxa de câmbio final para PIX:', finalExchangeRate);
       }
-      
+
       let applicationId = metadata?.application_id;
       if (beforeCheckout) {
         const result = await beforeCheckout();
@@ -349,10 +349,10 @@ export const StripeCheckout = React.forwardRef<HTMLButtonElement, StripeCheckout
       }
       // Obter valor final (com dependentes se aplicável)
       let finalAmount: number;
-      
+
       // Verificar se há desconto já aplicado no valor
       const hasDiscountApplied = (window as any).__checkout_final_amount && typeof (window as any).__checkout_final_amount === 'number';
-      
+
       // Se há um valor do PreCheckoutModal, usar ele
       if (hasDiscountApplied) {
         finalAmount = (window as any).__checkout_final_amount;
@@ -419,7 +419,7 @@ export const StripeCheckout = React.forwardRef<HTMLButtonElement, StripeCheckout
 
       // Verificar se o desconto já foi aplicado no valor (via activeDiscount do PreCheckoutModal)
       const discountAlreadyApplied = hasDiscountApplied && (window as any).__checkout_discount_applied === true;
-      
+
       const requestBody = {
         price_id: product.priceId,
         amount: finalAmount, // Incluir valor final calculado (já com desconto se aplicável)
@@ -438,13 +438,13 @@ export const StripeCheckout = React.forwardRef<HTMLButtonElement, StripeCheckout
           // Flag para indicar que o desconto já foi aplicado no frontend
           discount_already_applied: discountAlreadyApplied ? 'true' : 'false',
           // Incluir taxa de câmbio se for PIX e estiver disponível (priorizar currentExchangeRate do PaymentMethodSelector, senão usar prop exchangeRate)
-          ...(exchangeRateToSend ? { 
-            exchange_rate: exchangeRateToSend.toString() 
+          ...(exchangeRateToSend ? {
+            exchange_rate: exchangeRateToSend.toString()
           } : {}),
         },
         scholarships_ids: scholarshipsIds,
       };
-      
+
       if (paymentMethod === 'pix' && exchangeRateToSend) {
         console.log('[StripeCheckout] ✅ Taxa de câmbio incluída no metadata:', exchangeRateToSend);
         console.log('[StripeCheckout] 📤 RequestBody metadata.exchange_rate:', requestBody.metadata.exchange_rate);
@@ -452,15 +452,15 @@ export const StripeCheckout = React.forwardRef<HTMLButtonElement, StripeCheckout
         console.warn('[StripeCheckout] ⚠️ PIX selecionado mas taxa de câmbio não disponível!');
         console.warn('[StripeCheckout] ⚠️ Debug - exchangeRateParam:', exchangeRateParam, 'currentExchangeRate:', currentExchangeRate, 'exchangeRate:', exchangeRate, 'finalExchangeRate:', finalExchangeRate);
       }
-      
+
       console.log('[StripeCheckout] 📤 Enviando requestBody (metadata):', JSON.stringify(requestBody.metadata, null, 2));
-      
+
       // ✅ Caso especial Parcelow
       if (paymentMethod === 'parcelow') {
         console.log('🔍 [StripeCheckout] Iniciando checkout Parcelow...');
-        
+
         let parcelowUrl = `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/parcelow-checkout-application-fee`;
-        
+
         if (feeType === 'selection_process') {
           parcelowUrl = `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/parcelow-checkout-selection-process`;
         } else if (feeType === 'scholarship_fee') {
@@ -468,7 +468,7 @@ export const StripeCheckout = React.forwardRef<HTMLButtonElement, StripeCheckout
         } else if (feeType === 'i20_control_fee') {
           parcelowUrl = `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/parcelow-checkout-i20-control-fee`;
         }
-        
+
         const response = await fetch(parcelowUrl, {
           method: 'POST',
           headers: {
@@ -552,7 +552,7 @@ export const StripeCheckout = React.forwardRef<HTMLButtonElement, StripeCheckout
         // Para PIX, incluir script de redirecionamento
         if (paymentMethod === 'pix') {
           console.log('[PIX] Incluindo script de redirecionamento...');
-          
+
           // Injetar script diretamente na página do Stripe
           const script = document.createElement('script');
           script.textContent = `
@@ -588,7 +588,7 @@ export const StripeCheckout = React.forwardRef<HTMLButtonElement, StripeCheckout
                   
                   if (data.payment_method === 'pix' && data.status === 'complete') {
                     console.log('[PIX] Pagamento confirmado! Redirecionando...');
-                    window.location.href = '${successUrl || window.location.origin + '/student/dashboard/selection-process-fee-success'}';
+                    window.location.href = '${successUrl || window.location.origin + '/student/onboarding?step=selection_fee&payment=success'}';
                     return true;
                   }
                   
@@ -614,7 +614,7 @@ export const StripeCheckout = React.forwardRef<HTMLButtonElement, StripeCheckout
               setTimeout(() => {
                 clearInterval(interval);
                 console.log('[PIX] Timeout - redirecionando...');
-                window.location.href = '${successUrl || window.location.origin + '/student/dashboard/selection-process-fee-success'}';
+                window.location.href = '${successUrl || window.location.origin + '/student/onboarding?step=selection_fee&payment=success'}';
               }, 120000);
               
             })();
@@ -642,10 +642,10 @@ export const StripeCheckout = React.forwardRef<HTMLButtonElement, StripeCheckout
         disabled={disabled || loading || paymentBlockedLoading || Boolean(isBlocked && pendingPayment)}
         className={`${className} ${(loading || paymentBlockedLoading || (isBlocked && pendingPayment)) ? 'opacity-50 cursor-not-allowed' : ''}`}
       >
-        {loading ? t('zelleCheckout.processing') : 
-         paymentBlockedLoading ? 'Checking...' : 
-         (isBlocked && pendingPayment) ? t('zelleCheckout.processing') : 
-         buttonText}
+        {loading ? t('zelleCheckout.processing') :
+          paymentBlockedLoading ? 'Checking...' :
+            (isBlocked && pendingPayment) ? t('zelleCheckout.processing') :
+              buttonText}
       </button>
 
       {/* Pre-Checkout Modal para Selection Process e Application Fee */}
@@ -671,7 +671,7 @@ export const StripeCheckout = React.forwardRef<HTMLButtonElement, StripeCheckout
         >
           {/* Backdrop */}
           <div className="fixed inset-0 bg-black/60 backdrop-blur-sm z-30" aria-hidden="true" />
-          
+
           {/* Modal */}
           <div className="fixed inset-0 flex items-center justify-center p-4 z-30">
             <Dialog.Panel className="w-full max-w-md bg-white rounded-2xl shadow-2xl overflow-hidden relative border-0">
@@ -686,7 +686,7 @@ export const StripeCheckout = React.forwardRef<HTMLButtonElement, StripeCheckout
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
                   </svg>
                 </button>
-                
+
                 <div className="flex items-center gap-3 mb-4">
                   <div className="p-2 bg-white/20 rounded-lg">
                     <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -733,10 +733,10 @@ export const StripeCheckout = React.forwardRef<HTMLButtonElement, StripeCheckout
           amount={(window as any).__checkout_final_amount || (feeType === 'selection_process'
             ? (selectionProcessFee ? parseFloat(selectionProcessFee.replace('$', '')) : 0)
             : feeType === 'scholarship_fee'
-            ? (scholarshipFee ? parseFloat(scholarshipFee.replace('$', '')) : 0)
-            : feeType === 'i20_control_fee'
-            ? (i20ControlFee ? parseFloat(i20ControlFee.replace('$', '')) : 0)
-            : getFinalApplicationFee())}
+              ? (scholarshipFee ? parseFloat(scholarshipFee.replace('$', '')) : 0)
+              : feeType === 'i20_control_fee'
+                ? (i20ControlFee ? parseFloat(i20ControlFee.replace('$', '')) : 0)
+                : getFinalApplicationFee())}
           isLoading={loading}
         />
       )}

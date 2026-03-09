@@ -14,6 +14,7 @@ export type ApplicationFlowStageKey =
   | 'apply'
   | 'review'
   | 'application_fee'
+  | 'placement_fee'
   | 'scholarship_fee'
   | 'i20_fee'
   | 'acceptance_letter'
@@ -34,12 +35,15 @@ export interface ApplicationFlowStage {
 export interface StudentRecord {
   user_id: string;
   student_id: string;
+  application_id: string | null;
   has_paid_selection_process_fee: boolean;
   total_applications: number;
   application_status: string | null;
   is_application_fee_paid: boolean;
   is_scholarship_fee_paid: boolean;
   has_paid_i20_control_fee: boolean;
+  placement_fee_flow?: boolean;
+  is_placement_fee_paid?: boolean;
   acceptance_letter_status: string | null;
   student_process_type: string | null;
   transfer_form_status: string | null;
@@ -73,6 +77,13 @@ export const APPLICATION_FLOW_STAGES: ApplicationFlowStage[] = [
     shortLabel: 'App Fee',
     icon: DollarSign,
     description: 'Student has paid the Application Fee'
+  },
+  {
+    key: 'placement_fee',
+    label: 'Placement Fee',
+    shortLabel: 'Placement Fee',
+    icon: DollarSign,
+    description: 'Student has paid the Placement Fee (for placement fee flow only)'
   },
   {
     key: 'scholarship_fee',
@@ -141,10 +152,16 @@ export function getStepStatus(
     case 'application_fee':
       return student.is_application_fee_paid ? 'completed' : 'pending';
     
+    case 'placement_fee':
+      if (!student.placement_fee_flow) return 'skipped';
+      return student.is_placement_fee_paid ? 'completed' : 'pending';
+    
     case 'scholarship_fee':
+      if (student.placement_fee_flow) return 'skipped';
       return student.is_scholarship_fee_paid ? 'completed' : 'pending';
     
     case 'i20_fee':
+      if (student.placement_fee_flow) return 'skipped';
       return student.has_paid_i20_control_fee ? 'completed' : 'pending';
     
     case 'acceptance_letter':
@@ -235,8 +252,3 @@ export function getStageMetadata(stageKey: ApplicationFlowStageKey): Application
 export function isValidStageKey(stageKey: string): stageKey is ApplicationFlowStageKey {
   return APPLICATION_FLOW_STAGES.some(stage => stage.key === stageKey);
 }
-
-
-
-
-

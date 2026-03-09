@@ -9,13 +9,13 @@ import {
 import { getPlacementFee } from '../../../utils/placementFeeCalculator';
 import { useTranslation } from 'react-i18next';
 import {
-  formatAmount,
   getFieldBadgeColor,
   getDaysUntilDeadlineDisplay,
   getDeadlineStatus,
   getLevelIcon,
   getDeliveryModeLabel
 } from '../../../utils/scholarshipHelpers.tsx';
+import { formatCurrency } from '../../../utils/currency';
 import { is3800Scholarship, is3800ScholarshipBlocked } from '../../../utils/scholarshipDeadlineValidation';
 import { ScholarshipCountdownTimer } from '../../../components/ScholarshipCountdownTimer';
 import { ScholarshipExpiryWarning } from '../../../components/ScholarshipExpiryWarning';
@@ -46,7 +46,7 @@ const ScholarshipCardFullComponent: React.FC<ScholarshipCardFullProps> = ({
     const systemType = userProfile?.system_type || 'legacy';
     const deps = Number(userProfile?.dependents) || 0;
     const finalAmount = systemType === 'legacy' && deps > 0 ? base + deps * 100 : base;
-    return finalAmount.toFixed(2);
+    return formatCurrency(finalAmount);
   };
 
   // Usar o ID da bolsa como parte da chave para garantir que cada card seja único
@@ -58,8 +58,8 @@ const ScholarshipCardFullComponent: React.FC<ScholarshipCardFullProps> = ({
       id={`scholarship-card-wrapper-${scholarship.id}`}
       data-scholarship-id={scholarship.id}
       className={`group relative bg-white rounded-2xl sm:rounded-3xl shadow-md hover:shadow-xl transition-all duration-300 overflow-hidden border-2 ${isSelected
-          ? 'border-blue-600 border-[3px] bg-blue-50/50 shadow-lg shadow-blue-100/50'
-          : 'border-slate-200/60 hover:border-slate-300'
+        ? 'border-blue-600 border-[3px] bg-blue-50/50 shadow-lg shadow-blue-100/50'
+        : 'border-slate-200/60 hover:border-slate-300'
         } flex flex-col h-full hover:-translate-y-1 transform-gpu ${!scholarship.is_active || isBlocked || isLocked ? 'cursor-not-allowed' : 'cursor-pointer' // Fix: Ensure cursor is pointer when clickable
         }`}
       onClick={() => {
@@ -200,21 +200,21 @@ const ScholarshipCardFullComponent: React.FC<ScholarshipCardFullProps> = ({
             <div className="flex items-center justify-between">
               <span className="text-slate-400 text-xs font-medium">{t('studentDashboard.findScholarships.scholarshipCard.originalPrice')}</span>
               <span className="text-slate-500 text-xs font-bold line-through">
-                ${formatAmount(scholarship.original_annual_value || scholarship.amount || 'N/A')}
+                {formatCurrency(Number(scholarship.original_annual_value || scholarship.amount || 0))}
               </span>
             </div>
 
             <div className="flex items-center justify-between">
               <span className="text-slate-400 text-xs font-medium">{t('studentDashboard.findScholarships.scholarshipCard.withScholarship')}</span>
               <span className="text-emerald-600 font-black text-base">
-                ${formatAmount(scholarship.annual_value_with_scholarship || scholarship.amount || 'N/A')}
+                {formatCurrency(Number(scholarship.annual_value_with_scholarship || scholarship.amount || 0))}
               </span>
             </div>
 
             <div className="flex items-center justify-between pt-1.5 border-t border-slate-100">
               <span className="text-slate-400 text-xs font-medium">{t('studentDashboard.findScholarships.scholarshipCard.perCredit')}</span>
               <span className="text-slate-500 text-xs font-bold">
-                ${formatAmount(scholarship.original_value_per_credit || scholarship.per_credit_cost || 'N/A')}
+                {formatCurrency(Number(scholarship.original_value_per_credit || scholarship.per_credit_cost || 0))}
               </span>
             </div>
 
@@ -236,22 +236,22 @@ const ScholarshipCardFullComponent: React.FC<ScholarshipCardFullProps> = ({
               return null;
             })()}
 
-            <div className="flex items-center justify-between pt-1.5 border-t border-slate-100">
+            <div className="flex items-center justify-between">
               <span className="text-slate-400 text-xs font-medium">{t('scholarshipsPage.scholarshipCard.applicationFee')}</span>
               <span className="text-slate-500 text-xs font-bold">
-                ${getApplicationFeeWithDependents(scholarship)}
+                {getApplicationFeeWithDependents(scholarship)}
               </span>
             </div>
 
             {/* Placement Fee - exibir apenas para novos usuários */}
             {userProfile?.placement_fee_flow && (() => {
-              const annualValue = Number(scholarship.annual_value_with_scholarship || scholarship.amount || 0);
-              if (annualValue <= 0) return null;
-              const placementFee = getPlacementFee(annualValue);
+              const annualValue = scholarship.annual_value_with_scholarship ? Number(scholarship.annual_value_with_scholarship) : Number(scholarship.amount) || 0;
+              const placementFeeAmount = scholarship.placement_fee_amount ? Number(scholarship.placement_fee_amount) : null;
+              const placementFee = getPlacementFee(annualValue, placementFeeAmount);
               return (
                 <div className="flex items-center justify-between pt-1.5 border-t border-slate-100">
                   <span className="text-slate-400 text-xs font-medium">Placement Fee</span>
-                  <span className="text-blue-600 text-xs font-black">${placementFee.toFixed(2)}</span>
+                  <span className="text-blue-600 text-xs font-black">{formatCurrency(placementFee)}</span>
                 </div>
               );
             })()}
@@ -289,10 +289,10 @@ const ScholarshipCardFullComponent: React.FC<ScholarshipCardFullProps> = ({
               }}
               disabled={isLocked}
               className={`group/btn w-full h-10 px-4 rounded-xl font-bold text-xs sm:text-sm flex items-center justify-center transition-all duration-300 relative overflow-hidden backdrop-blur-md border border-white/20 shadow-lg hover:shadow-xl ${isLocked
-                  ? 'bg-slate-300/80 text-slate-500 cursor-not-allowed'
-                  : isSelected
-                    ? 'bg-gradient-to-r from-blue-600/90 to-blue-700/90 text-white hover:from-blue-600 hover:to-blue-700'
-                    : 'bg-gradient-to-r from-blue-500/85 to-indigo-600/85 text-white hover:from-blue-600/90 hover:to-indigo-700/90'
+                ? 'bg-slate-300/80 text-slate-500 cursor-not-allowed'
+                : isSelected
+                  ? 'bg-gradient-to-r from-blue-600/90 to-blue-700/90 text-white hover:from-blue-600 hover:to-blue-700'
+                  : 'bg-gradient-to-r from-blue-500/85 to-indigo-600/85 text-white hover:from-blue-600/90 hover:to-indigo-700/90'
                 }`}
             >
               <div className="absolute inset-0 bg-gradient-to-r from-white/0 via-white/25 to-white/0 transform -skew-x-12 -translate-x-full group-hover/btn:translate-x-full transition-transform duration-1000"></div>

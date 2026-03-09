@@ -56,11 +56,14 @@ interface ApplicationWithScholarship {
   };
 }
 
-export const WaitingApprovalStep: React.FC<StepProps> = ({ onComplete }) => {
+import { usePaymentBlocked } from '../../../hooks/usePaymentBlocked';
+
+export const WaitingApprovalStep: React.FC<StepProps> = ({ onComplete, onBack }) => {
   const { t } = useTranslation();
   const { user, userProfile, refetchUserProfile } = useAuth();
   const { getFeeAmount } = useFeeConfig(user?.id);
   const { i20ControlFee, hasSellerPackage } = useDynamicFees();
+  const { isBlocked, pendingPayment, refetch: refetchPaymentStatus } = usePaymentBlocked();
 
 
   const [application, setApplication] = useState<ApplicationWithScholarship | null>(null);
@@ -80,6 +83,7 @@ export const WaitingApprovalStep: React.FC<StepProps> = ({ onComplete }) => {
   // Derived state
   const isNewFlowUser = !!(userProfile as any)?.placement_fee_flow;
   const hasPaidI20 = isNewFlowUser || !!(userProfile && (userProfile as any).has_paid_i20_control_fee);
+  const hasZellePendingI20 = isBlocked && pendingPayment?.fee_type === 'i20_control_fee';
   const i20PaidAt = (userProfile as any)?.i20_paid_at || null;
 
   // Acceptance letter states
@@ -427,13 +431,14 @@ export const WaitingApprovalStep: React.FC<StepProps> = ({ onComplete }) => {
               feeType="i20_control_fee"
               amount={i20Amount}
               scholarshipsIds={application?.scholarship_id ? [application.scholarship_id] : []}
-              onSuccess={() => {
-                setShowZelleCheckout(false);
-                handleRefresh();
-              }}
               metadata={{
                 application_id: application?.id,
-                selected_scholarship_id: application?.scholarship_id
+                selected_scholarship_id: application?.scholarship_id,
+                annual_tuition: application?.scholarships?.annual_value_with_scholarship
+              }}
+              isPendingVerification={hasZellePendingI20}
+              onProcessingChange={(isProcessing) => {
+                if (isProcessing) refetchPaymentStatus();
               }}
             />
           </div>
@@ -578,6 +583,37 @@ export const WaitingApprovalStep: React.FC<StepProps> = ({ onComplete }) => {
                               <p className="text-emerald-600/80 text-xs font-medium uppercase tracking-tight mt-0.5">
                                 {i20PaidAt ? `Pago em ${formatDate(i20PaidAt)}` : 'Sua taxa foi processada com sucesso.'}
                               </p>
+                            </div>
+                          </div>
+                        ) : hasZellePendingI20 ? (
+                          <div className="flex flex-col gap-0 shadow-sm rounded-[2rem] overflow-hidden border border-amber-100">
+                            <div className="bg-amber-50/50 p-6 flex flex-col sm:flex-row items-center gap-4 text-center sm:text-left">
+                              <div className="w-12 h-12 bg-amber-100 rounded-2xl flex items-center justify-center border border-amber-200 shrink-0">
+                                <Clock className="w-6 h-6 text-amber-600 animate-pulse" />
+                              </div>
+                              <div>
+                                <p className="text-sm font-black text-amber-900 uppercase tracking-tight">Pagamento Zelle em Análise</p>
+                                <p className="text-[11px] text-amber-700/80 font-bold mt-0.5 leading-relaxed uppercase tracking-wide">
+                                  Você já iniciou um pagamento via Zelle. Aguarde a confirmação de até 48 horas.
+                                </p>
+                              </div>
+                            </div>
+                            <div className="bg-white p-2">
+                              <ZelleCheckout
+                                feeType="i20_control_fee"
+                                amount={i20Amount}
+                                scholarshipsIds={application?.scholarship_id ? [application.scholarship_id] : []}
+                                metadata={{
+                                  application_id: application?.id,
+                                  selected_scholarship_id: application?.scholarship_id,
+                                  annual_tuition: application?.scholarships?.annual_value_with_scholarship
+                                }}
+                                isPendingVerification={true}
+                                onProcessingChange={(isProcessing) => {
+                                  if (isProcessing) refetchPaymentStatus();
+                                }}
+                                className="!border-0 !shadow-none !bg-transparent"
+                              />
                             </div>
                           </div>
                         ) : (

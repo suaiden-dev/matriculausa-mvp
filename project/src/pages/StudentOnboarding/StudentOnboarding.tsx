@@ -34,8 +34,13 @@ const StudentOnboarding: React.FC = () => {
   const [showNotif, setShowNotif] = useState(false);
   const [showNotificationsModal, setShowNotificationsModal] = useState(false);
 
-  // Determina o array de steps com base no tipo de fluxo do usuário
-  const isNewFlowUser = !!(userProfile as any)?.placement_fee_flow;
+  // O estado do progresso agora contém se o usuário é do novo fluxo
+  const isNewFlowUser = !!state.isNewFlowUser || !!(userProfile as any)?.placement_fee_flow;
+  const isNewFlowUserRef = React.useRef(isNewFlowUser);
+
+  useEffect(() => {
+    isNewFlowUserRef.current = isNewFlowUser;
+  }, [isNewFlowUser]);
 
   const getOrderedSteps = useCallback((): OnboardingStep[] => {
     const base: OnboardingStep[] = [
@@ -159,6 +164,7 @@ const StudentOnboarding: React.FC = () => {
     const stepParam = searchParams.get('step');
     const sessionId = searchParams.get('session_id');
 
+
     if (paymentSuccess === 'success' && stepParam) {
       const paymentKey = sessionId || 'manual_pix';
       if (processingPaymentRef.current === paymentKey) return;
@@ -181,8 +187,14 @@ const StudentOnboarding: React.FC = () => {
 
           setTimeout(() => {
             setShowPaymentAnimation(false);
-            if (stepParam === 'payment' || stepParam === 'scholarship_fee') {
-              handleNext();
+            if (stepParam === 'payment') {
+              // Navegar diretamente para o step correto, sem depender de handleNext()
+              // que pode usar isNewFlowUser=false caso userProfile ainda não tenha carregado
+              const nextFeeStep: OnboardingStep = isNewFlowUserRef.current ? 'placement_fee' : 'scholarship_fee';
+              goToStep(nextFeeStep);
+            } else if (stepParam === 'scholarship_fee' || stepParam === 'placement_fee') {
+              // Mover para my_applications diretamente
+              goToStep('my_applications');
             } else {
               const cleanUrl = new URL(window.location.href);
               cleanUrl.searchParams.delete('payment');
@@ -256,10 +268,16 @@ const StudentOnboarding: React.FC = () => {
 
               setTimeout(() => {
                 setShowPaymentAnimation(false);
-                if (stepParam === 'payment' || stepParam === 'scholarship_fee' || stepParam === 'placement_fee') {
-                  handleNext();
+
+                // Recalcular o próximo passo no momento da execução para garantir que
+                // usamos o estado mais atualizado de isNewFlowUser vindo do hook ou do profile
+                if (stepParam === 'payment') {
+                  const nextFeeStep: OnboardingStep = isNewFlowUserRef.current ? 'placement_fee' : 'scholarship_fee';
+                  goToStep(nextFeeStep);
+                } else if (stepParam === 'scholarship_fee' || stepParam === 'placement_fee') {
+                  // Mover para my_applications diretamente para evitar bug de estado no closure do handleNext
+                  goToStep('my_applications');
                 } else {
-                  // Se for selection_fee ou outro, o OnboardingProgress vai decidir o próximo passo após o reload
                   const cleanUrl = new URL(window.location.href);
                   cleanUrl.searchParams.delete('payment');
                   cleanUrl.searchParams.delete('session_id');
@@ -296,7 +314,7 @@ const StudentOnboarding: React.FC = () => {
         verifyStripeSession();
       }
     }
-  }, [searchParams, handleNext]);
+  }, [searchParams, handleNext, isNewFlowUser, goToStep]);
 
   useEffect(() => {
     if (!authLoading && user && user.role !== 'student') {
@@ -391,11 +409,18 @@ const StudentOnboarding: React.FC = () => {
   };
 
   if (showPaymentAnimation) {
+    const stepParam = searchParams.get('step');
+    let titleKey = 'selectionFeeStep.paid.title';
+    if (stepParam === 'payment') titleKey = 'studentDashboard.progressBar.applicationFee';
+    else if (stepParam === 'scholarship_fee') titleKey = 'studentDashboard.progressBar.scholarshipFee';
+    else if (stepParam === 'placement_fee') titleKey = 'studentDashboard.progressBar.placementFee';
+    else if (stepParam === 'my_applications') titleKey = 'studentDashboard.progressBar.i20ControlFee';
+
     return (
       <PaymentSuccessOverlay
         isSuccess={true}
-        title={t('successPages.selectionProcessFee.title')}
-        message={t('successPages.common.paymentProcessedAmount')}
+        title={t(`${titleKey}`)}
+        message={t('selectionFeeStep.paid.paidSubtitle')}
       />
     );
   }
@@ -405,7 +430,7 @@ const StudentOnboarding: React.FC = () => {
     let translationKey = 'selectionProcessFee';
     if (stepParam === 'payment') translationKey = 'applicationFee';
     else if (stepParam === 'scholarship_fee') translationKey = 'scholarshipFee';
-    else if (stepParam === 'placement_fee') translationKey = 'scholarshipFee'; // reutiliza chave de tradução
+    else if (stepParam === 'placement_fee') translationKey = 'placementFee';
     else if (stepParam === 'my_applications') translationKey = 'i20ControlFee';
 
     return (

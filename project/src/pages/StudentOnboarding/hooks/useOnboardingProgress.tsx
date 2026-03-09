@@ -46,6 +46,7 @@ export const useOnboardingProgress = () => {
       placementFeePaid: false,
       universityDocumentsUploaded: false,
       onboardingCompleted: false,
+      isNewFlowUser: false,
     };
   });
   const [loading, setLoading] = useState(true);
@@ -61,9 +62,6 @@ export const useOnboardingProgress = () => {
 
     try {
       setLoading(true);
-      const selAppId = window.localStorage.getItem('selected_application_id');
-      console.log('[OnboardingDebug] Starting checkProgress. LocalStorage - selAppId:', selAppId);
-
       // 1. Verificar Selection Fee
       let selectionFeePaid = userProfile.has_paid_selection_process_fee || false;
 
@@ -295,8 +293,6 @@ export const useOnboardingProgress = () => {
 
       // Re-ler o step salvo após as operações assíncronas para evitar race conditions
       const savedStep = getSavedStep();
-      const savedStepLog = window.localStorage.getItem(ONBOARDING_STEP_KEY);
-      console.log('[OnboardingDebug] Calculating step. savedStep from localStorage:', savedStepLog);
 
       let currentStep: OnboardingStep;
 
@@ -385,7 +381,6 @@ export const useOnboardingProgress = () => {
       }
 
       if (currentCheckId !== lastCheckId.current) {
-        console.log('[OnboardingDebug] checkProgress call is stale, ignoring results.');
         return;
       }
 
@@ -402,6 +397,7 @@ export const useOnboardingProgress = () => {
         placementFeePaid,
         universityDocumentsUploaded,
         onboardingCompleted,
+        isNewFlowUser,
       });
 
       // Salvar step atual

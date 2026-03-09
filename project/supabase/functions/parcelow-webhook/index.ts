@@ -1110,6 +1110,10 @@ Deno.serve(async (req: Request) => {
         reference.startsWith("scholarshi_")
       ) {
         feeType = "scholarship_fee";
+      } else if (
+        reference.startsWith("pf_") || reference.startsWith("placement_")
+      ) {
+        feeType = "placement_fee";
       } else if (reference.startsWith("i20_")) {
         feeType = "i20_control";
       } else {
@@ -1532,10 +1536,33 @@ Deno.serve(async (req: Request) => {
           }
           break;
 
+        case "placement":
+        case "placement_fee":
+          console.log("[parcelow-webhook] 🔄 Processando placement_fee...");
+
+          const { error: placementUpdateError } = await supabase
+            .from("user_profiles")
+            .update({
+              is_placement_fee_paid: true,
+              placement_fee_payment_method: "parcelow",
+            })
+            .eq("user_id", userId);
+
+          if (placementUpdateError) {
+            console.error(
+              "[parcelow-webhook] ❌ Erro ao atualizar placement fee:",
+              placementUpdateError,
+            );
+          } else {
+            console.log(
+              "[parcelow-webhook] ✅ Placement fee status atualizado!",
+            );
+          }
+          break;
+
         default:
           console.warn(
-            "[parcelow-webhook] ⚠️ Fee type não reconhecido:",
-            feeType,
+            `[parcelow-webhook] ⚠️ Fee type não reconhecido: ${feeType}`,
           );
       }
 
@@ -1697,13 +1724,16 @@ Deno.serve(async (req: Request) => {
 
         // 1. NOTIFICAÇÃO PARA O ALUNO
         // Define tipo_notf baseado no fee_type para consistência com Stripe
-        let tipoNotfAluno = "Pagamento de " + feeType + " confirmado";
+        // Define tipo_notf baseado no fee_type para Parcelow
+        let tipoNotfAluno = "Pagamento Stripe de " + feeType + " confirmado";
         if (feeType === "scholarship_fee") {
-          tipoNotfAluno = "Pagamento de taxa de bolsa confirmado";
+          tipoNotfAluno = "Pagamento Stripe de taxa de bolsa confirmado";
         } else if (feeType === "i20_control" || feeType === "i20_control_fee") {
-          tipoNotfAluno = "Pagamento de I-20 control fee confirmado";
+          tipoNotfAluno = "Pagamento Stripe de I-20 control fee confirmado";
         } else if (feeType === "application_fee" || feeType === "application") {
-          tipoNotfAluno = "Novo pagamento de application fee";
+          tipoNotfAluno = "Novo pagamento Stripe de application fee";
+        } else if (feeType === "placement_fee" || feeType === "placement") {
+          tipoNotfAluno = "Pagamento Parcelow de Placement Fee confirmado";
         }
 
         let emailAlunoFinal = userProfile.email;
@@ -1857,9 +1887,9 @@ Deno.serve(async (req: Request) => {
               }
             }
 
-            // a) NOTIFICAÇÃO PARA TODOS OS ADMINS
+            // 1. NOTIFICAÇÃO PARA TODOS OS ADMINS
             const adminNotificationPromises = admins.map(async (admin) => {
-              // Define tipo_notf para admin baseado no fee_type (usando 'Stripe' para consistência com n8n - Strings Exatas)
+              // Define tipo_notf para admin baseado no fee_type para Parcelow
               let tipoNotfAdmin =
                 `Pagamento Stripe de selection process confirmado - Admin`; // Default fallback
 
@@ -1880,6 +1910,9 @@ Deno.serve(async (req: Request) => {
               } else if (feeType === "selection_process") {
                 tipoNotfAdmin =
                   "Pagamento Stripe de selection process confirmado - Admin";
+              } else if (feeType === "placement_fee" || feeType === "placement") {
+                tipoNotfAdmin =
+                  "Pagamento de Placement Fee confirmado - Admin";
               }
 
               const adminNotificationPayload = {
@@ -1971,11 +2004,11 @@ Deno.serve(async (req: Request) => {
 
             await Promise.allSettled(adminNotificationPromises);
 
-            // b) NOTIFICAÇÃO PARA SELLER (Strings Exatas com 'Stripe' para consistência)
-            let tipoNotfSeller =
-              `Pagamento Stripe de selection process confirmado - Seller`; // Default
+            // b) NOTIFICAÇÃO PARA SELLER
             let oQueEnviarSeller =
               `Parabéns! Seu aluno ${userProfile.full_name} pagou a taxa ${feeType} no valor de ${formattedAmount} via Parcelow. Sua comissão será calculada em breve.`;
+            let tipoNotfSeller =
+              `Pagamento Stripe de selection process confirmado - Seller`; // Default
 
             if (feeType === "scholarship_fee") {
               tipoNotfSeller =
@@ -1995,6 +2028,9 @@ Deno.serve(async (req: Request) => {
             } else if (feeType === "selection_process") {
               tipoNotfSeller =
                 "Pagamento Stripe de selection process confirmado - Seller";
+            } else if (feeType === "placement_fee" || feeType === "placement") {
+              tipoNotfSeller =
+                "Pagamento de Placement Fee confirmado - Seller";
             }
 
             let emailSellerFinal = sellerData.email;
@@ -2084,7 +2120,7 @@ Deno.serve(async (req: Request) => {
 
             // c) NOTIFICAÇÃO PARA AFFILIATE ADMIN (se houver)
             if (affiliateAdminData.email) {
-              // Define tipo_notf para affiliate admin baseado no fee_type (usando 'Stripe' para consistência - Strings Exatas)
+              // Define tipo_notf para affiliate admin baseado no fee_type para Parcelow
               let tipoNotfAffiliate =
                 `Pagamento Stripe de selection process confirmado - Affiliate Admin`; // Default fallback
 
@@ -2105,6 +2141,9 @@ Deno.serve(async (req: Request) => {
               } else if (feeType === "selection_process") {
                 tipoNotfAffiliate =
                   "Pagamento Stripe de selection process confirmado - Affiliate Admin";
+              } else if (feeType === "placement_fee" || feeType === "placement") {
+                tipoNotfAffiliate =
+                  "Pagamento de Placement Fee confirmado - Affiliate Admin";
               }
 
               let emailAffiliateFinal = affiliateAdminData.email;
@@ -2205,26 +2244,29 @@ Deno.serve(async (req: Request) => {
 
             // Notificar apenas admins quando não há seller
             const adminNotificationPromises = admins.map(async (admin) => {
-              // Define tipo_notf para admin sem seller (usando 'Stripe' para consistência - Strings Exatas)
+              // Define tipo_notf para admin sem seller para Parcelow
               let tipoNotfAdminNoSeller =
-                `Pagamento Stripe de selection process confirmado - Admin`; // Default fallback
+                `Pagamento Parcelow de selection process confirmado - Admin`; // Default fallback
               if (feeType === "scholarship_fee") {
                 tipoNotfAdminNoSeller =
-                  "Pagamento Stripe de scholarship fee confirmado - Admin";
+                  "Pagamento Parcelow de scholarship fee confirmado - Admin";
               } else if (
                 feeType === "i20_control" || feeType === "i20_control_fee"
               ) {
                 tipoNotfAdminNoSeller =
-                  "Pagamento Stripe de I-20 control fee confirmado - Admin";
+                  "Pagamento Parcelow de I-20 control fee confirmado - Admin";
               } else if (
                 feeType === "application_fee" || feeType === "application" ||
                 feeType === "application_fee_payment"
               ) {
                 tipoNotfAdminNoSeller =
-                  "Pagamento Stripe de application fee confirmado - Admin";
+                  "Pagamento Parcelow de application fee confirmado - Admin";
               } else if (feeType === "selection_process") {
                 tipoNotfAdminNoSeller =
-                  "Pagamento Stripe de selection process confirmado - Admin";
+                  "Pagamento Parcelow de selection process confirmado - Admin";
+              } else if (feeType === "placement_fee" || feeType === "placement") {
+                tipoNotfAdminNoSeller =
+                  "Pagamento Parcelow de Placement Fee confirmado - Admin";
               }
 
               const adminNotificationPayload = {

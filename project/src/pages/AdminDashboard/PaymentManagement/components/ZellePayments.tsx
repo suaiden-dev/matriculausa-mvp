@@ -108,7 +108,7 @@ function ZellePaymentsBase(props: ZellePaymentsProps) {
 									<div key={payment.id} className="bg-gray-50 rounded-xl p-6 hover:bg-gray-100 transition-colors cursor-pointer border">
 										<div className="flex items-start justify-between mb-4">
 											<div className="flex-1">
-												<Link 
+												<Link
 													to={`/admin/dashboard/students/${payment.student_id}`}
 													className="font-semibold text-gray-900 text-lg mb-1 hover:text-blue-600 transition-colors block"
 												>
@@ -117,12 +117,11 @@ function ZellePaymentsBase(props: ZellePaymentsProps) {
 												<p className="text-sm text-gray-500">{payment.student_email}</p>
 												<p className="text-sm text-gray-500">{payment.university_name}</p>
 											</div>
-											<span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${
-												payment.zelle_status === 'pending_verification' ? 'bg-yellow-100 text-yellow-800' :
-												payment.zelle_status === 'approved' ? 'bg-green-100 text-green-800' :
-												payment.zelle_status === 'rejected' ? 'bg-red-100 text-red-800' :
-												'bg-gray-100 text-gray-800'
-											}` }>
+											<span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${payment.zelle_status === 'pending_verification' ? 'bg-yellow-100 text-yellow-800' :
+													payment.zelle_status === 'approved' ? 'bg-green-100 text-green-800' :
+														payment.zelle_status === 'rejected' ? 'bg-red-100 text-red-800' :
+															'bg-gray-100 text-gray-800'
+												}`}>
 												{payment.zelle_status === 'pending_verification' && <Clock className="w-3 h-3 mr-1" />}
 												{payment.zelle_status === 'approved' && <CheckCircle className="w-3 h-3 mr-1" />}
 												{payment.zelle_status === 'rejected' && <XCircle className="w-3 h-3 mr-1" />}
@@ -131,7 +130,7 @@ function ZellePaymentsBase(props: ZellePaymentsProps) {
 										</div>
 
 										<div className="mb-4">
-											<div className="text-2xl font-bold text-gray-900 mb-2">${formatCentsToDollars(payment.amount)}</div>
+											<div className="text-2xl font-bold text-gray-900 mb-2">${formatCentsToDollars(payment.amount, true)}</div>
 											<p className="text-sm text-gray-600 capitalize">{payment.fee_type.replace('_', ' ')}</p>
 										</div>
 
@@ -160,7 +159,7 @@ function ZellePaymentsBase(props: ZellePaymentsProps) {
 										</div>
 									</div>
 								))}
-						</div>
+							</div>
 						) : (
 							<div className="bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden">
 								<div className="overflow-x-auto">
@@ -186,7 +185,7 @@ function ZellePaymentsBase(props: ZellePaymentsProps) {
 																</div>
 															</div>
 															<div className="ml-4">
-																<Link 
+																<Link
 																	to={`/admin/dashboard/students/${payment.student_id}`}
 																	className="text-sm font-medium text-gray-900 hover:text-blue-600 transition-colors"
 																>
@@ -197,14 +196,13 @@ function ZellePaymentsBase(props: ZellePaymentsProps) {
 														</div>
 													</td>
 													<td className="px-6 py-4 whitespace-nowrap"><div className="text-sm text-gray-900 capitalize">{payment.fee_type.replace('_', ' ')}</div></td>
-													<td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900 font-medium">${formatCentsToDollars(payment.amount)}</td>
+													<td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900 font-medium">${formatCentsToDollars(payment.amount, true)}</td>
 													<td className="px-6 py-4 whitespace-nowrap">
-														<span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${
-															payment.zelle_status === 'pending_verification' ? 'bg-yellow-100 text-yellow-800' :
-															payment.zelle_status === 'approved' ? 'bg-green-100 text-green-800' :
-															payment.zelle_status === 'rejected' ? 'bg-red-100 text-red-800' :
-															'bg-gray-100 text-gray-800'
-														}` }>
+														<span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${payment.zelle_status === 'pending_verification' ? 'bg-yellow-100 text-yellow-800' :
+																payment.zelle_status === 'approved' ? 'bg-green-100 text-green-800' :
+																	payment.zelle_status === 'rejected' ? 'bg-red-100 text-red-800' :
+																		'bg-gray-100 text-gray-800'
+															}`}>
 															{payment.zelle_status === 'pending_verification' ? 'Pending Review' : payment.zelle_status === 'approved' ? 'Approved' : payment.zelle_status === 'rejected' ? 'Rejected' : payment.zelle_status}
 														</span>
 													</td>

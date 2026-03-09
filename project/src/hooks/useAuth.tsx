@@ -56,7 +56,7 @@ export interface UserProfile {
 
   // Dependentes (campo adicionado no schema user_profiles)
   dependents?: number;
-  
+
   // System type inherited from seller
   system_type?: 'legacy' | 'simplified';
   selection_survey_passed?: boolean;
@@ -67,14 +67,8 @@ export interface UserProfile {
   // Onboarding completion status
   onboarding_completed?: boolean;
 
-  // CPF Document
-  cpf_document?: string;
-
-  // Onboarding completion status
-  onboarding_completed?: boolean;
-
-  // Questionário de seleção
-  selection_survey_passed?: boolean;
+  // Placement Fee Flow (adicionado condicionalmente no registro)
+  placement_fee_flow?: boolean;
 
   // ... outras colunas se existirem
 }
@@ -85,7 +79,7 @@ interface AuthContextType {
   userProfile: UserProfile | null;
   login: (email: string, password: string) => Promise<void>;
   logout: () => Promise<void>;
-  register: (email: string, password: string, userData: { full_name: string; role: 'student' | 'school' | 'admin' | 'affiliate_admin' | 'seller'; [key: string]: any }, options?: SignUpOptions) => Promise<any>;
+  register: (email: string, password: string, userData: { full_name: string; role: 'student' | 'school' | 'admin' | 'affiliate_admin' | 'seller';[key: string]: any }, options?: SignUpOptions) => Promise<any>;
   switchRole: (newRole: 'student' | 'school' | 'admin' | 'affiliate_admin' | 'seller') => void;
   isAuthenticated: boolean;
   loading: boolean;
@@ -145,7 +139,7 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
       // Prioridade: perfil.role -> user_metadata.role -> verificar se é universidade -> verificar se é vendedor -> perfil.is_admin -> fallback por email
       let role = currentProfile?.role as User['role'] | undefined;
       if (!role) role = sessionUser?.user_metadata?.role as User['role'] | undefined;
-      
+
       // Se ainda não tem role, verificar se é uma universidade
       if (!role) {
         try {
@@ -154,7 +148,7 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
             .select('id, image_url, logo_url')
             .eq('user_id', sessionUser.id)
             .single();
-          
+
           if (university) {
             role = 'school';
             // Adicionar a imagem da universidade ao user
@@ -166,7 +160,7 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
           // Se não encontrar universidade, continuar com a lógica normal
         }
       }
-      
+
       // Se ainda não tem role, verificar se é um vendedor
       if (!role) {
         try {
@@ -177,7 +171,7 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
             .eq('user_id', sessionUser.id)
             .eq('is_active', true)
             .single();
-          
+
           if (sellerError) {
             console.log('🔍 [USEAUTH] Erro ao verificar vendedor:', sellerError);
           } else if (seller) {
@@ -191,7 +185,7 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
           // Se não encontrar vendedor, continuar com a lógica normal
         }
       }
-      
+
       if (!role && currentProfile) role = currentProfile.is_admin ? 'admin' : undefined;
       if (!role) role = getDefaultRole(sessionUser?.email || '');
 
@@ -215,14 +209,14 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
         const urlParams = new URLSearchParams(window.location.search);
         const code = urlParams.get('code');
         const state = urlParams.get('state');
-        
+
         // Se há código OAuth na URL, é provavelmente para email
         if (code && state && (state.startsWith('google_') || state.startsWith('microsoft_'))) {
           console.log('🔄 [USEAUTH] OAuth de email detectado. Não processando autenticação...');
           // Não processar autenticação para OAuth de email
           return;
         }
-        
+
         let profile: UserProfile | null = null;
         try {
           const { data, error } = await supabase
@@ -251,16 +245,16 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
             }
           } else {
             profile = data || null;
-            
+
             // ✅ CORREÇÃO: Atualizar email e dependents se estiverem diferentes ou null
             if (profile) {
               const updates: any = {};
-              
+
               // Atualizar email se estiver null ou diferente
               if (!profile.email || profile.email !== session.user.email) {
                 updates.email = session.user.email;
               }
-              
+
               // Ensure dependents persists from metadata if profile exists without correct value
               const mdDependentsVal = Number(session.user.user_metadata?.dependents ?? NaN);
               if (
@@ -270,19 +264,49 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
                 updates.dependents = mdDependentsVal;
               }
               // Persist system_type from metadata if provided and different
-              const mdSystemType = session.user.user_metadata?.system_type as 'legacy' | 'simplified' | undefined;
-              if (mdSystemType && profile?.system_type !== mdSystemType) {
-                updates.system_type = mdSystemType;
+              // Check for seller code to identify if it's Brant Immigration
+              let isBrantStudent = false;
+
+              const sellerCode = session.user.user_metadata?.seller_referral_code || profile.seller_referral_code;
+              if (sellerCode) {
+                try {
+                  const { data: sellerData } = await supabase
+                    .from('sellers')
+                    .select('affiliate_admin_id')
+                    .eq('referral_code', sellerCode)
+                    .single();
+
+                  if (sellerData?.affiliate_admin_id) {
+                    const { data: adminData } = await supabase
+                      .from('affiliate_admins')
+                      .select('system_type')
+                      .eq('id', sellerData.affiliate_admin_id)
+                      .single();
+
+                    if (adminData?.system_type === 'legacy') {
+                      isBrantStudent = true;
+                    }
+                  }
+                } catch (err) {
+                  console.error('❌ [USEAUTH] Erro ao buscar system_type do vendedor (profile existente):', err);
+                }
               }
-              
+
+              // Regra de inserção do placement_fee_flow: true para todos, exceto alunos de vendedores da Brant (legacy admin)
+              const applyPlacementFlow = profile.role === 'student' && !isBrantStudent;
+
+              if (applyPlacementFlow && profile.placement_fee_flow !== true) {
+                updates.placement_fee_flow = true;
+              }
+
               // Aplicar atualizações se houver alguma
               if (Object.keys(updates).length > 0) {
-                console.log('🔄 [USEAUTH] Atualizando perfil existente:', { 
-                  antigo: { email: profile.email, dependents: (profile as any).dependents }, 
+                console.log('🔄 [USEAUTH] Atualizando perfil existente:', {
+                  antigo: { email: profile.email, dependents: (profile as any).dependents },
                   novo: { email: session.user.email, dependents: mdDependentsVal },
-                  updates 
+                  updates
                 });
-                
+
                 try {
                   const { data: updatedProfile, error: updateError } = await supabase
                     .from('user_profiles')
@@ -290,7 +314,7 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
                     .eq('user_id', session.user.id)
                     .select()
                     .single();
-                  
+
                   if (!updateError && updatedProfile) {
                     profile = updatedProfile as any;
                     console.log('✅ [USEAUTH] Perfil existente atualizado com sucesso:', updatedProfile);
@@ -314,33 +338,33 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
             console.log('🔍 [USEAUTH] Perfil não encontrado, criando novo perfil');
             console.log('🔍 [USEAUTH] session.user.id:', session.user.id);
             console.log('🔍 [USEAUTH] session.user.user_metadata:', session.user.user_metadata);
-            
+
             const pendingFullName = localStorage.getItem('pending_full_name');
             const pendingPhone = localStorage.getItem('pending_phone');
             const pendingAffiliateCode = localStorage.getItem('pending_affiliate_code');
-            
+
             console.log('🔍 [USEAUTH] Dados do localStorage:');
             console.log('🔍 [USEAUTH] - pendingFullName:', pendingFullName);
             console.log('🔍 [USEAUTH] - pendingPhone:', pendingPhone);
             console.log('🔍 [USEAUTH] - pendingAffiliateCode:', pendingAffiliateCode);
-            
-            const fullName = pendingFullName || 
-              session.user.user_metadata?.full_name || 
-              session.user.user_metadata?.name || 
+
+            const fullName = pendingFullName ||
+              session.user.user_metadata?.full_name ||
+              session.user.user_metadata?.name ||
               'User';
-            const phone = pendingPhone || 
-              session.user.user_metadata?.phone || 
+            const phone = pendingPhone ||
+              session.user.user_metadata?.phone ||
               null;
-            
+
             console.log('🔍 [USEAUTH] Valores finais para criação do perfil:');
             console.log('🔍 [USEAUTH] - fullName:', fullName);
             console.log('🔍 [USEAUTH] - phone:', phone);
-            
+
             // Debug: verificar se o telefone está no user_metadata
             console.log('Debug - user_metadata:', session.user.user_metadata);
             console.log('Debug - phone from user_metadata:', session.user.user_metadata?.phone);
             console.log('Debug - phone from localStorage:', pendingPhone);
-            
+
             const desiredRoleFromMetadata = (session.user.user_metadata?.role as 'student' | 'school' | 'admin' | undefined) || 'student';
 
             // Se o usuário tem seller_referral_code, sempre começar como 'student'
@@ -357,7 +381,7 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
                   .eq('package_number', session.user.user_metadata.scholarship_package_number)
                   .eq('is_active', true)
                   .single();
-                
+
                 if (!packageError && packageData) {
                   scholarshipPackageId = packageData.id;
                   console.log('✅ [USEAUTH] Pacote de bolsas encontrado:', packageData.id);
@@ -368,6 +392,38 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
                 console.error('❌ [USEAUTH] Erro ao buscar pacote de bolsas:', err);
               }
             }
+
+            // Check for seller code to identify if it's Brant Immigration
+            let isBrantStudent = false;
+
+            const sellerCode = session.user.user_metadata?.seller_referral_code;
+            if (sellerCode) {
+              try {
+                // Obter config da afiliada para saber se o vendedor é de "legacy" (como Brant)
+                const { data: sellerData } = await supabase
+                  .from('sellers')
+                  .select('affiliate_admin_id')
+                  .eq('referral_code', sellerCode)
+                  .single();
+
+                if (sellerData?.affiliate_admin_id) {
+                  const { data: adminData } = await supabase
+                    .from('affiliate_admins')
+                    .select('system_type')
+                    .eq('id', sellerData.affiliate_admin_id)
+                    .single();
+
+                  if (adminData?.system_type === 'legacy') {
+                    isBrantStudent = true;
+                  }
+                }
+              } catch (err) {
+                console.error('❌ [USEAUTH] Erro ao buscar system_type do vendedor:', err);
+              }
+            }
+
+            // Regra de inserção do placement_fee_flow: true para todos, exceto alunos de vendedores da Brant (legacy admin)
+            const applyPlacementFlow = finalRole === 'student' && !isBrantStudent;
 
             const profileData = {
               user_id: session.user.id,
@@ -385,25 +441,26 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
                 ? Number(session.user.user_metadata?.dependents) || 0
                 : 0,
               // Persist system_type if provided during sign up
-              system_type: (session.user.user_metadata?.system_type as 'legacy' | 'simplified' | undefined) || null,
+              system_type: session.user.user_metadata?.system_type || null,
               // Add desired_scholarship_range if provided
-              desired_scholarship_range: session.user.user_metadata?.desired_scholarship_range 
-                ? Number(session.user.user_metadata?.desired_scholarship_range) 
-                : null
+              desired_scholarship_range: session.user.user_metadata?.desired_scholarship_range
+                ? Number(session.user.user_metadata?.desired_scholarship_range)
+                : null,
+              ...(applyPlacementFlow && { placement_fee_flow: true })
             };
-            
+
             console.log('🔍 [USEAUTH] profileData que será inserido:', profileData);
-            
+
             const { data: newProfile, error: insertError } = await supabase
               .from('user_profiles')
               .insert(profileData)
               .select()
               .single();
-            
+
             console.log('🔍 [USEAUTH] Resultado da inserção do perfil:');
             console.log('🔍 [USEAUTH] - newProfile:', newProfile);
             console.log('🔍 [USEAUTH] - insertError:', insertError);
-            
+
             if (insertError) {
               console.log('❌ [USEAUTH] Erro ao inserir perfil:', insertError);
               // Log detalhado do erro
@@ -435,11 +492,16 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
                     ) {
                       updates.dependents = mdDependents;
                     }
+
+                    // Forçar atualização do placement_fee_flow para novos usuários (que foram criados via trigger)
+                    if (applyPlacementFlow && existingProfile.placement_fee_flow !== true) {
+                      updates.placement_fee_flow = true;
+                    }
                     if (Object.keys(updates).length > 0) {
-                      console.log('🔄 [USEAUTH] Atualizando perfil existente:', { 
-                        antigo: { phone: existingProfile.phone, email: existingProfile.email }, 
+                      console.log('🔄 [USEAUTH] Atualizando perfil existente:', {
+                        antigo: { phone: existingProfile.phone, email: existingProfile.email },
                         novo: { phone, email: session.user.email },
-                        updates 
+                        updates
                       });
                       const { data: updatedProfile, error: updateError } = await supabase
                         .from('user_profiles')
@@ -467,7 +529,7 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
               console.log('✅ [USEAUTH] Perfil criado com sucesso:', newProfile);
               console.log('🔍 [USEAUTH] Telefone no perfil criado:', newProfile?.phone);
               profile = newProfile;
-              
+
               // Processar código de afiliado se existir (do localStorage)
               if (pendingAffiliateCode) {
                 console.log('🎁 [USEAUTH] Processando código de afiliado do localStorage:', pendingAffiliateCode);
@@ -479,7 +541,7 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
                     .eq('code', pendingAffiliateCode)
                     .eq('is_active', true)
                     .single();
-                  
+
                   if (affiliateError || !affiliateCodeData) {
                     console.log('❌ [USEAUTH] Código de afiliado inválido:', pendingAffiliateCode);
                   } else {
@@ -497,7 +559,7 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
                           status: 'pending',
                           credits_earned: 180 // 180 Matricula Coins
                         });
-                      
+
                       if (referralError) {
                         console.log('❌ [USEAUTH] Erro ao criar indicação:', referralError);
                       } else {
@@ -511,7 +573,7 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
                   console.error('❌ [USEAUTH] Erro ao processar código de afiliado:', error);
                 }
               }
-              
+
               if (session.user.user_metadata?.role === 'school') {
                 try {
                   const { error: universityError } = await supabase
@@ -610,11 +672,11 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
                 .select('*')
                 .eq('user_id', session.user.id)
                 .single();
-              
+
               if (!refreshError && refreshedProfile) {
                 console.log('✅ [USEAUTH] Perfil atualizado após delay:', refreshedProfile);
                 setUserProfile(refreshedProfile as UserProfile);
-                
+
                 // Atualizar cache também
                 const refreshedUser = await buildUser(session.user, refreshedProfile);
                 if (refreshedUser) {
@@ -648,10 +710,10 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
             console.error('❌ [USEAUTH] Erro inesperado ao atualizar telefone:', err);
           }
         }
-        
+
         if (session.user.user_metadata?.affiliate_code) {
           console.log('🎁 [USEAUTH] Processando código de afiliado do user_metadata:', session.user.user_metadata.affiliate_code);
-          
+
           // Verificar se já existe um registro para este código
           const { data: existingRecord } = await supabase
             .from('used_referral_codes')
@@ -659,14 +721,14 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
             .eq('user_id', session.user.id)
             .eq('affiliate_code', session.user.user_metadata.affiliate_code)
             .single();
-          
+
           if (existingRecord) {
             console.log('🔍 [USEAUTH] Registro já existe:', existingRecord);
             if (existingRecord.status !== 'applied') {
               console.log('🔍 [USEAUTH] Atualizando status para applied...');
               await supabase
                 .from('used_referral_codes')
-                .update({ 
+                .update({
                   status: 'applied',
                   stripe_coupon_id: 'MATR_' + session.user.user_metadata.affiliate_code,
                   updated_at: new Date().toISOString()
@@ -688,11 +750,11 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
                 console.error('❌ [USEAUTH] Erro ao processar affiliate_code do user_metadata:', validationError);
               } else if (validationResult?.success) {
                 console.log('✅ [USEAUTH] Affiliate_code do user_metadata processado com sucesso:', validationResult);
-                
+
                 // Atualizar status para 'applied' imediatamente
                 await supabase
                   .from('used_referral_codes')
-                  .update({ 
+                  .update({
                     status: 'applied',
                     stripe_coupon_id: 'MATR_' + session.user.user_metadata.affiliate_code,
                     updated_at: new Date().toISOString()
@@ -717,7 +779,7 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
     // Verificar se já temos dados em cache para evitar flicker
     const cachedUser = localStorage.getItem('cached_user');
     const cachedProfile = localStorage.getItem('cached_user_profile');
-    
+
     if (cachedUser && cachedProfile) {
       try {
         const userData = JSON.parse(cachedUser);
@@ -729,13 +791,13 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
         // Se falhar ao parsear cache, continuar com verificação normal
       }
     }
-    
+
     supabase.auth.getSession().then(({ data: { session } }) => {
       if (!isMounted) return;
       fetchAndSetUser(session);
       setLoading(false);
     });
-    
+
     const { data: { subscription } } = supabase.auth.onAuthStateChange(
       async (_, session) => {
         if (!isMounted) return; // Proteção contra updates após unmount
@@ -785,16 +847,16 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
    * @param utm - Dados UTM a serem salvos
    */
   const persistUtmAttribution = async (
-    userId: string, 
-    email: string, 
+    userId: string,
+    email: string,
     utm?: StoredUtmAttribution | null
   ): Promise<void> => {
     // Se não há UTM, não faz nada
     if (!utm) return;
-    
+
     try {
       console.log('[Auth] 📊 Persistindo atribuição UTM para usuário:', userId);
-      
+
       const { error } = await supabase
         .from('utm_attributions')
         .insert({
@@ -815,7 +877,7 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
           // Usa capturedAt do UTM ou timestamp atual
           captured_at: utm.capturedAt ?? new Date().toISOString(),
         });
-        
+
       if (error) {
         console.warn('[Auth] ⚠️ Não foi possível salvar atribuição UTM:', error);
         // Não lança erro - falha silenciosa para não quebrar registro
@@ -866,14 +928,14 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
   const logout = async () => {
     try {
       setLoading(true);
-      
+
       // Forçar limpeza de todos os dados de autenticação
       await supabase.auth.signOut({ scope: 'local' });
-      
+
       // Limpar estado local imediatamente
       setUser(null);
       setUserProfile(null);
-      
+
       // Limpar dados do localStorage
       localStorage.removeItem('pending_full_name');
       localStorage.removeItem('pending_phone');
@@ -885,7 +947,7 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
       localStorage.removeItem('onboarding_current_step');
       localStorage.removeItem('pending_open_modal');
       sessionStorage.clear();
-      
+
       // Forçar refresh da página para limpar completamente o estado
       if (window.location.pathname.includes('/inbox')) {
         console.log('🔄 Logout from inbox page - refreshing to clear emails...');
@@ -894,14 +956,14 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
         // Redirecionar para home sem usar navigate para evitar problemas de estado
         window.location.href = '/';
       }
-      
+
     } catch (error) {
       console.error('Error during logout process:', error);
-      
+
       // Mesmo com erro, limpar tudo e forçar redirecionamento
       setUser(null);
       setUserProfile(null);
-      
+
       // Limpar localStorage
       localStorage.removeItem('pending_full_name');
       localStorage.removeItem('pending_phone');
@@ -912,7 +974,7 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
       localStorage.removeItem('onboarding_current_step');
       localStorage.removeItem('pending_open_modal');
       sessionStorage.clear();
-      
+
       // Forçar redirecionamento
       window.location.href = '/';
     } finally {
@@ -921,35 +983,35 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
   };
 
   // Função para registrar usuário
-  const register = async (email: string, password: string, userData: { full_name: string; role: 'student' | 'school' | 'admin' | 'affiliate_admin' | 'seller'; [key: string]: any }, options?: SignUpOptions): Promise<any> => {
+  const register = async (email: string, password: string, userData: { full_name: string; role: 'student' | 'school' | 'admin' | 'affiliate_admin' | 'seller';[key: string]: any }, options?: SignUpOptions): Promise<any> => {
     console.log('🔍 [USEAUTH] Iniciando função register');
     console.log('🔍 [USEAUTH] userData recebido:', userData);
-    
+
     // Garantir que full_name não seja undefined
     if (!userData.full_name || userData.full_name.trim() === '') {
       throw new Error('Nome completo é obrigatório');
     }
-    
+
     // Salvar dados no localStorage para uso posterior
     localStorage.setItem('pending_full_name', userData.full_name);
     if (userData.phone) {
       localStorage.setItem('pending_phone', userData.phone);
     }
-    
+
     // Filtrar valores undefined/null do userData
     // EXCEÇÃO: Manter dependents (mesmo se 0) e desired_scholarship_range quando há seller_referral_code ou affiliate_code
     // Via seller/affiliate admin: desired_scholarship_range é OBRIGATÓRIO
     // Registro direto: desired_scholarship_range pode ser null
     const hasReferralCode = userData.seller_referral_code || userData.affiliate_code;
     const fieldsToKeepEvenIfNull = ['dependents'];
-    
+
     const cleanUserData = Object.fromEntries(
       Object.entries(userData).filter(([key, value]) => {
         // Sempre manter dependents (mesmo se 0)
         if (fieldsToKeepEvenIfNull.includes(key)) {
           return true;
         }
-        
+
         // Se há referral code (seller ou affiliate), desired_scholarship_range é obrigatório
         // Não pode ser null - se estiver null, já foi tratado no componente de origem
         if (key === 'desired_scholarship_range') {
@@ -960,22 +1022,22 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
           // Manter o valor (null para registro direto, número para via seller/affiliate)
           return true;
         }
-        
+
         // Filtrar outros valores null/undefined
         return value !== undefined && value !== null;
       })
     );
-    
+
     console.log('🔍 [USEAUTH] userData original:', userData);
     console.log('🔍 [USEAUTH] cleanUserData:', cleanUserData);
-    
+
     // Normaliza o e-mail para evitar duplicidade por case/espacos
     const normalizedEmail = (email || '').trim().toLowerCase();
-    
+
     // Capturar informações de IP e User-Agent para conformidade legal
-    let clientInfo: { registration_ip: string | null; user_agent: string } = { 
-        registration_ip: null, 
-        user_agent: navigator.userAgent 
+    let clientInfo: { registration_ip: string | null; user_agent: string } = {
+      registration_ip: null,
+      user_agent: navigator.userAgent
     };
     try {
       const { getClientInfo } = await import('../utils/clientInfo');
@@ -992,7 +1054,7 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
       registration_ip: clientInfo.registration_ip, // Adicionado para o trigger de termos
       user_agent: clientInfo.user_agent // Adicionado para o trigger de termos
     };
-    
+
     console.log('🔍 [USEAUTH] signUpData final:', signUpData);
 
     console.log('🔍 [USEAUTH] Tentando signUp com:', {
@@ -1007,11 +1069,11 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
     const isOnSellerRegistrationPage = typeof window !== 'undefined' && window.location.pathname === '/student/register';
     let isStaffRegistering = false;
     let staffSessionToRestore: { access_token: string; refresh_token: string } | null = null;
-    
+
     if (sessionBeforeSignUp?.user) {
       // Verificar role do usuário atual ANTES do registro
       let currentUserRole: string | null = sessionBeforeSignUp.user.user_metadata?.role;
-      
+
       if (!currentUserRole) {
         const { data: profileData } = await supabase
           .from('user_profiles')
@@ -1020,10 +1082,10 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
           .single();
         currentUserRole = profileData?.role || null;
       }
-      
-      isStaffRegistering = !!(currentUserRole && 
+
+      isStaffRegistering = !!(currentUserRole &&
         ['seller', 'admin', 'affiliate_admin'].includes(currentUserRole));
-      
+
       if (isStaffRegistering) {
         // Salvar a sessão completa do staff para restaurar depois
         staffSessionToRestore = {
@@ -1034,7 +1096,7 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
         console.log('🔍 [USEAUTH] Sessão do staff salva para restauração');
       }
     }
-    
+
     // Se estiver na página de registro de seller, também considerar como registro por staff
     if (isOnSellerRegistrationPage && !isStaffRegistering && sessionBeforeSignUp) {
       console.log('🔍 [USEAUTH] Detectado registro na página /student/register (acessível apenas por staff)');
@@ -1062,16 +1124,16 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
       });
       throw error;
     }
-    
+
     console.log('✅ [USEAUTH] SignUp bem-sucedido');
     console.log('🔍 [USEAUTH] data.user:', data?.user);
-    
+
     // ✅ REATIVADO: Auto-confirmar email para todos os alunos (role student)
     if (data?.user && userData.role === 'student') {
       try {
         // Verificar se é um registro de vendedor (tem seller_referral_code E está em seller_registrations)
         let isSellerRegistration = false;
-        
+
         if (userData.seller_referral_code) {
           // Verificar se existe registro pendente em seller_registrations
           const { data: sellerReg, error: sellerRegError } = await supabase
@@ -1080,13 +1142,13 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
             .eq('user_id', data.user.id)
             .eq('status', 'pending')
             .maybeSingle();
-          
+
           if (!sellerRegError && sellerReg) {
             isSellerRegistration = true;
             console.log('🔍 [USEAUTH] Usuário é vendedor em registro, NÃO auto-confirmar email');
           }
         }
-        
+
         // Auto-confirmar apenas se NÃO for registro de vendedor
         if (!isSellerRegistration) {
           console.log('🔍 [USEAUTH] Auto-confirmando email para aluno...', {
@@ -1096,7 +1158,7 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
             seller_referral_code: userData.seller_referral_code,
             isStaffRegistering
           });
-          
+
           // Chamar Edge Function para confirmar email
           const { data: confirmData, error: confirmError } = await supabase.functions.invoke('auto-confirm-student-email', {
             body: {
@@ -1104,7 +1166,7 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
               role: userData.role
             }
           });
-          
+
           if (confirmError) {
             console.error('❌ [USEAUTH] Erro ao auto-confirmar email:', confirmError);
             console.error('❌ [USEAUTH] Detalhes do erro:', {
@@ -1115,18 +1177,18 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
             // Não falhar o registro se a confirmação falhar
           } else {
             console.log('✅ [USEAUTH] Email auto-confirmado com sucesso', confirmData);
-            
+
             // NÃO fazer login automático se foi um registro feito por staff
             if (isStaffRegistering && staffSessionToRestore) {
               console.log('🔍 [USEAUTH] Registro feito por staff, restaurando sessão do seller/admin');
-              
+
               // Restaurar a sessão do staff imediatamente após a confirmação do email
               // Isso substitui a sessão do aluno que foi criada automaticamente
               const { error: restoreError } = await supabase.auth.setSession({
                 access_token: staffSessionToRestore.access_token,
                 refresh_token: staffSessionToRestore.refresh_token
               });
-              
+
               if (restoreError) {
                 console.error('❌ [USEAUTH] Erro ao restaurar sessão do staff:', restoreError);
                 // Se falhar, fazer logout para não manter sessão do aluno
@@ -1138,33 +1200,33 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
               console.log('🔍 [USEAUTH] Registro feito por staff, mas não há sessão para restaurar - fazendo logout');
               await supabase.auth.signOut();
             } else {
-            // Aguardar um pouco para garantir que a confirmação foi processada
-            await new Promise(resolve => setTimeout(resolve, 500));
-            
+              // Aguardar um pouco para garantir que a confirmação foi processada
+              await new Promise(resolve => setTimeout(resolve, 500));
+
               // Fazer login automático após confirmação apenas se não for registro por staff
-            console.log('🔍 [USEAUTH] Fazendo login automático...');
-            const { data: loginData, error: loginError } = await supabase.auth.signInWithPassword({
-              email: normalizedEmail,
-              password,
-            });
-            
-            if (loginError) {
-              console.error('❌ [USEAUTH] Erro ao fazer login automático:', loginError);
-              console.error('❌ [USEAUTH] Detalhes do erro de login:', {
-                message: loginError.message,
-                status: loginError.status,
-                name: loginError.name
+              console.log('🔍 [USEAUTH] Fazendo login automático...');
+              const { data: loginData, error: loginError } = await supabase.auth.signInWithPassword({
+                email: normalizedEmail,
+                password,
               });
-              // Não falhar, o usuário pode fazer login manualmente depois
-            } else {
-              console.log('✅ [USEAUTH] Login automático realizado com sucesso', loginData);
-              
-              // ✅ Persistir atribuição UTM após login bem-sucedido (com sessão autenticada)
-              if (data?.user && options?.utm) {
-                await persistUtmAttribution(data.user.id, normalizedEmail, options.utm);
-              }
-              
-              // O onAuthStateChange vai detectar a mudança e atualizar o estado
+
+              if (loginError) {
+                console.error('❌ [USEAUTH] Erro ao fazer login automático:', loginError);
+                console.error('❌ [USEAUTH] Detalhes do erro de login:', {
+                  message: loginError.message,
+                  status: loginError.status,
+                  name: loginError.name
+                });
+                // Não falhar, o usuário pode fazer login manualmente depois
+              } else {
+                console.log('✅ [USEAUTH] Login automático realizado com sucesso', loginData);
+
+                // ✅ Persistir atribuição UTM após login bem-sucedido (com sessão autenticada)
+                if (data?.user && options?.utm) {
+                  await persistUtmAttribution(data.user.id, normalizedEmail, options.utm);
+                }
+
+                // O onAuthStateChange vai detectar a mudança e atualizar o estado
               }
             }
           }
@@ -1176,33 +1238,33 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
         // Não falhar o registro se houver erro
       }
     }
-    
+
     // Se o usuário tem scholarship_package_number, converter para scholarship_package_id
     if (userData.scholarship_package_number && data?.user) {
       try {
         console.log('🔍 [USEAUTH] Convertendo scholarship_package_number para scholarship_package_id...');
-        
+
         const { data: packageData, error: packageError } = await supabase
           .from('scholarship_packages')
           .select('id, scholarship_amount')
           .eq('package_number', userData.scholarship_package_number)
           .eq('is_active', true)
           .single();
-        
+
         if (packageError) {
           console.warn('⚠️ [USEAUTH] Erro ao buscar pacote:', packageError);
         } else if (packageData) {
           console.log('🔍 [USEAUTH] Pacote encontrado:', packageData.id);
-          
+
           // Atualizar o user_profiles com o scholarship_package_id e desired_scholarship_range
           const { error: updateError } = await supabase
             .from('user_profiles')
-            .update({ 
+            .update({
               scholarship_package_id: packageData.id,
               desired_scholarship_range: userData.desired_scholarship_range || packageData.scholarship_amount
             })
             .eq('user_id', data.user.id);
-          
+
           if (updateError) {
             console.warn('⚠️ [USEAUTH] Erro ao atualizar scholarship_package_id:', updateError);
           } else {
@@ -1224,7 +1286,7 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
   // Função para trocar role do usuário (apenas para desenvolvimento/admin)
   const switchRole = (newRole: 'student' | 'school' | 'admin' | 'affiliate_admin' | 'seller') => {
     if (!user || !userProfile) return;
-    
+
     // Atualizar estado local temporariamente
     setUser(prev => prev ? { ...prev, role: newRole } : null);
     setUserProfile(prev => prev ? { ...prev, role: newRole } : null);

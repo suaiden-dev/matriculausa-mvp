@@ -483,17 +483,11 @@ export const useFeeConfig = (userId?: string) => {
     }
 
     // 3. Aplicar taxa de dependentes (+$100 cada) para taxas aplicáveis
-    console.log(
-      `🔍 [getFeeAmount] feeType=${feeType}, userDependents=${userDependents}, baseAmount=${baseAmount}`,
-    );
     if (
       userDependents > 0 &&
       (feeType === "application_fee")
     ) {
       const additionalAmount = userDependents * 100;
-      console.log(
-        `➕ [useFeeConfig] Adding dependent fee for ${feeType}: $${additionalAmount} (${userDependents} dependents)`,
-      );
       return baseAmount + additionalAmount;
     }
 
@@ -518,10 +512,14 @@ export const useFeeConfig = (userId?: string) => {
     return feeConfig.application_fee_default;
   };
 
-  const formatFeeAmount = (amount: number | string): string => {
+  const formatFeeAmount = (amount: number | string, forceDollars: boolean = false): string => {
     const numAmount = typeof amount === "string" ? parseFloat(amount) : amount;
 
-    // Se o valor for maior ou igual a 10000, está em centavos (ex: 70000 = $700.00)
+    if (forceDollars) {
+      return `$${numAmount.toFixed(2)}`;
+    }
+
+    // Se o valor for maior ou igual a 10000, está em centavos (ex: 10000 = $100)
     if (numAmount >= 10000) {
       const dollars = numAmount / 100;
       return `$${dollars.toFixed(2)}`;

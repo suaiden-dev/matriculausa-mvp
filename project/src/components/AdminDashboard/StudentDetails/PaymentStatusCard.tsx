@@ -551,7 +551,8 @@ const PaymentStatusCard: React.FC<PaymentStatusCardProps> = React.memo((props) =
                           const scholarship = mainApp?.scholarships ? (Array.isArray(mainApp.scholarships) ? mainApp.scholarships[0] : mainApp.scholarships) : null;
 
                           if (scholarship?.annual_value_with_scholarship) {
-                            const expectedFee = getPlacementFee(Number(scholarship.annual_value_with_scholarship));
+                            const placementFeeAmount = scholarship.placement_fee_amount ? Number(scholarship.placement_fee_amount) : null;
+                            const expectedFee = getPlacementFee(Number(scholarship.annual_value_with_scholarship), placementFeeAmount);
                             return formatFeeAmount(expectedFee);
                           }
 

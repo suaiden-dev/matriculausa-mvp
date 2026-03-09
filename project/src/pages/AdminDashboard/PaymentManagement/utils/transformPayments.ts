@@ -280,6 +280,8 @@ export function transformPaymentsToRecordsAndStats({
         placementFeeAmount = Math.round(realPaid.placement * 100);
       } else if (userOverrides.placement_fee !== undefined) {
         placementFeeAmount = Math.round(userOverrides.placement_fee * 100);
+      } else if (scholarship?.placement_fee_amount) {
+        placementFeeAmount = Math.round(Number(scholarship.placement_fee_amount) * 100);
       } else {
         // Fallback or fetched if it wasn't pre-resolved.
         placementFeeAmount = 145000;

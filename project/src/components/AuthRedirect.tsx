@@ -2,6 +2,7 @@ import React, { useEffect, useState, useCallback, useRef } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
 import { useAuth } from '../hooks/useAuth';
 import { supabase } from '../lib/supabase';
+import { usePaymentBlockedContext } from '../contexts/PaymentBlockedContext';
 
 const AuthRedirect: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   const { user, loading } = useAuth();
@@ -12,7 +13,6 @@ const AuthRedirect: React.FC<{ children: React.ReactNode }> = ({ children }) => 
   const universityCache = useRef<{ [userId: string]: any }>({});
 
   const checkUniversityStatus = useCallback(async (userId: string) => {
-    // Usar cache se disponível
     if (universityCache.current[userId]) {
       return universityCache.current[userId];
     }
@@ -29,7 +29,6 @@ const AuthRedirect: React.FC<{ children: React.ReactNode }> = ({ children }) => 
         university: university || null
       };
 
-      // Cache por 30 segundos
       universityCache.current[userId] = result;
       setTimeout(() => {
         delete universityCache.current[userId];
@@ -41,75 +40,42 @@ const AuthRedirect: React.FC<{ children: React.ReactNode }> = ({ children }) => 
     }
   }, []);
 
-  // Verificar se há pagamento pendente ou rejeitado para selection_process
-  const checkSelectionProcessPayment = useCallback(async (userId: string): Promise<boolean> => {
-    try {
-      const { data: paymentData, error: paymentError } = await supabase.rpc('check_zelle_payments_status', {
-        p_user_id: userId
-      });
+  const { isBlocked: paymentIsBlocked, pendingPayment, rejectedPayment } = usePaymentBlockedContext();
 
-      if (paymentError || !paymentData || paymentData.length === 0) {
-        return false;
-      }
-
-      const result = paymentData[0];
-      
-      // Verificar se há pagamento pendente para selection_process
-      if (result.has_pending_payment && 
-          result.pending_payment_id && 
-          result.pending_payment_id !== '00000000-0000-0000-0000-000000000000' &&
-          (result.pending_payment_fee_type === 'selection_process' || !result.pending_payment_fee_type || result.pending_payment_fee_type === '')) {
-        return true;
-      }
-
-      // Verificar se há pagamento rejeitado recente para selection_process (mesmo que não seja o mesmo pagamento)
-      // Se há rejeição recente E não há pagamento pendente, redirecionar para que o aluno veja a rejeição
-      if (result.has_rejected_payment && 
-          result.rejected_payment_id && 
-          result.rejected_payment_id !== '00000000-0000-0000-0000-000000000000' &&
-          (result.rejected_payment_fee_type === 'selection_process' || !result.rejected_payment_fee_type || result.rejected_payment_fee_type === '') &&
-          !result.has_pending_payment) {
-        return true;
-      }
-
-      return false;
-    } catch (error) {
-      console.error('[AuthRedirect] Erro ao verificar pagamento:', error);
-      return false;
+  // Derivado do context — sem request adicional
+  const hasPendingOrRejectedSelectionPayment = (() => {
+    if (pendingPayment &&
+      pendingPayment.id !== '00000000-0000-0000-0000-000000000000' &&
+      (pendingPayment.fee_type === 'selection_process' || !pendingPayment.fee_type || pendingPayment.fee_type === '')) {
+      return paymentIsBlocked;
     }
-  }, []);
+    if (rejectedPayment &&
+      rejectedPayment.id !== '00000000-0000-0000-0000-000000000000' &&
+      (rejectedPayment.fee_type === 'selection_process' || !rejectedPayment.fee_type || rejectedPayment.fee_type === '') &&
+      !pendingPayment) {
+      return true;
+    }
+    return false;
+  })();
 
   useEffect(() => {
-    console.log('[AuthRedirect] 🔍 useEffect executado - loading:', loading, 'user:', !!user, 'pathname:', location.pathname);
-    console.log('[AuthRedirect] 🔍 Timestamp:', new Date().toISOString());
-    
     // Tratar erros de verificação de email no hash da URL
-    // IMPORTANTE: Para estudantes, o email é confirmado automaticamente via edge function
-    // Então quando o link é acessado, o token já foi usado e retorna erro otp_expired
-    // Nesse caso, verificamos se o usuário já está autenticado e redirecionamos para o dashboard
     const hash = window.location.hash;
     if (hash && !user && !loading) {
       const hashParams = new URLSearchParams(hash.substring(1));
       const error = hashParams.get('error');
       const errorCode = hashParams.get('error_code');
       const errorDescription = hashParams.get('error_description');
-      
+
       if (error && errorCode) {
         console.error('[AuthRedirect] ❌ Erro de verificação de email detectado:', { error, errorCode, errorDescription });
-        
-        // Se for erro de OTP expirado ou acesso negado
-        // Para estudantes, o email já foi confirmado automaticamente, então verificamos se há sessão ativa
+
         if (errorCode === 'otp_expired' || error === 'access_denied') {
-          // Limpar hash da URL
           window.history.replaceState(null, '', window.location.pathname + window.location.search);
-          
-          // Verificar se há sessão ativa do Supabase (usuário pode já estar logado)
+
           supabase.auth.getSession().then(({ data: { session } }) => {
             if (session?.user) {
-              // Usuário já está autenticado, redirecionar para dashboard baseado no role
-              console.log('[AuthRedirect] ✅ Sessão ativa detectada, redirecionando para dashboard');
               const userRole = session.user.user_metadata?.role || 'student';
-              
               if (userRole === 'student') {
                 navigate('/student/dashboard', { replace: true });
               } else if (userRole === 'admin') {
@@ -122,8 +88,6 @@ const AuthRedirect: React.FC<{ children: React.ReactNode }> = ({ children }) => 
                 navigate('/login?info=email_already_confirmed&message=' + encodeURIComponent('Seu email já foi confirmado! Você pode fazer login agora.'));
               }
             } else {
-              // Não há sessão ativa, redirecionar para login com mensagem positiva
-              console.log('[AuthRedirect] ℹ️ Nenhuma sessão ativa, redirecionando para login');
               const friendlyMessage = 'Seu email já foi confirmado! Você pode fazer login agora com seu email e senha.';
               navigate('/login?info=email_already_confirmed&message=' + encodeURIComponent(friendlyMessage));
             }
@@ -132,22 +96,15 @@ const AuthRedirect: React.FC<{ children: React.ReactNode }> = ({ children }) => 
         }
       }
     } else if (hash && user) {
-      // Se o usuário está autenticado, limpar o hash (registro/login foi bem-sucedido)
-      console.log('[AuthRedirect] ✅ Usuário autenticado detectado, limpando hash da URL');
       window.history.replaceState(null, '', window.location.pathname + window.location.search);
     }
-    
-    // Se ainda está carregando, aguardar
-    if (loading) {
-      console.log('[AuthRedirect] ⚠️ Ainda carregando, aguardando...');
-      return;
-    }
+
+    // Aguardar carregamento
+    if (loading) return;
 
     // Se não há usuário autenticado, verificar se está tentando acessar rota protegida
     if (!user) {
       const currentPath = location.pathname;
-      
-      // Rotas protegidas que requerem autenticação
       const protectedPaths = [
         '/student/dashboard',
         '/school/dashboard',
@@ -155,217 +112,120 @@ const AuthRedirect: React.FC<{ children: React.ReactNode }> = ({ children }) => 
         '/affiliate-admin/dashboard',
         '/seller/dashboard'
       ];
-      
-      // Verificar se está tentando acessar rota protegida
       const isProtectedPath = protectedPaths.some(path => currentPath.startsWith(path));
-      
+
       if (isProtectedPath) {
-        console.log('[AuthRedirect] 🔒 Usuário não autenticado tentando acessar rota protegida, redirecionando para login');
-        // Salvar a rota original para redirecionar após login
         const returnUrl = encodeURIComponent(currentPath + location.search);
         navigate(`/login?redirect=${returnUrl}`, { replace: true });
         return;
       }
-      
-      // Se não é rota protegida, permitir acesso
       return;
     }
 
     const currentPath = location.pathname;
+
     // Detectar fluxo de recuperação de senha
     const isPasswordResetFlow = currentPath.startsWith('/forgot-password') ||
       window.location.hash.includes('access_token') || window.location.hash.includes('refresh_token');
-    if (isPasswordResetFlow) {
-      // Não redirecionar durante o fluxo de recuperação de senha
-      return;
-    }
-    
+    if (isPasswordResetFlow) return;
+
     // Páginas públicas que não precisam de verificação
     const publicPaths = ['/schools', '/scholarships', '/about', '/how-it-works', '/universities'];
-    if (publicPaths.some(path => currentPath === path || currentPath.startsWith(path))) {
-      return;
-    }
-    
-    // Evitar re-execução se o path não mudou  
+    if (publicPaths.some(path => currentPath === path || currentPath.startsWith(path))) return;
+
+    // Evitar re-execução se o path não mudou
     if (lastCheckedPath.current === currentPath && !currentPath.includes('/login') && !currentPath.includes('/auth')) {
       return;
     }
     lastCheckedPath.current = currentPath;
 
     const checkAndRedirect = async () => {
-      // Whitelist: permitir acesso explícito à página interna de cadastro de estudante
       const isWhitelistedInternalRegister = location.pathname === '/student/register';
-      
-      // REDIRECIONAMENTO APÓS LOGIN - verificar se usuário está na página de login/auth
+
+      // REDIRECIONAMENTO APÓS LOGIN
       if (currentPath === '/login' || currentPath === '/auth' || currentPath === '/register') {
-        // Verificar se há parâmetro redirect na URL (quando usuário foi redirecionado de rota protegida)
         const searchParams = new URLSearchParams(location.search);
         const redirectParam = searchParams.get('redirect');
-        
+
         if (redirectParam) {
-          // Decodificar e redirecionar para a URL original
           try {
             const decodedRedirect = decodeURIComponent(redirectParam);
-            console.log('[AuthRedirect] 🔄 Redirecionando para URL original:', decodedRedirect);
             navigate(decodedRedirect, { replace: true });
             return;
-          } catch (error) {
-            console.error('[AuthRedirect] ❌ Erro ao decodificar redirect:', error);
-            // Se houver erro, continuar com redirecionamento padrão baseado no role
+          } catch {
+            // Se houver erro, continuar com redirecionamento padrão
           }
         }
-        
-        // Redirecionamento baseado no role (quando não há redirect param)
-        if (user.role === 'admin') {
-          navigate('/admin/dashboard', { replace: true });
-          return;
-        }
-        
-        if (user.role === 'affiliate_admin') {
-          navigate('/affiliate-admin/dashboard', { replace: true });
-          return;
-        }
-        
-        if (user.role === 'seller') {
-          navigate('/seller/dashboard', { replace: true });
-          return;
-        }
-        
+
+        if (user.role === 'admin') { navigate('/admin/dashboard', { replace: true }); return; }
+        if (user.role === 'affiliate_admin') { navigate('/affiliate-admin/dashboard', { replace: true }); return; }
+        if (user.role === 'seller') { navigate('/seller/dashboard', { replace: true }); return; }
+
         if (user.role === 'student') {
-          // Verificar se há pagamento pendente ou rejeitado para selection_process
-          const hasPendingOrRejectedPayment = await checkSelectionProcessPayment(user.id);
-          
-          if (hasPendingOrRejectedPayment) {
-            // Redirecionar para a página de pagamento se houver pagamento pendente/rejeitado
+          if (hasPendingOrRejectedSelectionPayment) {
             navigate('/student/onboarding?step=selection_fee', { replace: true });
             return;
           }
-          
-          // Redirecionar para home após registro/login (sem redirecionamento automático para onboarding)
           navigate('/', { replace: true });
           return;
         }
-        
+
         if (user.role === 'school') {
           setCheckingUniversity(true);
-          
           const { error, university } = await checkUniversityStatus(user.id);
-          
-          if (error) {
-            navigate('/school/dashboard', { replace: true });
-            setCheckingUniversity(false);
-            return;
-          }
-
-          // Se não existe universidade ou termos não foram aceitos
-          if (!university || !university.terms_accepted) {
-            navigate('/school/termsandconditions', { replace: true });
-            setCheckingUniversity(false);
-            return;
-          }
-
-          // Se termos aceitos mas perfil não completo
-          if (!university.profile_completed) {
-            navigate('/school/setup-profile', { replace: true });
-            setCheckingUniversity(false);
-            return;
-          }
-
-          // Se tudo OK, ir para dashboard
+          if (error) { navigate('/school/dashboard', { replace: true }); setCheckingUniversity(false); return; }
+          if (!university || !university.terms_accepted) { navigate('/school/termsandconditions', { replace: true }); setCheckingUniversity(false); return; }
+          if (!university.profile_completed) { navigate('/school/setup-profile', { replace: true }); setCheckingUniversity(false); return; }
           navigate('/school/dashboard', { replace: true });
           setCheckingUniversity(false);
           return;
         }
-        
-        // Fallback para roles não reconhecidos ou casos inesperados
+
         navigate('/', { replace: true });
         return;
       }
 
-      // PROTEÇÃO DE ROTAS - verificar se usuário está tentando acessar área restrita
-      // Se usuário é school, verificar apenas se está tentando acessar áreas restritas de outros roles
+      // PROTEÇÃO DE ROTAS
       if (user.role === 'school' && (currentPath.startsWith('/student/') || currentPath.startsWith('/admin') || currentPath.startsWith('/affiliate-admin'))) {
-        navigate('/school/dashboard', { replace: true });
-        return;
+        navigate('/school/dashboard', { replace: true }); return;
       }
 
-      // Se usuário é student e está tentando acessar áreas restritas de outros roles
       if (user.role === 'student' && (currentPath.startsWith('/school/') || currentPath.startsWith('/admin') || currentPath.startsWith('/affiliate-admin'))) {
-        // Verificar se há pagamento pendente ou rejeitado antes de redirecionar
-        const hasPendingOrRejectedPayment = await checkSelectionProcessPayment(user.id);
-        
-        if (hasPendingOrRejectedPayment) {
-          navigate('/student/onboarding?step=selection_fee', { replace: true });
-          return;
-        }
-        
-        // Redirecionar para dashboard do aluno (sem verificar onboarding)
-        navigate('/student/dashboard', { replace: true });
-        return;
+        if (hasPendingOrRejectedSelectionPayment) { navigate('/student/onboarding?step=selection_fee', { replace: true }); return; }
+        navigate('/student/dashboard', { replace: true }); return;
       }
 
-      // Estudantes não precisam mais verificar termos aceitos
-      // Eles aceitam automaticamente durante o registro
-      
-      // Se usuário é admin e está tentando acessar áreas restritas de outros roles (exceto a rota interna liberada)
       if (user.role === 'admin' && ((currentPath.startsWith('/student/') && !isWhitelistedInternalRegister) || currentPath.startsWith('/school/') || currentPath.startsWith('/affiliate-admin') || currentPath.startsWith('/seller/'))) {
-        navigate('/admin/dashboard', { replace: true });
-        return;
+        navigate('/admin/dashboard', { replace: true }); return;
       }
-      
-      // Se usuário é affiliate_admin e está tentando acessar áreas restritas de outros roles (exceto a rota interna liberada)
+
       if (user.role === 'affiliate_admin' && ((currentPath.startsWith('/student/') && !isWhitelistedInternalRegister) || currentPath.startsWith('/school/') || currentPath.startsWith('/admin/dashboard'))) {
-        navigate('/affiliate-admin/dashboard', { replace: true });
-        return;
+        navigate('/affiliate-admin/dashboard', { replace: true }); return;
       }
-      
-      // Se usuário é seller e está tentando acessar áreas restritas de outros roles (exceto a rota interna liberada)
+
       if (user.role === 'seller' && ((currentPath.startsWith('/student/') && !isWhitelistedInternalRegister) || currentPath.startsWith('/school/') || currentPath.startsWith('/admin/') || currentPath.startsWith('/affiliate-admin/'))) {
-        navigate('/seller/dashboard', { replace: true });
-        return;
+        navigate('/seller/dashboard', { replace: true }); return;
       }
 
       // VERIFICAÇÃO ADICIONAL PARA ESCOLAS - apenas na página inicial
       if (user.role === 'school' && currentPath === '/') {
         setCheckingUniversity(true);
-        
         const { error, university } = await checkUniversityStatus(user.id);
-        
-        if (error) {
-          setCheckingUniversity(false);
-          return; // Deixar na página atual se houver erro
-        }
-
-        // Se não existe universidade ou termos não foram aceitos
-        if (!university || !university.terms_accepted) {
-          navigate('/school/termsandconditions', { replace: true });
-          setCheckingUniversity(false);
-          return;
-        }
-
-        // Se termos aceitos mas perfil não completo
-        if (!university.profile_completed) {
-          navigate('/school/setup-profile', { replace: true });
-          setCheckingUniversity(false);
-          return;
-        }
-
-        // Se tudo OK e está na home, deixar na home - não redirecionar
+        if (error) { setCheckingUniversity(false); return; }
+        if (!university || !university.terms_accepted) { navigate('/school/termsandconditions', { replace: true }); setCheckingUniversity(false); return; }
+        if (!university.profile_completed) { navigate('/school/setup-profile', { replace: true }); setCheckingUniversity(false); return; }
         setCheckingUniversity(false);
       }
 
       // VERIFICAÇÃO ADICIONAL PARA ESTUDANTES - redirecionar da home para o dashboard
       if (user.role === 'student' && currentPath === '/') {
-        navigate('/student/dashboard', { replace: true });
-        return;
+        navigate('/student/dashboard', { replace: true }); return;
       }
     };
 
-    // Executar imediatamente, sem delay desnecessário
     checkAndRedirect();
-  }, [user?.id, user?.role, loading, location.pathname, navigate, checkUniversityStatus, checkSelectionProcessPayment]);
+  }, [user?.id, user?.role, loading, location.pathname, navigate, checkUniversityStatus, hasPendingOrRejectedSelectionPayment]);
 
-  // Mostrar loading enquanto verifica universidade
   if (checkingUniversity) {
     return (
       <div className="min-h-screen bg-gray-50 flex items-center justify-center">
@@ -377,4 +237,4 @@ const AuthRedirect: React.FC<{ children: React.ReactNode }> = ({ children }) => 
   return <>{children}</>;
 };
 
-export default AuthRedirect; 
+export default AuthRedirect;

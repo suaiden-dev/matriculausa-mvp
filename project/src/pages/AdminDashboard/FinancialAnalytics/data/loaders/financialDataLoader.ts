@@ -68,6 +68,8 @@ async function loadApplications(): Promise<any[]> {
         created_at,
         selection_process_fee_payment_method,
         i20_control_fee_payment_method,
+        placement_fee_payment_method,
+        is_placement_fee_paid,
         seller_referral_code
       ),
       scholarships (
@@ -136,7 +138,7 @@ async function loadZellePayments(_currentRange: DateRange): Promise<any[]> {
     const userIds = zellePaymentsRaw.map((p) => p.user_id).filter(Boolean);
     const { data: userProfiles, error: usersError } = await supabase
       .from('user_profiles')
-      .select('id, user_id, full_name, email, has_paid_selection_process_fee, is_application_fee_paid, is_scholarship_fee_paid, has_paid_i20_control_fee, selection_process_fee_payment_method, i20_control_fee_payment_method, scholarship_package_id, dependents, seller_referral_code')
+      .select('id, user_id, full_name, email, has_paid_selection_process_fee, is_application_fee_paid, is_scholarship_fee_paid, has_paid_i20_control_fee, is_placement_fee_paid, selection_process_fee_payment_method, i20_control_fee_payment_method, placement_fee_payment_method, scholarship_package_id, dependents, seller_referral_code')
       .in('user_id', userIds);
     
     if (usersError) {
@@ -200,10 +202,12 @@ async function loadStripeUsers(applications: any[]): Promise<any[]> {
       created_at,
       selection_process_fee_payment_method,
       i20_control_fee_payment_method,
+      placement_fee_payment_method,
+      is_placement_fee_paid,
       seller_referral_code
     `)
     .eq('role', 'student')
-    .or('has_paid_selection_process_fee.eq.true,is_application_fee_paid.eq.true,is_scholarship_fee_paid.eq.true,has_paid_i20_control_fee.eq.true');
+    .or('has_paid_selection_process_fee.eq.true,is_application_fee_paid.eq.true,is_scholarship_fee_paid.eq.true,has_paid_i20_control_fee.eq.true,is_placement_fee_paid.eq.true');
     // Removido filtro de período para igualar Payment Management
   
   if (error) throw error;
@@ -235,6 +239,7 @@ async function loadFeeOverrides(userIds: string[]): Promise<{ [key: string]: any
           application_fee: data.application_fee != null ? Number(data.application_fee) : undefined,
           scholarship_fee: data.scholarship_fee != null ? Number(data.scholarship_fee) : undefined,
           i20_control_fee: data.i20_control_fee != null ? Number(data.i20_control_fee) : undefined,
+          placement_fee: data.placement_fee != null ? Number(data.placement_fee) : undefined,
         };
       }
     }
@@ -389,7 +394,7 @@ async function loadIndividualFeePayments(): Promise<any[]> {
   // Fetch user profiles for payment methods (selection_process and i20_control)
   const { data: userProfiles } = await supabase
     .from('user_profiles')
-    .select('user_id, selection_process_fee_payment_method, i20_control_fee_payment_method')
+    .select('user_id, selection_process_fee_payment_method, i20_control_fee_payment_method, placement_fee_payment_method')
     .in('user_id', userIds);
 
   // Fetch scholarship applications for payment methods (application_fee and scholarship_fee)
@@ -464,7 +469,7 @@ async function loadIndividualFeePayments(): Promise<any[]> {
   // Fetch overrides for these users
   const { data: overrides } = await supabase
     .from('user_fee_overrides')
-    .select('user_id, selection_process_fee, application_fee, scholarship_fee, i20_control_fee')
+    .select('user_id, selection_process_fee, application_fee, scholarship_fee, i20_control_fee, placement_fee')
     .in('user_id', userIds);
 
   // Fetch coupon usage for these users and date range
@@ -542,6 +547,8 @@ async function loadIndividualFeePayments(): Promise<any[]> {
         const scholarshipApp = scholarshipFeeMap.get(studentProfile.id);
         paymentMethod = scholarshipApp?.scholarship_fee_payment_method || 'manual';
       }
+    } else if (payment.fee_type === 'placement' || payment.fee_type === 'placement_fee') {
+      paymentMethod = userProfile?.placement_fee_payment_method || 'manual';
     } else {
       // Fallback to payment_method from individual_fee_payments if fee_type doesn't match
       paymentMethod = payment.payment_method || 'manual';
@@ -554,6 +561,7 @@ async function loadIndividualFeePayments(): Promise<any[]> {
       override_application: override?.application_fee || null,
       override_scholarship: override?.scholarship_fee || null,
       override_i20: override?.i20_control_fee || null,
+      override_placement: override?.placement_fee || null,
       coupon_code: couponUsage?.coupon_code || null,
       coupon_name: coupon?.name || null,
       discount_amount: couponUsage?.discount_amount || null,
@@ -649,7 +657,7 @@ export async function loadFinancialData(
   
   // ✅ CORREÇÃO: Gerar realPaymentAmounts a partir de individualFeePayments carregados
   // Isso evita N chamadas extras ao banco e garante que o Transformer use exatamente os mesmos dados
-  const realPaymentAmounts = new Map<string, { selection_process?: number; scholarship?: number; i20_control?: number; application?: number }>();
+  const realPaymentAmounts = new Map<string, { selection_process?: number; scholarship?: number; i20_control?: number; application?: number; placement?: number }>();
   
   // Como individualFeePayments já vem ordenado por payment_date DESC, o primeiro de cada tipo é o mais recente
   individualFeePayments.forEach((payment: any) => {
@@ -672,7 +680,8 @@ export async function loadFinancialData(
     const feeTypeKey = payment.fee_type === 'selection_process' || payment.fee_type === 'selection_process_fee' ? 'selection_process' :
                       payment.fee_type === 'scholarship' || payment.fee_type === 'scholarship_fee' ? 'scholarship' :
                       payment.fee_type === 'i20_control' || payment.fee_type === 'i20_control_fee' ? 'i20_control' :
-                      payment.fee_type === 'application' || payment.fee_type === 'application_fee' ? 'application' : null;
+                      payment.fee_type === 'application' || payment.fee_type === 'application_fee' ? 'application' : 
+                      payment.fee_type === 'placement' || payment.fee_type === 'placement_fee' ? 'placement' : null;
 
     if (feeTypeKey && (userAmounts as any)[feeTypeKey] === undefined) {
       (userAmounts as any)[feeTypeKey] = amountUSD;

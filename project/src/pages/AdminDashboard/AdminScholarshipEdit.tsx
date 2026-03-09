@@ -1,11 +1,11 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
-import { 
-  Award, 
-  DollarSign, 
-  Calendar, 
-  CheckCircle, 
-  AlertTriangle, 
+import {
+  Award,
+  DollarSign,
+  Calendar,
+  CheckCircle,
+  AlertTriangle,
   Save,
   ArrowLeft,
   BookOpen,
@@ -28,7 +28,7 @@ const AdminScholarshipEdit: React.FC = () => {
   const navigate = useNavigate();
   const { id } = useParams<{ id: string }>();
   const isEditMode = Boolean(id);
-  
+
   const { user } = useAuth();
   const [loading, setLoading] = useState(false);
   const [loadingScholarship, setLoadingScholarship] = useState(false);
@@ -38,7 +38,7 @@ const AdminScholarshipEdit: React.FC = () => {
   const [imagePreview, setImagePreview] = useState<string | null>(null);
   const [uploadingImage, setUploadingImage] = useState(false);
   const [isDataRestored, setIsDataRestored] = useState(false);
-  
+
   const [formData, setFormData] = useState({
     title: '',
     description: '',
@@ -58,6 +58,7 @@ const AdminScholarshipEdit: React.FC = () => {
     work_permissions: [] as string[],
     application_fee_amount: '350.00',
     scholarship_fee_amount: '',
+    placement_fee_amount: '',
     scholarship_type: '',
     visaassistance: '',
     needcpt: false,
@@ -107,7 +108,7 @@ const AdminScholarshipEdit: React.FC = () => {
   // Função para carregar dados da bolsa existente
   const loadScholarshipData = useCallback(async () => {
     if (!id) return;
-    
+
     setLoadingScholarship(true);
     try {
       const { data: scholarship, error } = await supabase
@@ -138,27 +139,28 @@ const AdminScholarshipEdit: React.FC = () => {
           work_permissions: Array.isArray(scholarship.work_permissions) ? scholarship.work_permissions : [],
           application_fee_amount: scholarship.application_fee_amount?.toString() || '350.00',
           scholarship_fee_amount: scholarship.scholarship_fee_amount?.toString() || '',
+          placement_fee_amount: scholarship.placement_fee_amount?.toString() || '',
           scholarship_type: scholarship.scholarship_type || '',
           visaassistance: scholarship.visaassistance || '',
           needcpt: scholarship.needcpt || false,
           university_id: scholarship.university_id || '',
-          internal_fees: Array.isArray(scholarship.internal_fees) 
+          internal_fees: Array.isArray(scholarship.internal_fees)
             ? scholarship.internal_fees.map((f: any) => ({
-                category: f.category || f.name || '',
-                amount: f.amount?.toString() || '',
-                details: f.details || f.frequency || ''
-              }))
+              category: f.category || f.name || '',
+              amount: f.amount?.toString() || '',
+              details: f.details || f.frequency || ''
+            }))
             : typeof scholarship.internal_fees === 'string'
               ? (() => {
-                  try {
-                    const parsed = JSON.parse(scholarship.internal_fees);
-                    return Array.isArray(parsed) ? parsed.map((f: any) => ({
-                       category: f.category || f.name || '',
-                       amount: f.amount?.toString() || '',
-                       details: f.details || f.frequency || ''
-                    })) : [];
-                  } catch { return []; }
-                })()
+                try {
+                  const parsed = JSON.parse(scholarship.internal_fees);
+                  return Array.isArray(parsed) ? parsed.map((f: any) => ({
+                    category: f.category || f.name || '',
+                    amount: f.amount?.toString() || '',
+                    details: f.details || f.frequency || ''
+                  })) : [];
+                } catch { return []; }
+              })()
               : [],
         });
 
@@ -190,18 +192,18 @@ const AdminScholarshipEdit: React.FC = () => {
 
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement>) => {
     const { name, value } = e.target;
-    
+
     // Validação específica para o campo deadline
     if (name === 'deadline' && value) {
       const selectedDate = new Date(value);
       const today = new Date();
       today.setHours(0, 0, 0, 0);
-      
+
       if (selectedDate < today) {
         return;
       }
     }
-    
+
     setFormData(prev => ({
       ...prev,
       [name]: value
@@ -282,11 +284,11 @@ const AdminScholarshipEdit: React.FC = () => {
 
     try {
       setUploadingImage(true);
-      
+
       // Create unique filename
       const fileExt = imageFile.name.split('.').pop();
       const fileName = `scholarship-${Date.now()}-${Math.random().toString(36).substring(7)}.${fileExt}`;
-      
+
       // Upload to scholarship-images bucket
       const { data, error } = await supabase.storage
         .from('scholarship-images')
@@ -315,7 +317,7 @@ const AdminScholarshipEdit: React.FC = () => {
     e.preventDefault();
     setLoading(true);
     setError(null);
-    
+
     // Validate form
     if (!formData.title.trim()) {
       setError('Scholarship title is required');
@@ -362,7 +364,7 @@ const AdminScholarshipEdit: React.FC = () => {
     const selectedDate = new Date(formData.deadline);
     const today = new Date();
     today.setHours(0, 0, 0, 0);
-    
+
     if (selectedDate < today) {
       setError('Application deadline cannot be in the past');
       setLoading(false);
@@ -423,16 +425,24 @@ const AdminScholarshipEdit: React.FC = () => {
               details: fee.details
             })),
         };
-        
+
         if (formData.scholarship_fee_amount) {
           payload.scholarship_fee_amount = Number(formData.scholarship_fee_amount);
+        } else {
+          payload.scholarship_fee_amount = null;
         }
-        
+
+        if (formData.placement_fee_amount) {
+          payload.placement_fee_amount = Number(formData.placement_fee_amount);
+        } else {
+          payload.placement_fee_amount = null;
+        }
+
         // Only set image_url to null if we're not preserving the existing image
         if (!preserveImage) {
           payload.image_url = null; // Will be updated after image upload
         }
-        
+
         if (includeWP) payload.work_permissions = formData.work_permissions.filter((wp) => wp !== 'F1');
         if (includeDM) payload.delivery_mode = formData.delivery_mode;
         return payload;
@@ -487,7 +497,7 @@ const AdminScholarshipEdit: React.FC = () => {
               .from('scholarships')
               .update({ image_url: imageUrl })
               .eq('id', scholarshipId);
-            
+
             if (updateError) {
               console.error('Error updating scholarship with image URL:', updateError);
             }
@@ -498,7 +508,7 @@ const AdminScholarshipEdit: React.FC = () => {
       }
 
       setSuccess(true);
-      
+
       // Aguardar um pouco antes de navegar para mostrar a mensagem de sucesso
       setTimeout(() => {
         navigate('/admin/dashboard/scholarships');
@@ -535,14 +545,14 @@ const AdminScholarshipEdit: React.FC = () => {
             <ArrowLeft className="h-4 w-4 mr-2" />
             Back to Scholarships
           </button>
-          
+
           <div className="flex items-center justify-between">
             <div>
               <h1 className="text-3xl font-bold text-slate-900">
                 {isEditMode ? 'Edit Scholarship' : 'Create New Scholarship'}
               </h1>
               <p className="text-slate-600 mt-2">
-                {isEditMode 
+                {isEditMode
                   ? 'Update scholarship details and requirements'
                   : 'Define a new scholarship opportunity for international students'
                 }
@@ -582,7 +592,7 @@ const AdminScholarshipEdit: React.FC = () => {
                 <Award className="h-5 w-5 mr-2 text-[#05294E]" />
                 Scholarship Image <span className="text-slate-400 ml-2">(optional)</span>
               </h2>
-              
+
               {!imagePreview ? (
                 <div className="flex flex-col items-start gap-4">
                   <label className="block text-sm font-medium text-slate-700 mb-2">
@@ -621,7 +631,7 @@ const AdminScholarshipEdit: React.FC = () => {
                 <Award className="h-5 w-5 mr-2 text-[#05294E]" />
                 Basic Information
               </h2>
-              
+
               <div className="grid grid-cols-1 gap-6">
                 <div>
                   <label className="block text-sm font-medium text-slate-700 mb-2">
@@ -713,6 +723,47 @@ const AdminScholarshipEdit: React.FC = () => {
                     onChange={handleInputChange}
                     className="w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-[#05294E] focus:border-[#05294E] transition-all duration-200"
                     placeholder="e.g., 500"
+                  />
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-slate-700 mb-2">
+                    Application Fee Amount (USD)
+                  </label>
+                  <input
+                    type="number"
+                    name="application_fee_amount"
+                    value={formData.application_fee_amount}
+                    onChange={handleInputChange}
+                    className="w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-[#05294E] focus:border-[#05294E] transition-all duration-200"
+                    placeholder="e.g., 350.00"
+                  />
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-slate-700 mb-2" title="Override placement fee calculated by table">
+                    Custom Placement Fee (USD)
+                    <span className="text-xs text-slate-400 font-normal ml-2">(Optional)</span>
+                  </label>
+                  <input
+                    type="number"
+                    name="placement_fee_amount"
+                    value={formData.placement_fee_amount}
+                    onChange={handleInputChange}
+                    className="w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-[#05294E] focus:border-[#05294E] transition-all duration-200"
+                    placeholder="e.g., 1500"
+                  />
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-slate-700 mb-2">
+                    Custom Scholarship Fee (USD)
+                    <span className="text-xs text-slate-400 font-normal ml-2">(Legacy)</span>
+                  </label>
+                  <input
+                    type="number"
+                    name="scholarship_fee_amount"
+                    value={formData.scholarship_fee_amount}
+                    onChange={handleInputChange}
+                    className="w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-[#05294E] focus:border-[#05294E] transition-all duration-200"
+                    placeholder="e.g., 900"
                   />
                 </div>
                 <div>
@@ -835,8 +886,8 @@ const AdminScholarshipEdit: React.FC = () => {
                 </div>
               )}
               <div className="mt-2 text-xs text-slate-500 flex gap-2 items-center">
-                 <Info className="h-3 w-3" />
-                 <span>These fees will be displayed to the student in the program breakdown.</span>
+                <Info className="h-3 w-3" />
+                <span>These fees will be displayed to the student in the program breakdown.</span>
               </div>
             </div>
 
@@ -846,7 +897,7 @@ const AdminScholarshipEdit: React.FC = () => {
                 <Target className="h-5 w-5 mr-2 text-[#D0151C]" />
                 Eligibility & Requirements
               </h2>
-              
+
               <div className="grid grid-cols-1 gap-6">
                 <div>
                   <label className="block text-sm font-medium text-slate-700 mb-2">
@@ -909,7 +960,7 @@ const AdminScholarshipEdit: React.FC = () => {
                       + Add Requirement
                     </button>
                   </div>
-                  
+
                   <div className="space-y-3">
                     {formData.requirements.map((req, index) => (
                       <div key={index} className="flex items-center gap-2">
@@ -947,7 +998,7 @@ const AdminScholarshipEdit: React.FC = () => {
                       + Add Criterion
                     </button>
                   </div>
-                  
+
                   <div className="space-y-3">
                     {formData.eligibility.map((item, index) => (
                       <div key={index} className="flex items-center gap-2">
@@ -980,7 +1031,7 @@ const AdminScholarshipEdit: React.FC = () => {
                 <BookOpen className="h-5 w-5 mr-2 text-blue-600" />
                 Benefits & Options
               </h2>
-              
+
               <div className="grid grid-cols-1 gap-6">
                 {/* Work Permissions */}
                 <div>
@@ -1001,14 +1052,13 @@ const AdminScholarshipEdit: React.FC = () => {
                     </div>
                   </div>
                   <div className="flex flex-col gap-2">
-                    {['OPT','CPT'].map((wp) => {
+                    {['OPT', 'CPT'].map((wp) => {
                       const checked = formData.work_permissions.includes(wp);
                       return (
                         <label
                           key={wp}
-                          className={`flex items-center gap-2 px-3 py-1.5 border rounded-md w-fit min-w-[150px] cursor-pointer transition-colors ${
-                            checked ? 'border-blue-300 bg-blue-50' : 'border-slate-200 hover:bg-slate-50'
-                          }`}
+                          className={`flex items-center gap-2 px-3 py-1.5 border rounded-md w-fit min-w-[150px] cursor-pointer transition-colors ${checked ? 'border-blue-300 bg-blue-50' : 'border-slate-200 hover:bg-slate-50'
+                            }`}
                         >
                           <input
                             type="checkbox"
@@ -1036,7 +1086,7 @@ const AdminScholarshipEdit: React.FC = () => {
                       + Add Benefit
                     </button>
                   </div>
-                  
+
                   <div className="space-y-3">
                     {formData.benefits.map((benefit, index) => (
                       <div key={index} className="flex items-center gap-2">
