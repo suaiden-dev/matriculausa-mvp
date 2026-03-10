@@ -374,7 +374,7 @@ const DocumentViewerModal: React.FC<DocumentViewerModalProps> = ({ documentUrl, 
 
   const modalContent = (
     <div
-      className="fixed inset-0 bg-black bg-opacity-75 flex items-center justify-center transition-opacity p-4 document-viewer-overlay"
+      className="fixed inset-0 bg-black/80 flex items-center justify-center transition-opacity document-viewer-overlay"
       onClick={onClose}
       style={{
         zIndex: 9999999,
@@ -382,12 +382,11 @@ const DocumentViewerModal: React.FC<DocumentViewerModalProps> = ({ documentUrl, 
         left: 0,
         right: 0,
         bottom: 0,
-        position: 'fixed',
-        backgroundColor: 'rgba(0, 0, 0, 0.75)'
+        position: 'fixed'
       }}
     >
       <div
-        className="relative bg-white rounded-lg shadow-2xl max-w-6xl max-h-[95vh] w-full h-full flex flex-col overflow-hidden"
+        className="relative bg-white rounded-xl shadow-2xl w-[98vw] h-[95vh] flex flex-col overflow-hidden"
         onClick={(e) => e.stopPropagation()}
       >
         {/* Header com título e botões */}

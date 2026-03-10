@@ -1756,7 +1756,7 @@ const DocumentRequestsCard: React.FC<DocumentRequestsCardProps> = ({
   };
 
   return (
-    <div className="max-w-3xl mx-auto px-4 sm:px-6 py-4">
+    <div className="w-full px-4 sm:px-6 py-4">
       {isSchool && (
         <div className="flex justify-end mb-4">
           <button

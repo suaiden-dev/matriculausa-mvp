@@ -368,7 +368,7 @@
       "securePayment": "Pagamento Seguro",
       "securePaymentDesc": "Suas informações de pagamento são criptografadas e seguras",
       "verificationRequired": "Verificação Necessária",
-      "verificationRequiredDesc": "O pagamento será verificado automaticamente em até 24 horas",
+      "verificationRequiredDesc": "O pagamento será verificado automaticamente em até 48 horas",
       "zelleTransfer": "Transferência Zelle",
       "zelleTransferDesc": "Complete a transferência e envie seu comprovante",
       "paymentInstructions": "Instruções de Pagamento",
@@ -447,7 +447,7 @@
       "approved": "Seu pagamento foi verificado e aprovado com sucesso.",
       "rejected": "Seu comprovante não foi aprovado. Verifique se todas as informações estão visíveis.",
       "error": "Ocorreu um erro ao verificar seu pagamento. Tente novamente.",
-      "under_review": "Seu comprovante requer verificação adicional. Nossa equipe o revisará em até 24 horas."
+      "under_review": "Seu comprovante requer verificação adicional. Nossa equipe o revisará em até 48 horas."
     },
     "actions": {
       "tryAgain": "Tentar Novamente",
@@ -2521,7 +2521,7 @@
           "email": "Email",
           "phone": "Telefone",
           "country": "País",
-          "studentType": "Tipo de Estudante",
+          "studentType": "Tipo de Processo",
           "initialF1VisaRequired": "Inicial - Visto F-1 Necessário",
           "transferCurrentF1Student": "Transferência - Estudante F-1 Atual",
           "changeOfStatusFromOtherVisa": "Mudança de Status - De Outro Visto",

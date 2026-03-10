@@ -1401,10 +1401,10 @@ const MyApplications: React.FC = () => {
                 {t('studentDashboard.myApplications.noApplications.description')}
               </p>
               <Link
-                to="/student/dashboard/scholarships"
+                to="/student/onboarding"
                 className="bg-gradient-to-r from-blue-600 to-blue-700 text-white px-8 sm:px-10 py-4 sm:py-5 rounded-2xl hover:from-blue-700 hover:to-blue-800 transition-all duration-300 font-bold shadow-lg hover:shadow-xl transform hover:scale-105 inline-flex items-center text-sm sm:text-base"
               >
-                {t('studentDashboard.myApplications.noApplications.findScholarships')}
+                Começar Processo
                 <ArrowRight className="ml-2 h-5 w-5 sm:h-6 sm:w-6" />
               </Link>
             </div>

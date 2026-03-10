@@ -129,7 +129,7 @@ export const usePaymentBlocked = (): PaymentBlockedState => {
         }
       }
 
-      setState({
+      const nextState = {
         isBlocked,
         pendingPayment,
         rejectedPayment,
@@ -137,6 +137,29 @@ export const usePaymentBlocked = (): PaymentBlockedState => {
         totalPending,
         loading: false,
         error: null,
+      };
+
+      // Só atualizar se houver mudança real para evitar re-renders desnecessários
+      setState((prev) => {
+        const isSame = prev.isBlocked === nextState.isBlocked &&
+          prev.totalPending === nextState.totalPending &&
+          prev.pendingPayment?.id === nextState.pendingPayment?.id &&
+          prev.pendingPayment?.status === nextState.pendingPayment?.status &&
+          prev.pendingPayment?.fee_type ===
+            nextState.pendingPayment?.fee_type &&
+          prev.rejectedPayment?.id === nextState.rejectedPayment?.id &&
+          prev.rejectedPayment?.status === nextState.rejectedPayment?.status &&
+          prev.rejectedPayment?.fee_type ===
+            nextState.rejectedPayment?.fee_type &&
+          prev.approvedPayment?.id === nextState.approvedPayment?.id &&
+          prev.approvedPayment?.status === nextState.approvedPayment?.status &&
+          prev.approvedPayment?.fee_type ===
+            nextState.approvedPayment?.fee_type;
+
+        if (isSame && prev.loading === nextState.loading) {
+          return prev;
+        }
+        return nextState;
       });
     } catch (error) {
       console.error("Error in checkPayments:", error);

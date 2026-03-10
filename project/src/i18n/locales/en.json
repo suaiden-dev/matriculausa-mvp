@@ -368,7 +368,7 @@
       "securePayment": "Secure Payment",
       "securePaymentDesc": "Your payment information is encrypted and secure",
       "verificationRequired": "Verification Required",
-      "verificationRequiredDesc": "Payment will be verified automatically within 24 hours",
+      "verificationRequiredDesc": "Payment will be verified automatically within 48 hours",
       "zelleTransfer": "Zelle Transfer",
       "zelleTransferDesc": "Complete the transfer and upload your confirmation",
       "paymentInstructions": "Payment Instructions",
@@ -447,7 +447,7 @@
       "approved": "Your payment has been verified and approved successfully.",
       "rejected": "Your receipt was not approved. Please check that all information is visible.",
       "error": "An error occurred while verifying your payment. Please try again.",
-      "under_review": "Your payment proof requires additional verification. Our team will review it within 24 hours."
+      "under_review": "Your payment proof requires additional verification. Our team will review it within 48 hours."
     },
     "actions": {
       "tryAgain": "Try Again",
@@ -2517,7 +2517,7 @@
           "email": "Email",
           "phone": "Phone",
           "country": "Country",
-          "studentType": "Student Type",
+          "studentType": "Process Type",
           "initialF1VisaRequired": "Initial - F-1 Visa Required",
           "transferCurrentF1Student": "Transfer - Current F-1 Student",
           "changeOfStatusFromOtherVisa": "Change of Status - From Other Visa",
@@ -2701,7 +2701,7 @@
         "scholarshipDetails": "Scholarship Details",
         "scholarshipTitle": "Scholarship Title",
         "courseField": "Course / Field of Study",
-        "enrollmentFee": "Enrollment Fee",
+        "enrollmentFee": "Application Fee",
         "internalFees": "Institutional Internal Fees",
         "internalFeesNote": "These fees are reported by the university and paid directly to them. They are not part of Matricula USA's mentoring service.",
         "oneTimePayment": "One-Time Payment",

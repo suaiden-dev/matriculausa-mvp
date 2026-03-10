@@ -178,6 +178,29 @@ export const ZelleCheckout: React.FC<ZelleCheckoutProps> = ({
                 console.log(`✅ [Mock] ${fieldToUpdate} marcado como true para scholarship ${scholarshipId}`);
               }
             }
+
+            // --- NOVO: Atualizar também o perfil global para manter sincronia ---
+            if (feeType === 'application_fee' || feeType === 'scholarship_fee' || feeType === 'placement_fee') {
+              const syncData: any = { updated_at: new Date().toISOString() };
+              
+              if (feeType === 'application_fee') {
+                syncData.is_application_fee_paid = true;
+                syncData.application_fee_paid_at = new Date().toISOString();
+              } else if (feeType === 'scholarship_fee') {
+                syncData.is_scholarship_fee_paid = true;
+                syncData.scholarship_fee_paid_at = new Date().toISOString();
+              } else if (feeType === 'placement_fee') {
+                syncData.is_placement_fee_paid = true;
+              }
+
+              const { error: profileSyncError } = await supabase
+                .from('user_profiles')
+                .update(syncData)
+                .eq('id', profileData.id);
+              
+              if (profileSyncError) console.error('❌ [Mock] Erro ao sincronizar perfil:', profileSyncError);
+              else console.log(`✅ [Mock] Perfil global sincronizado com ${feeType}`);
+            }
           }
         } else if (feeType === 'i20_control_fee') {
           // Atualizar has_paid_i20_control_fee no user_profiles
@@ -424,7 +447,9 @@ export const ZelleCheckout: React.FC<ZelleCheckoutProps> = ({
         setPaymentStatus(newState.paymentStatus);
         setZellePaymentId(newState.zellePaymentId);
         setIsProcessing(newState.isProcessing);
-        onProcessingChange?.(newState.isProcessing);
+        if (newState.isProcessing !== isProcessingRef.current) {
+          onProcessingChange?.(newState.isProcessing);
+        }
         
         // Atualizar refs
         stepRef.current = newState.step;
@@ -1092,7 +1117,7 @@ export const ZelleCheckout: React.FC<ZelleCheckoutProps> = ({
             console.log(`🔍 [ZelleCheckout] Tentativa ${attempts}/${maxAttempts} de buscar pagamento...`);
             
             // Primeiro tentar buscar com fee_type específico
-            let { data, error } = await supabase
+            const response = await supabase
               .from('zelle_payments')
               .select('id')
               .eq('user_id', user?.id)
@@ -1102,10 +1127,17 @@ export const ZelleCheckout: React.FC<ZelleCheckoutProps> = ({
               .limit(1)
               .single();
             
+            let { data, error } = response;
+            const httpStatus = (response as any).status;
+            
             // Se não encontrar com fee_type específico, buscar por valor e status (para pagamentos criados pelo n8n)
-            if (error && error.code === 'PGRST116') {
+            // PGRST116 é o erro padrão do Supabase/PostgREST para "no rows found" com .single()
+            // 406 (Not Acceptable) também pode ocorrer dependendo do gateway ou se o Accept header não puder ser satisfeito
+            const isNoRowsError = error && (error.code === 'PGRST116' || httpStatus === 406);
+            
+            if (isNoRowsError) {
               console.log(`🔍 [ZelleCheckout] Não encontrado com fee_type específico, buscando por valor e status...`);
-              const { data: dataByAmount, error: errorByAmount } = await supabase
+              const fallbackResponse = await supabase
                 .from('zelle_payments')
                 .select('id')
                 .eq('user_id', user?.id)
@@ -1115,14 +1147,14 @@ export const ZelleCheckout: React.FC<ZelleCheckoutProps> = ({
                 .limit(1)
                 .single();
               
-              if (!errorByAmount && dataByAmount) {
-                data = dataByAmount;
+              if (!fallbackResponse.error && fallbackResponse.data) {
+                data = fallbackResponse.data;
                 error = null;
                 console.log(`✅ [ZelleCheckout] Pagamento encontrado por valor e status!`);
               }
             }
             
-            if (error && error.code === 'PGRST116') {
+            if (error && (error.code === 'PGRST116' || (response as any).status === 406)) {
               // Nenhum registro encontrado, aguardar mais um pouco
               console.log(`⏳ [ZelleCheckout] Pagamento não encontrado na tentativa ${attempts}, aguardando...`);
               await new Promise(resolve => setTimeout(resolve, 1000)); // 1 segundo de delay
@@ -1426,34 +1458,17 @@ export const ZelleCheckout: React.FC<ZelleCheckoutProps> = ({
           </div>
         </div>
 
-        {/* Status Info */}
-        <div className="bg-blue-50 border border-blue-200 rounded-lg p-3 sm:p-4">
-          <div className="flex items-start gap-2">
-            <div className="w-5 h-5 bg-blue-200 rounded-full flex items-center justify-center mt-0.5 flex-shrink-0">
-              <span className="text-blue-600 text-xs font-bold">!</span>
-            </div>
-            <div>
-              <p className="text-xs sm:text-sm text-blue-800 font-medium mb-1">
-                {t('zelleModal.paymentUnderReview')}
-              </p>
-              <p className="text-xs sm:text-sm text-blue-700">
-                {t('zelleModal.paymentUnderReviewMessage')}
-              </p>
-            </div>
+        {isLocalhost && (
+          <div className="p-4 bg-amber-50 border border-amber-200 rounded-lg mt-4">
+            <p className="text-xs font-bold text-amber-800 uppercase mb-2">Test Mode (Localhost Only)</p>
+            <button
+              onClick={handleMockSuccess}
+              className="w-full bg-amber-600 text-white py-2 px-4 rounded-lg hover:bg-amber-700 transition-colors font-medium text-xs uppercase"
+            >
+              Skip to Success (Mock)
+            </button>
           </div>
-
-          {isLocalhost && (
-            <div className="p-4 bg-amber-50 border border-amber-200 rounded-lg mt-4">
-              <p className="text-xs font-bold text-amber-800 uppercase mb-2">Test Mode (Localhost Only)</p>
-              <button
-                onClick={handleMockSuccess}
-                className="w-full bg-amber-600 text-white py-2 px-4 rounded-lg hover:bg-amber-700 transition-colors font-medium text-xs uppercase"
-              >
-                Skip to Success (Mock)
-              </button>
-            </div>
-          )}
-        </div>
+        )}
       </div>
     );
   }

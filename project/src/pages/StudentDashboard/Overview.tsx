@@ -39,7 +39,8 @@ interface OverviewProps {
 
 const Overview: React.FC<OverviewProps> = ({
   stats, 
-  recentApplications = []
+  recentApplications = [],
+  applications = []
 }) => {
   const { t } = useTranslation();
   const navigate = useNavigate();
@@ -47,18 +48,67 @@ const Overview: React.FC<OverviewProps> = ({
 
   const { user, userProfile, refetchUserProfile } = useAuth();
   const { isGuideOpen, openGuide, closeGuide } = useStepByStepGuide();
-  
 
+  // Threshold para obrigatoriedade do questionário: 18/02/2026
+  const SURVEY_THRESHOLD_DATE = new Date('2026-02-18T21:50:00Z');
+  const paidAt = userProfile?.selection_process_paid_at ? new Date(userProfile.selection_process_paid_at) : null;
+  const isExemptedByLegacy = userProfile?.has_paid_selection_process_fee && (!paidAt || paidAt < SURVEY_THRESHOLD_DATE);
   
-  // Verificar se há step de onboarding salvo no localStorage
+  // Verificar qual o passo de onboarding correto baseado no progresso real (DB) + LocalStorage
   const savedOnboardingStep = React.useMemo(() => {
     if (typeof window === 'undefined') return null;
+    
+    // 1. Calcular o passo baseado no perfil do banco de dados (Progresso Real)
+    let calculatedStep: string | null = 'selection_fee';
+    
+    if (userProfile) {
+      // Unifica flags de progresso vindo de múltiplas fontes para evitar bloqueios por falta de sincronia
+      const hasAppsInSystem = applications.length > 0;
+      const anyAppPaidOrApproved = applications.some(app => 
+        app.is_application_fee_paid || 
+        ['approved', 'enrolled', 'under_review'].includes(app.status)
+      );
+      
+      const anyScholarshipFeePaid = applications.some(app => app.is_scholarship_fee_paid) || userProfile.is_scholarship_fee_paid;
+
+      const hasGlobalFeePaid = userProfile.is_application_fee_paid || !!userProfile.application_fee_paid_at || !!userProfile.scholarship_fee_paid_at || anyAppPaidOrApproved;
+      const hasDocsGlobal = userProfile.documents_uploaded || !!userProfile.application_fee_paid_at || anyAppPaidOrApproved;
+
+      if (userProfile.onboarding_completed) {
+        calculatedStep = 'completed';
+      } else if (!userProfile.has_paid_selection_process_fee) {
+        calculatedStep = 'selection_fee';
+      } else if (!userProfile.selection_survey_passed && !isExemptedByLegacy && !hasDocsGlobal && !hasGlobalFeePaid) {
+        calculatedStep = 'selection_survey';
+      } else if (!userProfile.selected_scholarship_id && !hasAppsInSystem && !hasDocsGlobal && !hasGlobalFeePaid) {
+        calculatedStep = 'scholarship_selection';
+      } else if (!hasDocsGlobal && userProfile.documents_status !== 'approved') {
+        calculatedStep = 'documents_upload';
+      } else if (!hasGlobalFeePaid) {
+        calculatedStep = 'payment';
+      } else if (!anyScholarshipFeePaid) {
+        calculatedStep = 'scholarship_fee';
+      } else {
+        calculatedStep = 'my_applications';
+      }
+    }
+
+    // 2. Tentar pegar o que está no localStorage
     const savedStep = window.localStorage.getItem('onboarding_current_step');
     const validSteps = ['selection_fee', 'identity_verification', 'selection_survey', 'scholarship_selection', 'process_type', 'documents_upload', 'payment', 'scholarship_fee', 'my_applications', 'completed'];
     
-    if (!savedStep || !validSteps.includes(savedStep)) return null;
+    // Se não há nada no localStorage ou é inválido, usa o calculado
+    if (!savedStep || !validSteps.includes(savedStep)) return calculatedStep;
 
-    // Se o usuário não pagou a taxa de seleção, ele não deve conseguir avançar além desse ponto via localStorage antigo
+    // 3. Lógica de Sincronia: Se o localStorage está MUITO atrás do calculado (pós-limpeza), usa o calculado.
+    const savedIdx = validSteps.indexOf(savedStep);
+    const calculatedIdx = validSteps.indexOf(calculatedStep || 'selection_fee');
+
+    if (savedIdx < calculatedIdx) {
+      return calculatedStep;
+    }
+
+    // Se o usuário não pagou a taxa de seleção, ele não deve conseguir avançar além desse ponto
     if (userProfile && !userProfile.has_paid_selection_process_fee) {
       const stepsAfterSelection = ['scholarship_selection', 'process_type', 'documents_upload', 'payment', 'scholarship_fee', 'my_applications', 'waiting_approval', 'completed'];
       if (stepsAfterSelection.includes(savedStep)) {
@@ -67,7 +117,7 @@ const Overview: React.FC<OverviewProps> = ({
     }
 
     return savedStep;
-  }, [userProfile]);
+  }, [userProfile, applications, isExemptedByLegacy]);
   
   const hasSavedOnboardingStep = savedOnboardingStep !== null;
   const isOnboardingStarted = hasSavedOnboardingStep && savedOnboardingStep !== 'welcome';
@@ -527,11 +577,11 @@ const Overview: React.FC<OverviewProps> = ({
                 <h4 className="text-lg sm:text-xl font-semibold text-slate-700 mb-2">{t('studentDashboard.recentApplications.noApplications')}</h4>
                 <p className="text-slate-500 mb-6 px-4">{t('studentDashboard.recentApplications.startJourneyMessage')}</p>
                 <Link
-                  to="/student/dashboard/scholarships"
+                  to="/student/onboarding"
                   className="inline-flex items-center gap-2 px-4 sm:px-6 py-3 bg-blue-600 text-white rounded-xl hover:bg-blue-700 transition-colors font-semibold text-sm sm:text-base"
                 >
                   <Search className="w-4 h-4" />
-                  {t('studentDashboard.recentApplications.browseScholarships')}
+                  Começar Processo
                 </Link>
               </div>
             ) : (

@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { 
   AlertCircle, Award, Info, Home, FolderOpen, GraduationCap, Download, 
-  ShieldCheck, ArrowRight, LayoutDashboard, Building, MapPin, 
+  ShieldCheck, ArrowRight, LayoutDashboard, MapPin, 
   Star, Eye, CheckCircle2, Clock, Mail, Phone, Globe, ExternalLink 
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
@@ -344,7 +344,7 @@ export const UniversityDocumentsStep: React.FC<StepProps> = ({ onBack }) => {
                        },
                        { 
                          title: t('studentDashboard.myApplicationStep.welcome.acceptanceLetterReceipt'), 
-                         status: applicationDetails.acceptance_letter_url ? t('studentDashboard.myApplicationStep.welcome.status.available') : t('studentDashboard.myApplicationStep.welcome.status.inProgress'), 
+                         status: applicationDetails.acceptance_letter_url ? t('studentDashboard.myApplicationStep.welcome.documentAvailable') : t('studentDashboard.myApplicationStep.welcome.status.inProgress'), 
                          variant: applicationDetails.acceptance_letter_url ? 'success' : 'warning',
                          tab: 'acceptance' 
                        }
@@ -375,7 +375,7 @@ export const UniversityDocumentsStep: React.FC<StepProps> = ({ onBack }) => {
                             container: 'bg-gradient-to-br from-emerald-50/60 to-teal-50/60 backdrop-blur-xl border border-emerald-400/40 shadow-[0_10px_40px_rgba(16,185,129,0.15)] hover:shadow-emerald-500/30 hover:border-emerald-500 transform hover:scale-[1.02] transition-all duration-500 relative overflow-hidden group ring-2 ring-white/50',
                             iconBg: 'bg-gradient-to-br from-emerald-500 to-teal-600 text-white shadow-[0_0_20px_rgba(16,185,129,0.5)] border border-emerald-400/30',
                             status: 'text-emerald-700 font-black tracking-tight',
-                            indicator: 'bg-emerald-600 animate-pulse shadow-[0_0_12px_rgba(16,185,129,0.6)]'
+                            indicator: 'bg-emerald-600'
                          },
                          default: {
                            container: 'bg-slate-50 border-slate-300 hover:border-blue-300 hover:bg-white',
@@ -406,17 +406,14 @@ export const UniversityDocumentsStep: React.FC<StepProps> = ({ onBack }) => {
                              </div>
                              <div className="flex flex-col">
                                <span className={`text-sm font-bold uppercase tracking-tight ${isLetterAvailable ? 'text-emerald-950' : 'text-gray-900'}`}>{step.title}</span>
-                               {isLetterAvailable && (
-                                  <div className="flex items-center gap-1.5 mt-0.5">
-                                    <span className="w-1.5 h-1.5 bg-emerald-500 rounded-full animate-ping" />
-                                    <span className="text-[10px] text-emerald-700 font-extrabold uppercase tracking-widest">{t('studentDashboard.myApplicationStep.welcome.documentAvailable')}</span>
-                                  </div>
-                               )}
                              </div>
                            </div>
                            <div className="flex items-center gap-2 relative z-10 sm:ml-0 ml-[52px]">
-                              <div className={`w-2 h-2 rounded-full ${styles.indicator}`} />
-                              <span className={`text-[10px] font-black uppercase tracking-widest ${styles.status}`}>{step.status}</span>
+                               <div className="relative flex items-center justify-center">
+                                 {isLetterAvailable && <div className="absolute w-3 h-3 bg-emerald-400 rounded-full animate-ping" />}
+                                 <div className={`w-2 h-2 rounded-full relative z-10 ${styles.indicator}`} />
+                               </div>
+                               <span className={`text-[10px] font-black uppercase tracking-widest ${styles.status}`}>{step.status}</span>
                               {isLetterAvailable && <ArrowRight className="w-4 h-4 text-emerald-600 ml-2 group-hover:translate-x-1 transition-transform" />}
                            </div>
                          </div>
@@ -437,9 +434,6 @@ export const UniversityDocumentsStep: React.FC<StepProps> = ({ onBack }) => {
               {/* University Hero Card */}
               <div className="bg-white rounded-[2.5rem] shadow-2xl overflow-hidden group">
                 <div className="bg-gradient-to-r from-[#05294E] to-[#08427e] p-8 md:p-12 relative overflow-hidden">
-                  <div className="absolute inset-0 opacity-10 pointer-events-none">
-                    <Building className="w-96 h-96 -right-24 -bottom-24 absolute rotate-12" />
-                  </div>
                   <div className="relative z-10 flex flex-col md:flex-row items-center gap-8">
                     <div className="w-32 h-32 md:w-40 md:h-40 bg-white rounded-[2.5rem] shadow-2xl flex items-center justify-center p-2 transform group-hover:scale-105 transition-transform duration-500">
                       {applicationDetails.scholarships?.image_url || applicationDetails.scholarships?.universities?.logo_url ? (
@@ -448,9 +442,7 @@ export const UniversityDocumentsStep: React.FC<StepProps> = ({ onBack }) => {
                           alt={applicationDetails.scholarships.universities?.name || ''}
                           className="w-full h-full object-contain p-2"
                         />
-                      ) : (
-                        <Building className="w-20 h-20 text-[#05294E]" />
-                      )}
+                      ) : null}
                     </div>
                     <div className="flex-1 text-center md:text-left space-y-4">
                       <div className="flex flex-wrap justify-center md:justify-start gap-3">
@@ -493,7 +485,7 @@ export const UniversityDocumentsStep: React.FC<StepProps> = ({ onBack }) => {
                             { label: t('studentDashboard.myApplicationStep.details.mode'), val: applicationDetails.scholarships?.delivery_mode === 'in_person' ? t('studentDashboard.myApplicationStep.details.inPerson') : t('studentDashboard.myApplicationStep.details.online') },
                             { label: t('studentDashboard.myApplicationStep.details.deadline'), val: applicationDetails.scholarships?.deadline ? new Date(applicationDetails.scholarships.deadline).toLocaleDateString() : 'N/A' }
                           ].map((item, i) => (
-                            <div key={i} className="bg-white p-4 rounded-[2rem] border border-slate-300 shadow-sm">
+                            <div key={i} className="bg-white p-4 rounded-[2rem] border border-slate-300 shadow-sm pl-5">
                               <div className="flex items-center gap-2 mb-2">
                                 <span className="text-[10px] font-black text-slate-900 uppercase tracking-widest">{item.label}</span>
                               </div>
@@ -503,10 +495,29 @@ export const UniversityDocumentsStep: React.FC<StepProps> = ({ onBack }) => {
                         </div>
  
                         {/* Financial Summary - Mobile Only (Ordered after Deadline) */}
-                        <div className="block lg:hidden">
+                        <div className="block lg:hidden space-y-12">
+                           {/* Application Meta Info - Mobile Only */}
+                           <div className="bg-white rounded-[2rem] p-5 border border-slate-300 shadow-sm space-y-5">
+                              <div className="flex flex-col border-b border-slate-100 pb-3">
+                                <p className="text-[10px] font-black text-slate-900 uppercase tracking-widest mb-1">{t('studentDashboard.applicationChatPage.details.studentInformation.studentType')}</p>
+                                <p className="text-xs font-black text-slate-900 uppercase">
+                                  {applicationDetails.student_process_type === 'initial' ? t('studentDashboard.applicationChatPage.details.studentInformation.initialF1VisaRequired') :
+                                   applicationDetails.student_process_type === 'transfer' ? t('studentDashboard.applicationChatPage.details.studentInformation.transferCurrentF1Student') :
+                                   applicationDetails.student_process_type === 'change_of_status' ? t('studentDashboard.applicationChatPage.details.studentInformation.changeOfStatusFromOtherVisa') :
+                                   applicationDetails.student_process_type || 'N/A'}
+                                </p>
+                              </div>
+                              <div className="flex flex-col">
+                                <p className="text-[10px] font-black text-slate-900 uppercase tracking-widest mb-1">{t('studentDashboard.applicationChatPage.details.studentInformation.applicationDate')}</p>
+                                <p className="text-xs font-black text-slate-900 uppercase">
+                                  {new Date(applicationDetails.created_at || Date.now()).toLocaleDateString()}
+                                </p>
+                              </div>
+                           </div>
+
                            <div className="bg-white rounded-[2rem] p-5 text-slate-900 border border-slate-300 shadow-sm relative overflow-hidden">
                               <div className="absolute top-0 right-0 w-32 h-32 bg-slate-100 rounded-full -mr-16 -mt-16 blur-xl" />
-                              <h4 className="text-xs font-black uppercase tracking-widest text-slate-900 mb-6 pb-2 border-b border-slate-100 flex items-center justify-between">
+                              <h4 className="text-sm font-black uppercase tracking-widest text-slate-900 mb-6 pb-2 border-b border-slate-100 flex items-center justify-between">
                                 {t('studentDashboard.myApplicationStep.details.finance.financialSummary')}
                               </h4>
                               <div className="space-y-6">
@@ -548,20 +559,20 @@ export const UniversityDocumentsStep: React.FC<StepProps> = ({ onBack }) => {
                             <h4 className="text-xl font-black text-gray-900 uppercase tracking-tight border-b border-slate-300 pb-4">
                               {t('studentDashboard.myApplicationStep.details.scholarshipDetails')}
                             </h4>
-                           <div className="bg-slate-50 p-4 sm:p-6 rounded-2xl mb-4">
+                           <div className="py-4 border-b border-slate-100 mb-2">
                               <p className="text-[10px] font-black text-slate-500 uppercase tracking-widest mb-1">{t('studentDashboard.myApplicationStep.details.scholarshipTitle')}</p>
                               <p className="text-lg sm:text-xl font-black text-slate-900 uppercase leading-tight">{applicationDetails.scholarships?.title || applicationDetails.scholarships?.name || 'N/A'}</p>
                            </div>
 
                            {applicationDetails.scholarships?.course && (
-                             <div className="bg-blue-50 p-4 sm:p-6 rounded-2xl mb-4">
+                             <div className="py-4 border-b border-slate-100 mb-2">
                                <p className="text-[10px] font-black text-blue-600 uppercase tracking-widest mb-1">{t('studentDashboard.myApplicationStep.details.courseField')}</p>
                                <p className="text-lg sm:text-xl font-black text-blue-900 uppercase leading-tight">{applicationDetails.scholarships.course}</p>
                              </div>
                            )}
                            
                            {applicationDetails.scholarships?.description && (
-                             <div className="bg-slate-50 p-4 sm:p-6 rounded-2xl mb-4">
+                             <div className="py-4 border-b border-slate-100 mb-2">
                                <div className="mb-2">
                                  <span className="text-[10px] font-black text-slate-500 uppercase tracking-widest">
                                    {t('studentDashboard.applicationChatPage.details.scholarshipDetails.description')}
@@ -575,7 +586,7 @@ export const UniversityDocumentsStep: React.FC<StepProps> = ({ onBack }) => {
 
                            {/* Application Fee (Enrollment Fee) */}
                            {applicationDetails.scholarships?.application_fee_amount && (
-                             <div className="bg-slate-50 p-4 sm:p-6 rounded-2xl mb-4 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 mt-6">
+                             <div className="py-4 border-b border-slate-100 mb-2 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
                                <div className="flex items-start gap-3">
                                  <div>
                                    <p className="text-[10px] font-black text-slate-600 uppercase tracking-widest mb-1">{t('studentDashboard.myApplicationStep.details.enrollmentFee')}</p>
@@ -586,7 +597,7 @@ export const UniversityDocumentsStep: React.FC<StepProps> = ({ onBack }) => {
                                    </p>
                                  </div>
                                </div>
-                               <div className="text-lg sm:text-xl font-black text-gray-900 bg-white px-4 py-2 rounded-xl shadow-sm whitespace-nowrap">
+                               <div className="text-lg sm:text-xl font-black text-gray-900 whitespace-nowrap pr-6">
                                  {formatFeeAmount(
                                    getFeeAmount('application_fee', applicationDetails.scholarships.application_fee_amount)
                                  )}
@@ -605,7 +616,7 @@ export const UniversityDocumentsStep: React.FC<StepProps> = ({ onBack }) => {
                             </h4>
                             <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                               {applicationDetails.scholarships.internal_fees.map((fee: any, idx: number) => (
-                                <div key={idx} className="flex justify-between items-center p-6 bg-white rounded-2xl border border-slate-300 shadow-sm group hover:border-blue-200 transition-colors">
+                                <div key={idx} className="flex justify-between items-center p-6 bg-white rounded-2xl border border-slate-300 shadow-sm group">
                                    <div className="min-w-0 mr-4">
                                      <p className="text-[10px] font-black text-slate-500 uppercase tracking-widest mb-1">{fee.frequency || fee.details || t('studentDashboard.myApplicationStep.details.oneTimePayment')}</p>
                                      <p className="text-sm font-black text-gray-900 uppercase truncate" title={fee.category || fee.name}>{fee.category || fee.name}</p>
@@ -626,7 +637,7 @@ export const UniversityDocumentsStep: React.FC<StepProps> = ({ onBack }) => {
  
                         {/* Institution Info - Mobile Only */}
                         <div className="block lg:hidden">
-                           <div className="bg-slate-50 rounded-[2.5rem] p-5 border border-slate-300">
+                           <div className="bg-white rounded-[2.5rem] p-5 border border-slate-300">
                               <h4 className="text-sm font-black text-gray-900 uppercase tracking-widest mb-6 border-b border-slate-300 pb-2">{t('studentDashboard.myApplicationStep.details.institution.title')}</h4>
                               <div className="space-y-4">
                                  {applicationDetails.scholarships?.universities?.contact?.email && (
@@ -685,22 +696,13 @@ export const UniversityDocumentsStep: React.FC<StepProps> = ({ onBack }) => {
                               ].map((doc) => {
                                 const docData = (applicationDetails.documents || []).find((d: any) => d.type === doc.key) || 
                                                 (applicationDetails.user_profiles?.documents || []).find((d: any) => d.type === doc.key);
-                                const status = docData?.status || 'not_submitted';
                                 const fileUrl = docData?.file_url || docData?.url;
                                 
                                 return (
-                                  <div key={doc.key} className="flex flex-col md:flex-row md:items-center justify-between p-4 bg-white border border-slate-100 rounded-2xl shadow-sm hover:border-slate-300 transition-colors gap-2">
-                                    <div className="flex items-center gap-3">
-                                      <div className={`w-8 h-8 rounded-lg flex items-center justify-center ${
-                                        status === 'approved' ? 'text-slate-900' :
-                                        status === 'under_review' ? 'text-blue-600' :
-                                        status === 'changes_requested' ? 'text-amber-600' :
-                                        'text-slate-400'
-                                      }`}>
-                                        <div className="w-1.5 h-1.5 rounded-full bg-current" />
-                                      </div>
-                                      <div className="flex flex-col text-left">
-                                        <span className="text-xs font-bold text-slate-700 uppercase tracking-tight">{doc.label}</span>
+                                  <div key={doc.key} className="flex items-start md:items-center justify-between py-4 border-b border-slate-100 last:border-0 transition-colors gap-2">
+                                    <div className="flex items-start md:items-center gap-2 flex-1 min-w-0">
+                                      <div className="flex flex-col text-left min-w-0 flex-1">
+                                        <span className="text-xs font-bold text-slate-700 uppercase tracking-tight break-words">{doc.label}</span>
                                         {docData?.uploaded_at && (
                                           <span className="text-[10px] text-slate-500 font-medium mt-0.5">
                                             {t('studentDashboard.myApplicationStep.details.submittedOn')} {new Date(docData.uploaded_at).toLocaleDateString('pt-BR')}
@@ -709,22 +711,22 @@ export const UniversityDocumentsStep: React.FC<StepProps> = ({ onBack }) => {
                                       </div>
                                     </div>
 
-                                    <div className="flex items-center justify-end gap-3 flex-1">
+                                    <div className="flex items-center justify-end gap-2 flex-shrink-0">
                                       {fileUrl && (
                                         <div className="flex items-center gap-1">
                                           <button 
                                             onClick={() => handleViewDocument(fileUrl)}
-                                            className="p-2 text-slate-400 hover:text-blue-600 hover:bg-blue-50 rounded-lg transition-colors"
+                                            className="p-2 md:p-3 text-slate-400 hover:text-blue-600 hover:bg-blue-50 rounded-lg transition-colors flex items-center justify-center"
                                             title={t('studentDashboard.myApplicationStep.details.view')}
                                           >
-                                            <Eye className="w-6 h-6" />
+                                            <Eye className="w-5 h-5" />
                                           </button>
                                           <button 
                                             onClick={() => handleDownloadDocument(fileUrl, doc.label)}
-                                            className="p-2 text-slate-400 hover:text-blue-600 hover:bg-blue-50 rounded-lg transition-colors"
+                                            className="p-2 md:p-3 text-slate-400 hover:text-blue-600 hover:bg-blue-50 rounded-lg transition-colors flex items-center justify-center"
                                             title={t('studentDashboard.myApplicationStep.details.download')}
                                           >
-                                            <Download className="w-6 h-6" />
+                                            <Download className="w-5 h-5" />
                                           </button>
                                         </div>
                                       )}
@@ -739,10 +741,29 @@ export const UniversityDocumentsStep: React.FC<StepProps> = ({ onBack }) => {
 
                      {/* Right: Financial & Sidebar */}
                      <div className="space-y-8">
+                       {/* Application Meta Info - Desktop Only */}
+                       <div className="hidden lg:block bg-white rounded-[2rem] p-5 md:p-8 border border-slate-300 shadow-sm space-y-6">
+                          <div className="flex flex-col border-b border-slate-100 pb-4">
+                            <p className="text-[10px] font-black text-slate-900 uppercase tracking-widest mb-1">{t('studentDashboard.applicationChatPage.details.studentInformation.studentType')}</p>
+                            <p className="text-sm font-black text-slate-900 uppercase">
+                              {applicationDetails.student_process_type === 'initial' ? t('studentDashboard.applicationChatPage.details.studentInformation.initialF1VisaRequired') :
+                               applicationDetails.student_process_type === 'transfer' ? t('studentDashboard.applicationChatPage.details.studentInformation.transferCurrentF1Student') :
+                               applicationDetails.student_process_type === 'change_of_status' ? t('studentDashboard.applicationChatPage.details.studentInformation.changeOfStatusFromOtherVisa') :
+                               applicationDetails.student_process_type || 'N/A'}
+                            </p>
+                          </div>
+                          <div className="flex flex-col">
+                            <p className="text-[10px] font-black text-slate-900 uppercase tracking-widest mb-1">{t('studentDashboard.applicationChatPage.details.studentInformation.applicationDate')}</p>
+                            <p className="text-sm font-black text-slate-900 uppercase">
+                              {new Date(applicationDetails.created_at || Date.now()).toLocaleDateString()}
+                            </p>
+                          </div>
+                       </div>
+
                        {/* Financial Summary Table - Desktop Only */}
                         <div className="hidden lg:block bg-white rounded-[2rem] p-5 md:p-8 text-slate-900 border border-slate-300 shadow-sm relative overflow-hidden">
                            <div className="absolute top-0 right-0 w-32 h-32 bg-slate-100 rounded-full -mr-16 -mt-16 blur-xl" />
-                           <h4 className="text-xs font-black uppercase tracking-widest text-slate-900 mb-6 pb-2 border-b border-slate-100 flex items-center justify-between">
+                           <h4 className="text-sm font-black uppercase tracking-widest text-slate-900 mb-6 pb-2 border-b border-slate-100 flex items-center justify-between">
                              {t('studentDashboard.myApplicationStep.details.finance.financialSummary')}
                            </h4>
                            <div className="space-y-6">
@@ -780,7 +801,7 @@ export const UniversityDocumentsStep: React.FC<StepProps> = ({ onBack }) => {
 
                        {/* Contact & Support - Desktop Only */}
                        <div className="hidden lg:block space-y-4">
-                         <div className="bg-slate-50 rounded-[2.5rem] p-5 md:p-8 border border-slate-300">
+                         <div className="bg-white rounded-[2.5rem] p-5 md:p-8 border border-slate-300">
                             <h4 className="text-sm font-black text-gray-900 uppercase tracking-widest mb-6 border-b border-slate-300 pb-2">{t('studentDashboard.myApplicationStep.details.institution.title')}</h4>
                             <div className="space-y-4">
                                {applicationDetails.scholarships?.universities?.contact?.email && (

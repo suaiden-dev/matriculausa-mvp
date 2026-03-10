@@ -54,7 +54,7 @@ const LayoutContent: React.FC<LayoutProps> = ({ children }) => {
       <main className={`flex-grow overflow-x-hidden ${isDashboard ? '' : 'overflow-y-auto'}`}>
         {children}
         {!isAdmin && !hideSmartChat && !isStudentChatPage && (
-          <SmartChat isStudentPage={location.pathname.startsWith('/student')} />
+          <SmartChat />
         )}
       </main>
       {!hideFooter && <Footer />}

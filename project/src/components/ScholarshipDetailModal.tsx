@@ -129,7 +129,7 @@ const ScholarshipDetailModal: React.FC<ScholarshipDetailModalProps> = ({
             onClick={(e) => e.stopPropagation()}
           >
             {/* Header with Image */}
-            <div className="relative flex-shrink-0 h-48 sm:h-72 bg-gradient-to-br from-[#05294E] via-[#0a3d6e] to-[#05294E] flex items-center justify-center p-6 sm:p-10">
+            <div className="relative flex-shrink-0 h-48 sm:h-72 bg-white flex items-center justify-center p-6 sm:p-10 border-b border-slate-100">
               {scholarship.image_url && canViewSensitive && (
                 <img 
                   src={scholarship.image_url} 
@@ -141,9 +141,9 @@ const ScholarshipDetailModal: React.FC<ScholarshipDetailModalProps> = ({
               {/* Close Button */}
               <button
                 onClick={onClose}
-                className="absolute top-3 right-3 p-2 bg-black/40 hover:bg-black/60 rounded-full transition-colors z-20 backdrop-blur-sm"
+                className="absolute top-3 right-3 p-2 bg-slate-100/80 hover:bg-slate-200 text-slate-500 rounded-full transition-colors z-20 backdrop-blur-sm"
               >
-                <X className="h-5 w-5 text-white" />
+                <X className="h-5 w-5" />
               </button>
             </div>
 

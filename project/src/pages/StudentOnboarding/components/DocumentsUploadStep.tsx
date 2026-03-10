@@ -668,7 +668,7 @@ export const DocumentsUploadStep: React.FC<StepProps> = ({ onNext }) => {
                               <button
                                 type="button"
                                 onClick={(e) => handleOpenDetailModal(e, scholarship)}
-                                className="bg-white/90 p-2.5 rounded-xl shadow-lg border border-slate-200 text-blue-600 hover:text-blue-700 hover:scale-110 transition-all backdrop-blur-md"
+                                className="bg-white/80 p-2.5 rounded-xl text-blue-600 hover:text-blue-700 hover:scale-110 transition-all backdrop-blur-md"
                                 title={t('scholarshipsPage.scholarshipCard.details')}
                               >
                                 <Eye className="w-5 h-5" />
@@ -684,25 +684,57 @@ export const DocumentsUploadStep: React.FC<StepProps> = ({ onNext }) => {
 
                             {/* Card Content */}
                             <div className="p-4 sm:p-5 flex-1 flex flex-col">
-                              {/* Status Badge & View Details - Mobile Inline */}
-                              <div className="sm:hidden mb-4 self-end flex items-center gap-2">
-                                <button
-                                  type="button"
-                                  onClick={(e) => handleOpenDetailModal(e, scholarship)}
-                                  className="bg-white/90 p-2 rounded-xl shadow-sm border border-slate-200 text-blue-600 hover:text-blue-700 transition-all"
-                                >
-                                  <Eye className="w-3.5 h-3.5" />
-                                </button>
-                                <div className={`px-3 py-1.5 rounded-xl text-xs font-black uppercase tracking-widest shadow-sm backdrop-blur-md border inline-block ${
-                                  isAppApproved ? 'bg-emerald-500/90 text-white border-emerald-400' :
-                                  app.status === 'rejected' ? 'bg-red-500/90 text-white border-red-400' :
-                                  'bg-amber-500/90 text-white border-amber-400'
-                                }`}>
-                                  {isAppApproved ? t('studentOnboarding.documentsUpload.cards.status.approved') : app.status === 'rejected' ? t('studentOnboarding.documentsUpload.cards.status.rejected') : t('studentOnboarding.documentsUpload.cards.status.underReview')}
+                              {/* Mobile Header: Logo (left) | Eye + Status (right) */}
+                              <div className="sm:hidden flex items-center justify-between mb-4 w-full">
+                                {/* Left Side: University Logo */}
+                                <div className="relative group/image flex-shrink-0">
+                                  {scholarship?.image_url || scholarship?.universities?.logo_url ? (
+                                    <div className="w-11 h-11 bg-white rounded-xl flex items-center justify-center overflow-hidden border border-slate-100 shadow-sm">
+                                      <img 
+                                        src={scholarship?.image_url || scholarship?.universities?.logo_url} 
+                                        alt="" 
+                                        className="w-full h-full object-contain p-1.5"
+                                        onError={(e) => { (e.target as HTMLImageElement).parentElement!.style.display = 'none'; }}
+                                      />
+                                    </div>
+                                  ) : (
+                                    <div className="w-11 h-11 bg-slate-50 rounded-xl flex items-center justify-center border border-slate-100">
+                                      <Building className="w-6 h-6 text-slate-300" />
+                                    </div>
+                                  )}
+                                </div>
+
+                                {/* Right Side: Eye + Status Badge */}
+                                <div className="flex items-center gap-2">
+                                  <button
+                                    type="button"
+                                    onClick={(e) => handleOpenDetailModal(e, scholarship)}
+                                    className="bg-transparent p-1 rounded-xl text-blue-600 active:scale-95 transition-all h-9 w-9 flex items-center justify-center"
+                                  >
+                                    <Eye className="w-5 h-5" />
+                                  </button>
+                                  <div className={`px-3 py-1.5 rounded-xl text-[10px] font-black uppercase tracking-widest border ${
+                                    isAppApproved ? 'bg-emerald-500 text-white border-emerald-400' :
+                                    app.status === 'rejected' ? 'bg-red-500 text-white border-red-400' :
+                                    'bg-amber-500 text-white border-amber-400'
+                                  }`}>
+                                    {isAppApproved ? t('studentOnboarding.documentsUpload.cards.status.approved') : app.status === 'rejected' ? t('studentOnboarding.documentsUpload.cards.status.rejected') : t('studentOnboarding.documentsUpload.cards.status.underReview')}
+                                  </div>
                                 </div>
                               </div>
 
-                              <div className="flex gap-4 items-center mb-4">
+                              {/* Mobile Row 2: Scholarship & University Title */}
+                              <div className="sm:hidden mb-4">
+                                <h4 className="text-lg font-bold text-slate-900 mb-0.5 leading-tight">
+                                  {scholarship?.title}
+                                </h4>
+                                <p className="text-sm font-medium text-slate-500">
+                                  {scholarship?.universities?.name || t('studentOnboarding.documentsUpload.cards.university')}
+                                </p>
+                              </div>
+
+                              {/* Desktop Content Block - Hidden on Mobile */}
+                              <div className="hidden sm:flex gap-4 items-center mb-4">
                                 <div className="relative group/image flex-shrink-0">
                                   {scholarship?.image_url || scholarship?.universities?.logo_url ? (
                                     <div className="w-28 h-28 bg-white rounded-[2rem] flex items-center justify-center overflow-hidden border border-gray-100/50 shadow-sm relative">
@@ -718,8 +750,6 @@ export const DocumentsUploadStep: React.FC<StepProps> = ({ onNext }) => {
                                       <Building className="w-16 h-16 text-slate-300" />
                                     </div>
                                   )}
-                                  
-
                                 </div>
                                 
                                 <div className="flex-1 min-w-0">
@@ -1015,7 +1045,7 @@ export const DocumentsUploadStep: React.FC<StepProps> = ({ onNext }) => {
   }
 
   return (
-    <div className="space-y-10 pb-24 sm:pb-12 max-w-4xl mx-auto">
+    <div className="space-y-10 pb-24 sm:pb-12 w-full">
       <div className="text-left space-y-4 px-4">
         <h2 className="text-3xl md:text-5xl font-black text-slate-900 uppercase tracking-tighter leading-none">
           {t('studentDashboard.documentsUploadStep.title')}

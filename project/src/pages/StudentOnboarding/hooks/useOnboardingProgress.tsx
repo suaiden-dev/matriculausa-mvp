@@ -28,23 +28,63 @@ export const useOnboardingProgress = () => {
   }, []);
 
   const [state, setState] = useState<OnboardingState>(() => {
-    // Inicializar com step do localStorage se existir (síncrono)
+    // 1. Calcular o passo baseado no perfil do banco de dados se disponível no contexto (Síncrono/Inmediato)
+    let calculatedStep: OnboardingStep = 'selection_fee';
+    
+    if (userProfile) {
+      const SURVEY_THRESHOLD_DATE = new Date('2026-02-18T21:50:00Z');
+      const paidAt = userProfile.selection_process_paid_at ? new Date(userProfile.selection_process_paid_at) : null;
+      const isExemptedByLegacy = userProfile.has_paid_selection_process_fee && (!paidAt || paidAt < SURVEY_THRESHOLD_DATE);
+      
+      // Busca evidências adicionais de pagamento para evitar falso-negativo no Passo 6
+      const hasFeesPaid = userProfile.is_application_fee_paid || !!userProfile.application_fee_paid_at || !!userProfile.scholarship_fee_paid_at;
+      const hasDocs = userProfile.documents_uploaded || !!userProfile.application_fee_paid_at;
+
+      if (userProfile.onboarding_completed) {
+        calculatedStep = 'completed';
+      } else if (!userProfile.has_paid_selection_process_fee) {
+        calculatedStep = 'selection_fee';
+      } else if (!userProfile.selection_survey_passed && !isExemptedByLegacy && !hasDocs && !hasFeesPaid) {
+        calculatedStep = 'selection_survey';
+      } else if (!userProfile.selected_scholarship_id && !hasDocs && !hasFeesPaid) {
+        calculatedStep = 'scholarship_selection';
+      } else if (!userProfile.documents_uploaded && !hasFeesPaid && userProfile.documents_status !== 'approved') {
+        calculatedStep = 'documents_upload';
+      } else if (!hasFeesPaid) {
+        calculatedStep = 'payment';
+      } else {
+        calculatedStep = 'my_applications';
+      }
+    }
+
+    // 2. Inicializar com step do localStorage se existir (síncrono)
     const savedStep = window.localStorage.getItem(ONBOARDING_STEP_KEY);
     const validSteps: OnboardingStep[] = ['selection_fee', 'identity_verification', 'selection_survey', 'scholarship_selection', 'process_type', 'documents_upload', 'payment', 'scholarship_fee', 'my_applications', 'completed'];
-    const initialStep = savedStep && validSteps.includes(savedStep as OnboardingStep) ? savedStep as OnboardingStep : 'selection_fee';
+    
+    let initialStep: OnboardingStep;
+    
+    if (savedStep && validSteps.includes(savedStep as OnboardingStep)) {
+      const savedIdx = validSteps.indexOf(savedStep as OnboardingStep);
+      const calculatedIdx = validSteps.indexOf(calculatedStep);
+      
+      // Se o localStorage está atrasado em relação ao perfil real, ignora-o
+      initialStep = (savedIdx < calculatedIdx) ? calculatedStep : (savedStep as OnboardingStep);
+    } else {
+      initialStep = calculatedStep;
+    }
     
     return {
       currentStep: initialStep,
-      selectionFeePaid: false,
-      selectionSurveyPassed: false,
-      scholarshipsSelected: false,
-      processTypeSelected: false,
-      documentsUploaded: false,
-      documentsApproved: false,
-      applicationFeePaid: false,
+      selectionFeePaid: userProfile?.has_paid_selection_process_fee || false,
+      selectionSurveyPassed: userProfile?.selection_survey_passed || false,
+      scholarshipsSelected: !!userProfile?.selected_scholarship_id,
+      processTypeSelected: !!userProfile?.documents_uploaded, // Heurística síncrona simples
+      documentsUploaded: userProfile?.documents_uploaded || false,
+      documentsApproved: userProfile?.documents_status === 'approved',
+      applicationFeePaid: userProfile?.is_application_fee_paid || false,
       scholarshipFeePaid: false,
       universityDocumentsUploaded: false,
-      onboardingCompleted: false,
+      onboardingCompleted: userProfile?.onboarding_completed || false,
     };
   });
   const [loading, setLoading] = useState(true);
@@ -262,78 +302,63 @@ export const useOnboardingProgress = () => {
       const savedStepLog = window.localStorage.getItem(ONBOARDING_STEP_KEY);
       console.log('[OnboardingDebug] Calculating step. savedStep from localStorage:', savedStepLog);
 
+      // 9. Calcular o primeiro passo pendente (O "lugar correto" onde o usuário deve estar)
+      let maxAllowedStep: OnboardingStep;
+      
+      if (onboardingCompleted) {
+        maxAllowedStep = 'completed';
+      } else if (!selectionFeePaid) {
+        maxAllowedStep = 'selection_fee';
+      } else if (!identityVerified && !documentsUploaded && !applicationFeePaid && !scholarshipFeePaid) {
+        maxAllowedStep = 'identity_verification';
+      } else if (!selectionSurveyPassed && !documentsUploaded && !applicationFeePaid && !scholarshipFeePaid) {
+        maxAllowedStep = 'selection_survey';
+      } else if (!scholarshipsSelected && !documentsUploaded && !applicationFeePaid && !scholarshipFeePaid) {
+        maxAllowedStep = 'scholarship_selection';
+      } else if (!processTypeSelected && !documentsUploaded && !applicationFeePaid && !scholarshipFeePaid) {
+        maxAllowedStep = 'process_type';
+      } else if (!documentsUploaded || !documentsApproved) {
+        maxAllowedStep = 'documents_upload';
+      } else if (!applicationFeePaid) {
+        const selectedAppId = window.localStorage.getItem('selected_application_id');
+        maxAllowedStep = selectedAppId ? 'payment' : 'documents_upload';
+      } else if (!scholarshipFeePaid) {
+        maxAllowedStep = 'scholarship_fee';
+      } else {
+        maxAllowedStep = 'my_applications';
+      }
+
       let currentStep: OnboardingStep;
       
       const urlParams = new URLSearchParams(window.location.search);
       const isForcingPortal = urlParams.get('step') === 'my_applications';
 
+      // Lógica de Redirecionamento Proativo
       if (onboardingCompleted && !isForcingPortal) {
         currentStep = 'completed';
-        // Limpar step salvo quando completado
         window.localStorage.removeItem(ONBOARDING_STEP_KEY);
-      } else if (onboardingCompleted && isForcingPortal) {
+      } else if (isForcingPortal) {
         currentStep = 'my_applications';
-      } else if (savedStep && savedStep !== 'completed') {
-        // Se há um step salvo e não está completado, calcular o máximo permitido
-        let maxAllowedStep: OnboardingStep = 'selection_fee';
-        
-        if (!selectionFeePaid) {
-          maxAllowedStep = 'selection_fee';
-        } else if (!identityVerified) {
-          maxAllowedStep = 'identity_verification';
-        } else if (!selectionSurveyPassed) {
-          maxAllowedStep = 'selection_survey';
-        } else if (!scholarshipsSelected) {
-          maxAllowedStep = 'scholarship_selection';
-        } else if (!processTypeSelected) {
-          maxAllowedStep = 'process_type';
-        } else if (!documentsUploaded || !documentsApproved) {
-          maxAllowedStep = 'documents_upload';
-        } else if (!applicationFeePaid) {
-          const selectedAppId = window.localStorage.getItem('selected_application_id');
-          maxAllowedStep = selectedAppId ? 'payment' : 'documents_upload';
-        } else if (!scholarshipFeePaid) {
-          maxAllowedStep = 'scholarship_fee';
-        } else {
-          maxAllowedStep = 'my_applications';
-        }
-
-        // Se o step salvo é mais avançado que o permitido, usar o permitido
-        // Caso contrário, respeitar o desejo do usuário (permitir voltar)
-        const allSteps: OnboardingStep[] = ['selection_fee', 'identity_verification', 'selection_survey', 'scholarship_selection', 'process_type', 'documents_upload', 'payment', 'scholarship_fee', 'my_applications', 'completed'];
-        const savedIdx = allSteps.indexOf(savedStep);
-        const maxIdx = allSteps.indexOf(maxAllowedStep);
-        
-        currentStep = savedIdx > maxIdx ? maxAllowedStep : savedStep;
       } else {
-        // Se não há step salvo e não é novo usuário, calcular baseado no progresso
-        if (!selectionFeePaid) {
-          currentStep = 'selection_fee';
-        } else if (!identityVerified) {
-          currentStep = 'identity_verification';
-        } else if (!selectionSurveyPassed) {
-          currentStep = 'selection_survey';
-        } else if (!scholarshipsSelected) {
-          currentStep = 'scholarship_selection';
-        } else if (!processTypeSelected) {
-          currentStep = 'process_type';
-        } else if (!documentsUploaded || !documentsApproved) {
-          currentStep = 'documents_upload';
-        } else if (!applicationFeePaid) {
-          // No cálculo automático (sem step salvo), só ir para payment se houver seleção
-          const selectedAppId = window.localStorage.getItem('selected_application_id');
-          if (selectedAppId) {
-            currentStep = 'payment';
-          } else {
-            currentStep = 'documents_upload';
-          }
-        } else if (!scholarshipFeePaid) {
-          currentStep = 'scholarship_fee';
-        } else if (!onboardingCompleted) {
-          // Sempre passar pelo university_documents antes de reach completed
-          currentStep = 'my_applications';
+        // SEMPRE Priorizar o progresso real do banco de dados ao carregar ou atualizar.
+        // Se houver um step salvo no localStorage, respeitá-lo apenas se ele NÃO estiver 
+        // tentando pular passos à frente do permitido, OU se o progresso real estiver 
+        // muito à frente do que está salvo localmente (o que acontece após limpar cache).
+        
+        const allStepsArray: OnboardingStep[] = ['selection_fee', 'identity_verification', 'selection_survey', 'scholarship_selection', 'process_type', 'documents_upload', 'payment', 'scholarship_fee', 'my_applications', 'completed'];
+        const savedStepIdx = allStepsArray.indexOf(savedStep || 'selection_fee');
+        const maxAllowedIdx = allStepsArray.indexOf(maxAllowedStep);
+
+        // Se o que está no localStorage é mais antigo do que o progresso real, 
+        // ou se não há nada no localStorage, pula para o progresso real.
+        if (savedStepIdx < maxAllowedIdx) {
+          currentStep = maxAllowedStep;
+        } else if (savedStepIdx > maxAllowedIdx) {
+          // Se o localStorage tentou pular pra frente do permitido por algum motivo, trava no real.
+          currentStep = maxAllowedStep;
         } else {
-          currentStep = 'completed';
+          // Se são iguais, mantém o salvo (ou o real, dá no mesmo).
+          currentStep = savedStep || maxAllowedStep;
         }
       }
 

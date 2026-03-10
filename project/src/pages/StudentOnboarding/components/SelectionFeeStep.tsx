@@ -1353,7 +1353,7 @@ export const SelectionFeeStep: React.FC<StepProps> = ({ onNext }) => {
 
           {/* Matricula Rewards / Referral Code Section */}
           {/* Mostrar seção sempre, exceto se tiver seller_referral_code */}
-          {!hasSellerReferralCode ? (
+          {!hasSellerReferralCode && !hasZellePendingSelectionFee ? (
             <div className="mb-6 space-y-4">
 
               {/* Mostrar campo de código sempre */}
@@ -1577,34 +1577,35 @@ export const SelectionFeeStep: React.FC<StepProps> = ({ onNext }) => {
 
 
 
-          {/* Terms acceptance section */}
-          <div className="mb-12">
-            <div className="flex items-center space-x-3 p-3 bg-gray-50 rounded-lg group/terms hover:bg-gray-100/50 transition-colors duration-300">
-              <label htmlFor="termsAccepted" className={`checkbox-container ${hasAcceptedTermsInDB ? 'cursor-not-allowed opacity-75' : 'cursor-pointer'} flex-shrink-0`}>
-                <input
-                  id="termsAccepted"
-                  name="termsAccepted"
-                  type="checkbox"
-                  checked={termsAccepted}
-                  onChange={handleCheckboxChange}
-                  disabled={hasAcceptedTermsInDB}
-                  className="custom-checkbox"
-                />
-                <div className="checkmark border-gray-300" />
-              </label>
-              <div className="text-sm sm:text-base font-medium text-gray-700 leading-relaxed flex-1 cursor-default group-hover/terms:text-gray-900 transition-colors">
-                <span className="text-red-500 font-bold mr-1">*</span>
-                Eu aceito os {' '}
-                <span 
-                  onClick={handleTermsClick}
-                  className="text-blue-600 font-bold underline hover:text-blue-700 cursor-pointer"
-                >
-                  {t('preCheckoutModal.termsAndConditions.title') || 'termos e condições'}
-                </span>
-                {' '} do contrato de prestação de serviços.
+          {!hasZellePendingSelectionFee && (
+            <div className="mb-12">
+              <div className="flex items-center space-x-3 p-3 bg-gray-50 rounded-lg group/terms hover:bg-gray-100/50 transition-colors duration-300">
+                <label htmlFor="termsAccepted" className={`checkbox-container ${hasAcceptedTermsInDB ? 'cursor-not-allowed opacity-75' : 'cursor-pointer'} flex-shrink-0`}>
+                  <input
+                    id="termsAccepted"
+                    name="termsAccepted"
+                    type="checkbox"
+                    checked={termsAccepted}
+                    onChange={handleCheckboxChange}
+                    disabled={hasAcceptedTermsInDB}
+                    className="custom-checkbox"
+                  />
+                  <div className="checkmark border-gray-300" />
+                </label>
+                <div className="text-sm sm:text-base font-medium text-gray-700 leading-relaxed flex-1 cursor-default group-hover/terms:text-gray-900 transition-colors">
+                  <span className="text-red-500 font-bold mr-1">*</span>
+                  Eu aceito os {' '}
+                  <span 
+                    onClick={handleTermsClick}
+                    className="text-blue-600 font-bold underline hover:text-blue-700 cursor-pointer"
+                  >
+                    {t('preCheckoutModal.termsAndConditions.title') || 'termos e condições'}
+                  </span>
+                  {' '} do contrato de prestação de serviços.
+                </div>
               </div>
             </div>
-          </div>
+          )}
 
           {error && (
             <div className="mb-6 p-4 bg-red-50 border-2 border-red-200 rounded-lg">
@@ -1630,23 +1631,46 @@ export const SelectionFeeStep: React.FC<StepProps> = ({ onNext }) => {
                 </div>
               ))}
             </div>
-          ) : hasZellePendingSelectionFee ? (
-            <div className="flex flex-col gap-0">
-              {/* Banner de aviso âmbar */}
-              <div className="bg-amber-50 border border-amber-200 rounded-t-[2rem] px-6 py-4 flex items-start gap-4">
-                <div className="w-10 h-10 bg-amber-100 rounded-2xl flex items-center justify-center border border-amber-200 flex-shrink-0 mt-0.5">
-                  <AlertCircle className="w-5 h-5 text-amber-600" />
+          ) : (hasZellePendingSelectionFee || showZelleCheckout) ? (
+            <div className={`flex flex-col gap-0 ${hasZellePendingSelectionFee ? '' : 'space-y-6 sm:bg-white sm:border sm:border-gray-100 sm:rounded-3xl py-4 pb-1 sm:p-6 sm:shadow-xl relative overflow-hidden sm:mx-0'}`}>
+              {hasZellePendingSelectionFee && (
+                <div className="bg-amber-50 border border-amber-200 rounded-t-[2rem] px-6 py-4 flex items-start gap-4">
+                  <div className="w-10 h-10 bg-amber-100 rounded-2xl flex items-center justify-center border border-amber-200 flex-shrink-0 mt-0.5">
+                    <AlertCircle className="w-5 h-5 text-amber-600" />
+                  </div>
+                  <div>
+                    <p className="text-sm font-black text-amber-700 uppercase tracking-tight">{t('selectionFeeStep.main.zelleProcessing.title')}</p>
+                    <p className="text-xs text-amber-600/80 font-medium mt-0.5 leading-relaxed">
+                      {t('selectionFeeStep.main.zelleProcessing.subtitle')}
+                    </p>
+                  </div>
                 </div>
-                <div>
-                  <p className="text-sm font-black text-amber-700 uppercase tracking-tight">{t('selectionFeeStep.main.zelleProcessing.title')}</p>
-                  <p className="text-xs text-amber-600/80 font-medium mt-0.5 leading-relaxed">
-                    {t('selectionFeeStep.main.zelleProcessing.subtitle')}
-                  </p>
-                </div>
-              </div>
+              )}
 
-              {/* ZelleCheckout inline — aberto automaticamente */}
-              <div className="border border-amber-200 border-t-0 rounded-b-[2rem] overflow-hidden bg-white shadow-sm">
+              {!hasZellePendingSelectionFee && (
+                <>
+                  <div className="hidden sm:block absolute top-0 right-0 w-32 h-32 bg-blue-500/5 rounded-full blur-[40px] -mr-16 -mt-16 pointer-events-none" />
+                  <div className="flex items-center justify-between mb-2 relative z-10 sm:px-0">
+                    <h3 className="text-xl font-black text-gray-900 uppercase tracking-tight">{t('selectionFeeStep.main.zellePayment')}</h3>
+                    
+                    {!isZelleProcessing && (
+                      <button
+                        onClick={() => {
+                          setShowZelleCheckout(false);
+                          setIsZelleProcessing(false);
+                          setSelectedMethod(null);
+                          setShowInlineCpf(false);
+                        }}
+                        className="p-2 hover:bg-gray-100 rounded-full transition-colors text-gray-400 hover:text-gray-900"
+                      >
+                        <X className="w-5 h-5" />
+                      </button>
+                    )}
+                  </div>
+                </>
+              )}
+
+              <div className={`${hasZellePendingSelectionFee ? 'border border-amber-200 border-t-0 rounded-b-[2rem] overflow-hidden bg-white shadow-sm' : ''}`}>
                 <ZelleCheckout
                   feeType="selection_process"
                   amount={computedBasePrice}
@@ -1672,62 +1696,16 @@ export const SelectionFeeStep: React.FC<StepProps> = ({ onNext }) => {
                     setIsZelleProcessing(false);
                   }}
                   onProcessingChange={(isProcessing) => {
+                    // Evitar loop: só refetch se o estado de processamento MUDAR para true
+                    // Se já estamos processando, não precisa refetch toda vez que o componente re-renderizar
+                    if (isProcessing && !isZelleProcessing) {
+                      console.log('🔄 [SelectionFeeStep] Detectada mudança para processamento, refetching status...');
+                      refetchPaymentStatus();
+                    }
                     setIsZelleProcessing(isProcessing);
-                    if (isProcessing) refetchPaymentStatus();
                   }}
                 />
               </div>
-            </div>
-          ) : showZelleCheckout ? (
-            <div className="space-y-6 sm:bg-white sm:border sm:border-gray-100 sm:rounded-3xl py-4 pb-1 sm:p-6 sm:shadow-xl relative overflow-hidden sm:mx-0">
-              <div className="hidden sm:block absolute top-0 right-0 w-32 h-32 bg-blue-500/5 rounded-full blur-[40px] -mr-16 -mt-16 pointer-events-none" />
-              <div className="flex items-center justify-between mb-2 relative z-10 sm:px-0">
-                <h3 className="text-xl font-black text-gray-900 uppercase tracking-tight">{t('selectionFeeStep.main.zellePayment')}</h3>
-                
-                {!isZelleProcessing && (
-                  <button
-                    onClick={() => {
-                      setShowZelleCheckout(false);
-                      setIsZelleProcessing(false);
-                      setSelectedMethod(null);
-                      setShowInlineCpf(false);
-                    }}
-                    className="p-2 hover:bg-gray-100 rounded-full transition-colors text-gray-400 hover:text-gray-900"
-                  >
-                    <X className="w-5 h-5" />
-                  </button>
-                )}
-              </div>
-              
-              <ZelleCheckout
-                feeType="selection_process"
-                amount={computedBasePrice}
-                scholarshipsIds={[]}
-                metadata={{
-                  discount_applied: computedBasePrice < selectionFeeAmount,
-                  original_amount: selectionFeeAmount,
-                  final_amount: computedBasePrice,
-                  ...(activeDiscount?.has_discount && activeDiscount.affiliate_code ? { discount_code: activeDiscount.affiliate_code } : {}),
-                  ...(validationResult?.isValid && codeApplied && discountCode.trim() ? { discount_code: discountCode.trim().toUpperCase() } : {}),
-                  promotional_coupon: (window as any).__checkout_promotional_coupon || null
-                }}
-                onSuccess={() => {
-                  console.log('✅ [SelectionFeeStep] Pagamento Zelle aprovado');
-                  setZellePaymentSubmitted(false);
-                  setShowZelleCheckout(false);
-                  setIsZelleProcessing(false);
-                  onNext(); 
-                }}
-                onError={(error) => {
-                  setError(error);
-                  setZellePaymentSubmitted(false);
-                  setIsZelleProcessing(false);
-                }}
-                onProcessingChange={(isProcessing) => {
-                  setIsZelleProcessing(isProcessing);
-                  if (isProcessing) refetchPaymentStatus();
-                }}
-              />
             </div>
           ) : (
             <div className="space-y-4 relative z-10">

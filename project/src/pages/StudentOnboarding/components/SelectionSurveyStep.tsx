@@ -387,10 +387,20 @@ export const SelectionSurveyStep: React.FC<StepProps> = ({ onNext }) => {
                     ))}
                 </div>
 
-                <div className="mt-12 flex flex-col sm:flex-row justify-between items-center gap-4">
+                <div className="mt-12 flex flex-col-reverse sm:flex-row justify-between items-center gap-4">
                     <div className="flex gap-4 w-full sm:w-auto">
+                        {currentSection > 0 && (
+                            <Button
+                                variant="outline"
+                                onClick={handleBack}
+                                className="flex-1 sm:flex-none h-14 px-8 rounded-2xl border-2 border-gray-100 text-gray-600 font-bold hover:bg-gray-50 hover:border-gray-300 hover:text-gray-800 transition-all"
+                            >
+                                {t('common.back')}
+                            </Button>
+                        )}
+                    </div>
 
-                        
+                    <div className="flex gap-4 w-full sm:w-auto">
                         {currentSection < sections.length - 1 ? (
                             <Button
                                 onClick={handleNext}
@@ -417,20 +427,6 @@ export const SelectionSurveyStep: React.FC<StepProps> = ({ onNext }) => {
                             </Button>
                         )}
                     </div>
-
-                    <div className="flex gap-4 w-full sm:w-auto">
-                        {currentSection > 0 && (
-                            <Button
-                                variant="outline"
-                                onClick={handleBack}
-                                className="flex-1 sm:flex-none h-14 px-8 rounded-2xl border-2 border-gray-100 text-gray-600 font-bold hover:bg-gray-50 hover:border-gray-300 hover:text-gray-800 transition-all"
-                            >
-                                {t('common.back')}
-                            </Button>
-                        )}
-                    </div>
-
-                    
                 </div>
             </div>
         </div>

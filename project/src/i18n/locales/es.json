@@ -358,7 +358,7 @@
       "securePayment": "Secure Payment",
       "securePaymentDesc": "Your payment information is encrypted and secure",
       "verificationRequired": "Verification Required",
-      "verificationRequiredDesc": "Payment will be verified automatically within 24 hours",
+      "verificationRequiredDesc": "Payment will be verified automatically within 48 hours",
       "zelleTransfer": "Zelle Transfer",
       "zelleTransferDesc": "Complete the transfer and upload your confirmation",
       "paymentInstructions": "Payment Instructions",
@@ -437,7 +437,7 @@
       "approved": "Tu pago ha sido verificado y aprobado con éxito.",
       "rejected": "Tu comprobante no fue aprobado. Verifica que toda la información sea visible.",
       "error": "Ocurrió un error al verificar tu pago. Por favor, inténtalo de nuevo.",
-      "under_review": "Tu comprobante requiere verificación adicional. Nuestro equipo lo revisará en 24 horas."
+      "under_review": "Tu comprobante requiere verificación adicional. Nuestro equipo lo revisará en 48 horas."
     },
     "actions": {
       "tryAgain": "Intentar de Nuevo",
@@ -2538,6 +2538,11 @@
           "email": "Correo Electrónico",
           "phone": "Teléfono",
           "country": "País",
+          "studentType": "Tipo de Proceso",
+          "initialF1VisaRequired": "Inicial - Visa F-1 Necesaria",
+          "transferCurrentF1Student": "Transferencia - Estudiante F-1 Actual",
+          "changeOfStatusFromOtherVisa": "Cambio de Estatus - De Otra Visa",
+          "applicationDate": "Fecha de la Solicitud",
           "fieldOfInterest": "Campo de Interés",
           "academicLevel": "Nivel Académico",
           "gpa": "GPA",
