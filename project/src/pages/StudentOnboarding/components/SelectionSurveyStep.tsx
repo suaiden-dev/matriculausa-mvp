@@ -4,7 +4,7 @@ import ProgressBar from '@/components/form/ProgressBar';
 import QuestionField from '@/components/form/QuestionField';
 import ResultsPage from '@/components/form/ResultsPage';
 import { Button } from '@/components/ui/button';
-import { ArrowLeft, ArrowRight, FastForward, Loader2 } from 'lucide-react';
+import { FastForward, Loader2 } from 'lucide-react';
 import { toast } from 'react-hot-toast';
 import { supabase } from '../../../lib/supabase';
 import { useAuth } from '../../../hooks/useAuth';
@@ -336,18 +336,31 @@ export const SelectionSurveyStep: React.FC<StepProps> = ({ onNext }) => {
 
     return (
         <div id="survey-top" className="max-w-4xl mx-auto w-full space-y-8 sm:space-y-10 pb-12">
-            <div className="mb-10 text-left">
-                <h1 className="text-3xl md:text-5xl font-black text-gray-900 uppercase tracking-tighter mb-4 leading-none">
-                    {t('selectionSurvey.title')}
-                </h1>
-                <p className="text-slate-600 text-base md:text-lg font-medium max-w-2xl">
-                    <Trans
-                        i18nKey="selectionSurvey.subtitle"
-                        components={[
-                            <span key="0" className="!text-blue-600 font-bold" />
-                        ]}
-                    />
-                </p>
+            <div className="mb-10 flex flex-col sm:flex-row justify-between items-start gap-4">
+                <div className="text-left">
+                    <h1 className="text-3xl md:text-5xl font-black text-gray-900 uppercase tracking-tighter mb-4 leading-none">
+                        {t('selectionSurvey.title')}
+                    </h1>
+                    <p className="text-slate-600 text-base md:text-lg font-medium max-w-2xl">
+                        <Trans
+                            i18nKey="selectionSurvey.subtitle"
+                            components={[
+                                <span key="0" className="!text-blue-600 font-bold" />
+                            ]}
+                        />
+                    </p>
+                </div>
+                {isLocalhost && (
+                    <Button
+                        variant="ghost"
+                        onClick={handleSkip}
+                        disabled={isSaving}
+                        className="w-full sm:w-auto h-12 px-6 rounded-xl text-slate-500 font-bold bg-slate-100 hover:bg-slate-200 hover:text-slate-700 transition-all border border-slate-200 hover:border-slate-300 shadow-sm"
+                    >
+                        <FastForward className="w-4 h-4 mr-2" />
+                        Pular (Dev)
+                    </Button>
+                )}
             </div>
 
             <div className="bg-white border border-gray-100 rounded-[2.5rem] p-6 md:p-10 shadow-2xl relative overflow-hidden">
@@ -374,7 +387,7 @@ export const SelectionSurveyStep: React.FC<StepProps> = ({ onNext }) => {
                     ))}
                 </div>
 
-                <div className="mt-12 flex flex-col sm:flex-row justify-between items-center gap-4">
+                <div className="mt-12 flex flex-col-reverse sm:flex-row justify-between items-center gap-4">
                     <div className="flex gap-4 w-full sm:w-auto">
                         {currentSection > 0 && (
                             <Button
@@ -382,38 +395,24 @@ export const SelectionSurveyStep: React.FC<StepProps> = ({ onNext }) => {
                                 onClick={handleBack}
                                 className="flex-1 sm:flex-none h-14 px-8 rounded-2xl border-2 border-gray-100 text-gray-600 font-bold hover:bg-gray-50 hover:border-gray-300 hover:text-gray-800 transition-all"
                             >
-                                <ArrowLeft className="w-5 h-5 mr-2" />
                                 {t('common.back')}
                             </Button>
                         )}
                     </div>
 
                     <div className="flex gap-4 w-full sm:w-auto">
-                        {isLocalhost && (
-                            <Button
-                                variant="ghost"
-                                onClick={handleSkip}
-                                disabled={isSaving}
-                                className="flex-1 sm:flex-none h-14 px-8 rounded-2xl text-gray-400 font-bold hover:text-gray-600 transition-all"
-                            >
-                                <FastForward className="w-5 h-5 mr-2" />
-                                Pular (Dev)
-                            </Button>
-                        )}
-                        
                         {currentSection < sections.length - 1 ? (
                             <Button
                                 onClick={handleNext}
-                                className="flex-1 sm:flex-none h-14 px-10 rounded-2xl !bg-blue-600 hover:!bg-blue-700 text-white font-black uppercase tracking-widest text-sm shadow-xl shadow-blue-500/20 active:scale-95 transition-all"
+                                className="flex-1 sm:flex-none h-14 px-8 rounded-2xl !bg-blue-600 hover:!bg-blue-700 text-white font-bold shadow-xl shadow-blue-500/20 active:scale-95 transition-all"
                             >
                                 {t('common.next')}
-                                <ArrowRight className="w-5 h-5 ml-2" />
                             </Button>
                         ) : (
                             <Button
                                 onClick={handleSubmit}
                                 disabled={isSaving}
-                                className="flex-1 sm:flex-none h-14 px-10 rounded-2xl !bg-blue-600 hover:!bg-blue-700 text-white font-black uppercase tracking-widest text-sm shadow-xl shadow-blue-500/20 active:scale-95 transition-all"
+                                className="flex-1 sm:flex-none h-14 px-8 rounded-2xl !bg-blue-600 hover:!bg-blue-700 text-white font-bold shadow-xl shadow-blue-500/20 active:scale-95 transition-all"
                             >
                                 {isSaving ? (
                                     <>
@@ -423,7 +422,6 @@ export const SelectionSurveyStep: React.FC<StepProps> = ({ onNext }) => {
                                 ) : (
                                     <>
                                         {t('common.finish')}
-                                        <ArrowRight className="w-5 h-5 ml-2" />
                                     </>
                                 )}
                             </Button>

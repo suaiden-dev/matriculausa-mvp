@@ -82,7 +82,7 @@ const ScholarshipCardFullComponent: React.FC<ScholarshipCardFullProps> = ({
             src={scholarship.image_url}
             alt={scholarship.title}
             onError={() => setBrokenImage(true)}
-            className="w-full h-full object-contain p-4 group-hover:scale-110 transition-transform duration-700"
+            className="w-full h-full object-contain p-4 group-hover:scale-[1.02] transition-transform duration-700"
           />
         ) : (
           <div className="flex items-center justify-center w-full h-full text-slate-400">
@@ -103,13 +103,17 @@ const ScholarshipCardFullComponent: React.FC<ScholarshipCardFullProps> = ({
             </div>
           )}
 
-          {/* Featured/Highlighted Badge */}
-          {scholarship.is_highlighted && (
-            <div className="bg-gradient-to-r from-yellow-400 to-orange-500 text-white px-3 py-1.5 rounded-lg text-xs font-black flex items-center shadow-lg uppercase tracking-wider">
-              <Star className="h-3.5 w-3.5 mr-1.5 fill-current" />
-              {t('common.featured')}
+          <div className="flex flex-col items-end gap-2">
+            <div className="flex items-center gap-2">
+
+              {scholarship.is_highlighted && (
+                <div className="bg-gradient-to-r from-yellow-400 to-orange-500 text-white px-3 py-1.5 rounded-xl text-xs font-black flex items-center shadow-lg uppercase tracking-wider h-9">
+                  <Star className="h-3.5 w-3.5 mr-1.5 fill-current" />
+                  {t('common.featured')}
+                </div>
+              )}
             </div>
-          )}
+          </div>
         </div>
       </div>
 
@@ -275,7 +279,7 @@ const ScholarshipCardFullComponent: React.FC<ScholarshipCardFullProps> = ({
           {!scholarship.is_active || isBlocked ? (
             <button
               disabled
-              className="w-full h-9 px-3 rounded-lg font-semibold cursor-not-allowed flex items-center justify-center bg-slate-300 text-slate-500 opacity-60 text-xs"
+              className="w-full h-10 px-3 rounded-xl font-semibold cursor-not-allowed flex items-center justify-center bg-slate-300 text-slate-500 opacity-60 text-sm"
             >
               <AlertTriangle className="h-3 w-3 mr-1.5" />
               {isBlocked ? t('scholarshipDeadline.3800Expired') : t('scholarshipsPage.scholarshipCard.notAvailable')}
@@ -288,11 +292,11 @@ const ScholarshipCardFullComponent: React.FC<ScholarshipCardFullProps> = ({
                 onToggle();
               }}
               disabled={isLocked}
-              className={`group/btn w-full h-10 px-4 rounded-xl font-bold text-xs sm:text-sm flex items-center justify-center transition-all duration-300 relative overflow-hidden backdrop-blur-md border border-white/20 shadow-lg hover:shadow-xl ${isLocked
-                ? 'bg-slate-300/80 text-slate-500 cursor-not-allowed'
-                : isSelected
-                  ? 'bg-gradient-to-r from-blue-600/90 to-blue-700/90 text-white hover:from-blue-600 hover:to-blue-700'
-                  : 'bg-gradient-to-r from-blue-500/85 to-indigo-600/85 text-white hover:from-blue-600/90 hover:to-indigo-700/90'
+              className={`group/btn w-full h-10 px-4 rounded-xl font-bold text-sm flex items-center justify-center transition-all duration-300 relative overflow-hidden backdrop-blur-md border border-white/20 shadow-lg hover:shadow-xl ${isLocked
+                  ? 'bg-slate-300/80 text-slate-500 cursor-not-allowed'
+                  : isSelected
+                    ? 'bg-gradient-to-r from-blue-600/90 to-blue-700/90 text-white hover:from-blue-600 hover:to-blue-700'
+                    : 'bg-gradient-to-r from-blue-500/85 to-indigo-600/85 text-white hover:from-blue-600/90 hover:to-indigo-700/90'
                 }`}
             >
               <div className="absolute inset-0 bg-gradient-to-r from-white/0 via-white/25 to-white/0 transform -skew-x-12 -translate-x-full group-hover/btn:translate-x-full transition-transform duration-1000"></div>

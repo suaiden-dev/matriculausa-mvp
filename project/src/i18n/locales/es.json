@@ -467,7 +467,7 @@
       "securePayment": "Secure Payment",
       "securePaymentDesc": "Your payment information is encrypted and secure",
       "verificationRequired": "Verification Required",
-      "verificationRequiredDesc": "Payment will be verified automatically within 24 hours",
+      "verificationRequiredDesc": "Payment will be verified automatically within 48 hours",
       "zelleTransfer": "Zelle Transfer",
       "zelleTransferDesc": "Complete the transfer and upload your confirmation",
       "paymentInstructions": "Payment Instructions",
@@ -523,47 +523,104 @@
     }
   },
   "zelleWaiting": {
-    "title": "Waiting for Verification",
-    "subtitle": "We are analyzing your payment receipt",
-    "analyzingPayment": "Analyzing your payment receipt...",
-    "waitTime": "Wait time",
+    "title": "Esperando Verificación",
+    "subtitle": "Estamos analizando tu comprobante de pago",
+    "analyzingPayment": "Analizando tu comprobante de pago...",
+    "waitTime": "Tiempo de espera",
     "status": {
-      "pending": "Pending",
-      "approved": "Approved",
-      "rejected": "Rejected",
+      "pending": "Pendiente",
+      "approved": "Aprobado",
+      "rejected": "Rechazado",
       "error": "Error"
     },
     "messages": {
-      "analyzing": "Analyzing your payment receipt...",
-      "approved": "Payment approved! 🎉",
-      "rejected": "Payment rejected ❌",
-      "error": "Error verifying payment",
-      "under_review": "Processing Payment"
+      "analyzing": "Analizando tu comprobante de pago...",
+      "approved": "Pago aprobado! 🎉",
+      "rejected": "Pago rechazado ❌",
+      "error": "Error al verificar el pago",
+      "under_review": "Procesando Pago"
     },
     "details": {
-      "analyzing": "Our team is verifying your receipt. This may take a few minutes.",
-      "approved": "Your payment has been verified and approved successfully.",
-      "rejected": "Your receipt was not approved. Please check that all information is visible.",
-      "error": "An error occurred while verifying your payment. Please try again.",
-      "under_review": "Your payment proof requires additional verification. Our team will review it within 24 hours."
+      "analyzing": "Nuestro equipo está verificando tu comprobante. Esto puede tomar unos minutos.",
+      "analyzingAi": "Nuestra IA está validando tu comprobante de pago",
+      "approved": "Tu pago ha sido verificado y aprobado con éxito.",
+      "rejected": "Tu comprobante no fue aprobado. Verifica que toda la información sea visible.",
+      "error": "Ocurrió un error al verificar tu pago. Por favor, inténtalo de nuevo.",
+      "under_review": "Tu comprobante requiere verificación adicional. Nuestro equipo lo revisará en 48 horas."
     },
     "actions": {
-      "tryAgain": "Try Again",
-      "contactSupport": "Contact Support",
-      "backToCheckout": "Back to Dashboard"
+      "tryAgain": "Intentar de Nuevo",
+      "contactSupport": "Contactar Soporte",
+      "backToCheckout": "Volver al Dashboard",
+      "uploadingDocument": "Subiendo Documento...",
+      "uploadingWait": "Por favor espera mientras subimos tu comprobante de pago",
+      "sendingDocument": "Enviando para Verificación...",
+      "sendingWait": "Tu comprobante de pago está siendo enviado para validación automática",
+      "analyzingWait": "Por favor espera mientras analizamos tu comprobante"
     },
-    "redirecting": "Redirecting to success page...",
-    "analysisTime": "Analysis time: ~40 seconds",
+    "redirecting": "Redirigiendo a la página de éxito...",
+    "analysisTime": "Tiempo de análisis: ~40 segundos",
     "paymentInfo": {
-      "title": "Payment Information",
-      "feeType": "Fee Type:",
-      "amount": "Amount:",
-      "paymentId": "Payment ID:"
+      "title": "Información del Pago",
+      "feeType": "Tipo de Tarifa:",
+      "amount": "Monto:",
+      "paymentId": "ID de Pago:"
     },
     "helpText": {
-      "default": "If the process takes longer than 2 minutes, please contact support.",
-      "underReview": "Your payment is under review. Please wait for verification."
+      "default": "Si el proceso toma más de 2 minutos, contacta al soporte.",
+      "underReview": "Tu pago está en revisión. Por favor espera la verificación."
     }
+  },
+  "paymentStep": {
+    "loading": "Cargando tus aplicaciones...",
+    "title": "Tarifa de Matrícula",
+    "securePaymentBadge": "Pago Seguro y Cifrado",
+    "subtitleAllPaid": "Todas las tarifas de matrícula han sido procesadas. Haz clic en el botón de abajo para completar tu incorporación.",
+    "subtitlePending": "Paga la tarifa de matrícula de la beca seleccionada para confirmar oficialmente tu elección y asegurar tu lugar.",
+    "completedTitle": "Paso Completado",
+    "completedSubtitle": "La tarifa de matrícula de tu beca ya fue procesada. Este paso está completo.",
+    "completedTitle2": "La tarifa de matrícula fue procesada con éxito.",
+    "continue": "Continuar",
+    "enrollmentFeeLabel": "Tarifa de Matrícula",
+    "feeWithoutDependents": "Tarifa sin dependientes:",
+    "dependentsSingular": "dependiente (+$100 cada uno):",
+    "dependentsPlural": "dependientes (+$100 cada uno):",
+    "creditCard": "Tarjeta de Crédito",
+    "creditCardFees": "* Pueden incluir tarifas de procesamiento",
+    "pixFees": "* Pueden incluir tarifas de procesamiento",
+    "parcelowFees": "* Pueden incluir tarifas de operadora y procesamiento de la plataforma",
+    "parcelowInstallments": "Hasta 12 cuotas",
+    "zelleNoFees": "Sin Cargos",
+    "zelleProcessingTime": "El procesamiento puede tomar hasta 48 horas",
+    "parcelowCpfTitle": "Verificación Obligatoria Parcelow",
+    "parcelowCpfPlaceholder": "Ingresa tu CPF (000.000.000-00)",
+    "parcelowCpfInvalid": "CPF inválido. Ingresa los 11 dígitos.",
+    "parcelowCpfError": "Error al guardar CPF. Inténtalo de nuevo.",
+    "goToPayment": "Ir al pago",
+    "zellePendingTitle": "Pago Zelle en Análisis",
+    "zellePendingMessage": "Ya iniciaste un pago vía Zelle. Espera la confirmación antes de usar otro método. Esto puede tomar hasta 48 horas.",
+    "paymentConfirmed": "Pago Confirmado",
+    "paymentConfirmedSubtitle": "Esta tarifa ya fue procesada con éxito.",
+    "noApplications": "Ninguna aplicación activa",
+    "noApplicationsMessage": "Aún no has seleccionado ninguna beca. Vuelve y selecciona al menos una para continuar.",
+    "backToSelection": "Volver a Selección"
+  },
+  "zelleModal": {
+    "finalAmount": "Monto Final:",
+    "feeType": "Tipo de Tarifa:",
+    "paymentId": "ID de Pago:",
+    "submitted": "Enviado:",
+    "paymentUnderReview": "Pago en Revisión",
+    "paymentUnderReviewMessage": "Serás notificado cuando la revisión esté completa. Por favor, no envíes otro pago.",
+    "rejectionReason": "Motivo del Rechazo:",
+    "paymentDetails": "Detalles del Pago:",
+    "originalAmount": "Monto Original:",
+    "discountApplied": "Descuento Aplicado:",
+    "amount": "Monto:",
+    "uploadNewProof": "Subir Nuevo Comprobante",
+    "uploadNewProofHint": "Haz clic en el botón de arriba para subir una nueva captura de tu comprobante de pago",
+    "removeFile": "Eliminar",
+    "changeFile": "Cambiar Archivo"
   },
   "zelleSuccess": {
     "title": "Zelle Payment Successful!",
@@ -1904,6 +1961,16 @@
       "description": "Esta tarifa cubre el procesamiento de su solicitud, la evaluación de documentos y el apoyo inicial para su viaje de estudios en los Estados Unidos.",
       "identityVerification": "Verificación de Identidad",
       "identityVerificationSubtitle": "Este paso es obligatorio",
+      "identity": {
+        "success": "¡Foto enviada con éxito!",
+        "error": "Error al guardar foto. Inténtalo de nuevo.",
+        "continue": "Continuar",
+        "sending": "Enviando...",
+        "sendPhoto": "Enviar Foto",
+        "completed": "Verificación Completada",
+        "completedTitle": "¡Verificación completada!",
+        "alreadySent": "Su foto de identidad ya ha sido enviada. Puede continuar con el cuestionario."
+      },
       "discountApplied": "Descuento Aplicado",
       "couponApplied": "Cupón {{coupon}} Aplicado",
       "methods": {
@@ -2000,6 +2067,20 @@
           "waiting_approval": "Esperando Aprobación",
           "completed": "Completado",
           "my_applications": "Mis Solicitudes"
+        },
+        "stepDescriptions": {
+          "selection_fee": "Paga la tarifa para desbloquear el acceso a las becas.",
+          "identity_verification": "Verifica tu identidad para continuar el proceso.",
+          "selection_survey": "Responde el cuestionario de selección con al menos 80% de aciertos.",
+          "scholarship_selection": "Elige las becas a las que deseas aplicar.",
+          "process_type": "Indica tu tipo de proceso (Inicial, Transferencia o COS).",
+          "documents_upload": "Envía tu pasaporte, diploma y comprobante de fondos.",
+          "payment": "Paga la tarifa de matrícula para asegurar tu lugar.",
+          "scholarship_fee": "Paga la tarifa de beca para confirmar tu inscripción.",
+          "university_documents": "Envía los documentos requeridos por la universidad.",
+          "waiting_approval": "Tus documentos están en revisión. Plazo de 48h.",
+          "my_applications": "Sigue tus documentos y la carta de aceptación.",
+          "completed": "¡Proceso completado con éxito!"
         }
       }
     },
@@ -2068,12 +2149,80 @@
       "browseScholarships": "Explorar Becas"
     },
     "documentsAndScholarshipChoice": {
+      "title": "Configuración del Proceso de Solicitud",
+      "subtitle": "Complete su proceso de solicitud de estudiante seleccionando su estado y subiendo los documentos requeridos",
+      "step1Title": "¿Cuál es su estado actual en los EE. UU.?",
+      "step1Description": "Seleccione su estado de inmigración actual para ayudarnos a brindar la mejor orientación para su proceso de solicitud.",
+      "firstTimeF1": "Primera solicitud de visa F-1",
+      "firstTimeF1Description": "Estoy fuera de los EE. UU. y necesito una visa de estudiante F-1 para estudiar en Estados Unidos.",
+      "schoolTransfer": "Transferencia de escuela",
+      "schoolTransferDescription": "Ya estoy en los EE. UU. con una visa de estudiante F-1 y quiero cambiar de escuela.",
+      "statusChange": "Cambio de Estatus",
+      "statusChangeDescription": "Ya estoy en los EE. UU. con otra visa y quiero cambiar mi estatus a estudiante.",
+      "continueToDocuments": "Continuar a Documentos",
+      "saving": "Guardando...",
+      "step2Title": "Subida de Documentos",
+      "step2Description": "Suba los documentos requeridos para su solicitud.",
+      "step2Important": "IMPORTANTE: Todos los documentos deben estar en inglés. Si sus documentos están en otro idioma, puede solicitar una traducción certificada a través de nuestro socio Lush America.",
+      "step2PartnerUrl": "www.lushamerica.com",
+      "languageError": "Este documento no está en inglés. Proporcione una versión en inglés o una traducción certificada.",
+      "accessError": "No se puede procesar {{documentType}}. El archivo puede estar corrupto o en un formato no compatible. Intente subir un nuevo archivo.",
+      "fundsDataError": "No se puede validar el comprobante de fondos. El documento puede no contener información clara del saldo bancario o estar en un formato ilegible. Intente subir un estado de cuenta bancario más claro y legible.",
+      "currencyFieldError": "Error de sistema interno al procesar datos de divisas en {{documentType}}. El documento puede no contener información de divisas válida o estar en un formato no compatible. Intente subir un documento más claro.",
+      "insufficientFundsError": "Se detectaron fondos insuficientes. El saldo mínimo requerido es de $22,000 USD.",
+      "diplomaDamagedError": "El diploma parece estar dañado o poco claro. Suba una copia clara y sin daños.",
+      "passport": "Pasaporte",
+      "passportDescription": "Suba una foto clara o un escaneo de su pasaporte.",
+      "diploma": "Diploma de Escuela Secundaria",
+      "diplomaDescription": "Suba su diploma de escuela secundaria o equivalente.",
+      "fundsProof": "Comprobante de Ingresos",
+      "fundsProofDescription": "Suba estados de cuenta bancarios o documentos financieros. Se requiere un mínimo de $22,000 USD, más $5,000 USD por cada dependiente.",
+      "documents": "documentos",
+      "dragDropFiles": "Arrastre archivos o haga clic para seleccionar",
+      "onlyPdfSupported": "Solo se admiten archivos PDF para múltiples documentos",
+      "addMoreDocuments": "Agregar más documentos",
+      "documentLimitExceeded": "Límite de {{limit}} documentos excedido",
+      "fileSizeExceeded": "El archivo {{fileName}} excede el límite de 10MB",
+      "onlyPdfAllowed": "Solo se permiten archivos PDF para comprobantes de fondos",
+      "totalSizeExceeded": "El tamaño total de los archivos excede los 10MB",
+      "mergingDocuments": "Combinando documentos...",
+      "chooseFile": "Seleccionar archivo",
+      "noFileChosen": "Ningún archivo seleccionado",
+      "continueToManualReview": "Continuar a Revisión Manual",
+      "uploadDocuments": "Subir y Analizar Documentos",
+      "uploadingDocuments": "Enviando documentos...",
+      "analyzingDocuments": "Analizando Documentos...",
+      "documentsApprovedTitle": "¡Documentos Aprobados! ✅",
+      "documentsApprovedDescription": "¡Excelente! Sus documentos han sido aprobados y está listo para proceder con el pago de la tarifa de solicitud.",
+      "proceedToPayment": "Proceder al Pago",
+      "analyzingOverlayTitle": "Analizando sus documentos...",
+      "analyzingOverlayDescription": "Esto puede tardar hasta 40 segundos. Por favor, no cierre esta ventana.",
+      "manualReviewTitle": "Documentos en Revisión",
+      "manualReviewDescription": "Nuestra inteligencia artificial no pudo identificar toda la información necesaria en los documentos enviados. ¡No se preocupe! Su documentación ha sido enviada a nuestro equipo de soporte para realizar un análisis detallado.",
+      "manualReviewTimeframe": "El análisis se completará en 48 horas y recibirá los resultados por correo electrónico.",
+      "aiProcessingFailed": "Nuestra IA no pudo procesar los documentos automáticamente.",
+      "teamAnalysisMessage": "¡No se preocupe! Los hemos enviado a nuestro equipo para un análisis detallado.",
+      "needHelp": "¿Necesita Ayuda?",
+      "smartAssistantHelp": "Asistente Inteligente:",
+      "smartAssistantDescription": "Use el botón flotante en la esquina de la pantalla para hacer preguntas en tiempo real.",
+      "supportChatHelp": "Chat de Soporte:",
+      "supportChatDescription": "Acceda al chat del equipo justo debajo de la sección 'Mis Solicitudes' en el panel.",
+      "backToOverview": "Entendido, Volver al Panel",
+      "gotItContinue": "Entendido, Continuar",
       "passportFormatError": "Error de formato de pasaporte",
       "passportMRZError": "Error de MRZ de pasaporte",
       "bankStatementNotReadableError": "Estado de cuenta bancario no legible",
       "diplomaNotReadableError": "Diploma no legible",
       "diplomaProcessError": "Error de procesamiento de diploma",
       "fundsValidationError": "Error de validación de fondos"
+    },
+    "documentsUploadStep": {
+      "title": "Envío de Documentos",
+      "subtitle": "Necesitamos algunos documentos para verificar su elegibilidad y procesar su solicitud.",
+      "importantNotice": "Asegúrese de que los documentos enviados sean claramente visibles y legibles. Asegúrese también de que los documentos enviados estén exclusivamente en <boldUnderline>Inglés</boldUnderline>, si no tiene los documentos traducidos le recomendamos los servicios de traducción de documentos de nuestro socio <link>Lush America Translations</link>.",
+      "uploadAndContinue": "Enviar documentos",
+      "uploadingDocuments": "Enviando documentos...",
+      "aiAnalysisInProgress": "Análisis por IA en Progreso..."
     },
     "myApplications": {
       "title": "Mis Solicitudes",
@@ -2111,10 +2260,7 @@
         "approved": "aprobadas",
         "applications": "solicitudes"
       },
-      "importantNotice": {
-        "title": "Importante:",
-        "description": "Solo puedes elegir una beca. Después de pagar la Tarifa de Solicitud para una beca, las otras opciones se deshabilitarán."
-      },
+
       "paymentStatus": {
         "title": "Estado del Pago",
         "applicationFee": "Tarifa de Solicitud",
@@ -2153,7 +2299,7 @@
         "viewDetails": "Ver Detalles de la Solicitud"
       },
       "confirmationModal": {
-        "title": "Confirma Tu Selección de Beca",
+        "title": "Confirma Tu Selección",
         "importantDecision": "Decisión Importante",
         "description": "Al proceder con este pago, estás haciendo de esta tu elección final de beca. Esta acción no se puede deshacer.",
         "willRemoveOthers": "Esto eliminará {{count}} otra solicitud aprobada:",
@@ -2163,109 +2309,6 @@
       },
       "loading": "Cargando tus solicitudes...",
       "error": "Error: {{message}}",
-      "statusDescriptions": {
-        "documentsApprovedByUniversity": {
-          "title": "Documentos Aprobados por la Universidad",
-          "description": "¡Excelentes noticias! Tu solicitud ha sido aprobada, pero algunos documentos aún necesitan atención.",
-          "nextSteps": [
-            "Completa cualquier carga de documento pendiente",
-            "Paga la tarifa de solicitud para asegurar tu lugar",
-            "Prepárate para la siguiente fase de inscripción"
-          ]
-        },
-        "applicationApprovedPaymentRequired": {
-          "title": "Solicitud Aprobada - Pago Requerido",
-          "description": "¡Felicitaciones! Tu solicitud ha sido completamente aprobada. El siguiente paso es pagar la tarifa de solicitud.",
-          "nextSteps": [
-            "Paga la tarifa de solicitud para asegurar tu beca",
-            "Completa el proceso de inscripción",
-            "Prepárate para tu jornada académica"
-          ]
-        },
-        "applicationFeePaidScholarshipFeeRequired": {
-          "title": "Tarifa de Solicitud Pagada - Tarifa de Beca Requerida",
-          "description": "¡Excelente! Tu tarifa de solicitud ha sido confirmada. Ahora paga la tarifa de beca para finalizar tu inscripción.",
-          "nextSteps": [
-            "Paga la tarifa de beca para completar la inscripción",
-            "Recibe la confirmación final",
-            "Comienza tu programa académico"
-          ]
-        },
-        "scholarshipFeePaidI20Required": {
-          "title": "Tarifa de Beca Pagada - Documentos Pendientes",
-          "description": "¡Excelente! Tu tarifa de beca ha sido confirmada. Ahora necesitas enviar las solicitudes de documentos pendientes solicitadas por la universidad.",
-          "nextSteps": [
-            "Envía las solicitudes de documentos pendientes",
-            "Espera la aprobación de los documentos por la universidad",
-            "Paga la I-20 Control Fee para poder recibir la carta de aceptación",
-            "Recibe la carta de aceptación de la universidad"
-          ]
-        },
-        "allFeesPaidWaitingAcceptanceLetter": {
-          "title": "Todas las Tarifas Pagadas - Esperando Carta de Aceptación",
-          "description": "¡Excelente! Todas las tarifas han sido pagadas exitosamente. Ahora estás esperando que la universidad envíe tu carta de aceptación oficial.",
-          "nextSteps": [
-            "Espera que la universidad envíe tu carta de aceptación",
-            "Revisa regularmente la sección de documentos",
-            "Completa tu inscripción después de recibir la carta"
-          ]
-        },
-        "fullyEnrolled": {
-          "title": "¡Totalmente Inscrito!",
-          "description": "¡Perfecto! Has completado exitosamente todos los requisitos y estás oficialmente inscrito.",
-          "nextSteps": [
-            "Accede a tu portal estudiantil",
-            "Revisa el horario de clases",
-            "Conéctate con asesores académicos"
-          ]
-        },
-        "applicationNotSelected": {
-          "title": "Solicitud No Seleccionada",
-          "description": "Desafortunadamente, tu solicitud no fue seleccionada para esta oportunidad de beca.",
-          "nextSteps": [
-            "Revisa otras becas disponibles",
-            "Considera mejorar tu solicitud",
-            "Aplica para diferentes programas"
-          ]
-        },
-        "applicationUnderReview": {
-          "title": "Solicitud en Revisión",
-          "description": "Tu solicitud está siendo evaluada actualmente por la universidad. Este proceso típicamente toma 2-4 semanas.",
-          "nextSteps": [
-            "Espera la decisión de la universidad",
-            "Monitorea tu correo electrónico para notificaciones importantes",
-            "Verifica el estado de la solicitud regularmente",
-            "Ten paciencia durante el proceso de revisión"
-          ]
-        },
-        "applicationFeeConfirmed": {
-          "title": "Tarifa de Solicitud Confirmada",
-          "description": "Tu tarifa de solicitud ha sido recibida y confirmada. Ahora eres elegible para la beca.",
-          "nextSteps": [
-            "Paga la tarifa de beca para completar la inscripción",
-            "Envía cualquier documento restante",
-            "Prepárate para el inicio de tu programa"
-          ]
-        },
-        "documentsUnderUniversityReview": {
-          "title": "Documentos en Revisión por la Universidad",
-          "description": "Tu solicitud ha sido enviada con todos los documentos requeridos. La universidad está revisando actualmente tus materiales.",
-          "nextSteps": [
-            "Espera la revisión de documentos por la universidad",
-            "Monitorea tu correo electrónico para notificaciones",
-            "Verifica el estado de la solicitud regularmente"
-          ]
-        },
-        "applicationSubmitted": {
-          "title": "Solicitud Enviada",
-          "description": "Tu solicitud ha sido enviada exitosamente y está esperando la revisión inicial.",
-          "nextSteps": [
-            "Espera la revisión de documentos",
-            "Monitorea el estado de la solicitud",
-            "Prepárate para los siguientes pasos"
-          ]
-        }
-      },
       "statusLabels": {
         "approvedByUniversity": "APROBADA POR LA UNIVERSIDAD",
         "approved": "APROBADA",
@@ -2273,9 +2316,98 @@
         "pending": "PENDIENTE",
         "underReview": "EN REVISIÓN",
         "pendingScholarshipFee": "TARIFA DE BECA PENDIENTE"
-      },
-      "nextSteps": "Siguientes Pasos:"
+      }
     },
+
+    "documentRequests": {
+      "status": {
+        "downloading": "Descargando...",
+        "opening": "Abriendo...",
+        "uploading": "Subiendo...",
+        "waitingForUniversity": "Esperando a la universidad"
+      },
+      "actions": {
+        "downloadAcceptanceLetter": "Descargar Carta de Aceptación",
+        "view": "Ver",
+        "uploadTransferForm": "Subir Formulario de Transferencia",
+        "upload": "Subir",
+        "downloadTransferForm": "Descargar Formulario de Transferencia",
+        "uploadTransferFormTitle": "Subir formulario de transferencia",
+        "selectTransferFormTitle": "Seleccionar formulario de transferencia",
+        "sendTransferFormTitle": "Enviar formulario de transferencia"
+      },
+      "messages": {
+        "noTransferForm": "Aún no se ha subido ningún formulario de transferencia.",
+        "failedToUploadAttachment": "Error al subir el anexo:",
+        "failedToUploadAcceptanceLetter": "Error al subir la carta de aceptación:",
+        "failedToCreateRequest": "Error al crear la solicitud:",
+        "unexpectedError": "Error inesperado:",
+        "unexpectedErrorWhileApproving": "Error inesperado al aprobar:",
+        "unexpectedErrorWhileRejecting": "Error inesperado al rechazar:",
+        "errorUploadingFile": "Error al subir el archivo:",
+        "errorUploading": "Error al subir:",
+        "userNotAuthenticated": "Usuario no autenticado. Por favor, inicie sesión de nuevo."
+      },
+      "forms": {
+        "newDocumentRequest": "Nueva Solicitud de Documento",
+        "newIndividualDocumentRequest": "Nueva Solicitud Individual de Documento",
+        "title": "Título",
+        "titleRequired": "Título *",
+        "description": "Descripción",
+        "dueDate": "Fecha de vencimiento",
+        "attachment": "Anexo",
+        "enterDocumentTitle": "Escriba el título del documento",
+        "enterDocumentDescription": "Escriba la descripción del documento",
+        "describeDocumentOptional": "Describa el documento o las instrucciones (opcional)",
+        "selectFile": "Seleccionar archivo",
+        "changeFile": "Cambiar archivo",
+        "chooseFile": "Elegir archivo",
+        "cancel": "Cancelar",
+        "createRequest": "Crear Solicitud",
+        "creating": "Creando...",
+        "transferFormDescriptionSchool": "Suba el formulario de transferencia para este estudiante. Solo visible para estudiantes de transferencia.",
+        "transferFormDescriptionStudent": "Su universidad subirá su formulario de transferencia aquí. Descárguelo cuando esté disponible.",
+        "transferForm": "Formulario de Transferencia",
+        "transferFormUploadButton": "Subir Formulario Relleno",
+        "transferFormUploaded": "Formulario de transferencia subido",
+        "transferFormUnderReview": "En revisión por la universidad",
+        "transferFormApproved": "Aprobado",
+        "transferFormRejected": "Rechazado",
+        "transferFormRejectionReason": "Motivo del rechazo",
+        "transferFormReupload": "Subir nueva versión",
+        "approveTransferForm": "Aprovar Formulario de Transferencia",
+        "rejectTransferForm": "Rechazar Formulario de Transferencia",
+        "transferFormReceived": "Formulario de Transferência Recibido",
+        "transferFormReadyMessage": "Su formulario de transferencia está listo para descargar. Descárguelo, rellénelo y envíelo de vuelta a la universidad.",
+        "sentOn": "Enviado el",
+        "studentUploads": "Subidas del estudiante:",
+        "yourUploads": "Sus subidas:",
+        "uploading": "Subiendo...",
+        "upload": "Subir",
+        "uploadNewFile": "Seleccionar archivo",
+        "removeFile": "Eliminar archivo",
+        "failedToDownloadFile": "Error al descargar el archivo.",
+        "failedToApproveDocument": "Error al aprobar el documento:",
+        "failedToRejectDocument": "Error al rechazar el documento:",
+        "errorDownloadingDocument": "Error al descargar el documento. Por favor, inténtelo de nuevo.",
+        "errorViewingDocument": "Error al visualizar el documento. Por favor, inténtelo de nuevo.",
+        "acceptanceLetter": "Carta de Aceptación",
+        "acceptanceLetterReceived": "¡Carta de Aceptación Recibida! 🎉",
+        "downloadTransferForm": "Descargar Formulario de Transferencia",
+        "view": "Ver",
+        "enrolledMessage": "¡Has sido matriculado! Revisa tu panel para los próximos pasos.",
+        "noFilesUploadedYet": "Aún no se ha subido ningún archivo.",
+        "noTransferFormUploadedYet": "Aún no se ha subido ningún formulario de transferencia.",
+        "acceptanceLetterInstructions": "La universidad enviará su carta de aceptación aquí cuando esté lista. Una vez enviada, será automáticamente matriculado."
+      },
+      "modals": {
+        "provideJustification": "Proporcione una justificación",
+        "rejectionExplanation": "Explique el motivo del rechazo de este documento. El estudiante verá este mensaje.",
+        "rejectionExplanationPlaceholder": "Ej.: El documento está cortado. Por favor, envíelo de nuevo en PDF con todas las páginas.",
+        "confirm": "Confirmar"
+      }
+    },
+
     "recentApplications": {
       "title": "Solicitudes Recientes",
       "subtitle": "Revisa el progreso de tus solicitudes más recientes",
@@ -2517,6 +2649,11 @@
           "email": "Correo Electrónico",
           "phone": "Teléfono",
           "country": "País",
+          "studentType": "Tipo de Proceso",
+          "initialF1VisaRequired": "Inicial - Visa F-1 Necesaria",
+          "transferCurrentF1Student": "Transferencia - Estudiante F-1 Actual",
+          "changeOfStatusFromOtherVisa": "Cambio de Estatus - De Otra Visa",
+          "applicationDate": "Fecha de la Solicitud",
           "fieldOfInterest": "Campo de Interés",
           "academicLevel": "Nivel Académico",
           "gpa": "GPA",
@@ -2681,6 +2818,100 @@
         "photoRequired": "Por favor, suba su foto de identidad.",
         "termAcceptanceNotFound": "Error: Registro de aceptación de términos no encontrado.",
         "submittingPhoto": "Error al enviar la foto. Por favor, inténtelo de nuevo."
+      }
+    },
+    "myApplicationStep": {
+      "header": {
+        "my": "Mi",
+        "application": "Aplicación"
+      },
+      "tabs": {
+        "acceptanceLetter": "Carta de Aceptación"
+      },
+      "loading": "Cargando portal de gestión...",
+      "noApplication": {
+        "title": "Ninguna Aplicación Encontrada",
+        "description": "Aún no tienes una aplicación activa. Por favor, vuelve al paso anterior o contacta con soporte."
+      },
+      "back": "Volver",
+      "welcome": {
+        "congratsMessage": "¡Felicidades {{name}},<br/> has sido <approved>aprobado</approved> en <university>{{university}}</university>!",
+        "almostDone": "¡Ya falta muy poco para que todo esté listo! En esta etapa final puedes revisar los detalles de la universidad que elegiste y enviar la documentación obligatoria. Una vez que todo esté correcto, tu Carta de Aceptación estará disponible aquí mismo para descargar.",
+        "sendDocuments": "Enviar Documentos",
+        "requestedDocs": "Documentos solicitados",
+        "scholarshipDetails": "Detalles de la Beca",
+        "requirementsValues": "Requisitos y valores",
+        "needHelp": "¿Necesitas Ayuda?",
+        "mentorsReady": "Nuestros mentores están listos para ayudarte con cualquier duda sobre este proceso.",
+        "talkToSupport": "Hablar con Soporte",
+        "nextSteps": "Próximos Pasos",
+        "documentSubmission": "Envío de Documentos",
+        "acceptanceLetterReceipt": "Recepción de la Carta de Aceptación",
+        "documentAvailable": "Documento Disponible",
+        "status": {
+          "completed": "Completado",
+          "underReview": "En Revisión",
+          "actionRequired": "Acción Requerida",
+          "available": "Disponible",
+          "inProgress": "Liberación en Curso"
+        }
+      },
+      "details": {
+        "universityPartner": "University Partner",
+        "inPerson": "Presencial",
+        "online": "En Línea",
+        "exclusive": "Exclusiva",
+        "level": "Nivel",
+        "mode": "Modalidad",
+        "deadline": "Plazo",
+        "scholarshipDetails": "Detalles de la Beca",
+        "scholarshipTitle": "Título de la Beca",
+        "courseField": "Curso / Área de Estudio",
+        "enrollmentFee": "Tarifa de Matrícula",
+        "internalFees": "Tarifas Internas de la Institución",
+        "internalFeesNote": "Estas tarifas son informadas por la universidad y se pagan directamente a ellos. No forman parte del servicio de mentoría de Matricula USA.",
+        "oneTimePayment": "Pago Único",
+        "studentDocuments": "Documentos del Estudiante",
+        "diploma": "Diploma / Certificado (High School)",
+        "passport": "Pasaporte (Copia en Color)",
+        "bankStatement": "Estado de Cuenta Bancario (Financial Statement)",
+        "submittedOn": "Enviado el:",
+        "view": "Ver",
+        "download": "Descargar",
+        "finance": {
+          "originalAnnualCost": "Costo Anual Original",
+          "withExclusiveScholarship": "Con Beca Exclusiva",
+          "perYear": "/año",
+          "perCredit": "Por Crédito",
+          "guaranteedAnnualSavings": "Ahorro Anual Garantizado",
+          "financialSummary": "Resumen Financiero"
+        },
+        "institution": {
+          "title": "Institución",
+          "email": "Correo Electrónico",
+          "phone": "Teléfono",
+          "website": "Sitio Web"
+        }
+      },
+      "documents": {
+        "title": "Envío de Documentos",
+        "subtitle": "Envía los documentos solicitados por la universidad para revisión y aprobación final."
+      },
+      "acceptance": {
+        "letterOf": "Carta de",
+        "acceptance": "Aceptación",
+        "available": "Disponible",
+        "inProgress": "Liberación en Curso",
+        "successConfirmation": "Tu Confirmación de Éxito",
+        "description": "La Carta de Aceptación es el documento oficial emitido por la universidad que confirma tu admisión. Contiene detalles importantes sobre tu programa y es fundamental para el proceso de visa.",
+        "officialNote": "Este documento es emitido oficialmente por la universidad tras el análisis de tu documentación.",
+        "documentAvailable": "Documento Disponible",
+        "readyToDownload": "¡Tu carta de aceptación ya puede ser descargada!",
+        "downloadPdf": "Descargar PDF"
+      },
+      "errors": {
+        "viewDocument": "Error al visualizar documento",
+        "downloadDocument": "Error al descargar documento"
       }
     }
   },
@@ -3892,7 +4123,7 @@
       "warningDescription": "Al confirmar, ya no podrá cambiar las becas elegidas. Revise cuidadosamente su selección a continuación antes de continuar.",
       "unknownUniversity": "Universidad Desconocida",
       "backButton": "Volver a la Selección",
-      "continueButton": "Confirmar y Continuar",
+      "continueButton": "Continuar",
       "removeButton": "Eliminar Selección"
     },
     "completed": {
@@ -4523,6 +4754,109 @@
         "text": "Declaración final",
         "placeholder": "Escriba su declaración...",
         "prompt": "\"Entiendo que mi resultado depende de mi disciplina. Si no sigo el plan, puedo perjudicar mi estatus y mi proyecto.\""
+      }
+    }
+  },
+  "studentOnboarding": {
+    "stepper": {
+      "step": "Paso",
+      "of": "de",
+      "initiating": "Iniciando",
+      "steps": {
+        "selectionFee": "Tarifa del Proceso de Selección",
+        "selectionSurvey": "Cuestionario",
+        "scholarshipSelection": "Selección de Becas",
+        "processType": "Tipo de Proceso",
+        "documentsUpload": "Documentos",
+        "payment": "Tarifa de Matrícula",
+        "scholarshipFee": "Tarifa de Beca"
+      }
+    },
+    "processType": {
+      "title": "Situación de Visa",
+      "subtitle": "Seleccione la opción que mejor describa su situación actual con respecto a la visa estadounidense.",
+      "lockedError": "Ya ha pasado la revisión. No es posible cambiar el tipo de proceso.",
+      "selectTypeError": "Por favor seleccione un tipo de proceso",
+      "authError": "Usuario no autenticado",
+      "saveError": "Error al guardar la selección. Por favor, inténtelo de nuevo.",
+      "completed": {
+        "title": "Tipo de Proceso",
+        "subtitle": "Tipo de proceso seleccionado con éxito.",
+        "status": "Etapa Completada",
+        "description": "Ya ha seleccionado su tipo de proceso y pasado la revisión. Esta etapa está completa."
+      },
+      "continueButton": "Continuar",
+      "saving": "Guardando...",
+      "options": {
+        "initial": {
+          "label": "Primera Visa F-1 (Inicial)",
+          "description": "Nunca ha tenido una visa de estudiante F-1 o está aplicando por primera vez."
+        },
+        "transfer": {
+          "label": "Transferencia de Visa F-1",
+          "description": "Ya tiene una visa F-1 activa y desea transferirse de otra escuela en los EE. UU."
+        },
+        "changeOfStatus": {
+          "label": "Cambio de Estatus",
+          "description": "Tiene otro tipo de visa (B-2, H-1B, etc.) y desea cambiar a F-1."
+        }
+      }
+    },
+    "documentsUpload": {
+      "approvedApps": {
+        "title": "Seleccione su Beca",
+        "subtitle": "Paso completado con éxito.",
+        "scholarshipConfirmed": "¡Beca Confirmada!",
+        "scholarshipSelectedPre": "Ha seleccionado la beca ",
+        "scholarshipSelectedPost": " y la tarifa de solicitud ya ha sido pagada.",
+        "continue": "Continuar"
+      },
+      "review": {
+        "title": "Solicitudes en Revisión",
+        "subtitle": "Sus documentos están siendo revisados. Puede realizar un seguimiento del estado de cada beca a continuación.",
+        "titleApproved": "¡Felicidades! Ha sido aceptado. Seleccione la universidad a continuación para proceder con el pago."
+      },
+      "cards": {
+        "yourScholarships": "Sus Becas",
+        "applications": "{{count}} Solicitudes",
+        "status": {
+          "approved": "Aprobada",
+          "rejected": "Rechazada",
+          "underReview": "En Revisión",
+          "pending": "Pendiente",
+          "isApproved": "Aprobado",
+          "isRejected": "Rechazado",
+          "isReview": "En Análisis"
+        },
+        "reason": "Motivo:",
+        "verifyDocuments": "Verificar Documentos",
+        "sentOn": "Enviado el: {{date}}",
+        "rejectionNote": "Importante: Los documentos rechazados pueden volver a enviarse para un nuevo análisis.",
+        "selectNewFile": "Seleccionar Nuevo Archivo",
+        "selected": "✓ Seleccionada",
+        "clickToSelect": "Haga clic para seleccionar",
+        "originalValue": "Valor original",
+        "withScholarship": "Con Beca",
+        "perYear": "/ año",
+        "university": "Universidad"
+      },
+      "actions": {
+        "selectScholarship": "Seleccionar Beca",
+        "selectAScholarship": "Seleccione una Beca",
+        "confirmSelectionModal": {
+          "title": "Confirmar Selección",
+          "description": "Esta decisión es definitiva. Al confirmar, ya no podrá cambiar la beca seleccionada para este proceso de solicitud.",
+          "cancel": "Cancelar",
+          "confirm": "Confirmar"
+        }
+      },
+      "instructions": {
+        "title": "Instrucciones Importantes",
+        "descriptionPre": "Asegúrese de que los documentos enviados sean completamente legibles y ",
+        "descriptionStrong": "exclusivamente en inglés",
+        "descriptionMid": ". Si necesita una traducción certificada y de calidad, recomendamos los servicios de nuestro socio ",
+        "descriptionLink": "Lush America Translations",
+        "descriptionPost": "."
       }
     }
   }

@@ -129,69 +129,65 @@ const ScholarshipDetailModal: React.FC<ScholarshipDetailModalProps> = ({
             onClick={(e) => e.stopPropagation()}
           >
             {/* Header with Image */}
-            <div className="relative flex-shrink-0">
-              <div className="h-40 sm:h-48 bg-gradient-to-br from-[#05294E] via-[#0a3d6e] to-[#05294E] relative">
-                {scholarship.image_url && canViewSensitive && (
-                  <img 
-                    src={scholarship.image_url} 
-                    alt="" 
-                    className="absolute inset-0 w-full h-full object-cover opacity-30"
-                  />
-                )}
-                <div className="absolute inset-0 bg-gradient-to-t from-black/60 to-transparent" />
-                
-                {/* Close Button */}
-                <button
-                  onClick={onClose}
-                  className="absolute top-3 right-3 p-2 bg-white/10 hover:bg-white/20 rounded-full transition-colors"
-                >
-                  <X className="h-5 w-5 text-white" />
-                </button>
+            <div className="relative flex-shrink-0 h-48 sm:h-72 bg-white flex items-center justify-center p-6 sm:p-10 border-b border-slate-100">
+              {scholarship.image_url && canViewSensitive && (
+                <img 
+                  src={scholarship.image_url} 
+                  alt="" 
+                  className="w-full h-full object-contain"
+                />
+              )}
+              
+              {/* Close Button */}
+              <button
+                onClick={onClose}
+                className="absolute top-3 right-3 p-2 bg-slate-100/80 hover:bg-slate-200 text-slate-500 rounded-full transition-colors z-20 backdrop-blur-sm"
+              >
+                <X className="h-5 w-5" />
+              </button>
+            </div>
 
-                {/* Badges */}
-                <div className="absolute top-3 left-3 flex gap-2">
-                  {scholarship.is_exclusive && (
-                    <span className="inline-flex items-center gap-1 bg-amber-500 text-white px-2.5 py-1 rounded-full text-xs font-semibold shadow-lg">
-                      <Star className="h-3 w-3" />
-                      {t('scholarshipsPage.modal.exclusive') || 'Exclusive'}
-                    </span>
-                  )}
-                  {isExpired && (
-                    <span className="inline-flex items-center gap-1 bg-red-500 text-white px-2.5 py-1 rounded-full text-xs font-semibold shadow-lg">
-                      <AlertTriangle className="h-3 w-3" />
-                      {t('scholarshipsPage.modal.expired') || 'Expired'}
-                    </span>
-                  )}
-                </div>
+            <div className="flex-1 overflow-y-auto">
+              <div className="p-5 sm:p-6">
+                {/* Title Section relocated to Body */}
+                <div className="mb-6">
+                  <div className="flex flex-wrap gap-2 mb-3">
+                    {scholarship.is_exclusive && (
+                      <span className="inline-flex items-center gap-1 bg-amber-500 text-white px-2.5 py-1 rounded-full text-xs font-semibold shadow-lg">
+                        <Star className="h-3 w-3" />
+                        {t('scholarshipsPage.modal.exclusive') || 'Exclusive'}
+                      </span>
+                    )}
+                    {isExpired && (
+                      <span className="inline-flex items-center gap-1 bg-red-500 text-white px-2.5 py-1 rounded-full text-xs font-semibold shadow-lg">
+                        <AlertTriangle className="h-3 w-3" />
+                        {t('scholarshipsPage.modal.expired') || 'Expired'}
+                      </span>
+                    )}
+                  </div>
 
-                {/* Title Section */}
-                <div className="absolute bottom-4 left-4 right-4">
-                  <p className="text-white/70 text-sm mb-1">
+                  <p className="text-slate-500 text-sm mb-1">
                     {scholarship.field_of_study || t('scholarshipsPage.modal.anyField')}
                   </p>
-                  <h2 className="text-xl sm:text-2xl font-bold text-white leading-tight mb-2">
+                  <h2 className="text-xl sm:text-2xl font-bold text-slate-900 leading-tight mb-2">
                     {scholarship.title}
                   </h2>
-                  <div className="flex items-center gap-2 text-white/80 text-sm">
-                    <Building className="h-4 w-4" />
-                    <span className={!canViewSensitive ? 'blur-[3px]' : ''}>
-                      {canViewSensitive ? scholarship.universities?.name : '••••••••••••'}
-                    </span>
+                  <div className="flex flex-wrap items-center gap-3 text-slate-600 text-sm font-medium">
+                    <div className="flex items-center gap-1.5">
+                      <Building className="h-4 w-4 text-[#05294E]" />
+                      <span className={!canViewSensitive ? 'blur-[3px]' : ''}>
+                        {canViewSensitive ? scholarship.universities?.name : '••••••••••••'}
+                      </span>
+                    </div>
                     {canViewSensitive && scholarship.universities?.location && (
-                      <>
-                        <span className="text-white/50">•</span>
-                        <MapPin className="h-3.5 w-3.5" />
+                      <div className="flex items-center gap-1.5">
+                        <span className="text-slate-300 hidden sm:block">•</span>
+                        <MapPin className="h-4 w-4 text-[#05294E]" />
                         <span>{scholarship.universities.location}</span>
-                      </>
+                      </div>
                     )}
                   </div>
                 </div>
-              </div>
-            </div>
-
-            {/* Content */}
-            <div className="flex-1 overflow-y-auto">
-              <div className="p-5 sm:p-6">
                 
                 {/* Content Grid */}
                 <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 mb-6">

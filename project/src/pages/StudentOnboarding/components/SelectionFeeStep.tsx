@@ -58,7 +58,7 @@ const ZelleIcon = ({ className }: { className?: string }) => (
 const StripeIcon = ({ className }: { className?: string }) => (
   <div className={`${className} flex items-center justify-center bg-[#635bff] rounded-lg overflow-hidden shadow-sm shadow-[#635bff]/20`}>
     <span
-      className="text-white font-black text-[28px] leading-[0] select-none"
+      className="text-white font-black text-[22px] sm:text-[28px] leading-[0] select-none"
       style={{
         fontFamily: 'system-ui, -apple-system, sans-serif',
         transform: 'translateY(-1.5px)' // Puxando para cima para compensar o peso da fonte
@@ -1293,9 +1293,8 @@ export const SelectionFeeStep: React.FC<StepProps> = ({ onNext }) => {
     return (
       <div className="space-y-10 pb-12 max-w-4xl mx-auto px-4">
         {/* Header */}
-        <div className="text-center md:text-left space-y-4">
+        <div className="text-left space-y-4">
           <h2 className="text-3xl md:text-5xl font-black text-slate-900 uppercase tracking-tighter leading-none">{t('selectionFeeStep.paid.title')}</h2>
-          <p className="text-lg md:text-xl text-slate-600 font-medium max-w-2xl mt-2">{t('selectionFeeStep.paid.subtitle')}</p>
         </div>
 
         {/* Main White Container */}
@@ -1324,7 +1323,7 @@ export const SelectionFeeStep: React.FC<StepProps> = ({ onNext }) => {
     <div className="space-y-8 sm:space-y-10 pb-12">
       {/* Payment Section */}
       <div className="space-y-6">
-        <div className="text-center md:text-left">
+        <div className="text-left">
           <h2 className="text-3xl md:text-5xl font-black text-slate-900 mb-3 uppercase tracking-tighter">
             {t('selectionFeeStep.main.title')}
           </h2>
@@ -1333,15 +1332,15 @@ export const SelectionFeeStep: React.FC<StepProps> = ({ onNext }) => {
           </p>
         </div>
 
-        <div className="bg-white border border-gray-100 rounded-[2.5rem] p-6 md:p-10 shadow-2xl relative overflow-hidden">
+        <div className="bg-white border border-gray-100 rounded-[2.0rem] sm:rounded-[2.5rem] p-3 sm:p-6 md:p-10 shadow-2xl relative overflow-hidden">
           <div className="absolute top-0 right-0 w-64 h-64 bg-blue-500/5 rounded-full blur-[80px] -mr-32 -mt-32 pointer-events-none" />
 
 
 
 
           {/* Matricula Rewards / Referral Code Section */}
-          {/* Mostrar seção sempre, exceto se tiver seller_referral_code e se NÃO estiver bloqueado por pagamento pendente */}
-          {!isBlocked && !hasSellerReferralCode ? (
+          {/* Mostrar seção sempre, exceto se tiver seller_referral_code */}
+          {!hasSellerReferralCode && !hasZellePendingSelectionFee ? (
             <div className="mb-6 space-y-4">
 
               {/* Mostrar campo de código sempre */}
@@ -1371,7 +1370,7 @@ export const SelectionFeeStep: React.FC<StepProps> = ({ onNext }) => {
                         />
                         <div className="checkmark" />
                       </label>
-                      <label htmlFor="hasReferralCode" className="text-sm text-gray-700 leading-relaxed cursor-pointer flex-1">
+                      <label htmlFor="hasReferralCode" className="text-sm sm:text-base font-medium text-gray-700 leading-relaxed cursor-pointer flex-1">
                         {t('preCheckoutModal.haveReferralCode') || 'Eu tenho um código de indicação'}
                       </label>
                     </div>
@@ -1563,10 +1562,9 @@ export const SelectionFeeStep: React.FC<StepProps> = ({ onNext }) => {
 
 
 
-          {/* Terms acceptance section - ocultar se já tiver pagamento pendente */}
-          {!isBlocked && (
-            <div className="mb-8">
-              <div className="flex items-center space-x-3 p-4 bg-gray-50 border border-gray-100 rounded-xl group/terms hover:bg-gray-100/50 transition-colors duration-300 shadow-sm">
+          {!hasZellePendingSelectionFee && (
+            <div className="mb-12">
+              <div className="flex items-center space-x-3 p-3 bg-gray-50 rounded-lg group/terms hover:bg-gray-100/50 transition-colors duration-300">
                 <label htmlFor="termsAccepted" className={`checkbox-container ${hasAcceptedTermsInDB ? 'cursor-not-allowed opacity-75' : 'cursor-pointer'} flex-shrink-0`}>
                   <input
                     id="termsAccepted"
@@ -1579,12 +1577,12 @@ export const SelectionFeeStep: React.FC<StepProps> = ({ onNext }) => {
                   />
                   <div className="checkmark border-gray-300" />
                 </label>
-                <div className="text-xs sm:text-sm text-gray-600 leading-relaxed flex-1 cursor-default group-hover/terms:text-gray-900 transition-colors">
+                <div className="text-sm sm:text-base font-medium text-gray-700 leading-relaxed flex-1 cursor-default group-hover/terms:text-gray-900 transition-colors">
                   <span className="text-red-500 font-bold mr-1">*</span>
                   Eu aceito os {' '}
                   <span
                     onClick={handleTermsClick}
-                    className="text-blue-600 font-bold hover:underline cursor-pointer"
+                    className="text-blue-600 font-bold underline hover:text-blue-700 cursor-pointer"
                   >
                     {t('preCheckoutModal.termsAndConditions.title') || 'termos e condições'}
                   </span>
@@ -1618,23 +1616,46 @@ export const SelectionFeeStep: React.FC<StepProps> = ({ onNext }) => {
                 </div>
               ))}
             </div>
-          ) : hasZellePendingSelectionFee ? (
-            <div className="flex flex-col gap-0">
-              {/* Banner de aviso âmbar */}
-              <div className="bg-amber-50 border border-amber-200 rounded-t-[2rem] px-6 py-4 flex items-start gap-4">
-                <div className="w-10 h-10 bg-amber-100 rounded-2xl flex items-center justify-center border border-amber-200 flex-shrink-0 mt-0.5">
-                  <AlertCircle className="w-5 h-5 text-amber-600" />
+          ) : (hasZellePendingSelectionFee || showZelleCheckout) ? (
+            <div className={`flex flex-col gap-0 ${hasZellePendingSelectionFee ? '' : 'space-y-6 sm:bg-white sm:border sm:border-gray-100 sm:rounded-3xl py-4 pb-1 sm:p-6 sm:shadow-xl relative overflow-hidden sm:mx-0'}`}>
+              {hasZellePendingSelectionFee && (
+                <div className="bg-amber-50 border border-amber-200 rounded-t-[2rem] px-6 py-4 flex items-start gap-4">
+                  <div className="w-10 h-10 bg-amber-100 rounded-2xl flex items-center justify-center border border-amber-200 flex-shrink-0 mt-0.5">
+                    <AlertCircle className="w-5 h-5 text-amber-600" />
+                  </div>
+                  <div>
+                    <p className="text-sm font-black text-amber-700 uppercase tracking-tight">{t('selectionFeeStep.main.zelleProcessing.title')}</p>
+                    <p className="text-xs text-amber-600/80 font-medium mt-0.5 leading-relaxed">
+                      {t('selectionFeeStep.main.zelleProcessing.subtitle')}
+                    </p>
+                  </div>
                 </div>
-                <div>
-                  <p className="text-sm font-black text-amber-700 uppercase tracking-tight">{t('selectionFeeStep.main.zelleProcessing.title')}</p>
-                  <p className="text-xs text-amber-600/80 font-medium mt-0.5 leading-relaxed">
-                    {t('selectionFeeStep.main.zelleProcessing.subtitle')}
-                  </p>
-                </div>
-              </div>
+              )}
 
-              {/* ZelleCheckout inline — aberto automaticamente */}
-              <div className="border border-amber-200 border-t-0 rounded-b-[2rem] overflow-hidden bg-white shadow-sm">
+              {!hasZellePendingSelectionFee && (
+                <>
+                  <div className="hidden sm:block absolute top-0 right-0 w-32 h-32 bg-blue-500/5 rounded-full blur-[40px] -mr-16 -mt-16 pointer-events-none" />
+                  <div className="flex items-center justify-between mb-2 relative z-10 sm:px-0">
+                    <h3 className="text-xl font-black text-gray-900 uppercase tracking-tight">{t('selectionFeeStep.main.zellePayment')}</h3>
+
+                    {!isZelleProcessing && (
+                      <button
+                        onClick={() => {
+                          setShowZelleCheckout(false);
+                          setIsZelleProcessing(false);
+                          setSelectedMethod(null);
+                          setShowInlineCpf(false);
+                        }}
+                        className="p-2 hover:bg-gray-100 rounded-full transition-colors text-gray-400 hover:text-gray-900"
+                      >
+                        <X className="w-5 h-5" />
+                      </button>
+                    )}
+                  </div>
+                </>
+              )}
+
+              <div className={`${hasZellePendingSelectionFee ? 'border border-amber-200 border-t-0 rounded-b-[2rem] overflow-hidden bg-white shadow-sm' : ''}`}>
                 <ZelleCheckout
                   feeType="selection_process"
                   amount={computedBasePrice}
@@ -1647,65 +1668,29 @@ export const SelectionFeeStep: React.FC<StepProps> = ({ onNext }) => {
                     ...(validationResult?.isValid && codeApplied && discountCode.trim() ? { discount_code: discountCode.trim().toUpperCase() } : {}),
                     promotional_coupon: (window as any).__checkout_promotional_coupon || null
                   }}
-                  isPendingVerification={hasZellePendingSelectionFee}
+                  onSuccess={() => {
+                    console.log('✅ [SelectionFeeStep] Pagamento Zelle aprovado');
+                    setZellePaymentSubmitted(false);
+                    setShowZelleCheckout(false);
+                    setIsZelleProcessing(false);
+                    onNext();
+                  }}
                   onError={(error) => {
                     setError(error);
                     setZellePaymentSubmitted(false);
                     setIsZelleProcessing(false);
                   }}
-                  onProcessingChange={(isProcessing: boolean) => {
+                  onProcessingChange={(isProcessing) => {
+                    // Evitar loop: só refetch se o estado de processamento MUDAR para true
+                    // Se já estamos processando, não precisa refetch toda vez que o componente re-renderizar
+                    if (isProcessing && !isZelleProcessing) {
+                      console.log('🔄 [SelectionFeeStep] Detectada mudança para processamento, refetching status...');
+                      refetchPaymentStatus();
+                    }
                     setIsZelleProcessing(isProcessing);
-                    setZellePaymentSubmitted(isProcessing);
-                    if (isProcessing) refetchPaymentStatus();
                   }}
                 />
               </div>
-            </div>
-          ) : showZelleCheckout ? (
-            <div className="space-y-6 bg-white border border-gray-100 rounded-3xl p-6 shadow-xl relative overflow-hidden">
-              <div className="absolute top-0 right-0 w-32 h-32 bg-blue-500/5 rounded-full blur-[40px] -mr-16 -mt-16 pointer-events-none" />
-              <div className="flex items-center justify-between mb-2 relative z-10">
-                <h3 className="text-xl font-black text-gray-900 uppercase tracking-tight">{t('selectionFeeStep.main.zellePayment')}</h3>
-
-                {!isZelleProcessing && (
-                  <button
-                    onClick={() => {
-                      setShowZelleCheckout(false);
-                      setIsZelleProcessing(false);
-                      setSelectedMethod(null);
-                      setShowInlineCpf(false);
-                    }}
-                    className="p-2 hover:bg-gray-100 rounded-full transition-colors text-gray-400 hover:text-gray-900"
-                  >
-                    <X className="w-5 h-5" />
-                  </button>
-                )}
-              </div>
-
-              <ZelleCheckout
-                feeType="selection_process"
-                amount={computedBasePrice}
-                scholarshipsIds={[]}
-                metadata={{
-                  discount_applied: computedBasePrice < selectionFeeAmount,
-                  original_amount: selectionFeeAmount,
-                  final_amount: computedBasePrice,
-                  ...(activeDiscount?.has_discount && activeDiscount.affiliate_code ? { discount_code: activeDiscount.affiliate_code } : {}),
-                  ...(validationResult?.isValid && codeApplied && discountCode.trim() ? { discount_code: discountCode.trim().toUpperCase() } : {}),
-                  promotional_coupon: (window as any).__checkout_promotional_coupon || null
-                }}
-                isPendingVerification={hasZellePendingSelectionFee}
-                onError={(error) => {
-                  setError(error);
-                  setZellePaymentSubmitted(false);
-                  setIsZelleProcessing(false);
-                }}
-                onProcessingChange={(isProcessing: boolean) => {
-                  setIsZelleProcessing(isProcessing);
-                  setZellePaymentSubmitted(isProcessing);
-                  if (isProcessing) refetchPaymentStatus();
-                }}
-              />
             </div>
           ) : (
             <div className="space-y-4 relative z-10">
@@ -1728,268 +1713,338 @@ export const SelectionFeeStep: React.FC<StepProps> = ({ onNext }) => {
               <div className="flex items-end justify-between mb-4 px-2">
                 <p className="text-xs font-black text-gray-400 uppercase tracking-[0.2em]">{t('selectionFeeStep.main.selectMethod')}</p>
                 <div className="text-right">
-                  {computedBasePrice < selectionFeeAmount ? (
-                    <div className="flex flex-col items-end">
-                      <div className="text-sm line-through text-gray-300 font-bold mb-0.5">{originalFormattedAmount}</div>
-                      <div className="text-3xl md:text-4xl font-black text-emerald-500 tracking-tighter leading-none">{formattedAmount}</div>
-                      <div className="inline-flex items-center mt-1.5 opacity-90">
-                        <CheckCircle className="w-3 h-3 text-emerald-500 mr-1.5" />
-                        <span className="text-[10px] text-emerald-500 font-black uppercase tracking-widest">
-                          {promotionalCouponValidation?.isValid
-                            ? t('selectionFeeStep.main.couponApplied', { coupon: promotionalCoupon })
-                            : t('selectionFeeStep.main.discountApplied')}
-                        </span>
-                      </div>
-                    </div>
-                  ) : (
-                    <div className="text-3xl md:text-4xl font-black text-gray-900 tracking-tighter leading-none">{formattedAmount}</div>
-                  )}
-                </div>
-              </div>
 
-              {paymentMethods.map((method) => {
-                const Icon = method.icon;
-                const isSelected = selectedMethod === method.id;
-                const isProcessing = loading && isSelected;
-                const isDisabled = !!loading ||
-                  !termsAccepted ||
-                  (hasReferralCode && !(validationResult?.isValid) && !activeDiscount?.has_discount) ||
-                  (!!isBlocked && !!pendingPayment && method.id !== 'zelle');
-
-                return (
-                  <div key={method.id} className="w-full flex flex-col">
-                    <button
-                      onClick={() => handleCheckout(method.id)}
-                      disabled={isDisabled}
-                      className={`w-full p-6 rounded-2xl border-2 transition-all duration-300 text-left relative overflow-hidden group/method ${isSelected
-                        ? 'border-blue-100 bg-blue-50 shadow-[0_0_30px_rgba(59,130,246,0.1)]'
-                        : 'border-gray-100 bg-gray-50 hover:border-gray-200 hover:bg-white'
-                        } ${isDisabled ? 'opacity-40 cursor-not-allowed grayscale' : 'cursor-pointer hover:scale-[1.01] active:scale-[0.99]'}`}
-                    >
-                      <div className="flex items-center space-x-5 relative z-10">
-                        <div className={`flex-shrink-0 w-14 h-14 flex items-center justify-center rounded-xl bg-white border border-gray-100 transition-transform duration-500 group-hover/method:scale-110 shadow-sm`}>
-                          <Icon className="w-10 h-10 text-gray-700" />
+                  <div className="flex flex-col sm:flex-row sm:items-end justify-between mb-8 px-2 gap-2 sm:gap-4">
+                    <h3 className="text-xl font-black text-gray-900 uppercase tracking-tight w-full sm:w-auto text-left">{t('selectionFeeStep.main.selectMethod')}</h3>
+                    <div className="text-right flex-shrink-0 self-end sm:self-auto">
+                      {computedBasePrice < selectionFeeAmount ? (
+                        <div className="flex flex-col items-end">
+                          <div className="text-sm line-through text-gray-300 font-bold mb-0.5">{originalFormattedAmount}</div>
+                          <div className="flex items-baseline gap-2">
+                            <span className="text-xs font-black text-slate-900 uppercase tracking-widest mb-0.5">Total</span>
+                            <div className="text-2xl md:text-4xl font-black text-emerald-500 tracking-tighter leading-none">{formattedAmount}</div>
+                          </div>
+                          <div className="inline-flex items-center mt-1.5 opacity-90">
+                            <CheckCircle className="w-3 h-3 text-emerald-500 mr-1.5" />
+                            <span className="text-[10px] text-emerald-500 font-black uppercase tracking-widest">
+                              {promotionalCouponValidation?.isValid
+                                ? t('selectionFeeStep.main.couponApplied', { coupon: promotionalCoupon })
+                                : t('selectionFeeStep.main.discountApplied')}
+                            </span>
+                          </div>
                         </div>
+                      ) : (
+                        <div className="flex items-baseline justify-end gap-2">
+                          <span className="text-xs font-black text-slate-900 uppercase tracking-widest mb-0.5">Total</span>
+                          <div className="text-2xl md:text-4xl font-black text-gray-900 tracking-tighter leading-none">{formattedAmount}</div>
+                        </div>
+                      )}
+                    </div>
+                  </div>
 
-                        <div className="flex-1 min-w-0">
-                          <div className="flex items-center justify-between">
-                            <div className="flex flex-col">
-                              <h4 className="text-lg font-black text-gray-900 uppercase tracking-tight">
+                  {paymentMethods.map((method) => {
+                    const Icon = method.icon;
+                    const isSelected = selectedMethod === method.id;
+                    const isProcessing = loading && isSelected;
+                    const isDisabled = !!loading ||
+                      !termsAccepted ||
+                      (hasReferralCode && !(validationResult?.isValid) && !activeDiscount?.has_discount) ||
+                      (!!isBlocked && !!pendingPayment && method.id !== 'zelle');
+
+                    return (
+                      <div key={method.id} className="w-full flex flex-col">
+                        <button
+                          onClick={() => handleCheckout(method.id)}
+                          disabled={isDisabled}
+                          className={`w-full px-4 py-4 sm:p-6 rounded-2xl border-2 transition-all duration-300 text-left relative overflow-hidden group/method ${isSelected
+                              ? 'border-blue-100 bg-blue-50 shadow-[0_0_30px_rgba(59,130,246,0.1)]'
+                              : 'border-gray-100 bg-gray-50 hover:border-gray-200 hover:bg-white'
+                            } ${isDisabled ? 'opacity-40 cursor-not-allowed grayscale' : 'cursor-pointer hover:scale-[1.01] active:scale-[0.99]'}`}
+                        >
+                          <div className="flex items-center gap-3 sm:gap-5 relative z-10">
+                            <div className={`flex-shrink-0 w-12 h-12 sm:w-14 sm:h-14 flex items-center justify-center rounded-xl bg-white border border-gray-100 transition-transform duration-500 group-hover/method:scale-110 shadow-sm`}>
+                              <Icon className="w-8 h-8 sm:w-10 sm:h-10 text-gray-700" />
+                            </div>
+
+                            <div className="flex-1 min-w-0">
+                              <div className="flex items-center justify-between">
+                                <div className="flex flex-col">
+                                  <h4 className="text-lg font-black text-gray-900 uppercase tracking-tight">
+                                    {method.name}
+                                  </h4>
+                                  {method.id === 'stripe' && (
+                                    <span className="text-[10px] font-bold text-gray-400 mt-1 uppercase tracking-wide leading-tight">{t('selectionFeeStep.main.processingFees.card')}</span>
+                                  )}
+                                  {method.id === 'pix' && (
+                                    <span className="text-[10px] font-bold text-gray-400 mt-1 uppercase tracking-wide leading-tight">{t('selectionFeeStep.main.processingFees.pix')}</span>
+                                  )}
+                                  {method.id === 'parcelow' && (
+                                    <span className="text-[10px] font-bold text-gray-400 mt-1 uppercase tracking-wide leading-tight max-w-[200px] sm:max-w-none">{t('selectionFeeStep.main.processingFees.parcelow')}</span>
+                                  )}
+                                  {method.id === 'zelle' && (
+                                    <span className="text-[10px] font-bold text-gray-400 mt-1 uppercase tracking-wide leading-tight flex items-center gap-1">
+                                      <AlertCircle className="w-3 h-3 flex-shrink-0" />
+                                      {t('selectionFeeStep.main.processingFees.zelle')}
+                                    </span>
+                                  )}
+                                </div>
+
+                                <div className="flex items-center gap-3">
+                                  {method.id === 'stripe' && cardAmountWithFees > 0 && (
+                                    <span className="text-grey-900 text-lg font-black px-2">
+                                      ${cardAmountWithFees.toFixed(2)}
+                                    </span>
+                                  )}
+                                  {method.id === 'parcelow' && computedBasePrice > 0 && (
+                                    <div className="flex flex-col items-end">
+                                      <span className="text-grey-900 text-lg font-black px-2">
+                                        ${computedBasePrice.toFixed(2)}
+                                      </span>
+                                      <span className="text-[10px] font-bold text-slate-900 mt-1 block uppercase tracking-widest leading-tight">
+                                        {t('selectionFeeStep.main.parcelowInstallments')}
+                                      </span>
+                                    </div>
+                                  )}
+                                  {method.id === 'pix' && pixAmountWithFees > 0 && exchangeRate && (
+                                    <span className="text-grey-900 text-lg font-black px-2">
+                                      R$ {pixAmountWithFees.toFixed(2)}
+                                    </span>
+                                  )}
+                                  {method.id === 'zelle' && computedBasePrice > 0 && (
+                                    <span className="text-grey-900 text-lg font-black px-2">
+                                      ${computedBasePrice.toFixed(2)}
+                                    </span>
+                                  )}
+
+                                  {isProcessing && (
+                                    <Loader2 className="w-5 h-5 text-blue-500 animate-spin flex-shrink-0" />
+                                  )}
+                                  {isSelected && !loading && (
+                                <div className="bg-blue-500 rounded-full p-1 shadow-[0_0_15px_rgba(59,130,246,0.3)]">
+                                  <CheckCircle className="w-4 h-4 text-white" />
+                                </div>
+                          <div className="flex flex-col w-full">
+                            <div className="flex items-end justify-between w-full">
+                              <h4 className="text-base sm:text-lg font-black text-gray-900 uppercase tracking-tight">
                                 {method.name}
                               </h4>
+
+                              <div className="flex items-end gap-3 flex-shrink-0">
+                                {method.id === 'stripe' && cardAmountWithFees > 0 && (
+                                  <span className="text-gray-900 text-lg font-black">
+                                    ${cardAmountWithFees.toFixed(2)}
+                                  </span>
+                                )}
+                                {method.id === 'parcelow' && computedBasePrice > 0 && (
+                                  <div className="flex flex-col items-end">
+                                    <span className="text-[10px] font-bold text-slate-900 mb-0.5 block uppercase tracking-widest leading-tight">
+                                      {t('selectionFeeStep.main.parcelowInstallments')}
+                                    </span>
+                                    <span className="text-gray-900 text-lg font-black">
+                                      ${computedBasePrice.toFixed(2)}
+                                    </span>
+                                  </div>
+                                )}
+                                {method.id === 'pix' && pixAmountWithFees > 0 && exchangeRate && (
+                                   <span className="text-gray-900 text-lg font-black">
+                                     R$ {pixAmountWithFees.toFixed(2)}
+                                   </span>
+                                )}
+                                {method.id === 'zelle' && computedBasePrice > 0 && (
+                                   <span className="text-gray-900 text-lg font-black">
+                                     ${computedBasePrice.toFixed(2)}
+                                   </span>
+                                )}
+                                
+                                {isProcessing && (
+                                  <Loader2 className="w-5 h-5 text-blue-500 animate-spin flex-shrink-0" />
+                                )}
+                                {isSelected && !loading && (
+                                  <div className="bg-blue-500 rounded-full p-1 shadow-[0_0_15px_rgba(59,130,246,0.3)]">
+                                    <CheckCircle className="w-4 h-4 text-white" />
+                                  </div>
+                                )}
+                              </div>
+                            </div>
+                            
+                            <div className="mt-1">
                               {method.id === 'stripe' && (
-                                <span className="text-[10px] font-bold text-gray-400 mt-1 uppercase tracking-wide leading-tight">{t('selectionFeeStep.main.processingFees.card')}</span>
+                                <span className="text-[10px] font-bold text-gray-400 block uppercase tracking-wide leading-tight">{t('selectionFeeStep.main.processingFees.card')}</span>
                               )}
                               {method.id === 'pix' && (
-                                <span className="text-[10px] font-bold text-gray-400 mt-1 uppercase tracking-wide leading-tight">{t('selectionFeeStep.main.processingFees.pix')}</span>
+                                <span className="text-[10px] font-bold text-gray-400 block uppercase tracking-wide leading-tight">{t('selectionFeeStep.main.processingFees.pix')}</span>
                               )}
                               {method.id === 'parcelow' && (
-                                <span className="text-[10px] font-bold text-gray-400 mt-1 uppercase tracking-wide leading-tight max-w-[200px] sm:max-w-none">{t('selectionFeeStep.main.processingFees.parcelow')}</span>
+                                <span className="text-[10px] font-bold text-gray-400 block uppercase tracking-wide leading-tight">{t('selectionFeeStep.main.processingFees.parcelow')}</span>
                               )}
                               {method.id === 'zelle' && (
-                                <span className="text-[10px] font-bold text-gray-400 mt-1 uppercase tracking-wide leading-tight flex items-center gap-1">
+                                <span className="text-[10px] font-bold text-gray-400 flex items-center gap-1 uppercase tracking-wide leading-tight">
                                   <AlertCircle className="w-3 h-3 flex-shrink-0" />
                                   {t('selectionFeeStep.main.processingFees.zelle')}
                                 </span>
                               )}
                             </div>
-
-                            <div className="flex items-center gap-3">
-                              {method.id === 'stripe' && cardAmountWithFees > 0 && (
-                                <span className="text-grey-900 text-lg font-black px-2">
-                                  ${cardAmountWithFees.toFixed(2)}
-                                </span>
-                              )}
-                              {method.id === 'parcelow' && computedBasePrice > 0 && (
-                                <div className="flex flex-col items-end">
-                                  <span className="text-grey-900 text-lg font-black px-2">
-                                    ${computedBasePrice.toFixed(2)}
-                                  </span>
-                                  <span className="text-[10px] font-bold text-slate-900 mt-1 block uppercase tracking-widest leading-tight">
-                                    {t('selectionFeeStep.main.parcelowInstallments')}
-                                  </span>
-                                </div>
-                              )}
-                              {method.id === 'pix' && pixAmountWithFees > 0 && exchangeRate && (
-                                <span className="text-grey-900 text-lg font-black px-2">
-                                  R$ {pixAmountWithFees.toFixed(2)}
-                                </span>
-                              )}
-                              {method.id === 'zelle' && computedBasePrice > 0 && (
-                                <span className="text-grey-900 text-lg font-black px-2">
-                                  ${computedBasePrice.toFixed(2)}
-                                </span>
-                              )}
-
-                              {isProcessing && (
-                                <Loader2 className="w-5 h-5 text-blue-500 animate-spin flex-shrink-0" />
-                              )}
-                              {isSelected && !loading && (
-                                <div className="bg-blue-500 rounded-full p-1 shadow-[0_0_15px_rgba(59,130,246,0.3)]">
-                                  <CheckCircle className="w-4 h-4 text-white" />
-                                </div>
-                              )}
-                            </div>
                           </div>
 
                           {isDisabled && !!isBlocked && !!pendingPayment && method.id !== 'zelle' && (
-                            <div className="mt-3 flex items-center space-x-2 bg-amber-50 border border-amber-100 w-fit px-2 py-1 rounded-lg">
-                              <AlertCircle className="w-3 h-3 text-amber-600" />
-                              <span className="text-[10px] text-amber-600 font-bold uppercase tracking-tight">
-                                {t('selectionFeeStep.main.zelleUnavailable')}
-                              </span>
-                            </div>
-                          )}
-                        </div>
-                      </div>
-                    </button>
+                                    <div className="mt-3 flex items-center space-x-2 bg-amber-50 border border-amber-100 w-fit px-2 py-1 rounded-lg">
+                                      <AlertCircle className="w-3 h-3 text-amber-600" />
+                                      <span className="text-[10px] text-amber-600 font-bold uppercase tracking-tight">
+                                        {t('selectionFeeStep.main.zelleUnavailable')}
+                                      </span>
+                                    </div>
+                                  )}
+                                </div>
+                              </div>
+                            </button>
 
-                    {/* Campo inline de CPF para Parcelow - Exibido logo abaixo do botão de forma integrada */}
-                    {method.id === 'parcelow' && showInlineCpf && (
-                      <div className="p-6 bg-blue-50 border-2 border-blue-100 rounded-2xl mt-4 space-y-4 animate-fadeIn relative z-0 shadow-[0_15px_30px_rgba(59,130,246,0.1)]">
-                        <div className="flex flex-col sm:flex-row sm:items-center gap-4">
-                          <div className="flex-initial sm:w-[300px]">
-                            <p className="text-[11px] font-black text-blue-700 uppercase tracking-widest mb-2 flex items-center gap-2">
-                              <Shield className="w-3 h-3" />
-                              {t('selectionFeeStep.main.parcelowVerification')}
-                            </p>
-                            <div className="relative">
-                              <input
-                                type="text"
-                                value={inlineCpf}
-                                onChange={(e) => {
-                                  setInlineCpf(formatCpf(e.target.value));
-                                  setCpfError(null);
-                                }}
-                                placeholder={t('selectionFeeStep.main.cpfPlaceholder')}
-                                maxLength={14}
-                                className="w-full px-4 py-3 rounded-xl border border-blue-200 text-sm font-bold text-gray-900 focus:outline-none focus:ring-2 focus:ring-blue-500 bg-white transition-all shadow-sm"
-                              />
-                            </div>
+                            {/* Campo inline de CPF para Parcelow - Exibido logo abaixo do botão de forma integrada */}
+                            {method.id === 'parcelow' && showInlineCpf && (
+                              <div className="p-6 bg-blue-50 border-2 border-blue-100 rounded-2xl mt-4 space-y-4 animate-fadeIn relative z-0 shadow-[0_15px_30px_rgba(59,130,246,0.1)]">
+                                <div className="flex flex-col sm:flex-row sm:items-center gap-4">
+                                  <div className="flex-initial sm:w-[300px]">
+                                    <p className="text-[11px] font-black text-blue-700 uppercase tracking-widest mb-2 flex items-center gap-2">
+                                      <Shield className="w-3 h-3" />
+                                      {t('selectionFeeStep.main.parcelowVerification')}
+                                    </p>
+                                    <div className="relative">
+                                      <input
+                                        type="text"
+                                        value={inlineCpf}
+                                        onChange={(e) => {
+                                          setInlineCpf(formatCpf(e.target.value));
+                                          setCpfError(null);
+                                        }}
+                                        placeholder={t('selectionFeeStep.main.cpfPlaceholder')}
+                                        maxLength={14}
+                                        className="w-full px-4 py-3 rounded-xl border border-blue-200 text-sm font-bold text-gray-900 focus:outline-none focus:ring-2 focus:ring-blue-500 bg-white transition-all shadow-sm"
+                                      />
+                                    </div>
+                                  </div>
+                                  <button
+                                    onClick={saveCpfAndCheckout}
+                                    disabled={savingCpf || inlineCpf.replace(/\D/g, '').length !== 11}
+                                    className="sm:mt-6 px-8 py-3 rounded-xl bg-blue-600 text-white text-sm font-black hover:bg-blue-700 transition-all disabled:opacity-50 disabled:cursor-not-allowed whitespace-nowrap flex items-center justify-center gap-2 shadow-lg shadow-blue-500/25 active:scale-95"
+                                  >
+                                    {savingCpf ? <Loader2 className="w-4 h-4 animate-spin" /> : t('selectionFeeStep.main.goToPayment')}
+                                  </button>
+                                </div>
+                                {cpfError && (
+                                  <p className="text-xs text-red-600 flex items-center gap-1 font-bold animate-pulse">
+                                    <AlertCircle className="w-4 h-4" />
+                                    {cpfError}
+                                  </p>
+                                )}
+                              </div>
+                            )}
                           </div>
-                          <button
-                            onClick={saveCpfAndCheckout}
-                            disabled={savingCpf || inlineCpf.replace(/\D/g, '').length !== 11}
-                            className="sm:mt-6 px-8 py-3 rounded-xl bg-blue-600 text-white text-sm font-black hover:bg-blue-700 transition-all disabled:opacity-50 disabled:cursor-not-allowed whitespace-nowrap flex items-center justify-center gap-2 shadow-lg shadow-blue-500/25 active:scale-95"
-                          >
-                            {savingCpf ? <Loader2 className="w-4 h-4 animate-spin" /> : t('selectionFeeStep.main.goToPayment')}
-                          </button>
-                        </div>
-                        {cpfError && (
-                          <p className="text-xs text-red-600 flex items-center gap-1 font-bold animate-pulse">
-                            <AlertCircle className="w-4 h-4" />
-                            {cpfError}
-                          </p>
-                        )}
-                      </div>
-                    )}
-                  </div>
 
-                );
+                          );
               })}
 
 
 
-            </div>
-          )}
+                      </div>
+                    )
+                  }
         </div>
-      </div>
-
-      {/* Terms and Conditions Modal for desktop */}
-      {showTermsModal && ReactDOM.createPortal(
-        <div className="fixed inset-0 z-[10020] flex items-center justify-center bg-black bg-opacity-50 p-2 sm:p-4">
-          <Dialog open={showTermsModal} onClose={() => setShowTermsModal(false)} className="relative z-[10021]">
-            <div className="fixed inset-0 bg-black/60 backdrop-blur-sm z-[10020]" aria-hidden="true" />
-            <div className="fixed inset-0 flex items-center justify-center p-2 sm:p-4 z-[10020]">
-              <Dialog.Panel className="w-full max-w-4xl bg-white/90 backdrop-blur-xl rounded-[2.5rem] shadow-[0_32px_64px_-16px_rgba(0,0,0,0.3)] overflow-hidden relative max-h-[90dvh] flex flex-col">
-                <div className="relative bg-gradient-to-br from-blue-600/90 via-blue-700/90 to-indigo-800/90 text-white p-6 sm:p-8 flex-shrink-0 border-b border-white/10">
-                  <div className="absolute top-0 right-0 w-64 h-64 bg-white/10 rounded-full blur-[80px] -mr-32 -mt-32 pointer-events-none" />
-
-                  <button
-                    onClick={() => setShowTermsModal(false)}
-                    className="absolute top-4 right-4 p-2.5 hover:bg-white/20 rounded-2xl transition-all duration-300 group/close z-50"
-                    title={t('preCheckoutModal.closeTerms') || 'Close'}
-                  >
-                    <X className="w-6 h-6 group-hover/close:rotate-90 transition-transform duration-500" />
-                  </button>
-
-                  <div className="flex items-center gap-4 relative z-10">
-                    <div>
-                      <Dialog.Title className="text-2xl sm:text-3xl font-black uppercase tracking-tighter">
-                        {activeTerm?.title ? activeTerm.title : t('preCheckoutModal.termsAndConditions.title')}
-                      </Dialog.Title>
-                      <p className="text-blue-100/60 text-xs font-bold uppercase tracking-widest mt-1">{t('selectionFeeStep.main.serviceContract')}</p>
-                    </div>
-                  </div>
-                </div>
-
-                {/* Terms Content */}
-                <div
-                  className="flex-1 overflow-y-auto p-6 sm:p-10 scrollbar-thin scrollbar-thumb-gray-200 scrollbar-track-transparent"
-                >
-                  {loadingTerms ? (
-                    <div className="flex flex-col items-center justify-center py-20">
-                      <div className="w-16 h-16 border-4 border-blue-500/20 border-t-blue-600 rounded-full animate-spin mb-4"></div>
-                      <p className="text-gray-400 font-bold uppercase tracking-widest text-xs">{t('preCheckoutModal.loading')}</p>
-                    </div>
-                  ) : activeTerm ? (
-                    <div
-                      className="prose prose-blue max-w-none prose-headings:font-black prose-headings:uppercase prose-headings:tracking-tight prose-p:text-gray-600 prose-p:leading-relaxed prose-strong:text-gray-900"
-                      dangerouslySetInnerHTML={{ __html: activeTerm?.content || '' }}
-                    />
-                  ) : (
-                    <div className="flex flex-col items-center justify-center py-20 text-gray-400">
-                      <AlertCircle className="w-12 h-12 mb-4 opacity-20" />
-                      <p className="font-bold uppercase tracking-widest text-xs">{t('preCheckoutModal.noTermsFound')}</p>
-                    </div>
-                  )}
-                </div>
-
-                <div className="border-t border-gray-100 bg-gray-50/80 backdrop-blur-md p-6 sm:p-8 flex-shrink-0">
-                  <div className="flex justify-center max-w-xs mx-auto">
-                    <button
-                      onClick={() => setShowTermsModal(false)}
-                      className="w-full px-8 py-4 bg-blue-600 text-white rounded-2xl font-black uppercase tracking-widest text-sm hover:bg-blue-700 transition-all shadow-xl active:scale-95 shadow-blue-500/20"
-                    >
-                      {t('common.close') || 'Fechar'}
-                    </button>
-                  </div>
-                </div>
-              </Dialog.Panel>
-            </div>
-          </Dialog>
-        </div>,
-        document.body
-      )}
-
-      {/* Terms Drawer for mobile */}
-      {showTermsInDrawer && (
-        <Drawer open={showTermsInDrawer} onOpenChange={setShowTermsInDrawer}>
-          <DrawerContent className="max-h-[95vh] bg-white border-t border-gray-200 rounded-t-2xl">
-            <DrawerHeader className="bg-gradient-to-r from-blue-600 to-blue-800 text-white rounded-t-2xl">
-              <div className="flex items-center gap-3">
-                <div className="p-2 bg-white/20 rounded-lg">
-                  <Shield className="w-5 h-5" />
-                </div>
-                <DrawerTitle className="text-xl font-bold">
-                  {t('preCheckoutModal.termsAndConditions.title')}
-                </DrawerTitle>
               </div>
-            </DrawerHeader>
 
-            <div className="flex-1 overflow-y-auto p-4 bg-white">
-              <MobileTermsView
-                setShowTermsInDrawer={setShowTermsInDrawer}
-                activeTerm={activeTerm}
-                loadingTerms={loadingTerms}
-                t={t}
-              />
-            </div>
-          </DrawerContent>
-        </Drawer>
-      )}
+              {/* Terms and Conditions Modal for desktop */}
+              {showTermsModal && ReactDOM.createPortal(
+                <div className="fixed inset-0 z-[10020] flex items-center justify-center bg-black bg-opacity-50 p-2 sm:p-4">
+                  <Dialog open={showTermsModal} onClose={() => setShowTermsModal(false)} className="relative z-[10021]">
+                    <div className="fixed inset-0 bg-black/60 backdrop-blur-sm z-[10020]" aria-hidden="true" />
+                    <div className="fixed inset-0 flex items-center justify-center p-2 sm:p-4 z-[10020]">
+                      <Dialog.Panel className="w-full max-w-4xl bg-white/90 backdrop-blur-xl rounded-[2.5rem] shadow-[0_32px_64px_-16px_rgba(0,0,0,0.3)] overflow-hidden relative max-h-[90dvh] flex flex-col">
+                        <div className="relative bg-gradient-to-br from-blue-600/90 via-blue-700/90 to-indigo-800/90 text-white p-6 sm:p-8 flex-shrink-0 border-b border-white/10">
+                          <div className="absolute top-0 right-0 w-64 h-64 bg-white/10 rounded-full blur-[80px] -mr-32 -mt-32 pointer-events-none" />
 
-      <style>{`
+                          <button
+                            onClick={() => setShowTermsModal(false)}
+                            className="absolute top-4 right-4 p-2.5 hover:bg-white/20 rounded-2xl transition-all duration-300 group/close z-50"
+                            title={t('preCheckoutModal.closeTerms') || 'Close'}
+                          >
+                            <X className="w-6 h-6 group-hover/close:rotate-90 transition-transform duration-500" />
+                          </button>
+
+                          <div className="flex items-center gap-4 relative z-10">
+                            <div>
+                              <Dialog.Title className="text-2xl sm:text-3xl font-black uppercase tracking-tighter">
+                                {activeTerm?.title ? activeTerm.title : t('preCheckoutModal.termsAndConditions.title')}
+                              </Dialog.Title>
+                              <p className="text-blue-100/60 text-xs font-bold uppercase tracking-widest mt-1">{t('selectionFeeStep.main.serviceContract')}</p>
+                            </div>
+                          </div>
+                        </div>
+
+                        {/* Terms Content */}
+                        <div
+                          className="flex-1 overflow-y-auto p-6 sm:p-10 scrollbar-thin scrollbar-thumb-gray-200 scrollbar-track-transparent"
+                        >
+                          {loadingTerms ? (
+                            <div className="flex flex-col items-center justify-center py-20">
+                              <div className="w-16 h-16 border-4 border-blue-500/20 border-t-blue-600 rounded-full animate-spin mb-4"></div>
+                              <p className="text-gray-400 font-bold uppercase tracking-widest text-xs">{t('preCheckoutModal.loading')}</p>
+                            </div>
+                          ) : activeTerm ? (
+                            <div
+                              className="prose prose-blue max-w-none prose-headings:font-black prose-headings:uppercase prose-headings:tracking-tight prose-p:text-gray-600 prose-p:leading-relaxed prose-strong:text-gray-900"
+                              dangerouslySetInnerHTML={{ __html: activeTerm?.content || '' }}
+                            />
+                          ) : (
+                            <div className="flex flex-col items-center justify-center py-20 text-gray-400">
+                              <AlertCircle className="w-12 h-12 mb-4 opacity-20" />
+                              <p className="font-bold uppercase tracking-widest text-xs">{t('preCheckoutModal.noTermsFound')}</p>
+                            </div>
+                          )}
+                        </div>
+
+                        <div className="border-t border-gray-100 bg-gray-50/80 backdrop-blur-md p-6 sm:p-8 flex-shrink-0">
+                          <div className="flex justify-center max-w-xs mx-auto">
+                            <button
+                              onClick={() => setShowTermsModal(false)}
+                              className="w-full px-8 py-4 bg-blue-600 text-white rounded-2xl font-black uppercase tracking-widest text-sm hover:bg-blue-700 transition-all shadow-xl active:scale-95 shadow-blue-500/20"
+                            >
+                              {t('common.close') || 'Fechar'}
+                            </button>
+                          </div>
+                        </div>
+                      </Dialog.Panel>
+                    </div>
+                  </Dialog>
+                </div>,
+                document.body
+              )}
+
+              {/* Terms Drawer for mobile */}
+              {showTermsInDrawer && (
+                <Drawer open={showTermsInDrawer} onOpenChange={setShowTermsInDrawer}>
+                  <DrawerContent className="max-h-[95vh] bg-white border-t border-gray-200 rounded-t-2xl">
+                    <DrawerHeader className="bg-gradient-to-r from-blue-600 to-blue-800 text-white rounded-t-2xl">
+                      <div className="flex items-center gap-3">
+                        <div className="p-2 bg-white/20 rounded-lg">
+                          <Shield className="w-5 h-5" />
+                        </div>
+                        <DrawerTitle className="text-xl font-bold">
+                          {t('preCheckoutModal.termsAndConditions.title')}
+                        </DrawerTitle>
+                      </div>
+                    </DrawerHeader>
+
+                    <div className="flex-1 overflow-y-auto p-4 bg-white">
+                      <MobileTermsView
+                        setShowTermsInDrawer={setShowTermsInDrawer}
+                        activeTerm={activeTerm}
+                        loadingTerms={loadingTerms}
+                        t={t}
+                      />
+                    </div>
+                  </DrawerContent>
+                </Drawer>
+              )}
+
+              <style>{`
         /* Hide the default checkbox */
         .checkbox-container input {
           position: absolute;
@@ -2069,47 +2124,47 @@ export const SelectionFeeStep: React.FC<StepProps> = ({ onNext }) => {
           }
         }
       `}</style>
-      {/* Modal de Aviso de CPF necessário para Parcelow */}
-      <Dialog
-        open={showCpfModal}
-        onClose={() => setShowCpfModal(false)}
-        className="relative z-[100]"
-      >
-        <div className="fixed inset-0 bg-black/60 backdrop-blur-sm" aria-hidden="true" />
-        <div className="fixed inset-0 flex items-center justify-center p-4">
-          <Dialog.Panel className="w-full max-w-sm rounded-2xl bg-white p-6 shadow-2xl">
-            <div className="flex flex-col items-center text-center">
-              <div className="w-16 h-16 bg-amber-100 rounded-full flex items-center justify-center mb-4">
-                <AlertCircle className="w-8 h-8 text-amber-600" />
-              </div>
-              <Dialog.Title className="text-xl font-bold text-gray-900 mb-2">
-                {t('scholarshipDeadline.parcelowCpfModal.title')}
-              </Dialog.Title>
-              <Dialog.Description className="text-gray-600 mb-6">
-                {t('scholarshipDeadline.parcelowCpfModal.description')}
-              </Dialog.Description>
-              <div className="flex flex-col w-full gap-3">
-                <button
-                  onClick={() => {
-                    setShowCpfModal(false);
-                    navigate('/student/dashboard/profile');
-                  }}
-                  className="w-full py-3 px-4 bg-blue-600 text-white rounded-xl font-bold hover:bg-blue-700 transition-colors shadow-lg shadow-blue-500/20"
-                >
-                  {t('scholarshipDeadline.parcelowCpfModal.confirm')}
-                </button>
-                <button
-                  onClick={() => setShowCpfModal(false)}
-                  className="w-full py-3 px-4 bg-gray-100 text-gray-700 rounded-xl font-bold hover:bg-gray-200 transition-colors"
-                >
-                  {t('scholarshipDeadline.parcelowCpfModal.cancel')}
-                </button>
-              </div>
+              {/* Modal de Aviso de CPF necessário para Parcelow */}
+              <Dialog
+                open={showCpfModal}
+                onClose={() => setShowCpfModal(false)}
+                className="relative z-[100]"
+              >
+                <div className="fixed inset-0 bg-black/60 backdrop-blur-sm" aria-hidden="true" />
+                <div className="fixed inset-0 flex items-center justify-center p-4">
+                  <Dialog.Panel className="w-full max-w-sm rounded-2xl bg-white p-6 shadow-2xl">
+                    <div className="flex flex-col items-center text-center">
+                      <div className="w-16 h-16 bg-amber-100 rounded-full flex items-center justify-center mb-4">
+                        <AlertCircle className="w-8 h-8 text-amber-600" />
+                      </div>
+                      <Dialog.Title className="text-xl font-bold text-gray-900 mb-2">
+                        {t('scholarshipDeadline.parcelowCpfModal.title')}
+                      </Dialog.Title>
+                      <Dialog.Description className="text-gray-600 mb-6">
+                        {t('scholarshipDeadline.parcelowCpfModal.description')}
+                      </Dialog.Description>
+                      <div className="flex flex-col w-full gap-3">
+                        <button
+                          onClick={() => {
+                            setShowCpfModal(false);
+                            navigate('/student/dashboard/profile');
+                          }}
+                          className="w-full py-3 px-4 bg-blue-600 text-white rounded-xl font-bold hover:bg-blue-700 transition-colors shadow-lg shadow-blue-500/20"
+                        >
+                          {t('scholarshipDeadline.parcelowCpfModal.confirm')}
+                        </button>
+                        <button
+                          onClick={() => setShowCpfModal(false)}
+                          className="w-full py-3 px-4 bg-gray-100 text-gray-700 rounded-xl font-bold hover:bg-gray-200 transition-colors"
+                        >
+                          {t('scholarshipDeadline.parcelowCpfModal.cancel')}
+                        </button>
+                      </div>
+                    </div>
+                  </Dialog.Panel>
+                </div>
+              </Dialog>
             </div>
-          </Dialog.Panel>
-        </div>
-      </Dialog>
-    </div>
-  );
+          );
 };
 

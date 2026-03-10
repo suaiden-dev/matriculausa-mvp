@@ -2,14 +2,14 @@ import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { 
   AlertCircle, Award, Info, Home, FolderOpen, GraduationCap, Download, 
-  ShieldCheck, ArrowRight, LayoutDashboard, Building, MapPin, 
+  ShieldCheck, ArrowRight, LayoutDashboard, MapPin, 
   Star, Eye, CheckCircle2, Clock, Mail, Phone, Globe, ExternalLink 
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useAuth } from '../../../hooks/useAuth';
 import { supabase } from '../../../lib/supabase';
 import { StepProps } from '../types';
-import { useTranslation } from 'react-i18next';
+import { useTranslation, Trans } from 'react-i18next';
 import { useStudentLogs } from '../../../hooks/useStudentLogs';
 import { useFeeConfig } from '../../../hooks/useFeeConfig';
 import { ExpandableTabs } from '../../../components/ui/expandable-tabs';
@@ -157,7 +157,7 @@ export const UniversityDocumentsStep: React.FC<StepProps> = ({ onBack }) => {
             <GraduationCap className="w-6 h-6 text-slate-800" />
           </div>
         </div>
-        <p className="text-slate-600 font-medium mt-4">Carregando portal de gerenciamento...</p>
+        <p className="text-slate-600 font-medium mt-4">{t('studentDashboard.myApplicationStep.loading')}</p>
       </div>
     );
   }
@@ -168,12 +168,12 @@ export const UniversityDocumentsStep: React.FC<StepProps> = ({ onBack }) => {
         <div className="w-20 h-20 bg-amber-50 rounded-2xl flex items-center justify-center mx-auto mb-6">
           <AlertCircle className="w-10 h-10 text-amber-500" />
         </div>
-        <h3 className="text-2xl font-black text-slate-900 uppercase tracking-tight mb-2">Nenhuma Aplicação Encontrada</h3>
+        <h3 className="text-2xl font-black text-slate-900 uppercase tracking-tight mb-2">{t('studentDashboard.myApplicationStep.noApplication.title')}</h3>
         <p className="text-slate-600 mb-8 max-w-md mx-auto">
-          Você ainda não possui uma aplicação ativa. Por favor, volte ao passo anterior ou entre em contato com o suporte.
+          {t('studentDashboard.myApplicationStep.noApplication.description')}
         </p>
         <button onClick={onBack} className="bg-slate-900 text-white px-8 py-4 rounded-xl font-bold uppercase tracking-widest text-xs hover:bg-slate-800 transition-all">
-          Voltar
+          {t('studentDashboard.myApplicationStep.back')}
         </button>
       </div>
     );
@@ -183,7 +183,7 @@ export const UniversityDocumentsStep: React.FC<StepProps> = ({ onBack }) => {
     { title: t('studentDashboard.applicationChatPage.tabs.welcome'), icon: Home },
     { title: t('studentDashboard.applicationChatPage.tabs.details'), icon: Info },
     { title: t('studentDashboard.applicationChatPage.tabs.documents'), icon: FolderOpen },
-    { title: 'Carta de Aceite', icon: Award }
+    { title: t('studentDashboard.myApplicationStep.tabs.acceptanceLetter'), icon: Award }
   ];
 
   const tabIds: ('welcome' | 'details' | 'documents' | 'acceptance')[] = ['welcome', 'details', 'documents', 'acceptance'];
@@ -215,10 +215,10 @@ export const UniversityDocumentsStep: React.FC<StepProps> = ({ onBack }) => {
   return (
     <div className="space-y-8 pb-24">
       {/* Header Premium */}
-      <div className="flex flex-col md:flex-row md:items-end justify-between gap-6">
+      <div className="flex flex-col md:flex-row md:items-end justify-between gap-6 mt-6 md:mt-0">
         <div className="space-y-3">
           <h2 className="text-4xl md:text-6xl font-black text-slate-900 uppercase tracking-tighter leading-none">
-            Minha <span className="text-blue-600">Aplicação</span>
+            {t('studentDashboard.myApplicationStep.header.my')} <span className="text-blue-600">{t('studentDashboard.myApplicationStep.header.application')}</span>
           </h2>
 
         </div>
@@ -252,51 +252,62 @@ export const UniversityDocumentsStep: React.FC<StepProps> = ({ onBack }) => {
             <div className="grid grid-cols-1 md:grid-cols-12 gap-6">
               {/* Main Welcome Card */}
               <div className="md:col-span-12 space-y-6">
-                <div className="bg-white rounded-[2.5rem] p-8 md:p-12 shadow-2xl relative overflow-hidden border border-slate-200">
+                <div className="bg-white rounded-[2.5rem] p-8 md:p-12 shadow-2xl relative overflow-hidden border border-slate-300">
                   <div className="absolute top-0 right-0 w-64 h-64 bg-blue-500/5 rounded-full blur-[80px] -mr-32 -mt-32 pointer-events-none" />
                   
                   <div className="relative z-10 grid grid-cols-1 lg:grid-cols-12 gap-12">
                     <div className="lg:col-span-8">
                       <div className="flex items-center gap-4 mb-8">
-                        <div className="w-16 h-16 bg-blue-600 rounded-2xl flex items-center justify-center shadow-lg shadow-blue-500/20">
+                        <div className="hidden md:flex w-16 h-16 bg-blue-600 rounded-2xl items-center justify-center shadow-lg shadow-blue-500/20">
                           <LayoutDashboard className="w-8 h-8 text-white" />
                         </div>
                         <div>
                           <h3 className="text-2xl font-black text-gray-900 uppercase tracking-tight">
-                            Parabéns {userProfile?.full_name || 'Estudante'},<br/> você foi <span className="text-emerald-600">aprovado</span> na <span className="text-blue-600">{applicationDetails?.scholarships?.universities?.name || 'Universidade'}</span>
+                            <Trans 
+                              i18nKey="studentDashboard.myApplicationStep.welcome.congratsMessage"
+                              values={{ 
+                                name: userProfile?.full_name || 'Estudante',
+                                university: applicationDetails?.scholarships?.universities?.name || 'Universidade'
+                              }}
+                              components={{
+                                br: <br />,
+                                approved: <span className="text-emerald-600" />,
+                                university: <span className="text-blue-600" />
+                              }}
+                            />
                           </h3>
                         </div>
                       </div>
 
                       <div className="space-y-14">
                         <p className="text-gray-600 leading-relaxed text-lg">
-                          Falta muito pouco para tudo ficar pronto! Nesta etapa final você pode rever os detalhes da universidade que escolheu e enviar a documentação obrigatória. Assim que tudo estiver certo, sua Carta de Aceite estará liberada aqui mesmo para você baixar.
+                          {t('studentDashboard.myApplicationStep.welcome.almostDone')}
                         </p>
 
                         <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                           <button 
                             onClick={() => setActiveTab('documents')}
-                            className="flex items-center gap-4 p-5 bg-slate-50 hover:bg-white rounded-2xl border border-slate-200 hover:border-blue-300 hover:shadow-lg hover:shadow-blue-500/5 transition-all text-left group"
+                            className="flex items-center gap-4 p-5 bg-slate-50 hover:bg-white rounded-2xl border border-slate-300 hover:border-blue-300 hover:shadow-lg hover:shadow-blue-500/5 transition-all text-left group"
                           >
                             <div className="w-12 h-12 bg-white rounded-xl shadow-sm flex items-center justify-center group-hover:scale-110 transition-transform">
                               <FolderOpen className="w-6 h-6 text-slate-600 group-hover:text-blue-600 transition-colors" />
                             </div>
                             <div>
-                              <p className="text-sm font-black text-gray-900 uppercase tracking-tight">Enviar Documentos</p>
-                              <p className="text-xs text-gray-500 font-medium">Documentos solicitados</p>
+                              <p className="text-sm font-black text-gray-900 uppercase tracking-tight">{t('studentDashboard.myApplicationStep.welcome.sendDocuments')}</p>
+                              <p className="text-xs text-gray-500 font-medium">{t('studentDashboard.myApplicationStep.welcome.requestedDocs')}</p>
                             </div>
                           </button>
 
                           <button 
                             onClick={() => setActiveTab('details')}
-                            className="flex items-center gap-4 p-5 bg-slate-50 hover:bg-white rounded-2xl border border-slate-200 hover:border-blue-300 hover:shadow-lg hover:shadow-blue-500/5 transition-all text-left group"
+                            className="flex items-center gap-4 p-5 bg-slate-50 hover:bg-white rounded-2xl border border-slate-300 hover:border-blue-300 hover:shadow-lg hover:shadow-blue-500/5 transition-all text-left group"
                           >
                             <div className="w-12 h-12 bg-white rounded-xl shadow-sm flex items-center justify-center group-hover:scale-110 transition-transform">
                               <Info className="w-6 h-6 text-slate-600 group-hover:text-blue-600 transition-colors" />
                             </div>
                             <div>
-                              <p className="text-sm font-black text-gray-900 uppercase tracking-tight">Detalhes da Bolsa</p>
-                              <p className="text-xs text-gray-500 font-medium">Requisitos e valores</p>
+                              <p className="text-sm font-black text-gray-900 uppercase tracking-tight">{t('studentDashboard.myApplicationStep.welcome.scholarshipDetails')}</p>
+                              <p className="text-xs text-gray-500 font-medium">{t('studentDashboard.myApplicationStep.welcome.requirementsValues')}</p>
                             </div>
                           </button>
                         </div>
@@ -305,13 +316,13 @@ export const UniversityDocumentsStep: React.FC<StepProps> = ({ onBack }) => {
 
                     <div className="lg:col-span-4 flex flex-col justify-center">
                       <div className="bg-gradient-to-br from-gray-900 to-black rounded-[2.5rem] p-8 py-12 text-white flex flex-col justify-center">
-                        <h4 className="text-xs font-black uppercase tracking-widest text-white-400 mb-4">Precisa de Ajuda?</h4>
-                        <p className="text-sm text-white-400 mb-6">Nossos mentores estão prontos para ajudar com qualquer dúvida sobre este processo.</p>
+                        <h4 className="text-xs font-black uppercase tracking-widest text-white-400 mb-4">{t('studentDashboard.myApplicationStep.welcome.needHelp')}</h4>
+                        <p className="text-sm text-white-400 mb-6">{t('studentDashboard.myApplicationStep.welcome.mentorsReady')}</p>
                         <button 
                           onClick={() => navigate('/student/dashboard/chat')}
                           className="w-full py-4 bg-white/10 hover:bg-white/20 rounded-2xl text-xs font-black uppercase tracking-widest transition-all"
                         >
-                          Falar com Suporte
+                          {t('studentDashboard.myApplicationStep.welcome.talkToSupport')}
                         </button>
                       </div>
                     </div>
@@ -319,21 +330,21 @@ export const UniversityDocumentsStep: React.FC<StepProps> = ({ onBack }) => {
                 </div>
 
                 {/* Timeline simplified */}
-                <div className="bg-white rounded-[2.5rem] p-8 border border-slate-200 shadow-2xl shadow-blue-900/5">
+                <div className="bg-white rounded-[2.5rem] p-8 border border-slate-300 shadow-2xl shadow-blue-900/5">
                    <h4 className="text-lg font-black text-gray-900 uppercase tracking-widest mb-6 flex items-center gap-2">
-                     Próximas Etapas
+                     {t('studentDashboard.myApplicationStep.welcome.nextSteps')}
                    </h4>
                    <div className="space-y-4">
                      {[
                        { 
-                         title: 'Envio de Documentos', 
-                         status: allDocsApproved ? 'Concluído' : (allDocsDone ? 'Em Análise' : 'Ação Necessária'), 
+                         title: t('studentDashboard.myApplicationStep.welcome.documentSubmission'), 
+                         status: allDocsApproved ? t('studentDashboard.myApplicationStep.welcome.status.completed') : (allDocsDone ? t('studentDashboard.myApplicationStep.welcome.status.underReview') : t('studentDashboard.myApplicationStep.welcome.status.actionRequired')), 
                          variant: allDocsApproved ? 'success' : (allDocsDone ? 'success' : 'warning'),
                          tab: 'documents' 
                        },
                        { 
-                         title: 'Recebimento da Carta de Aceite', 
-                         status: applicationDetails.acceptance_letter_url ? 'Disponível' : 'Liberação em Andamento', 
+                         title: t('studentDashboard.myApplicationStep.welcome.acceptanceLetterReceipt'), 
+                         status: applicationDetails.acceptance_letter_url ? t('studentDashboard.myApplicationStep.welcome.documentAvailable') : t('studentDashboard.myApplicationStep.welcome.status.inProgress'), 
                          variant: applicationDetails.acceptance_letter_url ? 'success' : 'warning',
                          tab: 'acceptance' 
                        }
@@ -364,10 +375,10 @@ export const UniversityDocumentsStep: React.FC<StepProps> = ({ onBack }) => {
                             container: 'bg-gradient-to-br from-emerald-50/60 to-teal-50/60 backdrop-blur-xl border border-emerald-400/40 shadow-[0_10px_40px_rgba(16,185,129,0.15)] hover:shadow-emerald-500/30 hover:border-emerald-500 transform hover:scale-[1.02] transition-all duration-500 relative overflow-hidden group ring-2 ring-white/50',
                             iconBg: 'bg-gradient-to-br from-emerald-500 to-teal-600 text-white shadow-[0_0_20px_rgba(16,185,129,0.5)] border border-emerald-400/30',
                             status: 'text-emerald-700 font-black tracking-tight',
-                            indicator: 'bg-emerald-600 animate-pulse shadow-[0_0_12px_rgba(16,185,129,0.6)]'
+                            indicator: 'bg-emerald-600'
                          },
                          default: {
-                           container: 'bg-slate-50 border-slate-200 hover:border-blue-300 hover:bg-white',
+                           container: 'bg-slate-50 border-slate-300 hover:border-blue-300 hover:bg-white',
                            iconBg: 'bg-slate-100 text-slate-400',
                            status: 'text-slate-400',
                            indicator: 'bg-slate-300'
@@ -382,7 +393,7 @@ export const UniversityDocumentsStep: React.FC<StepProps> = ({ onBack }) => {
                          <div 
                            key={i} 
                            onClick={() => isClickable && setActiveTab(step.tab as any)}
-                           className={`flex items-center justify-between p-4 rounded-xl border transition-all cursor-pointer hover:shadow-lg ${styles.container}`}
+                           className={`flex flex-col sm:flex-row sm:items-center justify-between p-4 rounded-xl border transition-all cursor-pointer hover:shadow-lg gap-3 ${styles.container}`}
                          >
                             {/* Emerald Shine effect */}
                             {isLetterAvailable && (
@@ -395,17 +406,14 @@ export const UniversityDocumentsStep: React.FC<StepProps> = ({ onBack }) => {
                              </div>
                              <div className="flex flex-col">
                                <span className={`text-sm font-bold uppercase tracking-tight ${isLetterAvailable ? 'text-emerald-950' : 'text-gray-900'}`}>{step.title}</span>
-                               {isLetterAvailable && (
-                                  <div className="flex items-center gap-1.5 mt-0.5">
-                                    <span className="w-1.5 h-1.5 bg-emerald-500 rounded-full animate-ping" />
-                                    <span className="text-[10px] text-emerald-700 font-extrabold uppercase tracking-widest">Documento Disponível</span>
-                                  </div>
-                               )}
                              </div>
                            </div>
-                           <div className="flex items-center gap-2 relative z-10">
-                              <div className={`w-2 h-2 rounded-full ${styles.indicator}`} />
-                              <span className={`text-[10px] font-black uppercase tracking-widest ${styles.status}`}>{step.status}</span>
+                           <div className="flex items-center gap-2 relative z-10 sm:ml-0 ml-[52px]">
+                               <div className="relative flex items-center justify-center">
+                                 {isLetterAvailable && <div className="absolute w-3 h-3 bg-emerald-400 rounded-full animate-ping" />}
+                                 <div className={`w-2 h-2 rounded-full relative z-10 ${styles.indicator}`} />
+                               </div>
+                               <span className={`text-[10px] font-black uppercase tracking-widest ${styles.status}`}>{step.status}</span>
                               {isLetterAvailable && <ArrowRight className="w-4 h-4 text-emerald-600 ml-2 group-hover:translate-x-1 transition-transform" />}
                            </div>
                          </div>
@@ -417,25 +425,7 @@ export const UniversityDocumentsStep: React.FC<StepProps> = ({ onBack }) => {
 
 
 
-              <div className="md:col-span-12 bg-white rounded-[3rem] p-8 md:p-16 shadow-2xl shadow-blue-900/5 border border-slate-200 relative overflow-hidden">
-                <div className="absolute top-0 right-0 w-96 h-96 bg-blue-500/5 rounded-full blur-[120px] -mr-48 -mt-48" />
-                <h4 className="text-2xl font-black text-gray-900 uppercase tracking-tight mb-8 relative z-10 flex items-center gap-3">
-                  <div className="w-10 h-10 bg-blue-50 rounded-xl flex items-center justify-center">
-                    <ArrowRight className="w-5 h-5 text-blue-600" />
-                  </div>
-                  O que acontece agora?
-                </h4>
-                <div className="space-y-4 relative z-10">
-                   {(t('studentDashboard.applicationChatPage.i20ControlFee.paymentSuccess.nextStepsList', { returnObjects: true }) as string[]).map((step, index) => (
-                     <div key={index} className="flex items-center gap-5 p-6 bg-slate-50 rounded-2xl border border-slate-200 hover:bg-white hover:border-blue-200 hover:shadow-lg hover:shadow-blue-500/5 transition-all">
-                        <div className="w-10 h-10 bg-blue-600 rounded-xl flex items-center justify-center font-black text-white shadow-lg shadow-blue-500/20 flex-shrink-0">
-                          {index + 1}
-                        </div>
-                        <p className="text-sm font-bold text-slate-700 leading-tight uppercase tracking-tight">{step}</p>
-                     </div>
-                   ))}
-                </div>
-              </div>
+
           </div>
           )}
 
@@ -444,9 +434,6 @@ export const UniversityDocumentsStep: React.FC<StepProps> = ({ onBack }) => {
               {/* University Hero Card */}
               <div className="bg-white rounded-[2.5rem] shadow-2xl overflow-hidden group">
                 <div className="bg-gradient-to-r from-[#05294E] to-[#08427e] p-8 md:p-12 relative overflow-hidden">
-                  <div className="absolute inset-0 opacity-10 pointer-events-none">
-                    <Building className="w-96 h-96 -right-24 -bottom-24 absolute rotate-12" />
-                  </div>
                   <div className="relative z-10 flex flex-col md:flex-row items-center gap-8">
                     <div className="w-32 h-32 md:w-40 md:h-40 bg-white rounded-[2.5rem] shadow-2xl flex items-center justify-center p-2 transform group-hover:scale-105 transition-transform duration-500">
                       {applicationDetails.scholarships?.image_url || applicationDetails.scholarships?.universities?.logo_url ? (
@@ -455,21 +442,19 @@ export const UniversityDocumentsStep: React.FC<StepProps> = ({ onBack }) => {
                           alt={applicationDetails.scholarships.universities?.name || ''}
                           className="w-full h-full object-contain p-2"
                         />
-                      ) : (
-                        <Building className="w-20 h-20 text-[#05294E]" />
-                      )}
+                      ) : null}
                     </div>
                     <div className="flex-1 text-center md:text-left space-y-4">
                       <div className="flex flex-wrap justify-center md:justify-start gap-3">
-                        <span className="px-3 py-1 bg-white/10 backdrop-blur-md rounded-full text-[10px] font-black text-white uppercase tracking-widest border border-white/20">University Partner</span>
+                        <span className="px-3 py-1 bg-white/10 backdrop-blur-md rounded-full text-[10px] font-black text-white uppercase tracking-widest border border-white/20">{t('studentDashboard.myApplicationStep.details.universityPartner')}</span>
                         {applicationDetails.scholarships?.delivery_mode && (
                            <span className="px-3 py-1 bg-emerald-500/20 backdrop-blur-md rounded-full text-[10px] font-black text-emerald-400 uppercase tracking-widest border border-emerald-500/30">
-                             {applicationDetails.scholarships.delivery_mode === 'in_person' ? 'Presencial' : 'Online'}
+                             {applicationDetails.scholarships.delivery_mode === 'in_person' ? t('studentDashboard.myApplicationStep.details.inPerson') : t('studentDashboard.myApplicationStep.details.online')}
                            </span>
                         )}
                         {applicationDetails.scholarships?.is_exclusive && (
                           <span className="px-3 py-1 bg-amber-500/20 backdrop-blur-md rounded-full text-[10px] font-black text-amber-400 uppercase tracking-widest border border-amber-500/30 flex items-center gap-1">
-                            <Star className="w-3 h-3" /> Exclusiva
+                            <Star className="w-3 h-3" /> {t('studentDashboard.myApplicationStep.details.exclusive')}
                           </span>
                         )}
                       </div>
@@ -489,18 +474,18 @@ export const UniversityDocumentsStep: React.FC<StepProps> = ({ onBack }) => {
                   </div>
                 </div>
 
-                <div className="p-8 md:p-12">
+                <div className="p-4 sm:p-8 md:p-12">
                    <div className="grid grid-cols-1 lg:grid-cols-3 gap-12">
                      {/* Left: Program Info */}
                      <div className="lg:col-span-2 space-y-12">
                         {/* Meta Grid */}
                         <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
                           {[
-                            { label: 'Nível', val: applicationDetails.scholarships?.level || 'N/A' },
-                            { label: 'Modalidade', val: applicationDetails.scholarships?.delivery_mode === 'in_person' ? 'Presencial' : 'Online' },
-                            { label: 'Prazo', val: applicationDetails.scholarships?.deadline ? new Date(applicationDetails.scholarships.deadline).toLocaleDateString() : 'N/A' }
+                            { label: t('studentDashboard.myApplicationStep.details.level'), val: applicationDetails.scholarships?.level || 'N/A' },
+                            { label: t('studentDashboard.myApplicationStep.details.mode'), val: applicationDetails.scholarships?.delivery_mode === 'in_person' ? t('studentDashboard.myApplicationStep.details.inPerson') : t('studentDashboard.myApplicationStep.details.online') },
+                            { label: t('studentDashboard.myApplicationStep.details.deadline'), val: applicationDetails.scholarships?.deadline ? new Date(applicationDetails.scholarships.deadline).toLocaleDateString() : 'N/A' }
                           ].map((item, i) => (
-                            <div key={i} className={`bg-white p-4 rounded-[2rem] border border-slate-300 shadow-sm ${i === 2 ? 'col-span-2 md:col-span-1' : ''}`}>
+                            <div key={i} className="bg-white p-4 rounded-[2rem] border border-slate-300 shadow-sm pl-5">
                               <div className="flex items-center gap-2 mb-2">
                                 <span className="text-[10px] font-black text-slate-900 uppercase tracking-widest">{item.label}</span>
                               </div>
@@ -508,32 +493,92 @@ export const UniversityDocumentsStep: React.FC<StepProps> = ({ onBack }) => {
                             </div>
                           ))}
                         </div>
+ 
+                        {/* Financial Summary - Mobile Only (Ordered after Deadline) */}
+                        <div className="block lg:hidden space-y-12">
+                           {/* Application Meta Info - Mobile Only */}
+                           <div className="bg-white rounded-[2rem] p-5 border border-slate-300 shadow-sm space-y-5">
+                              <div className="flex flex-col border-b border-slate-100 pb-3">
+                                <p className="text-[10px] font-black text-slate-900 uppercase tracking-widest mb-1">{t('studentDashboard.applicationChatPage.details.studentInformation.studentType')}</p>
+                                <p className="text-xs font-black text-slate-900 uppercase">
+                                  {applicationDetails.student_process_type === 'initial' ? t('studentDashboard.applicationChatPage.details.studentInformation.initialF1VisaRequired') :
+                                   applicationDetails.student_process_type === 'transfer' ? t('studentDashboard.applicationChatPage.details.studentInformation.transferCurrentF1Student') :
+                                   applicationDetails.student_process_type === 'change_of_status' ? t('studentDashboard.applicationChatPage.details.studentInformation.changeOfStatusFromOtherVisa') :
+                                   applicationDetails.student_process_type || 'N/A'}
+                                </p>
+                              </div>
+                              <div className="flex flex-col">
+                                <p className="text-[10px] font-black text-slate-900 uppercase tracking-widest mb-1">{t('studentDashboard.applicationChatPage.details.studentInformation.applicationDate')}</p>
+                                <p className="text-xs font-black text-slate-900 uppercase">
+                                  {new Date(applicationDetails.created_at || Date.now()).toLocaleDateString()}
+                                </p>
+                              </div>
+                           </div>
 
-                        <div className="border border-slate-300 rounded-[2rem] p-8 space-y-12 bg-white shadow-sm relative overflow-hidden">
+                           <div className="bg-white rounded-[2rem] p-5 text-slate-900 border border-slate-300 shadow-sm relative overflow-hidden">
+                              <div className="absolute top-0 right-0 w-32 h-32 bg-slate-100 rounded-full -mr-16 -mt-16 blur-xl" />
+                              <h4 className="text-sm font-black uppercase tracking-widest text-slate-900 mb-6 pb-2 border-b border-slate-100 flex items-center justify-between">
+                                {t('studentDashboard.myApplicationStep.details.finance.financialSummary')}
+                              </h4>
+                              <div className="space-y-6">
+                                <div className="flex justify-between items-end border-b border-slate-100 pb-4">
+                                   <div>
+                                     <p className="text-[10px] font-black text-slate-900 uppercase tracking-widest mb-1">{t('studentDashboard.myApplicationStep.details.finance.originalAnnualCost')}</p>
+                                     <p className="text-xl font-black text-slate-900 line-through tracking-tighter">${(applicationDetails.scholarships?.original_annual_value || 0).toLocaleString()}</p>
+                                   </div>
+                                </div>
+                                
+                                <div className="flex justify-between items-center">
+                                   <div>
+                                     <p className="text-[10px] font-black text-slate-900 uppercase tracking-widest mb-2">{t('studentDashboard.myApplicationStep.details.finance.withExclusiveScholarship')}</p>
+                                     <div className="flex items-baseline gap-1">
+                                       <span className="text-4xl font-black text-emerald-600 tracking-tighter">${(applicationDetails.scholarships?.annual_value_with_scholarship || 0).toLocaleString()}</span>
+                                        <span className="text-sm text-emerald-600 font-bold uppercase">{t('studentDashboard.myApplicationStep.details.finance.perYear')}</span>
+                                     </div>
+                                   </div>
+                                   {applicationDetails.scholarships?.original_value_per_credit && (
+                                      <div className="text-right">
+                                        <p className="text-[10px] font-black text-slate-900 uppercase tracking-widest mb-1">{t('studentDashboard.myApplicationStep.details.finance.perCredit')}</p>
+                                        <p className="text-xs font-bold text-slate-900">${applicationDetails.scholarships.original_value_per_credit}</p>
+                                      </div>
+                                   )}
+                                </div>
+                                
+                                <div>
+                                  <p className="text-[10px] font-black text-slate-900 uppercase tracking-widest mb-2">{t('studentDashboard.myApplicationStep.details.finance.guaranteedAnnualSavings')}</p>
+                                  <p className="text-3xl font-black text-emerald-600 tracking-tighter">
+                                    + $ {((applicationDetails.scholarships?.original_annual_value || 0) - (applicationDetails.scholarships?.annual_value_with_scholarship || 0)).toLocaleString()}
+                                  </p>
+                                </div>
+                              </div>
+                           </div>
+                        </div>
+
+                        <div className="border border-slate-300 rounded-[2rem] p-4 sm:p-5 md:p-8 space-y-8 md:space-y-12 bg-white shadow-sm relative overflow-hidden">
                           <section className="space-y-6">
-                            <h4 className="text-xl font-black text-gray-900 uppercase tracking-tight border-b border-slate-200 pb-4">
-                              Detalhes da Bolsa
+                            <h4 className="text-xl font-black text-gray-900 uppercase tracking-tight border-b border-slate-300 pb-4">
+                              {t('studentDashboard.myApplicationStep.details.scholarshipDetails')}
                             </h4>
-                           <div className="bg-slate-50 p-6 rounded-2xl mb-4">
-                              <p className="text-[10px] font-black text-slate-500 uppercase tracking-widest mb-1">Título da Bolsa</p>
-                              <p className="text-xl font-black text-slate-900 uppercase leading-tight">{applicationDetails.scholarships?.title || applicationDetails.scholarships?.name || 'N/A'}</p>
+                           <div className="py-4 border-b border-slate-100 mb-2">
+                              <p className="text-[10px] font-black text-slate-500 uppercase tracking-widest mb-1">{t('studentDashboard.myApplicationStep.details.scholarshipTitle')}</p>
+                              <p className="text-lg sm:text-xl font-black text-slate-900 uppercase leading-tight">{applicationDetails.scholarships?.title || applicationDetails.scholarships?.name || 'N/A'}</p>
                            </div>
 
                            {applicationDetails.scholarships?.course && (
-                             <div className="bg-blue-50 p-6 rounded-2xl mb-4">
-                               <p className="text-[10px] font-black text-blue-600 uppercase tracking-widest mb-1">Curso / Área de Estudo</p>
-                               <p className="text-xl font-black text-blue-900 uppercase leading-tight">{applicationDetails.scholarships.course}</p>
+                             <div className="py-4 border-b border-slate-100 mb-2">
+                               <p className="text-[10px] font-black text-blue-600 uppercase tracking-widest mb-1">{t('studentDashboard.myApplicationStep.details.courseField')}</p>
+                               <p className="text-lg sm:text-xl font-black text-blue-900 uppercase leading-tight">{applicationDetails.scholarships.course}</p>
                              </div>
                            )}
                            
                            {applicationDetails.scholarships?.description && (
-                             <div className="bg-slate-50 p-6 rounded-2xl mb-4">
+                             <div className="py-4 border-b border-slate-100 mb-2">
                                <div className="mb-2">
                                  <span className="text-[10px] font-black text-slate-500 uppercase tracking-widest">
                                    {t('studentDashboard.applicationChatPage.details.scholarshipDetails.description')}
                                  </span>
                                </div>
-                               <div className="text-sm font-medium text-gray-700 leading-relaxed">
+                               <div className="text-xs sm:text-sm font-medium text-gray-700 leading-relaxed">
                                  {applicationDetails.scholarships.description}
                                </div>
                              </div>
@@ -541,10 +586,10 @@ export const UniversityDocumentsStep: React.FC<StepProps> = ({ onBack }) => {
 
                            {/* Application Fee (Enrollment Fee) */}
                            {applicationDetails.scholarships?.application_fee_amount && (
-                             <div className="bg-slate-50 p-6 rounded-2xl mb-4 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 mt-6">
+                             <div className="py-4 border-b border-slate-100 mb-2 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
                                <div className="flex items-start gap-3">
                                  <div>
-                                   <p className="text-[10px] font-black text-slate-600 uppercase tracking-widest mb-1">Taxa de Matrícula</p>
+                                   <p className="text-[10px] font-black text-slate-600 uppercase tracking-widest mb-1">{t('studentDashboard.myApplicationStep.details.enrollmentFee')}</p>
                                    <p className="text-xs font-semibold text-gray-900">
                                      {Number(applicationDetails.scholarships.application_fee_amount) !== 350
                                        ? t('scholarshipsPage.scholarshipCard.customFee') 
@@ -552,7 +597,7 @@ export const UniversityDocumentsStep: React.FC<StepProps> = ({ onBack }) => {
                                    </p>
                                  </div>
                                </div>
-                               <div className="text-xl font-black text-gray-900 bg-white px-4 py-2 rounded-xl shadow-sm whitespace-nowrap">
+                               <div className="text-lg sm:text-xl font-black text-gray-900 whitespace-nowrap pr-6">
                                  {formatFeeAmount(
                                    getFeeAmount('application_fee', applicationDetails.scholarships.application_fee_amount)
                                  )}
@@ -567,13 +612,13 @@ export const UniversityDocumentsStep: React.FC<StepProps> = ({ onBack }) => {
                         {applicationDetails.scholarships?.internal_fees && Array.isArray(applicationDetails.scholarships.internal_fees) && applicationDetails.scholarships.internal_fees.length > 0 && (
                           <section className="space-y-6">
                             <h4 className="text-xl font-black text-gray-900 uppercase tracking-tight">
-                              Taxas Internas da Instituição
+                              {t('studentDashboard.myApplicationStep.details.internalFees')}
                             </h4>
                             <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                               {applicationDetails.scholarships.internal_fees.map((fee: any, idx: number) => (
-                                <div key={idx} className="flex justify-between items-center p-6 bg-white rounded-2xl border border-slate-200 shadow-sm group hover:border-blue-200 transition-colors">
+                                <div key={idx} className="flex justify-between items-center p-6 bg-white rounded-2xl border border-slate-300 shadow-sm group">
                                    <div className="min-w-0 mr-4">
-                                     <p className="text-[10px] font-black text-slate-500 uppercase tracking-widest mb-1">{fee.frequency || fee.details || 'Pagamento Único'}</p>
+                                     <p className="text-[10px] font-black text-slate-500 uppercase tracking-widest mb-1">{fee.frequency || fee.details || t('studentDashboard.myApplicationStep.details.oneTimePayment')}</p>
                                      <p className="text-sm font-black text-gray-900 uppercase truncate" title={fee.category || fee.name}>{fee.category || fee.name}</p>
                                    </div>
                                    <span className="text-xl font-black text-gray-900 whitespace-nowrap">${Number(fee.amount).toFixed(2)}</span>
@@ -583,73 +628,108 @@ export const UniversityDocumentsStep: React.FC<StepProps> = ({ onBack }) => {
                             <div className="p-4 bg-sky-50 border border-sky-100 rounded-2xl flex items-start gap-3">
                               <Info className="w-5 h-5 text-sky-600 mt-0.5 flex-shrink-0" />
                               <p className="text-xs font-medium text-sky-700 leading-relaxed">
-                                Estas taxas são informadas pela universidade e pagas diretamente a eles. Elas não fazem parte do serviço de mentoria da Matricula USA.
+                                {t('studentDashboard.myApplicationStep.details.internalFeesNote')}
                               </p>
                             </div>
                           </section>
                         )}
                         </div>
+ 
+                        {/* Institution Info - Mobile Only */}
+                        <div className="block lg:hidden">
+                           <div className="bg-white rounded-[2.5rem] p-5 border border-slate-300">
+                              <h4 className="text-sm font-black text-gray-900 uppercase tracking-widest mb-6 border-b border-slate-300 pb-2">{t('studentDashboard.myApplicationStep.details.institution.title')}</h4>
+                              <div className="space-y-4">
+                                 {applicationDetails.scholarships?.universities?.contact?.email && (
+                                   <div className="flex items-center gap-4">
+                                      <div className="w-10 h-10 bg-white rounded-xl shadow-sm flex items-center justify-center border border-slate-100">
+                                        <Mail className="w-5 h-5 text-slate-600" />
+                                      </div>
+                                      <div className="flex-1 min-w-0">
+                                        <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-0.5">{t('studentDashboard.myApplicationStep.details.institution.email')}</p>
+                                        <p className="text-sm font-bold text-slate-900 truncate" title={applicationDetails.scholarships.universities.contact.email}>
+                                          {applicationDetails.scholarships.universities.contact.email}
+                                        </p>
+                                      </div>
+                                   </div>
+                                 )}
+                                 {applicationDetails.scholarships?.universities?.contact?.phone && (
+                                   <div className="flex items-center gap-4">
+                                      <div className="w-10 h-10 bg-white rounded-xl shadow-sm flex items-center justify-center border border-slate-100">
+                                        <Phone className="w-5 h-5 text-slate-600" />
+                                      </div>
+                                      <div>
+                                        <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-0.5">{t('studentDashboard.myApplicationStep.details.institution.phone')}</p>
+                                        <p className="text-sm font-bold text-slate-900">{applicationDetails.scholarships.universities.contact.phone}</p>
+                                      </div>
+                                   </div>
+                                 )}
+                                 {applicationDetails.scholarships?.universities?.website && (
+                                   <div className="flex items-center gap-4">
+                                      <div className="w-10 h-10 bg-white rounded-xl shadow-sm flex items-center justify-center border border-slate-100">
+                                        <Globe className="w-5 h-5 text-slate-600" />
+                                      </div>
+                                      <div className="flex-1 min-w-0">
+                                        <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-0.5">{t('studentDashboard.myApplicationStep.details.institution.website')}</p>
+                                        <a href={applicationDetails.scholarships.universities.website} target="_blank" className="text-sm font-bold text-blue-600 hover:underline flex items-center gap-1 truncate">
+                                          {applicationDetails.scholarships.universities.website.replace('https://', '')}
+                                          <ExternalLink className="w-3 h-3 flex-shrink-0" />
+                                        </a>
+                                      </div>
+                                   </div>
+                                 )}
+                              </div>
+                           </div>
+                        </div>
 
                         {/* Documents Progress Summary */}
-                        <div className="border border-slate-300 rounded-[2rem] p-8 space-y-12 bg-white shadow-sm relative overflow-hidden">
+                        <div className="border border-slate-300 rounded-[2rem] p-5 md:p-8 space-y-12 bg-white shadow-sm relative overflow-hidden">
                         <section className="space-y-6">
-                            <h4 className="text-xl font-black text-gray-900 uppercase tracking-tight border-b border-slate-200 pb-4">
-                              Documentos do Estudante
+                            <h4 className="text-xl font-black text-gray-900 uppercase tracking-tight border-b border-slate-300 pb-4">
+                              {t('studentDashboard.myApplicationStep.details.studentDocuments')}
                             </h4>
                            <div className="flex flex-col gap-4">
                               {[
-                                { key: 'diploma', label: 'Diploma / Certificado (High School)' },
-                                { key: 'passport', label: 'Passaporte (Cópia Colorida)' },
-                                { key: 'funds_proof', label: 'Extrato Bancário (Financial Statement)' }
+                                { key: 'diploma', label: t('studentDashboard.myApplicationStep.details.diploma') },
+                                { key: 'passport', label: t('studentDashboard.myApplicationStep.details.passport') },
+                                { key: 'funds_proof', label: t('studentDashboard.myApplicationStep.details.bankStatement') }
                               ].map((doc) => {
                                 const docData = (applicationDetails.documents || []).find((d: any) => d.type === doc.key) || 
                                                 (applicationDetails.user_profiles?.documents || []).find((d: any) => d.type === doc.key);
-                                const status = docData?.status || 'not_submitted';
                                 const fileUrl = docData?.file_url || docData?.url;
                                 
                                 return (
-                                  <div key={doc.key} className="flex items-center justify-between p-4 bg-white border border-slate-100 rounded-2xl shadow-sm">
-                                    <div className="flex items-center gap-3">
-                                      <div className={`w-8 h-8 rounded-lg flex items-center justify-center ${
-                                        status === 'approved' ? 'text-slate-900' :
-                                        status === 'under_review' ? 'text-blue-600' :
-                                        status === 'changes_requested' ? 'text-amber-600' :
-                                        'text-slate-400'
-                                      }`}>
-                                        <div className="w-1.5 h-1.5 rounded-full bg-current" />
+                                  <div key={doc.key} className="flex items-start md:items-center justify-between py-4 border-b border-slate-100 last:border-0 transition-colors gap-2">
+                                    <div className="flex items-start md:items-center gap-2 flex-1 min-w-0">
+                                      <div className="flex flex-col text-left min-w-0 flex-1">
+                                        <span className="text-xs font-bold text-slate-700 uppercase tracking-tight break-words">{doc.label}</span>
+                                        {docData?.uploaded_at && (
+                                          <span className="text-[10px] text-slate-500 font-medium mt-0.5">
+                                            {t('studentDashboard.myApplicationStep.details.submittedOn')} {new Date(docData.uploaded_at).toLocaleDateString('pt-BR')}
+                                          </span>
+                                        )}
                                       </div>
-                                      <span className="text-xs font-bold text-slate-700 uppercase tracking-tight">{doc.label}</span>
                                     </div>
-                                    <div className="flex items-center gap-3">
+
+                                    <div className="flex items-center justify-end gap-2 flex-shrink-0">
                                       {fileUrl && (
-                                        <div className="flex items-center gap-1 border-r border-slate-100 pr-3 mr-1">
+                                        <div className="flex items-center gap-1">
                                           <button 
                                             onClick={() => handleViewDocument(fileUrl)}
-                                            className="p-2 text-slate-400 hover:text-blue-600 hover:bg-blue-50 rounded-lg transition-colors"
-                                            title="Visualizar"
+                                            className="p-2 md:p-3 text-slate-400 hover:text-blue-600 hover:bg-blue-50 rounded-lg transition-colors flex items-center justify-center"
+                                            title={t('studentDashboard.myApplicationStep.details.view')}
                                           >
-                                            <Eye className="w-6 h-6" />
+                                            <Eye className="w-5 h-5" />
                                           </button>
                                           <button 
                                             onClick={() => handleDownloadDocument(fileUrl, doc.label)}
-                                            className="p-2 text-slate-400 hover:text-blue-600 hover:bg-blue-50 rounded-lg transition-colors"
-                                            title="Baixar"
+                                            className="p-2 md:p-3 text-slate-400 hover:text-blue-600 hover:bg-blue-50 rounded-lg transition-colors flex items-center justify-center"
+                                            title={t('studentDashboard.myApplicationStep.details.download')}
                                           >
-                                            <Download className="w-6 h-6" />
+                                            <Download className="w-5 h-5" />
                                           </button>
                                         </div>
                                       )}
-                                      <div className="flex items-center gap-1">
-                                        {status === 'approved' ? (
-                                          <CheckCircle2 className="w-6 h-6 text-emerald-500" />
-                                        ) : status === 'under_review' ? (
-                                          <Clock className="w-6 h-6 text-blue-500" />
-                                        ) : status === 'changes_requested' ? (
-                                          <AlertCircle className="w-6 h-6 text-amber-500" />
-                                        ) : (
-                                          <div className="w-2 h-2 rounded-full bg-slate-200" />
-                                        )}
-                                      </div>
                                     </div>
                                   </div>
                                 );
@@ -661,38 +741,57 @@ export const UniversityDocumentsStep: React.FC<StepProps> = ({ onBack }) => {
 
                      {/* Right: Financial & Sidebar */}
                      <div className="space-y-8">
-                       {/* Financial Summary Table */}
-                        <div className="bg-white rounded-[2rem] p-8 text-slate-900 border border-slate-300 shadow-sm relative overflow-hidden">
+                       {/* Application Meta Info - Desktop Only */}
+                       <div className="hidden lg:block bg-white rounded-[2rem] p-5 md:p-8 border border-slate-300 shadow-sm space-y-6">
+                          <div className="flex flex-col border-b border-slate-100 pb-4">
+                            <p className="text-[10px] font-black text-slate-900 uppercase tracking-widest mb-1">{t('studentDashboard.applicationChatPage.details.studentInformation.studentType')}</p>
+                            <p className="text-sm font-black text-slate-900 uppercase">
+                              {applicationDetails.student_process_type === 'initial' ? t('studentDashboard.applicationChatPage.details.studentInformation.initialF1VisaRequired') :
+                               applicationDetails.student_process_type === 'transfer' ? t('studentDashboard.applicationChatPage.details.studentInformation.transferCurrentF1Student') :
+                               applicationDetails.student_process_type === 'change_of_status' ? t('studentDashboard.applicationChatPage.details.studentInformation.changeOfStatusFromOtherVisa') :
+                               applicationDetails.student_process_type || 'N/A'}
+                            </p>
+                          </div>
+                          <div className="flex flex-col">
+                            <p className="text-[10px] font-black text-slate-900 uppercase tracking-widest mb-1">{t('studentDashboard.applicationChatPage.details.studentInformation.applicationDate')}</p>
+                            <p className="text-sm font-black text-slate-900 uppercase">
+                              {new Date(applicationDetails.created_at || Date.now()).toLocaleDateString()}
+                            </p>
+                          </div>
+                       </div>
+
+                       {/* Financial Summary Table - Desktop Only */}
+                        <div className="hidden lg:block bg-white rounded-[2rem] p-5 md:p-8 text-slate-900 border border-slate-300 shadow-sm relative overflow-hidden">
                            <div className="absolute top-0 right-0 w-32 h-32 bg-slate-100 rounded-full -mr-16 -mt-16 blur-xl" />
-                           <h4 className="text-xs font-black uppercase tracking-widest text-slate-900 mb-6 pb-2 border-b border-slate-100 flex items-center justify-between">
-                             Resumo Financeiro
+                           <h4 className="text-sm font-black uppercase tracking-widest text-slate-900 mb-6 pb-2 border-b border-slate-100 flex items-center justify-between">
+                             {t('studentDashboard.myApplicationStep.details.finance.financialSummary')}
                            </h4>
                            <div className="space-y-6">
                              <div className="flex justify-between items-end border-b border-slate-100 pb-4">
                                 <div>
-                                  <p className="text-[10px] font-black text-slate-900 uppercase tracking-widest mb-1">Custo Anual Original</p>
+                                  <p className="text-[10px] font-black text-slate-900 uppercase tracking-widest mb-1">{t('studentDashboard.myApplicationStep.details.finance.originalAnnualCost')}</p>
                                   <p className="text-xl font-black text-slate-900 line-through tracking-tighter">${(applicationDetails.scholarships?.original_annual_value || 0).toLocaleString()}</p>
                                 </div>
                              </div>
                              
                              <div className="flex justify-between items-center">
                                 <div>
-                                  <p className="text-[10px] font-black text-slate-900 uppercase tracking-widest mb-2">Com Bolsa Exclusiva</p>
+                                  <p className="text-[10px] font-black text-slate-900 uppercase tracking-widest mb-2">{t('studentDashboard.myApplicationStep.details.finance.withExclusiveScholarship')}</p>
                                   <div className="flex items-baseline gap-1">
                                     <span className="text-4xl font-black text-emerald-600 tracking-tighter">${(applicationDetails.scholarships?.annual_value_with_scholarship || 0).toLocaleString()}</span>
-                                     <span className="text-sm text-emerald-600 font-bold uppercase">/ano</span>
+                                     <span className="text-sm text-emerald-600 font-bold uppercase">{t('studentDashboard.myApplicationStep.details.finance.perYear')}</span>
                                   </div>
                                 </div>
                                 {applicationDetails.scholarships?.original_value_per_credit && (
                                    <div className="text-right">
-                                     <p className="text-[10px] font-black text-slate-900 uppercase tracking-widest mb-1">Por Crédito</p>
+                                     <p className="text-[10px] font-black text-slate-900 uppercase tracking-widest mb-1">{t('studentDashboard.myApplicationStep.details.finance.perCredit')}</p>
                                      <p className="text-xs font-bold text-slate-900">${applicationDetails.scholarships.original_value_per_credit}</p>
                                    </div>
                                 )}
                              </div>
                              
                              <div>
-                               <p className="text-[10px] font-black text-slate-900 uppercase tracking-widest mb-2">Economia Anual Garantida</p>
+                               <p className="text-[10px] font-black text-slate-900 uppercase tracking-widest mb-2">{t('studentDashboard.myApplicationStep.details.finance.guaranteedAnnualSavings')}</p>
                                <p className="text-3xl font-black text-emerald-600 tracking-tighter">
                                  + $ {((applicationDetails.scholarships?.original_annual_value || 0) - (applicationDetails.scholarships?.annual_value_with_scholarship || 0)).toLocaleString()}
                                </p>
@@ -700,10 +799,10 @@ export const UniversityDocumentsStep: React.FC<StepProps> = ({ onBack }) => {
                            </div>
                         </div>
 
-                       {/* Contact & Support */}
-                       <div className="space-y-4">
-                         <div className="bg-slate-50 rounded-[2.5rem] p-8 border border-slate-300">
-                            <h4 className="text-sm font-black text-gray-900 uppercase tracking-widest mb-6 border-b border-slate-300 pb-2">Instituição</h4>
+                       {/* Contact & Support - Desktop Only */}
+                       <div className="hidden lg:block space-y-4">
+                         <div className="bg-white rounded-[2.5rem] p-5 md:p-8 border border-slate-300">
+                            <h4 className="text-sm font-black text-gray-900 uppercase tracking-widest mb-6 border-b border-slate-300 pb-2">{t('studentDashboard.myApplicationStep.details.institution.title')}</h4>
                             <div className="space-y-4">
                                {applicationDetails.scholarships?.universities?.contact?.email && (
                                  <div className="flex items-center gap-4">
@@ -711,7 +810,7 @@ export const UniversityDocumentsStep: React.FC<StepProps> = ({ onBack }) => {
                                       <Mail className="w-5 h-5 text-slate-600" />
                                     </div>
                                     <div className="flex-1 min-w-0">
-                                      <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-0.5">Email</p>
+                                      <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-0.5">{t('studentDashboard.myApplicationStep.details.institution.email')}</p>
                                       <p className="text-sm font-bold text-slate-900 truncate" title={applicationDetails.scholarships.universities.contact.email}>
                                         {applicationDetails.scholarships.universities.contact.email}
                                       </p>
@@ -724,7 +823,7 @@ export const UniversityDocumentsStep: React.FC<StepProps> = ({ onBack }) => {
                                       <Phone className="w-5 h-5 text-slate-600" />
                                     </div>
                                     <div>
-                                      <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-0.5">Telefone</p>
+                                      <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-0.5">{t('studentDashboard.myApplicationStep.details.institution.phone')}</p>
                                       <p className="text-sm font-bold text-slate-900">{applicationDetails.scholarships.universities.contact.phone}</p>
                                     </div>
                                  </div>
@@ -735,7 +834,7 @@ export const UniversityDocumentsStep: React.FC<StepProps> = ({ onBack }) => {
                                       <Globe className="w-5 h-5 text-slate-600" />
                                     </div>
                                     <div className="flex-1 min-w-0">
-                                      <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-0.5">Website</p>
+                                      <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-0.5">{t('studentDashboard.myApplicationStep.details.institution.website')}</p>
                                       <a href={applicationDetails.scholarships.universities.website} target="_blank" className="text-sm font-bold text-blue-600 hover:underline flex items-center gap-1 truncate">
                                         {applicationDetails.scholarships.universities.website.replace('https://', '')}
                                         <ExternalLink className="w-3 h-3 flex-shrink-0" />
@@ -763,15 +862,15 @@ export const UniversityDocumentsStep: React.FC<StepProps> = ({ onBack }) => {
               {/* Main Documents Component with Header integrated */}
               <div className="bg-white rounded-[2.5rem] shadow-2xl border border-slate-300 overflow-hidden">
                  {/* Header moved here */}
-                 <div className="p-8 md:p-12 relative overflow-hidden border-b border-slate-200">
+                 <div className="p-8 md:p-12 relative overflow-hidden border-b border-slate-300">
                     <div className="absolute top-0 right-0 w-64 h-64 bg-slate-500/5 rounded-full blur-[80px] -mr-32 -mt-32 pointer-events-none" />
                     <div className="relative z-10 flex flex-col md:flex-row items-center gap-8">
                       <div className="w-20 h-20 bg-blue-600 rounded-3xl flex items-center justify-center shadow-xl shadow-blue-500/20">
                         <FolderOpen className="w-10 h-10 text-white" />
                       </div>
                       <div className="flex-1 text-center md:text-left space-y-2">
-                        <h3 className="text-2xl font-black text-gray-900 uppercase tracking-tight">Envio de <span className="text-blue-600">Documentos</span></h3>
-                        <p className="text-gray-600 font-medium">Envie os documentos solicitados pela universidade para análise e aprovação final.</p>
+                        <h3 className="text-2xl font-black text-gray-900 uppercase tracking-tight">{t('studentDashboard.myApplicationStep.documents.title')}</h3>
+                        <p className="text-gray-600 font-medium">{t('studentDashboard.myApplicationStep.documents.subtitle')}</p>
                       </div>
                     </div>
                  </div>
@@ -820,12 +919,14 @@ export const UniversityDocumentsStep: React.FC<StepProps> = ({ onBack }) => {
                       <div className="w-20 h-20 bg-blue-600 rounded-[2rem] flex items-center justify-center shadow-xl shadow-blue-500/20 transition-transform">
                         <Award className="w-10 h-10 text-white" />
                       </div>
-                      <div className="text-center md:text-left">
-                        <h2 className="text-3xl font-black text-gray-900 uppercase tracking-tighter leading-none mb-2">Carta de <span className="text-blue-600">Aceite</span></h2>
+                      <div className="text-left">
+                        <h2 className="text-[22px] md:text-3xl font-black text-gray-900 uppercase tracking-tighter leading-none mb-2 whitespace-nowrap">
+                          {t('studentDashboard.myApplicationStep.acceptance.letterOf')} <span className="text-blue-600">{t('studentDashboard.myApplicationStep.acceptance.acceptance')}</span>
+                        </h2>
                       </div>
                     </div>
 
-                    <div className={`flex items-center gap-2 px-5 py-2.5 rounded-2xl text-[10px] font-black uppercase tracking-widest border shadow-sm transition-all duration-500 ${
+                    <div className={`flex items-center w-fit gap-2 px-5 py-2.5 rounded-2xl text-[10px] font-black uppercase tracking-widest border shadow-sm transition-all duration-500 ${
                       applicationDetails.acceptance_letter_url 
                         ? 'bg-emerald-50 border-emerald-200 text-emerald-700' 
                         : 'bg-amber-50 border-amber-200 text-amber-700'
@@ -833,12 +934,12 @@ export const UniversityDocumentsStep: React.FC<StepProps> = ({ onBack }) => {
                       {applicationDetails.acceptance_letter_url ? (
                         <>
                           <CheckCircle2 className="w-4 h-4" />
-                          Disponível
+                          {t('studentDashboard.myApplicationStep.acceptance.available')}
                         </>
                       ) : (
                         <>
                           <Clock className="w-4 h-4" />
-                          Liberação em Andamento
+                          {t('studentDashboard.myApplicationStep.acceptance.inProgress')}
                         </>
                       )}
                     </div>
@@ -850,17 +951,17 @@ export const UniversityDocumentsStep: React.FC<StepProps> = ({ onBack }) => {
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-12">
                     <div className="space-y-6">
                       <h4 className="text-xl font-black text-gray-900 uppercase tracking-tight flex items-center gap-3">
-                        Sua Confirmação de Sucesso
+                        {t('studentDashboard.myApplicationStep.acceptance.successConfirmation')}
                       </h4>
                       <p className="text-gray-600 leading-relaxed font-medium">
-                        A Carta de Aceite é o documento oficial emitido pela universidade que confirma sua admissão. Ela contém detalhes importantes sobre seu curso e é fundamental para o processo de visto.
+                        {t('studentDashboard.myApplicationStep.acceptance.description')}
                       </p>
-                      <div className="p-6 bg-slate-50 border border-slate-200 rounded-3xl flex items-start gap-4">
+                      <div className="p-6 bg-slate-50 border border-slate-300 rounded-3xl flex items-start gap-4">
                          <div className="w-10 h-10 bg-white rounded-xl flex items-center justify-center shadow-sm">
                             <ShieldCheck className="w-5 h-5 text-slate-400" />
                          </div>
                          <p className="text-xs font-bold text-slate-500 leading-relaxed uppercase tracking-wider">
-                           Este documento é emitido oficialmente pela universidade após a análise da sua documentação.
+                           {t('studentDashboard.myApplicationStep.acceptance.officialNote')}
                          </p>
                       </div>
                     </div>
@@ -873,15 +974,15 @@ export const UniversityDocumentsStep: React.FC<StepProps> = ({ onBack }) => {
                              <Award className="w-8 h-8 text-emerald-600" />
                            </div>
                            <div className="text-center space-y-2">
-                             <span className="text-[10px] font-black text-emerald-600 uppercase tracking-widest">Documento Disponível</span>
-                             <p className="text-sm text-emerald-800 font-bold">Sua carta de aceite já pode ser baixada!</p>
+                             <span className="text-[10px] font-black text-emerald-600 uppercase tracking-widest">{t('studentDashboard.myApplicationStep.acceptance.documentAvailable')}</span>
+                             <p className="text-sm text-emerald-800 font-bold">{t('studentDashboard.myApplicationStep.acceptance.readyToDownload')}</p>
                            </div>
                            <button 
                              onClick={() => handleDownloadDocument(applicationDetails.acceptance_letter_url, 'acceptance_letter', 'document-attachments')}
                              className="w-full bg-emerald-600 hover:bg-emerald-700 text-white px-8 py-4 rounded-xl font-black uppercase tracking-widest text-[10px] transition-all shadow-lg flex items-center justify-center gap-2 group"
                            >
                              <Download className="w-4 h-4 group-hover:scale-110 transition-transform" />
-                             Baixar PDF
+                             {t('studentDashboard.myApplicationStep.acceptance.downloadPdf')}
                            </button>
                          </div>
                        )}

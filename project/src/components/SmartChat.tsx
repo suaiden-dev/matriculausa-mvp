@@ -1,7 +1,6 @@
 import React, { useState, useRef, useEffect } from 'react';
 
 interface SmartChatProps {
-  isStudentPage?: boolean;
 }
 
 interface Message {
@@ -10,7 +9,7 @@ interface Message {
   timestamp: Date;
 }
 
-const SmartChat: React.FC<SmartChatProps> = ({ isStudentPage = false }) => {
+const SmartChat: React.FC<SmartChatProps> = () => {
   const [isChatOpen, setIsChatOpen] = useState(false);
   const [messages, setMessages] = useState<Message[]>([]);
   const [inputValue, setInputValue] = useState('');
@@ -166,7 +165,7 @@ const SmartChat: React.FC<SmartChatProps> = ({ isStudentPage = false }) => {
           }`}
         style={{
           position: 'fixed',
-          bottom: isStudentPage ? '100px' : '20px',
+          bottom: '20px',
           right: '20px',
           width: '64px',
           height: '64px',
@@ -213,8 +212,8 @@ const SmartChat: React.FC<SmartChatProps> = ({ isStudentPage = false }) => {
         style={{
           position: 'fixed',
           bottom: isChatOpen
-            ? (isStudentPage ? '180px' : '100px')
-            : (isStudentPage ? '100px' : '20px'),
+            ? '100px'
+            : '20px',
           right: '20px',
           width: '64px',
           height: '64px',
@@ -242,7 +241,7 @@ const SmartChat: React.FC<SmartChatProps> = ({ isStudentPage = false }) => {
 
       {/* Modal do Smart Assistant - APENAS para Desktop */}
       {isChatOpen && !isMobile && (
-        <div className={`fixed inset-0 z-[10003] flex items-end justify-end p-4 pr-24 pointer-events-none ${isStudentPage ? 'pb-[100px]' : 'pb-5'}`}>
+        <div className={`fixed inset-0 z-[10003] flex items-end justify-end p-4 pr-24 pointer-events-none pb-5`}>
           {/* Modal do Chat */}
           <div
             id="smart-assistant-modal"

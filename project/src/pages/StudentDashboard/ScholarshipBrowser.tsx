@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useMemo, useRef } from 'react';
-import { motion, AnimatePresence } from 'framer-motion';
+import { motion } from 'framer-motion';
 import {
   Search,
   Filter,
@@ -11,14 +11,11 @@ import {
   Clock,
   DollarSign,
   GraduationCap,
-  ArrowRight,
   CheckCircle,
   Users,
   Monitor,
   Globe,
-  Briefcase,
-  Trash2,
-  AlertTriangle
+  Briefcase
 } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 import { useAuth } from '../../hooks/useAuth';
@@ -35,18 +32,16 @@ import FavoriteButton from '../../components/FavoriteButton';
 import FavoritesFilter from '../../components/FavoritesFilter';
 import { ApplicationFeeBlockedMessage } from '../../components/ApplicationFeeBlockedMessage';
 import { useApplicationFeeStatus } from '../../hooks/useApplicationFeeStatus';
-import { is3800ScholarshipBlocked, is3800Scholarship } from '../../utils/scholarshipDeadlineValidation';
+import { is3800Scholarship } from '../../utils/scholarshipDeadlineValidation';
 import { ScholarshipExpiryWarning } from '../../components/ScholarshipExpiryWarning';
 import { ScholarshipCountdownTimer } from '../../components/ScholarshipCountdownTimer';
 
 interface ScholarshipBrowserProps {
   scholarships: any[];
-  applications: any[];
 }
 
 const ScholarshipBrowser: React.FC<ScholarshipBrowserProps> = ({
-  scholarships,
-  applications
+  scholarships
 }) => {
   const { t } = useTranslation();
   const { selectionProcessFee } = useDynamicFees();
@@ -95,7 +90,7 @@ const ScholarshipBrowser: React.FC<ScholarshipBrowserProps> = ({
   const [sortBy] = useState('deadline');
   const [filtersExpanded, setFiltersExpanded] = useState(false);
   const navigate = useNavigate();
-  const { cart, addToCart, removeFromCart, fetchCart } = useCartStore();
+  const { cart, fetchCart } = useCartStore();
   const [minValue, setMinValue] = useState('');
   const [maxValue, setMaxValue] = useState('');
   const [deadlineDays, setDeadlineDays] = useState('');
@@ -113,7 +108,6 @@ const ScholarshipBrowser: React.FC<ScholarshipBrowserProps> = ({
   // Estados para o PreCheckoutModal (Matricula Rewards)
   const [showPreCheckoutModal, setShowPreCheckoutModal] = useState(false);
   const [selectedScholarshipForCheckout, setSelectedScholarshipForCheckout] = useState<any>(null);
-  const [isCheckingDiscount, setIsCheckingDiscount] = useState(false);
   const [isOpeningStripe, setIsOpeningStripe] = useState(false);
 
   // Estados para PaymentMethodSelector
@@ -372,9 +366,7 @@ const ScholarshipBrowser: React.FC<ScholarshipBrowserProps> = ({
     loadApprovedUniversities();
   }, []);
 
-  // Remova o flyAnimation antigo e use Framer Motion
-  const [flyingCard, setFlyingCard] = useState<null | { card: any, from: DOMRect, to: DOMRect }>(null);
-  const [animating, setAnimating] = useState(false);
+
 
   // Estados para o modal de detalhes
   const [selectedScholarshipForModal, setSelectedScholarshipForModal] = useState<any>(null);
@@ -382,7 +374,6 @@ const ScholarshipBrowser: React.FC<ScholarshipBrowserProps> = ({
 
   // Refs para os cards de bolsas (não podem estar dentro do loop)
   const scholarshipRefs = useRef<Map<string, HTMLDivElement>>(new Map());
-  const buttonRefs = useRef<Map<string, HTMLButtonElement>>(new Map());
 
   // Controle de imagens quebradas para exibir placeholder
   const [brokenImageIds, setBrokenImageIds] = useState<Set<string | number>>(new Set());
@@ -650,8 +641,7 @@ const ScholarshipBrowser: React.FC<ScholarshipBrowserProps> = ({
   ]);
 
   // Memoização dos IDs aplicados e no carrinho
-  const appliedScholarshipIds = useMemo(() => new Set(applications.map(app => app.scholarship_id)), [applications]);
-  const cartScholarshipIds = useMemo(() => new Set(cart.map(s => s.scholarships.id)), [cart]);
+
 
   // Lógica de paginação
   const totalPages = Math.ceil(filteredScholarships.length / itemsPerPage);
@@ -745,7 +735,7 @@ const ScholarshipBrowser: React.FC<ScholarshipBrowserProps> = ({
         },
         body: JSON.stringify({
           price_id: STRIPE_PRODUCTS.selectionProcess.priceId,
-          success_url: `${window.location.origin}/student/onboarding?step=selection_fee&payment=success&session_id={CHECKOUT_SESSION_ID}`,
+          success_url: `${window.location.origin}/student/dashboard/selection-process-fee-success?session_id={CHECKOUT_SESSION_ID}`,
           cancel_url: `${window.location.origin}/student/dashboard/selection-process-fee-error`,
           mode: 'payment',
           payment_type: 'selection_process',
@@ -1398,10 +1388,7 @@ const ScholarshipBrowser: React.FC<ScholarshipBrowserProps> = ({
 
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 sm:gap-6">
               {filteredFeaturedScholarships.map((scholarship) => {
-                const alreadyApplied = appliedScholarshipIds.has(scholarship.id);
-                const inCart = cartScholarshipIds.has(scholarship.id);
                 const layoutId = `featured-scholarship-${scholarship.id}`;
-                const isBlocked = is3800ScholarshipBlocked(scholarship);
 
                 return (
                   <motion.div
@@ -1691,10 +1678,7 @@ const ScholarshipBrowser: React.FC<ScholarshipBrowserProps> = ({
       {/* Scholarships Grid */}
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 sm:gap-6 lg:gap-8">
         {paginatedScholarships.map((scholarship) => {
-          const alreadyApplied = appliedScholarshipIds.has(scholarship.id);
-          const inCart = cartScholarshipIds.has(scholarship.id);
           const layoutId = `scholarship-card-${scholarship.id}`;
-          const isBlocked = is3800ScholarshipBlocked(scholarship);
 
           return (
             <motion.div
@@ -2060,39 +2044,7 @@ const ScholarshipBrowser: React.FC<ScholarshipBrowserProps> = ({
           </button>
         </div>
       )}
-      <AnimatePresence>
-        {flyingCard && animating && (
-          <motion.div
-            initial={{
-              left: flyingCard.from.left,
-              top: flyingCard.from.top,
-              width: flyingCard.from.width,
-              height: flyingCard.from.height,
-              position: 'fixed',
-              zIndex: 999999,
-              scale: 1,
-              opacity: 1
-            }}
-            animate={{
-              left: flyingCard.to.left,
-              top: flyingCard.to.top,
-              width: flyingCard.to.width,
-              height: flyingCard.to.height,
-              scale: 0.5,
-              opacity: 0.5
-            }}
-            transition={{ duration: 1.1, type: 'spring' }}
-            style={{ pointerEvents: 'none' }}
-          >
-            <div className="bg-white rounded-3xl shadow-lg border border-slate-200 flex flex-col p-4 items-center w-full h-full">
-              <GraduationCap className="h-10 w-10 text-blue-600 mb-2" />
-              <div className="font-bold text-slate-900 text-center text-sm line-clamp-2 mb-1">{flyingCard.card.title}</div>
-              <span className="bg-blue-100 text-blue-800 px-2 py-1 rounded-full text-xs font-medium mb-1">{flyingCard.card.field_of_study}</span>
-              <span className="text-xs text-slate-500">{flyingCard.card.universities?.name || 'University'}</span>
-            </div>
-          </motion.div>
-        )}
-      </AnimatePresence>
+
 
       {/* Modal de Detalhes da Bolsa */}
       <ScholarshipDetailModal

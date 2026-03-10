@@ -35,13 +35,13 @@ export const useOnboardingProgress = () => {
 
     return {
       currentStep: initialStep,
-      selectionFeePaid: false,
-      selectionSurveyPassed: false,
-      scholarshipsSelected: false,
-      processTypeSelected: false,
-      documentsUploaded: false,
-      documentsApproved: false,
-      applicationFeePaid: false,
+      selectionFeePaid: userProfile?.has_paid_selection_process_fee || false,
+      selectionSurveyPassed: userProfile?.selection_survey_passed || false,
+      scholarshipsSelected: !!userProfile?.selected_scholarship_id,
+      processTypeSelected: !!userProfile?.documents_uploaded, // Heurística síncrona simples
+      documentsUploaded: userProfile?.documents_uploaded || false,
+      documentsApproved: userProfile?.documents_status === 'approved',
+      applicationFeePaid: userProfile?.is_application_fee_paid || false,
       scholarshipFeePaid: false,
       placementFeePaid: false,
       universityDocumentsUploaded: false,
@@ -376,7 +376,8 @@ export const useOnboardingProgress = () => {
           // Sempre passar pelo my_applications antes de reach completed
           currentStep = 'my_applications';
         } else {
-          currentStep = 'completed';
+          // Se são iguais, mantém o salvo (ou o real, dá no mesmo).
+          currentStep = savedStep || maxAllowedStep;
         }
       }
 

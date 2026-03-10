@@ -82,7 +82,7 @@ export function ExpandableTabs({
   return (
     <div
       className={cn(
-        "flex flex-nowrap items-center gap-2 md:gap-3 rounded-2xl border border-slate-200 bg-white p-1 md:p-1.5 shadow-sm w-fit",
+        "flex flex-nowrap items-center gap-2 md:gap-3 rounded-2xl border border-slate-300 bg-white p-1 md:p-1.5 shadow-sm w-fit",
         className
       )}
     >

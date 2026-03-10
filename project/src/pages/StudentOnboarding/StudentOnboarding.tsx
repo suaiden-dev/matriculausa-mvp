@@ -490,8 +490,8 @@ const StudentOnboarding: React.FC = () => {
 
                 {/* Notifications Dropdown - Desktop */}
                 {showNotif && (
-                  <div className="hidden md:block absolute right-0 top-full mt-2 w-80 bg-white rounded-xl shadow-xl border border-slate-200 py-2 z-[100]">
-                    <div className="px-4 pb-2 border-b border-slate-200 font-semibold text-slate-900 flex items-center justify-between">
+                  <div className="hidden md:block absolute right-0 top-full mt-2 w-80 bg-white rounded-xl shadow-xl border border-slate-300 py-2 z-[100]">
+                    <div className="px-4 pb-2 border-b border-slate-300 font-semibold text-slate-900 flex items-center justify-between">
                       <span className="text-sm">Notificações</span>
                       <div className="flex items-center gap-2 text-[10px]">
                         <button onClick={() => markAllAsRead()} className="text-blue-600 hover:underline">Marcar todas</button>

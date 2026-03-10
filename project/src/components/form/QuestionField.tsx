@@ -27,8 +27,8 @@ const QuestionField = ({ question, value, extraValue, onChange, onExtraChange, e
     const showExtraField = question.extraFieldOn && value === question.extraFieldOn.value;
 
     return (
-        <div className="bg-white rounded-2xl p-6 border border-slate-200 shadow-sm mb-4">
-            <div className="flex items-start gap-4 mb-4">
+        <div className="bg-white rounded-2xl p-4 sm:p-6 border border-slate-200 shadow-sm mb-4">
+            <div className="flex flex-col sm:flex-row items-start gap-2 sm:gap-4 mb-4">
                 <span className="flex-shrink-0 w-8 h-8 rounded-lg bg-blue-50 text-blue-600 flex items-center justify-center text-sm font-bold border border-blue-100">
                     {question.id}
                 </span>
@@ -43,7 +43,7 @@ const QuestionField = ({ question, value, extraValue, onChange, onExtraChange, e
                 </div>
             </div>
 
-            <div className="ml-12">
+            <div className="ml-0 sm:ml-12">
                 {(question.type === 'text' || question.type === 'email') && (
                     <Input
                         type={question.type}
