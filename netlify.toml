@@ -1,6 +1,6 @@
 [build]
   publish = "project/dist"
-  command = "cd project && npm install && npm run build:netlify"
+  command = "cd project && npm install --legacy-peer-deps && npm run build:netlify"
 
 [functions]
   directory = "project/netlify/functions"
