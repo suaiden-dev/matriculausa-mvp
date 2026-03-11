@@ -128,6 +128,7 @@ const StudentOnboarding: React.FC = () => {
   };
 
   useEffect(() => {
+    if (isVerifyingPayment || showPaymentAnimation) return;
     const stepParam = searchParams.get('step');
     if (stepParam) {
       const validSteps: OnboardingStep[] = ['selection_fee', 'identity_verification', 'selection_survey', 'scholarship_selection', 'process_type', 'documents_upload', 'payment', 'scholarship_fee', 'placement_fee', 'my_applications'];
@@ -138,17 +139,18 @@ const StudentOnboarding: React.FC = () => {
         }, 100);
       }
     }
-  }, [searchParams, goToStep]);
+  }, [searchParams, goToStep, isVerifyingPayment, showPaymentAnimation]);
 
   // Sincronizar URL com o passo atual
   useEffect(() => {
+    if (isVerifyingPayment || showPaymentAnimation) return;
     const currentStepUrl = searchParams.get('step');
     if (state.currentStep && state.currentStep !== currentStepUrl) {
       const newParams = new URLSearchParams(searchParams);
       newParams.set('step', state.currentStep);
       navigate(`?${newParams.toString()}`, { replace: true });
     }
-  }, [state.currentStep, searchParams, navigate]);
+  }, [state.currentStep, searchParams, navigate, isVerifyingPayment, showPaymentAnimation]);
 
   // Scroll to top when step changes
   useEffect(() => {
@@ -201,11 +203,11 @@ const StudentOnboarding: React.FC = () => {
               // Mover para my_applications diretamente
               goToStep('my_applications');
             } else {
-              const cleanUrl = new URL(window.location.href);
-              cleanUrl.searchParams.delete('payment');
-              cleanUrl.searchParams.delete('session_id');
-              cleanUrl.searchParams.delete('pix_payment');
-              window.location.href = cleanUrl.toString();
+              const newParams = new URLSearchParams(searchParams);
+              newParams.delete('payment');
+              newParams.delete('session_id');
+              newParams.delete('pix_payment');
+              setSearchParams(newParams, { replace: true });
             }
           }, 4000);
         }, 10000); // Aguarda 10 segundos extras antes da aba de sucesso
@@ -283,11 +285,11 @@ const StudentOnboarding: React.FC = () => {
                   // Mover para my_applications diretamente para evitar bug de estado no closure do handleNext
                   goToStep('my_applications');
                 } else {
-                  const cleanUrl = new URL(window.location.href);
-                  cleanUrl.searchParams.delete('payment');
-                  cleanUrl.searchParams.delete('session_id');
-                  cleanUrl.searchParams.delete('pix_payment');
-                  window.location.href = cleanUrl.toString();
+                  const newParams = new URLSearchParams(searchParams);
+                  newParams.delete('payment');
+                  newParams.delete('session_id');
+                  newParams.delete('pix_payment');
+                  setSearchParams(newParams, { replace: true });
                 }
               }, 4000);
             } else if ((data.status === 'open' || data.status === 'pending') && pollCount < MAX_POLLS) {
@@ -299,15 +301,8 @@ const StudentOnboarding: React.FC = () => {
               const newParams = new URLSearchParams(searchParams);
               newParams.delete('payment');
               newParams.delete('session_id');
+              newParams.delete('pix_payment');
               setSearchParams(newParams, { replace: true });
-              // Para garantir que o progress veja o real atual, força render ou reload.
-              if (pollCount >= MAX_POLLS) {
-                const cleanUrl = new URL(window.location.href);
-                cleanUrl.searchParams.delete('payment');
-                cleanUrl.searchParams.delete('session_id');
-                cleanUrl.searchParams.delete('pix_payment');
-                window.location.href = cleanUrl.toString();
-              }
             }
           } catch (error) {
             console.error('[Onboarding] Erro ao verificar sessão Stripe:', error);
@@ -441,12 +436,14 @@ const StudentOnboarding: React.FC = () => {
     else if (stepParam === 'my_applications') translationKey = 'i20ControlFee';
 
     return (
-      <div className="flex-1 flex items-center justify-center bg-slate-300">
-        <CustomLoading
-          color="green"
-          title={t(`successPages.${translationKey}.verifying`)}
-          message={t(`successPages.${translationKey}.pleaseWait`)}
-        />
+      <div className="flex-1 flex items-center justify-center bg-white/20 backdrop-blur-xl min-h-screen">
+        <div className="flex flex-col items-center">
+          <CustomLoading
+            color="green"
+            title={t(`successPages.${translationKey}.verifying`)}
+            message={t(`successPages.${translationKey}.pleaseWait`)}
+          />
+        </div>
       </div>
     );
   }

@@ -247,6 +247,12 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
             }
           } else {
             profile = data || null;
+            console.log('🔍 [USEAUTH] Perfil recuperado do banco:', {
+               has_paid_selection_process: profile?.has_paid_selection_process_fee,
+               is_scholarship_fee_paid: (profile as any)?.is_scholarship_fee_paid,
+               is_placement_fee_paid: (profile as any)?.is_placement_fee_paid,
+               role: profile?.role
+            });
 
             // ✅ CORREÇÃO: Atualizar email e dependents se estiverem diferentes ou null
             if (profile) {
