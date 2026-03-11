@@ -1,7 +1,7 @@
 [build]
   base = "project"
   publish = "dist"
-  command = "npm install --include=dev --legacy-peer-deps && npm run build:netlify"
+  command = "npm run build:netlify"
 
 [functions]
   directory = "netlify/functions"
