@@ -3,7 +3,8 @@ import { useNavigate } from 'react-router-dom';
 import { 
   AlertCircle, Award, Info, Home, FolderOpen, GraduationCap, Download, 
   ShieldCheck, ArrowRight, LayoutDashboard, MapPin, 
-  Star, Eye, CheckCircle2, Clock, Mail, Phone, Globe, ExternalLink 
+  Star, Eye, CheckCircle2, Clock, Mail, Phone, Globe, ExternalLink,
+  CreditCard, Check, X, RefreshCw, Loader2
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useAuth } from '../../../hooks/useAuth';
@@ -15,7 +16,52 @@ import { useFeeConfig } from '../../../hooks/useFeeConfig';
 import { ExpandableTabs } from '../../../components/ui/expandable-tabs';
 import DocumentRequestsCard from '../../../components/DocumentRequestsCard';
 import DocumentViewerModal from '../../../components/DocumentViewerModal';
-// Removidos ícones de pagamento I-20
+import { ZelleCheckout } from '../../../components/ZelleCheckout';
+import { STRIPE_PRODUCTS } from '../../../stripe-config';
+import { ProfileRequiredModal } from '../../../components/ProfileRequiredModal';
+import { useCallback } from 'react';
+import { getExchangeRate, calculateCardAmountWithFees, calculatePIXTotalWithIOF } from '../../../utils/stripeFeeCalculator';
+
+// Ícones de Pagamento
+const PixIcon = ({ className }: { className?: string }) => (
+    <svg className={className} xmlns="http://www.w3.org/2000/svg" viewBox="0 0 48 48">
+        <path fill="#4db6ac" d="M11.9,12h-0.68l8.04-8.04c2.62-2.61,6.86-2.61,9.48,0L36.78,12H36.1c-1.6,0-3.11,0.62-4.24,1.76l-6.8,6.77c-0.59,0.59-1.53,0.59-2.12,0l-6.8-6.77C15.01,12.62,13.5,12,11.9,12z" />
+        <path fill="#4db6ac" d="M36.1,36h0.68l-8.04,8.04c-2.62,2.61-6.86,2.61-9.48,0L11.22,36h0.68c1.6,0,3.11-0.62,4.24-1.76l6.8-6.77c0.59-0.59,1.53-0.59,2.12,0l6.8,6.77C32.99,35.38,34.5,36,36.1,36z" />
+        <path fill="#4db6ac" d="M44.04,28.74L38.78,34H36.1c-1.07,0-2.07-0.42-2.83-1.17l-6.8-6.78c-1.36-1.36-3.58-1.36-4.94,0l-6.8,6.78C13.97,33.58,12.97,34,11.9,34H9.22l-5.26-5.26c-2.61-2.62-2.61-6.86,0-9.48L9.22,14h2.68c1.07,0,2.07,0.42,2.83,1.17l6.8,6.78c0.68,0.68,1.58,1.02,2.47,1.02s1.79-0.34,2.47-1.02l6.8-6.78C34.03,14.42,35.03,14,36.1,14h2.68l5.26,5.26C46.65,21.88,46.65,26.12,44.04,28.74z" />
+    </svg>
+);
+
+const ZelleIcon = ({ className }: { className?: string }) => (
+    <svg className={className} xmlns="http://www.w3.org/2000/svg" viewBox="0 0 48 48">
+        <path fill="#a0f" d="M35,42H13c-3.866,0-7-3.134-7-7V13c0-3.866,3.134-7,7-7h22c3.866,0,7,3.134,7,7v22C42,38.866,38.866,42,35,42z" />
+        <path fill="#fff" d="M17.5,18.5h14c0.552,0,1-0.448,1-1V15c0-0.552-0.448-1-1-1h-14c-0.552,0-1,0.448-1,1v2.5C16.5,18.052,16.948,18.5,17.5,18.5z" />
+        <path fill="#fff" d="M17,34.5h14.5c0.552,0,1-0.448,1-1V31c0-0.552-0.448-1-1-1H17c-0.552,0-1,0.448-1,1v2.5C16,34.052,16.448,34.5,17,34.5z" />
+        <path fill="#fff" d="M22.25,11v6c0,0.276,0.224,0.5,0.5,0.5h3.5c0.276,0,0.5-0.224,0.5-0.5v-6c0-0.276-0.224-0.5-0.5-0.5h-3.5C22.474,10.5,22.25,10.724,22.25,11z" />
+        <path fill="#fff" d="M22.25,32v6c0,0.276,0.224,0.5,0.5,0.5h3.5c0.276,0,0.5-0.224,0.5-0.5v-6c0-0.276-0.224-0.5-0.5-0.5h-3.5C22.474,31.5,22.25,31.724,22.25,32z" />
+        <path fill="#fff" d="M16.578,30.938H22l10.294-12.839c0.178-0.222,0.019-0.552-0.266-0.552H26.5L16.275,30.298C16.065,30.553,16.247,30.938,16.578,30.938z" />
+    </svg>
+);
+
+const ParcelowIcon = ({ className }: { className?: string }) => (
+    <div className={`${className} flex items-center justify-center bg-white rounded-lg overflow-hidden p-0.5 border border-gray-100`}>
+        <img
+            src="/parcelow_share.webp"
+            alt="Parcelow"
+            className="w-full h-full object-contain scale-110"
+        />
+    </div>
+);
+
+const StripeIcon = ({ className }: { className?: string }) => (
+    <div className={`${className} flex items-center justify-center bg-[#635bff] rounded-lg overflow-hidden shadow-sm shadow-[#635bff]/20`}>
+        <span
+            className="text-white font-black text-[28px] leading-[0] select-none"
+            style={{ fontFamily: 'system-ui, -apple-system, sans-serif', transform: 'translateY(-1.5px)' }}
+        >
+            S
+        </span>
+    </div>
+);
 
 export const UniversityDocumentsStep: React.FC<StepProps> = ({ onBack }) => {
   const { t } = useTranslation();
@@ -26,16 +72,35 @@ export const UniversityDocumentsStep: React.FC<StepProps> = ({ onBack }) => {
   
   const [loading, setLoading] = useState(true);
   const [applicationDetails, setApplicationDetails] = useState<any>(null);
-  const [activeTab, setActiveTab] = useState<'welcome' | 'details' | 'documents' | 'acceptance'>('welcome');
+  const [activeTab, setActiveTab] = useState<'welcome' | 'details' | 'documents' | 'i20' | 'acceptance'>('welcome');
   const [previewUrl, setPreviewUrl] = useState<string | null>(null);
   const [documentRequests, setDocumentRequests] = useState<any[]>([]);
-  // Pagamento I-20 removido
+  
+  // Pagamento I-20
+  const [i20Loading, setI20Loading] = useState(false);
+  const [i20Error, setI20Error] = useState<string | null>(null);
+  const [selectedPaymentMethod, setSelectedPaymentMethod] = useState<'stripe' | 'zelle' | 'pix' | 'parcelow' | null>(null);
+  const [exchangeRate, setExchangeRate] = useState<number | null>(null);
+  const [showZelleCheckout, setShowZelleCheckout] = useState(false);
+  const [showProfileRequiredModal, setShowProfileRequiredModal] = useState(false);
+  const [profileErrorType, setProfileErrorType] = useState<'cpf_missing' | 'profile_incomplete' | null>(null);
+  const [inlineCpf, setInlineCpf] = useState('');
+  const [savingCpf, setSavingCpf] = useState(false);
+  const [cpfError, setCpfError] = useState<string | null>(null);
+  const [showInlineCpf, setShowInlineCpf] = useState(false);
+
+  useEffect(() => {
+    getExchangeRate().then(rate => setExchangeRate(rate));
+  }, []);
   useEffect(() => {
     fetchApplicationDetails();
   }, [userProfile?.id]);
 
   const fetchApplicationDetails = async (isRefresh = false) => {
-    if (!userProfile?.id) return;
+    if (!userProfile?.id) {
+      if (!isRefresh) setLoading(false);
+      return;
+    }
     
     try {
       if (!isRefresh) setLoading(true);
@@ -61,8 +126,6 @@ export const UniversityDocumentsStep: React.FC<StepProps> = ({ onBack }) => {
       if (data) {
         setApplicationDetails(data);
 
-
-        
         // Buscar solicitações de documentos para verificar status real de conclusão
         const { data: reqs } = await supabase
           .from('document_requests')
@@ -148,6 +211,195 @@ export const UniversityDocumentsStep: React.FC<StepProps> = ({ onBack }) => {
 
 
 
+  // I-20 Payment handlers
+  const handlePaymentMethodSelect = (method: 'stripe' | 'zelle' | 'pix' | 'parcelow', exchangeRateParam?: number) => {
+    setSelectedPaymentMethod(method);
+    if (method === 'pix' && exchangeRateParam) {
+      setExchangeRate(exchangeRateParam);
+    } else {
+      setExchangeRate(null);
+    }
+  };
+
+  const handleProceedPayment = useCallback(async () => {
+    if (!selectedPaymentMethod || !applicationDetails) return;
+
+    setI20Loading(true);
+    setI20Error(null);
+
+    try {
+      if (selectedPaymentMethod === 'stripe') {
+        const { data: { session } } = await supabase.auth.getSession();
+        const token = session?.access_token;
+        const supabaseUrl = import.meta.env.VITE_SUPABASE_URL;
+        const apiUrl = `${supabaseUrl}/functions/v1/stripe-checkout-i20-control-fee`;
+
+        const baseAmount = getFeeAmount('i20_control_fee');
+        const promotionalCoupon = (window as any).__checkout_promotional_coupon || null;
+        const finalAmountWithDiscount = (window as any).__checkout_final_amount || baseAmount;
+
+        const res = await fetch(apiUrl, {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'Authorization': `Bearer ${token}`,
+          },
+          body: JSON.stringify({
+            success_url: `${window.location.origin}/student/onboarding?step=university_documents&payment=success&session_id={CHECKOUT_SESSION_ID}`,
+            cancel_url: `${window.location.origin}/student/onboarding?step=university_documents&payment=cancelled`,
+            price_id: STRIPE_PRODUCTS.controlFee.priceId,
+            amount: finalAmountWithDiscount,
+            payment_method: 'stripe',
+            promotional_coupon: promotionalCoupon,
+          }),
+        });
+        const data = await res.json();
+        if (data.session_url) {
+          window.location.href = data.session_url;
+        } else {
+          setI20Error('Erro ao criar sessão de pagamento.');
+        }
+      } else if (selectedPaymentMethod === 'pix') {
+        const { data: { session } } = await supabase.auth.getSession();
+        const token = session?.access_token;
+        const supabaseUrl = import.meta.env.VITE_SUPABASE_URL;
+        const apiUrl = `${supabaseUrl}/functions/v1/stripe-checkout-i20-control-fee`;
+
+        const baseAmount = getFeeAmount('i20_control_fee');
+        const promotionalCoupon = (window as any).__checkout_promotional_coupon || null;
+        const finalAmountWithDiscount = (window as any).__checkout_final_amount || baseAmount;
+
+        const metadata: any = {};
+        if (exchangeRate && exchangeRate > 0) {
+          metadata.exchange_rate = exchangeRate.toString();
+        }
+
+        const res = await fetch(apiUrl, {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'Authorization': `Bearer ${token}`,
+          },
+          body: JSON.stringify({
+            success_url: `${window.location.origin}/student/onboarding?step=university_documents&payment=success&session_id={CHECKOUT_SESSION_ID}`,
+            cancel_url: `${window.location.origin}/student/onboarding?step=university_documents&payment=cancelled`,
+            price_id: STRIPE_PRODUCTS.controlFee.priceId,
+            amount: finalAmountWithDiscount,
+            payment_method: 'pix',
+            promotional_coupon: promotionalCoupon,
+            metadata,
+          }),
+        });
+        const data = await res.json();
+        if (data.session_url) {
+          window.location.href = data.session_url;
+        } else {
+          setI20Error('Erro ao criar sessão de pagamento PIX.');
+        }
+      } else if (selectedPaymentMethod === 'zelle') {
+        setShowZelleCheckout(true);
+        setI20Loading(false);
+      } else if (selectedPaymentMethod === 'parcelow') {
+        const { data: { session } } = await supabase.auth.getSession();
+        const token = session?.access_token;
+        const supabaseUrl = import.meta.env.VITE_SUPABASE_URL;
+        const apiUrl = `${supabaseUrl}/functions/v1/parcelow-checkout-i20-control-fee`;
+
+        const finalAmount = (window as any).__checkout_final_amount || getFeeAmount('i20_control_fee');
+        const promotionalCoupon = (window as any).__checkout_promotional_coupon || null;
+
+        const res = await fetch(apiUrl, {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'Authorization': `Bearer ${token}`,
+          },
+          body: JSON.stringify({
+            amount: finalAmount,
+            fee_type: 'i20_control_fee',
+            metadata: {
+              application_id: applicationDetails?.id,
+              final_amount: finalAmount,
+              promotional_coupon: promotionalCoupon,
+            },
+            promotional_coupon: promotionalCoupon,
+            scholarships_ids: applicationDetails?.scholarships?.id ? [applicationDetails.scholarships.id] : [],
+          }),
+        });
+
+        if (!res.ok) {
+          const errorData = await res.json();
+          if (errorData.error === 'document_number_required') {
+            setProfileErrorType('cpf_missing');
+            setShowProfileRequiredModal(true);
+            setI20Loading(false);
+            return;
+          }
+          if (errorData.error === 'User profile not found') {
+            setProfileErrorType('profile_incomplete');
+            setShowProfileRequiredModal(true);
+            setI20Loading(false);
+            return;
+          }
+          throw new Error(errorData.error || 'Erro ao criar sessão Parcelow');
+        }
+
+        const data = await res.json();
+        if (data.checkout_url) {
+          window.location.href = data.checkout_url;
+          return;
+        } else {
+          throw new Error('URL de checkout Parcelow não encontrada');
+        }
+      }
+    } catch (err) {
+      console.error('[UniversityDocumentsStep] Payment error:', err);
+      setI20Error('Erro ao processar pagamento. Tente novamente.');
+      setI20Loading(false);
+      setSelectedPaymentMethod(null);
+    }
+  }, [selectedPaymentMethod, applicationDetails, getFeeAmount, exchangeRate]);
+
+  const saveCpfAndCheckout = async () => {
+    const cleaned = inlineCpf.replace(/\D/g, '');
+    if (cleaned.length !== 11) {
+      setCpfError('CPF deve ter 11 dígitos');
+      return;
+    }
+
+    try {
+      setSavingCpf(true);
+      setCpfError(null);
+
+      const { error: updateError } = await supabase
+        .from('user_profiles')
+        .update({ cpf_document: cleaned })
+        .eq('user_id', userProfile?.user_id);
+
+      if (updateError) throw updateError;
+
+      setShowInlineCpf(false);
+      handlePaymentMethodSelect('parcelow');
+      handleProceedPayment();
+    } catch (err: any) {
+      console.error('[UniversityDocumentsStep] Error saving CPF:', err);
+      setCpfError('Erro ao salvar CPF. Tente novamente.');
+    } finally {
+      setSavingCpf(false);
+    }
+  };
+
+  const handleParcelowClick = () => {
+    if (!(userProfile as any)?.cpf_document) {
+      setShowInlineCpf(true);
+      return;
+    }
+    handlePaymentMethodSelect('parcelow');
+    handleProceedPayment();
+  };
+
+  // Remover useEffect do modal
+
   if (loading) {
     return (
       <div className="flex flex-col items-center justify-center py-20 animate-pulse">
@@ -161,6 +413,7 @@ export const UniversityDocumentsStep: React.FC<StepProps> = ({ onBack }) => {
       </div>
     );
   }
+
 
   if (!applicationDetails) {
     return (
@@ -179,14 +432,25 @@ export const UniversityDocumentsStep: React.FC<StepProps> = ({ onBack }) => {
     );
   }
 
+  const isScholarshipFeePaid = !!applicationDetails?.is_scholarship_fee_paid;
+  const isPlacementFeePaid = !!applicationDetails?.is_placement_fee_paid;
+  const showI20Tab = isScholarshipFeePaid || isPlacementFeePaid;
+
   const TABS = [
     { title: t('studentDashboard.applicationChatPage.tabs.welcome'), icon: Home },
     { title: t('studentDashboard.applicationChatPage.tabs.details'), icon: Info },
     { title: t('studentDashboard.applicationChatPage.tabs.documents'), icon: FolderOpen },
+    ...(showI20Tab ? [{ title: t('studentDashboard.applicationChatPage.tabs.i20ControlFee'), icon: CreditCard }] : []),
     { title: t('studentDashboard.myApplicationStep.tabs.acceptanceLetter'), icon: Award }
   ];
 
-  const tabIds: ('welcome' | 'details' | 'documents' | 'acceptance')[] = ['welcome', 'details', 'documents', 'acceptance'];
+  const tabIds: ('welcome' | 'details' | 'documents' | 'i20' | 'acceptance')[] = [
+    'welcome', 
+    'details', 
+    'documents', 
+    ...(showI20Tab ? ['i20' as const] : []), 
+    'acceptance'
+  ];
   const activeTabIndex = tabIds.indexOf(activeTab as any);
 
   // 1. Verifica os documentos "core" (JSONB)
@@ -855,7 +1119,289 @@ export const UniversityDocumentsStep: React.FC<StepProps> = ({ onBack }) => {
             </div>
           )}
 
-          {/* Bloco da aba I-20 removido */}
+          {activeTab === 'i20' && (
+            <div className="space-y-8 animate-in fade-in slide-in-from-bottom-4 duration-500">
+              {showZelleCheckout ? (
+                <div className="bg-white rounded-[2.5rem] shadow-2xl border border-slate-300 overflow-hidden">
+                  <div className="p-8">
+                    <button
+                      onClick={() => setShowZelleCheckout(false)}
+                      className="mb-8 flex items-center text-slate-600 hover:text-slate-900 transition-all gap-3 group"
+                    >
+                      <div className="w-10 h-10 rounded-full bg-slate-100 flex items-center justify-center group-hover:bg-slate-200 transition-all">
+                        <ArrowRight className="w-5 h-5 rotate-180" />
+                      </div>
+                      <span className="font-black uppercase tracking-widest text-xs">Voltar</span>
+                    </button>
+                    <ZelleCheckout
+                      feeType="i20_control_fee"
+                      amount={getFeeAmount('i20_control_fee')}
+                      scholarshipsIds={applicationDetails?.scholarship_id ? [applicationDetails.scholarship_id] : []}
+                      metadata={{
+                        application_id: applicationDetails?.id,
+                        selected_scholarship_id: applicationDetails?.scholarship_id,
+                      }}
+                      onProcessingChange={(isProcessing) => {
+                        if (isProcessing) fetchApplicationDetails(true);
+                      }}
+                    />
+                  </div>
+                </div>
+              ) : !(userProfile as any)?.has_paid_i20_control_fee ? (
+                <div className="bg-white rounded-[2.5rem] shadow-2xl border border-slate-300 overflow-hidden">
+                  <div className="bg-gradient-to-br from-blue-600 to-blue-800 p-8 md:p-12 relative overflow-hidden">
+                    <div className="absolute top-0 right-0 w-64 h-64 bg-white/10 rounded-full blur-3xl -mr-32 -mt-32 pointer-events-none" />
+                    <div className="relative z-10 flex flex-col md:flex-row items-center gap-8">
+                      <div className="w-20 h-20 bg-white/20 backdrop-blur-md rounded-3xl flex items-center justify-center border border-white/30 shadow-xl">
+                        <CreditCard className="w-10 h-10 text-white" />
+                      </div>
+                      <div className="flex-1 text-center md:text-left space-y-2">
+                        <h3 className="text-2xl md:text-3xl font-black text-white uppercase tracking-tight">{t('studentDashboard.applicationChatPage.i20ControlFee.title')}</h3>
+                        <p className="text-blue-100 font-medium">{t('studentDashboard.applicationChatPage.i20ControlFee.subtitle')}</p>
+                      </div>
+                    </div>
+                  </div>
+
+                  <div className="p-8 md:p-12 space-y-12">
+                    <div className="grid grid-cols-1 lg:grid-cols-2 gap-12">
+                      <div className="space-y-6">
+                        <h4 className="text-xl font-black text-gray-900 uppercase tracking-tight flex items-center gap-3">
+                          {t('studentDashboard.applicationChatPage.i20ControlFee.paymentRequired')}
+                        </h4>
+                        <p className="text-gray-600 leading-relaxed font-medium">
+                          {t('studentDashboard.applicationChatPage.i20ControlFee.description')}
+                        </p>
+                        <div className="p-6 bg-slate-50 border border-slate-300 rounded-3xl space-y-4">
+                          <div className="flex items-center justify-between border-b border-slate-200 pb-4">
+                            <span className="text-xs font-black text-slate-500 uppercase tracking-widest">{t('studentDashboard.applicationChatPage.i20ControlFee.feeType')}</span>
+                            <span className="text-xs font-black text-slate-900 uppercase tracking-tight">
+                              I-20 Control Fee
+                            </span>
+                          </div>
+                          <div className="flex items-center justify-between">
+                            <span className="text-xs font-black text-slate-500 uppercase tracking-widest">{t('studentDashboard.applicationChatPage.i20ControlFee.amount')}</span>
+                            <span className="text-2xl font-black text-blue-600 tracking-tighter">{formatFeeAmount(getFeeAmount('i20_control_fee'))}</span>
+                          </div>
+                        </div>
+
+                        {i20Error && (
+                          <div className="p-4 bg-red-50 border border-red-200 rounded-2xl flex items-center gap-3 text-red-600">
+                            <AlertCircle className="w-5 h-5 flex-shrink-0" />
+                            <p className="text-xs font-bold uppercase tracking-tight">{i20Error}</p>
+                          </div>
+                        )}
+                      </div>
+
+                      <div className="flex flex-col flex-1 gap-6">
+                        {/* Stripe */}
+                        <button
+                          onClick={() => { handlePaymentMethodSelect('stripe'); handleProceedPayment(); }}
+                          disabled={i20Loading}
+                          className="group/btn relative bg-white border border-gray-200 p-5 rounded-[2rem] text-left hover:scale-[1.01] active:scale-95 transition-all shadow-sm hover:shadow-md disabled:opacity-50 flex items-center justify-between"
+                        >
+                          <div className="flex items-center gap-5">
+                            <div className="w-14 h-14 flex items-center justify-center bg-slate-50 rounded-2xl">
+                              <StripeIcon className="w-9 h-9" />
+                            </div>
+                            <div>
+                              <div className="font-black text-slate-900 text-base uppercase tracking-tight">Cartão de Crédito</div>
+                              <div className="text-[10px] font-bold text-slate-400 mt-1 uppercase tracking-wide">* Podem incluir taxas de processamento</div>
+                            </div>
+                          </div>
+                          <div className="text-slate-900 text-xl font-black uppercase tracking-tight">
+                            {formatFeeAmount(calculateCardAmountWithFees(getFeeAmount('i20_control_fee')))}
+                          </div>
+                          {selectedPaymentMethod === 'stripe' && i20Loading && (
+                            <div className="absolute inset-0 bg-white/80 backdrop-blur-sm rounded-[2rem] flex items-center justify-center z-10">
+                              <RefreshCw className="w-8 h-8 text-blue-600 animate-spin" />
+                            </div>
+                          )}
+                        </button>
+
+                        {/* PIX */}
+                        <button
+                          onClick={() => { handlePaymentMethodSelect('pix', exchangeRate || 5.6); handleProceedPayment(); }}
+                          disabled={i20Loading}
+                          className="group/btn relative bg-white border border-gray-200 p-5 rounded-[2rem] text-left hover:scale-[1.01] active:scale-95 transition-all shadow-sm hover:shadow-md disabled:opacity-50 flex items-center justify-between"
+                        >
+                          <div className="flex items-center gap-5">
+                            <div className="w-14 h-14 flex items-center justify-center bg-slate-50 rounded-2xl">
+                              <PixIcon className="w-9 h-9" />
+                            </div>
+                            <div>
+                              <div className="font-black text-slate-900 text-base uppercase tracking-tight">PIX</div>
+                              <div className="text-[10px] font-bold text-slate-400 mt-1 uppercase tracking-wide">* Podem incluir taxas de processamento</div>
+                            </div>
+                          </div>
+                          <div className="text-right">
+                            <div className="text-slate-900 text-xl font-black uppercase tracking-tight">
+                              R$ {calculatePIXTotalWithIOF(getFeeAmount('i20_control_fee'), exchangeRate || 5.6).totalWithIOF.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
+                            </div>
+                          </div>
+                          {selectedPaymentMethod === 'pix' && i20Loading && (
+                            <div className="absolute inset-0 bg-white/80 backdrop-blur-sm rounded-[2rem] flex items-center justify-center z-10">
+                              <RefreshCw className="w-8 h-8 text-[#4db6ac] animate-spin" />
+                            </div>
+                          )}
+                        </button>
+
+                        {/* Parcelow */}
+                        <div className="flex flex-col gap-0 border border-gray-100 rounded-[2rem] overflow-hidden bg-white shadow-sm ring-1 ring-slate-100/50">
+                          <button
+                            onClick={handleParcelowClick}
+                            disabled={i20Loading}
+                            className={`group/btn relative bg-white p-5 text-left hover:scale-[1.01] active:scale-95 transition-all disabled:opacity-50 flex items-center justify-between ${showInlineCpf ? 'border-b border-gray-100 rounded-t-[2rem]' : 'rounded-[2rem]'}`}
+                          >
+                            <div className="flex items-center gap-5">
+                              <div className="w-14 h-14 flex items-center justify-center bg-slate-50 rounded-2xl px-2">
+                                <ParcelowIcon className="w-full h-10" />
+                              </div>
+                              <div>
+                                <div className="font-black text-slate-900 text-base uppercase tracking-tight">Parcelow</div>
+                                <div className="text-[10px] font-bold text-slate-400 mt-1 uppercase tracking-wide">* Podem incluir taxas da operadora</div>
+                              </div>
+                            </div>
+                            <div className="text-slate-900 text-xl font-black uppercase tracking-tight">{formatFeeAmount(getFeeAmount('i20_control_fee'))}</div>
+                            {selectedPaymentMethod === 'parcelow' && i20Loading && !showInlineCpf && (
+                              <div className="absolute inset-0 bg-white/80 backdrop-blur-sm rounded-[2rem] flex items-center justify-center z-10">
+                                <RefreshCw className="w-8 h-8 text-orange-500 animate-spin" />
+                              </div>
+                            )}
+                          </button>
+
+                          {showInlineCpf && (
+                            <div className="p-6 bg-slate-50 border-t border-gray-100 animate-in fade-in slide-in-from-top-2 duration-300">
+                              <div className="flex items-center justify-between mb-4">
+                                <h4 className="text-xs font-black text-slate-900 uppercase tracking-widest">Informe seu CPF para Parcelow</h4>
+                                <button onClick={() => setShowInlineCpf(false)} title="Fechar">
+                                  <X className="w-4 h-4 text-slate-400 hover:text-slate-600" />
+                                </button>
+                              </div>
+                              <div className="space-y-4">
+                                <div className="relative">
+                                  <input
+                                    type="text"
+                                    placeholder="000.000.000-00"
+                                    value={inlineCpf}
+                                    onChange={(e) => {
+                                      const val = e.target.value.replace(/\D/g, '').substring(0, 11);
+                                      setInlineCpf(val);
+                                      if (cpfError) setCpfError(null);
+                                    }}
+                                    className={`w-full bg-white border ${cpfError ? 'border-red-300 ring-4 ring-red-500/10' : 'border-slate-200'} rounded-xl px-4 py-3 text-lg font-bold text-slate-900 tracking-widest focus:ring-4 focus:ring-blue-500/10 focus:border-blue-500/50 outline-none transition-all placeholder:text-slate-300`}
+                                  />
+                                  {savingCpf && (
+                                    <div className="absolute right-3 top-3">
+                                      <Loader2 className="w-6 h-6 text-blue-500 animate-spin" />
+                                    </div>
+                                  )}
+                                </div>
+                                {cpfError && (
+                                  <p className="text-[10px] font-black text-red-500 uppercase tracking-widest flex items-center gap-2">
+                                    <AlertCircle className="w-3 h-3" />
+                                    {cpfError}
+                                  </p>
+                                )}
+                                <button
+                                  onClick={saveCpfAndCheckout}
+                                  disabled={savingCpf || inlineCpf.replace(/\D/g, '').length !== 11}
+                                  className="w-full bg-slate-900 text-white py-3.5 rounded-xl font-bold uppercase tracking-widest text-xs hover:bg-slate-800 transition-all shadow-lg active:scale-95 disabled:opacity-50 disabled:grayscale disabled:scale-100"
+                                >
+                                  Continuar para Pagamento
+                                </button>
+                              </div>
+                            </div>
+                          )}
+                        </div>
+
+                        {/* Zelle */}
+                        <div className="flex flex-col">
+                          <button
+                            onClick={() => { setShowZelleCheckout(!showZelleCheckout); setSelectedPaymentMethod('zelle'); }}
+                            disabled={i20Loading}
+                            className={`group/btn relative bg-white border p-5 text-left hover:scale-[1.01] active:scale-[0.99] transition-all shadow-sm hover:shadow-md disabled:opacity-50 flex items-center justify-between ${showZelleCheckout
+                              ? 'rounded-t-[2rem] border-slate-200 border-b-0 bg-slate-50/30'
+                              : 'rounded-[2rem] border-gray-200'
+                              }`}
+                          >
+                            <div className="flex items-center gap-5">
+                              <div className="w-14 h-14 flex items-center justify-center bg-slate-50 rounded-2xl">
+                                <ZelleIcon className="w-9 h-9" />
+                              </div>
+                              <div>
+                                <div className="font-black text-slate-900 text-base uppercase tracking-tight">Zelle</div>
+                                <div className="text-[10px] font-bold text-slate-500 mt-1 uppercase tracking-wide flex items-center gap-1">
+                                  <AlertCircle className="w-3 h-3" />
+                                  Processamento pode levar até 48 horas
+                                </div>
+                              </div>
+                            </div>
+                            <div className="text-right">
+                              <div className="text-slate-900 text-xl font-black uppercase tracking-tight">{formatFeeAmount(getFeeAmount('i20_control_fee'))}</div>
+                              <span className="text-[10px] font-bold text-slate-900 mt-1 block uppercase tracking-widest">Sem Taxas</span>
+                            </div>
+                          </button>
+
+                          {showZelleCheckout && (
+                            <div className="border border-slate-200 border-t-0 rounded-b-[2rem] overflow-hidden bg-white shadow-sm">
+                              <ZelleCheckout
+                                feeType="i20_control_fee"
+                                amount={getFeeAmount('i20_control_fee')}
+                                scholarshipsIds={applicationDetails?.scholarships?.id ? [applicationDetails.scholarships.id] : []}
+                                metadata={{
+                                  application_id: applicationDetails?.id,
+                                  selected_scholarship_id: applicationDetails?.scholarships?.id,
+                                }}
+                                isPendingVerification={false}
+                                onProcessingChange={(isProcessing) => { if (isProcessing) fetchApplicationDetails(true); }}
+                              />
+                            </div>
+                          )}
+                        </div>
+                        <div className="flex items-center gap-3 justify-center text-slate-400 mt-4">
+                          <ShieldCheck className="w-5 h-5" />
+                          <span className="text-[10px] font-black uppercase tracking-widest">{t('studentDashboard.applicationChatPage.i20ControlFee.securePayment')}</span>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              ) : (
+                <div className="bg-white rounded-[2.5rem] shadow-2xl border border-slate-300 overflow-hidden">
+                  <div className="bg-gradient-to-br from-emerald-500 to-emerald-700 p-8 md:p-12 relative overflow-hidden">
+                    <div className="absolute top-0 right-0 w-64 h-64 bg-white/10 rounded-full blur-3xl -mr-32 -mt-32 pointer-events-none" />
+                    <div className="relative z-10 flex flex-col md:flex-row items-center gap-8">
+                      <div className="w-20 h-20 bg-white/20 backdrop-blur-md rounded-3xl flex items-center justify-center border border-white/30 shadow-xl">
+                        <Check className="w-10 h-10 text-white" />
+                      </div>
+                      <div className="flex-1 text-center md:text-left space-y-2">
+                        <h3 className="text-2xl md:text-3xl font-black text-white uppercase tracking-tight">{t('studentDashboard.applicationChatPage.i20ControlFee.paymentSuccess.title')}</h3>
+                        <p className="text-emerald-100 font-medium">{t('studentDashboard.applicationChatPage.i20ControlFee.paymentSuccess.paymentProcessed')}</p>
+                      </div>
+                    </div>
+                  </div>
+
+                  <div className="p-8 md:p-12 space-y-12">
+                    <div className="bg-emerald-50 border border-emerald-200 rounded-[2rem] p-8">
+                      <h4 className="text-lg font-black text-emerald-900 uppercase tracking-tight mb-6 flex items-center gap-2">
+                        {t('studentDashboard.applicationChatPage.i20ControlFee.paymentSuccess.nextSteps')}
+                      </h4>
+                      <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                        {(t('studentDashboard.applicationChatPage.i20ControlFee.paymentSuccess.nextStepsList', { returnObjects: true }) as string[]).map((step, index) => (
+                          <div key={index} className="flex items-start gap-4 p-4 bg-white/50 rounded-2xl border border-emerald-100">
+                            <div className="w-8 h-8 bg-emerald-100 rounded-xl flex items-center justify-center flex-shrink-0 text-emerald-600 font-black text-sm">
+                              {index + 1}
+                            </div>
+                            <p className="text-sm font-medium text-emerald-800 leading-relaxed">{step}</p>
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              )}
+            </div>
+          )}
 
           {activeTab === 'documents' && (
             <div className="space-y-8">
@@ -1017,6 +1563,16 @@ export const UniversityDocumentsStep: React.FC<StepProps> = ({ onBack }) => {
 
       {previewUrl && (
         <DocumentViewerModal documentUrl={previewUrl || ''} onClose={() => setPreviewUrl(null)} />
+      )}
+
+
+
+      {showProfileRequiredModal && (
+        <ProfileRequiredModal
+          isOpen={showProfileRequiredModal}
+          onClose={() => setShowProfileRequiredModal(false)}
+          errorType={profileErrorType || 'profile_incomplete'}
+        />
       )}
     </div>
   );
