@@ -120,7 +120,7 @@ export const useSelectionFeeStep = (onNext: () => void) => {
       setShowCodeStep(true);
       setValidationResult({
         isValid: true,
-        message: t('preCheckoutModal.validCode') || 'Valid code! $50 discount applied',
+        message: t('payment:preCheckoutModal.validCode') || 'Valid code! $50 discount applied',
         discountAmount: activeDiscount.discount_amount || 50,
       });
     }
@@ -140,15 +140,15 @@ export const useSelectionFeeStep = (onNext: () => void) => {
         .single();
 
       if (affiliateError || !affiliateCodeData) {
-        setValidationResult({ isValid: false, message: t('preCheckoutModal.invalidCode') || 'Invalid code' });
+        setValidationResult({ isValid: false, message: t('payment:preCheckoutModal.invalidCode') || 'Invalid code' });
         return;
       }
       if (affiliateCodeData.user_id === user?.id) {
-        setValidationResult({ isValid: false, message: t('preCheckoutModal.selfReferral') || 'Self-referral not allowed', isSelfReferral: true });
+        setValidationResult({ isValid: false, message: t('payment:preCheckoutModal.selfReferral') || 'Self-referral not allowed', isSelfReferral: true });
         return;
       }
       if (hasUsedReferralCode && !activeDiscount?.has_discount) {
-        setValidationResult({ isValid: false, message: t('preCheckoutModal.alreadyUsedCode') || 'Code already used' });
+        setValidationResult({ isValid: false, message: t('payment:preCheckoutModal.alreadyUsedCode') || 'Code already used' });
         return;
       }
 
@@ -159,13 +159,13 @@ export const useSelectionFeeStep = (onNext: () => void) => {
         email_param: user.email,
       });
       if (rpcError || !result?.success) {
-        setValidationResult({ isValid: false, message: result?.error || t('preCheckoutModal.errorValidating') || 'Error' });
+        setValidationResult({ isValid: false, message: result?.error || t('payment:preCheckoutModal.errorValidating') || 'Error' });
         return;
       }
-      setValidationResult({ isValid: true, message: t('preCheckoutModal.validCode') || 'Valid code! $50 discount applied', discountAmount: 50 });
+      setValidationResult({ isValid: true, message: t('payment:preCheckoutModal.validCode') || 'Valid code! $50 discount applied', discountAmount: 50 });
       setCodeApplied(true);
     } catch (e) {
-      setValidationResult({ isValid: false, message: t('preCheckoutModal.errorValidating') || 'Error validating code' });
+      setValidationResult({ isValid: false, message: t('payment:preCheckoutModal.errorValidating') || 'Error validating code' });
     } finally {
       setIsValidating(false);
     }
@@ -202,7 +202,7 @@ export const useSelectionFeeStep = (onNext: () => void) => {
           setCodeApplied(true);
           setHasReferralCode(true);
           setShowCodeStep(true);
-          setValidationResult({ isValid: true, message: t('preCheckoutModal.validCode') || 'Valid code!', discountAmount: usedCode.discount_amount || 50 });
+          setValidationResult({ isValid: true, message: t('payment:preCheckoutModal.validCode') || 'Valid code!', discountAmount: usedCode.discount_amount || 50 });
         }
       } catch (e) {
         console.error('Erro ao buscar código usado:', e);
@@ -357,7 +357,7 @@ export const useSelectionFeeStep = (onNext: () => void) => {
   };
 
   const validateDiscountCode = async () => {
-    if (!discountCode.trim()) { setValidationResult({ isValid: false, message: t('preCheckoutModal.pleaseEnterCode') || 'Please enter a code' }); return; }
+    if (!discountCode.trim()) { setValidationResult({ isValid: false, message: t('payment:preCheckoutModal.enterCodePlease') || 'Please enter a code' }); return; }
     setIsValidating(true);
     setValidationResult(null);
     try {
@@ -365,9 +365,9 @@ export const useSelectionFeeStep = (onNext: () => void) => {
         .from('affiliate_codes').select('user_id, code, is_active')
         .eq('code', discountCode.trim().toUpperCase()).eq('is_active', true).single();
 
-      if (affiliateError || !affiliateCodeData) { setValidationResult({ isValid: false, message: t('preCheckoutModal.invalidCode') || 'Invalid code' }); return; }
-      if (affiliateCodeData.user_id === user?.id) { setValidationResult({ isValid: false, message: t('preCheckoutModal.selfReferral') || 'Self-referral not allowed', isSelfReferral: true }); return; }
-      if (hasUsedReferralCode && !activeDiscount?.has_discount) { setValidationResult({ isValid: false, message: t('preCheckoutModal.alreadyUsedCode') || 'Code already used' }); return; }
+      if (affiliateError || !affiliateCodeData) { setValidationResult({ isValid: false, message: t('payment:preCheckoutModal.invalidCode') || 'Invalid code' }); return; }
+      if (affiliateCodeData.user_id === user?.id) { setValidationResult({ isValid: false, message: t('payment:preCheckoutModal.selfReferral') || 'Self-referral not allowed', isSelfReferral: true }); return; }
+      if (hasUsedReferralCode && !activeDiscount?.has_discount) { setValidationResult({ isValid: false, message: t('payment:preCheckoutModal.alreadyUsedCode') || 'Code already used' }); return; }
 
       if (!user?.id || !user?.email) throw new Error('User not authenticated');
       const { data: result, error: rpcError } = await supabase.rpc('validate_and_apply_referral_code', {
@@ -376,13 +376,13 @@ export const useSelectionFeeStep = (onNext: () => void) => {
         email_param: user.email,
       });
       if (rpcError || !result?.success) {
-        setValidationResult({ isValid: false, message: result?.error || t('preCheckoutModal.errorValidating') || 'Error' });
+        setValidationResult({ isValid: false, message: result?.error || t('payment:preCheckoutModal.errorValidating') || 'Error' });
         return;
       }
-      setValidationResult({ isValid: true, message: t('preCheckoutModal.validCode') || 'Valid code! $50 discount applied', discountAmount: 50 });
+      setValidationResult({ isValid: true, message: t('payment:preCheckoutModal.validCode') || 'Valid code! $50 discount applied', discountAmount: 50 });
       setCodeApplied(true);
     } catch (e) {
-      setValidationResult({ isValid: false, message: t('preCheckoutModal.errorValidating') || 'Error validating code' });
+      setValidationResult({ isValid: false, message: t('payment:preCheckoutModal.errorValidating') || 'Error validating code' });
     } finally {
       setIsValidating(false);
     }
@@ -498,9 +498,9 @@ export const useSelectionFeeStep = (onNext: () => void) => {
 
     setLoading(true);
     if (!user?.id) { setError('User not authenticated'); return; }
-    if (!termsAccepted) { alert(t('preCheckoutModal.mustAcceptTerms') || 'You must accept the terms and conditions.'); setLoading(false); return; }
+    if (!termsAccepted) { alert(t('payment:preCheckoutModal.mustAcceptTerms') || 'You must accept the terms and conditions.'); setLoading(false); return; }
     if (hasReferralCode && !(validationResult?.isValid) && !activeDiscount?.has_discount) {
-      alert(t('preCheckoutModal.mustEnterValidCode') || 'Please validate your referral code.'); setLoading(false); return;
+      alert(t('payment:preCheckoutModal.mustEnterValidCode') || 'Please validate your referral code.'); setLoading(false); return;
     }
 
     setError(null);

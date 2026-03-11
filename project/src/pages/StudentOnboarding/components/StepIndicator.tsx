@@ -9,17 +9,17 @@ interface StepIndicatorProps {
   steps?: { key: OnboardingStep; label: string }[];
 }
 
-export const StepIndicator: React.FC<StepIndicatorProps> = ({ currentStep, completedSteps }) => {
-  const { t } = useTranslation();
+export const StepIndicator: React.FC<StepIndicatorProps> = ({ currentStep, completedSteps, steps }) => {
+  const { t } = useTranslation(['registration', 'common']);
 
-  const STEPS: { key: OnboardingStep; label: string }[] = [
-    { key: 'selection_fee', label: t('studentOnboarding.stepper.steps.selectionFee') },
-    { key: 'selection_survey', label: t('studentOnboarding.stepper.steps.selectionSurvey') },
-    { key: 'scholarship_selection', label: t('studentOnboarding.stepper.steps.scholarshipSelection') },
-    { key: 'process_type', label: t('studentOnboarding.stepper.steps.processType') },
-    { key: 'documents_upload', label: t('studentOnboarding.stepper.steps.documentsUpload') },
-    { key: 'payment', label: t('studentOnboarding.stepper.steps.payment') },
-    { key: 'scholarship_fee', label: t('studentOnboarding.stepper.steps.scholarshipFee') },
+  const STEPS = steps || [
+    { key: 'selection_fee', label: t('registration:studentOnboarding.stepper.steps.selectionFee') },
+    { key: 'selection_survey', label: t('registration:studentOnboarding.stepper.steps.selectionSurvey') },
+    { key: 'scholarship_selection', label: t('registration:studentOnboarding.stepper.steps.scholarshipSelection') },
+    { key: 'process_type', label: t('registration:studentOnboarding.stepper.steps.processType') },
+    { key: 'documents_upload', label: t('registration:studentOnboarding.stepper.steps.documentsUpload') },
+    { key: 'payment', label: t('registration:studentOnboarding.stepper.steps.payment') },
+    { key: 'scholarship_fee', label: t('registration:studentOnboarding.stepper.steps.scholarshipFee') },
   ];
 
   const currentStepIndex = STEPS.findIndex(s => s.key === currentStep);
@@ -37,8 +37,12 @@ export const StepIndicator: React.FC<StepIndicatorProps> = ({ currentStep, compl
 
       {/* Step labels - simplified for mobile */}
       <div className="flex items-center justify-between text-xs sm:text-sm text-gray-500 mb-6 px-1">
-        <span className="font-bold tracking-widest uppercase">{t('studentOnboarding.stepper.step')} {currentStepIndex + 1} {t('studentOnboarding.stepper.of')} {totalSteps}</span>
-        <span className="font-black text-gray-900 uppercase tracking-tight">{STEPS[currentStepIndex]?.label || t('studentOnboarding.stepper.initiating')}</span>
+        <span className="font-bold tracking-widest uppercase">
+          {t('registration:studentOnboarding.stepper.step')} {currentStepIndex + 1} {t('registration:studentOnboarding.stepper.of')} {totalSteps}
+        </span>
+        <span className="font-black text-gray-900 uppercase tracking-tight">
+          {STEPS[currentStepIndex]?.label || t('registration:studentOnboarding.stepper.initiating')}
+        </span>
       </div>
 
       {/* Desktop: Show all steps */}

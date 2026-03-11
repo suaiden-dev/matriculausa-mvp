@@ -9,7 +9,8 @@ import {
   Building,
   Shield,
   Loader2,
-  Eye
+  Eye,
+  Clock
 } from 'lucide-react';
 import { ZelleCheckout } from '../../../components/ZelleCheckout';
 import ScholarshipDetailModal from '../../../components/ScholarshipDetailModal';
@@ -444,13 +445,13 @@ export const ScholarshipFeeStep: React.FC<StepProps> = ({ onNext, onBack }) => {
                         {hasZellePendingScholarshipFee ? (
                           <div className="flex flex-col gap-0">
                             {/* Banner de aviso */}
-                            <div className="bg-amber-50 border border-amber-200 rounded-t-[2rem] px-6 py-4 flex items-start gap-4">
-                              <div className="w-10 h-10 bg-amber-100 rounded-2xl flex items-center justify-center border border-amber-200 flex-shrink-0 mt-0.5">
-                                <AlertCircle className="w-5 h-5 text-amber-600" />
+                            <div className="bg-blue-50 border border-blue-200 rounded-t-[2rem] px-6 py-4 flex items-start gap-4">
+                              <div className="w-10 h-10 bg-blue-100 rounded-2xl flex items-center justify-center border border-blue-200 flex-shrink-0 mt-0.5">
+                                <Clock className="w-5 h-5 text-blue-600 animate-pulse" />
                               </div>
                               <div>
-                                <p className="text-sm font-black text-amber-700 uppercase tracking-tight">Pagamento Zelle em Análise</p>
-                                <p className="text-xs text-amber-600/80 font-medium mt-0.5 leading-relaxed">
+                                <p className="text-sm font-black text-blue-700 uppercase tracking-tight">Pagamento Zelle em Análise</p>
+                                <p className="text-xs text-blue-600/80 font-medium mt-0.5 leading-relaxed">
                                   Você já iniciou um pagamento via Zelle. Aguarde a confirmação antes de usar outro método. Isso pode levar até 48 horas.
                                 </p>
                               </div>

@@ -28,7 +28,7 @@ interface PaymentStatusCardProps {
   onUpdatePaymentMethod: (feeType: 'selection_process' | 'application' | 'scholarship' | 'i20_control' | 'placement' | string) => Promise<void>;
   onCancelPaymentMethod: () => void;
   onPaymentMethodChange: (method: string) => void;
-  formatFeeAmount: (amount: number) => string;
+  formatFeeAmount: (amount: number | string, forceDollars?: boolean) => string;
   getFeeAmount: (feeType: string) => number;
   overridesRefreshKey?: number; // ✅ Key para forçar recarregamento de overrides
 }
@@ -381,7 +381,6 @@ const PaymentStatusCard: React.FC<PaymentStatusCardProps> = React.memo((props) =
               {student.is_application_fee_paid ? (
                 <dd className="text-sm font-semibold text-slate-700 mt-1">
                   {(() => {
-                    // ✅ CORREÇÃO: Se está carregando o valor correto, mostrar skeleton
                     if (loadingPaidAmounts?.application) {
                       return (
                         <div className="animate-pulse flex items-center gap-2">
@@ -390,13 +389,10 @@ const PaymentStatusCard: React.FC<PaymentStatusCardProps> = React.memo((props) =
                       );
                     }
 
-                    // Se o pagamento já foi feito E temos o valor bruto pago (gross_amount_usd), mostrar o valor REAL pago
-                    // Este valor inclui as taxas do Stripe, mostrando o que o aluno realmente pagou
                     if (realPaidAmounts?.application !== undefined && realPaidAmounts?.application !== null) {
-                      return formatFeeAmount(realPaidAmounts.application);
+                      return formatFeeAmount(realPaidAmounts.application, true);
                     }
 
-                    // Caso contrário, mostrar skeleton enquanto não carrega o valor correto
                     return (
                       <div className="animate-pulse flex items-center gap-2">
                         <div className="h-4 w-20 bg-slate-200 rounded"></div>
@@ -408,17 +404,15 @@ const PaymentStatusCard: React.FC<PaymentStatusCardProps> = React.memo((props) =
                 <div className="mt-1">
                   <dd className="text-sm font-semibold text-slate-700">
                     {(() => {
-                      // Tentar buscar valor da bolsa selecionada
                       const activeApp = student.all_applications?.find((app: any) => app.status !== 'rejected');
                       const scholarship = activeApp?.scholarships ? (Array.isArray(activeApp.scholarships) ? activeApp.scholarships[0] : activeApp.scholarships) : null;
 
                       if (scholarship?.application_fee_amount) {
                         let amount = Number(scholarship.application_fee_amount);
-                        // Adicionar $100 por dependente para sistema legacy
                         if (dependents > 0 && (userSystemType || 'legacy') === 'legacy') {
                           amount += dependents * 100;
                         }
-                        return formatFeeAmount(amount);
+                        return formatFeeAmount(amount, true);
                       }
 
                       return 'Varies by scholarship';
@@ -534,26 +528,28 @@ const PaymentStatusCard: React.FC<PaymentStatusCardProps> = React.memo((props) =
                             );
                           }
 
-                          // 1. Se temos valor real pago, MOSTRAR SEMPRE (independente da flag isPaid, pois o pagamento é a verdade absoluta)
+                          // 1. Mostrar sempre o valor customizado pago, mas sem deixar a conversão quebrar o valor
                           if (realPaidAmounts?.placement !== undefined && realPaidAmounts?.placement !== null && realPaidAmounts.placement > 0) {
-                            return formatFeeAmount(realPaidAmounts.placement);
+                            return formatFeeAmount(realPaidAmounts.placement, true);
                           }
 
-                          // 2. Se a flag isPaid está ativa mas não achamos o valor real, tentar o fallback do objeto student
-                          if (isPaid && student?.placement_fee_amount) {
-                            return formatFeeAmount(Number(student.placement_fee_amount));
+                          // 2. Tentar o valor configurado
+                          if (student?.placement_fee_amount) {
+                            return formatFeeAmount(Number(student.placement_fee_amount), true);
                           }
 
-                          // 3. Se não temos valor pago nem no student, calcular o valor esperado baseado na bolsa
+                          // 3. Pegar da aplicação principal
                           const applications = student.all_applications || [];
-                          const approvedApp = applications.find((app: any) => app.status === 'approved');
-                          const mainApp = approvedApp || applications[0];
-                          const scholarship = mainApp?.scholarships ? (Array.isArray(mainApp.scholarships) ? mainApp.scholarships[0] : mainApp.scholarships) : null;
+                          const activeApp = applications.find((app: any) => app.status === 'enrolled') || 
+                                           applications.find((app: any) => app.status === 'approved') || 
+                                           applications[0];
+                                           
+                          const scholarship = activeApp?.scholarships ? (Array.isArray(activeApp.scholarships) ? activeApp.scholarships[0] : activeApp.scholarships) : null;
 
                           if (scholarship?.annual_value_with_scholarship) {
                             const placementFeeAmount = scholarship.placement_fee_amount ? Number(scholarship.placement_fee_amount) : null;
                             const expectedFee = getPlacementFee(Number(scholarship.annual_value_with_scholarship), placementFeeAmount);
-                            return formatFeeAmount(expectedFee);
+                            return formatFeeAmount(expectedFee, true);
                           }
 
                           return 'N/A';
@@ -668,7 +664,6 @@ const PaymentStatusCard: React.FC<PaymentStatusCardProps> = React.memo((props) =
                     ) : (
                       <dd className="text-sm font-semibold text-slate-700 mt-1 flex items-center">
                         {(() => {
-                          // ✅ CORREÇÃO: Se está carregando o valor correto, verificando affiliate admin ou overrides, mostrar skeleton
                           if (loadingPaidAmounts?.scholarship || loadingAffiliateCheck || loadingOverrides) {
                             return (
                               <div className="animate-pulse flex items-center gap-2">
@@ -677,13 +672,10 @@ const PaymentStatusCard: React.FC<PaymentStatusCardProps> = React.memo((props) =
                             );
                           }
 
-                          // Se o pagamento já foi feito E temos o valor bruto pago (gross_amount_usd), mostrar o valor REAL pago
-                          // Este valor inclui as taxas do Stripe, mostrando o que o aluno realmente pagou
                           if (student?.is_scholarship_fee_paid) {
                             if (realPaidAmounts?.scholarship !== undefined && realPaidAmounts?.scholarship !== null) {
-                              return formatFeeAmount(realPaidAmounts.scholarship);
+                              return formatFeeAmount(realPaidAmounts.scholarship, true);
                             } else {
-                              // Se está marcado como pago mas não temos realPaidAmounts, mostrar skeleton
                               return (
                                 <div className="animate-pulse flex items-center gap-2">
                                   <div className="h-4 w-20 bg-slate-200 rounded"></div>
@@ -692,26 +684,24 @@ const PaymentStatusCard: React.FC<PaymentStatusCardProps> = React.memo((props) =
                             }
                           }
 
-                          // ✅ PRIORIDADE 1: Verificar override primeiro (busca direta do banco, sem cache)
                           if (currentOverrides?.scholarship_fee !== undefined && currentOverrides?.scholarship_fee !== null) {
-                            return formatFeeAmount(currentOverrides.scholarship_fee);
+                            return formatFeeAmount(currentOverrides.scholarship_fee, true);
                           }
 
-                          // ✅ PRIORIDADE 2: Se for do affiliate admin "contato@brantimmigration.com", usar valor fixo $900
                           if (isBrantImmigrationAffiliate) {
-                            return formatFeeAmount(900);
+                            return formatFeeAmount(900, true);
                           }
 
-                          // ✅ NOVO: Tentar buscar valor específico da bolsa selecionada
+                          // Tentar buscar valor da aplicação
                           const activeApp = student.all_applications?.find((app: any) => app.status !== 'rejected');
                           const scholarship = activeApp?.scholarships ? (Array.isArray(activeApp.scholarships) ? activeApp.scholarships[0] : activeApp.scholarships) : null;
 
                           if (scholarship?.scholarship_fee_amount) {
-                            return formatFeeAmount(Number(scholarship.scholarship_fee_amount));
+                            return formatFeeAmount(Number(scholarship.scholarship_fee_amount), true);
                           }
 
-                          // Caso contrário, mostrar valor esperado
-                          return formatFeeAmount(getFeeAmount('scholarship_fee'));
+                          // Caso contrário
+                          return formatFeeAmount(getFeeAmount('scholarship_fee'), true);
                         })()}
                         {currentOverrides?.scholarship_fee !== undefined && (
                           <span className="ml-2 text-xs text-blue-500">(custom)</span>
@@ -832,7 +822,7 @@ const PaymentStatusCard: React.FC<PaymentStatusCardProps> = React.memo((props) =
 
                           if (student?.has_paid_i20_control_fee) {
                             if (realPaidAmounts?.i20_control !== undefined && realPaidAmounts?.i20_control !== null) {
-                              return formatFeeAmount(realPaidAmounts.i20_control);
+                              return formatFeeAmount(realPaidAmounts.i20_control, true);
                             } else {
                               return (
                                 <div className="animate-pulse flex items-center gap-2">

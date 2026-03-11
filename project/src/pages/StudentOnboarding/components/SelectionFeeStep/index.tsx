@@ -1,6 +1,6 @@
 import React from 'react';
 import { Dialog } from '@headlessui/react';
-import { AlertCircle, CheckCircle, Shield, X } from 'lucide-react';
+import { AlertCircle, CheckCircle, Shield, X, Clock } from 'lucide-react';
 import { StepProps } from '../../types';
 import { ZelleCheckout } from '../../../../components/ZelleCheckout';
 import {
@@ -17,7 +17,7 @@ export const SelectionFeeStep: React.FC<StepProps> = ({ onNext }) => {
   const state = useSelectionFeeStep(onNext);
 
   const {
-    t, navigate, user, userProfile,
+    t, navigate,
     loading, error, selectedMethod, setSelectedMethod,
     showZelleCheckout, setShowZelleCheckout, setZellePaymentSubmitted, isZelleProcessing, setIsZelleProcessing,
     termsAccepted, hasAcceptedTermsInDB, showTermsModal, setShowTermsModal,
@@ -26,14 +26,14 @@ export const SelectionFeeStep: React.FC<StepProps> = ({ onNext }) => {
     hasReferralCode, setHasReferralCode, showCodeStep, setShowCodeStep,
     showCpfModal, setShowCpfModal, codeApplied, setCodeApplied,
     showInlineCpf, setShowInlineCpf, inlineCpf, setInlineCpf, savingCpf, cpfError, setCpfError,
-    promotionalCoupon, setPromotionalCoupon, isValidatingPromotionalCoupon, promotionalCouponValidation, setPromotionalCouponValidation,
+    promotionalCoupon, setPromotionalCoupon, isValidatingPromotionalCoupon, promotionalCouponValidation,
     selectionFeeAmount, computedBasePrice, formattedAmount, originalFormattedAmount, cardAmountWithFees, pixAmountWithFees,
     hasSellerReferralCode, hasAffiliateCode, hasZellePendingSelectionFee, hasPaid,
     isBlocked, pendingPayment, rejectedPayment, paymentBlockedLoading, refetchPaymentStatus,
     activeDiscount,
     handleCheckout, handleCheckboxChange, handleTermsClick,
     validateDiscountCode, validatePromotionalCoupon, removePromotionalCoupon,
-    saveCpfAndCheckout, formatCpf, refetchUserProfile, setError,
+    saveCpfAndCheckout, formatCpf, setError,
   } = state;
 
   const paymentMethods = [
@@ -94,7 +94,7 @@ export const SelectionFeeStep: React.FC<StepProps> = ({ onNext }) => {
               setValidationResult={setValidationResult}
               isValidating={isValidating}
               activeDiscount={activeDiscount}
-              hasAffiliateCode={hasAffiliateCode}
+              hasAffiliateCode={!!hasAffiliateCode}
               validateDiscountCode={validateDiscountCode}
               promotionalCoupon={promotionalCoupon}
               setPromotionalCoupon={setPromotionalCoupon}
@@ -121,11 +121,11 @@ export const SelectionFeeStep: React.FC<StepProps> = ({ onNext }) => {
                 </label>
                 <div className="text-sm sm:text-base font-medium text-gray-700 leading-relaxed flex-1 cursor-default group-hover/terms:text-gray-900 transition-colors">
                   <span className="text-red-500 font-bold mr-1">*</span>
-                  Eu aceito os{' '}
+                  {t('payment:preCheckoutModal.acceptPrefix') || 'Eu aceito os'}{' '}
                   <span onClick={handleTermsClick} className="text-blue-600 font-bold underline hover:text-blue-700 cursor-pointer">
-                    {t('preCheckoutModal.termsAndConditions.title') || 'termos e condições'}
+                    {t('payment:preCheckoutModal.termsAndConditionsLink') || t('payment:preCheckoutModal.termsAndConditions.title') || 'termos e condições'}
                   </span>
-                  {' '}do contrato de prestação de serviços.
+                  {' '}{t('payment:preCheckoutModal.acceptSuffix') || 'do contrato de prestação de serviços.'}
                 </div>
               </div>
             </div>
@@ -157,13 +157,13 @@ export const SelectionFeeStep: React.FC<StepProps> = ({ onNext }) => {
             /* Zelle checkout inline */
             <div className={`flex flex-col gap-0 ${hasZellePendingSelectionFee ? '' : 'space-y-6 sm:bg-white sm:border sm:border-gray-100 sm:rounded-3xl py-4 pb-1 sm:p-6 sm:shadow-xl relative overflow-hidden'}`}>
               {hasZellePendingSelectionFee && (
-                <div className="bg-amber-50 border border-amber-200 rounded-t-[2rem] px-6 py-4 flex items-start gap-4">
-                  <div className="w-10 h-10 bg-amber-100 rounded-2xl flex items-center justify-center border border-amber-200 flex-shrink-0 mt-0.5">
-                    <AlertCircle className="w-5 h-5 text-amber-600" />
+                <div className="bg-blue-50 border border-blue-200 rounded-t-[2rem] px-6 py-4 flex items-start gap-4">
+                  <div className="w-10 h-10 bg-blue-100 rounded-2xl flex items-center justify-center border border-blue-200 flex-shrink-0 mt-0.5">
+                    <Clock className="w-5 h-5 text-blue-600 animate-pulse" />
                   </div>
                   <div>
-                    <p className="text-sm font-black text-amber-700 uppercase tracking-tight">{t('selectionFeeStep.main.zelleProcessing.title')}</p>
-                    <p className="text-xs text-amber-600/80 font-medium mt-0.5 leading-relaxed">{t('selectionFeeStep.main.zelleProcessing.subtitle')}</p>
+                    <p className="text-sm font-black text-blue-700 uppercase tracking-tight">{t('selectionFeeStep.main.zelleProcessing.title')}</p>
+                    <p className="text-xs text-blue-600/80 font-medium mt-0.5 leading-relaxed">{t('selectionFeeStep.main.zelleProcessing.subtitle')}</p>
                   </div>
                 </div>
               )}

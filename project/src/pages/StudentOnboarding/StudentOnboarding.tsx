@@ -36,6 +36,19 @@ const StudentOnboarding: React.FC = () => {
 
   // O estado do progresso agora contém se o usuário é do novo fluxo
   const isNewFlowUser = !!state.isNewFlowUser || !!(userProfile as any)?.placement_fee_flow;
+  
+  // Log para depurar o fluxo de placement fee
+  useEffect(() => {
+    if (userProfile) {
+      console.log('[StudentOnboarding] 🔍 Verificação de Fluxo:', {
+        isNewFlowUser,
+        stateIsNew: state.isNewFlowUser,
+        profilePlacementFlow: (userProfile as any)?.placement_fee_flow,
+        userId: userProfile.id
+      });
+    }
+  }, [isNewFlowUser, state.isNewFlowUser, userProfile]);
+
   const isNewFlowUserRef = React.useRef(isNewFlowUser);
 
   useEffect(() => {
@@ -343,8 +356,10 @@ const StudentOnboarding: React.FC = () => {
 
 
 
-  const feeStep = isNewFlowUser ? 'placement_fee' : 'scholarship_fee';
-  const feeStepLabel = isNewFlowUser ? 'Placement Fee' : 'Taxa da Bolsa';
+  const feeStep: OnboardingStep = isNewFlowUser ? 'placement_fee' : 'scholarship_fee';
+  const feeStepLabel = isNewFlowUser 
+    ? t('registration:studentOnboarding.stepper.steps.placementFee') 
+    : t('registration:studentOnboarding.stepper.steps.scholarshipFee');
 
   const allSteps: OnboardingStep[] = [
     'selection_fee',
@@ -359,12 +374,12 @@ const StudentOnboarding: React.FC = () => {
   // identity_verification é um passo fantasma — não aparece na trilha visual
 
   const visualSteps: { key: OnboardingStep; label: string }[] = [
-    { key: 'selection_fee', label: 'Taxa do Processo Seletivo' },
-    { key: 'selection_survey', label: 'Questionário' },
-    { key: 'scholarship_selection', label: 'Escolha de Bolsas' },
-    { key: 'process_type', label: 'Tipo de Processo' },
-    { key: 'documents_upload', label: 'Documentos' },
-    { key: 'payment', label: 'Taxa de Matrícula' },
+    { key: 'selection_fee', label: t('registration:studentOnboarding.stepper.steps.selectionFee') },
+    { key: 'selection_survey', label: t('registration:studentOnboarding.stepper.steps.selectionSurvey') },
+    { key: 'scholarship_selection', label: t('registration:studentOnboarding.stepper.steps.scholarshipSelection') },
+    { key: 'process_type', label: t('registration:studentOnboarding.stepper.steps.processType') },
+    { key: 'documents_upload', label: t('registration:studentOnboarding.stepper.steps.documentsUpload') },
+    { key: 'payment', label: t('registration:studentOnboarding.stepper.steps.payment') },
     { key: feeStep, label: feeStepLabel },
   ];
 

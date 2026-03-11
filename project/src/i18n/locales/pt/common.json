@@ -1,0 +1,389 @@
+{
+  "nav": {
+    "home": "Início",
+    "howItWorks": "Como Funciona",
+    "scholarships": "Bolsas",
+    "universities": "Universidades",
+    "forUniversities": "Para Universidades",
+    "about": "Sobre",
+    "contact": "Contato",
+    "faq": "FAQ",
+    "login": "Entrar",
+    "getStarted": "Começar",
+    "dashboard": "Painel",
+    "viewScholarships": "Ver Bolsas",
+    "goToDashboard": "Ir ao Painel",
+    "startSelectionProcess": "Iniciar Processo de Seleção",
+    "scholarshipsPlatform": "Plataforma de Bolsas",
+    "processingZellePayment": "Pagamento Zelle em verificação",
+    "zellePaymentPending": "Aguarde a verificação do seu pagamento Zelle antes de iniciar um novo processo."
+  },
+  "footer": {
+    "company": {
+      "title": "Empresa",
+      "about": "Sobre Nós",
+      "careers": "Carreiras",
+      "contact": "Contato",
+      "blog": "Blog",
+      "description": "MatriculaUSA é a plataforma líder para estudantes internacionais que querem estudar nos Estados Unidos. Tornamos todo o processo de candidatura, matrícula e bolsas mais fácil nas universidades americanas, oferecendo tecnologia, suporte especializado e oportunidades exclusivas para transformar seu sonho internacional em realidade."
+    },
+    "students": {
+      "title": "Para Estudantes",
+      "forStudents": "Para Estudantes",
+      "scholarships": "Bolsas",
+      "matriculaRewards": "Matrícula Rewards",
+      "universities": "Universidades",
+      "howItWorks": "Como Funciona",
+      "support": "Suporte",
+      "faq": "Perguntas Frequentes",
+      "helpCenter": "Central de Ajuda"
+    },
+    "universities": {
+      "title": "Para Universidades",
+      "partners": "Torne-se um Parceiro",
+      "dashboard": "Painel da Universidade",
+      "resources": "Recursos"
+    },
+    "legal": {
+      "title": "Legal",
+      "privacy": "Política de Privacidade",
+      "terms": "Termos de Serviço",
+      "cookies": "Política de Cookies"
+    },
+    "contact": {
+      "email": "info@matriculausa.com",
+      "phone": "+1 (213) 676-2544",
+      "address": "Los Angeles - CA - USA."
+    },
+    "social": {
+      "title": "Siga-nos",
+      "facebook": "Facebook",
+      "twitter": "Twitter",
+      "linkedin": "LinkedIn",
+      "instagram": "Instagram"
+    },
+    "newsletter": {
+      "title": "Mantenha-se Atualizado",
+      "description": "Receba as últimas oportunidades de bolsa e notícias",
+      "placeholder": "Digite seu email",
+      "subscribe": "Inscrever-se",
+      "subscribed": "Obrigado por se inscrever!"
+    },
+    "unsubscribe": {
+      "invalidLink": {
+        "title": "Link Inválido",
+        "message": "O link de cancelamento de inscrição não é válido ou está expirado.",
+        "button": "Voltar para Home"
+      },
+      "alreadyUnsubscribed": {
+        "title": "Já Removido",
+        "message": "Você já está removido da lista de newsletter do MatriculaUSA.",
+        "button": "Voltar para Home"
+      },
+      "success": {
+        "title": "Inscrição Cancelada com Sucesso",
+        "message": "Você foi removido da lista de newsletter com sucesso. Não receberá mais emails de campanha do MatriculaUSA.",
+        "important": "<strong>Importante:</strong> Você ainda receberá emails importantes sobre sua conta, aplicações e confirmações de pagamento.",
+        "reactivate": "Se mudar de ideia, você pode reativar sua inscrição entrando em contato conosco.",
+        "button": "Voltar para Home"
+      },
+      "error": {
+        "title": "Erro",
+        "message": "Ocorreu um erro ao processar sua solicitação. Por favor, tente novamente mais tarde.",
+        "tryAgain": "Tentar Novamente",
+        "backToHome": "Voltar para Home"
+      },
+      "form": {
+        "title": "Cancelar Inscrição",
+        "question": "Tem certeza que deseja parar de receber emails de campanha do MatriculaUSA?",
+        "reasonLabel": "Motivo (opcional)",
+        "reasonPlaceholder": "Nos conte por que você está cancelando a inscrição (opcional)",
+        "reasonHelp": "Seu feedback nos ajuda a melhorar nossos serviços",
+        "note": "<strong>Nota:</strong> Você ainda receberá emails importantes sobre sua conta, aplicações e confirmações de pagamento.",
+        "disclaimer": "Ao cancelar, você não receberá mais emails de campanha, mas continuará recebendo emails importantes sobre sua conta e aplicações.",
+        "cancel": "Cancelar",
+        "confirm": "Confirmar Cancelamento",
+        "processing": "Processando..."
+      },
+      "errors": {
+        "tokenMissing": "Token ou ID de usuário não fornecido",
+        "configError": "Erro de configuração: URL do Supabase não encontrada",
+        "httpError": "Erro HTTP {{status}}",
+        "checkStatusError": "Erro ao verificar status ({{status}})",
+        "checkStatusGeneric": "Erro ao verificar status de inscrição. Por favor, tente novamente.",
+        "processError": "Erro ao processar cancelamento de inscrição",
+        "processErrorRetry": "Erro ao processar cancelamento de inscrição. Por favor, tente novamente."
+      }
+    },
+    "copyright": "© 2026 Matrícula USA. Todos os direitos reservados."
+  },
+  "common": {
+    "select": "Selecione",
+    "copy": "Copiar",
+    "copied": "Copiado!",
+    "yes": "Sim",
+    "no": "Não",
+    "expirationDate": "Data de expiração do status/I-94",
+    "name": "Nome",
+    "email": "Email",
+    "profile": "Perfil",
+    "section": "Seção",
+    "of": "de",
+    "loading": "Carregando...",
+    "success": "Sucesso",
+    "error": "Erro",
+    "filter": "Filtro",
+    "active": "ativo",
+    "apply": "Aplicar",
+    "language": "Português",
+    "featured": "Destaque",
+    "exclusive": "Exclusivo",
+    "showMore": "ver mais",
+    "learnMore": "Saiba mais",
+    "search": "Buscar",
+    "support": "Suporte",
+    "welcome": "Bem-vindo",
+    "close": "Fechar",
+    "back": "Voltar",
+    "next": "Próximo",
+    "saving": "Salvando...",
+    "finish": "Finalizar"
+  },
+  "fees": {
+    "selectionProcess": "Taxa do Processo Seletivo",
+    "application": "Taxa de Matrícula",
+    "scholarship": "Taxa de Bolsa",
+    "i20Control": "Taxa de Controle I-20",
+    "finalNonRefundable": "Esta taxa é final e não reembolsável"
+  },
+  "productNames": {
+    "selectionProcess": "Processo de Seleção",
+    "selectionProcessFee": "Taxa do Processo Seletivo",
+    "applicationFee": "Taxa de Matrícula",
+    "scholarshipFee": "Taxa de Bolsa",
+    "enrollmentFee": "Taxa de Matrícula",
+    "collegeEnrollmentFee": "Taxa de Matrícula Universitária",
+    "i20ControlFee": "Taxa de Controle I-20"
+  },
+  "feeValues": {
+    "asPerUniversity": "Conforme a universidade"
+  },
+  "feeDescriptions": {
+    "selectionProcess": "Taxa de Processo de Seleção - Complete seu processo de aplicação",
+    "applicationFee": "Taxa de Matrícula - Candidate-se a uma bolsa específica",
+    "scholarshipFee": "Taxa de Bolsa - Confirme sua candidatura de bolsa",
+    "i20ControlFee": "Taxa de Controle I-20 - Processamento e validação de documentos"
+  },
+  "features": {
+    "whyChoose": "Por Que Escolher MatriculaUSA?",
+    "subtitle": "Tudo que você precisa para ter sucesso na sua jornada educacional americana",
+    "smartMatching": {
+      "title": "Correspondência Inteligente",
+      "description": "Sistema alimentado por IA encontra as melhores universidades e bolsas para seu perfil"
+    },
+    "exclusiveScholarships": {
+      "title": "Bolsas Exclusivas",
+      "description": "Acesse bolsas não disponíveis em nenhum outro lugar, especificamente para estudantes internacionais"
+    },
+    "personalSupport": {
+      "title": "Suporte Pessoal",
+      "description": "Equipe dedicada para te guiar em cada etapa do processo de candidatura"
+    },
+    "fastProcess": {
+      "title": "Processo Rápido",
+      "description": "Processo de candidatura simplificado com respostas rápidas e manuseio eficiente de documentos"
+    }
+  },
+  "universities": {
+    "title": "Universidades",
+    "subtitle": "Explore as melhores universidades americanas",
+    "searchPlaceholder": "Buscar universidades...",
+    "location": "Localização",
+    "programs": "Programas",
+    "website": "Website",
+    "viewProfile": "Ver Perfil",
+    "applyNow": "Candidatar-se"
+  },
+  "paymentBlocker": {
+    "scholarships": {
+      "title": "Bolsas de Estudo Bloqueadas",
+      "description": "Para acessar nossa coleção exclusiva de bolsas de estudo, você precisa completar o processo de seleção inicial. Esta é a primeira etapa do seu processo para estudar nos Estados Unidos."
+    },
+    "universities": {
+      "title": "Universidades Bloqueadas",
+      "description": "Para explorar nossas universidades parceiras e seus programas, você precisa completar o processo de seleção inicial. Esta é a primeira etapa do seu processo para estudar nos Estados Unidos."
+    },
+    "default": {
+      "title": "Conteúdo Bloqueado",
+      "description": "Para acessar este conteúdo, você precisa completar o processo de seleção inicial. Esta é a primeira etapa do seu processo para estudar nos Estados Unidos."
+    },
+    "selectionProcessFee": "Taxa do Processo Seletivo",
+    "completeApplicationJourney": "Complete seu processo de candidatura",
+    "goToDashboardAndPayFee": "Ir ao Painel e Pagar Taxa",
+    "learnHowItWorks": "Aprender Como Funciona",
+    "contentLockedMessage": "Este conteúdo está bloqueado até que o pagamento seja concluído"
+  },
+  "successPages": {
+    "placementFee": {
+      "verifying": "Verificando Placement Fee",
+      "pleaseWait": "O seu pagamento está sendo processado."
+    },
+    "pixPayment": {
+      "processing": "Processando Pagamento PIX",
+      "message": "Seu pagamento PIX foi recebido e está sendo processado. Você será redirecionado automaticamente em alguns segundos.",
+      "verifying": "Verificando pagamento...",
+      "pleaseWait": "Por favor, aguarde..."
+    },
+    "selectionProcessFee": {
+      "title": "Pagamento da Taxa de Processo de Seleção Realizado com Sucesso!",
+      "description": "Seu pagamento de {{amount}} foi processado com sucesso.",
+      "message": "Agora você tem acesso a todas as bolsas e pode se candidatar livremente.",
+      "button": "Ir para Bolsas",
+      "verifying": "Verificando seu pagamento...",
+      "pleaseWait": "Aguarde enquanto confirmamos sua transação. Isso pode levar alguns instantes.",
+      "errorTitle": "Erro no Pagamento da Taxa de Processo de Seleção",
+      "errorMessage": "Houve um problema ao processar seu pagamento.",
+      "errorRetry": "Tente novamente. Se o erro persistir, entre em contato com o suporte."
+    },
+    "scholarshipFee": {
+      "title": "Pagamento da Taxa da Bolsa Realizado com Sucesso!",
+      "description": "Seu pagamento de {{amount}} foi processado com sucesso.",
+      "message": "Sua aplicação irá agora prosseguir para a próxima etapa.",
+      "button": "Ver Detalhes",
+      "verifying": "Verificando seu pagamento...",
+      "pleaseWait": "Aguarde enquanto confirmamos seu pagamento.",
+      "errorTitle": "Erro no Processamento do Pagamento",
+      "errorMessage": "Houve um problema ao processar seu pagamento.",
+      "errorRetry": "Tente novamente ou entre em contato com o suporte."
+    },
+    "applicationFee": {
+      "title": "Pagamento da Taxa de Matrícula Realizado com Sucesso!",
+      "description": "Seu pagamento de {{amount}} foi processado com sucesso.",
+      "message": "Sua aplicação irá agora prosseguir para a próxima etapa.",
+      "button": "Ir para Minhas Aplicações",
+      "verifying": "Verificando Pagamento...",
+      "pleaseWait": "Aguarde enquanto confirmamos sua transação. Isso pode levar alguns instantes.",
+      "errorTitle": "Falha na Verificação",
+      "errorMessage": "Houve um problema ao verificar seu pagamento. Entre em contato com o suporte.",
+      "errorDetails": "Detalhes do erro:"
+    },
+    "common": {
+      "redirecting": "Redirecionando em instantes...",
+      "paymentProcessedAmount": "Seu pagamento foi processado com sucesso!",
+      "paymentError": "Houve um problema ao processar seu pagamento."
+    },
+    "i20ControlFee": {
+      "title": "Pagamento da Taxa de Controle I-20 Realizado com Sucesso!",
+      "message": "Seu documento I-20 será processado e enviado em breve.",
+      "button": "Voltar para Minhas Aplicações",
+      "verifying": "Verificando Pagamento...",
+      "pleaseWait": "Aguarde enquanto confirmamos seu pagamento.",
+      "errorTitle": "Erro no Pagamento da Taxa de Controle I-20",
+      "errorMessage": "Houve um problema ao processar seu pagamento.",
+      "errorRetry": "Tente novamente. Se o erro persistir, entre em contato com o suporte."
+    }
+  },
+  "ssoCallback": {
+    "processing": {
+      "title": "Aguarde um momento",
+      "preparing": "Estamos preparando o ambiente para você...",
+      "connecting": "Conectando com o 323 Network...",
+      "preparingAccount": "Preparando sua conta...",
+      "creatingSession": "Criando sessão...",
+      "waitMessage": "Isso pode levar alguns segundos...",
+      "secureConnection": "Conectando com segurança ao Matrícula USA"
+    },
+    "success": {
+      "title": "Tudo pronto!",
+      "newUser": "Tudo pronto! Redirecionando você...",
+      "returningUser": "Bem-vindo de volta! Redirecionando...",
+      "redirecting": "Redirecionando você agora...",
+      "welcomeNew": "Bem-vindo ao Matrícula US!",
+      "loginSuccess": "Login realizado com sucesso!"
+    },
+    "error": {
+      "title": "Ops, algo deu errado",
+      "authenticationFailed": "Não foi possível completar a autenticação. Você será redirecionado para a página de login em instantes.",
+      "tokenNotProvided": "Token não fornecido na URL",
+      "tokenValidationError": "Erro ao validar token",
+      "sessionCreationError": "Erro ao criar sessão",
+      "sessionNotCreated": "Sessão não foi criada corretamente",
+      "noAuthMethod": "Nenhum método de autenticação disponível",
+      "tokenNotFoundInMagicLink": "Token ou type não encontrados no magic link",
+      "tokensNotFoundInRedirect": "Tokens não encontrados no redirect",
+      "locationHeaderNotFound": "Location header não encontrado no redirect",
+      "tokensNotFoundInResponse": "Tokens não encontrados na resposta",
+      "supabaseUrlNotConfigured": "VITE_SUPABASE_URL não configurada",
+      "tryAgain": "Tentar Novamente",
+      "goToLogin": "Ir para Login"
+    }
+  },
+  "components": {
+    "identityPhotoUpload": {
+      "titleInstructions": "Como tirar a foto correta",
+      "instructions": "Tire uma selfie segurando um documento com foto (passaporte, RG, CNH ou outros) ao lado do seu rosto. Certifique-se de que tanto seu rosto quanto o documento estejam claramente visíveis.",
+      "exampleAlt": "Exemplo de foto com documento",
+      "uploading": "Enviando foto...",
+      "clickToUpload": "Clique para fazer upload da foto",
+      "fileTypes": "JPG ou PNG (máximo 5MB)",
+      "success": "Foto enviada com sucesso",
+      "preview": "Preview da foto",
+      "previewAlt": "Preview da foto de identidade",
+      "remove": "Remover",
+      "changeFile": "Alterar Arquivo",
+      "submitPayment": "Enviar Pagamento",
+      "processing": "Processando...",
+      "paymentProcessing": "Processamento de Pagamento..."
+    },
+    "analyzing": {
+      "title": "Analisando Pagamento...",
+      "subtitle": "Sua confirmação de pagamento está sendo validada automaticamente pelo nosso sistema de IA."
+    },
+    "underReview": {
+      "title": "Pagamento em Revisão",
+      "subtitle": "Seu comprovante de pagamento requer verificação adicional. Nossa equipe irá revisá-lo em até 48 horas.",
+      "notification": "Você será notificado assim que a revisão for concluída. Por favor, não envie outro pagamento."
+    },
+    "success": {
+      "title": "Pagamento Aprovado com Sucesso!",
+      "subtitle": "Seu pagamento Zelle foi processado e aprovado. Você pode agora prosseguir com as próximas etapas.",
+      "detailsTitle": "Detalhes do Pagamento:",
+      "originalAmount": "Valor Original:",
+      "discountApplied": "Desconto Aplicado:",
+      "finalAmount": "Valor Final:",
+      "youSavedSuccess": "Você economizou!",
+      "amount": "Valor:",
+      "feeType": "Tipo de Taxa:",
+      "paymentId": "ID do Pagamento:",
+      "submitted": "Enviado em:",
+      "nextStepsTitle": "O que acontece agora?",
+      "stepUploaded": "Confirmação de pagamento carregada",
+      "stepApproved": "Pagamento aprovado com sucesso",
+      "stepProceeding": "Prosseguindo para a próxima etapa automaticamente"
+    },
+    "rejected": {
+      "title": "Pagamento Rejeitado",
+      "subtitle": "Seu comprovante de pagamento não foi aprovado. Por favor, revise o motivo abaixo e carregue uma nova confirmação de pagamento.",
+      "reasonTitle": "Motivo da Rejeição:",
+      "defaultReason": "O pagamento foi rejeitado pelo administrador. Por favor, carregue uma nova confirmação de pagamento.",
+      "uploadNew": "Carregar Novo Comprovante de Pagamento",
+      "uploadNewNote": "Clique no botão acima para carregar uma nova captura de tela de confirmação de pagamento"
+    },
+    "uploadModal": {
+      "uploadingTitle": "Carregando Documento...",
+      "uploadingMessage": "Por favor, aguarde enquanto carregamos sua confirmação de pagamento",
+      "sendingTitle": "Enviando para Verificação...",
+      "sendingMessage": "Seu comprovante de pagamento está sendo enviado para validação automática",
+      "analyzingTitle": "Analisando Pagamento...",
+      "analyzingMessage": "Nossa IA está validando sua confirmação de pagamento"
+    },
+    "errors": {
+      "fileSize": "O tamanho do arquivo deve ser inferior a 5MB",
+      "fileType": "Por favor, selecione um arquivo de imagem (JPG, PNG, etc.)",
+      "uploadRequired": "Por favor, carregue uma captura de tela da sua confirmação de pagamento",
+      "uploadFailed": "Falha ao carregar a confirmação do pagamento",
+      "alreadyPending": "Você já tem um pagamento em processamento. Por favor, aguarde a revisão.",
+      "checkingStatus": "Verificando status do pagamento..."
+    }
+  }
+}

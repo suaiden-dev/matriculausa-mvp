@@ -293,92 +293,66 @@ export const useOnboardingProgress = () => {
 
       // Re-ler o step salvo após as operações assíncronas para evitar race conditions
       const savedStep = getSavedStep();
-
-      let currentStep: OnboardingStep;
-
       const urlParams = new URLSearchParams(window.location.search);
       const isForcingPortal = urlParams.get('step') === 'my_applications';
 
+      // Calcular o máximo permitido baseado no progresso real
+      let maxAllowedStep: OnboardingStep = 'selection_fee';
+      if (!selectionFeePaid) {
+        maxAllowedStep = 'selection_fee';
+      } else if (!identityVerified) {
+        maxAllowedStep = 'identity_verification';
+      } else if (!selectionSurveyPassed) {
+        maxAllowedStep = 'selection_survey';
+      } else if (!scholarshipsSelected) {
+        maxAllowedStep = 'scholarship_selection';
+      } else if (!processTypeSelected) {
+        maxAllowedStep = 'process_type';
+      } else if (!documentsUploaded || !documentsApproved) {
+        maxAllowedStep = 'documents_upload';
+      } else if (!applicationFeePaid) {
+        const selectedAppId = window.localStorage.getItem('selected_application_id');
+        maxAllowedStep = selectedAppId ? 'payment' : 'documents_upload';
+      } else if (isNewFlowUser && !placementFeePaid) {
+        maxAllowedStep = 'placement_fee';
+      } else if (!isNewFlowUser && !scholarshipFeePaid) {
+        maxAllowedStep = 'scholarship_fee';
+      } else {
+        maxAllowedStep = 'my_applications';
+      }
+
+      const allSteps: OnboardingStep[] = ['selection_fee', 'identity_verification', 'selection_survey', 'scholarship_selection', 'process_type', 'documents_upload', 'payment', 'scholarship_fee', 'placement_fee', 'my_applications', 'completed'];
+
+      let currentStep: OnboardingStep;
+
       if (onboardingCompleted && !isForcingPortal) {
         currentStep = 'completed';
-        // Limpar step salvo quando completado
         window.localStorage.removeItem(ONBOARDING_STEP_KEY);
       } else if (onboardingCompleted && isForcingPortal) {
         currentStep = 'my_applications';
       } else if (savedStep && savedStep !== 'completed') {
-        // Se o usuário é do novo fluxo mas tem scholarship_fee salvo no localStorage, limpar
+        const savedIdx = allSteps.indexOf(savedStep);
+        const maxIdx = allSteps.indexOf(maxAllowedStep);
+
+        // Se o usuário mudou de fluxo, resetar para o passo inicial do novo fluxo se houver conflito
         if (isNewFlowUser && savedStep === 'scholarship_fee') {
+          console.log('[OnboardingHook] 🔄 Switching to NEW flow (Placement), clearing localStorage');
           window.localStorage.removeItem(ONBOARDING_STEP_KEY);
-          currentStep = 'placement_fee';
-          // Forçar re-cálculo sem o step salvo
-        } else {
-          // Se há um step salvo e não está completado, calcular o máximo permitido
-          let maxAllowedStep: OnboardingStep = 'selection_fee';
-
-          if (!selectionFeePaid) {
-            maxAllowedStep = 'selection_fee';
-          } else if (!identityVerified) {
-            maxAllowedStep = 'identity_verification';
-          } else if (!selectionSurveyPassed) {
-            maxAllowedStep = 'selection_survey';
-          } else if (!scholarshipsSelected) {
-            maxAllowedStep = 'scholarship_selection';
-          } else if (!processTypeSelected) {
-            maxAllowedStep = 'process_type';
-          } else if (!documentsUploaded || !documentsApproved) {
-            maxAllowedStep = 'documents_upload';
-          } else if (!applicationFeePaid) {
-            const selectedAppId = window.localStorage.getItem('selected_application_id');
-            maxAllowedStep = selectedAppId ? 'payment' : 'documents_upload';
-          } else if (isNewFlowUser && !placementFeePaid) {
-            maxAllowedStep = 'placement_fee';
-          } else if (!isNewFlowUser && !scholarshipFeePaid) {
-            maxAllowedStep = 'scholarship_fee';
-          } else {
-            maxAllowedStep = 'my_applications';
-          }
-
+          currentStep = maxAllowedStep;
+        } else if (!isNewFlowUser && savedStep === 'placement_fee') {
+          console.log('[OnboardingHook] 🔄 Switching to OLD flow (Scholarship), clearing localStorage');
+          window.localStorage.removeItem(ONBOARDING_STEP_KEY);
+          currentStep = maxAllowedStep;
+        } else if (savedIdx > maxIdx) {
           // Se o step salvo é mais avançado que o permitido, usar o permitido
-          // Caso contrário, respeitar o desejo do usuário (permitir voltar)
-          const allSteps: OnboardingStep[] = ['selection_fee', 'identity_verification', 'selection_survey', 'scholarship_selection', 'process_type', 'documents_upload', 'payment', 'scholarship_fee', 'placement_fee', 'my_applications', 'completed'];
-          const savedIdx = allSteps.indexOf(savedStep);
-          const maxIdx = allSteps.indexOf(maxAllowedStep);
-
-          currentStep = savedIdx > maxIdx ? maxAllowedStep : savedStep;
+          currentStep = maxAllowedStep;
+        } else {
+          // Respeitar o desejo do usuário de estar em um step anterior
+          currentStep = savedStep;
         }
       } else {
-        // Se não há step salvo e não é novo usuário, calcular baseado no progresso
-        if (!selectionFeePaid) {
-          currentStep = 'selection_fee';
-        } else if (!identityVerified) {
-          currentStep = 'identity_verification';
-        } else if (!selectionSurveyPassed) {
-          currentStep = 'selection_survey';
-        } else if (!scholarshipsSelected) {
-          currentStep = 'scholarship_selection';
-        } else if (!processTypeSelected) {
-          currentStep = 'process_type';
-        } else if (!documentsUploaded || !documentsApproved) {
-          currentStep = 'documents_upload';
-        } else if (!applicationFeePaid) {
-          // No cálculo automático (sem step salvo), só ir para payment se houver seleção
-          const selectedAppId = window.localStorage.getItem('selected_application_id');
-          if (selectedAppId) {
-            currentStep = 'payment';
-          } else {
-            currentStep = 'documents_upload';
-          }
-        } else if (isNewFlowUser && !placementFeePaid) {
-          currentStep = 'placement_fee';
-        } else if (!isNewFlowUser && !scholarshipFeePaid) {
-          currentStep = 'scholarship_fee';
-        } else if (!onboardingCompleted) {
-          // Sempre passar pelo my_applications antes de reach completed
-          currentStep = 'my_applications';
-        } else {
-          // Se são iguais, mantém o salvo (ou o real, dá no mesmo).
-          currentStep = savedStep || maxAllowedStep;
-        }
+        // Sem step salvo, usar o máximo permitido
+        currentStep = maxAllowedStep;
       }
 
       if (currentCheckId !== lastCheckId.current) {

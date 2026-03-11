@@ -169,10 +169,20 @@ export const useStudentDetails = (profileId: string | undefined) => {
         throw new Error('Failed to load student data');
       }
 
-      // Format the student record
+      // ✅ CORREÇÃO: Priorizar aplicação enrolled, depois approved com application fee pago, depois approved
       const applications = s.scholarship_applications || [];
+      const enrolledApp = applications.find((app: any) => app.status === 'enrolled');
+      const approvedWithFeeApp = applications.find((app: any) => app.status === 'approved' && app.is_application_fee_paid);
       const approvedApp = applications.find((app: any) => app.status === 'approved');
-      const mainApp = approvedApp || applications[0] || {};
+      const mainApp = enrolledApp || approvedWithFeeApp || approvedApp || applications[0] || {};
+
+      // ✅ CORREÇÃO: Verificar se ALGUMA aplicação tem os fees pagos (priorizando enrolled)
+      const is_application_fee_paid = enrolledApp?.is_application_fee_paid || 
+                                      applications.some((app: any) => app.is_application_fee_paid) || 
+                                      false;
+      const is_scholarship_fee_paid = enrolledApp?.is_scholarship_fee_paid || 
+                                      mainApp?.is_scholarship_fee_paid || 
+                                      false;
 
       const formatted: StudentRecord = {
         student_id: s.id,
@@ -201,8 +211,8 @@ export const useStudentDetails = (profileId: string | undefined) => {
         scholarship_id: mainApp.scholarship_id || null,
         application_status: mainApp.status || null,
         applied_at: mainApp.applied_at || null,
-        is_application_fee_paid: mainApp.is_application_fee_paid || false,
-        is_scholarship_fee_paid: mainApp.is_scholarship_fee_paid || false,
+        is_application_fee_paid,
+        is_scholarship_fee_paid,
         application_fee_payment_method: mainApp.application_fee_payment_method || null,
         scholarship_fee_payment_method: mainApp.scholarship_fee_payment_method || null,
         acceptance_letter_status: mainApp.acceptance_letter_status || null,

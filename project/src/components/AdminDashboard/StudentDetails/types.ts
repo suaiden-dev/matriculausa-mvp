@@ -46,6 +46,8 @@ export interface StudentRecord {
   is_locked: boolean;
   all_applications?: any[];
   admin_notes?: string | null;
+  scholarship_fee_amount?: number | string | null;
+  scholarship_title?: string | null;
 }
 
 export interface ReferralInfo {

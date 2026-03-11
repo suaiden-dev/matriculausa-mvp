@@ -100,6 +100,8 @@ export function useStudentDetailsQuery(profileId: string | undefined) {
                 field_of_study,
                 annual_value_with_scholarship,
                 application_fee_amount,
+                scholarship_fee_amount,
+                placement_fee_amount,
                 universities (
                   name
                 )
@@ -224,6 +226,8 @@ export function useStudentDetailsQuery(profileId: string | undefined) {
         all_applications: applications,
         admin_notes: s.admin_notes,
         documents_status: s.documents_status || null,
+        scholarship_fee_amount: mainApp.scholarships?.scholarship_fee_amount || null,
+        placement_fee_amount: mainApp.scholarships?.placement_fee_amount || null,
       };
 
       return formatted;

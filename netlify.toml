@@ -1,11 +1,12 @@
 [build]
-  publish = "project/dist"
-  command = "cd project && npm install --legacy-peer-deps && npm run build:netlify"
+  base = "project"
+  publish = "dist"
+  command = "npm install --include=dev --legacy-peer-deps && npm run build:netlify"
 
 [functions]
-  directory = "project/netlify/functions"
+  directory = "netlify/functions"
   node_bundler = "esbuild"
-  included_files = ["project/emailProcessor.js", "project/emailPollingService.js", "project/aiService.js", "project/graphService.js"]
+  included_files = ["emailProcessor.js", "emailPollingService.js", "aiService.js", "graphService.js"]
 
 [[redirects]]
   from = "/api/polling-user"

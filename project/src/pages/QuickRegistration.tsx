@@ -1,4 +1,4 @@
-﻿import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useTranslation } from 'react-i18next';
 import { useNavigate, useLocation } from 'react-router-dom';
 import { useAuth } from '../hooks/useAuth';
@@ -74,7 +74,7 @@ const ParcelowIcon = ({ className }: { className?: string }) => (
 );
 
 const QuickRegistration: React.FC = () => {
-  const { t } = useTranslation();
+  const { t } = useTranslation(['registration', 'payment', 'common']);
   const navigate = useNavigate();
   const location = useLocation();
   const { register, supabaseUser, userProfile, updateUserProfile } = useAuth();
@@ -198,14 +198,14 @@ const QuickRegistration: React.FC = () => {
   // Constants
   const baseFee = getFeeAmount('selection_process');
 
-  // Calcular preÃ§o final com desconto (LÃ³gica da SelectionFeeStep)
+  // Calcular preço final com desconto (Lógica da SelectionFeeStep)
   const currentFee = (() => {
     // 1. Cupom promocional tem prioridade
     if (promotionalCouponValidation?.isValid && promotionalCouponValidation.finalAmount !== undefined) {
       return promotionalCouponValidation.finalAmount;
     }
 
-    // 2. CÃ³digo validado e aplicado
+    // 2. Código validado e aplicado
     if ((isCouponValid || codeApplied) && validationResult?.isValid) {
       const discount = validationResult.discountAmount || 50;
       return Math.max(baseFee - discount, 0);
@@ -294,7 +294,7 @@ const QuickRegistration: React.FC = () => {
         return;
       }
 
-      // Se jÃ¡ estiver logado/registrado, podemos aplicar no banco
+      // Se já estiver logado/registrado, podemos aplicar no banco
       if (isRegistered && supabaseUser?.id && supabaseUser?.email) {
         const { data: result, error: validationError } = await supabase
           .rpc('validate_and_apply_referral_code', {
@@ -304,7 +304,7 @@ const QuickRegistration: React.FC = () => {
           });
 
         if (validationError || !result?.success) {
-          const errorMessage = validationError?.message || result?.error || t('preCheckoutModal.errorValidating') || 'Erro ao validar cÃ³digo';
+          const errorMessage = validationError?.message || result?.error || t('preCheckoutModal.errorValidating') || 'Erro ao validar código';
           setValidationResult({
             isValid: false,
             message: errorMessage
@@ -480,7 +480,7 @@ const QuickRegistration: React.FC = () => {
       try {
         if (selectedMethod === 'parcelow') {
           if (!formData.cpf || formData.cpf.length < 14) {
-            throw new Error(t('rapidRegistration.payment.cpf.error') || 'CPF Ã© obrigatÃ³rio para pagamento via Parcelow.');
+            throw new Error(t('rapidRegistration.payment.cpf.error') || 'CPF é obrigatório para pagamento via Parcelow.');
           }
           // Update profile if CPF is missing
           if (!userProfile?.cpf_document || userProfile.cpf_document !== formData.cpf) {
@@ -494,7 +494,7 @@ const QuickRegistration: React.FC = () => {
           setShowZelleCheckout(true);
           setLoading(false);
         } else {
-          throw new Error(t('rapidRegistration.payment.error.invalidMethod') || 'MÃ©todo de pagamento invÃ¡lido.');
+          throw new Error(t('rapidRegistration.payment.error.invalidMethod') || 'Método de pagamento inválido.');
         }
       } catch (err: any) {
         setError(err.message || 'Error occurred');
@@ -516,13 +516,13 @@ const QuickRegistration: React.FC = () => {
     }
 
     if (!formData.termsAccepted) {
-      setError(t('rapidRegistration.form.error.terms') || 'VocÃª deve aceitar os termos');
+      setError(t('rapidRegistration.form.error.terms') || 'Você deve aceitar os termos');
       setLoading(false);
       return;
     }
 
     if (selectedMethod === 'parcelow' && (!formData.cpf || formData.cpf.length < 14)) {
-      setError(t('rapidRegistration.payment.cpf.error') || 'CPF Ã© obrigatÃ³rio para pagamento via Parcelow.');
+      setError(t('rapidRegistration.payment.cpf.error') || 'CPF é obrigatório para pagamento via Parcelow.');
       setLoading(false);
       return;
     }
@@ -581,7 +581,7 @@ const QuickRegistration: React.FC = () => {
         setShowZelleCheckout(true);
         setLoading(false);
       } else {
-        throw new Error(t('rapidRegistration.payment.error.invalidMethod') || 'MÃ©todo de pagamento invÃ¡lido.');
+        throw new Error(t('rapidRegistration.payment.error.invalidMethod') || 'Método de pagamento inválido.');
       }
 
     } catch (err: any) {
@@ -685,7 +685,7 @@ const QuickRegistration: React.FC = () => {
 
   const getButtonText = () => {
     const methodNames: Record<string, string> = {
-      stripe: t('rapidRegistration.payment.methods.stripe', 'CartÃ£o de CrÃ©dito'),
+      stripe: t('rapidRegistration.payment.methods.stripe', 'Cartão de Crédito'),
       pix: t('rapidRegistration.payment.methods.pix', 'PIX'),
       parcelow: t('rapidRegistration.payment.methods.parcelow', 'Parcelow'),
       zelle: t('rapidRegistration.payment.methods.zelle', 'Zelle')
@@ -937,7 +937,7 @@ const QuickRegistration: React.FC = () => {
 
                   </div>
 
-                  {/* SeÃ§Ã£o Agrupada: Cupons e Termos (Coladinhos) */}
+                  {/* Seção Agrupada: Cupons e Termos (Coladinhos) */}
                   <div className="mt-6 pt-6 border-t border-slate-100 space-y-2">
                     {!userProfile?.seller_referral_code && !codeApplied && (
                       <div className="relative z-10">
@@ -976,11 +976,11 @@ const QuickRegistration: React.FC = () => {
                               }
                             }}
                           >
-                            {t('preCheckoutModal.haveReferralCode') || 'Eu tenho um cÃ³digo de indicaÃ§Ã£o'}
+                            {t('preCheckoutModal.haveReferralCode') || 'Eu tenho um código de indicação'}
                           </label>
                         </div>
 
-                        {/* Ãrea de Input de Cupons */}
+                        {/* Área de Input de Cupons */}
                         {(hasReferralCode || promotionalCouponValidation?.isValid || codeApplied) && (
                           <div className="grid grid-cols-1 md:grid-cols-2 gap-8 pt-4 pb-2">
                             {/* ... (Referral e Promo Columns mantidos) */}
@@ -988,7 +988,7 @@ const QuickRegistration: React.FC = () => {
                             <div className="space-y-4">
                               <h4 className="text-xs font-black text-slate-400 uppercase tracking-widest flex items-center">
                                 <Ticket className="w-3 h-3 mr-2" />
-                                {t('preCheckoutModal.referralCode') || 'CÃ³digo de IndicaÃ§Ã£o'}
+                                {t('preCheckoutModal.referralCode') || 'Código de Indicação'}
                               </h4>
 
                               <div className="flex gap-2">
@@ -1001,7 +1001,7 @@ const QuickRegistration: React.FC = () => {
                                         setCouponCode(e.target.value.toUpperCase());
                                       }
                                     }}
-                                    placeholder={t('preCheckoutModal.placeholder') || 'Digite o cÃ³digo'}
+                                    placeholder={t('payment:preCheckoutModal.placeholder') || 'Digite o código'}
                                     readOnly={codeApplied}
                                     className="w-full px-5 py-3.5 bg-slate-50 border border-slate-200 rounded-xl outline-none focus:outline-none focus:ring-2 focus:ring-[#05294E]/20 focus:border-[#05294E] transition-all text-center font-black text-slate-900 text-lg tracking-[0.2em] placeholder:text-slate-300 disabled:opacity-50"
                                   />
@@ -1025,7 +1025,7 @@ const QuickRegistration: React.FC = () => {
                                     {isValidating ? (
                                       <Loader2 className="w-4 h-4 animate-spin mx-auto" />
                                     ) : (
-                                      'Validar'
+                                      t('payment:paymentSelector.promotionalCoupon.validate') || 'Validar'
                                     )}
                                   </button>
                                 )}
@@ -1053,7 +1053,7 @@ const QuickRegistration: React.FC = () => {
                                       <CheckCircle className="w-6 h-6 text-emerald-500" />
                                     </div>
                                     <div>
-                                      <span className="text-[10px] font-black text-emerald-600/50 uppercase block tracking-widest leading-none mb-1">Cupom Aplicado</span>
+                                      <span className="text-[10px] font-black text-emerald-600/50 uppercase block tracking-widest leading-none mb-1">{t('registration:rapidRegistration.sidebar.couponApplied')}</span>
                                       <span className="text-lg font-black text-emerald-700 uppercase tracking-tight">{promotionalCoupon}</span>
                                     </div>
                                   </div>
@@ -1068,7 +1068,7 @@ const QuickRegistration: React.FC = () => {
                                       type="text"
                                       value={promotionalCoupon}
                                       onChange={(e) => setPromotionalCoupon(e.target.value.toUpperCase())}
-                                      placeholder="Digite o cÃ³digo"
+                                      placeholder={t('payment:preCheckoutModal.placeholder') || 'Digite o código'}
                                       className="w-full px-5 py-3.5 bg-slate-50 border border-slate-200 rounded-xl outline-none focus:outline-none focus:ring-2 focus:ring-[#05294E]/20 focus:border-[#05294E] transition-all text-center font-black text-slate-900 text-lg tracking-[0.2em] placeholder:text-slate-300"
                                     />
                                   </div>
@@ -1084,7 +1084,7 @@ const QuickRegistration: React.FC = () => {
                                     {isValidatingPromotionalCoupon ? (
                                       <Loader2 className="w-4 h-4 animate-spin mx-auto" />
                                     ) : (
-                                      'Validar'
+                                      t('payment:paymentSelector.promotionalCoupon.validate') || 'Validar'
                                     )}
                                   </button>
                                 </div>
@@ -1150,7 +1150,7 @@ const QuickRegistration: React.FC = () => {
                 </div>
               </div>
 
-              {/* SeÃ§Ã£o 2: MÃ©todo de Pagamento */}
+              {/* Seção 2: Método de Pagamento */}
               <div className="bg-white rounded-3xl shadow-xl border border-slate-200 p-8 relative overflow-hidden">
                 <div className="absolute top-0 right-0 w-32 h-32 bg-blue-50 rounded-full -mr-16 -mt-16 opacity-50"></div>
 
@@ -1387,7 +1387,7 @@ const QuickRegistration: React.FC = () => {
                           {activeTerm?.title || t('preCheckoutModal.termsAndConditions.title')}
                         </Dialog.Title>
                         <p className="text-xs font-bold text-slate-400 uppercase tracking-[0.2em] mt-1">
-                          {t('rapidRegistration.terms.contractSubtitle') || 'Contrato de PrestaÃ§Ã£o de ServiÃ§os'}
+                          {t('rapidRegistration.terms.contractSubtitle') || 'Contrato de Prestação de Serviços'}
                         </p>
                       </div>
                       <button

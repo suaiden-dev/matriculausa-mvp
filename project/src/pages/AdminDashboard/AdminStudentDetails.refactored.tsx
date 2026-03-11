@@ -1,4 +1,4 @@
-﻿import React, { useState, Suspense, lazy, useCallback, useEffect } from 'react';
+import React, { useState, Suspense, lazy, useCallback, useEffect } from 'react';
 import { useParams, useNavigate, useSearchParams } from 'react-router-dom';
 import { supabase } from '../../lib/supabase';
 import { useAuth } from '../../hooks/useAuth';
@@ -3121,26 +3121,26 @@ const AdminStudentDetails: React.FC = () => {
 
       {/* Zelle Payments Pending Alert */}
       {pendingZellePayments.length > 0 && (
-        <div className="bg-yellow-50 border border-yellow-200 rounded-xl p-4">
+        <div className="bg-blue-50 border border-blue-200 rounded-xl p-4">
           <div className="flex items-center justify-between">
             <div className="flex items-center space-x-3">
               <div className="flex-shrink-0">
-                <div className="w-8 h-8 bg-yellow-100 rounded-full flex items-center justify-center">
-                  <Clock className="w-4 h-4 text-yellow-600" />
+                <div className="w-8 h-8 bg-blue-100 rounded-full flex items-center justify-center">
+                  <Clock className="w-4 h-4 text-blue-600" />
                 </div>
               </div>
               <div>
-                <h3 className="text-sm font-medium text-yellow-800">
+                <h3 className="text-sm font-medium text-blue-800">
                   Pending Zelle Payment Approvals
                 </h3>
-                <p className="text-sm text-yellow-700">
+                <p className="text-sm text-blue-700">
                   This student has a Zelle payment awaiting administrative approval.
                 </p>
               </div>
             </div>
             <button
               onClick={handleGoToZellePayments}
-              className="px-4 py-2 bg-yellow-600 hover:bg-yellow-700 text-white text-sm font-medium rounded-lg transition-colors duration-200 flex items-center space-x-2"
+              className="px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white text-sm font-medium rounded-lg transition-colors duration-200 flex items-center space-x-2"
             >
               <span>Review Payments</span>
               <ExternalLink className="w-4 h-4" />

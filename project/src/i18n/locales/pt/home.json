@@ -1,0 +1,869 @@
+{
+  "home": {
+    "hero": {
+      "title": "Sua Porta de Entrada para Universidades Americanas",
+      "subtitle": "Descubra bolsas de estudo exclusivas e desbloqueie seu potencial nos Estados Unidos",
+      "description": "Conecte-se com universidades de ponta, acesse bolsas exclusivas e receba suporte personalizado durante todo seu processo para estudar nos EUA.",
+      "cta": "Inicie Seu Processo",
+      "watchVideo": "Assistir Vídeo"
+    },
+    "featuredUniversities": {
+      "lockedTitle": "Universidades Bloqueadas",
+      "lockedDescription": "Complete o processo de seleção para desbloquear informações detalhadas das universidades",
+      "goToDashboard": "Ir ao Painel",
+      "loginToView": "Fazer Login para Ver"
+    },
+    "features": {
+      "title": "Por Que Escolher MatriculaUSA?",
+      "subtitle": "Tudo que você precisa para ter sucesso no seu processo educacional americano",
+      "smartMatching": {
+        "title": "Correspondência Inteligente",
+        "description": "Sistema alimentado por IA encontra as melhores universidades e bolsas para seu perfil"
+      },
+      "exclusiveScholarships": {
+        "title": "Bolsas Exclusivas",
+        "description": "Acesse bolsas não disponíveis em nenhum outro lugar, especificamente para estudantes internacionais"
+      },
+      "personalSupport": {
+        "title": "Suporte Pessoal",
+        "description": "Equipe dedicada para te guiar em cada etapa do processo de candidatura"
+      },
+      "fastProcess": {
+        "title": "Processo Rápido",
+        "description": "Processo de candidatura simplificado com respostas rápidas e manuseio eficiente de documentos"
+      }
+    },
+    "stats": {
+      "students": "Estudantes Colocados",
+      "universities": "Universidades Parceiras",
+      "scholarships": "Bolsas Disponíveis",
+      "successRate": "Taxa de Sucesso"
+    },
+    "trustIndicators": {
+      "studentsEnrolled": "estudantes matriculados",
+      "rating": "4.8 de avaliação",
+      "setupTime": "Configuração em 5 Minutos",
+      "successRate": "95% de Taxa de Sucesso",
+      "secure": "100% Seguro"
+    },
+    "faq": {
+      "title": "Perguntas Frequentes",
+      "mainTitle": "Tudo o que Você Precisa Saber",
+      "subtitle": "Obtenha respostas para as perguntas mais comuns sobre taxas, pagamentos e o processo de candidatura no MatriculaUSA",
+      "badge": "Perguntas e Respostas",
+      "questions": {
+        "q1": {
+          "question": "Quais taxas ou pagamentos são necessários para usar o MatriculaUSA?",
+          "answer": "O MatriculaUSA é gratuito para criar seu perfil e explorar universidades. No entanto, uma vez que você inicia o processo de candidatura e é aprovado para uma bolsa, todas as taxas associadas ao fluxo de admissão e matrícula se tornam obrigatórias. Elas são claramente apresentadas antes de qualquer pagamento."
+        },
+        "q2": {
+          "question": "O que é a Taxa de Processo de Seleção?",
+          "answer": "A Taxa de Processo de Seleção (US${{selectionProcessFee}}) é o primeiro pagamento obrigatório na plataforma MatriculaUSA. Ela desbloqueia seu acesso completo para visualizar todas as bolsas e iniciar seu processo de candidatura."
+        },
+        "q3": {
+          "question": "O que é a Taxa de Bolsa?",
+          "answer": "A Taxa de Bolsa (US${{scholarshipFee}}) é cobrada quando você prossegue com candidaturas para bolsas exclusivas através do MatriculaUSA. Esta taxa cobre custos de processamento e suporte personalizado para suas candidaturas de bolsa."
+        },
+        "q4": {
+          "question": "O que é a Taxa de Matrícula?",
+          "answer": "A Taxa de Matrícula varia conforme a universidade e é um pagamento necessário para processar formalmente sua candidatura após você ter sido aceito. Este valor confirma sua intenção de se matricular e é gerenciado diretamente pela plataforma."
+        },
+        "q5": {
+          "question": "O que é a Taxa de Controle I-20?",
+          "answer": "A Taxa de Controle I-20 (US${{i20ControlFee}}) é um pagamento obrigatório para estudantes que precisam obter o formulário I-20, essencial para solicitar o visto de estudante F-1. Esta taxa garante processamento rápido e preciso de seus documentos de visto."
+        },
+        "q6": {
+          "question": "Existem outras taxas que devo conhecer?",
+          "answer": "Todas as taxas obrigatórias para seu processo de candidatura e matrícula estão listadas em seu painel antes de qualquer pagamento. Algumas universidades podem ter taxas adicionais (ex: depósitos de moradia, taxas de orientação), mas estas sempre serão comunicadas diretamente pela universidade ou por nós antecipadamente."
+        },
+        "q7": {
+          "question": "Como posso pagar essas taxas?",
+          "answer": "Você pode pagar todas as taxas diretamente através da plataforma MatriculaUSA usando cartões de crédito ou débito internacionais. Os pagamentos são processados com segurança via Stripe, e você receberá uma confirmação para cada transação."
+        },
+        "q8": {
+          "question": "Minhas informações de pagamento estão seguras?",
+          "answer": "Sim. Todos os pagamentos são processados pelo Stripe, um líder global em segurança de pagamentos. O MatriculaUSA não armazena os detalhes do seu cartão, e todas as transações são criptografadas para sua proteção."
+        },
+        "q9": {
+          "question": "Posso obter reembolso?",
+          "answer": "Você tem direito a reembolso total das taxas pagas se sua candidatura não for bem-sucedida ou você não for aprovado para uma bolsa. No entanto, se você desistir do processo ou mudar de ideia após iniciar a candidatura, as taxas pagas não são reembolsáveis, pois o processamento e suporte já terão começado."
+        },
+        "q10": {
+          "question": "Preciso pagar todas as taxas de uma vez?",
+          "answer": "Não. As taxas são compras separadas e são pagas em etapas conforme você progride no processo. Você paga a Taxa de Processo de Seleção primeiro, depois a Taxa de Bolsa (se aplicável), seguida pela Taxa de Matrícula, e finalmente a Taxa de Controle I-20. Todas são obrigatórias para o fluxo completo, mas não precisam ser pagas simultaneamente."
+        },
+        "q11": {
+          "question": "Com quem posso entrar em contato se tiver dúvidas sobre taxas ou pagamentos?",
+          "answer": "Nossa equipe de suporte está disponível via chat ou email a qualquer momento para responder a qualquer dúvida sobre taxas, pagamentos ou seu processo de candidatura. Estamos aqui para ajudá-lo a cada passo do caminho!"
+        }
+      }
+    },
+    "threeSteps": {
+      "title": "Três Passos para Sua Educação Americana",
+      "subtitle": "Processo Simples",
+      "step1": {
+        "title": "Crie Seu Perfil",
+        "description": "Construa seu perfil abrangente de estudante com histórico acadêmico, objetivos e preferências para nos ajudar a encontrar a combinação perfeita."
+      },
+      "step2": {
+        "title": "Descubra Oportunidades",
+        "description": "Navegue pela nossa seleção curada de escolas e oportunidades exclusivas de bolsas adaptadas ao seu perfil e interesses."
+      },
+      "step3": {
+        "title": "Complete a Matrícula",
+        "description": "Candidate-se com nosso processo simplificado e receba suporte abrangente até estar matriculado com sucesso na instituição escolhida."
+      }
+    },
+    "successStories": {
+      "title": "Histórias de Sucesso",
+      "subtitle": "Estudantes reais, resultados reais. Veja como o MatriculaUSA transformou sua jornada educacional para os Estados Unidos.",
+      "testimonial1": {
+        "text": "O MatriculaUSA tornou meu sonho de estudar na América uma realidade. As oportunidades de bolsa e o suporte foram incríveis!",
+        "author": "Gustavo Santos",
+        "field": "Ciência da Computação"
+      },
+      "testimonial2": {
+        "text": "O processo de matrícula foi perfeito. Da candidatura ao suporte para visto, o MatriculaUSA me orientou em cada passo do caminho.",
+        "author": "Carlos Rodriguez",
+        "field": "Escola de Negócios"
+      },
+      "testimonial3": {
+        "text": "Encontrei bolsas exclusivas que não estavam disponíveis em nenhum outro lugar. O MatriculaUSA realmente abre portas para oportunidades.",
+        "author": "Ana Chen",
+        "field": "Engenharia"
+      }
+    },
+    "cta": {
+      "title": "Pronto para Começar Seu Sonho Americano?",
+      "subtitle": "Junte-se a milhares de estudantes internacionais que encontraram seu caminho para a educação americana através da plataforma abrangente do MatriculaUSA.",
+      "button": "Comece Seu Processo Hoje",
+      "learnMore": "Saiba Mais",
+      "features": {
+        "freeToStart": "Gratuito para começar",
+        "noHiddenFees": "Sem taxas ocultas",
+        "expertSupport": "Suporte especializado incluído"
+      }
+    },
+    "enrollmentConfirmed": {
+      "title": "Matrícula Confirmada!",
+      "university": "Harvard University"
+    }
+  },
+  "howItWorks": {
+    "title": "Como Funciona",
+    "subtitle": "Seu caminho para uma universidade americana, passo a passo",
+    "journey": "Seu Processo",
+    "stats": {
+      "setup": "Configuração em 5 Minutos",
+      "success": "95% de Taxa de Sucesso",
+      "secure": "100% Seguro"
+    },
+    "steps": {
+      "profile": {
+        "title": "Crie Seu Perfil",
+        "description": "Preencha suas informações acadêmicas e pessoais. Nossa IA encontra suas melhores opções.",
+        "items": [
+          "Histórico acadêmico e conquistas",
+          "Objetivos de carreira e preferências",
+          "Requisitos financeiros",
+          "Adicione dependentes (se houver)"
+        ]
+      },
+      "selectionFee": {
+        "title": "Pague Taxa do Processo Seletivo",
+        "description": "Desbloqueie todas as bolsas. Esta taxa é final e não reembolsável. (+$150 por dependente)",
+        "items": [
+          "Acesso para navegar pelas bolsas",
+          "Iniciar processo de candidatura",
+          "Taxa única"
+        ]
+      },
+      "documents": {
+        "title": "Escolha Bolsas e Envie Documentos",
+        "description": "Escolha bolsas e envie seus documentos. Revisão rápida.",
+        "items": [
+          "Selecione múltiplas bolsas",
+          "Upload seguro de documentos",
+          "Análise inicial automatizada"
+        ]
+      },
+      "applicationFee": {
+        "title": "Pague Taxa de Matrícula",
+        "description": "Confirme sua universidade. Esta taxa é final e não reembolsável. (+$100 por dependente)",
+        "items": [
+          "Veja bolsas aprovadas",
+          "Confirme escolha da universidade",
+          "Garanta sua vaga"
+        ]
+      },
+      "scholarshipFee": {
+        "title": "Pague Taxa de Bolsa",
+        "description": "Obtenha chat direto com sua universidade. Esta taxa é final e não reembolsável.",
+        "items": [
+          "Chat direto com universidade",
+          "Envie documentos adicionais",
+          "Compromisso final com bolsa"
+        ]
+      },
+      "i20Fee": {
+        "title": "Pague Taxa de Controle I-20",
+        "description": "Necessário para seu visto F-1. Esta taxa é final e não reembolsável.",
+        "items": [
+          "Essencial para visto de estudante F-1",
+          "Cobre processamento I-20",
+          "Janela de pagamento de 10 dias"
+        ]
+      }
+    },
+    "whyUs": {
+      "title": "Por Que MatriculaUSA?",
+      "smartDiscovery": {
+        "title": "Descoberta Inteligente",
+        "description": "IA encontra as melhores bolsas para você"
+      },
+      "documentManagement": {
+        "title": "Gerenciamento de Documentos",
+        "description": "Envie e acompanhe todos seus documentos facilmente"
+      },
+      "personalSupport": {
+        "title": "Suporte Pessoal",
+        "description": "Nossa equipe te ajuda em cada etapa"
+      },
+      "successTracking": {
+        "title": "Acompanhamento de Sucesso",
+        "description": "Veja seu progresso e próximos passos em tempo real"
+      }
+    },
+    "successStories": {
+      "title": "Histórias de Sucesso",
+      "story1": {
+        "text": "\"Encontrei bolsas exclusivas que não estavam disponíveis em nenhum outro lugar. O MatriculaUSA realmente abre portas para oportunidades.\"",
+        "name": "Ana Chen",
+        "major": "Engenharia"
+      },
+      "story2": {
+        "text": "\"Graças ao MatriculaUSA, recebi uma bolsa integral e suporte durante todo o meu processo de visto. A equipe sempre esteve lá por mim!\"",
+        "name": "Lucas Silva",
+        "major": "Ciência da Computação"
+      },
+      "story3": {
+        "text": "\"O processo de candidatura foi tão fácil e transparente. Me senti apoiada em cada etapa. Recomendo muito!\"",
+        "name": "Priya Patel",
+        "major": "Negócios"
+      },
+      "story4": {
+        "text": "\"Eu nunca pensei que estudar nos EUA fosse possível para mim. O MatriculaUSA tornou meu sonho realidade!\"",
+        "name": "Ahmed Hassan",
+        "major": "Engenharia"
+      },
+      "story5": {
+        "text": "\"Desde o primeiro contato até minha chegada nos EUA, tudo foi tranquilo e profissional. Obrigado, MatriculaUSA!\"",
+        "name": "Maria Gomez",
+        "major": "Negócios"
+      }
+    },
+    "faq": {
+      "title": "Perguntas Frequentes",
+      "q1": {
+        "question": "Quais taxas ou pagamentos são necessários para usar o MatriculaUSA?",
+        "answer": "O MatriculaUSA é gratuito para criar seu perfil e explorar universidades. No entanto, uma vez que você inicia o processo de candidatura e é aprovado para uma bolsa, todas as taxas associadas ao fluxo de admissão e matrícula se tornam obrigatórias. Elas são claramente apresentadas antes de qualquer pagamento. Todas as taxas são finais e não reembolsáveis."
+      },
+      "q2": {
+        "question": "O que é a Taxa do Processo Seletivo?",
+        "answer": "A Taxa do Processo Seletivo (US{{selectionProcessFee}}) é o primeiro pagamento obrigatório na plataforma MatriculaUSA. Ela desbloqueia seu acesso completo para visualizar todas as bolsas e iniciar seu processo de candidatura. Esta taxa é final e você será reembolsado caso não seja aceito em nenhuma universidade."
+      },
+      "q3": {
+        "question": "O que é a Taxa de Bolsa?",
+        "answer": "A Taxa de Bolsa (US{{scholarshipFee}}) é cobrada quando você prossegue com candidaturas para bolsas exclusivas através do MatriculaUSA. Esta taxa cobre custos de processamento e suporte personalizado para suas candidaturas de bolsa. Esta taxa é final e não reembolsável."
+      },
+      "q4": {
+        "question": "O que é a Taxa de Matrícula?",
+        "answer": "A Taxa de Matrícula varia por universidade e é um pagamento necessário para processar formalmente sua candidatura após você ter sido aceito. Este valor confirma sua intenção de se matricular e é gerenciado diretamente pela plataforma. Esta taxa é final e não reembolsável."
+      },
+      "q5": {
+        "question": "O que é a Taxa de Controle I-20?",
+        "answer": "A Taxa de Controle I-20 (US{{i20ControlFee}}) é um pagamento obrigatório para estudantes que precisam obter o formulário I-20, essencial para solicitar o visto de estudante F-1. Esta taxa garante o processamento rápido e preciso dos seus documentos de visto. Esta taxa é final e não reembolsável."
+      },
+      "q6": {
+        "question": "Existem outras taxas que devo conhecer?",
+        "answer": "Todas as taxas obrigatórias para seu processo de candidatura e matrícula estão listadas em seu painel antes de qualquer pagamento. Algumas universidades podem ter taxas adicionais (ex: depósitos de moradia, taxas de orientação), mas estas serão sempre comunicadas diretamente pela universidade ou por nós com antecedência. Todas as taxas são finais e não reembolsáveis."
+      },
+      "q7": {
+        "question": "Como posso pagar essas taxas?",
+        "answer": "Você pode pagar todas as taxas diretamente através da plataforma MatriculaUSA usando cartões de crédito ou débito internacionais. Os pagamentos são processados com segurança via Stripe, e você receberá uma confirmação para cada transação. Todas as taxas são finais e não reembolsáveis."
+      },
+      "q8": {
+        "question": "Minhas informações de pagamento são seguras?",
+        "answer": "Sim. Todos os pagamentos são processados pelo Stripe, líder global em segurança de pagamentos. O MatriculaUSA não armazena os detalhes do seu cartão, e todas as transações são criptografadas para sua proteção."
+      },
+      "q9": {
+        "question": "Posso obter reembolso?",
+        "answer": "Você tem direito a reembolso total das taxas pagas se sua candidatura não for bem-sucedida ou se você não for aprovado para uma bolsa. No entanto, se você desistir do processo ou mudar de ideia após iniciar a candidatura, as taxas pagas não são reemboláveis, pois o processamento e suporte já terão começado. Todas as taxas são finais e não reembolsáveis."
+      },
+      "q10": {
+        "question": "Tenho que pagar todas as taxas de uma vez?",
+        "answer": "Não. As taxas são compras separadas e são pagas em etapas conforme você avança no processo. Você paga a Taxa de Processo de Seleção (US{{selectionProcessFee}}) primeiro, depois a Taxa de Bolsa (US{{scholarshipFee}}) (se aplicável), seguida pela Taxa de Matrícula, e finalmente a Taxa de Controle I-20 (US{{i20ControlFee}}). Todas são obrigatórias para o fluxo completo, mas não precisam ser pagas simultaneamente."
+      },
+      "q11": {
+        "question": "Quem posso contatar se tiver dúvidas sobre taxas ou pagamentos?",
+        "answer": "Nossa equipe de suporte está disponível via chat ou e-mail a qualquer momento para responder a quaisquer perguntas sobre taxas, pagamentos ou seu processo de candidatura. Estamos aqui para ajudar você em cada etapa!"
+      }
+    }
+  },
+  "forStudents": {
+    "hero": {
+      "title": "Estude nos EUA com",
+      "titleHighlight": "bolsas de estudos exclusivas",
+      "subtitle": "Processo Seletivo com IA",
+      "description": "Estude pagando <span class=\"text-[#D0151C] font-bold\">até 50% menos</span>, com bolsas híbridas e chance de trabalhar legalmente — por apenas <span class=\"text-yellow-400 font-bold\">$350</span> para começar.",
+      "ctaButton": "Começar Agora",
+      "trustElements": {
+        "approval24h": "Aprovação em 24h",
+        "guaranteed": "100% Garantido",
+        "approved": "+10.000 aprovados"
+      }
+    },
+    "benefits": {
+      "title": "Vantagens que fazem a diferença",
+      "subtitle": "Descubra por que milhares de estudantes escolhem o Matrícula USA para realizar o sonho americano",
+      "ctaButton": "Descobrir minha bolsa ideal",
+      "benefits": {
+        "economy": {
+          "title": "Economia Real",
+          "description": "Pague até 50% menos que o valor integral da universidade com nossas bolsas exclusivas",
+          "highlight": "Até 50% OFF"
+        },
+        "fastApproval": {
+          "title": "Aprovação Rápida",
+          "description": "Processo otimizado com IA que acelera sua aprovação em até 80%",
+          "highlight": "24h"
+        },
+        "hybridMode": {
+          "title": "Modalidade Híbrida",
+          "description": "Estude online e presencialmente, economizando em hospedagem e alimentação",
+          "highlight": "Flexível"
+        },
+        "multipleOpportunities": {
+          "title": "Múltiplas Oportunidades",
+          "description": "Candidature-se para várias universidades simultaneamente e aumente suas chances",
+          "highlight": "3+ Opções"
+        },
+        "guaranteed": {
+          "title": "Aprovação Garantida",
+          "description": "Se não for aprovado seguindo nosso processo, devolvemos seu dinheiro",
+          "highlight": "100%"
+        },
+        "support": {
+          "title": "Suporte Completo",
+          "description": "Acompanhamento desde a candidatura até o embarque nos EUA",
+          "highlight": "24/7"
+        }
+      }
+    },
+    "howItWorks": {
+      "title": "Como Funciona",
+      "subtitle": "Processo simples e transparente em 7 passos para garantir sua bolsa de estudos",
+      "ctaButton": "COMEÇAR AGORA",
+      "ctaDescription": "Comece sua jornada para estudar nos EUA hoje mesmo",
+      "steps": {
+        "processFee": {
+          "title": "Taxa do Processo Seletivo",
+          "description": "Pague apenas $350 para iniciar sua jornada de estudos nos EUA",
+          "price": "$350"
+        },
+        "scholarshipChoice": {
+          "title": "Escolha da Bolsa",
+          "description": "Nossa IA analisa seu perfil e sugere as melhores bolsas para você",
+          "price": "Grátis"
+        },
+        "application": {
+          "title": "Candidatura",
+          "description": "Enviamos sua candidatura para as universidades parceiras",
+          "price": "✓"
+        },
+        "enrollmentFee": {
+          "title": "Taxa de Matrícula",
+          "description": "Pague apenas quando for aprovado na universidade",
+          "price": "Variável"
+        },
+        "scholarshipFee": {
+          "title": "Taxa da Bolsa",
+          "description": "Valor da bolsa com desconto aplicado automaticamente",
+          "price": "Com Desconto"
+        },
+        "i20Fee": {
+          "title": "Taxa do I-20",
+          "description": "Documento oficial para seu visto de estudante",
+          "price": "Incluída"
+        },
+        "spotGuaranteed": {
+          "title": "Vaga Garantida",
+          "description": "Sua vaga está garantida na universidade escolhida",
+          "price": "✓"
+        }
+      }
+    },
+    "comparison": {
+      "title": "De gasto alto e incerteza… para economia real e aprovação garantida",
+      "subtitle": "Veja a diferença real entre estudar por conta própria vs. com o Matrícula USA",
+      "ctaButton": "QUERO ECONOMIZAR",
+      "before": {
+        "title": "Sem Matrícula USA",
+        "subtitle": "Processo tradicional",
+        "costLabel": "Custo total: $15.000 - $25.000",
+        "items": [
+          "Processo demorado e complexo",
+          "Alto risco de rejeição",
+          "Sem suporte especializado",
+          "Custos ocultos e surpresas",
+          "Dificuldade para conseguir bolsas",
+          "Processo manual e burocrático"
+        ]
+      },
+      "after": {
+        "title": "Com Matrícula USA",
+        "subtitle": "Processo otimizado com IA",
+        "savingsLabel": "Economia média: $8.000 - $15.000",
+        "items": [
+          "Processo rápido e simplificado",
+          "Aprovação garantida ou dinheiro de volta",
+          "Suporte dedicado 24/7",
+          "Transparência total nos custos",
+          "Acesso a bolsas exclusivas",
+          "Processo automatizado e eficiente"
+        ]
+      }
+    },
+    "specialOffer": {
+      "title": "Ganhe prioridade nas bolsas mais disputadas e benefícios exclusivos",
+      "subtitle": "Ao se inscrever hoje, você garante:",
+      "urgencyTitle": "Atenção: Vagas Limitadas",
+      "urgencyDescription": "As bolsas são liberadas por ordem de inscrição. <span class=\"text-[#D0151C] font-bold\">Cada dia de atraso pode significar perder a vaga dos seus sonhos.</span>",
+      "ctaButton": "QUERO MINHA BOLSA AGORA",
+      "ctaDescription": "⏰ Oferta válida por tempo limitado",
+      "benefits": [
+        {
+          "title": "Análise em 24h",
+          "description": "Análise de perfil em 24 horas para já saber suas melhores opções"
+        },
+        {
+          "title": "Prioridade nas Bolsas",
+          "description": "Prioridade nas bolsas com vagas limitadas"
+        },
+        {
+          "title": "Acesso Antecipado",
+          "description": "Acesso antecipado às bolsas híbridas (as mais procuradas)"
+        },
+        {
+          "title": "Suporte Dedicado",
+          "description": "Suporte dedicado para concluir sua inscrição sem erros"
+        }
+      ]
+    },
+    "guarantee": {
+      "title": "Aprovação garantida ou seu dinheiro de volta",
+      "subtitle": "Sabemos que investir no seu futuro exige confiança. Por isso, o Matrícula USA é o único programa que oferece:",
+      "ctaButton": "COMEÇAR SEM RISCOS",
+      "guarantees": [
+        {
+          "title": "Garantia de Aprovação",
+          "description": "Se você seguir nosso processo e não for aprovado, devolvemos o valor da Taxa do Processo Seletivo integralmente."
+        },
+        {
+          "title": "Processo Transparente",
+          "description": "Sem taxas escondidas ou custos surpresa. Você sabe exatamente quanto vai pagar do início ao fim."
+        },
+        {
+          "title": "Apoio até a Chegada",
+          "description": "Não paramos no aceite da universidade. Nossa equipe acompanha todo o processo até o embarque."
+        }
+      ],
+      "bottomMessage": "O risco é todo nosso. Para você, é só aproveitar a oportunidade."
+    },
+    "faq": {
+      "title": "Perguntas Frequentes",
+      "subtitle": "Tire suas principais dúvidas sobre nosso processo seletivo",
+      "contact": "Ainda tem dúvidas? Entre em contato com nosso time de suporte",
+      "items": [
+        {
+          "question": "O que está incluso na taxa de processo seletivo?",
+          "answer": "A taxa de $350 inclui análise completa do seu perfil, seleção personalizada de bolsas via IA, aplicação em múltiplas universidades, acompanhamento do processo e suporte até a aprovação."
+        },
+        {
+          "question": "Posso me inscrever em quantas bolsas quiser?",
+          "answer": "Sim! Com uma única taxa você pode aplicar para todas as bolsas compatíveis com seu perfil. Nossa IA identifica as melhores oportunidades e você escolhe quantas quer tentar."
+        },
+        {
+          "question": "Como funciona a garantia?",
+          "answer": "Se você seguir nosso processo completo e não for aprovado em nenhuma universidade, devolvemos 100% da taxa do processo seletivo. É nossa garantia de confiança no sistema."
+        },
+        {
+          "question": "Quais universidades participam?",
+          "answer": "Trabalhamos com mais de 45 universidades americanas credenciadas, incluindo Arizona State University, Florida International University, University of California e muitas outras."
+        },
+        {
+          "question": "Preciso falar inglês?",
+          "answer": "Sim, é necessário um nível básico de inglês. Algumas universidades aceitam teste de proficiência interno ou oferecem programas preparatórios para quem precisa melhorar o idioma."
+        },
+        {
+          "question": "Quanto tempo demora para saber se fui aprovado?",
+          "answer": "O processo de análise e resposta das universidades varia entre 2 a 8 semanas. Você receberá atualizações constantes sobre o status da sua aplicação."
+        }
+      ]
+    },
+    "socialProof": {
+      "title": "Mais de 150 alunos aprovados só em 2026",
+      "subtitle": "Veja o que nossos alunos estão dizendo sobre sua experiência",
+      "ctaButton": "SER O PRÓXIMO APROVADO",
+      "statistics": {
+        "approved": "Alunos aprovados",
+        "approvalRate": "Taxa de aprovação",
+        "averageSavings": "Economia média",
+        "partnerUniversities": "Universidades parceiras"
+      },
+      "testimonials": [
+        {
+          "name": "Gustavo Santos",
+          "university": "University of California",
+          "course": "Computer Science",
+          "text": "Consegui uma bolsa de 40% e estou realizando meu sonho de estudar nos EUA. O processo foi muito mais simples do que imaginava.",
+          "savings": "$18,000"
+        },
+        {
+          "name": "João Santos",
+          "university": "Arizona State University",
+          "course": "Business Administration",
+          "text": "A modalidade híbrida foi perfeita para mim. Economizei muito em hospedagem e ainda tenho a experiência presencial.",
+          "savings": "$22,000"
+        },
+        {
+          "name": "Ana Costa",
+          "university": "Florida International University",
+          "course": "International Business",
+          "text": "Aprovada em 3 universidades diferentes! A IA realmente encontrou as melhores opções para o meu perfil.",
+          "savings": "$25,000"
+        },
+        {
+          "name": "Carlos Mendes",
+          "university": "Northern Arizona University",
+          "course": "Engineering",
+          "text": "Incrível como o processo foi rápido. Em 3 semanas já tinha 2 aprovações com bolsas excelentes!",
+          "savings": "$30,000"
+        },
+        {
+          "name": "Fernanda Lima",
+          "university": "University of South Florida",
+          "course": "Marketing",
+          "text": "O suporte foi fantástico do início ao fim. Agora estou estudando e trabalhando legalmente nos EUA!",
+          "savings": "$20,000"
+        },
+        {
+          "name": "Roberto Silva",
+          "university": "California State University",
+          "course": "Data Science",
+          "text": "Consegui uma bolsa híbrida que me permite estudar online e presencialmente. Perfeito para minha situação!",
+          "savings": "$35,000"
+        }
+      ]
+    }
+  },
+  "processPages": {
+    "common": {
+      "selectionProcess": "Processo Seletivo",
+      "applicationFeeI20": "Application Fee + I-20",
+      "scholarshipFee": "Taxa da Bolsa",
+      "controlFee": "Control Fee",
+      "legalFees": "Honorários Jurídicos",
+      "fundsProof": "Comprovação de Fundos",
+      "valuesSummary": "Resumo de Valores",
+      "total": "Total:",
+      "step": "Etapa",
+      "optional": "Opcional",
+      "rights": "Todos os direitos reservados.",
+      "clients": {
+        "title": "Nossos Clientes",
+        "description": "Alunos que realizaram o sonho de estudar nos Estados Unidos",
+        "client": "Cliente"
+      },
+      "conversion": {
+        "title": "Pronto para começar seu processo?",
+        "description": "Clique no botão abaixo para iniciar seu processo rumo aos Estados Unidos com todo o suporte necessário.",
+        "buttonText": "Começar Agora",
+        "redirectAuthenticated": "Você será direcionado para a área do estudante para realizar o pagamento do processo seletivo.",
+        "redirectAnonymous": "Você será direcionado para criar sua conta. É rápido e gratuito!",
+        "referralBadge": "Código de Vendedor Aplicado",
+        "afterSteps": {
+          "title": "Pronto para dar o primeiro passo?",
+          "description": "Agora que você conhece as etapas, inicie seu processo hoje mesmo.",
+          "buttonText": "Iniciar Processo"
+        },
+        "afterFunds": {
+          "title": "Atende aos requisitos financeiros?",
+          "description": "Garanta sua vaga e comece a busca pelas melhores bolsas agora.",
+          "buttonText": "Garantir minha Vaga"
+        },
+        "benefits": {
+          "transparent": {
+            "title": "Processo Transparente",
+            "description": "Todos os custos detalhados desde o início"
+          },
+          "support": {
+            "title": "Suporte Completo",
+            "description": "Acompanhamento em todas as etapas"
+          },
+          "secure": {
+            "title": "Pagamento Seguro",
+            "description": "Métodos confiáveis e protegidos"
+          }
+        }
+      }
+    },
+    "initial": {
+      "header": {
+        "title": "Processo Initial",
+        "subtitle": "Visto de Estudante F-1 — Aplicação do Exterior",
+        "description": "Guia completo com todas as etapas e valores para obter seu visto de estudante F-1 aplicando de fora dos Estados Unidos"
+      },
+      "promise": "Se o seu plano é chegar aos Estados Unidos já com o visto F1 aprovado, nós organizamos o caminho desde a escolha da escola até o agendamento no consulado. Com nosso guia, você entende cada etapa, todos os custos e recebe orientação para montar uma aplicação forte e coerente com o seu projeto de vida.",
+      "steps": {
+        "title": "Etapas do Processo",
+        "description": "Conheça todas as etapas necessárias para obter seu visto de estudante F-1",
+        "list": {
+          "step1": {
+            "description": "Primeira etapa para verificar se você é elegível para o visto de estudante F-1.",
+            "items": [
+              "Passaporte válido (mínimo 1 ano)",
+              "Comprovante de fundos bancários ($22.000 mínimo)",
+              "Endereço completo no país de origem",
+              "Histórico escolar ou diploma",
+              "Pagamento via Zelle para: pay@matriculausa.com"
+            ]
+          },
+          "step2": {
+            "description": "Taxa de aplicação e emissão do I-20 para entrevista no consulado.",
+            "items": [
+              "Emissão do formulário I-20",
+              "Processamento da matrícula",
+              "$100 por cada dependente adicional"
+            ]
+          },
+          "step3": {
+            "description": "Taxa referente à bolsa de estudos.",
+            "items": [
+              "Formulário da matrícula na escola",
+              "Demais documentações necessárias"
+            ]
+          },
+          "step4": {
+            "description": "Taxa de controle do I-20 durante todo o processo de visto.",
+            "items": [
+              "Controle ativo do I-20",
+              "Acompanhamento durante todo o processo",
+              "Suporte para dúvidas e orientações",
+              "Pagamento dessa taxa na emissão da carta de aceite pela instituição"
+            ]
+          },
+          "step5": {
+            "description": "Acompanhamento jurídico completo do processo de visto.",
+            "items": [
+              "$1.800 para o aplicante principal",
+              "$100 por cada dependente adicional",
+              "Preparação para entrevista no consulado",
+              "Preparação de toda documentação"
+            ]
+          }
+        }
+      },
+      "funds": {
+        "description": "Requisitos mínimos de comprovação financeira para o visto F-1",
+        "mainApplicant": "Aplicante Principal",
+        "perDependent": "Por Dependente",
+        "minAmount": "$22.000",
+        "dependentAmount": "+$5.000",
+        "minBankAccount": "Valor mínimo em conta bancária",
+        "additionalPerDependent": "Valor adicional por cada dependente",
+        "note": "Os valores devem ser comprovados através de extrato bancário atualizado. O consulado americano exigirá esses documentos durante a entrevista de visto."
+      },
+      "values": {
+        "description": "Todos os custos envolvidos no processo Initial"
+      }
+    },
+    "transfer": {
+      "header": {
+        "title": "Processo de Transfer",
+        "subtitle": "Transferência de Escola — Student Transfer",
+        "description": "Guia completo com todas as etapas e valores para realizar a transferência de escola nos Estados Unidos"
+      },
+      "promise": "Quer transferir seu I-20 sem interromper seus estudos nem correr risco com seu status? Nós mostramos, passo a passo, quando e como fazer a transferência, quais taxas considerar e como manter sua carga horária e datas em ordem, para que você continue estudando com tranquilidade na nova escola.",
+      "steps": {
+        "title": "Etapas do Processo",
+        "description": "Conheça todas as etapas necessárias para realizar a transferência de escola",
+        "list": {
+          "step1": {
+            "description": "Primeira etapa para verificar se você é elegível para o processo de Transfer.",
+            "items": [
+              "Passaporte válido (mínimo 1 ano)",
+              "I-94 válido",
+              "Comprovante de visto ou status atual",
+              "Comprovante de fundos bancários ($22.000 mínimo)",
+              "Endereço completo nos EUA",
+              "Pagamento via Zelle para: pay@matriculausa.com"
+            ]
+          },
+          "step2": {
+            "description": "Taxa de aplicação e emissão do I-20.",
+            "items": [
+              "Emissão do formulário I-20",
+              "Processamento da matrícula",
+              "$100 por cada dependente adicional"
+            ]
+          },
+          "step3": {
+            "description": "Taxa referente à bolsa de estudos.",
+            "items": [
+              "Formulário da matrícula na escola",
+              "Demais documentações necessárias"
+            ]
+          },
+          "step4": {
+            "description": "Taxa de controle do I-20 durante todo o processo de Transfer.",
+            "items": [
+              "Controle ativo do I-20",
+              "Acompanhamento durante todo o processo",
+              "Suporte para dúvidas e orientações",
+              "Pagamento dessa taxa na emissão da carta de aceite pela instituição"
+            ]
+          }
+        }
+      },
+      "funds": {
+        "description": "Requisitos mínimos de comprovação financeira para o processo de Transfer",
+        "note": "Os valores devem ser comprovados através de extrato bancário atualizado. Investimentos e aplicações também são aceitos como comprovação de fundos."
+      },
+      "values": {
+        "description": "Todos os custos envolvidos no processo de Transfer"
+      }
+    },
+    "cos": {
+      "header": {
+        "title": "Processo de COS",
+        "subtitle": "Change of Status — Troca de Status",
+        "description": "Guia completo com todas as etapas e valores para realizar a troca do seu status de visto nos Estados Unidos"
+      },
+      "promise": "Trocar seu status dentro dos EUA não precisa ser um labirinto. Aqui você encontra um guia completo com todas as etapas, todos os valores e o suporte necessário para fazer seu COS com segurança, planejamento financeiro e acompanhamento jurídico até a resposta do USCIS.",
+      "steps": {
+        "title": "Etapas do Processo",
+        "description": "Conheça todas as etapas necessárias para realizar a troca do seu status de visto",
+        "list": {
+          "step1": {
+            "description": "Primeira etapa para verificar se você é elegível para o processo de COS.",
+            "items": [
+              "Passaporte válido (mínimo 1 ano)",
+              "I-94 válido",
+              "Comprovante de visto ou status atual",
+              "Comprovante de fundos bancários ($22.000 mínimo)",
+              "Endereço completo nos EUA",
+              "Pagamento via Zelle para: pay@matriculausa.com"
+            ]
+          },
+          "step2": {
+            "description": "Taxa de aplicação e emissão do I-20.",
+            "items": [
+              "Emissão do formulário I-20",
+              "Processamento da matrícula",
+              "$100 por cada dependente adicional"
+            ]
+          },
+          "step3": {
+            "description": "Taxa referente à bolsa de estudos.",
+            "items": [
+              "Formulário da matrícula na escola",
+              "Demais documentações necessárias"
+            ]
+          },
+          "step4": {
+            "description": "Taxa de controle do I-20 durante todo o processo de COS.",
+            "items": [
+              "Controle ativo do I-20",
+              "Acompanhamento durante todo o processo",
+              "Suporte para dúvidas e orientações",
+              "Pagamento dessa taxa na emissão da carta de aceite pela instituição"
+            ]
+          },
+          "step5": {
+            "description": "Acompanhamento jurídico completo do processo de COS.",
+            "items": [
+              "$1.800 para o aplicante principal",
+              "$100 por cada dependente adicional",
+              "Acompanhamento jurídico completo",
+              "Preparação de toda documentação"
+            ]
+          }
+        }
+      },
+      "funds": {
+        "description": "Requisitos mínimos de comprovação financeira para o processo de COS",
+        "note": "Os valores devem ser comprovados através de extrato bancário atualizado. Investimentos e aplicações também são aceitos como comprovação de fundos."
+      },
+      "values": {
+        "description": "Todos os custos envolvidos no processo de COS"
+      }
+    }
+  },
+  "stepByStepGuide": {
+    "title": "Guia Passo a Passo",
+    "subtitle": "Como funciona o processo de candidatura",
+    "closeButton": "Fechar guia passo a passo",
+    "progress": "{{current}} de {{total}}",
+    "previous": "Anterior",
+    "next": "Próximo",
+    "startNow": "Começar Agora!",
+    "steps": {
+      "step1": {
+        "title": "Bem-vindo ao Matrícula USA! 🎓",
+        "description": "Vamos guiá-lo através de todo o processo de candidatura para bolsas nos EUA. É mais fácil do que você pensa!"
+      },
+      "step2": {
+        "title": "1. Explorar Bolsas",
+        "description": "Navegue pela nossa lista de bolsas. Cada uma tem informações detalhadas sobre valores, requisitos e universidades parceiras. Clique nas que lhe interessam!"
+      },
+      "step3": {
+        "title": "2. Adicionar à Lista de Seleção",
+        "description": "Selecione as bolsas para as quais deseja se candidatar e adicione-as à sua lista de seleção. Você pode escolher múltiplas bolsas e gerenciar suas seleções facilmente."
+      },
+      "step4": {
+        "title": "3. Tipo de Estudante",
+        "description": "Selecione seu tipo de estudante: Inicial, Transferência ou Mudança de Status. Isso nos ajuda a direcionar as melhores oportunidades para seu perfil."
+      },
+      "step5": {
+        "title": "4. Enviar Documentos",
+        "description": "Envie seus documentos: Passaporte, Diploma do Ensino Médio e Extrato Bancário. Nossa equipe revisará tudo e dará feedback."
+      },
+      "step6": {
+        "title": "5. Seleção da Taxa de Matrícula",
+        "description": "Após o envio dos documentos, você deve aguardar a aprovação da universidade para continuar com o processo seletivo. Após a aprovação, você será liberado para pagar a Taxa de Matrícula e a Taxa de Bolsa."
+      },
+      "step7": {
+        "title": "6. Chat com a Universidade e Acompanhamento",
+        "description": "Na seção 'Minhas Aplicações', você terá acesso ao chat direto com a universidade, onde a universidade pode solicitar pagamentos adicionais, enviar sua carta de aceite para você e acompanhar todo o processo de candidatura."
+      },
+      "step8": {
+        "title": "7. Chat de Candidatura e Taxa de Controle I-20",
+        "description": "No Chat de Candidatura, você pode falar diretamente com a universidade. A universidade pode solicitar mais documentos. Aqui você também pagará a Taxa de Controle I-20 se for necessária."
+      }
+    },
+    "expandImage": "Expandir imagem",
+    "previewNotAvailable": "Prévia não disponível"
+  },
+  "scholarshipDeadline": {
+    "3800Expired": "Esta bolsa não está mais aceitando candidaturas",
+    "3800Expiring": "Últimas horas para se candidatar! Prazo expira amanhã (6 de novembro)",
+    "prazoExpiraAmanha": "Prazo expira amanhã",
+    "parcelowCpfModal": {
+      "title": "CPF Necessário",
+      "description": "Para realizar pagamentos via Parcelow, você precisa ter um CPF registrado em seu perfil. Deseja ir para seu perfil agora para completar seu cadastro?",
+      "confirm": "Ir para o Perfil",
+      "cancel": "Agora não"
+    }
+  }
+}
