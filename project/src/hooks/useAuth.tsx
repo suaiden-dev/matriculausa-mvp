@@ -794,16 +794,16 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
       }
     }
 
-    supabase.auth.getSession().then(({ data: { session } }) => {
+    supabase.auth.getSession().then(async ({ data: { session } }) => {
       if (!isMounted) return;
-      fetchAndSetUser(session);
+      await fetchAndSetUser(session);
       setLoading(false);
     });
 
     const { data: { subscription } } = supabase.auth.onAuthStateChange(
       async (_, session) => {
         if (!isMounted) return; // Proteção contra updates após unmount
-        fetchAndSetUser(session);
+        await fetchAndSetUser(session);
         setLoading(false);
       }
     );
