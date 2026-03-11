@@ -35,19 +35,11 @@ const StudentOnboarding: React.FC = () => {
   const [showNotificationsModal, setShowNotificationsModal] = useState(false);
 
   // O estado do progresso agora contém se o usuário é do novo fluxo
-  const isNewFlowUser = !!state.isNewFlowUser || !!(userProfile as any)?.placement_fee_flow;
+  // Prioriza o valor do perfil (banco) sobre o estado local se o perfil já estiver carregado
+  const isNewFlowUser = (userProfile as any)?.placement_fee_flow !== undefined 
+    ? !!(userProfile as any)?.placement_fee_flow 
+    : !!state.isNewFlowUser;
   
-  // Log para depurar o fluxo de placement fee
-  useEffect(() => {
-    if (userProfile) {
-      console.log('[StudentOnboarding] 🔍 Verificação de Fluxo:', {
-        isNewFlowUser,
-        stateIsNew: state.isNewFlowUser,
-        profilePlacementFlow: (userProfile as any)?.placement_fee_flow,
-        userId: userProfile.id
-      });
-    }
-  }, [isNewFlowUser, state.isNewFlowUser, userProfile]);
 
   const isNewFlowUserRef = React.useRef(isNewFlowUser);
 

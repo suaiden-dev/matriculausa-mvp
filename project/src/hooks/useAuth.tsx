@@ -296,7 +296,7 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
               // Alterado para aplicar apenas se for null/undefined, respeitando o valor false manual
               const applyPlacementFlow = profile.role === 'student' && !isBrantStudent;
 
-              if (applyPlacementFlow && profile.placement_fee_flow === null) {
+              if (applyPlacementFlow && (profile.placement_fee_flow === null || profile.placement_fee_flow === undefined)) {
                 updates.placement_fee_flow = true;
               }
 
@@ -496,7 +496,7 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
 
                     // Forçar atualização do placement_fee_flow para novos usuários (que foram criados via trigger)
                     // Apenas se for null, para permitir override manual para false
-                    if (applyPlacementFlow && existingProfile.placement_fee_flow === null) {
+                    if (applyPlacementFlow && (existingProfile.placement_fee_flow === null || existingProfile.placement_fee_flow === undefined)) {
                       updates.placement_fee_flow = true;
                     }
                     if (Object.keys(updates).length > 0) {
