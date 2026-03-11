@@ -156,23 +156,10 @@ export const SelectionFeeStep: React.FC<StepProps> = ({ onNext }) => {
           ) : (hasZellePendingSelectionFee || showZelleCheckout) ? (
             /* Zelle checkout inline */
             <div className={`flex flex-col gap-0 ${hasZellePendingSelectionFee ? '' : 'space-y-6 sm:bg-white sm:border sm:border-gray-100 sm:rounded-3xl py-4 pb-1 sm:p-6 sm:shadow-xl relative overflow-hidden'}`}>
-              {hasZellePendingSelectionFee && (
-                <div className="bg-blue-50 border border-blue-200 rounded-t-[2rem] px-6 py-4 flex items-start gap-4">
-                  <div className="w-10 h-10 bg-blue-100 rounded-2xl flex items-center justify-center border border-blue-200 flex-shrink-0 mt-0.5">
-                    <Clock className="w-5 h-5 text-blue-600 animate-pulse" />
-                  </div>
-                  <div>
-                    <p className="text-sm font-black text-blue-700 uppercase tracking-tight">{t('selectionFeeStep.main.zelleProcessing.title')}</p>
-                    <p className="text-xs text-blue-600/80 font-medium mt-0.5 leading-relaxed">{t('selectionFeeStep.main.zelleProcessing.subtitle')}</p>
-                  </div>
-                </div>
-              )}
-
               {!hasZellePendingSelectionFee && (
                 <>
                   <div className="hidden sm:block absolute top-0 right-0 w-32 h-32 bg-blue-500/5 rounded-full blur-[40px] -mr-16 -mt-16 pointer-events-none" />
-                  <div className="flex items-center justify-between mb-2 relative z-10 sm:px-0">
-                    <h3 className="text-xl font-black text-gray-900 uppercase tracking-tight">{t('selectionFeeStep.main.zellePayment')}</h3>
+                  <div className="flex items-center justify-end mb-2 relative z-10 sm:px-0">
                     {!isZelleProcessing && (
                       <button onClick={() => { setShowZelleCheckout(false); setIsZelleProcessing(false); setSelectedMethod(null); setShowInlineCpf(false); }} className="p-2 hover:bg-gray-100 rounded-full transition-colors text-gray-400 hover:text-gray-900">
                         <X className="w-5 h-5" />
@@ -182,7 +169,7 @@ export const SelectionFeeStep: React.FC<StepProps> = ({ onNext }) => {
                 </>
               )}
 
-              <div className={hasZellePendingSelectionFee ? 'border border-amber-200 border-t-0 rounded-b-[2rem] overflow-hidden bg-white shadow-sm' : ''}>
+              <div className={hasZellePendingSelectionFee ? 'rounded-[2rem] overflow-hidden' : ''}>
                 <ZelleCheckout
                   feeType="selection_process"
                   amount={computedBasePrice}
@@ -201,6 +188,7 @@ export const SelectionFeeStep: React.FC<StepProps> = ({ onNext }) => {
                     if (isProcessing && !isZelleProcessing) refetchPaymentStatus();
                     setIsZelleProcessing(isProcessing);
                   }}
+                  hideHeader={true}
                 />
               </div>
             </div>

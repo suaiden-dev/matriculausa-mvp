@@ -556,7 +556,7 @@ export const UniversityDocumentsStep: React.FC<StepProps> = ({ onBack }) => {
             <div className="grid grid-cols-1 md:grid-cols-12 gap-6">
               {/* Main Welcome Card */}
               <div className="md:col-span-12 space-y-6">
-                <div className="bg-white rounded-[2.5rem] p-8 md:p-12 shadow-2xl relative overflow-hidden border border-slate-300">
+                <div className="bg-white rounded-[2.5rem] p-8 md:p-12 shadow-2xl relative overflow-hidden ">
                   <div className="absolute top-0 right-0 w-64 h-64 bg-blue-500/5 rounded-full blur-[80px] -mr-32 -mt-32 pointer-events-none" />
                   
                   <div className="relative z-10 grid grid-cols-1 lg:grid-cols-12 gap-12">
@@ -591,7 +591,7 @@ export const UniversityDocumentsStep: React.FC<StepProps> = ({ onBack }) => {
                         <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                           <button 
                             onClick={() => setActiveTab('documents')}
-                            className="flex items-center gap-4 p-5 bg-slate-50 hover:bg-white rounded-2xl border border-slate-300 hover:border-blue-300 hover:shadow-lg hover:shadow-blue-500/5 transition-all text-left group"
+                            className="flex items-center gap-4 p-5 bg-slate-50 hover:bg-white rounded-2xl  hover:border-blue-300 hover:shadow-lg hover:shadow-blue-500/5 transition-all text-left group"
                           >
                             <div className="w-12 h-12 bg-white rounded-xl shadow-sm flex items-center justify-center group-hover:scale-110 transition-transform">
                               <FolderOpen className="w-6 h-6 text-slate-600 group-hover:text-blue-600 transition-colors" />
@@ -604,7 +604,7 @@ export const UniversityDocumentsStep: React.FC<StepProps> = ({ onBack }) => {
 
                           <button 
                             onClick={() => setActiveTab('details')}
-                            className="flex items-center gap-4 p-5 bg-slate-50 hover:bg-white rounded-2xl border border-slate-300 hover:border-blue-300 hover:shadow-lg hover:shadow-blue-500/5 transition-all text-left group"
+                            className="flex items-center gap-4 p-5 bg-slate-50 hover:bg-white rounded-2xl  hover:border-blue-300 hover:shadow-lg hover:shadow-blue-500/5 transition-all text-left group"
                           >
                             <div className="w-12 h-12 bg-white rounded-xl shadow-sm flex items-center justify-center group-hover:scale-110 transition-transform">
                               <Info className="w-6 h-6 text-slate-600 group-hover:text-blue-600 transition-colors" />
@@ -634,7 +634,7 @@ export const UniversityDocumentsStep: React.FC<StepProps> = ({ onBack }) => {
                 </div>
 
                 {/* Timeline simplified */}
-                <div className="bg-white rounded-[2.5rem] p-8 border border-slate-300 shadow-2xl shadow-blue-900/5">
+                <div className="bg-white rounded-[2.5rem] p-8  shadow-2xl shadow-blue-900/5">
                    <h4 className="text-lg font-black text-gray-900 uppercase tracking-widest mb-6 flex items-center gap-2">
                      {t('studentDashboard.myApplicationStep.welcome.nextSteps')}
                    </h4>
@@ -789,7 +789,7 @@ export const UniversityDocumentsStep: React.FC<StepProps> = ({ onBack }) => {
                             { label: t('studentDashboard.myApplicationStep.details.mode'), val: applicationDetails.scholarships?.delivery_mode === 'in_person' ? t('studentDashboard.myApplicationStep.details.inPerson') : t('studentDashboard.myApplicationStep.details.online') },
                             { label: t('studentDashboard.myApplicationStep.details.deadline'), val: applicationDetails.scholarships?.deadline ? new Date(applicationDetails.scholarships.deadline).toLocaleDateString() : 'N/A' }
                           ].map((item, i) => (
-                            <div key={i} className="bg-white p-4 rounded-[2rem] border border-slate-300 shadow-sm pl-5">
+                            <div key={i} className="bg-white p-4 rounded-[2rem]  shadow-sm pl-5">
                               <div className="flex items-center gap-2 mb-2">
                                 <span className="text-[10px] font-black text-slate-900 uppercase tracking-widest">{item.label}</span>
                               </div>
@@ -801,7 +801,7 @@ export const UniversityDocumentsStep: React.FC<StepProps> = ({ onBack }) => {
                         {/* Financial Summary - Mobile Only (Ordered after Deadline) */}
                         <div className="block lg:hidden space-y-12">
                            {/* Application Meta Info - Mobile Only */}
-                           <div className="bg-white rounded-[2rem] p-5 border border-slate-300 shadow-sm space-y-5">
+                           <div className="bg-white rounded-[2rem] p-5  shadow-sm space-y-5">
                               <div className="flex flex-col border-b border-slate-100 pb-3">
                                 <p className="text-[10px] font-black text-slate-900 uppercase tracking-widest mb-1">{t('studentDashboard.applicationChatPage.details.studentInformation.studentType')}</p>
                                 <p className="text-xs font-black text-slate-900 uppercase">
@@ -819,7 +819,7 @@ export const UniversityDocumentsStep: React.FC<StepProps> = ({ onBack }) => {
                               </div>
                            </div>
 
-                           <div className="bg-white rounded-[2rem] p-5 text-slate-900 border border-slate-300 shadow-sm relative overflow-hidden">
+                           <div className="bg-white rounded-[2rem] p-5 text-slate-900  shadow-sm relative overflow-hidden">
                               <div className="absolute top-0 right-0 w-32 h-32 bg-slate-100 rounded-full -mr-16 -mt-16 blur-xl" />
                               <h4 className="text-sm font-black uppercase tracking-widest text-slate-900 mb-6 pb-2 border-b border-slate-100 flex items-center justify-between">
                                 {t('studentDashboard.myApplicationStep.details.finance.financialSummary')}
@@ -858,7 +858,7 @@ export const UniversityDocumentsStep: React.FC<StepProps> = ({ onBack }) => {
                            </div>
                         </div>
 
-                        <div className="border border-slate-300 rounded-[2rem] p-4 sm:p-5 md:p-8 space-y-8 md:space-y-12 bg-white shadow-sm relative overflow-hidden">
+                        <div className=" rounded-[2rem] p-4 sm:p-5 md:p-8 space-y-8 md:space-y-12 bg-white shadow-sm relative overflow-hidden">
                           <section className="space-y-6">
                             <h4 className="text-xl font-black text-gray-900 uppercase tracking-tight border-b border-slate-300 pb-4">
                               {t('studentDashboard.myApplicationStep.details.scholarshipDetails')}
@@ -920,7 +920,7 @@ export const UniversityDocumentsStep: React.FC<StepProps> = ({ onBack }) => {
                             </h4>
                             <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                               {applicationDetails.scholarships.internal_fees.map((fee: any, idx: number) => (
-                                <div key={idx} className="flex justify-between items-center p-6 bg-white rounded-2xl border border-slate-300 shadow-sm group">
+                                <div key={idx} className="flex justify-between items-center p-6 bg-white rounded-2xl  shadow-sm group">
                                    <div className="min-w-0 mr-4">
                                      <p className="text-[10px] font-black text-slate-500 uppercase tracking-widest mb-1">{fee.frequency || fee.details || t('studentDashboard.myApplicationStep.details.oneTimePayment')}</p>
                                      <p className="text-sm font-black text-gray-900 uppercase truncate" title={fee.category || fee.name}>{fee.category || fee.name}</p>
@@ -941,7 +941,7 @@ export const UniversityDocumentsStep: React.FC<StepProps> = ({ onBack }) => {
  
                         {/* Institution Info - Mobile Only */}
                         <div className="block lg:hidden">
-                           <div className="bg-white rounded-[2.5rem] p-5 border border-slate-300">
+                           <div className="bg-white rounded-[2.5rem] p-5 ">
                               <h4 className="text-sm font-black text-gray-900 uppercase tracking-widest mb-6 border-b border-slate-300 pb-2">{t('studentDashboard.myApplicationStep.details.institution.title')}</h4>
                               <div className="space-y-4">
                                  {applicationDetails.scholarships?.universities?.contact?.email && (
@@ -987,7 +987,7 @@ export const UniversityDocumentsStep: React.FC<StepProps> = ({ onBack }) => {
                         </div>
 
                         {/* Documents Progress Summary */}
-                        <div className="border border-slate-300 rounded-[2rem] p-5 md:p-8 space-y-12 bg-white shadow-sm relative overflow-hidden">
+                        <div className=" rounded-[2rem] p-5 md:p-8 space-y-12 bg-white shadow-sm relative overflow-hidden">
                         <section className="space-y-6">
                             <h4 className="text-xl font-black text-gray-900 uppercase tracking-tight border-b border-slate-300 pb-4">
                               {t('studentDashboard.myApplicationStep.details.studentDocuments')}
@@ -1046,7 +1046,7 @@ export const UniversityDocumentsStep: React.FC<StepProps> = ({ onBack }) => {
                      {/* Right: Financial & Sidebar */}
                      <div className="space-y-8">
                        {/* Application Meta Info - Desktop Only */}
-                       <div className="hidden lg:block bg-white rounded-[2rem] p-5 md:p-8 border border-slate-300 shadow-sm space-y-6">
+                       <div className="hidden lg:block bg-white rounded-[2rem] p-5 md:p-8  shadow-sm space-y-6">
                           <div className="flex flex-col border-b border-slate-100 pb-4">
                             <p className="text-[10px] font-black text-slate-900 uppercase tracking-widest mb-1">{t('studentDashboard.applicationChatPage.details.studentInformation.studentType')}</p>
                             <p className="text-sm font-black text-slate-900 uppercase">
@@ -1065,7 +1065,7 @@ export const UniversityDocumentsStep: React.FC<StepProps> = ({ onBack }) => {
                        </div>
 
                        {/* Financial Summary Table - Desktop Only */}
-                        <div className="hidden lg:block bg-white rounded-[2rem] p-5 md:p-8 text-slate-900 border border-slate-300 shadow-sm relative overflow-hidden">
+                        <div className="hidden lg:block bg-white rounded-[2rem] p-5 md:p-8 text-slate-900  shadow-sm relative overflow-hidden">
                            <div className="absolute top-0 right-0 w-32 h-32 bg-slate-100 rounded-full -mr-16 -mt-16 blur-xl" />
                            <h4 className="text-sm font-black uppercase tracking-widest text-slate-900 mb-6 pb-2 border-b border-slate-100 flex items-center justify-between">
                              {t('studentDashboard.myApplicationStep.details.finance.financialSummary')}
@@ -1105,7 +1105,7 @@ export const UniversityDocumentsStep: React.FC<StepProps> = ({ onBack }) => {
 
                        {/* Contact & Support - Desktop Only */}
                        <div className="hidden lg:block space-y-4">
-                         <div className="bg-white rounded-[2.5rem] p-5 md:p-8 border border-slate-300">
+                         <div className="bg-white rounded-[2.5rem] p-5 md:p-8 ">
                             <h4 className="text-sm font-black text-gray-900 uppercase tracking-widest mb-6 border-b border-slate-300 pb-2">{t('studentDashboard.myApplicationStep.details.institution.title')}</h4>
                             <div className="space-y-4">
                                {applicationDetails.scholarships?.universities?.contact?.email && (
@@ -1162,7 +1162,7 @@ export const UniversityDocumentsStep: React.FC<StepProps> = ({ onBack }) => {
           {activeTab === 'i20' && (
             <div className="space-y-8 animate-in fade-in slide-in-from-bottom-4 duration-500">
               {showZelleCheckout ? (
-                <div className="bg-white rounded-[2.5rem] shadow-2xl border border-slate-300 overflow-hidden">
+                <div className="bg-white rounded-[2.5rem] shadow-2xl  overflow-hidden">
                   <div className="p-8">
                     <button
                       onClick={() => setShowZelleCheckout(false)}
@@ -1188,7 +1188,7 @@ export const UniversityDocumentsStep: React.FC<StepProps> = ({ onBack }) => {
                   </div>
                 </div>
               ) : !(userProfile as any)?.has_paid_i20_control_fee ? (
-                <div className="bg-white rounded-[2.5rem] shadow-2xl border border-slate-300 overflow-hidden">
+                <div className="bg-white rounded-[2.5rem] shadow-2xl  overflow-hidden">
                   <div className="p-8 md:p-12 relative overflow-hidden border-b border-slate-300">
                     <div className="absolute top-0 right-0 w-64 h-64 bg-slate-500/5 rounded-full blur-[80px] -mr-32 -mt-32 pointer-events-none" />
                     <div className="relative z-10 flex flex-col md:flex-row items-center gap-8">
@@ -1211,7 +1211,7 @@ export const UniversityDocumentsStep: React.FC<StepProps> = ({ onBack }) => {
                         <p className="text-gray-600 leading-relaxed font-medium">
                           {t('studentDashboard.applicationChatPage.i20ControlFee.description')}
                         </p>
-                        <div className="p-6 bg-slate-50 border border-slate-300 rounded-3xl space-y-4">
+                        <div className="p-6 bg-slate-50  rounded-3xl space-y-4">
                           <div className="flex items-center justify-between border-b border-slate-200 pb-4">
                             <span className="text-xs font-black text-slate-500 uppercase tracking-widest">{t('studentDashboard.applicationChatPage.i20ControlFee.feeType')}</span>
                             <span className="text-xs font-black text-slate-900 uppercase tracking-tight">
@@ -1407,7 +1407,7 @@ export const UniversityDocumentsStep: React.FC<StepProps> = ({ onBack }) => {
                   </div>
                 </div>
               ) : (
-                <div className="bg-white rounded-[2.5rem] shadow-2xl border border-slate-300 overflow-hidden">
+                <div className="bg-white rounded-[2.5rem] shadow-2xl  overflow-hidden">
                   <div className="bg-gradient-to-br from-emerald-500 to-emerald-700 p-8 md:p-12 relative overflow-hidden">
                     <div className="absolute top-0 right-0 w-64 h-64 bg-white/10 rounded-full blur-3xl -mr-32 -mt-32 pointer-events-none" />
                     <div className="relative z-10 flex flex-col md:flex-row items-center gap-8">
@@ -1446,7 +1446,7 @@ export const UniversityDocumentsStep: React.FC<StepProps> = ({ onBack }) => {
           {activeTab === 'documents' && (
             <div className="space-y-8">
               {/* Main Documents Component with Header integrated */}
-              <div className="bg-white rounded-[2.5rem] shadow-2xl border border-slate-300 overflow-hidden">
+              <div className="bg-white rounded-[2.5rem] shadow-2xl  overflow-hidden">
                  {/* Header moved here */}
                  <div className="p-8 md:p-12 relative overflow-hidden border-b border-slate-300">
                     <div className="absolute top-0 right-0 w-64 h-64 bg-slate-500/5 rounded-full blur-[80px] -mr-32 -mt-32 pointer-events-none" />
@@ -1542,7 +1542,7 @@ export const UniversityDocumentsStep: React.FC<StepProps> = ({ onBack }) => {
                       <p className="text-gray-600 leading-relaxed font-medium">
                         {t('studentDashboard.myApplicationStep.acceptance.description')}
                       </p>
-                      <div className="p-6 bg-slate-50 border border-slate-300 rounded-3xl flex items-start gap-4">
+                      <div className="p-6 bg-slate-50  rounded-3xl flex items-start gap-4">
                          <div className="w-10 h-10 bg-white rounded-xl flex items-center justify-center shadow-sm">
                             <ShieldCheck className="w-5 h-5 text-slate-400" />
                          </div>

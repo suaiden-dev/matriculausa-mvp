@@ -1,5 +1,8 @@
 {
   "preCheckoutModal": {
+    "acceptPrefix": "Acepto los ",
+    "termsAndConditionsLink": "Términos y Condiciones",
+    "acceptSuffix": " del contrato de prestación de servicios.",
     "loading": "Cargando...",
     "noTermsFound": "No se encontraron términos.",
     "confirmReading": "Confirmar Lectura",
@@ -111,7 +114,7 @@
   "zelleCheckout": {
     "title": "Zelle Payment Checkout",
     "subtitle": "Complete your payment via Zelle transfer",
-    "backToPaymentSelection": "Back to Payment Selection",
+    "backToPaymentSelection": "Volver a la Selección de Pago",
     "paymentSummary": "Payment Summary",
     "paymentMethod": "Payment Method",
     "amount": "Amount",

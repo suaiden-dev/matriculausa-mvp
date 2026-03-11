@@ -144,11 +144,15 @@
     "zellePaymentDetails": {
       "title": "Detalhes do Pagamento Zelle",
       "subtitle": "Envie seu pagamento para o destinatário abaixo",
+      "paymentInstructions": "Instruções de Pagamento via Zelle",
+      "paymentInstructionsSubtitle": "Complete sua transferência enviando o valor para o destinatário abaixo",
       "recipientEmail": "Email do Destinatário",
       "paymentAmount": "Valor do Pagamento",
       "important": "Importante:",
       "importantMessage": "Certifique-se de enviar o valor exato de <strong>{{amount}} USD</strong> para <strong>pay@matriculausa.com</strong> via Zelle. Qualquer discrepância no valor ou destinatário atrasará o processamento do seu pagamento.",
-      "importantMessageSimple": "Certifique-se de que o valor exato do pagamento corresponde ao valor mostrado acima."
+      "importantMessageSimple": "Certifique-se de que o valor exato do pagamento corresponde ao valor mostrado acima.",
+      "copied": "Copiado!",
+      "copiedTooltip": "Copiar e-mail"
     }
   },
   "zelleWaiting": {
