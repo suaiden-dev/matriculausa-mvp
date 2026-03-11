@@ -37,6 +37,8 @@ export interface UserProfile {
   application_fee_paid_at?: string | null;
   scholarship_fee_paid_at?: string | null;
   i20_paid_at?: string | null;
+  is_scholarship_fee_paid: boolean;
+  is_placement_fee_paid?: boolean;
   is_admin: boolean; // legado: mantido por compatibilidade
   role?: 'student' | 'school' | 'admin' | 'affiliate_admin' | 'seller';
   stripe_customer_id: string | null;

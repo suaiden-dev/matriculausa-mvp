@@ -166,7 +166,7 @@ const AuthRedirect: React.FC<{ children: React.ReactNode }> = ({ children }) => 
             navigate('/student/onboarding?step=selection_fee', { replace: true });
             return;
           }
-          navigate('/', { replace: true });
+          navigate('/student/dashboard', { replace: true });
           return;
         }
 
@@ -217,10 +217,6 @@ const AuthRedirect: React.FC<{ children: React.ReactNode }> = ({ children }) => 
         setCheckingUniversity(false);
       }
 
-      // VERIFICAÇÃO ADICIONAL PARA ESTUDANTES - redirecionar da home para o dashboard
-      if (user.role === 'student' && currentPath === '/') {
-        navigate('/student/dashboard', { replace: true }); return;
-      }
     };
 
     checkAndRedirect();
