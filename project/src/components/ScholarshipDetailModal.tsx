@@ -24,6 +24,8 @@ import {
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { is3800Scholarship, is3800ScholarshipBlocked } from '../utils/scholarshipDeadlineValidation';
+import { getPlacementFee } from '../utils/placementFeeCalculator';
+import { formatCurrency } from '../utils/currency';
 import { ScholarshipCountdownTimer } from './ScholarshipCountdownTimer';
 import { useModal } from '../contexts/ModalContext';
 
@@ -264,6 +266,19 @@ const ScholarshipDetailModal: React.FC<ScholarshipDetailModalProps> = ({
                               <td className="py-3 px-4 text-slate-600">{t('scholarshipsPage.scholarshipCard.applicationFee') || 'Application Fee'}</td>
                               <td className="py-3 px-4 text-right text-slate-700 font-medium">${applicationFee.toFixed(0)}</td>
                             </tr>
+                            
+                            {/* Placement Fee - exibir apenas para novos usuários */}
+                            {userProfile?.placement_fee_flow && (() => {
+                              const annualValue = scholarship.annual_value_with_scholarship ? Number(scholarship.annual_value_with_scholarship) : Number(scholarship.amount) || 0;
+                              const placementFeeAmount = scholarship.placement_fee_amount ? Number(scholarship.placement_fee_amount) : null;
+                              const placementFeeValue = getPlacementFee(annualValue, placementFeeAmount);
+                              return (
+                                <tr>
+                                  <td className="py-3 px-4 text-slate-600 font-medium">Placement Fee</td>
+                                  <td className="py-3 px-4 text-right text-blue-600 font-bold">{formatCurrency(placementFeeValue)}</td>
+                                </tr>
+                              );
+                            })()}
                             
                             {/* Per Credit */}
                             {scholarship.original_value_per_credit && (

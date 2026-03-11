@@ -23,6 +23,8 @@ import { useNavigate } from 'react-router-dom';
 import { useFavorites } from '../../hooks/useFavorites';
 import { useDynamicFees } from '../../hooks/useDynamicFees';
 import { supabase } from '../../lib/supabase';
+import { getPlacementFee } from '../../utils/placementFeeCalculator';
+import { formatCurrency } from '../../utils/currency';
 import { STRIPE_PRODUCTS } from '../../stripe-config';
 import ScholarshipDetailModal from '../../components/ScholarshipDetailModal';
 import { PreCheckoutModal } from '../../components/PreCheckoutModal';
@@ -1423,12 +1425,24 @@ const ScholarshipBrowser: React.FC<ScholarshipBrowserProps> = ({
                                   ${getApplicationFeeWithDependents(scholarship)}
                                 </span>
                               </div>
-                              <div className="text-xs text-slate-400 text-center mt-1">
+                               <div className="text-xs text-slate-400 text-center mt-1">
                                 {scholarship.application_fee_amount && Number(scholarship.application_fee_amount) !== 350 ?
                                   t('scholarshipsPage.scholarshipCard.customFee') :
                                   t('scholarshipsPage.scholarshipCard.standardFee')
                                 }
                               </div>
+                              {/* Placement Fee - exibir apenas para novos usuários */}
+                              {userProfile?.placement_fee_flow && (() => {
+                                const annualValue = scholarship.annual_value_with_scholarship ? Number(scholarship.annual_value_with_scholarship) : Number(scholarship.amount) || 0;
+                                const placementFeeAmount = scholarship.placement_fee_amount ? Number(scholarship.placement_fee_amount) : null;
+                                const placementFee = getPlacementFee(annualValue, placementFeeAmount);
+                                return (
+                                  <div className="flex items-center justify-between pt-1.5 border-t border-slate-200 mt-2">
+                                    <span className="text-xs text-slate-600 font-medium">Placement Fee</span>
+                                    <span className="text-sm font-bold text-blue-600">{formatCurrency(placementFee)}</span>
+                                  </div>
+                                );
+                              })()}
                             </div>
                           </div>
                         </div>
@@ -1660,6 +1674,18 @@ const ScholarshipBrowser: React.FC<ScholarshipBrowserProps> = ({
                             t('scholarshipsPage.scholarshipCard.standardFee')
                           }
                         </div>
+                        {/* Placement Fee - exibir apenas para novos usuários */}
+                        {userProfile?.placement_fee_flow && (() => {
+                          const annualValue = scholarship.annual_value_with_scholarship ? Number(scholarship.annual_value_with_scholarship) : Number(scholarship.amount) || 0;
+                          const placementFeeAmount = scholarship.placement_fee_amount ? Number(scholarship.placement_fee_amount) : null;
+                          const placementFee = getPlacementFee(annualValue, placementFeeAmount);
+                          return (
+                            <div className="flex items-center justify-between pt-1.5 border-t border-slate-200 mt-1">
+                              <span className="text-xs text-slate-500">Placement Fee</span>
+                              <span className="text-xs font-bold text-blue-600">{formatCurrency(placementFee)}</span>
+                            </div>
+                          );
+                        })()}
                       </div>
                     </div>
                   </div>
