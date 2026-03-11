@@ -2,6 +2,7 @@ import React, { useEffect, useState } from 'react';
 import { Link, useSearchParams } from 'react-router-dom';
 import { CheckCircle, ArrowRight } from 'lucide-react';
 import { useAuth } from '../hooks/useAuth';
+import PaymentStatusOverlay from '../components/PaymentStatusOverlay';
 
 const CheckoutSuccess: React.FC = () => {
   const [searchParams] = useSearchParams();
@@ -33,12 +34,12 @@ const CheckoutSuccess: React.FC = () => {
 
   if (loading) {
     return (
-      <div className="min-h-screen bg-slate-50 flex items-center justify-center">
-        <div className="flex flex-col items-center space-y-4">
-          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-[#05294E]"></div>
-          <p className="text-slate-600 font-medium">Verifying your payment...</p>
-        </div>
-      </div>
+      <PaymentStatusOverlay
+        status="loading"
+        title="Verifying your payment..."
+        message="Please wait while we confirm your transaction."
+        showPremiumLoading={true}
+      />
     );
   }
 
