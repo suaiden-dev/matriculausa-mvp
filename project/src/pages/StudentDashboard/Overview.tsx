@@ -120,7 +120,7 @@ const Overview: React.FC<OverviewProps> = ({
   }, [userProfile, applications, isExemptedByLegacy]);
 
   const hasSavedOnboardingStep = savedOnboardingStep !== null;
-  const isOnboardingStarted = hasSavedOnboardingStep && savedOnboardingStep !== 'welcome';
+  const isOnboardingStarted = hasSavedOnboardingStep && savedOnboardingStep !== 'selection_fee' && savedOnboardingStep !== 'welcome';
 
 
   const [visibleApplications, setVisibleApplications] = useState(5); // Mostrar 5 inicialmente
