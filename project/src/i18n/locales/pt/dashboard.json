@@ -534,6 +534,7 @@
         "details": "Detalhes",
         "chat": "Chat",
         "i20": "Taxa de Controle I-20",
+        "i20ControlFee": "Taxa de Controle I-20",
         "documents": "Documentos"
       },
       "welcome": {
@@ -676,6 +677,7 @@
       },
       "i20ControlFee": {
         "title": "Taxa de Controle I-20",
+        "subtitle": "Certificado oficial de elegibilidade estudantil",
         "description": "O I-20 é uma taxa essencial para visto de estudantes F-1, alem disso é uma taxa obrigatória para a liberação da sua carta de aceite pela faculdade. Esta taxa tem um prazo máximo de 10 dias para pagamento.",
         "deadlineInfo": "Prazo: 10 dias após pagamento da Taxa da Bolsa.",
         "timerInfo": "Tempo restante para pagamento:",
@@ -686,6 +688,11 @@
         "headerSubtitle": "Certificado oficial de elegibilidade estudantil",
         "valueLabel": "Valor",
         "whatIsThisFeeTitle": "O que é esta taxa?",
+        "paymentRequired": "Pagamento Necessário",
+        "securePayment": "Pagamento Seguro",
+        "feeType": "Tipo de Taxa",
+        "amount": "Valor da Taxa",
+        "payNow": "Pagar Agora",
         "contactUrgently": "Entre em contato urgentemente",
         "timeRemaining": "Tempo restante:",
         "dueDate": "Data de vencimento:",

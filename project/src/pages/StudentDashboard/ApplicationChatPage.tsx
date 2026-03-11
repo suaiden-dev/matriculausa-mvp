@@ -53,7 +53,6 @@ const ApplicationChatPage: React.FC = () => {
   const [applicationDetails, setApplicationDetails] = useState<any>(null);
   const [previewUrl, setPreviewUrl] = useState<string | null>(null);
   const [i20Countdown, setI20Countdown] = useState<string | null>(null);
-  const [i20CountdownValues, setI20CountdownValues] = useState<{ days: number; hours: number; minutes: number; seconds: number } | null>(null);
   const [scholarshipFeeDeadline, setScholarshipFeeDeadline] = useState<Date | null>(null);
   const [showI20ControlFeeModal, setShowI20ControlFeeModal] = useState(false);
   const [selectedPaymentMethod, setSelectedPaymentMethod] = useState<'stripe' | 'zelle' | 'pix' | 'parcelow' | null>(null);
@@ -153,9 +152,9 @@ const ApplicationChatPage: React.FC = () => {
       try {
         const { data, error } = await supabase
           .from('scholarship_applications')
-          .select('id, updated_at, is_scholarship_fee_paid')
+          .select('id, updated_at, is_scholarship_fee_paid, is_placement_fee_paid')
           .eq('student_id', userProfile.id)
-          .eq('is_scholarship_fee_paid', true)
+          .or('is_scholarship_fee_paid.eq.true,is_placement_fee_paid.eq.true')
           .order('updated_at', { ascending: false })
           .limit(1);
         
@@ -306,7 +305,6 @@ const ApplicationChatPage: React.FC = () => {
       const diff = scholarshipFeeDeadline.getTime() - now.getTime();
       if (diff <= 0) {
         setI20Countdown('Expired');
-        setI20CountdownValues(null);
         return;
       }
       const days = Math.floor(diff / (1000 * 60 * 60 * 24));
@@ -314,7 +312,6 @@ const ApplicationChatPage: React.FC = () => {
       const minutes = Math.floor((diff / (1000 * 60)) % 60);
       const seconds = Math.floor((diff / 1000) % 60);
       setI20Countdown(`${days}d ${hours}h ${minutes}m ${seconds}s`);
-      setI20CountdownValues({ days, hours, minutes, seconds });
     }
     updateCountdown();
     const interval = setInterval(updateCountdown, 1000);
@@ -323,7 +320,6 @@ const ApplicationChatPage: React.FC = () => {
 
   // Lógica de exibição do card
   const hasPaid = !!(userProfile && (userProfile as any).has_paid_i20_control_fee);
-  const dueDate = (userProfile && (userProfile as any).i20_control_fee_due_date) || null;
   const paymentDate = realI20PaymentDate || (userProfile && (userProfile as any).i20_paid_at) || null;
 
   // Função para iniciar o pagamento do I-20 Control Fee
@@ -607,8 +603,10 @@ const ApplicationChatPage: React.FC = () => {
   
   const tabIds: (typeof activeTab)[] = ['welcome', 'details'];
   
-  // I-20 agora aparece após scholarship fee ser paga
-  if (applicationDetails && applicationDetails.is_scholarship_fee_paid) {
+  // I-20 agora aparece após scholarship fee ou placement fee ser paga
+  const showI20TabInDashboard = applicationDetails && (applicationDetails.is_scholarship_fee_paid || applicationDetails.is_placement_fee_paid);
+  
+  if (showI20TabInDashboard) {
     tabItems.push({ title: t('studentDashboard.applicationChatPage.tabs.i20'), icon: FileCheck });
     tabIds.push('i20');
   }
@@ -653,7 +651,7 @@ const ApplicationChatPage: React.FC = () => {
       setSelectedTabIndex(newIndex);
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [activeTab, applicationDetails?.is_scholarship_fee_paid]);
+  }, [activeTab, applicationDetails?.is_scholarship_fee_paid, applicationDetails?.is_placement_fee_paid]);
 
   // Helper for Application Fee with dependents
   const getApplicationFeeWithDependents = (base: number): number => {
@@ -1308,7 +1306,7 @@ const ApplicationChatPage: React.FC = () => {
 
           </div>
         )}
-        {activeTab === 'i20' && applicationDetails && applicationDetails.is_scholarship_fee_paid && (
+        {activeTab === 'i20' && applicationDetails && (applicationDetails.is_scholarship_fee_paid || applicationDetails.is_placement_fee_paid) && (
           <div className="w-full max-w-5xl mx-auto">
             {!hasPaid ? (
               <div className="bg-white rounded-2xl shadow-sm border border-gray-200 overflow-hidden">
@@ -1320,8 +1318,10 @@ const ApplicationChatPage: React.FC = () => {
                         <Award className="w-6 h-6 text-blue-600" />
                       </div>
                       <div>
-                        <h2 className="text-xl font-semibold text-gray-900">{t('studentDashboard.applicationChatPage.i20ControlFee.headerTitle')}</h2>
-                        <p className="text-gray-600 text-sm">{t('studentDashboard.applicationChatPage.i20ControlFee.headerSubtitle')}</p>
+                        <h2 className="text-xl font-semibold text-gray-900">
+                          {t('studentDashboard.applicationChatPage.i20ControlFee.title')}
+                        </h2>
+                        <p className="text-gray-600 text-sm">{t('studentDashboard.applicationChatPage.i20ControlFee.subtitle')}</p>
                       </div>
                     </div>
                     <div className="text-right">
