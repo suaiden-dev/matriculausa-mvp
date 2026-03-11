@@ -86,15 +86,26 @@ const StudentDashboard: React.FC = () => {
   const [referralResult, setReferralResult] = useState<any>(null);
 
   const loadDashboardData = useCallback(async () => {
-    if (!user || !userProfile) return;
+    console.log('🔄 [Dashboard Index] loadDashboardData iniciado. Contexto:', { 
+      hasUser: !!user, 
+      hasUserProfile: !!userProfile, 
+      userId: user?.id,
+      hasLoadedData 
+    });
 
     try {
+      if (!user || !userProfile) {
+        console.warn('⚠️ [Dashboard Index] user ou userProfile nulos. Abortando carregamento.');
+        return;
+      }
+
       if (!hasLoadedData) {
+        console.log('⏳ [Dashboard Index] Definindo dashboardLoading = true');
         setDashboardLoading(true);
       }
       setDashboardError(null);
-      // Buscar bolsas reais do Supabase com informações da universidade
-      // NOVO: Buscar bolsas via função RPC protegida
+
+      console.log('📡 [Dashboard Index] Buscando bolsas e dados da sessão...');
       const { data: sessionData } = await supabase.auth.getSession();
       const userId = sessionData?.session?.user?.id;
       if (!userId) {
@@ -203,11 +214,13 @@ const StudentDashboard: React.FC = () => {
         console.log('🔍 [Dashboard Index] Formatted Profile State:', formattedProfile);
         setProfile(formattedProfile);
       }
+      console.log('✅ [Dashboard Index] Dados carregados com sucesso. hasLoadedData = true');
       setHasLoadedData(true);
     } catch (error) {
-      console.error('Error loading dashboard data:', error);
+      console.error('❌ [Dashboard Index] Erro ao carregar dados do dashboard:', error);
       setDashboardError('Error loading dashboard data');
     } finally {
+      console.log('🏁 [Dashboard Index] Finalizando carregamento. dashboardLoading = false');
       setDashboardLoading(false);
     }
   }, [user, userProfile, hasLoadedData]);
@@ -388,7 +401,6 @@ const StudentDashboard: React.FC = () => {
           element={
             <ScholarshipBrowser
               scholarships={scholarships}
-              applications={applications}
             />
           }
         />

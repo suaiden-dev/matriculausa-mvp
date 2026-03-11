@@ -20,6 +20,8 @@ import {
   getApplicationFeeWithDependents
 } from '../../../utils/scholarshipHelpers.tsx';
 import { is3800Scholarship, is3800ScholarshipBlocked } from '../../../utils/scholarshipDeadlineValidation';
+import { getPlacementFee } from '../../../utils/placementFeeCalculator';
+import { formatCurrency } from '../../../utils/currency';
 import { ScholarshipCountdownTimer } from '../../../components/ScholarshipCountdownTimer';
 import { ScholarshipExpiryWarning } from '../../../components/ScholarshipExpiryWarning';
 
@@ -222,6 +224,19 @@ export const ScholarshipCardExpandable: React.FC<ScholarshipCardExpandableProps>
                     </span>
                   </div>
                 </div>
+
+                {/* Placement Fee - exibir apenas para novos usuários */}
+                {userProfile?.placement_fee_flow && (() => {
+                  const annualValue = scholarship.annual_value_with_scholarship ? Number(scholarship.annual_value_with_scholarship) : Number(scholarship.amount) || 0;
+                  const placementFeeAmount = scholarship.placement_fee_amount ? Number(scholarship.placement_fee_amount) : null;
+                  const placementFeeValue = getPlacementFee(annualValue, placementFeeAmount);
+                  return (
+                    <div className="flex items-center justify-between pt-1 border-t border-slate-200 mt-1">
+                      <span className="text-xs text-slate-500">Placement Fee</span>
+                      <span className="text-xs font-bold text-blue-600">{formatCurrency(placementFeeValue)}</span>
+                    </div>
+                  );
+                })()}
               </div>
             </div>
 
