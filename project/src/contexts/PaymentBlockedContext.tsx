@@ -166,8 +166,10 @@ export const PaymentBlockedProvider: React.FC<{ children: React.ReactNode }> = (
         }
     }, [checkPayments]);
 
+    const value = React.useMemo(() => ({ ...state, refetch }), [state, refetch]);
+
     return (
-        <PaymentBlockedContext.Provider value={{ ...state, refetch }}>
+        <PaymentBlockedContext.Provider value={value}>
             {children}
         </PaymentBlockedContext.Provider>
     );

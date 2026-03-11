@@ -229,14 +229,19 @@ export const UniversityDocumentsStep: React.FC<StepProps> = ({ onBack }) => {
 
     try {
       if (selectedPaymentMethod === 'stripe') {
+        console.log('[Stripe] Iniciando checkout I-20...');
         const { data: { session } } = await supabase.auth.getSession();
         const token = session?.access_token;
+        console.log('[Stripe] Token presente:', !!token);
+        
         const supabaseUrl = import.meta.env.VITE_SUPABASE_URL;
         const apiUrl = `${supabaseUrl}/functions/v1/stripe-checkout-i20-control-fee`;
+        console.log('[Stripe] URL API:', apiUrl);
 
         const baseAmount = getFeeAmount('i20_control_fee');
         const promotionalCoupon = (window as any).__checkout_promotional_coupon || null;
         const finalAmountWithDiscount = (window as any).__checkout_final_amount || baseAmount;
+        console.log('[Stripe] Valor final:', finalAmountWithDiscount);
 
         const res = await fetch(apiUrl, {
           method: 'POST',
@@ -253,11 +258,27 @@ export const UniversityDocumentsStep: React.FC<StepProps> = ({ onBack }) => {
             promotional_coupon: promotionalCoupon,
           }),
         });
+
+        console.log('[Stripe] Status resposta:', res.status);
+
+        if (!res.ok) {
+          const errorText = await res.text();
+          console.error('[Stripe] Erro na API:', errorText);
+          setI20Error(`Erro API (${res.status}): ${errorText}`);
+          setI20Loading(false);
+          return;
+        }
+
         const data = await res.json();
+        console.log('[Stripe] Dados recebidos:', data);
+
         if (data.session_url) {
+          console.log('[Stripe] Redirecionando para:', data.session_url);
           window.location.href = data.session_url;
         } else {
+          console.error('[Stripe] session_url ausente');
           setI20Error('Erro ao criar sessão de pagamento.');
+          setI20Loading(false);
         }
       } else if (selectedPaymentMethod === 'pix') {
         const { data: { session } } = await supabase.auth.getSession();
@@ -290,11 +311,20 @@ export const UniversityDocumentsStep: React.FC<StepProps> = ({ onBack }) => {
             metadata,
           }),
         });
+
+        if (!res.ok) {
+          const errorText = await res.text();
+          setI20Error(`Erro API PIX (${res.status}): ${errorText}`);
+          setI20Loading(false);
+          return;
+        }
+
         const data = await res.json();
         if (data.session_url) {
           window.location.href = data.session_url;
         } else {
           setI20Error('Erro ao criar sessão de pagamento PIX.');
+          setI20Loading(false);
         }
       } else if (selectedPaymentMethod === 'zelle') {
         setShowZelleCheckout(true);
@@ -400,6 +430,19 @@ export const UniversityDocumentsStep: React.FC<StepProps> = ({ onBack }) => {
 
   // Remover useEffect do modal
 
+  const isScholarshipFeePaid = !!applicationDetails?.is_scholarship_fee_paid;
+  const isPlacementFeePaid = !!applicationDetails?.is_placement_fee_paid;
+  const isPlacementFlow = !!(userProfile as any)?.placement_fee_flow;
+  const showI20Tab = !isPlacementFlow && (isScholarshipFeePaid || isPlacementFeePaid);
+
+  // Redirecionamento de segurança caso a aba I-20 esteja desativada para o usuário
+  useEffect(() => {
+    if (activeTab === 'i20' && !showI20Tab && !loading) {
+      console.log('[UniversityDocumentsStep] 🛡️ Redirecionando: I-20 desativada para este usuário');
+      setActiveTab('welcome');
+    }
+  }, [activeTab, showI20Tab, loading]);
+
   if (loading) {
     return (
       <div className="flex flex-col items-center justify-center py-20 animate-pulse">
@@ -432,9 +475,6 @@ export const UniversityDocumentsStep: React.FC<StepProps> = ({ onBack }) => {
     );
   }
 
-  const isScholarshipFeePaid = !!applicationDetails?.is_scholarship_fee_paid;
-  const isPlacementFeePaid = !!applicationDetails?.is_placement_fee_paid;
-  const showI20Tab = isScholarshipFeePaid || isPlacementFeePaid;
 
   const TABS = [
     { title: t('studentDashboard.applicationChatPage.tabs.welcome'), icon: Home },
@@ -1149,15 +1189,15 @@ export const UniversityDocumentsStep: React.FC<StepProps> = ({ onBack }) => {
                 </div>
               ) : !(userProfile as any)?.has_paid_i20_control_fee ? (
                 <div className="bg-white rounded-[2.5rem] shadow-2xl border border-slate-300 overflow-hidden">
-                  <div className="bg-gradient-to-br from-blue-600 to-blue-800 p-8 md:p-12 relative overflow-hidden">
-                    <div className="absolute top-0 right-0 w-64 h-64 bg-white/10 rounded-full blur-3xl -mr-32 -mt-32 pointer-events-none" />
+                  <div className="p-8 md:p-12 relative overflow-hidden border-b border-slate-300">
+                    <div className="absolute top-0 right-0 w-64 h-64 bg-slate-500/5 rounded-full blur-[80px] -mr-32 -mt-32 pointer-events-none" />
                     <div className="relative z-10 flex flex-col md:flex-row items-center gap-8">
-                      <div className="w-20 h-20 bg-white/20 backdrop-blur-md rounded-3xl flex items-center justify-center border border-white/30 shadow-xl">
+                      <div className="w-20 h-20 bg-blue-600 rounded-3xl flex items-center justify-center shadow-xl shadow-blue-500/20 transition-transform hover:scale-105">
                         <CreditCard className="w-10 h-10 text-white" />
                       </div>
                       <div className="flex-1 text-center md:text-left space-y-2">
-                        <h3 className="text-2xl md:text-3xl font-black text-white uppercase tracking-tight">{t('studentDashboard.applicationChatPage.i20ControlFee.title')}</h3>
-                        <p className="text-blue-100 font-medium">{t('studentDashboard.applicationChatPage.i20ControlFee.subtitle')}</p>
+                        <h3 className="text-2xl md:text-3xl font-black text-gray-900 uppercase tracking-tight">{t('studentDashboard.applicationChatPage.i20ControlFee.title')}</h3>
+                        <p className="text-gray-600 font-medium">{t('studentDashboard.applicationChatPage.i20ControlFee.subtitle')}</p>
                       </div>
                     </div>
                   </div>

@@ -80,6 +80,12 @@ export interface StudentRecord {
 const StudentApplicationsView: React.FC = () => {
   const { t } = useTranslation();
   const queryClient = useQueryClient();
+  
+  // LOG DE RENDERIZAÇÃO
+  const renderCount = React.useRef(0);
+  // renderCount.current++;
+  // console.log(`[StudentApplicationsView] 🔄 Render #${renderCount.current} - Timestamp: ${new Date().toISOString()}`);
+
   const [searchTerm, setSearchTerm] = useState('');
   const [statusFilter, setStatusFilter] = useState('all');
   const [selectedStudent, setSelectedStudent] = useState<StudentRecord | null>(null);
@@ -416,6 +422,7 @@ const StudentApplicationsView: React.FC = () => {
   };
 
   useEffect(() => {
+    console.log('[StudentApplicationsView] 🚀 useEffect Mount - Carregando filtros');
     // Carregar filtros salvos primeiro
     loadFiltersFromStorage();
     // fetchStudents e fetchFilterData removidos - agora usando React Query hooks
@@ -454,7 +461,7 @@ const StudentApplicationsView: React.FC = () => {
     };
 
     loadPendingZelle();
-  }, [students]);
+  }, [students?.length]); // Usando length para estabilidade
 
   // Carregar estudantes que usaram cupom BLACK
   useEffect(() => {
@@ -486,10 +493,11 @@ const StudentApplicationsView: React.FC = () => {
     };
 
     loadBlackCouponUsers();
-  }, [students]);
+  }, [students?.length]); // Usando length para estabilidade
 
   // Salvar filtros no localStorage sempre que mudarem
   useEffect(() => {
+    console.log('[StudentApplicationsView] 💾 useEffect Filtros - Mudança detectada');
     saveFiltersToStorage();
   }, [
     searchTerm,

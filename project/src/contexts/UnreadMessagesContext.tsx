@@ -32,15 +32,15 @@ export const UnreadMessagesProvider: React.FC<UnreadMessagesProviderProps> = ({
     setUnreadCount(0);
   }, []);
 
+  const value = React.useMemo(() => ({ 
+    unreadCount, 
+    updateUnreadCount, 
+    decrementUnreadCount, 
+    resetUnreadCount 
+  }), [unreadCount, updateUnreadCount, decrementUnreadCount, resetUnreadCount]);
+
   return (
-    <UnreadMessagesContext.Provider 
-      value={{ 
-        unreadCount, 
-        updateUnreadCount, 
-        decrementUnreadCount, 
-        resetUnreadCount 
-      }}
-    >
+    <UnreadMessagesContext.Provider value={value}>
       {children}
     </UnreadMessagesContext.Provider>
   );

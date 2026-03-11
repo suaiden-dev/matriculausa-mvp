@@ -1,4 +1,4 @@
-import React, { createContext, useContext, useState, useEffect, useCallback, ReactNode } from 'react';
+import React, { createContext, useContext, useState, useEffect, useCallback, useMemo, ReactNode } from 'react';
 import { User as SupabaseUser } from '@supabase/supabase-js';
 import { supabase } from '../lib/supabase';
 import { StoredUtmAttribution } from '../types/utm';
@@ -813,7 +813,7 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
     };
   }, []);
 
-  const updateUserProfile = async (updates: Partial<UserProfile>) => {
+  const updateUserProfile = useCallback(async (updates: Partial<UserProfile>) => {
     if (!supabaseUser) {
       throw new Error("User must be logged in to update profile");
     }
@@ -830,7 +830,7 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
     if (data) {
       setUserProfile(data as UserProfile);
     }
-  };
+  }, [supabaseUser]);
 
   const getDefaultRole = (email: string): 'student' | 'school' | 'admin' | 'affiliate_admin' | 'seller' => {
     // Admin emails can be hardcoded or checked against a list
@@ -894,7 +894,7 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
 
 
 
-  const login = async (email: string, password: string) => {
+  const login = useCallback(async (email: string, password: string) => {
     const { error } = await supabase.auth.signInWithPassword({
       email,
       password,
@@ -905,7 +905,7 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
     }
     // O user_profile será criado automaticamente pelo listener de auth state change
     // Redirection will be handled by the auth state change listener
-  };
+  }, []);
 
   // Check if student has accepted terms
   const checkStudentTermsAcceptance = async (userId: string): Promise<boolean> => {
@@ -927,7 +927,7 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
     }
   };
 
-  const logout = async () => {
+  const logout = useCallback(async () => {
     try {
       setLoading(true);
 
@@ -982,10 +982,10 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
     } finally {
       setLoading(false);
     }
-  };
+  }, []);
 
   // Função para registrar usuário
-  const register = async (email: string, password: string, userData: { full_name: string; role: 'student' | 'school' | 'admin' | 'affiliate_admin' | 'seller';[key: string]: any }, options?: SignUpOptions): Promise<any> => {
+  const register = useCallback(async (email: string, password: string, userData: { full_name: string; role: 'student' | 'school' | 'admin' | 'affiliate_admin' | 'seller';[key: string]: any }, options?: SignUpOptions): Promise<any> => {
     console.log('🔍 [USEAUTH] Iniciando função register');
     console.log('🔍 [USEAUTH] userData recebido:', userData);
 
@@ -999,6 +999,12 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
     if (userData.phone) {
       localStorage.setItem('pending_phone', userData.phone);
     }
+    // Rest of the long register function...
+    // I will use a placeholder here for brevity in the tool call if possible, 
+    // but the tool requires exact character sequence. 
+    // Wait, I should probably not replace the WHOLE function content if I can help it, 
+    // but since I'm wrapping it in useCallback, I have to.
+    // Actually, I can just wrap it in useCallback and keep the content.
 
     // Filtrar valores undefined/null do userData
     // EXCEÇÃO: Manter dependents (mesmo se 0) e desired_scholarship_range quando há seller_referral_code ou affiliate_code
@@ -1283,7 +1289,7 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
     // Não é mais necessário enviar manualmente aqui
 
     return data;
-  };
+  }, []);
 
   // Função para trocar role do usuário (apenas para desenvolvimento/admin)
   const switchRole = (newRole: 'student' | 'school' | 'admin' | 'affiliate_admin' | 'seller') => {
@@ -1309,7 +1315,7 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
     }
   }, [supabaseUser]);
 
-  const value: AuthContextType = {
+  const value = useMemo(() => ({
     user,
     supabaseUser,
     userProfile,
@@ -1322,7 +1328,19 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
     updateUserProfile,
     refetchUserProfile,
     checkStudentTermsAcceptance,
-  };
+  }), [
+    user,
+    supabaseUser,
+    userProfile,
+    login,
+    logout,
+    register,
+    switchRole,
+    loading,
+    updateUserProfile,
+    refetchUserProfile,
+    checkStudentTermsAcceptance
+  ]);
 
   return (
     <AuthContext.Provider value={value}>
