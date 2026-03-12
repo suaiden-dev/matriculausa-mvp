@@ -24,6 +24,8 @@ import { useTranslation } from 'react-i18next';
 import { StepProps } from '../types';
 import { useCartStore } from '../../../stores/applicationStore';
 import { getN8nProxyUrl } from '../../../utils/storageProxy';
+import { getPlacementFee } from '../../../utils/placementFeeCalculator';
+import { formatCurrency } from '../../../utils/currency';
 import TruncatedText from '../../../components/TruncatedText';
 import ScholarshipDetailModal from '../../../components/ScholarshipDetailModal';
 
@@ -797,6 +799,21 @@ export const DocumentsUploadStep: React.FC<StepProps> = ({ onNext }) => {
                                      <span className="text-[10px] text-green-600 font-semibold ml-1">{t('studentOnboarding.documentsUpload.cards.perYear')}</span>
                                    </div>
                                  </div>
+
+                                 {/* Placement Fee - exibir apenas para novos usuários */}
+                                 {(userProfile as any)?.placement_fee_flow && (() => {
+                                   const annualValue = scholarship?.annual_value_with_scholarship ? Number(scholarship.annual_value_with_scholarship) : Number(scholarship?.amount) || 0;
+                                   const placementFeeAmount = scholarship?.placement_fee_amount ? Number(scholarship.placement_fee_amount) : null;
+                                   const placementFee = getPlacementFee(annualValue, placementFeeAmount);
+                                   return (
+                                     <div className="flex items-center justify-between pt-1.5 mt-1.5 border-t border-slate-200">
+                                       <span className="text-xs text-slate-500 font-medium">Placement Fee</span>
+                                       <span className="text-blue-600 font-bold text-sm">
+                                         {formatCurrency(placementFee)}
+                                       </span>
+                                     </div>
+                                   );
+                                 })()}
                                </div>
 
                                {/* Rejection Notes */}

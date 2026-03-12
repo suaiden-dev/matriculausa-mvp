@@ -18,6 +18,7 @@ import { useTranslation } from 'react-i18next';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../../hooks/useAuth';
 import { useStepByStepGuide } from '../../hooks/useStepByStepGuide';
+import { useCartStore } from '../../stores/applicationStore';
 import { supabase } from '../../lib/supabase';
 import StepByStepGuide from '../../components/OnboardingTour/StepByStepGuide';
 
@@ -86,6 +87,8 @@ const Overview: React.FC<OverviewProps> = ({
     let calculatedStep: string | null = 'selection_fee';
 
     if (userProfile) {
+      const { cart } = useCartStore.getState();
+      const hasCartItems = cart.length > 0;
       const hasAppsInSystem = applications.length > 0;
       const anyAppPaidOrApproved = applications.some(app =>
         app.is_application_fee_paid ||
@@ -95,14 +98,21 @@ const Overview: React.FC<OverviewProps> = ({
       const hasGlobalFeePaid = userProfile.is_application_fee_paid || !!userProfile.application_fee_paid_at || !!userProfile.scholarship_fee_paid_at || anyAppPaidOrApproved;
       const hasDocsGlobal = userProfile.documents_uploaded || !!userProfile.application_fee_paid_at || anyAppPaidOrApproved;
 
+      // Verificar Process Type (situação do visto)
+      const userProcessTypeKey = `studentProcessType_${userProfile.id}`;
+      const storedProcessType = typeof window !== 'undefined' ? (window.localStorage.getItem(userProcessTypeKey) || window.localStorage.getItem('studentProcessType')) : null;
+      const hasProcessType = (applications.length > 0 && !!applications[0].student_process_type) || (!!storedProcessType && ['initial', 'transfer', 'change_of_status'].includes(storedProcessType));
+
       if (userProfile.onboarding_completed) {
         calculatedStep = 'completed';
       } else if (!userProfile.has_paid_selection_process_fee) {
         calculatedStep = 'selection_fee';
       } else if (!userProfile.selection_survey_passed && !isExemptedByLegacy && !hasDocsGlobal && !hasGlobalFeePaid) {
         calculatedStep = 'selection_survey';
-      } else if (!userProfile.selected_scholarship_id && !hasAppsInSystem && !hasDocsGlobal && !hasGlobalFeePaid) {
+      } else if (!userProfile.selected_scholarship_id && !hasAppsInSystem && !hasCartItems && !hasDocsGlobal && !hasGlobalFeePaid) {
         calculatedStep = 'scholarship_selection';
+      } else if (!hasProcessType && !hasDocsGlobal && !hasGlobalFeePaid) {
+        calculatedStep = 'process_type';
       } else if (!hasDocsGlobal && userProfile.documents_status !== 'approved') {
         calculatedStep = 'documents_upload';
       } else if (!hasGlobalFeePaid) {
