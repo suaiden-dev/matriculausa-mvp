@@ -224,25 +224,63 @@
     "contentLockedMessage": "This content is locked until payment is completed"
   },
   "successPages": {
-    "placementFee": {
-      "verifying": "Verificando Placement Fee",
-      "pleaseWait": "Su pago está siendo procesado."
+    "selectionProcessFee": {
+      "title": "¡Pago de la Tasa del Proceso de Selección Realizado con Éxito!",
+      "description": "Su pago de {{amount}} ha sido procesado con éxito.",
+      "message": "Ahora tiene acceso a todas las becas y pode solicitar libremente.",
+      "button": "Ir a Becas",
+      "verifying": "Verificando su pago...",
+      "pleaseWait": "Por favor, espere un momento mientras confirmamos su transacción. Esto puede levar alguns instantes.",
+      "errorTitle": "Error en el Pago de la Tasa del Proceso de Selección",
+      "errorMessage": "Hubo un problema al procesar su pago.",
+      "errorRetry": "Intente nuevamente. Si el error persiste, entre en contacto con el soporte."
     },
     "scholarshipFee": {
-      "verifying": "Verificando Tarifa de Beca",
-      "pleaseWait": "Su pago está siendo procesado."
+      "title": "¡Pago de la Tasa de la Beca Realizado con Éxito!",
+      "description": "Su pago de {{amount}} ha sido procesado con éxito.",
+      "message": "Su solicitud continuará ahora hacia la siguiente etapa.",
+      "button": "Ver Detalles",
+      "verifying": "Verificando su pago...",
+      "pleaseWait": "Por favor, espere un momento mientras confirmamos su pago.",
+      "errorTitle": "Error en el Procesamiento del Pago",
+      "errorMessage": "Hubo un problema al procesar su pago.",
+      "errorRetry": "Intente nuevamente o entre en contacto con el soporte."
     },
     "applicationFee": {
-      "verifying": "Verificando Tarifa de Solicitud",
-      "pleaseWait": "Su pago está siendo procesado."
+      "title": "¡Pago de la Tasa de Matrícula Realizado con Éxito!",
+      "description": "Su pago de {{amount}} ha sido procesado con éxito.",
+      "message": "Su solicitud continuará ahora hacia la siguiente etapa.",
+      "button": "Ir a Mis Solicitudes",
+      "verifying": "Verificando Pago...",
+      "pleaseWait": "Por favor, espere un momento mientras confirmamos su transacción. Esto puede levar alguns instantes.",
+      "errorTitle": "Fallo en la Verificación",
+      "errorMessage": "Hubo un problema al verificar su pago. Entre en contacto con o suporte.",
+      "errorDetails": "Detalles del error:"
     },
-    "selectionProcessFee": {
-      "verifying": "Verificando Tarifa del Proceso de Selección",
-      "pleaseWait": "Su pago está siendo procesado."
+    "placementFee": {
+      "title": "¡Pago de la Placement Fee Realizado con Éxito!",
+      "description": "Su pago de {{amount}} ha sido procesado con éxito.",
+      "message": "Su solicitud está ahora confirmada.",
+      "button": "Continuar",
+      "verifying": "Verificando su pago...",
+      "pleaseWait": "Por favor, espere un momento mientras confirmamos su transacción. Esto puede levar alguns instantes.",
+      "errorTitle": "Error en el Procesamiento",
+      "errorMessage": "Hubo un problema ao processar su pago.",
+      "errorRetry": "Intente nuevamente o entre en contacto con o suporte."
+    },
+    "common": {
+      "verifying": "Verificando su pago...",
+      "pleaseWait": "Por favor, espere un momento mientras procesamos su transacción."
     },
     "i20ControlFee": {
-      "verifying": "Verificando Tarifa de Control I-20",
-      "pleaseWait": "Su pago está siendo procesado."
+      "title": "¡Pago de la Tasa de Control I-20 Realizado con Éxito!",
+      "message": "Su documento I-20 será procesado y enviado en breve.",
+      "button": "Volver a Mis Solicitudes",
+      "verifying": "Verificando Pago...",
+      "pleaseWait": "Por favor, espere un momento mientras confirmamos su pago.",
+      "errorTitle": "Error en el Pago de la Tasa de Control I-20",
+      "errorMessage": "Hubo un problema ao processar su pago.",
+      "errorRetry": "Intente nuevamente. Si el error persiste, entre en contacto con o suporte."
     }
   },
   "ssoCallback": {

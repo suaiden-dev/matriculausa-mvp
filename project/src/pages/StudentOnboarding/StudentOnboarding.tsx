@@ -16,7 +16,7 @@ import { SelectionSurveyStep } from './components/SelectionSurveyStep';
 import { IdentityVerificationStep } from './components/IdentityVerificationStep';
 import { OnboardingStep } from './types';
 import PaymentSuccessOverlay from '../../components/PaymentSuccessOverlay';
-import CustomLoading from '../../components/CustomLoading';
+
 import { useTranslation } from 'react-i18next';
 import LanguageSelector from '../../components/LanguageSelector';
 import { useSmartPollingNotifications } from '../../hooks/useSmartPollingNotifications';
@@ -28,7 +28,7 @@ const StudentOnboarding: React.FC = () => {
   const [searchParams, setSearchParams] = useSearchParams();
   const processingPaymentRef = React.useRef<string | null>(null);
   const { state, loading, goToStep } = useOnboardingProgress();
-  const { t } = useTranslation();
+  const { t } = useTranslation(['common', 'registration', 'payment', 'dashboard']);
   const [showPaymentAnimation, setShowPaymentAnimation] = useState(false);
   const [isVerifyingPayment, setIsVerifyingPayment] = useState(false);
   const [showNotif, setShowNotif] = useState(false);
@@ -183,8 +183,6 @@ const StudentOnboarding: React.FC = () => {
         setIsVerifyingPayment(true);
         setTimeout(() => {
           setIsVerifyingPayment(false);
-          setShowPaymentAnimation(true);
-
           // Limpar parâmetros da URL de forma reativa
           const newParams = new URLSearchParams(searchParams);
           newParams.delete('payment');
@@ -264,8 +262,6 @@ const StudentOnboarding: React.FC = () => {
 
             if (data.status === 'complete' || data.success) {
               setIsVerifyingPayment(false);
-              setShowPaymentAnimation(true);
-
               // Limpar parâmetros da URL de forma reativa
               const newParams = new URLSearchParams(searchParams);
               newParams.delete('payment');
@@ -367,7 +363,7 @@ const StudentOnboarding: React.FC = () => {
     { key: 'process_type', label: t('registration:studentOnboarding.stepper.steps.processType') },
     { key: 'documents_upload', label: t('registration:studentOnboarding.stepper.steps.documentsUpload') },
     { key: 'payment', label: t('registration:studentOnboarding.stepper.steps.payment') },
-    { key: feeStep, label: feeStepLabel },
+    { key: feeStep, label: feeStepLabel || '' },
   ];
 
   const currentIdx = allSteps.indexOf(state.currentStep);
@@ -410,43 +406,33 @@ const StudentOnboarding: React.FC = () => {
     }
   };
 
-  if (showPaymentAnimation) {
+  if (showPaymentAnimation || isVerifyingPayment) {
     const stepParam = searchParams.get('step');
-    let titleKey = 'selectionFeeStep.paid.title';
-    if (stepParam === 'payment') titleKey = 'studentDashboard.progressBar.applicationFee';
-    else if (stepParam === 'scholarship_fee') titleKey = 'studentDashboard.progressBar.scholarshipFee';
-    else if (stepParam === 'placement_fee') titleKey = 'studentDashboard.progressBar.placementFee';
-    else if (stepParam === 'my_applications') titleKey = 'studentDashboard.progressBar.i20ControlFee';
+    
+    // Mapeamento para o título final (sucesso) - Usamos os nomes das taxas do dashboard
+    let titleKey = 'dashboard:studentDashboard.progressBar.selectionProcessFee';
+    if (stepParam === 'payment') titleKey = 'dashboard:studentDashboard.progressBar.applicationFee';
+    else if (stepParam === 'scholarship_fee') titleKey = 'dashboard:studentDashboard.progressBar.scholarshipFee';
+    else if (stepParam === 'placement_fee') titleKey = 'dashboard:studentDashboard.progressBar.placementFee';
+    else if (stepParam === 'my_applications') titleKey = 'dashboard:studentDashboard.progressBar.i20ControlFee';
+
+    // Mapeamento para as chaves de verificação em successPages.[namespace] do common.json
+    let successNS = 'selectionProcessFee';
+    if (stepParam === 'payment') successNS = 'applicationFee';
+    else if (stepParam === 'scholarship_fee') successNS = 'scholarshipFee';
+    else if (stepParam === 'placement_fee') successNS = 'placementFee';
+    else if (stepParam === 'my_applications') successNS = 'i20ControlFee';
 
     return (
       <PaymentSuccessOverlay
         isSuccess={true}
-        title={t(`${titleKey}`)}
-        message={t('selectionFeeStep.paid.paidSubtitle')}
+        title={isVerifyingPayment ? t(`common:successPages.${successNS}.verifying`) : t(`${titleKey}`)}
+        message={isVerifyingPayment ? t(`common:successPages.${successNS}.pleaseWait`) : t('payment:selectionFeeStep.paid.paidSubtitle')}
       />
     );
   }
 
-  if (isVerifyingPayment) {
-    const stepParam = searchParams.get('step');
-    let translationKey = 'selectionProcessFee';
-    if (stepParam === 'payment') translationKey = 'applicationFee';
-    else if (stepParam === 'scholarship_fee') translationKey = 'scholarshipFee';
-    else if (stepParam === 'placement_fee') translationKey = 'placementFee';
-    else if (stepParam === 'my_applications') translationKey = 'i20ControlFee';
 
-    return (
-      <div className="flex-1 flex items-center justify-center bg-white/20 backdrop-blur-xl min-h-screen">
-        <div className="flex flex-col items-center">
-          <CustomLoading
-            color="green"
-            title={t(`successPages.${translationKey}.verifying`)}
-            message={t(`successPages.${translationKey}.pleaseWait`)}
-          />
-        </div>
-      </div>
-    );
-  }
 
   return (
     <div className="flex-1 w-full flex flex-col relative">
@@ -464,10 +450,10 @@ const StudentOnboarding: React.FC = () => {
           <div className="mb-4 sm:mb-6 flex justify-between items-center">
             <button
               onClick={handleBack}
-              className="flex items-center space-x-2 text-gray-600 hover:text-gray-900 transition-colors bg-white hover:bg-gray-50 px-4 py-2 rounded-xl shadow-sm border border-gray-100"
+               className="flex items-center space-x-2 text-gray-600 hover:text-gray-900 transition-colors bg-white hover:bg-gray-50 px-4 py-2 rounded-xl shadow-sm border border-gray-100"
             >
               <ArrowLeft className="w-5 h-5" />
-              <span className="font-medium">Voltar</span>
+              <span className="font-medium">{t('common:common.back')}</span>
             </button>
 
             <div className="flex items-center gap-3">
@@ -496,16 +482,16 @@ const StudentOnboarding: React.FC = () => {
                 {showNotif && (
                   <div className="hidden md:block absolute right-0 top-full mt-2 w-80 bg-white rounded-xl shadow-xl border border-slate-300 py-2 z-[100]">
                     <div className="px-4 pb-2 border-b border-slate-300 font-semibold text-slate-900 flex items-center justify-between">
-                      <span className="text-sm">Notificações</span>
+                      <span className="text-sm">{t('dashboard:studentDashboard.notifications.title')}</span>
                       <div className="flex items-center gap-2 text-[10px]">
-                        <button onClick={() => markAllAsRead()} className="text-blue-600 hover:underline">Marcar todas</button>
+                        <button onClick={() => markAllAsRead()} className="text-blue-600 hover:underline">{t('dashboard:studentDashboard.notifications.markAllAsRead')}</button>
                         <span className="text-slate-300">|</span>
-                        <button onClick={() => clearAll()} className="text-red-600 hover:underline">Limpar</button>
+                        <button onClick={() => clearAll()} className="text-red-600 hover:underline">{t('dashboard:studentDashboard.notifications.clearAll')}</button>
                       </div>
                     </div>
                     <div className="max-h-80 overflow-y-auto">
                       {notifications.length === 0 ? (
-                        <div className="px-4 py-8 text-sm text-slate-500 text-center">Nenhuma notificação</div>
+                        <div className="px-4 py-8 text-sm text-slate-500 text-center">{t('dashboard:studentDashboard.notifications.noNotifications')}</div>
                       ) : (
                         notifications.map((n) => (
                           <div key={n.id} className={`px-4 py-3 hover:bg-slate-50 cursor-pointer border-b border-slate-50 last:border-0 ${!n.read_at ? 'bg-blue-50/30' : ''}`} onClick={() => openNotification(n)}>
@@ -531,7 +517,7 @@ const StudentOnboarding: React.FC = () => {
                 onClick={() => navigate('/student/dashboard')}
                 className="flex items-center space-x-2 text-gray-600 hover:text-gray-900 transition-colors bg-white hover:bg-gray-50 px-4 py-2 rounded-xl shadow-sm border border-gray-100 h-[42px]"
               >
-                <span className="font-medium">Dashboard</span>
+                <span className="font-medium">{t('common:nav.dashboard')}</span>
               </button>
             </div>
           </div>

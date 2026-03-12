@@ -462,34 +462,72 @@
     }
   },
   "paymentChoice": {
-    "title": "Choose Payment Method",
-    "subtitle": "Select how you would like to pay your {{feeType}} fee",
-    "manualVerification": "Processing may take up to 48 hours",
-    "important": "Important",
-    "amount": "Amount",
-    "zelleUploadNote": "After making the Zelle payment, you'll need to upload a screenshot of the confirmation showing the confirmation code, date, amount, and recipient.",
+    "title": "Elija o Método de Pago",
+    "subtitle": "Seleccione como deseas pagar la tasa de {{feeType}}",
+    "manualVerification": "El procesamiento puede tardar hasta 48 horas",
+    "important": "Importante",
+    "amount": "Monto",
+    "zelleUploadNote": "Depois de realizar o pago vía Zelle, será necesario enviar un capture da confirmación mostrando o código, data, monto e destinatario.",
     "loading": {
-      "processing": "Processing..."
+      "processing": "Procesando..."
     },
     "feeTypes": {
-      "application_fee": "application",
-      "enrollment_fee": "enrollment",
-      "scholarship_fee": "scholarship",
-      "selection_process": "selection process"
+      "application_fee": "matrícula",
+      "enrollment_fee": "matrícula",
+      "scholarship_fee": "beca",
+      "selection_process": "proceso de selección"
     },
     "methods": {
       "stripe": {
-        "title": "Credit Card",
-        "description": "Pay securely with credit or debit card via Stripe"
+        "title": "Tarjeta de Crédito",
+        "description": "Pague con seguridad con tarjeta de crédito o débito vía Stripe"
       },
       "pix": {
         "title": "PIX",
-        "description": "Instant payment system for Brazilian users"
+        "description": "Sistema de pago instantáneo brasileño"
       },
       "zelle": {
         "title": "Zelle",
-        "description": "Pay via Zelle transfer"
+        "description": "Pague vía transferencia Zelle"
       }
     }
+  },
+  "scholarshipFeeStep": {
+    "loading": "Cargando información...",
+    "title": "Tasa de la Beca",
+    "subtitle": "Esta tasa es el compromiso final con la beca o universidad seleccionada.",
+    "completedTitle": "Etapa Completada",
+    "completedSubtitle": "Su tasa de beca ha sido procesada con éxito. Esta etapa está completa.",
+    "continue": "Continuar",
+    "securePayment": "Pago Seguro",
+    "confirmed": "Pago Confirmado",
+    "confirmedSubtitle": "Su tasa de beca ha sido confirmada.",
+    "noApplications": "Ninguna solicitud lista",
+    "noApplicationsMessage": "Debe completar las etapas anteriores antes de pagar la tasa de la beca.",
+    "back": "Volver",
+    "zellePendingTitle": "Pago Zelle en Análisis",
+    "zellePendingMessage": "Ya ha iniciado un pago vía Zelle. Espere la confirmación antes de usar otro método. Esto puede tardar hasta 48 horas."
+  },
+  "placementFeeStep": {
+    "loading": "Cargando información...",
+    "title": "Placement Fee",
+    "subtitle": "Tasa de colocación calculada en base al valor anual de su beca seleccionada.",
+    "completedTitle": "Etapa Completada",
+    "completedSubtitle": "Su Placement Fee ha sido procesada con éxito.",
+    "continue": "Continuar",
+    "securePayment": "Pago Seguro",
+    "confirmed": "Pago Confirmado",
+    "confirmedSubtitle": "Su Placement Fee ha sido confirmada.",
+    "noApplications": "Ninguna solicitud lista",
+    "noApplicationsMessage": "Debe completar las etapas anteriores antes de pagar la Placement Fee.",
+    "back": "Volver",
+    "zellePendingTitle": "Pago Zelle en Análisis",
+    "zellePendingMessage": "Ya ha iniciado un pago vía Zelle. Espere la confirmación antes de usar otro método. Esto puede tardar hasta 48 horas.",
+    "annualTuition": "Valor anual de la beca: {{amount}}",
+    "cpfRequiredTitle": "Informe su CPF para Parcelow",
+    "cpfPlaceholder": "000.000.000-00",
+    "cpfError": "Error al guardar CPF. Inténtelo de nuevo.",
+    "cpfInvalid": "El CPF debe tener 11 dígitos",
+    "goToPayment": "Continuar al Pago"
   }
 }

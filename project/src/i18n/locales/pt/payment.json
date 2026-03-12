@@ -462,5 +462,43 @@
         "description": "Pague com cartão brasileiro em até 21x"
       }
     }
+  },
+  "scholarshipFeeStep": {
+    "loading": "Carregando informações...",
+    "title": "Taxa da Bolsa",
+    "subtitle": "Esta taxa é o compromisso final com a bolsa ou faculdade selecionada.",
+    "completedTitle": "Etapa Concluída",
+    "completedSubtitle": "Sua taxa de bolsa foi processada com sucesso. Esta etapa está completa.",
+    "continue": "Continuar",
+    "securePayment": "Pagamento Seguro",
+    "confirmed": "Pagamento Confirmado",
+    "confirmedSubtitle": "Sua taxa de bolsa foi confirmada.",
+    "noApplications": "Nenhuma aplicação pronta",
+    "noApplicationsMessage": "Você precisa completar as etapas anteriores antes de pagar a taxa da bolsa.",
+    "back": "Voltar",
+    "zellePendingTitle": "Pagamento Zelle em Análise",
+    "zellePendingMessage": "Você já iniciou um pagamento via Zelle. Aguarde a confirmação antes de usar outro método. Isso pode levar até 48 horas."
+  },
+  "placementFeeStep": {
+    "loading": "Carregando informações...",
+    "title": "Placement Fee",
+    "subtitle": "Taxa de colocação calculada com base no valor anual da sua bolsa selecionada.",
+    "completedTitle": "Etapa Concluída",
+    "completedSubtitle": "Sua Placement Fee foi processada com sucesso.",
+    "continue": "Continuar",
+    "securePayment": "Pagamento Seguro",
+    "confirmed": "Pagamento Confirmado",
+    "confirmedSubtitle": "Sua Placement Fee foi confirmada.",
+    "noApplications": "Nenhuma aplicação pronta",
+    "noApplicationsMessage": "Você precisa completar as etapas anteriores antes de pagar a Placement Fee.",
+    "back": "Voltar",
+    "zellePendingTitle": "Pagamento Zelle em Análise",
+    "zellePendingMessage": "Você já iniciou um pagamento via Zelle. Aguarde a confirmação antes de usar outro método. Isso pode levar até 48 horas.",
+    "annualTuition": "Valor anual da bolsa: {{amount}}",
+    "cpfRequiredTitle": "Informe seu CPF para Parcelow",
+    "cpfPlaceholder": "000.000.000-00",
+    "cpfError": "Erro ao salvar CPF. Tente novamente.",
+    "cpfInvalid": "CPF deve ter 11 dígitos",
+    "goToPayment": "Continuar para Pagamento"
   }
 }

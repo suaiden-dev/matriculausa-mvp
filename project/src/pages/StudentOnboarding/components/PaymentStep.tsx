@@ -89,7 +89,7 @@ export const PaymentStep: React.FC<StepProps> = ({ onNext, onBack }) => {
   const { userProfile } = useAuth();
   const { getFeeAmount, formatFeeAmount, userDependents } = useFeeConfig(userProfile?.user_id);
   const { isBlocked, pendingPayment, refetch: refetchPaymentStatus } = usePaymentBlocked();
-  const { t } = useTranslation();
+  const { t } = useTranslation(['payment', 'common']);
 
   const [applications, setApplications] = useState<ApplicationWithScholarship[]>([]);
   const [loading, setLoading] = useState(true);

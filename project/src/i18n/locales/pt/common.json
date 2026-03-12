@@ -224,10 +224,6 @@
     "contentLockedMessage": "Este conteúdo está bloqueado até que o pagamento seja concluído"
   },
   "successPages": {
-    "placementFee": {
-      "verifying": "Verificando Placement Fee",
-      "pleaseWait": "O seu pagamento está sendo processado."
-    },
     "pixPayment": {
       "processing": "Processando Pagamento PIX",
       "message": "Seu pagamento PIX foi recebido e está sendo processado. Você será redirecionado automaticamente em alguns segundos.",
@@ -267,10 +263,23 @@
       "errorMessage": "Houve um problema ao verificar seu pagamento. Entre em contato com o suporte.",
       "errorDetails": "Detalhes do erro:"
     },
+    "placementFee": {
+      "title": "Pagamento da Placement Fee Realizado com Sucesso!",
+      "description": "Seu pagamento de {{amount}} foi processado com sucesso.",
+      "message": "Sua aplicação está agora confirmada.",
+      "button": "Continuar",
+      "verifying": "Verificando seu pagamento...",
+      "pleaseWait": "Aguarde enquanto confirmamos sua transação. Isso pode levar alguns instantes.",
+      "errorTitle": "Erro no Processamento",
+      "errorMessage": "Houve um problema ao processar seu pagamento.",
+      "errorRetry": "Tente novamente ou entre em contato com o suporte."
+    },
     "common": {
       "redirecting": "Redirecionando em instantes...",
       "paymentProcessedAmount": "Seu pagamento foi processado com sucesso!",
-      "paymentError": "Houve um problema ao processar seu pagamento."
+      "paymentError": "Houve um problema ao processar seu pagamento!",
+      "verifying": "Verificando seu pagamento...",
+      "pleaseWait": "Aguarde enquanto confirmamos sua transação. Isso pode levar alguns instantes."
     },
     "i20ControlFee": {
       "title": "Pagamento da Taxa de Controle I-20 Realizado com Sucesso!",

@@ -90,7 +90,7 @@ import { usePaymentBlocked } from '../../../hooks/usePaymentBlocked';
 
 export const ScholarshipFeeStep: React.FC<StepProps> = ({ onNext, onBack }) => {
   const { userProfile } = useAuth();
-  const { t } = useTranslation();
+  const { t } = useTranslation(['payment', 'common']);
   const { getFeeAmount, formatFeeAmount } = useFeeConfig(userProfile?.user_id);
   const { isBlocked, pendingPayment, refetch: refetchPaymentStatus } = usePaymentBlocked();
 
@@ -188,7 +188,7 @@ export const ScholarshipFeeStep: React.FC<StepProps> = ({ onNext, onBack }) => {
   const saveCpfAndCheckout = async () => {
     const cleaned = inlineCpf.replace(/\D/g, '');
     if (cleaned.length !== 11) {
-      setCpfError('CPF inválido. Digite os 11 dígitos.');
+      setCpfError(t('payment:scholarshipFeeStep.cpfInvalid') || 'CPF inválido');
       return;
     }
     if (!pendingParcelowApp) return;
@@ -211,7 +211,7 @@ export const ScholarshipFeeStep: React.FC<StepProps> = ({ onNext, onBack }) => {
       // Chamar checkout normalmente agora que CPF está salvo (pulando a checagem no estado local)
       processCheckout(pendingParcelowApp, 'parcelow', true);
     } catch (err: any) {
-      setCpfError('Erro ao salvar CPF. Tente novamente.');
+      setCpfError(t('payment:scholarshipFeeStep.cpfError') || 'Erro ao salvar CPF');
       console.error('[ScholarshipFeeStep] Erro ao salvar CPF inline:', err);
     } finally {
       setSavingCpf(false);
@@ -309,7 +309,7 @@ export const ScholarshipFeeStep: React.FC<StepProps> = ({ onNext, onBack }) => {
     return (
       <div className="flex flex-col items-center justify-center py-20 min-h-[400px]">
         <RefreshCw className="w-12 h-12 text-blue-500 animate-spin mb-6" />
-        <p className="text-white/60 font-bold uppercase tracking-widest text-sm">Carregando informações...</p>
+        <p className="text-white/60 font-bold uppercase tracking-widest text-sm">{t('payment:scholarshipFeeStep.loading')}</p>
       </div>
     );
   }
@@ -319,7 +319,7 @@ export const ScholarshipFeeStep: React.FC<StepProps> = ({ onNext, onBack }) => {
     return (
       <div className="space-y-10 pb-12 max-w-4xl mx-auto px-4">
         <div className="text-center md:text-left space-y-4">
-          <h2 className="text-3xl md:text-5xl font-black text-slate-900 uppercase tracking-tighter leading-none">Taxa da Bolsa</h2>
+          <h2 className="text-3xl md:text-5xl font-black text-slate-900 uppercase tracking-tighter leading-none">{t('scholarshipFeeStep.title')}</h2>
 
         </div>
 
@@ -330,13 +330,13 @@ export const ScholarshipFeeStep: React.FC<StepProps> = ({ onNext, onBack }) => {
             <div className="w-20 h-20 bg-emerald-500/20 rounded-full flex items-center justify-center mx-auto mb-6 border border-emerald-500/30">
               <CheckCircle className="w-12 h-12 text-emerald-400" />
             </div>
-            <h3 className="text-3xl font-black text-gray-900 mb-3 uppercase tracking-tight">Etapa Concluída</h3>
-            <p className="text-gray-500 mb-8 font-medium">Sua taxa de bolsa foi processada com sucesso. Esta etapa está completa.</p>
+            <h3 className="text-3xl font-black text-gray-900 mb-3 uppercase tracking-tight">{t('payment:scholarshipFeeStep.completedTitle')}</h3>
+            <p className="text-gray-500 mb-8 font-medium">{t('payment:scholarshipFeeStep.completedSubtitle')}</p>
             <button
               onClick={onNext}
               className="w-full max-w-xs bg-blue-600 text-white py-4 px-8 rounded-xl hover:bg-blue-700 transition-all font-bold uppercase tracking-widest shadow-lg shadow-blue-500/20 hover:scale-105 active:scale-95 mx-auto"
             >
-              Continuar
+              {t('payment:scholarshipFeeStep.continue')}
             </button>
           </div>
         </div>
@@ -350,13 +350,13 @@ export const ScholarshipFeeStep: React.FC<StepProps> = ({ onNext, onBack }) => {
         <div className="text-center md:text-left space-y-4">
           <div className="inline-flex items-center bg-blue-500/10 border border-blue-500/20 px-4 py-2 rounded-full mb-2">
             <Shield className="w-4 h-4 text-blue-600 mr-2" />
-            <span className="text-[10px] font-black text-blue-600 uppercase tracking-widest">Pagamento Seguro</span>
+            <span className="text-[10px] font-black text-blue-600 uppercase tracking-widest">{t('payment:scholarshipFeeStep.securePayment')}</span>
           </div>
           <h2 className="text-4xl md:text-6xl font-black text-slate-900 uppercase tracking-tighter leading-none">
-            Taxa da Bolsa
+            {t('payment:scholarshipFeeStep.title')}
           </h2>
           <p className="text-lg md:text-xl text-slate-600 font-medium max-w-2xl">
-            Esta taxa é o compromisso final com a bolsa ou faculdade selecionada.
+            {t('payment:scholarshipFeeStep.subtitle')}
           </p>
         </div>
       </div>
@@ -450,9 +450,9 @@ export const ScholarshipFeeStep: React.FC<StepProps> = ({ onNext, onBack }) => {
                                 <Clock className="w-5 h-5 text-blue-600 animate-pulse" />
                               </div>
                               <div>
-                                <p className="text-sm font-black text-blue-700 uppercase tracking-tight">Pagamento Zelle em Análise</p>
+                                <p className="text-sm font-black text-blue-700 uppercase tracking-tight">{t('scholarshipFeeStep.zellePendingTitle')}</p>
                                 <p className="text-xs text-blue-600/80 font-medium mt-0.5 leading-relaxed">
-                                  Você já iniciou um pagamento via Zelle. Aguarde a confirmação antes de usar outro método. Isso pode levar até 48 horas.
+                                  {t('scholarshipFeeStep.zellePendingMessage')}
                                 </p>
                               </div>
                             </div>
@@ -488,8 +488,8 @@ export const ScholarshipFeeStep: React.FC<StepProps> = ({ onNext, onBack }) => {
                                   <StripeIcon className="w-9 h-9" />
                                 </div>
                                 <div>
-                                  <div className="font-black text-slate-900 text-base uppercase tracking-tight">Cartão de Crédito</div>
-                                  <div className="text-[10px] font-bold text-slate-400 mt-0.5 sm:mt-1 uppercase tracking-wide leading-tight">* Podem incluir taxas de processamento</div>
+                                  <div className="font-black text-slate-900 text-base uppercase tracking-tight">{t('paymentStep.creditCard')}</div>
+                                  <div className="text-[10px] font-bold text-slate-400 mt-0.5 sm:mt-1 uppercase tracking-wide leading-tight">{t('paymentStep.creditCardFees')}</div>
                                 </div>
                               </div>
                               <div className="text-right">
@@ -516,7 +516,7 @@ export const ScholarshipFeeStep: React.FC<StepProps> = ({ onNext, onBack }) => {
                                 </div>
                                 <div>
                                   <div className="font-black text-slate-900 text-base uppercase tracking-tight">PIX</div>
-                                  <div className="text-[10px] font-bold text-slate-400 mt-0.5 sm:mt-1 uppercase tracking-wide leading-tight">* Podem incluir taxas de processamento</div>
+                                  <div className="text-[10px] font-bold text-slate-400 mt-0.5 sm:mt-1 uppercase tracking-wide leading-tight">{t('paymentStep.pixFees')}</div>
                                 </div>
                               </div>
                               <div className="text-right">
@@ -544,14 +544,14 @@ export const ScholarshipFeeStep: React.FC<StepProps> = ({ onNext, onBack }) => {
                                   </div>
                                   <div>
                                     <div className="font-black text-slate-900 text-base uppercase tracking-tight">Parcelow</div>
-                                    <div className="text-[10px] font-bold text-slate-400 mt-0.5 sm:mt-1 uppercase tracking-wide leading-tight">* Podem incluir taxas de operadora e processamento da plataforma</div>
+                                    <div className="text-[10px] font-bold text-slate-400 mt-0.5 sm:mt-1 uppercase tracking-wide leading-tight">{t('paymentStep.parcelowFees')}</div>
                                   </div>
                                 </div>
                                 <div className="text-right flex flex-col items-end">
                                   <div className="text-slate-900 text-xl font-black uppercase tracking-tight">
                                     {formatFeeAmount(cardAmount)}
                                   </div>
-                                  <span className="text-[10px] font-bold text-slate-900 mt-1 block uppercase tracking-widest leading-tight">Até 12x no cartão</span>
+                                  <span className="text-[10px] font-bold text-slate-900 mt-1 block uppercase tracking-widest leading-tight">{t('paymentStep.parcelowInstallments')}</span>
                                 </div>
                                 {isProcessingCheckout === `${app.id}_parcelow` && (
                                   <div className="absolute inset-0 bg-white/80 backdrop-blur-sm rounded-[2rem] flex items-center justify-center z-10">
@@ -567,7 +567,7 @@ export const ScholarshipFeeStep: React.FC<StepProps> = ({ onNext, onBack }) => {
                                     <div className="flex-initial sm:w-[300px]">
                                       <p className="text-[11px] font-black text-blue-700 uppercase tracking-widest mb-2 flex items-center gap-2">
                                         <Shield className="w-3 h-3" />
-                                        Verificação Obrigatória Parcelow
+                                        {t('paymentStep.parcelowCpfTitle')}
                                       </p>
                                       <div className="relative">
                                         <input
@@ -577,7 +577,7 @@ export const ScholarshipFeeStep: React.FC<StepProps> = ({ onNext, onBack }) => {
                                             setInlineCpf(formatCpf(e.target.value));
                                             setCpfError(null);
                                           }}
-                                          placeholder="Digite seu CPF (000.000.000-00)"
+                                          placeholder={t('paymentStep.parcelowCpfPlaceholder')}
                                           maxLength={14}
                                           className="w-full px-4 py-3 rounded-xl border border-blue-200 text-sm font-bold text-gray-900 focus:outline-none focus:ring-2 focus:ring-blue-500 bg-white transition-all shadow-sm"
                                         />
@@ -588,7 +588,7 @@ export const ScholarshipFeeStep: React.FC<StepProps> = ({ onNext, onBack }) => {
                                       disabled={savingCpf || inlineCpf.replace(/\D/g, '').length !== 11}
                                       className="sm:mt-6 px-8 py-3 rounded-xl bg-blue-600 text-white text-sm font-black hover:bg-blue-700 transition-all disabled:opacity-50 disabled:cursor-not-allowed whitespace-nowrap flex items-center justify-center gap-2 shadow-lg shadow-blue-500/25 active:scale-95"
                                     >
-                                      {savingCpf ? <Loader2 className="w-4 h-4 animate-spin" /> : 'Ir ao pagamento'}
+                                      {savingCpf ? <Loader2 className="w-4 h-4 animate-spin" /> : t('paymentStep.goToPayment')}
                                     </button>
                                   </div>
                                   {cpfError && (
@@ -619,7 +619,7 @@ export const ScholarshipFeeStep: React.FC<StepProps> = ({ onNext, onBack }) => {
                                     <div className="font-black text-slate-900 text-base uppercase tracking-tight">Zelle</div>
                                     <div className="text-[10px] font-bold text-slate-500 mt-0.5 sm:mt-1 uppercase tracking-wide leading-tight flex items-center gap-1">
                                       <AlertCircle className="w-3 h-3" />
-                                      Processamento pode levar até 48 horas
+                                      {t('paymentStep.zelleProcessingTime')}
                                     </div>
                                   </div>
                                 </div>
@@ -628,7 +628,7 @@ export const ScholarshipFeeStep: React.FC<StepProps> = ({ onNext, onBack }) => {
                                     <div className="text-slate-900 text-xl font-black uppercase tracking-tight">
                                       {formatFeeAmount(baseAmount)}
                                     </div>
-                                    <span className="text-[10px] font-bold text-slate-900 mt-1 block uppercase tracking-widest">Sem Taxas</span>
+                                    <span className="text-[10px] font-bold text-slate-900 mt-1 block uppercase tracking-widest">{t('paymentStep.zelleNoFees')}</span>
                                   </div>
                                 </div>
                               </button>
@@ -663,8 +663,8 @@ export const ScholarshipFeeStep: React.FC<StepProps> = ({ onNext, onBack }) => {
                           <CheckCircle className="w-6 h-6 text-emerald-600" />
                         </div>
                         <div>
-                          <div className="text-emerald-700 font-black uppercase tracking-widest text-sm">Pagamento Confirmado</div>
-                          <p className="text-emerald-600/80 text-xs font-medium uppercase tracking-tight mt-0.5">Sua taxa de bolsa foi confirmada.</p>
+                          <div className="text-emerald-700 font-black uppercase tracking-widest text-sm">{t('scholarshipFeeStep.confirmed')}</div>
+                          <p className="text-emerald-600/80 text-xs font-medium uppercase tracking-tight mt-0.5">{t('scholarshipFeeStep.confirmedSubtitle')}</p>
                         </div>
                       </div>
                     )}
@@ -678,13 +678,13 @@ export const ScholarshipFeeStep: React.FC<StepProps> = ({ onNext, onBack }) => {
                 <div className="w-24 h-24 bg-white rounded-full flex items-center justify-center mb-4 shadow-sm border border-gray-100">
                   <AlertCircle className="w-12 h-12 text-gray-300" />
                 </div>
-                <h3 className="text-2xl font-black text-gray-900 uppercase tracking-tight">Nenhuma aplicação pronta</h3>
-                <p className="text-gray-500 font-medium max-w-sm">Você precisa completar as etapas anteriores antes de pagar a taxa da bolsa.</p>
+                <h3 className="text-2xl font-black text-gray-900 uppercase tracking-tight">{t('payment:scholarshipFeeStep.noApplications')}</h3>
+                <p className="text-gray-500 font-medium max-w-sm">{t('payment:scholarshipFeeStep.noApplicationsMessage')}</p>
                 <button
                   onClick={onBack}
                   className="mt-6 px-8 py-3 bg-white border border-gray-200 rounded-2xl text-gray-900 font-black uppercase tracking-widest text-xs hover:bg-gray-50 transition-all shadow-sm"
                 >
-                  Voltar
+                  {t('payment:scholarshipFeeStep.back')}
                 </button>
               </div>
             )}

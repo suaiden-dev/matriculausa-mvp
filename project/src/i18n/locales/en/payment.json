@@ -537,5 +537,43 @@
         "description": "Pay via Zelle transfer"
       }
     }
+  },
+  "scholarshipFeeStep": {
+    "loading": "Loading information...",
+    "title": "Scholarship Fee",
+    "subtitle": "This fee is the final commitment to the selected scholarship or college.",
+    "completedTitle": "Step Completed",
+    "completedSubtitle": "Your scholarship fee has been successfully processed. This step is complete.",
+    "continue": "Continue",
+    "securePayment": "Secure Payment",
+    "confirmed": "Payment Confirmed",
+    "confirmedSubtitle": "Your scholarship fee has been confirmed.",
+    "noApplications": "No applications ready",
+    "noApplicationsMessage": "You need to complete the previous steps before paying the scholarship fee.",
+    "back": "Back",
+    "zellePendingTitle": "Zelle Payment Under Review",
+    "zellePendingMessage": "You have already initiated a Zelle payment. Please wait for confirmation before using another method. This can take up to 48 hours."
+  },
+  "placementFeeStep": {
+    "loading": "Loading information...",
+    "title": "Placement Fee",
+    "subtitle": "Placement fee calculated based on the annual value of your selected scholarship.",
+    "completedTitle": "Step Completed",
+    "completedSubtitle": "Your Placement Fee has been successfully processed.",
+    "continue": "Continue",
+    "securePayment": "Secure Payment",
+    "confirmed": "Payment Confirmed",
+    "confirmedSubtitle": "Your Placement Fee has been confirmed.",
+    "noApplications": "No applications ready",
+    "noApplicationsMessage": "You need to complete the previous steps before paying the Placement Fee.",
+    "back": "Back",
+    "zellePendingTitle": "Zelle Payment Under Review",
+    "zellePendingMessage": "You have already initiated a Zelle payment. Please wait for confirmation before using another method. This can take up to 48 hours.",
+    "annualTuition": "Annual scholarship value: {{amount}}",
+    "cpfRequiredTitle": "Enter your CPF for Parcelow",
+    "cpfPlaceholder": "000.000.000-00",
+    "cpfError": "Error saving CPF. Please try again.",
+    "cpfInvalid": "CPF must be 11 digits",
+    "goToPayment": "Continue to Payment"
   }
 }

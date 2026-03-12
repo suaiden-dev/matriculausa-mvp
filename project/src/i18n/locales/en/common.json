@@ -224,25 +224,63 @@
     "contentLockedMessage": "This content is locked until payment is completed"
   },
   "successPages": {
-    "placementFee": {
-      "verifying": "Verifying Placement Fee",
-      "pleaseWait": "Your payment is being processed."
+    "selectionProcessFee": {
+      "title": "Selection Process Fee Payment Successful!",
+      "description": "Your payment of {{amount}} has been processed successfully.",
+      "message": "You now have access to all scholarships and can apply freely.",
+      "button": "Go to Scholarships",
+      "verifying": "Verifying your payment...",
+      "pleaseWait": "Please wait while we confirm your transaction. This may take a few moments.",
+      "errorTitle": "Selection Process Fee Payment Error",
+      "errorMessage": "There was a problem processing your payment.",
+      "errorRetry": "Try again. If the error persists, please contact support."
     },
     "scholarshipFee": {
-      "verifying": "Verifying Scholarship Fee",
-      "pleaseWait": "Your payment is being processed."
+      "title": "Scholarship Fee Payment Successful!",
+      "description": "Your payment of {{amount}} has been processed successfully.",
+      "message": "Your application will now proceed to the next stage.",
+      "button": "View Details",
+      "verifying": "Verifying your payment...",
+      "pleaseWait": "Please wait while we confirm your payment.",
+      "errorTitle": "Payment Processing Error",
+      "errorMessage": "There was a problem processing your payment.",
+      "errorRetry": "Try again or contact support."
     },
     "applicationFee": {
-      "verifying": "Verifying Application Fee",
-      "pleaseWait": "Your payment is being processed."
+      "title": "Application Fee Payment Successful!",
+      "description": "Your payment of {{amount}} has been processed successfully.",
+      "message": "Your application will now proceed to the next stage.",
+      "button": "Go to My Applications",
+      "verifying": "Verifying Payment...",
+      "pleaseWait": "Please wait while we confirm your transaction. This may take a few moments.",
+      "errorTitle": "Verification Failed",
+      "errorMessage": "There was a problem verifying your payment. Please contact support.",
+      "errorDetails": "Error details:"
     },
-    "selectionProcessFee": {
-      "verifying": "Verifying Selection Process Fee",
-      "pleaseWait": "Your payment is being processed."
+    "placementFee": {
+      "title": "Placement Fee Payment Successful!",
+      "description": "Your payment of {{amount}} has been processed successfully.",
+      "message": "Your application is now confirmed.",
+      "button": "Continue",
+      "verifying": "Verifying your payment...",
+      "pleaseWait": "Please wait while we confirm your transaction. This may take a few moments.",
+      "errorTitle": "Processing Error",
+      "errorMessage": "There was a problem processing your payment.",
+      "errorRetry": "Try again or contact support."
+    },
+    "common": {
+      "verifying": "Verifying your payment...",
+      "pleaseWait": "Please wait a moment while we process your transaction."
     },
     "i20ControlFee": {
-      "verifying": "Verifying I-20 Control Fee",
-      "pleaseWait": "Your payment is being processed."
+      "title": "I-20 Control Fee Payment Successful!",
+      "message": "Your I-20 document will be processed and sent shortly.",
+      "button": "Back to My Applications",
+      "verifying": "Verifying Payment...",
+      "pleaseWait": "Please wait while we confirm your payment.",
+      "errorTitle": "I-20 Control Fee Payment Error",
+      "errorMessage": "There was a problem processing your payment.",
+      "errorRetry": "Try again. If the error persists, please contact support."
     }
   },
   "ssoCallback": {

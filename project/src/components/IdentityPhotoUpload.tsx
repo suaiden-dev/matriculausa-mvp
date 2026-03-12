@@ -30,16 +30,11 @@ export const IdentityPhotoUpload: React.FC<IdentityPhotoUploadProps> = ({
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   // Carregar preview se já existe foto usando signed URL
-  // ✅ CORREÇÃO: Só carregar se não foi removido manualmente e se há initialPhotoPath
   React.useEffect(() => {
     const loadPhotoPreview = async () => {
-      // Se não há initialPhotoPath, limpar preview (se veio do initialPhotoPath)
+      // Se não há initialPhotoPath, limpar preview
       if (!initialPhotoPath) {
-        // Se foi removido manualmente, já está limpo, não fazer nada
-        if (isRemoved) {
-          return;
-        }
-        // Se não foi removido manualmente mas initialPhotoPath foi removido externamente, limpar
+        if (isRemoved) return;
         if (preview && uploadedFilePath === initialPhotoPath) {
           setPreview(null);
           setUploadedFilePath(null);
@@ -47,25 +42,20 @@ export const IdentityPhotoUpload: React.FC<IdentityPhotoUploadProps> = ({
         return;
       }
       
-      // Se foi removido manualmente, não recarregar mesmo se há initialPhotoPath
-      if (isRemoved) {
-        return;
-      }
+      // Se foi removido manualmente, não recarregar
+      if (isRemoved) return;
 
-      // ✅ SUPORTE PARA MOCK/URL: Se o path é uma URL, data URI ou mock, usar diretamente
+      // Suporte para mock/URL
       if (initialPhotoPath.startsWith('http') || initialPhotoPath.startsWith('data:') || initialPhotoPath.startsWith('mock_')) {
-        console.log('🔍 [IdentityPhotoUpload] Usando path direto (mock/URL):', initialPhotoPath);
         const actualUrl = initialPhotoPath.startsWith('mock_') ? '/helpselfie.png' : initialPhotoPath;
         setPreview(actualUrl);
         setUploadedFilePath(initialPhotoPath);
         return;
       }
       
-      // Se há initialPhotoPath e ainda não carregou (ou é diferente do atual), carregar
+      // Carregar via signed URL
       if (initialPhotoPath && uploadedFilePath !== initialPhotoPath) {
         try {
-          console.log('🔍 [IdentityPhotoUpload] Carregando preview de:', initialPhotoPath);
-          // Gerar signed URL (válida por 1 hora)
           const { data, error } = await supabase.storage
             .from('identity-photos')
             .createSignedUrl(initialPhotoPath, 60 * 60);
@@ -77,7 +67,6 @@ export const IdentityPhotoUpload: React.FC<IdentityPhotoUploadProps> = ({
           
           setPreview(data.signedUrl);
           setUploadedFilePath(initialPhotoPath);
-          console.log('🔍 [IdentityPhotoUpload] Preview carregado com sucesso');
         } catch (err) {
           console.error('Erro ao carregar preview:', err);
         }
@@ -87,17 +76,22 @@ export const IdentityPhotoUpload: React.FC<IdentityPhotoUploadProps> = ({
     loadPhotoPreview();
   }, [initialPhotoPath, isRemoved, uploadedFilePath]);
 
+  const abortControllerRef = useRef<AbortController | null>(null);
+
   const handleFileSelect = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file) return;
 
+    console.log('🔍 [IdentityPhotoUpload] Iniciando handleFileSelect para arquivo:', file.name);
     setError(null);
+    setIsRemoved(false); // ✅ Resetar imediatamente para mudar a UI de "Upload Area" para "Preview/Loading"
 
     // Validação de tipo
     if (!ALLOWED_TYPES.includes(file.type)) {
       const errorMsg = t('components.identityPhotoUpload.errors.onlyImages');
       setError(errorMsg);
       onUploadError?.(errorMsg);
+      console.warn('⚠️ [IdentityPhotoUpload] Tipo de arquivo inválido:', file.type);
       return;
     }
 
@@ -106,22 +100,35 @@ export const IdentityPhotoUpload: React.FC<IdentityPhotoUploadProps> = ({
       const errorMsg = t('components.identityPhotoUpload.errors.maxSize');
       setError(errorMsg);
       onUploadError?.(errorMsg);
+      console.warn('⚠️ [IdentityPhotoUpload] Arquivo muito grande:', file.size);
       return;
     }
+
+    // Cancelar upload anterior se existir
+    if (abortControllerRef.current) {
+      console.log('🔍 [IdentityPhotoUpload] Abortando upload anterior...');
+      abortControllerRef.current.abort();
+    }
+    const currentController = new AbortController();
+    abortControllerRef.current = currentController;
 
     // Criar preview
     const reader = new FileReader();
     reader.onloadend = () => {
       setPreview(reader.result as string);
+      console.log('🔍 [IdentityPhotoUpload] Preview gerado localmente');
     };
     reader.readAsDataURL(file);
 
     // Upload via Edge Function
     setUploading(true);
+    console.log('🔍 [IdentityPhotoUpload] setUploading(true)');
+    
     try {
       const formData = new FormData();
       formData.append('file', file);
 
+      console.log('🔍 [IdentityPhotoUpload] Obtendo sessão do Supabase...');
       const { data: sessionData } = await supabase.auth.getSession();
       const token = sessionData.session?.access_token;
 
@@ -129,6 +136,7 @@ export const IdentityPhotoUpload: React.FC<IdentityPhotoUploadProps> = ({
         throw new Error(t('components.identityPhotoUpload.errors.unauthenticated'));
       }
 
+      console.log('🔍 [IdentityPhotoUpload] Enviando requisição para Edge Function...');
       const SUPABASE_URL = import.meta.env.VITE_SUPABASE_URL;
       const response = await fetch(`${SUPABASE_URL}/functions/v1/upload-identity-photo`, {
         method: 'POST',
@@ -136,41 +144,58 @@ export const IdentityPhotoUpload: React.FC<IdentityPhotoUploadProps> = ({
           'Authorization': `Bearer ${token}`,
         },
         body: formData,
+        signal: currentController.signal
       });
 
+      console.log('🔍 [IdentityPhotoUpload] Resposta recebida, extraindo JSON...');
       const result = await response.json();
 
       if (!result.success) {
         throw new Error(result.error || t('components.identityPhotoUpload.errors.generic'));
       }
 
+      console.log('🔍 [IdentityPhotoUpload] ✅ Upload concluído com sucesso:', result.filePath);
       setUploadedFilePath(result.filePath);
-      setIsRemoved(false); // ✅ Resetar flag quando novo upload é feito
       onUploadSuccess(result.filePath, result.fileName);
       setError(null);
     } catch (err: any) {
-      console.error('Erro ao fazer upload:', err);
+      if (err.name === 'AbortError') {
+        console.log('🔍 [IdentityPhotoUpload] 🛑 Upload cancelado/abortado');
+        return;
+      }
+      console.error('❌ [IdentityPhotoUpload] Erro no upload:', err);
       const errorMsg = err.message || t('components.identityPhotoUpload.errors.generic');
       setError(errorMsg);
       setPreview(null);
       onUploadError?.(errorMsg);
     } finally {
-      setUploading(false);
+      // ✅ Só resetar se ainda for o controlador desta execução
+      if (abortControllerRef.current === currentController) {
+        console.log('🔍 [IdentityPhotoUpload] Resetando estado de uploading (fim do fluxo)');
+        setUploading(false);
+        abortControllerRef.current = null;
+      } else {
+        console.log('🔍 [IdentityPhotoUpload] Ignorando reset de uploading pois um novo fluxo já assumiu');
+      }
     }
   };
 
   const handleRemove = () => {
-    console.log('🔍 [IdentityPhotoUpload] Removendo foto...');
+    if (abortControllerRef.current) {
+      abortControllerRef.current.abort();
+      abortControllerRef.current = null;
+    }
+
     setPreview(null);
     setUploadedFilePath(null);
     setError(null);
-    setIsRemoved(true); // ✅ Marcar como removido para evitar recarregamento
+    setUploading(false);
+    setIsRemoved(true);
+    
     if (fileInputRef.current) {
       fileInputRef.current.value = '';
     }
-    // ✅ Notificar componente pai que a foto foi removida
     onRemove?.();
-    console.log('🔍 [IdentityPhotoUpload] Foto removida com sucesso');
   };
 
   return (
@@ -178,7 +203,6 @@ export const IdentityPhotoUpload: React.FC<IdentityPhotoUploadProps> = ({
       {/* Imagem de ajuda */}
       <div className={`bg-blue-50 rounded-xl border border-blue-200 ${variant === 'large' ? 'p-5 md:p-6' : 'p-4'}`}>
         <div className={`flex items-start gap-4 ${variant === 'large' ? 'flex-col md:flex-row justify-between md:items-center' : 'flex-col'}`}>
-          
           <div className="flex items-start gap-3 flex-1">
             <Camera className={`text-blue-600 mt-0.5 flex-shrink-0 ${variant === 'large' ? 'w-6 h-6' : 'w-5 h-5'}`} />
             <div>
@@ -272,7 +296,6 @@ export const IdentityPhotoUpload: React.FC<IdentityPhotoUploadProps> = ({
         </div>
       )}
 
-      {/* Mensagem de erro */}
       {error && (
         <div className="flex items-center gap-2 p-3 bg-red-50 border border-red-200 rounded-lg">
           <AlertCircle className="w-5 h-5 text-red-600 flex-shrink-0" />
@@ -282,4 +305,3 @@ export const IdentityPhotoUpload: React.FC<IdentityPhotoUploadProps> = ({
     </div>
   );
 };
-

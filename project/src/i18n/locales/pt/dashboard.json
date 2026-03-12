@@ -111,6 +111,16 @@
       "profile": "Perfil",
       "supportChat": "Chat de Suporte"
     },
+    "notifications": {
+      "title": "Notificações",
+      "markAllAsRead": "Marcar todas",
+      "clearAll": "Limpar",
+      "noNotifications": "Nenhuma notificação",
+      "documentRejected": {
+        "title": "Documento Rejeitado",
+        "message": "Seu documento {{fileName}} foi rejeitado. Motivo: {{reason}}"
+      }
+    },
     "chat": {
       "welcomeMessage": {
         "title": "Bem-vindo ao Chat de Suporte!",
@@ -868,12 +878,6 @@
       "errors": {
         "viewDocument": "Erro ao visualizar documento",
         "downloadDocument": "Erro ao baixar documento"
-      }
-    },
-    "notifications": {
-      "documentRejected": {
-        "title": "Documento Rejeitado",
-        "message": "Seu documento {{fileName}} foi rejeitado. Motivo: {{reason}}"
       }
     },
     "documentRequests": {
