@@ -15,6 +15,8 @@ import { usePackageScholarshipFilter } from '../hooks/usePackageScholarshipFilte
 import { is3800ScholarshipBlocked, is3800Scholarship } from '../utils/scholarshipDeadlineValidation';
 import { ScholarshipExpiryWarning } from '../components/ScholarshipExpiryWarning';
 import { ScholarshipCountdownTimer } from '../components/ScholarshipCountdownTimer';
+import { getPlacementFee } from '../utils/placementFeeCalculator';
+import { formatCurrency } from '../utils/currency';
 
 const Scholarships: React.FC = () => {
   const { t } = useTranslation();
@@ -814,6 +816,18 @@ const Scholarships: React.FC = () => {
                                     t('scholarshipsPage.scholarshipCard.standardFee')
                                   }
                                 </div>
+                                {/* Placement Fee - exibir apenas para novos usuários */}
+                                {userProfile?.placement_fee_flow && (() => {
+                                  const annualValue = scholarship.annual_value_with_scholarship ? Number(scholarship.annual_value_with_scholarship) : Number(scholarship.amount) || 0;
+                                  const placementFeeAmount = scholarship.placement_fee_amount ? Number(scholarship.placement_fee_amount) : null;
+                                  const placementFee = getPlacementFee(annualValue, placementFeeAmount);
+                                  return (
+                                    <div className="flex items-center justify-between pt-1.5 border-t border-slate-200 mt-2">
+                                      <span className="text-xs text-slate-600 font-medium">Placement Fee</span>
+                                      <span className="text-sm font-bold text-blue-600">{formatCurrency(placementFee)}</span>
+                                    </div>
+                                  );
+                                })()}
                               </div>
                             </div>
                           </div>
@@ -1142,6 +1156,18 @@ const Scholarships: React.FC = () => {
                                    t('scholarshipsPage.scholarshipCard.standardFee')
                                  }
                                </div>
+                               {/* Placement Fee - exibir apenas para novos usuários */}
+                               {userProfile?.placement_fee_flow && (() => {
+                                 const annualValue = scholarship.annual_value_with_scholarship ? Number(scholarship.annual_value_with_scholarship) : Number(scholarship.amount) || 0;
+                                 const placementFeeAmount = scholarship.placement_fee_amount ? Number(scholarship.placement_fee_amount) : null;
+                                 const placementFee = getPlacementFee(annualValue, placementFeeAmount);
+                                 return (
+                                   <div className="flex items-center justify-between pt-1.5 border-t border-slate-200 mt-2">
+                                     <span className="text-xs text-slate-600 font-medium">Placement Fee</span>
+                                     <span className="text-sm font-bold text-blue-600">{formatCurrency(placementFee)}</span>
+                                   </div>
+                                 );
+                               })()}
                              </div>
                            </div>
                          </div>
