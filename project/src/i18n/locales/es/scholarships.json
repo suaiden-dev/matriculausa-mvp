@@ -164,6 +164,7 @@
       "warningDescription": "Al confirmar, ya no podrá cambiar las becas elegidas. Revise cuidadosamente su selección a continuación antes de continuar.",
       "unknownUniversity": "Universidad Desconocida",
       "backButton": "Volver a la Selección",
+      "alreadySelected": "Ya Seleccionada",
       "continueButton": "Continuar",
       "removeButton": "Eliminar Selección"
     },

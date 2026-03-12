@@ -164,6 +164,7 @@
       "warningDescription": "Ao confirmar, você não poderá mais alterar as bolsas escolhidas. Revise cuidadosamente sua seleção abaixo antes de prosseguir.",
       "unknownUniversity": "Universidade Desconhecida",
       "backButton": "Voltar para Seleção",
+      "alreadySelected": "Já Selecionada",
       "continueButton": "Continuar",
       "removeButton": "Remover Seleção"
     },

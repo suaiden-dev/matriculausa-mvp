@@ -123,6 +123,7 @@ const QuickRegistration: React.FC = () => {
   // UI State
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [fieldErrors, setFieldErrors] = useState<Record<string, string>>({});
   const [couponCode, setCouponCode] = useState('');
   const [isCouponValid, setIsCouponValid] = useState(false);
   const [selectedMethod, setSelectedMethod] = useState<'stripe' | 'pix' | 'zelle' | 'parcelow'>('stripe');
@@ -215,7 +216,7 @@ const QuickRegistration: React.FC = () => {
   })();
 
   const formattedAmount = formatFeeAmount(currentFee);
-  const originalFormattedAmount = formatFeeAmount(baseFee);
+
 
   // URL Parameter for Coupon
   useEffect(() => {
@@ -460,6 +461,15 @@ const QuickRegistration: React.FC = () => {
       [name]: type === 'checkbox' ? (e.target as HTMLInputElement).checked :
         name === 'dependents' ? (value === '' ? '' : parseInt(value)) : value
     }));
+
+    // Limpar erro do campo ao digitar
+    if (fieldErrors[name]) {
+      setFieldErrors(prev => {
+        const next = { ...prev };
+        delete next[name];
+        return next;
+      });
+    }
   };
 
   const handleRegisterAndPay = async (e: React.FormEvent) => {
@@ -480,7 +490,9 @@ const QuickRegistration: React.FC = () => {
       try {
         if (selectedMethod === 'parcelow') {
           if (!formData.cpf || formData.cpf.length < 14) {
-            throw new Error(t('rapidRegistration.payment.cpf.error') || 'CPF é obrigatório para pagamento via Parcelow.');
+            setFieldErrors({ cpf: t('rapidRegistration.payment.cpf.error') || 'CPF é obrigatório para pagamento via Parcelow.' });
+            setLoading(false);
+            return;
           }
           // Update profile if CPF is missing
           if (!userProfile?.cpf_document || userProfile.cpf_document !== formData.cpf) {
@@ -503,29 +515,42 @@ const QuickRegistration: React.FC = () => {
       return;
     }
 
+    const newFieldErrors: Record<string, string> = {};
+
+    if (!formData.full_name.trim()) newFieldErrors.full_name = t('common.required_field', 'Campo obrigatório');
+    if (!formData.email.trim()) newFieldErrors.email = t('common.required_field', 'Campo obrigatório');
+    if (!formData.phone.trim()) newFieldErrors.phone = t('common.required_field', 'Campo obrigatório');
+
     if (formData.password !== formData.confirm_password) {
-      setError(t('rapidRegistration.form.error.passwordsNotMatch') || 'As senhas não coincidem');
-      setLoading(false);
-      return;
+      newFieldErrors.password = t('rapidRegistration.form.error.passwordsNotMatch') || 'As senhas não coincidem';
+      newFieldErrors.confirm_password = t('rapidRegistration.form.error.passwordsNotMatch') || 'As senhas não coincidem';
     }
 
     if (formData.dependents === '') {
-      setError('Por favor, selecione o número de dependentes.');
-      setLoading(false);
-      return;
+      newFieldErrors.dependents = 'Por favor, selecione o número de dependentes.';
     }
 
     if (!formData.termsAccepted) {
-      setError(t('rapidRegistration.form.error.terms') || 'Você deve aceitar os termos');
-      setLoading(false);
-      return;
+      newFieldErrors.termsAccepted = t('rapidRegistration.form.error.terms') || 'Você deve aceitar os termos';
     }
 
     if (selectedMethod === 'parcelow' && (!formData.cpf || formData.cpf.length < 14)) {
-      setError(t('rapidRegistration.payment.cpf.error') || 'CPF é obrigatório para pagamento via Parcelow.');
+      newFieldErrors.cpf = t('rapidRegistration.payment.cpf.error') || 'CPF é obrigatório para pagamento via Parcelow.';
+    }
+
+    if (Object.keys(newFieldErrors).length > 0) {
+      setFieldErrors(newFieldErrors);
       setLoading(false);
+      // Rolar para o primeiro erro
+      const firstErrorField = Object.keys(newFieldErrors)[0];
+      const element = document.getElementsByName(firstErrorField)[0] || document.getElementById(firstErrorField);
+      if (element) {
+        element.scrollIntoView({ behavior: 'smooth', block: 'center' });
+      }
       return;
     }
+
+    setFieldErrors({});
 
     setLoading(true);
     setError(null);
@@ -772,9 +797,14 @@ const QuickRegistration: React.FC = () => {
                           onChange={handleChange}
                           disabled={isRegistered}
                           placeholder={t('rapidRegistration.form.placeholders.fullName')}
-                          className="block w-full pl-12 pr-4 py-3.5 border border-slate-200 rounded-2xl outline-none focus:outline-none focus:ring-2 focus:ring-[#05294E] focus:border-[#05294E] text-slate-900 bg-slate-50/50 transition-all duration-300 disabled:opacity-50 disabled:cursor-not-allowed"
+                          className={`block w-full pl-12 pr-4 py-3.5 border ${fieldErrors.full_name ? 'border-red-500 ring-2 ring-red-500/10' : 'border-slate-200'} rounded-2xl outline-none focus:outline-none focus:ring-2 ${fieldErrors.full_name ? 'focus:ring-red-500 focus:border-red-500' : 'focus:ring-[#05294E] focus:border-[#05294E]'} text-slate-900 bg-slate-50/50 transition-all duration-300 disabled:opacity-50 disabled:cursor-not-allowed`}
                         />
                       </div>
+                      {fieldErrors.full_name && (
+                        <p className="text-red-500 text-[10px] font-black uppercase tracking-widest mt-2 ml-1 animate-in fade-in slide-in-from-top-1 duration-300">
+                          {fieldErrors.full_name}
+                        </p>
+                      )}
                     </div>
 
                     {/* Email */}
@@ -795,9 +825,14 @@ const QuickRegistration: React.FC = () => {
                           onChange={handleChange}
                           disabled={isRegistered}
                           placeholder={t('rapidRegistration.form.placeholders.email')}
-                          className="block w-full pl-12 pr-4 py-3.5 border border-slate-200 rounded-2xl outline-none focus:outline-none focus:ring-2 focus:ring-[#05294E] focus:border-[#05294E] text-slate-900 bg-slate-50/50 transition-all duration-300 disabled:opacity-50 disabled:cursor-not-allowed"
+                          className={`block w-full pl-12 pr-4 py-3.5 border ${fieldErrors.email ? 'border-red-500 ring-2 ring-red-500/10' : 'border-slate-200'} rounded-2xl outline-none focus:outline-none focus:ring-2 ${fieldErrors.email ? 'focus:ring-red-500 focus:border-red-500' : 'focus:ring-[#05294E] focus:border-[#05294E]'} text-slate-900 bg-slate-50/50 transition-all duration-300 disabled:opacity-50 disabled:cursor-not-allowed`}
                         />
                       </div>
+                      {fieldErrors.email && (
+                        <p className="text-red-500 text-[10px] font-black uppercase tracking-widest mt-2 ml-1 animate-in fade-in slide-in-from-top-1 duration-300">
+                          {fieldErrors.email}
+                        </p>
+                      )}
                     </div>
 
                     {/* Phone */}
@@ -817,11 +852,23 @@ const QuickRegistration: React.FC = () => {
                           disabled={isRegistered}
                           onChange={(value) => {
                             setFormData((prev: any) => ({ ...prev, phone: value || '' }));
+                            if (fieldErrors.phone) {
+                              setFieldErrors(prev => {
+                                const next = { ...prev };
+                                delete next.phone;
+                                return next;
+                              });
+                            }
                           }}
-                          className={`quick-registration-phone w-full px-4 py-3.5 bg-slate-50/50 border border-slate-200 rounded-2xl outline-none focus-within:outline-none focus-within:ring-2 focus-within:ring-[#05294E] focus-within:border-[#05294E] text-slate-900 transition-all duration-300 ${isRegistered ? 'opacity-50 cursor-not-allowed' : ''}`}
+                          className={`quick-registration-phone w-full px-4 py-3.5 bg-slate-50/50 border ${fieldErrors.phone ? 'border-red-500 ring-2 ring-red-500/10' : 'border-slate-200'} rounded-2xl outline-none focus-within:outline-none focus-within:ring-2 ${fieldErrors.phone ? 'focus-within:ring-red-500 focus-within:border-red-500' : 'focus-within:ring-[#05294E] focus-within:border-[#05294E]'} text-slate-900 transition-all duration-300 ${isRegistered ? 'opacity-50 cursor-not-allowed' : ''}`}
                           placeholder={t('rapidRegistration.form.placeholders.phone')}
                         />
                       </div>
+                      {fieldErrors.phone && (
+                        <p className="text-red-500 text-[10px] font-black uppercase tracking-widest mt-2 ml-1 animate-in fade-in slide-in-from-top-1 duration-300">
+                          {fieldErrors.phone}
+                        </p>
+                      )}
                     </div>
 
                     {/* Dependents Selector */}
@@ -849,8 +896,15 @@ const QuickRegistration: React.FC = () => {
                           onChange={(e) => {
                             const value = e.target.value === '' ? '' : parseInt(e.target.value);
                             setFormData((prev: any) => ({ ...prev, dependents: value }));
+                            if (fieldErrors.dependents) {
+                              setFieldErrors(prev => {
+                                const next = { ...prev };
+                                delete next.dependents;
+                                return next;
+                              });
+                            }
                           }}
-                          className={`appearance-none block w-full pl-12 pr-12 py-3.5 border border-slate-200 rounded-2xl outline-none focus:outline-none focus:ring-2 focus:ring-[#05294E] focus:border-[#05294E] ${formData.dependents === '' ? 'text-slate-400' : 'text-slate-900'} bg-slate-50/50 transition-all duration-300 text-sm sm:text-base cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed`}
+                          className={`appearance-none block w-full pl-12 pr-12 py-3.5 border ${fieldErrors.dependents ? 'border-red-500 ring-2 ring-red-500/10' : 'border-slate-200'} rounded-2xl outline-none focus:outline-none focus:ring-2 ${fieldErrors.dependents ? 'focus:ring-red-500 focus:border-red-500' : 'focus:ring-[#05294E] focus:border-[#05294E]'} ${formData.dependents === '' ? 'text-slate-400' : 'text-slate-900'} bg-slate-50/50 transition-all duration-300 text-sm sm:text-base cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed`}
                         >
                           <option value="" disabled hidden className="text-slate-400">{t('common.select', 'Selecione')}</option>
                           <option value={0} className="text-slate-900">{t('rapidRegistration.form.dependentOptions.count', { count: 0 })}</option>
@@ -861,6 +915,11 @@ const QuickRegistration: React.FC = () => {
                           <option value={5} className="text-slate-900">{t('rapidRegistration.form.dependentOptions.count', { count: 5 })}</option>
                         </select>
                       </div>
+                      {fieldErrors.dependents && (
+                        <p className="text-red-500 text-[10px] font-black uppercase tracking-widest mt-2 ml-1 animate-in fade-in slide-in-from-top-1 duration-300">
+                          {fieldErrors.dependents}
+                        </p>
+                      )}
                     </div>
 
                     {/* Password */}
@@ -882,7 +941,7 @@ const QuickRegistration: React.FC = () => {
                           onChange={handleChange}
                           disabled={isRegistered}
                           placeholder={t('rapidRegistration.form.placeholders.password')}
-                          className="block w-full pl-12 pr-12 py-3.5 border border-slate-200 rounded-2xl outline-none focus:outline-none focus:ring-2 focus:ring-[#05294E] focus:border-[#05294E] text-slate-900 bg-slate-50/50 transition-all duration-300 disabled:opacity-50 disabled:cursor-not-allowed"
+                          className={`block w-full pl-12 pr-12 py-3.5 border ${fieldErrors.password ? 'border-red-500 ring-2 ring-red-500/10' : 'border-slate-200'} rounded-2xl outline-none focus:outline-none focus:ring-2 ${fieldErrors.password ? 'focus:ring-red-500 focus:border-red-500' : 'focus:ring-[#05294E] focus:border-[#05294E]'} text-slate-900 bg-slate-50/50 transition-all duration-300 disabled:opacity-50 disabled:cursor-not-allowed`}
                         />
                         <button
                           type="button"
@@ -897,6 +956,11 @@ const QuickRegistration: React.FC = () => {
                           )}
                         </button>
                       </div>
+                      {fieldErrors.password && (
+                        <p className="text-red-500 text-xs font-bold mt-2 ml-1 animate-in fade-in slide-in-from-top-1 duration-300">
+                          {fieldErrors.password}
+                        </p>
+                      )}
                     </div>
 
                     {/* Confirm Password */}
@@ -918,7 +982,7 @@ const QuickRegistration: React.FC = () => {
                           onChange={handleChange}
                           disabled={isRegistered}
                           placeholder={t('rapidRegistration.form.placeholders.confirmPassword')}
-                          className="block w-full pl-12 pr-12 py-3.5 border border-slate-200 rounded-2xl outline-none focus:outline-none focus:ring-2 focus:ring-[#05294E] focus:border-[#05294E] text-slate-900 bg-slate-50/50 transition-all duration-300 disabled:opacity-50 disabled:cursor-not-allowed"
+                          className={`block w-full pl-12 pr-12 py-3.5 border ${fieldErrors.confirm_password ? 'border-red-500 ring-2 ring-red-500/10' : 'border-slate-200'} rounded-2xl outline-none focus:outline-none focus:ring-2 ${fieldErrors.confirm_password ? 'focus:ring-red-500 focus:border-red-500' : 'focus:ring-[#05294E] focus:border-[#05294E]'} text-slate-900 bg-slate-50/50 transition-all duration-300 disabled:opacity-50 disabled:cursor-not-allowed`}
                         />
                         <button
                           type="button"
@@ -933,6 +997,11 @@ const QuickRegistration: React.FC = () => {
                           )}
                         </button>
                       </div>
+                      {fieldErrors.confirm_password && (
+                        <p className="text-red-500 text-xs font-bold mt-2 ml-1 animate-in fade-in slide-in-from-top-1 duration-300">
+                          {fieldErrors.confirm_password}
+                        </p>
+                      )}
                     </div>
 
                   </div>
@@ -1102,11 +1171,12 @@ const QuickRegistration: React.FC = () => {
                       </div>
                     )}
 
-                    {/* Terms acceptance */}
                     <div
                       className={`flex items-start space-x-3 p-4 border rounded-2xl group/terms transition-colors duration-300 ${formData.termsAccepted
                         ? 'border-gray-100 bg-emerald-50/20'
-                        : 'bg-gray-50 border-gray-100 hover:bg-gray-100/50'
+                        : fieldErrors.termsAccepted
+                          ? 'border-red-500 bg-red-50/10 shadow-[0_0_20px_rgba(239,68,68,0.05)]'
+                          : 'bg-gray-50 border-gray-100 hover:bg-gray-100/50'
                         }`}
                     >
                       <div className="flex items-center h-5 mt-0.5">
@@ -1119,6 +1189,13 @@ const QuickRegistration: React.FC = () => {
                           checked={formData.termsAccepted}
                           onChange={(e) => {
                             setFormData((prev: any) => ({ ...prev, termsAccepted: e.target.checked }));
+                            if (e.target.checked && fieldErrors.termsAccepted) {
+                              setFieldErrors(prev => {
+                                const next = { ...prev };
+                                delete next.termsAccepted;
+                                return next;
+                              });
+                            }
                           }}
                           className="h-5 w-5 text-[#05294E] border-gray-300 rounded focus:ring-[#05294E] disabled:opacity-50 disabled:cursor-not-allowed cursor-pointer"
                         />
@@ -1143,6 +1220,11 @@ const QuickRegistration: React.FC = () => {
                             <CheckCircle2 className="w-3 h-3 mr-1" />
                             {t('rapidRegistration.form.termsAcceptedBadge') || 'Termos Aceitos'}
                           </span>
+                        )}
+                        {fieldErrors.termsAccepted && (
+                          <p className="text-red-500 text-xs font-bold mt-2 ml-1 animate-in fade-in slide-in-from-top-1 duration-300">
+                            {fieldErrors.termsAccepted}
+                          </p>
                         )}
                       </div>
                     </div>
@@ -1250,9 +1332,14 @@ const QuickRegistration: React.FC = () => {
                                       setFormData((prev: any) => ({ ...prev, cpf: formatted }));
                                     }}
                                     placeholder={t('rapidRegistration.payment.cpf.placeholder')}
-                                    className="block w-full px-4 py-3 border border-blue-200/50 rounded-xl outline-none focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 text-sm font-bold text-slate-900 bg-white transition-all duration-300 disabled:opacity-50 disabled:cursor-not-allowed"
+                                    className={`block w-full px-4 py-3 border ${fieldErrors.cpf ? 'border-red-500 ring-2 ring-red-500/10' : 'border-blue-200/50'} rounded-xl outline-none focus:outline-none focus:ring-2 ${fieldErrors.cpf ? 'focus:ring-red-500 focus:border-red-500' : 'focus:ring-blue-500 focus:border-blue-500'} text-sm font-bold text-slate-900 bg-white transition-all duration-300 disabled:opacity-50 disabled:cursor-not-allowed`}
                                   />
                                 </div>
+                                {fieldErrors.cpf && (
+                                  <p className="text-red-500 text-[10px] font-black uppercase tracking-widest mt-2 ml-1 animate-in fade-in slide-in-from-top-1 duration-300">
+                                    {fieldErrors.cpf}
+                                  </p>
+                                )}
                               </div>
                             </div>
                           )}
@@ -1293,11 +1380,7 @@ const QuickRegistration: React.FC = () => {
                         {t('rapidRegistration.sidebar.total')}
                       </span>
                       <div className="text-right">
-                        {isCouponValid && (
-                          <span className="text-sm line-through block text-slate-300 font-bold mb-1">
-                            {originalFormattedAmount}
-                          </span>
-                        )}
+
                         <span className="text-4xl font-black text-grey-900 tracking-tighter">
                           {formattedAmount}
                         </span>
@@ -1321,6 +1404,9 @@ const QuickRegistration: React.FC = () => {
                 </div>
 
               </div>
+
+
+
 
               {/* Refund Assurance Note */}
               <div className="bg-white border border-slate-200 rounded-3xl p-6 shadow-xl">

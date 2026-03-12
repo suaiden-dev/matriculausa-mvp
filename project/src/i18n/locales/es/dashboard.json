@@ -93,6 +93,19 @@
       "profile": "Perfil",
       "supportChat": "Chat de Soporte"
     },
+    "notifications": {
+      "title": "Notificaciones",
+      "markAllAsRead": "Marcar todas como leídas",
+      "clearAll": "Limpar todo",
+      "noNotifications": "No hay notificaciones",
+      "youAreAllCaughtUp": "¡Estás al día!",
+      "documentRejected": {
+        "title": "Documento Rechazado",
+        "message": "Tu documento {{fileName}} fue rechazado. Motivo: {{reason}}"
+      },
+      "Scholarship approved": "Beca aprobada",
+      "You have been selected for the scholarship.": "Has sido seleccionado para la beca."
+    },
     "chat": {
       "welcomeMessage": {
         "title": "¡Bienvenido al Chat de Soporte!",

@@ -1,4 +1,4 @@
-{
+﻿{
   "rapidRegistration": {
     "title": "Registro y Pago",
     "subtitle": "Complete su registro e inicie su proceso de selección",
@@ -38,7 +38,7 @@
       "selectionFee": "Tarifa del Proceso de Selección",
       "total": "TOTAL",
       "currentFee": "Total a Pagar Ahora",
-      "feeExplanation": "La Tarifa del Proceso de Selección ($400.00) es el primer pago obligatorio en la plataforma MatriculaUSA. Desbloquea tu acceso completo para ver todas las becas e iniciar tu proceso de candidatura. Esta tarifa es definitiva y serás reembolsado si no eres aceptado en ninguna universidad.",
+      "feeExplanation": "La Tarifa del Proceso de Selección es el primer pago obligatorio en la plataforma MatriculaUSA. Desbloquea tu acceso completo para ver todas las becas e iniciar tu proceso de candidatura.",
       "futureFeesTitle": "Tarifas Futuras",
       "enrollmentFee": "Tarifa de Matrícula",
       "scholarshipFee": "Tarifa de Beca",

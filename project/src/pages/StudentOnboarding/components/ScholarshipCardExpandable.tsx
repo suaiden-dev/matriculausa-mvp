@@ -17,7 +17,9 @@ import {
   getDeliveryModeLabel,
   getDaysUntilDeadlineDisplay,
   getDeadlineStatus,
-  getApplicationFeeWithDependents
+  getApplicationFeeWithDependents,
+  getLevelLabel,
+  getFieldOfStudyLabel
 } from '../../../utils/scholarshipHelpers.tsx';
 import { is3800Scholarship, is3800ScholarshipBlocked } from '../../../utils/scholarshipDeadlineValidation';
 import { getPlacementFee } from '../../../utils/placementFeeCalculator';
@@ -67,17 +69,17 @@ export const ScholarshipCardExpandable: React.FC<ScholarshipCardExpandableProps>
             <div className="flex items-center gap-2 mb-1 flex-wrap">
               <span className={`px-2 py-0.5 rounded text-xs font-medium text-white shadow-sm flex items-center gap-1.5 ${getFieldBadgeColor(scholarship.field_of_study)}`}>
                 <GraduationCap className="h-3.5 w-3.5" strokeWidth={2.5} />
-                {scholarship.field_of_study || 'Any Field'}
+                {getFieldOfStudyLabel(scholarship.field_of_study, t)}
               </span>
               {scholarship.is_exclusive && (
                 <span className="bg-[#D0151C] text-white px-2 py-0.5 rounded text-xs font-bold">
-                  {t('studentDashboard.findScholarships.scholarshipCard.exclusive')}
+                  {t('scholarshipsPage.modal.exclusive')}
                 </span>
               )}
             </div>
             <div className="flex items-center text-slate-600 text-sm mb-1">
               <Building className="h-4 w-4 mr-1.5 text-[#05294E]" />
-              <span className="truncate">{scholarship.universities?.name || 'Unknown University'}</span>
+              <span className="truncate">{scholarship.universities?.name || t('scholarshipsPage.modal.universityNameAvailable') || 'Unknown University'}</span>
             </div>
           </div>
           {isSelected && (
@@ -146,7 +148,7 @@ export const ScholarshipCardExpandable: React.FC<ScholarshipCardExpandableProps>
                 : 'bg-gradient-to-r from-blue-400 to-blue-500 text-white hover:from-blue-500 hover:to-blue-600'
             }`}
           >
-            {isSelected ? 'Remove from Selection' : t('studentDashboard.findScholarships.scholarshipCard.selectScholarship')}
+            {isSelected ? (t('scholarshipSelection.review.removeButton') || 'Remove from Selection') : t('studentDashboard.findScholarships.scholarshipCard.selectScholarship')}
           </button>
         )}
       </div>
@@ -194,7 +196,7 @@ export const ScholarshipCardExpandable: React.FC<ScholarshipCardExpandableProps>
             {/* Financial Impact Section */}
             <div className="bg-gradient-to-br from-slate-50 to-slate-100 rounded-xl p-3 sm:p-4 border border-slate-200">
               <h4 className="text-xs sm:text-sm font-bold text-black mb-2 sm:mb-3 flex items-center gap-2">
-                Análise Geral
+                {t('studentDashboard.findScholarships.scholarshipCard.financialOverview')}
               </h4>
 
               <div className="space-y-1 sm:space-y-2">
@@ -232,7 +234,7 @@ export const ScholarshipCardExpandable: React.FC<ScholarshipCardExpandableProps>
                   const placementFeeValue = getPlacementFee(annualValue, placementFeeAmount);
                   return (
                     <div className="flex items-center justify-between pt-1 border-t border-slate-200 mt-1">
-                      <span className="text-xs text-slate-500">Placement Fee</span>
+                      <span className="text-xs text-slate-500">{t('studentDashboard.progressBar.placementFee') || 'Placement Fee'}</span>
                       <span className="text-xs font-bold text-blue-600">{formatCurrency(placementFeeValue)}</span>
                     </div>
                   );
@@ -249,7 +251,7 @@ export const ScholarshipCardExpandable: React.FC<ScholarshipCardExpandableProps>
                     className: "h-3.5 w-3.5",
                     strokeWidth: 2.5
                   })}
-                  <span className="ml-1 capitalize text-slate-700 text-xs sm:text-sm">{scholarship.level}</span>
+                  <span className="ml-1 capitalize text-slate-700 text-xs sm:text-sm">{getLevelLabel(scholarship.level || 'undergraduate', t)}</span>
                 </div>
               </div>
               {scholarship.delivery_mode && (

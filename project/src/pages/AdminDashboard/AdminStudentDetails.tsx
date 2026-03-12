@@ -64,7 +64,8 @@ import {
   Globe,
   Users,
   MessageCircle,
-  ExternalLink
+  ExternalLink,
+  DollarSign
 } from 'lucide-react';
 
 interface StudentRecord {
@@ -94,6 +95,9 @@ interface StudentRecord {
   applied_at: string | null;
   is_application_fee_paid: boolean;
   is_scholarship_fee_paid: boolean;
+  placement_fee_flow?: boolean;
+  is_placement_fee_paid?: boolean;
+  placement_fee_amount?: number | null;
   application_fee_payment_method?: string | null;
   scholarship_fee_payment_method?: string | null;
   acceptance_letter_status: string | null;
@@ -956,6 +960,7 @@ const AdminStudentDetails: React.FC = () => {
           i20_control_fee_payment_method: s.i20_control_fee_payment_method || null,
           seller_referral_code: s.seller_referral_code || null,
           admin_notes: s.admin_notes || null,
+          placement_fee_flow: s.placement_fee_flow || false,
           application_id: lockedApplication?.id || null,
           scholarship_id: lockedApplication?.scholarship_id || null,
           application_status: lockedApplication?.status || null,
@@ -1307,6 +1312,8 @@ const AdminStudentDetails: React.FC = () => {
         return 'pending';
       case 'application_fee':
         return st.is_application_fee_paid ? 'completed' : 'pending';
+      case 'placement_fee':
+        return st.is_placement_fee_paid ? 'completed' : 'pending';
       case 'scholarship_fee':
         return st.is_scholarship_fee_paid ? 'completed' : 'pending';
       case 'i20_fee':
@@ -1336,6 +1343,7 @@ const AdminStudentDetails: React.FC = () => {
     { key: 'apply', label: 'Application', icon: FileText },
     { key: 'review', label: 'Review', icon: Eye },
     { key: 'application_fee', label: 'App Fee', icon: CreditCard },
+    { key: 'placement_fee', label: 'Placement Fee', icon: DollarSign },
     { key: 'scholarship_fee', label: 'Scholarship Fee', icon: Award },
     { key: 'i20_fee', label: 'I-20 Fee', icon: CreditCard },
     { key: 'acceptance_letter', label: 'Acceptance', icon: FileText },
@@ -1343,14 +1351,34 @@ const AdminStudentDetails: React.FC = () => {
     { key: 'enrollment', label: 'Enrollment', icon: Award }
   ];
 
-  // Filtrar steps baseado no student_process_type
+
+  // Filtrar steps baseado no student_process_type e flow
   const steps = allSteps.filter(step => {
     if (step.key === 'transfer_form') {
-      // Só mostrar transfer_form se o student_process_type for 'transfer'
       return student?.student_process_type === 'transfer';
     }
-    return true;
+    if (student?.placement_fee_flow) {
+      // No fluxo de placement, removemos scholarhsip_fee e i20_fee
+      // MANTEMOS 'application_fee' pois ela ainda existe nesse fluxo
+      return !['scholarship_fee', 'i20_fee'].includes(step.key);
+    } else {
+      // No fluxo normal, removemos a placement_fee
+      return step.key !== 'placement_fee';
+    }
   });
+
+  // LOG DE DEPURAÇÃO
+  useEffect(() => {
+    if (student) {
+      console.log('🔍 [PlacementFeeDebug - ORIGINAL] Student data:', {
+        email: student.student_email,
+        placement_fee_flow: student.placement_fee_flow,
+        is_placement_fee_paid: student.is_placement_fee_paid,
+        is_scholarship_fee_paid: student.is_scholarship_fee_paid
+      });
+      console.log('🔍 [PlacementFeeDebug - ORIGINAL] Steps keys:', steps.map(s => s.key));
+    }
+  }, [student, steps]);
 
   const approveableTypes = new Set(['passport', 'funds_proof', 'diploma']);
   const handleApproveDocument = async (applicationId: string, docType: string) => {

@@ -164,6 +164,7 @@
       "warningDescription": "By confirming, you will no longer be able to change the chosen scholarships. Please carefully review your selection below before proceeding.",
       "unknownUniversity": "Unknown University",
       "backButton": "Back to Selection",
+      "alreadySelected": "Already Selected",
       "continueButton": "Continue",
       "removeButton": "Remove Selection"
     },

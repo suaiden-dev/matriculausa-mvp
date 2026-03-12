@@ -113,6 +113,19 @@
       "profile": "Profile",
       "supportChat": "Support Chat"
     },
+    "notifications": {
+      "title": "Notifications",
+      "markAllAsRead": "Mark all as read",
+      "clearAll": "Clear all",
+      "noNotifications": "No notifications",
+      "youAreAllCaughtUp": "You're all caught up!",
+      "documentRejected": {
+        "title": "Document Rejected",
+        "message": "Your document {{fileName}} was rejected. Reason: {{reason}}"
+      },
+      "Scholarship approved": "Scholarship Approved",
+      "You have been selected for the scholarship.": "You have been selected for the scholarship."
+    },
     "chat": {
       "welcomeMessage": {
         "title": "Welcome to Support Chat!",
@@ -864,12 +877,7 @@
         "downloadDocument": "Error downloading document"
       }
     },
-    "notifications": {
-      "documentRejected": {
-        "title": "Document Rejected",
-        "message": "Your document {{fileName}} was rejected. Reason: {{reason}}"
-      }
-    },
+
     "documentRequests": {
       "status": {
         "downloading": "Downloading...",

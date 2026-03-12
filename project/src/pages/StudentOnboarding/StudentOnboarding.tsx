@@ -496,10 +496,10 @@ const StudentOnboarding: React.FC = () => {
                         notifications.map((n) => (
                           <div key={n.id} className={`px-4 py-3 hover:bg-slate-50 cursor-pointer border-b border-slate-50 last:border-0 ${!n.read_at ? 'bg-blue-50/30' : ''}`} onClick={() => openNotification(n)}>
                             <div className="text-sm font-bold text-slate-900 flex items-center justify-between">
-                              <span className="truncate pr-4">{n.title}</span>
+                              <span className="truncate pr-4">{t(`dashboard:studentDashboard.notifications.${n.title}`, n.title)}</span>
                               {!n.read_at && <span className="h-2 w-2 rounded-full bg-blue-500 flex-shrink-0"></span>}
                             </div>
-                            <div className="text-xs text-slate-600 mt-1 line-clamp-2">{n.message}</div>
+                            <div className="text-xs text-slate-600 mt-1 line-clamp-2">{t(`dashboard:studentDashboard.notifications.${n.message}`, n.message)}</div>
                             <div className="text-[10px] text-slate-400 mt-1.5 flex items-center gap-1">
                               <Clock className="w-3 h-3" />
                               {new Date(n.created_at).toLocaleString()}
