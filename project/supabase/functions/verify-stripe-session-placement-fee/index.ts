@@ -66,7 +66,10 @@ Deno.serve(async (req) => {
     }
 
     // Atualizar perfil
-    await supabase.from('user_profiles').update({ is_placement_fee_paid: true }).eq('user_id', userId);
+    await supabase.from('user_profiles').update({ 
+      is_placement_fee_paid: true,
+      placement_fee_payment_method: session.metadata?.payment_method || 'stripe'
+    }).eq('user_id', userId);
 
     // Registrar pagamento
     const paymentIntentId = typeof session.payment_intent === 'string' ? session.payment_intent : session.payment_intent?.id;

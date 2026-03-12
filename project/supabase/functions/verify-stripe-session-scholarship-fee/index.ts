@@ -499,7 +499,8 @@ Deno.serve(async (req)=>{
       
       // Atualiza perfil do usuário para marcar que pagou a scholarship fee (usando userId para user_profiles)
       const { error: profileUpdateError } = await supabase.from('user_profiles').update({
-        is_scholarship_fee_paid: true
+        is_scholarship_fee_paid: true,
+        scholarship_fee_payment_method: paymentMethodForApplication // 'pix' ou 'stripe'
       }).eq('user_id', userId);
       if (profileUpdateError) throw new Error(`Failed to update user_profiles: ${profileUpdateError.message}`);
       console.log('User profile updated - scholarship fee paid');

@@ -1276,6 +1276,7 @@ async function handleCheckoutSessionCompleted(session: any, stripe: any) {
         .update({
           is_application_fee_paid: true,
           application_fee_paid_at: new Date().toISOString(),
+          application_fee_payment_method: metadata?.payment_method || "stripe",
           last_payment_date: new Date().toISOString(),
           updated_at: new Date().toISOString(),
         }).eq("user_id", finalUserId);
@@ -1492,6 +1493,7 @@ async function handleCheckoutSessionCompleted(session: any, stripe: any) {
         await supabase.from("user_profiles").update({
           is_scholarship_fee_paid: true,
           scholarship_fee_paid_at: new Date().toISOString(),
+          scholarship_fee_payment_method: metadata?.payment_method || "stripe",
           last_payment_date: new Date().toISOString(),
           updated_at: new Date().toISOString(),
         }).eq("user_id", userId);
@@ -1773,6 +1775,67 @@ async function handleCheckoutSessionCompleted(session: any, stripe: any) {
         } catch (recordError) {
           console.error("[Individual Fee Payment] Error recording payment:", recordError);
         }
+      }
+    }
+  }
+  if (paymentType === "placement_fee") {
+    const userId = metadata?.user_id || metadata?.student_id;
+    if (userId) {
+      const placementPaymentMethod = metadata?.payment_method || "stripe";
+      const { error } = await supabase.from("user_profiles").update({
+        is_placement_fee_paid: true,
+        placement_fee_paid_at: new Date().toISOString(),
+        placement_fee_payment_method: placementPaymentMethod,
+        last_payment_date: new Date().toISOString(),
+        updated_at: new Date().toISOString(),
+      }).eq("user_id", userId);
+      
+      if (error) {
+        console.error("[stripe-webhook] Error updating placement fee status:", error);
+      } else {
+        console.log(
+          "[stripe-webhook] Placement fee payment processed successfully for user:",
+          userId,
+        );
+      }
+
+      // Registrar pagamento na tabela individual_fee_payments
+      try {
+        const paymentDate = new Date().toISOString();
+        const paymentAmountRaw = session.amount_total
+          ? session.amount_total / 100
+          : 0;
+        const currency = session.currency?.toUpperCase() || "USD";
+        const paymentIntentId = session.payment_intent as string || "";
+
+        // Converter BRL para USD se necessário (sempre registrar em USD)
+        let paymentAmount = paymentAmountRaw;
+        if (currency === "BRL" && session.metadata?.exchange_rate) {
+          const exchangeRate = parseFloat(session.metadata.exchange_rate);
+          if (exchangeRate > 0) {
+            paymentAmount = paymentAmountRaw / exchangeRate;
+          }
+        }
+
+        const { error: insertError } = await supabase.rpc(
+          "insert_individual_fee_payment",
+          {
+            p_user_id: userId,
+            p_fee_type: "placement",
+            p_amount: paymentAmount, // Sempre em USD
+            p_payment_date: paymentDate,
+            p_payment_method: "stripe",
+            p_payment_intent_id: paymentIntentId,
+            p_stripe_charge_id: null,
+            p_zelle_payment_id: null,
+          },
+        );
+
+        if (insertError) {
+          console.warn("[stripe-webhook] [Individual Fee Payment] Warning: Could not record placement fee payment:", insertError);
+        }
+      } catch (recordError) {
+        console.error("[stripe-webhook] [Individual Fee Payment] Error recording placement payment:", recordError);
       }
     }
   }

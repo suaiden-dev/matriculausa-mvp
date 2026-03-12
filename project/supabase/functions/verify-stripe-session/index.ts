@@ -80,7 +80,10 @@ Deno.serve(async (req) => {
         // Atualiza perfil (flag global) e SOMENTE a aplicação correta (flag da aplicação)
         const { error: profileError2 } = await supabase
           .from('user_profiles')
-          .update({ is_application_fee_paid: true })
+          .update({ 
+            is_application_fee_paid: true,
+            application_fee_payment_method: session.metadata?.payment_method || 'stripe'
+          })
           .eq('user_id', userId);
         if (profileError2) throw new Error(`Failed to update user_profiles: ${profileError2.message}`);
         const { error: appError } = await supabase
@@ -200,10 +203,19 @@ Deno.serve(async (req) => {
         console.log('Processing: Scholarship Fee');
         const { error: updateError } = await supabase
           .from('scholarship_applications')
-          .update({ status: 'approved' })
+          .update({ 
+            status: 'approved',
+            scholarship_fee_payment_method: session.metadata?.payment_method || 'stripe'
+          })
           .eq('student_id', studentId)
           .eq('id', applicationId);
         if (updateError) throw new Error(`Failed to update application status for scholarship fee: ${updateError.message}`);
+
+        // Também atualizar o perfil do usuário para consistência
+        await supabase.from('user_profiles').update({
+          is_scholarship_fee_paid: true,
+          scholarship_fee_payment_method: session.metadata?.payment_method || 'stripe'
+        }).eq('user_id', userId);
 
         // Remover todas as outras aplicações do aluno
         try {
@@ -229,12 +241,29 @@ Deno.serve(async (req) => {
            console.error('Error creating in-app notification:', inAppError);
         }
         return corsResponse({ status: 'complete', message: 'Session verified and processed successfully.' }, 200);
+        return corsResponse({ status: 'complete', message: 'Session verified and processed successfully.' }, 200);
+      } else if (feeType === 'placement_fee') {
+        console.log('Processing: Placement Fee');
+        const { error: profileError } = await supabase
+          .from('user_profiles')
+          .update({ 
+            is_placement_fee_paid: true,
+            placement_fee_paid_at: new Date().toISOString(),
+            placement_fee_payment_method: session.metadata?.payment_method || 'stripe'
+          })
+          .eq('user_id', userId);
+        if (profileError) throw new Error(`Failed to update user_profiles: ${profileError.message}`);
+        
+        return corsResponse({ status: 'complete', message: 'Session verified and processed successfully.' }, 200);
       } else if (feeType === 'selection_process') {
         console.log('Processing: Selection Process Fee');
         // Atualiza perfil do usuário
         const { error: profileError } = await supabase
           .from('user_profiles')
-          .update({ has_paid_selection_process_fee: true })
+          .update({ 
+            has_paid_selection_process_fee: true,
+            selection_process_fee_payment_method: session.metadata?.payment_method || 'stripe'
+          })
           .eq('user_id', userId);
         if (profileError) throw new Error(`Failed to update user_profiles: ${profileError.message}`);
         // Se houver applicationId, atualiza a aplicação
