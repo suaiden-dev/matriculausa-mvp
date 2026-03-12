@@ -1438,7 +1438,7 @@ const ScholarshipBrowser: React.FC<ScholarshipBrowserProps> = ({
                                 const placementFee = getPlacementFee(annualValue, placementFeeAmount);
                                 return (
                                   <div className="flex items-center justify-between pt-1.5 border-t border-slate-200 mt-2">
-                                    <span className="text-xs text-slate-600 font-medium">Placement Fee</span>
+                                    <span className="text-xs text-slate-600 font-medium">{t('studentDashboard.myApplications.paymentStatus.placementFee')}</span>
                                     <span className="text-sm font-bold text-blue-600">{formatCurrency(placementFee)}</span>
                                   </div>
                                 );
@@ -1681,7 +1681,7 @@ const ScholarshipBrowser: React.FC<ScholarshipBrowserProps> = ({
                           const placementFee = getPlacementFee(annualValue, placementFeeAmount);
                           return (
                             <div className="flex items-center justify-between pt-1.5 border-t border-slate-200 mt-1">
-                              <span className="text-xs text-slate-500">Placement Fee</span>
+                              <span className="text-xs text-slate-500">{t('studentDashboard.myApplications.paymentStatus.placementFee')}</span>
                               <span className="text-xs font-bold text-blue-600">{formatCurrency(placementFee)}</span>
                             </div>
                           );

@@ -112,7 +112,10 @@ const MyApplications: React.FC = () => {
 
 
   // Função para verificar se há documentos rejeitados e abrir automaticamente o checklist
+  // Nota: Não abrimos automaticamente se a aplicação em si já foi rejeitada finalmene
   const checkAndOpenRejectedDocuments = (application: ApplicationWithScholarship) => {
+    if (application.status === 'rejected') return;
+
     const docs = parseApplicationDocuments((application as any).documents);
     const hasRejectedDocuments = docs.some(doc =>
       (doc.status || '').toLowerCase() === 'changes_requested' ||
@@ -1260,7 +1263,7 @@ const MyApplications: React.FC = () => {
                                                       )}
 
                                                       {/* Upload Action for Rejected Docs */}
-                                                      {isRejected && (
+                                                      {isRejected && application.status !== 'rejected' && (
                                                         <div className="mt-3 space-y-2">
                                                           <div className="flex flex-col gap-2">
                                                             <label className="cursor-pointer bg-gradient-to-r from-blue-50 to-blue-100 text-blue-700 border-2 border-blue-200 hover:from-blue-100 hover:to-blue-200 px-3 py-2 rounded-lg font-semibold transition-all duration-200 flex-1 text-center text-xs hover:shadow-md">

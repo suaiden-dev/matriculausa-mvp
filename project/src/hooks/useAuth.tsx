@@ -117,16 +117,11 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
   const [loading, setLoading] = useState<boolean>(true);
 
   useEffect(() => {
-    console.log('[useAuth] 🔍 useEffect executado - Timestamp:', new Date().toISOString());
-    console.log('[useAuth] 🔍 Pathname:', window.location.pathname);
-    setLoading(true);
-
     // Detectar fluxo de recuperação de senha
     const isPasswordResetFlow =
       window.location.pathname.startsWith('/forgot-password') &&
       (window.location.hash.includes('access_token') || window.location.hash.includes('refresh_token'));
     if (isPasswordResetFlow) {
-      console.log('[useAuth] 🔍 Password reset flow detectado');
       setUser(null);
       setSupabaseUser(null);
       setUserProfile(null);
@@ -671,11 +666,12 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
           localStorage.setItem('cached_user_profile', JSON.stringify(profile));
         }
 
-        // ✅ NOVO: Refetch do perfil após um pequeno delay para garantir que o trigger do banco
-        // tenha atualizado o system_type e outros campos calculados
-        // Isso é especialmente importante após o registro de novos usuários
-        if (profile && profile.role === 'student') {
+        // Refetch do perfil APENAS se for um registro recente (detetado via localStorage)
+        // Isso evita chamadas redundantes em cada refresh de página normal
+        const isRecentRegistration = localStorage.getItem('pending_full_name') !== null;
+        if (profile && profile.role === 'student' && isRecentRegistration) {
           setTimeout(async () => {
+             if (!isMounted) return;
             try {
               const { data: refreshedProfile, error: refreshError } = await supabase
                 .from('user_profiles')
@@ -684,7 +680,6 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
                 .single();
 
               if (!refreshError && refreshedProfile) {
-                console.log('✅ [USEAUTH] Perfil atualizado após delay:', refreshedProfile);
                 setUserProfile(refreshedProfile as UserProfile);
 
                 // Atualizar cache também
@@ -698,7 +693,7 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
             } catch (err) {
               console.error('❌ [USEAUTH] Erro ao refetch do perfil:', err);
             }
-          }, 1500); // 1.5 segundos de delay para permitir que o trigger do banco execute
+          }, 1500); 
         }
 
         // Sincronizar telefone do user_metadata se o perfil não tiver

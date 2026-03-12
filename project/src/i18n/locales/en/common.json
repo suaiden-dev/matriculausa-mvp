@@ -153,6 +153,7 @@
     "selectionProcess": "Selection Process Fee",
     "application": "Application Fee",
     "scholarship": "Scholarship Fee",
+    "placement": "Placement Fee",
     "i20Control": "I-20 Control Fee",
     "finalNonRefundable": "This fee is final and non-refundable"
   },
@@ -161,6 +162,7 @@
     "selectionProcessFee": "Selection Process Fee",
     "applicationFee": "Application Fee",
     "scholarshipFee": "Scholarship Fee",
+    "placementFee": "Placement Fee",
     "enrollmentFee": "Enrollment Fee",
     "collegeEnrollmentFee": "College Enrollment Fee",
     "i20ControlFee": "I-20 Control Fee"
@@ -172,6 +174,7 @@
     "selectionProcess": "Selection Process Fee - Complete your application process",
     "applicationFee": "Application Fee - Apply for a specific scholarship",
     "scholarshipFee": "Scholarship Fee - Confirm your scholarship application",
+    "placementFee": "Placement Fee - Final step to secure your placement and support",
     "i20ControlFee": "I-20 Control Fee - Document processing and validation"
   },
   "features": {
