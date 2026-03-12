@@ -54,23 +54,44 @@ const Overview: React.FC<OverviewProps> = ({
   const paidAt = userProfile?.selection_process_paid_at ? new Date(userProfile.selection_process_paid_at) : null;
   const isExemptedByLegacy = userProfile?.has_paid_selection_process_fee && (!paidAt || paidAt < SURVEY_THRESHOLD_DATE);
 
-  // Verificar qual o passo de onboarding correto baseado no progresso real (DB) + LocalStorage
+  // Verificar qual o passo de onboarding correto baseado no banco de dados
   const savedOnboardingStep = React.useMemo(() => {
     if (typeof window === 'undefined') return null;
 
-    // 1. Calcular o passo baseado no perfil do banco de dados (Progresso Real)
+    const validSteps = [
+      'selection_fee', 'identity_verification', 'selection_survey',
+      'scholarship_selection', 'process_type', 'documents_upload',
+      'payment', 'scholarship_fee', 'placement_fee', 'my_applications', 'completed'
+    ];
+
+    // 1. FONTE PRIMÁRIA: step salvo no banco de dados
+    const dbStep = (userProfile as any)?.onboarding_current_step;
+
+    if (dbStep && validSteps.includes(dbStep)) {
+      // Único bloqueio de segurança: sem taxa de seleção paga, não avança
+      if (userProfile && !userProfile.has_paid_selection_process_fee) {
+        const stepsAfterSelection = [
+          'scholarship_selection', 'process_type', 'documents_upload',
+          'payment', 'scholarship_fee', 'placement_fee', 'my_applications',
+          'waiting_approval', 'completed'
+        ];
+        if (stepsAfterSelection.includes(dbStep)) {
+          return 'selection_fee';
+        }
+      }
+      return dbStep;
+    }
+
+    // 2. FALLBACK: calcular baseado nas flags do perfil (usuários sem campo preenchido)
     let calculatedStep: string | null = 'selection_fee';
 
     if (userProfile) {
-      // Unifica flags de progresso vindo de múltiplas fontes para evitar bloqueios por falta de sincronia
       const hasAppsInSystem = applications.length > 0;
       const anyAppPaidOrApproved = applications.some(app =>
         app.is_application_fee_paid ||
         ['approved', 'enrolled', 'under_review'].includes(app.status)
       );
-
       const anyScholarshipFeePaid = applications.some(app => app.is_scholarship_fee_paid) || userProfile.is_scholarship_fee_paid;
-
       const hasGlobalFeePaid = userProfile.is_application_fee_paid || !!userProfile.application_fee_paid_at || !!userProfile.scholarship_fee_paid_at || anyAppPaidOrApproved;
       const hasDocsGlobal = userProfile.documents_uploaded || !!userProfile.application_fee_paid_at || anyAppPaidOrApproved;
 
@@ -93,30 +114,7 @@ const Overview: React.FC<OverviewProps> = ({
       }
     }
 
-    // 2. Tentar pegar o que está no localStorage
-    const savedStep = window.localStorage.getItem('onboarding_current_step');
-    const validSteps = ['selection_fee', 'identity_verification', 'selection_survey', 'scholarship_selection', 'process_type', 'documents_upload', 'payment', 'scholarship_fee', 'my_applications', 'completed'];
-
-    // Se não há nada no localStorage ou é inválido, usa o calculado
-    if (!savedStep || !validSteps.includes(savedStep)) return calculatedStep;
-
-    // 3. Lógica de Sincronia: Se o localStorage está MUITO atrás do calculado (pós-limpeza), usa o calculado.
-    const savedIdx = validSteps.indexOf(savedStep);
-    const calculatedIdx = validSteps.indexOf(calculatedStep || 'selection_fee');
-
-    if (savedIdx < calculatedIdx) {
-      return calculatedStep;
-    }
-
-    // Se o usuário não pagou a taxa de seleção, ele não deve conseguir avançar além desse ponto
-    if (userProfile && !userProfile.has_paid_selection_process_fee) {
-      const stepsAfterSelection = ['scholarship_selection', 'process_type', 'documents_upload', 'payment', 'scholarship_fee', 'my_applications', 'waiting_approval', 'completed'];
-      if (stepsAfterSelection.includes(savedStep)) {
-        return 'selection_fee';
-      }
-    }
-
-    return savedStep;
+    return calculatedStep;
   }, [userProfile, applications, isExemptedByLegacy]);
 
   const hasSavedOnboardingStep = savedOnboardingStep !== null;
