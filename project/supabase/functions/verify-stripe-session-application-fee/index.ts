@@ -430,6 +430,7 @@ Deno.serve(async (req)=>{
       // Atualiza perfil do usuário para marcar que pagou a application fee
       const { error: profileUpdateError } = await supabase.from('user_profiles').update({
         is_application_fee_paid: true,
+        application_fee_payment_method: paymentMethodForApplication, // 'pix' ou 'stripe'
         last_payment_date: new Date().toISOString()
       }).eq('user_id', userId);
       if (profileUpdateError) {
