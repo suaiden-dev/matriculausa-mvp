@@ -304,7 +304,7 @@ const ScholarshipCardFullComponent: React.FC<ScholarshipCardFullProps> = ({
                 {isLocked
                   ? 'Já Selecionado'
                   : isSelected
-                    ? 'Remove from Selection'
+                    ? t('studentDashboard.findScholarships.scholarshipCard.removeSelection')
                     : t('studentDashboard.findScholarships.scholarshipCard.selectScholarship')}
               </span>
             </button>

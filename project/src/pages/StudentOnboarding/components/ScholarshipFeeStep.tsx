@@ -472,6 +472,8 @@ export const ScholarshipFeeStep: React.FC<StepProps> = ({ onNext, onBack }) => {
                                 onProcessingChange={(isProcessing: boolean) => {
                                   if (isProcessing) refetchPaymentStatus();
                                 }}
+                                hideHeader={true}
+                                onSuccess={onNext}
                               />
                             </div>
                           </div>
@@ -647,6 +649,11 @@ export const ScholarshipFeeStep: React.FC<StepProps> = ({ onNext, onBack }) => {
                                     isPendingVerification={hasZellePendingScholarshipFee}
                                     onProcessingChange={(isProcessing: boolean) => {
                                       if (isProcessing) refetchPaymentStatus();
+                                    }}
+                                    onClose={() => setZelleActiveApp(null)}
+                                    onSuccess={() => {
+                                      setZelleActiveApp(null);
+                                      onNext();
                                     }}
                                   />
                                 </div>

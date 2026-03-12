@@ -748,7 +748,7 @@ const ApplicationChatPage: React.FC = () => {
                       {(applicationDetails.acceptance_letter_status === 'sent' || 
                         applicationDetails.acceptance_letter_status === 'approved' ||
                         applicationDetails.acceptance_letter_sent_at) && (
-                        <div className="bg-blue-50 border border-blue-200 rounded-lg p-3 flex items-start gap-2">
+                        <div className="bg-blue-50 outline outline-1 outline-slate-300 rounded-xl p-3 flex items-start gap-2">
                           <CheckCircle className="w-5 h-5 text-blue-600 flex-shrink-0 mt-0.5" />
                           <div className="flex-1">
                             <p className="text-blue-800 text-sm font-medium">
@@ -763,7 +763,7 @@ const ApplicationChatPage: React.FC = () => {
                       
                       <button 
                         onClick={() => setActiveTab('documents')}
-                        className="inline-flex items-center gap-2 bg-gradient-to-r from-blue-600 to-blue-700 text-white px-6 py-3 rounded-xl font-semibold shadow-lg hover:shadow-xl transition-all duration-300 hover:scale-105 group"
+                        className="inline-flex items-center gap-2 bg-gradient-to-r from-blue-600 to-blue-700 text-white px-6 py-3 rounded-xl font-semibold shadow-lg hover:shadow-xl transition-all duration-300 hover:scale-105 group outline outline-1 outline-slate-300"
                       >
                         {t('studentDashboard.applicationChatPage.welcome.documentRequests.button')}
                         <svg className="w-4 h-4 group-hover:translate-x-1 transition-transform duration-300" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -792,7 +792,7 @@ const ApplicationChatPage: React.FC = () => {
                       
                       <button 
                         onClick={() => setActiveTab('details')}
-                        className="inline-flex items-center gap-2 bg-gradient-to-r from-[#05294E] to-[#0a4a7a] text-white px-6 py-3 rounded-xl font-semibold shadow-lg hover:shadow-xl transition-all duration-300 hover:scale-105 group"
+                        className="inline-flex items-center gap-2 bg-gradient-to-r from-[#05294E] to-[#0a4a7a] text-white px-6 py-3 rounded-xl font-semibold shadow-lg hover:shadow-xl transition-all duration-300 hover:scale-105 group outline outline-1 outline-slate-300"
                       >
                         {t('studentDashboard.applicationChatPage.welcome.applicationDetails.button')}
                         <svg className="w-4 h-4 group-hover:translate-x-1 transition-transform duration-300" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -906,7 +906,7 @@ const ApplicationChatPage: React.FC = () => {
             {/* Cards Grid - Mobile First */}
             <div className="grid gap-6 md:gap-8">
               {/* Student Information Card */}
-              <div className="group bg-white rounded-3xl shadow-lg hover:shadow-2xl transition-all duration-300 border border-gray-100 hover:border-[#05294E]/20 overflow-hidden">
+              <div className="group bg-white rounded-xl shadow-lg hover:shadow-2xl transition-all duration-300 border border-gray-100 hover:border-[#05294E]/20 overflow-hidden outline outline-1 outline-slate-300">
                 <div className="bg-gradient-to-br from-[#05294E] via-[#0a4a7a] to-[#05294E] p-6 sm:p-8">
                   <div className="flex items-center gap-4">
                     <div className="w-12 h-12 bg-white/10 rounded-2xl flex items-center justify-center backdrop-blur-sm">
@@ -928,19 +928,19 @@ const ApplicationChatPage: React.FC = () => {
                         <h3 className="text-lg font-bold text-gray-900">{t('studentDashboard.applicationChatPage.details.studentInformation.personalDetails')}</h3>
                       </div>
                       <div className="space-y-4">
-                        <div className="bg-gray-50 rounded-xl p-4 hover:bg-gray-100 transition-colors duration-200">
+                        <div className="bg-gray-50 rounded-xl p-4 hover:bg-gray-100 transition-colors duration-200 outline outline-1 outline-slate-300">
                           <span className="text-sm font-medium text-gray-600 block mb-1">{t('studentDashboard.applicationChatPage.details.studentInformation.fullName')}</span>
                           <span className="text-base font-semibold text-gray-900">{applicationDetails.user_profiles?.full_name || 'N/A'}</span>
                         </div>
-                        <div className="bg-gray-50 rounded-xl p-4 hover:bg-gray-100 transition-colors duration-200">
+                        <div className="bg-gray-50 rounded-xl p-4 hover:bg-gray-100 transition-colors duration-200 outline outline-1 outline-slate-300">
                           <span className="text-sm font-medium text-gray-600 block mb-1">{t('studentDashboard.applicationChatPage.details.studentInformation.email')}</span>
                           <span className="text-base font-semibold text-gray-900">{applicationDetails.user_profiles?.email || 'N/A'}</span>
                         </div>
-                        <div className="bg-gray-50 rounded-xl p-4 hover:bg-gray-100 transition-colors duration-200">
+                        <div className="bg-gray-50 rounded-xl p-4 hover:bg-gray-100 transition-colors duration-200 outline outline-1 outline-slate-300">
                           <span className="text-sm font-medium text-gray-600 block mb-1">{t('studentDashboard.applicationChatPage.details.studentInformation.phone')}</span>
                           <span className="text-base font-semibold text-gray-900">{applicationDetails.user_profiles?.phone || 'N/A'}</span>
                         </div>
-                        <div className="bg-gray-50 rounded-xl p-4 hover:bg-gray-100 transition-colors duration-200">
+                        <div className="bg-gray-50 rounded-xl p-4 hover:bg-gray-100 transition-colors duration-200 outline outline-1 outline-slate-300">
                           <span className="text-sm font-medium text-gray-600 block mb-1">{t('studentDashboard.applicationChatPage.details.studentInformation.country')}</span>
                           <span className="text-base font-semibold text-gray-900">{applicationDetails.user_profiles?.country || 'N/A'}</span>
                         </div>
@@ -956,7 +956,7 @@ const ApplicationChatPage: React.FC = () => {
                         <h3 className="text-lg font-bold text-gray-900">{t('studentDashboard.applicationChatPage.details.studentInformation.academicProfile')}</h3>
                       </div>
                       <div className="space-y-4">
-                        <div className="bg-gray-50 rounded-xl p-4 hover:bg-gray-100 transition-colors duration-200">
+                        <div className="bg-gray-50 rounded-xl p-4 hover:bg-gray-100 transition-colors duration-200 outline outline-1 outline-slate-300">
                           <span className="text-sm font-medium text-gray-600 block mb-1">{t('studentDashboard.applicationChatPage.details.studentInformation.studentType')}</span>
                           <span className="text-base font-semibold text-gray-900">
                             {applicationDetails.student_process_type === 'initial' ? t('studentDashboard.applicationChatPage.details.studentInformation.initialF1VisaRequired') :
@@ -965,13 +965,13 @@ const ApplicationChatPage: React.FC = () => {
                              applicationDetails.student_process_type || 'N/A'}
                           </span>
                         </div>
-                        <div className="bg-gray-50 rounded-xl p-4 hover:bg-gray-100 transition-colors duration-200">
+                        <div className="bg-gray-50 rounded-xl p-4 hover:bg-gray-100 transition-colors duration-200 outline outline-1 outline-slate-300">
                           <span className="text-sm font-medium text-gray-600 block mb-1">{t('studentDashboard.applicationChatPage.details.studentInformation.applicationDate')}</span>
                           <span className="text-base font-semibold text-gray-900">
                             {new Date(applicationDetails.created_at || Date.now()).toLocaleDateString()}
                           </span>
                         </div>
-                        <div className="bg-gray-50 rounded-xl p-4 hover:bg-gray-100 transition-colors duration-200">
+                        <div className="bg-gray-50 rounded-xl p-4 hover:bg-gray-100 transition-colors duration-200 outline outline-1 outline-slate-300">
                           <span className="text-sm font-medium text-gray-600 block mb-1">{t('studentDashboard.applicationChatPage.details.studentInformation.lastUpdated')}</span>
                           <span className="text-base font-semibold text-gray-900">
                             {new Date(applicationDetails.updated_at || Date.now()).toLocaleDateString()}
@@ -989,7 +989,7 @@ const ApplicationChatPage: React.FC = () => {
                         <h3 className="text-lg font-bold text-gray-900">{t('studentDashboard.applicationChatPage.details.studentInformation.applicationStatus')}</h3>
                       </div>
                       <div className="space-y-4">
-                        <div className="bg-gray-50 rounded-xl p-4 hover:bg-gray-100 transition-colors duration-200">
+                        <div className="bg-gray-50 rounded-xl p-4 hover:bg-gray-100 transition-colors duration-200 outline outline-1 outline-slate-300">
                           <span className="text-sm font-medium text-gray-600 block mb-2">{t('studentDashboard.applicationChatPage.details.studentInformation.currentStatus')}</span>
                           {applicationDetails.status === 'enrolled' || applicationDetails.acceptance_letter_status === 'approved' ? (
                             <span className="inline-flex items-center px-4 py-2 rounded-xl text-sm font-semibold bg-green-100 text-green-700 border border-green-200">
@@ -1003,7 +1003,7 @@ const ApplicationChatPage: React.FC = () => {
                             </span>
                           )}
                         </div>
-                        <div className="bg-gray-50 rounded-xl p-4 hover:bg-gray-100 transition-colors duration-200">
+                        <div className="bg-gray-50 rounded-xl p-4 hover:bg-gray-100 transition-colors duration-200 outline outline-1 outline-slate-300">
                           <span className="text-sm font-medium text-gray-600 block mb-1">{t('studentDashboard.applicationChatPage.details.studentInformation.documentsStatus')}</span>
                           <span className="text-base font-semibold text-gray-900">
                             {DOCUMENTS_INFO.filter(doc => {
@@ -1024,7 +1024,7 @@ const ApplicationChatPage: React.FC = () => {
               </div>
               
               {/* University Information Card */}
-              <div className="group bg-white rounded-3xl shadow-lg hover:shadow-2xl transition-all duration-300 border border-gray-100 hover:border-blue-200 overflow-hidden">
+              <div className="group bg-white rounded-xl shadow-lg hover:shadow-2xl transition-all duration-300 border border-gray-100 hover:border-blue-200 overflow-hidden outline outline-1 outline-slate-300">
                 <div className="bg-gradient-to-br from-blue-600 via-blue-700 to-blue-800 p-6 sm:p-8">
                   <div className="flex items-center gap-4">
                     <div className="w-12 h-12 bg-white/10 rounded-2xl flex items-center justify-center backdrop-blur-sm">
@@ -1037,7 +1037,7 @@ const ApplicationChatPage: React.FC = () => {
                 </div>
                 <div className="p-6 sm:p-8">
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                    <div className="bg-blue-50 rounded-2xl p-6 hover:bg-blue-100 transition-colors duration-200">
+                    <div className="bg-blue-50 rounded-xl p-6 hover:bg-blue-100 transition-colors duration-200 outline outline-1 outline-slate-300">
                       <div className="flex items-center gap-3 mb-3">
                         <div className="w-8 h-8 bg-blue-100 rounded-xl flex items-center justify-center">
                           <GraduationCap className="w-5 h-5 text-blue-600" />
@@ -1047,7 +1047,7 @@ const ApplicationChatPage: React.FC = () => {
                       <div className="text-lg font-bold text-gray-900">{applicationDetails.scholarships?.universities?.name || 'N/A'}</div>
                     </div>
                     
-                    <div className="bg-blue-50 rounded-2xl p-6 hover:bg-blue-100 transition-colors duration-200">
+                    <div className="bg-blue-50 rounded-xl p-6 hover:bg-blue-100 transition-colors duration-200 outline outline-1 outline-slate-300">
                       <div className="flex items-center gap-3 mb-3">
                         <div className="w-8 h-8 bg-blue-100 rounded-xl flex items-center justify-center">
                           <MapPin className="w-5 h-5 text-blue-600" />
@@ -1061,14 +1061,14 @@ const ApplicationChatPage: React.FC = () => {
                   </div>
                   
                   {/* Contact Information */}
-                  <div className="mt-6 bg-gray-50 rounded-2xl p-6">
+                  <div className="mt-6 bg-gray-50 rounded-xl p-6 outline outline-1 outline-slate-300">
                     <h3 className="text-lg font-bold text-gray-900 mb-4 flex items-center gap-2">
                       <Phone className="w-5 h-5 text-gray-600" />
                       {t('studentDashboard.applicationChatPage.details.universityInformation.contactInformation')}
                     </h3>
                     <div className="space-y-3">
                       {applicationDetails.scholarships?.universities?.website && (
-                        <div className="flex flex-col sm:flex-row sm:items-center gap-2 sm:gap-3 p-3 bg-white rounded-xl hover:bg-gray-50 transition-colors duration-200">
+                        <div className="flex flex-col sm:flex-row sm:items-center gap-2 sm:gap-3 p-3 bg-white rounded-xl hover:bg-gray-50 transition-colors duration-200 outline outline-1 outline-slate-300">
                           <div className="flex items-center gap-2 sm:gap-3 flex-shrink-0">
                             <Globe className="w-4 h-4 text-gray-500 flex-shrink-0" />
                             <span className="text-sm text-gray-600 whitespace-nowrap">{t('studentDashboard.applicationChatPage.details.universityInformation.website')}</span>
@@ -1084,7 +1084,7 @@ const ApplicationChatPage: React.FC = () => {
                         </div>
                       )}
                       {(applicationDetails.scholarships?.universities?.contact?.email || applicationDetails.scholarships?.universities?.contact?.admissionsEmail) && (
-                        <div className="flex flex-col sm:flex-row sm:items-center gap-2 sm:gap-3 p-3 bg-white rounded-xl hover:bg-gray-50 transition-colors duration-200">
+                        <div className="flex flex-col sm:flex-row sm:items-center gap-2 sm:gap-3 p-3 bg-white rounded-xl hover:bg-gray-50 transition-colors duration-200 outline outline-1 outline-slate-300">
                           <div className="flex items-center gap-2 sm:gap-3 flex-shrink-0">
                             <Mail className="w-4 h-4 text-gray-500 flex-shrink-0" />
                             <span className="text-sm text-gray-600 whitespace-nowrap">{t('studentDashboard.applicationChatPage.details.universityInformation.email')}</span>
@@ -1095,7 +1095,7 @@ const ApplicationChatPage: React.FC = () => {
                         </div>
                       )}
                       {applicationDetails.scholarships?.universities?.contact?.phone && (
-                        <div className="flex flex-col sm:flex-row sm:items-center gap-2 sm:gap-3 p-3 bg-white rounded-xl hover:bg-gray-50 transition-colors duration-200">
+                        <div className="flex flex-col sm:flex-row sm:items-center gap-2 sm:gap-3 p-3 bg-white rounded-xl hover:bg-gray-50 transition-colors duration-200 outline outline-1 outline-slate-300">
                           <div className="flex items-center gap-2 sm:gap-3 flex-shrink-0">
                             <Phone className="w-4 h-4 text-gray-500 flex-shrink-0" />
                             <span className="text-sm text-gray-600 whitespace-nowrap">{t('studentDashboard.applicationChatPage.details.universityInformation.phone')}</span>
@@ -1109,7 +1109,7 @@ const ApplicationChatPage: React.FC = () => {
               </div>
 
               {/* Scholarship Information Card */}
-              <div className="group bg-white rounded-2xl shadow-sm border border-slate-200 overflow-hidden hover:shadow-md transition-all duration-300">
+              <div className="group bg-white rounded-xl shadow-sm border border-slate-200 overflow-hidden hover:shadow-md transition-all duration-300 outline outline-1 outline-slate-300">
                 <div className="bg-gradient-to-r from-[#05294E] to-[#08427e] px-6 py-4">
                   <div className="flex items-center gap-3">
                     <Award className="w-6 h-6 text-white/90" />
@@ -1121,7 +1121,7 @@ const ApplicationChatPage: React.FC = () => {
                 <div className="p-6">
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                     {/* Scholarship Name */}
-                    <div className="bg-slate-50 rounded-xl p-4 border border-slate-100 dark:border-slate-800">
+                    <div className="bg-slate-50 rounded-xl p-4 border border-slate-100 dark:border-slate-800 outline outline-1 outline-slate-300">
                       <div className="flex items-center gap-2 mb-2">
                         <Award className="w-4 h-4 text-[#05294E]" />
                         <span className="text-xs font-bold uppercase tracking-wider text-slate-500">{t('studentDashboard.applicationChatPage.details.scholarshipDetails.scholarshipName')}</span>
@@ -1133,7 +1133,7 @@ const ApplicationChatPage: React.FC = () => {
                     
                     {/* Course */}
                     {applicationDetails.scholarships?.course && (
-                      <div className="bg-slate-50 rounded-xl p-4 border border-slate-100">
+                      <div className="bg-slate-50 rounded-xl p-4 border border-slate-100 outline outline-1 outline-slate-300">
                         <div className="flex items-center gap-2 mb-2">
                           <BookOpen className="w-4 h-4 text-[#05294E]" />
                           <span className="text-xs font-bold uppercase tracking-wider text-slate-500">{t('studentDashboard.applicationChatPage.details.scholarshipDetails.course')}</span>
@@ -1144,7 +1144,7 @@ const ApplicationChatPage: React.FC = () => {
                     
                     {/* Description - Full width */}
                     {applicationDetails.scholarships?.description && (
-                      <div className="col-span-1 md:col-span-2 bg-slate-50 rounded-xl p-4 border border-slate-100">
+                      <div className="col-span-1 md:col-span-2 bg-slate-50 rounded-xl p-4 border border-slate-100 outline outline-1 outline-slate-300">
                         <div className="flex items-center gap-2 mb-2">
                           <FileText className="w-4 h-4 text-[#05294E]" />
                           <span className="text-xs font-bold uppercase tracking-wider text-slate-500">{t('studentDashboard.applicationChatPage.details.scholarshipDetails.description')}</span>
@@ -1155,9 +1155,9 @@ const ApplicationChatPage: React.FC = () => {
 
                     {/* Application Fee */}
                     {userProfile?.has_paid_selection_process_fee && (
-                      <div className="col-span-1 md:col-span-2 bg-slate-50 rounded-xl p-4 border border-slate-100 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
+                      <div className="col-span-1 md:col-span-2 bg-slate-50 rounded-xl p-4 border border-slate-100 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 outline outline-1 outline-slate-300">
                         <div className="flex items-start gap-2">
-                          <div className="p-1.5 bg-white rounded-md shadow-sm border border-slate-100 mt-0.5">
+                          <div className="p-1.5 bg-white rounded-md shadow-sm border border-slate-100 mt-0.5 outline outline-1 outline-slate-300">
                             <DollarSign className="w-4 h-4 text-[#05294E]" />
                           </div>
                           <div>
@@ -1169,7 +1169,7 @@ const ApplicationChatPage: React.FC = () => {
                             </span>
                           </div>
                         </div>
-                        <div className="text-lg font-bold text-gray-900 bg-white px-3 py-1.5 rounded-lg border border-slate-200 shadow-sm">
+                        <div className="text-lg font-bold text-gray-900 bg-white px-3 py-1.5 rounded-lg border border-slate-200 shadow-sm outline outline-1 outline-slate-300">
                            {applicationDetails.scholarships.application_fee_amount 
                               ? formatFeeAmount(getApplicationFeeWithDependents(Number(applicationDetails.scholarships.application_fee_amount)))
                               : formatFeeAmount(getApplicationFeeWithDependents(350))}
@@ -1179,14 +1179,14 @@ const ApplicationChatPage: React.FC = () => {
 
                     {/* University Internal Fees */}
                     {applicationDetails.scholarships?.internal_fees && Array.isArray(applicationDetails.scholarships.internal_fees) && applicationDetails.scholarships.internal_fees.length > 0 && userProfile?.has_paid_selection_process_fee && (
-                      <div className="col-span-1 md:col-span-2 bg-slate-50 rounded-xl p-4 border border-slate-100">
+                      <div className="col-span-1 md:col-span-2 bg-slate-50 rounded-xl p-4 border border-slate-100 outline outline-1 outline-slate-300">
                         <div className="flex items-center gap-2 mb-4 pb-2 border-b border-slate-200/60">
                           <Building className="w-4 h-4 text-[#05294E]" />
                           <span className="text-xs font-bold uppercase tracking-wider text-slate-500">{t('scholarshipsPage.modal.universityInternalFees')}</span>
                         </div>
                         <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                           {applicationDetails.scholarships.internal_fees.map((fee: any, idx: number) => (
-                            <div key={idx} className="flex justify-between items-center p-3 bg-white rounded-lg border border-slate-200 shadow-sm">
+                            <div key={idx} className="flex justify-between items-center p-3 bg-white rounded-xl border border-slate-200 shadow-sm outline outline-1 outline-slate-300">
                                <div className="min-w-0 mr-3">
                                  <p className="text-sm font-semibold text-gray-900 truncate" title={fee.category || fee.name}>{fee.category || fee.name}</p>
                                  <p className="text-[10px] text-slate-500 uppercase tracking-wide">{fee.details || fee.frequency}</p>
@@ -1202,7 +1202,7 @@ const ApplicationChatPage: React.FC = () => {
               </div>
 
               {/* Student Documents Card */}
-              <div className="bg-white rounded-2xl shadow-sm border border-slate-200 overflow-hidden">
+              <div className="bg-white rounded-xl shadow-sm border border-slate-200 overflow-hidden outline outline-1 outline-slate-300">
                 <div className="bg-gradient-to-r from-slate-500 to-slate-600 px-6 py-4">
                   <h2 className="text-xl font-semibold text-white flex items-center">
                     <FileText className="w-6 h-6 mr-3" />
@@ -1252,14 +1252,14 @@ const ApplicationChatPage: React.FC = () => {
                               </div>
                               <p className="text-sm text-slate-600 mb-3">{doc.description}</p>
                               {docData && (
-                                                              <div className="text-xs text-slate-500 mb-3">
+                                <div className="text-xs text-slate-500 mb-3">
                                 {t('studentDashboard.applicationChatPage.details.studentDocuments.uploaded')} {new Date(docData.uploaded_at).toLocaleDateString()}
                               </div>
                               )}
                               
                               {/* Exibir motivo da rejeição se o documento foi rejeitado */}
                               {status === 'rejected' && docData?.rejection_reason && (
-                                <div className="mb-3 p-3 bg-red-50 border border-red-200 rounded-lg">
+                                <div className="mb-3 p-3 bg-red-50 outline outline-1 outline-slate-300 rounded-xl">
                                   <p className="text-xs font-medium text-red-600 mb-1">Rejection reason:</p>
                                   <TruncatedText
                                     text={docData.rejection_reason}
@@ -1309,12 +1309,12 @@ const ApplicationChatPage: React.FC = () => {
         {activeTab === 'i20' && applicationDetails && (applicationDetails.is_scholarship_fee_paid || applicationDetails.is_placement_fee_paid) && (
           <div className="w-full max-w-5xl mx-auto">
             {!hasPaid ? (
-              <div className="bg-white rounded-2xl shadow-sm border border-gray-200 overflow-hidden">
+              <div className="bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden outline outline-1 outline-slate-300">
                 {/* Header */}
                 <div className="bg-gradient-to-r from-gray-50 to-gray-100 px-6 py-6 border-b border-gray-200">
                   <div className="flex items-center justify-between">
                     <div className="flex items-center gap-4">
-                      <div className="w-12 h-12 bg-blue-50 rounded-lg flex items-center justify-center">
+                      <div className="w-12 h-12 bg-blue-50 rounded-xl flex items-center justify-center">
                         <Award className="w-6 h-6 text-blue-600" />
                       </div>
                       <div>
@@ -1358,7 +1358,7 @@ const ApplicationChatPage: React.FC = () => {
                     </div>
 
                     {/* Deadline Info */}
-                    <div className="bg-amber-50 border border-amber-200 rounded-lg p-4">
+                    <div className="bg-amber-50 outline outline-1 outline-slate-300 rounded-xl p-4">
                       <div className="flex items-start gap-3">
                         <div className="w-5 h-5 text-amber-600 mt-0.5">
                           <svg fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -1380,7 +1380,7 @@ const ApplicationChatPage: React.FC = () => {
                         <button
                           onClick={handlePayI20}
                           disabled={i20Loading}
-                          className="w-full bg-blue-600 hover:bg-blue-700 text-white px-6 py-3 rounded-lg font-medium transition-colors duration-200 disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
+                          className="w-full bg-blue-600 hover:bg-blue-700 text-white px-6 py-3 rounded-xl font-medium transition-colors duration-200 disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2 outline outline-1 outline-slate-300"
                         >
                           {i20Loading ? (
                             <>
@@ -1401,14 +1401,14 @@ const ApplicationChatPage: React.FC = () => {
                       {/* Countdown Timer */}
                       {scholarshipFeeDeadline && (
                         <div>
-                          <div className={`rounded-lg p-4 text-center border ${
+                          <div className={`rounded-xl p-4 text-center outline outline-1 outline-slate-300 border ${
                             i20Countdown === 'Expired' 
                               ? 'bg-red-50 border-red-200' 
                               : 'bg-blue-50 border-blue-200'
                           }`}>
                             {i20Countdown === 'Expired' ? (
                               <div className="space-y-2">
-                                <div className="w-8 h-8 bg-red-100 rounded-lg flex items-center justify-center mx-auto">
+                                <div className="w-8 h-8 bg-red-100 rounded-xl flex items-center justify-center mx-auto">
                                   <svg className="w-4 h-4 text-red-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
                                   </svg>
@@ -1420,7 +1420,7 @@ const ApplicationChatPage: React.FC = () => {
                               </div>
                             ) : (
                               <div className="space-y-2">
-                                <div className="w-8 h-8 bg-blue-100 rounded-lg flex items-center justify-center mx-auto">
+                                <div className="w-8 h-8 bg-blue-100 rounded-xl flex items-center justify-center mx-auto">
                                   <svg className="w-4 h-4 text-blue-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
                                   </svg>
@@ -1440,7 +1440,7 @@ const ApplicationChatPage: React.FC = () => {
                   </div>
                   
                   {i20Error && (
-                    <div className="mt-4 p-3 bg-red-50 border border-red-200 rounded-lg">
+                    <div className="mt-4 p-3 bg-red-50 outline outline-1 outline-slate-300 rounded-xl">
                       <div className="flex items-center gap-2">
                         <svg className="w-4 h-4 text-red-600 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                           <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
@@ -1454,10 +1454,10 @@ const ApplicationChatPage: React.FC = () => {
             ) : (
               <div className="space-y-8">
                 {/* Success Card */}
-                <div className="bg-white rounded-3xl shadow-lg border border-gray-100 overflow-hidden">
+                <div className="bg-white rounded-xl shadow-lg border border-gray-100 overflow-hidden outline outline-1 outline-slate-300">
                   <div className="bg-gradient-to-br from-green-500 via-green-600 to-green-700 p-6 sm:p-8">
                     <div className="flex items-center gap-4">
-                      <div className="w-12 h-12 bg-white/10 rounded-2xl flex items-center justify-center backdrop-blur-sm">
+                      <div className="w-12 h-12 bg-white/10 rounded-xl flex items-center justify-center backdrop-blur-sm">
                         <CheckCircle className="w-6 h-6 text-white" />
                       </div>
                       <div>
@@ -1473,7 +1473,7 @@ const ApplicationChatPage: React.FC = () => {
                         {t('studentDashboard.applicationChatPage.i20ControlFee.paymentSuccess.description')}
                       </p>
                       
-                      <div className="bg-green-50 border border-green-200 rounded-2xl p-6">
+                      <div className="bg-green-50 outline outline-1 outline-slate-300 rounded-xl p-6">
                         <h4 className="font-bold text-green-800 mb-4 flex items-center gap-2">
                           <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
@@ -1496,10 +1496,10 @@ const ApplicationChatPage: React.FC = () => {
                 </div>
 
                 {/* Payment Details Card */}
-                <div className="bg-white rounded-3xl shadow-lg border border-gray-100 overflow-hidden">
+                <div className="bg-white rounded-xl shadow-lg border border-gray-100 overflow-hidden outline outline-1 outline-slate-300">
                   <div className="bg-gradient-to-br from-blue-500 via-blue-600 to-blue-700 p-6 sm:p-8">
                     <div className="flex items-center gap-4">
-                      <div className="w-12 h-12 bg-white/10 rounded-2xl flex items-center justify-center backdrop-blur-sm">
+                      <div className="w-12 h-12 bg-white/10 rounded-xl flex items-center justify-center backdrop-blur-sm">
                         <svg className="w-6 h-6 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                           <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
                         </svg>
@@ -1510,7 +1510,7 @@ const ApplicationChatPage: React.FC = () => {
                   
                   <div className="p-6 sm:p-8">
                     <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-                      <div className="bg-blue-50 rounded-2xl p-6 hover:bg-blue-100 transition-colors duration-200">
+                      <div className="bg-blue-50 rounded-xl p-6 hover:bg-blue-100 transition-colors duration-200 outline outline-1 outline-slate-300">
                         <div className="flex items-center gap-3 mb-3">
                           <div className="w-8 h-8 bg-blue-100 rounded-xl flex items-center justify-center">
                             <svg className="w-5 h-5 text-blue-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -1526,7 +1526,7 @@ const ApplicationChatPage: React.FC = () => {
                         </div>
                       </div>
                       
-                      <div className="bg-blue-50 rounded-2xl p-6 hover:bg-blue-100 transition-colors duration-200">
+                      <div className="bg-blue-50 rounded-xl p-6 hover:bg-blue-100 transition-colors duration-200 outline outline-1 outline-slate-300">
                         <div className="flex items-center gap-3 mb-3">
                           <div className="w-8 h-8 bg-blue-100 rounded-xl flex items-center justify-center">
                             <svg className="w-5 h-5 text-blue-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -1538,7 +1538,7 @@ const ApplicationChatPage: React.FC = () => {
                         <div className="text-lg font-bold text-gray-900">{paymentDate ? new Date(paymentDate).toLocaleDateString() : 'N/A'}</div>
                       </div>
                       
-                      <div className="bg-blue-50 rounded-2xl p-6 hover:bg-blue-100 transition-colors duration-200">
+                      <div className="bg-blue-50 rounded-xl p-6 hover:bg-blue-100 transition-colors duration-200 outline outline-1 outline-slate-300">
                         <div className="flex items-center gap-3 mb-3">
                           <div className="w-8 h-8 bg-blue-100 rounded-xl flex items-center justify-center">
                             <CheckCircle className="w-5 h-5 text-blue-600" />
@@ -1559,7 +1559,7 @@ const ApplicationChatPage: React.FC = () => {
         )}
         
         {activeTab === 'documents' && applicationDetails && (
-          <div className="bg-white rounded-2xl sm:rounded-2xl shadow-sm border border-slate-200 overflow-hidden">
+          <div className="bg-white rounded-xl sm:rounded-xl shadow-sm border border-slate-200 overflow-hidden outline outline-1 outline-slate-300">
             <div className="bg-gradient-to-r from-slate-600 to-slate-700 px-4 py-3 sm:px-6 sm:py-4">
               <h2 className="text-lg sm:text-xl font-semibold text-white flex items-center">
                 <svg className="w-5 h-5 sm:w-6 sm:h-6 mr-2 sm:mr-3" fill="none" stroke="currentColor" strokeWidth={2} viewBox="0 0 24 24">
@@ -1577,7 +1577,7 @@ const ApplicationChatPage: React.FC = () => {
                 applicationDetails.acceptance_letter_status === 'approved' ||
                 applicationDetails.acceptance_letter_sent_at) && 
                !(userProfile as any)?.has_paid_i20_control_fee && (
-                <div className="bg-blue-50 border border-blue-200 rounded-lg p-4 sm:p-6 mb-6">
+                <div className="bg-blue-50 outline outline-1 outline-slate-300 rounded-xl p-4 sm:p-6 mb-6">
                   <div className="flex items-start gap-3">
                     <div className="flex-1">
                       <h3 className="text-lg font-bold text-blue-900 mb-2">
@@ -1604,7 +1604,7 @@ const ApplicationChatPage: React.FC = () => {
               {applicationDetails.is_scholarship_fee_paid && 
                (userProfile as any)?.has_paid_i20_control_fee && 
                !applicationDetails.acceptance_letter_url && (
-                <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-4 sm:p-6 mb-6">
+                <div className="bg-yellow-50 outline outline-1 outline-slate-300 rounded-xl p-4 sm:p-6 mb-6">
                   <div className="flex items-start gap-3">
                     <div className="w-10 h-10 bg-yellow-100 rounded-lg flex items-center justify-center flex-shrink-0">
                       <svg className="w-5 h-5 text-yellow-600" fill="none" stroke="currentColor" strokeWidth={2} viewBox="0 0 24 24">
@@ -1655,7 +1655,7 @@ const ApplicationChatPage: React.FC = () => {
                {applicationDetails.acceptance_letter_url && 
                  (applicationDetails.acceptance_letter_status === 'approved' || applicationDetails.acceptance_letter_status === 'sent') && 
                  (userProfile as any)?.has_paid_i20_control_fee && (
-                 <div className="bg-white rounded-lg mb-3 max-w-3xl mx-auto p-4 sm:p-6 border border-slate-200">
+                 <div className="bg-white rounded-xl mb-3 max-w-3xl mx-auto p-4 sm:p-6 outline outline-1 outline-slate-300">
                    {/* Header da seção */}
                    <div className="flex items-center gap-3 mb-4 pb-3 border-b border-slate-200">
                      <div className="w-10 h-10 bg-blue-100 rounded-lg flex items-center justify-center">
@@ -1670,7 +1670,7 @@ const ApplicationChatPage: React.FC = () => {
                         </div>
 
                    {/* Status de recebimento */}
-                   <div className="px-4 py-3 bg-green-50 border border-green-200 rounded-lg mb-4">
+                   <div className="px-4 py-3 bg-green-50 outline outline-1 outline-slate-300 rounded-xl mb-4">
                      <div className="flex items-center gap-2">
                        <svg className="w-5 h-5 text-green-600" fill="none" stroke="currentColor" strokeWidth={2} viewBox="0 0 24 24">
                          <path strokeLinecap="round" strokeLinejoin="round" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />

@@ -356,6 +356,10 @@ export const useOnboardingProgress = () => {
         clearStep();
       } else if (onboardingCompleted && isForcingPortal) {
         currentStep = 'my_applications';
+      } else if (maxAllowedStep === 'identity_verification') {
+        // Bloqueio incondicional: Se o máximo permitido agora é a foto fantasma (ele já pagou mas não mandou foto),
+        // nós FORÇAMOS a tela da foto, ignorando qualquer savedStep antigo que o reteria no selection_fee.
+        currentStep = 'identity_verification';
       } else if (savedStep && savedStep !== 'completed') {
         const savedIdx = allSteps.indexOf(savedStep);
         const maxIdx = allSteps.indexOf(maxAllowedStep);
@@ -369,6 +373,10 @@ export const useOnboardingProgress = () => {
           clearStep();
           currentStep = maxAllowedStep;
         } else if (savedIdx > maxIdx) {
+          currentStep = maxAllowedStep;
+        } else if (savedStep === 'selection_fee' && maxAllowedStep !== 'selection_fee') {
+          // Se o banco estava preservando 'selection_fee' de um usuário que acabou de pagar,
+          // solta a âncora e avança ele pro step calculado real.
           currentStep = maxAllowedStep;
         } else {
           currentStep = savedStep;
