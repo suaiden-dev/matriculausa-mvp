@@ -264,6 +264,22 @@ const Overview: React.FC<OverviewProps> = ({
     }
   };
 
+  const getStatusLabel = (status: string) => {
+    switch (status) {
+      case 'approved':
+      case 'enrolled':
+        return t('studentDashboard.myApplications.statusLabels.approvedByUniversity');
+      case 'rejected':
+        return t('studentDashboard.myApplications.statusLabels.notSelectedForScholarship');
+      case 'pending':
+        return t('studentDashboard.myApplications.statusLabels.pending');
+      case 'under_review':
+        return t('studentDashboard.myApplications.statusLabels.underReview');
+      default:
+        return status.replace('_', ' ').replace(/\b\w/g, (l: string) => l.toUpperCase());
+    }
+  };
+
   // Funções para verificar o status de cada seção do perfil
   const checkBasicInformationComplete = (): boolean => {
     if (!userProfile) return false;
@@ -385,11 +401,13 @@ const Overview: React.FC<OverviewProps> = ({
           {!userProfile?.onboarding_completed && (
             <div className="mt-6 sm:mt-0 sm:-mt-2 mb-10 flex flex-col items-center text-center mx-auto w-full max-w-3xl px-4">
               {/* Badge da Etapa - Posicionada acima do título */}
-              <div className="inline-flex items-center bg-white/10 backdrop-blur-md border border-white/20 rounded-full px-5 py-1.5 mb-14 sm:mb-20 shadow-xl ring-1 ring-white/10">
-                <span className="text-white/90 font-black text-[10px] sm:text-xs md:text-sm uppercase tracking-[0.2em]">
-                  PASSO {currentStepNumber} / {TOTAL_ONBOARDING_STEPS}
-                </span>
-              </div>
+              {currentStepKey !== 'my_applications' && (
+                <div className="inline-flex items-center bg-white/10 backdrop-blur-md border border-white/20 rounded-full px-5 py-1.5 mb-14 sm:mb-20 shadow-xl ring-1 ring-white/10">
+                  <span className="text-white/90 font-black text-[10px] sm:text-xs md:text-sm uppercase tracking-[0.2em]">
+                    PASSO {currentStepNumber} / {TOTAL_ONBOARDING_STEPS}
+                  </span>
+                </div>
+              )}
 
               {/* Texto do passo */}
               <div className="flex flex-col items-center justify-center min-w-0">
@@ -640,15 +658,10 @@ const Overview: React.FC<OverviewProps> = ({
                                 {scholarship?.universities?.name || t('studentDashboard.recentApplications.university')}
                               </p>
                             </div>
-                            <div className={`flex w-[90px] items-center sm:w-[110px] gap-1 sm:gap-2 px-2 sm:px-3 py-1.5 sm:py-2 rounded-xl text-xs sm:text-sm font-semibold flex-shrink-0 ${getStatusColor(app.status)}`}>
+                            <div className={`flex items-center gap-1 sm:gap-2 px-2 sm:px-3 py-1.5 sm:py-2 rounded-xl text-xs sm:text-sm font-semibold flex-shrink-0 ${getStatusColor(app.status)}`}>
                               <StatusIcon className="w-3 h-3 sm:w-4 sm:h-4" />
-                              <span className="hidden sm:inline">
-                                {app.status.replace('_', ' ').replace(/\b\w/g, (l: string) => l.toUpperCase())}
-                              </span>
-                              <span className="sm:hidden">
-                                {app.status === 'approved' ? t('studentDashboard.recentApplications.status.approved') :
-                                  app.status === 'under_review' ? t('studentDashboard.recentApplications.status.under_review') :
-                                    t('studentDashboard.recentApplications.status.pending')}
+                              <span>
+                                {getStatusLabel(app.status)}
                               </span>
                             </div>
                           </div>

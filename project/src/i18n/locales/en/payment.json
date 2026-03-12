@@ -330,6 +330,7 @@
       "i-20_control_fee": "I-20 Control Fee",
       "application_fee": "Application Fee",
       "scholarship_fee": "Scholarship Fee",
+      "placement_fee": "Placement Fee",
       "selection_process": "Selection Process Fee",
       "default": "Payment"
     }

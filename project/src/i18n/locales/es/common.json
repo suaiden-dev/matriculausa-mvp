@@ -150,29 +150,32 @@
     "finish": "Finalizar"
   },
   "fees": {
-    "selectionProcess": "Selection Process Fee",
-    "application": "Application Fee",
-    "scholarship": "Scholarship Fee",
-    "i20Control": "I-20 Control Fee",
-    "finalNonRefundable": "This fee is final and non-refundable"
+    "selectionProcess": "Tarifa del Proceso de Selección",
+    "application": "Tarifa de Solicitud",
+    "scholarship": "Tarifa de Beca",
+    "placement": "Tarifa de Colocación",
+    "i20Control": "Tarifa de Control I-20",
+    "finalNonRefundable": "Esta tarifa es definitiva y no reembolsable"
   },
   "productNames": {
-    "selectionProcess": "Selection Process",
-    "selectionProcessFee": "Selection Process Fee",
-    "applicationFee": "Application Fee",
-    "scholarshipFee": "Scholarship Fee",
-    "enrollmentFee": "Enrollment Fee",
-    "collegeEnrollmentFee": "College Enrollment Fee",
-    "i20ControlFee": "I-20 Control Fee"
+    "selectionProcess": "Proceso de Selección",
+    "selectionProcessFee": "Tarifa del Proceso de Selección",
+    "applicationFee": "Tarifa de Solicitud",
+    "scholarshipFee": "Tarifa de Beca",
+    "placementFee": "Tarifa de Colocación",
+    "enrollmentFee": "Tarifa de Matrícula",
+    "collegeEnrollmentFee": "Tarifa de Matrícula de la Universidad",
+    "i20ControlFee": "Tarifa de Control I-20"
   },
   "feeValues": {
     "asPerUniversity": "Según la universidad"
   },
   "feeDescriptions": {
-    "selectionProcess": "Selection Process Fee - Complete your application process",
-    "applicationFee": "Application Fee - Apply for a specific scholarship",
-    "scholarshipFee": "Scholarship Fee - Confirm your scholarship application",
-    "i20ControlFee": "I-20 Control Fee - Document processing and validation"
+    "selectionProcess": "Tarifa del Proceso de Selección - Complete su proceso de solicitud",
+    "applicationFee": "Tarifa de Solicitud - Aplicar para una beca específica",
+    "scholarshipFee": "Tarifa de Beca - Confirme su solicitud de beca",
+    "placementFee": "Tarifa de Colocación - Paso final para asegurar su colocación y soporte",
+    "i20ControlFee": "Tarifa de Control I-20 - Procesamiento y validación de documentos"
   },
   "features": {
     "whyChoose": "Why Choose MatriculaUSA?",
@@ -258,7 +261,7 @@
       "errorDetails": "Detalles del error:"
     },
     "placementFee": {
-      "title": "¡Pago de la Placement Fee Realizado con Éxito!",
+      "title": "¡Pago de la Tarifa de Colocación Realizado con Éxito!",
       "description": "Su pago de {{amount}} ha sido procesado con éxito.",
       "message": "Su solicitud está ahora confirmada.",
       "button": "Continuar",

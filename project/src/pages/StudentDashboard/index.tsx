@@ -94,16 +94,17 @@ const StudentDashboard: React.FC = () => {
     });
 
     try {
-      if (!user || !userProfile) {
-        console.warn('⚠️ [Dashboard Index] user ou userProfile nulos. Abortando carregamento.');
-        return;
-      }
-
       if (!hasLoadedData) {
         console.log('⏳ [Dashboard Index] Definindo dashboardLoading = true');
         setDashboardLoading(true);
       }
       setDashboardError(null);
+
+      if (!user || !userProfile) {
+        console.warn('⚠️ [Dashboard Index] user ou userProfile nulos. Aguardando autenticação...');
+        // Se ainda não temos usuário, não marcamos como erro, apenas esperamos o próximo render
+        return;
+      }
 
       console.log('📡 [Dashboard Index] Buscando bolsas e dados da sessão...');
       const { data: sessionData } = await supabase.auth.getSession();
