@@ -18,6 +18,7 @@ import { useTranslation } from 'react-i18next';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../../hooks/useAuth';
 import { useStepByStepGuide } from '../../hooks/useStepByStepGuide';
+import { useCartStore } from '../../stores/applicationStore';
 import { supabase } from '../../lib/supabase';
 import StepByStepGuide from '../../components/OnboardingTour/StepByStepGuide';
 
@@ -54,25 +55,53 @@ const Overview: React.FC<OverviewProps> = ({
   const paidAt = userProfile?.selection_process_paid_at ? new Date(userProfile.selection_process_paid_at) : null;
   const isExemptedByLegacy = userProfile?.has_paid_selection_process_fee && (!paidAt || paidAt < SURVEY_THRESHOLD_DATE);
 
-  // Verificar qual o passo de onboarding correto baseado no progresso real (DB) + LocalStorage
+  // Verificar qual o passo de onboarding correto baseado no banco de dados
   const savedOnboardingStep = React.useMemo(() => {
     if (typeof window === 'undefined') return null;
 
-    // 1. Calcular o passo baseado no perfil do banco de dados (Progresso Real)
+    const validSteps = [
+      'selection_fee', 'identity_verification', 'selection_survey',
+      'scholarship_selection', 'process_type', 'documents_upload',
+      'payment', 'scholarship_fee', 'placement_fee', 'my_applications', 'completed'
+    ];
+
+    // 1. FONTE PRIMÁRIA: step salvo no banco de dados
+    const dbStep = (userProfile as any)?.onboarding_current_step;
+
+    if (dbStep && validSteps.includes(dbStep)) {
+      // Único bloqueio de segurança: sem taxa de seleção paga, não avança
+      if (userProfile && !userProfile.has_paid_selection_process_fee) {
+        const stepsAfterSelection = [
+          'scholarship_selection', 'process_type', 'documents_upload',
+          'payment', 'scholarship_fee', 'placement_fee', 'my_applications',
+          'waiting_approval', 'completed'
+        ];
+        if (stepsAfterSelection.includes(dbStep)) {
+          return 'selection_fee';
+        }
+      }
+      return dbStep;
+    }
+
+    // 2. FALLBACK: calcular baseado nas flags do perfil (usuários sem campo preenchido)
     let calculatedStep: string | null = 'selection_fee';
 
     if (userProfile) {
-      // Unifica flags de progresso vindo de múltiplas fontes para evitar bloqueios por falta de sincronia
+      const { cart } = useCartStore.getState();
+      const hasCartItems = cart.length > 0;
       const hasAppsInSystem = applications.length > 0;
       const anyAppPaidOrApproved = applications.some(app =>
         app.is_application_fee_paid ||
         ['approved', 'enrolled', 'under_review'].includes(app.status)
       );
-
       const anyScholarshipFeePaid = applications.some(app => app.is_scholarship_fee_paid) || userProfile.is_scholarship_fee_paid;
-
       const hasGlobalFeePaid = userProfile.is_application_fee_paid || !!userProfile.application_fee_paid_at || !!userProfile.scholarship_fee_paid_at || anyAppPaidOrApproved;
       const hasDocsGlobal = userProfile.documents_uploaded || !!userProfile.application_fee_paid_at || anyAppPaidOrApproved;
+
+      // Verificar Process Type (situação do visto)
+      const userProcessTypeKey = `studentProcessType_${userProfile.id}`;
+      const storedProcessType = typeof window !== 'undefined' ? (window.localStorage.getItem(userProcessTypeKey) || window.localStorage.getItem('studentProcessType')) : null;
+      const hasProcessType = (applications.length > 0 && !!applications[0].student_process_type) || (!!storedProcessType && ['initial', 'transfer', 'change_of_status'].includes(storedProcessType));
 
       if (userProfile.onboarding_completed) {
         calculatedStep = 'completed';
@@ -80,8 +109,10 @@ const Overview: React.FC<OverviewProps> = ({
         calculatedStep = 'selection_fee';
       } else if (!userProfile.selection_survey_passed && !isExemptedByLegacy && !hasDocsGlobal && !hasGlobalFeePaid) {
         calculatedStep = 'selection_survey';
-      } else if (!userProfile.selected_scholarship_id && !hasAppsInSystem && !hasDocsGlobal && !hasGlobalFeePaid) {
+      } else if (!userProfile.selected_scholarship_id && !hasAppsInSystem && !hasCartItems && !hasDocsGlobal && !hasGlobalFeePaid) {
         calculatedStep = 'scholarship_selection';
+      } else if (!hasProcessType && !hasDocsGlobal && !hasGlobalFeePaid) {
+        calculatedStep = 'process_type';
       } else if (!hasDocsGlobal && userProfile.documents_status !== 'approved') {
         calculatedStep = 'documents_upload';
       } else if (!hasGlobalFeePaid) {
@@ -93,30 +124,7 @@ const Overview: React.FC<OverviewProps> = ({
       }
     }
 
-    // 2. Tentar pegar o que está no localStorage
-    const savedStep = window.localStorage.getItem('onboarding_current_step');
-    const validSteps = ['selection_fee', 'identity_verification', 'selection_survey', 'scholarship_selection', 'process_type', 'documents_upload', 'payment', 'scholarship_fee', 'my_applications', 'completed'];
-
-    // Se não há nada no localStorage ou é inválido, usa o calculado
-    if (!savedStep || !validSteps.includes(savedStep)) return calculatedStep;
-
-    // 3. Lógica de Sincronia: Se o localStorage está MUITO atrás do calculado (pós-limpeza), usa o calculado.
-    const savedIdx = validSteps.indexOf(savedStep);
-    const calculatedIdx = validSteps.indexOf(calculatedStep || 'selection_fee');
-
-    if (savedIdx < calculatedIdx) {
-      return calculatedStep;
-    }
-
-    // Se o usuário não pagou a taxa de seleção, ele não deve conseguir avançar além desse ponto
-    if (userProfile && !userProfile.has_paid_selection_process_fee) {
-      const stepsAfterSelection = ['scholarship_selection', 'process_type', 'documents_upload', 'payment', 'scholarship_fee', 'my_applications', 'waiting_approval', 'completed'];
-      if (stepsAfterSelection.includes(savedStep)) {
-        return 'selection_fee';
-      }
-    }
-
-    return savedStep;
+    return calculatedStep;
   }, [userProfile, applications, isExemptedByLegacy]);
 
   const hasSavedOnboardingStep = savedOnboardingStep !== null;
@@ -256,6 +264,22 @@ const Overview: React.FC<OverviewProps> = ({
     }
   };
 
+  const getStatusLabel = (status: string) => {
+    switch (status) {
+      case 'approved':
+      case 'enrolled':
+        return t('studentDashboard.myApplications.statusLabels.approvedByUniversity');
+      case 'rejected':
+        return t('studentDashboard.myApplications.statusLabels.notSelectedForScholarship');
+      case 'pending':
+        return t('studentDashboard.myApplications.statusLabels.pending');
+      case 'under_review':
+        return t('studentDashboard.myApplications.statusLabels.underReview');
+      default:
+        return status.replace('_', ' ').replace(/\b\w/g, (l: string) => l.toUpperCase());
+    }
+  };
+
   // Funções para verificar o status de cada seção do perfil
   const checkBasicInformationComplete = (): boolean => {
     if (!userProfile) return false;
@@ -377,11 +401,13 @@ const Overview: React.FC<OverviewProps> = ({
           {!userProfile?.onboarding_completed && (
             <div className="mt-6 sm:mt-0 sm:-mt-2 mb-10 flex flex-col items-center text-center mx-auto w-full max-w-3xl px-4">
               {/* Badge da Etapa - Posicionada acima do título */}
-              <div className="inline-flex items-center bg-white/10 backdrop-blur-md border border-white/20 rounded-full px-5 py-1.5 mb-14 sm:mb-20 shadow-xl ring-1 ring-white/10">
-                <span className="text-white/90 font-black text-[10px] sm:text-xs md:text-sm uppercase tracking-[0.2em]">
-                  PASSO {currentStepNumber} / {TOTAL_ONBOARDING_STEPS}
-                </span>
-              </div>
+              {currentStepKey !== 'my_applications' && (
+                <div className="inline-flex items-center bg-white/10 backdrop-blur-md border border-white/20 rounded-full px-5 py-1.5 mb-14 sm:mb-20 shadow-xl ring-1 ring-white/10">
+                  <span className="text-white/90 font-black text-[10px] sm:text-xs md:text-sm uppercase tracking-[0.2em]">
+                    PASSO {currentStepNumber} / {TOTAL_ONBOARDING_STEPS}
+                  </span>
+                </div>
+              )}
 
               {/* Texto do passo */}
               <div className="flex flex-col items-center justify-center min-w-0">
@@ -632,15 +658,10 @@ const Overview: React.FC<OverviewProps> = ({
                                 {scholarship?.universities?.name || t('studentDashboard.recentApplications.university')}
                               </p>
                             </div>
-                            <div className={`flex w-[90px] items-center sm:w-[110px] gap-1 sm:gap-2 px-2 sm:px-3 py-1.5 sm:py-2 rounded-xl text-xs sm:text-sm font-semibold flex-shrink-0 ${getStatusColor(app.status)}`}>
+                            <div className={`flex items-center gap-1 sm:gap-2 px-2 sm:px-3 py-1.5 sm:py-2 rounded-xl text-xs sm:text-sm font-semibold flex-shrink-0 ${getStatusColor(app.status)}`}>
                               <StatusIcon className="w-3 h-3 sm:w-4 sm:h-4" />
-                              <span className="hidden sm:inline">
-                                {app.status.replace('_', ' ').replace(/\b\w/g, (l: string) => l.toUpperCase())}
-                              </span>
-                              <span className="sm:hidden">
-                                {app.status === 'approved' ? t('studentDashboard.recentApplications.status.approved') :
-                                  app.status === 'under_review' ? t('studentDashboard.recentApplications.status.under_review') :
-                                    t('studentDashboard.recentApplications.status.pending')}
+                              <span>
+                                {getStatusLabel(app.status)}
                               </span>
                             </div>
                           </div>

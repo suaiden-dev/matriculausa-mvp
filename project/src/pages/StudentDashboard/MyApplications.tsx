@@ -11,20 +11,20 @@ import {
   ArrowRight,
   GraduationCap,
 } from 'lucide-react';
+import { Link, useLocation, useNavigate } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
-import { Link, useLocation } from 'react-router-dom';
 import { useAuth } from '../../hooks/useAuth';
 import { useFeeConfig } from '../../hooks/useFeeConfig';
 import { usePaymentBlocked } from '../../hooks/usePaymentBlocked';
 import { supabase } from '../../lib/supabase';
 import { Application, Scholarship } from '../../types';
 import { useCartStore } from '../../stores/applicationStore';
-import { ScholarshipConfirmationModal } from '../../components/ScholarshipConfirmationModal';
 import { convertCentsToDollars } from '../../utils/currency';
 import TruncatedText from '../../components/TruncatedText';
 import { useStudentApplicationsQuery, useStudentPaidAmountsQuery, usePromotionalCouponQuery } from '../../hooks/useStudentDashboardQueries';
 import { invalidateStudentDashboardApplications, invalidateStudentDashboardFees, invalidateStudentDashboardCoupons } from '../../lib/queryKeys';
 import { useQueryClient } from '@tanstack/react-query';
+import { getPlacementFee, formatPlacementFee } from '../../utils/placementFeeCalculator';
 // import StudentDashboardLayout from "./StudentDashboardLayout";
 // import CustomLoading from '../../components/CustomLoading';
 
@@ -38,15 +38,18 @@ type ApplicationWithScholarship = Application & {
 const MyApplications: React.FC = () => {
   const { t } = useTranslation();
   const { user, userProfile } = useAuth();
+  const navigate = useNavigate();
   const { getFeeAmount } = useFeeConfig(user?.id);
   const { isBlocked, pendingPayment, loading: paymentBlockedLoading } = usePaymentBlocked();
   const queryClient = useQueryClient();
+
+  const isNewFlowUser = !!(userProfile as any)?.placement_fee_flow;
 
   // React Query hooks for cached data
   // isPending = sem dados no cache ainda (primeira carga)
   // isFetching = buscando em background (pode ter dados em cache)
   const { data: applications = [], isPending, error: queryError } = useStudentApplicationsQuery(userProfile?.id);
-  const { data: realPaidAmounts = {} } = useStudentPaidAmountsQuery(user?.id, ['application', 'scholarship']);
+  const { data: realPaidAmounts = {} } = useStudentPaidAmountsQuery(user?.id, ['application', 'scholarship', 'placement']);
   const { data: scholarshipFeePromotionalCoupon = null } = usePromotionalCouponQuery(user?.id, 'scholarship_fee');
   const { data: applicationFeePromotionalCoupon = null } = usePromotionalCouponQuery(user?.id, 'application_fee');
   // Helper: calcular Application Fee exibida considerando dependentes (legacy e simplified)
@@ -83,15 +86,6 @@ const MyApplications: React.FC = () => {
   const location = useLocation();
   const syncCartWithDatabase = useCartStore(state => state.syncCartWithDatabase);
 
-  // Modal confirmation states
-  const [showConfirmationModal, setShowConfirmationModal] = useState(false);
-  const [pendingApplication, setPendingApplication] = useState<ApplicationWithScholarship | null>(null);
-  const [isProcessingCheckout, setIsProcessingCheckout] = useState(false);
-
-  // Modal confirmation states para Scholarship Fee
-  const [showScholarshipFeeModal, setShowScholarshipFeeModal] = useState(false);
-  const [pendingScholarshipFeeApplication, setPendingScholarshipFeeApplication] = useState<ApplicationWithScholarship | null>(null);
-  const [isProcessingScholarshipFeeCheckout, setIsProcessingScholarshipFeeCheckout] = useState(false);
 
   // Estado para controlar abertura/fechamento individual dos documents checklist
   const [openChecklists, setOpenChecklists] = useState<Record<string, boolean>>({});
@@ -118,7 +112,10 @@ const MyApplications: React.FC = () => {
 
 
   // Função para verificar se há documentos rejeitados e abrir automaticamente o checklist
+  // Nota: Não abrimos automaticamente se a aplicação em si já foi rejeitada finalmene
   const checkAndOpenRejectedDocuments = (application: ApplicationWithScholarship) => {
+    if (application.status === 'rejected') return;
+
     const docs = parseApplicationDocuments((application as any).documents);
     const hasRejectedDocuments = docs.some(doc =>
       (doc.status || '').toLowerCase() === 'changes_requested' ||
@@ -290,12 +287,19 @@ const MyApplications: React.FC = () => {
     };
   }, [user?.id, queryClient]);
 
-  // Quando o aluno pagar a taxa de uma bolsa aprovada, escondemos as demais aprovadas não pagas
+  // Quando o aluno pagar a taxa de uma bolsa aprovada, escolhemos ela como principal e escondemos as demais
+  // Garantimos que apenas aplicações APROVADAS ou MATRICULADAS sejam escolhidas como "principais" para esconder as outras
   const chosenPaidApp = applications.find(
-    (a: ApplicationWithScholarship) => !!(a as any).is_application_fee_paid || !!(a as any).is_scholarship_fee_paid
+    (a: ApplicationWithScholarship) => 
+      (a.status === 'approved' || a.status === 'enrolled') && (
+        !!(a as any).is_application_fee_paid || 
+        !!(a as any).is_scholarship_fee_paid || 
+        !!(a as any).acceptance_letter_url ||
+        (isNewFlowUser && (!!(userProfile as any)?.is_placement_fee_paid || !!realPaidAmounts.placement))
+      )
   );
   const applicationsToShow = chosenPaidApp
-    ? applications.filter((a: ApplicationWithScholarship) => a.id === chosenPaidApp.id)
+    ? applications.filter((a: ApplicationWithScholarship) => a.id === chosenPaidApp.id || a.status === 'rejected')
     : applications;
 
 
@@ -327,7 +331,8 @@ const MyApplications: React.FC = () => {
 
   const getStatusColor = (status: string) => {
     switch (status) {
-      case 'approved': return 'bg-green-100 text-green-800 border-green-200';
+      case 'approved': 
+      case 'enrolled': return 'bg-green-100 text-green-800 border-green-200';
       case 'rejected': return 'bg-red-100 text-red-800 border-red-200';
       case 'under_review': return 'bg-yellow-100 text-yellow-800 border-yellow-200';
       case 'pending_scholarship_fee': return 'bg-blue-100 text-blue-800 border-blue-200';
@@ -337,7 +342,8 @@ const MyApplications: React.FC = () => {
 
   const getStatusIcon = (status: string) => {
     switch (status) {
-      case 'approved': return CheckCircle;
+      case 'approved': 
+      case 'enrolled': return CheckCircle;
       case 'rejected': return XCircle;
       case 'under_review': return AlertCircle;
       case 'pending_scholarship_fee': return DollarSign;
@@ -346,7 +352,7 @@ const MyApplications: React.FC = () => {
   };
 
   const getStatusLabel = (status: string) => {
-    if (status === 'approved') return t('studentDashboard.myApplications.statusLabels.approvedByUniversity');
+    if (status === 'approved' || status === 'enrolled') return t('studentDashboard.myApplications.statusLabels.approvedByUniversity');
     if (status === 'rejected') return t('studentDashboard.myApplications.statusLabels.notSelectedForScholarship');
     if (status === 'pending') return t('studentDashboard.myApplications.statusLabels.pending');
     if (status === 'under_review') return t('studentDashboard.myApplications.statusLabels.underReview');
@@ -482,7 +488,7 @@ const MyApplications: React.FC = () => {
   const stats = {
     total: applicationsToShow.length,
     pending: applicationsToShow.filter((app: ApplicationWithScholarship) => app.status === 'pending').length,
-    approved: applicationsToShow.filter((app: ApplicationWithScholarship) => app.status === 'approved').length,
+    approved: applicationsToShow.filter((app: ApplicationWithScholarship) => app.status === 'approved' || app.status === 'enrolled').length,
     rejected: applicationsToShow.filter((app: ApplicationWithScholarship) => app.status === 'rejected').length,
     under_review: applicationsToShow.filter((app: ApplicationWithScholarship) => app.status === 'under_review').length,
     pending_scholarship_fee: applicationsToShow.filter((app: ApplicationWithScholarship) => app.status === 'pending_scholarship_fee').length,
@@ -589,632 +595,19 @@ const MyApplications: React.FC = () => {
 
   // Function to handle application fee payment confirmation
   const handleApplicationFeeClick = (application: ApplicationWithScholarship) => {
-    // Verificar se há pagamento Zelle pendente antes de abrir o modal
-    if (isBlocked && pendingPayment) {
-      console.log('Pagamento Zelle pendente detectado, bloqueando novo pagamento');
-      return;
-    }
-    setPendingApplication(application);
-    setShowConfirmationModal(true);
+    // Redirecionar para o onboarding salvando a aplicação selecionada
+    localStorage.setItem('selected_application_id', application.id);
+    navigate('/student/onboarding?step=payment');
   };
 
   // Function to handle scholarship fee payment confirmation
   const handleScholarshipFeeClick = (application: ApplicationWithScholarship) => {
-    // Verificar se há pagamento Zelle pendente antes de abrir o modal
-    if (isBlocked && pendingPayment) {
-      console.log('Pagamento Zelle pendente detectado, bloqueando novo pagamento');
-      return;
-    }
-    setPendingScholarshipFeeApplication(application);
-    setShowScholarshipFeeModal(true);
+    // Redirecionar para o onboarding salvando a aplicação selecionada
+    localStorage.setItem('selected_application_id', application.id);
+    const step = isNewFlowUser ? 'placement_fee' : 'scholarship_fee';
+    navigate(`/student/onboarding?step=${step}`);
   };
 
-  // Função para processar checkout Stripe
-  const handleStripeCheckout = async () => {
-    if (!pendingApplication) return;
-
-    try {
-      // Ativar loading
-      setIsProcessingCheckout(true);
-
-      console.log('Iniciando checkout Stripe para application fee com application ID:', pendingApplication.id);
-
-      // ✅ Priorizar valor com desconto do window, caso contrário usar valor original
-      const baseAmount = getApplicationFeeWithDependents(pendingApplication.scholarships?.application_fee_amount || 35000);
-      const finalAmount = (window as any).__checkout_final_amount || baseAmount;
-
-      console.log('Iniciando checkout Stripe para application fee:');
-      console.log('- Application ID:', pendingApplication.id);
-      console.log('- Scholarship ID:', pendingApplication.scholarship_id);
-      console.log('- Valor original:', baseAmount);
-      console.log('- Valor com desconto:', finalAmount);
-
-      // Chamar diretamente a Edge Function do Stripe
-      const { data: sessionData } = await supabase.auth.getSession();
-      const token = sessionData.session?.access_token;
-
-      if (!token) {
-        throw new Error('Usuário não autenticado');
-      }
-
-      const apiUrl = `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/stripe-checkout-application-fee`;
-
-      // Extrair código promocional do window se existir (passado pelo ScholarshipConfirmationModal)
-      const promotionalCoupon = (window as any).__checkout_promotional_coupon || null;
-
-      const response = await fetch(apiUrl, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${token}`
-        },
-        body: JSON.stringify({
-          price_id: 'price_application_fee', // ID do produto no Stripe
-          success_url: `${window.location.origin}/student/dashboard/application-fee-success?session_id={CHECKOUT_SESSION_ID}`,
-          cancel_url: `${window.location.origin}/student/dashboard/application-fee-error`,
-          mode: 'payment',
-          payment_type: 'application_fee',
-          fee_type: 'application_fee',
-          amount: finalAmount, // ✅ Usar valor com desconto se existir
-          promotional_coupon: promotionalCoupon, // Cupom promocional (BLACK, etc)
-          metadata: {
-            application_id: pendingApplication.id,
-            selected_scholarship_id: pendingApplication.scholarship_id,
-            fee_type: 'application_fee',
-            amount: finalAmount, // ✅ Usar valor com desconto
-            application_fee_amount: finalAmount, // ✅ Usar valor com desconto
-            original_amount: baseAmount, // Valor original para referência
-            final_amount: finalAmount, // Valor final com desconto
-          },
-          scholarships_ids: [pendingApplication.scholarship_id],
-        }),
-      });
-
-      if (!response.ok) {
-        const errorData = await response.json();
-        throw new Error(errorData.error || 'Erro ao criar sessão de checkout');
-      }
-
-      const { session_url } = await response.json();
-      if (session_url) {
-        // Redirecionar diretamente para o checkout do Stripe
-        window.location.href = session_url;
-      } else {
-        throw new Error('URL da sessão não encontrada na resposta');
-      }
-
-    } catch (error) {
-      console.error('Erro ao processar checkout:', error);
-      // Reabrir o modal em caso de erro
-      setShowConfirmationModal(true);
-    } finally {
-      // Desativar loading
-      setIsProcessingCheckout(false);
-    }
-  };
-
-  // Função para processar checkout PIX
-  const handlePixCheckout = async (exchangeRate?: number) => {
-    if (!pendingApplication) return;
-
-    try {
-      setIsProcessingCheckout(true);
-
-      console.log('Iniciando checkout PIX para application fee com application ID:', pendingApplication.id);
-      console.log('[MyApplications] PIX Checkout - Exchange Rate:', exchangeRate);
-
-      const { data: sessionData } = await supabase.auth.getSession();
-      const token = sessionData.session?.access_token;
-
-      if (!token) {
-        throw new Error('Usuário não autenticado');
-      }
-
-      const apiUrl = `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/stripe-checkout-application-fee`;
-
-      // Extrair código promocional e valor final com desconto do window se existir (passado pelo ScholarshipConfirmationModal)
-      const promotionalCoupon = (window as any).__checkout_promotional_coupon || null;
-      // ✅ Priorizar valor com desconto do window, caso contrário usar valor original
-      const finalAmount = (window as any).__checkout_final_amount || getApplicationFeeWithDependents(pendingApplication.scholarships?.application_fee_amount || 35000);
-      const baseAmount = getApplicationFeeWithDependents(pendingApplication.scholarships?.application_fee_amount || 35000); // Valor original para referência
-
-      console.log('[MyApplications] PIX Checkout - Valor original:', baseAmount, 'Valor com desconto:', finalAmount);
-
-      const response = await fetch(apiUrl, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${token}`
-        },
-        body: JSON.stringify({
-          price_id: 'price_application_fee',
-          success_url: `${window.location.origin}/student/dashboard/application-fee-success?session_id={CHECKOUT_SESSION_ID}`,
-          cancel_url: `${window.location.origin}/student/dashboard/application-fee-error`,
-          mode: 'payment',
-          payment_type: 'application_fee',
-          fee_type: 'application_fee',
-          payment_method: 'pix', // Especificar PIX
-          promotional_coupon: promotionalCoupon, // Cupom promocional (BLACK, etc)
-          amount: finalAmount, // ✅ Usar valor com desconto se existir
-          metadata: {
-            application_id: pendingApplication.id,
-            selected_scholarship_id: pendingApplication.scholarship_id,
-            fee_type: 'application_fee',
-            amount: finalAmount, // ✅ Usar valor com desconto
-            application_fee_amount: finalAmount, // ✅ Usar valor com desconto
-            original_amount: baseAmount, // Valor original para referência
-            final_amount: finalAmount, // Valor final com desconto
-            // Incluir taxa de câmbio se disponível para garantir consistência
-            ...(exchangeRate ? { exchange_rate: exchangeRate.toString() } : {}),
-          },
-          scholarships_ids: [pendingApplication.scholarship_id],
-        }),
-      });
-
-      if (!response.ok) {
-        const errorData = await response.json();
-        throw new Error(errorData.error || 'Erro ao criar sessão de checkout PIX');
-      }
-
-      const { session_url } = await response.json();
-      if (session_url) {
-        window.location.href = session_url;
-      } else {
-        throw new Error('URL da sessão não encontrada na resposta');
-      }
-
-    } catch (error) {
-      console.error('Erro ao processar checkout PIX:', error);
-      setShowConfirmationModal(true);
-    } finally {
-      setIsProcessingCheckout(false);
-    }
-  };
-
-  /*
-  // Função para processar checkout Zelle
-  const handleZelleCheckout = async () => {
-    if (!pendingApplication) return;
-
-    try {
-      const applicationFeeAmount = getApplicationFeeWithDependents(pendingApplication.scholarships?.application_fee_amount || 35000);
-
-      const params = new URLSearchParams({
-        feeType: 'application_fee',
-        amount: applicationFeeAmount.toString(),
-        scholarshipsIds: pendingApplication.scholarship_id
-      });
-
-      // Adicionar campo específico para Application Fee
-      params.append('applicationFeeAmount', applicationFeeAmount.toString());
-
-      window.location.href = `/checkout/zelle?${params.toString()}`;
-    } catch (error) {
-      console.error('Erro ao processar checkout Zelle:', error);
-    }
-  };
-  */
-
-  /*
-  // Função para notificar universidade quando Application Fee for paga
-  const notifyUniversityApplicationFeePaid = async (application: ApplicationWithScholarship) => {
-    try {
-      const { data: sessionData } = await supabase.auth.getSession();
-      const token = sessionData.session?.access_token;
-
-      if (!token) {
-        console.error('Usuário não autenticado para notificação');
-        return;
-      }
-
-      const apiUrl = `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/notify-university-application-fee-paid`;
-
-      const response = await fetch(apiUrl, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${token}`
-        },
-        body: JSON.stringify({
-          application_id: application.id,
-          user_id: user?.id,
-          scholarship_id: application.scholarship_id
-        }),
-      });
-
-      if (!response.ok) {
-        const errorData = await response.json();
-        console.error('Erro ao enviar notificação de Application Fee para universidade:', errorData);
-      } else {
-        const result = await response.json();
-        console.log('Notificação de Application Fee enviada com sucesso:', result);
-      }
-    } catch (error) {
-      console.error('Erro ao notificar universidade sobre Application Fee:', error);
-    }
-  };
-
-  // Função para notificar universidade quando Scholarship Fee for paga
-  const notifyUniversityScholarshipFeePaid = async (application: ApplicationWithScholarship) => {
-    try {
-      const { data: sessionData } = await supabase.auth.getSession();
-      const token = sessionData.session?.access_token;
-
-      if (!token) {
-        console.error('Usuário não autenticado para notificação');
-        return;
-      }
-
-      const apiUrl = `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/notify-university-scholarship-fee-paid`;
-
-      const response = await fetch(apiUrl, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${token}`
-        },
-        body: JSON.stringify({
-          application_id: application.id,
-          user_id: user?.id,
-          scholarship_id: application.scholarship_id
-        }),
-      });
-
-      if (!response.ok) {
-        const errorData = await response.json();
-        console.error('Erro ao enviar notificação de Scholarship Fee para universidade:', errorData);
-      } else {
-        const result = await response.json();
-        console.log('Notificação de Scholarship Fee enviada com sucesso:', result);
-      }
-    } catch (error) {
-      console.error('Erro ao notificar universidade sobre Scholarship Fee:', error);
-    }
-  };
-  */
-
-  // Função para processar checkout Stripe da Scholarship Fee
-  const handleScholarshipFeeCheckout = async (exchangeRate?: number) => {
-    if (!pendingScholarshipFeeApplication) return;
-
-    try {
-      // Ativar loading
-      setIsProcessingScholarshipFeeCheckout(true);
-
-      // ✅ Priorizar valor com desconto do window, caso contrário usar valor original
-      const baseAmount = getFeeAmount('scholarship_fee');
-      const finalAmount = (window as any).__checkout_final_amount || baseAmount;
-
-      console.log('Iniciando checkout Stripe para scholarship fee:');
-      console.log('- Application ID:', pendingScholarshipFeeApplication.id);
-      console.log('- Scholarship ID:', pendingScholarshipFeeApplication.scholarship_id);
-      console.log('- Valor original:', baseAmount);
-      console.log('- Valor com desconto:', finalAmount);
-      console.log('- Exchange Rate:', exchangeRate);
-
-      // Chamar diretamente a Edge Function do Stripe para scholarship fee
-      const { data: sessionData } = await supabase.auth.getSession();
-      const token = sessionData.session?.access_token;
-
-      if (!token) {
-        throw new Error('Usuário não autenticado');
-      }
-
-      const apiUrl = `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/stripe-checkout-scholarship-fee`;
-
-      // Extrair código promocional do window se existir (passado pelo ScholarshipConfirmationModal)
-      const promotionalCoupon = (window as any).__checkout_promotional_coupon || null;
-
-      const requestPayload = {
-        price_id: 'price_scholarship_fee', // ID do produto no Stripe
-        success_url: `${window.location.origin}/student/dashboard/scholarship-fee-success?session_id={CHECKOUT_SESSION_ID}`,
-        cancel_url: `${window.location.origin}/student/dashboard/scholarship-fee-error`,
-        mode: 'payment',
-        payment_type: 'scholarship_fee',
-        fee_type: 'scholarship_fee',
-        amount: finalAmount, // ✅ Usar valor com desconto se existir
-        promotional_coupon: promotionalCoupon, // Cupom promocional (BLACK, etc)
-        metadata: {
-          application_id: pendingScholarshipFeeApplication.id,
-          selected_scholarship_id: pendingScholarshipFeeApplication.scholarship_id,
-          fee_type: 'scholarship_fee',
-          amount: finalAmount, // ✅ Usar valor com desconto
-          scholarship_fee_amount: finalAmount, // ✅ Usar valor com desconto
-          original_amount: baseAmount, // Valor original para referência
-          final_amount: finalAmount, // Valor final com desconto
-          // Incluir taxa de câmbio se for PIX e estiver disponível
-          ...(exchangeRate ? { exchange_rate: exchangeRate.toString() } : {}),
-        },
-        scholarships_ids: [pendingScholarshipFeeApplication.scholarship_id],
-      };
-
-      console.log('Payload sendo enviado:', JSON.stringify(requestPayload, null, 2));
-
-      const response = await fetch(apiUrl, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${token}`
-        },
-        body: JSON.stringify(requestPayload),
-      });
-
-      if (!response.ok) {
-        let errorData: any;
-        try {
-          errorData = await response.json();
-        } catch {
-          errorData = { error: `HTTP ${response.status}: ${response.statusText}` };
-        }
-        console.error('Erro na resposta da API:', errorData);
-        throw new Error(errorData.error || 'Erro ao criar sessão de checkout');
-      }
-
-      const { session_url } = await response.json();
-      if (session_url) {
-        console.log('Sessão criada com sucesso, redirecionando para:', session_url);
-        // Redirecionar diretamente para o checkout do Stripe
-        window.location.href = session_url;
-      } else {
-        throw new Error('URL da sessão não encontrada na resposta');
-      }
-
-    } catch (error) {
-      console.error('Erro ao processar checkout da scholarship fee:', error);
-      console.error('Stack trace:', error instanceof Error ? error.stack : 'No stack trace available');
-      // Reabrir o modal em caso de erro
-      setShowScholarshipFeeModal(true);
-    } finally {
-      // Desativar loading
-      setIsProcessingScholarshipFeeCheckout(false);
-    }
-  };
-
-  // Função para processar checkout PIX da Scholarship Fee
-  const handleScholarshipFeePixCheckout = async (exchangeRate?: number) => {
-    if (!pendingScholarshipFeeApplication) return;
-
-    try {
-      setIsProcessingScholarshipFeeCheckout(true);
-
-      console.log('Iniciando checkout PIX para scholarship fee com application ID:', pendingScholarshipFeeApplication.id);
-      console.log('[MyApplications] PIX Checkout - Exchange Rate:', exchangeRate);
-
-      const { data: sessionData } = await supabase.auth.getSession();
-      const token = sessionData.session?.access_token;
-
-      if (!token) {
-        throw new Error('Usuário não autenticado');
-      }
-
-      const apiUrl = `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/stripe-checkout-scholarship-fee`;
-
-      // Extrair código promocional e valor final com desconto do window se existir (passado pelo ScholarshipConfirmationModal)
-      const promotionalCoupon = (window as any).__checkout_promotional_coupon || null;
-      // ✅ Priorizar valor com desconto do window, caso contrário usar valor original
-      const finalAmount = (window as any).__checkout_final_amount || getFeeAmount('scholarship_fee');
-      const baseAmount = getFeeAmount('scholarship_fee'); // Valor original para referência
-
-      console.log('[MyApplications] PIX Checkout - Valor original:', baseAmount, 'Valor com desconto:', finalAmount);
-
-      const response = await fetch(apiUrl, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${token}`
-        },
-        body: JSON.stringify({
-          price_id: 'price_scholarship_fee',
-          success_url: `${window.location.origin}/student/dashboard/scholarship-fee-success?session_id={CHECKOUT_SESSION_ID}`,
-          cancel_url: `${window.location.origin}/student/dashboard/scholarship-fee-error`,
-          mode: 'payment',
-          payment_type: 'scholarship_fee',
-          fee_type: 'scholarship_fee',
-          payment_method: 'pix', // Especificar PIX
-          promotional_coupon: promotionalCoupon, // Cupom promocional (BLACK, etc)
-          amount: finalAmount, // ✅ Usar valor com desconto se existir
-          metadata: {
-            application_id: pendingScholarshipFeeApplication.id,
-            selected_scholarship_id: pendingScholarshipFeeApplication.scholarship_id,
-            fee_type: 'scholarship_fee',
-            amount: finalAmount, // ✅ Usar valor com desconto
-            scholarship_fee_amount: finalAmount, // ✅ Usar valor com desconto
-            original_amount: baseAmount, // Valor original para referência
-            final_amount: finalAmount, // Valor final com desconto
-            // Incluir taxa de câmbio se estiver disponível
-            ...(exchangeRate ? { exchange_rate: exchangeRate.toString() } : {}),
-          },
-          scholarships_ids: [pendingScholarshipFeeApplication.scholarship_id],
-        }),
-      });
-
-      if (!response.ok) {
-        const errorData = await response.json();
-        throw new Error(errorData.error || 'Erro ao criar sessão de checkout PIX para scholarship fee');
-      }
-
-      const { session_url } = await response.json();
-      if (session_url) {
-        window.location.href = session_url;
-      } else {
-        throw new Error('URL da sessão não encontrada na resposta');
-      }
-
-    } catch (error) {
-      console.error('Erro ao processar checkout PIX para scholarship fee:', error);
-      setShowScholarshipFeeModal(true);
-    } finally {
-      setIsProcessingScholarshipFeeCheckout(false);
-    }
-  };
-
-  // Função para processar checkout Parcelow (Application Fee)
-  const handleParcelowCheckout = async () => {
-    if (!pendingApplication) return;
-    
-    try {
-      setIsProcessingCheckout(true);
-      
-      const baseAmount = getApplicationFeeWithDependents(pendingApplication.scholarships?.application_fee_amount || 35000);
-      const finalAmount = (window as any).__checkout_final_amount || baseAmount;
-      const promotionalCoupon = (window as any).__checkout_promotional_coupon || null;
-      
-      console.log('Iniciando checkout Parcelow para application fee:', {
-        applicationId: pendingApplication.id,
-        scholarshipId: pendingApplication.scholarship_id,
-        baseAmount,
-        finalAmount,
-      });
-      
-      const { data: sessionData } = await supabase.auth.getSession();
-      const token = sessionData.session?.access_token;
-      
-      if (!token) {
-        throw new Error('Usuário não autenticado');
-      }
-
-      const parcelowUrl = `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/parcelow-checkout-application-fee`;
-      
-      const response = await fetch(parcelowUrl, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${token}`
-        },
-        body: JSON.stringify({
-          amount: finalAmount,
-          fee_type: 'application_fee',
-          metadata: {
-            application_id: pendingApplication.id,
-            selected_scholarship_id: pendingApplication.scholarship_id,
-            fee_type: 'application_fee',
-            amount: finalAmount,
-            application_fee_amount: finalAmount,
-            original_amount: baseAmount,
-            final_amount: finalAmount,
-            promotional_coupon: promotionalCoupon
-          },
-          promotional_coupon: promotionalCoupon,
-          scholarships_ids: [pendingApplication.scholarship_id],
-        }),
-      });
-
-      if (!response.ok) {
-        let errorData: any = {};
-        try {
-          errorData = await response.json();
-        } catch {
-          throw new Error('Erro ao criar sessão Parcelow');
-        }
-        
-        if (errorData.error === 'document_number_required') {
-          alert('CPF é obrigatório para pagamento via Parcelow. Por favor, atualize seu perfil.');
-          setIsProcessingCheckout(false);
-          return;
-        }
-        
-        throw new Error(errorData.message || errorData.error || 'Erro ao criar sessão Parcelow');
-      }
-
-      const data = await response.json();
-      if (data.checkout_url) {
-        console.log('[Parcelow] Redirecionando para:', data.checkout_url);
-        window.location.href = data.checkout_url;
-      } else {
-        throw new Error('URL de checkout Parcelow não encontrada');
-      }
-      
-    } catch (error) {
-      console.error('Erro ao processar checkout Parcelow:', error);
-      setShowConfirmationModal(true);
-    } finally {
-      setIsProcessingCheckout(false);
-    }
-  };
-
-  // Função para processar checkout Parcelow (Scholarship Fee)
-  const handleScholarshipFeeParcelowCheckout = async () => {
-    if (!pendingScholarshipFeeApplication) return;
-    
-    try {
-      setIsProcessingScholarshipFeeCheckout(true);
-      
-      const baseAmount = getFeeAmount('scholarship_fee');
-      const finalAmount = (window as any).__checkout_final_amount || baseAmount;
-      const promotionalCoupon = (window as any).__checkout_promotional_coupon || null;
-      
-      console.log('Iniciando checkout Parcelow para scholarship fee:', {
-        applicationId: pendingScholarshipFeeApplication.id,
-        scholarshipId: pendingScholarshipFeeApplication.scholarship_id,
-        baseAmount,
-        finalAmount,
-      });
-      
-      const { data: sessionData } = await supabase.auth.getSession();
-      const token = sessionData.session?.access_token;
-      
-      if (!token) {
-        throw new Error('Usuário não autenticado');
-      }
-
-      const parcelowUrl = `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/parcelow-checkout-scholarship-fee`;
-      
-      const response = await fetch(parcelowUrl, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${token}`
-        },
-        body: JSON.stringify({
-          amount: finalAmount,
-          fee_type: 'scholarship_fee',
-          metadata: {
-            application_id: pendingScholarshipFeeApplication.id,
-            selected_scholarship_id: pendingScholarshipFeeApplication.scholarship_id,
-            fee_type: 'scholarship_fee',
-            amount: finalAmount,
-            scholarship_fee_amount: finalAmount,
-            original_amount: baseAmount,
-            final_amount: finalAmount,
-            promotional_coupon: promotionalCoupon
-          },
-          promotional_coupon: promotionalCoupon,
-          scholarships_ids: [pendingScholarshipFeeApplication.scholarship_id],
-        }),
-      });
-
-      if (!response.ok) {
-        let errorData: any = {};
-        try {
-          errorData = await response.json();
-        } catch {
-          throw new Error('Erro ao criar sessão Parcelow');
-        }
-        
-        if (errorData.error === 'document_number_required') {
-          alert('CPF é obrigatório para pagamento via Parcelow. Por favor, atualize seu perfil.');
-          setIsProcessingScholarshipFeeCheckout(false);
-          return;
-        }
-        
-        throw new Error(errorData.message || errorData.error || 'Erro ao criar sessão Parcelow');
-      }
-
-      const data = await response.json();
-      if (data.checkout_url) {
-        console.log('[Parcelow] Redirecionando para:', data.checkout_url);
-        window.location.href = data.checkout_url;
-      } else {
-        throw new Error('URL de checkout Parcelow não encontrada');
-      }
-      
-    } catch (error) {
-      console.error('Erro ao processar checkout Parcelow para scholarship fee:', error);
-      setShowScholarshipFeeModal(true);
-    } finally {
-      setIsProcessingScholarshipFeeCheckout(false);
-    }
-  };
 
   return (
     <>
@@ -1434,7 +827,9 @@ const MyApplications: React.FC = () => {
                           const Icon = getStatusIcon(application.status);
                           const scholarship = application.scholarships;
                           const applicationFeePaid = !!application.is_application_fee_paid;
-                          const scholarshipFeePaid = !!application.is_scholarship_fee_paid;
+                          const scholarshipFeePaid = !!application.is_scholarship_fee_paid || 
+                                                     !!application.acceptance_letter_url ||
+                                                     (isNewFlowUser && (!!(userProfile as any)?.is_placement_fee_paid || !!realPaidAmounts.placement));
                           if (!scholarship) return null;
 
 
@@ -1567,23 +962,28 @@ const MyApplications: React.FC = () => {
                                       )}
                                     </div>
 
-                                    <div className="bg-white border-2 border-slate-200 rounded-xl p-3 shadow-sm">
-                                      <div className="flex items-center justify-between mb-3">
-                                        <span className="font-semibold text-gray-900 text-sm">{t('studentDashboard.myApplications.paymentStatus.scholarshipFee')}</span>
-                                        {realPaidAmounts.scholarship !== undefined ? (
-                                          // Se há pagamento registrado, mostrar valor bruto (gross_amount_usd) ou amount
-                                          <span className="text-base font-bold text-gray-700">{formatAmount(realPaidAmounts.scholarship)}</span>
-                                        ) : scholarshipFeePromotionalCoupon ? (
-                                          // Se há cupom promocional, mostrar valor com desconto
-                                          <div className="text-right">
-                                            <div className="text-base font-bold text-gray-400 line-through">{formatAmount(Number(getFeeAmount('scholarship_fee')))}</div>
-                                            <div className="text-base font-bold text-green-600">{formatAmount(scholarshipFeePromotionalCoupon.finalAmount)}</div>
-                                          </div>
-                                        ) : (
-                                          // Sem cupom, mostrar valor normal da taxa
-                                          <span className="text-base font-bold text-gray-700">{formatAmount(Number(getFeeAmount('scholarship_fee')))}</span>
-                                        )}
-                                      </div>
+                                      <div className="bg-white border-2 border-slate-200 rounded-xl p-3 shadow-sm">
+                                        <div className="flex items-center justify-between mb-3">
+                                          <span className="font-semibold text-gray-900 text-sm">
+                                            {isNewFlowUser 
+                                              ? t('studentDashboard.myApplications.paymentStatus.placementFee') 
+                                              : t('studentDashboard.myApplications.paymentStatus.scholarshipFee')}
+                                          </span>
+                                          {realPaidAmounts.scholarship !== undefined ? (
+                                            <span className="text-base font-bold text-gray-700">{formatAmount(realPaidAmounts.scholarship)}</span>
+                                          ) : isNewFlowUser ? (
+                                            <span className="text-base font-bold text-gray-700">
+                                              {formatPlacementFee(getPlacementFee(scholarship.annual_value_with_scholarship || 0, scholarship.placement_fee_amount))}
+                                            </span>
+                                          ) : scholarshipFeePromotionalCoupon ? (
+                                            <div className="text-right">
+                                              <div className="text-base font-bold text-gray-400 line-through">{formatAmount(Number(getFeeAmount('scholarship_fee')))}</div>
+                                              <div className="text-base font-bold text-green-600">{formatAmount(scholarshipFeePromotionalCoupon.finalAmount)}</div>
+                                            </div>
+                                          ) : (
+                                            <span className="text-base font-bold text-gray-700">{formatAmount(Number(getFeeAmount('scholarship_fee')))}</span>
+                                          )}
+                                        </div>
                                       {scholarshipFeePaid ? (
                                         <div className="inline-flex items-center px-3 py-2 rounded-lg text-xs font-semibold bg-green-100 text-green-700 border border-green-200">
                                           <CheckCircle className="h-3 w-3 mr-1" />
@@ -1619,7 +1019,9 @@ const MyApplications: React.FC = () => {
                                             >
                                               {paymentBlockedLoading
                                                 ? t('studentDashboard.myApplications.paymentStatus.checking')
-                                                : t('studentDashboard.myApplications.paymentStatus.payScholarshipFee')}
+                                                : isNewFlowUser 
+                                                  ? t('studentDashboard.myApplications.paymentStatus.payPlacementFee') 
+                                                  : t('studentDashboard.myApplications.paymentStatus.payScholarshipFee')}
                                             </button>
                                           )}
                                         </>
@@ -1642,13 +1044,16 @@ const MyApplications: React.FC = () => {
                                 {/* Action Section */}
                                 {(applicationFeePaid && scholarshipFeePaid) && (
                                   <div className="border-t border-slate-200 pt-4">
-                                    <Link
-                                      to={`/student/dashboard/application/${application.id}/chat`}
+                                    <button
+                                      onClick={() => {
+                                        localStorage.setItem('selected_application_id', application.id);
+                                        navigate('/student/onboarding?step=my_applications');
+                                      }}
                                       className="inline-flex items-center justify-center w-full px-4 py-3 rounded-xl font-bold bg-gradient-to-r from-blue-600 to-blue-700 text-white shadow-lg hover:shadow-xl hover:from-blue-700 hover:to-blue-800 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 transform hover:scale-105 transition-all duration-200 text-sm"
                                     >
                                       <GraduationCap className="h-4 w-4 mr-2" />
                                       {t('studentDashboard.myApplications.applicationDetails.viewDetails')}
-                                    </Link>
+                                    </button>
                                   </div>
                                 )}
                               </div>
@@ -1858,7 +1263,7 @@ const MyApplications: React.FC = () => {
                                                       )}
 
                                                       {/* Upload Action for Rejected Docs */}
-                                                      {isRejected && (
+                                                      {isRejected && application.status !== 'rejected' && (
                                                         <div className="mt-3 space-y-2">
                                                           <div className="flex flex-col gap-2">
                                                             <label className="cursor-pointer bg-gradient-to-r from-blue-50 to-blue-100 text-blue-700 border-2 border-blue-200 hover:from-blue-100 hover:to-blue-200 px-3 py-2 rounded-lg font-semibold transition-all duration-200 flex-1 text-center text-xs hover:shadow-md">
@@ -2006,34 +1411,6 @@ const MyApplications: React.FC = () => {
         </>
       )}
       
-      {/* Modal de confirmação para Application Fee */}
-      {pendingApplication && (
-        <ScholarshipConfirmationModal
-          isOpen={showConfirmationModal}
-          onClose={() => setShowConfirmationModal(false)}
-          scholarship={pendingApplication.scholarships!}
-          onStripeCheckout={handleStripeCheckout}
-          onPixCheckout={handlePixCheckout}
-          onParcelowCheckout={handleParcelowCheckout}
-          isProcessing={isProcessingCheckout}
-          applicationId={pendingApplication.id}
-        />
-      )}
-
-      {/* Modal de confirmação para Scholarship Fee */}
-      {pendingScholarshipFeeApplication && (
-        <ScholarshipConfirmationModal
-          isOpen={showScholarshipFeeModal}
-          onClose={() => setShowScholarshipFeeModal(false)}
-          scholarship={pendingScholarshipFeeApplication.scholarships!}
-          onStripeCheckout={handleScholarshipFeeCheckout}
-          onPixCheckout={handleScholarshipFeePixCheckout}
-          onParcelowCheckout={handleScholarshipFeeParcelowCheckout}
-          isProcessing={isProcessingScholarshipFeeCheckout}
-          feeType="scholarship_fee"
-          applicationId={pendingScholarshipFeeApplication.id}
-        />
-      )}
       </div>
     </div>
     </>

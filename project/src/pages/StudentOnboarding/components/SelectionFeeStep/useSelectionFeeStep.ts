@@ -347,12 +347,29 @@ export const useSelectionFeeStep = (onNext: () => void) => {
   const handleCheckboxChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
     if (hasAcceptedTermsInDB) { e.preventDefault(); return; }
     const isChecked = e.target.checked;
+    
+    // OPTIMISTIC UPDATE: Update UI immediately
     setTermsAccepted(isChecked);
+    
     if (isChecked) {
-      setLoading(true);
-      if (!activeTerm) await loadActiveTerms();
-      await handleTermsAcceptRecord();
-      setLoading(false);
+      // Sync with DB in background
+      const syncTerms = async () => {
+        try {
+          if (!activeTerm) {
+            const success = await loadActiveTerms();
+            if (!success) throw new Error('Failed to load terms');
+          }
+          await handleTermsAcceptRecord();
+          console.log('✅ [Onboarding Terms] Aceite registrado com sucesso.');
+        } catch (err) {
+          console.error('❌ [Onboarding Terms] Erro ao registrar aceite:', err);
+          // ROLLBACK: Revert UI state if DB sync fails
+          setTermsAccepted(false);
+          alert(t('common:errors.generic') || 'Error accepting terms. Please try again.');
+        }
+      };
+      
+      syncTerms();
     }
   };
 

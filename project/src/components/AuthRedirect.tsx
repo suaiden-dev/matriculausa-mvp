@@ -42,8 +42,8 @@ const AuthRedirect: React.FC<{ children: React.ReactNode }> = ({ children }) => 
 
   const { isBlocked: paymentIsBlocked, pendingPayment, rejectedPayment } = usePaymentBlockedContext();
 
-  // Derivado do context — sem request adicional
-  const hasPendingOrRejectedSelectionPayment = (() => {
+  // Derivado do context — memoizado para evitar re-calculo em cada render
+  const hasPendingOrRejectedSelectionPayment = React.useMemo(() => {
     if (pendingPayment &&
       pendingPayment.id !== '00000000-0000-0000-0000-000000000000' &&
       (pendingPayment.fee_type === 'selection_process' || !pendingPayment.fee_type || pendingPayment.fee_type === '')) {
@@ -56,7 +56,7 @@ const AuthRedirect: React.FC<{ children: React.ReactNode }> = ({ children }) => 
       return true;
     }
     return false;
-  })();
+  }, [paymentIsBlocked, pendingPayment, rejectedPayment]);
 
   useEffect(() => {
     // Tratar erros de verificação de email no hash da URL
@@ -99,12 +99,13 @@ const AuthRedirect: React.FC<{ children: React.ReactNode }> = ({ children }) => 
       window.history.replaceState(null, '', window.location.pathname + window.location.search);
     }
 
-    // Aguardar carregamento
+    // Aguardar carregamento primordial
     if (loading) return;
+
+    const currentPath = location.pathname;
 
     // Se não há usuário autenticado, verificar se está tentando acessar rota protegida
     if (!user) {
-      const currentPath = location.pathname;
       const protectedPaths = [
         '/student/dashboard',
         '/school/dashboard',
@@ -122,8 +123,6 @@ const AuthRedirect: React.FC<{ children: React.ReactNode }> = ({ children }) => 
       return;
     }
 
-    const currentPath = location.pathname;
-
     // Detectar fluxo de recuperação de senha
     const isPasswordResetFlow = currentPath.startsWith('/forgot-password') ||
       window.location.hash.includes('access_token') || window.location.hash.includes('refresh_token');
@@ -133,14 +132,17 @@ const AuthRedirect: React.FC<{ children: React.ReactNode }> = ({ children }) => 
     const publicPaths = ['/schools', '/scholarships', '/about', '/how-it-works', '/universities'];
     if (publicPaths.some(path => currentPath === path || currentPath.startsWith(path))) return;
 
-    // Evitar re-execução se o path não mudou
+    // Evitar re-execução se o path não mudou e o estado de pagamento/role é estável
     if (lastCheckedPath.current === currentPath && !currentPath.includes('/login') && !currentPath.includes('/auth')) {
       return;
     }
-    lastCheckedPath.current = currentPath;
-
+    
+    // REDIRECIONAMENTO DE SEGURANÇA SE O USUÁRIO ESTÁ EM PATH ERRADO PARA O ROLE DELE
+    // Mas só fazemos se não for uma rota pública
+    
     const checkAndRedirect = async () => {
-      const isWhitelistedInternalRegister = location.pathname === '/student/register';
+      lastCheckedPath.current = currentPath;
+      const isWhitelistedInternalRegister = currentPath === '/student/register';
 
       // REDIRECIONAMENTO APÓS LOGIN
       if (currentPath === '/login' || currentPath === '/auth' || currentPath === '/register') {
@@ -185,7 +187,7 @@ const AuthRedirect: React.FC<{ children: React.ReactNode }> = ({ children }) => 
         return;
       }
 
-      // PROTEÇÃO DE ROTAS
+      // PROTEÇÃO DE ROTAS POR ROLE
       if (user.role === 'school' && (currentPath.startsWith('/student/') || currentPath.startsWith('/admin') || currentPath.startsWith('/affiliate-admin'))) {
         navigate('/school/dashboard', { replace: true }); return;
       }
@@ -207,7 +209,7 @@ const AuthRedirect: React.FC<{ children: React.ReactNode }> = ({ children }) => 
         navigate('/seller/dashboard', { replace: true }); return;
       }
 
-      // VERIFICAÇÃO ADICIONAL PARA ESCOLAS - apenas na página inicial
+      // VERIFICAÇÃO ADICIONAL PARA ESCOLAS
       if (user.role === 'school' && currentPath === '/') {
         setCheckingUniversity(true);
         const { error, university } = await checkUniversityStatus(user.id);
@@ -216,11 +218,10 @@ const AuthRedirect: React.FC<{ children: React.ReactNode }> = ({ children }) => 
         if (!university.profile_completed) { navigate('/school/setup-profile', { replace: true }); setCheckingUniversity(false); return; }
         setCheckingUniversity(false);
       }
-
     };
 
     checkAndRedirect();
-  }, [user?.id, user?.role, loading, location.pathname, navigate, checkUniversityStatus, hasPendingOrRejectedSelectionPayment]);
+  }, [user?.id, user?.role, loading, location.pathname, navigate, hasPendingOrRejectedSelectionPayment]);
 
   if (checkingUniversity) {
     return (

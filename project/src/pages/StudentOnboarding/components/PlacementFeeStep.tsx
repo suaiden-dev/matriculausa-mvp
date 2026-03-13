@@ -400,6 +400,8 @@ export const PlacementFeeStep: React.FC<StepProps> = ({ onNext, onBack }) => {
                                                                 }}
                                                                 isPendingVerification={hasZellePendingPlacementFee}
                                                                 onProcessingChange={(isProcessing) => { if (isProcessing) refetchPaymentStatus(); }}
+                                                                hideHeader={true}
+                                                                onSuccess={onNext}
                                                             />
                                                         </div>
                                                     </div>
@@ -566,6 +568,11 @@ export const PlacementFeeStep: React.FC<StepProps> = ({ onNext, onBack }) => {
                                                                         }}
                                                                         isPendingVerification={hasZellePendingPlacementFee}
                                                                         onProcessingChange={(isProcessing) => { if (isProcessing) refetchPaymentStatus(); }}
+                                                                        onClose={() => setZelleActiveApp(null)}
+                                                                        onSuccess={() => {
+                                                                            setZelleActiveApp(null);
+                                                                            onNext();
+                                                                        }}
                                                                     />
                                                                 </div>
                                                             )}

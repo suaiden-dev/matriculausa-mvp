@@ -1,8 +1,8 @@
 import React, { useState } from 'react';
-import { 
-  Building, 
-  Clock, 
-  DollarSign, 
+import {
+  Building,
+  Clock,
+  DollarSign,
   GraduationCap,
   CheckCircle,
   AlertTriangle,
@@ -10,10 +10,10 @@ import {
   ChevronUp
 } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
-import { 
-  formatAmount, 
-  getFieldBadgeColor, 
-  getLevelIcon, 
+import {
+  formatAmount,
+  getFieldBadgeColor,
+  getLevelIcon,
   getDeliveryModeLabel,
   getDaysUntilDeadlineDisplay,
   getDeadlineStatus,
@@ -53,11 +53,10 @@ export const ScholarshipCardExpandable: React.FC<ScholarshipCardExpandableProps>
 
   return (
     <div
-      className={`group relative bg-white rounded-xl sm:rounded-2xl shadow-md hover:shadow-lg transition-all duration-300 overflow-hidden border-2 ${
-        isSelected 
-          ? 'border-blue-600 bg-blue-50' 
+      className={`group relative bg-white rounded-xl sm:rounded-2xl shadow-md hover:shadow-lg transition-all duration-300 overflow-hidden border-2 ${isSelected
+          ? 'border-blue-600 bg-blue-50'
           : 'border-slate-200 hover:border-slate-300'
-      }`}
+        }`}
     >
       {/* Compact View */}
       <div className="p-4">
@@ -142,13 +141,12 @@ export const ScholarshipCardExpandable: React.FC<ScholarshipCardExpandableProps>
           <button
             type="button"
             onClick={onToggle}
-            className={`w-full h-10 px-4 rounded-lg font-bold text-sm flex items-center justify-center transition-all duration-300 ${
-              isSelected
+            className={`w-full h-10 px-4 rounded-lg font-bold text-sm flex items-center justify-center transition-all duration-300 ${isSelected
                 ? 'bg-gradient-to-r from-blue-600 to-blue-700 text-white hover:from-blue-700 hover:to-blue-800 shadow-md'
                 : 'bg-gradient-to-r from-blue-400 to-blue-500 text-white hover:from-blue-500 hover:to-blue-600'
-            }`}
+              }`}
           >
-            {isSelected ? (t('scholarshipSelection.review.removeButton') || 'Remove from Selection') : t('studentDashboard.findScholarships.scholarshipCard.selectScholarship')}
+            {isSelected ? t('studentDashboard.findScholarships.scholarshipCard.removeSelection') : t('studentDashboard.findScholarships.scholarshipCard.selectScholarship')}
           </button>
         )}
       </div>
@@ -247,7 +245,7 @@ export const ScholarshipCardExpandable: React.FC<ScholarshipCardExpandableProps>
               <div className="flex items-center justify-between text-xs sm:text-sm">
                 <span className="text-slate-500">{t('studentDashboard.findScholarships.scholarshipCard.level')}</span>
                 <div className="flex items-center">
-                  {React.cloneElement(getLevelIcon(scholarship.level || 'undergraduate'), { 
+                  {React.cloneElement(getLevelIcon(scholarship.level || 'undergraduate'), {
                     className: "h-3.5 w-3.5",
                     strokeWidth: 2.5
                   })}

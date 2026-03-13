@@ -23,6 +23,7 @@ interface ZelleCheckoutProps {
   };
   onProcessingChange?: (isProcessing: boolean) => void;
   hideHeader?: boolean;
+  onClose?: () => void;
 }
 
 export const ZelleCheckout: React.FC<ZelleCheckoutProps> = ({
@@ -35,7 +36,8 @@ export const ZelleCheckout: React.FC<ZelleCheckoutProps> = ({
   isPendingVerification = false,
   metadata = {},
   onProcessingChange,
-  hideHeader = false
+  hideHeader = false,
+  onClose
 }) => {
   const { t } = useTranslation();
   const [copied, setCopied] = useState(false);
@@ -518,6 +520,7 @@ export const ZelleCheckout: React.FC<ZelleCheckoutProps> = ({
     
     try {
       const comprovanteUrl = await uploadComprovante();
+      
       if (!comprovanteUrl) throw new Error('Upload failed');
       
       setUploadStep('sending');
@@ -528,6 +531,7 @@ export const ZelleCheckout: React.FC<ZelleCheckoutProps> = ({
 
       // Invocamos a Edge Function para criar o registro e disparar o n8n
       // Capture the actual payment ID from the server
+
       const { data: functionData, error: functionError } = await supabase.functions.invoke('create-zelle-payment', {
         body: {
           fee_type: feeType,
@@ -672,7 +676,14 @@ export const ZelleCheckout: React.FC<ZelleCheckoutProps> = ({
         </div>
         <h3 className="text-2xl font-black text-green-900 mb-2 uppercase tracking-tight">{t('payment:zelleWaiting.messages.approved')}</h3>
         <p className="text-green-700 font-medium mb-8 leading-relaxed font-outfit">{t('payment:zelleWaiting.details.approved')}</p>
-        {!onSuccess && (
+        {(onSuccess || onClose) ? (
+          <button 
+            onClick={() => onClose ? onClose() : (onSuccess ? onSuccess() : window.location.reload())} 
+            className="w-full bg-green-600 text-white py-4 rounded-2xl font-black uppercase tracking-widest hover:bg-green-700 transition-all shadow-lg active:scale-95 shadow-green-200 mt-4"
+          >
+            FECHAR
+          </button>
+        ) : (
           <button 
             onClick={() => window.location.reload()} 
             className="w-full bg-green-600 text-white py-4 rounded-2xl font-black uppercase tracking-widest hover:bg-green-700 transition-all shadow-lg active:scale-95 shadow-green-200"
@@ -692,8 +703,11 @@ export const ZelleCheckout: React.FC<ZelleCheckoutProps> = ({
         {!hideHeader && (
           <div className="flex justify-between items-center mb-8 px-2">
             <h2 className="text-2xl font-black text-gray-900 uppercase tracking-tight">{t('payment:zelleCheckout.title')}</h2>
-            {!onSuccess && (
-              <button onClick={() => window.location.reload()} className="p-2 hover:bg-gray-100 rounded-full transition-colors">
+            {(onClose || !onSuccess) && (
+              <button 
+                onClick={() => onClose ? onClose() : window.location.reload()} 
+                className="p-2 hover:bg-gray-100 rounded-full transition-colors"
+              >
                 <X className="w-6 h-6 text-gray-400" />
               </button>
             )}

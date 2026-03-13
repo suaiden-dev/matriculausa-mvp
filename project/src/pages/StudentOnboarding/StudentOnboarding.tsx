@@ -27,6 +27,8 @@ const StudentOnboarding: React.FC = () => {
   const navigate = useNavigate();
   const [searchParams, setSearchParams] = useSearchParams();
   const processingPaymentRef = React.useRef<string | null>(null);
+  // Ref para evitar loop: indica que a mudança de URL foi feita internamente (por nós)
+  const isInternalUrlUpdate = React.useRef(false);
   const { state, loading, goToStep } = useOnboardingProgress();
   const { t } = useTranslation(['common', 'registration', 'payment', 'dashboard']);
   const [showPaymentAnimation, setShowPaymentAnimation] = useState(false);
@@ -127,13 +129,19 @@ const StudentOnboarding: React.FC = () => {
     navigate(target);
   };
 
+  // Lê o step da URL apenas na montagem inicial ou quando a mudança veio de fora (não foi causada por nós)
   useEffect(() => {
     if (isVerifyingPayment || showPaymentAnimation) return;
+    // Se foi uma atualização interna de URL (feita por nós), ignorar para evitar loop
+    if (isInternalUrlUpdate.current) {
+      isInternalUrlUpdate.current = false;
+      return;
+    }
     const stepParam = searchParams.get('step');
     if (stepParam) {
-      const validSteps: OnboardingStep[] = ['selection_fee', 'identity_verification', 'selection_survey', 'scholarship_selection', 'process_type', 'documents_upload', 'payment', 'scholarship_fee', 'placement_fee', 'my_applications'];
-      if (validSteps.includes(stepParam as OnboardingStep)) {
-        window.localStorage.setItem('onboarding_current_step', stepParam);
+      // identity_verification nunca deve ser forçado via URL — o checkProgress decide
+      const validSteps: OnboardingStep[] = ['selection_fee', 'selection_survey', 'scholarship_selection', 'process_type', 'documents_upload', 'payment', 'scholarship_fee', 'placement_fee', 'my_applications'];
+      if (validSteps.includes(stepParam as OnboardingStep) && stepParam !== state.currentStep) {
         setTimeout(() => {
           goToStep(stepParam as OnboardingStep);
         }, 100);
@@ -141,11 +149,13 @@ const StudentOnboarding: React.FC = () => {
     }
   }, [searchParams, goToStep, isVerifyingPayment, showPaymentAnimation]);
 
-  // Sincronizar URL com o passo atual
+  // Sincronizar URL com o passo atual (sem disparar loop)
   useEffect(() => {
     if (isVerifyingPayment || showPaymentAnimation) return;
     const currentStepUrl = searchParams.get('step');
     if (state.currentStep && state.currentStep !== currentStepUrl) {
+      // Marcar que esta mudança de URL é interna para o outro effect não reagir
+      isInternalUrlUpdate.current = true;
       const newParams = new URLSearchParams(searchParams);
       newParams.set('step', state.currentStep);
       navigate(`?${newParams.toString()}`, { replace: true });

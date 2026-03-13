@@ -136,8 +136,8 @@
     "recipientEmailPlaceholder": "Email used in Zelle",
     "recipientName": "Recipient Name",
     "recipientNamePlaceholder": "Name used in Zelle",
-    "submitPayment": "Submit Payment",
-    "processing": "Processing...",
+    "submitPayment": "Enviar Comprobante",
+    "processing": "Procesando...",
     "activeDiscount": "Active Discount",
     "discountApplied": "Discount applied",
     "originalAmount": "Original amount",
@@ -302,11 +302,12 @@
       "returnHome": "Return Home"
     },
     "feeTypes": {
-      "i-20_control_fee": "I-20 Control Fee",
-      "application_fee": "Application Fee",
-      "scholarship_fee": "Scholarship Fee",
-      "selection_process": "Selection Process Fee",
-      "default": "Payment"
+      "i-20_control_fee": "Tarifa de Control I-20",
+      "application_fee": "Tarifa de Solicitud",
+      "scholarship_fee": "Tarifa de Beca",
+      "placement_fee": "Tarifa de Colocación",
+      "selection_process": "Tarifa del Proceso de Selección",
+      "default": "Pago"
     }
   },
   "selectionFeeStep": {
@@ -510,16 +511,16 @@
   },
   "placementFeeStep": {
     "loading": "Cargando información...",
-    "title": "Placement Fee",
-    "subtitle": "Tasa de colocación calculada en base al valor anual de su beca seleccionada.",
+    "title": "Tarifa de Colocación",
+    "subtitle": "Tarifa de colocación calculada en base al valor anual de su beca seleccionada.",
     "completedTitle": "Etapa Completada",
-    "completedSubtitle": "Su Placement Fee ha sido procesada con éxito.",
+    "completedSubtitle": "Su Tarifa de Colocación ha sido procesada con éxito.",
     "continue": "Continuar",
     "securePayment": "Pago Seguro",
     "confirmed": "Pago Confirmado",
-    "confirmedSubtitle": "Su Placement Fee ha sido confirmada.",
+    "confirmedSubtitle": "Su Tarifa de Colocación ha sido confirmada.",
     "noApplications": "Ninguna solicitud lista",
-    "noApplicationsMessage": "Debe completar las etapas anteriores antes de pagar la Placement Fee.",
+    "noApplicationsMessage": "Debe completar las etapas anteriores antes de pagar la Tarifa de Colocación.",
     "back": "Volver",
     "zellePendingTitle": "Pago Zelle en Análisis",
     "zellePendingMessage": "Ya ha iniciado un pago vía Zelle. Espere la confirmación antes de usar otro método. Esto puede tardar hasta 48 horas.",
