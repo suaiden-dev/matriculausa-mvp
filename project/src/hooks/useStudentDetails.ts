@@ -46,6 +46,8 @@ export interface StudentRecord {
   all_applications?: any[];
   admin_notes?: string | null;
   documents_status?: 'pending' | 'analyzing' | 'approved' | 'rejected' | 'under_review' | null;
+  scholarship_fee_amount?: number | null;
+  placement_fee_amount?: number | null;
 }
 
 /**
@@ -68,7 +70,7 @@ export const useStudentDetails = (profileId: string | undefined) => {
 
       // Try RPC first for better performance
       let s: any = null;
-      let useRpc = false; // DESABILITADO TEMPORARIAMENTE para forçar o retorno do placement_fee_flow do select
+      let useRpc = true; // Reativado após atualização da RPC no banco
 
       try {
         const { data: rpcData, error: rpcError } = await supabase.rpc(

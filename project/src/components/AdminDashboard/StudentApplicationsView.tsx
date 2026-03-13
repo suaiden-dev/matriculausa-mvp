@@ -646,8 +646,9 @@ const StudentApplicationsView: React.FC = () => {
         return 'pending';
       case 'application_fee':
         return student.is_application_fee_paid ? 'completed' : 'pending';
+      case 'placement_fee':
+        return student.is_placement_fee_paid ? 'completed' : 'pending';
       case 'scholarship_fee':
-        if (student.placement_fee_flow) return student.is_placement_fee_paid ? 'completed' : 'pending';
         return student.is_scholarship_fee_paid ? 'completed' : 'pending';
       case 'i20_fee':
         if (student.placement_fee_flow) return 'skipped';
@@ -769,7 +770,7 @@ const StudentApplicationsView: React.FC = () => {
         case 'scholarship_fee':
           if (student.placement_fee_flow) {
             // Placement fee paga mas ainda não tem acceptance letter
-            result = student.is_placement_fee_paid && !student.acceptance_letter_status;
+            result = !!student.is_placement_fee_paid && !student.acceptance_letter_status;
           } else {
             // Scholarship fee paga mas ainda não pagaram I-20 fee
             result = student.is_scholarship_fee_paid && !student.has_paid_i20_control_fee;
@@ -878,27 +879,27 @@ const StudentApplicationsView: React.FC = () => {
       { key: 'apply', label: 'Application', icon: FileText, shortLabel: 'Application' },
       { key: 'review', label: 'Review', icon: Eye, shortLabel: 'Review' },
       { key: 'application_fee', label: 'App Fee', icon: DollarSign, shortLabel: 'App Fee' },
-      {
-        key: 'scholarship_fee',
-        label: student.placement_fee_flow ? 'Placement Fee' : 'Scholarship Fee',
-        icon: Award,
-        shortLabel: student.placement_fee_flow ? 'Placement Fee' : 'Scholarship Fee'
-      },
+      { key: 'placement_fee', label: 'Placement Fee', icon: DollarSign, shortLabel: 'Placement Fee' },
+      { key: 'scholarship_fee', label: 'Scholarship Fee', icon: Award, shortLabel: 'Scholarship Fee' },
       { key: 'i20_fee', label: 'I-20 Fee', icon: CreditCard, shortLabel: 'I-20 Fee' },
       { key: 'acceptance_letter', label: 'Acceptance', icon: BookOpen, shortLabel: 'Acceptance' },
       { key: 'transfer_form', label: 'Transfer Form', icon: FileText, shortLabel: 'Transfer Form' },
       { key: 'enrollment', label: 'Enrollment', icon: GraduationCap, shortLabel: 'Enrollment' }
     ];
 
-    // Filtrar steps baseado no student_process_type
+    // Filtrar steps baseado no student_process_type e flow
     const steps = allSteps.filter(step => {
       if (step.key === 'transfer_form') {
         return student?.student_process_type === 'transfer';
       }
-      if (step.key === 'i20_fee' && student?.placement_fee_flow) {
-        return false;
+      if (student?.placement_fee_flow) {
+        // No fluxo de placement, removemos scholarhsip_fee e i20_fee
+        // MANTEMOS 'application_fee' pois ela ainda existe nesse fluxo
+        return !['scholarship_fee', 'i20_fee'].includes(step.key);
+      } else {
+        // No fluxo normal, removemos a placement_fee
+        return step.key !== 'placement_fee';
       }
-      return true;
     });
 
     // Calcular progresso geral
@@ -1573,13 +1574,13 @@ const StudentApplicationsView: React.FC = () => {
                     <User className="h-8 w-8 text-white" />
                   </div>
                   <div>
-                    <h3 className="text-2xl font-bold text-slate-900">{selectedStudent.student_name}</h3>
-                    <p className="text-slate-600">{selectedStudent.student_email}</p>
+                    <h3 className="text-2xl font-bold text-slate-900">{selectedStudent?.student_name}</h3>
+                    <p className="text-slate-600">{selectedStudent?.student_email}</p>
                     <div className="flex items-center space-x-4 mt-1">
                       <span className="text-sm text-slate-500">
-                        Registered: {new Date(selectedStudent.student_created_at).toLocaleDateString()}
+                        Registered: {selectedStudent?.student_created_at ? new Date(selectedStudent.student_created_at).toLocaleDateString() : 'N/A'}
                       </span>
-                      {selectedStudent.seller_referral_code && (
+                      {selectedStudent?.seller_referral_code && (
                         <span className="bg-slate-100 text-slate-700 px-2 py-1 rounded-lg text-xs font-medium">
                           Ref: {selectedStudent.seller_referral_code}
                         </span>
@@ -1650,7 +1651,7 @@ const StudentApplicationsView: React.FC = () => {
                             <div>
                               <dt className="text-sm font-medium text-slate-600">Total Applications</dt>
                               <dd className="text-base font-semibold text-slate-900 mt-1">
-                                {selectedStudent.total_applications} application(s)
+                                {selectedStudent?.total_applications} application(s)
                               </dd>
                             </div>
                             <div>
@@ -1682,7 +1683,7 @@ const StudentApplicationsView: React.FC = () => {
                   </div>
 
                   {/* Scholarship Information Card */}
-                  {selectedStudent.scholarship_title ? (
+                  {selectedStudent?.scholarship_title ? (
                     <div className="bg-white rounded-2xl shadow-sm border border-slate-200">
                       <div className="bg-gradient-to-r rounded-t-2xl from-slate-700 to-slate-800 px-6 py-4">
                         <h2 className="text-xl font-semibold text-white flex items-center">
@@ -1899,7 +1900,7 @@ const StudentApplicationsView: React.FC = () => {
                                     const baseFee = Number(getFeeAmount('selection_process'));
                                     // ✅ CORREÇÃO: Para simplified, Selection Process Fee é fixo ($350), sem dependentes
                                     // Dependentes só afetam Application Fee ($100 por dependente)
-                                    const systemType = student?.system_type || 'legacy';
+                                    const systemType = (selectedStudent as any)?.system_type || 'legacy';
                                     const total = systemType === 'simplified'
                                       ? baseFee
                                       : baseFee + (dependents * 150);

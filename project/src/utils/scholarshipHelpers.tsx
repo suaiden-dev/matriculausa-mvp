@@ -170,3 +170,38 @@ export const getApplicationFeeWithDependents = (
   return systemType === 'legacy' && dependents > 0 ? baseInDollars + dependents * 100 : baseInDollars;
 };
 
+/**
+ * Retorna o label traduzido do nível acadêmico
+ */
+export const getLevelLabel = (level: string, t: (key: string) => string): string => {
+  switch (level?.toLowerCase()) {
+    case 'undergraduate':
+      return t('scholarshipsPage.filters.levels.undergraduate');
+    case 'graduate':
+      return t('scholarshipsPage.filters.levels.graduate');
+    case 'doctorate':
+      return t('scholarshipsPage.filters.levels.doctorate');
+    default:
+      return level || t('scholarshipsPage.filters.levels.undergraduate');
+  }
+};
+
+/**
+ * Retorna o label traduzido da área de estudo
+ */
+export const getFieldOfStudyLabel = (field: string | undefined, t: (key: string) => string): string => {
+  if (!field) return t('scholarshipsPage.modal.anyField');
+  
+  switch (field.toLowerCase()) {
+    case 'stem':
+      return t('scholarshipsPage.filters.stem');
+    case 'business':
+      return t('scholarshipsPage.filters.business');
+    case 'engineering':
+      return t('scholarshipsPage.filters.engineering');
+    default:
+      return field;
+  }
+};
+
+

@@ -548,7 +548,7 @@ export const ScholarshipSelectionStep: React.FC<StepProps> = ({ onNext, onBack: 
       <div className="w-full h-full flex flex-col">
         <div className="max-w-4xl mx-auto w-full px-4">
           <h1 className="text-2xl sm:text-4xl font-black mb-4 text-slate-900 uppercase tracking-tighter">
-            <span>{t('studentDashboard.selectedScholarships.title') || 'Review Your Selected Scholarships'}</span>
+            <span>{t('scholarshipSelection.review.title')}</span>
           </h1>
           
           {/* Description */}
@@ -1010,7 +1010,7 @@ export const ScholarshipSelectionStep: React.FC<StepProps> = ({ onNext, onBack: 
                   onClick={clearFilters}
                   className="text-blue-600 hover:text-blue-700 font-medium text-sm underline"
                 >
-                  Clear all filters
+                  {t('scholarshipSelection.grid.noResults.clearButton')}
                 </button>
               )}
             </div>
@@ -1019,25 +1019,25 @@ export const ScholarshipSelectionStep: React.FC<StepProps> = ({ onNext, onBack: 
           {/* Pagination */}
           {totalPages > 1 && (
             <div className="flex items-center justify-center gap-2 pb-4">
-              <button
-                type="button"
-                onClick={() => setCurrentPage(prev => Math.max(1, prev - 1))}
-                disabled={currentPage === 1}
-                className="px-4 py-2 rounded-lg font-medium transition-all bg-white border border-slate-300 text-slate-700 hover:bg-slate-50 disabled:opacity-50 disabled:cursor-not-allowed"
-              >
-                {t('scholarshipsPage.pagination.previous')}
-              </button>
-              <span className="px-4 py-2 text-sm text-slate-900">
-                {t('scholarshipsPage.pagination.page')} {currentPage} {t('scholarshipsPage.pagination.of')} {totalPages}
-              </span>
-              <button
-                type="button"
-                onClick={() => setCurrentPage(prev => Math.min(totalPages, prev + 1))}
-                disabled={currentPage === totalPages}
-                className="px-4 py-2 rounded-lg font-medium transition-all bg-white border border-slate-300 text-slate-700 hover:bg-slate-50 disabled:opacity-50 disabled:cursor-not-allowed"
-              >
-                {t('scholarshipsPage.pagination.next')}
-              </button>
+                  <button
+                    type="button"
+                    onClick={() => setCurrentPage(prev => Math.max(1, prev - 1))}
+                    disabled={currentPage === 1}
+                    className="px-4 py-2 rounded-lg font-medium transition-all bg-white border border-slate-300 text-slate-700 hover:bg-slate-50 disabled:opacity-50 disabled:cursor-not-allowed"
+                  >
+                    {t('scholarshipsPage.pagination.previous')}
+                  </button>
+                  <span className="px-4 py-2 text-sm text-slate-900">
+                    {t('scholarshipsPage.pagination.page')} {currentPage} {t('scholarshipsPage.pagination.of')} {totalPages}
+                  </span>
+                  <button
+                    type="button"
+                    onClick={() => setCurrentPage(prev => Math.min(totalPages, prev + 1))}
+                    disabled={currentPage === totalPages}
+                    className="px-4 py-2 rounded-lg font-medium transition-all bg-white border border-slate-300 text-slate-700 hover:bg-slate-50 disabled:opacity-50 disabled:cursor-not-allowed"
+                  >
+                    {t('scholarshipsPage.pagination.next')}
+                  </button>
             </div>
           )}
 

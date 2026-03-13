@@ -16,7 +16,7 @@ export function useStudentDetailsQuery(profileId: string | undefined) {
 
       // Try RPC first for better performance
       let s: any = null;
-      let useRpc = false; // DESABILITADO TEMPORARIAMENTE para forçar o retorno do placement_fee_flow do select
+      let useRpc = true; // Reativado após atualização da RPC no banco
 
       try {
         const { data: rpcData, error: rpcError } = await supabase.rpc(

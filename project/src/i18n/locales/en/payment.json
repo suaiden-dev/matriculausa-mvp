@@ -406,7 +406,7 @@
       }
     },
     "paid": {
-      "title": "Selection Process Fee Paid",
+      "title": "Selection Process Fee",
       "subtitle": "You have successfully paid the selection process fee.",
       "paidTitle": "Payment Confirmed",
       "paidSubtitle": "Your payment has been successfully confirmed.",

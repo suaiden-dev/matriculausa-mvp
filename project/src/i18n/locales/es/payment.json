@@ -381,7 +381,7 @@
       }
     },
     "paid": {
-      "title": "Tarifa del Proceso de Selección Pagada",
+      "title": "Tarifa del Proceso de Selección",
       "subtitle": "Ha pagado con éxito la tarifa del proceso de selección.",
       "paidTitle": "Pago Confirmado",
       "paidSubtitle": "Su pago ha sido confirmado con éxito.",

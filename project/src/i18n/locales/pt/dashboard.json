@@ -113,13 +113,16 @@
     },
     "notifications": {
       "title": "Notificações",
-      "markAllAsRead": "Marcar todas",
-      "clearAll": "Limpar",
+      "markAllAsRead": "Marcar todas como lidas",
+      "clearAll": "Limpar tudo",
       "noNotifications": "Nenhuma notificação",
+      "youAreAllCaughtUp": "Você está em dia!",
       "documentRejected": {
         "title": "Documento Rejeitado",
         "message": "Seu documento {{fileName}} foi rejeitado. Motivo: {{reason}}"
-      }
+      },
+      "Scholarship approved": "Bolsa aprovada",
+      "You have been selected for the scholarship.": "Você foi selecionado para a bolsa."
     },
     "chat": {
       "welcomeMessage": {

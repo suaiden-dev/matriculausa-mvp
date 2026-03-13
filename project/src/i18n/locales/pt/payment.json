@@ -326,7 +326,7 @@
       }
     },
     "paid": {
-      "title": "Taxa do Processo Seletivo Paga",
+      "title": "Taxa do Processo Seletivo",
       "subtitle": "Você pagou com sucesso a taxa do processo seletivo.",
       "paidTitle": "Pagamento Confirmado",
       "paidSubtitle": "Seu pagamento foi confirmado com segurança.",

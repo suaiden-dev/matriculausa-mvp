@@ -13,7 +13,9 @@ import {
   getDaysUntilDeadlineDisplay,
   getDeadlineStatus,
   getLevelIcon,
-  getDeliveryModeLabel
+  getDeliveryModeLabel,
+  getLevelLabel,
+  getFieldOfStudyLabel
 } from '../../../utils/scholarshipHelpers.tsx';
 import { formatCurrency } from '../../../utils/currency';
 import { is3800Scholarship, is3800ScholarshipBlocked } from '../../../utils/scholarshipDeadlineValidation';
@@ -75,7 +77,7 @@ const ScholarshipCardFullComponent: React.FC<ScholarshipCardFullProps> = ({
     >
       {/* Scholarship Image / Header Background */}
       <div className="relative h-32 sm:h-36 overflow-hidden flex-shrink-0 bg-gradient-to-b from-slate-100/50 to-white">
-        <div className="absolute inset-x-0 bottom-0 h-16 bg-gradient-to-t from-white to-transparent"></div>
+        <div className="absolute inset-x-0 bottom-0 h-16 bg-gradient-t from-white to-transparent"></div>
 
         {scholarship.image_url && userProfile?.has_paid_selection_process_fee && !brokenImage ? (
           <img
@@ -131,15 +133,20 @@ const ScholarshipCardFullComponent: React.FC<ScholarshipCardFullProps> = ({
           <div className="flex flex-wrap items-center gap-1.5">
             <span className={`px-2.5 py-1 rounded-lg text-[10px] font-bold text-white shadow-sm flex items-center gap-1.5 ${getFieldBadgeColor(scholarship.field_of_study)}`}>
               <GraduationCap className="h-3.5 w-3.5" strokeWidth={2.5} />
-              {scholarship.field_of_study || 'Any Field'}
+              {getFieldOfStudyLabel(scholarship.field_of_study, t)}
             </span>
             <span className="px-2.5 py-1 rounded-lg text-[10px] font-bold bg-slate-100 text-slate-700 border border-slate-200 flex items-center gap-1.5">
               {React.cloneElement(getLevelIcon(scholarship.level || 'undergraduate'), {
                 className: "h-3.5 w-3.5",
                 strokeWidth: 2.5
               })}
-              <span className="capitalize">{scholarship.level || 'Undergraduate'}</span>
+              <span className="capitalize">{getLevelLabel(scholarship.level || 'undergraduate', t)}</span>
             </span>
+            {scholarship.is_exclusive && (
+              <span className="bg-[#D0151C] text-white px-2.5 py-1 rounded-lg text-[10px] font-bold uppercase tracking-wider shadow-sm">
+                {t('scholarshipsPage.modal.exclusive')}
+              </span>
+            )}
           </div>
         </div>
 
@@ -197,7 +204,7 @@ const ScholarshipCardFullComponent: React.FC<ScholarshipCardFullProps> = ({
         {/* Financial Overview Table View */}
         <div className="bg-white rounded-2xl p-4 border border-gray-200 shadow-sm">
           <h4 className="text-[11px] font-black text-grey-900 mb-3 flex items-center gap-1.5 uppercase tracking-widest">
-            Análise Geral
+            {t('studentDashboard.findScholarships.scholarshipCard.financialOverview')}
           </h4>
 
           <div className="space-y-2">
@@ -254,7 +261,7 @@ const ScholarshipCardFullComponent: React.FC<ScholarshipCardFullProps> = ({
               const placementFee = getPlacementFee(annualValue, placementFeeAmount);
               return (
                 <div className="flex items-center justify-between pt-1.5 border-t border-slate-100">
-                  <span className="text-slate-400 text-xs font-medium">Placement Fee</span>
+                  <span className="text-slate-400 text-xs font-medium">{t('scholarshipsPage.scholarshipCard.placementFee', 'Placement Fee')}</span>
                   <span className="text-blue-600 text-xs font-black">{formatCurrency(placementFee)}</span>
                 </div>
               );
@@ -293,16 +300,16 @@ const ScholarshipCardFullComponent: React.FC<ScholarshipCardFullProps> = ({
               }}
               disabled={isLocked}
               className={`group/btn w-full h-10 px-4 rounded-xl font-bold text-sm flex items-center justify-center transition-all duration-300 relative overflow-hidden backdrop-blur-md border border-white/20 shadow-lg hover:shadow-xl ${isLocked
-                  ? 'bg-slate-300/80 text-slate-500 cursor-not-allowed'
-                  : isSelected
-                    ? 'bg-gradient-to-r from-blue-600/90 to-blue-700/90 text-white hover:from-blue-600 hover:to-blue-700'
-                    : 'bg-gradient-to-r from-blue-500/85 to-indigo-600/85 text-white hover:from-blue-600/90 hover:to-indigo-700/90'
+                ? 'bg-slate-300/80 text-slate-500 cursor-not-allowed'
+                : isSelected
+                  ? 'bg-gradient-to-r from-blue-600/90 to-blue-700/90 text-white hover:from-blue-600 hover:to-blue-700'
+                  : 'bg-gradient-to-r from-blue-500/85 to-indigo-600/85 text-white hover:from-blue-600/90 hover:to-indigo-700/90'
                 }`}
             >
               <div className="absolute inset-0 bg-gradient-to-r from-white/0 via-white/25 to-white/0 transform -skew-x-12 -translate-x-full group-hover/btn:translate-x-full transition-transform duration-1000"></div>
               <span className="relative z-10">
                 {isLocked
-                  ? 'Já Selecionado'
+                  ? t('scholarshipSelection.review.alreadySelected') || 'Já Selecionada'
                   : isSelected
                     ? t('studentDashboard.findScholarships.scholarshipCard.removeSelection')
                     : t('studentDashboard.findScholarships.scholarshipCard.selectScholarship')}
