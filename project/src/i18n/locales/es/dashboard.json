@@ -899,99 +899,102 @@
     }
   },
   "profileManagement": {
-    "title": "Student Profile",
-    "subtitle": "Manage your academic profile and preferences",
-    "editProfile": "Edit Profile",
+    "title": "Perfil del Estudiante",
+    "subtitle": "Gestiona tu perfil académico y preferencias",
+    "editProfile": "Editar Perfil",
     "profileCompleteness": {
-      "title": "Profile Completeness",
-      "subtitle": "Complete your profile to unlock more scholarship opportunities",
-      "complete": "Complete",
-      "improveMatching": "Complete your profile to improve scholarship matching"
+      "title": "Integridad del Perfil",
+      "subtitle": "Completa tu perfil para desbloquear más oportunidades de becas",
+      "complete": "Completo",
+      "improveMatching": "Completa tu perfil para mejorar el emparejamiento con becas"
     },
     "form": {
-      "editProfile": "Edit Profile",
-      "saving": "Saving...",
-      "saveChanges": "Save Changes",
-      "cancel": "Cancel",
-      "fullName": "Full Name",
-      "phoneNumber": "Phone Number",
-      "country": "Country",
-      "fieldOfInterest": "Field of Interest",
-      "academicLevel": "Academic Level",
+      "editProfile": "Editar Perfil",
+      "saving": "Guardando...",
+      "saveChanges": "Guardar Cambios",
+      "cancel": "Cancelar",
+      "fullName": "Nombre Completo",
+      "phoneNumber": "Número de Teléfono",
+      "country": "País",
+      "fieldOfInterest": "Área de Interés",
+      "academicLevel": "Nivel Académico",
       "gpa": "GPA",
-      "englishProficiency": "English Proficiency",
+      "englishProficiency": "Nivel de Inglés",
+      "cpfDocument": "CPF",
+      "cpfHelper": "Utilizado para validación y pagos en Brasil (formato 000.000.000-00).",
       "placeholders": {
-        "enterFullName": "Enter your full name",
-        "phoneExample": "Ex: +55 11 99999-8888",
-        "yourCountry": "Your country",
-        "selectField": "Select your field",
-        "selectLevel": "Select level",
-        "selectProficiency": "Select proficiency"
+        "enterFullName": "Ingresa tu nombre completo",
+        "phoneExample": "Ej: +55 11 99999-8888",
+        "yourCountry": "Tu país",
+        "selectField": "Selecciona tu área",
+        "selectLevel": "Selecciona el nivel",
+        "selectProficiency": "Selecciona el nivel de inglés"
       },
       "fields": {
-        "engineering": "Engineering",
-        "business": "Business",
-        "computerScience": "Computer Science",
-        "medicine": "Medicine",
-        "law": "Law",
-        "arts": "Arts & Humanities",
-        "sciences": "Natural Sciences",
-        "other": "Other",
-        "highSchool": "High School",
-        "undergraduate": "Undergraduate",
-        "graduate": "Graduate",
-        "doctorate": "Doctorate",
-        "beginner": "Beginner",
-        "intermediate": "Intermediate",
-        "advanced": "Advanced",
-        "native": "Native",
-        "toefl": "TOEFL Certified",
-        "ielts": "IELTS Certified"
+        "engineering": "Ingeniería",
+        "business": "Negocios",
+        "computerScience": "Ciencias de la Computación",
+        "medicine": "Medicina",
+        "law": "Derecho",
+        "arts": "Artes y Humanidades",
+        "sciences": "Ciencias Naturales",
+        "other": "Otro",
+        "highSchool": "Bachillerato / Secundaria",
+        "undergraduate": "Pregrado",
+        "graduate": "Posgrado",
+        "doctorate": "Doctorado",
+        "beginner": "Principiante",
+        "intermediate": "Intermedio",
+        "advanced": "Avanzado",
+        "native": "Nativo",
+        "toefl": "Certificado TOEFL",
+        "ielts": "Certificado IELTS"
       }
     },
     "sections": {
-      "personalInformation": "Personal Information",
-      "academicInformation": "Academic Information",
-      "accountInformation": "Account Information"
+      "personalInformation": "Información Personal",
+      "academicInformation": "Información Académica",
+      "accountInformation": "Información de la Cuenta"
     },
     "labels": {
-      "fullName": "Full Name",
-      "email": "Email",
-      "phone": "Phone",
-      "country": "Country",
-      "fieldOfInterest": "Field of Interest",
-      "academicLevel": "Academic Level",
+      "fullName": "Nombre Completo",
+      "email": "Correo Electrónico",
+      "phone": "Teléfono",
+      "country": "País",
+      "fieldOfInterest": "Área de Interés",
+      "academicLevel": "Nivel Académico",
       "gpa": "GPA",
-      "englishProficiency": "English Proficiency",
-      "memberSince": "Member Since",
-      "profileCompleteness": "Profile Completeness"
+      "englishProficiency": "Nivel de Inglés",
+      "memberSince": "Miembro desde",
+      "profileCompleteness": "Integridad del Perfil"
     },
     "status": {
-      "activeStudent": "Active Student",
-      "verified": "Verified",
-      "notProvided": "Not provided",
-      "studentName": "Student Name",
-      "unknown": "Unknown"
+      "activeStudent": "Estudiante Activo",
+      "verified": "Verificado",
+      "notProvided": "No informado",
+      "studentName": "Nombre del Estudiante",
+      "unknown": "Desconocido"
     },
     "messages": {
-      "profileUpdated": "Profile updated successfully!",
-      "uploadError": "Failed to upload avatar. Please try again.",
-      "saveError": "Failed to save profile changes. Please try again.",
-      "invalidImageFile": "Please select an image file",
-      "fileTooLarge": "File size must be less than 5MB",
-      "imageUrlError": "Could not get image URL",
-      "avatarUpdateError": "Failed to update avatar",
-      "changeProfilePicture": "Change profile picture"
+      "profileUpdated": "¡Perfil actualizado con éxito!",
+      "uploadError": "Error al subir el avatar. Inténtalo de nuevo.",
+      "saveError": "Error al guardar los cambios del perfil. Inténtalo de nuevo.",
+      "invalidCPF": "CPF inválido. Verifica e inténtalo de nuevo.",
+      "invalidImageFile": "Por favor, selecciona un archivo de imagen",
+      "fileTooLarge": "El archivo debe pesar menos de 5MB",
+      "imageUrlError": "No se pudo obtener la URL de la imagen",
+      "avatarUpdateError": "Error al actualizar el avatar",
+      "changeProfilePicture": "Cambiar foto de perfil"
     },
     "tips": {
-      "completeProfile": "Complete Your Profile",
-      "description": "A complete profile helps us match you with the most relevant scholarship opportunities. Consider adding the missing information to improve your chances of finding the perfect scholarships.",
-      "addPhoneNumber": "Add phone number",
-      "addCountry": "Add country",
-      "addFieldOfInterest": "Add field of interest",
-      "addAcademicLevel": "Add academic level",
-      "addGpa": "Add GPA",
-      "addEnglishProficiency": "Add English proficiency"
+      "completeProfile": "Completa Tu Perfil",
+      "description": "Un perfil completo nos ayuda a conectarte con las oportunidades de becas más relevantes. Considera agregar la información que falta para mejorar tus posibilidades de encontrar las becas perfectas.",
+      "addPhoneNumber": "Agregar número de teléfono",
+      "addCountry": "Agregar país",
+      "addFieldOfInterest": "Agregar área de interés",
+      "addAcademicLevel": "Agregar nivel académico",
+      "addGpa": "Agregar GPA",
+      "addEnglishProficiency": "Agregar nivel de inglés"
     }
   },
   "matriculaRewards": {
@@ -999,6 +1002,8 @@
     "subtitle": "Gana créditos recomendando amigos a MatriculaUSA",
     "balance": "Saldo",
     "coins": "monedas",
+    "helpSupport": "Ayuda y Soporte",
+    "smartAssistant": "Asistente Inteligente",
     "totalReferrals": "Total de Recomendaciones",
     "totalEarnings": "Total Ganado",
     "yourReferralCode": "Tu Código de Recomendación",
@@ -1129,207 +1134,209 @@
     }
   },
   "matriculaRewardsLanding": {
-    "badge": "New Rewards Program",
+    "aiPoweredHelp": "Ayuda con IA",
+    "directMessaging": "Mensajería directa",
+    "badge": "Nuevo Programa de Recompensas",
     "hero": {
-      "title": "Turn Your",
-      "titleHighlight": "Referrals into Discounts",
-      "subtitle": "on Your Tuition",
-      "description": "Earn <strong>Matricula Coins</strong> for every friend you refer and use them to <strong>reduce your tuition</strong> - 1 coin = $1 off your monthly payment",
+      "title": "Convierte tus",
+      "titleHighlight": "Referidos en Descuentos",
+      "subtitle": "en tu Matrícula",
+      "description": "Gana <strong>Matricula Coins</strong> por cada amigo que refieras y úsalos para <strong>reducir tu matrícula</strong> - 1 coin = $1 de descuento en tu pago mensual",
       "valueCards": {
         "referFriends": {
-          "title": "Share & Earn",
-          "description": "Get your unique code and share with friends who want to study in the USA"
+          "title": "Comparte y Gana",
+          "description": "Obtén tu código único y compártelo con amigos que quieran estudiar en EE. UU."
         },
         "accumulateCoins": {
-          "title": "Earn Rewards",
-          "description": "180 coins per successful referral - that's $180 off your tuition"
+          "title": "Gana Recompensas",
+          "description": "180 coins por referido exitoso - eso es $180 de descuento en tu matrícula"
         },
         "payLess": {
-          "title": "Save Money",
-          "description": "Use your coins to reduce your monthly university payments"
+          "title": "Ahorra Dinero",
+          "description": "Usa tus coins para reducir tus pagos mensuales de la universidad"
         }
       },
       "cta": {
-        "getStarted": "Start Now",
-        "learnMore": "See How It Works"
+        "getStarted": "Comenzar Ahora",
+        "learnMore": "Ver Cómo Funciona"
       },
       "demo": {
-        "title": "Live Demo",
-        "subtitle": "Your Rewards Dashboard",
-        "description": "See what your account would look like with some referrals",
+        "title": "Demostración en Vivo",
+        "subtitle": "Tu Panel de Recompensas",
+        "description": "Mira cómo se vería tu cuenta con algunos referidos",
         "referralCode": {
-          "title": "Your Referral Code",
+          "title": "Tu Código de Referencia",
           "code": "MTR2026",
-          "copy": "Copy Code",
-          "copied": "Copied!",
-          "loginToGetCode": "Login to get your referral code"
+          "copy": "Copiar Código",
+          "copied": "¡Copiado!",
+          "loginToGetCode": "Inicia sesión para obtener tu código de referencia"
         },
         "balance": {
-          "title": "Current Balance",
+          "title": "Saldo Actual",
           "coins": "Matricula Coins",
-          "discount": "in discounts"
+          "discount": "en descuentos"
         },
         "discount": {
-          "title": "Available Discount",
-          "forTuition": "For Tuition",
-          "applicableTo": "Applicable to {{count}} universities"
+          "title": "Descuento Disponible",
+          "forTuition": "Para Matrícula",
+          "applicableTo": "Aplicable a {{count}} universidades"
         },
         "stats": {
-          "referred": "Friends Referred",
-          "signedUp": "Signed Up",
-          "conversion": "Conversion Rate",
-          "monthsSaving": "Months Saving"
+          "referred": "Amigos Referidos",
+          "signedUp": "Registrados",
+          "conversion": "Tasa de Conversión",
+          "monthsSaving": "Meses Ahorrando"
         }
       }
     },
     "stats": {
-      "activeStudents": "Active Students",
-      "partnerUniversities": "Partner Universities",
-      "discountsGiven": "In Discounts Given",
-      "satisfactionRate": "Satisfaction Rate"
+      "activeStudents": "Estudiantes Activos",
+      "partnerUniversities": "Universidades Asociadas",
+      "discountsGiven": "En Descuentos Otorgados",
+      "satisfactionRate": "Tasa de Satisfacción"
     },
     "howItWorks": {
-      "title": "How Matricula Rewards Works",
-      "subtitle": "A simple and transparent system for you to save on your education while helping your friends achieve the American dream",
+      "title": "Cómo Funciona Matricula Rewards",
+      "subtitle": "Un sistema simple y transparente para que ahorres en tu educación mientras ayudas a tus amigos a alcanzar el sueño americano",
       "steps": {
         "step1": {
-          "title": "Share Your Code",
-          "description": "Get your unique code and share with friends who want to study in the USA",
-          "details": "Each code automatically tracks your referrals"
+          "title": "Comparte tu Código",
+          "description": "Obtén tu código único y compártelo con amigos que quieran estudiar en EE. UU.",
+          "details": "Cada código rastrea automáticamente tus referidos"
         },
         "step2": {
-          "title": "Friends Sign Up",
-          "description": "When your friends register using your code, you both earn Matricula Coins",
-          "details": "180 coins for each successful referral"
+          "title": "Tus Amigos se Registran",
+          "description": "Cuando tus amigos se registran usando tu código, ambos ganan Matricula Coins",
+          "details": "180 coins después de pagar la Cuota de Colocación (Placement Fee)"
         },
         "step3": {
-          "title": "Redeem Fee Discount",
-          "description": "Use your coins to redeem fee discounts from the Rewards Store",
-          "details": "Select your university and redeem the discount"
+          "title": "Canjea Descuento en Cuotas",
+          "description": "Usa tus coins para canjear descuentos en las cuotas desde la Tienda de Recompensas",
+          "details": "Selecciona tu universidad y canjea el descuento"
         },
         "step4": {
-          "title": "Contact Your University",
-          "description": "Contact your university's admissions office to apply the redeemed discount",
-          "details": "Present your discount code to get the reduction on your fees"
+          "title": "Contacta a tu Universidad",
+          "description": "Contacta a la oficina de admisiones de tu universidad para aplicar el descuento canjeado",
+          "details": "Presenta tu código de descuento para obtener la reducción en tus cuotas"
         }
       },
       "calculator": {
-        "title": "Matrícula Coins Calculator",
-        "description": "See how many coins you can earn by referring friends",
-        "label": "How many friends can you refer?",
-        "friends": "friends",
-        "coinsEarned": "Coins Earned",
-        "totalSavings": "Value Available for Redemption",
-        "cta": "Start Saving Now",
-        "minValue": "1 friend",
-        "maxValue": "50+ friends",
+        "title": "Calculadora de Matrícula Coins",
+        "description": "Mira cuántos coins puedes ganar refiriendo amigos",
+        "label": "¿Cuántos amigos puedes referir?",
+        "friends": "amigos",
+        "coinsEarned": "Coins Ganados",
+        "totalSavings": "Valor Disponible para Canje",
+        "cta": "Empieza a Ahorrar Ahora",
+        "minValue": "1 amigo",
+        "maxValue": "50+ amigos",
         "coinsPerFriend": "180 coins",
-        "perFriend": "per friend",
+        "perFriend": "por amigo",
         "coinValue": "1 coin =",
         "usdValue": "$1 USD"
       },
       "actions": {
-        "shareNow": "Share now",
-        "inviteFriends": "Invite friends",
-        "seeEarnings": "See earnings",
-        "useDiscount": "Use discount"
+        "shareNow": "Compartir ahora",
+        "inviteFriends": "Invitar amigos",
+        "seeEarnings": "Ver ganancias",
+        "useDiscount": "Usar descuento"
       },
       "journey": {
-        "startMessage": "Start your savings journey now!"
+        "startMessage": "¡Comienza tu viaje de ahorro ahora!"
       },
       "qrCode": {
-        "title": "Register Instantly",
-        "subtitle": "Scan the QR code with your phone to access the registration page directly and start saving on your tuition today.",
-        "description": "Quick and secure access to your account",
-        "instruction": "Use your phone's camera to scan",
-        "note": "Available for mobile devices only",
+        "title": "Regístrate Instantáneamente",
+        "subtitle": "Escanea el código QR con tu teléfono para acceder directamente a la página de registro y comienza a ahorrar en tu matrícula hoy mismo.",
+        "description": "Acceso rápido y seguro a tu cuenta",
+        "instruction": "Usa la cámara de tu teléfono para escanear",
+        "note": "Disponible solo para dispositivos móviles",
         "benefits": {
           "quickAccess": {
-            "title": "Quick and Secure Access",
-            "description": "Register in seconds without typing long URLs"
+            "title": "Acceso Rápido y Seguro",
+            "description": "Regístrate en segundos sin escribir URLs largas"
           },
           "startSaving": {
-            "title": "Start Saving Immediately",
-            "description": "Earn coins from day one and apply discounts to your fees"
+            "title": "Empieza a Ahorrar Inmediatamente",
+            "description": "Gana coins desde el primer día y aplica descuentos a tus cuotas"
           },
           "referFriends": {
-            "title": "Refer Friends and Multiply Your Earnings",
-            "description": "180 coins for each friend who signs up using your code"
+            "title": "Refiere Amigos y Multiplica tus Ganancias",
+            "description": "180 coins por cada amigo que se registre usando tu código y pague la Placement Fee"
           }
         }
       }
     },
     "testimonials": {
-      "title": "Success Stories",
-      "subtitle": "Join thousands of students who are already saving on their education and achieving the American dream",
+      "title": "Historias de Éxito",
+      "subtitle": "Únete a miles de estudiantes que ya están ahorrando en su educación y alcanzando el sueño americano",
       "stories": [
         {
           "name": "Maria Santos",
           "university": "University of California",
-          "text": "I saved $800 on tuition just by sharing Matricula with my friends. Amazing!",
-          "savings": "Saved $800"
+          "text": "¡Ahorré $800 en la matrícula solo compartiendo Matricula con mis amigos. ¡Increíble!",
+          "savings": "Ahorró $800"
         },
         {
           "name": "João Silva",
           "university": "Arizona State University",
-          "text": "The program helped me significantly reduce education costs. Highly recommend!",
-          "savings": "Saved $1,200"
+          "text": "El programa me ayudó a reducir significativamente los costos de educación. ¡Lo recomiendo mucho!",
+          "savings": "Ahorró $1,200"
         },
         {
           "name": "Ana Rodriguez",
           "university": "University of Miami",
-          "text": "Easy to use and really pays off. I got a discount for an entire semester!",
-          "savings": "Saved $1,500"
+          "text": "Fácil de usar y realmente vale la pena. ¡Obtuve un descuento para todo un semestre!",
+          "savings": "Ahorró $1,500"
         }
       ],
       "stats": {
-        "activeStudents": "Active Students",
-        "totalSavings": "Total Savings",
-        "averageRating": "Average Rating",
-        "universities": "Universities"
+        "activeStudents": "Estudiantes Activos",
+        "totalSavings": "Ahorro Total",
+        "averageRating": "Calificación Promedio",
+        "universities": "Universidades"
       }
     },
     "benefits": {
-      "title": "Why Choose Matricula Rewards?",
-      "subtitle": "More than a referral program, it's a smart way to make your education more accessible",
+      "title": "¿Por qué elegir Matricula Rewards?",
+      "subtitle": "Más que un programa de referidos, es una forma inteligente de hacer tu educación más accesible",
       "items": [
         {
-          "title": "Real Savings",
-          "description": "Direct discounts on your university fees",
-          "highlight": "Up to $2,000/semester"
+          "title": "Ahorro Real",
+          "description": "Descuentos directos en tus cuotas universitarias",
+          "highlight": "Hasta $2,000/semestre"
         },
         {
-          "title": "Super Easy",
-          "description": "Simple system to share and earn",
-          "highlight": "3 clicks to start"
+          "title": "Super Fácil",
+          "description": "Sistema simple para compartir y ganar",
+          "highlight": "3 clics para comenzar"
         },
         {
-          "title": "Instant",
-          "description": "Coins credited immediately after referral",
-          "highlight": "100 coins/referral"
+          "title": "Instantáneo",
+          "description": "Coins acreditados inmediatamente después del referido",
+          "highlight": "100 coins/referido"
         }
       ]
     },
     "finalCta": {
-      "title": "Ready to",
-      "titleHighlight": "Save?",
-      "description": "Join thousands of students who are already saving on education. Your journey to accessible education starts with one click.",
+      "title": "¿Listo para",
+      "titleHighlight": "Ahorrar?",
+      "description": "Únete a miles de estudiantes que ya están ahorrando en educación. Tu viaje hacia una educación accesible comienza con un clic.",
       "cards": {
         "startNow": {
-          "title": "Start Now",
-          "description": "Get your referral code and start accumulating coins today",
-          "cta": "Get Code"
+          "title": "Comienza Ahora",
+          "description": "Obtén tu código de referido y comienza a acumular coins hoy mismo",
+          "cta": "Obtener Código"
         },
         "learnMore": {
-          "title": "Learn More",
-          "description": "Discover how the system works and see real savings examples",
-          "cta": "View Details"
+          "title": "Saber Más",
+          "description": "Descubre cómo funciona el sistema y mira ejemplos de ahorro real",
+          "cta": "Ver Detalles"
         }
       },
       "trust": {
-        "free": "Free",
-        "quickStart": "To start",
-        "support": "Support"
+        "free": "Gratis",
+        "quickStart": "Para empezar",
+        "support": "Soporte"
       }
     }
   }

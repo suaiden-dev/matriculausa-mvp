@@ -40,7 +40,7 @@ export const ScholarshipCardExpandable: React.FC<ScholarshipCardExpandableProps>
   onToggle,
   userProfile
 }) => {
-  const { t } = useTranslation();
+  const { t } = useTranslation(['registration', 'scholarships', 'common']);
   const [isExpanded, setIsExpanded] = useState(false);
   const isBlocked = is3800ScholarshipBlocked(scholarship);
   const systemType = (userProfile?.system_type as any) || 'legacy';

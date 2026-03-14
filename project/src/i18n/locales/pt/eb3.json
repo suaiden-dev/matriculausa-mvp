@@ -53,7 +53,8 @@
         "lessDetails": "Menos Detalhes",
         "apply": "Candidatar-se",
         "description": "Descrição:",
-        "requirements": "Requisitos:"
+        "requirements": "Requisitos:",
+        "filingLabel": "Apresentação:"
       },
       "noJobsFound": {
         "title": "Nenhum emprego encontrado",

@@ -24,7 +24,7 @@ import {
 import './DocumentsAndScholarshipChoice.css';
 
 const DocumentsAndScholarshipChoice: React.FC = () => {
-  const { t } = useTranslation();
+  const { t } = useTranslation(['dashboard', 'common']);
   const { userProfile, user } = useAuth();
   const { fetchCart, clearCart } = useCartStore();
   const [processType, setProcessType] = useState<string | null>(window.localStorage.getItem('studentProcessType'));

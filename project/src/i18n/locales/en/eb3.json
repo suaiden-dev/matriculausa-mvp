@@ -53,7 +53,8 @@
         "lessDetails": "Less Details",
         "apply": "Apply",
         "description": "Description:",
-        "requirements": "Requirements:"
+        "requirements": "Requirements:",
+        "filingLabel": "Filing:"
       },
       "noJobsFound": {
         "title": "No jobs found",

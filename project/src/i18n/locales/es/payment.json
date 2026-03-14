@@ -530,5 +530,84 @@
     "cpfError": "Error al guardar CPF. Inténtelo de nuevo.",
     "cpfInvalid": "El CPF debe tener 11 dígitos",
     "goToPayment": "Continuar al Pago"
+  },
+  "paymentBlocker": {
+    "scholarships": {
+      "title": "Becas Bloqueadas",
+      "description": "Para acceder a nuestra colección exclusiva de becas, debes completar el proceso de selección inicial. Este es el primer paso de tu viaje para estudiar en los Estados Unidos."
+    },
+    "universities": {
+      "title": "Universidades Bloqueadas",
+      "description": "Para explorar nuestras universidades asociadas y sus programas, debes completar el proceso de selección inicial. Este es el primer paso de tu viaje para estudiar en los Estados Unidos."
+    },
+    "default": {
+      "title": "Contenido Bloqueado",
+      "description": "Para acceder a este contenido, debes completar el proceso de selección inicial. Este es el primer paso de tu viaje para estudiar en los Estados Unidos."
+    },
+    "selectionProcessFee": "Cuota del Proceso de Selección",
+    "completeApplicationJourney": "Completa tu viaje de solicitud",
+    "goToDashboardAndPayFee": "Ir al Panel y Pagar la Cuota",
+    "learnHowItWorks": "Aprende Cómo Funciona",
+    "contentLockedMessage": "Este contenido está bloqueado hasta que se complete el pago"
+  },
+  "successPages": {
+    "selectionProcessFee": {
+      "title": "¡Pago de la Cuota del Proceso de Selección Realizado con Éxito!",
+      "description": "Su pago de {{amount}} ha sido procesado con éxito.",
+      "message": "Ahora tiene acceso a todas las becas y puede postularse libremente.",
+      "button": "Ir a Becas",
+      "verifying": "Verificando su pago...",
+      "pleaseWait": "Espere mientras confirmamos su transacción. Esto puede tomar unos momentos.",
+      "errorTitle": "Error en el Pago de la Cuota del Proceso de Selección",
+      "errorMessage": "Hubo un problema al procesar su pago.",
+      "errorRetry": "Inténtelo de nuevo. Si el error persiste, contacte al soporte."
+    },
+    "scholarshipFee": {
+      "title": "¡Pago de la Cuota de Beca Realizado con Éxito!",
+      "description": "Su pago de {{amount}} ha sido procesado con éxito.",
+      "message": "Su solicitud ahora pasará a la siguiente etapa.",
+      "button": "Ver Detalles",
+      "verifying": "Verificando su pago...",
+      "pleaseWait": "Espere mientras confirmamos su pago.",
+      "errorTitle": "Error en el Procesamiento del Pago",
+      "errorMessage": "Hubo un problema al procesar su pago.",
+      "errorRetry": "Inténtelo de nuevo o contacte al soporte."
+    },
+    "applicationFee": {
+      "title": "¡Pago de la Cuota de Matrícula Realizado con Éxito!",
+      "description": "Su pago de {{amount}} ha sido procesado con éxito.",
+      "message": "Su solicitud ahora pasará a la siguiente etapa.",
+      "button": "Ir a Mis Solicitudes",
+      "verifying": "Verificando Pago...",
+      "pleaseWait": "Espere mientras confirmamos su transacción. Esto puede tomar unos momentos.",
+      "errorTitle": "Verificación Fallida",
+      "errorMessage": "Hubo un problema al verificar su pago. Contacte al soporte.",
+      "errorDetails": "Detalles del error:"
+    },
+    "placementFee": {
+      "title": "¡Pago de la Cuota de Colocación Realizado con Éxito!",
+      "description": "Su pago de {{amount}} ha sido procesado con éxito.",
+      "message": "Su solicitud está ahora confirmada.",
+      "button": "Continuar",
+      "verifying": "Verificando su pago...",
+      "pleaseWait": "Espere mientras confirmamos su transacción. Esto puede tomar unos momentos.",
+      "errorTitle": "Error en el Procesamiento",
+      "errorMessage": "Hubo un problema al procesar su pago.",
+      "errorRetry": "Inténtelo de nuevo o contacte al soporte."
+    },
+    "common": {
+      "verifying": "Verificando su pago...",
+      "pleaseWait": "Espere un momento mientras procesamos su transacción."
+    },
+    "i20ControlFee": {
+      "title": "¡Pago de la Cuota de Control I-20 Realizado con Éxito!",
+      "message": "Su documento I-20 será procesado y enviado en breve.",
+      "button": "Volver a Mis Solicitudes",
+      "verifying": "Verificando Pago...",
+      "pleaseWait": "Espere mientras confirmamos su pago.",
+      "errorTitle": "Error en el Pago de la Cuota de Control I-20",
+      "errorMessage": "Hubo un problema al procesar su pago.",
+      "errorRetry": "Inténtelo de nuevo. Si el error persiste, contacte al soporte."
+    }
   }
 }

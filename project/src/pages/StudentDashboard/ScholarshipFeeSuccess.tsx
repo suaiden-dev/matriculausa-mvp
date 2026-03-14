@@ -16,7 +16,7 @@ const ScholarshipFeeSuccess: React.FC = () => {
   const { userProfile, user } = useAuth();
   const verificationRef = useRef<boolean>(false);
   const [searchParams] = useSearchParams();
-  const { t } = useTranslation();
+  const { t } = useTranslation(['dashboard', 'common']);
 
   // Função para verificar pagamento Parcelow
   const verifyParcelowPayment = async (reference: string) => {
@@ -34,7 +34,7 @@ const ScholarshipFeeSuccess: React.FC = () => {
 
       try {
         // Buscar o pagamento pelo reference (que pode estar truncado)
-        const { data: payment, error: paymentError } = await supabase
+        const { data: payment } = await supabase
           .from('individual_fee_payments')
           .select('*')
           .eq('user_id', user.id)

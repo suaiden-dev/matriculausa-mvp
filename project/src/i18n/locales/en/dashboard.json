@@ -1119,6 +1119,8 @@
     "subtitle": "Earn credits by referring friends to MatriculaUSA",
     "balance": "Balance",
     "coins": "coins",
+    "helpSupport": "Help & Support",
+    "smartAssistant": "Smart Assistant",
     "totalReferrals": "Total Referrals",
     "totalEarnings": "Total Earnings",
     "yourReferralCode": "Your Referral Code",
@@ -1262,6 +1264,8 @@
     }
   },
   "matriculaRewardsLanding": {
+    "aiPoweredHelp": "AI-powered help",
+    "directMessaging": "Direct messaging",
     "badge": "New Rewards Program",
     "hero": {
       "title": "Turn Your",
@@ -1275,7 +1279,7 @@
         },
         "accumulateCoins": {
           "title": "Earn Rewards",
-          "description": "180 coins per referral that completes the I-20 payment"
+          "description": "180 coins per referral that completes the Placement Fee payment"
         },
         "payLess": {
           "title": "Save Money",
@@ -1333,7 +1337,7 @@
         "step2": {
           "title": "Friends Sign Up",
           "description": "When your friends register using your code, you both earn Matricula Coins",
-          "details": "180 coins after I-20 Control Fee is paid"
+          "details": "180 coins after Placement Fee is paid"
         },
         "step3": {
           "title": "Redeem Fee Discount",
@@ -1387,7 +1391,7 @@
           },
           "referFriends": {
             "title": "Refer Friends and Multiply Your Earnings",
-            "description": "180 coins for each friend who signs up using your code"
+            "description": "180 coins for each friend who pays the Placement Fee using your code"
           }
         }
       }

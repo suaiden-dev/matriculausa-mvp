@@ -36,7 +36,7 @@ type ApplicationWithScholarship = Application & {
 // Labels amigáveis para os documentos principais - será definido dentro do componente
 
 const MyApplications: React.FC = () => {
-  const { t } = useTranslation();
+  const { t } = useTranslation(['dashboard', 'common']);
   const { user, userProfile } = useAuth();
   const navigate = useNavigate();
   const { getFeeAmount } = useFeeConfig(user?.id);

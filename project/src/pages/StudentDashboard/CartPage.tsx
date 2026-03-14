@@ -11,13 +11,13 @@ import NotificationService from '../../services/NotificationService';
 import { is3800ScholarshipBlocked, is3800Scholarship } from '../../utils/scholarshipDeadlineValidation';
 
 const CartPage: React.FC = () => {
-  const { t } = useTranslation();
+  const { t } = useTranslation(['dashboard', 'payment', 'common']);
   const { cart, clearCart, fetchCart, isLoading } = useCartStore();
   const navigate = useNavigate();
   const { user, userProfile, updateUserProfile } = useAuth();
   const [showUploadModal, setShowUploadModal] = useState(false);
   const [showStudentTypeModal, setShowStudentTypeModal] = useState(false);
-  const [studentType, setStudentType] = useState<string | null>(null);
+  const [_studentType, setStudentType] = useState<string | null>(null);
   const [isProcessing, setIsProcessing] = useState(false);
   const [removingScholarshipId, setRemovingScholarshipId] = useState<string | null>(null);
 
@@ -175,8 +175,10 @@ const CartPage: React.FC = () => {
       }
 
       // Preparar dados para notificação
-      const universityName = scholarship.universities.name;
-      const universityContact = scholarship.universities.contact || {};
+      // @ts-ignore - Handle potential array or object return from Supabase join
+      const uniData = Array.isArray(scholarship.universities) ? scholarship.universities[0] : scholarship.universities;
+      const universityName = uniData?.name || '';
+      const universityContact = uniData?.contact || {};
       const universityEmail = universityContact.admissionsEmail || universityContact.email || '';
 
       if (!universityEmail) {

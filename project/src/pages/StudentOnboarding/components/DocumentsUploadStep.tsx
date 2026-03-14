@@ -38,7 +38,7 @@ const DOCUMENT_TYPES = [
 ];
 
 export const DocumentsUploadStep: React.FC<StepProps> = ({ onNext }) => {
-  const { t } = useTranslation();
+  const { t } = useTranslation(['registration', 'common']);
   const { user, userProfile, refetchUserProfile } = useAuth();
   const { clearCart } = useCartStore();
   const [files, setFiles] = useState<Record<string, File | File[] | null>>({

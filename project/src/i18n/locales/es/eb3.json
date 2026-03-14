@@ -1,238 +1,239 @@
 {
   "eb3Jobs": {
     "hero": {
-      "badge": "EB-3 Employment Opportunities",
-      "title": "Work and Live <span class=\"text-[#05294E]\">Legally</span> in the USA",
-      "subtitle": "Multiple employment opportunities in essential industries in the USA through the <strong>EB-3</strong> program, which offers <strong>permanent residence (Green Card)</strong> for you and your family.",
+      "badge": "Oportunidades de Empleo EB-3",
+      "title": "Trabaje y Viva <span class=\"text-[#05294E]\">Legalmente</span> en EUA",
+      "subtitle": "Múltiples oportunidades de empleo en industrias esenciales de EUA a través del programa <strong>EB-3</strong>, que ofrece <strong>residencia permanente (Green Card)</strong> para usted y su familia.",
       "importantInfo": {
-        "title": "Important Information",
+        "title": "Información Importante",
         "items": [
-          "• These positions are <strong>not guaranteed</strong> and placement is only confirmed after we are hired",
-          "• Positions fill up quickly",
-          "• All listed salaries are the <strong>minimum values established by PWD</strong>"
+          "• Estas posiciones <strong>no están garantizadas</strong> y la colocación solo se confirma después de ser contratados",
+          "• Las posiciones se llenan rápidamente",
+          "• Todos los salarios listados son los <strong>valores mínimos establecidos por el PWD</strong>"
         ]
       },
-      "applyNow": "Apply Now",
-      "learnMore": "Learn More"
+      "applyNow": "Postularse",
+      "learnMore": "Saber Más"
     },
     "whatIsEb3": {
-      "badge": "What is EB-3?",
-      "title": "Permanent Residence through <span class=\"text-[#05294E]\">Work</span>",
+      "badge": "¿Qué es el EB-3?",
+      "title": "Residencia Permanente a través del <span class=\"text-[#05294E]\">Trabajo</span>",
       "benefits": [
         {
-          "title": "Permanent Green Card",
-          "description": "Permanent residence for you and your family through qualified employment."
+          "title": "Green Card Permanente",
+          "description": "Residencia permanente para usted y su familia a través de un empleo calificado."
         },
         {
-          "title": "Competitive Salaries",
-          "description": "Stable and competitive compensation in essential USA industries."
+          "title": "Salarios Competitivos",
+          "description": "Compensación estable y competitiva en industrias esenciales de EUA"
         },
         {
-          "title": "Nationwide",
-          "description": "Opportunities available in multiple states across the United States."
+          "title": "Nacional",
+          "description": "Oportunidades disponibles en múltiples estados de los Estados Unidos."
         }
       ],
-      "greenCardApproved": "Green Card Approved",
-      "permanentResidence": "Permanent Residence"
+      "greenCardApproved": "Green Card Aprobado",
+      "permanentResidence": "Residencia Permanente"
     },
     "jobs": {
-      "badge": "Available Jobs",
-      "title": "List of <span class=\"text-[#05294E]\">Opportunities</span>",
+      "badge": "Empleos Disponibles",
+      "title": "Lista de <span class=\"text-[#05294E]\">Oportunidades</span>",
       "lastUpdated": "Última actualización: 18 de febrero de 2026",
       "filters": {
-        "allJobs": "All Jobs",
-        "healthcare": "Healthcare",
-        "hospitality": "Hospitality",
-        "logistics": "Logistics",
-        "location": "Location:",
-        "allLocations": "All Locations",
-        "searchPlaceholder": "Search jobs..."
+        "allJobs": "Todos los Empleos",
+        "healthcare": "Salud",
+        "hospitality": "Hospitalidad",
+        "logistics": "Logística",
+        "location": "Ubicación:",
+        "allLocations": "Todas las Ubicaciones",
+        "searchPlaceholder": "Buscar empleos..."
       },
       "jobCard": {
-        "moreDetails": "More Details",
-        "lessDetails": "Less Details",
-        "apply": "Apply",
-        "description": "Description:",
-        "requirements": "Requirements:"
+        "moreDetails": "Más Detalles",
+        "lessDetails": "Menos Detalles",
+        "apply": "Postularse",
+        "description": "Descripción:",
+        "requirements": "Requisitos:",
+        "filingLabel": "Presentación:"
       },
       "noJobsFound": {
-        "title": "No jobs found",
-        "description": "Try adjusting the filters or search term."
+        "title": "No se encontraron empleos",
+        "description": "Intente ajustar los filtros o el término de búsqueda."
       }
     },
     "benefits": {
-      "badge": "EB-3 Program Benefits",
-      "title": "Why choose <span class=\"text-[#05294E]\">EB-3</span>?",
+      "badge": "Beneficios del Programa EB-3",
+      "title": "¿Por qué elegir <span class=\"text-[#05294E]\">EB-3</span>?",
       "items": [
         {
-          "title": "Permanent Residence",
-          "description": "Green Card for you and your family"
+          "title": "Residencia Permanente",
+          "description": "Green Card para usted y su familia"
         },
         {
-          "title": "Stable Salaries",
-          "description": "Competitive and stable compensation"
+          "title": "Salarios Estables",
+          "description": "Compensación competitiva y estable"
         },
         {
-          "title": "Multiple States",
-          "description": "Opportunities across the country"
+          "title": "Múltiples Estados",
+          "description": "Oportunidades en todo el país"
         },
         {
-          "title": "Professional Growth",
-          "description": "Stability and career growth"
+          "title": "Crecimiento Profesional",
+          "description": "Estabilidad y crecimiento en la carrera"
         }
       ]
     },
     "howItWorks": {
-      "title": "How It <span class=\"text-[#05294E]\">Works</span>",
-      "subtitle": "Simple and transparent process for your journey to the Green Card",
+      "title": "Cómo <span class=\"text-[#05294E]\">Funciona</span>",
+      "subtitle": "Proceso simple y transparente para su camino hacia la Green Card",
       "steps": [
         {
-          "title": "Application",
-          "description": "Fill out the form and our team will contact you to review your profile"
+          "title": "Postulación",
+          "description": "Complete el formulario y nuestro equipo se pondrá en contacto para revisar su perfil"
         },
         {
-          "title": "Selection",
-          "description": "We evaluate your qualifications and connect you with the best opportunities"
+          "title": "Selección",
+          "description": "Evaluamos sus calificaciones y lo conectamos con las mejores oportunidades"
         },
         {
-          "title": "Process",
-          "description": "We will guide you through the entire Green Card acquisition process"
+          "title": "Proceso",
+          "description": "Lo guiaremos a través de todo el proceso de adquisición de la Green Card"
         }
       ]
     },
     "offer": {
-      "title": "DON'T WAIT ANY LONGER FOR YOUR FUTURE",
-      "subtitle": "Fulfill Your Dream of Working in the USA!",
+      "title": "NO ESPERE MÁS POR SU FUTURO",
+      "subtitle": "¡Haga Realidad Su Sueño de Trabajar en EUA!",
       "card": {
-        "title": "EB3 Jobs Pre-Application",
+        "title": "Pre-Postulación EB3 Jobs",
         "features": [
-          "Profile Analysis",
-          "Expert Consultation",
-          "Strategy Development",
-          "Guarantee"
+          "Análisis de Perfil",
+          "Consulta Especializada",
+          "Desarrollo de Estrategia",
+          "Garantía"
         ],
         "pricing": {
-          "originalPrice": "FROM $ 1297.00",
-          "currentPrice": "$ 477.00",
-          "guarantee": "Guaranteed Refund in Case of Inelegibility"
+          "originalPrice": "DE $ 1297,00",
+          "currentPrice": "$ 477,00",
+          "guarantee": "Garantía de Reembolso en Caso de Inelegibilidad"
         },
-        "signUpNow": "Sign Up Now!",
+        "signUpNow": "¡Inscríbase Ahora!",
         "security": {
-          "secureCheckout": "Secure Checkout",
-          "satisfactionGuaranteed": "Satisfaction Guaranteed",
-          "protectedPrivacy": "Protected Privacy"
+          "secureCheckout": "Checkout Seguro",
+          "satisfactionGuaranteed": "Satisfacción Garantizada",
+          "protectedPrivacy": "Privacidad Protegida"
         },
-        "paymentMethods": "Payment Methods:",
+        "paymentMethods": "Métodos de Pago:",
         "methods": [
           "PIX",
           "VISA",
           "Mastercard",
           "PayPal",
           "Hipercard",
-          "Bank Slip"
+          "Boleto"
         ]
       },
       "guarantee": {
-        "title": "Guarantee and Security",
-        "description": "If, after this evaluation, it is determined that you do not meet the necessary criteria for the EB-3 visa application, we guarantee a full refund of the amount invested in the pre-application process. This means you can proceed knowing that your investment is protected."
+        "title": "Garantía y Seguridad",
+        "description": "Si, tras esta evaluación, se determina que no cumple con los criterios necesarios para la solicitud de la visa EB-3, garantizamos el reembolso íntegro del valor invertido en el proceso de pre-postulación. Esto significa que puede proceder sabiendo que su inversión está protegida."
       }
     },
     "faq": {
-      "badge": "Frequently Asked Questions",
-      "title": "Questions about <span class=\"text-[#05294E]\">EB-3</span>?",
-      "subtitle": "Find answers to the main questions about the Green Card acquisition process through the EB-3 program",
+      "badge": "Preguntas Frecuentes",
+      "title": "¿Preguntas sobre <span class=\"text-[#05294E]\">EB-3</span>?",
+      "subtitle": "Encuentre respuestas a las principales preguntas sobre el proceso de adquisición de la Green Card a través del programa EB-3",
       "questions": [
         {
-          "question": "What is the EB-3 visa and how does it work?",
-          "answer": "The EB-3 is an employment-based immigration visa category that allows skilled workers, professionals, and unskilled workers to obtain permanent residence (Green Card) in the United States. The process involves a permanent job offer from an American employer and proof that there are no qualified American workers available for the position."
+          "question": "¿Qué es la visa EB-3 y cómo funciona?",
+          "answer": "El EB-3 es una categoría de visa de inmigración basada en el empleo que permite que trabajadores calificados, profesionales y trabajadores no calificados obtengan la residencia permanente (Green Card) en los Estados Unidos. El proceso implica una oferta de empleo permanente de un empleador estadounidense y la prueba de que no hay trabajadores estadounidenses calificados disponibles para el puesto."
         },
         {
-          "question": "What are the requirements to qualify for EB-3?",
-          "answer": "Requirements vary by subcategory: 1) Skilled workers: Require at least 2 years of experience or training; 2) Professionals: Need a bachelor's degree or equivalent; 3) Unskilled workers: May have less than 2 years of experience. All must have a permanent job offer from an American employer."
+          "question": "¿Cuáles son los requisitos para calificar para el EB-3?",
+          "answer": "Los requisitos varían por subcategoría: 1) Trabajadores calificados: Requieren al menos 2 años de experiencia o capacitación; 2) Profesionales: Necesitan un título de grado o equivalente; 3) Trabajadores no calificados: Pueden tener menos de 2 años de experiencia. Todos deben tener una oferta de empleo permanente de un empleador estadounidense."
         },
         {
-          "question": "How long does the EB-3 process take?",
-          "answer": "The total time varies from 2 to 4 years, depending on the country of origin and visa availability. The process includes: 1) Labor Certification (6-12 months); 2) I-140 Petition (6-12 months); 3) Status adjustment or consular process (6-18 months). Brazilians generally have shorter wait times compared to other countries."
+          "question": "¿Cuánto tiempo toma el proceso EB-3?",
+          "answer": "El tiempo total varía de 2 a 4 años, dependiendo del país de origen y la disponibilidad de visas. El proceso incluye: 1) Certificación Laboral (6-12 meses); 2) Petición I-140 (6-12 meses); 3) Ajuste de estatus o proceso consular (6-18 meses). Los brasileños generalmente tienen tiempos de espera menores en comparación con otros países."
         },
         {
-          "question": "Can I include my family in the EB-3 process?",
-          "answer": "Yes! The EB-3 allows you to include your spouse and unmarried children under 21 years old in the process. Everyone will receive Green Cards and have the same permanent residence rights, including permission to work and study in the United States."
+          "question": "¿Puedo incluir a mi familia en el proceso EB-3?",
+          "answer": "¡Sí! El EB-3 le permite incluir a su cónyuge e hijos solteros menores de 21 años en el proceso. Todos recibirán Green Cards y tendrán los mismos derechos de residencia permanente, incluida la autorización para trabajar y estudiar en los Estados Unidos."
         },
         {
-          "question": "What is the total cost of the EB-3 process?",
-          "answer": "Costs include: government fees (approximately $2,000-3,000), legal fees ($5,000-15,000), translations and documentation ($500-1,500), medical exams ($200-500), and travel costs. The employer usually pays the main fees, but some costs may be shared."
+          "question": "¿Cuál es el costo total del proceso EB-3?",
+          "answer": "Los costos incluyen: tasas gubernamentales (aproximadamente $2.000-3.000), honorarios legales ($5.000-15.000), traducciones y documentación ($500-1.500), exámenes médicos ($200-500) y costos de viaje. El empleador suele pagar las tasas principales, pero algunos costos pueden ser compartidos."
         },
         {
-          "question": "Do I need to speak English fluently for EB-3?",
-          "answer": "The required English level depends on the specific position. For some positions, basic English is sufficient, especially in unskilled jobs. For professional positions, intermediate or advanced English may be required. MatriculaUSA offers support to improve your language skills."
+          "question": "¿Necesito hablar inglés con fluidez para el EB-3?",
+          "answer": "El nivel de inglés necesario depende del puesto específico. Para algunos puestos, un inglés básico es suficiente, especialmente en empleos no calificados. Para puestos profesionales, puede ser necesario un inglés intermedio o avanzado. MatriculaUSA ofrece apoyo para mejorar sus habilidades lingüísticas."
         },
         {
-          "question": "What happens if I lose my job after receiving the Green Card?",
-          "answer": "After receiving the Green Card, you have more flexibility. If you lose your job, you can look for another job in the same or similar field. After 5 years, you can naturalize as an American citizen. The EB-3 Green Card is permanent and is not tied to a specific employer after approval."
+          "question": "¿Qué pasa si pierdo mi empleo después de recibir el Green Card?",
+          "answer": "Después de recibir el Green Card, tiene más flexibilidad. Si pierde el empleo, puede buscar otro en el mismo campo o en uno similar. Después de 5 años, puede naturalizarse como ciudadano estadounidense. El Green Card EB-3 es permanente y no está vinculado a un empleador específico después de la aprobación."
         },
         {
-          "question": "Can I change jobs during the EB-3 process?",
-          "answer": "During the process, it is possible to change jobs, but it requires a new I-140 petition with the new employer. This may add time to the process. After receiving the Green Card, you have complete freedom to change jobs without restrictions."
+          "question": "¿Puedo cambiar de empleo durante el proceso EB-3?",
+          "answer": "Durante el proceso, es posible cambiar de empleo, pero requiere una nueva petición I-140 con el nuevo empleador. Esto puede retrasar el proceso. Después de recibir el Green Card, tiene total libertad para cambiar de empleo sin restricciones."
         }
       ]
     },
     "cta": {
-      "badge": "Join thousands of Brazilians",
-      "title": "Ready to start your <span class=\"text-[#D0151C]\">journey</span>?",
-      "subtitle": "Fill out the form below and our team will contact you to review your profile and guide you through the process.",
-      "applyNow": "Apply Now",
-      "contactUs": "Contact Us",
+      "badge": "Únase a miles de brasileños",
+      "title": "¿Listo para empezar su <span class=\"text-[#D0151C]\">viaje</span>?",
+      "subtitle": "Complete el formulario a continuación y nuestro equipo se pondrá en contacto para revisar su perfil y guiarlo a través del proceso.",
+      "applyNow": "Postularse",
+      "contactUs": "Póngase en Contacto",
       "features": [
-        "100% legal process",
-        "Specialized support",
-        "Permanent Green Card"
+        "Proceso 100% legal",
+        "Soporte especializado",
+        "Green Card permanente"
       ]
     }
   },
   "eb3Success": {
     "loading": {
-      "title": "Verifying your payment...",
-      "description": "Please wait a moment."
+      "title": "Verificando su pago...",
+      "description": "Por favor, espere un momento."
     },
     "success": {
-      "title": "EB-3 Pre-Application Processed!",
-      "description": "Your EB-3 job pre-application has been successfully processed. Our specialized team will contact you soon to continue your process."
+      "title": "¡Pre-postulación EB-3 Procesada!",
+      "description": "Su pre-postulación para vacantes EB-3 ha sido procesada con éxito. Nuestro equipo especializado se pondrá en contacto pronto para dar continuidad a su proceso."
     },
     "nextSteps": {
-      "title": "Next Steps",
+      "title": "Próximos Pasos",
       "steps": [
         {
-          "title": "Email Confirmation",
-          "description": "You will receive an email confirmation with all the details of your pre-application."
+          "title": "Confirmación por Email",
+          "description": "Recibirá un email de confirmación con todos los detalles de su pre-postulación."
         },
         {
-          "title": "Team Contact",
-          "description": "Our team will contact you within 24 hours to schedule a conversation."
+          "title": "Contacto del Equipo",
+          "description": "Nuestro equipo se pondrá en contacto en un máximo de 24 horas para programar una charla."
         },
         {
-          "title": "Application Process",
-          "description": "We will begin the complete application process for available EB-3 positions."
+          "title": "Proceso de Postulación",
+          "description": "Iniciaremos el proceso completo de postulación para las vacantes EB-3 disponibles."
         }
       ]
     },
     "benefits": {
-      "title": "What do you get with your EB-3 pre-application?",
+      "title": "¿Qué obtiene con su pre-postulación EB-3?",
       "items": [
-        "Exclusive access to EB-3 positions",
-        "Specialized support from our team",
-        "Complete process guidance",
-        "Organized necessary documentation",
-        "Personalized follow-up",
-        "Quality guarantee in the process"
+        "Acceso exclusivo a vacantes EB-3",
+        "Soporte especializado de nuestro equipo",
+        "Orientación completa en el proceso",
+        "Documentación necesaria organizada",
+        "Seguimiento personalizado",
+        "Garantia de calidad en el proceso"
       ]
     },
     "actions": {
-      "viewMoreJobs": "View More EB-3 Jobs",
-      "backToHome": "Back to Home"
+      "viewMoreJobs": "Ver Más Vacantes EB-3",
+      "backToHome": "Volver al Inicio"
     },
     "contact": {
-      "title": "Questions?",
-      "description": "Contact us:",
+      "title": "¿Dudas?",
+      "description": "Póngase en contacto con nosotros:",
       "email": "Email: info@matriculausa.com",
       "whatsapp": "WhatsApp: +1 (213) 676-2544"
     }

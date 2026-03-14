@@ -1,0 +1,41 @@
+{
+  "title": "Entre em Contato",
+  "subtitle": "Fale com nossa equipe. Estamos aqui para ajudar você a ter sucesso.",
+  "stats": {
+    "support": "Suporte 24/7",
+    "response": "Resposta rápida",
+    "expert": "Equipe especializada"
+  },
+  "methods": {
+    "title": "Métodos de Contato",
+    "subtitle": "Escolha a melhor forma de falar com nossa equipe",
+    "email": {
+      "title": "Suporte por E-mail",
+      "description": "Envie-nos um e-mail e responderemos em até 24 horas",
+      "category": "Principal"
+    },
+    "phone": {
+      "title": "Suporte por Telefone",
+      "description": "Ligue para nós de segunda a sexta, das 9h às 18h PST",
+      "category": "Direto"
+    },
+    "location": {
+      "title": "Localização do Escritório",
+      "value": "Los Angeles, CA, EUA",
+      "description": "Visite nossa sede na ensolarada Califórnia",
+      "category": "Físico"
+    },
+    "whatsapp": {
+      "title": "Suporte via WhatsApp",
+      "value": "Disponível 24/7",
+      "description": "Obtenha ajuda instantânea através do WhatsApp",
+      "category": "Instantâneo"
+    },
+    "online": {
+      "title": "Suporte Online",
+      "value": "Assistente Inteligente",
+      "description": "Ajuda via IA disponível a qualquer momento",
+      "category": "IA"
+    }
+  }
+}

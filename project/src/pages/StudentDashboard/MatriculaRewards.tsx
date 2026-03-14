@@ -34,7 +34,7 @@ import { invalidateStudentDashboardRewards } from '../../lib/queryKeys';
 import NotificationService from '../../services/NotificationService';
 
 const MatriculaRewards: React.FC = () => {
-  const { t } = useTranslation();
+  const { t } = useTranslation(['dashboard', 'common']);
   
   // Logos oficiais em SVG simplificados (inline), sem dependências externas
   const FacebookLogo = () => (
@@ -526,7 +526,7 @@ const MatriculaRewards: React.FC = () => {
 
             {/* Coin Symbol - Positioned Absolutely at top right */}
             <div className="hidden md:flex absolute top-6 right-6 lg:top-10 lg:right-10 items-center justify-center">
-              <div className="h-24 w-24 lg:h-32 lg:w-32 rounded-full bg-gradient-to-br from-blue-600 to-indigo-600 shadow-xl ring-4 ring-white/60 flex items-center justify-center animate-hover">
+              <div className="h-24 w-24 lg:h-32 lg:w-32 rounded-full bg-gradient-to-br from-blue-600 to-indigo-600 shadow-xl ring-4 ring-white/60 flex items-center justify-center">
                 <img src="/favicon-branco.png" className="h-12 w-12 lg:h-16 lg:w-16 object-contain" alt={t('matriculaRewards.coins')} />
               </div>
             </div>
@@ -882,17 +882,9 @@ const MatriculaRewards: React.FC = () => {
         </Card>
       </div>
 
-      {/* Coin styling kept for subtle animation */}
+      {/* Coin styling */}
       <style dangerouslySetInnerHTML={{__html:`
         .coin-simple{display:none}
-        @keyframes float {
-          0% { transform: translateY(0px) rotate(0deg); }
-          50% { transform: translateY(-15px) rotate(5deg); }
-          100% { transform: translateY(0px) rotate(0deg); }
-        }
-        .animate-hover {
-          animation: float 4s ease-in-out infinite;
-        }
       `}} />
     </div>
   );

@@ -15,7 +15,7 @@ const PaymentRequiredBlocker: React.FC<PaymentRequiredBlockerProps> = ({
   pageType, 
   showHeader = true // Por padrão, mostra o header
 }) => {
-  const { t } = useTranslation();
+  const { t } = useTranslation(['payment', 'common']);
   const { isAuthenticated } = useAuth();
   const { getFeeAmount } = useFeeConfig();
   const navigate = useNavigate();

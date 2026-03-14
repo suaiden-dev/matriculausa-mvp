@@ -1,1 +1,12 @@
-{}
+{
+  "universities": {
+    "title": "Universities",
+    "subtitle": "Explore top American universities",
+    "searchPlaceholder": "Search universities...",
+    "location": "Location",
+    "programs": "Programs",
+    "website": "Website",
+    "viewProfile": "View Profile",
+    "applyNow": "Apply Now"
+  }
+}

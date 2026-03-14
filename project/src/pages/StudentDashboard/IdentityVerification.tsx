@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { CheckCircle, XCircle, Clock, AlertCircle, Camera, ArrowLeft, Scroll } from 'lucide-react';
+import { CheckCircle, XCircle, Clock, AlertCircle, ArrowLeft, Scroll } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 import { supabase } from '../../lib/supabase';
 import { useAuth } from '../../hooks/useAuth';
@@ -34,16 +34,15 @@ interface TermAcceptance {
 }
 
 const IdentityVerification: React.FC = () => {
-  const { t } = useTranslation();
+  const { t } = useTranslation(['dashboard', 'common']);
   const navigate = useNavigate();
-  const { user, userProfile } = useAuth();
+  const { user } = useAuth();
   const { recordTermAcceptance } = useTermsAcceptance();
   const { recordAffiliateTermAcceptance, checkIfUserHasAffiliate } = useAffiliateTermsAcceptance();
 
   const [termAcceptance, setTermAcceptance] = useState<TermAcceptance | null>(null);
   const [activeTerm, setActiveTerm] = useState<Term | null>(null);
   const [loading, setLoading] = useState(true);
-  const [uploading, setUploading] = useState(false);
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [success, setSuccess] = useState<string | null>(null);

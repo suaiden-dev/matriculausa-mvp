@@ -248,9 +248,12 @@
       "private": "Private",
       "public": "Public",
       "allStates": "All States",
-      "universitiesCount": "universities",
-      "featured": "featured"
+      "universitiesCount": "universidades",
+      "featured": "featured",
+      "filterByType": "Filter by university type",
+      "filterByState": "Filter by university state"
     },
+    "loading": "Loading universities...",
     "featured": {
       "title": "Featured Universities",
       "subtitle": "Weekly Highlights",
@@ -305,7 +308,8 @@
       "state": "State",
       "zipCode": "ZIP Code",
       "country": "Country",
-      "website": "https://university.edu"
+      "website": "https://university.edu",
+      "uploadBanner": "Upload university banner image"
     },
     "sections": {
       "about": "About",

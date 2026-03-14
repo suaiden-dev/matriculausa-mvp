@@ -35,7 +35,7 @@ const ProfileManagement: React.FC<ProfileManagementProps> = ({
   profile,
   onUpdateProfile
 }) => {
-  const { t } = useTranslation();
+  const { t } = useTranslation(['dashboard', 'common']);
   const { user } = useAuth();
   const fileInputRef = useRef<HTMLInputElement>(null);
   const [isEditing, setIsEditing] = useState(false);
@@ -44,7 +44,6 @@ const ProfileManagement: React.FC<ProfileManagementProps> = ({
   const [uploadError, setUploadError] = useState<string | null>(null);
   const [saveError, setSaveError] = useState<string | null>(null);
   const [successMessage, setSuccessMessage] = useState<string | null>(null);
-  const [avatarUrl, setAvatarUrl] = useState<string | undefined>(profile?.avatar_url || user?.avatar_url);
   const [formData, setFormData] = useState({
     name: profile?.name || '',
     phone: profile?.phone || '',
@@ -128,7 +127,7 @@ const ProfileManagement: React.FC<ProfileManagementProps> = ({
         throw new Error(updateResult?.message || t('profileManagement.messages.avatarUpdateError'));
       }
 
-      setAvatarUrl(publicUrl);
+
       
       // Call the parent component's update function
       onUpdateProfile({ 
@@ -441,7 +440,7 @@ const ProfileManagement: React.FC<ProfileManagementProps> = ({
                   {user?.avatar_url ? (
                     <img 
                       src={user.avatar_url} 
-                      alt="Profile Avatar" 
+                      alt={profile?.name || t('profileManagement.status.studentName')} 
                       className="w-full h-full object-cover"
                     />
                   ) : (

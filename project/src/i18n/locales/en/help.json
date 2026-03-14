@@ -1,0 +1,55 @@
+{
+  "header": {
+    "title": "Help Center",
+    "description": "Find quick answers and detailed guidance for all your questions",
+    "searchPlaceholder": "Search topics...",
+    "stats": {
+      "support247": "24/7 support",
+      "quickResponse": "Quick response"
+    }
+  },
+  "mainTopics": {
+    "title": "Main Topics",
+    "description": "Find help organized by category",
+    "items": {
+      "profile": {
+        "title": "Creating your profile",
+        "description": "Step-by-step guidance to set up your academic and personal information.",
+        "category": "Setup"
+      },
+      "application": {
+        "title": "Understanding the application process",
+        "description": "Learn how to apply, track your progress, and what to expect at each stage.",
+        "category": "Application"
+      },
+      "payment": {
+        "title": "Paying fees",
+        "description": "How to pay, check payment status, and understand non-refundable fees.",
+        "category": "Payment"
+      },
+      "documents": {
+        "title": "Uploading documents",
+        "description": "Tips for uploading transcripts, IDs, and other required files.",
+        "category": "Documents"
+      },
+      "status": {
+        "title": "Tracking your application",
+        "description": "Monitor your status and next steps after submission.",
+        "category": "Status"
+      }
+    }
+  },
+  "sidebar": {
+    "needHelp": "Need help?",
+    "smartAssistant": "Smart Assistant",
+    "smartAssistantDesc": "AI-powered help",
+    "whatsappSupport": "WhatsApp Support",
+    "whatsappDesc": "Direct messaging",
+    "quickSupport": {
+      "title": "Quick Support",
+      "description": "Use the floating buttons for instant help - Smart Assistant and WhatsApp are available 24/7.",
+      "instantAI": "Instant AI responses",
+      "availability247": "24/7 availability"
+    }
+  }
+}

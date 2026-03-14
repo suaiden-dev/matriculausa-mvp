@@ -4,6 +4,7 @@
     "howItWorks": "Como Funciona",
     "scholarships": "Bolsas",
     "universities": "Universidades",
+    "eb3Jobs": "EB-3 Jobs",
     "forUniversities": "Para Universidades",
     "about": "Sobre",
     "contact": "Contato",
@@ -11,6 +12,13 @@
     "login": "Entrar",
     "getStarted": "Começar",
     "dashboard": "Painel",
+    "profileSettings": "Configurações de Perfil",
+    "signOut": "Sair",
+    "studentDashboard": "Painel do Estudante",
+    "schoolDashboard": "Painel da Universidade",
+    "adminDashboard": "Painel do Administrador",
+    "affiliateDashboard": "Painel de Afiliado",
+    "sellerDashboard": "Painel do Vendedor",
     "viewScholarships": "Ver Bolsas",
     "goToDashboard": "Ir ao Painel",
     "startSelectionProcess": "Iniciar Processo de Seleção",
@@ -174,124 +182,6 @@
     "scholarshipFee": "Taxa de Bolsa - Confirme sua candidatura de bolsa",
     "i20ControlFee": "Taxa de Controle I-20 - Processamento e validação de documentos"
   },
-  "features": {
-    "whyChoose": "Por Que Escolher MatriculaUSA?",
-    "subtitle": "Tudo que você precisa para ter sucesso na sua jornada educacional americana",
-    "smartMatching": {
-      "title": "Correspondência Inteligente",
-      "description": "Sistema alimentado por IA encontra as melhores universidades e bolsas para seu perfil"
-    },
-    "exclusiveScholarships": {
-      "title": "Bolsas Exclusivas",
-      "description": "Acesse bolsas não disponíveis em nenhum outro lugar, especificamente para estudantes internacionais"
-    },
-    "personalSupport": {
-      "title": "Suporte Pessoal",
-      "description": "Equipe dedicada para te guiar em cada etapa do processo de candidatura"
-    },
-    "fastProcess": {
-      "title": "Processo Rápido",
-      "description": "Processo de candidatura simplificado com respostas rápidas e manuseio eficiente de documentos"
-    }
-  },
-  "universities": {
-    "title": "Universidades",
-    "subtitle": "Explore as melhores universidades americanas",
-    "searchPlaceholder": "Buscar universidades...",
-    "location": "Localização",
-    "programs": "Programas",
-    "website": "Website",
-    "viewProfile": "Ver Perfil",
-    "applyNow": "Candidatar-se"
-  },
-  "paymentBlocker": {
-    "scholarships": {
-      "title": "Bolsas de Estudo Bloqueadas",
-      "description": "Para acessar nossa coleção exclusiva de bolsas de estudo, você precisa completar o processo de seleção inicial. Esta é a primeira etapa do seu processo para estudar nos Estados Unidos."
-    },
-    "universities": {
-      "title": "Universidades Bloqueadas",
-      "description": "Para explorar nossas universidades parceiras e seus programas, você precisa completar o processo de seleção inicial. Esta é a primeira etapa do seu processo para estudar nos Estados Unidos."
-    },
-    "default": {
-      "title": "Conteúdo Bloqueado",
-      "description": "Para acessar este conteúdo, você precisa completar o processo de seleção inicial. Esta é a primeira etapa do seu processo para estudar nos Estados Unidos."
-    },
-    "selectionProcessFee": "Taxa do Processo Seletivo",
-    "completeApplicationJourney": "Complete seu processo de candidatura",
-    "goToDashboardAndPayFee": "Ir ao Painel e Pagar Taxa",
-    "learnHowItWorks": "Aprender Como Funciona",
-    "contentLockedMessage": "Este conteúdo está bloqueado até que o pagamento seja concluído"
-  },
-  "successPages": {
-    "pixPayment": {
-      "processing": "Processando Pagamento PIX",
-      "message": "Seu pagamento PIX foi recebido e está sendo processado. Você será redirecionado automaticamente em alguns segundos.",
-      "verifying": "Verificando pagamento...",
-      "pleaseWait": "Por favor, aguarde..."
-    },
-    "selectionProcessFee": {
-      "title": "Pagamento da Taxa de Processo de Seleção Realizado com Sucesso!",
-      "description": "Seu pagamento de {{amount}} foi processado com sucesso.",
-      "message": "Agora você tem acesso a todas as bolsas e pode se candidatar livremente.",
-      "button": "Ir para Bolsas",
-      "verifying": "Verificando seu pagamento...",
-      "pleaseWait": "Aguarde enquanto confirmamos sua transação. Isso pode levar alguns instantes.",
-      "errorTitle": "Erro no Pagamento da Taxa de Processo de Seleção",
-      "errorMessage": "Houve um problema ao processar seu pagamento.",
-      "errorRetry": "Tente novamente. Se o erro persistir, entre em contato com o suporte."
-    },
-    "scholarshipFee": {
-      "title": "Pagamento da Taxa da Bolsa Realizado com Sucesso!",
-      "description": "Seu pagamento de {{amount}} foi processado com sucesso.",
-      "message": "Sua aplicação irá agora prosseguir para a próxima etapa.",
-      "button": "Ver Detalhes",
-      "verifying": "Verificando seu pagamento...",
-      "pleaseWait": "Aguarde enquanto confirmamos seu pagamento.",
-      "errorTitle": "Erro no Processamento do Pagamento",
-      "errorMessage": "Houve um problema ao processar seu pagamento.",
-      "errorRetry": "Tente novamente ou entre em contato com o suporte."
-    },
-    "applicationFee": {
-      "title": "Pagamento da Taxa de Matrícula Realizado com Sucesso!",
-      "description": "Seu pagamento de {{amount}} foi processado com sucesso.",
-      "message": "Sua aplicação irá agora prosseguir para a próxima etapa.",
-      "button": "Ir para Minhas Aplicações",
-      "verifying": "Verificando Pagamento...",
-      "pleaseWait": "Aguarde enquanto confirmamos sua transação. Isso pode levar alguns instantes.",
-      "errorTitle": "Falha na Verificação",
-      "errorMessage": "Houve um problema ao verificar seu pagamento. Entre em contato com o suporte.",
-      "errorDetails": "Detalhes do erro:"
-    },
-    "placementFee": {
-      "title": "Pagamento da Placement Fee Realizado com Sucesso!",
-      "description": "Seu pagamento de {{amount}} foi processado com sucesso.",
-      "message": "Sua aplicação está agora confirmada.",
-      "button": "Continuar",
-      "verifying": "Verificando seu pagamento...",
-      "pleaseWait": "Aguarde enquanto confirmamos sua transação. Isso pode levar alguns instantes.",
-      "errorTitle": "Erro no Processamento",
-      "errorMessage": "Houve um problema ao processar seu pagamento.",
-      "errorRetry": "Tente novamente ou entre em contato com o suporte."
-    },
-    "common": {
-      "redirecting": "Redirecionando em instantes...",
-      "paymentProcessedAmount": "Seu pagamento foi processado com sucesso!",
-      "paymentError": "Houve um problema ao processar seu pagamento!",
-      "verifying": "Verificando seu pagamento...",
-      "pleaseWait": "Aguarde enquanto confirmamos sua transação. Isso pode levar alguns instantes."
-    },
-    "i20ControlFee": {
-      "title": "Pagamento da Taxa de Controle I-20 Realizado com Sucesso!",
-      "message": "Seu documento I-20 será processado e enviado em breve.",
-      "button": "Voltar para Minhas Aplicações",
-      "verifying": "Verificando Pagamento...",
-      "pleaseWait": "Aguarde enquanto confirmamos seu pagamento.",
-      "errorTitle": "Erro no Pagamento da Taxa de Controle I-20",
-      "errorMessage": "Houve um problema ao processar seu pagamento.",
-      "errorRetry": "Tente novamente. Se o erro persistir, entre em contato com o suporte."
-    }
-  },
   "ssoCallback": {
     "processing": {
       "title": "Aguarde um momento",
@@ -394,5 +284,18 @@
       "alreadyPending": "Você já tem um pagamento em processamento. Por favor, aguarde a revisão.",
       "checkingStatus": "Verificando status do pagamento..."
     }
+  },
+  "smartChat": {
+    "title": "Assistente Inteligente",
+    "subtitle": "Seu companheiro inteligente",
+    "welcomeMessage": "Olá! Eu sou o seu Assistente Inteligente. Como posso ajudá-lo hoje? Posso responder a perguntas sobre bolsas, taxas, processo de candidatura e muito mais.",
+    "inputPlaceholder": "Pergunte-me qualquer coisa...",
+    "send": "Enviar",
+    "typing": "Digitando...",
+    "close": "Fechar chat",
+    "you": "Você",
+    "assistant": "Assistente Inteligente",
+    "whatsappTitle": "Entre em contato via WhatsApp",
+    "mobileNote": "Smart Assistant - Abre em nova aba"
   }
 }

@@ -1,16 +1,24 @@
 {
   "nav": {
-    "home": "Home",
-    "howItWorks": "How It Works",
-    "scholarships": "Scholarships",
+    "home": "Inicio",
+    "howItWorks": "Cómo Funciona",
+    "scholarships": "Becas",
     "universities": "Universidades",
-    "forUniversities": "For Universities",
-    "about": "About",
-    "contact": "Contact",
+    "eb3Jobs": "Empleos EB-3",
+    "forUniversities": "Para Universidades",
+    "about": "Sobre Nosotros",
+    "contact": "Contacto",
     "faq": "FAQ",
     "login": "Iniciar Sesión",
     "getStarted": "Comenzar",
     "dashboard": "Panel",
+    "profileSettings": "Configuraciones de Perfil",
+    "signOut": "Cerrar Sesión",
+    "studentDashboard": "Panel del Estudiante",
+    "schoolDashboard": "Panel de la Universidad",
+    "adminDashboard": "Panel del Administrador",
+    "affiliateDashboard": "Panel de Afiliado",
+    "sellerDashboard": "Panel del Vendedor",
     "viewScholarships": "Ver Becas",
     "goToDashboard": "Ir al Panel",
     "startSelectionProcess": "Iniciar Proceso de Selección",
@@ -56,18 +64,18 @@
       "address": "Los Angeles - CA - USA."
     },
     "social": {
-      "title": "Follow Us",
+      "title": "Síguenos",
       "facebook": "Facebook",
       "twitter": "Twitter",
       "linkedin": "LinkedIn",
       "instagram": "Instagram"
     },
     "newsletter": {
-      "title": "Stay Updated",
-      "description": "Get the latest scholarship opportunities and news",
-      "placeholder": "Enter your email",
-      "subscribe": "Subscribe",
-      "subscribed": "Thank you for subscribing!"
+      "title": "Mantente Informado",
+      "description": "Recibe las últimas noticias y oportunidades de becas",
+      "placeholder": "Ingresa tu correo electrónico",
+      "subscribe": "Suscribirse",
+      "subscribed": "¡Gracias por suscribirte!"
     },
     "unsubscribe": {
       "invalidLink": {
@@ -115,7 +123,7 @@
         "processErrorRetry": "Error al procesar la solicitud de desuscripción. Por favor, intenta nuevamente."
       }
     },
-    "copyright": "© 2026 Matrícula USA. All rights reserved."
+    "copyright": "© 2026 Matrícula USA. Todos los derechos reservados."
   },
   "common": {
     "select": "Seleccione",
@@ -176,115 +184,6 @@
     "scholarshipFee": "Tarifa de Beca - Confirme su solicitud de beca",
     "placementFee": "Tarifa de Colocación - Paso final para asegurar su colocación y soporte",
     "i20ControlFee": "Tarifa de Control I-20 - Procesamiento y validación de documentos"
-  },
-  "features": {
-    "whyChoose": "Why Choose MatriculaUSA?",
-    "subtitle": "Everything you need to succeed in your American education journey",
-    "smartMatching": {
-      "title": "Smart Matching",
-      "description": "AI-powered system finds the best universities and scholarships for your profile"
-    },
-    "exclusiveScholarships": {
-      "title": "Exclusive Scholarships",
-      "description": "Access scholarships not available anywhere else, specifically for international students"
-    },
-    "personalSupport": {
-      "title": "Personal Support",
-      "description": "Dedicated team to guide you through every step of the application process"
-    },
-    "fastProcess": {
-      "title": "Fast Process",
-      "description": "Streamlined application process with quick responses and efficient document handling"
-    }
-  },
-  "universities": {
-    "title": "Universities",
-    "subtitle": "Explore top American universities",
-    "searchPlaceholder": "Search universities...",
-    "location": "Location",
-    "programs": "Programs",
-    "website": "Website",
-    "viewProfile": "View Profile",
-    "applyNow": "Apply Now"
-  },
-  "paymentBlocker": {
-    "scholarships": {
-      "title": "Scholarships Locked",
-      "description": "To access our exclusive collection of scholarships, you need to complete the initial selection process. This is the first step of your journey to studying in the United States."
-    },
-    "universities": {
-      "title": "Universities Locked",
-      "description": "To explore our partner universities and their programs, you need to complete the initial selection process. This is the first step of your journey to studying in the United States."
-    },
-    "default": {
-      "title": "Content Locked",
-      "description": "To access this content, you need to complete the initial selection process. This is the first step of your journey to studying in the United States."
-    },
-    "selectionProcessFee": "Selection Process Fee",
-    "completeApplicationJourney": "Complete your application journey",
-    "goToDashboardAndPayFee": "Go to Dashboard & Pay Fee",
-    "learnHowItWorks": "Learn How It Works",
-    "contentLockedMessage": "This content is locked until payment is completed"
-  },
-  "successPages": {
-    "selectionProcessFee": {
-      "title": "¡Pago de la Tasa del Proceso de Selección Realizado con Éxito!",
-      "description": "Su pago de {{amount}} ha sido procesado con éxito.",
-      "message": "Ahora tiene acceso a todas las becas y pode solicitar libremente.",
-      "button": "Ir a Becas",
-      "verifying": "Verificando su pago...",
-      "pleaseWait": "Por favor, espere un momento mientras confirmamos su transacción. Esto puede levar alguns instantes.",
-      "errorTitle": "Error en el Pago de la Tasa del Proceso de Selección",
-      "errorMessage": "Hubo un problema al procesar su pago.",
-      "errorRetry": "Intente nuevamente. Si el error persiste, entre en contacto con el soporte."
-    },
-    "scholarshipFee": {
-      "title": "¡Pago de la Tasa de la Beca Realizado con Éxito!",
-      "description": "Su pago de {{amount}} ha sido procesado con éxito.",
-      "message": "Su solicitud continuará ahora hacia la siguiente etapa.",
-      "button": "Ver Detalles",
-      "verifying": "Verificando su pago...",
-      "pleaseWait": "Por favor, espere un momento mientras confirmamos su pago.",
-      "errorTitle": "Error en el Procesamiento del Pago",
-      "errorMessage": "Hubo un problema al procesar su pago.",
-      "errorRetry": "Intente nuevamente o entre en contacto con el soporte."
-    },
-    "applicationFee": {
-      "title": "¡Pago de la Tasa de Matrícula Realizado con Éxito!",
-      "description": "Su pago de {{amount}} ha sido procesado con éxito.",
-      "message": "Su solicitud continuará ahora hacia la siguiente etapa.",
-      "button": "Ir a Mis Solicitudes",
-      "verifying": "Verificando Pago...",
-      "pleaseWait": "Por favor, espere un momento mientras confirmamos su transacción. Esto puede levar alguns instantes.",
-      "errorTitle": "Fallo en la Verificación",
-      "errorMessage": "Hubo un problema al verificar su pago. Entre en contacto con o suporte.",
-      "errorDetails": "Detalles del error:"
-    },
-    "placementFee": {
-      "title": "¡Pago de la Tarifa de Colocación Realizado con Éxito!",
-      "description": "Su pago de {{amount}} ha sido procesado con éxito.",
-      "message": "Su solicitud está ahora confirmada.",
-      "button": "Continuar",
-      "verifying": "Verificando su pago...",
-      "pleaseWait": "Por favor, espere un momento mientras confirmamos su transacción. Esto puede levar alguns instantes.",
-      "errorTitle": "Error en el Procesamiento",
-      "errorMessage": "Hubo un problema ao processar su pago.",
-      "errorRetry": "Intente nuevamente o entre en contacto con o suporte."
-    },
-    "common": {
-      "verifying": "Verificando su pago...",
-      "pleaseWait": "Por favor, espere un momento mientras procesamos su transacción."
-    },
-    "i20ControlFee": {
-      "title": "¡Pago de la Tasa de Control I-20 Realizado con Éxito!",
-      "message": "Su documento I-20 será procesado y enviado en breve.",
-      "button": "Volver a Mis Solicitudes",
-      "verifying": "Verificando Pago...",
-      "pleaseWait": "Por favor, espere un momento mientras confirmamos su pago.",
-      "errorTitle": "Error en el Pago de la Tasa de Control I-20",
-      "errorMessage": "Hubo un problema ao processar su pago.",
-      "errorRetry": "Intente nuevamente. Si el error persiste, entre en contacto con o suporte."
-    }
   },
   "ssoCallback": {
     "processing": {
@@ -438,5 +337,18 @@
         "unauthenticated": "Usuario no autenticado"
       }
     }
+  },
+  "smartChat": {
+    "title": "Asistente Inteligente",
+    "subtitle": "Tu compañero inteligente",
+    "welcomeMessage": "¡Hola! Soy tu Asistente Inteligente. ¿Cómo posso ayudarte hoy? Puedo responder preguntas sobre becas, tasas, el proceso de solicitud y mucho más.",
+    "inputPlaceholder": "Pregúntame cualquier cosa...",
+    "send": "Enviar",
+    "typing": "Escribiendo...",
+    "close": "Cerrar chat",
+    "you": "Tú",
+    "assistant": "Asistente Inteligente",
+    "whatsappTitle": "Contáctanos por WhatsApp",
+    "mobileNote": "Smart Assistant - Se abre en una nueva pestaña"
   }
 }

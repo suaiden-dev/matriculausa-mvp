@@ -630,3 +630,29 @@ All colors MUST be HSL.
 .quick-registration-phone .PhoneInputCountrySelect {
   cursor: pointer;
 }
+
+/* Custom override for PhoneInput inside registration page */
+.phone-input-custom:focus-within {
+  outline: none !important;
+  border-color: #05294E !important;
+  box-shadow: 0 0 0 2px #05294E !important;
+}
+
+.phone-input-custom.university:focus-within {
+  border-color: #D0151C !important;
+  box-shadow: 0 0 0 2px #D0151C !important;
+}
+
+.phone-input-custom .PhoneInputInput {
+  outline: none !important;
+  box-shadow: none !important;
+  border: none !important;
+}
+
+/* Global focus visibility fix to prevent double outline */
+button:focus,
+input:focus,
+select:focus,
+textarea:focus {
+  outline: none !important;
+}

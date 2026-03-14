@@ -33,7 +33,7 @@ interface DocumentInfo {
 // Função utilitária de download imediato será movida para dentro do componente
 
 const ApplicationChatPage: React.FC = () => {
-  const { t } = useTranslation();
+  const { t } = useTranslation(['dashboard', 'common']);
   const { applicationId } = useParams<{ applicationId: string }>();
   const [searchParams] = useSearchParams();
   const { user, userProfile, refetchUserProfile } = useAuth();

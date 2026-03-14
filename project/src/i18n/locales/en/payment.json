@@ -576,5 +576,84 @@
     "cpfError": "Error saving CPF. Please try again.",
     "cpfInvalid": "CPF must be 11 digits",
     "goToPayment": "Continue to Payment"
+  },
+  "paymentBlocker": {
+    "scholarships": {
+      "title": "Scholarships Locked",
+      "description": "To access our exclusive collection of scholarships, you need to complete the initial selection process. This is the first step of your journey to studying in the United States."
+    },
+    "universities": {
+      "title": "Universities Locked",
+      "description": "To explore our partner universities and their programs, you need to complete the initial selection process. This is the first step of your journey to studying in the United States."
+    },
+    "default": {
+      "title": "Content Locked",
+      "description": "To access this content, you need to complete the initial selection process. This is the first step of your journey to studying in the United States."
+    },
+    "selectionProcessFee": "Selection Process Fee",
+    "completeApplicationJourney": "Complete your application journey",
+    "goToDashboardAndPayFee": "Go to Dashboard & Pay Fee",
+    "learnHowItWorks": "Learn How It Works",
+    "contentLockedMessage": "This content is locked until payment is completed"
+  },
+  "successPages": {
+    "selectionProcessFee": {
+      "title": "Selection Process Fee Payment Successful!",
+      "description": "Your payment of {{amount}} has been processed successfully.",
+      "message": "You now have access to all scholarships and can apply freely.",
+      "button": "Go to Scholarships",
+      "verifying": "Verifying your payment...",
+      "pleaseWait": "Please wait while we confirm your transaction. This may take a few moments.",
+      "errorTitle": "Selection Process Fee Payment Error",
+      "errorMessage": "There was a problem processing your payment.",
+      "errorRetry": "Try again. If the error persists, please contact support."
+    },
+    "scholarshipFee": {
+      "title": "Scholarship Fee Payment Successful!",
+      "description": "Your payment of {{amount}} has been processed successfully.",
+      "message": "Your application will now proceed to the next stage.",
+      "button": "View Details",
+      "verifying": "Verifying your payment...",
+      "pleaseWait": "Please wait while we confirm your payment.",
+      "errorTitle": "Payment Processing Error",
+      "errorMessage": "There was a problem processing your payment.",
+      "errorRetry": "Try again or contact support."
+    },
+    "applicationFee": {
+      "title": "Application Fee Payment Successful!",
+      "description": "Your payment of {{amount}} has been processed successfully.",
+      "message": "Your application will now proceed to the next stage.",
+      "button": "Go to My Applications",
+      "verifying": "Verifying Payment...",
+      "pleaseWait": "Please wait while we confirm your transaction. This may take a few moments.",
+      "errorTitle": "Verification Failed",
+      "errorMessage": "There was a problem verifying your payment. Please contact support.",
+      "errorDetails": "Error details:"
+    },
+    "placementFee": {
+      "title": "Placement Fee Payment Successful!",
+      "description": "Your payment of {{amount}} has been processed successfully.",
+      "message": "Your application is now confirmed.",
+      "button": "Continue",
+      "verifying": "Verifying your payment...",
+      "pleaseWait": "Please wait while we confirm your transaction. This may take a few moments.",
+      "errorTitle": "Processing Error",
+      "errorMessage": "There was a problem processing your payment.",
+      "errorRetry": "Try again or contact support."
+    },
+    "common": {
+      "verifying": "Verifying your payment...",
+      "pleaseWait": "Please wait a moment while we process your transaction."
+    },
+    "i20ControlFee": {
+      "title": "I-20 Control Fee Payment Successful!",
+      "message": "Your I-20 document will be processed and sent shortly.",
+      "button": "Back to My Applications",
+      "verifying": "Verifying Payment...",
+      "pleaseWait": "Please wait while we confirm your payment.",
+      "errorTitle": "I-20 Control Fee Payment Error",
+      "errorMessage": "There was a problem processing your payment.",
+      "errorRetry": "Try again. If the error persists, please contact support."
+    }
   }
 }

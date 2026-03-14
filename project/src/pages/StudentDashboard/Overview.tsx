@@ -43,7 +43,7 @@ const Overview: React.FC<OverviewProps> = ({
   recentApplications = [],
   applications = []
 }) => {
-  const { t } = useTranslation();
+  const { t } = useTranslation(['dashboard', 'common']);
   const navigate = useNavigate();
   const [searchParams, setSearchParams] = useSearchParams();
 

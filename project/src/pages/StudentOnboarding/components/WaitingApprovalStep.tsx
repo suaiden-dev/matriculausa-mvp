@@ -58,8 +58,8 @@ interface ApplicationWithScholarship {
 
 import { usePaymentBlocked } from '../../../hooks/usePaymentBlocked';
 
-export const WaitingApprovalStep: React.FC<StepProps> = ({ onComplete, onBack }) => {
-  const { t } = useTranslation();
+export const WaitingApprovalStep: React.FC<StepProps> = ({ onComplete }) => {
+  const { t } = useTranslation(['registration', 'common']);
   const { user, userProfile, refetchUserProfile } = useAuth();
   const { getFeeAmount } = useFeeConfig(user?.id);
   const { i20ControlFee, hasSellerPackage } = useDynamicFees();

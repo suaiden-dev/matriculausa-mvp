@@ -310,7 +310,7 @@ const categoryColors = {
 };
 
 const EB3JobsLanding: React.FC = () => {
-  const { t } = useTranslation();
+  const { t } = useTranslation(['eb3', 'common']);
   const [selectedCategory, setSelectedCategory] = useState<string>('all');
   const [selectedLocation, setSelectedLocation] = useState<string>('all');
   const [searchTerm, setSearchTerm] = useState('');
@@ -452,7 +452,7 @@ const EB3JobsLanding: React.FC = () => {
                   <div className="text-left">
                     <h3 className="text-lg font-bold text-amber-800 mb-2">{t('eb3Jobs.hero.importantInfo.title')}</h3>
                     <ul className="text-amber-700 space-y-1 text-sm">
-                      {t('eb3Jobs.hero.importantInfo.items', { returnObjects: true }).map((item: string, index: number) => (
+                      {(t('eb3Jobs.hero.importantInfo.items', { returnObjects: true }) as any[]).map((item: string, index: number) => (
                         <li key={index} dangerouslySetInnerHTML={{ __html: item }} />
                       ))}
                     </ul>
@@ -496,7 +496,7 @@ const EB3JobsLanding: React.FC = () => {
                 <h2 className="text-4xl md:text-5xl font-black text-slate-900 mb-8" dangerouslySetInnerHTML={{ __html: t('eb3Jobs.whatIsEb3.title') }} />
 
                 <div className="space-y-6">
-                  {t('eb3Jobs.whatIsEb3.benefits', { returnObjects: true }).map((benefit: any, index: number) => (
+                  {(t('eb3Jobs.whatIsEb3.benefits', { returnObjects: true }) as any[]).map((benefit: any, index: number) => (
                     <div key={index} className="flex items-start space-x-4">
                       <div className={`w-12 h-12 rounded-2xl flex items-center justify-center shadow-lg flex-shrink-0 ${index === 0 ? 'bg-[#05294E]' :
                           index === 1 ? 'bg-[#D0151C]' :
@@ -643,7 +643,7 @@ const EB3JobsLanding: React.FC = () => {
 
                       <div className="flex items-center text-slate-600 mb-4">
                         <Calendar className="h-4 w-4 mr-2 text-blue-600" />
-                        <span className="text-sm">Filing: {job.filing}</span>
+                        <span className="text-sm">{t('eb3Jobs.jobs.jobCard.filingLabel')} {job.filing}</span>
                       </div>
 
                       {job.description && (
@@ -727,7 +727,7 @@ const EB3JobsLanding: React.FC = () => {
             </div>
 
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-8">
-              {t('eb3Jobs.benefits.items', { returnObjects: true }).map((benefit: any, index: number) => (
+              {(t('eb3Jobs.benefits.items', { returnObjects: true }) as any[]).map((benefit: any, index: number) => (
                 <div key={index} className="bg-white p-8 rounded-3xl shadow-lg hover:shadow-xl transition-all duration-300 border border-slate-200 text-center">
                   <div className={`w-16 h-16 rounded-2xl flex items-center justify-center mx-auto mb-6 ${index === 0 ? 'bg-green-100' :
                       index === 1 ? 'bg-blue-100' :
@@ -758,7 +758,7 @@ const EB3JobsLanding: React.FC = () => {
             </div>
 
             <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
-              {t('eb3Jobs.howItWorks.steps', { returnObjects: true }).map((step: any, index: number) => (
+              {(t('eb3Jobs.howItWorks.steps', { returnObjects: true }) as any[]).map((step: any, index: number) => (
                 <div key={index} className="text-center">
                   <div className={`w-16 h-16 rounded-2xl flex items-center justify-center mx-auto mb-6 shadow-lg ${index === 0 ? 'bg-[#05294E]' :
                       index === 1 ? 'bg-[#D0151C]' :
@@ -828,7 +828,7 @@ const EB3JobsLanding: React.FC = () => {
 
                     {/* Features List */}
                     <div className="space-y-3 mb-6">
-                      {t('eb3Jobs.offer.card.features', { returnObjects: true }).map((feature: string, index: number) => (
+                      {(t('eb3Jobs.offer.card.features', { returnObjects: true }) as any[]).map((feature: string, index: number) => (
                         <div key={index} className="flex items-center space-x-3">
                           <CheckCircle className="h-5 w-5 text-[#05294E] flex-shrink-0" />
                           <span className="text-[#05294E] font-semibold">{feature}</span>
@@ -886,7 +886,7 @@ const EB3JobsLanding: React.FC = () => {
                     <div className="text-center">
                       <div className="text-xs text-gray-500 mb-3">{t('eb3Jobs.offer.card.paymentMethods')}</div>
                       <div className="flex flex-wrap justify-center items-center gap-3">
-                        {t('eb3Jobs.offer.card.methods', { returnObjects: true }).map((method: string, index: number) => (
+                        {(t('eb3Jobs.offer.card.methods', { returnObjects: true }) as any[]).map((method: string, index: number) => (
                           <div key={index} className="bg-gray-100 px-3 py-1 rounded text-xs font-semibold text-gray-700">{method}</div>
                         ))}
                       </div>
@@ -936,7 +936,7 @@ const EB3JobsLanding: React.FC = () => {
             </div>
 
             <div className="space-y-4">
-              {t('eb3Jobs.faq.questions', { returnObjects: true }).map((faq: any, index: number) => (
+              {(t('eb3Jobs.faq.questions', { returnObjects: true }) as any[]).map((faq: any, index: number) => (
                 <motion.div
                   key={index}
                   initial={{ opacity: 0, y: 20 }}
@@ -1015,7 +1015,7 @@ const EB3JobsLanding: React.FC = () => {
             </div>
 
             <div className="mt-8 flex flex-col sm:flex-row gap-4 justify-center text-blue-100">
-              {t('eb3Jobs.cta.features', { returnObjects: true }).map((feature: string, index: number) => (
+              {(t('eb3Jobs.cta.features', { returnObjects: true }) as any[]).map((feature: string, index: number) => (
                 <div key={index} className="flex items-center text-sm">
                   <CheckCircle className="h-5 w-5 mr-2 text-green-400" />
                   <span>{feature}</span>

@@ -234,104 +234,108 @@
   },
   "universitiesPage": {
     "header": {
-      "partnerUniversities": "Partner Universities",
-      "title": "American Universities",
-      "subtitle": "Discover world-class institutions offering exceptional education and scholarship opportunities."
+      "partnerUniversities": "Universidades Asociadas",
+      "title": "Universidades Americanas",
+      "subtitle": "Descubra instituciones de clase mundial que ofrecen educación excepcional y oportunidades de becas."
     },
     "loginRequired": {
-      "title": "Login Required",
-      "message": "Please log in to view university details and access all features"
+      "title": "Inicio de Sesión Requerido",
+      "message": "Inicie sesión para ver los detalles de las universidades y acceder a todas las funciones"
     },
     "search": {
-      "placeholder": "Search universities...",
-      "allTypes": "All Types",
-      "private": "Private",
-      "public": "Public",
-      "allStates": "All States",
-      "universitiesCount": "universities",
-      "featured": "featured"
+      "placeholder": "Buscar universidades...",
+      "allTypes": "Todos los Tipos",
+      "private": "Privada",
+      "public": "Pública",
+      "allStates": "Todos los Estados",
+      "universitiesCount": "universidades",
+      "featured": "destacadas",
+      "filterByType": "Filtrar por tipo de universidad",
+      "filterByState": "Filtrar por estado de la universidad"
     },
+    "loading": "Cargando universidades...",
     "featured": {
-      "title": "Featured Universities",
-      "subtitle": "Weekly Highlights",
-      "description": "Discover the universities selected by our experts for you",
-      "featured": "Featured",
-      "more": "more"
+      "title": "Universidades Destacadas",
+      "subtitle": "Lo Más Destacado de la Semana",
+      "description": "Descubra las universidades seleccionadas por nuestros expertos para usted",
+      "featured": "Destacada",
+      "more": "más"
     },
     "card": {
-      "learnMore": "Learn More"
+      "learnMore": "Más Información"
     },
     "pagination": {
-      "previous": "Previous",
-      "next": "Next",
-      "page": "Page",
-      "of": "of"
+      "previous": "Anterior",
+      "next": "Siguiente",
+      "page": "Página",
+      "of": "de"
     },
     "noResults": {
-      "title": "No universities found",
-      "description": "Try adjusting your search criteria"
+      "title": "No se encontraron universidades",
+      "description": "Intente ajustar sus criterios de búsqueda"
     },
     "callToAction": {
-      "title": "Ready to Apply to Your",
-      "titleHighlight": "Dream University?",
-      "description": "Start your journey with our AI-powered platform and unlock exclusive scholarship opportunities.",
-      "findScholarships": "Find Scholarships",
-      "learnMore": "Learn More"
+      "title": "¿Listo para Aplicar a tu",
+      "titleHighlight": "Universidad de Ensueño?",
+      "description": "Comience su viaje con nuestra plataforma impulsada por IA y desbloquee oportunidades exclusivas de becas.",
+      "findScholarships": "Encontrar Becas",
+      "learnMore": "Más Información"
     }
   },
   "universityDetailPage": {
-    "loading": "Loading university details...",
+    "loading": "Cargando detalles de la universidad...",
     "notFound": {
-      "title": "University not found",
-      "backLink": "Back to Universities"
+      "title": "Universidad no encontrada",
+      "backLink": "Volver a Universidades"
     },
     "editProfile": {
-      "editButton": "Edit Profile",
-      "saveButton": "Save",
-      "cancelButton": "Cancel",
-      "uploadingBanner": "Uploading...",
-      "changeBanner": "Change Banner",
-      "yourUniversity": "Your University",
-      "successMessage": "Profile updated successfully!",
-      "errorMessage": "Failed to update profile. Please try again."
+      "editButton": "Editar Perfil",
+      "saveButton": "Guardar",
+      "cancelButton": "Cancelar",
+      "uploadingBanner": "Subiendo...",
+      "changeBanner": "Cambiar Banner",
+      "yourUniversity": "Tu Universidad",
+      "successMessage": "¡Perfil actualizado con éxito!",
+      "errorMessage": "Error al actualizar el perfil. Inténtalo de nuevo."
     },
     "placeholders": {
-      "universityName": "University Name",
-      "location": "Location",
-      "description": "Describe your university...",
-      "addNewProgram": "Add new program",
-      "street": "Street",
-      "city": "City",
-      "state": "State",
-      "zipCode": "ZIP Code",
-      "country": "Country",
-      "website": "https://university.edu"
+      "universityName": "Nombre de la Universidad",
+      "location": "Ubicación",
+      "description": "Describa su universidad...",
+      "addNewProgram": "Añadir nuevo programa",
+      "street": "Calle",
+      "city": "Ciudad",
+      "state": "Estado",
+      "zipCode": "Código Postal",
+      "country": "País",
+      "website": "https://universidad.edu",
+      "uploadBanner": "Cargar imagen del banner de la universidad"
     },
     "sections": {
-      "about": "About",
-      "academicPrograms": "Academic Programs",
-      "contactInformation": "Contact Information",
-      "address": "Address",
-      "website": "Website",
-      "scholarshipOpportunities": "Scholarship Opportunities"
+      "about": "Acerca de",
+      "academicPrograms": "Programas Académicos",
+      "contactInformation": "Información de Contacto",
+      "address": "Dirección",
+      "website": "Sitio Web",
+      "scholarshipOpportunities": "Oportunidades de Becas"
     },
     "contact": {
-      "phone": "Phone",
-      "email": "Email",
-      "admissionsEmail": "Admissions Email",
+      "phone": "Teléfono",
+      "email": "Correo Electrónico",
+      "admissionsEmail": "Correo de Admisiones",
       "fax": "Fax"
     },
     "buttons": {
-      "add": "Add",
-      "remove": "Remove",
-      "visitWebsite": "Visit Official Website",
-      "viewScholarships": "View Scholarships"
+      "add": "Añadir",
+      "remove": "Eliminar",
+      "visitWebsite": "Visitar Sitio Web Oficial",
+      "viewScholarships": "Ver Becas"
     },
     "messages": {
-      "noProgramsListed": "No programs listed",
-      "noWebsiteProvided": "No website provided",
-      "scholarshipDescription": "Discover exclusive scholarships available at",
-      "uploadError": "Failed to upload image. Please try again."
+      "noProgramsListed": "No hay programas listados",
+      "noWebsiteProvided": "No se proporcionó sitio web",
+      "scholarshipDescription": "Descubra becas exclusivas disponibles en",
+      "uploadError": "Error al subir la imagen. Inténtalo de nuevo."
     }
   }
 }

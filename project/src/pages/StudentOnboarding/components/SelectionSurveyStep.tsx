@@ -13,7 +13,7 @@ import { StepProps } from '../types';
 import { dispatchCacheInvalidationEvent, CacheInvalidationEvent } from '../../../utils/cacheInvalidation';
 
 export const SelectionSurveyStep: React.FC<StepProps> = ({ onNext }) => {
-    const { t } = useTranslation();
+    const { t } = useTranslation(['registration', 'common']);
     const [currentSection, setCurrentSection] = useState(0);
     const [answers, setAnswers] = useState<Record<number, string>>(() => {
         const saved = localStorage.getItem('onboarding_survey_answers');
