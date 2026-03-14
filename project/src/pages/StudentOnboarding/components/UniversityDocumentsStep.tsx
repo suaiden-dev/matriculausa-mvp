@@ -64,7 +64,7 @@ const StripeIcon = ({ className }: { className?: string }) => (
 );
 
 export const UniversityDocumentsStep: React.FC<StepProps> = ({ onBack }) => {
-  const { t } = useTranslation();
+  const { t } = useTranslation(['registration', 'common']);
   const navigate = useNavigate();
   const { user, userProfile } = useAuth();
   const { logAction } = useStudentLogs(userProfile?.id || '');

@@ -14,6 +14,9 @@ export const NAMESPACES = [
   'scholarships',
   'eb3',
   'school',
+  'about',
+  'contact',
+  'help',
 ] as const;
 
 export type Namespace = typeof NAMESPACES[number];
@@ -60,9 +63,10 @@ const initI18n = async () => {
       // defaultNS é onde o useTranslation() sem argumento busca primeiro
       defaultNS: 'common',
 
-      // fallbackNS: busca nos outros namespaces automaticamente se a chave não for encontrada
-      // Isso garante compatibilidade com todos os componentes existentes (useTranslation() sem argumento)
-      fallbackNS: ['home', 'auth', 'payment', 'registration', 'dashboard', 'scholarships', 'eb3', 'school'],
+      // fallbackNS: ordem de busca quando a chave não é encontrada no namespace principal
+      // A otimização é feita por componente via useTranslation(['namespace', 'common'])
+      // que controla QUAIS namespaces são carregados para cada página
+      fallbackNS: ['common', 'home', 'auth', 'payment', 'registration', 'dashboard', 'scholarships', 'eb3', 'school', 'about', 'contact', 'help'],
 
       ns: NAMESPACES,
 

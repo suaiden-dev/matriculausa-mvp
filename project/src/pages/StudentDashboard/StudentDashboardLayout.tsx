@@ -37,10 +37,10 @@ const StudentDashboardLayout: React.FC<StudentDashboardLayoutProps> = ({
   loading,
   children
 }) => {
-  const { t, i18n } = useTranslation();
+  const { t, i18n } = useTranslation(['dashboard', 'common']);
   const location = useLocation();
   const navigate = useNavigate();
-  const { logout, userProfile } = useAuth();
+  const { logout } = useAuth();
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const [userMenuOpen, setUserMenuOpen] = useState(false);
   const [showNotif, setShowNotif] = useState(false);
@@ -68,9 +68,9 @@ const StudentDashboardLayout: React.FC<StudentDashboardLayoutProps> = ({
   const { unreadCount: contextChatUnreadCount, resetUnreadCount } = useUnreadMessages();
 
   // Foto de identidade
-  const { data: identityPhotoStatus, isPending: identityPhotoLoading, refetch: refetchIdentityStatus } = useIdentityPhotoStatusQuery(user?.id);
+  const { isPending: _unusedLoading, refetch: refetchIdentityStatus } = useIdentityPhotoStatusQuery(user?.id);
   const [isSelfieModalOpen, setIsSelfieModalOpen] = useState(false);
-  const hasAutoOpenedSelfie = useRef(false);
+
 
   // Removido auto-opening da selfie - agora ocorre organicamente no Onboarding
 
@@ -287,7 +287,7 @@ const StudentDashboardLayout: React.FC<StudentDashboardLayoutProps> = ({
                 const isActive = activeTab === item.id;
 
                 // Em modo restrito, o item do Processo Seletivo deve pulsar
-                const isSelectionSurveyLink = item.id === 'selection-survey';
+
 
                 return (
                   <Link

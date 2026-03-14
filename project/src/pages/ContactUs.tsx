@@ -1,51 +1,54 @@
 import React from 'react';
 import { Mail, Phone, MapPin, MessageCircle, Clock, CheckCircle, MapPinIcon, Building, Globe, MessageSquare } from 'lucide-react';
+import { useTranslation } from 'react-i18next';
 import SmartChat from '../components/SmartChat';
 
 const ContactUs: React.FC = () => {
+  const { t } = useTranslation('contact');
+
   const contactMethods = [
     {
       icon: Mail,
-      title: 'Email Support',
+      title: t('methods.email.title'),
       value: 'info@matriculausa.com',
-      description: 'Send us an email and we\'ll respond within 24 hours',
-      category: 'Primary',
+      description: t('methods.email.description'),
+      category: t('methods.email.category'),
       bgColor: 'bg-blue-100',
       textColor: 'text-blue-600'
     },
     {
       icon: Phone,
-      title: 'Phone Support',
+      title: t('methods.phone.title'),
       value: '+1 (213) 676-2544',
-      description: 'Call us Monday to Friday, 9 AM - 6 PM PST',
-      category: 'Direct',
+      description: t('methods.phone.description'),
+      category: t('methods.phone.category'),
       bgColor: 'bg-green-100',
       textColor: 'text-green-600'
     },
     {
       icon: MapPin,
-      title: 'Office Location',
-      value: 'Los Angeles, CA, USA',
-      description: 'Visit our headquarters in sunny California',
-      category: 'Physical',
+      title: t('methods.location.title'),
+      value: t('methods.location.value'),
+      description: t('methods.location.description'),
+      category: t('methods.location.category'),
       bgColor: 'bg-purple-100',
       textColor: 'text-purple-600'
     },
     {
       icon: MessageSquare,
-      title: 'WhatsApp Support',
-      value: 'Available 24/7',
-      description: 'Get instant help through WhatsApp messaging',
-      category: 'Instant',
+      title: t('methods.whatsapp.title'),
+      value: t('methods.whatsapp.value'),
+      description: t('methods.whatsapp.description'),
+      category: t('methods.whatsapp.category'),
       bgColor: 'bg-green-100',
       textColor: 'text-green-600'
     },
     {
       icon: Globe,
-      title: 'Online Support',
-      value: 'Smart Assistant',
-      description: 'AI-powered help available anytime',
-      category: 'AI',
+      title: t('methods.online.title'),
+      value: t('methods.online.value'),
+      description: t('methods.online.description'),
+      category: t('methods.online.category'),
       bgColor: 'bg-blue-100',
       textColor: 'text-blue-600'
     }
@@ -62,26 +65,26 @@ const ContactUs: React.FC = () => {
             </div>
             
             <h1 className="text-4xl md:text-5xl font-bold text-gray-900 mb-4">
-              Contact Us
+              {t('title')}
             </h1>
             
             <p className="text-xl text-gray-600 max-w-2xl mx-auto mb-8">
-              Get in touch with our team. We're here to help you succeed.
+              {t('subtitle')}
             </p>
 
             {/* Stats */}
             <div className="flex justify-center items-center space-x-8 mt-8 text-sm text-gray-500">
               <div className="flex items-center space-x-2">
                 <div className="w-2 h-2 bg-green-500 rounded-full"></div>
-                <span>24/7 support</span>
+                <span>{t('stats.support')}</span>
               </div>
               <div className="flex items-center space-x-2">
                 <div className="w-2 h-2 bg-blue-500 rounded-full"></div>
-                <span>Quick response</span>
+                <span>{t('stats.response')}</span>
               </div>
               <div className="flex items-center space-x-2">
                 <div className="w-2 h-2 bg-[#05294E] rounded-full"></div>
-                <span>Expert team</span>
+                <span>{t('stats.expert')}</span>
               </div>
             </div>
           </div>
@@ -94,8 +97,8 @@ const ContactUs: React.FC = () => {
           {/* Main Content */}
           <div className="lg:col-span-4">
             <div className="mb-8">
-              <h2 className="text-2xl font-semibold text-gray-900 mb-2">Contact Methods</h2>
-              <p className="text-gray-600">Choose the best way to reach our team</p>
+              <h2 className="text-2xl font-semibold text-gray-900 mb-2">{t('methods.title')}</h2>
+              <p className="text-gray-600">{t('methods.subtitle')}</p>
             </div>
             
             <div className="grid gap-4">
@@ -140,4 +143,5 @@ const ContactUs: React.FC = () => {
   );
 };
 
-export default ContactUs; 
+export default ContactUs;
+ 

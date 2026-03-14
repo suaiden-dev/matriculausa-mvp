@@ -1,0 +1,57 @@
+{
+  "hero": {
+    "title": "Capacitando a Educação Internacional",
+    "description": "A MatriculaUSA é a plataforma digital líder na conexão de estudantes internacionais com universidades americanas, bolsas de estudo e oportunidades transformadoras. Simplificamos a jornada de estudos nos Estados Unidos com tecnologia, orientação especializada e uma abordagem focada no aluno."
+  },
+  "pillars": {
+    "mission": {
+      "title": "Nossa Missão",
+      "description": "Democratizar o acesso ao ensino superior dos EUA para estudantes talentosos em todo o mundo, proporcionando uma experiência contínua, transparente e solidária, desde a candidatura até a matrícula."
+    },
+    "vision": {
+      "title": "Nossa Visão",
+      "description": "Ser a ponte global mais confiável entre estudantes internacionais e universidades americanas, promovendo diversidade, oportunidade e excelência acadêmica."
+    },
+    "values": {
+      "title": "Nossos Valores",
+      "description": "Integridade, inclusão, inovação e um compromisso implacável com o sucesso do aluno guiam cada decisão que tomamos."
+    }
+  },
+  "story": {
+    "badge": "Nossa História",
+    "title": "Transformando Sonhos em Realidade",
+    "p1": "A MatriculaUSA foi fundada por especialistas em educação internacional que entendem os desafios únicos enfrentados por estudantes que buscam estudar nos Estados Unidos. Nossa equipe já ajudou milhares de alunos de diversas origens a garantir bolsas de estudo, admissões e uma transição tranquila para a vida nos campi americanos.",
+    "p2": "Fazemos parcerias com as principais universidades e organizações dos EUA para oferecer oportunidades exclusivas, processos transparentes e suporte contínuo — tornando o sonho americano acessível a todos.",
+    "stats": {
+      "scholarships": "em Bolsas de Estudo Concedidas",
+      "students": "Estudantes Apoiados"
+    }
+  },
+  "howItWorks": {
+    "title": "Como Funciona a <0>MatriculaUSA</0>",
+    "description": "Tornamos o processo de candidatura a faculdades nos EUA simples, transparente e amigável para o aluno.",
+    "steps": {
+      "explore": {
+        "title": "1. Explore",
+        "description": "Navegue por universidades parceiras e oportunidades de bolsa personalizadas para seu perfil."
+      },
+      "apply": {
+        "title": "2. Candidate-se",
+        "description": "Envie sua candidatura e documentos necessários através de nossa plataforma digital segura."
+      },
+      "match": {
+        "title": "3. Conecte-se",
+        "description": "Nossa equipe e tecnologia conectam você com as universidades e bolsas que melhor se adaptam a você."
+      },
+      "succeed": {
+        "title": "4. Tenha Sucesso",
+        "description": "Receba orientação sobre visto, matrícula e sua transição para a vida universitária nos EUA."
+      }
+    }
+  },
+  "cta": {
+    "title": "Pronto para Começar sua Jornada?",
+    "description": "Junte-se a milhares de estudantes que tornaram seu sonho americano realidade com a MatriculaUSA.",
+    "button": "Começar"
+  }
+}

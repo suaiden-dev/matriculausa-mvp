@@ -5,15 +5,27 @@
       "subtitle": "Discover exclusive scholarships and unlock your potential in the United States",
       "description": "Connect with top universities, access exclusive scholarships, and get personalized support throughout your journey to studying in the USA.",
       "cta": "Start Your Journey",
-      "watchVideo": "Watch Video"
+      "watchVideo": "Watch Video",
+      "stats": {
+        "successRate": {
+          "title": "95% Success Rate",
+          "subtitle": "Student enrollment"
+        },
+        "scholarships": {
+          "title": "$50M+",
+          "subtitle": "In scholarships"
+        }
+      }
     },
     "featuredUniversities": {
       "lockedTitle": "Universities Locked",
       "lockedDescription": "Complete the selection process to unlock detailed university information",
       "goToDashboard": "Go to Dashboard",
-      "loginToView": "Login to View"
+      "loginToView": "Login to View",
+      "featured": "Featured"
     },
     "features": {
+      "whyChoose": "Why Choose MatriculaUSA?",
       "title": "Why Choose MatriculaUSA?",
       "subtitle": "Everything you need to succeed in your American education journey",
       "smartMatching": {
@@ -51,6 +63,12 @@
       "mainTitle": "Everything You Need to Know",
       "subtitle": "Get answers to the most common questions about fees, payments, and the application process at MatriculaUSA",
       "badge": "Questions & Answers",
+      "quickAnswers": "Quick Answers",
+      "questionsFound": "{{count}} question found",
+      "questionsFound_plural": "{{count}} questions found",
+      "footerContact": "Use the floating buttons for instant help or contact us directly at info@matriculausa.com",
+      "instantAiResponses": "Instant AI responses",
+      "availability": "24/7 availability",
       "questions": {
         "q1": {
           "question": "What fees or payments are required to use MatriculaUSA?",
@@ -58,39 +76,39 @@
         },
         "q2": {
           "question": "What is the Selection Process Fee?",
-          "answer": "The Selection Process Fee (US${{selectionProcessFee}}) is the first mandatory payment on the MatriculaUSA platform. It unlocks your full access to view all scholarships and start your application process."
+          "answer": "The Selection Process Fee $400 is the first mandatory payment on the MatriculaUSA platform. It unlocks your full access to view all scholarships and start your application process."
         },
         "q3": {
-          "question": "What is the Scholarship Fee?",
-          "answer": "The Scholarship Fee (US${{scholarshipFee}}) is charged when you proceed with applications for exclusive scholarships through MatriculaUSA. This fee covers processing costs and personalized support for your scholarship applications."
+          "question": "What is the Placement Fee?",
+          "answer": "The Placement Fee covers the specialized support to guarantee your scholarship and enrollment. It covers professional work including academic analysis, identification of university options, scholarship negotiation, and enrollment process support. This fee is variable and directly linked to the scholarship amount:<div class=\"mt-4 overflow-x-auto\"><table class=\"min-w-full divide-y divide-slate-200 border border-slate-200 rounded-lg overflow-hidden\"><thead class=\"bg-slate-100\"><tr><th class=\"px-4 py-2 text-left text-xs font-bold text-slate-500 uppercase\">Placement Fee</th><th class=\"px-4 py-2 text-left text-xs font-bold text-slate-500 uppercase\">Annual Tuition</th></tr></thead><tbody class=\"divide-y divide-slate-200\"><tr><td class=\"px-4 py-2 text-sm\">$100</td><td class=\"px-4 py-2 text-sm text-green-600 font-bold\">$9,500</td></tr><tr><td class=\"px-4 py-2 text-sm\">$150</td><td class=\"px-4 py-2 text-sm text-green-600 font-bold\">$9,000</td></tr><tr><td class=\"px-4 py-2 text-sm\">$200</td><td class=\"px-4 py-2 text-sm text-green-600 font-bold\">$8,500</td></tr><tr><td class=\"px-4 py-2 text-sm\">$250</td><td class=\"px-4 py-2 text-sm text-green-600 font-bold\">$8,000</td></tr><tr><td class=\"px-4 py-2 text-sm\">$300</td><td class=\"px-4 py-2 text-sm text-green-600 font-bold\">$7,500</td></tr><tr><td class=\"px-4 py-2 text-sm\">$350</td><td class=\"px-4 py-2 text-sm text-green-600 font-bold\">$7,000</td></tr><tr><td class=\"px-4 py-2 text-sm\">$550</td><td class=\"px-4 py-2 text-sm text-green-600 font-bold\">$6,500</td></tr><tr><td class=\"px-4 py-2 text-sm\">$900</td><td class=\"px-4 py-2 text-sm text-green-600 font-bold\">$6,000</td></tr><tr><td class=\"px-4 py-2 text-sm\">$1,100</td><td class=\"px-4 py-2 text-sm text-green-600 font-bold\">$5,500</td></tr><tr><td class=\"px-4 py-2 text-sm\">$1,200</td><td class=\"px-4 py-2 text-sm text-green-600 font-bold\">$5,000</td></tr><tr><td class=\"px-4 py-2 text-sm\">$1,450</td><td class=\"px-4 py-2 text-sm text-green-600 font-bold\">$4,500</td></tr></tbody></table></div>"
         },
         "q4": {
           "question": "What is the Application Fee?",
-          "answer": "The Application Fee varies by university and is a payment required to formally process your application after you have been accepted. This amount confirms your intention to enroll and is managed directly by the platform."
+          "answer": "The Application Fee varies by university and is a required payment to formally process your application after you have been accepted. This amount confirms your intent to enroll and is managed directly by the platform."
         },
         "q5": {
-          "question": "What is the I-20 Control Fee?",
-          "answer": "The I-20 Control Fee (US${{i20ControlFee}}) is a mandatory payment for students who need to obtain the I-20 form, essential for applying for the F-1 student visa. This fee ensures fast and accurate processing of your visa documents."
+          "question": "Is there support for the student visa process?",
+          "answer": "Yes! The Placement Fee includes specialized support for your student visa process. Our team guides you through all necessary steps to ensure you have the correct documents for your arrival in the US."
         },
         "q6": {
-          "question": "Are there any other fees I should be aware of?",
+          "question": "Are there other fees I should know about?",
           "answer": "All mandatory fees for your application and enrollment process are listed in your dashboard before any payment. Some universities may have additional fees (e.g., housing deposits, orientation fees), but these will always be communicated directly by the university or by us in advance."
         },
         "q7": {
           "question": "How can I pay these fees?",
-          "answer": "You can pay all fees directly through the MatriculaUSA platform using international credit or debit cards. Payments are securely processed via Stripe, and you will receive a confirmation for each transaction."
+          "answer": "You can pay all fees directly through the MatriculaUSA platform using international credit or debit cards. Payments are processed securely via Stripe, and you will receive a confirmation for each transaction."
         },
         "q8": {
           "question": "Is my payment information secure?",
-          "answer": "Yes. All payments are processed by Stripe, a global leader in payment security. MatriculaUSA does not store your card details, and all transactions are encrypted for your protection."
+          "answer": "Yes. All payments are processed by Stripe, a world leader in payment security. MatriculaUSA does not store your card details, and all transactions are encrypted for your protection."
         },
         "q9": {
           "question": "Can I get a refund?",
-          "answer": "You are entitled to a full refund of fees paid if your application is not successful or you are not approved for a scholarship. However, if you withdraw from the process or change your mind after starting the application, the fees paid are non-refundable, as processing and support will have already begun."
+          "answer": "You have the right to a full refund of the fees paid if your application is unsuccessful or you are not approved for a scholarship. However, if you withdraw from the process or change your mind after starting the application, the fees paid are non-refundable, as the processing and support will have already begun."
         },
         "q10": {
           "question": "Do I have to pay all fees at once?",
-          "answer": "No. The fees are separate purchases and are paid in stages as you progress through the process. You pay the Selection Process Fee first, then the Scholarship Fee (if applicable), followed by the Application Fee, and finally the I-20 Control Fee. All are mandatory for the complete flow, but do not need to be paid simultaneously."
+          "answer": "No. The fees are independent purchases and are paid in stages as you advance through the process. You pay the Selection Process Fee first, then the Application Fee (if applicable), and finally the Placement Fee associated with the chosen scholarship."
         },
         "q11": {
           "question": "Who can I contact if I have questions about fees or payments?",
@@ -138,6 +156,7 @@
       "subtitle": "Join thousands of international students who have found their path to American education through MatriculaUSA's comprehensive platform.",
       "button": "Start Your Journey Today",
       "learnMore": "Learn More",
+      "badge": "Join 5,000+ {{students}}",
       "features": {
         "freeToStart": "Free to get started",
         "noHiddenFees": "No hidden fees",
@@ -147,11 +166,16 @@
     "enrollmentConfirmed": {
       "title": "Enrollment Confirmed!",
       "university": "Harvard University"
+    },
+    "about": {
+      "cta": {
+        "questions": "Still have questions?"
+      }
     }
   },
   "howItWorks": {
     "title": "How It Works",
-    "subtitle": "Your path to a U.S. university, step by step",
+    "subtitle": "Your path to a US university, step by step",
     "journey": "Your Journey",
     "stats": {
       "setup": "5 Minutes Setup",
@@ -161,57 +185,51 @@
     "steps": {
       "profile": {
         "title": "Create Your Profile",
-        "description": "Fill out your academic and personal info. Our AI finds your best options.",
+        "description": "Fill in your academic and personal information. Our AI finds your best options.",
         "items": [
-          "Academic history & achievements",
-          "Career goals & preferences",
+          "Academic history and achievements",
+          "Career goals and preferences",
           "Financial requirements",
           "Add dependents (if any)"
         ]
       },
       "selectionFee": {
-        "title": "Pay Selection Fee ({{selectionProcessFee}})",
+        "title": "Pay Selection Fee ($400)",
         "description": "Unlock all scholarships. This fee is final and non-refundable. (+$150 per dependent)",
         "items": [
-          "Access to scholarship browse",
-          "Initiate application process",
+          "Access to browse scholarships",
+          "Start application process",
           "One-time fee"
         ]
       },
       "documents": {
-        "title": "Choose Scholarships & Upload Docs",
-        "description": "Pick scholarships and upload your documents. Fast review.",
+        "title": "Choose Scholarships & Upload Documents",
+        "description": "Choose scholarships and upload your documents. Quick review.",
         "items": [
           "Select multiple scholarships",
           "Secure document upload",
-          "Automated initial analysis"
+          "Initial automated analysis"
         ]
       },
       "applicationFee": {
-        "title": "Pay Application Fee (As per university)",
+        "title": "Pay Application Fee (By university)",
         "description": "Confirm your university. This fee is final and non-refundable. (+$100 per dependent)",
         "items": [
-          "See approved scholarships",
+          "View approved scholarships",
           "Confirm university choice",
           "Secure your spot"
         ]
       },
-      "scholarshipFee": {
-        "title": "Pay Scholarship Fee ({{scholarshipFee}})",
-        "description": "Get direct chat with your university. This fee is final and non-refundable.",
+      "placementFee": {
+        "title": "Placement Fee (Variable)",
+        "description": "At MatriculaUSA, the placement fee is a service fee related to full support to secure your scholarship, enrollment, and specialized support for your visa process.",
         "items": [
-          "Direct chat with university",
-          "Submit additional documents",
-          "Final scholarship commitment"
-        ]
-      },
-      "i20Fee": {
-        "title": "Pay I-20 Control Fee ({{i20ControlFee}})",
-        "description": "Needed for your F-1 visa. This fee is final and non-refundable.",
-        "items": [
-          "Essential for F-1 student visa",
-          "Covers I-20 processing",
-          "10-day payment window"
+          "Analysis of your academic and financial profile",
+          "Identification of the best university options for you",
+          "Negotiation or guarantee of scholarship opportunities",
+          "Documentation coordination with the institution",
+          "Enrollment process support",
+          "Full visa process support"
         ]
       }
     },
@@ -247,17 +265,17 @@
         "major": "Computer Science"
       },
       "story3": {
-        "text": "\"The application process was so easy and transparent. I felt supported every step of the way. Highly recommend!\"",
+        "text": "\"The application process was so easy and transparent. I felt supported at every step. Highly recommended!\"",
         "name": "Priya Patel",
         "major": "Business"
       },
       "story4": {
-        "text": "\"I never thought studying in the U.S. was possible for me. MatriculaUSA made my dream come true!\"",
+        "text": "\"I never thought studying in the US was possible for me. MatriculaUSA made my dream come true!\"",
         "name": "Ahmed Hassan",
         "major": "Engineering"
       },
       "story5": {
-        "text": "\"From the first contact to my arrival in the U.S., everything was smooth and professional. Thank you, MatriculaUSA!\"",
+        "text": "\"From the first contact until my arrival in the US, everything was smooth and professional. Thank you, MatriculaUSA!\"",
         "name": "Maria Gomez",
         "major": "Business"
       }
@@ -270,27 +288,27 @@
       },
       "q2": {
         "question": "What is the Selection Process Fee?",
-        "answer": "The Selection Process Fee (US{{selectionProcessFee}}) is the first mandatory payment on the MatriculaUSA platform. It unlocks your full access to view all scholarships and start your application process. This fee is final and non-refundable."
+        "answer": "The Selection Process Fee $400 is the first mandatory payment on the MatriculaUSA platform. It unlocks your full access to view all scholarships and start your application process. This fee is final and non-refundable."
       },
       "q3": {
-        "question": "What is the Scholarship Fee?",
-        "answer": "The Scholarship Fee (US{{scholarshipFee}}) is charged when you proceed with applications for exclusive scholarships through MatriculaUSA. This fee covers processing costs and personalized support for your scholarship applications. This fee is final and non-refundable."
+        "question": "What is the Placement Fee?",
+        "answer": "The placement fee covers the professional work required to successfully connect and enroll a student in the right university program. This fee is variable and directly linked to the scholarship amount: the higher the placement fee, the lower your annual tuition.<div class=\"mt-4 overflow-x-auto\"><table class=\"min-w-full divide-y divide-slate-200 border border-slate-200 rounded-lg overflow-hidden\"><thead class=\"bg-slate-100\"><tr><th class=\"px-4 py-2 text-left text-xs font-bold text-slate-500 uppercase\">Placement Fee</th><th class=\"px-4 py-2 text-left text-xs font-bold text-slate-500 uppercase\">Annual Tuition</th></tr></thead><tbody class=\"divide-y divide-slate-200\"><tr><td class=\"px-4 py-2 text-sm\">$100</td><td class=\"px-4 py-2 text-sm text-green-600 font-bold\">$9,500</td></tr><tr><td class=\"px-4 py-2 text-sm\">$150</td><td class=\"px-4 py-2 text-sm text-green-600 font-bold\">$9,000</td></tr><tr><td class=\"px-4 py-2 text-sm\">$200</td><td class=\"px-4 py-2 text-sm text-green-600 font-bold\">$8,500</td></tr><tr><td class=\"px-4 py-2 text-sm\">$250</td><td class=\"px-4 py-2 text-sm text-green-600 font-bold\">$8,000</td></tr><tr><td class=\"px-4 py-2 text-sm\">$300</td><td class=\"px-4 py-2 text-sm text-green-600 font-bold\">$7,500</td></tr><tr><td class=\"px-4 py-2 text-sm\">$350</td><td class=\"px-4 py-2 text-sm text-green-600 font-bold\">$7,000</td></tr><tr><td class=\"px-4 py-2 text-sm\">$550</td><td class=\"px-4 py-2 text-sm text-green-600 font-bold\">$6,500</td></tr><tr><td class=\"px-4 py-2 text-sm\">$900</td><td class=\"px-4 py-2 text-sm text-green-600 font-bold\">$6,000</td></tr><tr><td class=\"px-4 py-2 text-sm\">$1,100</td><td class=\"px-4 py-2 text-sm text-green-600 font-bold\">$5,500</td></tr><tr><td class=\"px-4 py-2 text-sm\">$1,200</td><td class=\"px-4 py-2 text-sm text-green-600 font-bold\">$5,000</td></tr><tr><td class=\"px-4 py-2 text-sm\">$1,450</td><td class=\"px-4 py-2 text-sm text-green-600 font-bold\">$4,500</td></tr></tbody></table></div>"
       },
       "q4": {
         "question": "What is the Application Fee?",
-        "answer": "The Application Fee varies by university and is a payment required to formally process your application after you have been accepted. This amount confirms your intention to enroll and is managed directly by the platform."
+        "answer": "The Application Fee varies by university and is a required payment to formally process your application after you have been accepted. This amount confirms your intent to enroll and is managed directly by the platform. This fee is final and non-refundable."
       },
       "q5": {
-        "question": "What is the I-20 Control Fee?",
-        "answer": "The I-20 Control Fee (US${{i20ControlFee}}) is a mandatory payment for students who need to obtain the I-20 form, essential for applying for the F-1 student visa. This fee ensures fast and accurate processing of your visa documents."
+        "question": "How do I choose my scholarship?",
+        "answer": "After paying the Selection Process Fee and submitting your documents, our AI and support team will present the best scholarship options for your profile. You can then choose the one that best fits your budget and goals."
       },
       "q6": {
-        "question": "Are there any other fees I should be aware of?",
+        "question": "Are there other fees I should know about?",
         "answer": "All mandatory fees for your application and enrollment process are listed in your dashboard before any payment. Some universities may have additional fees (e.g., housing deposits, orientation fees), but these will always be communicated directly by the university or by us in advance. All fees are final and non-refundable."
       },
       "q7": {
         "question": "How can I pay these fees?",
-        "answer": "You can pay all fees directly through the MatriculaUSA platform using international credit or debit cards. Payments are securely processed via Stripe, and you will receive a confirmation for each transaction. All fees are final and non-refundable."
+        "answer": "You can pay all fees directly through the MatriculaUSA platform using international credit or debit cards. Payments are processed securely via Stripe, and you will receive a confirmation for each transaction. All fees are final and non-refundable."
       },
       "q8": {
         "question": "Is my payment information secure?",
@@ -298,11 +316,11 @@
       },
       "q9": {
         "question": "Can I get a refund?",
-        "answer": "You are entitled to a full refund of fees paid if your application is not successful or you are not approved for a scholarship. However, if you withdraw from the process or change your mind after starting the application, the fees paid are non-refundable, as processing and support will have already begun. All fees are final and non-refundable."
+        "answer": "You have the right to a full refund of the fees paid if your application is unsuccessful or you are not approved for a scholarship. However, if you withdraw from the process or change your mind after starting the application, the fees paid are non-refundable, as binary processing and support will have already begun. All fees are final and non-refundable."
       },
       "q10": {
         "question": "Do I have to pay all fees at once?",
-        "answer": "No. The fees are separate purchases and are paid in stages as you progress through the process. You pay the Selection Process Fee (US${{selectionProcessFee}}) first, then the Scholarship Fee (US${{scholarshipFee}}) (if applicable), followed by the Application Fee, and finally the I-20 Control Fee (US${{i20ControlFee}}). All are mandatory for the complete flow, but do not need to be paid simultaneously."
+        "answer": "No. The fees are separate and paid in stages. You pay the Selection Process Fee first, then the Application Fee (if applicable), and finally the Placement Fee associated with the chosen scholarship. All are mandatory but paid at different times."
       },
       "q11": {
         "question": "Who can I contact if I have questions about fees or payments?",
@@ -310,22 +328,23 @@
       }
     }
   },
+
   "forStudents": {
     "hero": {
-      "title": "Study in the USA with",
+      "title": "Study in the US with",
       "titleHighlight": "exclusive scholarships",
       "subtitle": "AI-Powered Selection Process",
-      "description": "Study paying <span class=\"text-[#D0151C] font-bold\">up to 50% less</span>, with hybrid scholarships and the chance to work legally — for just <span class=\"text-yellow-400 font-bold\">$350</span> to start.",
+      "description": "Study paying <span class=\"text-[#D0151C] font-bold\">up to 50% less</span>, with hybrid scholarships and a chance to work legally — for just <span class=\"text-yellow-400 font-bold\">$400</span> to start.",
       "ctaButton": "Start Now",
       "trustElements": {
-        "approval24h": "Approval in 24h",
+        "approval24h": "24h Approval",
         "guaranteed": "100% Guaranteed",
         "approved": "+10,000 approved"
       }
     },
     "benefits": {
-      "title": "Benefits that make the difference",
-      "subtitle": "Discover why thousands of students choose Matrícula USA to fulfill their American dream",
+      "title": "Benefits that make a difference",
+      "subtitle": "Discover why thousands of students choose MatriculaUSA to achieve their American dream",
       "ctaButton": "Discover my ideal scholarship",
       "benefits": {
         "economy": {
@@ -335,12 +354,12 @@
         },
         "fastApproval": {
           "title": "Fast Approval",
-          "description": "AI-optimized process that speeds up your approval by up to 80%",
+          "description": "AI-optimized process that accelerates your approval by up to 80%",
           "highlight": "24h"
         },
         "hybridMode": {
           "title": "Hybrid Mode",
-          "description": "Study online and in-person, saving on accommodation and food",
+          "description": "Study online and in person, saving on housing and food",
           "highlight": "Flexible"
         },
         "multipleOpportunities": {
@@ -354,66 +373,61 @@
           "highlight": "100%"
         },
         "support": {
-          "title": "Complete Support",
-          "description": "Support from application to departure to the USA",
+          "title": "Full Support",
+          "description": "Monitoring from application to boarding to the US",
           "highlight": "24/7"
         }
       }
     },
     "howItWorks": {
       "title": "How It Works",
-      "subtitle": "Simple and transparent process in 7 steps to guarantee your scholarship",
+      "subtitle": "Simple and transparent 6-step process to guarantee your scholarship",
       "ctaButton": "START NOW",
-      "ctaDescription": "Start your journey to study in the USA today",
+      "ctaDescription": "Start your journey to study in the US today",
       "steps": {
         "processFee": {
           "title": "Selection Process Fee",
-          "description": "Pay only $350 to start your journey studying in the USA",
-          "price": "$350"
+          "description": "Start your journey with our profile analysis and personalized search for just $400",
+          "price": "$400"
         },
         "scholarshipChoice": {
           "title": "Scholarship Choice",
-          "description": "Our AI analyzes your profile and suggests the best scholarships for you",
+          "description": "Our AI identifies the best opportunities and you choose the ideal one for your budget",
           "price": "Free"
         },
         "application": {
           "title": "Application",
-          "description": "We send your application to partner universities",
+          "description": "We take care of all documentation submission to partner universities",
           "price": "✓"
         },
         "enrollmentFee": {
           "title": "Enrollment Fee",
-          "description": "Pay only when approved by the university",
+          "description": "Mandatory university fee to process your official enrollment after acceptance",
           "price": "Variable"
         },
-        "scholarshipFee": {
-          "title": "Scholarship Fee",
-          "description": "Scholarship value with discount applied automatically",
-          "price": "With Discount"
-        },
-        "i20Fee": {
-          "title": "I-20 Fee",
-          "description": "Official document for your student visa",
-          "price": "Included"
+        "placementFee": {
+          "title": "Placement Fee",
+          "description": "Covers professional networking, scholarship negotiation, and support up to boarding",
+          "price": "Variable"
         },
         "spotGuaranteed": {
-          "title": "Guaranteed Spot",
-          "description": "Your spot is guaranteed at the chosen university",
+          "title": "Spot Guaranteed",
+          "description": "Your spot is guaranteed and you are ready for your US journey",
           "price": "✓"
         }
       }
     },
     "comparison": {
-      "title": "From high costs and uncertainty... to real savings and guaranteed approval",
-      "subtitle": "See the real difference between studying on your own vs. with Matrícula USA",
+      "title": "From high spending and uncertainty... to real savings and guaranteed approval",
+      "subtitle": "See the real difference between studying on your own vs. with MatriculaUSA",
       "ctaButton": "I WANT TO SAVE",
       "before": {
-        "title": "Without Matrícula USA",
+        "title": "Without MatriculaUSA",
         "subtitle": "Traditional process",
         "costLabel": "Total cost: $15,000 - $25,000",
         "items": [
           "Slow and complex process",
-          "High rejection risk",
+          "High risk of rejection",
           "No specialized support",
           "Hidden costs and surprises",
           "Difficulty getting scholarships",
@@ -421,7 +435,7 @@
         ]
       },
       "after": {
-        "title": "With Matrícula USA",
+        "title": "With MatriculaUSA",
         "subtitle": "AI-optimized process",
         "savingsLabel": "Average savings: $8,000 - $15,000",
         "items": [
@@ -435,24 +449,24 @@
       }
     },
     "specialOffer": {
-      "title": "Get priority on the most competitive scholarships and exclusive benefits",
-      "subtitle": "By enrolling today, you guarantee:",
+      "title": "Get priority in the most competitive scholarships and exclusive benefits",
+      "subtitle": "By signing up today, you guarantee:",
       "urgencyTitle": "Attention: Limited Spots",
-      "urgencyDescription": "Scholarships are released in order of enrollment. <span class=\"text-[#D0151C] font-bold\">Each day of delay can mean losing your dream spot.</span>",
+      "urgencyDescription": "Scholarships are released in order of enrollment. <span class=\"text-[#D0151C] font-bold\">Each day of delay can mean losing the spot of your dreams.</span>",
       "ctaButton": "I WANT MY SCHOLARSHIP NOW",
       "ctaDescription": "⏰ Limited time offer",
       "benefits": [
         {
           "title": "24h Analysis",
-          "description": "Profile analysis in 24 hours to know your best options right away"
+          "description": "Profile analysis in 24 hours to know your best options immediately"
         },
         {
           "title": "Scholarship Priority",
-          "description": "Priority on scholarships with limited spots"
+          "description": "Priority in scholarships with limited spots"
         },
         {
           "title": "Early Access",
-          "description": "Early access to hybrid scholarships (the most sought after)"
+          "description": "Early access to hybrid scholarships (the most requested)"
         },
         {
           "title": "Dedicated Support",
@@ -462,20 +476,20 @@
     },
     "guarantee": {
       "title": "Guaranteed approval or your money back",
-      "subtitle": "We know that investing in your future requires confidence. That's why Matrícula USA is the only program that offers:",
+      "subtitle": "We know that investing in your future requires confidence. That's why MatriculaUSA is the only program that offers:",
       "ctaButton": "START RISK-FREE",
       "guarantees": [
         {
           "title": "Approval Guarantee",
-          "description": "If you follow our process and are not approved, we refund the Selection Process Fee in full."
+          "description": "If you follow our process and are not approved, we refund the Selection Process Fee entirely."
         },
         {
           "title": "Transparent Process",
-          "description": "No hidden fees or surprise costs. You know exactly how much you'll pay from start to finish."
+          "description": "No hidden fees or surprise costs. You know exactly how much you will pay from start to finish."
         },
         {
           "title": "Support Until Arrival",
-          "description": "We don't stop at university acceptance. Our team follows the entire process until departure."
+          "description": "We don't stop after the university acceptance. Our team accompanies the entire process until boarding."
         }
       ],
       "bottomMessage": "The risk is all ours. For you, it's just taking advantage of the opportunity."
@@ -487,27 +501,31 @@
       "items": [
         {
           "question": "What is included in the selection process fee?",
-          "answer": "$350 includes a complete profile analysis, AI-powered personalized scholarship matching, applications to multiple universities, process tracking, and support until approval."
+          "answer": "$400 includes a full profile analysis, personalized AI scholarship search, applications to multiple universities, process monitoring, and support until approval."
         },
         {
-          "question": "Can I apply to as many scholarships as I want?",
-          "answer": "Yes! With a single fee you can apply to all scholarships compatible with your profile. Our AI identifies the best opportunities and you choose how many you want to try."
+          "question": "What is the Placement Fee?",
+          "answer": "The Placement Fee covers specialized support to secure your scholarship and enrollment. It refers to profile analysis, identification of best options, scholarship negotiation, and boarding support. It is variable and directly linked to the scholarship amount: the higher the placement fee, the lower your annual tuition.<div class=\"mt-4 overflow-x-auto\"><table class=\"min-w-full divide-y divide-slate-200 border border-slate-200 rounded-lg overflow-hidden\"><thead class=\"bg-slate-100\"><tr><th class=\"px-4 py-2 text-left text-xs font-bold text-slate-500 uppercase\">Placement Fee</th><th class=\"px-4 py-2 text-left text-xs font-bold text-slate-500 uppercase\">Annual Tuition</th></tr></thead><tbody class=\"divide-y divide-slate-200\"><tr><td class=\"px-4 py-2 text-sm\">$100</td><td class=\"px-4 py-2 text-sm text-green-600 font-bold\">$9,500</td></tr><tr><td class=\"px-4 py-2 text-sm\">$150</td><td class=\"px-4 py-2 text-sm text-green-600 font-bold\">$9,000</td></tr><tr><td class=\"px-4 py-2 text-sm\">$200</td><td class=\"px-4 py-2 text-sm text-green-600 font-bold\">$8,500</td></tr><tr><td class=\"px-4 py-2 text-sm\">$250</td><td class=\"px-4 py-2 text-sm text-green-600 font-bold\">$8,000</td></tr><tr><td class=\"px-4 py-2 text-sm\">$300</td><td class=\"px-4 py-2 text-sm text-green-600 font-bold\">$7,500</td></tr><tr><td class=\"px-4 py-2 text-sm\">$350</td><td class=\"px-4 py-2 text-sm text-green-600 font-bold\">$7,000</td></tr><tr><td class=\"px-4 py-2 text-sm\">$550</td><td class=\"px-4 py-2 text-sm text-green-600 font-bold\">$6,500</td></tr><tr><td class=\"px-4 py-2 text-sm\">$900</td><td class=\"px-4 py-2 text-sm text-green-600 font-bold\">$6,000</td></tr><tr><td class=\"px-4 py-2 text-sm\">$1,100</td><td class=\"px-4 py-2 text-sm text-green-600 font-bold\">$5,500</td></tr><tr><td class=\"px-4 py-2 text-sm\">$1,200</td><td class=\"px-4 py-2 text-sm text-green-600 font-bold\">$5,000</td></tr><tr><td class=\"px-4 py-2 text-sm\">$1,450</td><td class=\"px-4 py-2 text-sm text-green-600 font-bold\">$4,500</td></tr></tbody></table></div>"
+        },
+        {
+          "question": "Can I apply for as many scholarships as I want?",
+          "answer": "Yes! With a single fee you can apply for all scholarships compatible with your profile. Our AI identifies the best opportunities and you choose how many you want to try."
         },
         {
           "question": "How does the guarantee work?",
-          "answer": "If you follow our complete process and are not approved at any university, we refund 100% of the selection process fee."
+          "answer": "If you follow our full process and are not approved by any university, we refund 100% of the selection process fee. It's our guarantee of trust in the system."
         },
         {
           "question": "Which universities participate?",
-          "answer": "We work with more than 45 accredited American universities, including Arizona State University, Florida International University, University of California and many others."
+          "answer": "We work with more than 45 accredited American universities, including Arizona State University, Florida International University, University of California, and many others."
         },
         {
           "question": "Do I need to speak English?",
-          "answer": "Yes, a basic level of English is required. Some universities accept an internal proficiency test or offer preparatory programs for those who need to improve the language."
+          "answer": "Yes, a basic level of English is required. Some universities accept an internal proficiency test or offer preparatory programs for those who need to improve their language."
         },
         {
           "question": "How long does it take to know if I was approved?",
-          "answer": "The universities' analysis and response process varies between 2 to 8 weeks. You will receive constant updates on the status of your application."
+          "answer": "The analysis and response process from universities varies from 2 to 8 weeks. You will receive constant updates on your application status."
         }
       ]
     },
@@ -516,7 +534,7 @@
       "subtitle": "See what our students are saying about their experience",
       "ctaButton": "BE THE NEXT APPROVED",
       "statistics": {
-        "approved": "Approved students",
+        "approved": "Students approved",
         "approvalRate": "Approval rate",
         "averageSavings": "Average savings",
         "partnerUniversities": "Partner universities"
@@ -526,21 +544,21 @@
           "name": "Gustavo Santos",
           "university": "University of California",
           "course": "Computer Science",
-          "text": "I got a 40% scholarship and I'm fulfilling my dream of studying in the USA. The process was much simpler than I imagined.",
+          "text": "I got a 40% scholarship and I'm fulfilling my dream of studying in the US! The process was much simpler than I imagined.",
           "savings": "$18,000"
         },
         {
           "name": "João Santos",
           "university": "Arizona State University",
           "course": "Business Administration",
-          "text": "The hybrid mode was perfect for me. I saved a lot on accommodation and still have the in-person experience.",
+          "text": "The hybrid mode was perfect for me. I saved a lot on housing and still have the in-person experience.",
           "savings": "$22,000"
         },
         {
           "name": "Ana Costa",
           "university": "Florida International University",
           "course": "International Business",
-          "text": "Approved at 3 different universities! The AI really found the best options for my profile.",
+          "text": "Approved at 3 different universities! AI really found the best options for my profile.",
           "savings": "$25,000"
         },
         {
@@ -554,260 +572,17 @@
           "name": "Fernanda Lima",
           "university": "University of South Florida",
           "course": "Marketing",
-          "text": "The support was fantastic from start to finish. Now I'm studying and working legally in the USA!",
+          "text": "The support was fantastic from start to finish. Now I'm studying and working legally in the US!",
           "savings": "$20,000"
         },
         {
           "name": "Roberto Silva",
           "university": "California State University",
           "course": "Data Science",
-          "text": "I got a hybrid scholarship that allows me to study online and in-person. Perfect for my situation!",
+          "text": "I got a hybrid scholarship that allows me to study online and in person. Perfect for my situation!",
           "savings": "$35,000"
         }
       ]
-    }
-  },
-  "processPages": {
-    "common": {
-      "selectionProcess": "Selection Process",
-      "applicationFeeI20": "Application Fee + I-20",
-      "scholarshipFee": "Scholarship Fee",
-      "controlFee": "Control Fee",
-      "legalFees": "Legal Fees",
-      "fundsProof": "Proof of Funds",
-      "valuesSummary": "Values Summary",
-      "total": "Total:",
-      "step": "Step",
-      "optional": "Optional",
-      "rights": "All rights reserved.",
-      "clients": {
-        "title": "Our Clients",
-        "description": "Students who achieved the dream of studying in the United States",
-        "client": "Client"
-      },
-      "conversion": {
-        "title": "Ready to start your process?",
-        "description": "Click the button below to start your journey to the United States with all the necessary support.",
-        "buttonText": "Start Now",
-        "redirectAuthenticated": "You will be directed to the student area to make the payment for the selection process.",
-        "redirectAnonymous": "You will be directed to create your account. It's fast and free!",
-        "referralBadge": "Seller Code Applied",
-        "afterSteps": {
-          "title": "Ready to take the first step?",
-          "description": "Now that you know the steps, start your journey today.",
-          "buttonText": "Start Process"
-        },
-        "afterFunds": {
-          "title": "Meet the financial requirements?",
-          "description": "Secure your spot and start the search for the best scholarships now.",
-          "buttonText": "Secure my Spot"
-        },
-        "benefits": {
-          "transparent": {
-            "title": "Transparent Process",
-            "description": "All costs detailed from the beginning"
-          },
-          "support": {
-            "title": "Complete Support",
-            "description": "Monitoring at all stages"
-          },
-          "secure": {
-            "title": "Secure Payment",
-            "description": "Reliable and protected methods"
-          }
-        }
-      }
-    },
-    "initial": {
-      "header": {
-        "title": "Initial Process",
-        "subtitle": "F-1 Student Visa — Application from Abroad",
-        "description": "Complete guide with all steps and costs to obtain your F-1 student visa applying from outside the United States"
-      },
-      "promise": "If your plan is to arrive in the United States with an approved F1 visa, we organize the path from school selection to consulate appointment. With our guide, you understand each step, all costs, and receive guidance to build a strong application aligned with your life project.",
-      "steps": {
-        "title": "Process Steps",
-        "description": "Learn all the necessary steps to obtain your F-1 student visa",
-        "list": {
-          "step1": {
-            "description": "First step to verify if you are eligible for the F-1 student visa.",
-            "items": [
-              "Valid passport (minimum 1 year)",
-              "Proof of bank funds ($22,000 minimum)",
-              "Full address in country of origin",
-              "School transcripts or diploma",
-              "Payment via Zelle to: pay@matriculausa.com"
-            ]
-          },
-          "step2": {
-            "description": "Application and I-20 issuance fee for the consulate interview.",
-            "items": [
-              "I-20 form issuance",
-              "Enrollment processing",
-              "$100 per each additional dependent"
-            ]
-          },
-          "step3": {
-            "description": "Scholarship-related fee.",
-            "items": [
-              "School registration form",
-              "Other necessary documentation"
-            ]
-          },
-          "step4": {
-            "description": "I-20 control fee throughout the entire visa process.",
-            "items": [
-              "Active I-20 control",
-              "Monitoring throughout the process",
-              "Support for questions and guidance",
-              "Payment of this fee upon issuance of the acceptance letter by the institution"
-            ]
-          },
-          "step5": {
-            "description": "Complete legal follow-up of the visa process.",
-            "items": [
-              "$1,800 for the main applicant",
-              "$100 per each additional dependent",
-              "Preparation for consulate interview",
-              "Preparation of all documentation"
-            ]
-          }
-        }
-      },
-      "funds": {
-        "description": "Minimum financial proof requirements for the F-1 visa",
-        "mainApplicant": "Main Applicant",
-        "perDependent": "Per Dependent",
-        "minAmount": "$22,000",
-        "dependentAmount": "+$5,000",
-        "minBankAccount": "Minimum amount in bank account",
-        "additionalPerDependent": "Additional amount per each dependent",
-        "note": "Amounts must be proven through updated bank statement. The American consulate will require these documents during the visa interview."
-      },
-      "values": {
-        "description": "All costs involved in the Initial process"
-      }
-    },
-    "transfer": {
-      "header": {
-        "title": "Transfer Process",
-        "subtitle": "School Transfer — Student Transfer",
-        "description": "Complete guide with all steps and costs to transfer schools in the United States"
-      },
-      "promise": "Want to transfer your I-20 without interrupting your studies or risking your status? We show you, step by step, when and how to make the transfer, which fees to consider, and how to keep your course load and dates in order, so you can continue studying peacefully at your new school.",
-      "steps": {
-        "title": "Process Steps",
-        "description": "Learn all the necessary steps to transfer schools",
-        "list": {
-          "step1": {
-            "description": "First step to verify if you are eligible for the Transfer process.",
-            "items": [
-              "Valid passport (minimum 1 year)",
-              "Valid I-94",
-              "Proof of current visa or status",
-              "Proof of bank funds ($22,000 minimum)",
-              "Full address in the US",
-              "Payment via Zelle to: pay@matriculausa.com"
-            ]
-          },
-          "step2": {
-            "description": "Application and I-20 issuance fee.",
-            "items": [
-              "I-20 form issuance",
-              "Enrollment processing",
-              "$100 per each additional dependent"
-            ]
-          },
-          "step3": {
-            "description": "Scholarship-related fee.",
-            "items": [
-              "School registration form",
-              "Other necessary documentation"
-            ]
-          },
-          "step4": {
-            "description": "I-20 control fee throughout the entire Transfer process.",
-            "items": [
-              "Active I-20 control",
-              "Monitoring throughout the process",
-              "Support for questions and guidance",
-              "Payment of this fee upon issuance of the acceptance letter by the institution"
-            ]
-          }
-        }
-      },
-      "funds": {
-        "description": "Minimum financial proof requirements for the Transfer process",
-        "note": "Amounts must be proven through updated bank statement. Investments and applications are also accepted as proof of funds."
-      },
-      "values": {
-        "description": "All costs involved in the Transfer process"
-      }
-    },
-    "cos": {
-      "header": {
-        "title": "COS Process",
-        "subtitle": "Change of Status — Status Change",
-        "description": "Complete guide with all steps and costs to change your visa status in the United States"
-      },
-      "promise": "Changing your status within the US doesn't have to be a maze. Here you find a complete guide with all steps, all costs, and the necessary support to do your COS safely, with financial planning and legal follow-up until the USCIS response.",
-      "steps": {
-        "title": "Process Steps",
-        "description": "Learn all the necessary steps to change your visa status",
-        "list": {
-          "step1": {
-            "description": "First step to verify if you are eligible for the COS process.",
-            "items": [
-              "Valid passport (minimum 1 year)",
-              "Valid I-94",
-              "Proof of current visa or status",
-              "Proof of bank funds ($22,000 minimum)",
-              "Full address in the US",
-              "Payment via Zelle to: pay@matriculausa.com"
-            ]
-          },
-          "step2": {
-            "description": "Application and I-20 issuance fee.",
-            "items": [
-              "I-20 form issuance",
-              "Enrollment processing",
-              "$100 per each additional dependent"
-            ]
-          },
-          "step3": {
-            "description": "Scholarship-related fee.",
-            "items": [
-              "School registration form",
-              "Other necessary documentation"
-            ]
-          },
-          "step4": {
-            "description": "I-20 control fee throughout the entire COS process.",
-            "items": [
-              "Active I-20 control",
-              "Monitoring throughout the process",
-              "Support for questions and guidance",
-              "Payment of this fee upon issuance of the acceptance letter by the institution"
-            ]
-          },
-          "step5": {
-            "description": "Complete legal follow-up of the COS process.",
-            "items": [
-              "$1,800 for the main applicant",
-              "$100 per each additional dependent",
-              "Complete legal follow-up",
-              "Preparation of all documentation"
-            ]
-          }
-        }
-      },
-      "funds": {
-        "description": "Minimum financial proof requirements for the COS process",
-        "note": "Amounts must be proven through updated bank statement. Investments and applications are also accepted as proof of funds."
-      },
-      "values": {
-        "description": "All costs involved in the COS process"
-      }
     }
   },
   "stepByStepGuide": {
@@ -821,35 +596,27 @@
     "steps": {
       "step1": {
         "title": "Welcome to Matrícula USA! 🎓",
-        "description": "Let's guide you through the entire application process for scholarships in the USA. It's easier than you think!"
+        "description": "We will guide you through the entire scholarship application process in the US. It's easier than you think!"
       },
       "step2": {
         "title": "1. Explore Scholarships",
-        "description": "Browse our list of scholarships. Each one has detailed information about values, requirements, and partner universities. Click on the ones that interest you!"
+        "description": "Browse our scholarship list. Each one has detailed information about values, requirements, and partner universities. Click on those that interest you!"
       },
       "step3": {
         "title": "2. Add to Selection List",
         "description": "Select the scholarships you want to apply for and add them to your selection list. You can choose multiple scholarships and manage your selections easily."
       },
       "step4": {
-        "title": "3. Student Type",
-        "description": "Select your student type: Initial, Transfer, or Status Change. This helps us direct the best opportunities for your profile."
-      },
-      "step5": {
-        "title": "4. Upload Documents",
+        "title": "3. Upload Documents",
         "description": "Upload your documents: Passport, High School Diploma, and a Bank Statement. Our team will review everything and give you feedback."
       },
+      "step5": {
+        "title": "4. Placement Fee and Final Support",
+        "description": "After university approval, you proceed with the Placement Fee. This covers our professional services to secure your enrollment and support you until arrival."
+      },
       "step6": {
-        "title": "5. Application Fee Selection",
-        "description": "After submitting your documents, you must wait for university approval to continue with the selection process. Once approved, you will be able to proceed with paying the Application Fee and Scholarship Fee."
-      },
-      "step7": {
-        "title": "6. University Chat & Application Tracking",
-        "description": "In the 'My Applications' section, you will have access to direct chat with the university, where the university can request additional payments, send you your acceptance letter, and track your entire application process."
-      },
-      "step8": {
-        "title": "7. Application Chat & I-20 Control Fee",
-        "description": "In the Application Chat, you can talk directly to the university. The university may request more documents. Here you will also pay the I-20 Control Fee if required."
+        "title": "5. Spot Guaranteed",
+        "description": "Once the process is complete, your spot is guaranteed and you are ready to start your American journey!"
       }
     },
     "expandImage": "Expand image",

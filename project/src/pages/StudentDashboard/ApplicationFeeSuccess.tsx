@@ -14,7 +14,7 @@ const ApplicationFeeSuccess: React.FC = () => {
   const [status, setStatus] = useState<VerificationStatus>('loading');
   const [error, setError] = useState<string | null>(null);
   const [applicationFeeAmount, setApplicationFeeAmount] = useState<number>(0);
-  const { t } = useTranslation();
+  const { t } = useTranslation(['dashboard', 'payment', 'common']);
   const { userProfile, user } = useAuth();
   const hasRunRef = useRef(false);
 

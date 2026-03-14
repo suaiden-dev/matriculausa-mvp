@@ -5,8 +5,8 @@ import { useFeeConfig } from './useFeeConfig';
  * Hook personalizado que combina useTranslation com processamento de placeholders de taxas
  * Substitui automaticamente placeholders como ${selectionProcessFee} pelos valores reais das taxas
  */
-export const useTranslationWithFees = () => {
-  const { t } = useTranslation();
+export const useTranslationWithFees = (namespaces?: string | string[]) => {
+  const { t } = useTranslation(namespaces);
   const { processTranslation } = useFeeConfig(undefined);
 
   /**

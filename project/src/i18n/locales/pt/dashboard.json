@@ -1124,6 +1124,8 @@
     "subtitle": "Ganhe créditos indicando amigos para o MatriculaUSA",
     "balance": "Saldo",
     "coins": "moedas",
+    "helpSupport": "Ajuda e Suporte",
+    "smartAssistant": "Assistente Inteligente",
     "totalReferrals": "Total de Indicações",
     "totalEarnings": "Total Ganho",
     "yourReferralCode": "Seu Código de Indicação",
@@ -1308,6 +1310,8 @@
     }
   },
   "matriculaRewardsLanding": {
+    "aiPoweredHelp": "Ajuda com IA",
+    "directMessaging": "Mensagem direta",
     "badge": "Novo Programa de Recompensas",
     "hero": {
       "title": "Transforme Suas",
@@ -1321,7 +1325,7 @@
         },
         "accumulateCoins": {
           "title": "Ganhe Recompensas",
-          "description": "180 coins por indicação que completar o pagamento do I-20"
+          "description": "180 coins por indicação que completar o pagamento da Placement Fee"
         },
         "payLess": {
           "title": "Economize Dinheiro",
@@ -1378,8 +1382,8 @@
         },
         "step2": {
           "title": "Amigos Se Inscrevem",
-          "description": "Quando seus amigos avançam e pagam o I-20, vocês ganham Matricula Coins",
-          "details": "180 coins depois que a taxa de Controle I-20 for paga"
+          "description": "Quando seus amigos avançam e pagam a Placement Fee, vocês ganham Matricula Coins",
+          "details": "180 coins depois que a Placement Fee for paga"
         },
         "step3": {
           "title": "Resgate Desconto de Mensalidade",
@@ -1433,7 +1437,7 @@
           },
           "referFriends": {
             "title": "Indique Amigos e Multiplique Seus Ganhos",
-            "description": "180 coins por cada amigo que pagar a taxa de Controle I-20"
+            "description": "180 coins por cada amigo que pagar a Placement Fee"
           }
         }
       }

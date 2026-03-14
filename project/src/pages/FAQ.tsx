@@ -5,7 +5,7 @@ import { useDynamicFees } from '../hooks/useDynamicFees';
 import SmartChat from '../components/SmartChat';
 
 const FAQ: React.FC = () => {
-  const { t } = useTranslationWithFees();
+  const { t } = useTranslationWithFees(['home', 'common', 'dashboard']);
   const { selectionProcessFee, scholarshipFee, i20ControlFee, hasSellerPackage, packageName } = useDynamicFees();
   const [searchQuery, setSearchQuery] = useState('');
   const [expandedItems, setExpandedItems] = useState<number[]>([]);
@@ -128,7 +128,7 @@ const FAQ: React.FC = () => {
               </div>
               <div className="flex items-center space-x-2">
                 <div className="w-2 h-2 bg-[#05294E] rounded-full"></div>
-                <span>Quick answers</span>
+                <span>{t('home.faq.quickAnswers') || 'Quick answers'}</span>
               </div>
             </div>
           </div>
@@ -143,8 +143,8 @@ const FAQ: React.FC = () => {
             <div className="mb-8">
               <h2 className="text-2xl font-semibold text-gray-900 mb-2">{t('home.faq.badge')}</h2>
               <p className="text-gray-600">
-                {filteredItems.length} question{filteredItems.length !== 1 ? 's' : ''} found
-                {searchQuery && ` for "${searchQuery}"`}
+                {filteredItems.length} {t('home.faq.questionsFound', { count: filteredItems.length }) || (filteredItems.length !== 1 ? 'questions found' : 'question found')}
+                {searchQuery && ` ${t('common.for') || 'for'} "${searchQuery}"`}
               </p>
             </div>
             
@@ -181,9 +181,10 @@ const FAQ: React.FC = () => {
                     
                     {isExpanded && (
                       <div className="px-6 pb-4 border-t border-gray-100">
-                        <p className="text-gray-600 text-sm leading-relaxed pt-4">
-                          {item.a}
-                        </p>
+                        <div 
+                          className="text-gray-600 text-sm leading-relaxed pt-4"
+                          dangerouslySetInnerHTML={{ __html: item.a }}
+                        />
                       </div>
                     )}
                   </div>
@@ -196,8 +197,8 @@ const FAQ: React.FC = () => {
                 <div className="w-16 h-16 bg-gray-100 rounded-lg flex items-center justify-center mx-auto mb-4">
                   <Search className="h-8 w-8 text-gray-400" />
                 </div>
-                <h3 className="text-lg font-medium text-gray-900 mb-2">No questions found</h3>
-                <p className="text-gray-600">Try adjusting your search terms or browse all questions.</p>
+                <h3 className="text-lg font-medium text-gray-900 mb-2">{t('common.noResults') || 'No questions found'}</h3>
+                <p className="text-gray-600">{t('common.tryAdjustingFilters') || 'Try adjusting your search terms or browse all questions.'}</p>
               </div>
             )}
           </div>
@@ -206,7 +207,7 @@ const FAQ: React.FC = () => {
           <div className="lg:col-span-1 space-y-6">
             {/* Contact Options */}
             <div className="bg-white rounded-lg border border-gray-200 p-6">
-              <h3 className="text-lg font-semibold text-gray-900 mb-4">{t('studentDashboard.matriculaRewards.helpSupport')}</h3>
+              <h3 className="text-lg font-semibold text-gray-900 mb-4">{t('dashboard:matriculaRewards.helpSupport')}</h3>
               
               <div className="space-y-3">
                 <div className="flex items-center p-3 border border-gray-200 rounded-lg hover:border-[#05294E] hover:bg-gray-50 transition-colors cursor-pointer">
@@ -214,8 +215,8 @@ const FAQ: React.FC = () => {
                     <MessageCircle className="h-5 w-5 text-blue-600" />
                   </div>
                   <div className="flex-1">
-                    <p className="font-medium text-gray-900">{t('studentDashboard.matriculaRewards.smartAssistant')}</p>
-                    <p className="text-sm text-gray-600">AI-powered help</p>
+                    <p className="font-medium text-gray-900">{t('dashboard:matriculaRewards.smartAssistant')}</p>
+                    <p className="text-sm text-gray-600">{t('dashboard:matriculaRewardsLanding.aiPoweredHelp') || 'AI-powered help'}</p>
                   </div>
                   <div className="w-2 h-2 bg-blue-500 rounded-full"></div>
                 </div>
@@ -226,7 +227,7 @@ const FAQ: React.FC = () => {
                   </div>
                   <div className="flex-1">
                     <p className="font-medium text-gray-900">WhatsApp {t('common.support') || 'Support'}</p>
-                    <p className="text-sm text-gray-600">Direct messaging</p>
+                    <p className="text-sm text-gray-600">{t('dashboard:matriculaRewardsLanding.directMessaging') || 'Direct messaging'}</p>
                   </div>
                   <div className="w-2 h-2 bg-green-500 rounded-full"></div>
                 </div>
@@ -239,21 +240,21 @@ const FAQ: React.FC = () => {
                 <div className="w-8 h-8 bg-white/20 rounded-lg flex items-center justify-center mr-3">
                   <Mail className="h-5 w-5 text-white" />
                 </div>
-                <h3 className="text-lg font-semibold">Still have questions?</h3>
+                <h3 className="text-lg font-semibold">{t('home.about.cta.questions') || 'Still have questions?'}</h3>
               </div>
               
               <p className="text-blue-100 mb-4 text-sm">
-                Use the floating buttons for instant help or contact us directly at info@matriculausa.com
+                {t('home.faq.footerContact') || 'Use the floating buttons for instant help or contact us directly at info@matriculausa.com'}
               </p>
               
               <div className="space-y-2 text-sm">
                 <div className="flex items-center">
                   <CheckCircle className="h-4 w-4 text-green-400 mr-2" />
-                  <span>Instant AI responses</span>
+                  <span>{t('home.faq.instantAiResponses') || 'Instant AI responses'}</span>
                 </div>
                 <div className="flex items-center">
                   <Clock className="h-4 w-4 text-blue-400 mr-2" />
-                  <span>24/7 availability</span>
+                  <span>{t('home.faq.availability') || '24/7 availability'}</span>
                 </div>
               </div>
             </div>

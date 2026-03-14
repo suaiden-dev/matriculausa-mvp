@@ -19,7 +19,7 @@ import { getPlacementFee } from '../utils/placementFeeCalculator';
 import { formatCurrency } from '../utils/currency';
 
 const Scholarships: React.FC = () => {
-  const { t } = useTranslation();
+  const { t } = useTranslation(['scholarships', 'common', 'home', 'school']);
   const { isAuthenticated, user, userProfile } = useAuth();
 
   // Hook para verificar se usuário já tem application fee paga
@@ -472,7 +472,7 @@ const Scholarships: React.FC = () => {
           <div className="text-center">
             <div className="inline-flex items-center bg-white/10 backdrop-blur-sm border border-white/20 rounded-full px-6 py-2 mb-4">
               <Award className="h-4 w-4 mr-2 text-white" />
-              <span className="text-sm font-medium text-white">{t('features.exclusiveScholarships.title')}</span>
+              <span className="text-sm font-medium text-white">{t('home.features.exclusiveScholarships.title')}</span>
             </div>
 
             <h1 className="text-4xl md:text-5xl font-black mb-3 leading-tight">

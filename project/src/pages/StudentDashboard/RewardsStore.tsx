@@ -29,7 +29,7 @@ import { Link } from 'react-router-dom';
 
 
 const RewardsStore: React.FC = () => {
-  const { t } = useTranslation();
+  const { t } = useTranslation(['dashboard', 'common']);
   const { user, userProfile } = useAuth();
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);

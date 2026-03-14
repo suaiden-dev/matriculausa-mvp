@@ -1,0 +1,55 @@
+{
+  "header": {
+    "title": "Centro de Ayuda",
+    "description": "Encuentra respuestas rápidas y orientación detallada para todas tus dudas",
+    "searchPlaceholder": "Buscar temas...",
+    "stats": {
+      "support247": "Soporte 24/7",
+      "quickResponse": "Respuesta rápida"
+    }
+  },
+  "mainTopics": {
+    "title": "Temas Principales",
+    "description": "Encuentra ayuda organizada por categoría",
+    "items": {
+      "profile": {
+        "title": "Creando tu perfil",
+        "description": "Guía paso a paso para configurar tu información académica y personal.",
+        "category": "Configuración"
+      },
+      "application": {
+        "title": "Entendiendo el proceso de solicitud",
+        "description": "Aprende cómo solicitar, seguir tu progreso e saber qué esperar en cada etapa.",
+        "category": "Solicitud"
+      },
+      "payment": {
+        "title": "Pagando tasas",
+        "description": "Cómo pagar, verificar el estado del pago y entender las tasas no reembolsables.",
+        "category": "Pago"
+      },
+      "documents": {
+        "title": "Subiendo documentos",
+        "description": "Consejos para subir expedientes académicos, documentos de identidad y otros archivos necessários.",
+        "category": "Documentos"
+      },
+      "status": {
+        "title": "Siguiendo tu solicitud",
+        "description": "Monitorea tu estado y los próximos pasos después de la presentación.",
+        "category": "Estado"
+      }
+    }
+  },
+  "sidebar": {
+    "needHelp": "¿Necesitas ayuda?",
+    "smartAssistant": "Asistente Inteligente",
+    "smartAssistantDesc": "Ayuda vía IA",
+    "whatsappSupport": "Soporte WhatsApp",
+    "whatsappDesc": "Mensajería directa",
+    "quickSupport": {
+      "title": "Soporte Rápido",
+      "description": "Usa los botones flotantes para ayuda instantánea - Asistente Inteligente y WhatsApp están disponibles 24/7.",
+      "instantAI": "Respuestas instantáneas por IA",
+      "availability247": "Disponibilidad 24/7"
+    }
+  }
+}

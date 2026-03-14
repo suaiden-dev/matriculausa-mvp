@@ -8,7 +8,7 @@ import { useTranslation } from 'react-i18next';
 interface UploadedDoc { name: string; url: string; type: string; uploaded_at: string }
 
 const ManualReview: React.FC = () => {
-  const { t } = useTranslation();
+  const { t } = useTranslation(['dashboard', 'common']);
   const navigate = useNavigate();
   const { user, userProfile } = useAuth();
   const [fieldErrors, setFieldErrors] = useState<Record<string, string>>({});

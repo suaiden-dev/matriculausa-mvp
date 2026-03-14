@@ -39,7 +39,7 @@ const ScholarshipCardFullComponent: React.FC<ScholarshipCardFullProps> = ({
   isLocked = false,
   onViewDetails
 }) => {
-  const { t } = useTranslation();
+  const { t } = useTranslation(['registration', 'scholarships', 'common']);
   const [brokenImage, setBrokenImage] = useState<boolean>(false);
   const isBlocked = is3800ScholarshipBlocked(scholarship);
 

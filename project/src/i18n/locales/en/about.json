@@ -1,0 +1,57 @@
+{
+  "hero": {
+    "title": "Empowering International Education",
+    "description": "MatriculaUSA is the leading digital platform connecting international students to American universities, scholarships, and life-changing opportunities. We simplify the journey to study in the United States with technology, expert guidance, and a student-first approach."
+  },
+  "pillars": {
+    "mission": {
+      "title": "Our Mission",
+      "description": "To democratize access to U.S. higher education for talented students worldwide, providing a seamless, transparent, and supportive experience from application to enrollment."
+    },
+    "vision": {
+      "title": "Our Vision",
+      "description": "To be the most trusted global bridge between international students and American universities, fostering diversity, opportunity, and academic excellence."
+    },
+    "values": {
+      "title": "Our Values",
+      "description": "Integrity, inclusion, innovation, and a relentless commitment to student success guide every decision we make."
+    }
+  },
+  "story": {
+    "badge": "Our Story",
+    "title": "Transforming Dreams into Reality",
+    "p1": "MatriculaUSA was founded by international education specialists who understand the unique challenges faced by students seeking to study in the United States. Our team has helped thousands of students from diverse backgrounds secure scholarships, admissions, and a smooth transition to American campus life.",
+    "p2": "We partner with top U.S. universities and organizations to offer exclusive opportunities, transparent processes, and ongoing support—making the American dream accessible to all.",
+    "stats": {
+      "scholarships": "in Scholarships Awarded",
+      "students": "Students Supported"
+    }
+  },
+  "howItWorks": {
+    "title": "How <0>MatriculaUSA</0> Works",
+    "description": "We make the U.S. college application process simple, transparent, and student-friendly.",
+    "steps": {
+      "explore": {
+        "title": "1. Explore",
+        "description": "Browse partner universities and scholarship opportunities tailored to your profile."
+      },
+      "apply": {
+        "title": "2. Apply",
+        "description": "Submit your application and required documents through our secure digital platform."
+      },
+      "match": {
+        "title": "3. Get Matched",
+        "description": "Our team and technology connect you with the best-fit universities and scholarships."
+      },
+      "succeed": {
+        "title": "4. Succeed",
+        "description": "Receive guidance on visa, enrollment, and your transition to U.S. campus life."
+      }
+    }
+  },
+  "cta": {
+    "title": "Ready to Start Your Journey?",
+    "description": "Join thousands of students who have made their American dream a reality with MatriculaUSA.",
+    "button": "Get Started"
+  }
+}

@@ -13,7 +13,7 @@ const Header: React.FC = () => {
   const [isUserMenuOpen, setIsUserMenuOpen] = useState(false);
   const { user, userProfile, logout, isAuthenticated } = useAuth();
   // const navigate = useNavigate();
-  const { t } = useTranslation();
+  const { t } = useTranslation(['common']);
   const location = useLocation();
   const { hasTranslation } = usePageTranslationStatus();
   const [schoolImageUrl, setSchoolImageUrl] = useState<string | null>(null);
@@ -80,14 +80,14 @@ const Header: React.FC = () => {
   };
 
   const getDashboardLabel = () => {
-    if (!user) return 'Dashboard';
+    if (!user) return t('nav.dashboard');
     switch (user.role) {
-      case 'student': return 'Student Dashboard';
-      case 'school': return 'School Dashboard';
-      case 'admin': return 'Admin Dashboard';
-      case 'affiliate_admin': return 'Affiliate Admin Dashboard';
-      case 'seller': return 'Seller Dashboard';
-      default: return 'Dashboard';
+      case 'student': return t('nav.studentDashboard');
+      case 'school': return t('nav.schoolDashboard');
+      case 'admin': return t('nav.adminDashboard');
+      case 'affiliate_admin': return t('nav.affiliateDashboard');
+      case 'seller': return t('nav.sellerDashboard');
+      default: return t('nav.dashboard');
     }
   };
 
@@ -132,7 +132,7 @@ const Header: React.FC = () => {
               to="/eb3-jobs"
               className="text-slate-700 hover:text-[#05294E] transition-colors font-medium relative group"
             >
-              EB-3 Jobs
+              {t('nav.eb3Jobs')}
               <span className="absolute -bottom-1 left-0 w-0 h-0.5 bg-[#05294E] group-hover:w-full transition-all duration-300"></span>
             </Link>
             <Link to="/scholarships" className="text-slate-700 hover:text-[#05294E] transition-colors font-medium relative group flex items-center">
@@ -199,7 +199,7 @@ const Header: React.FC = () => {
                           onClick={() => setIsUserMenuOpen(false)}
                         >
                           <User className="h-4 w-4 mr-3" />
-                          Profile Settings
+                          {t('nav.profileSettings')}
                         </Link>
                       </div>
                     )}
@@ -209,7 +209,7 @@ const Header: React.FC = () => {
                         className="flex items-center w-full px-4 py-2 text-sm text-red-600 hover:bg-red-50"
                       >
                         <LogOut className="h-4 w-4 mr-3" />
-                        Sign Out
+                        {t('nav.signOut')}
                       </button>
                     </div>
                   </div>
@@ -267,7 +267,7 @@ const Header: React.FC = () => {
               className="block px-4 py-3 text-slate-700 hover:bg-[#05294E]/5 rounded-xl font-medium transition-all duration-200"
               onClick={() => setIsMenuOpen(false)}
             >
-              EB-3 Jobs
+              {t('nav.eb3Jobs')}
             </Link>
             <Link to="/scholarships" className="px-4 py-3 text-slate-700 hover:bg-[#05294E]/5 rounded-xl font-medium transition-all duration-200 flex items-center" onClick={() => setIsMenuOpen(false)}>
               {t('nav.scholarships')}
@@ -290,7 +290,7 @@ const Header: React.FC = () => {
 
                 <Link to={getDashboardPath()} className="block px-4 py-3 text-slate-700 hover:bg-[#05294E]/5 rounded-xl font-medium transition-all duration-200" onClick={() => setIsMenuOpen(false)}>{getDashboardLabel()}</Link>
 
-                <button onClick={handleLogout} className="block w-full text-left px-4 py-3 text-slate-700 hover:bg-[#D0151C]/5 rounded-xl font-medium transition-all duration-200">Logout</button>
+                <button onClick={handleLogout} className="block w-full text-left px-4 py-3 text-slate-700 hover:bg-[#D0151C]/5 rounded-xl font-medium transition-all duration-200">{t('nav.signOut')}</button>
               </div>
             ) : (
               <div className="border-t border-slate-200 pt-4 mt-4 space-y-2">

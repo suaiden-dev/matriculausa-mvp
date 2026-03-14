@@ -44,7 +44,7 @@ interface ScholarshipBrowserProps {
 const ScholarshipBrowser: React.FC<ScholarshipBrowserProps> = ({
   scholarships
 }) => {
-  const { t } = useTranslation();
+  const { t } = useTranslation(['dashboard', 'scholarships', 'common']);
   const { selectionProcessFee } = useDynamicFees();
 
   // Universidades a serem ocultadas (case-insensitive, igualdade exata de nome)

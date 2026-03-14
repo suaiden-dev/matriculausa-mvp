@@ -89,9 +89,10 @@ const FAQSection: React.FC = () => {
                   )}
                 </button>
                 {openItems.includes(index) && (
-                  <div className="px-6 pb-6 text-slate-600 leading-relaxed">
-                    {faq.answer}
-                  </div>
+                  <div 
+                    className="px-6 pb-6 text-slate-600 leading-relaxed"
+                    dangerouslySetInnerHTML={{ __html: faq.answer }}
+                  />
                 )}
               </motion.div>
             ))}

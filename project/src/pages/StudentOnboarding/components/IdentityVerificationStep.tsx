@@ -14,7 +14,7 @@ interface IdentityVerificationStepProps {
 export const IdentityVerificationStep: React.FC<IdentityVerificationStepProps> = ({
   onNext,
 }) => {
-  const { t } = useTranslation();
+  const { t } = useTranslation(['registration', 'common']);
   const { user } = useAuth();
   const [uploadedPath, setUploadedPath] = useState<string | null>(null);
   const [saving, setSaving] = useState(false);

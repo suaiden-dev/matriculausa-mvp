@@ -11,7 +11,7 @@ export const ProcessTypeStep: React.FC<StepProps> = ({ onNext }) => {
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [isLocked, setIsLocked] = useState(false);
-  const { t } = useTranslation();
+  const { t } = useTranslation(['registration', 'common']);
 
   useEffect(() => {
     if (!userProfile?.id) return;

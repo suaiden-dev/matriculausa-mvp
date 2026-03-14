@@ -16,7 +16,7 @@ import { Dialog, Transition } from '@headlessui/react';
 import { Fragment } from 'react';
 
 export const ScholarshipSelectionStep: React.FC<StepProps> = ({ onNext, onBack: _onBack }) => {
-  const { t } = useTranslation();
+  const { t } = useTranslation(['registration', 'scholarships', 'common']);
   const { user, userProfile } = useAuth();
   const { cart, addToCart, removeFromCart, fetchCart } = useCartStore();
   const { scholarships: allScholarships, loading: scholarshipsLoading, error: scholarshipsError } = useScholarships();

@@ -498,7 +498,94 @@
     "cpfRequiredTitle": "Informe seu CPF para Parcelow",
     "cpfPlaceholder": "000.000.000-00",
     "cpfError": "Erro ao salvar CPF. Tente novamente.",
-    "cpfInvalid": "CPF deve ter 11 dígitos",
-    "goToPayment": "Continuar para Pagamento"
+    "cpfInvalid": "CPF deve ter 11 dígitos"
+  },
+  "paymentBlocker": {
+    "scholarships": {
+      "title": "Bolsas de Estudo Bloqueadas",
+      "description": "Para acessar nossa coleção exclusiva de bolsas de estudo, você precisa completar o processo de seleção inicial. Esta é a primeira etapa do seu processo para estudar nos Estados Unidos."
+    },
+    "universities": {
+      "title": "Universidades Bloqueadas",
+      "description": "Para explorar nossas universidades parceiras e seus programas, você precisa completar o processo de seleção inicial. Esta é a primeira etapa do seu processo para estudar nos Estados Unidos."
+    },
+    "default": {
+      "title": "Conteúdo Bloqueado",
+      "description": "Para acessar este conteúdo, você precisa completar o processo de seleção inicial. Esta é a primeira etapa do seu processo para estudar nos Estados Unidos."
+    },
+    "selectionProcessFee": "Taxa do Processo Seletivo",
+    "completeApplicationJourney": "Complete seu processo de candidatura",
+    "goToDashboardAndPayFee": "Ir ao Painel e Pagar Taxa",
+    "learnHowItWorks": "Aprender Como Funciona",
+    "contentLockedMessage": "Este conteúdo está bloqueado até que o pagamento seja concluído"
+  },
+  "successPages": {
+    "pixPayment": {
+      "processing": "Processando Pagamento PIX",
+      "message": "Seu pagamento PIX foi recebido e está sendo processado. Você será redirecionado automaticamente em alguns segundos.",
+      "verifying": "Verificando pagamento...",
+      "pleaseWait": "Por favor, aguarde..."
+    },
+    "selectionProcessFee": {
+      "title": "Pagamento da Taxa de Processo de Seleção Realizado com Sucesso!",
+      "description": "Seu pagamento de {{amount}} foi processado com sucesso.",
+      "message": "Agora você tem acesso a todas as bolsas e pode se candidatar livremente.",
+      "button": "Ir para Bolsas",
+      "verifying": "Verificando seu pagamento...",
+      "pleaseWait": "Aguarde enquanto confirmamos sua transação. Isso pode levar alguns instantes.",
+      "errorTitle": "Erro no Pagamento da Taxa de Processo de Seleção",
+      "errorMessage": "Houve um problema ao processar seu pagamento.",
+      "errorRetry": "Tente novamente. Se o erro persistir, entre em contato com o suporte."
+    },
+    "scholarshipFee": {
+      "title": "Pagamento da Taxa da Bolsa Realizado com Sucesso!",
+      "description": "Seu pagamento de {{amount}} foi processado com sucesso.",
+      "message": "Sua aplicação irá agora prosseguir para a próxima etapa.",
+      "button": "Ver Detalhes",
+      "verifying": "Verificando seu pagamento...",
+      "pleaseWait": "Aguarde enquanto confirmamos seu pagamento.",
+      "errorTitle": "Erro no Processamento do Pagamento",
+      "errorMessage": "Houve um problema ao processar seu pagamento.",
+      "errorRetry": "Tente novamente ou entre em contato com o suporte."
+    },
+    "applicationFee": {
+      "title": "Pagamento da Taxa de Matrícula Realizado com Sucesso!",
+      "description": "Seu pagamento de {{amount}} foi processado com sucesso.",
+      "message": "Sua aplicação irá agora prosseguir para a próxima etapa.",
+      "button": "Ir para Minhas Aplicações",
+      "verifying": "Verificando Pagamento...",
+      "pleaseWait": "Aguarde enquanto confirmamos sua transação. Isso pode levar alguns instantes.",
+      "errorTitle": "Falha na Verificação",
+      "errorMessage": "Houve um problema ao verificar seu pagamento. Entre em contato com o suporte.",
+      "errorDetails": "Detalhes do erro:"
+    },
+    "placementFee": {
+      "title": "Pagamento da Placement Fee Realizado com Sucesso!",
+      "description": "Seu pagamento de {{amount}} foi processado com sucesso.",
+      "message": "Sua aplicação está agora confirmada.",
+      "button": "Continuar",
+      "verifying": "Verificando seu pagamento...",
+      "pleaseWait": "Aguarde enquanto confirmamos sua transação. Isso pode levar alguns instantes.",
+      "errorTitle": "Erro no Processamento",
+      "errorMessage": "Houve um problema ao processar seu pagamento.",
+      "errorRetry": "Tente novamente ou entre em contato com o suporte."
+    },
+    "common": {
+      "redirecting": "Redirecionando em instantes...",
+      "paymentProcessedAmount": "Seu pagamento foi processado com sucesso!",
+      "paymentError": "Houve um problema ao processar seu pagamento!",
+      "verifying": "Verificando seu pagamento...",
+      "pleaseWait": "Aguarde enquanto confirmamos sua transação. Isso pode levar alguns instantes."
+    },
+    "i20ControlFee": {
+      "title": "Pagamento da Taxa de Controle I-20 Realizado com Sucesso!",
+      "message": "Seu documento I-20 será processado e enviado em breve.",
+      "button": "Voltar para Minhas Aplicações",
+      "verifying": "Verificando Pagamento...",
+      "pleaseWait": "Aguarde enquanto confirmamos seu pagamento.",
+      "errorTitle": "Erro no Pagamento da Taxa de Controle I-20",
+      "errorMessage": "Houve um problema ao processar seu pagamento.",
+      "errorRetry": "Tente novamente. Se o erro persistir, entre em contato com o suporte."
+    }
   }
 }

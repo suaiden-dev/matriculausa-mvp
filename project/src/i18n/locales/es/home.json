@@ -1,152 +1,176 @@
 {
   "home": {
     "hero": {
-      "title": "Your Gateway to American Universities",
-      "subtitle": "Discover exclusive scholarships and unlock your potential in the United States",
-      "description": "Connect with top universities, access exclusive scholarships, and get personalized support throughout your journey to studying in the USA.",
-      "cta": "Start Your Journey",
-      "watchVideo": "Watch Video"
+      "title": "Tu Puerta de Entrada a las Universidades Americanas",
+      "subtitle": "Descubre becas exclusivas y desbloquea tu potencial en los Estados Unidos",
+      "description": "Conéctate con las mejores universidades, accede a becas exclusivas y recibe apoyo personalizado durante todo tu proceso para estudiar en los EE. UU.",
+      "cta": "Inicia Tu Proceso",
+      "watchVideo": "Ver Video",
+      "stats": {
+        "successRate": {
+          "title": "95% Tasa de Éxito",
+          "subtitle": "Matrícula de estudiantes"
+        },
+        "scholarships": {
+          "title": "$50M+",
+          "subtitle": "En becas"
+        }
+      }
     },
     "featuredUniversities": {
-      "lockedTitle": "Universities Locked",
-      "lockedDescription": "Complete the selection process to unlock detailed university information",
-      "goToDashboard": "Go to Dashboard",
-      "loginToView": "Login to View"
+      "lockedTitle": "Universidades Bloqueadas",
+      "lockedDescription": "Completa el proceso de selección para desbloquear información detallada de las universidades",
+      "goToDashboard": "Ir al Panel",
+      "loginToView": "Iniciar Sesión para Ver",
+      "featured": "Destacadas"
     },
     "features": {
-      "title": "Why Choose MatriculaUSA?",
-      "subtitle": "Everything you need to succeed in your American education journey",
+      "whyChoose": "¿Por qué elegir MatriculaUSA?",
+      "title": "¿Por Qué Elegir MatriculaUSA?",
+      "subtitle": "Todo lo que necesitas para tener éxito en tu camino educativo americano",
       "smartMatching": {
-        "title": "Smart Matching",
-        "description": "AI-powered system finds the best universities and scholarships for your profile"
+        "title": "Emparejamiento Inteligente",
+        "description": "Sistema impulsado por IA que encuentra las mejores universidades y becas para tu perfil"
       },
       "exclusiveScholarships": {
-        "title": "Exclusive Scholarships",
-        "description": "Access scholarships not available anywhere else, specifically for international students"
+        "title": "Becas Exclusivas",
+        "description": "Accede a becas no disponibles en ningún otro lugar, específicamente para estudiantes internacionales"
       },
       "personalSupport": {
-        "title": "Personal Support",
-        "description": "Dedicated team to guide you through every step of the application process"
+        "title": "Soporte Personal",
+        "description": "Equipo dedicado para guiarte en cada paso del proceso de solicitud"
       },
       "fastProcess": {
-        "title": "Fast Process",
-        "description": "Streamlined application process with quick responses and efficient document handling"
+        "title": "Proceso Rápido",
+        "description": "Proceso de solicitud simplificado con respuestas rápidas y gestión eficiente de documentos"
       }
     },
     "stats": {
-      "students": "Students Placed",
-      "universities": "Partner Universities",
-      "scholarships": "Scholarships Available",
-      "successRate": "Success Rate"
+      "students": "Estudiantes Colocados",
+      "universities": "Universidades Asociadas",
+      "scholarships": "Becas Disponibles",
+      "successRate": "Tasa de Éxito"
     },
     "trustIndicators": {
-      "studentsEnrolled": "students enrolled",
-      "rating": "4.8 rating",
-      "setupTime": "5 Minutes Setup",
-      "successRate": "95% Success Rate",
-      "secure": "100% Secure"
+      "studentsEnrolled": "estudiantes matriculados",
+      "rating": "4.8 de calificación",
+      "setupTime": "Configuración en 5 Minutos",
+      "successRate": "95% Tasa de Éxito",
+      "secure": "100% Seguro"
     },
     "faq": {
-      "title": "Frequently Asked Questions",
-      "mainTitle": "Everything You Need to Know",
-      "subtitle": "Get answers to the most common questions about fees, payments, and the application process at MatriculaUSA",
-      "badge": "Questions & Answers",
+      "title": "Preguntas Frecuentes",
+      "mainTitle": "Todo lo que Necesitas Saber",
+      "subtitle": "Obtén respuestas a las preguntas más comunes sobre tasas, pagos y o proceso de candidatura en MatriculaUSA",
+      "badge": "Preguntas y Respuestas",
+      "quickAnswers": "Respuestas Rápidas",
+      "questionsFound": "{{count}} pregunta encontrada",
+      "questionsFound_plural": "{{count}} preguntas encontradas",
+      "footerContact": "Usa los botones flotantes para ayuda instantánea o contáctanos directamente en info@matriculausa.com",
+      "instantAiResponses": "Respuestas instantáneas por IA",
+      "availability": "Disponibilidad 24/7",
       "questions": {
         "q1": {
-          "question": "What fees or payments are required to use MatriculaUSA?",
-          "answer": "MatriculaUSA is free to create your profile and explore universities. However, once you start the application process and are approved for a scholarship, all fees associated with the admission and enrollment flow become mandatory. They are clearly presented before any payment."
+          "question": "¿Qué tarifas o pagos son necesarios para usar MatriculaUSA?",
+          "answer": "MatriculaUSA es gratuito para crear tu perfil y explorar universidades. Sin embargo, una vez que inicias el proceso de solicitud y eres aprobado para una beca, todas las tarifas asociadas con el flujo de admisión e inscripción se vuelven obligatorias. Se presentan claramente antes de cualquier pago."
         },
         "q2": {
-          "question": "What is the Selection Process Fee?",
-          "answer": "The Selection Process Fee (US${{selectionProcessFee}}) is the first mandatory payment on the MatriculaUSA platform. It unlocks your full access to view all scholarships and start your application process."
+          "question": "¿Qué es la Cuota del Proceso de Selección?",
+          "answer": "La Cuota del Proceso de Selección $400 es el primer pago obligatorio en la plataforma MatriculaUSA. Desbloquea tu acceso completo para ver todas las becas e iniciar tu proceso de solicitud."
         },
         "q3": {
-          "question": "What is the Scholarship Fee?",
-          "answer": "The Scholarship Fee (US${{scholarshipFee}}) is charged when you proceed with applications for exclusive scholarships through MatriculaUSA. This fee covers processing costs and personalized support for your scholarship applications."
+          "question": "¿Qué es la Cuota de Colocación (Placement Fee)?",
+          "answer": "La Cuota de Colocación cubre el soporte especializado para asegurar su beca e inscripción. Cubre el trabajo profesional, incluyendo el análisis académico, la identificación de opciones universitarias, la negociación de becas y el apoyo en el proceso de inscripción. Esta cuota es variable y está directamente ligada al monto de la beca:<div class=\"mt-4 overflow-x-auto\"><table class=\"min-w-full divide-y divide-slate-200 border border-slate-200 rounded-lg overflow-hidden\"><thead class=\"bg-slate-100\"><tr><th class=\"px-4 py-2 text-left text-xs font-bold text-slate-500 uppercase\">Placement Fee</th><th class=\"px-4 py-2 text-left text-xs font-bold text-slate-500 uppercase\">Matrícula Anual</th></tr></thead><tbody class=\"divide-y divide-slate-200\"><tr><td class=\"px-4 py-2 text-sm\">$100</td><td class=\"px-4 py-2 text-sm text-green-600 font-bold\">$9,500</td></tr><tr><td class=\"px-4 py-2 text-sm\">$150</td><td class=\"px-4 py-2 text-sm text-green-600 font-bold\">$9,000</td></tr><tr><td class=\"px-4 py-2 text-sm\">$200</td><td class=\"px-4 py-2 text-sm text-green-600 font-bold\">$8,500</td></tr><tr><td class=\"px-4 py-2 text-sm\">$250</td><td class=\"px-4 py-2 text-sm text-green-600 font-bold\">$8,000</td></tr><tr><td class=\"px-4 py-2 text-sm\">$300</td><td class=\"px-4 py-2 text-sm text-green-600 font-bold\">$7,500</td></tr><tr><td class=\"px-4 py-2 text-sm\">$350</td><td class=\"px-4 py-2 text-sm text-green-600 font-bold\">$7,000</td></tr><tr><td class=\"px-4 py-2 text-sm\">$550</td><td class=\"px-4 py-2 text-sm text-green-600 font-bold\">$6,500</td></tr><tr><td class=\"px-4 py-2 text-sm\">$900</td><td class=\"px-4 py-2 text-sm text-green-600 font-bold\">$6,000</td></tr><tr><td class=\"px-4 py-2 text-sm\">$1,100</td><td class=\"px-4 py-2 text-sm text-green-600 font-bold\">$5,500</td></tr><tr><td class=\"px-4 py-2 text-sm\">$1,200</td><td class=\"px-4 py-2 text-sm text-green-600 font-bold\">$5,000</td></tr><tr><td class=\"px-4 py-2 text-sm\">$1,450</td><td class=\"px-4 py-2 text-sm text-green-600 font-bold\">$4,500</td></tr></tbody></table></div>"
         },
         "q4": {
-          "question": "What is the Application Fee?",
-          "answer": "The Application Fee varies by university and is a payment required to formally process your application after you have been accepted. This amount confirms your intention to enroll and is managed directly by the platform."
+          "question": "¿Qué es la Cuota de Solicitud?",
+          "answer": "La Cuota de Solicitud varía por universidad y es un pago requerido para procesar formalmente tu solicitud después de haber sido aceptado. Este monto confirma tu intención de inscribirte y es gestionado directamente por la plataforma."
         },
         "q5": {
-          "question": "What is the I-20 Control Fee?",
-          "answer": "The I-20 Control Fee (US${{i20ControlFee}}) is a mandatory payment for students who need to obtain the I-20 form, essential for applying for the F-1 student visa. This fee ensures fast and accurate processing of your visa documents."
+          "question": "¿Existe apoyo para el proceso de visa de estudiante?",
+          "answer": "¡Sí! La Cuota de Colocación incluye soporte especializado para su proceso de visa de estudiante. Nuestro equipo lo guía a través de todos los pasos necesarios para garantizar que tenga los documentos correctos para su llegada a los EE. UU."
         },
         "q6": {
-          "question": "Are there any other fees I should be aware of?",
-          "answer": "All mandatory fees for your application and enrollment process are listed in your dashboard before any payment. Some universities may have additional fees (e.g., housing deposits, orientation fees), but these will always be communicated directly by the university or by us in advance."
+          "question": "¿Existen otras tarifas que deba conocer?",
+          "answer": "Todas las tarifas obligatorias para su proceso de solicitud e inscripción se enumeran en su panel de control antes de cualquier pago. Algunas universidades pueden tener tarifas adicionales (por ejemplo, depósitos de alojamiento, tarifas de orientación), pero estas siempre serán comunicadas directamente por la universidad o por nosotros con anticipación."
         },
         "q7": {
-          "question": "How can I pay these fees?",
-          "answer": "You can pay all fees directly through the MatriculaUSA platform using international credit or debit cards. Payments are securely processed via Stripe, and you will receive a confirmation for each transaction."
+          "question": "¿Cómo puedo pagar estas tarifas?",
+          "answer": "Puede pagar todas las tarifas directamente a través de la plataforma MatriculaUSA utilizando tarjetas de crédito o débito internacionales. Los pagos se procesan de forma segura a través de Stripe y recibirá una confirmación por cada transacción."
         },
         "q8": {
-          "question": "Is my payment information secure?",
-          "answer": "Yes. All payments are processed by Stripe, a global leader in payment security. MatriculaUSA does not store your card details, and all transactions are encrypted for your protection."
+          "question": "¿Es segura mi información de pago?",
+          "answer": "Sí. Todos los pagos son procesados por Stripe, un líder mundial en seguridad de pagos. MatriculaUSA no almacena los datos de su tarjeta y todas las transacciones están cifradas para su protección."
         },
         "q9": {
-          "question": "Can I get a refund?",
-          "answer": "You are entitled to a full refund of fees paid if your application is not successful or you are not approved for a scholarship. However, if you withdraw from the process or change your mind after starting the application, the fees paid are non-refundable, as processing and support will have already begun."
+          "question": "¿Puedo obtener un reembolso?",
+          "answer": "Tiene derecho a un reembolso total de las tarifas pagadas si su solicitud no tiene éxito o no es aprobado para una beca. Sin embargo, si se retira del proceso o cambia de opinión después de iniciar la solicitud, las tarifas pagadas no son reembolsables, ya que el procesamiento y el soporte ya habrán comenzado."
         },
         "q10": {
-          "question": "Do I have to pay all fees at once?",
-          "answer": "No. The fees are separate purchases and are paid in stages as you progress through the process. You pay the Selection Process Fee first, then the Scholarship Fee (if applicable), followed by the Application Fee, and finally the I-20 Control Fee. All are mandatory for the complete flow, but do not need to be paid simultaneously."
+          "question": "¿Tengo que pagar todas las tarifas a la vez?",
+          "answer": "No. Las tarifas son compras independientes y se pagan por etapas a medida que avanzas en el proceso. Primero pagas la Cuota de Proceso de Selección, luego la Cuota de Solicitud (si corresponde) y finalmente la Cuota de Colocación asociada a la beca elegida."
         },
         "q11": {
-          "question": "Who can I contact if I have questions about fees or payments?",
-          "answer": "Our support team is available via chat or email at any time to answer any questions about fees, payments, or your application process. We are here to help you every step of the way!"
+          "question": "¿Con quién puedo contactar si tengo preguntas sobre tarifas o pagos?",
+          "answer": "¡Nuestro equipo de soporte está disponible a través de chat o correo electrónico en cualquier momento para responder cualquier pregunta sobre tarifas, pagos o su proceso de solicitud. Estamos aquí para ayudarle en cada paso del camino!"
         }
       }
     },
     "threeSteps": {
-      "title": "Three Steps to Your American Education",
-      "subtitle": "Simple Process",
+      "title": "Tres Pasos para Tu Educación Americana",
+      "subtitle": "Proceso Simple",
       "step1": {
-        "title": "Create Your Profile",
-        "description": "Build your comprehensive student profile with academic history, goals, and preferences to help us find the perfect match."
+        "title": "Crea Tu Perfil",
+        "description": "Construye tu perfil completo de estudiante con historial académico, metas y preferencias para ayudarnos a encontrar la combinación perfecta."
       },
       "step2": {
-        "title": "Discover Opportunities",
-        "description": "Browse through our curated selection of schools and exclusive scholarship opportunities tailored to your profile and interests."
+        "title": "Descubre Oportunidades",
+        "description": "Navega a través de nuestra selección curada de escuelas y oportunidades exclusivas de becas adaptadas a tu perfil e intereses."
       },
       "step3": {
-        "title": "Complete Enrollment",
-        "description": "Apply with our streamlined process and receive comprehensive support until you're successfully enrolled in your chosen institution."
+        "title": "Completa la Inscripción",
+        "description": "Postúlate con nuestro proceso simplificado y recibe apoyo integral hasta que estés inscrito con éxito en la institución elegida."
       }
     },
     "successStories": {
-      "title": "Success Stories",
-      "subtitle": "Real students, real results. See how MatriculaUSA transformed their educational journey to the United States.",
+      "title": "Historias de Éxito",
+      "subtitle": "Estudiantes reales, resultados reales. Mira cómo MatriculaUSA transformó su viaje educativo a los Estados Unidos.",
       "testimonial1": {
-        "text": "MatriculaUSA made my dream of studying in America a reality. The scholarship opportunities and support were incredible!",
+        "text": "MatriculaUSA hizo realidad mi sueño de estudiar en América. ¡Las oportunidades de becas y el apoyo fueron increíbles!",
         "author": "Gustavo Santos",
-        "field": "Computer Science"
+        "field": "Ciencias de la Computación"
       },
       "testimonial2": {
-        "text": "The enrollment process was seamless. From application to visa support, MatriculaUSA guided me every step of the way.",
+        "text": "El proceso de inscripción fue perfecto. Desde la solicitud hasta el apoyo para la visa, MatriculaUSA me guió en cada paso del camino.",
         "author": "Carlos Rodriguez",
-        "field": "Business School"
+        "field": "Escuela de Negocios"
       },
       "testimonial3": {
-        "text": "I found exclusive scholarships that weren't available anywhere else. MatriculaUSA truly opens doors to opportunities.",
+        "text": "Encontré becas exclusivas que no estaban disponibles en ningún otro lugar. MatriculaUSA realmente abre puertas a oportunidades.",
         "author": "Ana Chen",
-        "field": "Engineering"
+        "field": "Ingeniería"
       }
     },
     "cta": {
-      "title": "Ready to Begin Your American Dream?",
-      "subtitle": "Join thousands of international students who have found their path to American education through MatriculaUSA's comprehensive platform.",
-      "button": "Start Your Journey Today",
-      "learnMore": "Learn More",
+      "title": "¿Listo para Iniciar Tu Sueño Americano?",
+      "subtitle": "Únete a miles de estudiantes internacionales que han encontrado su camino hacia la educación americana a través de la plataforma integral de MatriculaUSA.",
+      "button": "Inicia Tu Proceso Hoy",
+      "learnMore": "Saber Más",
+      "badge": "Únete a más de 5,000 {{students}}",
       "features": {
-        "freeToStart": "Free to get started",
-        "noHiddenFees": "No hidden fees",
-        "expertSupport": "Expert support included"
+        "freeToStart": "Gratis para comenzar",
+        "noHiddenFees": "Sin tarifas ocultas",
+        "expertSupport": "Soporte experto incluido"
       }
     },
     "enrollmentConfirmed": {
-      "title": "Enrollment Confirmed!",
+      "title": "¡Inscripción Confirmada!",
       "university": "Harvard University"
+    },
+    "about": {
+      "cta": {
+        "questions": "¿Todavía tienes preguntas?"
+      }
     }
   },
   "howItWorks": {
@@ -170,7 +194,7 @@
         ]
       },
       "selectionFee": {
-        "title": "Pagar Tarifa de Selección (${{selectionProcessFee}})",
+        "title": "Pagar Cuota de Selección ($400)",
         "description": "Desbloquea todas las becas. Esta tarifa es final y no reembolsable. (+$150 por dependiente)",
         "items": [
           "Acceso para navegar becas",
@@ -188,7 +212,7 @@
         ]
       },
       "applicationFee": {
-        "title": "Pagar Tarifa de Solicitud (Según universidad)",
+        "title": "Pagar Cuota de Solicitud (Según universidad)",
         "description": "Confirma tu universidad. Esta tarifa es final y no reembolsable. (+$100 por dependiente)",
         "items": [
           "Ver becas aprobadas",
@@ -196,27 +220,21 @@
           "Asegura tu lugar"
         ]
       },
-      "scholarshipFee": {
-        "title": "Pagar Tarifa de Beca (${{scholarshipFee}})",
-        "description": "Obtén chat directo con tu universidad. Esta tarifa es final y no reembolsable.",
+      "placementFee": {
+        "title": "Cuota de Colocación (Variable)",
+        "description": "En MatrículaUSA, la cuota de colocación es una tarifa de servicio que incluye soporte total para asegurar su beca, matrícula y apoyo especializado para su proceso de visa.",
         "items": [
-          "Chat directo con universidad",
-          "Enviar documentos adicionales",
-          "Compromiso final de beca"
-        ]
-      },
-      "i20Fee": {
-        "title": "Pagar Tarifa de Control I-20 (${{i20ControlFee}})",
-        "description": "Necesario para tu visa F-1. Esta tarifa es final y no reembolsable.",
-        "items": [
-          "Esencial para visa de estudiante F-1",
-          "Cubre procesamiento I-20",
-          "Ventana de pago de 10 días"
+          "Análisis de su perfil académico y financiero",
+          "Identificación de las mejores opciones de universidad para usted",
+          "Negociación o garantía de oportunidades de beca",
+          "Coordinación de documentación con la institución",
+          "Soporte al proceso de matrícula",
+          "Soporte completo al proceso de visa"
         ]
       }
     },
     "whyUs": {
-      "title": "Por Qué MatriculaUSA?",
+      "title": "¿Por Qué MatriculaUSA?",
       "smartDiscovery": {
         "title": "Descubrimiento Inteligente",
         "description": "IA encuentra las mejores becas para ti"
@@ -269,20 +287,20 @@
         "answer": "MatriculaUSA es gratuito para crear tu perfil y explorar universidades. Sin embargo, una vez que inicias el proceso de solicitud y eres aprobado para una beca, todas las tarifas asociadas con el flujo de admisión y matrícula se vuelven obligatorias. Se presentan claramente antes de cualquier pago. Todas las tarifas son finales y no reembolsables."
       },
       "q2": {
-        "question": "¿Qué es la Tarifa de Proceso de Selección?",
-        "answer": "La Tarifa de Proceso de Selección (US{{selectionProcessFee}}) es el primer pago obligatorio en la plataforma MatriculaUSA. Desbloquea tu acceso completo para ver todas las becas e iniciar tu proceso de solicitud. Esta tarifa es final y no reembolsable."
+        "question": "¿Qué es la Cuota del Proceso de Selección?",
+        "answer": "La Cuota del Proceso de Selección $400 es el primer pago obligatorio en la plataforma MatriculaUSA. Desbloquea tu acceso completo para ver todas las becas e iniciar tu proceso de solicitud. Esta tarifa es final y no reembolsable."
       },
       "q3": {
-        "question": "¿Qué es la Tarifa de Beca?",
-        "answer": "La Tarifa de Beca (US{{scholarshipFee}}) se cobra cuando procedes con solicitudes para becas exclusivas a través de MatriculaUSA. Esta tarifa cubre costos de procesamiento y soporte personalizado para tus solicitudes de beca. Esta tarifa es final y no reembolsable."
+        "question": "¿Qué es la Cuota de Colocación (Placement Fee)?",
+        "answer": "La cuota de colocación cubre el trabajo profesional necesario para conectar e inscribir con éxito a un estudiante en el programa universitario correcto. Esta cuota es variable y está directamente vinculada al monto de la beca: cuanto mayor sea la cuota de colocación, menor será su matrícula anual (tuition).<div class=\"mt-4 overflow-x-auto\"><table class=\"min-w-full divide-y divide-slate-200 border border-slate-200 rounded-lg overflow-hidden\"><thead class=\"bg-slate-100\"><tr><th class=\"px-4 py-2 text-left text-xs font-bold text-slate-500 uppercase\">Placement Fee</th><th class=\"px-4 py-2 text-left text-xs font-bold text-slate-500 uppercase\">Matrícula Anual</th></tr></thead><tbody class=\"divide-y divide-slate-200\"><tr><td class=\"px-4 py-2 text-sm\">$100</td><td class=\"px-4 py-2 text-sm text-green-600 font-bold\">$9,500</td></tr><tr><td class=\"px-4 py-2 text-sm\">$150</td><td class=\"px-4 py-2 text-sm text-green-600 font-bold\">$9,000</td></tr><tr><td class=\"px-4 py-2 text-sm\">$200</td><td class=\"px-4 py-2 text-sm text-green-600 font-bold\">$8,500</td></tr><tr><td class=\"px-4 py-2 text-sm\">$250</td><td class=\"px-4 py-2 text-sm text-green-600 font-bold\">$8,000</td></tr><tr><td class=\"px-4 py-2 text-sm\">$300</td><td class=\"px-4 py-2 text-sm text-green-600 font-bold\">$7,500</td></tr><tr><td class=\"px-4 py-2 text-sm\">$350</td><td class=\"px-4 py-2 text-sm text-green-600 font-bold\">$7,000</td></tr><tr><td class=\"px-4 py-2 text-sm\">$550</td><td class=\"px-4 py-2 text-sm text-green-600 font-bold\">$6,500</td></tr><tr><td class=\"px-4 py-2 text-sm\">$900</td><td class=\"px-4 py-2 text-sm text-green-600 font-bold\">$6,000</td></tr><tr><td class=\"px-4 py-2 text-sm\">$1,100</td><td class=\"px-4 py-2 text-sm text-green-600 font-bold\">$5,500</td></tr><tr><td class=\"px-4 py-2 text-sm\">$1,200</td><td class=\"px-4 py-2 text-sm text-green-600 font-bold\">$5,000</td></tr><tr><td class=\"px-4 py-2 text-sm\">$1,450</td><td class=\"px-4 py-2 text-sm text-green-600 font-bold\">$4,500</td></tr></tbody></table></div>"
       },
       "q4": {
-        "question": "¿Qué es la Tarifa de Solicitud?",
-        "answer": "La Tarifa de Solicitud varía por universidad y es un pago requerido para procesar formalmente tu solicitud después de haber sido aceptado. Este monto confirma tu intención de inscribirte y es gestionado directamente por la plataforma. Esta tarifa es final y no reembolsable."
+        "question": "¿Qué es la Cuota de Solicitud?",
+        "answer": "La Cuota de Solicitud varía por universidad y es un pago requerido para procesar formalmente tu solicitud después de haber sido aceptado. Este monto confirma tu intención de inscribirte y es gestionado directamente por la plataforma. Esta tarifa es final y no reembolsable."
       },
       "q5": {
-        "question": "¿Qué es la Tarifa de Control I-20?",
-        "answer": "La Tarifa de Control I-20 (US{{i20ControlFee}}) es un pago obligatorio para estudiantes que necesitan obtener el formulario I-20, esencial para solicitar la visa de estudiante F-1. Esta tarifa asegura un procesamiento rápido y preciso de tus documentos de visa. Esta tarifa es final y no reembolsable."
+        "question": "¿Cómo elijo mi beca?",
+        "answer": "Tras el pago de la Cuota del Proceso de Selección y el envío de los documentos, nuestra IA y el equipo de soporte apresentarán las mejores opciones de beca para su perfil. Podrá entonces elegir la que mejor se adapte a su presupuesto y objetivos."
       },
       "q6": {
         "question": "¿Hay otras tarifas que deba conocer?",
@@ -302,7 +320,7 @@
       },
       "q10": {
         "question": "¿Tengo que pagar todas las tarifas a la vez?",
-        "answer": "No. Las tarifas son compras separadas y se pagan en etapas a medida que avanzas en el proceso. Pagas la Tarifa de Proceso de Selección (US{{selectionProcessFee}}) primero, luego la Tarifa de Beca (US{{scholarshipFee}}) (si aplica), seguida por la Tarifa de Solicitud, y finalmente la Tarifa de Control I-20 (US{{i20ControlFee}}). Todas son obligatorias para el flujo completo, pero no necesitan pagarse simultáneamente."
+        "answer": "No. Las tarifas son separadas y se pagan por etapas. Usted paga primero la Cuota del Proceso de Selección, luego la Cuota de Solicitud (si corresponde) y, finalmente, la Cuota de Colocación asociada a la beca elegida. Todas son obligatorias, pero se pagan en diferentes momentos."
       },
       "q11": {
         "question": "¿A quién puedo contactar si tengo preguntas sobre tarifas o pagos?",
@@ -310,544 +328,303 @@
       }
     }
   },
+
   "forStudents": {
     "hero": {
-      "title": "Study in the USA with",
-      "titleHighlight": "exclusive scholarships",
-      "subtitle": "AI-Powered Selection Process",
-      "description": "Study paying <span class=\"text-[#D0151C] font-bold\">up to 50% less</span>, with hybrid scholarships and the chance to work legally — for just <span class=\"text-yellow-400 font-bold\">$350</span> to start.",
-      "ctaButton": "Start Now",
+      "title": "Estudia en los EE. UU. con",
+      "titleHighlight": "becas de estudio exclusivas",
+      "subtitle": "Proceso de Selección con IA",
+      "description": "Estudia pagando <span class=\"text-[#D0151C] font-bold\">hasta un 50% menos</span>, con becas híbridas y la oportunidad de trabajar legalmente — por solo <span class=\"text-yellow-400 font-bold\">$400</span> para comenzar.",
+      "ctaButton": "Comenzar Ahora",
       "trustElements": {
-        "approval24h": "Approval in 24h",
-        "guaranteed": "100% Guaranteed",
-        "approved": "+10,000 approved"
+        "approval24h": "Aprobación en 24h",
+        "guaranteed": "100% Garantizado",
+        "approved": "+10.000 aprobados"
       }
     },
     "benefits": {
-      "title": "Benefits that make the difference",
-      "subtitle": "Discover why thousands of students choose Matrícula USA to fulfill their American dream",
-      "ctaButton": "Discover my ideal scholarship",
+      "title": "Ventajas que marcan la diferencia",
+      "subtitle": "Descubre por qué miles de estudiantes eligen Matrícula USA para cumplir su sueño americano",
+      "ctaButton": "Descubrir mi beca ideal",
       "benefits": {
         "economy": {
-          "title": "Real Savings",
-          "description": "Pay up to 50% less than the full university value with our exclusive scholarships",
-          "highlight": "Up to 50% OFF"
+          "title": "Ahorro Real",
+          "description": "Paga hasta un 50% menos del valor total de la universidad con nuestras becas exclusivas",
+          "highlight": "Hasta 50% OFF"
         },
         "fastApproval": {
-          "title": "Fast Approval",
-          "description": "AI-optimized process that speeds up your approval by up to 80%",
+          "title": "Aprobación Rápida",
+          "description": "Proceso optimizado con IA que acelera tu aprobación hasta en un 80%",
           "highlight": "24h"
         },
         "hybridMode": {
-          "title": "Hybrid Mode",
-          "description": "Study online and in-person, saving on accommodation and food",
+          "title": "Modalidad Híbrida",
+          "description": "Estudia online y presencialmente, ahorrando en alojamiento y comida",
           "highlight": "Flexible"
         },
         "multipleOpportunities": {
-          "title": "Multiple Opportunities",
-          "description": "Apply to multiple universities simultaneously and increase your chances",
-          "highlight": "3+ Options"
+          "title": "Múltiples Oportunidades",
+          "description": "Aplica a varias universidades simultáneamente y aumenta tus posibilidades",
+          "highlight": "3+ Opciones"
         },
         "guaranteed": {
-          "title": "Guaranteed Approval",
-          "description": "If you're not approved following our process, we refund your money",
+          "title": "Aprobación Garantizada",
+          "description": "Si no eres aprobado siguiendo nuestro proceso, te devolvemos tu dinero",
           "highlight": "100%"
         },
         "support": {
-          "title": "Complete Support",
-          "description": "Support from application to departure to the USA",
+          "title": "Soporte Completo",
+          "description": "Acompañamiento desde la solicitud hasta el embarque a los EE. UU.",
           "highlight": "24/7"
         }
       }
     },
     "howItWorks": {
-      "title": "How It Works",
-      "subtitle": "Simple and transparent process in 7 steps to guarantee your scholarship",
-      "ctaButton": "START NOW",
-      "ctaDescription": "Start your journey to study in the USA today",
+      "title": "Cómo Funciona",
+      "subtitle": "Proceso simple y transparente en 6 pasos para garantizar tu beca de estudios",
+      "ctaButton": "COMENZAR AHORA",
+      "ctaDescription": "Comienza hoy mismo tu viaje para estudiar en los EE. UU.",
       "steps": {
         "processFee": {
-          "title": "Selection Process Fee",
-          "description": "Pay only $350 to start your journey studying in the USA",
-          "price": "$350"
+          "title": "Cuota del Proceso de Selección",
+          "description": "Inicia tu viaje con nuestro análisis de perfil e búsqueda personalizada por solo $400",
+          "price": "$400"
         },
         "scholarshipChoice": {
-          "title": "Scholarship Choice",
-          "description": "Our AI analyzes your profile and suggests the best scholarships for you",
-          "price": "Free"
+          "title": "Elección de Beca",
+          "description": "Nuestra IA identifica las mejores oportunidades y tú eliges la ideal para tu presupuesto",
+          "price": "Gratis"
         },
         "application": {
-          "title": "Application",
-          "description": "We send your application to partner universities",
+          "title": "Solicitud",
+          "description": "Nos encargamos de todo el envío de documentación a las universidades asociadas",
           "price": "✓"
         },
         "enrollmentFee": {
-          "title": "Enrollment Fee",
-          "description": "Pay only when approved by the university",
+          "title": "Cuota de Inscripción",
+          "description": "Cuota obligatoria de la universidad para procesar tu inscripción oficial tras la aceptación",
           "price": "Variable"
         },
-        "scholarshipFee": {
-          "title": "Scholarship Fee",
-          "description": "Scholarship value with discount applied automatically",
-          "price": "With Discount"
-        },
-        "i20Fee": {
-          "title": "I-20 Fee",
-          "description": "Official document for your student visa",
-          "price": "Included"
+        "placementFee": {
+          "title": "Cuota de Colocación (Placement Fee)",
+          "description": "Cubre el trabajo profesional de conexión, negociación de becas y soporte hasta el embarque",
+          "price": "Variable"
         },
         "spotGuaranteed": {
-          "title": "Guaranteed Spot",
-          "description": "Your spot is guaranteed at the chosen university",
+          "title": "Cupo Garantizado",
+          "description": "Tu lugar está garantizado y estás listo para tu viaje en los EE. UU.",
           "price": "✓"
         }
       }
     },
     "comparison": {
-      "title": "From high costs and uncertainty... to real savings and guaranteed approval",
-      "subtitle": "See the real difference between studying on your own vs. with Matrícula USA",
-      "ctaButton": "I WANT TO SAVE",
+      "title": "De gastos altos e incertidumbre... a un ahorro real y aprobación garantizada",
+      "subtitle": "Mira la diferencia real entre estudiar por tu cuenta vs. con Matrícula USA",
+      "ctaButton": "QUIERO AHORRAR",
       "before": {
-        "title": "Without Matrícula USA",
-        "subtitle": "Traditional process",
-        "costLabel": "Total cost: $15,000 - $25,000",
+        "title": "Sin Matrícula USA",
+        "subtitle": "Proceso tradicional",
+        "costLabel": "Costo total: $15.000 - $25.000",
         "items": [
-          "Slow and complex process",
-          "High rejection risk",
-          "No specialized support",
-          "Hidden costs and surprises",
-          "Difficulty getting scholarships",
-          "Manual and bureaucratic process"
+          "Proceso lento y complejo",
+          "Alto riesgo de rechazo",
+          "Sin soporte especializado",
+          "Costos ocultos y sorpresas",
+          "Dificultad para conseguir becas",
+          "Proceso manual y burocrático"
         ]
       },
       "after": {
-        "title": "With Matrícula USA",
-        "subtitle": "AI-optimized process",
-        "savingsLabel": "Average savings: $8,000 - $15,000",
+        "title": "Con Matrícula USA",
+        "subtitle": "Proceso optimizado con IA",
+        "savingsLabel": "Ahorro promedio: $8.000 - $15.000",
         "items": [
-          "Fast and simplified process",
-          "Guaranteed approval or money back",
-          "Dedicated 24/7 support",
-          "Total cost transparency",
-          "Access to exclusive scholarships",
-          "Automated and efficient process"
+          "Proceso rápido y simplificado",
+          "Aprobación garantizada o devolución de dinero",
+          "Soporte dedicado 24/7",
+          "Transparencia total en los costos",
+          "Acceso a becas exclusivas",
+          "Proceso automatizado e eficiente"
         ]
       }
     },
     "specialOffer": {
-      "title": "Get priority on the most competitive scholarships and exclusive benefits",
-      "subtitle": "By enrolling today, you guarantee:",
-      "urgencyTitle": "Attention: Limited Spots",
-      "urgencyDescription": "Scholarships are released in order of enrollment. <span class=\"text-[#D0151C] font-bold\">Each day of delay can mean losing your dream spot.</span>",
-      "ctaButton": "I WANT MY SCHOLARSHIP NOW",
-      "ctaDescription": "⏰ Limited time offer",
+      "title": "Obtén prioridad en las becas más competitivas y beneficios exclusivos",
+      "subtitle": "Al inscribirte hoy, garantizas:",
+      "urgencyTitle": "Atención: Cupos Limitados",
+      "urgencyDescription": "Las becas se liberan por orden de inscripción. <span class=\"text-[#D0151C] font-bold\">Cada día de retraso puede significar perder el cupo de tus sueños.</span>",
+      "ctaButton": "QUIERO MI BECA AHORA",
+      "ctaDescription": "⏰ Oferta por tiempo limitado",
       "benefits": [
         {
-          "title": "24h Analysis",
-          "description": "Profile analysis in 24 hours to know your best options right away"
+          "title": "Análisis en 24h",
+          "description": "Análisis de perfil en 24 horas para conocer tus mejores opciones de inmediato"
         },
         {
-          "title": "Scholarship Priority",
-          "description": "Priority on scholarships with limited spots"
+          "title": "Prioridad en Becas",
+          "description": "Prioridad en becas con cupos limitados"
         },
         {
-          "title": "Early Access",
-          "description": "Early access to hybrid scholarships (the most sought after)"
+          "title": "Acceso Anticipado",
+          "description": "Acceso anticipado a las becas híbridas (las más solicitadas)"
         },
         {
-          "title": "Dedicated Support",
-          "description": "Dedicated support to complete your enrollment without errors"
+          "title": "Soporte Dedicado",
+          "description": "Soporte dedicado para completar tu inscripción sin errores"
         }
       ]
     },
     "guarantee": {
-      "title": "Guaranteed approval or your money back",
-      "subtitle": "We know that investing in your future requires confidence. That's why Matrícula USA is the only program that offers:",
-      "ctaButton": "START RISK-FREE",
+      "title": "Aprobación garantizada o te devolvemos tu dinero",
+      "subtitle": "Sabemos que invertir en tu futuro requiere confianza. Por eso, Matrícula USA es el único programa que ofrece:",
+      "ctaButton": "COMENZAR SIN RIESGOS",
       "guarantees": [
         {
-          "title": "Approval Guarantee",
-          "description": "If you follow our process and are not approved, we refund the Selection Process Fee in full."
+          "title": "Garantía de Aprobación",
+          "description": "Si sigues nuestro proceso y no eres aprobado, te reembolsamos la Cuota del Proceso de Selección íntegramente."
         },
         {
-          "title": "Transparent Process",
-          "description": "No hidden fees or surprise costs. You know exactly how much you'll pay from start to finish."
+          "title": "Proceso Transparente",
+          "description": "Sin cuotas ocultas ni costos sorpresa. Sabes exactamente cuánto vas a pagar de principio a fin."
         },
         {
-          "title": "Support Until Arrival",
-          "description": "We don't stop at university acceptance. Our team follows the entire process until departure."
+          "title": "Soporte hasta la Llegada",
+          "description": "No nos detenemos tras el acepto de la universidad. Nuestro equipo acompaña todo el proceso hasta el embarque."
         }
       ],
-      "bottomMessage": "The risk is all ours. For you, it's just taking advantage of the opportunity."
+      "bottomMessage": "El riesgo es todo nuestro. Para ti, es solo aprovechar la oportunidad."
     },
     "faq": {
-      "title": "Frequently Asked Questions",
-      "subtitle": "Find answers to the most common questions about our selection process",
-      "contact": "Still have questions? Contact our support team",
+      "title": "Preguntas Frecuentes",
+      "subtitle": "Encuentra respuestas a las preguntas más comunes sobre nuestro proceso de selección",
+      "contact": "¿Todavía tienes preguntas? Contacta con nuestro equipo de soporte",
       "items": [
         {
-          "question": "What is included in the selection process fee?",
-          "answer": "$350 includes a complete profile analysis, AI-powered personalized scholarship matching, applications to multiple universities, process tracking, and support until approval."
+          "question": "¿Qué está incluido en la cuota del proceso de selección?",
+          "answer": "$400 incluye un análisis completo del perfil, búsqueda personalizada de becas mediante IA, solicitudes a múltiples universidades, seguimiento del proceso y soporte hasta la aprobación."
         },
         {
-          "question": "Can I apply to as many scholarships as I want?",
-          "answer": "Yes! With a single fee you can apply to all scholarships compatible with your profile. Our AI identifies the best opportunities and you choose how many you want to try."
+          "question": "¿Qué é la Cuota de Colocación (Placement Fee)?",
+          "answer": "La Cuota de Colocación cubre el soporte especializado para asegurar tu beca e inscripción. Se refiere al trabajo de análisis de perfil, identificación de mejores opciones, negociación de becas y soporte en tu viaje. Es variable y está directamente ligada al monto de la beca: cuanto mayor sea la cuota de colocación, menor será su matrícula anual.<div class=\"mt-4 overflow-x-auto\"><table class=\"min-w-full divide-y divide-slate-200 border border-slate-200 rounded-lg overflow-hidden\"><thead class=\"bg-slate-100\"><tr><th class=\"px-4 py-2 text-left text-xs font-bold text-slate-500 uppercase\">Placement Fee</th><th class=\"px-4 py-2 text-left text-xs font-bold text-slate-500 uppercase\">Matrícula Anual</th></tr></thead><tbody class=\"divide-y divide-slate-200\"><tr><td class=\"px-4 py-2 text-sm\">$100</td><td class=\"px-4 py-2 text-sm text-green-600 font-bold\">$9,500</td></tr><tr><td class=\"px-4 py-2 text-sm\">$150</td><td class=\"px-4 py-2 text-sm text-green-600 font-bold\">$9,000</td></tr><tr><td class=\"px-4 py-2 text-sm\">$200</td><td class=\"px-4 py-2 text-sm text-green-600 font-bold\">$8,500</td></tr><tr><td class=\"px-4 py-2 text-sm\">$250</td><td class=\"px-4 py-2 text-sm text-green-600 font-bold\">$8,000</td></tr><tr><td class=\"px-4 py-2 text-sm\">$300</td><td class=\"px-4 py-2 text-sm text-green-600 font-bold\">$7,500</td></tr><tr><td class=\"px-4 py-2 text-sm\">$350</td><td class=\"px-4 py-2 text-sm text-green-600 font-bold\">$7,000</td></tr><tr><td class=\"px-4 py-2 text-sm\">$550</td><td class=\"px-4 py-2 text-sm text-green-600 font-bold\">$6,500</td></tr><tr><td class=\"px-4 py-2 text-sm\">$900</td><td class=\"px-4 py-2 text-sm text-green-600 font-bold\">$6,000</td></tr><tr><td class=\"px-4 py-2 text-sm\">$1,100</td><td class=\"px-4 py-2 text-sm text-green-600 font-bold\">$5,500</td></tr><tr><td class=\"px-4 py-2 text-sm\">$1,200</td><td class=\"px-4 py-2 text-sm text-green-600 font-bold\">$5,000</td></tr><tr><td class=\"px-4 py-2 text-sm\">$1,450</td><td class=\"px-4 py-2 text-sm text-green-600 font-bold\">$4,500</td></tr></tbody></table></div>"
         },
         {
-          "question": "How does the guarantee work?",
-          "answer": "If you follow our complete process and are not approved at any university, we refund 100% of the selection process fee."
+          "question": "¿Puedo solicitar tantas becas como quiera?",
+          "answer": "¡Sí! Con una sola cuota puedes solicitar todas las becas compatibles con tu perfil. Nuestra IA identifica las mejores oportunidades y tú eliges cuántas quieres probar."
         },
         {
-          "question": "Which universities participate?",
-          "answer": "We work with more than 45 accredited American universities, including Arizona State University, Florida International University, University of California and many others."
+          "question": "¿Cómo funciona la garantía?",
+          "answer": "Si sigues nuestro proceso completo y no eres aprobado en ninguna universidad, te reembolsamos el 100% de la cuota del proceso de selección."
         },
         {
-          "question": "Do I need to speak English?",
-          "answer": "Yes, a basic level of English is required. Some universities accept an internal proficiency test or offer preparatory programs for those who need to improve the language."
+          "question": "¿Qué universidades participan?",
+          "answer": "Trabajamos con más de 45 universidades americanas acreditadas, incluidas la Universidad Estatal de Arizona, la Universidad Internacional de Florida, la Universidad de California y muchas otras."
         },
         {
-          "question": "How long does it take to know if I was approved?",
-          "answer": "The universities' analysis and response process varies between 2 to 8 weeks. You will receive constant updates on the status of your application."
+          "question": "¿Necesito hablar inglés?",
+          "answer": "Sí, se requiere un nivel básico de inglés. Algunas universidades aceptan una prueba de competencia interna u ofrecen programas preparatorios para quienes necesitan mejorar el idioma."
+        },
+        {
+          "question": "¿Cuánto tiempo se tarda en saber si fui aprobado?",
+          "answer": "El proceso de análisis y respuesta de las universidades varía entre 2 y 8 semanas. Recibirás actualizaciones constantes sobre el estado de tu solicitud."
         }
       ]
     },
     "socialProof": {
-      "title": "More than 150 students approved in 2026 alone",
-      "subtitle": "See what our students are saying about their experience",
-      "ctaButton": "BE THE NEXT APPROVED",
+      "title": "Más de 150 estudiantes aprobados solo en 2026",
+      "subtitle": "Mira lo que dicen nuestros estudiantes sobre su experiencia",
+      "ctaButton": "SÉ EL PRÓXIMO APROBADO",
       "statistics": {
-        "approved": "Approved students",
-        "approvalRate": "Approval rate",
-        "averageSavings": "Average savings",
-        "partnerUniversities": "Partner universities"
+        "approved": "Estudiantes aprobados",
+        "approvalRate": "Tasa de aprobación",
+        "averageSavings": "Ahorro promedio",
+        "partnerUniversities": "Universidades asociadas"
       },
       "testimonials": [
         {
           "name": "Gustavo Santos",
           "university": "University of California",
-          "course": "Computer Science",
-          "text": "I got a 40% scholarship and I'm fulfilling my dream of studying in the USA. The process was much simpler than I imagined.",
+          "course": "Ciencias de la Computación",
+          "text": "¡Conseguí una beca del 40% y estoy cumpliendo mi sueño de estudiar en los EE. UU.! El proceso fue mucho más simple de lo que imaginaba.",
           "savings": "$18,000"
         },
         {
           "name": "João Santos",
           "university": "Arizona State University",
-          "course": "Business Administration",
-          "text": "The hybrid mode was perfect for me. I saved a lot on accommodation and still have the in-person experience.",
+          "course": "Administración de Empresas",
+          "text": "La modalidad híbrida fue perfecta para mí. Ahorré mucho en alojamiento y sigo teniendo la experiencia presencial.",
           "savings": "$22,000"
         },
         {
           "name": "Ana Costa",
           "university": "Florida International University",
-          "course": "International Business",
-          "text": "Approved at 3 different universities! The AI really found the best options for my profile.",
+          "course": "Negocios Internacionales",
+          "text": "¡Aprobada en 3 universidades diferentes! La IA realmente encontró las mejores opciones para mi perfil.",
           "savings": "$25,000"
         },
         {
           "name": "Carlos Mendes",
           "university": "Northern Arizona University",
-          "course": "Engineering",
-          "text": "Amazing how fast the process was. In 3 weeks I already had 2 approvals with excellent scholarships!",
+          "course": "Ingeniería",
+          "text": "Increíble lo rápido que fue el proceso. ¡En 3 semanas ya tenía 2 aprobaciones con excelentes becas!",
           "savings": "$30,000"
         },
         {
           "name": "Fernanda Lima",
           "university": "University of South Florida",
           "course": "Marketing",
-          "text": "The support was fantastic from start to finish. Now I'm studying and working legally in the USA!",
+          "text": "El soporte fue fantástico de principio a fin. ¡Ahora estoy estudiando y trabajando legalmente en los EE. UU.!",
           "savings": "$20,000"
         },
         {
           "name": "Roberto Silva",
           "university": "California State University",
-          "course": "Data Science",
-          "text": "I got a hybrid scholarship that allows me to study online and in-person. Perfect for my situation!",
+          "course": "Ciencia de Datos",
+          "text": "Conseguí una beca híbrida que me permite estudiar online y presencialmente. ¡Perfecto para mi situación!",
           "savings": "$35,000"
         }
       ]
     }
   },
-  "processPages": {
-    "common": {
-      "selectionProcess": "Proceso Selectivo",
-      "applicationFeeI20": "Application Fee + I-20",
-      "scholarshipFee": "Tarifa de Beca",
-      "controlFee": "Control Fee",
-      "legalFees": "Honorarios Jurídicos",
-      "fundsProof": "Comprobación de Fondos",
-      "valuesSummary": "Resumen de Valores",
-      "total": "Total:",
-      "step": "Paso",
-      "optional": "Opcional",
-      "rights": "Todos los derechos reservados.",
-      "clients": {
-        "title": "Nuestros Clientes",
-        "description": "Estudiantes que realizaron el sueño de estudiar en los Estados Unidos",
-        "client": "Cliente"
-      },
-      "conversion": {
-        "title": "¿Listo para comenzar tu proceso?",
-        "description": "Haz clic en el botón de abajo para iniciar tu viaje a los Estados Unidos con todo el soporte necesario.",
-        "buttonText": "Comenzar Ahora",
-        "redirectAuthenticated": "Serás redirigido al área del estudiante para realizar el pago del proceso de selección.",
-        "redirectAnonymous": "Serás redirigido para crear tu cuenta. ¡Es rápido y gratuito!",
-        "referralBadge": "Código de Vendedor Aplicado",
-        "benefits": {
-          "transparent": {
-            "title": "Proceso Transparente",
-            "description": "Todos los costos detallados desde el principio"
-          },
-          "support": {
-            "title": "Soporte Completo",
-            "description": "Seguimiento en todas las etapas"
-          },
-          "secure": {
-            "title": "Pago Seguro",
-            "description": "Métodos confiables y protegidos"
-          }
-        }
-      }
-    },
-    "initial": {
-      "header": {
-        "title": "Proceso Initial",
-        "subtitle": "Visa de Estudiante F-1 — Aplicación desde el Exterior",
-        "description": "Guía completa con todas las etapas y valores para obtener su visa de estudiante F-1 aplicando desde fuera de los Estados Unidos"
-      },
-      "promise": "Si su plan es llegar a los Estados Unidos con la visa F1 ya aprobada, organizamos el camino desde la elección de la escuela hasta la programación en el consulado. Con nuestra guía, usted entiende cada etapa, todos los costos y recibe orientación para armar una aplicación sólida y coherente con su proyecto de vida.",
-      "steps": {
-        "title": "Etapas del Proceso",
-        "description": "Conozca todas las etapas necesarias para obtener su visa de estudiante F-1",
-        "list": {
-          "step1": {
-            "description": "Primera etapa para verificar si es elegible para la visa de estudiante F-1.",
-            "items": [
-              "Pasaporte vigente (mínimo 1 año)",
-              "Comprobante de fondos bancarios ($22.000 mínimo)",
-              "Dirección completa en el país de origen",
-              "Historial escolar o diploma",
-              "Pago vía Zelle a: pay@matriculausa.com"
-            ]
-          },
-          "step2": {
-            "description": "Tarifa de solicitud y emisión del I-20 para la entrevista en el consulado.",
-            "items": [
-              "Emisión del formulario I-20",
-              "Procesamiento de la matrícula",
-              "$100 por cada dependiente adicional"
-            ]
-          },
-          "step3": {
-            "description": "Tarifa referente a la beca de estudios.",
-            "items": [
-              "Formulario de matrícula en la escuela",
-              "Demás documentación necesaria"
-            ]
-          },
-          "step4": {
-            "description": "Tarifa de control del I-20 durante todo el proceso de visa.",
-            "items": [
-              "Control activo del I-20",
-              "Seguimiento durante todo el proceso",
-              "Soporte para dudas y orientaciones",
-              "Pago de esta tarifa al emitirse la carta de aceptación por la institución"
-            ]
-          },
-          "step5": {
-            "description": "Seguimiento jurídico completo del proceso de visa.",
-            "items": [
-              "$1.800 para el solicitante principal",
-              "$100 por cada dependente adicional",
-              "Preparación para la entrevista en el consulado",
-              "Preparación de toda la documentación"
-            ]
-          }
-        }
-      },
-      "funds": {
-        "description": "Requisitos mínimos de comprobación financiera para la visa F-1",
-        "mainApplicant": "Solicitante Principal",
-        "minAmount": "$22.000",
-        "minBankAccount": "Valor mínimo en cuenta bancaria",
-        "perDependent": "Por Dependiente",
-        "dependentAmount": "+$5.000",
-        "additionalPerDependent": "Valor adicional por cada dependiente",
-        "note": "Los valores deben ser comprobados a través de extracto bancario actualizado. El consulado americano exigirá estos documentos durante la entrevista de visa."
-      },
-      "values": {
-        "description": "Todos los costos involucrados en el proceso Initial"
-      }
-    },
-    "transfer": {
-      "header": {
-        "title": "Proceso de Transfer",
-        "subtitle": "Transferencia de Escuela — Student Transfer",
-        "description": "Guía completa con todas las etapas y valores para realizar la transferencia de escuela en los Estados Unidos"
-      },
-      "promise": "¿Quiere transferir su I-20 sin interrumpir sus estudios ni correr riesgo con su estatus? Mostramos, paso a paso, cuándo y cómo hacer la transferencia, qué tarifas considerar y cómo mantener su carga horaria y fechas en orden, para que continúe estudiando con tranquilidad en la nueva escuela.",
-      "steps": {
-        "title": "Etapas del Proceso",
-        "description": "Conozca todas las etapas necesarias para realizar la transferencia de escuela",
-        "list": {
-          "step1": {
-            "description": "Primera etapa para verificar si es elegible para el proceso de Transfer.",
-            "items": [
-              "Pasaporte vigente (mínimo 1 año)",
-              "I-94 vigente",
-              "Comprobante de visa o estatus actual",
-              "Comprobante de fondos bancários ($22.000 mínimo)",
-              "Dirección completa en EE. UU.",
-              "Pago vía Zelle a: pay@matriculausa.com"
-            ]
-          },
-          "step2": {
-            "description": "Tarifa de solicitud y emisión del I-20.",
-            "items": [
-              "Emisión del formulario I-20",
-              "Procesamiento de la matrícula",
-              "$100 por cada dependiente adicional"
-            ]
-          },
-          "step3": {
-            "description": "Tarifa referente a la beca de estudios.",
-            "items": [
-              "Formulario de matrícula en la escuela",
-              "Demás documentación necesaria"
-            ]
-          },
-          "step4": {
-            "description": "Tarifa de control del I-20 durante todo el proceso de Transfer.",
-            "items": [
-              "Control activo del I-20",
-              "Seguimiento durante todo el proceso",
-              "Soporte para dudas y orientaciones",
-              "Pago de esta tarifa al emitirse la carta de aceptación por la institución"
-            ]
-          }
-        }
-      },
-      "funds": {
-        "description": "Requisitos mínimos de comprobación financiera para el proceso de Transfer",
-        "note": "Los valores deben ser comprobados a través de extracto bancario actualizado. Inversiones y aplicaciones también son aceptadas como comprobación de fondos."
-      },
-      "values": {
-        "description": "Todos los costos involucrados en el proceso de Transfer"
-      }
-    },
-    "cos": {
-      "header": {
-        "title": "Proceso de COS",
-        "subtitle": "Change of Status — Cambio de Estatus",
-        "description": "Guía completa con todas las etapas y valores para realizar el cambio de su estatus de visa en los Estados Unidos"
-      },
-      "promise": "Cambiar su estatus dentro de EE. UU. no necesita ser un labirinto. Aquí encuentra una guía completa con todas las etapas, todos los valores y el soporte necesario para hacer su COS con seguridad, planificación financiera y acompañamiento jurídico hasta la respuesta del USCIS.",
-      "steps": {
-        "title": "Etapas del Proceso",
-        "description": "Conozca todas las etapas necesarias para realizar el cambio de su estatus de visa",
-        "list": {
-          "step1": {
-            "description": "Primera etapa para verificar si es elegible para el proceso de COS.",
-            "items": [
-              "Pasaporte vigente (mínimo 1 año)",
-              "I-94 vigente",
-              "Comprobante de visa o estatus actual",
-              "Comprobante de fondos bancários ($22.000 mínimo)",
-              "Dirección completa en EE. UU.",
-              "Pago vía Zelle a: pay@matriculausa.com"
-            ]
-          },
-          "step2": {
-            "description": "Tarifa de solicitud y emisión del I-20.",
-            "items": [
-              "Emisión del formulario I-20",
-              "Procesamiento de la matrícula",
-              "$100 por cada dependiente adicional"
-            ]
-          },
-          "step3": {
-            "description": "Tarifa referente a la beca de estudios.",
-            "items": [
-              "Formulario de matrícula en la escuela",
-              "Demás documentación necesaria"
-            ]
-          },
-          "step4": {
-            "description": "Tarifa de control del I-20 durante todo el proceso de COS.",
-            "items": [
-              "Control activo del I-20",
-              "Seguimiento durante todo el proceso",
-              "Soporte para dudas y orientaciones",
-              "Pago de esta tarifa al emitirse la carta de aceptación por la institución"
-            ]
-          },
-          "step5": {
-            "description": "Seguimiento jurídico completo del proceso de COS.",
-            "items": [
-              "$1.800 para el solicitante principal",
-              "$100 por cada dependente adicional",
-              "Seguimiento jurídico completo",
-              "Preparación de toda la documentación"
-            ]
-          }
-        }
-      },
-      "funds": {
-        "description": "Requisitos mínimos de comprobación financiera para el proceso de COS",
-        "note": "Los valores deben ser comprobados a través de extracto bancario actualizado. Inversiones y aplicaciones también son aceptadas como comprobación de fondos."
-      },
-      "values": {
-        "description": "Todos los costos involucrados en el proceso de COS"
-      }
-    }
-  },
   "stepByStepGuide": {
-    "title": "Step-by-Step Guide",
-    "subtitle": "How the application process works",
-    "closeButton": "Close step-by-step guide",
-    "progress": "{{current}} of {{total}}",
-    "previous": "Previous",
-    "next": "Next",
-    "startNow": "Start Now!",
+    "title": "Guía Paso a Paso",
+    "subtitle": "Cómo funciona el proceso de solicitud",
+    "closeButton": "Cerrar guía paso a paso",
+    "progress": "{{current}} de {{total}}",
+    "previous": "Anterior",
+    "next": "Siguiente",
+    "startNow": "¡Comenzar ahora!",
     "steps": {
       "step1": {
-        "title": "Welcome to Matrícula USA! 🎓",
-        "description": "Let's guide you through the entire application process for scholarships in the USA. It's easier than you think!"
+        "title": "¡Bienvenido a Matrícula USA! 🎓",
+        "description": "Te guiaremos a través de todo el proceso de solicitud de becas en los EE. UU. ¡Es más fácil de lo que piensas!"
       },
       "step2": {
-        "title": "1. Explore Scholarships",
-        "description": "Browse our list of scholarships. Each one has detailed information about values, requirements, and partner universities. Click on the ones that interest you!"
+        "title": "1. Explora Becas",
+        "description": "Explora nuestra lista de becas. Cada una tiene información detallada sobre valores, requisitos y universidades asociadas. ¡Haz clic en las que te interesen!"
       },
       "step3": {
-        "title": "2. Add to Selection List",
-        "description": "Select the scholarships you want to apply for and add them to your selection list. You can choose multiple scholarships and manage your selections easily."
+        "title": "2. Añadir a la Lista de Selección",
+        "description": "Selecciona las becas a las que quieres aplicar y añádelas a tu lista de selección. Puedes elegir múltiples becas y gestionar tus selecciones fácilmente."
       },
       "step4": {
-        "title": "3. Student Type",
-        "description": "Select your student type: Initial, Transfer, or Status Change. This helps us direct the best opportunities for your profile."
+        "title": "3. Subir Documentos",
+        "description": "Sube tus documentos: Pasaporte, Diploma de Secundaria y un Extracto Bancario. Nuestro equipo revisará todo y te dará feedback."
       },
       "step5": {
-        "title": "4. Upload Documents",
-        "description": "Upload your documents: Passport, High School Diploma, and a Bank Statement. Our team will review everything and give you feedback."
+        "title": "4. Cuota de Colocación y Soporte Final",
+        "description": "Después de la aprobación de la universidad, procedes con la Cuota de Colocación. Esto cubre nuestros servicios profesionales para asegurar tu inscripción y apoyarte hasta tu llegada."
       },
       "step6": {
-        "title": "5. Application Fee Selection",
-        "description": "After submitting your documents, you must wait for university approval to continue with the selection process. Once approved, you will be able to proceed with paying the Application Fee and Scholarship Fee."
-      },
-      "step7": {
-        "title": "6. University Chat & Application Tracking",
-        "description": "In the 'My Applications' section, you will have access to direct chat with the university, where the university can request additional payments, send you your acceptance letter, and track your entire application process."
-      },
-      "step8": {
-        "title": "7. Application Chat & I-20 Control Fee",
-        "description": "In the Application Chat, you can talk directly to the university. The university may request more documents. Here you will also pay the I-20 Control Fee if required."
+        "title": "5. Cupo Garantizado",
+        "description": "Una vez completado el proceso, ¡tu lugar está garantizado y estás listo para comenzar tu viaje americano!"
       }
     },
-    "expandImage": "Expand image",
-    "previewNotAvailable": "Preview not available"
+    "expandImage": "Expandir imagen",
+    "previewNotAvailable": "Previa no disponible"
   },
   "scholarshipDeadline": {
-    "3800Expired": "Not Available for application",
-    "3800Expiring": "Last hours to apply! Deadline expires tomorrow (November 6th)",
+    "3800Expired": "No disponible para postulación",
+    "3800Expiring": "¡Últimas horas para postularse! El plazo vence mañana (6 de noviembre)",
     "3800ExpiringShort": "El plazo expira mañana"
   }
 }

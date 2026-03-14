@@ -249,8 +249,11 @@
       "public": "Pública",
       "allStates": "Todos os Estados",
       "universitiesCount": "universidades",
-      "featured": "em destaque"
+      "featured": "destacadas",
+      "filterByType": "Filtrar por tipo de universidade",
+      "filterByState": "Filtrar por estado da universidade"
     },
+    "loading": "Carregando universidades...",
     "featured": {
       "title": "Universidades em Destaque",
       "subtitle": "Destaques Semanais",
@@ -303,9 +306,10 @@
       "street": "Rua",
       "city": "Cidade",
       "state": "Estado",
-      "zipCode": "CEP",
+      "zipCode": "Código Postal",
       "country": "País",
-      "website": "https://universidade.edu.br"
+      "website": "https://universidade.edu",
+      "uploadBanner": "Carregar imagem do banner da universidade"
     },
     "sections": {
       "about": "Sobre",

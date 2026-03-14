@@ -13,7 +13,7 @@ import { useAuth } from '../hooks/useAuth';
 const PAGE_SIZE = 20;
 
 const Universities: React.FC = () => {
-  const { t } = useTranslation();
+  const { t } = useTranslation(['school', 'scholarships', 'common']);
   const navigate = useNavigate();
   const location = useLocation();
   const { isAuthenticated, user, userProfile, loading } = useAuth();
@@ -134,7 +134,7 @@ const Universities: React.FC = () => {
       <div className="min-h-screen bg-white flex items-center justify-center">
         <div className="text-center">
           <div className="animate-spin rounded-full h-32 w-32 border-b-2 border-[#05294E] mx-auto"></div>
-          <p className="mt-4 text-gray-600">Carregando...</p>
+          <p className="mt-4 text-gray-600">{t('universitiesPage.loading', 'Carregando...')}</p>
         </div>
       </div>
     );
@@ -221,7 +221,7 @@ const Universities: React.FC = () => {
               value={selectedType}
               onChange={(e) => setSelectedType(e.target.value)}
               className="px-3 py-3 bg-white border border-slate-300 rounded-xl focus:ring-2 focus:ring-[#05294E] focus:border-[#05294E] transition-all duration-300 text-sm"
-              title="Filtrar por tipo de universidade"
+              title={t('universitiesPage.search.filterByType', 'Filtrar por tipo de universidade')}
             >
               <option value="all">{t('universitiesPage.search.allTypes')}</option>
               <option value="Private University">{t('universitiesPage.search.private')}</option>

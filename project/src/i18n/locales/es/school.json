@@ -1,1 +1,12 @@
-{}
+{
+  "universities": {
+    "title": "Universidades",
+    "subtitle": "Explora las mejores universidades americanas",
+    "searchPlaceholder": "Buscar universidades...",
+    "location": "Ubicación",
+    "programs": "Programas",
+    "website": "Sitio Web",
+    "viewProfile": "Ver Perfil",
+    "applyNow": "Postular Ahora"
+  }
+}

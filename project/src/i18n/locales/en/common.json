@@ -4,6 +4,7 @@
     "howItWorks": "How It Works",
     "scholarships": "Scholarships",
     "universities": "Universities",
+    "eb3Jobs": "EB-3 Jobs",
     "forUniversities": "For Universities",
     "about": "About",
     "contact": "Contact",
@@ -11,6 +12,13 @@
     "login": "Login",
     "getStarted": "Get Started",
     "dashboard": "Dashboard",
+    "profileSettings": "Profile Settings",
+    "signOut": "Sign Out",
+    "studentDashboard": "Student Dashboard",
+    "schoolDashboard": "School Dashboard",
+    "adminDashboard": "Admin Dashboard",
+    "affiliateDashboard": "Affiliate Admin Dashboard",
+    "sellerDashboard": "Seller Dashboard",
     "viewScholarships": "View Scholarships",
     "goToDashboard": "Go to Dashboard",
     "startSelectionProcess": "Start Selection Process",
@@ -177,115 +185,6 @@
     "placementFee": "Placement Fee - Final step to secure your placement and support",
     "i20ControlFee": "I-20 Control Fee - Document processing and validation"
   },
-  "features": {
-    "whyChoose": "Why Choose MatriculaUSA?",
-    "subtitle": "Everything you need to succeed in your American education journey",
-    "smartMatching": {
-      "title": "Smart Matching",
-      "description": "AI-powered system finds the best universities and scholarships for your profile"
-    },
-    "exclusiveScholarships": {
-      "title": "Exclusive Scholarships",
-      "description": "Access scholarships not available anywhere else, specifically for international students"
-    },
-    "personalSupport": {
-      "title": "Personal Support",
-      "description": "Dedicated team to guide you through every step of the application process"
-    },
-    "fastProcess": {
-      "title": "Fast Process",
-      "description": "Streamlined application process with quick responses and efficient document handling"
-    }
-  },
-  "universities": {
-    "title": "Universities",
-    "subtitle": "Explore top American universities",
-    "searchPlaceholder": "Search universities...",
-    "location": "Location",
-    "programs": "Programs",
-    "website": "Website",
-    "viewProfile": "View Profile",
-    "applyNow": "Apply Now"
-  },
-  "paymentBlocker": {
-    "scholarships": {
-      "title": "Scholarships Locked",
-      "description": "To access our exclusive collection of scholarships, you need to complete the initial selection process. This is the first step of your journey to studying in the United States."
-    },
-    "universities": {
-      "title": "Universities Locked",
-      "description": "To explore our partner universities and their programs, you need to complete the initial selection process. This is the first step of your journey to studying in the United States."
-    },
-    "default": {
-      "title": "Content Locked",
-      "description": "To access this content, you need to complete the initial selection process. This is the first step of your journey to studying in the United States."
-    },
-    "selectionProcessFee": "Selection Process Fee",
-    "completeApplicationJourney": "Complete your application journey",
-    "goToDashboardAndPayFee": "Go to Dashboard & Pay Fee",
-    "learnHowItWorks": "Learn How It Works",
-    "contentLockedMessage": "This content is locked until payment is completed"
-  },
-  "successPages": {
-    "selectionProcessFee": {
-      "title": "Selection Process Fee Payment Successful!",
-      "description": "Your payment of {{amount}} has been processed successfully.",
-      "message": "You now have access to all scholarships and can apply freely.",
-      "button": "Go to Scholarships",
-      "verifying": "Verifying your payment...",
-      "pleaseWait": "Please wait while we confirm your transaction. This may take a few moments.",
-      "errorTitle": "Selection Process Fee Payment Error",
-      "errorMessage": "There was a problem processing your payment.",
-      "errorRetry": "Try again. If the error persists, please contact support."
-    },
-    "scholarshipFee": {
-      "title": "Scholarship Fee Payment Successful!",
-      "description": "Your payment of {{amount}} has been processed successfully.",
-      "message": "Your application will now proceed to the next stage.",
-      "button": "View Details",
-      "verifying": "Verifying your payment...",
-      "pleaseWait": "Please wait while we confirm your payment.",
-      "errorTitle": "Payment Processing Error",
-      "errorMessage": "There was a problem processing your payment.",
-      "errorRetry": "Try again or contact support."
-    },
-    "applicationFee": {
-      "title": "Application Fee Payment Successful!",
-      "description": "Your payment of {{amount}} has been processed successfully.",
-      "message": "Your application will now proceed to the next stage.",
-      "button": "Go to My Applications",
-      "verifying": "Verifying Payment...",
-      "pleaseWait": "Please wait while we confirm your transaction. This may take a few moments.",
-      "errorTitle": "Verification Failed",
-      "errorMessage": "There was a problem verifying your payment. Please contact support.",
-      "errorDetails": "Error details:"
-    },
-    "placementFee": {
-      "title": "Placement Fee Payment Successful!",
-      "description": "Your payment of {{amount}} has been processed successfully.",
-      "message": "Your application is now confirmed.",
-      "button": "Continue",
-      "verifying": "Verifying your payment...",
-      "pleaseWait": "Please wait while we confirm your transaction. This may take a few moments.",
-      "errorTitle": "Processing Error",
-      "errorMessage": "There was a problem processing your payment.",
-      "errorRetry": "Try again or contact support."
-    },
-    "common": {
-      "verifying": "Verifying your payment...",
-      "pleaseWait": "Please wait a moment while we process your transaction."
-    },
-    "i20ControlFee": {
-      "title": "I-20 Control Fee Payment Successful!",
-      "message": "Your I-20 document will be processed and sent shortly.",
-      "button": "Back to My Applications",
-      "verifying": "Verifying Payment...",
-      "pleaseWait": "Please wait while we confirm your payment.",
-      "errorTitle": "I-20 Control Fee Payment Error",
-      "errorMessage": "There was a problem processing your payment.",
-      "errorRetry": "Try again. If the error persists, please contact support."
-    }
-  },
   "ssoCallback": {
     "processing": {
       "title": "Please wait a moment",
@@ -320,5 +219,18 @@
       "tryAgain": "Try Again",
       "goToLogin": "Go to Login"
     }
+  },
+  "smartChat": {
+    "title": "Smart Assistant",
+    "subtitle": "Your intelligent companion",
+    "welcomeMessage": "Hello! I'm your Smart Assistant. How can I help you today? I can answer questions about scholarships, fees, application process and much more.",
+    "inputPlaceholder": "Ask me anything...",
+    "send": "Send",
+    "typing": "Typing...",
+    "close": "Close chat",
+    "you": "You",
+    "assistant": "Smart Assistant",
+    "whatsappTitle": "Contact us via WhatsApp",
+    "mobileNote": "Smart Assistant - Opens in new tab"
   }
 }

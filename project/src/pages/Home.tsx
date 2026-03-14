@@ -5,7 +5,6 @@ import { useTranslationWithFees } from '../hooks/useTranslationWithFees';
 import { useDynamicFees } from '../hooks/useDynamicFees';
 import { useUniversities } from '../hooks/useUniversities';
 import { usePaymentBlocked } from '../hooks/usePaymentBlocked';
-import { StripeCheckout } from '../components/StripeCheckout';
 import { useAuth } from '../hooks/useAuth';
 import { supabase } from '../lib/supabase';
 // Removido SmartChat pois não é utilizado
@@ -15,12 +14,12 @@ import { motion } from 'framer-motion';
 
 const Home: React.FC = () => {
   
-  const { t } = useTranslationWithFees();
-  const { selectionProcessFee, scholarshipFee, i20ControlFee, hasSellerPackage, packageName } = useDynamicFees();
+  const { t } = useTranslationWithFees(['home', 'dashboard', 'common', 'school']);
+  const { hasSellerPackage, packageName } = useDynamicFees();
   const navigate = useNavigate();
   const location = useLocation();
   const { universities } = useUniversities();
-  const { isBlocked, pendingPayment, loading: paymentBlockedLoading } = usePaymentBlocked();
+  const { isBlocked, pendingPayment } = usePaymentBlocked();
   
   // Verificar se há pagamento Zelle pendente do tipo selection_process
   const hasPendingSelectionProcessPayment = isBlocked && pendingPayment && pendingPayment.fee_type === 'selection_process';
@@ -198,7 +197,7 @@ const Home: React.FC = () => {
                       <img className="w-8 h-8 rounded-full border-2 border-white" src="https://images.pexels.com/photos/2182970/pexels-photo-2182970.jpeg?auto=compress&cs=tinysrgb&w=100&h=100&dpr=1" alt="" />
                       <img className="w-8 h-8 rounded-full border-2 border-white" src="https://images.pexels.com/photos/1239291/pexels-photo-1239291.jpeg?auto=compress&cs=tinysrgb&w=100&h=100&dpr=1" alt="" />
                     </div>
-                    <span className="text-sm font-medium">5,000+ {t('home.trustIndicators.studentsEnrolled')}</span>
+                    <span className="text-sm font-medium">{t('home.cta.badge', { students: t('home.trustIndicators.studentsEnrolled') })}</span>
                   </div>
                   <div className="flex items-center">
                     <div className="flex mr-2">
@@ -227,8 +226,8 @@ const Home: React.FC = () => {
                         <CheckCircle className="h-6 w-6 text-green-600" />
                       </div>
                       <div>
-                        <div className="font-bold text-slate-900">95% Success Rate</div>
-                        <div className="text-sm text-slate-500">Student enrollment</div>
+                        <div className="font-bold text-slate-900">{t('home.hero.stats.successRate.title')}</div>
+                        <div className="text-sm text-slate-500">{t('home.hero.stats.successRate.subtitle')}</div>
                       </div>
                     </div>
                   </div>
@@ -239,8 +238,8 @@ const Home: React.FC = () => {
                         <DollarSign className="h-6 w-6 text-[#05294E]" />
                       </div>
                       <div>
-                        <div className="font-bold text-slate-900">$50M+</div>
-                        <div className="text-sm text-slate-500">In scholarships</div>
+                        <div className="font-bold text-slate-900">{t('home.hero.stats.scholarships.title')}</div>
+                        <div className="text-sm text-slate-500">{t('home.hero.stats.scholarships.subtitle')}</div>
                       </div>
                     </div>
                   </div>
@@ -262,7 +261,7 @@ const Home: React.FC = () => {
                 <span className="text-sm font-bold text-slate-700">{t('home.stats.universities')}</span>
               </div>
               <h2 className="text-4xl md:text-5xl font-black text-slate-900 mb-6">
-                Featured <span className="text-[#05294E]">{t('universities.title')}</span>
+                {t('home.featuredUniversities.featured')} <span className="text-[#05294E]">{t('universities.title')}</span>
               </h2>
               <p className="text-xl text-slate-600 max-w-3xl mx-auto">
                 {t('universities.subtitle')}
@@ -365,7 +364,7 @@ const Home: React.FC = () => {
                           </>
                         ) : (
                           <span className="bg-slate-100 text-slate-700 px-2 py-1 rounded-lg text-xs font-medium">
-                            No program info
+                            {t('common.noProgramInfo') || 'No program info'}
                           </span>
                         )}
                       </div>
@@ -405,13 +404,13 @@ const Home: React.FC = () => {
           <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
             <div className="text-center mb-20">
               <div className="inline-flex items-center bg-white rounded-full px-6 py-2 mb-6 shadow-lg border border-slate-200">
-                <span className="text-sm font-bold text-slate-700">{t('features.whyChoose')}</span>
+                <span className="text-sm font-bold text-slate-700">{t('home.features.whyChoose')}</span>
               </div>
               <h2 className="text-4xl md:text-5xl font-black text-slate-900 mb-6">
-                {t('features.whyChoose')}
+                {t('home.features.whyChoose')}
               </h2>
               <p className="text-xl text-slate-600 max-w-3xl mx-auto">
-                {t('features.subtitle')}
+                {t('home.features.subtitle')}
               </p>
             </div>
 
@@ -420,9 +419,9 @@ const Home: React.FC = () => {
                 <div className="bg-[#05294E] w-16 h-16 rounded-2xl flex items-center justify-center mb-6 group-hover:scale-110 transition-transform duration-300 shadow-lg">
                   <Globe className="h-8 w-8 text-white" />
                 </div>
-                <h3 className="text-2xl font-bold text-slate-900 mb-4">{t('features.smartMatching.title')}</h3>
+                <h3 className="text-2xl font-bold text-slate-900 mb-4">{t('home.features.smartMatching.title')}</h3>
                 <p className="text-slate-600 leading-relaxed mb-6">
-                  {t('features.smartMatching.description')}
+                  {t('home.features.smartMatching.description')}
                 </p>
                 <Link to="/schools" className="inline-flex items-center text-[#05294E] font-bold hover:text-[#05294E]/80 transition-colors">
                   {t('universities.title')} <ChevronRight className="ml-1 h-4 w-4" />
@@ -433,9 +432,9 @@ const Home: React.FC = () => {
                 <div className="bg-[#D0151C] w-16 h-16 rounded-2xl flex items-center justify-center mb-6 group-hover:scale-110 transition-transform duration-300 shadow-lg">
                   <Award className="h-8 w-8 text-white" />
                 </div>
-                <h3 className="text-2xl font-bold text-slate-900 mb-4">{t('features.exclusiveScholarships.title')}</h3>
+                <h3 className="text-2xl font-bold text-slate-900 mb-4">{t('home.features.exclusiveScholarships.title')}</h3>
                 <p className="text-slate-600 leading-relaxed mb-6">
-                  {t('features.exclusiveScholarships.description')}
+                  {t('home.features.exclusiveScholarships.description')}
                 </p>
                 <Link to="/scholarships" className="inline-flex items-center text-[#D0151C] font-bold hover:text-[#D0151C]/80 transition-colors">
                   {t('nav.viewScholarships')} <ChevronRight className="ml-1 h-4 w-4" />
@@ -446,9 +445,9 @@ const Home: React.FC = () => {
                 <div className="bg-green-600 w-16 h-16 rounded-2xl flex items-center justify-center mb-6 group-hover:scale-110 transition-transform duration-300 shadow-lg">
                   <Heart className="h-8 w-8 text-white" />
                 </div>
-                <h3 className="text-2xl font-bold text-slate-900 mb-4">{t('features.personalSupport.title')}</h3>
+                <h3 className="text-2xl font-bold text-slate-900 mb-4">{t('home.features.personalSupport.title')}</h3>
                 <p className="text-slate-600 leading-relaxed mb-6">
-                  {t('features.personalSupport.description')}
+                  {t('home.features.personalSupport.description')}
                 </p>
                 <Link to="/how-it-works" className="inline-flex items-center text-green-600 font-bold hover:text-green-700 transition-colors">
                   {t('common.learnMore')} <ChevronRight className="ml-1 h-4 w-4" />
@@ -651,14 +650,14 @@ const Home: React.FC = () => {
                   </div>
                   {t('home.faq.questions.q2.question')}
                 </h3>
-                <p className="text-slate-600 leading-relaxed pl-11">
-                  The Selection Process Fee ({selectionProcessFee}) is the first mandatory payment on the MatriculaUSA platform. It unlocks your full access to view all scholarships and start your application process.
+                <div className="text-slate-600 leading-relaxed pl-11">
+                  {t('home.faq.questions.q2.answer')}
                   {hasSellerPackage && (
                     <span className="ml-2 text-sm bg-blue-100 text-blue-800 px-2 py-1 rounded-full">
                       {packageName}
                     </span>
                   )}
-                </p>
+                </div>
               </div>
               <div className="bg-gradient-to-r from-slate-50 to-blue-50 p-8 rounded-3xl border border-slate-200 hover:shadow-lg transition-all duration-300">
                 <h3 className="text-xl font-bold text-slate-900 mb-4 flex items-center">
@@ -667,14 +666,17 @@ const Home: React.FC = () => {
                   </div>
                   {t('home.faq.questions.q3.question')}
                 </h3>
-                <p className="text-slate-600 leading-relaxed pl-11">
-                  The Scholarship Fee ({scholarshipFee}) is charged when you proceed with applications for exclusive scholarships through MatriculaUSA. This fee covers processing costs and personalized support for your scholarship applications.
-                  {hasSellerPackage && (
-                    <span className="ml-2 text-sm bg-blue-100 text-blue-800 px-2 py-1 rounded-full">
+                <div 
+                  className="text-slate-600 leading-relaxed pl-11"
+                  dangerouslySetInnerHTML={{ __html: t('home.faq.questions.q3.answer') }}
+                />
+                {hasSellerPackage && (
+                  <div className="pl-11 mt-2">
+                    <span className="text-sm bg-blue-100 text-blue-800 px-2 py-1 rounded-full">
                       {packageName}
                     </span>
-                  )}
-                </p>
+                  </div>
+                )}
               </div>
               <div className="bg-gradient-to-r from-slate-50 to-blue-50 p-8 rounded-3xl border border-slate-200 hover:shadow-lg transition-all duration-300">
                 <h3 className="text-xl font-bold text-slate-900 mb-4 flex items-center">
@@ -694,14 +696,14 @@ const Home: React.FC = () => {
                   </div>
                   {t('home.faq.questions.q5.question')}
                 </h3>
-                <p className="text-slate-600 leading-relaxed pl-11">
-                  The I-20 Control Fee ({i20ControlFee}) is a mandatory payment for students who need to obtain the I-20 form, essential for applying for the F-1 student visa. This fee ensures fast and accurate processing of your visa documents.
+                <div className="text-slate-600 leading-relaxed pl-11">
+                  {t('home.faq.questions.q5.answer')}
                   {hasSellerPackage && (
                     <span className="ml-2 text-sm bg-blue-100 text-blue-800 px-2 py-1 rounded-full">
                       {packageName}
                     </span>
                   )}
-                </p>
+                </div>
               </div>
               <div className="bg-gradient-to-r from-slate-50 to-blue-50 p-8 rounded-3xl border border-slate-200 hover:shadow-lg transition-all duration-300">
                 <h3 className="text-xl font-bold text-slate-900 mb-4 flex items-center">
@@ -754,14 +756,14 @@ const Home: React.FC = () => {
                   </div>
                   {t('home.faq.questions.q10.question')}
                 </h3>
-                <p className="text-slate-600 leading-relaxed pl-11">
-                  No. The fees are separate purchases and are paid in stages as you progress through the process. You pay the Selection Process Fee ({selectionProcessFee}) first, then the Scholarship Fee ({scholarshipFee}) (if applicable), followed by the Application Fee, and finally the I-20 Control Fee ({i20ControlFee}). All are mandatory for the complete flow, but do not need to be paid simultaneously.
+                <div className="text-slate-600 leading-relaxed pl-11">
+                  {t('home.faq.questions.q10.answer')}
                   {hasSellerPackage && (
                     <span className="ml-2 text-sm bg-blue-100 text-blue-800 px-2 py-1 rounded-full">
                       {packageName}
                     </span>
                   )}
-                </p>
+                </div>
               </div>
               <div className="bg-gradient-to-r from-slate-50 to-blue-50 p-8 rounded-3xl border border-slate-200 hover:shadow-lg transition-all duration-300">
                 <h3 className="text-xl font-bold text-slate-900 mb-4 flex items-center">
@@ -783,7 +785,7 @@ const Home: React.FC = () => {
           <div className="relative max-w-5xl mx-auto px-4 sm:px-6 lg:px-8 text-center">
             <div className="inline-flex items-center bg-white/10 backdrop-blur-sm border border-white/20 rounded-full px-6 py-2 mb-8">
               <Sparkles className="h-4 w-4 mr-2" />
-              <span className="text-sm font-medium">Join 5,000+ {t('home.trustIndicators.studentsEnrolled')}</span>
+              <span className="text-sm font-medium">{t('home.cta.badge', { students: t('home.trustIndicators.studentsEnrolled') })}</span>
             </div>
             
             <h2 className="text-4xl md:text-6xl font-black mb-6 leading-tight">

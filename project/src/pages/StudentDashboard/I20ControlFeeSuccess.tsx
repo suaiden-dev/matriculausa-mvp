@@ -19,7 +19,7 @@ const I20ControlFeeSuccess: React.FC = () => {
   const sessionId = params.get('session_id');
   const reference = searchParams.get('ref') || searchParams.get('reference');
   const paymentMethod = searchParams.get('pm') || searchParams.get('payment_method');
-  const { t } = useTranslation();
+  const { t } = useTranslation(['dashboard', 'payment', 'common']);
   const hasRunRef = useRef(false);
 
   // Função para verificar pagamento Parcelow

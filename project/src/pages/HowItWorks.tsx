@@ -6,8 +6,6 @@ import {
   Clock, 
   FileText,
   Star,
-  BookOpen,
-  Lock,
   MessageCircle,
   GraduationCap,
   CreditCard
@@ -22,7 +20,7 @@ import { useSimplifiedFees } from '../hooks/useSimplifiedFees';
 import SmartChat from '../components/SmartChat';
 
 const HowItWorks: React.FC = () => {
-  const { t, i18n } = useTranslation();
+  const { t, i18n } = useTranslation(['home', 'common']);
   const { selectionProcessFee, scholarshipFee, i20ControlFee, hasSellerPackage, packageName } = useDynamicFees();
   const { affiliateAdminEmail, loading: affiliateCheckLoading, isTheFutureOfEnglishAffiliate } = useAffiliateAdminCheck();
   const { userProfile } = useAuth();
@@ -225,46 +223,17 @@ const HowItWorks: React.FC = () => {
           {/* Step 5 */}
           <div className="bg-slate-50 rounded-3xl shadow-lg p-8 flex flex-col md:flex-row gap-8 items-center border border-slate-200">
             <div className="flex-shrink-0 flex items-center justify-center w-16 h-16 rounded-2xl bg-purple-100">
-              <BookOpen className="h-8 w-8 text-purple-600" />
+              <Sparkles className="h-8 w-8 text-purple-600" />
             </div>
             <div>
               <h3 className="text-2xl font-bold mb-2 text-purple-700">
-                5. {t('howItWorks.steps.scholarshipFee.title', { scholarshipFee })}
-                {hasSellerPackage && (
-                  <span className="ml-2 text-sm bg-blue-100 text-blue-800 px-2 py-1 rounded-full">
-                    {packageName}
-                  </span>
-                )}
+                5. {t('howItWorks.steps.placementFee.title')}
               </h3>
               <p className="text-slate-700 mb-2 text-lg">
-                {t('howItWorks.steps.scholarshipFee.description', { scholarshipFee })}
+                {t('howItWorks.steps.placementFee.description')}
               </p>
               <ul className="list-disc list-inside text-slate-500 text-sm space-y-1">
-                {(t('howItWorks.steps.scholarshipFee.items', { returnObjects: true }) as string[]).map((item, index) => (
-                  <li key={index}>{item}</li>
-                ))}
-              </ul>
-            </div>
-                </div>
-          {/* Step 6 */}
-          <div className="bg-slate-50 rounded-3xl shadow-lg p-8 flex flex-col md:flex-row gap-8 items-center border border-slate-200">
-            <div className="flex-shrink-0 flex items-center justify-center w-16 h-16 rounded-2xl bg-red-100">
-              <Lock className="h-8 w-8 text-red-600" />
-                  </div>
-            <div>
-              <h3 className="text-2xl font-bold mb-2 text-red-700">
-                6. {t('howItWorks.steps.i20Fee.title', { i20ControlFee })}
-                {hasSellerPackage && (
-                  <span className="ml-2 text-sm bg-blue-100 text-blue-800 px-2 py-1 rounded-full">
-                    {packageName}
-                  </span>
-                )}
-              </h3>
-              <p className="text-slate-700 mb-2 text-lg">
-                {t('howItWorks.steps.i20Fee.description', { i20ControlFee })}
-              </p>
-              <ul className="list-disc list-inside text-slate-500 text-sm space-y-1">
-                {(t('howItWorks.steps.i20Fee.items', { returnObjects: true }) as string[]).map((item, index) => (
+                {(t('howItWorks.steps.placementFee.items', { returnObjects: true }) as string[]).map((item, index) => (
                   <li key={index}>{item}</li>
                 ))}
               </ul>
@@ -311,7 +280,10 @@ const HowItWorks: React.FC = () => {
             {Array.from({ length: 11 }, (_, i) => i + 1).map((num) => (
               <div key={num} className="bg-slate-50 rounded-2xl p-6 shadow flex flex-col gap-2">
                 <h3 className="font-bold text-[#05294E]">{num}. {t(`howItWorks.faq.q${num}.question`, { selectionProcessFee, scholarshipFee, i20ControlFee })}</h3>
-                <p>{t(`howItWorks.faq.q${num}.answer`, { selectionProcessFee, scholarshipFee, i20ControlFee })}</p>
+                <div 
+                  className="text-slate-600 leading-relaxed"
+                  dangerouslySetInnerHTML={{ __html: t(`howItWorks.faq.q${num}.answer`, { selectionProcessFee, scholarshipFee, i20ControlFee }) }} 
+                />
               </div>
             ))}
           </div>

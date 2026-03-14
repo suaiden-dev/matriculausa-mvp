@@ -1,21 +1,21 @@
 import React, { useEffect, useState, useRef } from 'react';
-import { useParams, Link, useNavigate } from 'react-router-dom';
+import { useParams, Link } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import { useAuth } from '../hooks/useAuth';
-import { MapPin, ExternalLink, ArrowLeft, Sparkles, Phone, Mail, Fan as Fax, DollarSign, Award, Clock, Edit, Settings } from 'lucide-react';
+import { MapPin, ExternalLink, Sparkles, Phone, Mail, Fan as Fax, Edit, Settings } from 'lucide-react';
 import { mockSchools } from '../data/mockData';
 import { supabase } from '../lib/supabase';
-import type { Scholarship } from '../types';
+
 import Header from '../components/Header';
 import { slugify } from '../utils/slugify';
 
 const UniversityDetail: React.FC = () => {
-  const { t } = useTranslation();
+  const { t } = useTranslation(['school', 'common']);
   const { slug } = useParams<{ slug: string }>();
   const [university, setUniversity] = useState<any | null>(null);
   const [loading, setLoading] = useState(true);
   const { user, isAuthenticated } = useAuth();
-  const navigate = useNavigate();
+
   const [isEditing, setIsEditing] = useState(false);
   const [saving, setSaving] = useState(false);
   const [uploading, setUploading] = useState(false);
@@ -237,11 +237,7 @@ const UniversityDetail: React.FC = () => {
     }
   };
 
-  const handleEditProfile = () => {
-    if (isOwner) {
-      navigate('/school/dashboard/profile');
-    }
-  };
+
 
   if (loading) {
     return (
@@ -326,15 +322,14 @@ const UniversityDetail: React.FC = () => {
                   className="hidden"
                   id="banner-upload"
                   disabled={uploading}
-                  title="Upload university banner image"
                 />
-                <button
-                  onClick={() => fileInputRef.current?.click()}
-                  className="bg-white/90 text-[#05294E] px-4 py-2 rounded-lg shadow-lg hover:bg-white transition-colors text-sm font-medium"
-                  disabled={uploading}
+                <label
+                  htmlFor="banner-upload"
+                  className="bg-white/90 text-[#05294E] px-4 py-2 rounded-lg shadow-lg hover:bg-white transition-colors text-sm font-medium cursor-pointer flex items-center justify-center"
+                  title={t('universityDetailPage.placeholders.uploadBanner', 'Upload university banner image')}
                 >
                   {uploading ? t('universityDetailPage.editProfile.uploadingBanner') : t('universityDetailPage.editProfile.changeBanner')}
-                </button>
+                </label>
                 {uploadError && <div className="text-red-600 text-xs mt-1 bg-white/90 px-2 py-1 rounded">{uploadError}</div>}
               </>
             ) : (

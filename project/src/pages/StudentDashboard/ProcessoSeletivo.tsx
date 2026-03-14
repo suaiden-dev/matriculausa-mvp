@@ -13,7 +13,7 @@ import { dispatchCacheInvalidationEvent, CacheInvalidationEvent } from '../../ut
 import { useTranslation, Trans } from 'react-i18next';
 
 const ProcessoSeletivo = () => {
-    const { t } = useTranslation();
+    const { t } = useTranslation(['dashboard', 'common']);
     const [currentSection, setCurrentSection] = useState(() => {
         const saved = localStorage.getItem('survey_current_section');
         return saved ? parseInt(saved, 10) : 0;

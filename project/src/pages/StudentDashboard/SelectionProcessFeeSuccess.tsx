@@ -20,7 +20,7 @@ const SelectionProcessFeeSuccess: React.FC = () => {
   const [animationSuccess, setAnimationSuccess] = useState(true);
   const [isVerifying, setIsVerifying] = useState(false);
   const [hasVerified, setHasVerified] = useState(false);
-  const { t } = useTranslation();
+  const { t } = useTranslation(['dashboard', 'common']);
   const [paidAmount, setPaidAmount] = useState<number | null>(null);
   const { user, userProfile } = useAuth();
   console.log('[SelectionProcessFeeSuccess] Supabase URL:', import.meta.env.VITE_SUPABASE_URL);
