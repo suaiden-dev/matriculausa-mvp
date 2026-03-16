@@ -95,6 +95,7 @@ interface StudentRecord {
   applied_at: string | null;
   is_application_fee_paid: boolean;
   is_scholarship_fee_paid: boolean;
+  selection_survey_passed?: boolean;
   placement_fee_flow?: boolean;
   is_placement_fee_paid?: boolean;
   placement_fee_amount?: number | null;
@@ -134,7 +135,6 @@ const AdminStudentDetails: React.FC = () => {
   const navigate = useNavigate();
   const [student, setStudent] = useState<StudentRecord | null>(null);
   const [loading, setLoading] = useState(true);
-  const [loadingSecondaryData, setLoadingSecondaryData] = useState(false);
   const [expandedApps, setExpandedApps] = useState<{ [key: string]: boolean }>({});
   const [dependents, setDependents] = useState<number>(0);
   const [approvingDocs, setApprovingDocs] = useState<{ [key: string]: boolean }>({});
@@ -1135,8 +1135,6 @@ const AdminStudentDetails: React.FC = () => {
       if (!student || loading) return; // Aguardar dados críticos
 
       try {
-        setLoadingSecondaryData(true);
-
         // ✅ OTIMIZAÇÃO: Tentar usar RPC consolidada primeiro (reduz múltiplas queries para 1)
         let useRpc = true;
 
@@ -1233,7 +1231,7 @@ const AdminStudentDetails: React.FC = () => {
       } catch (e) {
         console.error('Error loading secondary data:', e);
       } finally {
-        setLoadingSecondaryData(false);
+        // Finalized loading secondary data
       }
     };
 
@@ -3757,14 +3755,6 @@ const AdminStudentDetails: React.FC = () => {
 
   return (
     <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6 space-y-6">
-      {/* Indicador de carregamento de dados secundários */}
-      {loadingSecondaryData && (
-        <div className="bg-blue-50 border border-blue-200 rounded-xl p-3 flex items-center gap-3">
-          <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-blue-600"></div>
-          <p className="text-sm text-blue-700">Carregando informações adicionais...</p>
-        </div>
-      )}
-
       <div className="flex items-center justify-between">
         <div>
           <h1 className="text-2xl font-bold text-slate-900">Student Details</h1>
@@ -6077,6 +6067,7 @@ const AdminStudentDetails: React.FC = () => {
           <Suspense fallback={<TabLoadingSkeleton />}>
             <SelectionSurveyView
               userId={student.user_id}
+              surveyPassed={student.selection_survey_passed}
             />
           </Suspense>
         </div>

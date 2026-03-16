@@ -1,7 +1,11 @@
-import React, { useState, useRef } from 'react';
+import React, { useState, useRef, useImperativeHandle, forwardRef } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Upload, X, CheckCircle, AlertCircle, Camera } from 'lucide-react';
 import { supabase } from '../lib/supabase';
+
+export interface IdentityPhotoUploadRef {
+  clear: () => void;
+}
 
 interface IdentityPhotoUploadProps {
   onUploadSuccess: (filePath: string, fileName: string) => void;
@@ -9,18 +13,20 @@ interface IdentityPhotoUploadProps {
   onRemove?: () => void;
   initialPhotoPath?: string;
   variant?: 'default' | 'large';
+  hideInternalActions?: boolean;
 }
 
 const ALLOWED_TYPES = ['image/jpeg', 'image/jpg', 'image/png'];
 const MAX_FILE_SIZE = 5 * 1024 * 1024; // 5MB
 
-export const IdentityPhotoUpload: React.FC<IdentityPhotoUploadProps> = ({
+export const IdentityPhotoUpload = forwardRef<IdentityPhotoUploadRef, IdentityPhotoUploadProps>(({
   onUploadSuccess,
   onUploadError,
   onRemove,
   initialPhotoPath,
-  variant = 'default'
-}) => {
+  variant = 'default',
+  hideInternalActions = false
+}, ref) => {
   const { t } = useTranslation();
   const [preview, setPreview] = useState<string | null>(null);
   const [uploading, setUploading] = useState(false);
@@ -28,6 +34,13 @@ export const IdentityPhotoUpload: React.FC<IdentityPhotoUploadProps> = ({
   const [uploadedFilePath, setUploadedFilePath] = useState<string | null>(initialPhotoPath || null);
   const [isRemoved, setIsRemoved] = useState(false); // Flag para controlar se foi removido manualmente
   const fileInputRef = useRef<HTMLInputElement>(null);
+  const abortControllerRef = useRef<AbortController | null>(null);
+
+  useImperativeHandle(ref, () => ({
+    clear: () => {
+      handleRemove();
+    }
+  }));
 
   // Carregar preview se já existe foto usando signed URL
   React.useEffect(() => {
@@ -76,22 +89,18 @@ export const IdentityPhotoUpload: React.FC<IdentityPhotoUploadProps> = ({
     loadPhotoPreview();
   }, [initialPhotoPath, isRemoved, uploadedFilePath]);
 
-  const abortControllerRef = useRef<AbortController | null>(null);
-
   const handleFileSelect = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file) return;
 
-    console.log('🔍 [IdentityPhotoUpload] Iniciando handleFileSelect para arquivo:', file.name);
     setError(null);
-    setIsRemoved(false); // ✅ Resetar imediatamente para mudar a UI de "Upload Area" para "Preview/Loading"
+    setIsRemoved(false);
 
     // Validação de tipo
     if (!ALLOWED_TYPES.includes(file.type)) {
       const errorMsg = t('components.identityPhotoUpload.errors.onlyImages');
       setError(errorMsg);
       onUploadError?.(errorMsg);
-      console.warn('⚠️ [IdentityPhotoUpload] Tipo de arquivo inválido:', file.type);
       return;
     }
 
@@ -100,13 +109,11 @@ export const IdentityPhotoUpload: React.FC<IdentityPhotoUploadProps> = ({
       const errorMsg = t('components.identityPhotoUpload.errors.maxSize');
       setError(errorMsg);
       onUploadError?.(errorMsg);
-      console.warn('⚠️ [IdentityPhotoUpload] Arquivo muito grande:', file.size);
       return;
     }
 
     // Cancelar upload anterior se existir
     if (abortControllerRef.current) {
-      console.log('🔍 [IdentityPhotoUpload] Abortando upload anterior...');
       abortControllerRef.current.abort();
     }
     const currentController = new AbortController();
@@ -116,19 +123,16 @@ export const IdentityPhotoUpload: React.FC<IdentityPhotoUploadProps> = ({
     const reader = new FileReader();
     reader.onloadend = () => {
       setPreview(reader.result as string);
-      console.log('🔍 [IdentityPhotoUpload] Preview gerado localmente');
     };
     reader.readAsDataURL(file);
 
     // Upload via Edge Function
     setUploading(true);
-    console.log('🔍 [IdentityPhotoUpload] setUploading(true)');
     
     try {
       const formData = new FormData();
       formData.append('file', file);
 
-      console.log('🔍 [IdentityPhotoUpload] Obtendo sessão do Supabase...');
       const { data: sessionData } = await supabase.auth.getSession();
       const token = sessionData.session?.access_token;
 
@@ -136,7 +140,6 @@ export const IdentityPhotoUpload: React.FC<IdentityPhotoUploadProps> = ({
         throw new Error(t('components.identityPhotoUpload.errors.unauthenticated'));
       }
 
-      console.log('🔍 [IdentityPhotoUpload] Enviando requisição para Edge Function...');
       const SUPABASE_URL = import.meta.env.VITE_SUPABASE_URL;
       const response = await fetch(`${SUPABASE_URL}/functions/v1/upload-identity-photo`, {
         method: 'POST',
@@ -147,35 +150,27 @@ export const IdentityPhotoUpload: React.FC<IdentityPhotoUploadProps> = ({
         signal: currentController.signal
       });
 
-      console.log('🔍 [IdentityPhotoUpload] Resposta recebida, extraindo JSON...');
       const result = await response.json();
 
       if (!result.success) {
         throw new Error(result.error || t('components.identityPhotoUpload.errors.generic'));
       }
 
-      console.log('🔍 [IdentityPhotoUpload] ✅ Upload concluído com sucesso:', result.filePath);
       setUploadedFilePath(result.filePath);
       onUploadSuccess(result.filePath, result.fileName);
       setError(null);
     } catch (err: any) {
       if (err.name === 'AbortError') {
-        console.log('🔍 [IdentityPhotoUpload] 🛑 Upload cancelado/abortado');
         return;
       }
-      console.error('❌ [IdentityPhotoUpload] Erro no upload:', err);
       const errorMsg = err.message || t('components.identityPhotoUpload.errors.generic');
       setError(errorMsg);
       setPreview(null);
       onUploadError?.(errorMsg);
     } finally {
-      // ✅ Só resetar se ainda for o controlador desta execução
       if (abortControllerRef.current === currentController) {
-        console.log('🔍 [IdentityPhotoUpload] Resetando estado de uploading (fim do fluxo)');
         setUploading(false);
         abortControllerRef.current = null;
-      } else {
-        console.log('🔍 [IdentityPhotoUpload] Ignorando reset de uploading pois um novo fluxo já assumiu');
       }
     }
   };
@@ -274,25 +269,28 @@ export const IdentityPhotoUpload: React.FC<IdentityPhotoUploadProps> = ({
               className="max-w-full h-auto max-h-[200px] md:max-h-[280px] object-contain rounded-md"
             />
           </div>
-          <div className="mt-3 flex items-center justify-between">
-            {uploadedFilePath && !isRemoved ? (
-              <div className="flex items-center gap-2 text-green-700">
-                <CheckCircle className="w-5 h-5" />
-                <span className="text-sm font-medium">{t('components.identityPhotoUpload.success')}</span>
-              </div>
-            ) : (
-              <div className="flex items-center gap-2 text-gray-500">
-                <span className="text-sm">{t('components.identityPhotoUpload.preview')}</span>
-              </div>
-            )}
-            <button
-              onClick={handleRemove}
-              className="px-4 py-2 text-sm font-medium text-red-700 bg-red-50 hover:bg-red-100 rounded-lg transition-colors flex items-center gap-2"
-            >
-              <X className="w-4 h-4" />
-              {t('components.identityPhotoUpload.remove')}
-            </button>
-          </div>
+          
+          {!hideInternalActions && (
+            <div className="mt-3 flex items-center justify-between">
+              {uploadedFilePath && !isRemoved ? (
+                <div className="flex items-center gap-2 text-green-700">
+                  <CheckCircle className="w-5 h-5" />
+                  <span className="text-sm font-medium">{t('components.identityPhotoUpload.success')}</span>
+                </div>
+              ) : (
+                <div className="flex items-center gap-2 text-gray-500">
+                  <span className="text-sm">{t('components.identityPhotoUpload.preview')}</span>
+                </div>
+              )}
+              <button
+                onClick={handleRemove}
+                className="px-4 py-2 text-sm font-medium text-red-700 bg-red-50 hover:bg-red-100 rounded-lg transition-colors flex items-center gap-2"
+              >
+                <X className="w-4 h-4" />
+                {t('components.identityPhotoUpload.remove')}
+              </button>
+            </div>
+          )}
         </div>
       )}
 
@@ -304,4 +302,6 @@ export const IdentityPhotoUpload: React.FC<IdentityPhotoUploadProps> = ({
       )}
     </div>
   );
-};
+});
+
+IdentityPhotoUpload.displayName = 'IdentityPhotoUpload';

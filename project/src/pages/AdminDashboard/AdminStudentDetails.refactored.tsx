@@ -3549,6 +3549,7 @@ const AdminStudentDetails: React.FC = () => {
           <Suspense fallback={<TabLoadingSkeleton />}>
             <SelectionSurveyView
               userId={student?.user_id || ''}
+              surveyPassed={student?.selection_survey_passed}
             />
           </Suspense>
         </div>

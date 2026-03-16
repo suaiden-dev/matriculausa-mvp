@@ -6,6 +6,7 @@ import { CheckCircle, XCircle, FileText, Calendar, Award, ChevronDown, ChevronRi
 
 interface SelectionSurveyViewProps {
     userId: string;
+    surveyPassed?: boolean;
 }
 
 interface Submission {
@@ -21,7 +22,7 @@ interface Submission {
     updated_at: string;
 }
 
-const SelectionSurveyView: React.FC<SelectionSurveyViewProps> = ({ userId }) => {
+const SelectionSurveyView: React.FC<SelectionSurveyViewProps> = ({ userId, surveyPassed }) => {
     const { t } = useTranslation();
     const [submission, setSubmission] = useState<Submission | null>(null);
     const [loading, setLoading] = useState(true);
@@ -80,8 +81,16 @@ const SelectionSurveyView: React.FC<SelectionSurveyViewProps> = ({ userId }) => 
                     <FileText className="w-8 h-8 text-slate-400" />
                 </div>
                 <h3 className="text-lg font-medium text-slate-900 mb-2">No Survey Submission Found</h3>
-                <p className="text-slate-500">
-                    This student has not completed the Selection Survey yet.
+                {surveyPassed && (
+                    <div className="mb-4 inline-flex items-center px-4 py-1.5 rounded-full bg-green-100 text-green-800 text-sm font-bold border-2 border-green-200">
+                        <CheckCircle className="w-4 h-4 mr-2" />
+                        STUDENT PASSED SURVEY
+                    </div>
+                )}
+                <p className="text-slate-500 max-w-md mx-auto">
+                    {surveyPassed 
+                        ? "This student passed the Selection Survey during onboarding, but the detailed answers are not available in the database." 
+                        : "This student has not completed the Selection Survey yet."}
                 </p>
             </div>
         );
@@ -189,7 +198,7 @@ const SelectionSurveyView: React.FC<SelectionSurveyViewProps> = ({ userId }) => 
                     </div>
                 </div>
 
-                {sections.map((section, index) => {
+                {sections.map((section) => {
                     const isExpanded = !!expandedSections[section.key];
                     const sectionQuestions = questions.filter(q => q.section === section.key);
                     const answeredCount = sectionQuestions.filter(q => submission.answers[String(q.id)]).length;

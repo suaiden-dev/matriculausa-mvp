@@ -431,6 +431,7 @@ export const DocumentsUploadStep: React.FC<StepProps> = ({ onNext }) => {
       // Atualizar documentos da aplicação
       const app = applications.find((a: any) => a.id === applicationId);
       if (!app) throw new Error('Application not found');
+      if (app.status === 'rejected') throw new Error('Cannot upload documents to a rejected application');
 
       const currentDocs: any[] = app.documents || [];
       const normalized = parseApplicationDocuments(currentDocs);
@@ -927,7 +928,7 @@ export const DocumentsUploadStep: React.FC<StepProps> = ({ onNext }) => {
                                               </div>
                                             </div>
 
-                                            {isRejectedStatus && (
+                                            {isRejectedStatus && app.status !== 'rejected' && (
                                               <div className="mt-3 space-y-2" onClick={(e) => e.stopPropagation()}>
                                                 {!selectedFile ? (
                                                   <label className="flex w-1/2 cursor-pointer bg-white border-2 border-dashed border-blue-200 hover:border-blue-400 hover:bg-blue-50 p-1.5 rounded-lg text-center transition-all group/upload items-center justify-center">

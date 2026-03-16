@@ -19,6 +19,7 @@ export interface StudentRecord {
   student_created_at: string;
   has_paid_selection_process_fee: boolean;
   has_paid_i20_control_fee: boolean;
+  selection_survey_passed?: boolean;
   placement_fee_flow?: boolean;
   is_placement_fee_paid?: boolean;
   selection_process_fee_payment_method?: string | null;
@@ -57,7 +58,6 @@ export interface StudentRecord {
 export const useStudentDetails = (profileId: string | undefined) => {
   const [student, setStudent] = useState<StudentRecord | null>(null);
   const [loading, setLoading] = useState(true);
-  const [loadingSecondaryData, setLoadingSecondaryData] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
   // Load critical student data
@@ -118,6 +118,7 @@ export const useStudentDetails = (profileId: string | undefined) => {
             created_at,
             has_paid_selection_process_fee,
             has_paid_i20_control_fee,
+            selection_survey_passed,
             placement_fee_flow,
             is_placement_fee_paid,
             selection_process_fee_payment_method,
@@ -204,6 +205,7 @@ export const useStudentDetails = (profileId: string | undefined) => {
         student_created_at: s.created_at,
         has_paid_selection_process_fee: s.has_paid_selection_process_fee,
         has_paid_i20_control_fee: s.has_paid_i20_control_fee,
+        selection_survey_passed: s.selection_survey_passed,
         placement_fee_flow: s.placement_fee_flow,
         is_placement_fee_paid: s.is_placement_fee_paid,
         selection_process_fee_payment_method: s.selection_process_fee_payment_method,
@@ -252,7 +254,6 @@ export const useStudentDetails = (profileId: string | undefined) => {
     student,
     setStudent,
     loading,
-    loadingSecondaryData,
     error,
     refetch: loadCriticalData,
   };

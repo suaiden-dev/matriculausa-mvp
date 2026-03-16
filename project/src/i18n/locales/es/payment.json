@@ -324,7 +324,7 @@
         "error": "Error al guardar foto. Inténtalo de nuevo.",
         "continue": "Continuar",
         "sending": "Enviando...",
-        "sendPhoto": "Enviar Foto",
+        "sendPhoto": "Enviar",
         "completed": "Verificación Completada",
         "completedTitle": "¡Verificación completada!",
         "alreadySent": "Su foto de identidad ya ha sido enviada. Puede continuar con el cuestionario."
