@@ -4,6 +4,7 @@ import { useTranslation } from 'react-i18next';
 import { supabase } from '../../../lib/supabase';
 import { ZelleCheckout } from '../../../components/ZelleCheckout';
 import { getExchangeRate, calculateCardAmountWithFees, calculatePIXTotalWithIOF } from '../../../utils/stripeFeeCalculator';
+import { usePaymentBlocked } from '../../../hooks/usePaymentBlocked';
 
 const PACKAGE_FEE_AMOUNT = 1800;
 
@@ -89,9 +90,12 @@ export const PackageFeeTab: React.FC<PackageFeeTabProps> = ({
   userProfile,
   onPaymentSuccess,
 }) => {
-  const { t } = useTranslation(['registration', 'common', 'scholarships']);
+  const { t } = useTranslation(['registration', 'common', 'scholarships', 'payment']);
   const [exchangeRate, setExchangeRate] = useState<number | null>(null);
   const SUPABASE_URL = import.meta.env.VITE_SUPABASE_URL;
+
+  const { isBlocked, pendingPayment, refetch: refetchPaymentStatus } = usePaymentBlocked();
+  const hasZellePendingPackageFee = isBlocked && pendingPayment?.fee_type === feeType;
 
   React.useEffect(() => {
     getExchangeRate().then(rate => setExchangeRate(rate));
@@ -306,12 +310,48 @@ export const PackageFeeTab: React.FC<PackageFeeTabProps> = ({
             <p className="text-[22px] font-black text-slate-900 uppercase tracking-tight mb-4">{t('studentOnboarding.documentsUpload.packageFees.paymentMethod')}</p>
             
             <div className="flex flex-col gap-4">
-              {/* Stripe Card */}
-              <button
-                onClick={() => { setSelectedPaymentMethod('stripe'); handleStripeCheckout('stripe'); setShowZelle(false); setShowInlineCpf(false); }}
-                disabled={loading}
-                className="group/btn relative bg-white border border-gray-200 p-5 rounded-[2rem] text-left hover:scale-[1.01] active:scale-95 transition-all shadow-sm hover:shadow-md disabled:opacity-50 flex items-center justify-between"
-              >
+              {hasZellePendingPackageFee ? (
+                <div className="flex flex-col gap-0">
+                  <div className="bg-amber-50 border border-amber-200 rounded-t-[2rem] px-6 py-4 flex items-start gap-4">
+                    <div className="w-10 h-10 bg-amber-100 rounded-2xl flex items-center justify-center border border-amber-200 flex-shrink-0 mt-0.5">
+                      <AlertCircle className="w-5 h-5 text-amber-600" />
+                    </div>
+                    <div>
+                      <p className="text-sm font-black text-amber-700 uppercase tracking-tight">{t('paymentStep.zellePendingTitle', { ns: 'payment' })}</p>
+                      <p className="text-xs text-amber-600/80 font-medium mt-0.5 leading-relaxed">
+                        {t('paymentStep.zellePendingMessage', { ns: 'payment' })}
+                      </p>
+                    </div>
+                  </div>
+                  <div className="border border-amber-200 border-t-0 rounded-b-[2rem] overflow-hidden bg-white shadow-sm">
+                    <ZelleCheckout
+                      feeType={feeType as any}
+                      amount={PACKAGE_FEE_AMOUNT}
+                      isPendingVerification={hasZellePendingPackageFee}
+                      onProcessingChange={(isProcessing) => {
+                        if (isProcessing) refetchPaymentStatus();
+                      }}
+                      hideHeader={true}
+                      onClose={() => {
+                        console.log('[PackageFeeTab] Zelle onClose triggered');
+                        setShowZelle(false);
+                      }}
+                      onSuccess={() => {
+                        console.log('[PackageFeeTab] Zelle onSuccess triggered');
+                        setShowZelle(false);
+                        onPaymentSuccess();
+                      }}
+                    />
+                  </div>
+                </div>
+              ) : (
+                <>
+                  {/* Stripe Card */}
+                  <button
+                    onClick={() => { setSelectedPaymentMethod('stripe'); handleStripeCheckout('stripe'); setShowZelle(false); setShowInlineCpf(false); }}
+                    disabled={loading}
+                    className="group/btn relative bg-white border border-gray-200 p-5 rounded-[2rem] text-left hover:scale-[1.01] active:scale-95 transition-all shadow-sm hover:shadow-md disabled:opacity-50 flex items-center justify-between"
+                  >
                 <div className="flex items-center gap-5">
                   <div className="w-14 h-14 flex items-center justify-center bg-slate-50 rounded-2xl">
                     <StripeIcon className="w-9 h-9" />
@@ -483,10 +523,12 @@ export const PackageFeeTab: React.FC<PackageFeeTabProps> = ({
                   </div>
                 )}
               </div>
-            </div>
+            </>
+            )}
           </div>
         </div>
       </div>
+    </div>
     </div>
   );
 };

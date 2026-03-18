@@ -254,6 +254,7 @@ const StudentOnboarding: React.FC = () => {
                   newParams.delete('ref');
                   newParams.delete('pm');
                   newParams.delete('fee_type');
+                  newParams.delete('f'); // Remove também o f= se existir
                   setSearchParams(newParams, { replace: true });
                   return;
                 }
@@ -269,6 +270,8 @@ const StudentOnboarding: React.FC = () => {
                 newParams.delete('session_id');
                 newParams.delete('ref');
                 newParams.delete('pm');
+                newParams.delete('fee_type');
+                newParams.delete('f');
                 setSearchParams(newParams, { replace: true });
               }
             } catch {
