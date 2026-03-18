@@ -127,20 +127,6 @@ export const useOnboardingProgress = () => {
           .not('identity_photo_path', 'is', null)
           .maybeSingle();
         identityVerified = !!photoAcceptance?.identity_photo_path;
-
-        // Se não encontrou foto mas o savedStep já está ALÉM do identity_verification,
-        // inferimos que a identidade foi verificada anteriormente (evita loop infinito de regressão).
-        if (!identityVerified && selectionFeePaid) {
-          const savedStepNow = getSavedStep();
-          const stepsAfterIdentity: OnboardingStep[] = [
-            'selection_survey', 'scholarship_selection', 'process_type',
-            'documents_upload', 'payment', 'scholarship_fee', 'placement_fee',
-            'my_applications', 'completed'
-          ];
-          if (savedStepNow && stepsAfterIdentity.includes(savedStepNow)) {
-            identityVerified = true;
-          }
-        }
       }
 
       // 1.6 Verificar Selection Survey
@@ -356,10 +342,6 @@ export const useOnboardingProgress = () => {
         clearStep();
       } else if (onboardingCompleted && isForcingPortal) {
         currentStep = 'my_applications';
-      } else if (maxAllowedStep === 'identity_verification') {
-        // Bloqueio incondicional: Se o máximo permitido agora é a foto fantasma (ele já pagou mas não mandou foto),
-        // nós FORÇAMOS a tela da foto, ignorando qualquer savedStep antigo que o reteria no selection_fee.
-        currentStep = 'identity_verification';
       } else if (savedStep && savedStep !== 'completed') {
         const savedIdx = allSteps.indexOf(savedStep);
         const maxIdx = allSteps.indexOf(maxAllowedStep);
@@ -406,11 +388,7 @@ export const useOnboardingProgress = () => {
       });
 
       // Salvar step atual no banco
-      // identity_verification é um passo dinâmico — nunca deve ser persistido no banco
-      // pois pode causar loop se o usuário recarregar a página sem ter a foto verificada temporariamente
-      if (currentStep !== 'identity_verification') {
-        saveStep(currentStep);
-      }
+      saveStep(currentStep);
     } catch (error) {
       console.error('Error checking onboarding progress:', error);
     } finally {
@@ -426,10 +404,7 @@ export const useOnboardingProgress = () => {
 
   const goToStep = useCallback((step: OnboardingStep) => {
     setState(prev => ({ ...prev, currentStep: step }));
-    // identity_verification não deve ser persistido no banco (passo dinâmico)
-    if (step !== 'identity_verification') {
-      saveStep(step);
-    }
+    saveStep(step);
   }, [saveStep]);
 
   const markStepComplete = useCallback(async (step: OnboardingStep) => {

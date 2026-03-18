@@ -89,7 +89,9 @@
       "error": {
         "invalidMethod": "Invalid payment method.",
         "notAuthenticated": "User not authenticated.",
-        "generationFailed": "Failed to generate payment link. Please try again."
+        "generationFailed": "Failed to generate payment link. Please try again.",
+        "userIdNotFound": "User ID not found",
+        "saveCpfFailed": "Error saving CPF"
       }
     }
   },
@@ -194,6 +196,20 @@
         "descriptionMid": ". If you need certified and quality translation, we recommend the services of our partner ",
         "descriptionLink": "Lush America Translations",
         "descriptionPost": "."
+      },
+      "acceptance": {
+        "lockMessage": "You need to pay the <0>{{feeName}}</0> fee before your acceptance letter can be released.",
+        "goToPayment": "Go to Payment"
+      },
+      "packageFees": {
+        "paidSuccess": "Fee paid successfully!",
+        "confirmedMessage": "Your payment has been confirmed. You can now proceed to the acceptance letter.",
+        "obligatoryFee": "Mandatory fee • Unlocks acceptance letter",
+        "paymentMethod": "Payment method",
+        "cpfRequiredTitle": "Provide your CPF for Parcelow",
+        "saveCpfContinue": "Continue to Payment",
+        "noFees": "No Fees",
+        "installments12x": "Up to 12 installments"
       }
     }
   },

@@ -116,7 +116,11 @@ export async function loadPaymentsBaseDataOptimized(supabase: SupabaseClient): P
           seller_referral_code,
           placement_fee_flow,
           is_placement_fee_paid,
-          placement_fee_payment_method
+          placement_fee_payment_method,
+          has_paid_ds160_package,
+          has_paid_i539_cos_package,
+          ds160_package_payment_method,
+          i539_cos_package_payment_method
         ),
         scholarships (
           id,
@@ -160,7 +164,7 @@ export async function loadPaymentsBaseDataOptimized(supabase: SupabaseClient): P
       const userIds = zellePaymentsRaw.map((p) => p.user_id);
       const { data: userProfiles, error: usersError } = await supabase
         .from('user_profiles')
-        .select('id, user_id, full_name, email, has_paid_selection_process_fee, is_application_fee_paid, is_scholarship_fee_paid, has_paid_i20_control_fee, selection_process_fee_payment_method, i20_control_fee_payment_method, scholarship_package_id, dependents, seller_referral_code, placement_fee_flow, is_placement_fee_paid, placement_fee_payment_method')
+        .select('id, user_id, full_name, email, has_paid_selection_process_fee, is_application_fee_paid, is_scholarship_fee_paid, has_paid_i20_control_fee, selection_process_fee_payment_method, i20_control_fee_payment_method, scholarship_package_id, dependents, seller_referral_code, placement_fee_flow, is_placement_fee_paid, placement_fee_payment_method, has_paid_ds160_package, has_paid_i539_cos_package, ds160_package_payment_method, i539_cos_package_payment_method')
         .in('user_id', userIds);
       if (usersError) {
         console.error('Error loading user profiles for Zelle payments:', usersError);
@@ -199,9 +203,13 @@ export async function loadPaymentsBaseDataOptimized(supabase: SupabaseClient): P
         seller_referral_code,
         placement_fee_flow,
         is_placement_fee_paid,
-        placement_fee_payment_method
+        placement_fee_payment_method,
+        has_paid_ds160_package,
+        has_paid_i539_cos_package,
+        ds160_package_payment_method,
+        i539_cos_package_payment_method
       `)
-      .or('has_paid_selection_process_fee.eq.true,is_application_fee_paid.eq.true,is_scholarship_fee_paid.eq.true,has_paid_i20_control_fee.eq.true,is_placement_fee_paid.eq.true');
+      .or('has_paid_selection_process_fee.eq.true,is_application_fee_paid.eq.true,is_scholarship_fee_paid.eq.true,has_paid_i20_control_fee.eq.true,is_placement_fee_paid.eq.true,has_paid_ds160_package.eq.true,has_paid_i539_cos_package.eq.true');
     if (stripeError) {
       console.error('Error loading Stripe users:', stripeError);
     }

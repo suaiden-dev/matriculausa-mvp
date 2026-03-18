@@ -1,6 +1,6 @@
 import { SupabaseClient } from '@supabase/supabase-js';
 
-export type FeeType = 'selection_process' | 'application' | 'scholarship' | 'i20_control' | 'placement';
+export type FeeType = 'selection_process' | 'application' | 'scholarship' | 'i20_control' | 'placement' | 'ds160_package' | 'i539_cos_package';
 export type PaymentMethod = 'stripe' | 'zelle' | 'manual';
 
 export interface RecordPaymentParams {

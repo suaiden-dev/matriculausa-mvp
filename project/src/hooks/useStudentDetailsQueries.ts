@@ -28,6 +28,27 @@ export function useStudentDetailsQuery(profileId: string | undefined) {
           s = typeof rpcData === 'string' ? JSON.parse(rpcData) : rpcData;
           if (s && s.id) {
             console.log('✅ [PERFORMANCE] Using consolidated RPC for student data');
+
+            // 🔄 Complementar dados que ainda não estão na RPC (compatibilidade)
+            try {
+              const { data: extraProfile, error: extraError } = await supabase
+                .from('user_profiles')
+                .select('placement_fee_flow, is_placement_fee_paid, selection_survey_passed, has_paid_i20_control_fee')
+                .eq('id', profileId)
+                .single();
+
+              if (!extraError && extraProfile) {
+                s = {
+                  ...s,
+                  placement_fee_flow: s.placement_fee_flow ?? extraProfile.placement_fee_flow,
+                  is_placement_fee_paid: s.is_placement_fee_paid ?? extraProfile.is_placement_fee_paid,
+                  selection_survey_passed: s.selection_survey_passed ?? extraProfile.selection_survey_passed,
+                  has_paid_i20_control_fee: s.has_paid_i20_control_fee ?? extraProfile.has_paid_i20_control_fee,
+                };
+              }
+            } catch (extraErr) {
+              console.warn('⚠️ [PERFORMANCE] Failed to complement RPC data with placement/I-20 flags:', extraErr);
+            }
           } else {
             console.warn('⚠️ [PERFORMANCE] RPC returned invalid data, using fallback');
             useRpc = false;
@@ -69,6 +90,10 @@ export function useStudentDetailsQuery(profileId: string | undefined) {
             is_placement_fee_paid,
             selection_process_fee_payment_method,
             i20_control_fee_payment_method,
+            has_paid_ds160_package,
+            has_paid_i539_cos_package,
+            ds160_package_payment_method,
+            i539_cos_package_payment_method,
             role,
             seller_referral_code,
             admin_notes,
@@ -217,6 +242,10 @@ export function useStudentDetailsQuery(profileId: string | undefined) {
         scholarship_fee_payment_method: mainApp.scholarship_fee_payment_method || null,
         acceptance_letter_status: mainApp.acceptance_letter_status || null,
         student_process_type: mainApp.student_process_type || null,
+        has_paid_ds160_package: !!s.has_paid_ds160_package,
+        has_paid_i539_cos_package: !!s.has_paid_i539_cos_package,
+        ds160_package_payment_method: s.ds160_package_payment_method || null,
+        i539_cos_package_payment_method: s.i539_cos_package_payment_method || null,
         payment_status: mainApp.payment_status || null,
         reviewed_at: mainApp.reviewed_at || null,
         reviewed_by: mainApp.reviewed_by || null,

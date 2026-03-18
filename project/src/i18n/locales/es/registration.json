@@ -1,4 +1,4 @@
-﻿{
+{
   "rapidRegistration": {
     "title": "Registro y Pago",
     "subtitle": "Complete su registro e inicie su proceso de selección",
@@ -89,7 +89,9 @@
       "error": {
         "invalidMethod": "Método de pago inválido.",
         "notAuthenticated": "Usuario no autenticado.",
-        "generationFailed": "Error al generar el enlace de pago. Por favor, inténtelo de nuevo."
+        "generationFailed": "Error al generar el enlace de pago. Por favor, inténtelo de novo.",
+        "userIdNotFound": "ID de usuario no encontrado",
+        "saveCpfFailed": "Error al guardar el CPF"
       }
     }
   },
@@ -194,6 +196,20 @@
         "descriptionMid": ". Si necesita una traducción certificada y de calidad, recomendamos los servicios de nuestro socio ",
         "descriptionLink": "Lush America Translations",
         "descriptionPost": "."
+      },
+      "acceptance": {
+        "lockMessage": "Debe pagar la tarifa <0>{{feeName}}</0> antes de que se pueda liberar su carta de aceptación.",
+        "goToPayment": "Ir al Pago"
+      },
+      "packageFees": {
+        "paidSuccess": "¡Tarifa pagada con éxito!",
+        "confirmedMessage": "Su pago ha sido confirmado. Ahora puede proceder a la carta de aceptación.",
+        "obligatoryFee": "Tarifa obligatoria • Desbloquea carta de aceptación",
+        "paymentMethod": "Método de pago",
+        "cpfRequiredTitle": "Proporcione su CPF para Parcelow",
+        "saveCpfContinue": "Continuar al Pago",
+        "noFees": "Sin Comisiones",
+        "installments12x": "Hasta en 12 cuotas"
       }
     }
   },

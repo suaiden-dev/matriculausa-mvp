@@ -139,8 +139,7 @@ const StudentOnboarding: React.FC = () => {
     }
     const stepParam = searchParams.get('step');
     if (stepParam) {
-      // identity_verification nunca deve ser forçado via URL — o checkProgress decide
-      const validSteps: OnboardingStep[] = ['selection_fee', 'selection_survey', 'scholarship_selection', 'process_type', 'documents_upload', 'payment', 'scholarship_fee', 'placement_fee', 'my_applications'];
+      const validSteps: OnboardingStep[] = ['selection_fee', 'identity_verification', 'selection_survey', 'scholarship_selection', 'process_type', 'documents_upload', 'payment', 'scholarship_fee', 'placement_fee', 'my_applications'];
       if (validSteps.includes(stepParam as OnboardingStep) && stepParam !== state.currentStep) {
         setTimeout(() => {
           goToStep(stepParam as OnboardingStep);
@@ -177,9 +176,33 @@ const StudentOnboarding: React.FC = () => {
   }, [state.currentStep]);
 
   useEffect(() => {
+    // Corrige bug da Parcelow: os parâmetros chegam como &amp; ou &amp%3B (%3B = ; percent-encoded)
+    // Exemplo: ?step=my_applications&amp%3Bpayment=success&amp%3Bref=ds16_xxx
+    const rawSearch = window.location.search;
+    const hasAmpEncoded = rawSearch.includes('&amp%3B');   // &amp;  com ; percent-encoded
+    const hasAmpLiteral = rawSearch.includes('&amp;');     // &amp;  com ; literal
+    if (hasAmpEncoded || hasAmpLiteral) {
+      // Normalizar: substituir qualquer variante de &amp; por &
+      const fixedSearch = rawSearch
+        .replace(/&amp%3B/gi, '&')   // &amp%3B → &
+        .replace(/&amp;/gi, '&');    // &amp;   → &
+      navigate(`${window.location.pathname}${fixedSearch}`, { replace: true });
+      return;
+    }
+
     const paymentSuccess = searchParams.get('payment');
     const stepParam = searchParams.get('step');
     const sessionId = searchParams.get('session_id');
+
+
+    if (paymentSuccess === 'cancelled') {
+        const newParams = new URLSearchParams(searchParams);
+        newParams.delete('payment');
+        newParams.delete('session_id');
+        newParams.delete('pix_payment');
+        setSearchParams(newParams, { replace: true });
+        return;
+    }
 
 
     if (paymentSuccess === 'success' && stepParam) {
@@ -188,37 +211,99 @@ const StudentOnboarding: React.FC = () => {
       processingPaymentRef.current = paymentKey;
 
       if (!sessionId || sessionId === '{CHECKOUT_SESSION_ID}') {
-        // Fluxo Parcelow PIX (ou sem session id válido)
-        // O webhook demora alguns segundos. Vamos segurar a tela de "Verificando" para dar tempo ao webhook.
+        // Fluxo Parcelow (sem session_id – pagamento assíncrono)
+        // Aguarda o webhook processar e o registro aparecer no banco
         setIsVerifyingPayment(true);
-        setTimeout(() => {
-          setIsVerifyingPayment(false);
-          // Limpar parâmetros da URL de forma reativa
-          const newParams = new URLSearchParams(searchParams);
-          newParams.delete('payment');
-          newParams.delete('session_id');
-          newParams.delete('pix_payment');
-          setSearchParams(newParams, { replace: true });
 
-          setTimeout(() => {
-            setShowPaymentAnimation(false);
-            if (stepParam === 'payment') {
-              // Navegar diretamente para o step correto, sem depender de handleNext()
-              // que pode usar isNewFlowUser=false caso userProfile ainda não tenha carregado
-              const nextFeeStep: OnboardingStep = isNewFlowUserRef.current ? 'placement_fee' : 'scholarship_fee';
-              goToStep(nextFeeStep);
-            } else if (stepParam === 'scholarship_fee' || stepParam === 'placement_fee') {
-              // Mover para my_applications diretamente
-              goToStep('my_applications');
-            } else {
-              const newParams = new URLSearchParams(searchParams);
-              newParams.delete('payment');
-              newParams.delete('session_id');
-              newParams.delete('pix_payment');
-              setSearchParams(newParams, { replace: true });
+        const refParam = searchParams.get('ref');
+
+        // Para taxas de pacote (ds160/i539), fazer poll do banco
+        if (stepParam === 'my_applications' && refParam) {
+          const SUPABASE_PROJECT_URL = import.meta.env.VITE_SUPABASE_URL;
+          let pollCount = 0;
+          const MAX_POLLS = 10; // 30 segundos
+
+          const pollPackagePayment = async () => {
+            pollCount++;
+            try {
+              let token: string | null = null;
+              const raw = localStorage.getItem(`sb-${SUPABASE_PROJECT_URL.split('//')[1].split('.')[0]}-auth-token`);
+              if (raw) { token = JSON.parse(raw)?.access_token || null; }
+
+              if (!token) {
+                setIsVerifyingPayment(false);
+                return;
+              }
+
+              // Verificar se o registro foi criado com status paid
+              const response = await fetch(`${SUPABASE_PROJECT_URL}/rest/v1/individual_fee_payments?parcelow_reference=eq.${encodeURIComponent(refParam)}&parcelow_status=eq.paid&select=id,fee_type`, {
+                headers: {
+                  'apikey': import.meta.env.VITE_SUPABASE_ANON_KEY,
+                  'Authorization': `Bearer ${token}`,
+                },
+              });
+
+              if (response.ok) {
+                const data = await response.json();
+                if (data && data.length > 0) {
+                  // Pagamento confirmado!
+                  setIsVerifyingPayment(false);
+                  const newParams = new URLSearchParams(searchParams);
+                  newParams.delete('payment');
+                  newParams.delete('session_id');
+                  newParams.delete('ref');
+                  newParams.delete('pm');
+                  newParams.delete('fee_type');
+                  setSearchParams(newParams, { replace: true });
+                  return;
+                }
+              }
+
+              if (pollCount < MAX_POLLS) {
+                setTimeout(pollPackagePayment, 3000);
+              } else {
+                // Timeout — limpa URL mesmo assim
+                setIsVerifyingPayment(false);
+                const newParams = new URLSearchParams(searchParams);
+                newParams.delete('payment');
+                newParams.delete('session_id');
+                newParams.delete('ref');
+                newParams.delete('pm');
+                setSearchParams(newParams, { replace: true });
+              }
+            } catch {
+              setIsVerifyingPayment(false);
             }
-          }, 4000);
-        }, 10000); // Aguarda 10 segundos extras antes da aba de sucesso
+          };
+
+          pollPackagePayment();
+        } else {
+          // Outros steps (sem package fee) — aguarda 10s como antes
+          setTimeout(() => {
+            setIsVerifyingPayment(false);
+            const newParams = new URLSearchParams(searchParams);
+            newParams.delete('payment');
+            newParams.delete('session_id');
+            newParams.delete('pix_payment');
+            setSearchParams(newParams, { replace: true });
+
+            setTimeout(() => {
+              setShowPaymentAnimation(false);
+              if (stepParam === 'payment') {
+                const nextFeeStep: OnboardingStep = isNewFlowUserRef.current ? 'placement_fee' : 'scholarship_fee';
+                goToStep(nextFeeStep);
+              } else if (stepParam === 'scholarship_fee' || stepParam === 'placement_fee') {
+                goToStep('my_applications');
+              } else {
+                const newParams2 = new URLSearchParams(searchParams);
+                newParams2.delete('payment');
+                newParams2.delete('session_id');
+                newParams2.delete('pix_payment');
+                setSearchParams(newParams2, { replace: true });
+              }
+            }, 4000);
+          }, 10000);
+        } // fecha else (outros steps)
       } else {
         // Fluxo Stripe Normal / Stripe PIX
         let pollCount = 0;
@@ -237,7 +322,13 @@ const StudentOnboarding: React.FC = () => {
             } else if (stepParam === 'placement_fee') {
               edgeFunctionName = 'verify-stripe-session-placement-fee';
             } else if (stepParam === 'my_applications') {
-              edgeFunctionName = 'verify-stripe-session-i20-control-fee';
+              // Detectar se é uma taxa de pacote (ds160 ou i539) ou i20 padrão
+              const feeTypeParam = searchParams.get('fee_type');
+              if (feeTypeParam === 'ds160_package' || feeTypeParam === 'i539_cos_package') {
+                edgeFunctionName = 'verify-stripe-session-package-fee';
+              } else {
+                edgeFunctionName = 'verify-stripe-session-i20-control-fee';
+              }
             }
 
             if (!edgeFunctionName) {

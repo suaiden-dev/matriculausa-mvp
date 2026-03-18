@@ -231,6 +231,112 @@ export async function approveZelleFlow(params: {
     });
   }
 
+  // ✅ NOVO: DS-160 Package logic
+  if (payment.fee_type === "ds160_package" || payment.fee_type_global === "ds160_package") {
+    // Mark on profile
+    await supabase
+      .from("user_profiles")
+      .update({
+        has_paid_ds160_package: true,
+        ds160_package_payment_method: "zelle",
+        updated_at: new Date().toISOString(),
+      })
+      .eq("user_id", payment.user_id)
+      .select();
+
+    // Record payment (individual table)
+    const approvedAt = payment.admin_approved_at || payment.created_at;
+    await recordIndividualFeePayment(
+      supabase,
+      {
+        userId: payment.user_id,
+        feeType: "ds160_package",
+        amount: payment.amount,
+        paymentDate: approvedAt,
+        paymentMethod: "zelle",
+        zellePaymentId: payment.id,
+      },
+    );
+
+    // Log action
+    await supabase.rpc("log_student_action", {
+      p_student_id: payment.student_id,
+      p_action_type: "fee_payment",
+      p_action_description: `DS-160 Package Fee paid via Zelle (approved by admin)`,
+      p_performed_by: adminUserId,
+      p_performed_by_type: "admin",
+      p_metadata: {
+        fee_type: "ds160_package",
+        payment_method: "zelle",
+        amount: payment.amount,
+        payment_id: payment.id,
+        zelle_payment_id: payment.id,
+      },
+    });
+
+    // Billing
+    await supabase.rpc("register_payment_billing", {
+      user_id_param: payment.user_id,
+      fee_type_param: "ds160_package",
+      amount_param: payment.amount,
+      payment_session_id_param: `zelle_${payment.id}`,
+      payment_method_param: "zelle",
+    });
+  }
+
+  // ✅ NOVO: I-539 COS Package logic
+  if (payment.fee_type === "i539_cos_package" || payment.fee_type_global === "i539_cos_package") {
+    // Mark on profile
+    await supabase
+      .from("user_profiles")
+      .update({
+        has_paid_i539_cos_package: true,
+        i539_cos_package_payment_method: "zelle",
+        updated_at: new Date().toISOString(),
+      })
+      .eq("user_id", payment.user_id)
+      .select();
+
+    // Record payment (individual table)
+    const approvedAt = payment.admin_approved_at || payment.created_at;
+    await recordIndividualFeePayment(
+      supabase,
+      {
+        userId: payment.user_id,
+        feeType: "i539_cos_package",
+        amount: payment.amount,
+        paymentDate: approvedAt,
+        paymentMethod: "zelle",
+        zellePaymentId: payment.id,
+      },
+    );
+
+    // Log action
+    await supabase.rpc("log_student_action", {
+      p_student_id: payment.student_id,
+      p_action_type: "fee_payment",
+      p_action_description: `I-539 COS Package Fee paid via Zelle (approved by admin)`,
+      p_performed_by: adminUserId,
+      p_performed_by_type: "admin",
+      p_metadata: {
+        fee_type: "i539_cos_package",
+        payment_method: "zelle",
+        amount: payment.amount,
+        payment_id: payment.id,
+        zelle_payment_id: payment.id,
+      },
+    });
+
+    // Billing
+    await supabase.rpc("register_payment_billing", {
+      user_id_param: payment.user_id,
+      fee_type_param: "i539_cos_package",
+      amount_param: payment.amount,
+      payment_session_id_param: `zelle_${payment.id}`,
+      payment_method_param: "zelle",
+    });
+  }
+
   // Application/Scholarship fees logic (applications table updates, logging, billing scholarship)
   if (
     payment.fee_type === "application_fee" ||

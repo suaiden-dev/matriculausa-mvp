@@ -33,6 +33,7 @@
           "documents_upload": "Documentação e Escolha final",
           "payment": "Taxa de Matrícula",
           "scholarship_fee": "Taxa da Bolsa",
+          "placement_fee": "Placement Fee",
           "university_documents": "Minha Aplicação",
           "waiting_approval": "Carta de Aceitação e I-20",
           "completed": "Finalizado",
@@ -47,6 +48,7 @@
           "documents_upload": "Envie seus documentos básicos (Passaporte, Diploma e Extrato) em inglês para análise da universidade.",
           "payment": "Garanta sua vaga pagando a taxa de matrícula da instituição escolhida.",
           "scholarship_fee": "Esta taxa é o compromisso final com a bolsa ou faculdade selecionada.",
+          "placement_fee": "Esta taxa final é seu compromisso para garantir de fato sua vaga na instituição selecionada com todo nosso suporte vitalício à sua jornada.",
           "university_documents": "Revise os detalhes da sua universidade e envie a documentação obrigatória.",
           "waiting_approval": "Acompanhe a emissão da sua Carta de Aceitação e o processo do formulário I-20.",
           "my_applications": "Visualize o progresso das suas aplicações e documentos.",
@@ -826,7 +828,8 @@
           "underReview": "Em Análise",
           "actionRequired": "Ação Necessária",
           "available": "Disponível",
-          "inProgress": "Liberação em Andamento"
+          "inProgress": "Liberação em Andamento",
+          "blocked": "Bloqueado"
         }
       },
       "details": {
@@ -880,7 +883,8 @@
         "officialNote": "Este documento é emitido oficialmente pela universidade após a análise da sua documentação.",
         "documentAvailable": "Documento Disponível",
         "readyToDownload": "Sua carta de aceite já pode ser baixada!",
-        "downloadPdf": "Baixar PDF"
+        "downloadPdf": "Baixar PDF",
+        "waitingForUniversity": "Aguardando processamento da universidade"
       },
       "errors": {
         "viewDocument": "Erro ao visualizar documento",

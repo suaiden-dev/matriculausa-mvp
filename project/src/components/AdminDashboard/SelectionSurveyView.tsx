@@ -16,8 +16,10 @@ interface Submission {
     total: number;
     percentage: number;
     passed: boolean;
+    // Sempre usamos "answers" internamente; "respostas" é apenas para compatibilidade com o banco
     answers: Record<string, string>;
-    extra_answers: Record<string, string>;
+    respostas?: Record<string, string>;
+    extra_answers?: Record<string, string>;
     created_at: string;
     updated_at: string;
 }
@@ -32,6 +34,14 @@ const SelectionSurveyView: React.FC<SelectionSurveyViewProps> = ({ userId, surve
         const fetchSubmission = async () => {
             try {
                 setLoading(true);
+
+                // Se não tiver userId, já libera o loading e não tenta buscar nada
+                if (!userId) {
+                    setSubmission(null);
+                    setExpandedSections({});
+                    return;
+                }
+
                 const { data, error } = await supabase
                     .from('submissions')
                     .select('*')
@@ -39,22 +49,34 @@ const SelectionSurveyView: React.FC<SelectionSurveyViewProps> = ({ userId, surve
                     .maybeSingle();
 
                 if (error) throw error;
-                setSubmission(data);
+                
+                if (data) {
+                    // Normaliza para sempre usar "answers" dentro do componente
+                    const normalized: Submission = {
+                        ...(data as any),
+                        answers: (data as any).answers || (data as any).respostas || {},
+                        extra_answers: (data as any).extra_answers || {}
+                    };
+                    setSubmission(normalized);
 
-                // Initialize first section as expanded
-                if (data && sections.length > 0) {
-                    setExpandedSections({ [sections[0].key]: true });
+                    // Inicializa a primeira seção como expandida
+                    if (sections.length > 0) {
+                        setExpandedSections({ [sections[0].key]: true });
+                    }
+                } else {
+                    setSubmission(null);
+                    setExpandedSections({});
                 }
             } catch (error) {
                 console.error('Error fetching survey submission:', error);
+                setSubmission(null);
+                setExpandedSections({});
             } finally {
                 setLoading(false);
             }
         };
 
-        if (userId) {
-            fetchSubmission();
-        }
+        fetchSubmission();
     }, [userId]);
 
     const toggleSection = (sectionKey: string) => {
@@ -199,9 +221,10 @@ const SelectionSurveyView: React.FC<SelectionSurveyViewProps> = ({ userId, surve
                 </div>
 
                 {sections.map((section) => {
+                    const answers = submission.answers || {};
                     const isExpanded = !!expandedSections[section.key];
                     const sectionQuestions = questions.filter(q => q.section === section.key);
-                    const answeredCount = sectionQuestions.filter(q => submission.answers[String(q.id)]).length;
+                    const answeredCount = sectionQuestions.filter(q => answers[String(q.id)]).length;
 
                     if (answeredCount === 0) return null;
 
@@ -229,11 +252,13 @@ const SelectionSurveyView: React.FC<SelectionSurveyViewProps> = ({ userId, surve
                                 <div className="p-6 space-y-6 bg-white">
                                     <div className="grid grid-cols-1 gap-6">
                                         {sectionQuestions.map(question => {
-                                            const answer = submission.answers[String(question.id)];
+                                            const answers = submission.answers || {};
+                                            const extraAnswers = submission.extra_answers || {};
+                                            const answer = answers[String(question.id)];
                                             if (!answer) return null;
 
                                             const correct = isCorrect(question.id, answer);
-                                            const extraAnswer = submission.extra_answers?.[String(question.id)];
+                                            const extraAnswer = extraAnswers[String(question.id)];
 
                                             return (
                                                 <div key={question.id} className="relative pl-6 border-l-2 border-slate-100 hover:border-[#05294E]/30 transition-colors">

@@ -17,6 +17,7 @@ import { generateTermAcceptancePDF, StudentTermAcceptanceData } from '../../util
 import { recordIndividualFeePayment } from '../../lib/paymentRecorder';
 import { useStudentLogs } from '../../hooks/useStudentLogs';
 import { getGrossPaidAmounts } from '../../utils/paymentConverter';
+import { getPlacementFee } from '../../utils/placementFeeCalculator';
 
 // Componentes de UI Base
 import {
@@ -1274,7 +1275,7 @@ const AdminStudentDetails: React.FC = () => {
     }
   }, [student, dependents, saveProfile, profileId, queryClient, user, logAction]);
 
-  const handleMarkAsPaid = useCallback((feeType: 'selection_process' | 'application' | 'scholarship' | 'i20_control' | 'placement') => {
+  const handleMarkAsPaid = useCallback((feeType: 'selection_process' | 'application' | 'scholarship' | 'i20_control' | 'placement' | 'ds160_package' | 'i539_cos_package') => {
     setPendingPayment({ fee_type: feeType, payment_method: 'manual' });
     setPaymentAmount(getFeeAmount(feeType));
     setShowPaymentModal(true);
@@ -1283,7 +1284,7 @@ const AdminStudentDetails: React.FC = () => {
   const handleConfirmPayment = useCallback(async () => {
     if (!student || !pendingPayment) return;
 
-    const feeType = pendingPayment.fee_type as 'selection_process' | 'application' | 'scholarship' | 'i20_control' | 'placement';
+    const feeType = pendingPayment.fee_type as 'selection_process' | 'application' | 'scholarship' | 'i20_control' | 'placement' | 'ds160_package' | 'i539_cos_package';
     let applicationId: string | undefined = undefined;
 
     // Para Application Fee, Scholarship Fee e Placement Fee, buscar a aplicação aprovada ou mais recente
@@ -2583,6 +2584,8 @@ const AdminStudentDetails: React.FC = () => {
     { key: 'review', label: 'Review' },
     { key: 'application_fee', label: 'App Fee' },
     { key: 'placement_fee', label: 'Placement Fee' },
+    { key: 'ds160_package', label: 'DS-160 Package' },
+    { key: 'i539_cos_package', label: 'I-539 Package' },
     { key: 'scholarship_fee', label: 'Scholarship Fee' },
     { key: 'i20_fee', label: 'I-20 Fee' },
     { key: 'acceptance_letter', label: 'Acceptance' },
@@ -2593,6 +2596,12 @@ const AdminStudentDetails: React.FC = () => {
   const steps = allSteps.filter(step => {
     if (step.key === 'transfer_form') {
       return student?.student_process_type === 'transfer';
+    }
+    if (step.key === 'ds160_package') {
+      return student?.student_process_type === 'initial';
+    }
+    if (step.key === 'i539_cos_package') {
+      return student?.student_process_type === 'change_of_status';
     }
     if (student?.placement_fee_flow) {
       // No fluxo de placement, removemos as taxas que são substituídas
@@ -2634,6 +2643,10 @@ const AdminStudentDetails: React.FC = () => {
         return student.is_application_fee_paid ? 'completed' : 'pending';
       case 'placement_fee':
         return student.is_placement_fee_paid ? 'completed' : 'pending';
+      case 'ds160_package':
+        return student.has_paid_ds160_package ? 'completed' : 'pending';
+      case 'i539_cos_package':
+        return student.has_paid_i539_cos_package ? 'completed' : 'pending';
       case 'scholarship_fee':
         return student.is_scholarship_fee_paid ? 'completed' : 'pending';
       case 'i20_fee':
@@ -2735,6 +2748,9 @@ const AdminStudentDetails: React.FC = () => {
           selection_process_fee: editingFees.selection_process,
           scholarship_fee: editingFees.scholarship,
           i20_control_fee: editingFees.i20_control,
+          placement_fee: editingFees.placement,
+          ds160_package_fee: editingFees.ds160_package,
+          i539_cos_package_fee: editingFees.i539_cos_package,
           updated_at: new Date().toISOString()
         }, {
           onConflict: 'user_id'
@@ -2745,7 +2761,10 @@ const AdminStudentDetails: React.FC = () => {
       console.log('✅ [handleSaveEditFees] Overrides salvos no banco:', {
         selection_process: editingFees.selection_process,
         scholarship: editingFees.scholarship,
-        i20_control: editingFees.i20_control
+        i20_control: editingFees.i20_control,
+        placement: editingFees.placement,
+        ds160_package: editingFees.ds160_package,
+        i539_cos_package: editingFees.i539_cos_package
       });
 
       // Log da ação
@@ -2759,6 +2778,9 @@ const AdminStudentDetails: React.FC = () => {
             selection_process_fee: editingFees.selection_process,
             scholarship_fee: editingFees.scholarship,
             i20_control_fee: editingFees.i20_control,
+            placement_fee: editingFees.placement,
+            ds160_package_fee: editingFees.ds160_package,
+            i539_cos_package_fee: editingFees.i539_cos_package,
             updated_by: user?.email || 'Platform Admin'
           }
         );
@@ -2856,13 +2878,16 @@ const AdminStudentDetails: React.FC = () => {
       selection_process_fee?: number;
       scholarship_fee?: number;
       i20_control_fee?: number;
+      placement_fee?: number;
+      ds160_package_fee?: number;
+      i539_cos_package_fee?: number;
     } | null = null;
 
     try {
       // ✅ Forçar nova query sem cache adicionando timestamp
       const { data: overrideData, error: overrideError } = await supabase
         .from('user_fee_overrides')
-        .select('selection_process_fee, scholarship_fee, i20_control_fee, updated_at')
+        .select('selection_process_fee, scholarship_fee, i20_control_fee, placement_fee, ds160_package_fee, i539_cos_package_fee, updated_at')
         .eq('user_id', student.user_id)
         .maybeSingle();
 
@@ -2875,6 +2900,9 @@ const AdminStudentDetails: React.FC = () => {
           selection_process_fee: overrideData.selection_process_fee != null ? Number(overrideData.selection_process_fee) : undefined,
           scholarship_fee: overrideData.scholarship_fee != null ? Number(overrideData.scholarship_fee) : undefined,
           i20_control_fee: overrideData.i20_control_fee != null ? Number(overrideData.i20_control_fee) : undefined,
+          placement_fee: overrideData.placement_fee != null ? Number(overrideData.placement_fee) : undefined,
+          ds160_package_fee: overrideData.ds160_package_fee != null ? Number(overrideData.ds160_package_fee) : undefined,
+          i539_cos_package_fee: overrideData.i539_cos_package_fee != null ? Number(overrideData.i539_cos_package_fee) : undefined,
         };
         console.log('✅ [handleStartEditFees] Overrides encontrados no banco:', currentOverrides);
       } else {
@@ -2982,10 +3010,61 @@ const AdminStudentDetails: React.FC = () => {
       }
     }
 
+    // Placement Fee
+    let placementValue: number;
+    if (student.is_placement_fee_paid && realPaidAmounts?.placement !== undefined && realPaidAmounts?.placement !== null) {
+      placementValue = realPaidAmounts.placement;
+    } else {
+      if (currentOverrides?.placement_fee !== undefined && currentOverrides?.placement_fee !== null) {
+        placementValue = currentOverrides.placement_fee;
+      } else {
+        // Tentar o valor configurado no perfil ou calcular via getPlacementFee
+        if (student?.placement_fee_amount) {
+          placementValue = Number(student.placement_fee_amount);
+        } else {
+          // Buscar da aplicação principal/scholarship
+          const scholarship = student.all_applications?.find((app: any) => app.status !== 'rejected')?.scholarships;
+          const scholarshipData = Array.isArray(scholarship) ? scholarship[0] : scholarship;
+          if (scholarshipData?.annual_value_with_scholarship) {
+            placementValue = getPlacementFee(Number(scholarshipData.annual_value_with_scholarship));
+          } else {
+            placementValue = getFeeAmount('placement_fee');
+          }
+        }
+      }
+    }
+
+    // DS-160 Package Fee
+    let ds160PackageValue: number;
+    if (student.has_paid_ds160_package && realPaidAmounts?.ds160_package !== undefined && realPaidAmounts?.ds160_package !== null) {
+      ds160PackageValue = realPaidAmounts.ds160_package;
+    } else {
+      if (currentOverrides?.ds160_package_fee !== undefined && currentOverrides?.ds160_package_fee !== null) {
+        ds160PackageValue = currentOverrides.ds160_package_fee;
+      } else {
+        ds160PackageValue = getFeeAmount('ds160_package');
+      }
+    }
+
+    // I-539 COS Package Fee
+    let i539PackageValue: number;
+    if (student.has_paid_i539_cos_package && realPaidAmounts?.i539_cos_package !== undefined && realPaidAmounts?.i539_cos_package !== null) {
+      i539PackageValue = realPaidAmounts.i539_cos_package;
+    } else {
+      if (currentOverrides?.i539_cos_package_fee !== undefined && currentOverrides?.i539_cos_package_fee !== null) {
+        i539PackageValue = currentOverrides.i539_cos_package_fee;
+      } else {
+        i539PackageValue = getFeeAmount('i539_cos_package');
+      }
+    }
+
     const finalFees = {
       selection_process: selectionProcessValue,
       scholarship: scholarshipValue,
-      i20_control: i20ControlValue
+      i20_control: i20ControlValue,
+      placement: placementValue,
+      ds160_package: ds160PackageValue,
+      i539_cos_package: i539PackageValue
     };
 
     console.log('✅ [handleStartEditFees] Valores finais para edição:', finalFees);
@@ -3012,7 +3091,7 @@ const AdminStudentDetails: React.FC = () => {
   // Funções de Transfer Form e Document Requests agora vêm dos hooks personalizados
 
   // Handler para atualizar método de pagamento
-  const handleUpdatePaymentMethod = useCallback(async (feeType: string) => {
+  const handleUpdatePaymentMethod = useCallback(async (feeType: 'selection_process' | 'application' | 'scholarship' | 'i20_control' | 'placement' | 'ds160_package' | 'i539_cos_package' | string) => {
     if (!student || !isPlatformAdmin) return;
 
     setSavingPaymentMethod(true);
@@ -3052,6 +3131,20 @@ const AdminStudentDetails: React.FC = () => {
         const { error } = await supabase
           .from('user_profiles')
           .update({ i20_control_fee_payment_method: method })
+          .eq('id', student.student_id);
+
+        if (error) throw error;
+      } else if (feeType === 'ds160_package') {
+        const { error } = await supabase
+          .from('user_profiles')
+          .update({ ds160_package_payment_method: method })
+          .eq('id', student.student_id);
+
+        if (error) throw error;
+      } else if (feeType === 'i539_cos_package') {
+        const { error } = await supabase
+          .from('user_profiles')
+          .update({ i539_cos_package_payment_method: method })
           .eq('id', student.student_id);
 
         if (error) throw error;

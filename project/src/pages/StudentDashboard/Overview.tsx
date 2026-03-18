@@ -350,7 +350,7 @@ const Overview: React.FC<OverviewProps> = ({
   type OnboardingStepKey =
     | 'selection_fee' | 'identity_verification' | 'selection_survey'
     | 'scholarship_selection' | 'process_type' | 'documents_upload'
-    | 'payment' | 'scholarship_fee' | 'university_documents'
+    | 'payment' | 'scholarship_fee' | 'placement_fee' | 'university_documents'
     | 'waiting_approval' | 'my_applications' | 'completed';
 
   const STEP_NUMBER_MAP: Record<OnboardingStepKey, number> = {
@@ -362,6 +362,7 @@ const Overview: React.FC<OverviewProps> = ({
     'documents_upload': 5,
     'payment': 6,
     'scholarship_fee': 7,
+    'placement_fee': 7,
     'university_documents': 7,
     'waiting_approval': 7,
     'my_applications': 7,

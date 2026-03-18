@@ -185,7 +185,7 @@ function calculateNetAmountFromGross(
 export async function getDisplayAmounts(
   userId: string,
   feeTypes:
-    ("selection_process" | "scholarship" | "i20_control" | "application")[],
+    ("selection_process" | "scholarship" | "i20_control" | "application" | "ds160_package" | "i539_cos_package")[],
 ): Promise<Record<string, number>> {
   try {
     // 1. Buscar system_type, dependents e scholarship_package_id do usuário
@@ -223,6 +223,8 @@ export async function getDisplayAmounts(
       "scholarship": "scholarship_fee",
       "i20_control": "i20_control",
       "application": "application_fee",
+      "ds160_package": "ds160_package",
+      "i539_cos_package": "i539_cos_package",
     };
 
     const feeTypesForCoupon = feeTypes.map((ft) => couponFeeTypeMap[ft] || ft);
@@ -247,6 +249,10 @@ export async function getDisplayAmounts(
           ? "i20_control"
           : coupon.fee_type === "application_fee"
           ? "application"
+          : coupon.fee_type === "ds160_package"
+          ? "ds160_package"
+          : coupon.fee_type === "i539_cos_package"
+          ? "i539_cos_package"
           : null;
 
         if (feeTypeKey && !couponAmounts[feeTypeKey] && coupon.final_amount) {
@@ -287,6 +293,10 @@ export async function getDisplayAmounts(
           ? "i20_control"
           : payment.fee_type === "application"
           ? "application"
+          : payment.fee_type === "ds160_package"
+          ? "ds160_package"
+          : payment.fee_type === "i539_cos_package"
+          ? "i539_cos_package"
           : null;
 
         if (
@@ -381,6 +391,28 @@ export async function getDisplayAmounts(
       }
     }
 
+    // DS-160 Package Fee - Prioridade: override > valor real pago (Zelle) > cálculo fixo ($1800 padrão)
+    if (feeTypes.includes("ds160_package")) {
+      if (overrides.ds160_package_fee != null) {
+        amounts.ds160_package = Number(overrides.ds160_package_fee);
+      } else if (realPaidMap.ds160_package) {
+        amounts.ds160_package = realPaidMap.ds160_package;
+      } else {
+        amounts.ds160_package = 1800;
+      }
+    }
+
+    // I-539 COS Package Fee - Prioridade: override > valor real pago (Zelle) > cálculo fixo ($1800 padrão)
+    if (feeTypes.includes("i539_cos_package")) {
+      if (overrides.i539_cos_package_fee != null) {
+        amounts.i539_cos_package = Number(overrides.i539_cos_package_fee);
+      } else if (realPaidMap.i539_cos_package) {
+        amounts.i539_cos_package = realPaidMap.i539_cos_package;
+      } else {
+        amounts.i539_cos_package = 1800;
+      }
+    }
+
     // Application Fee - Prioridade: override > cupom promocional > cálculo fixo
     if (feeTypes.includes("application")) {
       if (overrides.application_fee != null) {
@@ -424,7 +456,7 @@ export async function getDisplayAmounts(
 export async function getRealPaidAmounts(
   userId: string,
   feeTypes:
-    ("selection_process" | "scholarship" | "i20_control" | "application")[],
+    ("selection_process" | "scholarship" | "i20_control" | "application" | "ds160_package" | "i539_cos_package")[],
 ): Promise<Record<string, number>> {
   try {
     // ✅ CORREÇÃO: Buscar também payment_date, gross_amount_usd e parcelow_status (Parcelow failed não conta como pago)
@@ -593,15 +625,19 @@ export async function getRealPaidAmounts(
       }
 
       // Mapear fee_type para a chave correta
-      const feeTypeKey = payment.fee_type === "selection_process"
-        ? "selection_process"
-        : payment.fee_type === "scholarship"
-        ? "scholarship"
-        : payment.fee_type === "i20_control"
-        ? "i20_control"
-        : payment.fee_type === "application"
-        ? "application"
-        : null;
+        const feeTypeKey = payment.fee_type === "selection_process"
+          ? "selection_process"
+          : payment.fee_type === "scholarship"
+          ? "scholarship"
+          : payment.fee_type === "i20_control"
+          ? "i20_control"
+          : payment.fee_type === "application"
+          ? "application"
+          : payment.fee_type === "ds160_package"
+          ? "ds160_package"
+          : payment.fee_type === "i539_cos_package"
+          ? "i539_cos_package"
+          : null;
 
       if (feeTypeKey) {
         // Se já existe um valor para este fee_type, usar o maior (mais recente)
@@ -623,7 +659,7 @@ export async function getRealPaidAmounts(
  */
 export async function getRealPaidAmount(
   userId: string,
-  feeType: "selection_process" | "scholarship" | "i20_control" | "application",
+  feeType: "selection_process" | "scholarship" | "i20_control" | "application" | "ds160_package" | "i539_cos_package",
 ): Promise<number | null> {
   const amounts = await getRealPaidAmounts(userId, [feeType]);
   return amounts[feeType] || null;
@@ -639,7 +675,7 @@ export async function getRealPaidAmount(
 export async function getGrossPaidAmounts(
   userId: string,
   feeTypes:
-    ("selection_process" | "scholarship" | "i20_control" | "application" | "placement")[],
+    ("selection_process" | "scholarship" | "i20_control" | "application" | "placement" | "ds160_package" | "i539_cos_package")[],
 ): Promise<Record<string, number>> {
   try {
     const { data: payments, error } = await supabase
@@ -681,6 +717,10 @@ export async function getGrossPaidAmounts(
         ? "application"
         : payment.fee_type === "placement"
         ? "placement"
+        : payment.fee_type === "ds160_package"
+        ? "ds160_package"
+        : payment.fee_type === "i539_cos_package"
+        ? "i539_cos_package"
         : null;
 
       if (feeTypeKey) {

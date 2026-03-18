@@ -90,12 +90,30 @@ const ScholarshipDetailModal: React.FC<ScholarshipDetailModalProps> = ({
   const daysLeft = getDaysUntilDeadline(scholarship.deadline);
   const isExpired = !scholarship.is_active || is3800ScholarshipBlocked(scholarship) || daysLeft < 0;
 
-  // Parse internal fees
-  let internalFees = scholarship.internal_fees;
-  if (typeof internalFees === 'string') {
-    try { internalFees = JSON.parse(internalFees); } catch (e) { internalFees = []; }
+  // Parse internal fees and add fixed ones
+  let internalFeesData = scholarship.internal_fees;
+  if (typeof internalFeesData === 'string') {
+    try { internalFeesData = JSON.parse(internalFeesData); } catch (e) { internalFeesData = []; }
   }
-  const hasInternalFees = internalFees && Array.isArray(internalFees) && internalFees.length > 0;
+  
+  const baseInternalFees = Array.isArray(internalFeesData) ? internalFeesData : [];
+  
+  // Add fixed fees (I539 and DS160)
+  const fixedFees = [
+    { 
+      name: t('scholarshipsPage.modal.i539COSPackage'), 
+      amount: 1800, 
+      details: t('scholarshipsPage.modal.i539PackageDescription') 
+    },
+    { 
+      name: t('scholarshipsPage.modal.ds160Package'), 
+      amount: 1800, 
+      details: t('scholarshipsPage.modal.ds160PackageDescription') 
+    }
+  ];
+  
+  const internalFees = [...fixedFees, ...baseInternalFees];
+  const hasInternalFees = internalFees.length > 0;
   const canViewInternalFees = hasInternalFees && userProfile?.has_paid_selection_process_fee;
   const shouldShowInternalFeesNotice = hasInternalFees && !userProfile?.has_paid_selection_process_fee;
 
@@ -335,13 +353,13 @@ const ScholarshipDetailModal: React.FC<ScholarshipDetailModalProps> = ({
                             )}
                           </div>
                           <table className="w-full text-sm">
-                            <tbody className="divide-y divide-amber-100">
+                            <tbody className="divide-y divide-slate-100">
                               {internalFees.map((fee: any, idx: number) => (
                                 <tr key={`internal-${idx}`} className="bg-white/50">
                                   <td className="py-3 px-4">
                                     <div className="flex flex-col">
                                       <span className="text-slate-700 font-medium">{fee.category || fee.name}</span>
-                                      {fee.details && <span className="text-[10px] text-slate-500 font-medium uppercase tracking-wide mt-0.5">{fee.details}</span>}
+                                      {fee.details && <span className="text-[10px] text-slate-500 font-medium tracking-wide mt-0.5">{fee.details}</span>}
                                     </div>
                                   </td>
                                   <td className="py-3 px-4 text-right text-slate-700 font-medium">${Number(fee.amount).toLocaleString()}</td>

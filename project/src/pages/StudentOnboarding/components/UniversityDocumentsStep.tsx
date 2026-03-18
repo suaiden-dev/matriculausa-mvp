@@ -1,10 +1,10 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { 
   AlertCircle, Award, Info, Home, FolderOpen, GraduationCap, Download, 
   ShieldCheck, ArrowRight, LayoutDashboard, MapPin, 
   Star, Eye, CheckCircle2, Clock, Mail, Phone, Globe, ExternalLink,
-  CreditCard, Check, X, RefreshCw, Loader2
+  CreditCard, Check, X, RefreshCw, Loader2, Lock
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useAuth } from '../../../hooks/useAuth';
@@ -19,8 +19,8 @@ import DocumentViewerModal from '../../../components/DocumentViewerModal';
 import { ZelleCheckout } from '../../../components/ZelleCheckout';
 import { STRIPE_PRODUCTS } from '../../../stripe-config';
 import { ProfileRequiredModal } from '../../../components/ProfileRequiredModal';
-import { useCallback } from 'react';
 import { getExchangeRate, calculateCardAmountWithFees, calculatePIXTotalWithIOF } from '../../../utils/stripeFeeCalculator';
+import { PackageFeeTab } from './PackageFeeTab';
 
 // Ícones de Pagamento
 const PixIcon = ({ className }: { className?: string }) => (
@@ -64,7 +64,7 @@ const StripeIcon = ({ className }: { className?: string }) => (
 );
 
 export const UniversityDocumentsStep: React.FC<StepProps> = ({ onBack }) => {
-  const { t } = useTranslation(['registration', 'common']);
+  const { t } = useTranslation(['registration', 'common', 'scholarships']);
   const navigate = useNavigate();
   const { user, userProfile } = useAuth();
   const { logAction } = useStudentLogs(userProfile?.id || '');
@@ -72,9 +72,12 @@ export const UniversityDocumentsStep: React.FC<StepProps> = ({ onBack }) => {
   
   const [loading, setLoading] = useState(true);
   const [applicationDetails, setApplicationDetails] = useState<any>(null);
-  const [activeTab, setActiveTab] = useState<'welcome' | 'details' | 'documents' | 'i20' | 'acceptance'>('welcome');
+  const [activeTab, setActiveTab] = useState<'welcome' | 'details' | 'documents' | 'i20' | 'ds160' | 'i539' | 'acceptance'>('welcome');
   const [previewUrl, setPreviewUrl] = useState<string | null>(null);
   const [documentRequests, setDocumentRequests] = useState<any[]>([]);
+  // Estado dinâmico das taxas de pacote (busca em individual_fee_payments, não depende do userProfile)
+  const [ds160PackagePaid, setDs160PackagePaid] = useState<boolean>(false);
+  const [i539PackagePaid, setI539PackagePaid] = useState<boolean>(false);
   
   // Pagamento I-20
   const [i20Loading, setI20Loading] = useState(false);
@@ -134,6 +137,34 @@ export const UniversityDocumentsStep: React.FC<StepProps> = ({ onBack }) => {
         
         if (reqs) {
           setDocumentRequests(reqs);
+        }
+
+        // Verificar pagamento das taxas de pacote diretamente no banco
+        // (não depende do userProfile.has_paid_* que só atualiza após relogin)
+        if (userProfile?.user_id) {
+          const { data: packagePayments } = await supabase
+            .from('individual_fee_payments')
+            .select('fee_type, parcelow_status, payment_method')
+            .eq('user_id', userProfile.user_id)
+            .in('fee_type', ['ds160_package', 'i539_cos_package'])
+            .limit(10);
+
+          if (packagePayments) {
+            const ds160Paid = packagePayments.some(
+              (p: any) => p.fee_type === 'ds160_package' &&
+                (p.parcelow_status === 'paid' || p.payment_method === 'stripe' || p.payment_method === 'zelle')
+            );
+            const i539Paid = packagePayments.some(
+              (p: any) => p.fee_type === 'i539_cos_package' &&
+                (p.parcelow_status === 'paid' || p.payment_method === 'stripe' || p.payment_method === 'zelle')
+            );
+            setDs160PackagePaid(ds160Paid || !!(userProfile as any)?.has_paid_ds160_package);
+            setI539PackagePaid(i539Paid || !!(userProfile as any)?.has_paid_i539_cos_package);
+          } else {
+            // Fallback para o campo do perfil
+            setDs160PackagePaid(!!(userProfile as any)?.has_paid_ds160_package);
+            setI539PackagePaid(!!(userProfile as any)?.has_paid_i539_cos_package);
+          }
         }
       }
 
@@ -250,8 +281,8 @@ export const UniversityDocumentsStep: React.FC<StepProps> = ({ onBack }) => {
             'Authorization': `Bearer ${token}`,
           },
           body: JSON.stringify({
-            success_url: `${window.location.origin}/student/onboarding?step=university_documents&payment=success&session_id={CHECKOUT_SESSION_ID}`,
-            cancel_url: `${window.location.origin}/student/onboarding?step=university_documents&payment=cancelled`,
+            success_url: `${window.location.origin}/student/onboarding?step=my_applications&payment=success&session_id={CHECKOUT_SESSION_ID}`,
+            cancel_url: `${window.location.origin}/student/onboarding?step=my_applications&payment=cancelled`,
             price_id: STRIPE_PRODUCTS.controlFee.priceId,
             amount: finalAmountWithDiscount,
             payment_method: 'stripe',
@@ -302,8 +333,8 @@ export const UniversityDocumentsStep: React.FC<StepProps> = ({ onBack }) => {
             'Authorization': `Bearer ${token}`,
           },
           body: JSON.stringify({
-            success_url: `${window.location.origin}/student/onboarding?step=university_documents&payment=success&session_id={CHECKOUT_SESSION_ID}`,
-            cancel_url: `${window.location.origin}/student/onboarding?step=university_documents&payment=cancelled`,
+            success_url: `${window.location.origin}/student/onboarding?step=my_applications&payment=success&session_id={CHECKOUT_SESSION_ID}`,
+            cancel_url: `${window.location.origin}/student/onboarding?step=my_applications&payment=cancelled`,
             price_id: STRIPE_PRODUCTS.controlFee.priceId,
             amount: finalAmountWithDiscount,
             payment_method: 'pix',
@@ -390,6 +421,28 @@ export const UniversityDocumentsStep: React.FC<StepProps> = ({ onBack }) => {
     }
   }, [selectedPaymentMethod, applicationDetails, getFeeAmount, exchangeRate]);
 
+  // Internal Fees including fixed fees (I539 and DS160)
+  const internalFees = useMemo(() => {
+    const base = Array.isArray(applicationDetails?.scholarships?.internal_fees)
+      ? applicationDetails.scholarships.internal_fees
+      : [];
+    
+    const fixedFees = [
+      { 
+        name: t('scholarshipsPage.modal.i539COSPackage', { ns: 'scholarships' }), 
+        amount: 1800, 
+        details: t('scholarshipsPage.modal.i539PackageDescription', { ns: 'scholarships' }) 
+      },
+      { 
+        name: t('scholarshipsPage.modal.ds160Package', { ns: 'scholarships' }), 
+        amount: 1800, 
+        details: t('scholarshipsPage.modal.ds160PackageDescription', { ns: 'scholarships' }) 
+      }
+    ];
+    
+    return [...fixedFees, ...base];
+  }, [applicationDetails?.scholarships?.internal_fees, t]);
+
   const saveCpfAndCheckout = async () => {
     const cleaned = inlineCpf.replace(/\D/g, '');
     if (cleaned.length !== 11) {
@@ -434,6 +487,28 @@ export const UniversityDocumentsStep: React.FC<StepProps> = ({ onBack }) => {
   const isPlacementFeePaid = !!applicationDetails?.is_placement_fee_paid;
   const isPlacementFlow = !!(userProfile as any)?.placement_fee_flow;
   const showI20Tab = !isPlacementFlow && (isScholarshipFeePaid || isPlacementFeePaid);
+
+  // Novas taxas de pacote (apenas para usuários do novo fluxo/placement_fee)
+  const studentProcessType = applicationDetails?.student_process_type as string | undefined;
+  // DS160 para 'initial', I539 para 'change_of_status'
+  // Usa estado dinâmico buscado do banco, com fallback para userProfile
+  const hasDs160Package = ds160PackagePaid;
+  const hasI539Package = i539PackagePaid;
+  // DS160 para 'initial', I539 para 'change_of_status'
+  const showDs160Tab = isPlacementFlow && studentProcessType === 'initial';
+  const showI539Tab = isPlacementFlow && studentProcessType === 'change_of_status';
+  // Bloquear acceptance letter se há taxa de pacote obrigatória não paga
+  const packageFeeRequired = (showDs160Tab && !hasDs160Package) || (showI539Tab && !hasI539Package);
+
+  // Estado de pagamento das novas taxas (reutiliza mesma lógica do I-20)
+  const [packageFeeLoading, setPackageFeeLoading] = useState(false);
+  const [packageFeeError, setPackageFeeError] = useState<string | null>(null);
+  const [selectedPackagePaymentMethod, setSelectedPackagePaymentMethod] = useState<'stripe' | 'zelle' | 'pix' | 'parcelow' | null>(null);
+  const [showZellePackageFee, setShowZellePackageFee] = useState(false);
+  const [showInlineCpfPackage, setShowInlineCpfPackage] = useState(false);
+  const [inlineCpfPackage, setInlineCpfPackage] = useState('');
+  const [savingCpfPackage, setSavingCpfPackage] = useState(false);
+  const [cpfErrorPackage, setCpfErrorPackage] = useState<string | null>(null);
 
   // Redirecionamento de segurança caso a aba I-20 esteja desativada para o usuário
   useEffect(() => {
@@ -481,14 +556,18 @@ export const UniversityDocumentsStep: React.FC<StepProps> = ({ onBack }) => {
     { title: t('studentDashboard.applicationChatPage.tabs.details'), icon: Info },
     { title: t('studentDashboard.applicationChatPage.tabs.documents'), icon: FolderOpen },
     ...(showI20Tab ? [{ title: t('studentDashboard.applicationChatPage.tabs.i20ControlFee'), icon: CreditCard }] : []),
+    ...(showDs160Tab ? [{ title: t('scholarshipsPage.modal.ds160Package', { ns: 'scholarships' }), icon: CreditCard }] : []),
+    ...(showI539Tab ? [{ title: t('scholarshipsPage.modal.i539COSPackage', { ns: 'scholarships' }), icon: CreditCard }] : []),
     { title: t('studentDashboard.myApplicationStep.tabs.acceptanceLetter'), icon: Award }
   ];
 
-  const tabIds: ('welcome' | 'details' | 'documents' | 'i20' | 'acceptance')[] = [
+  const tabIds: ('welcome' | 'details' | 'documents' | 'i20' | 'ds160' | 'i539' | 'acceptance')[] = [
     'welcome', 
     'details', 
     'documents', 
-    ...(showI20Tab ? ['i20' as const] : []), 
+    ...(showI20Tab ? ['i20' as const] : []),
+    ...(showDs160Tab ? ['ds160' as const] : []),
+    ...(showI539Tab ? ['i539' as const] : []),
     'acceptance'
   ];
   const activeTabIndex = tabIds.indexOf(activeTab as any);
@@ -646,10 +725,23 @@ export const UniversityDocumentsStep: React.FC<StepProps> = ({ onBack }) => {
                          variant: allDocsApproved ? 'success' : (allDocsDone ? 'success' : 'warning'),
                          tab: 'documents' 
                        },
+                       // Etapas condicionais de taxas de pacote
+                       ...(showDs160Tab ? [{
+                         title: 'DS160 Package - INITIAL',
+                         status: hasDs160Package ? t('studentDashboard.myApplicationStep.welcome.status.completed') : t('studentDashboard.myApplicationStep.welcome.status.actionRequired'),
+                         variant: hasDs160Package ? 'success' : 'warning',
+                         tab: 'ds160'
+                       }] : []),
+                       ...(showI539Tab ? [{
+                         title: 'I539 COS Package - COS',
+                         status: hasI539Package ? t('studentDashboard.myApplicationStep.welcome.status.completed') : t('studentDashboard.myApplicationStep.welcome.status.actionRequired'),
+                         variant: hasI539Package ? 'success' : 'warning',
+                         tab: 'i539'
+                       }] : []),
                        { 
                          title: t('studentDashboard.myApplicationStep.welcome.acceptanceLetterReceipt'), 
-                         status: applicationDetails.acceptance_letter_url ? t('studentDashboard.myApplicationStep.welcome.documentAvailable') : t('studentDashboard.myApplicationStep.welcome.status.inProgress'), 
-                         variant: applicationDetails.acceptance_letter_url ? 'success' : 'warning',
+                         status: applicationDetails.acceptance_letter_url ? t('studentDashboard.myApplicationStep.welcome.documentAvailable') : (packageFeeRequired ? t('studentDashboard.myApplicationStep.welcome.status.blocked') : t('studentDashboard.myApplicationStep.welcome.status.inProgress')), 
+                         variant: applicationDetails.acceptance_letter_url ? 'success' : (packageFeeRequired ? 'error' : 'warning'),
                          tab: 'acceptance' 
                        }
                      ].map((step, i) => {
@@ -913,17 +1005,18 @@ export const UniversityDocumentsStep: React.FC<StepProps> = ({ onBack }) => {
 
 
                         {/* Internal Fees */}
-                        {applicationDetails.scholarships?.internal_fees && Array.isArray(applicationDetails.scholarships.internal_fees) && applicationDetails.scholarships.internal_fees.length > 0 && (
+                        {internalFees.length > 0 && (
                           <section className="space-y-6">
-                            <h4 className="text-xl font-black text-gray-900 uppercase tracking-tight">
+                            <h4 className="text-xl font-black text-gray-900 uppercase tracking-tight ">
                               {t('studentDashboard.myApplicationStep.details.internalFees')}
                             </h4>
                             <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                              {applicationDetails.scholarships.internal_fees.map((fee: any, idx: number) => (
+                              {internalFees.map((fee: any, idx: number) => (
                                 <div key={idx} className="flex justify-between items-center p-6 bg-white rounded-2xl shadow-sm border border-slate-300 group">
                                    <div className="min-w-0 mr-4">
-                                     <p className="text-[10px] font-black text-slate-500 uppercase tracking-widest mb-1">{fee.frequency || fee.details || t('studentDashboard.myApplicationStep.details.oneTimePayment')}</p>
+                                     <p className="text-[10px] font-black text-slate-500 uppercase tracking-widest mb-1">{fee.frequency || t('studentDashboard.myApplicationStep.details.oneTimePayment')}</p>
                                      <p className="text-sm font-black text-gray-900 uppercase truncate" title={fee.category || fee.name}>{fee.category || fee.name}</p>
+                                     {fee.details && <p className="text-[10px] text-slate-500 font-medium tracking-wide mt-0.5">{fee.details}</p>}
                                    </div>
                                    <span className="text-xl font-black text-gray-900 whitespace-nowrap">${Number(fee.amount).toFixed(2)}</span>
                                 </div>
@@ -1493,6 +1586,60 @@ export const UniversityDocumentsStep: React.FC<StepProps> = ({ onBack }) => {
             </div>
           )}
 
+          {/* ====== DS160 Package Tab ====== */}
+          {activeTab === 'ds160' && (
+            <PackageFeeTab
+              feeType="ds160_package"
+              feeLabel="DS160 Package"
+              isPaid={hasDs160Package}
+              loading={packageFeeLoading}
+              setLoading={setPackageFeeLoading}
+              error={packageFeeError}
+              setError={setPackageFeeError}
+              selectedPaymentMethod={selectedPackagePaymentMethod}
+              setSelectedPaymentMethod={setSelectedPackagePaymentMethod}
+              showZelle={showZellePackageFee}
+              setShowZelle={setShowZellePackageFee}
+              showInlineCpf={showInlineCpfPackage}
+              setShowInlineCpf={setShowInlineCpfPackage}
+              inlineCpf={inlineCpfPackage}
+              setInlineCpf={setInlineCpfPackage}
+              savingCpf={savingCpfPackage}
+              setSavingCpf={setSavingCpfPackage}
+              cpfError={cpfErrorPackage}
+              setCpfError={setCpfErrorPackage}
+              userProfile={userProfile}
+              onPaymentSuccess={() => fetchApplicationDetails(true)}
+            />
+          )}
+
+          {/* ====== I539 COS Package Tab ====== */}
+          {activeTab === 'i539' && (
+            <PackageFeeTab
+              feeType="i539_cos_package"
+              feeLabel="I539 COS Package"
+              isPaid={hasI539Package}
+              loading={packageFeeLoading}
+              setLoading={setPackageFeeLoading}
+              error={packageFeeError}
+              setError={setPackageFeeError}
+              selectedPaymentMethod={selectedPackagePaymentMethod}
+              setSelectedPaymentMethod={setSelectedPackagePaymentMethod}
+              showZelle={showZellePackageFee}
+              setShowZelle={setShowZellePackageFee}
+              showInlineCpf={showInlineCpfPackage}
+              setShowInlineCpf={setShowInlineCpfPackage}
+              inlineCpf={inlineCpfPackage}
+              setInlineCpf={setInlineCpfPackage}
+              savingCpf={savingCpfPackage}
+              setSavingCpf={setSavingCpfPackage}
+              cpfError={cpfErrorPackage}
+              setCpfError={setCpfErrorPackage}
+              userProfile={userProfile}
+              onPaymentSuccess={() => fetchApplicationDetails(true)}
+            />
+          )}
+
           {activeTab === 'acceptance' && (
             <div className="space-y-8 pb-12">
               <div className="bg-white rounded-[3rem] shadow-2xl border border-gray-100 overflow-hidden relative">
@@ -1513,14 +1660,21 @@ export const UniversityDocumentsStep: React.FC<StepProps> = ({ onBack }) => {
                     </div>
 
                     <div className={`flex items-center w-fit gap-2 px-5 py-2.5 rounded-2xl text-[10px] font-black uppercase tracking-widest border shadow-sm transition-all duration-500 ${
-                      applicationDetails.acceptance_letter_url 
+                      applicationDetails.acceptance_letter_url && !packageFeeRequired
                         ? 'bg-emerald-50 border-emerald-200 text-emerald-700' 
+                        : packageFeeRequired
+                        ? 'bg-red-50 border-red-200 text-red-700'
                         : 'bg-amber-50 border-amber-200 text-amber-700'
                     }`}>
-                      {applicationDetails.acceptance_letter_url ? (
+                      {applicationDetails.acceptance_letter_url && !packageFeeRequired ? (
                         <>
                           <CheckCircle2 className="w-4 h-4" />
                           {t('studentDashboard.myApplicationStep.acceptance.available')}
+                        </>
+                      ) : packageFeeRequired ? (
+                        <>
+                          <Lock className="w-4 h-4" />
+                          {t('studentDashboard.myApplicationStep.welcome.status.blocked')}
                         </>
                       ) : (
                         <>
@@ -1554,7 +1708,30 @@ export const UniversityDocumentsStep: React.FC<StepProps> = ({ onBack }) => {
 
                     <div className="space-y-8">
                        {/* Status indicator block */}
-                       {applicationDetails.acceptance_letter_url && (
+                       {packageFeeRequired ? (
+                         <div className="bg-gradient-to-br from-red-50 to-rose-50 border-2 border-red-100 rounded-[2.5rem] p-10 flex flex-col items-center justify-center gap-8 animate-in fade-in zoom-in duration-700 relative overflow-hidden group">
+                           {/* Decorative background element */}
+                           <div className="absolute -top-10 -right-10 w-32 h-32 bg-red-200/20 rounded-full blur-3xl pointer-events-none" />
+                            
+                            <div className="text-left space-y-4 relative z-10 w-full">
+                              <p className="text-sm text-red-900/80 font-bold leading-relaxed">
+                                <Trans 
+                                  i18nKey="studentOnboarding.documentsUpload.acceptance.lockMessage"
+                                  values={{ feeName: showDs160Tab ? 'DS160 Package' : 'I539 COS Package' }}
+                                  components={{ 0: <span className="text-red-600 font-black" /> }}
+                                />
+                              </p>
+                            </div>
+                            
+                            <button 
+                              onClick={() => setActiveTab(showDs160Tab ? 'ds160' : 'i539')}
+                              className="w-full bg-red-600 hover:bg-red-700 text-white px-8 py-5 rounded-[1.25rem] font-black uppercase tracking-widest text-[10px] transition-all shadow-lg shadow-red-600/20 flex items-center justify-center gap-3 active:scale-95 group/btn"
+                            >
+                              <CreditCard className="w-4 h-4 group-hover/btn:translate-x-1 transition-transform" />
+                              {t('studentOnboarding.documentsUpload.acceptance.goToPayment')}
+                            </button>
+                         </div>
+                       ) : applicationDetails.acceptance_letter_url ? (
                          <div className="bg-emerald-50 border-2 border-emerald-200 rounded-[2rem] p-8 flex flex-col items-center justify-center gap-6 animate-in fade-in zoom-in duration-500">
                            <div className="w-16 h-16 bg-emerald-100 border-2 border-emerald-200 rounded-2xl flex items-center justify-center animate-bounce-slow">
                              <Award className="w-8 h-8 text-emerald-600" />
@@ -1571,6 +1748,8 @@ export const UniversityDocumentsStep: React.FC<StepProps> = ({ onBack }) => {
                              {t('studentDashboard.myApplicationStep.acceptance.downloadPdf')}
                            </button>
                          </div>
+                       ) : (
+                         null
                        )}
                     </div>
                   </div>

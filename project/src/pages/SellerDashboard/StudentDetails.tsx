@@ -47,6 +47,8 @@ interface StudentInfo {
   has_paid_i20_control_fee?: boolean;
   student_process_type?: string;
   application_status?: string;
+  has_paid_ds160_package?: boolean;
+  has_paid_i539_cos_package?: boolean;
   application_fee_amount?: number;
   scholarship_fee_amount?: number;
   scholarship?: {
@@ -965,6 +967,9 @@ const StudentDetails: React.FC<StudentDetailsProps> = ({ studentId, profileId, o
     { key: 'apply', label: 'Application' },
     { key: 'review', label: 'Review' },
     { key: 'application_fee', label: 'App Fee' },
+    { key: 'placement_fee', label: 'Placement Fee' },
+    { key: 'ds160_package', label: 'DS-160 Package' },
+    { key: 'i539_cos_package', label: 'I-539 Package' },
     { key: 'scholarship_fee', label: 'Scholarship Fee' },
     { key: 'i20_fee', label: 'I-20 Fee' },
     { key: 'acceptance_letter', label: 'Acceptance' },
@@ -976,7 +981,17 @@ const StudentDetails: React.FC<StudentDetailsProps> = ({ studentId, profileId, o
     if (step.key === 'transfer_form') {
       return studentInfo?.student_process_type === 'transfer';
     }
-    return true;
+    if (step.key === 'ds160_package') {
+      return studentInfo?.student_process_type === 'initial';
+    }
+    if (step.key === 'i539_cos_package') {
+      return studentInfo?.student_process_type === 'change_of_status';
+    }
+    if ((studentInfo as any)?.placement_fee_flow) {
+      return !['scholarship_fee', 'i20_fee'].includes(step.key);
+    } else {
+      return step.key !== 'placement_fee';
+    }
   });
 
   const getStepStatus = useCallback((step: { key: string; label: string }) => {
@@ -994,6 +1009,12 @@ const StudentDetails: React.FC<StudentDetailsProps> = ({ studentId, profileId, o
         return 'pending';
       case 'application_fee':
         return studentInfo.is_application_fee_paid ? 'completed' : 'pending';
+      case 'placement_fee':
+        return (studentInfo as any).is_placement_fee_paid ? 'completed' : 'pending';
+      case 'ds160_package':
+        return studentInfo.has_paid_ds160_package ? 'completed' : 'pending';
+      case 'i539_cos_package':
+        return studentInfo.has_paid_i539_cos_package ? 'completed' : 'pending';
       case 'scholarship_fee':
         return studentInfo.is_scholarship_fee_paid ? 'completed' : 'pending';
       case 'i20_fee':

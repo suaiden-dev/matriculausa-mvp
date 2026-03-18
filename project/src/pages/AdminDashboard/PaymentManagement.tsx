@@ -17,9 +17,7 @@ import { getPageNumbers as getPageNumbersUtil, pagingGoTo, pagingNext, pagingPre
 import { calculateSelectedTotalsUtil } from './PaymentManagement/utils/totals';
 import { supabase } from '../../lib/supabase';
 import { useAuth } from '../../hooks/useAuth';
-import { useFeeConfig } from '../../hooks/useFeeConfig';
-import { UniversityPaymentRequestService, type UniversityPaymentRequest } from '../../services/UniversityPaymentRequestService';
-import { AffiliatePaymentRequestService } from '../../services/AffiliatePaymentRequestService';
+import { type UniversityPaymentRequest } from '../../services/UniversityPaymentRequestService';
 import { useQueryClient } from '@tanstack/react-query';
 import { queryKeys } from '../../lib/queryKeys';
 import {
@@ -69,9 +67,6 @@ import Tabs from './PaymentManagement/components/Tabs';
 import { useAdminPaymentsState } from './PaymentManagement/state/useAdminPaymentsState';
 import type { PaymentRecord, PaymentStats } from './PaymentManagement/data/types';
 import { UniversityRequests } from './PaymentManagement/components/UniversityRequests';
-import { loadPaymentsBaseDataOptimized } from './PaymentManagement/data/loaders/paymentsLoaderOptimized';
-import { getPaymentDatesForUsersLoaderOptimized } from './PaymentManagement/data/loaders/paymentDatesLoaderOptimized';
-import { transformPaymentsToRecordsAndStats } from './PaymentManagement/utils/transformPayments';
 import { usePaymentsBackendPagination } from './PaymentManagement/hooks/usePaymentsBackendPagination';
 import { createAffiliateUIHandlers } from './PaymentManagement/handlers/affiliateHandlers';
 import { createUniversityUIHandlers } from './PaymentManagement/handlers/universityHandlers';
@@ -86,6 +81,8 @@ const FEE_TYPES = [
   { value: 'scholarship', label: 'Scholarship Fee', color: 'bg-blue-100 text-[#05294E]' },
   { value: 'i20_control_fee', label: 'I-20 Control Fee', color: 'bg-orange-100 text-orange-800' },
   { value: 'placement', label: 'Placement Fee', color: 'bg-purple-100 text-purple-800' },
+  { value: 'ds160_package', label: 'DS-160 Package', color: 'bg-indigo-100 text-indigo-800' },
+  { value: 'i539_cos_package', label: 'I-539 COS Package', color: 'bg-rose-100 text-rose-800' },
 ];
 
 const STATUS_OPTIONS = [
@@ -97,12 +94,10 @@ const STATUS_OPTIONS = [
 
 const PaymentManagement = (): React.JSX.Element => {
   const { user } = useAuth();
-  const { getFeeAmount } = useFeeConfig();
   const queryClient = useQueryClient();
   const [searchParams] = useSearchParams();
   const [payments, setPayments] = useState<PaymentRecord[]>([]);
-  const [loading, setLoading] = useState(false); // Começar como false, será atualizado pelos hooks
-  const [, setError] = useState<string | null>(null);
+  const [loading, setLoading] = useState(false);
   const [stats, setStats] = useState<PaymentStats>({
     totalRevenue: 0,
     totalPayments: 0,
@@ -246,7 +241,6 @@ const PaymentManagement = (): React.JSX.Element => {
   const loadingUniversityRequests = universityRequestsQuery.isLoading;
   const loadingAffiliateRequests = affiliateRequestsQuery.isLoading;
 
-  // Backend pagination for Payments tab (supports specific university or all)
   usePaymentsBackendPagination({
     activeTab,
     filters,
@@ -274,13 +268,10 @@ const PaymentManagement = (): React.JSX.Element => {
         if (shouldLoadPayments) {
           setLoading(paymentsQuery.isLoading || paymentsQuery.isFetching);
         } else {
-          // Se não deve carregar, não está em loading
           setLoading(false);
         }
       }
-      // Se university não é 'all', o usePaymentsBackendPagination gerencia o loading
     } else {
-      // Quando não está na aba payments, não precisa de loading
       setLoading(false);
       if (activeTab !== 'payments') {
         setPayments([]);
@@ -828,8 +819,8 @@ const PaymentManagement = (): React.JSX.Element => {
 
   // ✅ Mostrar skeleton se está carregando/buscando dados E está na aba payments
   // Mostrar skeleton quando está carregando pela primeira vez (isLoading) ou quando não há dados e está buscando
-  const isFetchingPayments = shouldLoadPayments && (paymentsQuery.isFetching || paymentsQuery.isLoading);
-  const shouldShowSkeleton = activeTab === 'payments' && isFetchingPayments && (paymentsQuery.isLoading || payments.length === 0);
+  const isFetchingPayments = (shouldLoadPayments && (paymentsQuery.isFetching || paymentsQuery.isLoading)) || loading;
+  const shouldShowSkeleton = activeTab === 'payments' && isFetchingPayments && (paymentsQuery.isLoading || loading || payments.length === 0);
   if (shouldShowSkeleton) {
     return <PaymentManagementSkeleton />;
   }

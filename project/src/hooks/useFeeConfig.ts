@@ -21,6 +21,9 @@ interface UserFeeOverrides {
   application_fee?: number;
   scholarship_fee?: number;
   i20_control_fee?: number;
+  placement_fee?: number;
+  ds160_package_fee?: number;
+  i539_cos_package_fee?: number;
 }
 
 export const useFeeConfig = (userId?: string) => {
@@ -154,6 +157,15 @@ export const useFeeConfig = (userId?: string) => {
             : undefined,
           i20_control_fee: data.i20_control_fee != null
             ? Number(data.i20_control_fee)
+            : undefined,
+          placement_fee: data.placement_fee != null
+            ? Number(data.placement_fee)
+            : undefined,
+          ds160_package_fee: data.ds160_package_fee != null
+            ? Number(data.ds160_package_fee)
+            : undefined,
+          i539_cos_package_fee: data.i539_cos_package_fee != null
+            ? Number(data.i539_cos_package_fee)
             : undefined,
         }
         : null;
@@ -305,6 +317,15 @@ export const useFeeConfig = (userId?: string) => {
             i20_control_fee: data.user_fee_overrides.i20_control_fee != null
               ? Number(data.user_fee_overrides.i20_control_fee)
               : undefined,
+            placement_fee: data.user_fee_overrides.placement_fee != null
+              ? Number(data.user_fee_overrides.placement_fee)
+              : undefined,
+            ds160_package_fee: data.user_fee_overrides.ds160_package_fee != null
+              ? Number(data.user_fee_overrides.ds160_package_fee)
+              : undefined,
+            i539_cos_package_fee: data.user_fee_overrides.i539_cos_package_fee != null
+              ? Number(data.user_fee_overrides.i539_cos_package_fee)
+              : undefined,
           };
           setUserFeeOverrides(normalized);
         } else {
@@ -451,6 +472,17 @@ export const useFeeConfig = (userId?: string) => {
         case "i-20_control_fee":
           override = userFeeOverrides.i20_control_fee;
           break;
+        case "placement_fee":
+          override = userFeeOverrides.placement_fee;
+          break;
+        case "ds160_package":
+        case "ds160_package_fee":
+          override = userFeeOverrides.ds160_package_fee;
+          break;
+        case "i539_cos_package":
+        case "i539_cos_package_fee":
+          override = userFeeOverrides.i539_cos_package_fee;
+          break;
       }
 
       if (override !== undefined && override !== null) {
@@ -506,13 +538,22 @@ export const useFeeConfig = (userId?: string) => {
     if (feeType === "i20_control_fee" || feeType === "i-20_control_fee") {
       return 900;
     }
+    if (feeType === "placement_fee" || feeType === "placement") {
+      return 1200; // Valor base padrão se não calculado dinamicamente
+    }
+    if (feeType === "ds160_package" || feeType === "i539_cos_package") {
+      return 1800;
+    }
     if (feeType === "application_fee") {
       return feeConfig.application_fee_default;
     }
     return feeConfig.application_fee_default;
   };
 
-  const formatFeeAmount = (amount: number | string, forceDollars: boolean = false): string => {
+  const formatFeeAmount = (
+    amount: number | string,
+    forceDollars: boolean = false,
+  ): string => {
     const numAmount = typeof amount === "string" ? parseFloat(amount) : amount;
 
     if (forceDollars) {
@@ -567,6 +608,17 @@ export const useFeeConfig = (userId?: string) => {
       case "i20_control_fee":
         return userFeeOverrides.i20_control_fee !== undefined &&
           userFeeOverrides.i20_control_fee !== null;
+      case "placement_fee":
+        return userFeeOverrides.placement_fee !== undefined &&
+          userFeeOverrides.placement_fee !== null;
+      case "ds160_package":
+      case "ds160_package_fee":
+        return userFeeOverrides.ds160_package_fee !== undefined &&
+          userFeeOverrides.ds160_package_fee !== null;
+      case "i539_cos_package":
+      case "i539_cos_package_fee":
+        return userFeeOverrides.i539_cos_package_fee !== undefined &&
+          userFeeOverrides.i539_cos_package_fee !== null;
       default:
         return false;
     }

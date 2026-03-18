@@ -38,7 +38,7 @@ const DOCUMENT_TYPES = [
 ];
 
 export const DocumentsUploadStep: React.FC<StepProps> = ({ onNext }) => {
-  const { t } = useTranslation(['registration', 'common']);
+  const { t } = useTranslation(['registration', 'common', 'scholarships']);
   const { user, userProfile, refetchUserProfile } = useAuth();
   const { clearCart } = useCartStore();
   const [files, setFiles] = useState<Record<string, File | File[] | null>>({
@@ -801,6 +801,18 @@ export const DocumentsUploadStep: React.FC<StepProps> = ({ onNext }) => {
                                    </div>
                                  </div>
 
+                                  {/* Enrollment Fee (Taxa de Matricula) */}
+                                  {scholarship?.application_fee_amount && (
+                                    <div className='flex items-center justify-between pt-1.5 mt-1.5 border-t border-slate-200'>
+                                      <span className='text-xs text-slate-500 font-medium'>
+                                        {t('studentDashboard.progressBar.applicationFee')}
+                                      </span>
+                                      <span className='text-blue-600 font-bold text-sm'>
+                                        {formatCurrency(Number(scholarship.application_fee_amount))}
+                                      </span>
+                                    </div>
+                                  )}
+
                                  {/* Placement Fee - exibir apenas para novos usuários */}
                                  {(userProfile as any)?.placement_fee_flow && (() => {
                                    const annualValue = scholarship?.annual_value_with_scholarship ? Number(scholarship.annual_value_with_scholarship) : Number(scholarship?.amount) || 0;
@@ -815,7 +827,27 @@ export const DocumentsUploadStep: React.FC<StepProps> = ({ onNext }) => {
                                      </div>
                                    );
                                  })()}
+
+                                  {/* I539 or DS160 Package Fee */}
+                                  {(() => {
+                                    const pType = app.student_process_type || processType;
+                                    if (!pType) return null;
+                                    
+                                    const isCOS = pType === 'change_of_status';
+                                    const feeKey = isCOS ? 'scholarshipsPage.modal.i539COSPackage' : 'scholarshipsPage.modal.ds160Package';
+                                    
+                                    return (
+                                      <div className="flex items-center justify-between pt-1.5 mt-1.5 border-t border-slate-200">
+                                        <span className="text-xs text-slate-500 font-medium">{t(`scholarships:${feeKey}`)}</span>
+                                        <span className="text-blue-600 font-bold text-sm">
+                                          {formatCurrency(1800)}
+                                        </span>
+                                      </div>
+                                    );
+                                  })()}
                                </div>
+
+
 
                                {/* Rejection Notes */}
                                {app.status === 'rejected' && app.notes && (
@@ -1233,4 +1265,5 @@ export const DocumentsUploadStep: React.FC<StepProps> = ({ onNext }) => {
     </div>
   );
 };
+
 
