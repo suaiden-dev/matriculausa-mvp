@@ -616,20 +616,23 @@ const AdminStudentDetails: React.FC = () => {
 
       // Processar cada pagamento, usando o mais recente para cada fee_type
       payments?.forEach(payment => {
-        // ✅ PRIORIDADE: Usar gross_amount_usd quando disponível (valor bruto em USD)
-        // Se não tiver, usar amount (mas pode estar em BRL para PIX, então verificar)
-        let amountUSD = payment.gross_amount_usd
-          ? Number(payment.gross_amount_usd)
-          : Number(payment.amount);
-
-        // Se não tem gross_amount_usd e o valor é muito alto, provavelmente é BRL
-        // Não usar esse valor para evitar mostrar valores incorretos
-        if (!payment.gross_amount_usd && amountUSD > 1000 && payment.payment_method === 'stripe') {
-          console.log(`[AdminDashboard] Ignorando valor provavelmente BRL para ${payment.fee_type}: ${amountUSD}`);
-          return;
-        }
+        // ✅ PRIORIDADE PARA DETALHES DO ESTUDANTE: Usar amount (que agora é o valor líquido sem taxas)
+        // O gross_amount_usd é usado apenas no Payment Management (valor bruto pago pelo aluno)
+        let amountUSD = Number(payment.amount);
 
         const feeType = payment.fee_type as keyof typeof amounts;
+
+        // ✅ LÓGICA DE SANITIZAÇÃO PARA DADOS LEGADOS:
+        // Se o valor é muito alto (> esperado * 2) e não temos confirmação de que é USD (via gross_amount_usd),
+        // provavelmente é um erro de BRL salvo como USD.
+        const expectedBase = feeType === 'selection_process'
+          ? (student?.system_type === 'simplified' ? 350 : 400)
+          : (feeType === 'scholarship' ? 900 : (feeType === 'application' ? 100 : 900));
+
+        if (!payment.gross_amount_usd && amountUSD > expectedBase * 2) {
+          console.log(`[AdminStudentDetails] Sanitizando valor provavelmente BRL para ${feeType}: ${amountUSD} (esperado ~${expectedBase})`);
+          return;
+        }
 
         // Só definir se ainda não foi definido (usar o mais recente, que vem primeiro devido ao order)
         if (feeType === 'selection_process' && !amounts.selection_process) {
@@ -1172,18 +1175,30 @@ const AdminStudentDetails: React.FC = () => {
             // Processar real paid amounts
             if (data.real_paid_amounts && typeof data.real_paid_amounts === 'object') {
               const amounts: typeof realPaidAmounts = {};
-              if (data.real_paid_amounts.selection_process) {
-                amounts.selection_process = Number(data.real_paid_amounts.selection_process);
-              }
-              if (data.real_paid_amounts.application) {
-                amounts.application = Number(data.real_paid_amounts.application);
-              }
-              if (data.real_paid_amounts.scholarship) {
-                amounts.scholarship = Number(data.real_paid_amounts.scholarship);
-              }
-              if (data.real_paid_amounts.i20_control) {
-                amounts.i20_control = Number(data.real_paid_amounts.i20_control);
-              }
+              
+              // Helper para sanitização (mesma lógica do fetchRealPaidAmounts)
+              const sanitizeAmount = (val: any, feeType: string) => {
+                if (!val) return undefined;
+                const amount = Number(val);
+                const expectedBase = feeType === 'selection_process'
+                  ? (student?.system_type === 'simplified' ? 350 : 400)
+                  : (feeType === 'scholarship' ? 900 : (feeType === 'application' ? 100 : 900));
+                
+                // Nota: A RPC não retorna gross_amount_usd explicitamente no json consolidado,
+                // mas retorna o 'amount' que para novos pagamentos já é o líquido correto.
+                // Se o valor for absurdamente alto, ainda é seguro sanitizar para o detalhe do admin.
+                if (amount > expectedBase * 2) {
+                  console.log(`[AdminStudentDetails] Sanitizando valor RPC para ${feeType}: ${amount}`);
+                  return undefined;
+                }
+                return amount;
+              };
+
+              amounts.selection_process = sanitizeAmount(data.real_paid_amounts.selection_process, 'selection_process');
+              amounts.application = sanitizeAmount(data.real_paid_amounts.application, 'application');
+              amounts.scholarship = sanitizeAmount(data.real_paid_amounts.scholarship, 'scholarship');
+              amounts.i20_control = sanitizeAmount(data.real_paid_amounts.i20_control, 'i20_control');
+              
               setRealPaidAmounts(amounts);
             } else {
               setRealPaidAmounts({});

@@ -185,7 +185,7 @@ function calculateNetAmountFromGross(
 export async function getDisplayAmounts(
   userId: string,
   feeTypes:
-    ("selection_process" | "scholarship" | "i20_control" | "application" | "ds160_package" | "i539_cos_package")[],
+    ("selection_process" | "scholarship" | "i20_control" | "application" | "placement" | "ds160_package" | "i539_cos_package")[],
 ): Promise<Record<string, number>> {
   try {
     // 1. Buscar system_type, dependents e scholarship_package_id do usuário
@@ -270,7 +270,7 @@ export async function getDisplayAmounts(
     // Parcelow: só considerar parcelow_status = 'paid' (ignorar failed, processing, etc.)
     const { data: payments, error: paymentsError } = await supabase
       .from("individual_fee_payments")
-      .select("fee_type, gross_amount_usd, payment_method, parcelow_status")
+      .select("fee_type, amount, gross_amount_usd, payment_method, parcelow_status")
       .eq("user_id", userId)
       .in("fee_type", feeTypes)
       .order("payment_date", { ascending: false, nullsFirst: false })
@@ -299,22 +299,33 @@ export async function getDisplayAmounts(
           ? "i539_cos_package"
           : null;
 
-        if (
-          feeTypeKey && !realPaidMap[feeTypeKey] && payment.gross_amount_usd
-        ) {
-          // Para Zelle, usar diretamente (sem taxas)
-          // Para Stripe, usar gross_amount_usd como referência (mas vamos usar valores esperados)
-          if (payment.payment_method === "zelle") {
+        if (feeTypeKey && !realPaidMap[feeTypeKey]) {
+          const amountLiquid = Number(payment.amount);
+
+          // Para Zelle: usar o amount diretamente (sem taxas)
+          if (payment.payment_method === "zelle" && payment.gross_amount_usd) {
             realPaidMap[feeTypeKey] = Number(payment.gross_amount_usd);
           }
-          // Parcelow com status paid: usar gross_amount_usd para exibição
-          if (
+          // Para Parcelow com status paid: usar gross_amount_usd para exibição
+          else if (
             payment.payment_method === "parcelow" &&
-            payment.parcelow_status === "paid"
+            payment.parcelow_status === "paid" && payment.gross_amount_usd
           ) {
             realPaidMap[feeTypeKey] = Number(payment.gross_amount_usd);
           }
-          // Para Stripe, não usar gross_amount_usd diretamente, vamos usar valores esperados
+          // ✅ NOVO - Para Stripe/PIX: usar o campo `amount` (líquido, sem taxas Stripe)
+          // mas somente se o valor for razoável (entre $50 e $2000) para evitar dados legados BRL
+          else if (
+            payment.payment_method === "stripe" &&
+            amountLiquid > 50 && amountLiquid < 2000 &&
+            payment.gross_amount_usd
+          ) {
+            // Usar o amount líquido (que agora é corretamente salvo pela Edge Function)
+            realPaidMap[feeTypeKey] = amountLiquid;
+            console.log(
+              `[paymentConverter] ✅ [DISPLAY] Stripe PIX - usando amount líquido para ${feeTypeKey}: ${amountLiquid}`,
+            );
+          }
         }
       }
     }
@@ -412,6 +423,15 @@ export async function getDisplayAmounts(
         amounts.i539_cos_package = 1800;
       }
     }
+    
+    // Placement Fee
+    if (feeTypes.includes("placement")) {
+      if (overrides.placement_fee != null) {
+        amounts.placement = Number(overrides.placement_fee);
+      } else if (realPaidMap.placement) {
+        amounts.placement = realPaidMap.placement;
+      }
+    }
 
     // Application Fee - Prioridade: override > cupom promocional > cálculo fixo
     if (feeTypes.includes("application")) {
@@ -456,7 +476,7 @@ export async function getDisplayAmounts(
 export async function getRealPaidAmounts(
   userId: string,
   feeTypes:
-    ("selection_process" | "scholarship" | "i20_control" | "application" | "ds160_package" | "i539_cos_package")[],
+    ("selection_process" | "scholarship" | "i20_control" | "application" | "placement" | "ds160_package" | "i539_cos_package")[],
 ): Promise<Record<string, number>> {
   try {
     // ✅ CORREÇÃO: Buscar também payment_date, gross_amount_usd e parcelow_status (Parcelow failed não conta como pago)
@@ -633,6 +653,8 @@ export async function getRealPaidAmounts(
           ? "i20_control"
           : payment.fee_type === "application"
           ? "application"
+          : payment.fee_type === "placement"
+          ? "placement"
           : payment.fee_type === "ds160_package"
           ? "ds160_package"
           : payment.fee_type === "i539_cos_package"
@@ -659,7 +681,7 @@ export async function getRealPaidAmounts(
  */
 export async function getRealPaidAmount(
   userId: string,
-  feeType: "selection_process" | "scholarship" | "i20_control" | "application" | "ds160_package" | "i539_cos_package",
+  feeType: "selection_process" | "scholarship" | "i20_control" | "application" | "placement" | "ds160_package" | "i539_cos_package",
 ): Promise<number | null> {
   const amounts = await getRealPaidAmounts(userId, [feeType]);
   return amounts[feeType] || null;

@@ -215,14 +215,15 @@ export const SelectionSurveyStep: React.FC<StepProps> = ({ onNext }) => {
         setExtraAnswers((prev) => ({ ...prev, [questionId]: value }));
     }, []);
 
-    const handleSubmit = useCallback(async () => {
-        if (!validateSection()) {
+    const handleSubmit = useCallback(async (overrideAnswers?: Record<number, string>) => {
+        const currentAnswers = overrideAnswers || answers;
+        if (!overrideAnswers && !validateSection()) {
             toast.error(t('selectionSurvey.toastErrorFields'));
             return;
         }
 
         setIsSaving(true);
-        const { score, total, percentage } = calculateScore(answers);
+        const { score, total, percentage } = calculateScore(currentAnswers);
         const passed = percentage >= 80;
 
         try {
@@ -235,11 +236,11 @@ export const SelectionSurveyStep: React.FC<StepProps> = ({ onNext }) => {
                 .from('submissions')
                 .upsert({
                     user_id: user.id,
-                    name: answers[1] || userProfile?.full_name,
-                    email: answers[2] || user.email,
-                    whatsapp: answers[3],
-                    profile_type: answers[5],
-                    answers,
+                    name: currentAnswers[1] || userProfile?.full_name,
+                    email: currentAnswers[2] || user.email,
+                    whatsapp: currentAnswers[3],
+                    profile_type: currentAnswers[5],
+                    answers: currentAnswers,
                     extra_answers: extraAnswers,
                     score,
                     total,
@@ -300,25 +301,42 @@ export const SelectionSurveyStep: React.FC<StepProps> = ({ onNext }) => {
         try {
             if (!user) return;
 
-            const { error: profileError } = await supabase
-                .from('user_profiles')
-                .update({ selection_survey_passed: true })
-                .eq('user_id', user.id);
-
-            if (profileError) throw profileError;
-
-            dispatchCacheInvalidationEvent(CacheInvalidationEvent.PROFILE_UPDATED);
-            await refetchUserProfile();
+            // 1. Gerar respostas automáticas
+            const newAnswers = { ...answers };
             
-            toast.success('Questionário pulado (Modo Dev)');
-            onNext();
+            // Garantir que os dados básicos do perfil existam
+            if (!newAnswers[1] && userProfile?.full_name) newAnswers[1] = userProfile.full_name;
+            if (!newAnswers[2] && (userProfile?.email || user?.email)) newAnswers[2] = userProfile?.email || user?.email || '';
+            if (!newAnswers[3] && userProfile?.phone) newAnswers[3] = userProfile.phone;
+            
+            // Garantir tipo de processo como 'initial' (Q5)
+            if (!newAnswers[5]) newAnswers[5] = 'initial';
+
+            // 2. Preencher questões 'scored' com ~90% de acerto
+            const scoredQuestions = questions.filter(q => q.scored && q.options);
+            scoredQuestions.forEach(q => {
+                if (q.options) {
+                    const isCorrect = Math.random() < 0.9; // 90% de chance de acerto
+                    const option = q.options.find(o => o.correct === isCorrect) || q.options[0];
+                    newAnswers[q.id] = option.value;
+                }
+            });
+
+            // 3. Atualizar estado local
+            setAnswers(newAnswers);
+
+            // 4. Disparar submissão com os dados gerados
+            await handleSubmit(newAnswers);
+            
+            toast.success('Questionário preenchido (Modo Dev)');
+            // Agora o handleSubmit vai setar setSubmitted(true), mostrando a ResultsPage
         } catch (error) {
-            console.error('Erro ao pular questionário:', error);
-            toast.error('Erro ao pular questionário');
+            console.error('Erro ao auto-preencher questionário:', error);
+            toast.error('Erro ao auto-preencher questionário');
         } finally {
             setIsSaving(false);
         }
-    }, [isLocalhost, user, refetchUserProfile, onNext]);
+    }, [isLocalhost, user, userProfile, answers, handleSubmit]);
 
     if (submitted) {
         return (
@@ -410,7 +428,7 @@ export const SelectionSurveyStep: React.FC<StepProps> = ({ onNext }) => {
                             </Button>
                         ) : (
                             <Button
-                                onClick={handleSubmit}
+                                onClick={() => handleSubmit()}
                                 disabled={isSaving}
                                 className="flex-1 sm:flex-none h-14 px-8 rounded-2xl !bg-blue-600 hover:!bg-blue-700 text-white font-bold shadow-xl shadow-blue-500/20 active:scale-95 transition-all"
                             >

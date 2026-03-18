@@ -1,6 +1,6 @@
 import React from 'react';
 import { Dialog } from '@headlessui/react';
-import { AlertCircle, CheckCircle, Shield, X, Clock } from 'lucide-react';
+import { AlertCircle, CheckCircle, Shield, X } from 'lucide-react';
 import { StepProps } from '../../types';
 import { ZelleCheckout } from '../../../../components/ZelleCheckout';
 import {
@@ -41,7 +41,10 @@ export const SelectionFeeStep: React.FC<StepProps> = ({ onNext }) => {
     { id: 'pix' as const, name: 'PIX', description: t('selectionFeeStep.main.processingFees.pix'), icon: PixIcon },
     { id: 'parcelow' as const, name: 'Parcelow', description: t('selectionFeeStep.main.parcelowInstallments'), icon: ParcelowIcon },
     { id: 'zelle' as const, name: 'Zelle', description: t('selectionFeeStep.main.processingFees.zelle'), icon: ZelleIcon, requiresVerification: true },
-  ];
+  ].filter(method => {
+    if (method.id === 'pix' && pixAmountWithFees > 3000) return false;
+    return true;
+  });
 
   // ── Paid state ─────────────────────────────────────────────────────────────
   if (hasPaid) {
