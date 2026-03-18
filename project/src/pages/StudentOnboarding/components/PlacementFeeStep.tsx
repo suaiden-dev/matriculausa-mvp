@@ -366,7 +366,7 @@ export const PlacementFeeStep: React.FC<StepProps> = ({ onNext, onBack }) => {
                                             </div>
 
                                             <div className="flex flex-col md:items-end">
-                                                <span className="text-[10px] font-black text-gray-500 uppercase tracking-[0.2em] mb-1">Placement Fee</span>
+                                                <span className="text-[10px] font-black text-gray-500 uppercase tracking-[0.2em] mb-1">{t('placementFeeStep.title')}</span>
                                                 <div className="text-4xl font-black text-slate-900 tracking-tighter">
                                                     {formatPlacementFee(baseAmount)}
                                                 </div>
@@ -460,11 +460,11 @@ export const PlacementFeeStep: React.FC<StepProps> = ({ onNext, onBack }) => {
                                                         )}
 
                                                         {/* Parcelow */}
-                                                        <div className="flex flex-col gap-0 border border-gray-100 rounded-[2rem] overflow-hidden bg-white shadow-sm ring-1 ring-slate-100/50">
+                                                        <div className="group/parcelow flex flex-col gap-0 border border-gray-200 rounded-[2rem] overflow-hidden bg-white shadow-sm hover:shadow-md hover:scale-[1.01] transition-all duration-300">
                                                             <button
                                                                 onClick={() => handleParcelowClick(app)}
                                                                 disabled={!!isProcessingCheckout}
-                                                                className={`group/btn relative bg-white p-5 text-left hover:scale-[1.01] active:scale-95 transition-all disabled:opacity-50 flex items-center justify-between ${showInlineCpf === app.id ? 'border-b border-gray-100 rounded-t-[2rem]' : 'rounded-[2rem]'}`}
+                                                                className={`group/btn relative bg-white p-5 text-left transition-all disabled:opacity-50 flex items-center justify-between ${showInlineCpf === app.id ? 'border-b border-gray-100 rounded-t-[2rem]' : 'rounded-[2rem]'}`}
                                                             >
                                                                 <div className="flex items-center gap-5">
                                                                     <div className="w-14 h-14 flex items-center justify-center bg-slate-50 rounded-2xl px-2">

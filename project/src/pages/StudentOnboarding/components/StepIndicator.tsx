@@ -46,7 +46,7 @@ export const StepIndicator: React.FC<StepIndicatorProps> = ({ currentStep, compl
       </div>
 
       {/* Desktop: Show all steps */}
-      <div className="hidden lg:flex items-center justify-between mt-4 relative">
+      <div className="hidden lg:flex items-start justify-between mt-4 relative">
         {/* Linha de conexão de fundo */}
         <div className="absolute top-4 left-0 w-full h-[1px] bg-gray-200 z-0" />
 
@@ -61,9 +61,9 @@ export const StepIndicator: React.FC<StepIndicatorProps> = ({ currentStep, compl
               className={`flex flex-col items-center flex-1 z-10 transition-all duration-500 ${isCurrent ? 'scale-110' : ''
                 }`}
             >
-              <div className="mb-3 relative">
+              <div className="mb-3 relative flex items-center justify-center h-8">
                 {isCompleted || isPast ? (
-                  <div className="bg-emerald-500/10 rounded-full p-1 border border-emerald-500/20">
+                  <div className="w-8 h-8 flex items-center justify-center bg-emerald-500/10 rounded-full border border-emerald-500/20">
                     <CheckCircle className="w-6 h-6 text-emerald-600" />
                   </div>
                 ) : (

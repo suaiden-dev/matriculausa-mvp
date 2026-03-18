@@ -94,9 +94,10 @@ const Overview: React.FC<OverviewProps> = ({
         app.is_application_fee_paid ||
         ['approved', 'enrolled', 'under_review'].includes(app.status)
       );
-      const anyScholarshipFeePaid = applications.some(app => app.is_scholarship_fee_paid) || userProfile.is_scholarship_fee_paid;
-      const hasGlobalFeePaid = userProfile.is_application_fee_paid || !!userProfile.application_fee_paid_at || !!userProfile.scholarship_fee_paid_at || anyAppPaidOrApproved;
-      const hasDocsGlobal = userProfile.documents_uploaded || !!userProfile.application_fee_paid_at || anyAppPaidOrApproved;
+      const hasPaidPackage = !!(userProfile as any).has_paid_ds160_package || !!(userProfile as any).has_paid_i539_cos_package;
+      const anyScholarshipFeePaid = applications.some(app => app.is_scholarship_fee_paid) || userProfile.is_scholarship_fee_paid || hasPaidPackage;
+      const hasGlobalFeePaid = userProfile.is_application_fee_paid || !!userProfile.application_fee_paid_at || !!userProfile.scholarship_fee_paid_at || anyAppPaidOrApproved || hasPaidPackage;
+      const hasDocsGlobal = userProfile.documents_uploaded || !!userProfile.application_fee_paid_at || anyAppPaidOrApproved || hasPaidPackage;
 
       // Verificar Process Type (situação do visto)
       const userProcessTypeKey = `studentProcessType_${userProfile.id}`;
