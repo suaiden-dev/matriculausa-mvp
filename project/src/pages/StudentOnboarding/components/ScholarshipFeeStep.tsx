@@ -507,31 +507,33 @@ export const ScholarshipFeeStep: React.FC<StepProps> = ({ onNext, onBack }) => {
                             </button>
 
                             {/* PIX Option */}
-                            <button
-                              onClick={() => processCheckout(app, 'pix')}
-                              disabled={!!isProcessingCheckout}
-                              className="group/btn relative bg-white border border-gray-200 p-5 rounded-[2rem] text-left hover:scale-[1.01] active:scale-95 transition-all shadow-sm hover:shadow-md disabled:opacity-50 hover:border-blue-600/30 hover:bg-blue-50/10 flex items-center justify-between"
-                            >
-                              <div className="flex items-center gap-5">
-                                <div className="w-14 h-14 flex items-center justify-center bg-slate-50 rounded-2xl group-hover/btn:bg-slate-100 transition-colors">
-                                  <PixIcon className="w-9 h-9" />
+                            {pixInfo.totalWithIOF <= 3000 && (
+                              <button
+                                onClick={() => processCheckout(app, 'pix')}
+                                disabled={!!isProcessingCheckout}
+                                className="group/btn relative bg-white border border-gray-200 p-5 rounded-[2rem] text-left hover:scale-[1.01] active:scale-95 transition-all shadow-sm hover:shadow-md disabled:opacity-50 hover:border-blue-600/30 hover:bg-blue-50/10 flex items-center justify-between"
+                              >
+                                <div className="flex items-center gap-5">
+                                  <div className="w-14 h-14 flex items-center justify-center bg-slate-50 rounded-2xl group-hover/btn:bg-slate-100 transition-colors">
+                                    <PixIcon className="w-9 h-9" />
+                                  </div>
+                                  <div>
+                                    <div className="font-black text-slate-900 text-base uppercase tracking-tight">PIX</div>
+                                    <div className="text-[10px] font-bold text-slate-400 mt-0.5 sm:mt-1 uppercase tracking-wide leading-tight">{t('paymentStep.pixFees')}</div>
+                                  </div>
                                 </div>
-                                <div>
-                                  <div className="font-black text-slate-900 text-base uppercase tracking-tight">PIX</div>
-                                  <div className="text-[10px] font-bold text-slate-400 mt-0.5 sm:mt-1 uppercase tracking-wide leading-tight">{t('paymentStep.pixFees')}</div>
+                                <div className="text-right">
+                                  <div className="text-slate-900 text-xl font-black uppercase tracking-tight">
+                                    R$ {pixInfo.totalWithIOF.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
+                                  </div>
                                 </div>
-                              </div>
-                              <div className="text-right">
-                                <div className="text-slate-900 text-xl font-black uppercase tracking-tight">
-                                  R$ {pixInfo.totalWithIOF.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
-                                </div>
-                              </div>
-                              {isProcessingCheckout === `${app.id}_pix` && (
-                                <div className="absolute inset-0 bg-white/80 backdrop-blur-sm rounded-[2rem] flex items-center justify-center z-10">
-                                  <RefreshCw className="w-8 h-8 text-[#4db6ac] animate-spin" />
-                                </div>
-                              )}
-                            </button>
+                                {isProcessingCheckout === `${app.id}_pix` && (
+                                  <div className="absolute inset-0 bg-white/80 backdrop-blur-sm rounded-[2rem] flex items-center justify-center z-10">
+                                    <RefreshCw className="w-8 h-8 text-[#4db6ac] animate-spin" />
+                                  </div>
+                                )}
+                              </button>
+                            )}
 
                             {/* Parcelow Option */}
                             <div className="flex flex-col">

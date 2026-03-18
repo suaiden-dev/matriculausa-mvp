@@ -372,31 +372,33 @@ export const PackageFeeTab: React.FC<PackageFeeTabProps> = ({
               </button>
 
               {/* PIX */}
-              <button
-                onClick={() => { setSelectedPaymentMethod('pix'); handleStripeCheckout('pix'); setShowZelle(false); setShowInlineCpf(false); }}
-                disabled={loading}
-                className="group/btn relative bg-white border border-gray-200 p-5 rounded-[2rem] text-left hover:scale-[1.01] active:scale-95 transition-all shadow-sm hover:shadow-md disabled:opacity-50 flex items-center justify-between"
-              >
-                <div className="flex items-center gap-5">
-                  <div className="w-14 h-14 flex items-center justify-center bg-slate-50 rounded-2xl">
-                    <PixIcon className="w-9 h-9" />
+              {pixAmount && pixAmount <= 3000 && (
+                <button
+                  onClick={() => { setSelectedPaymentMethod('pix'); handleStripeCheckout('pix'); setShowZelle(false); setShowInlineCpf(false); }}
+                  disabled={loading}
+                  className="group/btn relative bg-white border border-gray-200 p-5 rounded-[2rem] text-left hover:scale-[1.01] active:scale-95 transition-all shadow-sm hover:shadow-md disabled:opacity-50 flex items-center justify-between"
+                >
+                  <div className="flex items-center gap-5">
+                    <div className="w-14 h-14 flex items-center justify-center bg-slate-50 rounded-2xl">
+                      <PixIcon className="w-9 h-9" />
+                    </div>
+                    <div>
+                      <div className="font-black text-slate-900 text-base uppercase tracking-tight">{t('rapidRegistration.payment.methods.pix')}</div>
+                      <div className="text-[10px] font-bold text-slate-400 mt-1 uppercase tracking-wide">{t('rapidRegistration.payment.notes.processingFees')}</div>
+                    </div>
                   </div>
-                  <div>
-                    <div className="font-black text-slate-900 text-base uppercase tracking-tight">{t('rapidRegistration.payment.methods.pix')}</div>
-                    <div className="text-[10px] font-bold text-slate-400 mt-1 uppercase tracking-wide">{t('rapidRegistration.payment.notes.processingFees')}</div>
+                  <div className="text-right">
+                    <div className="text-slate-900 text-xl font-black uppercase tracking-tight">
+                      {pixAmount ? `R$ ${pixAmount.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}` : '...'}
+                    </div>
                   </div>
-                </div>
-                <div className="text-right">
-                  <div className="text-slate-900 text-xl font-black uppercase tracking-tight">
-                    {pixAmount ? `R$ ${pixAmount.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}` : '...'}
-                  </div>
-                </div>
-                {loading && selectedPaymentMethod === 'pix' && (
-                  <div className="absolute inset-0 bg-white/80 backdrop-blur-sm rounded-[2rem] flex items-center justify-center z-10">
-                    <Loader2 className="w-8 h-8 text-[#4db6ac] animate-spin" />
-                  </div>
-                )}
-              </button>
+                  {loading && selectedPaymentMethod === 'pix' && (
+                    <div className="absolute inset-0 bg-white/80 backdrop-blur-sm rounded-[2rem] flex items-center justify-center z-10">
+                      <Loader2 className="w-8 h-8 text-[#4db6ac] animate-spin" />
+                    </div>
+                  )}
+                </button>
+              )}
 
               {/* Parcelow */}
               <div className="flex flex-col">

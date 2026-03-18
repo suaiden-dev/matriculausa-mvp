@@ -1352,31 +1352,33 @@ export const UniversityDocumentsStep: React.FC<StepProps> = ({ onBack }) => {
                         </button>
 
                         {/* PIX */}
-                        <button
-                          onClick={() => { handlePaymentMethodSelect('pix', exchangeRate || 5.6); handleProceedPayment(); }}
-                          disabled={i20Loading}
-                          className="group/btn relative bg-white border border-gray-200 p-5 rounded-[2rem] text-left hover:scale-[1.01] active:scale-95 transition-all shadow-sm hover:shadow-md disabled:opacity-50 flex items-center justify-between"
-                        >
-                          <div className="flex items-center gap-5">
-                            <div className="w-14 h-14 flex items-center justify-center bg-slate-50 rounded-2xl">
-                              <PixIcon className="w-9 h-9" />
+                        {calculatePIXTotalWithIOF(getFeeAmount('i20_control_fee'), exchangeRate || 5.6).totalWithIOF <= 3000 && (
+                          <button
+                            onClick={() => { handlePaymentMethodSelect('pix', exchangeRate || 5.6); handleProceedPayment(); }}
+                            disabled={i20Loading}
+                            className="group/btn relative bg-white border border-gray-200 p-5 rounded-[2rem] text-left hover:scale-[1.01] active:scale-95 transition-all shadow-sm hover:shadow-md disabled:opacity-50 flex items-center justify-between"
+                          >
+                            <div className="flex items-center gap-5">
+                              <div className="w-14 h-14 flex items-center justify-center bg-slate-50 rounded-2xl">
+                                <PixIcon className="w-9 h-9" />
+                              </div>
+                              <div>
+                                <div className="font-black text-slate-900 text-base uppercase tracking-tight">PIX</div>
+                                <div className="text-[10px] font-bold text-slate-400 mt-1 uppercase tracking-wide">* Podem incluir taxas de processamento</div>
+                              </div>
                             </div>
-                            <div>
-                              <div className="font-black text-slate-900 text-base uppercase tracking-tight">PIX</div>
-                              <div className="text-[10px] font-bold text-slate-400 mt-1 uppercase tracking-wide">* Podem incluir taxas de processamento</div>
+                            <div className="text-right">
+                              <div className="text-slate-900 text-xl font-black uppercase tracking-tight">
+                                R$ {calculatePIXTotalWithIOF(getFeeAmount('i20_control_fee'), exchangeRate || 5.6).totalWithIOF.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
+                              </div>
                             </div>
-                          </div>
-                          <div className="text-right">
-                            <div className="text-slate-900 text-xl font-black uppercase tracking-tight">
-                              R$ {calculatePIXTotalWithIOF(getFeeAmount('i20_control_fee'), exchangeRate || 5.6).totalWithIOF.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
-                            </div>
-                          </div>
-                          {selectedPaymentMethod === 'pix' && i20Loading && (
-                            <div className="absolute inset-0 bg-white/80 backdrop-blur-sm rounded-[2rem] flex items-center justify-center z-10">
-                              <RefreshCw className="w-8 h-8 text-[#4db6ac] animate-spin" />
-                            </div>
-                          )}
-                        </button>
+                            {selectedPaymentMethod === 'pix' && i20Loading && (
+                              <div className="absolute inset-0 bg-white/80 backdrop-blur-sm rounded-[2rem] flex items-center justify-center z-10">
+                                <RefreshCw className="w-8 h-8 text-[#4db6ac] animate-spin" />
+                              </div>
+                            )}
+                          </button>
+                        )}
 
                         {/* Parcelow */}
                         <div className="flex flex-col gap-0 border border-gray-100 rounded-[2rem] overflow-hidden bg-white shadow-sm ring-1 ring-slate-100/50">
