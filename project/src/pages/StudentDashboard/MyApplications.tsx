@@ -49,7 +49,7 @@ const MyApplications: React.FC = () => {
   // isPending = sem dados no cache ainda (primeira carga)
   // isFetching = buscando em background (pode ter dados em cache)
   const { data: applications = [], isPending, error: queryError } = useStudentApplicationsQuery(userProfile?.id);
-  const { data: realPaidAmounts = {} } = useStudentPaidAmountsQuery(user?.id, ['application', 'scholarship', 'placement']);
+  const { data: realPaidAmounts = {} } = useStudentPaidAmountsQuery(user?.id, ['application', 'scholarship', 'placement', 'ds160_package', 'i539_cos_package']);
   const { data: scholarshipFeePromotionalCoupon = null } = usePromotionalCouponQuery(user?.id, 'scholarship_fee');
   const { data: applicationFeePromotionalCoupon = null } = usePromotionalCouponQuery(user?.id, 'application_fee');
   // Helper: calcular Application Fee exibida considerando dependentes (legacy e simplified)
@@ -287,6 +287,10 @@ const MyApplications: React.FC = () => {
     };
   }, [user?.id, queryClient]);
 
+  const packageD160PaidGlobal = !!(userProfile as any)?.has_paid_ds160_package || !!realPaidAmounts.ds160_package;
+  const packageI539PaidGlobal = !!(userProfile as any)?.has_paid_i539_cos_package || !!realPaidAmounts.i539_cos_package;
+  const hasPaidPackageGlobal = packageD160PaidGlobal || packageI539PaidGlobal;
+
   // Quando o aluno pagar a taxa de uma bolsa aprovada, escolhemos ela como principal e escondemos as demais
   // Garantimos que apenas aplicações APROVADAS ou MATRICULADAS sejam escolhidas como "principais" para esconder as outras
   const chosenPaidApp = applications.find(
@@ -295,7 +299,8 @@ const MyApplications: React.FC = () => {
         !!(a as any).is_application_fee_paid || 
         !!(a as any).is_scholarship_fee_paid || 
         !!(a as any).acceptance_letter_url ||
-        (isNewFlowUser && (!!(userProfile as any)?.is_placement_fee_paid || !!realPaidAmounts.placement))
+        (isNewFlowUser && (!!(userProfile as any)?.is_placement_fee_paid || !!realPaidAmounts.placement)) ||
+        hasPaidPackageGlobal
       )
   );
   const applicationsToShow = chosenPaidApp
@@ -826,10 +831,16 @@ const MyApplications: React.FC = () => {
                         {approvedList.map((application: ApplicationWithScholarship) => {
                           const Icon = getStatusIcon(application.status);
                           const scholarship = application.scholarships;
-                          const applicationFeePaid = !!application.is_application_fee_paid;
+                          
+                          const packageD160Paid = !!(userProfile as any)?.has_paid_ds160_package || !!realPaidAmounts.ds160_package;
+                          const packageI539Paid = !!(userProfile as any)?.has_paid_i539_cos_package || !!realPaidAmounts.i539_cos_package;
+                          const hasPaidPackage = packageD160Paid || packageI539Paid;
+                          
+                          const applicationFeePaid = !!application.is_application_fee_paid || hasPaidPackage;
                           const scholarshipFeePaid = !!application.is_scholarship_fee_paid || 
                                                      !!application.acceptance_letter_url ||
-                                                     (isNewFlowUser && (!!(userProfile as any)?.is_placement_fee_paid || !!realPaidAmounts.placement));
+                                                     (isNewFlowUser && (!!(userProfile as any)?.is_placement_fee_paid || !!realPaidAmounts.placement)) ||
+                                                     hasPaidPackage;
                           if (!scholarship) return null;
 
 

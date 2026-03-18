@@ -95,6 +95,7 @@ interface StudentRecord {
   applied_at: string | null;
   is_application_fee_paid: boolean;
   is_scholarship_fee_paid: boolean;
+  selection_survey_passed?: boolean;
   placement_fee_flow?: boolean;
   is_placement_fee_paid?: boolean;
   placement_fee_amount?: number | null;
@@ -134,7 +135,6 @@ const AdminStudentDetails: React.FC = () => {
   const navigate = useNavigate();
   const [student, setStudent] = useState<StudentRecord | null>(null);
   const [loading, setLoading] = useState(true);
-  const [loadingSecondaryData, setLoadingSecondaryData] = useState(false);
   const [expandedApps, setExpandedApps] = useState<{ [key: string]: boolean }>({});
   const [dependents, setDependents] = useState<number>(0);
   const [approvingDocs, setApprovingDocs] = useState<{ [key: string]: boolean }>({});
@@ -1135,8 +1135,6 @@ const AdminStudentDetails: React.FC = () => {
       if (!student || loading) return; // Aguardar dados críticos
 
       try {
-        setLoadingSecondaryData(true);
-
         // ✅ OTIMIZAÇÃO: Tentar usar RPC consolidada primeiro (reduz múltiplas queries para 1)
         let useRpc = true;
 
@@ -1233,7 +1231,7 @@ const AdminStudentDetails: React.FC = () => {
       } catch (e) {
         console.error('Error loading secondary data:', e);
       } finally {
-        setLoadingSecondaryData(false);
+        // Finalized loading secondary data
       }
     };
 
@@ -1468,114 +1466,108 @@ const AdminStudentDetails: React.FC = () => {
       });
 
       // Log da ação
-      try {
-        await supabase.rpc('log_student_action', {
-          p_student_id: student?.student_id,
-          p_action_type: 'document_rejection',
-          p_action_description: `Document ${docType} rejected by platform admin: ${reason}`,
-          p_performed_by: user?.id || '',
-          p_performed_by_type: 'admin',
-          p_metadata: {
-            document_type: docType,
-            application_id: applicationId,
-            rejection_reason: reason,
-            rejected_by: user?.email || 'Platform Admin'
-          }
-        });
-      } catch (logError) {
-        console.error('Failed to log document rejection:', logError);
-      }
-
-      // ENVIAR NOTIFICAÇÕES PARA O ALUNO
-      console.log('📤 [handleRejectDocument] Enviando notificações de rejeição para o aluno...');
-
-      try {
-        // Buscar nome do admin
-
-
-        // 1. ENVIAR EMAIL VIA WEBHOOK (payload idêntico ao da universidade)
-        const rejectionPayload = {
-          tipo_notf: "Changes Requested",
-          email_aluno: student.student_email,
-          nome_aluno: student.student_name,
-          email_universidade: user?.email,
-          o_que_enviar: `Your document <strong>${docType}</strong> for the request <strong>${docType}</strong> has been rejected. Reason: <strong>${reason}</strong>. Please review and upload a corrected version.`
-        };
-
-        console.log('📤 [handleRejectDocument] Payload de rejeição:', rejectionPayload);
-
-        const webhookResponse = await fetch('https://nwh.suaiden.com/webhook/notfmatriculausa', {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-          },
-          body: JSON.stringify(rejectionPayload),
-        });
-
-        if (webhookResponse.ok) {
-          console.log('✅ [handleRejectDocument] Email de rejeição enviado com sucesso!');
-        } else {
-          console.warn('⚠️ [handleRejectDocument] Erro ao enviar email de rejeição:', webhookResponse.status);
-        }
-      } catch (webhookError) {
-        console.error('❌ [handleRejectDocument] Erro ao enviar webhook de rejeição:', webhookError);
-        // Não falhar o processo se o webhook falhar
-      }
-
-      // 2. ENVIAR NOTIFICAÇÃO IN-APP PARA O ALUNO (SINO)
-      console.log('📤 [handleRejectDocument] Enviando notificação in-app para o aluno...');
-
-      try {
-        // Obter labels amigáveis para os documentos
-        const docLabels: Record<string, string> = {
-          passport: 'Passport',
-          diploma: 'High School Diploma',
-          funds_proof: 'Proof of Funds',
-        };
-        const docLabel = docLabels[docType] || docType;
-
-        // Usar Edge Function que tem service role para criar notificação
-        const { data: { session } } = await supabase.auth.getSession();
-        const accessToken = session?.access_token;
-
-        if (!accessToken) {
-          console.error('❌ [handleRejectDocument] Access token não encontrado');
-          return;
-        }
-
-        // Preparar payload - usar user_id (UUID) que a Edge Function vai converter para student_id
-        // A Edge Function busca o student_id (user_profiles.id) a partir do user_id
-        const notificationPayload = {
-          user_id: student.user_id, // UUID que referencia auth.users.id
-          title: 'Document Rejected',
-          message: `Your ${docLabel} document has been rejected. Reason: ${reason}. Please review and upload a corrected version.`,
-          link: '/student/dashboard/applications',
-        };
-
-        const response = await fetch(`${import.meta.env.VITE_SUPABASE_FUNCTIONS_URL}/create-student-notification`, {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-            'Authorization': `Bearer ${accessToken}`,
-          },
-          body: JSON.stringify(notificationPayload),
-        });
-
-        if (!response.ok) {
-          const errorText = await response.text();
-          console.error('❌ [handleRejectDocument] Erro ao criar notificação:', response.status, errorText);
-        } else {
-          await response.json(); // Result não usado, apenas para consumir a resposta
-        }
-      } catch (notificationError) {
-        console.error('❌ [handleRejectDocument] Erro ao enviar notificação in-app:', notificationError);
-        // Não falhar o processo se a notificação in-app falhar
-      }
-
-      // Fechar modal e limpar dados
+      // Fechar modal e limpar dados o mais rápido possível (UX primeiro)
       setShowRejectDocModal(false);
       setRejectDocData(null);
       setRejectDocReason('');
+
+      // Log da ação (assíncrono, sem travar a UI)
+      (async () => {
+        try {
+          await supabase.rpc('log_student_action', {
+            p_student_id: student?.student_id,
+            p_action_type: 'document_rejection',
+            p_action_description: `Document ${docType} rejected by platform admin: ${reason}`,
+            p_performed_by: user?.id || '',
+            p_performed_by_type: 'admin',
+            p_metadata: {
+              document_type: docType,
+              application_id: applicationId,
+              rejection_reason: reason,
+              rejected_by: user?.email || 'Platform Admin'
+            }
+          });
+        } catch (logError) {
+          console.error('Failed to log document rejection:', logError);
+        }
+      })();
+
+      // ENVIAR NOTIFICAÇÕES PARA O ALUNO (assíncrono, sem bloquear)
+      (async () => {
+        console.log('📤 [handleRejectDocument] Enviando notificações de rejeição para o aluno...');
+
+        try {
+          const rejectionPayload = {
+            tipo_notf: "Changes Requested",
+            email_aluno: student.student_email,
+            nome_aluno: student.student_name,
+            email_universidade: user?.email,
+            o_que_enviar: `Your document <strong>${docType}</strong> for the request <strong>${docType}</strong> has been rejected. Reason: <strong>${reason}</strong>. Please review and upload a corrected version.`
+          };
+
+          console.log('📤 [handleRejectDocument] Payload de rejeição:', rejectionPayload);
+
+          const webhookResponse = await fetch('https://nwh.suaiden.com/webhook/notfmatriculausa', {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/json',
+            },
+            body: JSON.stringify(rejectionPayload),
+          });
+
+          if (webhookResponse.ok) {
+            console.log('✅ [handleRejectDocument] Email de rejeição enviado com sucesso!');
+          } else {
+            console.warn('⚠️ [handleRejectDocument] Erro ao enviar email de rejeição:', webhookResponse.status);
+          }
+        } catch (webhookError) {
+          console.error('❌ [handleRejectDocument] Erro ao enviar webhook de rejeição:', webhookError);
+        }
+
+        console.log('📤 [handleRejectDocument] Enviando notificação in-app para o aluno...');
+
+        try {
+          const docLabels: Record<string, string> = {
+            passport: 'Passport',
+            diploma: 'High School Diploma',
+            funds_proof: 'Proof of Funds',
+          };
+          const docLabel = docLabels[docType] || docType;
+
+          const { data: { session } } = await supabase.auth.getSession();
+          const accessToken = session?.access_token;
+
+          if (!accessToken) {
+            console.error('❌ [handleRejectDocument] Access token não encontrado');
+            return;
+          }
+
+          const notificationPayload = {
+            user_id: student.user_id,
+            title: 'Document Rejected',
+            message: `Your ${docLabel} document has been rejected. Reason: ${reason}. Please review and upload a corrected version.`,
+            link: '/student/dashboard/applications',
+          };
+
+          const response = await fetch(`${import.meta.env.VITE_SUPABASE_FUNCTIONS_URL}/create-student-notification`, {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/json',
+              'Authorization': `Bearer ${accessToken}`,
+            },
+            body: JSON.stringify(notificationPayload),
+          });
+
+          if (!response.ok) {
+            const errorText = await response.text();
+            console.error('❌ [handleRejectDocument] Erro ao criar notificação:', response.status, errorText);
+          } else {
+            await response.json();
+          }
+        } catch (notificationError) {
+          console.error('❌ [handleRejectDocument] Erro ao enviar notificação in-app:', notificationError);
+        }
+      })();
 
     } catch (error: any) {
       console.error('Erro ao rejeitar documento:', error);
@@ -3757,14 +3749,6 @@ const AdminStudentDetails: React.FC = () => {
 
   return (
     <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6 space-y-6">
-      {/* Indicador de carregamento de dados secundários */}
-      {loadingSecondaryData && (
-        <div className="bg-blue-50 border border-blue-200 rounded-xl p-3 flex items-center gap-3">
-          <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-blue-600"></div>
-          <p className="text-sm text-blue-700">Carregando informações adicionais...</p>
-        </div>
-      )}
-
       <div className="flex items-center justify-between">
         <div>
           <h1 className="text-2xl font-bold text-slate-900">Student Details</h1>
@@ -6077,6 +6061,7 @@ const AdminStudentDetails: React.FC = () => {
           <Suspense fallback={<TabLoadingSkeleton />}>
             <SelectionSurveyView
               userId={student.user_id}
+              surveyPassed={student.selection_survey_passed}
             />
           </Suspense>
         </div>

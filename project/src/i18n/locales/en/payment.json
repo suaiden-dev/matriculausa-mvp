@@ -349,7 +349,7 @@
         "error": "Error saving photo. Please try again.",
         "continue": "Continue",
         "sending": "Sending...",
-        "sendPhoto": "Send Photo",
+        "sendPhoto": "Send",
         "completed": "Verification Completed",
         "completedTitle": "Verification completed!",
         "alreadySent": "Your identity photo has already been sent. You can proceed to the questionnaire."

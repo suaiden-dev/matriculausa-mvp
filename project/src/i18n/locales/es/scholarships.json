@@ -139,11 +139,16 @@
       "noLongerAccepting": "No disponible para aplicación",
       "canStillView": "Aún puede ver la información, pero no será posible aplicar a esta beca.",
       "internalFeesTitle": "Tarifas Internas de la Universidad",
-      "internalFeesDisclaimer": "Estas tarifas se pagan directamente a la universidad, no a través de nuestra plataforma",
+      "internalFeesDisclaimer": "Algunas tarifas se pagan directamente a la universidad, mientras que otras se procesan a través de nuestra plataforma.",
       "internalFeesAvailable": "Tarifas Internas de la Universidad Disponibles",
       "internalFeesNotice": "Esta beca puede tener tarifas internas adicionales de la universidad. Estas tarifas serán visibles después del pago de la Tarifa de Proceso de Selección.",
       "universityInternalFees": "Tarifas Internas de la Universidad",
       "viewUniversityFeesPage": "Ver Página de Tarifas de la Universidad",
+      "internalFeesConditionalNote": "La tarifa depende del tipo de proceso o visa del estudiante y luego corresponde con la tarifa",
+      "i539COSPackage": "I539 COS Package",
+      "ds160Package": "DS160 Package",
+      "i539PackageDescription": "Tarifa requerida para estudiantes que solicitan Cambio de Status (COS)",
+      "ds160PackageDescription": "Tarifa requerida para estudiantes que solicitan Transferencia",
       "days": "días"
     }
   },

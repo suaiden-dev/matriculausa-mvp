@@ -89,7 +89,9 @@
       "error": {
         "invalidMethod": "Método de pagamento inválido.",
         "notAuthenticated": "Usuário não autenticado.",
-        "generationFailed": "Falha ao gerar link de pagamento. Tente novamente."
+        "generationFailed": "Falha ao gerar link de pagamento. Tente novamente.",
+        "userIdNotFound": "ID do usuário não encontrado",
+        "saveCpfFailed": "Erro ao salvar CPF"
       }
     }
   },
@@ -106,7 +108,7 @@
         "documentsUpload": "Documentos",
         "payment": "Taxa de Matrícula",
         "scholarshipFee": "Taxa da Bolsa",
-        "placementFee": "Placement Fee"
+        "placementFee": "Taxa de Colocação"
       }
     },
     "processType": {
@@ -194,6 +196,20 @@
         "descriptionMid": ". Caso precise de tradução certificada e de qualidade, recomendamos os serviços do nosso parceiro ",
         "descriptionLink": "Lush America Translations",
         "descriptionPost": "."
+      },
+      "acceptance": {
+        "lockMessage": "Você precisa pagar a taxa <0>{{feeName}}</0> antes de houver a liberação da sua carta de aceite.",
+        "goToPayment": "Ir para Pagamento"
+      },
+      "packageFees": {
+        "paidSuccess": "Taxa paga com sucesso!",
+        "confirmedMessage": "Seu pagamento foi confirmado. Você pode prosseguir para a carta de aceite.",
+        "obligatoryFee": "Taxa obrigatória • Desbloqueia carta de aceite",
+        "paymentMethod": "Método de pagamento",
+        "cpfRequiredTitle": "Informe seu CPF para Parcelow",
+        "saveCpfContinue": "Continuar para Pagamento",
+        "noFees": "Sem Taxas",
+        "installments12x": "Em até 12x"
       }
     }
   },

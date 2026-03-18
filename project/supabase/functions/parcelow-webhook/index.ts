@@ -1,11 +1,15 @@
 import "jsr:@supabase/functions-js/edge-runtime.d.ts";
-import { createClient, SupabaseClient } from "npm:@supabase/supabase-js@2.49.1";
+// @ts-ignore
+import { createClient, SupabaseClient } from "https://esm.sh/@supabase/supabase-js@2.49.1";
+// @ts-ignore
 import { encode as base64Encode } from "https://deno.land/std@0.168.0/encoding/base64.ts";
 // @ts-ignore
 import jsPDF from "https://esm.sh/jspdf@2.5.1?target=deno";
 
 const supabase = createClient(
+// @ts-ignore
   Deno.env.get("SUPABASE_URL") ?? "",
+// @ts-ignore
   Deno.env.get("SUPABASE_SERVICE_ROLE_KEY") ?? "",
 );
 
@@ -819,6 +823,7 @@ function formatAmountWithCurrency(
   return `${symbol}${amount.toFixed(2)}`;
 }
 
+// @ts-ignore
 Deno.serve(async (req: Request) => {
   try {
     console.log("[parcelow-webhook] 🚀 Recebido webhook da Parcelow");
@@ -1116,6 +1121,10 @@ Deno.serve(async (req: Request) => {
         feeType = "placement_fee";
       } else if (reference.startsWith("i20_")) {
         feeType = "i20_control";
+      } else if (reference.startsWith("ds16_")) {
+        feeType = "ds160_package";
+      } else if (reference.startsWith("i539_")) {
+        feeType = "i539_cos_package";
       } else {
         // Fallback para metadata se existir (Parcelow Sandbox às vezes retorna, Produção raramente)
         const metaFee = parcelowOrder.metadata?.fee_type;
@@ -1400,7 +1409,7 @@ Deno.serve(async (req: Request) => {
 
             if (scholarshipData) {
               nomeBolsa = scholarshipData.title;
-              nomeUniversidade = scholarshipData.universities?.name || "";
+              nomeUniversidade = (scholarshipData.universities as any)?.[0]?.name || (scholarshipData.universities as any)?.name || "";
               console.log(
                 `[parcelow-webhook] 🎓 Bolsa: ${nomeBolsa}, Universidade: ${nomeUniversidade}`,
               );
@@ -1487,7 +1496,7 @@ Deno.serve(async (req: Request) => {
 
                   if (scholarshipData) {
                     nomeBolsa = scholarshipData.title;
-                    nomeUniversidade = scholarshipData.universities?.name || "";
+                    nomeUniversidade = (scholarshipData.universities as any)?.[0]?.name || (scholarshipData.universities as any)?.name || "";
                     console.log(
                       `[parcelow-webhook] 🎓 Bolsa recuperada: ${nomeBolsa}`,
                     );
@@ -1536,8 +1545,8 @@ Deno.serve(async (req: Request) => {
           }
           break;
 
-        case "placement":
         case "placement_fee":
+        case "placement":
           console.log("[parcelow-webhook] 🔄 Processando placement_fee...");
 
           const { error: placementUpdateError } = await supabase
@@ -1557,6 +1566,48 @@ Deno.serve(async (req: Request) => {
             console.log(
               "[parcelow-webhook] ✅ Placement fee status atualizado!",
             );
+          }
+          break;
+
+        case "ds160_package":
+          console.log("[parcelow-webhook] 🔄 Processando ds160_package...");
+
+          const { error: ds160UpdateError } = await supabase
+            .from("user_profiles")
+            .update({
+              has_paid_ds160_package: true,
+              ds160_package_payment_method: "parcelow",
+            })
+            .eq("user_id", userId);
+
+          if (ds160UpdateError) {
+            console.error(
+              "[parcelow-webhook] ❌ Erro ao atualizar ds160_package:",
+              ds160UpdateError,
+            );
+          } else {
+            console.log("[parcelow-webhook] ✅ DS160 package status atualizado!");
+          }
+          break;
+
+        case "i539_cos_package":
+          console.log("[parcelow-webhook] 🔄 Processando i539_cos_package...");
+
+          const { error: i539UpdateError } = await supabase
+            .from("user_profiles")
+            .update({
+              has_paid_i539_cos_package: true,
+              i539_cos_package_payment_method: "parcelow",
+            })
+            .eq("user_id", userId);
+
+          if (i539UpdateError) {
+            console.error(
+              "[parcelow-webhook] ❌ Erro ao atualizar i539_cos_package:",
+              i539UpdateError,
+            );
+          } else {
+            console.log("[parcelow-webhook] ✅ I539 COS package status atualizado!");
           }
           break;
 

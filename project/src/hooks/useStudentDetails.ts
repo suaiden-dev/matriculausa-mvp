@@ -19,6 +19,7 @@ export interface StudentRecord {
   student_created_at: string;
   has_paid_selection_process_fee: boolean;
   has_paid_i20_control_fee: boolean;
+  selection_survey_passed?: boolean;
   placement_fee_flow?: boolean;
   is_placement_fee_paid?: boolean;
   selection_process_fee_payment_method?: string | null;
@@ -48,6 +49,10 @@ export interface StudentRecord {
   documents_status?: 'pending' | 'analyzing' | 'approved' | 'rejected' | 'under_review' | null;
   scholarship_fee_amount?: number | null;
   placement_fee_amount?: number | null;
+  has_paid_ds160_package: boolean;
+  has_paid_i539_cos_package: boolean;
+  ds160_package_payment_method?: string | null;
+  i539_cos_package_payment_method?: string | null;
 }
 
 /**
@@ -57,7 +62,6 @@ export interface StudentRecord {
 export const useStudentDetails = (profileId: string | undefined) => {
   const [student, setStudent] = useState<StudentRecord | null>(null);
   const [loading, setLoading] = useState(true);
-  const [loadingSecondaryData, setLoadingSecondaryData] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
   // Load critical student data
@@ -118,6 +122,7 @@ export const useStudentDetails = (profileId: string | undefined) => {
             created_at,
             has_paid_selection_process_fee,
             has_paid_i20_control_fee,
+            selection_survey_passed,
             placement_fee_flow,
             is_placement_fee_paid,
             selection_process_fee_payment_method,
@@ -126,6 +131,10 @@ export const useStudentDetails = (profileId: string | undefined) => {
             seller_referral_code,
             admin_notes,
             documents_status,
+            has_paid_ds160_package,
+            has_paid_i539_cos_package,
+            ds160_package_payment_method,
+            i539_cos_package_payment_method,
             scholarship_applications (
               id,
               scholarship_id,
@@ -204,6 +213,7 @@ export const useStudentDetails = (profileId: string | undefined) => {
         student_created_at: s.created_at,
         has_paid_selection_process_fee: s.has_paid_selection_process_fee,
         has_paid_i20_control_fee: s.has_paid_i20_control_fee,
+        selection_survey_passed: s.selection_survey_passed,
         placement_fee_flow: s.placement_fee_flow,
         is_placement_fee_paid: s.is_placement_fee_paid,
         selection_process_fee_payment_method: s.selection_process_fee_payment_method,
@@ -230,6 +240,10 @@ export const useStudentDetails = (profileId: string | undefined) => {
         all_applications: applications,
         admin_notes: s.admin_notes,
         documents_status: s.documents_status || null,
+        has_paid_ds160_package: s.has_paid_ds160_package || false,
+        has_paid_i539_cos_package: s.has_paid_i539_cos_package || false,
+        ds160_package_payment_method: s.ds160_package_payment_method || null,
+        i539_cos_package_payment_method: s.i539_cos_package_payment_method || null,
       };
 
       setStudent(formatted);
@@ -252,7 +266,6 @@ export const useStudentDetails = (profileId: string | undefined) => {
     student,
     setStudent,
     loading,
-    loadingSecondaryData,
     error,
     refetch: loadCriticalData,
   };

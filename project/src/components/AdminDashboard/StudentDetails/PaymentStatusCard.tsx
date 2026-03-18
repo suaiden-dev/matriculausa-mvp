@@ -23,9 +23,9 @@ interface PaymentStatusCardProps {
   onCancelEditFees: () => void;
   onResetFees: () => Promise<void>;
   onEditFeesChange: (fees: any) => void;
-  onMarkAsPaid: (feeType: 'selection_process' | 'application' | 'scholarship' | 'i20_control' | 'placement') => void;
+  onMarkAsPaid: (feeType: 'selection_process' | 'application' | 'scholarship' | 'i20_control' | 'placement' | 'ds160_package' | 'i539_cos_package') => void;
   onEditPaymentMethod: (feeType: string) => void;
-  onUpdatePaymentMethod: (feeType: 'selection_process' | 'application' | 'scholarship' | 'i20_control' | 'placement' | string) => Promise<void>;
+  onUpdatePaymentMethod: (feeType: 'selection_process' | 'application' | 'scholarship' | 'i20_control' | 'placement' | 'ds160_package' | 'i539_cos_package' | string) => Promise<void>;
   onCancelPaymentMethod: () => void;
   onPaymentMethodChange: (method: string) => void;
   formatFeeAmount: (amount: number | string, forceDollars?: boolean) => string;
@@ -76,6 +76,9 @@ const PaymentStatusCard: React.FC<PaymentStatusCardProps> = React.memo((props) =
     selection_process_fee?: number;
     scholarship_fee?: number;
     i20_control_fee?: number;
+    placement_fee?: number;
+    ds160_package_fee?: number;
+    i539_cos_package_fee?: number;
   } | null>(null);
   const [loadingOverrides, setLoadingOverrides] = React.useState<boolean>(true);
 
@@ -120,7 +123,7 @@ const PaymentStatusCard: React.FC<PaymentStatusCardProps> = React.memo((props) =
       try {
         const { data: overrideData, error: overrideError } = await supabase
           .from('user_fee_overrides')
-          .select('selection_process_fee, scholarship_fee, i20_control_fee, updated_at')
+          .select('selection_process_fee, scholarship_fee, i20_control_fee, placement_fee, ds160_package_fee, i539_cos_package_fee, updated_at')
           .eq('user_id', student.user_id)
           .maybeSingle();
 
@@ -133,6 +136,9 @@ const PaymentStatusCard: React.FC<PaymentStatusCardProps> = React.memo((props) =
             selection_process_fee: overrideData.selection_process_fee != null ? Number(overrideData.selection_process_fee) : undefined,
             scholarship_fee: overrideData.scholarship_fee != null ? Number(overrideData.scholarship_fee) : undefined,
             i20_control_fee: overrideData.i20_control_fee != null ? Number(overrideData.i20_control_fee) : undefined,
+            placement_fee: overrideData.placement_fee != null ? Number(overrideData.placement_fee) : undefined,
+            ds160_package_fee: overrideData.ds160_package_fee != null ? Number(overrideData.ds160_package_fee) : undefined,
+            i539_cos_package_fee: overrideData.i539_cos_package_fee != null ? Number(overrideData.i539_cos_package_fee) : undefined,
           });
         } else {
           setCurrentOverrides(null);
@@ -158,7 +164,10 @@ const PaymentStatusCard: React.FC<PaymentStatusCardProps> = React.memo((props) =
       console.log('✅ [PaymentStatusCard] Valores de editingFees:', {
         selection_process: editingFees.selection_process,
         scholarship: editingFees.scholarship,
-        i20_control: editingFees.i20_control
+        i20_control: editingFees.i20_control,
+        placement: editingFees.placement,
+        ds160_package: editingFees.ds160_package,
+        i539_cos_package: editingFees.i539_cos_package
       });
     } else {
       console.log('ℹ️ [PaymentStatusCard] editingFees é null/undefined');
@@ -201,7 +210,7 @@ const PaymentStatusCard: React.FC<PaymentStatusCardProps> = React.memo((props) =
                   <Edit3 className="w-4 h-4" />
                   <span>Edit Fees</span>
                 </button>
-                {(hasOverride('selection_process') || hasOverride('scholarship_fee') || hasOverride('i20_control_fee')) && (
+                {(hasOverride('selection_process') || hasOverride('scholarship_fee') || hasOverride('i20_control_fee') || hasOverride('placement_fee') || hasOverride('ds160_package_fee') || hasOverride('i539_cos_package_fee')) && (
                   <button
                     onClick={onResetFees}
                     disabled={savingFees}
@@ -515,45 +524,70 @@ const PaymentStatusCard: React.FC<PaymentStatusCardProps> = React.memo((props) =
                     <dd className="text-sm text-slate-500 mt-1">Paid after application fee</dd>
                     {editingFees ? (
                       <div className="mt-2 text-slate-400 italic text-sm">
-                        Fixed value (Cannot be edited manually yet)
+                        <input
+                          type="number"
+                          value={editingFees.placement ?? ''}
+                          onChange={(e) =>
+                            onEditFeesChange({ ...editingFees, placement: Number(e.target.value) })
+                          }
+                          className="w-32 px-3 py-2 border border-slate-300 rounded-lg text-sm text-slate-700"
+                          min="0"
+                          step="0.01"
+                        />
                       </div>
                     ) : (
                       <dd className="text-sm font-semibold text-slate-700 mt-1 flex items-center">
                         {(() => {
-                          if (loadingPaidAmounts?.placement) {
+                          if (loadingPaidAmounts?.placement || loadingAffiliateCheck || loadingOverrides) {
                             return (
                               <div className="animate-pulse flex items-center gap-2">
                                 <div className="h-4 w-20 bg-slate-200 rounded"></div>
                               </div>
                             );
                           }
-
+ 
                           // 1. Mostrar sempre o valor customizado pago, mas sem deixar a conversão quebrar o valor
-                          if (realPaidAmounts?.placement !== undefined && realPaidAmounts?.placement !== null && realPaidAmounts.placement > 0) {
-                            return formatFeeAmount(realPaidAmounts.placement, true);
+                          if (student?.is_placement_fee_paid) {
+                            if (realPaidAmounts?.placement !== undefined && realPaidAmounts?.placement !== null && realPaidAmounts.placement > 0) {
+                              return formatFeeAmount(realPaidAmounts.placement, true);
+                            } else {
+                              return (
+                                <div className="animate-pulse flex items-center gap-2">
+                                  <div className="h-4 w-20 bg-slate-200 rounded"></div>
+                                </div>
+                              );
+                            }
                           }
-
-                          // 2. Tentar o valor configurado
+ 
+                          // 2. Verificar override primeiro
+                          if (currentOverrides?.placement_fee !== undefined && currentOverrides?.placement_fee !== null) {
+                            return formatFeeAmount(currentOverrides.placement_fee, true);
+                          }
+ 
+                          // 3. Tentar o valor configurado
                           if (student?.placement_fee_amount) {
                             return formatFeeAmount(Number(student.placement_fee_amount), true);
                           }
-
-                          // 3. Pegar da aplicação principal
+ 
+                          // 4. Pegar da aplicação principal
                           const applications = student.all_applications || [];
                           const activeApp = applications.find((app: any) => app.status === 'enrolled') || 
                                            applications.find((app: any) => app.status === 'approved') || 
                                            applications[0];
                                            
                           const scholarship = activeApp?.scholarships ? (Array.isArray(activeApp.scholarships) ? activeApp.scholarships[0] : activeApp.scholarships) : null;
-
+ 
                           if (scholarship?.annual_value_with_scholarship) {
                             const placementFeeAmount = scholarship.placement_fee_amount ? Number(scholarship.placement_fee_amount) : null;
                             const expectedFee = getPlacementFee(Number(scholarship.annual_value_with_scholarship), placementFeeAmount);
                             return formatFeeAmount(expectedFee, true);
                           }
-
+ 
                           return 'N/A';
                         })()}
+                        {currentOverrides?.placement_fee !== undefined && (
+                          <span className="ml-2 text-xs text-blue-500">(custom)</span>
+                        )}
                       </dd>
                     )}
                   </div>
@@ -923,6 +957,256 @@ const PaymentStatusCard: React.FC<PaymentStatusCardProps> = React.memo((props) =
                 </div>
               </div>
             </>
+          );
+        })()}
+
+        {/* DS-160 Package — apenas para alunos initial (F-1 Visa Required) */}
+        {student.student_process_type === 'initial' && (() => {
+          const isPaid = !!student.has_paid_ds160_package;
+          return (
+            <div className="bg-slate-50 rounded-xl p-4">
+              <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-4">
+                <div className="flex-1">
+                  <dt className="text-sm font-medium text-slate-600">DS-160 Package</dt>
+                  <dd className="text-sm text-slate-500 mt-1">Required for initial F-1 visa students</dd>
+                  {editingFees ? (
+                    <div className="mt-2">
+                      <input
+                        type="number"
+                        value={editingFees.ds160_package ?? ''}
+                        onChange={(e) =>
+                          onEditFeesChange({ ...editingFees, ds160_package: Number(e.target.value) })
+                        }
+                        className="w-32 px-3 py-2 border border-slate-300 rounded-lg text-sm"
+                        min="0"
+                        step="0.01"
+                      />
+                    </div>
+                  ) : (
+                    <dd className="text-sm font-semibold text-slate-700 mt-1 flex items-center">
+                      {(() => {
+                        if (loadingOverrides) {
+                          return (
+                            <div className="animate-pulse flex items-center gap-2">
+                              <div className="h-4 w-20 bg-slate-200 rounded"></div>
+                            </div>
+                          );
+                        }
+                        if (isPaid) {
+                          return realPaidAmounts?.ds160_package !== undefined && realPaidAmounts?.ds160_package !== null
+                            ? formatFeeAmount(realPaidAmounts.ds160_package, true)
+                            : formatFeeAmount(1800, true);
+                        }
+                        if (currentOverrides?.ds160_package_fee !== undefined && currentOverrides?.ds160_package_fee !== null) {
+                          return formatFeeAmount(currentOverrides.ds160_package_fee, true);
+                        }
+                        return formatFeeAmount(1800, true);
+                      })()}
+                      {currentOverrides?.ds160_package_fee !== undefined && (
+                        <span className="ml-2 text-xs text-blue-500">(custom)</span>
+                      )}
+                    </dd>
+                  )}
+                </div>
+                <div className="flex flex-col gap-3">
+                  {isPaid ? (
+                    <div className="flex flex-col gap-3">
+                      <div className="flex items-center space-x-2">
+                        <CheckCircle className="h-5 w-5 text-green-600" />
+                        <span className="text-sm font-medium text-green-600">Paid</span>
+                      </div>
+                      {isPlatformAdmin && (
+                        <div className="flex flex-col gap-3">
+                          {editingPaymentMethod === 'ds160_package' ? (
+                            <div className="flex flex-col gap-3">
+                              <select
+                                value={newPaymentMethod}
+                                onChange={(e) => onPaymentMethodChange(e.target.value)}
+                                className="text-sm px-3 py-2 border border-slate-300 rounded-lg w-full max-w-[150px]"
+                                disabled={savingPaymentMethod}
+                              >
+                                <option value="manual">Outside</option>
+                                <option value="stripe">Stripe</option>
+                                <option value="zelle">Zelle</option>
+                              </select>
+                              <div className="flex items-center gap-2">
+                                <button
+                                  onClick={() => onUpdatePaymentMethod('ds160_package')}
+                                  disabled={savingPaymentMethod}
+                                  className="px-4 py-2 bg-green-600 hover:bg-green-700 text-white text-sm rounded-lg flex items-center space-x-2"
+                                >
+                                  <Save className="w-4 h-4" />
+                                  <span>{savingPaymentMethod ? 'Saving...' : 'Save'}</span>
+                                </button>
+                                <button
+                                  onClick={onCancelPaymentMethod}
+                                  className="px-4 py-2 bg-slate-600 hover:bg-slate-700 text-white text-sm rounded-lg flex items-center space-x-2"
+                                >
+                                  <X className="w-4 h-4" />
+                                  <span>Cancel</span>
+                                </button>
+                              </div>
+                            </div>
+                          ) : (
+                            <button
+                              onClick={() => {
+                                onEditPaymentMethod('ds160_package');
+                                onPaymentMethodChange((student.ds160_package_payment_method as string) || 'manual');
+                              }}
+                              className="px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white text-sm rounded-lg flex items-center space-x-2 w-fit"
+                            >
+                              <Edit3 className="w-4 h-4" />
+                              <span>Edit Method</span>
+                            </button>
+                          )}
+                        </div>
+                      )}
+                    </div>
+                  ) : (
+                    <div className="flex flex-col gap-3">
+                      <div className="flex items-center space-x-2">
+                        <XCircle className="h-5 w-5 text-red-600" />
+                        <span className="text-sm font-medium text-red-600">Not Paid</span>
+                      </div>
+                      {isPlatformAdmin && (
+                        <button
+                          onClick={() => onMarkAsPaid('ds160_package')}
+                          className="px-4 py-2 bg-[#05294E] hover:bg-[#05294E]/90 text-white text-sm rounded-lg flex items-center space-x-2 w-fit"
+                        >
+                          <CheckCircle className="w-4 h-4" />
+                          <span>Mark as Paid</span>
+                        </button>
+                      )}
+                    </div>
+                  )}
+                </div>
+              </div>
+            </div>
+          );
+        })()}
+
+        {/* I-539 COS Package — apenas para alunos change_of_status */}
+        {student.student_process_type === 'change_of_status' && (() => {
+          const isPaid = !!student.has_paid_i539_cos_package;
+          return (
+            <div className="bg-slate-50 rounded-xl p-4">
+              <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-4">
+                <div className="flex-1">
+                  <dt className="text-sm font-medium text-slate-600">I-539 COS Package</dt>
+                  <dd className="text-sm text-slate-500 mt-1">Required for change of status students</dd>
+                  {editingFees ? (
+                    <div className="mt-2">
+                      <input
+                        type="number"
+                        value={editingFees.i539_cos_package ?? ''}
+                        onChange={(e) =>
+                          onEditFeesChange({ ...editingFees, i539_cos_package: Number(e.target.value) })
+                        }
+                        className="w-32 px-3 py-2 border border-slate-300 rounded-lg text-sm"
+                        min="0"
+                        step="0.01"
+                      />
+                    </div>
+                  ) : (
+                    <dd className="text-sm font-semibold text-slate-700 mt-1 flex items-center">
+                      {(() => {
+                        if (loadingOverrides) {
+                          return (
+                            <div className="animate-pulse flex items-center gap-2">
+                              <div className="h-4 w-20 bg-slate-200 rounded"></div>
+                            </div>
+                          );
+                        }
+                        if (isPaid) {
+                          return realPaidAmounts?.i539_cos_package !== undefined && realPaidAmounts?.i539_cos_package !== null
+                            ? formatFeeAmount(realPaidAmounts.i539_cos_package, true)
+                            : formatFeeAmount(1800, true);
+                        }
+                        if (currentOverrides?.i539_cos_package_fee !== undefined && currentOverrides?.i539_cos_package_fee !== null) {
+                          return formatFeeAmount(currentOverrides.i539_cos_package_fee, true);
+                        }
+                        return formatFeeAmount(1800, true);
+                      })()}
+                      {currentOverrides?.i539_cos_package_fee !== undefined && (
+                        <span className="ml-2 text-xs text-blue-500">(custom)</span>
+                      )}
+                    </dd>
+                  )}
+                </div>
+                <div className="flex flex-col gap-3">
+                  {isPaid ? (
+                    <div className="flex flex-col gap-3">
+                      <div className="flex items-center space-x-2">
+                        <CheckCircle className="h-5 w-5 text-green-600" />
+                        <span className="text-sm font-medium text-green-600">Paid</span>
+                      </div>
+                      {isPlatformAdmin && (
+                        <div className="flex flex-col gap-3">
+                          {editingPaymentMethod === 'i539_cos_package' ? (
+                            <div className="flex flex-col gap-3">
+                              <select
+                                value={newPaymentMethod}
+                                onChange={(e) => onPaymentMethodChange(e.target.value)}
+                                className="text-sm px-3 py-2 border border-slate-300 rounded-lg w-full max-w-[150px]"
+                                disabled={savingPaymentMethod}
+                              >
+                                <option value="manual">Outside</option>
+                                <option value="stripe">Stripe</option>
+                                <option value="zelle">Zelle</option>
+                              </select>
+                              <div className="flex items-center gap-2">
+                                <button
+                                  onClick={() => onUpdatePaymentMethod('i539_cos_package')}
+                                  disabled={savingPaymentMethod}
+                                  className="px-4 py-2 bg-green-600 hover:bg-green-700 text-white text-sm rounded-lg flex items-center space-x-2"
+                                >
+                                  <Save className="w-4 h-4" />
+                                  <span>{savingPaymentMethod ? 'Saving...' : 'Save'}</span>
+                                </button>
+                                <button
+                                  onClick={onCancelPaymentMethod}
+                                  className="px-4 py-2 bg-slate-600 hover:bg-slate-700 text-white text-sm rounded-lg flex items-center space-x-2"
+                                >
+                                  <X className="w-4 h-4" />
+                                  <span>Cancel</span>
+                                </button>
+                              </div>
+                            </div>
+                          ) : (
+                            <button
+                              onClick={() => {
+                                onEditPaymentMethod('i539_cos_package');
+                                onPaymentMethodChange((student.i539_cos_package_payment_method as string) || 'manual');
+                              }}
+                              className="px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white text-sm rounded-lg flex items-center space-x-2 w-fit"
+                            >
+                              <Edit3 className="w-4 h-4" />
+                              <span>Edit Method</span>
+                            </button>
+                          )}
+                        </div>
+                      )}
+                    </div>
+                  ) : (
+                    <div className="flex flex-col gap-3">
+                      <div className="flex items-center space-x-2">
+                        <XCircle className="h-5 w-5 text-red-600" />
+                        <span className="text-sm font-medium text-red-600">Not Paid</span>
+                      </div>
+                      {isPlatformAdmin && (
+                        <button
+                          onClick={() => onMarkAsPaid('i539_cos_package')}
+                          className="px-4 py-2 bg-[#05294E] hover:bg-[#05294E]/90 text-white text-sm rounded-lg flex items-center space-x-2 w-fit"
+                        >
+                          <CheckCircle className="w-4 h-4" />
+                          <span>Mark as Paid</span>
+                        </button>
+                      )}
+                    </div>
+                  )}
+                </div>
+              </div>
+            </div>
           );
         })()}
       </div>

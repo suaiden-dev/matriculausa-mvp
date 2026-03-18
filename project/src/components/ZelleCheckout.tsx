@@ -8,7 +8,7 @@ import { generateUUID } from '../utils/uuid';
 import { config } from '../lib/config';
 
 interface ZelleCheckoutProps {
-  feeType: 'selection_process' | 'application_fee' | 'enrollment_fee' | 'scholarship_fee' | 'i20_control_fee' | 'placement_fee';
+  feeType: 'selection_process' | 'application_fee' | 'enrollment_fee' | 'scholarship_fee' | 'i20_control_fee' | 'placement_fee' | 'ds160_package' | 'i539_cos_package';
   amount: number;
   scholarshipsIds?: string[];
   onSuccess?: () => void;
@@ -189,6 +189,24 @@ export const ZelleCheckout: React.FC<ZelleCheckoutProps> = ({
               updated_at: new Date().toISOString()
             })
             .eq('user_id', user.id);
+        } else if (feeType === 'ds160_package') {
+          await supabase
+            .from('user_profiles')
+            .update({ 
+              has_paid_ds160_package: true,
+              ds160_package_payment_method: 'zelle',
+              updated_at: new Date().toISOString()
+            })
+            .eq('user_id', user.id);
+        } else if (feeType === 'i539_cos_package') {
+          await supabase
+            .from('user_profiles')
+            .update({ 
+              has_paid_i539_cos_package: true,
+              i539_cos_package_payment_method: 'zelle',
+              updated_at: new Date().toISOString()
+            })
+            .eq('user_id', user.id);
         }
       }
 
@@ -340,7 +358,9 @@ export const ZelleCheckout: React.FC<ZelleCheckoutProps> = ({
 
   useEffect(() => {
     if (!paymentBlockedLoading && step === 'instructions' && !zellePaymentId) {
+      console.log('[ZelleCheckout] Checking initial state...', { feeType, blockedPending: !!blockedPendingPayment, blockedApproved: !!blockedApprovedPayment });
       if (blockedPendingPayment && blockedPendingPayment.fee_type === feeType) {
+        console.log('[ZelleCheckout] Found pending payment for this fee');
         const newState = determinePaymentState(blockedPendingPayment, blockedRejectedPayment, blockedApprovedPayment, 'instructions', null, null);
         setStep(newState.step);
         setPaymentStatus(newState.paymentStatus);
@@ -352,6 +372,7 @@ export const ZelleCheckout: React.FC<ZelleCheckoutProps> = ({
         zellePaymentIdRef.current = newState.zellePaymentId;
         isProcessingRef.current = newState.isProcessing;
       } else if (blockedApprovedPayment && blockedApprovedPayment.fee_type === feeType) {
+        console.log('[ZelleCheckout] Found APPROVED payment for this fee, triggering onSuccess');
         setStep('success');
         setPaymentStatus('approved');
         setZellePaymentId(blockedApprovedPayment.id);
@@ -363,6 +384,7 @@ export const ZelleCheckout: React.FC<ZelleCheckoutProps> = ({
         isProcessingRef.current = false;
         onSuccess?.();
       } else if (blockedRejectedPayment && blockedRejectedPayment.fee_type === feeType) {
+        console.log('[ZelleCheckout] Found REJECTED payment for this fee');
         setStep('rejected');
         setPaymentStatus('rejected');
         setZellePaymentId(blockedRejectedPayment.id);

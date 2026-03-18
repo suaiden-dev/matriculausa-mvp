@@ -94,9 +94,10 @@ const Overview: React.FC<OverviewProps> = ({
         app.is_application_fee_paid ||
         ['approved', 'enrolled', 'under_review'].includes(app.status)
       );
-      const anyScholarshipFeePaid = applications.some(app => app.is_scholarship_fee_paid) || userProfile.is_scholarship_fee_paid;
-      const hasGlobalFeePaid = userProfile.is_application_fee_paid || !!userProfile.application_fee_paid_at || !!userProfile.scholarship_fee_paid_at || anyAppPaidOrApproved;
-      const hasDocsGlobal = userProfile.documents_uploaded || !!userProfile.application_fee_paid_at || anyAppPaidOrApproved;
+      const hasPaidPackage = !!(userProfile as any).has_paid_ds160_package || !!(userProfile as any).has_paid_i539_cos_package;
+      const anyScholarshipFeePaid = applications.some(app => app.is_scholarship_fee_paid) || userProfile.is_scholarship_fee_paid || hasPaidPackage;
+      const hasGlobalFeePaid = userProfile.is_application_fee_paid || !!userProfile.application_fee_paid_at || !!userProfile.scholarship_fee_paid_at || anyAppPaidOrApproved || hasPaidPackage;
+      const hasDocsGlobal = userProfile.documents_uploaded || !!userProfile.application_fee_paid_at || anyAppPaidOrApproved || hasPaidPackage;
 
       // Verificar Process Type (situação do visto)
       const userProcessTypeKey = `studentProcessType_${userProfile.id}`;
@@ -350,7 +351,7 @@ const Overview: React.FC<OverviewProps> = ({
   type OnboardingStepKey =
     | 'selection_fee' | 'identity_verification' | 'selection_survey'
     | 'scholarship_selection' | 'process_type' | 'documents_upload'
-    | 'payment' | 'scholarship_fee' | 'university_documents'
+    | 'payment' | 'scholarship_fee' | 'placement_fee' | 'university_documents'
     | 'waiting_approval' | 'my_applications' | 'completed';
 
   const STEP_NUMBER_MAP: Record<OnboardingStepKey, number> = {
@@ -362,6 +363,7 @@ const Overview: React.FC<OverviewProps> = ({
     'documents_upload': 5,
     'payment': 6,
     'scholarship_fee': 7,
+    'placement_fee': 7,
     'university_documents': 7,
     'waiting_approval': 7,
     'my_applications': 7,

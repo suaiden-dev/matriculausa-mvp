@@ -95,22 +95,9 @@ const StudentDashboardLayout: React.FC<StudentDashboardLayoutProps> = ({
   const paidAt = profile?.selection_process_paid_at ? new Date(profile.selection_process_paid_at) : null;
   const isExemptedByLegacy = profile?.selection_process_fee_paid && (!paidAt || paidAt < SURVEY_THRESHOLD_DATE);
 
-  // Redirecionamento obrigatório unificado: Se pagou e não completou as etapas de base (onboarding)
-  useEffect(() => {
-    // Se o usuário está isento por ser um pagamento antigo, não redireciona
-    if (isExemptedByLegacy) return;
+  // Redirecionamento obrigatório unificado removido para permitir acesso ao dashboard restrito (Chat/Perfil/Suporte) durante o onboarding.
+  // A própria Overview.tsx e o estado isRestricted já lidam com a experiência do usuário nessas etapas.
 
-    if (
-      !loading &&
-      profile?.selection_process_fee_paid &&
-      !profile?.selection_survey_passed &&
-      !location.pathname.includes('onboarding') &&
-      !location.pathname.includes('selection-process-fee-error')
-    ) {
-      console.log('🔒 Redirecionando para o fluxo unificado de Onboarding do Aluno...');
-      navigate('/student/onboarding');
-    }
-  }, [profile, loading, location.pathname, navigate, isExemptedByLegacy]);
 
   // Clean up duplicate useEffect if present (lines 80-83 in original file were duplicate)
 

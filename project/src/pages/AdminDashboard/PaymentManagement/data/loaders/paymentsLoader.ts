@@ -38,7 +38,11 @@ export async function loadPaymentsBaseData(supabase: SupabaseClient): Promise<Pa
           i20_control_fee_payment_method,
           scholarship_package_id,
           dependents,
-          seller_referral_code
+          seller_referral_code,
+          has_paid_ds160_package,
+          has_paid_i539_cos_package,
+          ds160_package_payment_method,
+          i539_cos_package_payment_method
         ),
         scholarships (
           id,
@@ -67,7 +71,7 @@ export async function loadPaymentsBaseData(supabase: SupabaseClient): Promise<Pa
       const userIds = zellePaymentsRaw.map((p) => p.user_id);
       const { data: userProfiles, error: usersError } = await supabase
         .from('user_profiles')
-        .select('id, user_id, full_name, email, has_paid_selection_process_fee, is_application_fee_paid, is_scholarship_fee_paid, has_paid_i20_control_fee, selection_process_fee_payment_method, i20_control_fee_payment_method, scholarship_package_id, dependents, seller_referral_code')
+        .select('id, user_id, full_name, email, has_paid_selection_process_fee, is_application_fee_paid, is_scholarship_fee_paid, has_paid_i20_control_fee, has_paid_ds160_package, has_paid_i539_cos_package, selection_process_fee_payment_method, i20_control_fee_payment_method, ds160_package_payment_method, i539_cos_package_payment_method, scholarship_package_id, dependents, seller_referral_code')
         .in('user_id', userIds);
       if (usersError) {
         console.error('Error loading user profiles for Zelle payments:', usersError);
@@ -90,14 +94,18 @@ export async function loadPaymentsBaseData(supabase: SupabaseClient): Promise<Pa
         is_application_fee_paid,
         is_scholarship_fee_paid,
         has_paid_i20_control_fee,
+        has_paid_ds160_package,
+        has_paid_i539_cos_package,
         selection_process_fee_payment_method,
         i20_control_fee_payment_method,
+        ds160_package_payment_method,
+        i539_cos_package_payment_method,
         scholarship_package_id,
         dependents,
         created_at,
         seller_referral_code
       `)
-      .or('has_paid_selection_process_fee.eq.true,is_application_fee_paid.eq.true,is_scholarship_fee_paid.eq.true,has_paid_i20_control_fee.eq.true');
+      .or('has_paid_selection_process_fee.eq.true,is_application_fee_paid.eq.true,is_scholarship_fee_paid.eq.true,has_paid_i20_control_fee.eq.true,has_paid_ds160_package.eq.true,has_paid_i539_cos_package.eq.true');
     if (stripeError) {
       console.error('Error loading Stripe users:', stripeError);
     }
@@ -132,6 +140,8 @@ export async function loadPaymentsBaseData(supabase: SupabaseClient): Promise<Pa
               application_fee: data.application_fee != null ? Number(data.application_fee) : undefined,
               scholarship_fee: data.scholarship_fee != null ? Number(data.scholarship_fee) : undefined,
               i20_control_fee: data.i20_control_fee != null ? Number(data.i20_control_fee) : undefined,
+              ds160_package_fee: data.ds160_package_fee != null ? Number(data.ds160_package_fee) : undefined,
+              i539_cos_package_fee: data.i539_cos_package_fee != null ? Number(data.i539_cos_package_fee) : undefined,
             };
           }
         }

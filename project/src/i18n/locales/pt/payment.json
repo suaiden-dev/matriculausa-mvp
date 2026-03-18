@@ -269,7 +269,7 @@
         "error": "Erro ao salvar foto. Tente novamente.",
         "continue": "Continuar",
         "sending": "Enviando...",
-        "sendPhoto": "Enviar Foto",
+        "sendPhoto": "Enviar",
         "completed": "Verificação Concluída",
         "completedTitle": "Verificação concluída!",
         "alreadySent": "Sua foto de identificação já foi enviada. Você pode prosseguir para o questionário."
@@ -481,16 +481,16 @@
   },
   "placementFeeStep": {
     "loading": "Carregando informações...",
-    "title": "Placement Fee",
+    "title": "Taxa de Colocação",
     "subtitle": "Taxa de colocação calculada com base no valor anual da sua bolsa selecionada.",
     "completedTitle": "Etapa Concluída",
-    "completedSubtitle": "Sua Placement Fee foi processada com sucesso.",
+    "completedSubtitle": "Sua Taxa de Colocação foi processada com sucesso.",
     "continue": "Continuar",
     "securePayment": "Pagamento Seguro",
     "confirmed": "Pagamento Confirmado",
-    "confirmedSubtitle": "Sua Placement Fee foi confirmada.",
+    "confirmedSubtitle": "Sua Taxa de Colocação foi confirmada.",
     "noApplications": "Nenhuma aplicação pronta",
-    "noApplicationsMessage": "Você precisa completar as etapas anteriores antes de pagar a Placement Fee.",
+    "noApplicationsMessage": "Você precisa completar as etapas anteriores antes de pagar a Taxa de Colocação.",
     "back": "Voltar",
     "zellePendingTitle": "Pagamento Zelle em Análise",
     "zellePendingMessage": "Você já iniciou um pagamento via Zelle. Aguarde a confirmação antes de usar outro método. Isso pode levar até 48 horas.",
@@ -560,7 +560,7 @@
       "errorDetails": "Detalhes do erro:"
     },
     "placementFee": {
-      "title": "Pagamento da Placement Fee Realizado com Sucesso!",
+      "title": "Pagamento da Taxa de Colocação Realizado com Sucesso!",
       "description": "Seu pagamento de {{amount}} foi processado com sucesso.",
       "message": "Sua aplicação está agora confirmada.",
       "button": "Continuar",

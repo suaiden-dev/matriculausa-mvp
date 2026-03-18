@@ -38,7 +38,7 @@ const DOCUMENT_TYPES = [
 ];
 
 export const DocumentsUploadStep: React.FC<StepProps> = ({ onNext }) => {
-  const { t } = useTranslation(['registration', 'common']);
+  const { t } = useTranslation(['registration', 'common', 'scholarships']);
   const { user, userProfile, refetchUserProfile } = useAuth();
   const { clearCart } = useCartStore();
   const [files, setFiles] = useState<Record<string, File | File[] | null>>({
@@ -431,6 +431,7 @@ export const DocumentsUploadStep: React.FC<StepProps> = ({ onNext }) => {
       // Atualizar documentos da aplicação
       const app = applications.find((a: any) => a.id === applicationId);
       if (!app) throw new Error('Application not found');
+      if (app.status === 'rejected') throw new Error('Cannot upload documents to a rejected application');
 
       const currentDocs: any[] = app.documents || [];
       const normalized = parseApplicationDocuments(currentDocs);
@@ -800,6 +801,18 @@ export const DocumentsUploadStep: React.FC<StepProps> = ({ onNext }) => {
                                    </div>
                                  </div>
 
+                                  {/* Enrollment Fee (Taxa de Matricula) */}
+                                  {scholarship?.application_fee_amount && (
+                                    <div className='flex items-center justify-between pt-1.5 mt-1.5 border-t border-slate-200'>
+                                      <span className='text-xs text-slate-500 font-medium'>
+                                        {t('studentDashboard.progressBar.applicationFee')}
+                                      </span>
+                                      <span className='text-blue-600 font-bold text-sm'>
+                                        {formatCurrency(Number(scholarship.application_fee_amount))}
+                                      </span>
+                                    </div>
+                                  )}
+
                                  {/* Placement Fee - exibir apenas para novos usuários */}
                                  {(userProfile as any)?.placement_fee_flow && (() => {
                                    const annualValue = scholarship?.annual_value_with_scholarship ? Number(scholarship.annual_value_with_scholarship) : Number(scholarship?.amount) || 0;
@@ -814,7 +827,27 @@ export const DocumentsUploadStep: React.FC<StepProps> = ({ onNext }) => {
                                      </div>
                                    );
                                  })()}
+
+                                  {/* I539 or DS160 Package Fee */}
+                                  {(() => {
+                                    const pType = app.student_process_type || processType;
+                                    if (!pType) return null;
+                                    
+                                    const isCOS = pType === 'change_of_status';
+                                    const feeKey = isCOS ? 'scholarshipsPage.modal.i539COSPackage' : 'scholarshipsPage.modal.ds160Package';
+                                    
+                                    return (
+                                      <div className="flex items-center justify-between pt-1.5 mt-1.5 border-t border-slate-200">
+                                        <span className="text-xs text-slate-500 font-medium">{t(`scholarships:${feeKey}`)}</span>
+                                        <span className="text-blue-600 font-bold text-sm">
+                                          {formatCurrency(1800)}
+                                        </span>
+                                      </div>
+                                    );
+                                  })()}
                                </div>
+
+
 
                                {/* Rejection Notes */}
                                {app.status === 'rejected' && app.notes && (
@@ -927,7 +960,7 @@ export const DocumentsUploadStep: React.FC<StepProps> = ({ onNext }) => {
                                               </div>
                                             </div>
 
-                                            {isRejectedStatus && (
+                                            {isRejectedStatus && app.status !== 'rejected' && (
                                               <div className="mt-3 space-y-2" onClick={(e) => e.stopPropagation()}>
                                                 {!selectedFile ? (
                                                   <label className="flex w-1/2 cursor-pointer bg-white border-2 border-dashed border-blue-200 hover:border-blue-400 hover:bg-blue-50 p-1.5 rounded-lg text-center transition-all group/upload items-center justify-center">
@@ -1232,4 +1265,5 @@ export const DocumentsUploadStep: React.FC<StepProps> = ({ onNext }) => {
     </div>
   );
 };
+
 

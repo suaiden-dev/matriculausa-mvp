@@ -139,11 +139,16 @@
       "noLongerAccepting": "Esta bolsa não está mais aceitando novas aplicações.",
       "canStillView": "Você ainda pode visualizar as informações, mas não será possível aplicar para esta bolsa.",
       "internalFeesTitle": "Taxas Internas da Universidade",
-      "internalFeesDisclaimer": "Estas taxas são pagas diretamente à universidade, não através de nossa plataforma",
+      "internalFeesDisclaimer": "Algumas taxas são pagas diretamente à universidade, enquanto outras são processadas por meio da nossa plataforma.",
       "internalFeesAvailable": "Taxas Internas da Universidade Disponíveis",
       "internalFeesNotice": "Esta bolsa pode ter taxas internas adicionais da universidade. Estas taxas serão visíveis após o pagamento da Taxa do Processo de Seleção.",
       "universityInternalFees": "Taxas Internas da Universidade",
       "viewUniversityFeesPage": "Ver Página de Taxas da Universidade",
+      "internalFeesConditionalNote": "A taxa depende do tipo de processo ou visto do aluno e daí corresponde com a taxa",
+      "i539COSPackage": "I539 COS Package",
+      "ds160Package": "DS160 Package",
+      "i539PackageDescription": "Taxa necessária para estudantes que solicitam Mudança de Status (Change of Status)",
+      "ds160PackageDescription": "Taxa necessária para estudantes que solicitam Transferência",
       "days": "dias"
     }
   },

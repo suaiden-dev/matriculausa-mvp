@@ -1,7 +1,7 @@
-import React, { useState, useEffect } from 'react';
-import { CheckCircle } from 'lucide-react';
+import React, { useState, useEffect, useRef } from 'react';
+import { CheckCircle, X } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
-import { IdentityPhotoUpload } from '../../../components/IdentityPhotoUpload';
+import { IdentityPhotoUpload, IdentityPhotoUploadRef } from '../../../components/IdentityPhotoUpload';
 import { supabase } from '../../../lib/supabase';
 import { useAuth } from '../../../hooks/useAuth';
 import toast from 'react-hot-toast';
@@ -20,6 +20,7 @@ export const IdentityVerificationStep: React.FC<IdentityVerificationStepProps> =
   const [saving, setSaving] = useState(false);
   const [alreadyVerified, setAlreadyVerified] = useState(false);
   const [checkingExisting, setCheckingExisting] = useState(true);
+  const photoUploadRef = useRef<IdentityPhotoUploadRef>(null);
 
   // Verificar se já existe foto enviada anteriormente
   useEffect(() => {
@@ -168,25 +169,40 @@ export const IdentityVerificationStep: React.FC<IdentityVerificationStepProps> =
         {/* Upload da selfie */}
         <div className="relative z-10 space-y-6">
           <IdentityPhotoUpload
+            ref={photoUploadRef}
             onUploadSuccess={(path) => handleUploadSuccess(path)}
             onUploadError={(err) => toast.error(err)}
             initialPhotoPath={uploadedPath || undefined}
             onRemove={() => setUploadedPath(null)}
             variant="large"
+            hideInternalActions={true}
           />
 
-            {/* Botão de prosseguir — só aparece após upload */}
+          <div className="flex justify-end gap-3 mt-6">
             {uploadedPath && (
-              <div className="flex justify-end">
-                <button
-                  onClick={handleSendPhoto}
-                  disabled={saving}
-                  className="inline-flex items-center justify-center gap-2 px-6 py-3 bg-blue-600 hover:bg-blue-700 disabled:opacity-50 text-white font-bold rounded-xl transition-all duration-200 shadow-lg shadow-blue-200 hover:scale-[1.02] active:scale-[0.98]"
-                >
-                  {saving ? t('selectionFeeStep.main.identity.sending') : t('selectionFeeStep.main.identity.sendPhoto')}
-                </button>
-              </div>
+              <button
+                onClick={() => {
+                  photoUploadRef.current?.clear();
+                  setUploadedPath(null);
+                }}
+                disabled={saving}
+                className="px-6 py-3 text-sm font-medium text-red-700 bg-red-50 hover:bg-red-100 rounded-xl transition-colors flex items-center gap-2"
+              >
+                <X className="w-4 h-4" />
+                {t('components.identityPhotoUpload.remove', { ns: 'common' })}
+              </button>
             )}
+            
+            <button
+              onClick={handleSendPhoto}
+              disabled={!uploadedPath || saving}
+              className={`inline-flex items-center justify-center gap-2 px-6 py-3 bg-blue-600 hover:bg-blue-700 text-white font-bold rounded-xl transition-all duration-200 shadow-lg shadow-blue-200 ${
+                !uploadedPath ? 'opacity-40 cursor-not-allowed grayscale-[0.5]' : 'hover:scale-[1.02] active:scale-[0.98]'
+              }`}
+            >
+              {saving ? t('selectionFeeStep.main.identity.sending') : t('selectionFeeStep.main.identity.sendPhoto')}
+            </button>
+          </div>
         </div>
       </div>
     </div>

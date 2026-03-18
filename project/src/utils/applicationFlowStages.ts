@@ -17,6 +17,8 @@ export type ApplicationFlowStageKey =
   | 'placement_fee'
   | 'scholarship_fee'
   | 'i20_fee'
+  | 'ds160_package'
+  | 'i539_cos_package'
   | 'acceptance_letter'
   | 'transfer_form'
   | 'enrollment';
@@ -30,6 +32,7 @@ export interface ApplicationFlowStage {
   icon: LucideIcon;
   description: string;
   requiresTransfer?: boolean;
+  requiresProcessType?: string; // Exibir apenas para esse process_type
 }
 
 export interface StudentRecord {
@@ -47,6 +50,8 @@ export interface StudentRecord {
   acceptance_letter_status: string | null;
   student_process_type: string | null;
   transfer_form_status: string | null;
+  has_paid_ds160_package?: boolean;
+  has_paid_i539_cos_package?: boolean;
 }
 
 export const APPLICATION_FLOW_STAGES: ApplicationFlowStage[] = [
@@ -98,6 +103,22 @@ export const APPLICATION_FLOW_STAGES: ApplicationFlowStage[] = [
     shortLabel: 'I-20 Fee',
     icon: CreditCard,
     description: 'Student has paid the I-20 Control Fee'
+  },
+  {
+    key: 'ds160_package',
+    label: 'DS-160 Package',
+    shortLabel: 'DS-160',
+    icon: FileText,
+    description: 'Student pays the DS-160 Package fee (initial F-1 students)',
+    requiresProcessType: 'initial'
+  },
+  {
+    key: 'i539_cos_package',
+    label: 'I-539 COS Package',
+    shortLabel: 'I-539',
+    icon: FileText,
+    description: 'Student pays the I-539 COS Package fee (change of status students)',
+    requiresProcessType: 'change_of_status'
   },
   {
     key: 'acceptance_letter',
@@ -163,6 +184,14 @@ export function getStepStatus(
     case 'i20_fee':
       if (student.placement_fee_flow) return 'skipped';
       return student.has_paid_i20_control_fee ? 'completed' : 'pending';
+
+    case 'ds160_package':
+      if (student.student_process_type !== 'initial') return 'skipped';
+      return student.has_paid_ds160_package ? 'completed' : 'pending';
+
+    case 'i539_cos_package':
+      if (student.student_process_type !== 'change_of_status') return 'skipped';
+      return student.has_paid_i539_cos_package ? 'completed' : 'pending';
     
     case 'acceptance_letter':
       if (student.acceptance_letter_status === 'approved' || student.acceptance_letter_status === 'sent') {
@@ -218,6 +247,10 @@ export function getCurrentStage(student: StudentRecord): {
   for (const stageDef of APPLICATION_FLOW_STAGES) {
     // Pular transfer_form se não for transfer student
     if (stageDef.requiresTransfer && student.student_process_type !== 'transfer') {
+      continue;
+    }
+    // Pular stages que requerem um process_type específico
+    if (stageDef.requiresProcessType && student.student_process_type !== stageDef.requiresProcessType) {
       continue;
     }
     

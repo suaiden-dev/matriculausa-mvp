@@ -449,15 +449,15 @@ const Auth: React.FC<AuthProps> = ({ mode }) => {
          const directSalesCodes = ['SUAIDEN', 'BRANT'];
          const isDirectSalesCode = directSalesCodes.includes(formData.referralCode.toUpperCase());
          
-          // Validar dependents para todos os estudantes (deve ser entre 0 e 5)
-          if (activeTab === 'student' && (formData.dependents !== null && (formData.dependents < 0 || formData.dependents > 5))) {
+          // Validar dependents para todos os estudantes (Obrigatório selecionar, deve ser entre 0 e 5)
+          if (activeTab === 'student' && (formData.dependents === null || formData.dependents < 0 || formData.dependents > 5)) {
             setError(t('authPage.messages.invalidDependents'));
             setLoading(false);
             return;
           }
           
-          // Se não selecionou dependentes, tratar como 0 para o backend
-          const finalDependents = formData.dependents === null ? 0 : formData.dependents;
+          // Como a validação acima garante que não é null, usamos o valor diretamente
+          const finalDependents = formData.dependents;
         
         const userData = {
           full_name: activeTab === 'student' ? formData.full_name : formData.full_name,

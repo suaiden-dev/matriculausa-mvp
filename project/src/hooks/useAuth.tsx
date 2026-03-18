@@ -277,14 +277,14 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
                     .from('sellers')
                     .select('affiliate_admin_id')
                     .eq('referral_code', sellerCode)
-                    .single();
+                    .maybeSingle();
 
                   if (sellerData?.affiliate_admin_id) {
                     const { data: adminData } = await supabase
                       .from('affiliate_admins')
                       .select('system_type')
                       .eq('id', sellerData.affiliate_admin_id)
-                      .single();
+                      .maybeSingle();
 
                     if (adminData?.system_type === 'legacy') {
                       isBrantStudent = true;
@@ -384,7 +384,7 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
                   .select('id')
                   .eq('package_number', session.user.user_metadata.scholarship_package_number)
                   .eq('is_active', true)
-                  .single();
+                  .maybeSingle();
 
                 if (!packageError && packageData) {
                   scholarshipPackageId = packageData.id;
@@ -408,14 +408,14 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
                   .from('sellers')
                   .select('affiliate_admin_id')
                   .eq('referral_code', sellerCode)
-                  .single();
+                  .maybeSingle();
 
                 if (sellerData?.affiliate_admin_id) {
                   const { data: adminData } = await supabase
                     .from('affiliate_admins')
                     .select('system_type')
                     .eq('id', sellerData.affiliate_admin_id)
-                    .single();
+                    .maybeSingle();
 
                   if (adminData?.system_type === 'legacy') {
                     isBrantStudent = true;

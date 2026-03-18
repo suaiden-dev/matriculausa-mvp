@@ -36,6 +36,10 @@ export interface StudentRecord {
   scholarship_fee_payment_method?: string | null;
   acceptance_letter_status: string | null;
   student_process_type: string | null;
+  has_paid_ds160_package: boolean;
+  has_paid_i539_cos_package: boolean;
+  ds160_package_payment_method?: string | null;
+  i539_cos_package_payment_method?: string | null;
   payment_status: string | null;
   reviewed_at: string | null;
   reviewed_by: string | null;
@@ -89,7 +93,7 @@ export interface TermAcceptance {
 }
 
 export interface PendingPayment {
-  fee_type: 'selection_process' | 'application' | 'scholarship' | 'i20_control' | 'placement';
+  fee_type: 'selection_process' | 'application' | 'scholarship' | 'i20_control' | 'placement' | 'ds160_package' | 'i539_cos_package';
   payment_method: 'stripe' | 'zelle' | 'manual';
   amount?: number;
   scholarship_id?: string | null;

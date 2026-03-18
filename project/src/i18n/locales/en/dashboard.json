@@ -32,6 +32,7 @@
           "documents_upload": "Documents Upload",
           "payment": "Payment",
           "scholarship_fee": "Scholarship Fee",
+          "placement_fee": "Placement Fee",
           "university_documents": "University Documents",
           "waiting_approval": "Waiting Approval",
           "completed": "Completed",
@@ -46,6 +47,7 @@
           "documents_upload": "Submit your passport, diploma, and proof of funds.",
           "payment": "Pay the enrollment fee to secure your spot.",
           "scholarship_fee": "Pay the scholarship fee to confirm your application.",
+          "placement_fee": "This final fee is your commitment to actually secure your placement at the selected institution.",
           "university_documents": "Submit the documents required by the university.",
           "waiting_approval": "Your documents are under review. 48h timeframe.",
           "my_applications": "Track your documents and acceptance letter.",
@@ -820,7 +822,8 @@
           "underReview": "Under Review",
           "actionRequired": "Action Required",
           "available": "Available",
-          "inProgress": "Release in Progress"
+          "inProgress": "Release in Progress",
+          "blocked": "Blocked"
         }
       },
       "details": {
@@ -874,7 +877,8 @@
         "officialNote": "This document is officially issued by the university after reviewing your documentation.",
         "documentAvailable": "Document Available",
         "readyToDownload": "Your acceptance letter is ready to download!",
-        "downloadPdf": "Download PDF"
+        "downloadPdf": "Download PDF",
+        "waitingForUniversity": "Waiting for university processing"
       },
       "errors": {
         "viewDocument": "Error viewing document",
