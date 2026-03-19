@@ -28,6 +28,7 @@ import { calculateCardAmountWithFees, calculatePIXAmountWithFees, getExchangeRat
 import { ZelleCheckout } from '../components/ZelleCheckout';
 import PhoneInput from 'react-phone-number-input';
 import 'react-phone-number-input/style.css';
+import { PaymentLoadingOverlay } from '../components/PaymentLoadingOverlay';
 
 // SVG Icons (Simplified for the registration page)
 const PixIcon = ({ className }: { className?: string }) => (
@@ -130,6 +131,36 @@ const QuickRegistration: React.FC = () => {
   const [showZelleCheckout, setShowZelleCheckout] = useState(false);
   const [showPassword, setShowPassword] = useState(false);
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
+
+  // Loading Progress State
+  const [loadingStep, setLoadingStep] = useState('');
+  const [loadingProgress, setLoadingProgress] = useState(0);
+
+  // Helper to simulate smooth progress within a range
+  const simulateProgress = (start: number, end: number, duration: number) => {
+    const startTime = Date.now();
+    const interval = setInterval(() => {
+      const elapsed = Date.now() - startTime;
+      const rawProgress = Math.min(elapsed / duration, 1);
+      // Ease out quadratic
+      const easedProgress = rawProgress === 1 ? 1 : 1 - Math.pow(1 - rawProgress, 2);
+      const current = start + (end - start) * easedProgress;
+      setLoadingProgress(current);
+      if (rawProgress === 1) clearInterval(interval);
+    }, 50);
+    return interval;
+  };
+
+  const [activeIntervals, setActiveIntervals] = useState<NodeJS.Timeout[]>([]);
+
+  const addInterval = (interval: NodeJS.Timeout) => {
+    setActiveIntervals(prev => [...prev, interval]);
+  };
+
+  const clearAllIntervals = () => {
+    activeIntervals.forEach(clearInterval);
+    setActiveIntervals([]);
+  };
 
   // Aligned with SelectionFeeStep coupon states
   const [hasReferralCode, setHasReferralCode] = useState(false);
@@ -554,6 +585,10 @@ const QuickRegistration: React.FC = () => {
 
     setLoading(true);
     setError(null);
+    setLoadingProgress(0);
+    setLoadingStep("Criando sua conta com segurança...");
+    const regInterval = simulateProgress(0, 30, 2000);
+    addInterval(regInterval);
 
     try {
       // Direct Sales check (SUAIDEN ou BRANT logic for auto package)
@@ -598,6 +633,8 @@ const QuickRegistration: React.FC = () => {
 
       setIsRegistered(true);
       sessionStorage.setItem('matricula_quick_registered', 'true');
+      clearInterval(regInterval);
+      setLoadingProgress(30);
 
       // 3. Initiate Payment
       if (selectedMethod === 'stripe' || selectedMethod === 'pix' || selectedMethod === 'parcelow' || !selectedMethod) {
@@ -610,6 +647,7 @@ const QuickRegistration: React.FC = () => {
       }
 
     } catch (err: any) {
+      clearAllIntervals();
       console.error('Registration failed:', err);
       setError(err.message || t('rapidRegistration.form.error.general', 'Ocorreu um erro no registro.'));
       setLoading(false);
@@ -617,6 +655,11 @@ const QuickRegistration: React.FC = () => {
   };
 
   const handlePaymentCheckout = async (method: 'stripe' | 'pix' | 'parcelow') => {
+    const startProgress = loadingProgress || 0;
+    setLoadingStep("Validando seus dados...");
+    const authInterval = simulateProgress(startProgress, Math.max(startProgress + 20, 60), 3000);
+    addInterval(authInterval);
+
     try {
       let sessionData = null;
       let token = null;
@@ -643,6 +686,12 @@ const QuickRegistration: React.FC = () => {
         console.error('❌ [QuickRegistration] Falha crítica: Sessão não encontrada após 5 tentativas');
         throw new Error(t('rapidRegistration.payment.error.notAuthenticated', 'Usuário não autenticado.'));
       }
+
+      clearInterval(authInterval);
+      setLoadingProgress(60);
+      setLoadingStep("Preparando seu checkout seguro...");
+      const fetchInterval = simulateProgress(60, 90, 4000);
+      addInterval(fetchInterval);
 
       const sessionUser = sessionData.session.user;
 
@@ -698,11 +747,17 @@ const QuickRegistration: React.FC = () => {
       const paymentUrl = data.session_url || data.url || data.checkout_url;
 
       if (paymentUrl) {
+        clearInterval(fetchInterval);
+        setLoadingProgress(100);
+        setLoadingStep("Redirecionando para o pagamento...");
+        // Pequeno delay para o usuário ver o 100%
+        await new Promise(resolve => setTimeout(resolve, 800));
         window.location.href = paymentUrl;
       } else {
         throw new Error(data.error || t('rapidRegistration.payment.error.generationFailed', 'Falha ao gerar link de pagamento. Tente novamente.'));
       }
     } catch (err: any) {
+      clearAllIntervals();
       console.error('Payment redirect failed:', err);
       throw err;
     }
@@ -1524,6 +1579,12 @@ const QuickRegistration: React.FC = () => {
           </div>
         </Dialog>
       </Transition>
+
+      <PaymentLoadingOverlay 
+        show={loading && !showZelleCheckout} 
+        step={loadingStep} 
+        progress={loadingProgress} 
+      />
     </div>
   );
 };
