@@ -292,7 +292,7 @@ export const PlacementFeeStep: React.FC<StepProps> = ({ onNext, onBack }) => {
     }
 
     return (
-        <div className="space-y-10 pb-20 w-full mx-auto px-4">
+        <div className="space-y-10 pb-20 w-full mx-auto">
             <div className="flex flex-col md:flex-row md:items-end justify-between gap-6">
                 <div className="text-center md:text-left space-y-4">
                     <div className="inline-flex items-center bg-blue-500/10 border border-blue-500/20 px-4 py-2 rounded-full mb-2">
@@ -308,7 +308,7 @@ export const PlacementFeeStep: React.FC<StepProps> = ({ onNext, onBack }) => {
                 </div>
             </div>
 
-            <div className="bg-white rounded-[2.5rem] p-6 md:p-10 shadow-2xl border border-gray-100 relative overflow-hidden">
+            <div className="relative overflow-hidden">
                 <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 items-start relative z-10 w-full">
                     <div className="lg:col-span-12 space-y-6">
                         {applications.map((app) => {
@@ -321,8 +321,8 @@ export const PlacementFeeStep: React.FC<StepProps> = ({ onNext, onBack }) => {
                             return (
                                 <div
                                     key={app.id}
-                                    className={`group relative bg-white border rounded-[2rem] p-8 transition-all ${app.is_placement_fee_paid
-                                        ? 'border-emerald-500/30 ring-1 ring-emerald-500/20'
+                                    className={`group relative bg-white border rounded-[2rem] px-4 py-8 md:p-8 transition-all ${app.is_placement_fee_paid
+                                        ? 'border-emerald-500/30 ring-1 ring-emerald-500/20 bg-white'
                                         : 'border-slate-200 hover:border-slate-300 shadow-sm hover:shadow-xl'
                                         }`}
                                 >
@@ -334,9 +334,9 @@ export const PlacementFeeStep: React.FC<StepProps> = ({ onNext, onBack }) => {
 
                                     <div className="flex flex-col gap-8">
                                         <div className="flex flex-col md:flex-row md:items-center justify-between gap-6">
-                                            <div className="flex items-center space-x-6">
+                                            <div className="flex flex-col md:flex-row md:items-center gap-6">
                                                 {app.scholarships?.image_url || app.scholarships?.universities?.logo_url ? (
-                                                    <div className="w-28 h-28 bg-white rounded-[2rem] flex items-center justify-center border border-gray-100/50 overflow-hidden shadow-sm flex-shrink-0">
+                                                    <div className="w-28 h-28 bg-white rounded-[2rem] flex items-center justify-center border border-gray-100/50 overflow-hidden shadow-sm flex-shrink-0 group-hover:scale-105 transition-transform duration-500 mx-auto md:mx-0">
                                                         <img
                                                             src={app.scholarships.image_url || app.scholarships.universities?.logo_url || ''}
                                                             alt=""
@@ -345,15 +345,15 @@ export const PlacementFeeStep: React.FC<StepProps> = ({ onNext, onBack }) => {
                                                         />
                                                     </div>
                                                 ) : (
-                                                    <div className="w-28 h-28 bg-slate-50 rounded-[2rem] flex items-center justify-center flex-shrink-0">
+                                                    <div className="w-28 h-28 bg-slate-50 rounded-[2rem] flex items-center justify-center flex-shrink-0 mx-auto md:mx-0">
                                                         <Building className="w-16 h-16 text-slate-300" />
                                                     </div>
                                                 )}
-                                                <div className="min-w-0 flex-1">
+                                                <div className="min-w-0 flex-1 text-center md:text-left">
                                                     <h3 className="text-2xl font-black text-gray-900 truncate uppercase tracking-tight">
                                                         {app.scholarships?.title || 'Scholarship'}
                                                     </h3>
-                                                    <p className="text-sm text-gray-500 font-bold uppercase tracking-widest flex items-center gap-2">
+                                                    <p className="text-sm text-gray-500 font-bold uppercase tracking-widest flex items-center justify-center md:justify-start gap-2">
                                                         <Building className="w-3 h-3" />
                                                         {app.scholarships?.universities?.name || 'University'}
                                                     </p>
@@ -365,7 +365,7 @@ export const PlacementFeeStep: React.FC<StepProps> = ({ onNext, onBack }) => {
                                                 </div>
                                             </div>
 
-                                            <div className="flex flex-col md:items-end">
+                                            <div className="flex flex-col items-center md:items-end">
                                                 <span className="text-[10px] font-black text-gray-500 uppercase tracking-[0.2em] mb-1">{t('placementFeeStep.title')}</span>
                                                 <div className="text-4xl font-black text-slate-900 tracking-tighter">
                                                     {formatPlacementFee(baseAmount)}
@@ -411,18 +411,25 @@ export const PlacementFeeStep: React.FC<StepProps> = ({ onNext, onBack }) => {
                                                         <button
                                                             onClick={() => processCheckout(app, 'stripe')}
                                                             disabled={!!isProcessingCheckout}
-                                                            className="group/btn relative bg-white border border-gray-200 p-5 rounded-[2rem] text-left hover:scale-[1.01] active:scale-95 transition-all shadow-sm hover:shadow-md disabled:opacity-50 flex items-center justify-between"
+                                                            className="group/btn relative bg-white border border-gray-200 px-4 py-5 md:p-5 rounded-[2rem] text-left hover:scale-[1.01] active:scale-95 transition-all shadow-sm hover:shadow-md disabled:opacity-50 hover:border-blue-600/30 hover:bg-blue-50/10 block w-full"
                                                         >
-                                                            <div className="flex items-center gap-5">
-                                                                <div className="w-14 h-14 flex items-center justify-center bg-slate-50 rounded-2xl">
-                                                                    <StripeIcon className="w-9 h-9" />
+                                                            <div className="flex items-center justify-between w-full">
+                                                                <div className="flex items-center gap-4 sm:gap-5 -ml-1 md:ml-0">
+                                                                    <div className="w-14 h-14 flex items-center justify-center bg-slate-50 rounded-2xl group-hover/btn:bg-slate-100 transition-colors shrink-0">
+                                                                        <StripeIcon className="w-9 h-9" />
+                                                                    </div>
+                                                                    <div>
+                                                                        <div className="font-black text-slate-900 text-base uppercase tracking-tight">{t('paymentStep.creditCard')}</div>
+                                                                        <div className="hidden md:block text-[10px] font-bold text-slate-400 mt-1 uppercase tracking-wide leading-tight">{t('paymentStep.creditCardFees')}</div>
+                                                                    </div>
                                                                 </div>
-                                                                <div>
-                                                                    <div className="font-black text-slate-900 text-base uppercase tracking-tight">{t('paymentStep.creditCard')}</div>
-                                                                    <div className="text-[10px] font-bold text-slate-400 mt-1 uppercase tracking-wide">{t('paymentStep.creditCardFees')}</div>
+                                                                <div className="text-right shrink-0">
+                                                                    <div className="text-slate-900 text-xl font-black uppercase tracking-tight">{formatFeeAmount(cardAmount, true)}</div>
                                                                 </div>
                                                             </div>
-                                                            <div className="text-slate-900 text-xl font-black uppercase tracking-tight">{formatFeeAmount(cardAmount, true)}</div>
+                                                            <div className="md:hidden mt-1.5 text-[10px] font-bold text-slate-400 uppercase tracking-wide leading-tight">
+                                                                {t('paymentStep.creditCardFees')}
+                                                            </div>
                                                             {isProcessingCheckout === `${app.id}_stripe` && (
                                                                 <div className="absolute inset-0 bg-white/80 backdrop-blur-sm rounded-[2rem] flex items-center justify-center z-10">
                                                                     <RefreshCw className="w-8 h-8 text-blue-600 animate-spin" />
@@ -435,21 +442,26 @@ export const PlacementFeeStep: React.FC<StepProps> = ({ onNext, onBack }) => {
                                                             <button
                                                                 onClick={() => processCheckout(app, 'pix')}
                                                                 disabled={!!isProcessingCheckout}
-                                                                className="group/btn relative bg-white border border-gray-200 p-5 rounded-[2rem] text-left hover:scale-[1.01] active:scale-95 transition-all shadow-sm hover:shadow-md disabled:opacity-50 flex items-center justify-between"
+                                                                className="group/btn relative bg-white border border-gray-200 px-4 py-5 md:p-5 rounded-[2rem] text-left hover:scale-[1.01] active:scale-95 transition-all shadow-sm hover:shadow-md disabled:opacity-50 hover:border-blue-600/30 hover:bg-blue-50/10 block w-full"
                                                             >
-                                                                <div className="flex items-center gap-5">
-                                                                    <div className="w-14 h-14 flex items-center justify-center bg-slate-50 rounded-2xl">
-                                                                        <PixIcon className="w-9 h-9" />
+                                                                <div className="flex items-center justify-between w-full">
+                                                                    <div className="flex items-center gap-4 sm:gap-5 -ml-1 md:ml-0">
+                                                                        <div className="w-14 h-14 flex items-center justify-center bg-slate-50 rounded-2xl group-hover/btn:bg-slate-100 transition-colors shrink-0">
+                                                                            <PixIcon className="w-9 h-9" />
+                                                                        </div>
+                                                                        <div>
+                                                                            <div className="font-black text-slate-900 text-base uppercase tracking-tight">PIX</div>
+                                                                            <div className="hidden md:block text-[10px] font-bold text-slate-400 mt-1 uppercase tracking-wide leading-tight">{t('paymentStep.pixFees')}</div>
+                                                                        </div>
                                                                     </div>
-                                                                    <div>
-                                                                        <div className="font-black text-slate-900 text-base uppercase tracking-tight">PIX</div>
-                                                                        <div className="text-[10px] font-bold text-slate-400 mt-1 uppercase tracking-wide">{t('paymentStep.pixFees')}</div>
+                                                                    <div className="text-right shrink-0">
+                                                                        <div className="text-slate-900 text-xl font-black uppercase tracking-tight">
+                                                                            R$ {pixInfo.totalWithIOF.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
+                                                                        </div>
                                                                     </div>
                                                                 </div>
-                                                                <div className="text-right">
-                                                                    <div className="text-slate-900 text-xl font-black uppercase tracking-tight">
-                                                                        R$ {pixInfo.totalWithIOF.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
-                                                                    </div>
+                                                                <div className="md:hidden mt-1.5 text-[10px] font-bold text-slate-400 uppercase tracking-wide leading-tight">
+                                                                    {t('paymentStep.pixFees')}
                                                                 </div>
                                                                 {isProcessingCheckout === `${app.id}_pix` && (
                                                                     <div className="absolute inset-0 bg-white/80 backdrop-blur-sm rounded-[2rem] flex items-center justify-center z-10">
@@ -460,22 +472,30 @@ export const PlacementFeeStep: React.FC<StepProps> = ({ onNext, onBack }) => {
                                                         )}
 
                                                         {/* Parcelow */}
-                                                        <div className="group/parcelow flex flex-col gap-0 border border-gray-200 rounded-[2rem] overflow-hidden bg-white shadow-sm hover:shadow-md hover:scale-[1.01] transition-all duration-300">
+                                                        <div className="group/parcelow flex flex-col gap-0">
                                                             <button
                                                                 onClick={() => handleParcelowClick(app)}
                                                                 disabled={!!isProcessingCheckout}
-                                                                className={`group/btn relative bg-white p-5 text-left transition-all disabled:opacity-50 flex items-center justify-between ${showInlineCpf === app.id ? 'border-b border-gray-100 rounded-t-[2rem]' : 'rounded-[2rem]'}`}
+                                                                className={`group/btn relative bg-white border border-gray-200 px-4 py-5 md:p-5 text-left hover:scale-[1.01] active:scale-95 transition-all shadow-sm hover:shadow-md disabled:opacity-50 hover:border-blue-600/30 hover:bg-blue-50/10 block w-full ${showInlineCpf === app.id ? 'rounded-t-[2rem] border-b-0' : 'rounded-[2rem]'}`}
                                                             >
-                                                                <div className="flex items-center gap-5">
-                                                                    <div className="w-14 h-14 flex items-center justify-center bg-slate-50 rounded-2xl px-2">
-                                                                        <ParcelowIcon className="w-full h-10" />
+                                                                <div className="flex items-center justify-between w-full">
+                                                                    <div className="flex items-center gap-4 sm:gap-5 -ml-1 md:ml-0">
+                                                                        <div className="w-14 h-14 flex items-center justify-center bg-slate-50 rounded-2xl group-hover/btn:bg-slate-100 transition-colors px-2 shrink-0">
+                                                                            <ParcelowIcon className="w-full h-10" />
+                                                                        </div>
+                                                                        <div>
+                                                                            <div className="font-black text-slate-900 text-base uppercase tracking-tight">Parcelow</div>
+                                                                            <div className="hidden md:block text-[10px] font-bold text-slate-400 mt-1 uppercase tracking-wide leading-tight">{t('paymentStep.parcelowFees')}</div>
+                                                                        </div>
                                                                     </div>
-                                                                    <div>
-                                                                        <div className="font-black text-slate-900 text-base uppercase tracking-tight">Parcelow</div>
-                                                                        <div className="text-[10px] font-bold text-slate-400 mt-1 uppercase tracking-wide">{t('paymentStep.parcelowFees')}</div>
+                                                                    <div className="text-right flex flex-col items-end shrink-0">
+                                                                        <div className="text-slate-900 text-xl font-black uppercase tracking-tight">{formatFeeAmount(baseAmount, true)}</div>
+                                                                        <span className="text-[10px] font-bold text-slate-900 mt-1 block uppercase tracking-widest leading-tight">{t('paymentStep.parcelowInstallments')}</span>
                                                                     </div>
                                                                 </div>
-                                                                <div className="text-slate-900 text-xl font-black uppercase tracking-tight">{formatFeeAmount(baseAmount, true)}</div>
+                                                                <div className="md:hidden mt-1.5 text-[10px] font-bold text-slate-400 uppercase tracking-wide leading-tight">
+                                                                    {t('paymentStep.parcelowFees')}
+                                                                </div>
                                                                 {isProcessingCheckout === `${app.id}_parcelow` && (
                                                                     <div className="absolute inset-0 bg-white/80 backdrop-blur-sm rounded-[2rem] flex items-center justify-center z-10">
                                                                         <RefreshCw className="w-8 h-8 text-orange-500 animate-spin" />
@@ -534,26 +554,32 @@ export const PlacementFeeStep: React.FC<StepProps> = ({ onNext, onBack }) => {
                                                             <button
                                                                 onClick={() => handleZelleClick(app)}
                                                                 disabled={!!isProcessingCheckout}
-                                                                className={`group/btn relative bg-white border p-5 text-left hover:scale-[1.01] active:scale-[0.99] transition-all shadow-sm hover:shadow-md disabled:opacity-50 flex items-center justify-between ${zelleActiveApp?.id === app.id
+                                                                className={`group/btn relative bg-white border px-4 py-5 md:p-5 text-left hover:scale-[1.01] active:scale-[0.99] transition-all shadow-sm hover:shadow-md disabled:opacity-50 hover:border-blue-600/30 hover:bg-blue-50/10 block w-full ${zelleActiveApp?.id === app.id
                                                                     ? 'rounded-t-[2rem] border-slate-200 border-b-0 bg-slate-50/30'
                                                                     : 'rounded-[2rem] border-gray-200'
                                                                     }`}
                                                             >
-                                                                <div className="flex items-center gap-5">
-                                                                    <div className="w-14 h-14 flex items-center justify-center bg-slate-50 rounded-2xl">
-                                                                        <ZelleIcon className="w-9 h-9" />
-                                                                    </div>
-                                                                    <div>
-                                                                        <div className="font-black text-slate-900 text-base uppercase tracking-tight">Zelle</div>
-                                                                        <div className="text-[10px] font-bold text-slate-500 mt-1 uppercase tracking-wide flex items-center gap-1">
-                                                                            <AlertCircle className="w-3 h-3" />
-                                                                            {t('paymentStep.zelleProcessingTime')}
+                                                                <div className="flex items-center justify-between w-full">
+                                                                    <div className="flex items-center gap-4 sm:gap-5 -ml-1 md:ml-0">
+                                                                        <div className="w-14 h-14 flex items-center justify-center bg-slate-50 rounded-2xl group-hover/btn:bg-slate-100 transition-colors shrink-0">
+                                                                            <ZelleIcon className="w-9 h-9" />
+                                                                        </div>
+                                                                        <div>
+                                                                            <div className="font-black text-slate-900 text-base uppercase tracking-tight">Zelle</div>
+                                                                            <div className="hidden md:flex text-[10px] font-bold text-slate-500 mt-1 uppercase tracking-wide leading-tight items-center gap-1">
+                                                                                <AlertCircle className="w-3 h-3" />
+                                                                                {t('paymentStep.zelleProcessingTime')}
+                                                                            </div>
                                                                         </div>
                                                                     </div>
+                                                                    <div className="text-right shrink-0">
+                                                                        <div className="text-slate-900 text-xl font-black uppercase tracking-tight">{formatPlacementFee(baseAmount)}</div>
+                                                                        <span className="text-[10px] font-bold text-slate-900 mt-1 block uppercase tracking-widest leading-tight">{t('paymentStep.zelleNoFees')}</span>
+                                                                    </div>
                                                                 </div>
-                                                                <div className="text-right">
-                                                                    <div className="text-slate-900 text-xl font-black uppercase tracking-tight">{formatPlacementFee(baseAmount)}</div>
-                                                                    <span className="text-[10px] font-bold text-slate-900 mt-1 block uppercase tracking-widest">{t('paymentStep.zelleNoFees')}</span>
+                                                                <div className="md:hidden mt-1.5 text-[10px] font-bold text-slate-500 uppercase tracking-wide leading-tight flex items-center gap-1">
+                                                                    <AlertCircle className="w-3 h-3" />
+                                                                    {t('paymentStep.zelleProcessingTime')}
                                                                 </div>
                                                             </button>
 

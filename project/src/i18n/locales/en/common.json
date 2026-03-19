@@ -172,8 +172,8 @@
     "applicationFee": "Application Fee",
     "scholarshipFee": "Scholarship Fee",
     "placementFee": "Placement Fee",
-    "enrollmentFee": "Enrollment Fee",
-    "collegeEnrollmentFee": "College Enrollment Fee",
+    "enrollmentFee": "Application Fee",
+    "collegeEnrollmentFee": "College Application Fee",
     "i20ControlFee": "I-20 Control Fee"
   },
   "feeValues": {

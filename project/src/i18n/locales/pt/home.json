@@ -80,7 +80,7 @@
         },
         "q3": {
           "question": "O que é a Taxa de Colocação (Placement Fee)?",
-          "answer": "A Taxa de Colocação é o seu compromisso final para garantir sua vaga na instituição selecionada após ser aceito e ter seus documentos aprovados. Esta taxa cobre o suporte contínuo e a garantia de sua vaga na universidade escolhida."
+          "answer": "A Taxa de Colocação cobre o suporte especializado para garantir sua bolsa e matrícula. Cobre o trabalho profissional incluindo análise acadêmica, identificação de opções universitárias, negociação de bolsas e suporte no processo de matrícula. Esta taxa é variável e diretamente ligada ao valor da bolsa."
         },
         "q4": {
           "question": "O que é a Taxa de Matrícula?",
@@ -505,7 +505,7 @@
         },
         {
           "question": "O que é a Taxa de Colocação (Placement Fee)?",
-          "answer": "A Taxa de Colocação cobre o suporte especializado para garantir sua bolsa e matrícula. Ela refere-se ao trabalho de análise de perfil, identificação de opções, negociação de bolsas e suporte no embarque."
+          "answer": "A Taxa de Colocação cobre o suporte especializado para garantir sua bolsa e matrícula. Ela refere-se ao trabalho de análise de perfil, identificação de opções, negociação de bolsas e suporte no embarque. Ela é variável e diretamente ligada ao valor da bolsa: quanto maior a taxa de colocação, menor será sua mensalidade anual."
         },
         {
           "question": "Posso me inscrever em quantas bolsas quiser?",

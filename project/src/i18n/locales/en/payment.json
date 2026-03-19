@@ -415,15 +415,15 @@
   },
   "paymentStep": {
     "loading": "Loading your applications...",
-    "title": "Enrollment Fee",
+    "title": "Application Fee",
     "securePaymentBadge": "Secure & Encrypted Payment",
-    "subtitleAllPaid": "All enrollment fees have been processed. Click the button below to complete your onboarding.",
-    "subtitlePending": "Pay the enrollment fee for your selected scholarship to officially confirm your choice and secure your spot.",
+    "subtitleAllPaid": "All application fees have been processed. Click the button below to complete your onboarding.",
+    "subtitlePending": "Pay the application fee for your selected scholarship to officially confirm your choice and secure your spot.",
     "completedTitle": "Step Completed",
-    "completedSubtitle": "The enrollment fee for your scholarship has already been processed. This step is complete.",
-    "completedTitle2": "The enrollment fee has been successfully processed.",
+    "completedSubtitle": "The application fee for your scholarship has already been processed. This step is complete.",
+    "completedTitle2": "The application fee has been successfully processed.",
     "continue": "Continue",
-    "enrollmentFeeLabel": "Enrollment Fee",
+    "enrollmentFeeLabel": "Application Fee",
     "feeWithoutDependents": "Fee without dependents:",
     "dependentsSingular": "dependent (+$100 each):",
     "dependentsPlural": "dependents (+$100 each):",
@@ -496,8 +496,8 @@
     },
     "feeTypes": {
       "selection_process": "selection process",
-      "application_fee": "enrollment",
-      "enrollment_fee": "enrollment",
+      "application_fee": "application",
+      "enrollment_fee": "application",
       "scholarship_fee": "scholarship",
       "i20_control_fee": "I-20 control fee"
     },
@@ -520,7 +520,7 @@
     },
     "feeTypes": {
       "application_fee": "application",
-      "enrollment_fee": "enrollment",
+      "enrollment_fee": "application",
       "scholarship_fee": "scholarship",
       "selection_process": "selection process"
     },

@@ -79,8 +79,8 @@
           "answer": "La Cuota del Proceso de Selección $400 es el primer pago obligatorio en la plataforma MatriculaUSA. Desbloquea tu acceso completo para ver todas las becas e iniciar tu proceso de solicitud."
         },
         "q3": {
-          "question": "¿Qué es la Cuota de Colocación?",
-          "answer": "La Cuota de Colocación es su compromiso final para garantizar su lugar en la institución seleccionada después de ser aceptado y tener sus documentos aprobados. Esta cuota cubre el apoyo continuo y la garantía de su lugar en la universidad elegida."
+          "question": "¿Qué es la Cuota de Colocación (Placement Fee)?",
+          "answer": "La Cuota de Colocación cubre el soporte especializado para asegurar su beca e inscripción. Cubre el trabajo profesional, incluyendo el análisis académico, la identificación de opciones universitarias, la negociación de becas y el apoyo en el proceso de inscripción. Esta cuota es variable y está directamente ligada al monto de la beca."
         },
         "q4": {
           "question": "¿Qué es la Cuota de Solicitud?",
@@ -291,8 +291,8 @@
         "answer": "La Cuota del Proceso de Selección $400 es el primer pago obligatorio en la plataforma MatriculaUSA. Desbloquea tu acceso completo para ver todas las becas e iniciar tu proceso de solicitud. Esta tarifa es final y no reembolsable."
       },
       "q3": {
-        "question": "¿Qué es la Cuota de Colocación?",
-        "answer": "La cuota de colocación cubre el trabajo profesional necesario para conectar e inscribir con éxito a un estudiante en el programa universitario correcto. Esta cuota es final y cubre todo el soporte hasta el viaje."
+        "question": "¿Qué es la Cuota de Colocación (Placement Fee)?",
+        "answer": "La cuota de colocación cubre el trabajo profesional necesario para conectar e inscribir con éxito a un estudiante en el programa universitario correcto. Esta cuota es variable y está directamente vinculada al monto de la beca: cuanto mayor sea la cuota de colocación, menor será su matrícula anual (tuition)."
       },
       "q4": {
         "question": "¿Qué es la Cuota de Solicitud?",
@@ -500,8 +500,12 @@
       "contact": "¿Todavía tienes preguntas? Contacta con nuestro equipo de soporte",
       "items": [
         {
-          "question": "¿Qué es la Cuota de Colocación?",
-          "answer": "La Cuota de Colocación cubre el soporte especializado para asegurar tu beca e inscripción. Se refiere al trabajo de análisis de perfil, identificación de mejores opciones, negociación de becas y soporte en tu viaje."
+          "question": "¿Qué está incluido en la cuota del proceso de selección?",
+          "answer": "$400 incluye un análisis completo del perfil, búsqueda personalizada de becas mediante IA, solicitudes a múltiples universidades, seguimiento del proceso y soporte hasta la aprobación."
+        },
+        {
+          "question": "¿Qué é la Cuota de Colocación (Placement Fee)?",
+          "answer": "La Cuota de Colocación cubre el soporte especializado para asegurar tu beca e inscripción. Se refiere al trabajo de análisis de perfil, identificación de mejores opciones, negociación de becas y soporte en tu viaje. Es variable y está directamente ligada al monto de la beca: cuanto mayor sea la cuota de colocación, menor será su matrícula anual."
         },
         {
           "question": "¿Puedo solicitar tantas becas como quiera?",

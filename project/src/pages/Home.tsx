@@ -193,9 +193,9 @@ const Home: React.FC = () => {
                 <div className="flex flex-wrap items-center gap-8 text-slate-500">
                   <div className="flex items-center">
                     <div className="flex -space-x-2 mr-3">
-                      <img className="w-8 h-8 rounded-full border-2 border-white" src="https://images.pexels.com/photos/2379004/pexels-photo-2379004.jpeg?auto=compress&cs=tinysrgb&w=100&h=100&dpr=1" alt="" />
-                      <img className="w-8 h-8 rounded-full border-2 border-white" src="https://images.pexels.com/photos/2182970/pexels-photo-2182970.jpeg?auto=compress&cs=tinysrgb&w=100&h=100&dpr=1" alt="" />
-                      <img className="w-8 h-8 rounded-full border-2 border-white" src="https://images.pexels.com/photos/1239291/pexels-photo-1239291.jpeg?auto=compress&cs=tinysrgb&w=100&h=100&dpr=1" alt="" />
+                      <img className="w-8 h-8 rounded-full border-2 border-white object-cover" src="https://images.pexels.com/photos/2379004/pexels-photo-2379004.jpeg?auto=compress&cs=tinysrgb&w=200&h=200&dpr=2&fit=crop" alt="" />
+                      <img className="w-8 h-8 rounded-full border-2 border-white object-cover" src="https://images.pexels.com/photos/2182970/pexels-photo-2182970.jpeg?auto=compress&cs=tinysrgb&w=200&h=200&dpr=2&fit=crop" alt="" />
+                      <img className="w-8 h-8 rounded-full border-2 border-white object-cover" src="https://images.pexels.com/photos/1239291/pexels-photo-1239291.jpeg?auto=compress&cs=tinysrgb&w=200&h=200&dpr=2&fit=crop" alt="" />
                     </div>
                     <span className="text-sm font-medium">{t('home.cta.badge', { students: t('home.trustIndicators.studentsEnrolled') })}</span>
                   </div>
@@ -558,9 +558,9 @@ const Home: React.FC = () => {
                 </p>
                 <div className="flex items-center">
                   <img
-                    src="https://images.pexels.com/photos/2379004/pexels-photo-2379004.jpeg?auto=compress&cs=tinysrgb&w=150&h=150&dpr=1"
+                    src="https://images.pexels.com/photos/2379004/pexels-photo-2379004.jpeg?auto=compress&cs=tinysrgb&w=400&h=400&dpr=2&fit=crop"
                     alt={t('home.successStories.testimonial1.author')}
-                    className="w-14 h-14 rounded-2xl mr-4 shadow-lg"
+                    className="w-14 h-14 rounded-2xl mr-4 shadow-lg object-cover"
                   />
                   <div>
                     <div className="font-bold text-slate-900">{t('home.successStories.testimonial1.author')}</div>
@@ -580,9 +580,9 @@ const Home: React.FC = () => {
                 </p>
                 <div className="flex items-center">
                   <img
-                    src="https://images.pexels.com/photos/2182970/pexels-photo-2182970.jpeg?auto=compress&cs=tinysrgb&w=150&h=150&dpr=1"
+                    src="https://images.pexels.com/photos/2182970/pexels-photo-2182970.jpeg?auto=compress&cs=tinysrgb&w=400&h=400&dpr=2&fit=crop"
                     alt={t('home.successStories.testimonial2.author')}
-                    className="w-14 h-14 rounded-2xl mr-4 shadow-lg"
+                    className="w-14 h-14 rounded-2xl mr-4 shadow-lg object-cover"
                   />
                   <div>
                     <div className="font-bold text-slate-900">{t('home.successStories.testimonial2.author')}</div>
@@ -602,9 +602,9 @@ const Home: React.FC = () => {
                 </p>
                 <div className="flex items-center">
                   <img
-                    src="https://images.pexels.com/photos/1239291/pexels-photo-1239291.jpeg?auto=compress&cs=tinysrgb&w=150&h=150&dpr=1"
+                    src="https://images.pexels.com/photos/1239291/pexels-photo-1239291.jpeg?auto=compress&cs=tinysrgb&w=400&h=400&dpr=2&fit=crop"
                     alt={t('home.successStories.testimonial3.author')}
-                    className="w-14 h-14 rounded-2xl mr-4 shadow-lg"
+                    className="w-14 h-14 rounded-2xl mr-4 shadow-lg object-cover"
                   />
                   <div>
                     <div className="font-bold text-slate-900">{t('home.successStories.testimonial3.author')}</div>

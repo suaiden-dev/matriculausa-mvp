@@ -50,7 +50,7 @@ export const SelectionFeeStep: React.FC<StepProps> = ({ onNext }) => {
   if (hasPaid) {
     return (
       <div className="space-y-10 pb-12 max-w-4xl mx-auto px-4">
-        <div className="text-left space-y-4">
+        <div className="text-center md:text-left space-y-4">
           <h2 className="text-3xl md:text-5xl font-black text-slate-900 uppercase tracking-tighter leading-none">{t('selectionFeeStep.paid.title')}</h2>
         </div>
         <div className="bg-white border border-emerald-500/30 ring-1 ring-emerald-500/20 rounded-[2.5rem] p-8 md:p-10 shadow-2xl relative overflow-hidden">
@@ -74,7 +74,7 @@ export const SelectionFeeStep: React.FC<StepProps> = ({ onNext }) => {
   return (
     <div className="space-y-8 sm:space-y-10 pb-12">
       <div className="space-y-6">
-        <div className="text-left">
+        <div className="text-center md:text-left">
           <h2 className="text-3xl md:text-5xl font-black text-slate-900 mb-3 uppercase tracking-tighter">{t('selectionFeeStep.main.title')}</h2>
           <p className="text-lg md:text-xl text-slate-600 font-medium">{t('selectionFeeStep.main.subtitle')}</p>
         </div>

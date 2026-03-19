@@ -108,7 +108,7 @@ export const UniversityDocumentsStep: React.FC<StepProps> = ({ onBack }) => {
     try {
       if (!isRefresh) setLoading(true);
       
-      const selectedId = localStorage.getItem('selected_application_id');
+      const selectedId = userProfile.selected_application_id;
       
       let query = supabase
         .from('scholarship_applications')
@@ -116,13 +116,17 @@ export const UniversityDocumentsStep: React.FC<StepProps> = ({ onBack }) => {
         .eq('student_id', userProfile.id);
 
       if (selectedId) {
+        // 1. Prioridade para a aplicação explicitamente selecionada no banco
         query = query.eq('id', selectedId);
       } else {
-        // 1. Fallback para a aplicação ativa (a mais recente) se não houver seleção explícita
-        query = query.order('created_at', { ascending: false }).limit(1);
+        // 2. Fallback: procurar por qualquer aplicação que já tenha a taxa paga (garantia de consistência)
+        // 3. Fallback final para a mais recente
+        query = query.order('is_application_fee_paid', { ascending: false })
+                     .order('created_at', { ascending: false })
+                     .limit(1);
       }
 
-      const { data, error } = await query.single();
+      const { data, error } = await query.maybeSingle();
 
       if (error) throw error;
 
@@ -881,7 +885,7 @@ export const UniversityDocumentsStep: React.FC<StepProps> = ({ onBack }) => {
                             { label: t('studentDashboard.myApplicationStep.details.mode'), val: applicationDetails.scholarships?.delivery_mode === 'in_person' ? t('studentDashboard.myApplicationStep.details.inPerson') : t('studentDashboard.myApplicationStep.details.online') },
                             { label: t('studentDashboard.myApplicationStep.details.deadline'), val: applicationDetails.scholarships?.deadline ? new Date(applicationDetails.scholarships.deadline).toLocaleDateString() : 'N/A' }
                           ].map((item, i) => (
-                            <div key={i} className="bg-white p-4 rounded-2xl shadow-sm border border-slate-300 pl-5">
+                            <div key={i} className="bg-white p-4 rounded-2xl shadow-sm border border-slate-300">
                               <div className="flex items-center gap-2 mb-2">
                                 <span className="text-[10px] font-black text-slate-900 uppercase tracking-widest">{item.label}</span>
                               </div>
@@ -993,7 +997,7 @@ export const UniversityDocumentsStep: React.FC<StepProps> = ({ onBack }) => {
                                    </p>
                                  </div>
                                </div>
-                               <div className="text-lg sm:text-xl font-black text-gray-900 whitespace-nowrap pr-6">
+                               <div className="text-lg sm:text-xl font-black text-gray-900 whitespace-nowrap">
                                  {formatFeeAmount(
                                    getFeeAmount('application_fee', applicationDetails.scholarships.application_fee_amount)
                                  )}
@@ -1012,13 +1016,15 @@ export const UniversityDocumentsStep: React.FC<StepProps> = ({ onBack }) => {
                             </h4>
                             <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                               {internalFees.map((fee: any, idx: number) => (
-                                <div key={idx} className="flex justify-between items-center p-6 bg-white rounded-2xl shadow-sm border border-slate-300 group">
+                                <div key={idx} className="flex justify-between items-center p-6 bg-slate-50/50 rounded-2xl group transition-all hover:bg-slate-100/50 border border-transparent hover:border-slate-200">
                                    <div className="min-w-0 mr-4">
-                                     <p className="text-[10px] font-black text-slate-500 uppercase tracking-widest mb-1">{fee.frequency || t('studentDashboard.myApplicationStep.details.oneTimePayment')}</p>
-                                     <p className="text-sm font-black text-gray-900 uppercase truncate" title={fee.category || fee.name}>{fee.category || fee.name}</p>
-                                     {fee.details && <p className="text-[10px] text-slate-500 font-medium tracking-wide mt-0.5">{fee.details}</p>}
+                                     <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1">{fee.frequency || t('studentDashboard.myApplicationStep.details.oneTimePayment')}</p>
+                                     <p className="text-sm font-black text-gray-900 uppercase" title={fee.category || fee.name}>{fee.category || fee.name}</p>
+                                     {fee.details && <p className="text-[10px] text-slate-500 font-medium tracking-wide mt-1 leading-relaxed">{fee.details}</p>}
                                    </div>
-                                   <span className="text-xl font-black text-gray-900 whitespace-nowrap">${Number(fee.amount).toFixed(2)}</span>
+                                   <div className="flex flex-col items-end">
+                                      <span className="text-xl font-black text-gray-900 whitespace-nowrap">${Number(fee.amount).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</span>
+                                   </div>
                                 </div>
                               ))}
                             </div>

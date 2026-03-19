@@ -54,7 +54,7 @@ export const DocumentsUploadStep: React.FC<StepProps> = ({ onNext }) => {
   const [isLocked, setIsLocked] = useState(false);
   const [applications, setApplications] = useState<any[]>([]);
   const [loadingApplications, setLoadingApplications] = useState(false);
-  const [selectedAppId, setSelectedAppId] = useState<string | null>(localStorage.getItem('selected_application_id'));
+  const [selectedAppId, setSelectedAppId] = useState<string | null>(userProfile?.selected_application_id ?? null);
   const [selectedFiles, setSelectedFiles] = useState<Record<string, File | null>>({});
   const [uploadingFiles, setUploadingFiles] = useState<Record<string, boolean>>({});
   const [openChecklists, setOpenChecklists] = useState<Record<string, boolean>>({});
@@ -586,14 +586,29 @@ export const DocumentsUploadStep: React.FC<StepProps> = ({ onNext }) => {
     }
 
 
-    const handleConfirmSelection = () => {
-      if (selectedAppId) {
-        localStorage.setItem('selected_application_id', selectedAppId);
-      } else {
-        localStorage.removeItem('selected_application_id');
+    const handleConfirmSelection = async () => {
+      if (!userProfile?.id) return;
+      
+      try {
+        if (selectedAppId) {
+          await supabase
+            .from('user_profiles')
+            .update({ selected_application_id: selectedAppId })
+            .eq('id', userProfile.id);
+        } else {
+          await supabase
+            .from('user_profiles')
+            .update({ selected_application_id: null })
+            .eq('id', userProfile.id);
+        }
+        
+        await refetchUserProfile();
+        setShowConfirmModal(false);
+        onNext();
+      } catch (err) {
+        console.error('Error saving selection to DB:', err);
+        setError('Erro ao salvar sua escolha. Por favor, tente novamente.');
       }
-      setShowConfirmModal(false);
-      onNext();
     };
 
     const handleFinalContinue = () => {
