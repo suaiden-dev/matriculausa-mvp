@@ -1,6 +1,6 @@
 import 'jsr:@supabase/functions-js/edge-runtime.d.ts';
-import Stripe from 'stripe';
-import { createClient } from '@supabase/supabase-js';
+import Stripe from 'npm:stripe@17.7.0';
+import { createClient } from 'npm:@supabase/supabase-js@2.49.1';
 import { getStripeConfig } from '../stripe-config.ts';
 
 // @ts-ignore
@@ -88,11 +88,48 @@ Deno.serve(async (req: Request) => {
       if (profileError) throw new Error(`Failed to update user_profiles: ${profileError.message}`);
 
       // 2. Registrar pagamento na individual_fee_payments
-      // Convertendo para USD se for BRL usando exchange_rate do metadata
+      // Buscar o valor líquido real (USD) do Stripe Balance API para garantir precisão universal
       let paymentAmountUSD = amountValue;
-      if (session.currency?.toLowerCase() === 'brl' && session.metadata?.exchange_rate) {
-        const rate = parseFloat(session.metadata.exchange_rate);
-        if (rate > 0) paymentAmountUSD = amountValue / rate;
+      let grossAmountUsd: number | null = null;
+      let feeAmountUsd: number | null = null;
+
+      if (paymentIntentId) {
+        console.log(`✅ [Package Fee] Buscando valor líquido, bruto e taxas do Stripe (BalanceTransaction)`);
+        try {
+          const paymentIntent = await stripe.paymentIntents.retrieve(paymentIntentId, {
+            expand: ['latest_charge.balance_transaction']
+          });
+          
+          if (paymentIntent.latest_charge) {
+            const charge = typeof paymentIntent.latest_charge === 'string' 
+              ? await stripe.charges.retrieve(paymentIntent.latest_charge, {
+                  expand: ['balance_transaction']
+                })
+              : paymentIntent.latest_charge;
+            
+            if (charge.balance_transaction) {
+              const bt = typeof charge.balance_transaction === 'string'
+                ? await stripe.balanceTransactions.retrieve(charge.balance_transaction)
+                : charge.balance_transaction;
+              
+              if (bt.net && bt.currency === 'usd') {
+                paymentAmountUSD = bt.net / 100;
+                grossAmountUsd = bt.amount / 100;
+                feeAmountUsd = bt.fee / 100;
+                console.log(`[Package Fee] Valores recebidos do Stripe: Líquido=${paymentAmountUSD}, Bruto=${grossAmountUsd}, Taxas=${feeAmountUsd} (USD)`);
+              } else if (session.currency?.toLowerCase() === 'brl' && session.metadata?.exchange_rate) {
+                const rate = parseFloat(session.metadata.exchange_rate);
+                if (rate > 0) paymentAmountUSD = amountValue / rate;
+              }
+            }
+          }
+        } catch (stripeError) {
+          console.error('[Package Fee] Erro ao buscar valor real do Stripe:', stripeError);
+          if (session.currency?.toLowerCase() === 'brl' && session.metadata?.exchange_rate) {
+            const rate = parseFloat(session.metadata.exchange_rate);
+            if (rate > 0) paymentAmountUSD = amountValue / rate;
+          }
+        }
       }
 
       try {
@@ -105,8 +142,8 @@ Deno.serve(async (req: Request) => {
           p_payment_intent_id: paymentIntentId,
           p_stripe_charge_id: null,
           p_zelle_payment_id: null,
-          p_gross_amount_usd: session.metadata?.gross_amount ? parseFloat(session.metadata.gross_amount) : null,
-          p_fee_amount_usd: session.metadata?.fee_amount ? parseFloat(session.metadata.fee_amount) : null
+          p_gross_amount_usd: grossAmountUsd || (session.metadata?.gross_amount ? parseFloat(session.metadata.gross_amount) : null),
+          p_fee_amount_usd: feeAmountUsd || (session.metadata?.fee_amount ? parseFloat(session.metadata.fee_amount) : null)
         });
       } catch (recordError) {
         console.warn('[Individual Fee Payment] Warning: Failed to record payment:', recordError);

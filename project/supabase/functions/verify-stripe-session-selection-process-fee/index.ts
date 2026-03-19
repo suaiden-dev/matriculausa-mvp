@@ -1217,18 +1217,13 @@ Deno.serve(async (req: Request) => {
           paymentIntentId = (session.payment_intent as any).id;
         }
 
-        // Para pagamentos PIX (BRL), buscar o valor líquido recebido em USD do BalanceTransaction
-        // Sempre buscar o valor líquido, independente do ambiente
-        const shouldFetchNetAmount = true;
-
-        // Debug: Log das condições
-               let paymentAmount = paymentAmountRaw;
+        // Para pagamentos (cartão ou PIX), buscar o valor líquido, bruto e taxas reais do Stripe BalanceTransaction
+        let paymentAmount = paymentAmountRaw;
         let grossAmountUsd: number | null = null;
         let feeAmountUsd: number | null = null;
 
-        // Para pagamentos PIX (BRL), buscar o valor líquido recebido em USD do BalanceTransaction
-        if (paymentIntentId && currency === "BRL") {
-          console.log(`✅ [PIX] Buscando valor real convertido do Stripe: ${paymentIntentId}`);
+        if (paymentIntentId) {
+          console.log(`✅ [Selection Process] Buscando valor líquido, bruto e taxas do Stripe (BalanceTransaction)`);
           try {
             const paymentIntent = await stripe.paymentIntents.retrieve(paymentIntentId, {
               expand: ['latest_charge.balance_transaction']
@@ -1251,16 +1246,22 @@ Deno.serve(async (req: Request) => {
                 paymentAmount = bt.net / 100;
                 grossAmountUsd = bt.amount / 100;
                 feeAmountUsd = bt.fee / 100;
-                console.log(`[BalanceTransaction] Sucesso! Valor líquido: $${paymentAmount} USD`);
+                console.log(`[BalanceTransaction] Sucesso! Líquido=${paymentAmount}, Bruto=${grossAmountUsd}, Taxas=${feeAmountUsd} (USD)`);
+              } else if (currency === "BRL" && session.metadata?.exchange_rate) {
+                const rate = parseFloat(session.metadata.exchange_rate);
+                if (rate > 0) paymentAmount = paymentAmountRaw / rate;
               }
             }
           } catch (stripeError) {
             console.error("[BalanceTransaction] Erro ao buscar do Stripe:", stripeError);
+            if (currency === "BRL" && session.metadata?.exchange_rate) {
+              const rate = parseFloat(session.metadata.exchange_rate);
+              if (rate > 0) paymentAmount = paymentAmountRaw / rate;
+            }
           }
         } else if (currency === "BRL" && session.metadata?.exchange_rate) {
-          // Fallback mínimo apenas se a API do Stripe falhar criticamente
-          const exchangeRate = parseFloat(session.metadata.exchange_rate);
-          if (exchangeRate > 0) paymentAmount = paymentAmountRaw / exchangeRate;
+          const rate = parseFloat(session.metadata.exchange_rate);
+          if (rate > 0) paymentAmount = paymentAmountRaw / rate;
         }
 
 

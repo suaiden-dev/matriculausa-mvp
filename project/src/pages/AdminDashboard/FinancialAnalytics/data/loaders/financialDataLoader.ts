@@ -664,10 +664,11 @@ export async function loadFinancialData(
     // Ignorar pagamentos Parcelow que não estão com status 'paid'
     if (payment.payment_method === 'parcelow' && payment.parcelow_status && payment.parcelow_status !== 'paid') return;
     
-    // Valor bruto (gross)
-    const amountUSD = payment.gross_amount_usd 
-      ? Number(payment.gross_amount_usd) 
-      : Number(payment.amount);
+    // Valor Base para o lucro líquido (amount)
+    // Priorizamos o campo líquido (amount) pois é ele que define a receita real no sistema
+    const amountUSD = payment.amount !== null && payment.amount !== undefined 
+      ? Number(payment.amount) 
+      : (payment.gross_amount_usd ? Number(payment.gross_amount_usd) : 0);
       
     const userId = payment.user_id;
     if (!realPaymentAmounts.has(userId)) {
