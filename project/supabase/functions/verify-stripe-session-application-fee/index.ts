@@ -458,51 +458,73 @@ Deno.serve(async (req)=>{
         }
         
         // Para pagamentos PIX (BRL), buscar o valor líquido recebido em USD do BalanceTransaction
-        // Sempre buscar o valor líquido, independente do ambiente
-        const shouldFetchNetAmount = true;
-        
-        // Debug: Log das condições
-        console.log(`[Individual Fee Payment] DEBUG - currency: ${currency}, paymentMethod: ${paymentMethod}, paymentIntentId: ${paymentIntentId}, shouldFetchNetAmount: ${shouldFetchNetAmount}, isProduction: ${config.environment.isProduction}`);
+        // Sempre buscar o valor líquido para garantir precisão total
+        console.log(`[Individual Fee Payment] DEBUG - currency: ${currency}, paymentMethod: ${paymentMethod}, paymentIntentId: ${paymentIntentId}`);
         
         let paymentAmount = paymentAmountRaw;
         let grossAmountUsd: number | null = null;
         let feeAmountUsd: number | null = null;
-
-        // Para pagamentos PIX (BRL), buscar o valor líquido recebido em USD do BalanceTransaction
-        if (paymentIntentId && currency === "BRL") {
-          console.log(`✅ [PIX] Buscando valor real convertido do Stripe: ${paymentIntentId}`);
+        
+        // Buscar valores do Stripe para pagamentos que tenham paymentIntentId
+        if (paymentIntentId) {
+          console.log(`✅ Buscando valor líquido, bruto e taxas do Stripe (BalanceTransaction)`);
           try {
+            // Buscar PaymentIntent com latest_charge expandido
             const paymentIntent = await stripe.paymentIntents.retrieve(paymentIntentId, {
               expand: ['latest_charge.balance_transaction']
             });
             
-            const charge = paymentIntent.latest_charge;
-            if (charge && typeof charge !== 'string') {
-              let bt = charge.balance_transaction;
+            if (paymentIntent.latest_charge) {
+              const charge = typeof paymentIntent.latest_charge === 'string' 
+                ? await stripe.charges.retrieve(paymentIntent.latest_charge, {
+                    expand: ['balance_transaction']
+                  })
+                : paymentIntent.latest_charge;
               
-              // Se não veio expandido, buscar explicitamente
-              if (!bt || typeof bt === 'string') {
-                const bts = await stripe.balanceTransactions.list({
-                  source: charge.id,
-                  limit: 1
-                });
-                if (bts.data.length > 0) bt = bts.data[0];
-              }
-
-              if (bt && typeof bt !== 'string' && bt.currency === 'usd') {
-                paymentAmount = bt.net / 100;
-                grossAmountUsd = bt.amount / 100;
-                feeAmountUsd = bt.fee / 100;
-                console.log(`[BalanceTransaction] Sucesso! Valor líquido: $${paymentAmount} USD`);
+              if (charge.balance_transaction) {
+                const balanceTransaction = typeof charge.balance_transaction === 'string'
+                  ? await stripe.balanceTransactions.retrieve(charge.balance_transaction)
+                  : charge.balance_transaction;
+                
+                // O valor líquido (net) já está em USD se a conta for USD
+                if (balanceTransaction.net && balanceTransaction.currency === 'usd') {
+                  paymentAmount = balanceTransaction.net / 100; // net está em centavos
+                  
+                  if (balanceTransaction.amount && balanceTransaction.currency === 'usd') {
+                    grossAmountUsd = balanceTransaction.amount / 100;
+                  }
+                  
+                  if (balanceTransaction.fee && balanceTransaction.currency === 'usd') {
+                    feeAmountUsd = balanceTransaction.fee / 100;
+                  }
+                  
+                  console.log(`[Individual Fee Payment] Valores recebidos do Stripe: Líquido=${paymentAmount}, Bruto=${grossAmountUsd}, Taxas=${feeAmountUsd} (USD)`);
+                } else if (currency === 'BRL' && session.metadata?.exchange_rate) {
+                  // Fallback: usar exchange_rate do metadata se não for conta USD ou falhar
+                  const exchangeRate = parseFloat(session.metadata.exchange_rate);
+                  if (exchangeRate > 0) {
+                    paymentAmount = paymentAmountRaw / exchangeRate;
+                    console.log(`[Individual Fee Payment] Usando exchange_rate do metadata (fallback): ${paymentAmount} USD`);
+                  }
+                }
               }
             }
           } catch (stripeError) {
-            console.error("[BalanceTransaction] Erro ao buscar do Stripe:", stripeError);
+            console.error('[Individual Fee Payment] Erro ao buscar valor líquido do Stripe:', stripeError);
+            // Fallback: usar exchange_rate do metadata (apenas para BRL)
+            if (currency === 'BRL' && session.metadata?.exchange_rate) {
+              const exchangeRate = parseFloat(session.metadata.exchange_rate);
+              if (exchangeRate > 0) {
+                paymentAmount = paymentAmountRaw / exchangeRate;
+              }
+            }
           }
-        } else if (currency === "BRL" && session.metadata?.exchange_rate) {
-          // Fallback mínimo apenas se a API do Stripe falhar criticamente
+        } else if (currency === 'BRL' && session.metadata?.exchange_rate) {
+          // Fallback final para BRL sem Payment Intent
           const exchangeRate = parseFloat(session.metadata.exchange_rate);
-          if (exchangeRate > 0) paymentAmount = paymentAmountRaw / exchangeRate;
+          if (exchangeRate > 0) {
+            paymentAmount = paymentAmountRaw / exchangeRate;
+          }
         }
 
         

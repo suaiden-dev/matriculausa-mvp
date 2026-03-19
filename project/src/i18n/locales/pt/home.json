@@ -147,7 +147,7 @@
       },
       "testimonial3": {
         "text": "Encontrei bolsas exclusivas que não estavam disponíveis em nenhum outro lugar. O MatriculaUSA realmente abre portas para oportunidades.",
-        "author": "Ana Chen",
+        "actionRequired": "AÇÃO NECESSÁRIA",
         "field": "Engenharia"
       }
     },
@@ -213,7 +213,12 @@
       },
       "applicationFee": {
         "title": "Pague Taxa de Matrícula",
-        "description": "Confirme sua universidade. Esta taxa é final e não reembolsável. (+$100 por dependente)"
+        "description": "Confirme sua universidade. Esta taxa é final e não reembolsável. (+$100 por dependente)",
+        "items": [
+          "Visualize bolsas aprovadas",
+          "Confirme sua escolha de universidade",
+          "Garanta sua vaga"
+        ]
       },
       "placementFee": {
         "title": "Taxa de Colocação",

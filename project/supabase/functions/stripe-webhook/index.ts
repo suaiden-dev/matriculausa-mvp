@@ -50,7 +50,7 @@ async function getUSDAmountFromStripe(
   fallbackAmount: number,
   currency: string
 ): Promise<{ amount: number; gross_amount_usd: number | null; fee_amount_usd: number | null }> {
-  if (!paymentIntentId || currency !== "BRL") {
+  if (!paymentIntentId) {
     return { amount: fallbackAmount, gross_amount_usd: null, fee_amount_usd: null };
   }
 
@@ -1567,18 +1567,18 @@ async function handleCheckoutSessionCompleted(session: any, stripe: any) {
           let grossAmountUsd: number | null = null;
           let feeAmountUsd: number | null = null;
 
-          // Se for BRL (PIX), buscar valor real convertido no Stripe
-          if (currency === "BRL") {
-            const stripeInfo = await getUSDAmountFromStripe(
-              stripe,
-              paymentIntentId,
-              amountTotal,
-              currency
-            );
-            paymentAmount = stripeInfo.amount;
-            grossAmountUsd = stripeInfo.gross_amount_usd;
-            feeAmountUsd = stripeInfo.fee_amount_usd;
-          } else if (metadata?.exchange_rate) {
+          // Buscar valor real convertido (Líquido/Bruto/Taxas) no Stripe BalanceTransaction
+          const stripeInfo = await getUSDAmountFromStripe(
+            stripe,
+            paymentIntentId,
+            amountTotal,
+            currency
+          );
+          paymentAmount = stripeInfo.amount;
+          grossAmountUsd = stripeInfo.gross_amount_usd;
+          feeAmountUsd = stripeInfo.fee_amount_usd;
+
+          if (!grossAmountUsd && metadata?.exchange_rate) {
             const exchangeRate = parseFloat(metadata.exchange_rate);
             if (exchangeRate > 0) paymentAmount = amountTotal / exchangeRate;
           }
@@ -1817,13 +1817,24 @@ async function handleCheckoutSessionCompleted(session: any, stripe: any) {
           const currency = session.currency?.toUpperCase() || "USD";
           const paymentIntentId = session.payment_intent as string || "";
 
-          // Converter BRL para USD se necessário (sempre registrar em USD)
+          // Buscar valor real convertido (Líquido/Bruto/Taxas) no Stripe BalanceTransaction
           let paymentAmount = paymentAmountRaw;
-          if (currency === "BRL" && session.metadata?.exchange_rate) {
+          let grossAmountUsd: number | null = null;
+          let feeAmountUsd: number | null = null;
+
+          const stripeInfo = await getUSDAmountFromStripe(
+            stripe,
+            paymentIntentId,
+            paymentAmountRaw,
+            currency
+          );
+          paymentAmount = stripeInfo.amount;
+          grossAmountUsd = stripeInfo.gross_amount_usd;
+          feeAmountUsd = stripeInfo.fee_amount_usd;
+
+          if (!grossAmountUsd && session.metadata?.exchange_rate) {
             const exchangeRate = parseFloat(session.metadata.exchange_rate);
-            if (exchangeRate > 0) {
-              paymentAmount = paymentAmountRaw / exchangeRate;
-            }
+            if (exchangeRate > 0) paymentAmount = paymentAmountRaw / exchangeRate;
           }
 
           const { error: insertError } = await supabase.rpc(
@@ -1837,6 +1848,8 @@ async function handleCheckoutSessionCompleted(session: any, stripe: any) {
               p_payment_intent_id: paymentIntentId,
               p_stripe_charge_id: null,
               p_zelle_payment_id: null,
+              p_gross_amount_usd: grossAmountUsd,
+              p_fee_amount_usd: feeAmountUsd,
             },
           );
 
@@ -1945,22 +1958,20 @@ async function handleCheckoutSessionCompleted(session: any, stripe: any) {
         let grossAmountUsd: number | null = null;
         let feeAmountUsd: number | null = null;
 
-        // Se for BRL (PIX), buscar valor real convertido no Stripe
-        if (currency === "BRL") {
-          const stripeInfo = await getUSDAmountFromStripe(
-            stripe,
-            paymentIntentId,
-            paymentAmountRaw,
-            currency
-          );
-          paymentAmount = stripeInfo.amount;
-          grossAmountUsd = stripeInfo.gross_amount_usd;
-          feeAmountUsd = stripeInfo.fee_amount_usd;
-        } else if (session.metadata?.exchange_rate) {
+        // Buscar valor real convertido (Líquido/Bruto/Taxas) no Stripe BalanceTransaction
+        const stripeInfo = await getUSDAmountFromStripe(
+          stripe,
+          paymentIntentId,
+          paymentAmountRaw,
+          currency
+        );
+        paymentAmount = stripeInfo.amount;
+        grossAmountUsd = stripeInfo.gross_amount_usd;
+        feeAmountUsd = stripeInfo.fee_amount_usd;
+
+        if (!grossAmountUsd && session.metadata?.exchange_rate) {
           const exchangeRate = parseFloat(session.metadata.exchange_rate);
-          if (exchangeRate > 0) {
-            paymentAmount = paymentAmountRaw / exchangeRate;
-          }
+          if (exchangeRate > 0) paymentAmount = paymentAmountRaw / exchangeRate;
         }
 
         const { error: insertError } = await supabase.rpc(
