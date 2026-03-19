@@ -524,7 +524,7 @@ export const ScholarshipSelectionStep: React.FC<StepProps> = ({ onNext, onBack: 
     return (
       <div className="space-y-6">
         <div className="bg-gradient-to-br from-blue-50 via-indigo-50 to-purple-50 rounded-xl p-5 sm:p-6 border border-blue-100">
-          <div className="text-left">
+          <div className="text-center md:text-left">
             <h2 className="text-2xl sm:text-3xl font-bold text-gray-900 mb-2">{t('scholarshipSelection.header.title')}</h2>
             <p className="text-base sm:text-lg text-gray-700 font-medium">{t('scholarshipSelection.header.subtitle')}</p>
           </div>
@@ -547,7 +547,7 @@ export const ScholarshipSelectionStep: React.FC<StepProps> = ({ onNext, onBack: 
     return (
       <div className="w-full h-full flex flex-col">
         <div className="max-w-4xl mx-auto w-full px-4">
-          <h1 className="text-2xl sm:text-4xl font-black mb-4 text-slate-900 uppercase tracking-tighter">
+          <h1 className="text-center md:text-left text-2xl sm:text-4xl font-black mb-4 text-slate-900 uppercase tracking-tighter">
             <span>{t('scholarshipSelection.review.title')}</span>
           </h1>
           
@@ -659,7 +659,7 @@ export const ScholarshipSelectionStep: React.FC<StepProps> = ({ onNext, onBack: 
     return (
       <div className="space-y-10 pb-12 max-w-4xl mx-auto px-4">
         {/* Header */}
-        <div className="text-left space-y-4">
+        <div className="text-center md:text-left space-y-4">
           <h2 className="text-3xl md:text-5xl font-black text-slate-900 uppercase tracking-tighter leading-none">{t('scholarshipSelection.completed.title')}</h2>
         </div>
 
@@ -697,11 +697,11 @@ export const ScholarshipSelectionStep: React.FC<StepProps> = ({ onNext, onBack: 
         <div className="space-y-6 pb-24 sm:pb-6">
           {/* Header Section */}
           <div>
-            <div className="text-left mb-8 space-y-4">
+            <div className="text-center md:text-left mb-8 space-y-4">
               <h2 className="text-3xl md:text-5xl font-black text-slate-900 uppercase tracking-tighter leading-none">
                 {t('scholarshipSelection.header.title')}
               </h2>
-              <p className="text-lg md:text-xl text-slate-600 font-medium max-w-3xl">
+              <p className="text-lg md:text-xl text-slate-600 font-medium max-w-3xl mx-auto md:mx-0">
                 {t('scholarshipSelection.header.subtitle')}
               </p>
             </div>

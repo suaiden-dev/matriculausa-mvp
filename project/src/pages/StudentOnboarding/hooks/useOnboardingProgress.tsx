@@ -319,7 +319,7 @@ export const useOnboardingProgress = () => {
       } else if (!documentsUploaded || !documentsApproved) {
         maxAllowedStep = 'documents_upload';
       } else if (!applicationFeePaid) {
-        const selectedAppId = window.localStorage.getItem('selected_application_id');
+        const selectedAppId = userProfile?.selected_application_id;
         maxAllowedStep = selectedAppId ? 'payment' : 'documents_upload';
       } else if (isNewFlowUser && !placementFeePaid) {
         maxAllowedStep = 'placement_fee';

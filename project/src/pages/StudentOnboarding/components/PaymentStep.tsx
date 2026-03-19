@@ -129,20 +129,12 @@ export const PaymentStep: React.FC<StepProps> = ({ onNext, onBack }) => {
       if (error) throw error;
 
       const allApps = (data || []) as ApplicationWithScholarship[];
-      let selectedId = localStorage.getItem('selected_application_id');
-
-      // Se houver uma selecionada, tentamos filtrar
-      let filteredApps = selectedId
+      const selectedId = userProfile?.selected_application_id;
+      
+      // Se houver uma selecionada, filtramos para mostrar apenas ela ou as já pagas
+      const filteredApps = selectedId
         ? allApps.filter(app => app.id === selectedId || app.is_application_fee_paid)
         : allApps;
-
-      // Segurança: Se temos aplicações mas o filtro resultou em vazio (ID inválido ou antigo)
-      // Selecionamos a aplicação mais recente automaticamente
-      if (allApps.length > 0 && filteredApps.length === 0) {
-        const mostRecent = allApps[0];
-        filteredApps = [mostRecent];
-        localStorage.setItem('selected_application_id', mostRecent.id);
-      }
 
       setApplications(filteredApps);
     } catch (err: any) {

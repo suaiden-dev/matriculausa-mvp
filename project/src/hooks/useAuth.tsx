@@ -48,6 +48,7 @@ export interface UserProfile {
   documents_status?: 'pending' | 'analyzing' | 'approved' | 'rejected';
   documents_uploaded?: boolean;
   selected_scholarship_id?: string | null;
+  selected_application_id?: string | null;
   has_paid_college_enrollment_fee?: boolean;
   // Campo para avatar
   avatar_url?: string | null;

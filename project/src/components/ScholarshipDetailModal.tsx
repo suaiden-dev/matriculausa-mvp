@@ -355,14 +355,16 @@ const ScholarshipDetailModal: React.FC<ScholarshipDetailModalProps> = ({
                           <table className="w-full text-sm">
                             <tbody className="divide-y divide-slate-100">
                               {internalFees.map((fee: any, idx: number) => (
-                                <tr key={`internal-${idx}`} className="bg-white/50">
-                                  <td className="py-3 px-4">
+                                <tr key={`internal-${idx}`} className="bg-white/50 group hover:bg-slate-50 transition-colors">
+                                  <td className="py-4 px-6">
                                     <div className="flex flex-col">
-                                      <span className="text-slate-700 font-medium">{fee.category || fee.name}</span>
-                                      {fee.details && <span className="text-[10px] text-slate-500 font-medium tracking-wide mt-0.5">{fee.details}</span>}
+                                      <span className="text-slate-700 font-bold text-sm tracking-tight">{fee.category || fee.name}</span>
+                                      {fee.details && <span className="text-[10px] text-slate-500 font-medium tracking-wide mt-1 leading-relaxed">{fee.details}</span>}
                                     </div>
                                   </td>
-                                  <td className="py-3 px-4 text-right text-slate-700 font-medium">${Number(fee.amount).toLocaleString()}</td>
+                                  <td className="py-4 px-6 text-right text-slate-900 font-black text-base">
+                                    ${Number(fee.amount).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                                  </td>
                                 </tr>
                               ))}
                             </tbody>

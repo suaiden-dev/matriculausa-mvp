@@ -43,7 +43,7 @@
       "refundAssuranceTitle": "Refund Guarantee",
       "refundAssuranceText": "If you are not accepted to any partner university, your selection process fee will be fully refunded.",
       "futureFeesTitle": "Future Fees",
-      "enrollmentFee": "Enrollment Fee",
+      "enrollmentFee": "Application Fee",
       "scholarshipFee": "Scholarship Fee",
       "i20Fee": "I-20 Control Fee",
       "futureFeesNote": "Future fees are estimates and vary by university."
@@ -106,7 +106,7 @@
         "scholarshipSelection": "Scholarship Selection",
         "processType": "Process Type",
         "documentsUpload": "Documents",
-        "payment": "Enrollment Fee",
+        "payment": "Application Fee",
         "scholarshipFee": "Scholarship Fee",
         "placementFee": "Placement Fee"
       }
