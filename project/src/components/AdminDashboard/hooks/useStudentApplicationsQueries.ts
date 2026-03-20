@@ -57,33 +57,35 @@ export function useStudentsQuery() {
           is_placement_fee_paid,
           role,
           seller_referral_code,
-          scholarship_applications (
-            id,
-            scholarship_id,
-            status,
-            applied_at,
-            is_application_fee_paid,
-            is_scholarship_fee_paid,
-            acceptance_letter_status,
-            payment_status,
-            reviewed_at,
-            reviewed_by,
-            student_process_type,
-            transfer_form_status,
-            documents,
-            updated_at,
-            scholarships (
-              title,
-              universities (
-                name
+          scholarship_applications!scholarship_applications_student_id_fkey (
+              id,
+              scholarship_id,
+              status,
+              applied_at,
+              is_application_fee_paid,
+              is_scholarship_fee_paid,
+              acceptance_letter_status,
+              payment_status,
+              reviewed_at,
+              reviewed_by,
+              student_process_type,
+              transfer_form_status,
+              documents,
+              updated_at,
+              scholarships (
+                title,
+                universities (
+                  name
+                )
               )
             )
-          )
-        `)
-        .eq('role', 'student')
-        .order('created_at', { ascending: false });
+          `)
+          .eq('role', 'student')
+          .order('created_at', { ascending: false });
 
-      if (error) throw error;
+      if (error) {
+        throw error;
+      }
 
       const formattedData = data?.map((student: any) => {
         // Cada estudante aparece apenas uma vez na tabela
