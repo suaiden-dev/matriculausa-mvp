@@ -1,7 +1,7 @@
 import { useState, useEffect, useRef, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
-import { useAuth } from '../../../../hooks/useAuth';
+import { useAuth, UserProfile } from '../../../../hooks/useAuth';
 import { useFeeConfig } from '../../../../hooks/useFeeConfig';
 import { usePaymentBlocked } from '../../../../hooks/usePaymentBlocked';
 import { useTermsAcceptance } from '../../../../hooks/useTermsAcceptance';
@@ -66,6 +66,12 @@ export const useSelectionFeeStep = (onNext: () => void) => {
   const [isValidatingPromotionalCoupon, setIsValidatingPromotionalCoupon] = useState(false);
   const [promotionalCouponValidation, setPromotionalCouponValidation] = useState<PromotionalCouponValidation | null>(null);
 
+  const selectionFeeAmount = getFeeAmount('selection_process');
+  const hasAffiliateCode = userProfile?.affiliate_code && userProfile.affiliate_code.trim() !== '';
+  const hasSellerReferralCode = userProfile?.seller_referral_code && userProfile.seller_referral_code.trim() !== '';
+  const hasZellePendingSelectionFee = isBlocked && pendingPayment?.fee_type === 'selection_process';
+  const hasPaid = userProfile?.has_paid_selection_process_fee || false;
+
   // ── Effects ────────────────────────────────────────────────────────────────
 
   useEffect(() => {
@@ -88,13 +94,29 @@ export const useSelectionFeeStep = (onNext: () => void) => {
   }, [approvedPayment, refetchUserProfile, onNext]);
 
   useEffect(() => {
+    // 🎯 Se chegamos com payment=success na URL, forçamos o refetch e avançamos para o próximo passo.
+    const params = new URLSearchParams(window.location.search);
+    if (params.get('payment') === 'success') {
+      console.log('🎯 [SelectionFeeStep] Redirecionamento de sucesso detectado. Verificando pagamento...');
+      refetchPaymentStatus();
+      refetchUserProfile().then((profile: UserProfile | null) => {
+        if (profile?.has_paid_selection_process_fee) {
+          console.log('✅ Pagamento confirmado via refetch, avançando...');
+          onNext();
+        }
+      });
+    }
+  }, [refetchPaymentStatus, refetchUserProfile, onNext]);
+
+  useEffect(() => {
     if (paymentBlockedLoading) return;
-    if (isBlocked && pendingPayment) {
+    // 🎯 AJUSTE: Só mostra o modal se não tiver pago. Evita conflito com estado stale do context.
+    if (isBlocked && pendingPayment && !hasPaid) {
       setIsZelleProcessing(true);
       setShowZelleCheckout(true);
       setSelectedMethod('zelle');
     }
-  }, [isBlocked, pendingPayment, paymentBlockedLoading]);
+  }, [isBlocked, pendingPayment, paymentBlockedLoading, hasPaid]); // hasPaid incluído como dependência
 
   useEffect(() => {
     const checkExistingAcceptance = async () => {
@@ -126,7 +148,6 @@ export const useSelectionFeeStep = (onNext: () => void) => {
     }
   }, [activeDiscount?.has_discount, activeDiscount?.affiliate_code, activeDiscount?.discount_amount, t]);
 
-  const hasAffiliateCode = userProfile?.affiliate_code && userProfile.affiliate_code.trim() !== '';
 
   const validateDiscountCodeForPrefill = useCallback(async (code: string) => {
     if (!code.trim()) return;
@@ -405,7 +426,6 @@ export const useSelectionFeeStep = (onNext: () => void) => {
     }
   };
 
-  const selectionFeeAmount = getFeeAmount('selection_process');
 
   const computedBasePrice = (() => {
     if (promotionalCouponValidation?.isValid && promotionalCouponValidation.finalAmount !== undefined) return promotionalCouponValidation.finalAmount;
@@ -549,11 +569,15 @@ export const useSelectionFeeStep = (onNext: () => void) => {
       const metadata: any = {};
       if (paymentMethod === 'pix' && exchangeRate && exchangeRate > 0) metadata.exchange_rate = exchangeRate.toString();
 
+      const successRedirectUrl = !userProfile?.selection_survey_passed
+        ? `${window.location.origin}/student/onboarding?step=identity_verification`
+        : `${window.location.origin}/student/dashboard`;
+
       const requestBody = {
         price_id: 'price_selection_process_fee',
         amount: computedBasePrice,
         payment_method: paymentMethod,
-        success_url: `${window.location.origin}/student/onboarding?step=scholarship_selection&payment=success&session_id={CHECKOUT_SESSION_ID}`,
+        success_url: `${successRedirectUrl}&payment=success&session_id={CHECKOUT_SESSION_ID}`,
         cancel_url: `${window.location.origin}/student/onboarding?step=selection_fee&payment=cancelled`,
         mode: 'payment',
         payment_type: 'selection_process',
@@ -575,13 +599,10 @@ export const useSelectionFeeStep = (onNext: () => void) => {
     } catch (err: any) {
       console.error('Error processing checkout:', err);
       setError(err.message || 'Error processing payment. Please try again.');
+    } finally {
       setLoading(false);
     }
   };
-
-  const hasSellerReferralCode = userProfile?.seller_referral_code && userProfile.seller_referral_code.trim() !== '';
-  const hasZellePendingSelectionFee = isBlocked && pendingPayment?.fee_type === 'selection_process';
-  const hasPaid = userProfile?.has_paid_selection_process_fee || false;
 
   return {
     // State
