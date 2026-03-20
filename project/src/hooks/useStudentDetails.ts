@@ -53,6 +53,7 @@ export interface StudentRecord {
   has_paid_i539_cos_package: boolean;
   ds160_package_payment_method?: string | null;
   i539_cos_package_payment_method?: string | null;
+  system_type?: 'legacy' | 'simplified' | null;
 }
 
 /**
@@ -131,10 +132,9 @@ export const useStudentDetails = (profileId: string | undefined) => {
             seller_referral_code,
             admin_notes,
             documents_status,
-            has_paid_ds160_package,
-            has_paid_i539_cos_package,
             ds160_package_payment_method,
             i539_cos_package_payment_method,
+            system_type,
             scholarship_applications (
               id,
               scholarship_id,
@@ -244,6 +244,7 @@ export const useStudentDetails = (profileId: string | undefined) => {
         has_paid_i539_cos_package: s.has_paid_i539_cos_package || false,
         ds160_package_payment_method: s.ds160_package_payment_method || null,
         i539_cos_package_payment_method: s.i539_cos_package_payment_method || null,
+        system_type: s.system_type || null,
       };
 
       setStudent(formatted);

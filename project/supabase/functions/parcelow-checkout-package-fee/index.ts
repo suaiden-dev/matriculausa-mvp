@@ -45,12 +45,13 @@ Deno.serve(async (req: Request) => {
       return corsResponse({ error: "Parcelow configuration error" }, 500);
     }
 
-    const { amount, fee_type, metadata } = await req.json();
+    const { amount, fee_type, metadata, cpf: bodyCpf } = await req.json();
 
     console.log("[parcelow-checkout-package-fee] 📥 Payload recebido:", {
       amount,
       fee_type,
       metadata,
+      hasBodyCpf: !!bodyCpf,
     });
     
     if (fee_type !== 'ds160_package' && fee_type !== 'i539_cos_package') {
@@ -85,10 +86,23 @@ Deno.serve(async (req: Request) => {
       return corsResponse({ error: "User profile not found" }, 404);
     }
 
-    if (!profile.cpf_document) {
+    // Definir CPF final (Body > Profile)
+    const rawCpf = bodyCpf || profile.cpf_document;
+    const finalCpf = rawCpf ? String(rawCpf).replace(/\D/g, "") : null;
+
+    console.log("[parcelow-checkout-package-fee] 📄 Verificação de documento:", {
+      profileCpf: !!profile.cpf_document,
+      bodyCpf: !!bodyCpf,
+      finalCpfLength: finalCpf?.length || 0,
+    });
+
+    if (!finalCpf || finalCpf.length < 11) {
+      console.error(
+        "[parcelow-checkout-package-fee] ❌ CPF não encontrado no perfil nem no body",
+      );
       return corsResponse({
         error: "document_number_required",
-        message: "CPF is required for Parcelow payment",
+        message: "CPF is required for Parcelow payment (neither found in profile nor request body)",
       }, 400);
     }
 
@@ -126,7 +140,7 @@ Deno.serve(async (req: Request) => {
       client: {
         name: profile.full_name,
         email: profile.email,
-        cpf: profile.cpf_document.replace(/\D/g, ""),
+        cpf: finalCpf,
         phone: profile.phone || "",
       },
       redirect: {
