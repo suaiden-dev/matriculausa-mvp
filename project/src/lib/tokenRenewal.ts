@@ -1,9 +1,4 @@
-import { createClient } from '@supabase/supabase-js';
-
-const supabase = createClient(
-  import.meta.env.VITE_SUPABASE_URL,
-  import.meta.env.VITE_SUPABASE_ANON_KEY
-);
+import { supabase } from './supabase';
 
 interface TokenData {
   access_token: string;
@@ -168,7 +163,7 @@ export class TokenRenewalService {
           account: accounts[0],
           forceRefresh: false
         });
-      } catch (silentError) {
+      } catch (silentError: any) {
         console.log('⚠️ Token silencioso falhou, tentando com forceRefresh...');
         try {
           response = await msalInstance.acquireTokenSilent({
@@ -176,7 +171,7 @@ export class TokenRenewalService {
             account: accounts[0],
             forceRefresh: true
           });
-        } catch (forceRefreshError) {
+        } catch (forceRefreshError: any) {
           console.error('❌ Renovação silenciosa falhou:', forceRefreshError);
           
           // Se a renovação falhou, verificar se é erro de sessão expirada
@@ -194,8 +189,9 @@ export class TokenRenewalService {
       
       console.log('✅ Token renovado via MSAL');
       
-      // Atualizar banco com novo token
-      const newExpiresAt = new Date(Date.now() + (response.expiresOn?.getTime() - Date.now() || 3600000));
+      // Atualizar banco com novo token (evitando undefined em expiresOn)
+      const expiresOn = (response as any)?.expiresOn;
+      const newExpiresAt = new Date(Date.now() + (expiresOn?.getTime() - Date.now() || 3600000));
       const { error: updateError } = await supabase
         .from('email_configurations')
         .update({
@@ -213,7 +209,7 @@ export class TokenRenewalService {
 
       return {
         access_token: response.accessToken,
-        refresh_token: response.refreshToken || '',
+        refresh_token: (response as any).refreshToken || '',
         expires_at: newExpiresAt.toISOString(),
         user_id: userId,
         email: email

@@ -942,56 +942,50 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
     try {
       setLoading(true);
 
-      // Forçar limpeza de todos os dados de autenticação
-      await supabase.auth.signOut({ scope: 'local' });
-
-      // Limpar estado local imediatamente
+      // Limpar estado local IMEDIATAMENTE para parar queries e unmount components
       setUser(null);
       setUserProfile(null);
+      setSupabaseUser(null);
+      
+      try {
+        // Tentar assinar saída, mas se demorar mais que 2 segundos, continuamos o fluxo
+        // para não travar o usuário
+        const signOutPromise = supabase.auth.signOut({ scope: 'local' });
+        const timeoutPromise = new Promise((_, reject) => setTimeout(() => reject(new Error('SignOut Timeout')), 2000));
+        
+        await Promise.race([signOutPromise, timeoutPromise]);
+      } catch (e) {
+        console.warn('⚠️ signOut demorou muito ou falhou (lock contention), prosseguindo com limpeza manual:', e);
+      }
 
-      // Limpar dados do localStorage
+      // Limpar dados do localStorage - Mantendo apenas as chaves reais usadas
       localStorage.removeItem('pending_full_name');
       localStorage.removeItem('pending_phone');
       localStorage.removeItem('pending_affiliate_code');
       localStorage.removeItem('cached_user');
       localStorage.removeItem('cached_user_profile');
       localStorage.removeItem('pending_seller_referral_code');
-      localStorage.removeItem('sb-fitpynguasqqutuhzifx-auth-token');
+      
+      // Limpar tokens de forma direta por segurança (usando as DUAS chaves possíveis para garantir)
+      localStorage.removeItem('supabase.auth.token');
+      localStorage.removeItem('sb-fitpynguasqqutuhzifx-auth-token'); 
       localStorage.removeItem('pending_open_modal');
+      
       sessionStorage.clear();
 
-      // Forçar refresh da página para limpar completamente o estado
-      if (window.location.pathname.includes('/inbox')) {
-        console.log('🔄 Logout from inbox page - refreshing to clear emails...');
-        window.location.href = '/';
-      } else {
-        // Redirecionar para home sem usar navigate para evitar problemas de estado
-        window.location.href = '/';
-      }
+      // Redirecionar para home e forçar recarregamento completo para garantir estado limpo
+      window.location.href = '/';
 
     } catch (error) {
       console.error('Error during logout process:', error);
-
-      // Mesmo com erro, limpar tudo e forçar redirecionamento
+      // Fallback radical
       setUser(null);
       setUserProfile(null);
-
-      // Limpar localStorage
-      localStorage.removeItem('pending_full_name');
-      localStorage.removeItem('pending_phone');
-      localStorage.removeItem('pending_affiliate_code');
-      localStorage.removeItem('cached_user');
-      localStorage.removeItem('cached_user_profile');
-      localStorage.removeItem('sb-fitpynguasqqutuhzifx-auth-token');
-      localStorage.removeItem('pending_open_modal');
+      localStorage.clear();
       sessionStorage.clear();
-
-      // Forçar redirecionamento
       window.location.href = '/';
-    } finally {
-      setLoading(false);
     }
-  }, []);
+  }, [user, setUser, setUserProfile, setSupabaseUser]);
 
   // Função para registrar usuário
   const register = useCallback(async (email: string, password: string, userData: { full_name: string; role: 'student' | 'school' | 'admin' | 'affiliate_admin' | 'seller';[key: string]: any }, options?: SignUpOptions): Promise<any> => {

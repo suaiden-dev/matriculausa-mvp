@@ -122,8 +122,10 @@ export const PlacementFeeStep: React.FC<StepProps> = ({ onNext, onBack }) => {
 
             if (error) throw error;
 
-            const selectedId = localStorage.getItem('selected_application_id');
+            const selectedId = userProfile?.selected_application_id;
             const allApps = (data || []) as ApplicationWithScholarship[];
+            
+            // Focar na bolsa selecionada ou naquelas que já foram pagas (para exibir recibo)
             const filtered = selectedId
                 ? allApps.filter(app => app.id === selectedId || app.is_placement_fee_paid)
                 : allApps;

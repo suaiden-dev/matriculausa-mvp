@@ -1,13 +1,8 @@
 import React, { useState, useEffect } from 'react';
-import { Mail, Play, Pause, Settings, CheckCircle, XCircle, Clock, Bot } from 'lucide-react';
+import { Mail, Play, Pause, XCircle, Clock, Bot } from 'lucide-react';
 import { useAuthToken } from '../../hooks/useAuthToken';
 import { useMicrosoftConnection } from '../../hooks/useMicrosoftConnection';
-import { createClient } from '@supabase/supabase-js';
-
-const supabase = createClient(
-  import.meta.env.VITE_SUPABASE_URL,
-  import.meta.env.VITE_SUPABASE_ANON_KEY
-);
+import { supabase } from '../../lib/supabase';
 
 // Função para extrair email do token MSAL
 const getEmailFromToken = async (token: string): Promise<string> => {
@@ -157,29 +152,7 @@ const AutoEmailProcessing: React.FC = () => {
     }
   };
 
-  const testProcessing = async () => {
-    try {
-      setLoading(true);
-      const response = await fetch('/api/v1/microsoft-email-polling', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json'
-        }
-      });
 
-      if (!response.ok) {
-        throw new Error('Erro ao testar processamento');
-      }
-
-      const result = await response.json();
-      console.log('Resultado do teste:', result);
-    } catch (error) {
-      console.error('Erro no teste:', error);
-      setStatus(prev => ({ ...prev, error: 'Erro no teste' }));
-    } finally {
-      setLoading(false);
-    }
-  };
 
   // Debug logs removidos para evitar spam no console
 
