@@ -39,7 +39,7 @@ const DOCUMENT_TYPES = [
 
 export const DocumentsUploadStep: React.FC<StepProps> = ({ onNext }) => {
   const { t } = useTranslation(['registration', 'common', 'scholarships']);
-  const { user, userProfile, refetchUserProfile } = useAuth();
+  const { user, userProfile, refetchUserProfile, updateUserProfile } = useAuth();
   const { clearCart } = useCartStore();
   const [files, setFiles] = useState<Record<string, File | File[] | null>>({
     passport: null,
@@ -590,19 +590,18 @@ export const DocumentsUploadStep: React.FC<StepProps> = ({ onNext }) => {
       if (!userProfile?.id) return;
       
       try {
-        if (selectedAppId) {
-          await supabase
-            .from('user_profiles')
-            .update({ selected_application_id: selectedAppId })
-            .eq('id', userProfile.id);
+        if (updateUserProfile) {
+          // Utilizar o método consolidado do Auth para banco e estado simultâneo
+          await updateUserProfile({ selected_application_id: selectedAppId || null });
         } else {
+          // Fallback legacy caso hooks falhem
           await supabase
             .from('user_profiles')
-            .update({ selected_application_id: null })
+            .update({ selected_application_id: selectedAppId || null })
             .eq('id', userProfile.id);
+          await refetchUserProfile();
         }
         
-        await refetchUserProfile();
         setShowConfirmModal(false);
         onNext();
       } catch (err) {
