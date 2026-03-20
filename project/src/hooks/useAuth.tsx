@@ -88,7 +88,7 @@ interface AuthContextType {
   isAuthenticated: boolean;
   loading: boolean;
   updateUserProfile: (updates: Partial<UserProfile>) => Promise<void>;
-  refetchUserProfile: () => Promise<void>;
+  refetchUserProfile: () => Promise<UserProfile | null>;
   checkStudentTermsAcceptance: (userId: string) => Promise<boolean>;
 }
 
@@ -1305,16 +1305,20 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
 
   // Função para refetch manual do perfil do usuário - memoizada para evitar re-renders desnecessários
   const refetchUserProfile = useCallback(async () => {
-    if (!supabaseUser) return;
+    if (!supabaseUser) return null;
     try {
       const { data, error } = await supabase
         .from('user_profiles')
         .select('*')
         .eq('user_id', supabaseUser.id)
         .single();
-      if (!error) setUserProfile(data);
+      if (!error && data) {
+        setUserProfile(data);
+        return data as UserProfile;
+      }
+      return null;
     } catch (err) {
-      // Ignorar erros silenciosamente
+      return null;
     }
   }, [supabaseUser]);
 
