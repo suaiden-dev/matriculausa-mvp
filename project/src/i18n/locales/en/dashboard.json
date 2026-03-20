@@ -27,6 +27,8 @@
         "stepLabels": {
           "welcome": "Welcome",
           "selection_fee": "Selection Fee",
+          "identity_verification": "Identity Verification",
+          "selection_survey": "Profile Questionnaire",
           "scholarship_selection": "Scholarship Selection",
           "process_type": "Process Type",
           "documents_upload": "Documents Upload",

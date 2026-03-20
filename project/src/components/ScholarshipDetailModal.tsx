@@ -150,9 +150,9 @@ const ScholarshipDetailModal: React.FC<ScholarshipDetailModalProps> = ({
           >
             {/* Header with Image */}
             <div className="relative flex-shrink-0 h-48 sm:h-72 bg-white flex items-center justify-center p-6 sm:p-10 border-b border-slate-100">
-              {scholarship.image_url && canViewSensitive && (
+              {(scholarship.image_url || scholarship.universities?.image_url || scholarship.universities?.logo_url) && canViewSensitive && (
                 <img 
-                  src={scholarship.image_url} 
+                  src={scholarship.image_url || scholarship.universities?.image_url || scholarship.universities?.logo_url || ''} 
                   alt="" 
                   className="w-full h-full object-contain"
                 />

@@ -70,6 +70,7 @@
       "withScholarship": "Com Bolsa",
       "perCredit": "Por Crédito",
       "scholarshipDiscount": "Desconto da Bolsa",
+      "3800Expired": "Não disponível",
       "applicationFee": "Taxa de Matrícula",
       "customFee": "Taxa personalizada pela universidade",
       "standardFee": "Taxa padrão de candidatura",
@@ -77,7 +78,7 @@
       "days": "dias",
       "details": "Detalhes",
       "applyNow": "Candidatar-se",
-      "notAvailable": "Não Disponível para Aplicação"
+      "notAvailable": "Não disponível"
     },
     "noResults": {
       "title": "Nenhuma bolsa encontrada",

@@ -27,6 +27,8 @@
         "stepLabels": {
           "welcome": "Bienvenido",
           "selection_fee": "Tarifa de Selección",
+          "identity_verification": "Verificación de Identidad",
+          "selection_survey": "Cuestionario de Perfil",
           "scholarship_selection": "Selección de Becas",
           "process_type": "Tipo de Proceso",
           "documents_upload": "Envío de Documentos",
