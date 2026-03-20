@@ -419,7 +419,7 @@ export const PackageFeeTab: React.FC<PackageFeeTabProps> = ({
                     </div>
                   </div>
                   <div className="text-right">
-                    <div className="text-slate-900 text-xl font-black uppercase tracking-tight">USD $1,800.00</div>
+                    <div className="text-slate-900 text-xl font-black uppercase tracking-tight">USD ${PACKAGE_FEE_AMOUNT.toLocaleString('en-US', { minimumFractionDigits: 2 })}</div>
                     <span className="text-[10px] font-bold text-slate-900 mt-1 block uppercase tracking-widest text-right">{t('studentOnboarding.documentsUpload.packageFees.installments12x')}</span>
                   </div>
                   {loading && selectedPaymentMethod === 'parcelow' && !showInlineCpf && (

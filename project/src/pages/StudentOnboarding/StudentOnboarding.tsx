@@ -166,18 +166,25 @@ const StudentOnboarding: React.FC = () => {
 
   // 2. Sincronizar Estado -> URL (A única fonte de verdade durante a navegação interna)
   useEffect(() => {
-    if (isVerifyingPayment || showPaymentAnimation || isInitialMount.current) return;
+    if (isVerifyingPayment || showPaymentAnimation || isInitialMount.current || loading) return;
     
     const currentStepUrl = searchParams.get('step');
+    
+    // 🎯 PROTEÇÃO: Se o estado interno recuou mas a URL é identity_verification (um passo especial),
+    // não forçamos a volta para a URL a menos que o estado esteja MUITO inconsistente.
+    // Isso evita o loop de redirecionamento em erros 406.
     if (state.currentStep && state.currentStep !== currentStepUrl) {
+      if (currentStepUrl === 'identity_verification' && state.currentStep === 'selection_fee') {
+        console.warn('[Onboarding] 🚧 Bloqueando redirecionamento circular de identity_verification -> selection_fee');
+        return;
+      }
+
       console.log(`[Onboarding] 🔄 Sincronizando URL com Estado: ${state.currentStep}`);
       const newParams = new URLSearchParams(searchParams);
       newParams.set('step', state.currentStep);
-      
-      // Usamos replace: true para não poluir o histórico com transições automáticas
       navigate(`?${newParams.toString()}`, { replace: true });
     }
-  }, [state.currentStep, searchParams, navigate, isVerifyingPayment, showPaymentAnimation]);
+  }, [state.currentStep, searchParams, navigate, isVerifyingPayment, showPaymentAnimation, loading]);
 
   // Scroll to top when step changes
   useEffect(() => {
@@ -299,7 +306,7 @@ const StudentOnboarding: React.FC = () => {
 
           pollPackagePayment();
         } else {
-          // Outros steps (sem package fee) — aguarda 10s como antes
+          // Outros steps (sem package fee) — aguarda 8s como antes
           setTimeout(() => {
             setIsVerifyingPayment(false);
             const newParams = new URLSearchParams(searchParams);
@@ -310,20 +317,31 @@ const StudentOnboarding: React.FC = () => {
 
             setTimeout(() => {
               setShowPaymentAnimation(false);
-              if (stepParam === 'payment') {
+              const currentStepParam = searchParams.get('step');
+              
+              if (currentStepParam === 'payment') {
+                // Ao pagar a taxa de aplicação, vai para a placement_fee ou scholarship_fee
                 const nextFeeStep: OnboardingStep = isNewFlowUserRef.current ? 'placement_fee' : 'scholarship_fee';
+                console.log(`[Onboarding] 🚀 Pagamento confirmado via Parcelow. Indo para: ${nextFeeStep}`);
                 goToStep(nextFeeStep);
-              } else if (stepParam === 'scholarship_fee' || stepParam === 'placement_fee') {
-                goToStep('my_applications');
+              } else if (currentStepParam === 'scholarship_fee' || currentStepParam === 'placement_fee') {
+                // Ao pagar as taxas finais, vai para a listagem ou corrige fluxo
+                if (isNewFlowUserRef.current && currentStepParam === 'scholarship_fee') {
+                  console.log('[Onboarding] 🚧 Redirecionamento Parcelow incorreto (scholarship_fee no novo fluxo). Corrigindo para placement_fee.');
+                  goToStep('placement_fee');
+                } else {
+                  console.log('[Onboarding] 🚀 Pagamento de Taxa Final confirmado via Parcelow. Finalizando onboarding.');
+                  goToStep('my_applications');
+                }
               } else {
-                const newParams2 = new URLSearchParams(searchParams);
-                newParams2.delete('payment');
-                newParams2.delete('session_id');
-                newParams2.delete('pix_payment');
-                setSearchParams(newParams2, { replace: true });
+                const finalParams = new URLSearchParams(searchParams);
+                finalParams.delete('payment');
+                finalParams.delete('session_id');
+                finalParams.delete('pix_payment');
+                setSearchParams(finalParams, { replace: true });
               }
-            }, 4000);
-          }, 10000);
+            }, 600); // Reduzido de 4000 para 600ms para ser mais rápido
+          }, 8000); // Reduzido de 10000 para 8000ms
         } // fecha else (outros steps)
       } else {
         // Fluxo Stripe Normal / Stripe PIX
@@ -398,10 +416,22 @@ const StudentOnboarding: React.FC = () => {
                 // usamos o estado mais atualizado de isNewFlowUser vindo do hook ou do profile
                 if (stepParam === 'payment') {
                   const nextFeeStep: OnboardingStep = isNewFlowUserRef.current ? 'placement_fee' : 'scholarship_fee';
+                  console.log(`[Onboarding] Pagamento de Application Fee com sucesso. Indo para: ${nextFeeStep}`);
                   goToStep(nextFeeStep);
                 } else if (stepParam === 'scholarship_fee' || stepParam === 'placement_fee') {
-                  // Mover para my_applications diretamente para evitar bug de estado no closure do handleNext
-                  goToStep('my_applications');
+                  // Se ele acabou de pagar a Scholarship Fee ou Placement Fee, mas por algum erro de redirecionamento 
+                  // caiu no passo errado, garantimos que ele vá para o passo final correto.
+                  // Se for novo fluxo e ele pagou a Placement Fee (ou caiu aqui por erro), ele vai para my_applications.
+                  // Mas se for novo fluxo e ele "caiu" em scholarship_fee por erro de link antigo (correção retroativa),
+                  // forçamos o próximo passo lógico.
+                  
+                  if (isNewFlowUserRef.current && stepParam === 'scholarship_fee') {
+                     console.log('[Onboarding] Detectado redirecionamento incorreto para scholarship_fee no novo fluxo. Corrigindo para placement_fee.');
+                     goToStep('placement_fee');
+                  } else {
+                     console.log('[Onboarding] Pagamento de Taxa Final com sucesso. Indo para: my_applications');
+                     goToStep('my_applications');
+                  }
                 } else {
                   const newParams = new URLSearchParams(searchParams);
                   newParams.delete('payment');
@@ -409,7 +439,7 @@ const StudentOnboarding: React.FC = () => {
                   newParams.delete('pix_payment');
                   setSearchParams(newParams, { replace: true });
                 }
-              }, 4000);
+              }, 600); // Reduzido de 4000 para 600ms
             } else if ((data.status === 'open' || data.status === 'pending') && pollCount < MAX_POLLS) {
               // Pagamento assíncrono (ex: PIX), tenta novamente a cada 3s
               setTimeout(verifyStripeSession, 3000);

@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { CheckCircle, X } from 'lucide-react';
+import { CheckCircle } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 import { IdentityPhotoUpload, IdentityPhotoUploadRef } from '../../../components/IdentityPhotoUpload';
 import { supabase } from '../../../lib/supabase';
@@ -34,7 +34,8 @@ export const IdentityVerificationStep: React.FC<IdentityVerificationStepProps> =
           .from('comprehensive_term_acceptance')
           .select('identity_photo_path')
           .eq('user_id', user.id)
-          .not('identity_photo_path', 'is', null)
+          .order('created_at', { ascending: false })
+          .limit(1)
           .maybeSingle();
 
         if (data?.identity_photo_path) {
@@ -42,7 +43,7 @@ export const IdentityVerificationStep: React.FC<IdentityVerificationStepProps> =
           setUploadedPath(data.identity_photo_path);
         }
       } catch (e) {
-        // Silencioso — trataremos como não verificado
+        console.warn('[IdentityStep] Erro ao checar foto existente:', e);
       } finally {
         setCheckingExisting(false);
       }
@@ -51,7 +52,6 @@ export const IdentityVerificationStep: React.FC<IdentityVerificationStepProps> =
   }, [user?.id]);
 
   const handleUploadSuccess = (filePath: string) => {
-    // Apenas guardamos o path temporariamente. O envio de fato só ocorre ao clicar no botão.
     setUploadedPath(filePath);
   };
 
@@ -60,53 +60,33 @@ export const IdentityVerificationStep: React.FC<IdentityVerificationStepProps> =
     setSaving(true);
 
     try {
-      const { data: existing } = await supabase
-        .from('comprehensive_term_acceptance')
+      const { data: latestTerm } = await supabase
+        .from('application_terms')
         .select('id')
-        .eq('user_id', user.id)
         .eq('term_type', 'checkout_terms')
+        .eq('is_active', true)
+        .order('version', { ascending: false })
+        .limit(1)
         .maybeSingle();
 
-      if (existing) {
-        const { error } = await supabase
-          .from('comprehensive_term_acceptance')
-          .update({
-            identity_photo_path: uploadedPath,
-            identity_photo_status: 'pending'
-          })
-          .eq('id', existing.id);
-        if (error) throw error;
-      } else {
-        const { data: latestTerm } = await supabase
-          .from('application_terms')
-          .select('id')
-          .eq('term_type', 'checkout_terms')
-          .eq('is_active', true)
-          .order('version', { ascending: false })
-          .limit(1)
-          .maybeSingle();
-
-        const { error } = await supabase
-          .from('comprehensive_term_acceptance')
-          .insert({
-            user_id: user.id,
-            term_id: latestTerm?.id,
-            term_type: 'checkout_terms',
-            identity_photo_path: uploadedPath,
-            identity_photo_status: 'pending',
-            accepted_at: new Date().toISOString(),
-          });
-        if (error) throw error;
-      }
+      const { error } = await supabase
+        .from('comprehensive_term_acceptance')
+        .insert({
+          user_id: user.id,
+          term_id: latestTerm?.id,
+          term_type: 'checkout_terms',
+          identity_photo_path: uploadedPath,
+          identity_photo_status: 'pending',
+          accepted_at: new Date().toISOString(),
+        });
+      if (error) throw error;
 
       setAlreadyVerified(true);
-      toast.success(t('selectionFeeStep.main.identity.success'));
-      
-      // Avança diretamente após o envio explícito (já salvou no bd)
+      toast.success(t('selectionSurvey.toastPhotoSuccess') || 'Sucesso!');
       onNext();
     } catch (err) {
       console.error('[IdentityVerificationStep] Erro ao salvar foto:', err);
-      toast.error(t('selectionFeeStep.main.identity.error'));
+      toast.error(t('selectionSurvey.toastPhotoError') || 'Erro ao enviar foto.');
     } finally {
       setSaving(false);
     }
@@ -120,32 +100,31 @@ export const IdentityVerificationStep: React.FC<IdentityVerificationStepProps> =
     );
   }
 
+  // Traduções Fallback (Prevenção de Tela Branca se as chaves sumirem)
+  const title = t('selectionSurvey.identityVerification') || 'Verificação de Identidade';
+  const completedTitle = t('selectionSurvey.profilesIdentified') || 'Identidade Confirmada';
+  const alreadySentText = t('selectionSurvey.identityVerifiedSuccess') || 'Você já enviou sua foto de identidade e ela está em análise.';
+  const continueBtn = t('common.next') || 'Próximo';
+
   if (alreadyVerified) {
     return (
       <div className="space-y-8 sm:space-y-10 pb-12 max-w-4xl mx-auto px-4">
-        {/* Header */}
         <div className="text-left space-y-4">
-          <h2 className="text-3xl md:text-5xl font-black text-slate-900 uppercase tracking-tighter leading-none">
-            {t('selectionFeeStep.main.identityVerification')}
-          </h2>
-        
+          <h2 className="text-3xl md:text-5xl font-black text-slate-900 uppercase tracking-tighter leading-none">{title}</h2>
         </div>
-
-        {/* Main White Container */}
         <div className="bg-white border border-emerald-500/30 ring-1 ring-emerald-500/20 rounded-[2.5rem] p-8 md:p-10 shadow-2xl relative overflow-hidden">
           <div className="absolute top-0 right-0 w-64 h-64 bg-blue-500/5 rounded-full blur-[80px] -mr-32 -mt-32 pointer-events-none" />
-          
           <div className="relative z-10 text-center py-4">
             <div className="w-20 h-20 bg-emerald-500/20 rounded-full flex items-center justify-center mx-auto mb-6 border border-emerald-500/30">
               <CheckCircle className="w-12 h-12 text-emerald-400" />
             </div>
-            <h3 className="text-3xl font-black text-gray-900 mb-3 uppercase tracking-tight">{t('selectionFeeStep.main.identity.completedTitle')}</h3>
-            <p className="text-gray-500 mb-8 font-medium">{t('selectionFeeStep.main.identity.alreadySent')}</p>
+            <h3 className="text-3xl font-black text-gray-900 mb-3 uppercase tracking-tight">{completedTitle}</h3>
+            <p className="text-gray-500 mb-8 font-medium">{alreadySentText}</p>
             <button
               onClick={onNext}
               className="w-full max-w-xs bg-blue-600 text-white py-4 px-8 rounded-xl hover:bg-blue-700 transition-all font-bold uppercase tracking-widest shadow-lg shadow-blue-500/20 hover:scale-105 active:scale-95 mx-auto"
             >
-              {t('selectionFeeStep.main.identity.continue')}
+              {continueBtn}
             </button>
           </div>
         </div>
@@ -155,18 +134,10 @@ export const IdentityVerificationStep: React.FC<IdentityVerificationStepProps> =
 
   return (
     <div className="space-y-8 sm:space-y-10 pb-12">
-      {/* Header */}
       <div className="mb-10 text-left">
-        <h1 className="text-3xl md:text-5xl font-black text-gray-900 uppercase tracking-tighter mb-4 leading-none">
-          {t('selectionFeeStep.main.identityVerification')}
-        </h1>
+        <h1 className="text-3xl md:text-5xl font-black text-gray-900 uppercase tracking-tighter mb-4 leading-none">{title}</h1>
       </div>
-
-      {/* Card principal */}
       <div className="bg-white border border-gray-100 rounded-[2.5rem] p-6 md:p-10 shadow-2xl relative overflow-hidden">
-        <div className="absolute top-0 right-0 w-64 h-64 bg-blue-500/5 rounded-full blur-[80px] -mr-32 -mt-32 pointer-events-none" />
-
-        {/* Upload da selfie */}
         <div className="relative z-10 space-y-6">
           <IdentityPhotoUpload
             ref={photoUploadRef}
@@ -177,22 +148,7 @@ export const IdentityVerificationStep: React.FC<IdentityVerificationStepProps> =
             variant="large"
             hideInternalActions={true}
           />
-
           <div className="flex justify-end gap-3 mt-6">
-            {uploadedPath && (
-              <button
-                onClick={() => {
-                  photoUploadRef.current?.clear();
-                  setUploadedPath(null);
-                }}
-                disabled={saving}
-                className="px-6 py-3 text-sm font-medium text-red-700 bg-red-50 hover:bg-red-100 rounded-xl transition-colors flex items-center gap-2"
-              >
-                <X className="w-4 h-4" />
-                {t('components.identityPhotoUpload.remove', { ns: 'common' })}
-              </button>
-            )}
-            
             <button
               onClick={handleSendPhoto}
               disabled={!uploadedPath || saving}
@@ -200,7 +156,7 @@ export const IdentityVerificationStep: React.FC<IdentityVerificationStepProps> =
                 !uploadedPath ? 'opacity-40 cursor-not-allowed grayscale-[0.5]' : 'hover:scale-[1.02] active:scale-[0.98]'
               }`}
             >
-              {saving ? t('selectionFeeStep.main.identity.sending') : t('selectionFeeStep.main.identity.sendPhoto')}
+              {saving ? t('common.saving') || 'Salvando...' : continueBtn}
             </button>
           </div>
         </div>
