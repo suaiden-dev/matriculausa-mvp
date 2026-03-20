@@ -6,7 +6,7 @@ import { useTranslation } from 'react-i18next';
 import { StepProps, ProcessType } from '../types';
 
 export const ProcessTypeStep: React.FC<StepProps> = ({ onNext }) => {
-  const { user, userProfile } = useAuth();
+  const { userProfile, refetchUserProfile, updateUserProfile } = useAuth();
   const [selectedType, setSelectedType] = useState<ProcessType | null>(null);
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -16,9 +16,9 @@ export const ProcessTypeStep: React.FC<StepProps> = ({ onNext }) => {
   useEffect(() => {
     if (!userProfile?.id) return;
     
-    // Carregar tipo salvo do localStorage ou do banco
+    // Carregar tipo salvo prioritariamente do banco de dados (com localStorage como fallback antigo)
     const userKey = `studentProcessType_${userProfile.id}`;
-    const savedType = (window.localStorage.getItem(userKey) || window.localStorage.getItem('studentProcessType')) as ProcessType | null;
+    const savedType = (userProfile?.student_process_type || window.localStorage.getItem(userKey) || window.localStorage.getItem('studentProcessType')) as ProcessType | null;
     
     if (savedType && ['initial', 'transfer', 'change_of_status'].includes(savedType)) {
       setSelectedType(savedType);
@@ -57,7 +57,7 @@ export const ProcessTypeStep: React.FC<StepProps> = ({ onNext }) => {
       return;
     }
 
-    if (!user?.id || !userProfile?.id) {
+    if (!userProfile?.id) {
       setError(t('studentOnboarding.processType.authError'));
       return;
     }
@@ -66,33 +66,46 @@ export const ProcessTypeStep: React.FC<StepProps> = ({ onNext }) => {
     setError(null);
 
     try {
-      // Salvar no localStorage (escopado e global para compatibilidade)
-      const userKey = `studentProcessType_${userProfile.id}`;
-      window.localStorage.setItem(userKey, selectedType);
-      window.localStorage.setItem('studentProcessType', selectedType);
+      const { error: profileError } = await supabase
+        .from('user_profiles')
+        .update({ student_process_type: selectedType })
+        .eq('id', userProfile.id);
 
-      // Atualizar aplicações existentes
+      if (profileError) {
+         console.error('Error saving process type:', profileError);
+         const userKey = `studentProcessType_${userProfile.id}`;
+         window.localStorage.setItem(userKey, selectedType);
+         window.localStorage.setItem('studentProcessType', selectedType);
+      }
+
+      // Forçar atualização do Cache React Context
+      if (updateUserProfile) {
+        await updateUserProfile({ student_process_type: selectedType });
+      } else if (refetchUserProfile) {
+        await refetchUserProfile();
+      }
+
+      // Atualizar aplicações existentes 
       const { data: applications } = await supabase
         .from('scholarship_applications')
         .select('id')
         .eq('student_id', userProfile.id);
 
       if (applications && applications.length > 0) {
-        const { error: updateError } = await supabase
+        const { error: appError } = await supabase
           .from('scholarship_applications')
           .update({ student_process_type: selectedType })
-          .eq('student_id', userProfile.id);
+          .in('id', applications.map(a => a.id));
 
-        if (updateError) {
-          console.error('Error updating process type:', updateError);
-          // Não falhar se houver erro - continuar mesmo assim
+        if (appError) {
+          console.error('Erro ao atualizar applications:', appError);
         }
       }
 
       onNext();
     } catch (err: any) {
-      console.error('Error saving process type:', err);
-      setError(t('studentOnboarding.processType.saveError'));
+      console.error(err);
+      setError(err.message || 'Error occurred while saving your choice.');
     } finally {
       setSaving(false);
     }

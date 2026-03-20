@@ -39,7 +39,7 @@ const DOCUMENT_TYPES = [
 
 export const DocumentsUploadStep: React.FC<StepProps> = ({ onNext }) => {
   const { t } = useTranslation(['registration', 'common', 'scholarships']);
-  const { user, userProfile, refetchUserProfile } = useAuth();
+  const { user, userProfile, refetchUserProfile, updateUserProfile } = useAuth();
   const { clearCart } = useCartStore();
   const [files, setFiles] = useState<Record<string, File | File[] | null>>({
     passport: null,
@@ -85,9 +85,9 @@ export const DocumentsUploadStep: React.FC<StepProps> = ({ onNext }) => {
     funds_proof: t('studentDashboard.documentsAndScholarshipChoice.fundsProofDescription') || 'Faça upload de extratos bancários ou documentos financeiros. É necessário um mínimo de $22.000 USD, mais $5.000 USD para cada dependente.',
   };
 
-  // Obter process type do localStorage (escopado pref.)
+  // Obter process type do banco (com localStorage como fallback)
   const userProcessTypeKey = userProfile?.id ? `studentProcessType_${userProfile.id}` : 'studentProcessType';
-  const processType = (window.localStorage.getItem(userProcessTypeKey) || window.localStorage.getItem('studentProcessType')) || 'initial';
+  const processType = userProfile?.student_process_type || (window.localStorage.getItem(userProcessTypeKey) || window.localStorage.getItem('studentProcessType')) || 'initial';
 
   // Verificar se já passou pela review (tem documentos enviados ou aprovados)
   useEffect(() => {
@@ -329,7 +329,7 @@ export const DocumentsUploadStep: React.FC<StepProps> = ({ onNext }) => {
                 student_id: userProfile.id,
                 scholarship_id: scholarshipId,
                 status: 'pending',
-                student_process_type: (userProfile?.id ? (window.localStorage.getItem(`studentProcessType_${userProfile.id}`) || window.localStorage.getItem('studentProcessType')) : window.localStorage.getItem('studentProcessType')) || 'initial'
+                student_process_type: processType || 'initial'
               })
               .select('id')
               .single();
@@ -590,19 +590,18 @@ export const DocumentsUploadStep: React.FC<StepProps> = ({ onNext }) => {
       if (!userProfile?.id) return;
       
       try {
-        if (selectedAppId) {
-          await supabase
-            .from('user_profiles')
-            .update({ selected_application_id: selectedAppId })
-            .eq('id', userProfile.id);
+        if (updateUserProfile) {
+          // Utilizar o método consolidado do Auth para banco e estado simultâneo
+          await updateUserProfile({ selected_application_id: selectedAppId || null });
         } else {
+          // Fallback legacy caso hooks falhem
           await supabase
             .from('user_profiles')
-            .update({ selected_application_id: null })
+            .update({ selected_application_id: selectedAppId || null })
             .eq('id', userProfile.id);
+          await refetchUserProfile();
         }
         
-        await refetchUserProfile();
         setShowConfirmModal(false);
         onNext();
       } catch (err) {

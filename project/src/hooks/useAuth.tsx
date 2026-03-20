@@ -63,6 +63,7 @@ export interface UserProfile {
   // System type inherited from seller
   system_type?: 'legacy' | 'simplified';
   selection_survey_passed?: boolean;
+  student_process_type?: string | null;
 
   // CPF Document
   cpf_document?: string;
