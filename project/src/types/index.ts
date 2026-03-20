@@ -173,6 +173,7 @@ export interface UserProfile {
   affiliate_code?: string | null; // Friend referral code
   system_type?: "legacy" | "simplified"; // System type inherited from seller
   selection_survey_passed?: boolean;
+  student_process_type?: string | null;
 }
 
 export interface EmailAttachment {
