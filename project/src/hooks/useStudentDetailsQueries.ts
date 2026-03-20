@@ -33,7 +33,7 @@ export function useStudentDetailsQuery(profileId: string | undefined) {
             try {
               const { data: extraProfile, error: extraError } = await supabase
                 .from('user_profiles')
-                .select('placement_fee_flow, is_placement_fee_paid, selection_survey_passed, has_paid_i20_control_fee')
+                .select('placement_fee_flow, is_placement_fee_paid, selection_survey_passed, has_paid_i20_control_fee, system_type')
                 .eq('id', profileId)
                 .single();
 
