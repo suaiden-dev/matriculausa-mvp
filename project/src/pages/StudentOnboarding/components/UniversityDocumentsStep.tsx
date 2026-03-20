@@ -602,8 +602,8 @@ export const UniversityDocumentsStep: React.FC<StepProps> = ({ onBack }) => {
   return (
     <div className="space-y-8 pb-24">
       {/* Header Premium */}
-      <div className="flex flex-col md:flex-row md:items-end justify-between gap-6 mt-6 md:mt-0">
-        <div className="space-y-3">
+      <div className="flex flex-col md:flex-row md:items-end justify-between gap-6 mt-6 md:mt-0 text-center md:text-left">
+        <div className="space-y-3 w-full">
           <h2 className="text-4xl md:text-6xl font-black text-slate-900 uppercase tracking-tighter leading-none">
             {t('studentDashboard.myApplicationStep.header.my')} <span className="text-blue-600">{t('studentDashboard.myApplicationStep.header.application')}</span>
           </h2>

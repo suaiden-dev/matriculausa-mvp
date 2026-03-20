@@ -550,7 +550,7 @@ export const DocumentsUploadStep: React.FC<StepProps> = ({ onNext }) => {
       return (
         <div className="space-y-10 pb-12 max-w-4xl mx-auto px-4">
           {/* Header */}
-          <div className="text-left space-y-4">
+          <div className="text-center sm:text-left space-y-4">
             <h2 className="text-3xl md:text-5xl font-black text-slate-900 uppercase tracking-tighter leading-none">
               {t('studentOnboarding.documentsUpload.approvedApps.title')}
             </h2>
@@ -628,7 +628,7 @@ export const DocumentsUploadStep: React.FC<StepProps> = ({ onNext }) => {
         >
           <div className="space-y-10 max-w-5xl mx-auto pb-12 px-4">
             {/* Header Outside Container */}
-            <div className="text-left space-y-4 animate-in fade-in slide-in-from-top-10 duration-1000">
+            <div className="text-center sm:text-left space-y-4 animate-in fade-in slide-in-from-top-10 duration-1000">
               <h2 className="text-3xl md:text-5xl font-black text-slate-900 uppercase tracking-tighter leading-none">
                 {isApproved ? t('studentOnboarding.documentsUpload.approvedApps.title') : t('studentOnboarding.documentsUpload.review.title')}
               </h2>
@@ -1110,11 +1110,11 @@ export const DocumentsUploadStep: React.FC<StepProps> = ({ onNext }) => {
 
   return (
     <div className="space-y-10 pb-24 sm:pb-12 w-full">
-      <div className="text-left space-y-4 px-4">
+      <div className="text-center sm:text-left space-y-4 px-4">
         <h2 className="text-3xl md:text-5xl font-black text-slate-900 uppercase tracking-tighter leading-none">
           {t('studentDashboard.documentsUploadStep.title')}
         </h2>
-        <p className="text-lg md:text-xl text-slate-600 font-medium max-w-2xl mt-2">
+        <p className="text-lg md:text-xl text-slate-600 font-medium max-w-2xl mt-2 mx-auto sm:mx-0">
           {t('studentDashboard.documentsUploadStep.subtitle')}
         </p>
       </div>

@@ -354,12 +354,12 @@ export const SelectionSurveyStep: React.FC<StepProps> = ({ onNext }) => {
 
     return (
         <div id="survey-top" className="max-w-4xl mx-auto w-full space-y-8 sm:space-y-10 pb-12">
-            <div className="mb-10 flex flex-col sm:flex-row justify-between items-start gap-4">
-                <div className="text-left">
-                    <h1 className="text-3xl md:text-5xl font-black text-gray-900 uppercase tracking-tighter mb-4 leading-none">
+            <div className="mb-10 flex flex-col sm:flex-row justify-between items-center sm:items-start gap-4">
+                <div className="text-center sm:text-left w-full">
+                    <h1 className="text-3xl md:text-5xl font-black text-gray-900 uppercase tracking-tighter mb-4 leading-none text-center sm:text-left">
                         {t('selectionSurvey.title')}
                     </h1>
-                    <p className="text-slate-600 text-base md:text-lg font-medium max-w-2xl">
+                    <p className="text-slate-600 text-base md:text-lg font-medium max-w-2xl mx-auto sm:mx-0 text-center sm:text-left">
                         <Trans
                             i18nKey="selectionSurvey.subtitle"
                             components={[
