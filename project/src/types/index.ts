@@ -81,6 +81,7 @@ export interface Scholarship {
     logo_url?: string;
     location: string;
     is_approved: boolean;
+    image_url?: string;
     university_fees_page_url?: string;
   } | null;
 }

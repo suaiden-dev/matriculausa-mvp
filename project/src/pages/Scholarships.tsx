@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef, useMemo } from 'react';
-import { Search, DollarSign, Award, Clock, GraduationCap, Star, CheckCircle, Building, Users, ArrowRight, AlertTriangle, Monitor, MapPin, Briefcase, Globe } from 'lucide-react';
+import { Search, DollarSign, Award, GraduationCap, Star, CheckCircle, Building, Users, ArrowRight, AlertTriangle, Monitor, MapPin, Briefcase, Globe } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 import { useAuth } from '../hooks/useAuth';
 import { useNavigate, useLocation } from 'react-router-dom';
@@ -12,9 +12,9 @@ import ScholarshipDetailModal from '../components/ScholarshipDetailModal';
 import { ApplicationFeeBlockedMessage } from '../components/ApplicationFeeBlockedMessage';
 import { useApplicationFeeStatus } from '../hooks/useApplicationFeeStatus';
 import { usePackageScholarshipFilter } from '../hooks/usePackageScholarshipFilter';
-import { is3800ScholarshipBlocked, is3800Scholarship } from '../utils/scholarshipDeadlineValidation';
-import { ScholarshipExpiryWarning } from '../components/ScholarshipExpiryWarning';
-import { ScholarshipCountdownTimer } from '../components/ScholarshipCountdownTimer';
+import { is3800ScholarshipBlocked/*, is3800Scholarship*/ } from '../utils/scholarshipDeadlineValidation';
+// import { ScholarshipExpiryWarning } from '../components/ScholarshipExpiryWarning';
+// import { ScholarshipCountdownTimer } from '../components/ScholarshipCountdownTimer';
 import { getPlacementFee } from '../utils/placementFeeCalculator';
 import { formatCurrency } from '../utils/currency';
 
@@ -59,18 +59,35 @@ const Scholarships: React.FC = () => {
   // Estados para o modal de detalhes
   const [selectedScholarshipForModal, setSelectedScholarshipForModal] = useState<any>(null);
 
+  // Determinar se o usuário pode ver detalhes sensíveis (ex: nome da universidade, logo real da faculdade)
+  const canViewSensitive = isAuthenticated && (
+    user?.role !== 'student' || 
+    (userProfile as any)?.has_paid_selection_process_fee ||
+    (userProfile as any)?.has_paid_application_fee
+  );
+
+  useEffect(() => {
+    if (isAuthenticated) {
+      console.log('🐞 [DEBUG] canViewSensitive:', canViewSensitive, {
+        role: user?.role,
+        hasSelectionFee: (userProfile as any)?.has_paid_selection_process_fee,
+        hasAppFee: (userProfile as any)?.has_paid_application_fee
+      });
+    }
+  }, [isAuthenticated, canViewSensitive, userProfile, user]);
+
   // Get min and max scholarship values from data
   const scholarshipValues = scholarships.map((s: Scholarship) => s.amount).filter(val => val && val > 0);
   const maxScholarshipValue = scholarshipValues.length > 0 ? Math.max(...scholarshipValues) : 100000;
 
-  // Range state
-  const [maxPrice, setMaxPrice] = useState(() => maxScholarshipValue);
+  // Range state - Inicializado em 0 conforme solicitado (0 = sem limite superior no filtro matchesRange)
+  const [maxPrice, setMaxPrice] = useState(0);
   const [minPrice, setMinPrice] = useState(0);
 
-  // Sempre que o valor máximo das bolsas mudar, atualize o filtro
-  useEffect(() => {
+  // Removida a atualização automática de maxPrice para evitar conflitos visuais e "pulos" de valores
+  /* useEffect(() => {
     setMaxPrice(maxScholarshipValue);
-  }, [maxScholarshipValue]);
+  }, [maxScholarshipValue]); */
 
   // Salvar filtros no localStorage quando mudarem
   useEffect(() => {
@@ -114,14 +131,34 @@ const Scholarships: React.FC = () => {
           .from('scholarships')
           .select(`
             *,
-            universities (id, name, location, logo_url)
+            universities (id, name, location, logo_url, image_url)
           `)
           .eq('is_highlighted', true)
           // Removido filtro is_active=true - estudantes podem ver bolsas inativas mas não podem aplicar
           .order('featured_order', { ascending: true });
 
         if (!scholarshipsError && scholarshipsData) {
-          setFeaturedScholarships(scholarshipsData);
+          // Log de depuração para bolsas da St. Francis College ou bolsas sem imagem
+      const sfcBolsas = scholarshipsData.filter((s: any) => 
+        s.universities?.name?.toLowerCase().includes('francis') || 
+        s.title?.toLowerCase().includes('francis')
+      );
+      if (sfcBolsas.length > 0) {
+        console.log('🐞 [DEBUG] Bolsas da St. Francis encontradas:', sfcBolsas.map((s: any) => ({
+          titulo: s.title,
+          scholarship_img: s.image_url,
+          university_obj: s.universities,
+          uni_logo: s.universities?.logo_url,
+          uni_img: s.universities?.image_url
+        })));
+      } else if (scholarshipsData.length > 0) {
+        console.log('🐞 [DEBUG] Nenhuma bolsa da St. Francis no retorno. Total de bolsas:', scholarshipsData.length);
+        // Verificar se os objetos universities estão presentes no retorno global
+        const comUni = scholarshipsData.filter((s: any) => s.universities).length;
+        console.log('🐞 [DEBUG] Bolsas com universidade carregada no join:', comUni, '/', scholarshipsData.length);
+      }
+
+      setFeaturedScholarships(scholarshipsData);
 
           // Fetch universities of featured scholarships to display information
           const universityIds = scholarshipsData.map(s => s.university_id).filter(Boolean);
@@ -254,10 +291,7 @@ const Scholarships: React.FC = () => {
 
   const filteredFeaturedScholarships = featuredScholarships.filter(matchesFilters);
 
-  // Regras de visibilidade (replicadas do ScholarshipBrowser)
-  const canViewSensitive = isAuthenticated
-    ? (user?.role !== 'student' || !!userProfile?.has_paid_selection_process_fee)
-    : false;
+  // Regras de visibilidade (canViewSensitive já declarada no topo do componente)
   const shouldApplyBlur = !canViewSensitive;
 
   // Polling para atualizar o perfil do usuário apenas enquanto o pagamento está pendente
@@ -371,13 +405,13 @@ const Scholarships: React.FC = () => {
     return diffDays;
   };
 
-  const getDeadlineStatus = (deadline: string) => {
+  /* const getDeadlineStatus = (deadline: string) => {
     const days = getDaysUntilDeadline(deadline);
     if (days < 0) return { status: 'expired', color: 'text-red-600', bg: 'bg-red-50' };
     if (days <= 7) return { status: 'urgent', color: 'text-orange-600', bg: 'bg-orange-50' };
     if (days <= 30) return { status: 'soon', color: 'text-yellow-600', bg: 'bg-yellow-50' };
     return { status: 'normal', color: 'text-green-600', bg: 'bg-green-50' };
-  };
+  }; */
 
   // Funções para controlar o modal
   const openScholarshipModal = (scholarship: any) => {
@@ -426,12 +460,23 @@ const Scholarships: React.FC = () => {
     };
     const withIndex = filteredScholarships.map((s, idx) => ({ s, idx }));
     withIndex.sort((a, b) => {
+      // Prioridade 1: Disponibilidade de candidatura (Bolsas expiradas ou inativas vêm por último)
+      const aBlocked = !a.s.is_active || is3800ScholarshipBlocked(a.s);
+      const bBlocked = !b.s.is_active || is3800ScholarshipBlocked(b.s);
+      
+      if (aBlocked !== bBlocked) {
+        return aBlocked ? 1 : -1; // Se 'a' estiver bloqueada e 'b' não, a vai para depois
+      }
+
+      // Prioridade 2: Universidades parceiras (Caroline/Oikos)
       const aName = a.s.university_name || (a.s as any).universities?.name || '';
       const bName = b.s.university_name || (b.s as any).universities?.name || '';
       const aPr = priorityMatch(aName) ? 0 : 1;
       const bPr = priorityMatch(bName) ? 0 : 1;
-      if (aPr !== bPr) return aPr - bPr; // prioriza prioridade 0
-      return a.idx - b.idx; // estabilidade
+      if (aPr !== bPr) return aPr - bPr; 
+
+      // Prioridade 3: Ordem original (estabilidade)
+      return a.idx - b.idx;
     });
     const sorted = withIndex.map(x => x.s);
     return sorted.slice(page * pageSize, (page + 1) * pageSize);
@@ -629,7 +674,7 @@ const Scholarships: React.FC = () => {
 
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8 mb-8">
               {filteredFeaturedScholarships.slice(0, 6).map((scholarship) => {
-                const deadlineStatus = getDeadlineStatus(scholarship.deadline);
+                // const deadlineStatus = getDeadlineStatus(scholarship.deadline);
                 const daysLeft = getDaysUntilDeadline(scholarship.deadline);
                 const originalValue = scholarship.original_annual_value ?? 0;
                 const scholarshipValue = scholarship.annual_value_with_scholarship ?? 0;
@@ -641,13 +686,12 @@ const Scholarships: React.FC = () => {
                   <article key={scholarship.id} className="group relative bg-white rounded-3xl shadow-lg hover:shadow-2xl transition-all duration-500 overflow-hidden border border-slate-200 hover:-translate-y-3 hover:border-[#05294E]/20 focus-within:ring-2 focus-within:ring-[#05294E]/50 flex flex-col h-full" role="article" aria-labelledby={`featured-scholarship-title-${scholarship.id}`}>
                     {/* Overlay de blur quando não autenticado */}
 
-                    {/* Featured Badge - Top Right */}
-                    <div className="absolute top-4 right-4 z-10">
+                    {/* <div className="absolute top-4 right-4 z-10">
                       <div className="bg-gradient-to-r from-yellow-400 to-orange-500 text-white px-3 py-1.5 rounded-xl text-xs font-bold shadow-lg backdrop-blur-sm border border-white/20 flex items-center gap-1">
                         <Star className="h-3 w-3 fill-current" />
                         {t('common.featured')}
                       </div>
-                    </div>
+                    </div> */}
 
                     {/* Deadline Urgency Indicator */}
                     {daysLeft <= 7 && daysLeft > 0 && (
@@ -659,11 +703,14 @@ const Scholarships: React.FC = () => {
 
                     {/* Scholarship Image */}
                     <div className="relative h-48 w-full overflow-hidden flex items-center justify-center ">
-                      {scholarship.image_url && canViewSensitive ? (
+                      {(scholarship.image_url || scholarship.universities?.image_url || scholarship.universities?.logo_url) && canViewSensitive ? (
                         <img
-                          src={scholarship.image_url}
+                          src={scholarship.image_url || scholarship.universities?.image_url || scholarship.universities?.logo_url || ''}
                           alt={scholarship.title}
-                          className={`w-full h-full object-contain group-hover:scale-110 transition-transform duration-700`}
+                          onError={(e) => {
+                            console.error(`❌ [ERROR] Falha ao carregar imagem para ${scholarship.title}. URL:`, (e.target as HTMLImageElement).src);
+                          }}
+                          className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-500"
                         />
                       ) : (
                         <div className="flex items-center justify-center w-full h-full text-slate-400 bg-gradient-to-br from-[#05294E]/5 to-slate-100">
@@ -677,14 +724,15 @@ const Scholarships: React.FC = () => {
                         {/* Top Left Badges */}
                        <div className="absolute top-4 left-4 flex flex-col gap-2 z-20">
                          {/* Timer para bolsas de $3800 ou Deadline Badge */}
-                         {is3800Scholarship(scholarship) ? (
+                         {/* Visual timers hidden as per request - logical behavior remains intact */}
+                         {/* {is3800Scholarship(scholarship) ? (
                            <ScholarshipCountdownTimer scholarship={scholarship} />
                          ) : daysLeft > 0 && (
                            <div className={`px-3 py-1.5 rounded-xl text-xs font-bold shadow-lg backdrop-blur-sm border border-white/20 flex items-center gap-1 ${deadlineStatus.bg} ${deadlineStatus.color}`}>
                              <Clock className="h-3 w-3" />
                              {daysLeft <= 0 ? t('scholarshipsPage.scholarshipCard.expired') : `${daysLeft} ${t('scholarshipsPage.scholarshipCard.days')}`}
                            </div>
-                         )}
+                         )} */}
                          {/* Exclusive Badge */}
                          {scholarship.is_exclusive && (
                            <div className="bg-gradient-to-r from-[#D0151C] to-red-600 text-white px-3 py-1.5 rounded-xl text-xs font-bold shadow-lg backdrop-blur-sm border border-white/20 flex items-center gap-1">
@@ -699,8 +747,8 @@ const Scholarships: React.FC = () => {
                     <div className="p-6 flex-1 flex flex-col">
                       {/* Header Section */}
                       <div className="mb-4 flex-1">
-                        {/* Warning for $3800 scholarships - inline version */}
-                        <ScholarshipExpiryWarning scholarship={scholarship} variant="badge" className="mb-3" />
+                        {/* Warning for $3800 scholarships - inline version hidden as per request */}
+                        {/* <ScholarshipExpiryWarning scholarship={scholarship} variant="badge" className="mb-3" /> */}
                         
                         <h3 id={`featured-scholarship-title-${scholarship.id}`} className={`text-xl font-bold text-slate-900 mb-3 leading-tight line-clamp-2 group-hover:text-[#05294E] transition-colors duration-300`}>
                           {scholarship.title}
@@ -941,7 +989,7 @@ const Scholarships: React.FC = () => {
                       setSelectedField('all');
                       setSelectedStudyMode('all');
                       setSelectedWorkAuth('all');
-                      setMaxPrice(() => maxScholarshipValue);
+                       setMaxPrice(0);
                       setMinPrice(0);
                      localStorage.removeItem('scholarshipsPageFilters');
                    }}
@@ -952,13 +1000,13 @@ const Scholarships: React.FC = () => {
                </div>
              ) : (
                paginatedScholarships.map((scholarship: Scholarship) => {
-                 const deadlineStatus = getDeadlineStatus(scholarship.deadline);
+                 // const deadlineStatus = getDeadlineStatus(scholarship.deadline);
                  const daysLeft = getDaysUntilDeadline(scholarship.deadline);
                  const originalValue = scholarship.original_annual_value ?? 0;
                  const scholarshipValue = scholarship.annual_value_with_scholarship ?? 0;
                  const savings = originalValue - scholarshipValue;
                  const savingsPercentage = originalValue > 0 ? Math.round((savings / originalValue) * 100) : 0;
-                 
+
                  const isBlocked = is3800ScholarshipBlocked(scholarship);
                  
                  return (
@@ -995,11 +1043,14 @@ const Scholarships: React.FC = () => {
 
                     {/* Scholarship Image */}
                     <div className="relative h-48 w-full overflow-hidden flex items-center justify-center">
-                      {scholarship.image_url && canViewSensitive ? (
+                      {(scholarship.image_url || scholarship.universities?.image_url || scholarship.universities?.logo_url) && canViewSensitive ? (
                         <img
-                          src={scholarship.image_url}
+                          src={scholarship.image_url || scholarship.universities?.image_url || scholarship.universities?.logo_url || ''}
                           alt={scholarship.title}
-                          className={`w-full h-full object-contain group-hover:scale-110 transition-transform duration-700`}
+                          onError={(e) => {
+                            console.error(`❌ [ERROR] Falha ao carregar imagem para ${scholarship.title}. URL:`, (e.target as HTMLImageElement).src);
+                          }}
+                          className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-500"
                         />
                       ) : (
                         <div className="flex items-center justify-center w-full h-full text-slate-400 bg-gradient-to-br from-[#05294E]/5 to-slate-100">
@@ -1023,14 +1074,15 @@ const Scholarships: React.FC = () => {
 
                        {/* Deadline Badge - Top Left */}
                        <div className="absolute top-4 left-4">
-                         {is3800Scholarship(scholarship) ? (
-                           <ScholarshipCountdownTimer scholarship={scholarship} />
-                         ) : (
+                        {/* Visual timers hidden as per request - logical behavior remains intact */}
+                        {/* {is3800Scholarship(scholarship) ? (
+                          <ScholarshipCountdownTimer scholarship={scholarship} />
+                        ) : (
                                                     <div className={`px-3 py-1.5 rounded-xl text-xs font-bold shadow-lg backdrop-blur-sm border border-white/20 flex items-center gap-1 ${deadlineStatus.bg} ${deadlineStatus.color}`}>
-                             <Clock className="h-3 w-3" />
-                             {daysLeft <= 0 ? t('scholarshipsPage.scholarshipCard.expired') : `${daysLeft} ${t('scholarshipsPage.scholarshipCard.days')}`}
-                           </div>
-                         )}
+                            <Clock className="h-3 w-3" />
+                            {daysLeft <= 0 ? t('scholarshipsPage.scholarshipCard.expired') : `${daysLeft} ${t('scholarshipsPage.scholarshipCard.days')}`}
+                          </div>
+                        )} */}
                        </div>
                      </div>
                      
@@ -1038,8 +1090,8 @@ const Scholarships: React.FC = () => {
                      <div className="p-6 flex-1 flex flex-col">
                        {/* Header Section */}
                        <div className="mb-4 flex-1">
-                          {/* Warning for $3800 scholarships - inline version */}
-                          <ScholarshipExpiryWarning scholarship={scholarship} variant="badge" className="mb-3" />
+                          {/* Warning for $3800 scholarships - inline version hidden as per request */}
+                          {/* <ScholarshipExpiryWarning scholarship={scholarship} variant="badge" className="mb-3" /> */}
                           
                          <h3 id={`scholarship-title-${scholarship.id}`} className={`text-xl font-bold text-slate-900 mb-3 leading-tight line-clamp-2 group-hover:text-[#05294E] transition-colors duration-300`}>
                            {scholarship.title}
@@ -1063,7 +1115,7 @@ const Scholarships: React.FC = () => {
                           <span className="text-xs font-semibold mr-2 text-slate-500">{t('scholarshipsPage.scholarshipCard.university')}</span>
                           <span className={`text-sm font-medium ${shouldApplyBlur ? 'blur-sm text-slate-400' : 'text-slate-700'}`}>
                             {canViewSensitive
-                              ? (scholarship.university_name || scholarship.universities?.name || 'Unknown University')
+                              ? (scholarship.universities?.name || scholarship.university_name || 'Unknown University')
                               : '********'}
                           </span>
                         </div>
