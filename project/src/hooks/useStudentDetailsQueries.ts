@@ -44,6 +44,7 @@ export function useStudentDetailsQuery(profileId: string | undefined) {
                   is_placement_fee_paid: s.is_placement_fee_paid ?? extraProfile.is_placement_fee_paid,
                   selection_survey_passed: s.selection_survey_passed ?? extraProfile.selection_survey_passed,
                   has_paid_i20_control_fee: s.has_paid_i20_control_fee ?? extraProfile.has_paid_i20_control_fee,
+                  system_type: s.system_type ?? (extraProfile as any).system_type,
                 };
               }
             } catch (extraErr) {
@@ -94,6 +95,7 @@ export function useStudentDetailsQuery(profileId: string | undefined) {
             has_paid_i539_cos_package,
             ds160_package_payment_method,
             i539_cos_package_payment_method,
+            system_type,
             role,
             seller_referral_code,
             admin_notes,
@@ -246,6 +248,7 @@ export function useStudentDetailsQuery(profileId: string | undefined) {
         has_paid_i539_cos_package: !!s.has_paid_i539_cos_package,
         ds160_package_payment_method: s.ds160_package_payment_method || null,
         i539_cos_package_payment_method: s.i539_cos_package_payment_method || null,
+        system_type: s.system_type || null,
         payment_status: mainApp.payment_status || null,
         reviewed_at: mainApp.reviewed_at || null,
         reviewed_by: mainApp.reviewed_by || null,

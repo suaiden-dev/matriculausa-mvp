@@ -235,7 +235,11 @@ const AdminStudentDetails: React.FC = () => {
   };
 
   const { saving, saveProfile, markFeeAsPaid, approveDocument, rejectDocument } = useAdminStudentActions();
-  const { getFeeAmount, formatFeeAmount, hasOverride, userSystemType, userFeeOverrides, loadUserFeeOverrides } = useFeeConfig(student?.user_id);
+  const { getFeeAmount, formatFeeAmount, hasOverride, userSystemType: configSystemType, userFeeOverrides, loadUserFeeOverrides } = useFeeConfig(student?.user_id);
+  
+  // ✅ PRIORIDADE: Usar system_type do objeto student se disponível, fallback para configSystemType
+  const userSystemType = student?.system_type || configSystemType;
+
   const { logAction } = useStudentLogs(student?.student_id || '');
 
   /**
