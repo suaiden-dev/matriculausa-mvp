@@ -85,9 +85,9 @@ export const DocumentsUploadStep: React.FC<StepProps> = ({ onNext }) => {
     funds_proof: t('studentDashboard.documentsAndScholarshipChoice.fundsProofDescription') || 'Faça upload de extratos bancários ou documentos financeiros. É necessário um mínimo de $22.000 USD, mais $5.000 USD para cada dependente.',
   };
 
-  // Obter process type do localStorage (escopado pref.)
+  // Obter process type do banco (com localStorage como fallback)
   const userProcessTypeKey = userProfile?.id ? `studentProcessType_${userProfile.id}` : 'studentProcessType';
-  const processType = (window.localStorage.getItem(userProcessTypeKey) || window.localStorage.getItem('studentProcessType')) || 'initial';
+  const processType = userProfile?.student_process_type || (window.localStorage.getItem(userProcessTypeKey) || window.localStorage.getItem('studentProcessType')) || 'initial';
 
   // Verificar se já passou pela review (tem documentos enviados ou aprovados)
   useEffect(() => {
@@ -329,7 +329,7 @@ export const DocumentsUploadStep: React.FC<StepProps> = ({ onNext }) => {
                 student_id: userProfile.id,
                 scholarship_id: scholarshipId,
                 status: 'pending',
-                student_process_type: (userProfile?.id ? (window.localStorage.getItem(`studentProcessType_${userProfile.id}`) || window.localStorage.getItem('studentProcessType')) : window.localStorage.getItem('studentProcessType')) || 'initial'
+                student_process_type: processType || 'initial'
               })
               .select('id')
               .single();
