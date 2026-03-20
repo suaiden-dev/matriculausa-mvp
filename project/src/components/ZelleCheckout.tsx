@@ -464,6 +464,7 @@ export const ZelleCheckout: React.FC<ZelleCheckoutProps> = ({
           paymentStatusRef.current = 'rejected';
           isProcessingRef.current = false;
           lastDataKeyRef.current = null;
+          refetchPaymentStatus(); // Actualiza o estado global
           return;
         }
 
@@ -475,6 +476,7 @@ export const ZelleCheckout: React.FC<ZelleCheckoutProps> = ({
           stepRef.current = 'success';
           paymentStatusRef.current = 'approved';
           isProcessingRef.current = false;
+          refetchPaymentStatus(); // Actualiza o estado global antes de disparar o onSuccess
           onSuccess?.();
           lastDataKeyRef.current = null;
           return;

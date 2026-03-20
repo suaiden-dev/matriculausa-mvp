@@ -29,6 +29,7 @@ import { ZelleCheckout } from '../components/ZelleCheckout';
 import PhoneInput from 'react-phone-number-input';
 import 'react-phone-number-input/style.css';
 import { PaymentLoadingOverlay } from '../components/PaymentLoadingOverlay';
+import { usePaymentBlocked } from '../hooks/usePaymentBlocked';
 
 // SVG Icons (Simplified for the registration page)
 const PixIcon = ({ className }: { className?: string }) => (
@@ -93,6 +94,33 @@ const QuickRegistration: React.FC = () => {
     updated_at: string;
   }
 
+  const { pendingPayment, rejectedPayment, loading: paymentBlockedLoading } = usePaymentBlocked();
+
+  // Redirect if user has already paid
+  useEffect(() => {
+    if (userProfile?.has_paid_selection_process_fee) {
+      console.log('🎯 [QuickRegistration] User already paid. Redirecting...', {
+        isSurveyPassed: userProfile?.selection_survey_passed
+      });
+      if (!userProfile?.selection_survey_passed) {
+        navigate('/student/onboarding?step=identity_verification');
+      } else {
+        navigate('/student/dashboard');
+      }
+    }
+  }, [userProfile, navigate]);
+
+  // Se já houver um pagamento pendente ou rejeitado de Zelle do tipo selection_process,
+  // abrimos o checkout do Zelle automaticamente no refresh para mostrar o status.
+  useEffect(() => {
+    if (!paymentBlockedLoading) {
+      if (pendingPayment?.fee_type === 'selection_process' || rejectedPayment?.fee_type === 'selection_process') {
+        setShowZelleCheckout(true);
+        setSelectedMethod('zelle');
+      }
+    }
+  }, [pendingPayment, rejectedPayment, paymentBlockedLoading]);
+
   // Form State
   const [formData, setFormData] = useState(() => {
     try {
@@ -129,6 +157,7 @@ const QuickRegistration: React.FC = () => {
   const [isCouponValid, setIsCouponValid] = useState(false);
   const [selectedMethod, setSelectedMethod] = useState<'stripe' | 'pix' | 'zelle' | 'parcelow'>('stripe');
   const [showZelleCheckout, setShowZelleCheckout] = useState(false);
+  const [isZelleProcessing, setIsZelleProcessing] = useState(false);
   const [showPassword, setShowPassword] = useState(false);
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
 
@@ -786,13 +815,15 @@ const QuickRegistration: React.FC = () => {
     return (
       <div className="min-h-screen bg-gray-50 flex flex-col items-center p-4 pt-12 pb-32">
         <div className="max-w-4xl w-full relative">
-          <button
-            onClick={() => setShowZelleCheckout(false)}
-            className="flex items-center gap-2 text-gray-500 font-bold hover:text-[#05294E] transition-all mb-8 group"
-          >
-            <ArrowLeft className="w-5 h-5 transition-transform group-hover:-translate-x-1" />
-            {t('rapidRegistration.zelle.back')}
-          </button>
+          {!isZelleProcessing && (
+            <button
+              onClick={() => setShowZelleCheckout(false)}
+              className="flex items-center gap-2 text-gray-500 font-bold hover:text-[#05294E] transition-all mb-8 group"
+            >
+              <ArrowLeft className="w-5 h-5 transition-transform group-hover:-translate-x-1" />
+              {t('rapidRegistration.zelle.back')}
+            </button>
+          )}
 
           <div className="bg-white rounded-[2.5rem] shadow-2xl border border-slate-200 p-8 overflow-hidden">
             <div className="mb-8 text-center">
@@ -803,6 +834,7 @@ const QuickRegistration: React.FC = () => {
               amount={currentFee}
               feeType="selection_process"
               onSuccess={() => navigate('/student/onboarding?step=selection_fee&payment=success')}
+              onProcessingChange={setIsZelleProcessing}
             />
           </div>
         </div>
