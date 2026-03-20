@@ -833,7 +833,13 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
       throw error;
     }
     if (data) {
-      setUserProfile(data as UserProfile);
+      const updatedProfile = data as UserProfile;
+      setUserProfile(updatedProfile);
+      
+      // ✅ Sincronizar cache para evitar flicker/redirecionamento após refresh ou re-render
+      localStorage.setItem('cached_user_profile', JSON.stringify(updatedProfile));
+      
+      console.log('✅ [USEAUTH] Perfil atualizado e cache sincronizado:', updates);
     }
   }, [supabaseUser]);
 

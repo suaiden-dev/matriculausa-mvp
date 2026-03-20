@@ -102,6 +102,7 @@ export const ProcessTypeStep: React.FC<StepProps> = ({ onNext }) => {
         }
       }
 
+      console.log('[ProcessTypeStep] 🚀 Sucesso na gravação. Avançando para Documentos...');
       onNext();
     } catch (err: any) {
       console.error(err);

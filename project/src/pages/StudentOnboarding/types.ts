@@ -14,6 +14,7 @@ export type OnboardingStep =
 export interface OnboardingState {
   currentStep: OnboardingStep;
   selectionFeePaid: boolean;
+  identityVerified: boolean;
   selectionSurveyPassed: boolean;
   scholarshipsSelected: boolean;
   processTypeSelected: boolean;

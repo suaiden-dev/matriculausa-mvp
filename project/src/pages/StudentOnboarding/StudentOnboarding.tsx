@@ -27,8 +27,7 @@ const StudentOnboarding: React.FC = () => {
   const navigate = useNavigate();
   const [searchParams, setSearchParams] = useSearchParams();
   const processingPaymentRef = React.useRef<string | null>(null);
-  // Ref para evitar loop: indica que a mudança de URL foi feita internamente (por nós)
-  const isInternalUrlUpdate = React.useRef(false);
+  // Controle de progresso do onboarding
   const { state, loading, goToStep } = useOnboardingProgress();
   const { t } = useTranslation(['common', 'registration', 'payment', 'dashboard']);
   const [showPaymentAnimation, setShowPaymentAnimation] = useState(false);
@@ -129,34 +128,53 @@ const StudentOnboarding: React.FC = () => {
     navigate(target);
   };
 
-  // Lê o step da URL apenas na montagem inicial ou quando a mudança veio de fora (não foi causada por nós)
-  useEffect(() => {
-    if (isVerifyingPayment || showPaymentAnimation) return;
-    // Se foi uma atualização interna de URL (feita por nós), ignorar para evitar loop
-    if (isInternalUrlUpdate.current) {
-      isInternalUrlUpdate.current = false;
-      return;
-    }
-    const stepParam = searchParams.get('step');
-    if (stepParam) {
-      const validSteps: OnboardingStep[] = ['selection_fee', 'identity_verification', 'selection_survey', 'scholarship_selection', 'process_type', 'documents_upload', 'payment', 'scholarship_fee', 'placement_fee', 'my_applications'];
-      if (validSteps.includes(stepParam as OnboardingStep) && stepParam !== state.currentStep) {
-        setTimeout(() => {
-          goToStep(stepParam as OnboardingStep);
-        }, 100);
-      }
-    }
-  }, [searchParams, goToStep, isVerifyingPayment, showPaymentAnimation]);
+  // Controle de montagem inicial para ler a URL apenas uma vez
+  const isInitialMount = React.useRef(true);
 
-  // Sincronizar URL com o passo atual (sem disparar loop)
+  // 1. Sincronizar URL -> Estado (Apenas no carregamento inicial ou POPSTATE do navegador)
   useEffect(() => {
     if (isVerifyingPayment || showPaymentAnimation) return;
+    
+    // Se não for a montagem inicial, não forçamos o estado pela URL 
+    // a menos que o usuário clique no botão "Voltar" do navegador (popstate)
+    const handlePopState = () => {
+      const stepParam = new URLSearchParams(window.location.search).get('step');
+      if (stepParam) {
+        const validSteps: OnboardingStep[] = ['selection_fee', 'identity_verification', 'selection_survey', 'scholarship_selection', 'process_type', 'documents_upload', 'payment', 'scholarship_fee', 'placement_fee', 'my_applications'];
+        if (validSteps.includes(stepParam as OnboardingStep) && stepParam !== state.currentStep) {
+          console.log('[Onboarding] 🌐 PopState detectado, forçando step:', stepParam);
+          goToStep(stepParam as OnboardingStep);
+        }
+      }
+    };
+
+    if (isInitialMount.current) {
+      const stepParam = searchParams.get('step');
+      if (stepParam) {
+        const validSteps: OnboardingStep[] = ['selection_fee', 'identity_verification', 'selection_survey', 'scholarship_selection', 'process_type', 'documents_upload', 'payment', 'scholarship_fee', 'placement_fee', 'my_applications'];
+        if (validSteps.includes(stepParam as OnboardingStep) && stepParam !== state.currentStep) {
+          console.log('[Onboarding] 🚀 Carga inicial, forçando step via URL:', stepParam);
+          goToStep(stepParam as OnboardingStep);
+        }
+      }
+      isInitialMount.current = false;
+    }
+
+    window.addEventListener('popstate', handlePopState);
+    return () => window.removeEventListener('popstate', handlePopState);
+  }, [goToStep, isVerifyingPayment, showPaymentAnimation]); // Removemos searchParams para evitar loop reativo
+
+  // 2. Sincronizar Estado -> URL (A única fonte de verdade durante a navegação interna)
+  useEffect(() => {
+    if (isVerifyingPayment || showPaymentAnimation || isInitialMount.current) return;
+    
     const currentStepUrl = searchParams.get('step');
     if (state.currentStep && state.currentStep !== currentStepUrl) {
-      // Marcar que esta mudança de URL é interna para o outro effect não reagir
-      isInternalUrlUpdate.current = true;
+      console.log(`[Onboarding] 🔄 Sincronizando URL com Estado: ${state.currentStep}`);
       const newParams = new URLSearchParams(searchParams);
       newParams.set('step', state.currentStep);
+      
+      // Usamos replace: true para não poluir o histórico com transições automáticas
       navigate(`?${newParams.toString()}`, { replace: true });
     }
   }, [state.currentStep, searchParams, navigate, isVerifyingPayment, showPaymentAnimation]);
