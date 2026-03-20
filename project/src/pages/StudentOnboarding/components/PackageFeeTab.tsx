@@ -274,9 +274,9 @@ export const PackageFeeTab: React.FC<PackageFeeTabProps> = ({
 
         {/* Header */}
         <div className="bg-slate-50 px-8 py-10 md:p-12 border-b border-slate-100">
-          <div className="flex flex-col md:flex-row md:items-center justify-between gap-8">
-            <div className="flex items-center gap-6">
-              <div className="w-20 h-20 bg-blue-600 rounded-[2rem] flex items-center justify-center shadow-xl shadow-blue-500/20">
+          <div className="flex flex-col md:flex-row md:items-center justify-between gap-8 text-center md:text-left">
+            <div className="flex flex-col md:flex-row items-center gap-6">
+              <div className="w-20 h-20 bg-blue-600 rounded-[2rem] flex items-center justify-center shadow-xl shadow-blue-500/20 shrink-0">
                 <CreditCard className="w-10 h-10 text-white" />
               </div>
               <div>
@@ -286,7 +286,7 @@ export const PackageFeeTab: React.FC<PackageFeeTabProps> = ({
                 <p className="text-slate-500 text-sm font-medium">{t('studentOnboarding.documentsUpload.packageFees.obligatoryFee')}</p>
               </div>
             </div>
-            <div className="flex flex-col items-end gap-1">
+            <div className="flex flex-col md:items-end gap-1">
               <span className="text-4xl font-black text-slate-900 tracking-tighter">$1,800</span>
               <span className="text-xs text-slate-400 font-bold uppercase tracking-widest">USD</span>
             </div>
@@ -294,7 +294,7 @@ export const PackageFeeTab: React.FC<PackageFeeTabProps> = ({
         </div>
 
         {/* Content */}
-        <div className="p-8 md:p-12 space-y-8">
+        <div className="p-6 md:p-12 space-y-8">
 
 
           {error && (
@@ -346,23 +346,30 @@ export const PackageFeeTab: React.FC<PackageFeeTabProps> = ({
                 </div>
               ) : (
                 <>
-                  {/* Stripe Card */}
-                  <button
-                    onClick={() => { setSelectedPaymentMethod('stripe'); handleStripeCheckout('stripe'); setShowZelle(false); setShowInlineCpf(false); }}
-                    disabled={loading}
-                    className="group/btn relative bg-white border border-gray-200 p-5 rounded-[2rem] text-left hover:scale-[1.01] active:scale-95 transition-all shadow-sm hover:shadow-md disabled:opacity-50 flex items-center justify-between"
-                  >
-                <div className="flex items-center gap-5">
-                  <div className="w-14 h-14 flex items-center justify-center bg-slate-50 rounded-2xl">
-                    <StripeIcon className="w-9 h-9" />
+              {/* Stripe Card */}
+              <button
+                onClick={() => { setSelectedPaymentMethod('stripe'); handleStripeCheckout('stripe'); setShowZelle(false); setShowInlineCpf(false); }}
+                disabled={loading}
+                className="group/btn relative bg-white border border-gray-200 px-6 py-6 md:p-8 rounded-[2rem] text-left hover:scale-[1.01] active:scale-95 transition-all shadow-sm hover:shadow-md disabled:opacity-50 hover:border-blue-600/30 hover:bg-blue-50/10 block w-full"
+              >
+                <div className="flex items-center justify-between w-full">
+                  <div className="flex items-center gap-4 sm:gap-5 -ml-1 md:ml-0">
+                    <div className="w-14 h-14 flex items-center justify-center bg-slate-50 rounded-2xl group-hover/btn:bg-slate-100 transition-colors shrink-0">
+                      <StripeIcon className="w-9 h-9" />
+                    </div>
+                    <div>
+                      <div className="font-black text-slate-900 text-base uppercase tracking-tight">{t('rapidRegistration.payment.methods.stripe')}</div>
+                      <div className="hidden md:block text-[10px] font-bold text-slate-400 mt-1 uppercase tracking-wide leading-tight">{t('rapidRegistration.payment.notes.processingFees')}</div>
+                    </div>
                   </div>
-                  <div>
-                    <div className="font-black text-slate-900 text-base uppercase tracking-tight">{t('rapidRegistration.payment.methods.stripe')}</div>
-                    <div className="text-[10px] font-bold text-slate-400 mt-1 uppercase tracking-wide">{t('rapidRegistration.payment.notes.processingFees')}</div>
+                  <div className="text-right shrink-0">
+                    <div className="text-slate-900 text-xl font-black uppercase tracking-tight">
+                      USD ${cardAmount.toFixed(2)}
+                    </div>
                   </div>
                 </div>
-                <div className="text-slate-900 text-xl font-black uppercase tracking-tight">
-                  USD ${cardAmount.toFixed(2)}
+                <div className="md:hidden mt-1.5 text-[10px] font-bold text-slate-400 uppercase tracking-wide leading-tight">
+                  {t('rapidRegistration.payment.notes.processingFees')}
                 </div>
                 {loading && selectedPaymentMethod === 'stripe' && (
                   <div className="absolute inset-0 bg-white/80 backdrop-blur-sm rounded-[2rem] flex items-center justify-center z-10">
@@ -376,21 +383,26 @@ export const PackageFeeTab: React.FC<PackageFeeTabProps> = ({
                 <button
                   onClick={() => { setSelectedPaymentMethod('pix'); handleStripeCheckout('pix'); setShowZelle(false); setShowInlineCpf(false); }}
                   disabled={loading}
-                  className="group/btn relative bg-white border border-gray-200 p-5 rounded-[2rem] text-left hover:scale-[1.01] active:scale-95 transition-all shadow-sm hover:shadow-md disabled:opacity-50 flex items-center justify-between"
+                  className="group/btn relative bg-white border border-gray-200 px-6 py-6 md:p-8 rounded-[2rem] text-left hover:scale-[1.01] active:scale-95 transition-all shadow-sm hover:shadow-md disabled:opacity-50 hover:border-blue-600/30 hover:bg-blue-50/10 block w-full"
                 >
-                  <div className="flex items-center gap-5">
-                    <div className="w-14 h-14 flex items-center justify-center bg-slate-50 rounded-2xl">
-                      <PixIcon className="w-9 h-9" />
+                  <div className="flex items-center justify-between w-full">
+                    <div className="flex items-center gap-4 sm:gap-5 -ml-1 md:ml-0">
+                      <div className="w-14 h-14 flex items-center justify-center bg-slate-50 rounded-2xl group-hover/btn:bg-slate-100 transition-colors shrink-0">
+                        <PixIcon className="w-9 h-9" />
+                      </div>
+                      <div>
+                        <div className="font-black text-slate-900 text-base uppercase tracking-tight">{t('rapidRegistration.payment.methods.pix')}</div>
+                        <div className="hidden md:block text-[10px] font-bold text-slate-400 mt-1 uppercase tracking-wide leading-tight">{t('rapidRegistration.payment.notes.processingFees')}</div>
+                      </div>
                     </div>
-                    <div>
-                      <div className="font-black text-slate-900 text-base uppercase tracking-tight">{t('rapidRegistration.payment.methods.pix')}</div>
-                      <div className="text-[10px] font-bold text-slate-400 mt-1 uppercase tracking-wide">{t('rapidRegistration.payment.notes.processingFees')}</div>
+                    <div className="text-right shrink-0">
+                      <div className="text-slate-900 text-xl font-black uppercase tracking-tight">
+                        {pixAmount ? `R$ ${pixAmount.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}` : '...'}
+                      </div>
                     </div>
                   </div>
-                  <div className="text-right">
-                    <div className="text-slate-900 text-xl font-black uppercase tracking-tight">
-                      {pixAmount ? `R$ ${pixAmount.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}` : '...'}
-                    </div>
+                  <div className="md:hidden mt-1.5 text-[10px] font-bold text-slate-400 uppercase tracking-wide leading-tight">
+                    {t('rapidRegistration.payment.notes.processingFees')}
                   </div>
                   {loading && selectedPaymentMethod === 'pix' && (
                     <div className="absolute inset-0 bg-white/80 backdrop-blur-sm rounded-[2rem] flex items-center justify-center z-10">
@@ -405,22 +417,27 @@ export const PackageFeeTab: React.FC<PackageFeeTabProps> = ({
                 <button
                   onClick={() => { setSelectedPaymentMethod('parcelow'); handleParcelowCheckout(); setShowZelle(false); }}
                   disabled={loading}
-                  className={`group/btn relative bg-white border p-5 text-left hover:scale-[1.01] active:scale-95 transition-all shadow-sm hover:shadow-md disabled:opacity-50 flex items-center justify-between ${
+                  className={`group/btn relative bg-white border px-6 py-6 md:p-8 text-left hover:scale-[1.01] active:scale-95 transition-all shadow-sm hover:shadow-md disabled:opacity-50 hover:border-blue-600/30 hover:bg-blue-50/10 block w-full ${
                     showInlineCpf ? 'rounded-t-[2rem] border-slate-200 border-b-0 bg-slate-50/30' : 'rounded-[2rem] border-gray-200'
                   }`}
                 >
-                  <div className="flex items-center gap-5">
-                    <div className="w-14 h-14 flex items-center justify-center bg-slate-50 rounded-2xl px-2">
-                      <ParcelowIcon className="w-full h-10" />
+                  <div className="flex items-center justify-between w-full">
+                    <div className="flex items-center gap-4 sm:gap-5 -ml-1 md:ml-0">
+                      <div className="w-14 h-14 flex items-center justify-center bg-slate-50 rounded-2xl group-hover/btn:bg-slate-100 transition-colors px-2 shrink-0">
+                        <ParcelowIcon className="w-full h-10" />
+                      </div>
+                      <div>
+                        <div className="font-black text-slate-900 text-base uppercase tracking-tight">{t('rapidRegistration.payment.methods.parcelow')}</div>
+                        <div className="hidden md:block text-[10px] font-bold text-slate-400 mt-1 uppercase tracking-wide leading-tight">{t('rapidRegistration.payment.notes.parcelowFees')}</div>
+                      </div>
                     </div>
-                    <div>
-                      <div className="font-black text-slate-900 text-base uppercase tracking-tight">{t('rapidRegistration.payment.methods.parcelow')}</div>
-                      <div className="text-[10px] font-bold text-slate-400 mt-1 uppercase tracking-wide">{t('rapidRegistration.payment.notes.parcelowFees')}</div>
+                    <div className="text-right flex flex-col items-end shrink-0">
+                      <div className="text-slate-900 text-xl font-black uppercase tracking-tight">USD ${PACKAGE_FEE_AMOUNT.toLocaleString('en-US', { minimumFractionDigits: 2 })}</div>
+                      <span className="text-[10px] font-bold text-slate-900 mt-1 block uppercase tracking-widest leading-tight">{t('studentOnboarding.documentsUpload.packageFees.installments12x')}</span>
                     </div>
                   </div>
-                  <div className="text-right">
-                    <div className="text-slate-900 text-xl font-black uppercase tracking-tight">USD ${PACKAGE_FEE_AMOUNT.toLocaleString('en-US', { minimumFractionDigits: 2 })}</div>
-                    <span className="text-[10px] font-bold text-slate-900 mt-1 block uppercase tracking-widest text-right">{t('studentOnboarding.documentsUpload.packageFees.installments12x')}</span>
+                  <div className="md:hidden mt-1.5 text-[10px] font-bold text-slate-400 uppercase tracking-wide leading-tight">
+                    {t('rapidRegistration.payment.notes.parcelowFees')}
                   </div>
                   {loading && selectedPaymentMethod === 'parcelow' && !showInlineCpf && (
                     <div className="absolute inset-0 bg-white/80 backdrop-blur-sm rounded-[2rem] flex items-center justify-center z-10">
@@ -485,25 +502,31 @@ export const PackageFeeTab: React.FC<PackageFeeTabProps> = ({
                 <button
                   onClick={() => { setShowZelle(!showZelle); setSelectedPaymentMethod('zelle'); setShowInlineCpf(false); }}
                   disabled={loading}
-                  className={`group/btn relative bg-white border p-5 text-left hover:scale-[1.01] active:scale-[0.99] transition-all shadow-sm hover:shadow-md disabled:opacity-50 flex items-center justify-between ${
+                  className={`group/btn relative bg-white border px-6 py-6 md:p-8 text-left hover:scale-[1.01] active:scale-[0.99] transition-all shadow-sm hover:shadow-md disabled:opacity-50 hover:border-blue-600/30 hover:bg-blue-50/10 block w-full ${
                     showZelle ? 'rounded-t-[2rem] border-slate-200 border-b-0 bg-slate-50/30' : 'rounded-[2rem] border-gray-200'
                   }`}
                 >
-                  <div className="flex items-center gap-5">
-                    <div className="w-14 h-14 flex items-center justify-center bg-slate-50 rounded-2xl">
-                      <ZelleIcon className="w-9 h-9" />
-                    </div>
-                    <div>
-                      <div className="font-black text-slate-900 text-base uppercase tracking-tight">{t('rapidRegistration.payment.methods.zelle')}</div>
-                      <div className="text-[10px] font-bold text-slate-500 mt-1 uppercase tracking-wide flex items-center gap-1">
-                        <AlertCircle className="w-3 h-3" />
-                        {t('rapidRegistration.payment.notes.zelleTime')}
+                  <div className="flex items-center justify-between w-full">
+                    <div className="flex items-center gap-4 sm:gap-5 -ml-1 md:ml-0">
+                      <div className="w-14 h-14 flex items-center justify-center bg-slate-50 rounded-2xl group-hover/btn:bg-slate-100 transition-colors shrink-0">
+                        <ZelleIcon className="w-9 h-9" />
+                      </div>
+                      <div>
+                        <div className="font-black text-slate-900 text-base uppercase tracking-tight">{t('rapidRegistration.payment.methods.zelle')}</div>
+                        <div className="hidden md:flex text-[10px] font-bold text-slate-500 mt-1 uppercase tracking-wide leading-tight items-center gap-1">
+                          <AlertCircle className="w-3 h-3" />
+                          {t('rapidRegistration.payment.notes.zelleTime')}
+                        </div>
                       </div>
                     </div>
+                    <div className="text-right shrink-0">
+                      <div className="text-slate-900 text-xl font-black uppercase tracking-tight">USD $1,800.00</div>
+                      <span className="text-[10px] font-bold text-slate-900 mt-1 block uppercase tracking-widest leading-tight text-right">{t('studentOnboarding.documentsUpload.packageFees.noFees')}</span>
+                    </div>
                   </div>
-                  <div className="text-right">
-                    <div className="text-slate-900 text-xl font-black uppercase tracking-tight">USD $1,800.00</div>
-                    <span className="text-[10px] font-bold text-slate-900 mt-1 block uppercase tracking-widest text-right">{t('studentOnboarding.documentsUpload.packageFees.noFees')}</span>
+                  <div className="md:hidden mt-1.5 text-[10px] font-bold text-slate-500 uppercase tracking-wide leading-tight flex items-center gap-1">
+                    <AlertCircle className="w-3 h-3" />
+                    {t('rapidRegistration.payment.notes.zelleTime')}
                   </div>
                 </button>
 

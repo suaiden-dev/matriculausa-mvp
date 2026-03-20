@@ -118,7 +118,7 @@ export const ProcessTypeStep: React.FC<StepProps> = ({ onNext }) => {
     return (
       <div className="space-y-10 pb-12 max-w-4xl mx-auto px-4">
         {/* Header */}
-        <div className="text-left space-y-4">
+        <div className="text-center sm:text-left space-y-4">
           <h2 className="text-3xl md:text-5xl font-black text-slate-900 uppercase tracking-tighter leading-none">{t('studentOnboarding.processType.completed.title')}</h2>
         </div>
 
@@ -147,11 +147,11 @@ export const ProcessTypeStep: React.FC<StepProps> = ({ onNext }) => {
   return (
     <div className="space-y-10 pb-12 max-w-5xl mx-auto px-4">
       {/* Header */}
-      <div className="text-left space-y-4">
+      <div className="text-center sm:text-left space-y-4">
         <h2 className="text-3xl md:text-5xl font-black text-slate-900 uppercase tracking-tighter leading-none">
           {t('studentOnboarding.processType.title')}
         </h2>
-        <p className="text-lg md:text-xl text-slate-600 font-medium max-w-2xl leading-relaxed">
+        <p className="text-lg md:text-xl text-slate-600 font-medium max-w-2xl leading-relaxed mx-auto sm:mx-0">
           {t('studentOnboarding.processType.subtitle')}
         </p>
       </div>
