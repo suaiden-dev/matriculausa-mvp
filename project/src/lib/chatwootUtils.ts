@@ -1,4 +1,5 @@
 import { generateUniqueInstanceName } from '../pages/SchoolDashboard/WhatsAppConnection/utils/whatsappUtils';
+import { supabase } from './supabase';
 
 // Função para gerar senha única do Chatwoot
 export const generateChatwootPassword = (email: string, userId: string): string => {
@@ -177,39 +178,7 @@ export const createChatwootAndQRCodeDirect = async (
     // 3. Salvar dados no banco (mesmo padrão do WhatsAppConnection)
     console.log('💾 [ChatwootUtils] ===== SALVANDO DADOS NO BANCO =====');
     
-    const { createClient } = await import('@supabase/supabase-js');
-    const supabase = createClient(
-      import.meta.env.VITE_SUPABASE_URL!,
-      import.meta.env.VITE_SUPABASE_ANON_KEY!
-    );
-
-    // Salvar dados do Chatwoot
-    console.log('💾 [ChatwootUtils] Salvando dados do Chatwoot...');
-    const { error: chatwootError } = await supabase
-      .from('chatwoot_accounts')
-      .upsert({
-        user_id: userId,
-        chatwoot_user_name: name,
-        chatwoot_email: email,
-        chatwoot_password: chatwootPassword,
-        chatwoot_access_token: accessToken,
-        chatwoot_instance_name: instanceName,
-        updated_at: new Date().toISOString()
-      }, { 
-        onConflict: 'user_id' 
-      });
-
-    if (chatwootError) {
-      console.error('❌ [ChatwootUtils] Erro ao salvar dados do Chatwoot:', chatwootError);
-      return {
-        success: false,
-        error: chatwootError.message
-      };
-    }
-
-    console.log('✅ [ChatwootUtils] Dados do Chatwoot salvos com sucesso');
-
-    // Salvar dados do WhatsApp (mesmo padrão do WhatsAppConnection)
+    // Usando instância global de supabase
     console.log('💾 [ChatwootUtils] Salvando dados do WhatsApp...');
     const newConnection = {
       user_id: userId,
@@ -295,12 +264,7 @@ export const createAndSaveChatwootAccount = async (
     console.log('[ChatwootUtils] Chamando edge function integrate-chatwoot-qr');
 
     // Obter token de autenticação
-    const { createClient } = await import('@supabase/supabase-js');
-    const supabase = createClient(
-      import.meta.env.VITE_SUPABASE_URL!,
-      import.meta.env.VITE_SUPABASE_ANON_KEY!
-    );
-    
+    // Usando instância global de supabase
     const { data: { session } } = await supabase.auth.getSession();
     const accessToken = session?.access_token;
 
@@ -361,11 +325,7 @@ export const createAndSaveChatwootAccount = async (
 // Função para obter dados da conta Chatwoot
 export const getChatwootAccountData = async (userId: string) => {
   try {
-    const { createClient } = await import('@supabase/supabase-js');
-    const supabase = createClient(
-      import.meta.env.VITE_SUPABASE_URL!,
-      import.meta.env.VITE_SUPABASE_ANON_KEY!
-    );
+    // Usando instância global de supabase
 
     const { data, error } = await supabase
       .from('chatwoot_accounts')
@@ -388,11 +348,7 @@ export const getChatwootAccountData = async (userId: string) => {
 // Função para obter dados da conexão WhatsApp
 export const getWhatsAppConnectionData = async (userId: string) => {
   try {
-    const { createClient } = await import('@supabase/supabase-js');
-    const supabase = createClient(
-      import.meta.env.VITE_SUPABASE_URL!,
-      import.meta.env.VITE_SUPABASE_ANON_KEY!
-    );
+    // Usando instância global de supabase
 
     const { data, error } = await supabase
       .from('whatsapp_connections')
