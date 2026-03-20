@@ -232,25 +232,24 @@ export const useCartStore = create<CartState>((set, get) => ({
         const universityEmail = contact.admissionsEmail || contact.email || '';
 
         if (!universityEmail) {
-          console.error('University email not found for notification');
-          return;
-        }
-
-        // Criar e enviar notificação
-        const payload = NotificationService.createUniversityConfirmationPayload(
-          userProfile.full_name || 'Aluno',
-          userProfile.email || '',
-          university.name,
-          universityEmail,
-          scholarship.title
-        );
-
-        const result = await NotificationService.sendUniversityNotification(payload);
-        
-        if (result.success) {
-          console.log('University notification sent successfully');
+          console.warn('University email not found for notification - continuing without notification');
         } else {
-          console.error('Failed to send university notification:', result.error);
+          // Criar e enviar notificação
+          const payload = NotificationService.createUniversityConfirmationPayload(
+            userProfile.full_name || 'Aluno',
+            userProfile.email || '',
+            university.name,
+            universityEmail,
+            scholarship.title
+          );
+
+          const result = await NotificationService.sendUniversityNotification(payload);
+          
+          if (result.success) {
+            console.log('University notification sent successfully');
+          } else {
+            console.error('Failed to send university notification:', result.error);
+          }
         }
       } catch (notificationError) {
         console.error('Error sending university notification:', notificationError);
