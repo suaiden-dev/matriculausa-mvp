@@ -396,7 +396,7 @@ export const useOnboardingProgress = () => {
         setLoading(false);
       }
     }
-  }, [user?.id, userProfile?.id, userProfile?.has_paid_selection_process_fee, userProfile?.documents_uploaded, userProfile?.documents_status, userProfile?.is_application_fee_paid, userProfile?.onboarding_completed, (userProfile as any)?.placement_fee_flow, fetchCart, getSavedStep, saveStep, clearStep]);
+  }, [user?.id, userProfile?.id, userProfile?.has_paid_selection_process_fee, userProfile?.documents_uploaded, userProfile?.documents_status, userProfile?.is_application_fee_paid, userProfile?.onboarding_completed, userProfile?.selected_application_id, (userProfile as any)?.placement_fee_flow, fetchCart, getSavedStep, saveStep, clearStep]);
 
   useEffect(() => {
     checkProgress();
