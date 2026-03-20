@@ -182,7 +182,7 @@ Deno.serve(async (req) => {
     console.log("[parcelow-checkout-placement-fee] 🔗 Origin determinado:", origin);
 
     // URLs de redirect após pagamento Parcelow
-    const redirectSuccess = `${origin}/student/onboarding?step=payment&payment=success&ref=${encodeURIComponent(reference)}&pm=p`;
+    const redirectSuccess = `${origin}/student/onboarding?step=my_applications&payment=success&ref=${encodeURIComponent(reference)}&pm=p`;
     const redirectFailed = `${origin}/student/onboarding?step=placement_fee&payment=cancelled&ref=${encodeURIComponent(reference)}&pm=p`;
 
     const webhookUrl = `${Deno.env.get("SUPABASE_URL")}/functions/v1/parcelow-webhook`;

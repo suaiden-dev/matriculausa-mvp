@@ -432,8 +432,8 @@ const AdminStudentDetails: React.FC = () => {
 
     // Placement Fee
     if (realPaidAmounts.placement !== undefined && realPaidAmounts.placement > 0) {
-      // Para Placement Fee, aceitar o valor real pago se for razoável (entre $100 e $5000)
-      const isReasonableRange = realPaidAmounts.placement >= 100 && realPaidAmounts.placement <= 5000;
+      // Para Placement Fee, aceitar o valor real pago se for razoável (entre $100 e $35000)
+      const isReasonableRange = realPaidAmounts.placement >= 100 && realPaidAmounts.placement <= 35000;
       if (isReasonableRange) {
         normalized.placement = realPaidAmounts.placement;
         console.log(`[AdminStudentDetails] ✅ Aceitando valor real pago para placement: ${realPaidAmounts.placement}`);

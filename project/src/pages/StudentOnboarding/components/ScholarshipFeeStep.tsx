@@ -553,7 +553,7 @@ export const ScholarshipFeeStep: React.FC<StepProps> = ({ onNext, onBack }) => {
                                 </div>
                                 <div className="text-right flex flex-col items-end">
                                   <div className="text-slate-900 text-xl font-black uppercase tracking-tight">
-                                    {formatFeeAmount(cardAmount)}
+                                    {formatFeeAmount(baseAmount)}
                                   </div>
                                   <span className="text-[10px] font-bold text-slate-900 mt-1 block uppercase tracking-widest leading-tight">{t('paymentStep.parcelowInstallments')}</span>
                                 </div>

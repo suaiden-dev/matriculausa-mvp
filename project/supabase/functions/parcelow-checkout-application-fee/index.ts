@@ -77,11 +77,11 @@ Deno.serve(async (req) => {
       user.id,
     );
 
-    // Buscar perfil do usuário para obter CPF e dependentes
+    // Buscar perfil do usuário para obter CPF, dependentes e fluxo
     const { data: userProfile, error: profileError } = await supabase
       .from("user_profiles")
       .select(
-        "id, user_id, full_name, email, cpf_document, phone, system_type, dependents",
+        "id, user_id, full_name, email, cpf_document, phone, system_type, dependents, placement_fee_flow",
       )
       .eq("user_id", user.id)
       .single();
@@ -102,6 +102,7 @@ Deno.serve(async (req) => {
       profileCpf: !!userProfile.cpf_document,
       bodyCpf: !!bodyCpf,
       finalCpfLength: finalCpf?.length || 0,
+      isNewFlow: userProfile.placement_fee_flow
     });
 
     if (!finalCpf || finalCpf.length < 11) {
@@ -265,8 +266,9 @@ Deno.serve(async (req) => {
 
     // URLs de redirect após pagamento Parcelow
     // Apontar para o onboarding, próximo passo após a taxa de matrícula
+    const nextStep = userProfile.placement_fee_flow ? 'placement_fee' : 'scholarship_fee';
     const redirectSuccess =
-      `${origin}/student/onboarding?step=scholarship_fee&payment=success&ref=${
+      `${origin}/student/onboarding?step=${nextStep}&payment=success&ref=${
         encodeURIComponent(reference)
       }&pm=p`;
     const redirectFailed =
