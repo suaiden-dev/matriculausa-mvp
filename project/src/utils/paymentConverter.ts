@@ -636,6 +636,13 @@ export async function getRealPaidAmounts(
           `[paymentConverter] ⚠️ Stripe payment sem payment_intent_id para ${payment.fee_type}, não é possível determinar moeda - IGNORANDO (use valores fixos como fallback)`,
         );
         continue;
+      } else if (payment.payment_method === "parcelow") {
+        // ✅ Parcelow: usar o valor bruto conforme recebido $350.00
+        // Para a Stephanie, o valor real pago é 350
+        amountUSD = Number(payment.amount);
+        console.log(
+          `[paymentConverter] ✅ Parcelow payment: ${amountUSD.toFixed(2)} USD`,
+        );
       } else {
         // ✅ Outros métodos (manual/outside): não processar, deixar usar valores fixos
         console.log(

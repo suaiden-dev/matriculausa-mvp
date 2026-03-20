@@ -562,6 +562,21 @@ const AdminStudentDetails: React.FC = () => {
   // Estados de dados secundários
   const [realPaidAmounts, setRealPaidAmounts] = useState<Record<string, number>>({});
   const [loadingPaidAmounts, setLoadingPaidAmounts] = useState<Record<string, boolean>>({});
+
+  // ✅ LOG DE DEBUG PARA STEPHANIE/OUTROS USUÁRIOS COM DISCREPÂNCIA
+  React.useEffect(() => {
+    if (student) {
+      console.log(`[AdminStudentDetails] 🔍 DEBUG Student Info:`, {
+        name: student.student_name,
+        email: student.student_email,
+        student_system_type: student.system_type,
+        config_system_type: configSystemType,
+        final_system_type: userSystemType,
+        realPaidAmounts_exists: !!realPaidAmounts,
+        selection_process_paid: realPaidAmounts?.selection_process
+      });
+    }
+  }, [student, configSystemType, userSystemType, realPaidAmounts]);
   const [referralInfo, setReferralInfo] = useState<any>(null);
   const [hasMatriculaRewardsDiscount, setHasMatriculaRewardsDiscount] = useState(false);
   const [matriculaRewardsInfo, setMatriculaRewardsInfo] = useState<{
