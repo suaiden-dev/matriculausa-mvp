@@ -1,7 +1,6 @@
 import React, { useEffect, useState, useRef } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
-import CustomLoading from '../../components/CustomLoading';
-import PaymentSuccessOverlay from '../../components/PaymentSuccessOverlay';
+import PaymentStatusOverlay from '../../components/PaymentStatusOverlay';
 import { useTranslation } from 'react-i18next';
 import { dispatchCacheInvalidationEvent, CacheInvalidationEvent } from '../../utils/cacheInvalidation';
 import { supabase } from '../../lib/supabase';
@@ -21,9 +20,10 @@ const SelectionProcessFeeSuccess: React.FC = () => {
   const [animationSuccess, setAnimationSuccess] = useState(true);
   const [isVerifying, setIsVerifying] = useState(false);
   const [hasVerified, setHasVerified] = useState(false);
-  const { t } = useTranslation();
+  const { t } = useTranslation(['dashboard', 'common']);
   const [paidAmount, setPaidAmount] = useState<number | null>(null);
-  const { user } = useAuth();
+  const { user, userProfile } = useAuth();
+  console.log('[SelectionProcessFeeSuccess] Supabase URL:', import.meta.env.VITE_SUPABASE_URL);
   const hasRunRef = useRef(false);
 
   // Função para fazer polling do status do PIX (otimizada para webhook)
@@ -65,7 +65,8 @@ const SelectionProcessFeeSuccess: React.FC = () => {
         });
 
         const data = await response.json();
-        console.log(`[PIX] Resposta da API (tentativa ${attempts}):`, data);
+        console.log(`[PIX] 🚀 Resposta da API (tentativa ${attempts}):`, data);
+        if (data.error) console.error(`[PIX] ❌ Erro retornado pela API:`, data.error);
 
         // Extrair informações do pagamento
         // Priorizar gross_amount_usd (valor bruto que o aluno realmente pagou), senão usar final_amount ou amount_paid
@@ -247,11 +248,12 @@ const SelectionProcessFeeSuccess: React.FC = () => {
   };
 
   useEffect(() => {
-    // Prevenir múltiplas execuções simultâneas
     if (isVerifying) {
-      console.log('[Payment] Verificação já em andamento, ignorando chamada duplicada');
+      console.log('[Payment] ⚠️ Verificação já em andamento, ignorando chamada duplicada');
       return;
     }
+
+    console.log('[Payment] 🔍 useEffect iniciado - user:', !!user, 'userProfile:', !!userProfile);
 
     // Aguardar usuário estar carregado
     if (!user) {
@@ -326,7 +328,8 @@ const SelectionProcessFeeSuccess: React.FC = () => {
         });
 
         const data = await response.json();
-        console.log('[PIX] Resposta da verificação:', data);
+        console.log('[PIX] 🚀 Resposta da verificação imediata:', data);
+        if (data.error) console.error('[PIX] ❌ Erro na verificação imediata:', data.error);
 
         // Extrair informações do pagamento
         // Priorizar gross_amount_usd (valor bruto que o aluno realmente pagou), senão usar final_amount ou amount_paid
@@ -403,49 +406,31 @@ const SelectionProcessFeeSuccess: React.FC = () => {
     console.log('🔄 Estado mudou:', { loading, showAnimation, animationSuccess });
   }, [loading, showAnimation, animationSuccess]);
 
+  // Determine current overlay status
+  const getOverlayStatus = (): 'loading' | 'success' | 'error' => {
+    if (error || (showAnimation && !animationSuccess)) return 'error';
+    if (showAnimation && animationSuccess) return 'success';
+    return 'loading';
+  };
+
   return (
-    <div className="min-h-[60vh] flex flex-col items-center justify-center bg-white px-4 relative">
-      {/* Conteúdo principal - só mostra se ainda está carregando */}
-      {loading ? (
-        <div className="bg-white rounded-2xl shadow-lg p-10 max-w-md w-full flex flex-col items-center">
-          <CustomLoading
-            color="green"
-            title={t('successPages.selectionProcessFee.verifying')}
-            message={t('successPages.selectionProcessFee.pleaseWait')}
-          />
-        </div>
-      ) : error ? (
-        <div className="bg-white rounded-2xl shadow-lg p-10 max-w-md w-full flex flex-col items-center">
-          <svg className="h-16 w-16 text-red-600 mb-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 8v4m0 4h.01" />
-          </svg>
-          <h1 className="text-3xl font-bold text-red-700 mb-2">{t('successPages.selectionProcessFee.errorTitle')}</h1>
-          <p className="text-slate-700 mb-6 text-center">
-            {t('successPages.selectionProcessFee.errorMessage')}<br />
-            {t('successPages.selectionProcessFee.errorRetry')}
-          </p>
-          <button
-            className="bg-blue-600 text-white px-6 py-3 rounded-xl font-bold hover:bg-blue-700 transition-all duration-300"
-            onClick={() => navigate('/student/dashboard/selection-survey')}
-          >
-            {t('successPages.selectionProcessFee.button')}
-          </button>
-        </div>
-      ) : (
-        /* Overlay com animação */
-        <PaymentSuccessOverlay
-          isSuccess={animationSuccess}
-          title={animationSuccess
-            ? t('successPages.selectionProcessFee.title')
-            : t('successPages.selectionProcessFee.errorTitle')
-          }
-          message={animationSuccess
-            ? t('successPages.selectionProcessFee.description', { amount: paidAmount ? `$${paidAmount}` : '' })
-            : t('successPages.common.paymentError')
-          }
-        />
-      )}
-    </div>
+    <PaymentStatusOverlay
+      status={getOverlayStatus()}
+      title={
+        getOverlayStatus() === 'loading' ? t('successPages.selectionProcessFee.verifying') :
+        getOverlayStatus() === 'success' ? t('successPages.selectionProcessFee.title') :
+        t('successPages.selectionProcessFee.errorTitle')
+      }
+      message={
+        getOverlayStatus() === 'loading' ? t('successPages.selectionProcessFee.pleaseWait') :
+        getOverlayStatus() === 'success' ? t('successPages.selectionProcessFee.description', { amount: paidAmount ? `$${paidAmount}` : '' }) :
+        (error || t('successPages.common.paymentError'))
+      }
+      errorDetails={error}
+      onRetry={() => navigate('/student/dashboard/selection-survey')}
+      onHome={() => navigate('/student/dashboard')}
+      showPremiumLoading={true}
+    />
   );
 };
 

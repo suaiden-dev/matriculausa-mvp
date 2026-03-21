@@ -1,0 +1,630 @@
+{
+  "home": {
+    "hero": {
+      "title": "Your Gateway to American Universities",
+      "subtitle": "Discover exclusive scholarships and unlock your potential in the United States",
+      "description": "Connect with top universities, access exclusive scholarships, and get personalized support throughout your journey to studying in the USA.",
+      "cta": "Start Your Journey",
+      "watchVideo": "Watch Video",
+      "stats": {
+        "successRate": {
+          "title": "95% Success Rate",
+          "subtitle": "Student enrollment"
+        },
+        "scholarships": {
+          "title": "$50M+",
+          "subtitle": "In scholarships"
+        }
+      }
+    },
+    "featuredUniversities": {
+      "lockedTitle": "Universities Locked",
+      "lockedDescription": "Complete the selection process to unlock detailed university information",
+      "goToDashboard": "Go to Dashboard",
+      "loginToView": "Login to View",
+      "featured": "Featured"
+    },
+    "features": {
+      "whyChoose": "Why Choose MatriculaUSA?",
+      "title": "Why Choose MatriculaUSA?",
+      "subtitle": "Everything you need to succeed in your American education journey",
+      "smartMatching": {
+        "title": "Smart Matching",
+        "description": "AI-powered system finds the best universities and scholarships for your profile"
+      },
+      "exclusiveScholarships": {
+        "title": "Exclusive Scholarships",
+        "description": "Access scholarships not available anywhere else, specifically for international students"
+      },
+      "personalSupport": {
+        "title": "Personal Support",
+        "description": "Dedicated team to guide you through every step of the application process"
+      },
+      "fastProcess": {
+        "title": "Fast Process",
+        "description": "Streamlined application process with quick responses and efficient document handling"
+      }
+    },
+    "stats": {
+      "students": "Students Placed",
+      "universities": "Partner Universities",
+      "scholarships": "Scholarships Available",
+      "successRate": "Success Rate"
+    },
+    "trustIndicators": {
+      "studentsEnrolled": "students enrolled",
+      "rating": "4.8 rating",
+      "setupTime": "5 Minutes Setup",
+      "successRate": "95% Success Rate",
+      "secure": "100% Secure"
+    },
+    "faq": {
+      "title": "Frequently Asked Questions",
+      "mainTitle": "Everything You Need to Know",
+      "subtitle": "Get answers to the most common questions about fees, payments, and the application process at MatriculaUSA",
+      "badge": "Questions & Answers",
+      "quickAnswers": "Quick Answers",
+      "questionsFound": "{{count}} question found",
+      "questionsFound_plural": "{{count}} questions found",
+      "footerContact": "Use the floating buttons for instant help or contact us directly at info@matriculausa.com",
+      "instantAiResponses": "Instant AI responses",
+      "availability": "24/7 availability",
+      "questions": {
+        "q1": {
+          "question": "What fees or payments are required to use MatriculaUSA?",
+          "answer": "MatriculaUSA is free to create your profile and explore universities. However, once you start the application process and are approved for a scholarship, all fees associated with the admission and enrollment flow become mandatory. They are clearly presented before any payment."
+        },
+        "q2": {
+          "question": "What is the Selection Process Fee?",
+          "answer": "The Selection Process Fee $400 is the first mandatory payment on the MatriculaUSA platform. It unlocks your full access to view all scholarships and start your application process."
+        },
+        "q3": {
+          "question": "What is the Placement Fee?",
+          "answer": "The Placement Fee covers the specialized support to guarantee your scholarship and enrollment. It covers professional work including academic analysis, identification of university options, scholarship negotiation, and enrollment process support. This fee is variable and directly linked to the scholarship amount."
+        },
+        "q4": {
+          "question": "What is the Application Fee?",
+          "answer": "The Application Fee varies by university and is a required payment to formally process your application after you have been accepted. This amount confirms your intent to enroll and is managed directly by the platform."
+        },
+        "q5": {
+          "question": "Is there support for the student visa process?",
+          "answer": "Yes! The Placement Fee includes specialized support for your student visa process. Our team guides you through all necessary steps to ensure you have the correct documents for your arrival in the US."
+        },
+        "q6": {
+          "question": "Are there other fees I should know about?",
+          "answer": "All mandatory fees for your application and enrollment process are listed in your dashboard before any payment. Some universities may have additional fees (e.g., housing deposits, orientation fees), but these will always be communicated directly by the university or by us in advance."
+        },
+        "q7": {
+          "question": "How can I pay these fees?",
+          "answer": "You can pay all fees directly through the MatriculaUSA platform using international credit or debit cards. Payments are processed securely via Stripe, and you will receive a confirmation for each transaction."
+        },
+        "q8": {
+          "question": "Is my payment information secure?",
+          "answer": "Yes. All payments are processed by Stripe, a world leader in payment security. MatriculaUSA does not store your card details, and all transactions are encrypted for your protection."
+        },
+        "q9": {
+          "question": "Can I get a refund?",
+          "answer": "You have the right to a full refund of the fees paid if your application is unsuccessful or you are not approved for a scholarship. However, if you withdraw from the process or change your mind after starting the application, the fees paid are non-refundable, as the processing and support will have already begun."
+        },
+        "q10": {
+          "question": "Do I have to pay all fees at once?",
+          "answer": "No. The fees are independent purchases and are paid in stages as you advance through the process. You pay the Selection Process Fee first, then the Application Fee (if applicable), and finally the Placement Fee associated with the chosen scholarship."
+        },
+        "q11": {
+          "question": "Who can I contact if I have questions about fees or payments?",
+          "answer": "Our support team is available via chat or email at any time to answer any questions about fees, payments, or your application process. We are here to help you every step of the way!"
+        }
+      }
+    },
+    "threeSteps": {
+      "title": "Three Steps to Your American Education",
+      "subtitle": "Simple Process",
+      "step1": {
+        "title": "Create Your Profile",
+        "description": "Build your comprehensive student profile with academic history, goals, and preferences to help us find the perfect match."
+      },
+      "step2": {
+        "title": "Discover Opportunities",
+        "description": "Browse through our curated selection of schools and exclusive scholarship opportunities tailored to your profile and interests."
+      },
+      "step3": {
+        "title": "Complete Enrollment",
+        "description": "Apply with our streamlined process and receive comprehensive support until you're successfully enrolled in your chosen institution."
+      }
+    },
+    "successStories": {
+      "title": "Success Stories",
+      "subtitle": "Real students, real results. See how MatriculaUSA transformed their educational journey to the United States.",
+      "testimonial1": {
+        "text": "MatriculaUSA made my dream of studying in America a reality. The scholarship opportunities and support were incredible!",
+        "author": "Gustavo Santos",
+        "field": "Computer Science"
+      },
+      "testimonial2": {
+        "text": "The enrollment process was seamless. From application to visa support, MatriculaUSA guided me every step of the way.",
+        "author": "Carlos Rodriguez",
+        "field": "Business School"
+      },
+      "testimonial3": {
+        "text": "I found exclusive scholarships that weren't available anywhere else. MatriculaUSA truly opens doors to opportunities.",
+        "author": "Ana Chen",
+        "field": "Engineering"
+      }
+    },
+    "cta": {
+      "title": "Ready to Begin Your American Dream?",
+      "subtitle": "Join thousands of international students who have found their path to American education through MatriculaUSA's comprehensive platform.",
+      "button": "Start Your Journey Today",
+      "learnMore": "Learn More",
+      "badge": "Join 5,000+ {{students}}",
+      "features": {
+        "freeToStart": "Free to get started",
+        "noHiddenFees": "No hidden fees",
+        "expertSupport": "Expert support included"
+      }
+    },
+    "enrollmentConfirmed": {
+      "title": "Enrollment Confirmed!",
+      "university": "Harvard University"
+    },
+    "about": {
+      "cta": {
+        "questions": "Still have questions?"
+      }
+    }
+  },
+  "howItWorks": {
+    "title": "How It Works",
+    "subtitle": "Your path to a US university, step by step",
+    "journey": "Your Journey",
+    "stats": {
+      "setup": "5 Minutes Setup",
+      "success": "95% Success Rate",
+      "secure": "100% Secure"
+    },
+    "steps": {
+      "profile": {
+        "title": "Create Your Profile",
+        "description": "Fill in your academic and personal information. Our AI finds your best options.",
+        "items": [
+          "Academic history and achievements",
+          "Career goals and preferences",
+          "Financial requirements",
+          "Add dependents (if any)"
+        ]
+      },
+      "selectionFee": {
+        "title": "Pay Selection Fee ($400)",
+        "description": "Unlock all scholarships. This fee is final and non-refundable. (+$150 per dependent)",
+        "items": [
+          "Access to browse scholarships",
+          "Start application process",
+          "One-time fee"
+        ]
+      },
+      "documents": {
+        "title": "Choose Scholarships & Upload Documents",
+        "description": "Choose scholarships and upload your documents. Quick review.",
+        "items": [
+          "Select multiple scholarships",
+          "Secure document upload",
+          "Initial automated analysis"
+        ]
+      },
+      "applicationFee": {
+        "title": "Pay Application Fee (By university)",
+        "description": "Confirm your university. This fee is final and non-refundable. (+$100 per dependent)",
+        "items": [
+          "View approved scholarships",
+          "Confirm university choice",
+          "Secure your spot"
+        ]
+      },
+      "placementFee": {
+        "title": "Placement Fee",
+        "description": "At MatriculaUSA, the placement fee is a service fee related to full support to secure your scholarship, enrollment, and specialized support for your visa process.",
+        "items": [
+          "Analysis of your academic and financial profile",
+          "Identification of the best university options for you",
+          "Negotiation or guarantee of scholarship opportunities",
+          "Documentation coordination with the institution",
+          "Enrollment process support",
+          "Full visa process support"
+        ]
+      }
+    },
+    "whyUs": {
+      "title": "Why MatriculaUSA?",
+      "smartDiscovery": {
+        "title": "Smart Discovery",
+        "description": "AI finds the best scholarships for you"
+      },
+      "documentManagement": {
+        "title": "Document Management",
+        "description": "Upload and track all your documents easily"
+      },
+      "personalSupport": {
+        "title": "Personal Support",
+        "description": "Our team helps you at every step"
+      },
+      "successTracking": {
+        "title": "Success Tracking",
+        "description": "See your progress and next steps in real time"
+      }
+    },
+    "successStories": {
+      "title": "Success Stories",
+      "story1": {
+        "text": "\"I found exclusive scholarships that weren't available anywhere else. MatriculaUSA truly opens doors to opportunities.\"",
+        "name": "Ana Chen",
+        "major": "Engineering"
+      },
+      "story2": {
+        "text": "\"Thanks to MatriculaUSA, I received a full scholarship and support throughout my visa process. The team was always there for me!\"",
+        "name": "Lucas Silva",
+        "major": "Computer Science"
+      },
+      "story3": {
+        "text": "\"The application process was so easy and transparent. I felt supported at every step. Highly recommended!\"",
+        "name": "Priya Patel",
+        "major": "Business"
+      },
+      "story4": {
+        "text": "\"I never thought studying in the US was possible for me. MatriculaUSA made my dream come true!\"",
+        "name": "Ahmed Hassan",
+        "major": "Engineering"
+      },
+      "story5": {
+        "text": "\"From the first contact until my arrival in the US, everything was smooth and professional. Thank you, MatriculaUSA!\"",
+        "name": "Maria Gomez",
+        "major": "Business"
+      }
+    },
+    "faq": {
+      "title": "Frequently Asked Questions",
+      "q1": {
+        "question": "What fees or payments are required to use MatriculaUSA?",
+        "answer": "MatriculaUSA is free to create your profile and explore universities. However, once you start the application process and are approved for a scholarship, all fees associated with the admission and enrollment flow become mandatory. They are clearly presented before any payment. All fees are final and non-refundable."
+      },
+      "q2": {
+        "question": "What is the Selection Process Fee?",
+        "answer": "The Selection Process Fee $400 is the first mandatory payment on the MatriculaUSA platform. It unlocks your full access to view all scholarships and start your application process. This fee is final and non-refundable."
+      },
+      "q3": {
+        "question": "What is the Placement Fee?",
+        "answer": "The Placement Fee covers the professional work required to successfully connect and enroll a student in the right university program. This fee is variable and directly linked to the scholarship amount: the higher the placement fee, the lower your annual tuition."
+      },
+      "q4": {
+        "question": "What is the Application Fee?",
+        "answer": "The Application Fee varies by university and is a required payment to formally process your application after you have been accepted. This amount confirms your intent to enroll and is managed directly by the platform. This fee is final and non-refundable."
+      },
+      "q5": {
+        "question": "How do I choose my scholarship?",
+        "answer": "After paying the Selection Process Fee and submitting your documents, our AI and support team will present the best scholarship options for your profile. You can then choose the one that best fits your budget and goals."
+      },
+      "q6": {
+        "question": "Are there other fees I should know about?",
+        "answer": "All mandatory fees for your application and enrollment process are listed in your dashboard before any payment. Some universities may have additional fees (e.g., housing deposits, orientation fees), but these will always be communicated directly by the university or by us in advance. All fees are final and non-refundable."
+      },
+      "q7": {
+        "question": "How can I pay these fees?",
+        "answer": "You can pay all fees directly through the MatriculaUSA platform using international credit or debit cards. Payments are processed securely via Stripe, and you will receive a confirmation for each transaction. All fees are final and non-refundable."
+      },
+      "q8": {
+        "question": "Is my payment information secure?",
+        "answer": "Yes. All payments are processed by Stripe, a global leader in payment security. MatriculaUSA does not store your card details, and all transactions are encrypted for your protection."
+      },
+      "q9": {
+        "question": "Can I get a refund?",
+        "answer": "You have the right to a full refund of the fees paid if your application is unsuccessful or you are not approved for a scholarship. However, if you withdraw from the process or change your mind after starting the application, the fees paid are non-refundable, as binary processing and support will have already begun. All fees are final and non-refundable."
+      },
+      "q10": {
+        "question": "Do I have to pay all fees at once?",
+        "answer": "No. The fees are separate and paid in stages. You pay the Selection Process Fee first, then the Application Fee (if applicable), and finally the Placement Fee associated with the chosen scholarship. All are mandatory but paid at different times."
+      },
+      "q11": {
+        "question": "Who can I contact if I have questions about fees or payments?",
+        "answer": "Our support team is available via chat or email at any time to answer any questions about fees, payments, or your application process. We are here to help you every step of the way!"
+      }
+    }
+  },
+
+  "forStudents": {
+    "hero": {
+      "title": "Study in the US with",
+      "titleHighlight": "exclusive scholarships",
+      "subtitle": "AI-Powered Selection Process",
+      "description": "Study paying <span class=\"text-[#D0151C] font-bold\">up to 50% less</span>, with hybrid scholarships and a chance to work legally — for just <span class=\"text-yellow-400 font-bold\">$400</span> to start.",
+      "ctaButton": "Start Now",
+      "trustElements": {
+        "approval24h": "24h Approval",
+        "guaranteed": "100% Guaranteed",
+        "approved": "+10,000 approved"
+      }
+    },
+    "benefits": {
+      "title": "Benefits that make a difference",
+      "subtitle": "Discover why thousands of students choose MatriculaUSA to achieve their American dream",
+      "ctaButton": "Discover my ideal scholarship",
+      "benefits": {
+        "economy": {
+          "title": "Real Savings",
+          "description": "Pay up to 50% less than the full university value with our exclusive scholarships",
+          "highlight": "Up to 50% OFF"
+        },
+        "fastApproval": {
+          "title": "Fast Approval",
+          "description": "AI-optimized process that accelerates your approval by up to 80%",
+          "highlight": "24h"
+        },
+        "hybridMode": {
+          "title": "Hybrid Mode",
+          "description": "Study online and in person, saving on housing and food",
+          "highlight": "Flexible"
+        },
+        "multipleOpportunities": {
+          "title": "Multiple Opportunities",
+          "description": "Apply to multiple universities simultaneously and increase your chances",
+          "highlight": "3+ Options"
+        },
+        "guaranteed": {
+          "title": "Guaranteed Approval",
+          "description": "If you're not approved following our process, we refund your money",
+          "highlight": "100%"
+        },
+        "support": {
+          "title": "Full Support",
+          "description": "Monitoring from application to boarding to the US",
+          "highlight": "24/7"
+        }
+      }
+    },
+    "howItWorks": {
+      "title": "How It Works",
+      "subtitle": "Simple and transparent 6-step process to guarantee your scholarship",
+      "ctaButton": "START NOW",
+      "ctaDescription": "Start your journey to study in the US today",
+      "steps": {
+        "processFee": {
+          "title": "Selection Process Fee",
+          "description": "Start your journey with our profile analysis and personalized search for just $400",
+          "price": "$400"
+        },
+        "scholarshipChoice": {
+          "title": "Scholarship Choice",
+          "description": "Our AI identifies the best opportunities and you choose the ideal one for your budget",
+          "price": "Free"
+        },
+        "application": {
+          "title": "Application",
+          "description": "We take care of all documentation submission to partner universities",
+          "price": "✓"
+        },
+        "enrollmentFee": {
+          "title": "Application Fee",
+          "description": "Mandatory university fee to process your official enrollment after acceptance",
+          "price": "Variable"
+        },
+        "placementFee": {
+          "title": "Placement Fee",
+          "description": "Covers professional networking, scholarship negotiation, and support up to boarding",
+          "price": "Variable"
+        },
+        "spotGuaranteed": {
+          "title": "Spot Guaranteed",
+          "description": "Your spot is guaranteed and you are ready for your US journey",
+          "price": "✓"
+        }
+      }
+    },
+    "comparison": {
+      "title": "From high spending and uncertainty... to real savings and guaranteed approval",
+      "subtitle": "See the real difference between studying on your own vs. with MatriculaUSA",
+      "ctaButton": "I WANT TO SAVE",
+      "before": {
+        "title": "Without MatriculaUSA",
+        "subtitle": "Traditional process",
+        "costLabel": "Total cost: $15,000 - $25,000",
+        "items": [
+          "Slow and complex process",
+          "High risk of rejection",
+          "No specialized support",
+          "Hidden costs and surprises",
+          "Difficulty getting scholarships",
+          "Manual and bureaucratic process"
+        ]
+      },
+      "after": {
+        "title": "With MatriculaUSA",
+        "subtitle": "AI-optimized process",
+        "savingsLabel": "Average savings: $8,000 - $15,000",
+        "items": [
+          "Fast and simplified process",
+          "Guaranteed approval or money back",
+          "Dedicated 24/7 support",
+          "Total cost transparency",
+          "Access to exclusive scholarships",
+          "Automated and efficient process"
+        ]
+      }
+    },
+    "specialOffer": {
+      "title": "Get priority in the most competitive scholarships and exclusive benefits",
+      "subtitle": "By signing up today, you guarantee:",
+      "urgencyTitle": "Attention: Limited Spots",
+      "urgencyDescription": "Scholarships are released in order of enrollment. <span class=\"text-[#D0151C] font-bold\">Each day of delay can mean losing the spot of your dreams.</span>",
+      "ctaButton": "I WANT MY SCHOLARSHIP NOW",
+      "ctaDescription": "⏰ Limited time offer",
+      "benefits": [
+        {
+          "title": "24h Analysis",
+          "description": "Profile analysis in 24 hours to know your best options immediately"
+        },
+        {
+          "title": "Scholarship Priority",
+          "description": "Priority in scholarships with limited spots"
+        },
+        {
+          "title": "Early Access",
+          "description": "Early access to hybrid scholarships (the most requested)"
+        },
+        {
+          "title": "Dedicated Support",
+          "description": "Dedicated support to complete your enrollment without errors"
+        }
+      ]
+    },
+    "guarantee": {
+      "title": "Guaranteed approval or your money back",
+      "subtitle": "We know that investing in your future requires confidence. That's why MatriculaUSA is the only program that offers:",
+      "ctaButton": "START RISK-FREE",
+      "guarantees": [
+        {
+          "title": "Approval Guarantee",
+          "description": "If you follow our process and are not approved, we refund the Selection Process Fee entirely."
+        },
+        {
+          "title": "Transparent Process",
+          "description": "No hidden fees or surprise costs. You know exactly how much you will pay from start to finish."
+        },
+        {
+          "title": "Support Until Arrival",
+          "description": "We don't stop after the university acceptance. Our team accompanies the entire process until boarding."
+        }
+      ],
+      "bottomMessage": "The risk is all ours. For you, it's just taking advantage of the opportunity."
+    },
+    "faq": {
+      "title": "Frequently Asked Questions",
+      "subtitle": "Find answers to the most common questions about our selection process",
+      "contact": "Still have questions? Contact our support team",
+      "items": [
+        {
+          "question": "What is included in the selection process fee?",
+          "answer": "$400 includes a full profile analysis, personalized AI scholarship search, applications to multiple universities, process monitoring, and support until approval."
+        },
+        {
+          "question": "What is the Placement Fee?",
+          "answer": "The Placement Fee covers specialized support to secure your scholarship and enrollment. It refers to profile analysis, identification of best options, scholarship negotiation, and boarding support. It is variable and directly linked to the scholarship amount: the higher the placement fee, the lower your annual tuition."
+        },
+        {
+          "question": "Can I apply for as many scholarships as I want?",
+          "answer": "Yes! With a single fee you can apply for all scholarships compatible with your profile. Our AI identifies the best opportunities and you choose how many you want to try."
+        },
+        {
+          "question": "How does the guarantee work?",
+          "answer": "If you follow our full process and are not approved by any university, we refund 100% of the selection process fee. It's our guarantee of trust in the system."
+        },
+        {
+          "question": "Which universities participate?",
+          "answer": "We work with more than 45 accredited American universities, including Arizona State University, Florida International University, University of California, and many others."
+        },
+        {
+          "question": "Do I need to speak English?",
+          "answer": "Yes, a basic level of English is required. Some universities accept an internal proficiency test or offer preparatory programs for those who need to improve their language."
+        },
+        {
+          "question": "How long does it take to know if I was approved?",
+          "answer": "The analysis and response process from universities varies from 2 to 8 weeks. You will receive constant updates on your application status."
+        }
+      ]
+    },
+    "socialProof": {
+      "title": "More than 150 students approved in 2026 alone",
+      "subtitle": "See what our students are saying about their experience",
+      "ctaButton": "BE THE NEXT APPROVED",
+      "statistics": {
+        "approved": "Students approved",
+        "approvalRate": "Approval rate",
+        "averageSavings": "Average savings",
+        "partnerUniversities": "Partner universities"
+      },
+      "testimonials": [
+        {
+          "name": "Gustavo Santos",
+          "university": "University of California",
+          "course": "Computer Science",
+          "text": "I got a 40% scholarship and I'm fulfilling my dream of studying in the US! The process was much simpler than I imagined.",
+          "savings": "$18,000"
+        },
+        {
+          "name": "João Santos",
+          "university": "Arizona State University",
+          "course": "Business Administration",
+          "text": "The hybrid mode was perfect for me. I saved a lot on housing and still have the in-person experience.",
+          "savings": "$22,000"
+        },
+        {
+          "name": "Ana Costa",
+          "university": "Florida International University",
+          "course": "International Business",
+          "text": "Approved at 3 different universities! AI really found the best options for my profile.",
+          "savings": "$25,000"
+        },
+        {
+          "name": "Carlos Mendes",
+          "university": "Northern Arizona University",
+          "course": "Engineering",
+          "text": "Amazing how fast the process was. In 3 weeks I already had 2 approvals with excellent scholarships!",
+          "savings": "$30,000"
+        },
+        {
+          "name": "Fernanda Lima",
+          "university": "University of South Florida",
+          "course": "Marketing",
+          "text": "The support was fantastic from start to finish. Now I'm studying and working legally in the US!",
+          "savings": "$20,000"
+        },
+        {
+          "name": "Roberto Silva",
+          "university": "California State University",
+          "course": "Data Science",
+          "text": "I got a hybrid scholarship that allows me to study online and in person. Perfect for my situation!",
+          "savings": "$35,000"
+        }
+      ]
+    }
+  },
+  "stepByStepGuide": {
+    "title": "Step-by-Step Guide",
+    "subtitle": "How the application process works",
+    "closeButton": "Close step-by-step guide",
+    "progress": "{{current}} of {{total}}",
+    "previous": "Previous",
+    "next": "Next",
+    "startNow": "Start Now!",
+    "steps": {
+      "step1": {
+        "title": "Welcome to Matrícula USA! 🎓",
+        "description": "We will guide you through the entire scholarship application process in the US. It's easier than you think!"
+      },
+      "step2": {
+        "title": "1. Explore Scholarships",
+        "description": "Browse our scholarship list. Each one has detailed information about values, requirements, and partner universities. Click on those that interest you!"
+      },
+      "step3": {
+        "title": "2. Add to Selection List",
+        "description": "Select the scholarships you want to apply for and add them to your selection list. You can choose multiple scholarships and manage your selections easily."
+      },
+      "step4": {
+        "title": "3. Upload Documents",
+        "description": "Upload your documents: Passport, High School Diploma, and a Bank Statement. Our team will review everything and give you feedback."
+      },
+      "step5": {
+        "title": "4. Placement Fee and Final Support",
+        "description": "After university approval, you proceed with the Placement Fee. This covers our professional services to secure your enrollment and support you until arrival."
+      },
+      "step6": {
+        "title": "5. Spot Guaranteed",
+        "description": "Once the process is complete, your spot is guaranteed and you are ready to start your American journey!"
+      }
+    },
+    "expandImage": "Expand image",
+    "previewNotAvailable": "Preview not available"
+  },
+  "scholarshipDeadline": {
+    "3800Expired": "Not available",
+    "3800Expiring": "Last hours to apply! Deadline expires tomorrow (November 6th)",
+    "3800ExpiringShort": "Deadline expires tomorrow"
+  }
+}

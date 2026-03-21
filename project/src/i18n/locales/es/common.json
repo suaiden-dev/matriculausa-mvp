@@ -1,0 +1,355 @@
+{
+  "close": "Cerrar",
+  "nav": {
+    "home": "Inicio",
+    "howItWorks": "Cómo Funciona",
+    "scholarships": "Becas",
+    "universities": "Universidades",
+    "eb3Jobs": "Empleos EB-3",
+    "forUniversities": "Para Universidades",
+    "about": "Sobre Nosotros",
+    "contact": "Contacto",
+    "faq": "FAQ",
+    "login": "Iniciar Sesión",
+    "getStarted": "Comenzar",
+    "dashboard": "Panel",
+    "profileSettings": "Configuraciones de Perfil",
+    "signOut": "Cerrar Sesión",
+    "studentDashboard": "Panel del Estudiante",
+    "schoolDashboard": "Panel de la Universidad",
+    "adminDashboard": "Panel del Administrador",
+    "affiliateDashboard": "Panel de Afiliado",
+    "sellerDashboard": "Panel del Vendedor",
+    "viewScholarships": "Ver Becas",
+    "goToDashboard": "Ir al Panel",
+    "startSelectionProcess": "Iniciar Proceso de Selección",
+    "scholarshipsPlatform": "Plataforma de Becas",
+    "processingZellePayment": "Pago Zelle en verificación",
+    "zellePaymentPending": "Por favor, espere la verificación de su pago Zelle antes de iniciar un nuevo proceso."
+  },
+  "footer": {
+    "company": {
+      "title": "Empresa",
+      "about": "Sobre Nosotros",
+      "careers": "Carreras",
+      "contact": "Contacto",
+      "blog": "Blog",
+      "description": "MatriculaUSA es la plataforma líder para estudiantes internacionales que quieren estudiar en los Estados Unidos. Hacemos que todo el proceso de solicitud, inscripción y becas sea más fácil en las universidades estadounidenses, ofreciendo tecnología, soporte experto y oportunidades exclusivas para convertir su sueño internacional en realidad."
+    },
+    "students": {
+      "title": "Para Estudiantes",
+      "forStudents": "Para Estudiantes",
+      "scholarships": "Becas",
+      "matriculaRewards": "Matrícula Rewards",
+      "universities": "Universidades",
+      "howItWorks": "Cómo Funciona",
+      "support": "Soporte",
+      "faq": "Preguntas Frecuentes",
+      "helpCenter": "Centro de Ayuda"
+    },
+    "universities": {
+      "title": "Para Universidades",
+      "partners": "Conviértase en Socio",
+      "dashboard": "Panel de la Universidad",
+      "resources": "Recursos"
+    },
+    "legal": {
+      "title": "Legal",
+      "privacy": "Política de Privacidad",
+      "terms": "Términos de Servicio",
+      "cookies": "Política de Cookies"
+    },
+    "contact": {
+      "email": "info@matriculausa.com",
+      "phone": "+1 (213) 676-2544",
+      "address": "Los Angeles - CA - USA."
+    },
+    "social": {
+      "title": "Síguenos",
+      "facebook": "Facebook",
+      "twitter": "Twitter",
+      "linkedin": "LinkedIn",
+      "instagram": "Instagram"
+    },
+    "newsletter": {
+      "title": "Mantente Informado",
+      "description": "Recibe las últimas noticias y oportunidades de becas",
+      "placeholder": "Ingresa tu correo electrónico",
+      "subscribe": "Suscribirse",
+      "subscribed": "¡Gracias por suscribirte!"
+    },
+    "unsubscribe": {
+      "invalidLink": {
+        "title": "Enlace Inválido",
+        "message": "El enlace de cancelación de suscripción no es válido o ha expirado.",
+        "button": "Volver al Inicio"
+      },
+      "alreadyUnsubscribed": {
+        "title": "Ya Desuscrito",
+        "message": "Ya estás desuscrito de los emails del boletín de MatriculaUSA.",
+        "button": "Volver al Inicio"
+      },
+      "success": {
+        "title": "Desuscripción Exitosa",
+        "message": "Has sido removido exitosamente de nuestra lista de boletín. Ya no recibirás emails de campaña de MatriculaUSA.",
+        "important": "<strong>Importante:</strong> Aún recibirás emails importantes sobre tu cuenta, aplicaciones y confirmaciones de pago.",
+        "reactivate": "Si cambias de opinión, puedes reactivar tu suscripción contactándonos.",
+        "button": "Volver al Inicio"
+      },
+      "error": {
+        "title": "Error",
+        "message": "Ocurrió un error al procesar tu solicitud. Por favor, intenta nuevamente más tarde.",
+        "tryAgain": "Intentar Nuevamente",
+        "backToHome": "Volver al Inicio"
+      },
+      "form": {
+        "title": "Desuscribirse del Boletín",
+        "question": "¿Estás seguro de que deseas dejar de recibir emails de campaña de MatriculaUSA?",
+        "reasonLabel": "Motivo (opcional)",
+        "reasonPlaceholder": "Cuéntanos por qué te estás desuscribiendo (opcional)",
+        "reasonHelp": "Tu retroalimentación nos ayuda a mejorar nuestros servicios",
+        "note": "<strong>Nota:</strong> Aún recibirás emails importantes sobre tu cuenta, aplicaciones y confirmaciones de pago.",
+        "disclaimer": "Al desuscribirte, ya no recibirás emails de campaña, pero continuarás recibiendo emails importantes sobre tu cuenta y aplicaciones.",
+        "cancel": "Cancelar",
+        "confirm": "Confirmar Desuscripción",
+        "processing": "Procesando..."
+      },
+      "errors": {
+        "tokenMissing": "Token o ID de usuario no proporcionado",
+        "configError": "Error de configuración: URL de Supabase no encontrada",
+        "httpError": "Error HTTP {{status}}",
+        "checkStatusError": "Error al verificar estado ({{status}})",
+        "checkStatusGeneric": "Error al verificar el estado de suscripción. Por favor, intenta nuevamente.",
+        "processError": "Error al procesar la solicitud de desuscripción",
+        "processErrorRetry": "Error al procesar la solicitud de desuscripción. Por favor, intenta nuevamente."
+      }
+    },
+    "copyright": "© 2026 Matrícula USA. Todos los derechos reservados."
+  },
+  "common": {
+    "select": "Seleccione",
+    "copy": "Copiar",
+    "copied": "¡Copiado!",
+    "yes": "Sí",
+    "no": "No",
+    "expirationDate": "Fecha de vencimiento",
+    "name": "Nombre",
+    "email": "Correo electrónico",
+    "profile": "Perfil",
+    "section": "Sección",
+    "of": "de",
+    "loading": "Cargando...",
+    "success": "Éxito",
+    "error": "Error",
+    "filter": "Filtro",
+    "active": "activo",
+    "apply": "Aplicar",
+    "language": "Español",
+    "featured": "Destacado",
+    "exclusive": "Exclusivo",
+    "showMore": "ver más",
+    "learnMore": "Saber más",
+    "search": "Buscar",
+    "support": "Soporte",
+    "welcome": "Bienvenido",
+    "close": "Cerrar",
+    "back": "Volver",
+    "next": "Siguiente",
+    "saving": "Guardando...",
+    "finish": "Finalizar"
+  },
+  "fees": {
+    "selectionProcess": "Tarifa del Proceso de Selección",
+    "application": "Tarifa de Solicitud",
+    "scholarship": "Tarifa de Beca",
+    "placement": "Tarifa de Colocación",
+    "i20Control": "Tarifa de Control I-20",
+    "finalNonRefundable": "Esta tarifa es definitiva y no reembolsable"
+  },
+  "productNames": {
+    "selectionProcess": "Proceso de Selección",
+    "selectionProcessFee": "Tarifa del Proceso de Selección",
+    "applicationFee": "Tarifa de Solicitud",
+    "scholarshipFee": "Tarifa de Beca",
+    "placementFee": "Tarifa de Colocación",
+    "enrollmentFee": "Tarifa de Matrícula",
+    "collegeEnrollmentFee": "Tarifa de Matrícula de la Universidad",
+    "i20ControlFee": "Tarifa de Control I-20"
+  },
+  "feeValues": {
+    "asPerUniversity": "Según la universidad"
+  },
+  "feeDescriptions": {
+    "selectionProcess": "Tarifa del Proceso de Selección - Complete su proceso de solicitud",
+    "applicationFee": "Tarifa de Solicitud - Aplicar para una beca específica",
+    "scholarshipFee": "Tarifa de Beca - Confirme su solicitud de beca",
+    "placementFee": "Tarifa de Colocación - Paso final para asegurar su colocación y soporte",
+    "i20ControlFee": "Tarifa de Control I-20 - Procesamiento y validación de documentos"
+  },
+  "ssoCallback": {
+    "processing": {
+      "title": "Espere un momento",
+      "preparing": "Estamos preparando el entorno para usted...",
+      "connecting": "Conectando con 323 Network...",
+      "preparingAccount": "Preparando su cuenta...",
+      "creatingSession": "Creando sesión...",
+      "waitMessage": "Esto puede llevar unos segundos...",
+      "secureConnection": "Conectando de forma segura a Matrícula USA"
+    },
+    "success": {
+      "title": "¡Todo listo!",
+      "newUser": "¡Todo listo! Redirigiéndote...",
+      "returningUser": "¡Bienvenido de nuevo! Redirigiéndote...",
+      "redirecting": "Redirigiéndote ahora...",
+      "welcomeNew": "¡Bienvenido a Matrícula US!",
+      "loginSuccess": "¡Inicio de sesión exitoso!"
+    },
+    "error": {
+      "title": "Ups, algo salió mal",
+      "authenticationFailed": "No se pudo completar la autenticación. Será redirigido a la página de inicio de sesión en breve.",
+      "tokenNotProvided": "Token no proporcionado en la URL",
+      "tokenValidationError": "Error al validar el token",
+      "sessionCreationError": "Error al crear la sesión",
+      "sessionNotCreated": "La sesión no se creó correctamente",
+      "noAuthMethod": "Ningún método de autenticación disponible",
+      "tokenNotFoundInMagicLink": "Token o tipo no encontrado en el magic link",
+      "tokensNotFoundInRedirect": "Tokens no encontrados en el redireccionamiento",
+      "locationHeaderNotFound": "Encabezado de ubicación no encontrado en el redireccionamiento",
+      "tokensNotFoundInResponse": "Tokens no encontrados en la respuesta",
+      "supabaseUrlNotConfigured": "VITE_SUPABASE_URL no configurada",
+      "tryAgain": "Intentar de nuevo",
+      "goToLogin": "Ir al inicio de sesión"
+    }
+  },
+  "findScholarships": {
+    "title": "Encontrar Becas",
+    "subtitle": "Descubre oportunidades adaptadas a tu perfil académico",
+    "pagination": {
+      "previous": "Anterior",
+      "next": "Siguiente",
+      "showing": "Mostrando {{start}}-{{end}} de {{total}}",
+      "pageOf": "(Página {{current}} de {{total}})"
+    },
+    "searchPlaceholder": "Buscar becas...",
+    "allLevels": "Todos los Niveles",
+    "allFields": "Todas las Áreas",
+    "allModes": "Todas las Modalidades",
+    "allPermissions": "Todos los Permisos",
+    "allUniversities": "Todas las Universidades",
+    "minValue": "Valor mínimo",
+    "maxValue": "Valor máximo",
+    "deadline": "Fecha límite (días)",
+    "applyFilters": "Aplicar Filtros",
+    "scholarshipsFound": "becas encontradas",
+    "filters": {
+      "applying": "Aplicando...",
+      "loading": "Cargando...",
+      "applied": "¡Aplicado!",
+      "clearAllFilters": "Limpiar Todos los Filtros",
+      "clear": "Limpiar",
+      "active": "activo",
+      "academicLevel": "Nivel Académico",
+      "fieldOfStudy": "Área de Estudio",
+      "studyMode": "Modalidad del Curso",
+      "workAuthorization": "Autorización de Trabajo",
+      "minValue": "Valor Mínimo",
+      "maxValue": "Valor Máximo",
+      "deadlineDays": "Fecha límite (días)",
+      "undergraduate": "Pregrado",
+      "graduate": "Posgrado",
+      "postgraduate": "Postgrado",
+      "stem": "STEM",
+      "business": "Negocios",
+      "engineering": "Ingeniería",
+      "anyField": "Cualquier Área",
+      "online": "En línea",
+      "inPerson": "Presencial",
+      "hybrid": "Híbrido",
+      "opt": "OPT",
+      "cpt": "CPT",
+      "f1": "F1",
+      "h1b": "H1B",
+      "l1": "L1",
+      "search": "Buscar:",
+      "level": "Nivel:",
+      "field": "Área:",
+      "mode": "Modalidad:",
+      "work": "Trabajo:",
+      "min": "Mín:",
+      "max": "Máx:",
+      "deadline": "Fecha límite:",
+      "days": "días"
+    },
+    "featuredScholarships": {
+      "title": "Becas Destacadas",
+      "subtitle": "Estas becas se muestran destacadas y pueden tener beneficios especiales",
+      "featured": "Destacada",
+      "loading": "Cargando becas destacadas...",
+      "noFeatured": "No hay Becas Destacadas",
+      "checkBackLater": "Vuelve más tarde para oportunidades destacadas"
+    },
+    "scholarshipCard": {
+      "featured": "Destacada",
+      "exclusive": "Exclusiva",
+      "university": "Universidad:",
+      "studyMode": "Modalidad",
+      "workAuthorization": "Autorización de Trabajo",
+      "financialOverview": "Resumen Financiero",
+      "originalPrice": "Precio Original:",
+      "withScholarship": "Con Beca:",
+      "perCredit": "Por Crédito:",
+      "level": "Nivel",
+      "deadline": "Fecha Límite",
+      "daysLeft": "días restantes",
+      "showDetails": "Ver Detalles",
+      "show": "Ver",
+      "view": "Ver",
+      "details": "Detalles",
+      "alreadyApplied": "Ya Aplicado",
+      "deselect": "Deseleccionar",
+      "selectScholarship": "Seleccionar",
+      "checking": "Verificando...",
+      "inPerson": "Presencial",
+      "mixed": "Mixto",
+      "more": "más"
+    },
+    "noResults": {
+      "title": "No se encontraron becas",
+      "description": "Prueba ajustando tus criterios de búsqueda o limpia los filtros para descubrir más oportunidades.",
+      "clearAllFilters": "Limpiar Todos los Filtros"
+    }
+  },
+  "components": {
+    "identityPhotoUpload": {
+      "titleInstructions": "Cómo tomar la foto correcta",
+      "instructions": "Tómate una selfie sosteniendo un documento con foto (pasaporte, DNI, licencia de conducir u otros) al lado de tu cara. Asegúrate de que tanto tu cara como el documento sean claramente visibles.",
+      "exampleAlt": "Ejemplo de foto com documento",
+      "uploading": "Subiendo foto...",
+      "clickToUpload": "Haz clic para subir la foto",
+      "fileTypes": "JPG o PNG (máximo 5MB)",
+      "success": "Foto subida con éxito",
+      "preview": "Vista previa de la foto",
+      "previewAlt": "Vista previa de la foto de identidad",
+      "remove": "Eliminar",
+      "errors": {
+        "onlyImages": "Solo se permiten archivos JPG y PNG",
+        "maxSize": "El archivo debe tener un máximo de 5MB",
+        "generic": "Error al subir la foto",
+        "unauthenticated": "Usuario no autenticado"
+      }
+    }
+  },
+  "smartChat": {
+    "title": "Asistente Inteligente",
+    "subtitle": "Tu compañero inteligente",
+    "welcomeMessage": "¡Hola! Soy tu Asistente Inteligente. ¿Cómo posso ayudarte hoy? Puedo responder preguntas sobre becas, tasas, el proceso de solicitud y mucho más.",
+    "inputPlaceholder": "Pregúntame cualquier cosa...",
+    "send": "Enviar",
+    "typing": "Escribiendo...",
+    "close": "Cerrar chat",
+    "you": "Tú",
+    "assistant": "Asistente Inteligente",
+    "whatsappTitle": "Contáctanos por WhatsApp",
+    "mobileNote": "Smart Assistant - Se abre en una nueva pestaña"
+  }
+}

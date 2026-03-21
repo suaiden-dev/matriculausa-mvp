@@ -10,7 +10,7 @@ import { getPaymentDatesForUsersLoaderOptimized } from '../data/loaders/paymentD
 import { transformPaymentsToRecordsAndStats } from '../utils/transformPayments';
 import { useFeeConfig } from '../../../../hooks/useFeeConfig';
 import { getGrossPaidAmounts } from '../../../../utils/paymentConverter';
-import type { PaymentRecord, PaymentStats } from '../data/types';
+// import type { PaymentRecord, PaymentStats } from '../data/types';
 
 /**
  * Hook para buscar dados base de payments (aplicações, zelle, stripe)
@@ -42,14 +42,14 @@ export function usePaymentsQuery(enabled: boolean = true) {
         batches.push(uniqueUserIds.slice(i, i + batchSize));
       }
       
-      const realPaymentAmounts = new Map<string, { selection_process?: number; scholarship?: number; i20_control?: number; application?: number }>();
+      const realPaymentAmounts = new Map<string, { selection_process?: number; scholarship?: number; i20_control?: number; application?: number; placement?: number; ds160_package?: number; i539_cos_package?: number }>();
       
       // Processar batches em paralelo
       const batchPromises = batches.map(async (batch) => {
         const batchResults = await Promise.allSettled(
           batch.map(async (userId) => {
             try {
-              const amounts = await getGrossPaidAmounts(userId, ['selection_process', 'scholarship', 'i20_control', 'application']);
+              const amounts = await getGrossPaidAmounts(userId, ['selection_process', 'scholarship', 'i20_control', 'application', 'placement', 'ds160_package', 'i539_cos_package']);
               return { userId, amounts };
             } catch (error) {
               console.error(`Erro ao buscar valores brutos pagos para user_id ${userId}:`, error);
@@ -66,6 +66,9 @@ export function usePaymentsQuery(enabled: boolean = true) {
               scholarship: amounts.scholarship,
               i20_control: amounts.i20_control,
               application: amounts.application,
+              placement: amounts.placement,
+              ds160_package: amounts.ds160_package,
+              i539_cos_package: amounts.i539_cos_package,
             });
           }
         });

@@ -1,6 +1,6 @@
-import { useState, useEffect } from 'react';
-import { supabase } from '../lib/supabase';
-import { UserPackageFees } from '../types';
+import { useEffect, useState } from "react";
+import { supabase } from "../lib/supabase";
+import { UserPackageFees } from "../types";
 
 export interface FeeConfig {
   selection_process_fee: number;
@@ -13,7 +13,7 @@ const DEFAULT_FEE_CONFIG: FeeConfig = {
   selection_process_fee: 400,
   application_fee_default: 350,
   scholarship_fee_default: 900,
-  i20_control_fee: 900
+  i20_control_fee: 900,
 };
 
 interface UserFeeOverrides {
@@ -21,14 +21,26 @@ interface UserFeeOverrides {
   application_fee?: number;
   scholarship_fee?: number;
   i20_control_fee?: number;
+  placement_fee?: number;
+  ds160_package_fee?: number;
+  i539_cos_package_fee?: number;
 }
 
 export const useFeeConfig = (userId?: string) => {
   const [feeConfig, setFeeConfig] = useState<FeeConfig>(DEFAULT_FEE_CONFIG);
-  const [userPackageFees, setUserPackageFees] = useState<UserPackageFees | null>(null);
-  const [userFeeOverrides, setUserFeeOverrides] = useState<UserFeeOverrides | null>(null);
-  const [realPaymentAmounts, setRealPaymentAmounts] = useState<{[key: string]: number}>({});
-  const [userSystemType, setUserSystemType] = useState<'legacy' | 'simplified' | null>(null);
+  const [userPackageFees, setUserPackageFees] = useState<
+    UserPackageFees | null
+  >(null);
+  const [userFeeOverrides, setUserFeeOverrides] = useState<
+    UserFeeOverrides | null
+  >(null);
+  const [realPaymentAmounts, setRealPaymentAmounts] = useState<
+    { [key: string]: number }
+  >({});
+  const [userSystemType, setUserSystemType] = useState<
+    "legacy" | "simplified" | null
+  >(null);
+  const [userDependents, setUserDependents] = useState<number>(0);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
@@ -50,10 +62,9 @@ export const useFeeConfig = (userId?: string) => {
 
       // Novo modelo: valores fixos. Ignorar overrides do banco.
       setFeeConfig(DEFAULT_FEE_CONFIG);
-
     } catch (err) {
-      console.error('❌ [useFeeConfig] Erro inesperado:', err);
-      setError('Erro ao carregar configurações de taxas');
+      console.error("❌ [useFeeConfig] Erro inesperado:", err);
+      setError("Erro ao carregar configurações de taxas");
       setFeeConfig(DEFAULT_FEE_CONFIG);
     } finally {
       setLoading(false);
@@ -65,19 +76,25 @@ export const useFeeConfig = (userId?: string) => {
 
     try {
       const { data, error } = await supabase
-        .rpc('get_user_package_fees', {
-          user_id_param: userId
+        .rpc("get_user_package_fees", {
+          user_id_param: userId,
         });
 
       if (error) {
-        console.warn('⚠️ [useFeeConfig] Erro ao carregar taxas do pacote do usuário:', error);
+        console.warn(
+          "⚠️ [useFeeConfig] Erro ao carregar taxas do pacote do usuário:",
+          error,
+        );
         setUserPackageFees(null);
         return;
       }
 
       setUserPackageFees(data && data.length > 0 ? data[0] : null);
     } catch (err) {
-      console.error('❌ [useFeeConfig] Erro inesperado ao carregar taxas do pacote:', err);
+      console.error(
+        "❌ [useFeeConfig] Erro inesperado ao carregar taxas do pacote:",
+        err,
+      );
       setUserPackageFees(null);
     }
   };
@@ -91,7 +108,9 @@ export const useFeeConfig = (userId?: string) => {
       let error: any = null;
 
       try {
-        const rpc = await supabase.rpc('get_user_fee_overrides', { target_user_id: userId });
+        const rpc = await supabase.rpc("get_user_fee_overrides", {
+          target_user_id: userId,
+        });
         if (!rpc.error) {
           data = rpc.data || null;
         } else {
@@ -104,34 +123,59 @@ export const useFeeConfig = (userId?: string) => {
       // Fallback: tentar select direto (caso o contexto atual permita SELECT)
       if (!data) {
         const direct = await supabase
-          .from('user_fee_overrides')
-          .select('*')
-          .eq('user_id', userId)
+          .from("user_fee_overrides")
+          .select("*")
+          .eq("user_id", userId)
           .single();
         if (!direct.error) {
           data = direct.data || null;
-        } else if (direct.error?.code !== 'PGRST116') {
+        } else if (direct.error?.code !== "PGRST116") {
           error = direct.error;
         }
       }
 
-      if (error && error.code !== 'PGRST116') { // PGRST116 = no rows returned
-        console.warn('⚠️ [useFeeConfig] Erro ao carregar overrides de taxas do usuário:', error);
+      if (error && error.code !== "PGRST116") { // PGRST116 = no rows returned
+        console.warn(
+          "⚠️ [useFeeConfig] Erro ao carregar overrides de taxas do usuário:",
+          error,
+        );
         setUserFeeOverrides(null);
         return;
       }
 
       // Normalizar para números (podem vir como string do Postgres)
-      const normalized = data ? {
-        selection_process_fee: data.selection_process_fee != null ? Number(data.selection_process_fee) : undefined,
-        application_fee: data.application_fee != null ? Number(data.application_fee) : undefined,
-        scholarship_fee: data.scholarship_fee != null ? Number(data.scholarship_fee) : undefined,
-        i20_control_fee: data.i20_control_fee != null ? Number(data.i20_control_fee) : undefined,
-      } : null;
+      const normalized = data
+        ? {
+          selection_process_fee: data.selection_process_fee != null
+            ? Number(data.selection_process_fee)
+            : undefined,
+          application_fee: data.application_fee != null
+            ? Number(data.application_fee)
+            : undefined,
+          scholarship_fee: data.scholarship_fee != null
+            ? Number(data.scholarship_fee)
+            : undefined,
+          i20_control_fee: data.i20_control_fee != null
+            ? Number(data.i20_control_fee)
+            : undefined,
+          placement_fee: data.placement_fee != null
+            ? Number(data.placement_fee)
+            : undefined,
+          ds160_package_fee: data.ds160_package_fee != null
+            ? Number(data.ds160_package_fee)
+            : undefined,
+          i539_cos_package_fee: data.i539_cos_package_fee != null
+            ? Number(data.i539_cos_package_fee)
+            : undefined,
+        }
+        : null;
 
       setUserFeeOverrides(normalized);
     } catch (err) {
-      console.error('❌ [useFeeConfig] Erro inesperado ao carregar overrides de taxas:', err);
+      console.error(
+        "❌ [useFeeConfig] Erro inesperado ao carregar overrides de taxas:",
+        err,
+      );
       setUserFeeOverrides(null);
     }
   };
@@ -142,12 +186,15 @@ export const useFeeConfig = (userId?: string) => {
     try {
       // ✅ Usar nova função que retorna TODOS os valores pagos (gross_amount_usd ou amount)
       const { data, error } = await supabase
-        .rpc('get_user_paid_fees_display', {
-          user_id_param: userId
+        .rpc("get_user_paid_fees_display", {
+          user_id_param: userId,
         });
 
       if (error) {
-        console.warn('⚠️ [useFeeConfig] Erro ao carregar valores reais de pagamento:', error);
+        console.warn(
+          "⚠️ [useFeeConfig] Erro ao carregar valores reais de pagamento:",
+          error,
+        );
         setRealPaymentAmounts({});
         return;
       }
@@ -155,39 +202,48 @@ export const useFeeConfig = (userId?: string) => {
       if (data && data.length > 0) {
         // Mapear os dados para um objeto { fee_type: amount }
         // ✅ CORREÇÃO: Normalizar fee_type para garantir consistência
-        const amounts: {[key: string]: number} = {};
+        const amounts: { [key: string]: number } = {};
         data.forEach((fee: any) => {
           // Normalizar fee_type: remover sufixo _fee se existir e garantir formato consistente
           let normalizedFeeType = fee.fee_type;
           if (normalizedFeeType) {
             // Remover sufixo _fee se existir
-            normalizedFeeType = normalizedFeeType.replace(/_fee$/, '');
+            normalizedFeeType = normalizedFeeType.replace(/_fee$/, "");
             // Garantir que está em formato snake_case
-            normalizedFeeType = normalizedFeeType.replace(/-/g, '_');
+            normalizedFeeType = normalizedFeeType.replace(/-/g, "_");
           }
-          
+
           if (normalizedFeeType) {
             amounts[normalizedFeeType] = Number(fee.display_amount);
             // ✅ Também adicionar com _fee para garantir compatibilidade
             amounts[`${normalizedFeeType}_fee`] = Number(fee.display_amount);
           }
         });
-        
+
         setRealPaymentAmounts(amounts);
-        
+
         // Debug - Sempre logar para facilitar troubleshooting
-        console.log('🔍 [useFeeConfig] Real payment amounts loaded for user:', userId, amounts);
-        console.log('🔍 [useFeeConfig] Raw data from RPC:', data);
+        console.log(
+          "🔍 [useFeeConfig] Real payment amounts loaded for user:",
+          userId,
+          amounts,
+        );
+        console.log("🔍 [useFeeConfig] Raw data from RPC:", data);
       } else {
         setRealPaymentAmounts({});
-        
+
         // Debug para jolie8862@uorak.com
-        if (userId === '935e0eec-82c6-4a70-b013-e85dde6e63f7') {
-          console.log('🔍 [useFeeConfig] jolie8862@uorak.com - No real payment amounts found');
+        if (userId === "935e0eec-82c6-4a70-b013-e85dde6e63f7") {
+          console.log(
+            "🔍 [useFeeConfig] jolie8862@uorak.com - No real payment amounts found",
+          );
         }
       }
     } catch (err) {
-      console.error('❌ [useFeeConfig] Erro inesperado ao carregar valores reais de pagamento:', err);
+      console.error(
+        "❌ [useFeeConfig] Erro inesperado ao carregar valores reais de pagamento:",
+        err,
+      );
       setRealPaymentAmounts({});
     }
   };
@@ -199,28 +255,77 @@ export const useFeeConfig = (userId?: string) => {
     let useRpc = true;
     try {
       const { data: rpcData, error: rpcError } = await supabase.rpc(
-        'get_user_fee_config_consolidated',
-        { target_user_id: userId }
+        "get_user_fee_config_consolidated",
+        { target_user_id: userId },
       );
 
       if (!rpcError && rpcData) {
         // RPC retorna jsonb, processar os dados
-        const data = typeof rpcData === 'string' ? JSON.parse(rpcData) : rpcData;
-        
+        const data = typeof rpcData === "string"
+          ? JSON.parse(rpcData)
+          : rpcData;
+
         // Processar package fees
-        if (data.user_package_fees && data.user_package_fees !== 'null') {
+        if (data.user_package_fees && data.user_package_fees !== "null") {
           setUserPackageFees(data.user_package_fees);
         } else {
           setUserPackageFees(null);
         }
 
+        // 🔍 Log de diagnóstico de dependentes
+        console.log("🔍 [useFeeConfig] RPC data recebida:", {
+          system_type: data.system_type,
+          dependents: data.dependents,
+          dependents_type: typeof data.dependents,
+          has_dependents_key: "dependents" in data,
+          all_keys: Object.keys(data),
+        });
+
+        // Processar dependentes
+        const dependentsValue = data.dependents;
+        if (
+          dependentsValue !== undefined && dependentsValue !== null &&
+          dependentsValue !== "null"
+        ) {
+          const parsedDependents = Number(dependentsValue);
+          console.log(
+            "✅ [useFeeConfig] Dependentes carregados:",
+            parsedDependents,
+          );
+          setUserDependents(parsedDependents);
+        } else {
+          console.warn(
+            "⚠️ [useFeeConfig] Dependentes não encontrados na RPC, valor:",
+            dependentsValue,
+          );
+          setUserDependents(0);
+        }
+
         // Processar fee overrides
-        if (data.user_fee_overrides && data.user_fee_overrides !== 'null') {
+        if (data.user_fee_overrides && data.user_fee_overrides !== "null") {
           const normalized = {
-            selection_process_fee: data.user_fee_overrides.selection_process_fee != null ? Number(data.user_fee_overrides.selection_process_fee) : undefined,
-            application_fee: data.user_fee_overrides.application_fee != null ? Number(data.user_fee_overrides.application_fee) : undefined,
-            scholarship_fee: data.user_fee_overrides.scholarship_fee != null ? Number(data.user_fee_overrides.scholarship_fee) : undefined,
-            i20_control_fee: data.user_fee_overrides.i20_control_fee != null ? Number(data.user_fee_overrides.i20_control_fee) : undefined,
+            selection_process_fee:
+              data.user_fee_overrides.selection_process_fee != null
+                ? Number(data.user_fee_overrides.selection_process_fee)
+                : undefined,
+            application_fee: data.user_fee_overrides.application_fee != null
+              ? Number(data.user_fee_overrides.application_fee)
+              : undefined,
+            scholarship_fee: data.user_fee_overrides.scholarship_fee != null
+              ? Number(data.user_fee_overrides.scholarship_fee)
+              : undefined,
+            i20_control_fee: data.user_fee_overrides.i20_control_fee != null
+              ? Number(data.user_fee_overrides.i20_control_fee)
+              : undefined,
+            placement_fee: data.user_fee_overrides.placement_fee != null
+              ? Number(data.user_fee_overrides.placement_fee)
+              : undefined,
+            ds160_package_fee: data.user_fee_overrides.ds160_package_fee != null
+              ? Number(data.user_fee_overrides.ds160_package_fee)
+              : undefined,
+            i539_cos_package_fee: data.user_fee_overrides.i539_cos_package_fee != null
+              ? Number(data.user_fee_overrides.i539_cos_package_fee)
+              : undefined,
           };
           setUserFeeOverrides(normalized);
         } else {
@@ -228,10 +333,16 @@ export const useFeeConfig = (userId?: string) => {
         }
 
         // Processar real payment amounts
-        if (data.real_payment_amounts && Array.isArray(data.real_payment_amounts) && data.real_payment_amounts.length > 0) {
-          const amounts: {[key: string]: number} = {};
+        if (
+          data.real_payment_amounts &&
+          Array.isArray(data.real_payment_amounts) &&
+          data.real_payment_amounts.length > 0
+        ) {
+          const amounts: { [key: string]: number } = {};
           if (data.real_payment_amounts[0].payment_amount) {
-            amounts.selection_process = Number(data.real_payment_amounts[0].payment_amount);
+            amounts.selection_process = Number(
+              data.real_payment_amounts[0].payment_amount,
+            );
           }
           setRealPaymentAmounts(amounts);
         } else {
@@ -239,16 +350,22 @@ export const useFeeConfig = (userId?: string) => {
         }
 
         // Processar system_type
-        const systemType = data.system_type || 'legacy';
-        setUserSystemType(systemType as 'legacy' | 'simplified');
+        const systemType = data.system_type || "legacy";
+        setUserSystemType(systemType as "legacy" | "simplified");
 
         return;
       } else {
-        console.warn('⚠️ [PERFORMANCE] RPC consolidada falhou, usando queries individuais como fallback:', rpcError);
+        console.warn(
+          "⚠️ [PERFORMANCE] RPC consolidada falhou, usando queries individuais como fallback:",
+          rpcError,
+        );
         useRpc = false;
       }
     } catch (rpcError) {
-      console.warn('⚠️ [PERFORMANCE] RPC consolidada não disponível, usando queries individuais como fallback:', rpcError);
+      console.warn(
+        "⚠️ [PERFORMANCE] RPC consolidada não disponível, usando queries individuais como fallback:",
+        rpcError,
+      );
       useRpc = false;
     }
 
@@ -266,29 +383,39 @@ export const useFeeConfig = (userId?: string) => {
 
     try {
       const { data, error } = await supabase
-        .from('user_profiles')
-        .select('system_type')
-        .eq('user_id', userId)
+        .from("user_profiles")
+        .select("system_type, dependents")
+        .eq("user_id", userId)
         .single();
 
       if (error) {
-        if (error.code !== 'PGRST116') { // PGRST116 = no rows returned
-          console.warn('⚠️ [useFeeConfig] Erro ao carregar system_type:', error);
+        if (error.code !== "PGRST116") { // PGRST116 = no rows returned
+          console.warn(
+            "⚠️ [useFeeConfig] Erro ao carregar system_type:",
+            error,
+          );
         }
-        setUserSystemType('legacy'); // Default para legacy
+        setUserSystemType("legacy"); // Default para legacy
         return;
       }
 
-      const systemType = data?.system_type || 'legacy';
-      setUserSystemType(systemType as 'legacy' | 'simplified');
-      
+      const systemType = data?.system_type || "legacy";
+      setUserSystemType(systemType as "legacy" | "simplified");
+      setUserDependents(data?.dependents || 0);
+
       // Debug para jolie8862@uorak.com
-      if (userId === '935e0eec-82c6-4a70-b013-e85dde6e63f7') {
-        console.log('🔍 [useFeeConfig] jolie8862@uorak.com - System type loaded:', systemType);
+      if (userId === "935e0eec-82c6-4a70-b013-e85dde6e63f7") {
+        console.log(
+          "🔍 [useFeeConfig] jolie8862@uorak.com - System type loaded:",
+          systemType,
+        );
       }
     } catch (err) {
-      console.error('❌ [useFeeConfig] Erro inesperado ao carregar system_type:', err);
-      setUserSystemType('legacy');
+      console.error(
+        "❌ [useFeeConfig] Erro inesperado ao carregar system_type:",
+        err,
+      );
+      setUserSystemType("legacy");
     }
   };
 
@@ -300,141 +427,140 @@ export const useFeeConfig = (userId?: string) => {
       // Atualizar configurações no banco de dados
       const updates = Object.entries(newConfig).map(([key, value]) => ({
         key,
-        value: value.toString()
+        value: value.toString(),
       }));
 
       const { error: updateError } = await supabase
-        .from('system_settings')
-        .upsert(updates, { onConflict: 'key' });
+        .from("system_settings")
+        .upsert(updates, { onConflict: "key" });
 
       if (updateError) {
         throw updateError;
       }
 
       // Atualizar estado local
-      setFeeConfig(prev => ({ ...prev, ...newConfig }));
-      console.log('✅ [useFeeConfig] Configurações atualizadas:', newConfig);
-
+      setFeeConfig((prev) => ({ ...prev, ...newConfig }));
+      console.log("✅ [useFeeConfig] Configurações atualizadas:", newConfig);
     } catch (err) {
-      console.error('❌ [useFeeConfig] Erro ao atualizar configurações:', err);
-      setError('Erro ao atualizar configurações de taxas');
+      console.error("❌ [useFeeConfig] Erro ao atualizar configurações:", err);
+      setError("Erro ao atualizar configurações de taxas");
     } finally {
       setLoading(false);
     }
   };
 
   const getFeeAmount = (feeType: string, customAmount?: number): number => {
+    let baseAmount: number;
+
+    // 1. Determinar o valor base
     if (customAmount !== undefined) {
-      return customAmount;
+      baseAmount = customAmount;
+    } else if (userFeeOverrides) {
+      // Tentar overrides
+      let override: number | undefined;
+      switch (feeType) {
+        case "selection_process":
+          override = userFeeOverrides.selection_process_fee;
+          break;
+        case "application_fee":
+          override = userFeeOverrides.application_fee;
+          break;
+        case "scholarship_fee":
+          override = userFeeOverrides.scholarship_fee;
+          break;
+        case "i20_control_fee":
+        case "i-20_control_fee":
+          override = userFeeOverrides.i20_control_fee;
+          break;
+        case "placement_fee":
+          override = userFeeOverrides.placement_fee;
+          break;
+        case "ds160_package":
+        case "ds160_package_fee":
+          override = userFeeOverrides.ds160_package_fee;
+          break;
+        case "i539_cos_package":
+        case "i539_cos_package_fee":
+          override = userFeeOverrides.i539_cos_package_fee;
+          break;
+      }
+
+      if (override !== undefined && override !== null) {
+        baseAmount = override;
+      } else {
+        baseAmount = getDefaultBaseAmount(feeType);
+      }
+    } else {
+      baseAmount = getDefaultBaseAmount(feeType);
     }
 
-    // ✅ PRIORIDADE 1 (MÁXIMA): Verificar se há valor real pago na tabela individual_fee_payments
-    // Se já foi pago, usar o valor realmente pago (gross_amount_usd ou amount)
-    // Isso tem prioridade sobre overrides, pois representa o valor efetivamente pago
+    // 2. Tentar valor real pago (se já foi pago, retornamos DIRETO o valor pago, ignorando acréscimos extras pois já está consolidado)
     if (realPaymentAmounts && Object.keys(realPaymentAmounts).length > 0) {
-      // Normalizar nome da taxa para match (remover sufixo _fee se existir)
-      const normalizedFeeType = feeType.replace(/_fee$/, '');
-      
-      // ✅ CORREÇÃO: Tentar múltiplas variações do fee_type para garantir match
-      // A RPC pode retornar "selection_process", "selection_process_fee", etc.
+      const normalizedFeeType = feeType.replace(/_fee$/, "");
       const possibleKeys = [
-        normalizedFeeType, // "selection_process"
-        feeType, // "selection_process" ou "selection_process_fee"
-        feeType.replace('_', '-'), // "selection-process" ou "i-20_control_fee"
-        normalizedFeeType.replace('_', '-'), // "selection-process"
+        normalizedFeeType,
+        feeType,
+        feeType.replace("_", "-"),
+        normalizedFeeType.replace("_", "-"),
       ];
-      
+
       for (const key of possibleKeys) {
-        if (realPaymentAmounts[key] !== undefined && realPaymentAmounts[key] !== null) {
-          console.log(`🔍 [useFeeConfig] Using REAL payment amount for ${feeType} (matched key: ${key}):`, realPaymentAmounts[key]);
+        if (
+          realPaymentAmounts[key] !== undefined &&
+          realPaymentAmounts[key] !== null
+        ) {
           return realPaymentAmounts[key];
         }
       }
-      
-      // Debug: Log todas as chaves disponíveis se não encontrou match
-      console.log(`🔍 [useFeeConfig] Real payment amounts available keys:`, Object.keys(realPaymentAmounts));
-      console.log(`🔍 [useFeeConfig] Looking for feeType: ${feeType}, normalized: ${normalizedFeeType}`);
     }
 
-    // PRIORIDADE 2: Verificar se há override personalizado para este usuário
-    // Overrides só são usados se a fee ainda não foi paga
-    if (userFeeOverrides) {
-      switch (feeType) {
-        case 'selection_process':
-          if (userFeeOverrides.selection_process_fee !== undefined) {
-            // Debug para danielbamsesi@gmail.com
-            if (userId === 'e8244c53-3547-4028-83de-cae495953642') {
-              console.log('🔍 [useFeeConfig] danielbamsesi@gmail.com - Using override for Selection Process:', userFeeOverrides.selection_process_fee);
-            }
-            return userFeeOverrides.selection_process_fee;
-          }
-          break;
-        case 'application_fee':
-          if (userFeeOverrides.application_fee !== undefined) {
-            return userFeeOverrides.application_fee;
-          }
-          break;
-        case 'scholarship_fee':
-          if (userFeeOverrides.scholarship_fee !== undefined) {
-            return userFeeOverrides.scholarship_fee;
-          }
-          break;
-        case 'i-20_control_fee':
-        case 'i20_control_fee':
-          if (userFeeOverrides.i20_control_fee !== undefined) {
-            return userFeeOverrides.i20_control_fee;
-          }
-          break;
-      }
+    // 3. Aplicar taxa de dependentes (+$100 cada) para taxas aplicáveis
+    if (
+      userDependents > 0 &&
+      (feeType === "application_fee")
+    ) {
+      const additionalAmount = userDependents * 100;
+      return baseAmount + additionalAmount;
     }
 
-    // PRIORIDADE 3: Usar system_type para cálculo padrão
-    if (feeType === 'selection_process') {
-      if (userSystemType === 'simplified') {
-        return 350;
-      } else {
-        return 400; // legacy
-      }
-    }
-
-    // PRIORIDADE 4: Usar valores baseados no system_type do usuário
-    // Para scholarship_fee, usar valores diferentes baseados no sistema
-    if (feeType === 'scholarship_fee') {
-      // Usar system_type carregado diretamente da tabela user_profiles
-      if (userSystemType) {
-        const amount = userSystemType === 'simplified' ? 900 : 900;
-        
-        // Debug para jolie8862@uorak.com
-        if (userId === '935e0eec-82c6-4a70-b013-e85dde6e63f7') {
-          console.log('🔍 [useFeeConfig] jolie8862@uorak.com - Scholarship Fee system_type:', userSystemType, 'amount:', amount);
-        }
-        
-        return amount;
-      }
-      // Fallback para valores padrão se não conseguir determinar o sistema
-      return feeConfig.scholarship_fee_default;
-    }
-
-    // PRIORIDADE 4: Para i20_control_fee, sempre $900 para ambos os sistemas
-    if (feeType === 'i-20_control_fee' || feeType === 'i20_control_fee') {
-      return 900;
-    }
-
-    // PRIORIDADE 5: Usar valores padrão do sistema para outros tipos de taxa
-    switch (feeType) {
-      case 'selection_process':
-        return feeConfig.selection_process_fee;
-      case 'application_fee':
-        return feeConfig.application_fee_default;
-      default:
-        return feeConfig.application_fee_default;
-    }
+    return baseAmount;
   };
 
-  const formatFeeAmount = (amount: number | string): string => {
-    const numAmount = typeof amount === 'string' ? parseFloat(amount) : amount;
-    
-    // Se o valor for maior ou igual a 10000, está em centavos (ex: 70000 = $700.00)
+  // Função auxiliar para determinar o valor padrão sem dependentes
+  const getDefaultBaseAmount = (feeType: string): number => {
+    if (feeType === "selection_process") {
+      return userSystemType === "simplified" ? 350 : 400;
+    }
+    if (feeType === "scholarship_fee") {
+      if (userSystemType) return userSystemType === "simplified" ? 550 : 900;
+      return feeConfig.scholarship_fee_default;
+    }
+    if (feeType === "i20_control_fee" || feeType === "i-20_control_fee") {
+      return 900;
+    }
+    if (feeType === "placement_fee" || feeType === "placement") {
+      return 1200; // Valor base padrão se não calculado dinamicamente
+    }
+    if (feeType === "ds160_package" || feeType === "i539_cos_package") {
+      return 1800;
+    }
+    if (feeType === "application_fee") {
+      return feeConfig.application_fee_default;
+    }
+    return feeConfig.application_fee_default;
+  };
+
+  const formatFeeAmount = (
+    amount: number | string,
+    forceDollars: boolean = false,
+  ): string => {
+    const numAmount = typeof amount === "string" ? parseFloat(amount) : amount;
+
+    if (forceDollars) {
+      return `$${numAmount.toFixed(2)}`;
+    }
+
+    // Se o valor for maior ou igual a 10000, está em centavos (ex: 10000 = $100)
     if (numAmount >= 10000) {
       const dollars = numAmount / 100;
       return `$${dollars.toFixed(2)}`;
@@ -445,30 +571,54 @@ export const useFeeConfig = (userId?: string) => {
 
   const processTranslation = (text: any): string => {
     // Verifica se o texto é uma string válida
-    if (typeof text !== 'string') {
+    if (typeof text !== "string") {
       return text; // Retorna o valor original se não for string
     }
-    
+
     return text
-      .replace(/\${selectionProcessFee}/g, formatFeeAmount(feeConfig.selection_process_fee))
-      .replace(/\${scholarshipFee}/g, formatFeeAmount(feeConfig.scholarship_fee_default))
+      .replace(
+        /\${selectionProcessFee}/g,
+        formatFeeAmount(feeConfig.selection_process_fee),
+      )
+      .replace(
+        /\${scholarshipFee}/g,
+        formatFeeAmount(feeConfig.scholarship_fee_default),
+      )
       .replace(/\${i20ControlFee}/g, formatFeeAmount(feeConfig.i20_control_fee))
-      .replace(/\${applicationFee}/g, formatFeeAmount(feeConfig.application_fee_default));
+      .replace(
+        /\${applicationFee}/g,
+        formatFeeAmount(feeConfig.application_fee_default),
+      );
   };
 
   const hasOverride = (feeType: string): boolean => {
     if (!userFeeOverrides) return false;
-    
+
     switch (feeType) {
-      case 'selection_process':
-        return userFeeOverrides.selection_process_fee !== undefined && userFeeOverrides.selection_process_fee !== null;
-      case 'application_fee':
-        return userFeeOverrides.application_fee !== undefined && userFeeOverrides.application_fee !== null;
-      case 'scholarship_fee':
-        return userFeeOverrides.scholarship_fee !== undefined && userFeeOverrides.scholarship_fee !== null;
-      case 'i-20_control_fee':
-      case 'i20_control_fee':
-        return userFeeOverrides.i20_control_fee !== undefined && userFeeOverrides.i20_control_fee !== null;
+      case "selection_process":
+        return userFeeOverrides.selection_process_fee !== undefined &&
+          userFeeOverrides.selection_process_fee !== null;
+      case "application_fee":
+        return userFeeOverrides.application_fee !== undefined &&
+          userFeeOverrides.application_fee !== null;
+      case "scholarship_fee":
+        return userFeeOverrides.scholarship_fee !== undefined &&
+          userFeeOverrides.scholarship_fee !== null;
+      case "i-20_control_fee":
+      case "i20_control_fee":
+        return userFeeOverrides.i20_control_fee !== undefined &&
+          userFeeOverrides.i20_control_fee !== null;
+      case "placement_fee":
+        return userFeeOverrides.placement_fee !== undefined &&
+          userFeeOverrides.placement_fee !== null;
+      case "ds160_package":
+      case "ds160_package_fee":
+        return userFeeOverrides.ds160_package_fee !== undefined &&
+          userFeeOverrides.ds160_package_fee !== null;
+      case "i539_cos_package":
+      case "i539_cos_package_fee":
+        return userFeeOverrides.i539_cos_package_fee !== undefined &&
+          userFeeOverrides.i539_cos_package_fee !== null;
       default:
         return false;
     }
@@ -480,6 +630,7 @@ export const useFeeConfig = (userId?: string) => {
     userFeeOverrides,
     realPaymentAmounts,
     userSystemType,
+    userDependents,
     loading,
     error,
     loadFeeConfig,
@@ -491,6 +642,6 @@ export const useFeeConfig = (userId?: string) => {
     getFeeAmount,
     formatFeeAmount,
     processTranslation,
-    hasOverride
+    hasOverride,
   };
 };

@@ -10,22 +10,21 @@ import {
   Building,
   ArrowRight,
   GraduationCap,
-  ChevronDown
 } from 'lucide-react';
+import { Link, useLocation, useNavigate } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
-import { Link, useLocation } from 'react-router-dom';
 import { useAuth } from '../../hooks/useAuth';
 import { useFeeConfig } from '../../hooks/useFeeConfig';
 import { usePaymentBlocked } from '../../hooks/usePaymentBlocked';
 import { supabase } from '../../lib/supabase';
 import { Application, Scholarship } from '../../types';
 import { useCartStore } from '../../stores/applicationStore';
-import { ScholarshipConfirmationModal } from '../../components/ScholarshipConfirmationModal';
 import { convertCentsToDollars } from '../../utils/currency';
 import TruncatedText from '../../components/TruncatedText';
 import { useStudentApplicationsQuery, useStudentPaidAmountsQuery, usePromotionalCouponQuery } from '../../hooks/useStudentDashboardQueries';
 import { invalidateStudentDashboardApplications, invalidateStudentDashboardFees, invalidateStudentDashboardCoupons } from '../../lib/queryKeys';
 import { useQueryClient } from '@tanstack/react-query';
+import { getPlacementFee, formatPlacementFee } from '../../utils/placementFeeCalculator';
 // import StudentDashboardLayout from "./StudentDashboardLayout";
 // import CustomLoading from '../../components/CustomLoading';
 
@@ -37,17 +36,20 @@ type ApplicationWithScholarship = Application & {
 // Labels amigáveis para os documentos principais - será definido dentro do componente
 
 const MyApplications: React.FC = () => {
-  const { t } = useTranslation();
+  const { t } = useTranslation(['dashboard', 'common']);
   const { user, userProfile } = useAuth();
+  const navigate = useNavigate();
   const { getFeeAmount } = useFeeConfig(user?.id);
   const { isBlocked, pendingPayment, loading: paymentBlockedLoading } = usePaymentBlocked();
   const queryClient = useQueryClient();
+
+  const isNewFlowUser = !!(userProfile as any)?.placement_fee_flow;
 
   // React Query hooks for cached data
   // isPending = sem dados no cache ainda (primeira carga)
   // isFetching = buscando em background (pode ter dados em cache)
   const { data: applications = [], isPending, error: queryError } = useStudentApplicationsQuery(userProfile?.id);
-  const { data: realPaidAmounts = {} } = useStudentPaidAmountsQuery(user?.id, ['application', 'scholarship']);
+  const { data: realPaidAmounts = {} } = useStudentPaidAmountsQuery(user?.id, ['application', 'scholarship', 'placement', 'ds160_package', 'i539_cos_package']);
   const { data: scholarshipFeePromotionalCoupon = null } = usePromotionalCouponQuery(user?.id, 'scholarship_fee');
   const { data: applicationFeePromotionalCoupon = null } = usePromotionalCouponQuery(user?.id, 'application_fee');
   // Helper: calcular Application Fee exibida considerando dependentes (legacy e simplified)
@@ -84,27 +86,10 @@ const MyApplications: React.FC = () => {
   const location = useLocation();
   const syncCartWithDatabase = useCartStore(state => state.syncCartWithDatabase);
 
-  // Modal confirmation states
-  const [showConfirmationModal, setShowConfirmationModal] = useState(false);
-  const [pendingApplication, setPendingApplication] = useState<ApplicationWithScholarship | null>(null);
-  const [isProcessingCheckout, setIsProcessingCheckout] = useState(false);
-
-  // Modal confirmation states para Scholarship Fee
-  const [showScholarshipFeeModal, setShowScholarshipFeeModal] = useState(false);
-  const [pendingScholarshipFeeApplication, setPendingScholarshipFeeApplication] = useState<ApplicationWithScholarship | null>(null);
-  const [isProcessingScholarshipFeeCheckout, setIsProcessingScholarshipFeeCheckout] = useState(false);
 
   // Estado para controlar abertura/fechamento individual dos documents checklist
   const [openChecklists, setOpenChecklists] = useState<Record<string, boolean>>({});
 
-  // Mobile: controlar expansão/colapso dos detalhes de cada aplicação
-  const [mobileExpandedApps, setMobileExpandedApps] = useState<Record<string, boolean>>({});
-  const toggleMobileExpanded = (applicationId: string) => {
-    setMobileExpandedApps(prev => ({
-      ...prev,
-      [applicationId]: !prev[applicationId]
-    }));
-  };
 
   // Função para alternar o estado de um checklist específico
   const toggleChecklist = (applicationId: string) => {
@@ -114,6 +99,7 @@ const MyApplications: React.FC = () => {
     }));
   };
 
+  /*
   // Função para verificar se há documentos pendentes (mover para antes das outras funções)
   const hasPendingDocuments = (application: ApplicationWithScholarship) => {
     const docs = parseApplicationDocuments((application as any).documents);
@@ -121,11 +107,15 @@ const MyApplications: React.FC = () => {
       doc.status === 'pending' || doc.status === 'under_review' || doc.status === 'changes_requested'
     );
   };
+  */
 
 
 
   // Função para verificar se há documentos rejeitados e abrir automaticamente o checklist
+  // Nota: Não abrimos automaticamente se a aplicação em si já foi rejeitada finalmene
   const checkAndOpenRejectedDocuments = (application: ApplicationWithScholarship) => {
+    if (application.status === 'rejected') return;
+
     const docs = parseApplicationDocuments((application as any).documents);
     const hasRejectedDocuments = docs.some(doc =>
       (doc.status || '').toLowerCase() === 'changes_requested' ||
@@ -297,12 +287,24 @@ const MyApplications: React.FC = () => {
     };
   }, [user?.id, queryClient]);
 
-  // Quando o aluno pagar a taxa de uma bolsa aprovada, escondemos as demais aprovadas não pagas
+  const packageD160PaidGlobal = !!(userProfile as any)?.has_paid_ds160_package || !!realPaidAmounts.ds160_package;
+  const packageI539PaidGlobal = !!(userProfile as any)?.has_paid_i539_cos_package || !!realPaidAmounts.i539_cos_package;
+  const hasPaidPackageGlobal = packageD160PaidGlobal || packageI539PaidGlobal;
+
+  // Quando o aluno pagar a taxa de uma bolsa aprovada, escolhemos ela como principal e escondemos as demais
+  // Garantimos que apenas aplicações APROVADAS ou MATRICULADAS sejam escolhidas como "principais" para esconder as outras
   const chosenPaidApp = applications.find(
-    (a: ApplicationWithScholarship) => !!(a as any).is_application_fee_paid || !!(a as any).is_scholarship_fee_paid
+    (a: ApplicationWithScholarship) => 
+      (a.status === 'approved' || a.status === 'enrolled') && (
+        !!(a as any).is_application_fee_paid || 
+        !!(a as any).is_scholarship_fee_paid || 
+        !!(a as any).acceptance_letter_url ||
+        (isNewFlowUser && (!!(userProfile as any)?.is_placement_fee_paid || !!realPaidAmounts.placement)) ||
+        hasPaidPackageGlobal
+      )
   );
   const applicationsToShow = chosenPaidApp
-    ? applications.filter((a: ApplicationWithScholarship) => a.id === chosenPaidApp.id)
+    ? applications.filter((a: ApplicationWithScholarship) => a.id === chosenPaidApp.id || a.status === 'rejected')
     : applications;
 
 
@@ -334,7 +336,8 @@ const MyApplications: React.FC = () => {
 
   const getStatusColor = (status: string) => {
     switch (status) {
-      case 'approved': return 'bg-green-100 text-green-800 border-green-200';
+      case 'approved': 
+      case 'enrolled': return 'bg-green-100 text-green-800 border-green-200';
       case 'rejected': return 'bg-red-100 text-red-800 border-red-200';
       case 'under_review': return 'bg-yellow-100 text-yellow-800 border-yellow-200';
       case 'pending_scholarship_fee': return 'bg-blue-100 text-blue-800 border-blue-200';
@@ -344,7 +347,8 @@ const MyApplications: React.FC = () => {
 
   const getStatusIcon = (status: string) => {
     switch (status) {
-      case 'approved': return CheckCircle;
+      case 'approved': 
+      case 'enrolled': return CheckCircle;
       case 'rejected': return XCircle;
       case 'under_review': return AlertCircle;
       case 'pending_scholarship_fee': return DollarSign;
@@ -353,7 +357,7 @@ const MyApplications: React.FC = () => {
   };
 
   const getStatusLabel = (status: string) => {
-    if (status === 'approved') return t('studentDashboard.myApplications.statusLabels.approvedByUniversity');
+    if (status === 'approved' || status === 'enrolled') return t('studentDashboard.myApplications.statusLabels.approvedByUniversity');
     if (status === 'rejected') return t('studentDashboard.myApplications.statusLabels.notSelectedForScholarship');
     if (status === 'pending') return t('studentDashboard.myApplications.statusLabels.pending');
     if (status === 'under_review') return t('studentDashboard.myApplications.statusLabels.underReview');
@@ -362,156 +366,12 @@ const MyApplications: React.FC = () => {
     return status.replace('_', ' ').toUpperCase();
   };
 
-  // Helper function para garantir que nextSteps seja sempre um array
-  const ensureArray = (value: any): string[] => {
-    if (Array.isArray(value)) return value;
-    if (typeof value === 'string') return [value];
-    return [];
-  };
-
-  // Função para gerar mensagens detalhadas sobre o status
-  const getStatusDescription = (application: ApplicationWithScholarship) => {
-    const status = application.status;
-    const hasDocuments = (application as any)?.documents && Array.isArray((application as any).documents) && (application as any).documents.length > 0;
-    const hasPendingDocuments = hasDocuments && (application as any).documents.some((doc: any) =>
-      doc.status === 'pending' || doc.status === 'under_review' || doc.status === 'changes_requested'
-    );
-    const applicationFeePaid = !!(application as any).is_application_fee_paid;
-    const scholarshipFeePaid = !!(application as any).is_scholarship_fee_paid;
-    const i20ControlFeePaid = !!(application as any).is_i20_control_fee_paid;
-    // Verificar se a carta de aceite foi recebida (tem URL ou status 'sent'/'approved')
-    const hasAcceptanceLetter = !!(application as any).acceptance_letter_url ||
-      (application as any).acceptance_letter_status === 'sent' ||
-      (application as any).acceptance_letter_status === 'approved';
-
-    switch (status) {
-      case 'approved':
-        if (hasPendingDocuments) {
-          return {
-            title: t('studentDashboard.myApplications.statusDescriptions.documentsApprovedByUniversity.title'),
-            description: t('studentDashboard.myApplications.statusDescriptions.documentsApprovedByUniversity.description'),
-            nextSteps: ensureArray(t('studentDashboard.myApplications.statusDescriptions.documentsApprovedByUniversity.nextSteps', { returnObjects: true })),
-            icon: '📋',
-            color: 'text-blue-700',
-            bgColor: 'bg-blue-50',
-            borderColor: 'border-blue-200'
-          };
-        } else if (!applicationFeePaid) {
-          return {
-            title: t('studentDashboard.myApplications.statusDescriptions.applicationApprovedPaymentRequired.title'),
-            description: t('studentDashboard.myApplications.statusDescriptions.applicationApprovedPaymentRequired.description'),
-            nextSteps: ensureArray(t('studentDashboard.myApplications.statusDescriptions.applicationApprovedPaymentRequired.nextSteps', { returnObjects: true })),
-            icon: '💳',
-            color: 'text-green-700',
-            bgColor: 'bg-green-50',
-            borderColor: 'border-green-200'
-          };
-        } else if (!scholarshipFeePaid) {
-          return {
-            title: t('studentDashboard.myApplications.statusDescriptions.applicationFeePaidScholarshipFeeRequired.title'),
-            description: t('studentDashboard.myApplications.statusDescriptions.applicationFeePaidScholarshipFeeRequired.description'),
-            nextSteps: ensureArray(t('studentDashboard.myApplications.statusDescriptions.applicationFeePaidScholarshipFeeRequired.nextSteps', { returnObjects: true })),
-            icon: '🎓',
-            color: 'text-blue-700',
-            bgColor: 'bg-blue-50',
-            borderColor: 'border-blue-200'
-          };
-        } else if (!i20ControlFeePaid) {
-          // Scholarship Fee paga, mas I-20 ainda não foi pago
-          return {
-            title: t('studentDashboard.myApplications.statusDescriptions.scholarshipFeePaidI20Required.title'),
-            description: t('studentDashboard.myApplications.statusDescriptions.scholarshipFeePaidI20Required.description'),
-            nextSteps: ensureArray(t('studentDashboard.myApplications.statusDescriptions.scholarshipFeePaidI20Required.nextSteps', { returnObjects: true })),
-            icon: '📄',
-            color: 'text-blue-700',
-            bgColor: 'bg-blue-50',
-            borderColor: 'border-blue-200'
-          };
-        } else if (!hasAcceptanceLetter) {
-          // Todas as taxas pagas, mas ainda não recebeu a carta de aceite
-          return {
-            title: t('studentDashboard.myApplications.statusDescriptions.allFeesPaidWaitingAcceptanceLetter.title'),
-            description: t('studentDashboard.myApplications.statusDescriptions.allFeesPaidWaitingAcceptanceLetter.description'),
-            nextSteps: ensureArray(t('studentDashboard.myApplications.statusDescriptions.allFeesPaidWaitingAcceptanceLetter.nextSteps', { returnObjects: true })),
-            icon: '📧',
-            color: 'text-blue-700',
-            bgColor: 'bg-blue-50',
-            borderColor: 'border-blue-200'
-          };
-        } else {
-          // Todas as taxas pagas E carta de aceite recebida = Fully Enrolled
-          return {
-            title: t('studentDashboard.myApplications.statusDescriptions.fullyEnrolled.title'),
-            description: t('studentDashboard.myApplications.statusDescriptions.fullyEnrolled.description'),
-            nextSteps: ensureArray(t('studentDashboard.myApplications.statusDescriptions.fullyEnrolled.nextSteps', { returnObjects: true })),
-            icon: '🎉',
-            color: 'text-emerald-700',
-            bgColor: 'bg-emerald-50',
-            borderColor: 'border-emerald-200'
-          };
-        }
-
-      case 'rejected':
-        return {
-          title: t('studentDashboard.myApplications.statusDescriptions.applicationNotSelected.title'),
-          description: t('studentDashboard.myApplications.statusDescriptions.applicationNotSelected.description'),
-          nextSteps: ensureArray(t('studentDashboard.myApplications.statusDescriptions.applicationNotSelected.nextSteps', { returnObjects: true })),
-          icon: '📝',
-          color: 'text-red-700',
-          bgColor: 'bg-red-50',
-          borderColor: 'border-red-200'
-        };
-
-      case 'under_review':
-        return {
-          title: t('studentDashboard.myApplications.statusDescriptions.applicationUnderReview.title'),
-          description: t('studentDashboard.myApplications.statusDescriptions.applicationUnderReview.description'),
-          nextSteps: ensureArray(t('studentDashboard.myApplications.statusDescriptions.applicationUnderReview.nextSteps', { returnObjects: true })),
-          icon: '🔍',
-          color: 'text-amber-700',
-          bgColor: 'bg-amber-50',
-          borderColor: 'border-amber-200'
-        };
-
-      case 'pending_scholarship_fee':
-        return {
-          title: t('studentDashboard.myApplications.statusDescriptions.applicationFeeConfirmed.title'),
-          description: t('studentDashboard.myApplications.statusDescriptions.applicationFeeConfirmed.description'),
-          nextSteps: ensureArray(t('studentDashboard.myApplications.statusDescriptions.applicationFeeConfirmed.nextSteps', { returnObjects: true })),
-          icon: '✅',
-          color: 'text-blue-700',
-          bgColor: 'bg-blue-50',
-          borderColor: 'border-blue-200'
-        };
-
-      case 'pending':
-      default:
-        if (hasPendingDocuments) {
-          return {
-            title: t('studentDashboard.myApplications.statusDescriptions.documentsUnderUniversityReview.title'),
-            description: t('studentDashboard.myApplications.statusDescriptions.documentsUnderUniversityReview.description'),
-            nextSteps: ensureArray(t('studentDashboard.myApplications.statusDescriptions.documentsUnderUniversityReview.nextSteps', { returnObjects: true })),
-            icon: '📋',
-            color: 'text-blue-700',
-            bgColor: 'bg-blue-50',
-            borderColor: 'border-blue-200'
-          };
-        } else {
-          return {
-            title: t('studentDashboard.myApplications.statusDescriptions.applicationSubmitted.title'),
-            description: t('studentDashboard.myApplications.statusDescriptions.applicationSubmitted.description'),
-            nextSteps: ensureArray(t('studentDashboard.myApplications.statusDescriptions.applicationSubmitted.nextSteps', { returnObjects: true })),
-            icon: '📤',
-            color: 'text-slate-700',
-            bgColor: 'bg-slate-50',
-            borderColor: 'border-slate-200'
-          };
-        }
-    }
-  };
 
 
 
+
+
+  /*
   // Estilo para status dos documentos (nível do documento, não da aplicação)
   const getDocBadgeClasses = (status: string) => {
     const s = (status || '').toLowerCase();
@@ -520,6 +380,7 @@ const MyApplications: React.FC = () => {
     if (s === 'under_review') return 'bg-amber-100 text-amber-700 border border-amber-200';
     return 'bg-slate-100 text-slate-700 border border-slate-200';
   };
+  */
 
   const docKey = (applicationId: string, type: string) => `${applicationId}:${type}`;
 
@@ -604,7 +465,7 @@ const MyApplications: React.FC = () => {
   // Normaliza o array de documentos da aplicação para lidar com ambos os formatos:
   // - string[] (legado)
   // - { type, url, status, review_notes }[] (atual)
-  const parseApplicationDocuments = (documents: any): { type: string; status?: string; review_notes?: string; rejection_reason?: string }[] => {
+  const parseApplicationDocuments = (documents: any): { type: string; status?: string; review_notes?: string; rejection_reason?: string; uploaded_at?: string }[] => {
     if (!Array.isArray(documents)) return [];
     if (documents.length === 0) return [];
     if (typeof documents[0] === 'string') {
@@ -614,7 +475,8 @@ const MyApplications: React.FC = () => {
       type: d.type,
       status: d.status,
       review_notes: d.review_notes,
-      rejection_reason: d.rejection_reason
+      rejection_reason: d.rejection_reason,
+      uploaded_at: d.uploaded_at
     }));
   };
 
@@ -631,7 +493,7 @@ const MyApplications: React.FC = () => {
   const stats = {
     total: applicationsToShow.length,
     pending: applicationsToShow.filter((app: ApplicationWithScholarship) => app.status === 'pending').length,
-    approved: applicationsToShow.filter((app: ApplicationWithScholarship) => app.status === 'approved').length,
+    approved: applicationsToShow.filter((app: ApplicationWithScholarship) => app.status === 'approved' || app.status === 'enrolled').length,
     rejected: applicationsToShow.filter((app: ApplicationWithScholarship) => app.status === 'rejected').length,
     under_review: applicationsToShow.filter((app: ApplicationWithScholarship) => app.status === 'under_review').length,
     pending_scholarship_fee: applicationsToShow.filter((app: ApplicationWithScholarship) => app.status === 'pending_scholarship_fee').length,
@@ -702,7 +564,7 @@ const MyApplications: React.FC = () => {
     );
   }
 
-  const hasSelectedScholarship = false;
+
 
   const getLevelColor = (level: any) => {
     switch (level.toLowerCase()) {
@@ -738,460 +600,19 @@ const MyApplications: React.FC = () => {
 
   // Function to handle application fee payment confirmation
   const handleApplicationFeeClick = (application: ApplicationWithScholarship) => {
-    // Verificar se há pagamento Zelle pendente antes de abrir o modal
-    if (isBlocked && pendingPayment) {
-      console.log('Pagamento Zelle pendente detectado, bloqueando novo pagamento');
-      return;
-    }
-    setPendingApplication(application);
-    setShowConfirmationModal(true);
+    // Redirecionar para o onboarding salvando a aplicação selecionada
+    localStorage.setItem('selected_application_id', application.id);
+    navigate('/student/onboarding?step=payment');
   };
 
   // Function to handle scholarship fee payment confirmation
   const handleScholarshipFeeClick = (application: ApplicationWithScholarship) => {
-    // Verificar se há pagamento Zelle pendente antes de abrir o modal
-    if (isBlocked && pendingPayment) {
-      console.log('Pagamento Zelle pendente detectado, bloqueando novo pagamento');
-      return;
-    }
-    setPendingScholarshipFeeApplication(application);
-    setShowScholarshipFeeModal(true);
+    // Redirecionar para o onboarding salvando a aplicação selecionada
+    localStorage.setItem('selected_application_id', application.id);
+    const step = isNewFlowUser ? 'placement_fee' : 'scholarship_fee';
+    navigate(`/student/onboarding?step=${step}`);
   };
 
-  // Função para processar checkout Stripe
-  const handleStripeCheckout = async (exchangeRate?: number) => {
-    if (!pendingApplication) return;
-
-    try {
-      // Ativar loading
-      setIsProcessingCheckout(true);
-
-      console.log('Iniciando checkout Stripe para application fee com application ID:', pendingApplication.id);
-
-      // ✅ Priorizar valor com desconto do window, caso contrário usar valor original
-      const baseAmount = getApplicationFeeWithDependents(pendingApplication.scholarships?.application_fee_amount || 35000);
-      const finalAmount = (window as any).__checkout_final_amount || baseAmount;
-
-      console.log('Iniciando checkout Stripe para application fee:');
-      console.log('- Application ID:', pendingApplication.id);
-      console.log('- Scholarship ID:', pendingApplication.scholarship_id);
-      console.log('- Valor original:', baseAmount);
-      console.log('- Valor com desconto:', finalAmount);
-
-      // Chamar diretamente a Edge Function do Stripe
-      const { data: sessionData } = await supabase.auth.getSession();
-      const token = sessionData.session?.access_token;
-
-      if (!token) {
-        throw new Error('Usuário não autenticado');
-      }
-
-      const apiUrl = `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/stripe-checkout-application-fee`;
-
-      // Extrair código promocional do window se existir (passado pelo ScholarshipConfirmationModal)
-      const promotionalCoupon = (window as any).__checkout_promotional_coupon || null;
-
-      const response = await fetch(apiUrl, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${token}`
-        },
-        body: JSON.stringify({
-          price_id: 'price_application_fee', // ID do produto no Stripe
-          success_url: `${window.location.origin}/student/dashboard/application-fee-success?session_id={CHECKOUT_SESSION_ID}`,
-          cancel_url: `${window.location.origin}/student/dashboard/application-fee-error`,
-          mode: 'payment',
-          payment_type: 'application_fee',
-          fee_type: 'application_fee',
-          amount: finalAmount, // ✅ Usar valor com desconto se existir
-          promotional_coupon: promotionalCoupon, // Cupom promocional (BLACK, etc)
-          metadata: {
-            application_id: pendingApplication.id,
-            selected_scholarship_id: pendingApplication.scholarship_id,
-            fee_type: 'application_fee',
-            amount: finalAmount, // ✅ Usar valor com desconto
-            application_fee_amount: finalAmount, // ✅ Usar valor com desconto
-            original_amount: baseAmount, // Valor original para referência
-            final_amount: finalAmount, // Valor final com desconto
-          },
-          scholarships_ids: [pendingApplication.scholarship_id],
-        }),
-      });
-
-      if (!response.ok) {
-        const errorData = await response.json();
-        throw new Error(errorData.error || 'Erro ao criar sessão de checkout');
-      }
-
-      const { session_url } = await response.json();
-      if (session_url) {
-        // Redirecionar diretamente para o checkout do Stripe
-        window.location.href = session_url;
-      } else {
-        throw new Error('URL da sessão não encontrada na resposta');
-      }
-
-    } catch (error) {
-      console.error('Erro ao processar checkout:', error);
-      // Reabrir o modal em caso de erro
-      setShowConfirmationModal(true);
-    } finally {
-      // Desativar loading
-      setIsProcessingCheckout(false);
-    }
-  };
-
-  // Função para processar checkout PIX
-  const handlePixCheckout = async (exchangeRate?: number) => {
-    if (!pendingApplication) return;
-
-    try {
-      setIsProcessingCheckout(true);
-
-      console.log('Iniciando checkout PIX para application fee com application ID:', pendingApplication.id);
-      console.log('[MyApplications] PIX Checkout - Exchange Rate:', exchangeRate);
-
-      const { data: sessionData } = await supabase.auth.getSession();
-      const token = sessionData.session?.access_token;
-
-      if (!token) {
-        throw new Error('Usuário não autenticado');
-      }
-
-      const apiUrl = `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/stripe-checkout-application-fee`;
-
-      // Extrair código promocional e valor final com desconto do window se existir (passado pelo ScholarshipConfirmationModal)
-      const promotionalCoupon = (window as any).__checkout_promotional_coupon || null;
-      // ✅ Priorizar valor com desconto do window, caso contrário usar valor original
-      const finalAmount = (window as any).__checkout_final_amount || getApplicationFeeWithDependents(pendingApplication.scholarships?.application_fee_amount || 35000);
-      const baseAmount = getApplicationFeeWithDependents(pendingApplication.scholarships?.application_fee_amount || 35000); // Valor original para referência
-
-      console.log('[MyApplications] PIX Checkout - Valor original:', baseAmount, 'Valor com desconto:', finalAmount);
-
-      const response = await fetch(apiUrl, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${token}`
-        },
-        body: JSON.stringify({
-          price_id: 'price_application_fee',
-          success_url: `${window.location.origin}/student/dashboard/application-fee-success?session_id={CHECKOUT_SESSION_ID}`,
-          cancel_url: `${window.location.origin}/student/dashboard/application-fee-error`,
-          mode: 'payment',
-          payment_type: 'application_fee',
-          fee_type: 'application_fee',
-          payment_method: 'pix', // Especificar PIX
-          promotional_coupon: promotionalCoupon, // Cupom promocional (BLACK, etc)
-          amount: finalAmount, // ✅ Usar valor com desconto se existir
-          metadata: {
-            application_id: pendingApplication.id,
-            selected_scholarship_id: pendingApplication.scholarship_id,
-            fee_type: 'application_fee',
-            amount: finalAmount, // ✅ Usar valor com desconto
-            application_fee_amount: finalAmount, // ✅ Usar valor com desconto
-            original_amount: baseAmount, // Valor original para referência
-            final_amount: finalAmount, // Valor final com desconto
-            // Incluir taxa de câmbio se disponível para garantir consistência
-            ...(exchangeRate ? { exchange_rate: exchangeRate.toString() } : {}),
-          },
-          scholarships_ids: [pendingApplication.scholarship_id],
-        }),
-      });
-
-      if (!response.ok) {
-        const errorData = await response.json();
-        throw new Error(errorData.error || 'Erro ao criar sessão de checkout PIX');
-      }
-
-      const { session_url } = await response.json();
-      if (session_url) {
-        window.location.href = session_url;
-      } else {
-        throw new Error('URL da sessão não encontrada na resposta');
-      }
-
-    } catch (error) {
-      console.error('Erro ao processar checkout PIX:', error);
-      setShowConfirmationModal(true);
-    } finally {
-      setIsProcessingCheckout(false);
-    }
-  };
-
-  // Função para processar checkout Zelle
-  const handleZelleCheckout = async () => {
-    if (!pendingApplication) return;
-
-    try {
-      const applicationFeeAmount = getApplicationFeeWithDependents(pendingApplication.scholarships?.application_fee_amount || 35000);
-
-      const params = new URLSearchParams({
-        feeType: 'application_fee',
-        amount: applicationFeeAmount.toString(),
-        scholarshipsIds: pendingApplication.scholarship_id
-      });
-
-      // Adicionar campo específico para Application Fee
-      params.append('applicationFeeAmount', applicationFeeAmount.toString());
-
-      window.location.href = `/checkout/zelle?${params.toString()}`;
-    } catch (error) {
-      console.error('Erro ao processar checkout Zelle:', error);
-    }
-  };
-
-  // Função para notificar universidade quando Application Fee for paga
-  const notifyUniversityApplicationFeePaid = async (application: ApplicationWithScholarship) => {
-    try {
-      const { data: sessionData } = await supabase.auth.getSession();
-      const token = sessionData.session?.access_token;
-
-      if (!token) {
-        console.error('Usuário não autenticado para notificação');
-        return;
-      }
-
-      const apiUrl = `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/notify-university-application-fee-paid`;
-
-      const response = await fetch(apiUrl, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${token}`
-        },
-        body: JSON.stringify({
-          application_id: application.id,
-          user_id: user?.id,
-          scholarship_id: application.scholarship_id
-        }),
-      });
-
-      if (!response.ok) {
-        const errorData = await response.json();
-        console.error('Erro ao enviar notificação de Application Fee para universidade:', errorData);
-      } else {
-        const result = await response.json();
-        console.log('Notificação de Application Fee enviada com sucesso:', result);
-      }
-    } catch (error) {
-      console.error('Erro ao notificar universidade sobre Application Fee:', error);
-    }
-  };
-
-  // Função para notificar universidade quando Scholarship Fee for paga
-  const notifyUniversityScholarshipFeePaid = async (application: ApplicationWithScholarship) => {
-    try {
-      const { data: sessionData } = await supabase.auth.getSession();
-      const token = sessionData.session?.access_token;
-
-      if (!token) {
-        console.error('Usuário não autenticado para notificação');
-        return;
-      }
-
-      const apiUrl = `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/notify-university-scholarship-fee-paid`;
-
-      const response = await fetch(apiUrl, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${token}`
-        },
-        body: JSON.stringify({
-          application_id: application.id,
-          user_id: user?.id,
-          scholarship_id: application.scholarship_id
-        }),
-      });
-
-      if (!response.ok) {
-        const errorData = await response.json();
-        console.error('Erro ao enviar notificação de Scholarship Fee para universidade:', errorData);
-      } else {
-        const result = await response.json();
-        console.log('Notificação de Scholarship Fee enviada com sucesso:', result);
-      }
-    } catch (error) {
-      console.error('Erro ao notificar universidade sobre Scholarship Fee:', error);
-    }
-  };
-
-  // Função para processar checkout Stripe da Scholarship Fee
-  const handleScholarshipFeeCheckout = async (exchangeRate?: number) => {
-    if (!pendingScholarshipFeeApplication) return;
-
-    try {
-      // Ativar loading
-      setIsProcessingScholarshipFeeCheckout(true);
-
-      // ✅ Priorizar valor com desconto do window, caso contrário usar valor original
-      const baseAmount = getFeeAmount('scholarship_fee');
-      const finalAmount = (window as any).__checkout_final_amount || baseAmount;
-
-      console.log('Iniciando checkout Stripe para scholarship fee:');
-      console.log('- Application ID:', pendingScholarshipFeeApplication.id);
-      console.log('- Scholarship ID:', pendingScholarshipFeeApplication.scholarship_id);
-      console.log('- Valor original:', baseAmount);
-      console.log('- Valor com desconto:', finalAmount);
-      console.log('- Exchange Rate:', exchangeRate);
-
-      // Chamar diretamente a Edge Function do Stripe para scholarship fee
-      const { data: sessionData } = await supabase.auth.getSession();
-      const token = sessionData.session?.access_token;
-
-      if (!token) {
-        throw new Error('Usuário não autenticado');
-      }
-
-      const apiUrl = `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/stripe-checkout-scholarship-fee`;
-
-      // Extrair código promocional do window se existir (passado pelo ScholarshipConfirmationModal)
-      const promotionalCoupon = (window as any).__checkout_promotional_coupon || null;
-
-      const requestPayload = {
-        price_id: 'price_scholarship_fee', // ID do produto no Stripe
-        success_url: `${window.location.origin}/student/dashboard/scholarship-fee-success?session_id={CHECKOUT_SESSION_ID}`,
-        cancel_url: `${window.location.origin}/student/dashboard/scholarship-fee-error`,
-        mode: 'payment',
-        payment_type: 'scholarship_fee',
-        fee_type: 'scholarship_fee',
-        amount: finalAmount, // ✅ Usar valor com desconto se existir
-        promotional_coupon: promotionalCoupon, // Cupom promocional (BLACK, etc)
-        metadata: {
-          application_id: pendingScholarshipFeeApplication.id,
-          selected_scholarship_id: pendingScholarshipFeeApplication.scholarship_id,
-          fee_type: 'scholarship_fee',
-          amount: finalAmount, // ✅ Usar valor com desconto
-          scholarship_fee_amount: finalAmount, // ✅ Usar valor com desconto
-          original_amount: baseAmount, // Valor original para referência
-          final_amount: finalAmount, // Valor final com desconto
-          // Incluir taxa de câmbio se for PIX e estiver disponível
-          ...(exchangeRate ? { exchange_rate: exchangeRate.toString() } : {}),
-        },
-        scholarships_ids: [pendingScholarshipFeeApplication.scholarship_id],
-      };
-
-      console.log('Payload sendo enviado:', JSON.stringify(requestPayload, null, 2));
-
-      const response = await fetch(apiUrl, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${token}`
-        },
-        body: JSON.stringify(requestPayload),
-      });
-
-      if (!response.ok) {
-        let errorData: any;
-        try {
-          errorData = await response.json();
-        } catch {
-          errorData = { error: `HTTP ${response.status}: ${response.statusText}` };
-        }
-        console.error('Erro na resposta da API:', errorData);
-        throw new Error(errorData.error || 'Erro ao criar sessão de checkout');
-      }
-
-      const { session_url } = await response.json();
-      if (session_url) {
-        console.log('Sessão criada com sucesso, redirecionando para:', session_url);
-        // Redirecionar diretamente para o checkout do Stripe
-        window.location.href = session_url;
-      } else {
-        throw new Error('URL da sessão não encontrada na resposta');
-      }
-
-    } catch (error) {
-      console.error('Erro ao processar checkout da scholarship fee:', error);
-      console.error('Stack trace:', error instanceof Error ? error.stack : 'No stack trace available');
-      // Reabrir o modal em caso de erro
-      setShowScholarshipFeeModal(true);
-    } finally {
-      // Desativar loading
-      setIsProcessingScholarshipFeeCheckout(false);
-    }
-  };
-
-  // Função para processar checkout PIX da Scholarship Fee
-  const handleScholarshipFeePixCheckout = async (exchangeRate?: number) => {
-    if (!pendingScholarshipFeeApplication) return;
-
-    try {
-      setIsProcessingScholarshipFeeCheckout(true);
-
-      console.log('Iniciando checkout PIX para scholarship fee com application ID:', pendingScholarshipFeeApplication.id);
-      console.log('[MyApplications] PIX Checkout - Exchange Rate:', exchangeRate);
-
-      const { data: sessionData } = await supabase.auth.getSession();
-      const token = sessionData.session?.access_token;
-
-      if (!token) {
-        throw new Error('Usuário não autenticado');
-      }
-
-      const apiUrl = `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/stripe-checkout-scholarship-fee`;
-
-      // Extrair código promocional e valor final com desconto do window se existir (passado pelo ScholarshipConfirmationModal)
-      const promotionalCoupon = (window as any).__checkout_promotional_coupon || null;
-      // ✅ Priorizar valor com desconto do window, caso contrário usar valor original
-      const finalAmount = (window as any).__checkout_final_amount || getFeeAmount('scholarship_fee');
-      const baseAmount = getFeeAmount('scholarship_fee'); // Valor original para referência
-
-      console.log('[MyApplications] PIX Checkout - Valor original:', baseAmount, 'Valor com desconto:', finalAmount);
-
-      const response = await fetch(apiUrl, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${token}`
-        },
-        body: JSON.stringify({
-          price_id: 'price_scholarship_fee',
-          success_url: `${window.location.origin}/student/dashboard/scholarship-fee-success?session_id={CHECKOUT_SESSION_ID}`,
-          cancel_url: `${window.location.origin}/student/dashboard/scholarship-fee-error`,
-          mode: 'payment',
-          payment_type: 'scholarship_fee',
-          fee_type: 'scholarship_fee',
-          payment_method: 'pix', // Especificar PIX
-          promotional_coupon: promotionalCoupon, // Cupom promocional (BLACK, etc)
-          amount: finalAmount, // ✅ Usar valor com desconto se existir
-          metadata: {
-            application_id: pendingScholarshipFeeApplication.id,
-            selected_scholarship_id: pendingScholarshipFeeApplication.scholarship_id,
-            fee_type: 'scholarship_fee',
-            amount: finalAmount, // ✅ Usar valor com desconto
-            scholarship_fee_amount: finalAmount, // ✅ Usar valor com desconto
-            original_amount: baseAmount, // Valor original para referência
-            final_amount: finalAmount, // Valor final com desconto
-            // Incluir taxa de câmbio se estiver disponível
-            ...(exchangeRate ? { exchange_rate: exchangeRate.toString() } : {}),
-          },
-          scholarships_ids: [pendingScholarshipFeeApplication.scholarship_id],
-        }),
-      });
-
-      if (!response.ok) {
-        const errorData = await response.json();
-        throw new Error(errorData.error || 'Erro ao criar sessão de checkout PIX para scholarship fee');
-      }
-
-      const { session_url } = await response.json();
-      if (session_url) {
-        window.location.href = session_url;
-      } else {
-        throw new Error('URL da sessão não encontrada na resposta');
-      }
-
-    } catch (error) {
-      console.error('Erro ao processar checkout PIX para scholarship fee:', error);
-      setShowScholarshipFeeModal(true);
-    } finally {
-      setIsProcessingScholarshipFeeCheckout(false);
-    }
-  };
 
   return (
     <>
@@ -1207,160 +628,166 @@ const MyApplications: React.FC = () => {
 
           {/* Aviso removido conforme solicitação */}
 
-          {/* Stats - Mobile: Single compact summary card with 3 columns */}
-          <div className="sm:hidden mb-6">
-            <div className="bg-white border border-slate-200 rounded-2xl shadow-sm">
-              <div className="grid grid-cols-3 divide-x divide-slate-200">
-                <div className="p-3 text-center">
-                  <div className="flex items-center justify-center gap-1.5 text-xs text-slate-500 mb-1 leading-none">
-                    <span className="inline-flex items-center justify-center w-4.5 h-4.5 min-w-[18px] min-h-[18px] rounded-full bg-blue-50 border border-blue-200">
-                      <FileText className="h-3 w-3 text-blue-600" aria-hidden="true" />
-                    </span>
-                    <span>{t('studentDashboard.myApplications.totalApplications')}</span>
+          {/* TODO: FUTURE_REMOVAL - Hiding stats per user request */}
+          {false && (
+            <div className="sm:hidden mb-6">
+              <div className="bg-white border border-slate-200 rounded-2xl shadow-sm">
+                <div className="grid grid-cols-3 divide-x divide-slate-200">
+                  <div className="p-3 text-center">
+                    <div className="flex items-center justify-center gap-1.5 text-xs text-slate-500 mb-1 leading-none">
+                      <span className="inline-flex items-center justify-center w-4.5 h-4.5 min-w-[18px] min-h-[18px] rounded-full bg-blue-50 border border-blue-200">
+                        <FileText className="h-3 w-3 text-blue-600" aria-hidden="true" />
+                      </span>
+                      <span>{t('studentDashboard.myApplications.totalApplications')}</span>
+                    </div>
+                    <div className="text-2xl font-extrabold text-slate-900 leading-none">{stats.total}</div>
                   </div>
-                  <div className="text-2xl font-extrabold text-slate-900 leading-none">{stats.total}</div>
-                </div>
-                <div className="p-3 text-center">
-                  <div className="flex items-center justify-center gap-1.5 text-xs text-slate-500 mb-1 leading-none">
-                    <span className="inline-flex items-center justify-center w-4.5 h-4.5 min-w-[18px] min-h-[18px] rounded-full bg-green-50 border border-green-200">
-                      <CheckCircle className="h-3 w-3 text-green-600" aria-hidden="true" />
-                    </span>
-                    <span>{t('studentDashboard.myApplications.approved')}</span>
+                  <div className="p-3 text-center">
+                    <div className="flex items-center justify-center gap-1.5 text-xs text-slate-500 mb-1 leading-none">
+                      <span className="inline-flex items-center justify-center w-4.5 h-4.5 min-w-[18px] min-h-[18px] rounded-full bg-green-50 border border-green-200">
+                        <CheckCircle className="h-3 w-3 text-green-600" aria-hidden="true" />
+                      </span>
+                      <span>{t('studentDashboard.myApplications.approved')}</span>
+                    </div>
+                    <div className="text-2xl font-extrabold text-green-600 leading-none">{stats.approved}</div>
                   </div>
-                  <div className="text-2xl font-extrabold text-green-600 leading-none">{stats.approved}</div>
-                </div>
-                <div className="p-3 text-center">
-                  <div className="flex items-center justify-center gap-1.5 text-xs text-slate-500 mb-1 leading-none">
-                    <span className="inline-flex items-center justify-center w-4.5 h-4.5 min-w-[18px] min-h-[18px] rounded-full bg-slate-50 border border-slate-200">
-                      <Clock className="h-3 w-3 text-gray-600" aria-hidden="true" />
-                    </span>
-                    <span>{t('studentDashboard.myApplications.pending')}</span>
+                  <div className="p-3 text-center">
+                    <div className="flex items-center justify-center gap-1.5 text-xs text-slate-500 mb-1 leading-none">
+                      <span className="inline-flex items-center justify-center w-4.5 h-4.5 min-w-[18px] min-h-[18px] rounded-full bg-slate-50 border border-slate-200">
+                        <Clock className="h-3 w-3 text-gray-600" aria-hidden="true" />
+                      </span>
+                      <span>{t('studentDashboard.myApplications.pending')}</span>
+                    </div>
+                    <div className="text-2xl font-extrabold text-gray-700 leading-none">{stats.pending}</div>
                   </div>
-                  <div className="text-2xl font-extrabold text-gray-700 leading-none">{stats.pending}</div>
                 </div>
               </div>
             </div>
-          </div>
+          )}
 
-          {/* Stats - Desktop Cards */}
-          <div className="hidden sm:grid grid-cols-1 sm:grid-cols-3 gap-6 mb-8">
-            <div className="bg-white rounded-3xl border border-slate-200 shadow-lg p-8 min-h-[140px] flex items-center hover:shadow-xl transition-all duration-300">
-              <div className="flex items-center justify-between w-full">
-                <div>
-                  <p className="text-sm font-semibold text-slate-500 mb-2">{t('studentDashboard.myApplications.totalApplications')}</p>
-                  <p className="text-4xl font-bold text-slate-900">{stats.total}</p>
-                </div>
-                <div className="w-14 h-14 bg-blue-50 border border-blue-100 rounded-2xl flex items-center justify-center">
-                  <FileText className="h-7 w-7 text-blue-600" />
-                </div>
-              </div>
-            </div>
-
-            <div className="bg-white rounded-3xl border border-slate-200 shadow-lg p-8 min-h-[140px] flex items-center hover:shadow-xl transition-all duration-300">
-              <div className="flex items-center justify-between w-full">
-                <div>
-                  <p className="text-sm font-semibold text-slate-500 mb-2">{t('studentDashboard.myApplications.approved')}</p>
-                  <p className="text-4xl font-bold text-green-600">{stats.approved}</p>
-                </div>
-                <div className="w-14 h-14 bg-green-50 border border-green-100 rounded-2xl flex items-center justify-center">
-                  <CheckCircle className="h-7 w-7 text-green-600" />
-                </div>
-              </div>
-            </div>
-
-            <div className="bg-white rounded-3xl border border-slate-200 shadow-lg p-8 min-h-[140px] flex items-center hover:shadow-xl transition-all duration-300">
-              <div className="flex items-center justify-between w-full">
-                <div>
-                  <p className="text-sm font-semibold text-slate-500 mb-2">{t('studentDashboard.myApplications.pending')}</p>
-                  <p className="text-4xl font-bold text-gray-600">{stats.pending}</p>
-                </div>
-                <div className="w-14 h-14 bg-slate-50 border border-slate-200 rounded-2xl flex items-center justify-center">
-                  <Clock className="h-7 w-7 text-gray-600" />
-                </div>
-              </div>
-            </div>
-          </div>
-
-          {/* Guidance: explain fees and next steps */}
-          <div className="bg-white rounded-3xl shadow-lg border border-slate-200 p-4 sm:p-6 lg:p-8 mb-8">
-            {/* Important Notice */}
-            <div className="mb-6 p-4 bg-gradient-to-r from-blue-50 to-indigo-50 rounded-2xl border border-blue-200">
-              <div className="flex items-start">
-                <div className="w-6 h-6 bg-blue-600 text-white rounded-full flex items-center justify-center text-sm font-bold mr-3 mt-0.5 flex-shrink-0">!</div>
-                <div>
-                  <h3 className="font-bold text-blue-900 text-sm mb-2">{t('studentDashboard.myApplications.stayUpdated')}</h3>
-                  <p className="text-blue-800 text-sm leading-relaxed">
-                    <strong>{t('studentDashboard.myApplications.important')}</strong> {t('studentDashboard.myApplications.emailNotification')}
-                  </p>
-                </div>
-              </div>
-            </div>
-
-            {/* Mobile: Collapsible steps */}
-            <div className="block sm:hidden">
-              <details className="group">
-                <summary className="flex items-center justify-between cursor-pointer p-3 bg-gradient-to-r from-blue-50 to-indigo-50 rounded-2xl border border-blue-200">
-                  <div className="flex items-center">
-                    <div className="w-8 h-8 bg-blue-600 text-white rounded-full flex items-center justify-center text-sm font-bold mr-3">4</div>
-                    <span className="font-bold text-slate-900">{t('studentDashboard.myApplications.steps.processSteps')}</span>
+          {/* TODO: FUTURE_REMOVAL - Hiding stats per user request */}
+          {true && (
+            <div className="hidden sm:grid grid-cols-1 sm:grid-cols-3 gap-6 mb-8">
+              <div className="bg-white rounded-3xl border border-slate-200 shadow-lg p-8 min-h-[140px] flex items-center hover:shadow-xl transition-all duration-300">
+                <div className="flex items-center justify-between w-full">
+                  <div>
+                    <p className="text-sm font-semibold text-slate-500 mb-2">{t('studentDashboard.myApplications.totalApplications')}</p>
+                    <p className="text-4xl font-bold text-slate-900">{stats.total}</p>
                   </div>
-                  <svg className="w-5 h-5 text-blue-600 transition-transform group-open:rotate-180" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
-                  </svg>
-                </summary>
-                <div className="mt-3 space-y-3">
-                  <div className="flex items-start p-3 bg-slate-50 rounded-xl border border-slate-200">
-                    <div className="w-6 h-6 bg-blue-600 text-white rounded-full flex items-center justify-center text-xs font-bold mr-3 mt-0.5 flex-shrink-0">1</div>
-                    <div>
-                      <div className="font-semibold text-slate-900 text-sm mb-1">{t('studentDashboard.myApplications.steps.step1Title')}</div>
-                      <div className="text-xs text-slate-600">{t('studentDashboard.myApplications.steps.step1Description')}</div>
+                  <div className="w-14 h-14 bg-blue-50 border border-blue-100 rounded-2xl flex items-center justify-center">
+                    <FileText className="h-7 w-7 text-blue-600" />
+                  </div>
+                </div>
+              </div>
+
+              <div className="bg-white rounded-3xl border border-slate-200 shadow-lg p-8 min-h-[140px] flex items-center hover:shadow-xl transition-all duration-300">
+                <div className="flex items-center justify-between w-full">
+                  <div>
+                    <p className="text-sm font-semibold text-slate-500 mb-2">{t('studentDashboard.myApplications.approved')}</p>
+                    <p className="text-4xl font-bold text-green-600">{stats.approved}</p>
+                  </div>
+                  <div className="w-14 h-14 bg-green-50 border border-green-100 rounded-2xl flex items-center justify-center">
+                    <CheckCircle className="h-7 w-7 text-green-600" />
+                  </div>
+                </div>
+              </div>
+
+              <div className="bg-white rounded-3xl border border-slate-200 shadow-lg p-8 min-h-[140px] flex items-center hover:shadow-xl transition-all duration-300">
+                <div className="flex items-center justify-between w-full">
+                  <div>
+                    <p className="text-sm font-semibold text-slate-500 mb-2">{t('studentDashboard.myApplications.pending')}</p>
+                    <p className="text-4xl font-bold text-gray-600">{stats.pending}</p>
+                  </div>
+                  <div className="w-14 h-14 bg-slate-50 border border-slate-200 rounded-2xl flex items-center justify-center">
+                    <Clock className="h-7 w-7 text-gray-600" />
+                  </div>
+                </div>
+              </div>
+            </div>
+          )}
+
+          {/* TODO: FUTURE_REMOVAL - Hiding guidance per user request */}
+          {true && (
+            <div className="hidden bg-white rounded-3xl shadow-lg border border-slate-200 p-4 sm:p-6 lg:p-8 mb-8">
+              {/* Important Notice */}
+              <div className="mb-6 p-4 bg-gradient-to-r from-blue-50 to-indigo-50 rounded-2xl border border-blue-200">
+                <div className="flex items-start">
+                  <div className="w-6 h-6 bg-blue-600 text-white rounded-full flex items-center justify-center text-sm font-bold mr-3 mt-0.5 flex-shrink-0">!</div>
+                  <div>
+                    <h3 className="font-bold text-blue-900 text-sm mb-2">{t('studentDashboard.myApplications.stayUpdated')}</h3>
+                    <p className="text-blue-800 text-sm leading-relaxed">
+                      <strong>{t('studentDashboard.myApplications.important')}</strong> {t('studentDashboard.myApplications.emailNotification')}
+                    </p>
+                  </div>
+                </div>
+              </div>
+
+              {/* Mobile: Collapsible steps */}
+              <div className="block sm:hidden">
+                <details className="group">
+                  <summary className="flex items-center justify-between cursor-pointer p-3 bg-gradient-to-r from-blue-50 to-indigo-50 rounded-2xl border border-blue-200">
+                    <div className="flex items-center">
+                      <div className="w-8 h-8 bg-blue-600 text-white rounded-full flex items-center justify-center text-sm font-bold mr-3">4</div>
+                      <span className="font-bold text-slate-900">{t('studentDashboard.myApplications.steps.processSteps')}</span>
+                    </div>
+                    <svg className="w-5 h-5 text-blue-600 transition-transform group-open:rotate-180" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
+                    </svg>
+                  </summary>
+                  <div className="mt-3 space-y-3">
+                    <div className="flex items-start p-3 bg-slate-50 rounded-xl border border-slate-200">
+                      <div className="w-6 h-6 bg-blue-600 text-white rounded-full flex items-center justify-center text-xs font-bold mr-3 mt-0.5 flex-shrink-0">1</div>
+                      <div>
+                        <div className="font-semibold text-slate-900 text-sm mb-1">{t('studentDashboard.myApplications.steps.step1Title')}</div>
+                        <div className="text-xs text-slate-600">{t('studentDashboard.myApplications.steps.step1Description')}</div>
+                      </div>
+                    </div>
+                    <div className="flex items-start p-3 bg-slate-50 rounded-xl border border-slate-200">
+                      <div className="w-6 h-6 bg-blue-600 text-white rounded-full flex items-center justify-center text-xs font-bold mr-3 mt-0.5 flex-shrink-0">2</div>
+                      <div>
+                        <div className="font-semibold text-slate-900 text-sm mb-1">{t('studentDashboard.myApplications.steps.step2Title')}</div>
+                        <div className="text-xs text-slate-600">{t('studentDashboard.myApplications.steps.step2Description')}</div>
+                      </div>
+                    </div>
+                    <div className="flex items-start p-3 bg-slate-50 rounded-xl border border-slate-200">
+                      <div className="w-6 h-6 bg-blue-600 text-white rounded-full flex items-center justify-center text-xs font-bold mr-3 mt-0.5 flex-shrink-0">3</div>
+                      <div>
+                        <div className="font-semibold text-slate-900 text-sm mb-1">{t('studentDashboard.myApplications.steps.step3Title')}</div>
+                        <div className="text-xs text-slate-600">{t('studentDashboard.myApplications.steps.step3Description')}</div>
+                      </div>
+                    </div>
+                    <div className="flex items-start p-3 bg-slate-50 rounded-xl border border-slate-200">
+                      <div className="w-6 h-6 bg-blue-600 text-white rounded-full flex items-center justify-center text-xs font-bold mr-3 mt-0.5 flex-shrink-0">4</div>
+                      <div>
+                        <div className="font-semibold text-slate-900 text-sm mb-1">{t('studentDashboard.myApplications.steps.step4Title')}</div>
+                        <div className="text-xs text-slate-600">{t('studentDashboard.myApplications.steps.step4Description')}</div>
+                      </div>
                     </div>
                   </div>
-                  <div className="flex items-start p-3 bg-slate-50 rounded-xl border border-slate-200">
-                    <div className="w-6 h-6 bg-blue-600 text-white rounded-full flex items-center justify-center text-xs font-bold mr-3 mt-0.5 flex-shrink-0">2</div>
-                    <div>
-                      <div className="font-semibold text-slate-900 text-sm mb-1">{t('studentDashboard.myApplications.steps.step2Title')}</div>
-                      <div className="text-xs text-slate-600">{t('studentDashboard.myApplications.steps.step2Description')}</div>
-                    </div>
-                  </div>
-                  <div className="flex items-start p-3 bg-slate-50 rounded-xl border border-slate-200">
-                    <div className="w-6 h-6 bg-blue-600 text-white rounded-full flex items-center justify-center text-xs font-bold mr-3 mt-0.5 flex-shrink-0">3</div>
-                    <div>
-                      <div className="font-semibold text-slate-900 text-sm mb-1">{t('studentDashboard.myApplications.steps.step3Title')}</div>
-                      <div className="text-xs text-slate-600">{t('studentDashboard.myApplications.steps.step3Description')}</div>
-                    </div>
-                  </div>
-                  <div className="flex items-start p-3 bg-slate-50 rounded-xl border border-slate-200">
-                    <div className="w-6 h-6 bg-blue-600 text-white rounded-full flex items-center justify-center text-xs font-bold mr-3 mt-0.5 flex-shrink-0">4</div>
-                    <div>
-                      <div className="font-semibold text-slate-900 text-sm mb-1">{t('studentDashboard.myApplications.steps.step4Title')}</div>
-                      <div className="text-xs text-slate-600">{t('studentDashboard.myApplications.steps.step4Description')}</div>
-                    </div>
-                  </div>
-                </div>
-              </details>
-            </div>
+                </details>
+              </div>
 
-            {/* Desktop: Original layout */}
-            <div className="hidden sm:grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 sm:gap-6">
-              <div className="p-4 sm:p-6 rounded-2xl bg-gradient-to-br from-slate-50 to-blue-50 border border-slate-200">
-                <div className="text-sm sm:text-base font-bold text-slate-900 mb-2">{t('studentDashboard.myApplications.steps.step1Title')}</div>
-                <div className="text-xs sm:text-sm text-slate-600 leading-relaxed">{t('studentDashboard.myApplications.steps.step1Description')}</div>
-              </div>
-              <div className="p-4 sm:p-6 rounded-2xl bg-gradient-to-br from-slate-50 to-blue-50 border border-slate-200">
-                <div className="text-sm sm:text-base font-bold text-slate-900 mb-2">{t('studentDashboard.myApplications.steps.step2Title')}</div>
-                <div className="text-xs sm:text-sm text-slate-600 leading-relaxed">{t('studentDashboard.myApplications.steps.step2Description')}</div>
-              </div>
-              <div className="p-4 sm:p-6 rounded-2xl bg-gradient-to-br from-slate-50 to-blue-50 border border-slate-200">
-                <div className="text-sm sm:text-base font-bold text-slate-900 mb-2">{t('studentDashboard.myApplications.steps.step3Title')}</div>
-                <div className="text-xs sm:text-sm text-slate-600 leading-relaxed">{t('studentDashboard.myApplications.steps.step3Description')}</div>
-              </div>
-              <div className="p-4 sm:p-6 rounded-2xl bg-gradient-to-br from-slate-50 to-blue-50 border border-slate-200">
-                <div className="text-sm sm:text-base font-bold text-slate-900 mb-2">{t('studentDashboard.myApplications.steps.step4Title')}</div>
-                <div className="text-xs sm:text-sm text-slate-600 leading-relaxed">{t('studentDashboard.myApplications.steps.step4Description')}</div>
+              {/* Desktop: Original layout */}
+              <div className="hidden sm:grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 sm:gap-6">
+                <div className="p-4 sm:p-6 rounded-2xl bg-gradient-to-br from-slate-50 to-blue-50 border border-slate-200">
+                  <div className="text-sm sm:text-base font-bold text-slate-900 mb-2">{t('studentDashboard.myApplications.steps.step1Title')}</div>
+                  <div className="text-xs sm:text-sm text-slate-600 leading-relaxed">{t('studentDashboard.myApplications.steps.step1Description')}</div>
+                </div>
+                <div className="p-4 sm:p-6 rounded-2xl bg-gradient-to-br from-slate-50 to-blue-50 border border-slate-200">
+                  <div className="text-sm sm:text-base font-bold text-slate-900 mb-2">{t('studentDashboard.myApplications.steps.step2Title')}</div>
+                  <div className="text-xs sm:text-sm text-slate-600 leading-relaxed">{t('studentDashboard.myApplications.steps.step2Description')}</div>
+                </div>
+                <div className="p-4 sm:p-6 rounded-2xl bg-gradient-to-br from-slate-50 to-blue-50 border border-slate-200">
+                  <div className="text-sm sm:text-base font-bold text-slate-900 mb-2">{t('studentDashboard.myApplications.steps.step3Title')}</div>
+                  <div className="text-xs sm:text-sm text-slate-600 leading-relaxed">{t('studentDashboard.myApplications.steps.step3Description')}</div>
+                </div>
+                <div className="p-4 sm:p-6 rounded-2xl bg-gradient-to-br from-slate-50 to-blue-50 border border-slate-200">
+                  <div className="text-sm sm:text-base font-bold text-slate-900 mb-2">{t('studentDashboard.myApplications.steps.step4Title')}</div>
+                  <div className="text-xs sm:text-sm text-slate-600 leading-relaxed">{t('studentDashboard.myApplications.steps.step4Description')}</div>
+                </div>
               </div>
             </div>
-          </div>
+          )}
 
           {applications.length === 0 ? (
             <div className="bg-white rounded-3xl shadow-lg border border-slate-200 p-8 sm:p-12 text-center">
@@ -1372,10 +799,10 @@ const MyApplications: React.FC = () => {
                 {t('studentDashboard.myApplications.noApplications.description')}
               </p>
               <Link
-                to="/student/dashboard/scholarships"
+                to="/student/onboarding"
                 className="bg-gradient-to-r from-blue-600 to-blue-700 text-white px-8 sm:px-10 py-4 sm:py-5 rounded-2xl hover:from-blue-700 hover:to-blue-800 transition-all duration-300 font-bold shadow-lg hover:shadow-xl transform hover:scale-105 inline-flex items-center text-sm sm:text-base"
               >
-                {t('studentDashboard.myApplications.noApplications.findScholarships')}
+                Começar Processo
                 <ArrowRight className="ml-2 h-5 w-5 sm:h-6 sm:w-6" />
               </Link>
             </div>
@@ -1395,14 +822,7 @@ const MyApplications: React.FC = () => {
                         <h3 className="text-xl font-bold text-slate-900">{t('studentDashboard.myApplications.sections.approvedByUniversity')}</h3>
                         <span className="text-sm text-green-700 bg-green-100 border border-green-200 md:px-4 md:py-2 px-2 py-1 rounded-full font-medium">{approvedList.length} {t('studentDashboard.myApplications.sections.approved')}</span>
                       </div>
-                      <div className="mb-6 rounded-xl bg-blue-50 border border-blue-200 p-5 text-sm text-blue-800">
-                        <div className="flex items-start">
-                          <AlertCircle className="h-5 w-5 text-blue-600 mr-3 mt-0.5 flex-shrink-0" />
-                          <div>
-                            <span className="font-semibold">{t('studentDashboard.myApplications.importantNotice.title')}</span> {t('studentDashboard.myApplications.importantNotice.description')}
-                          </div>
-                        </div>
-                      </div>
+
                       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 md:gap-6 md:overflow-x-auto md:pb-4 gap-6" style={{
                         scrollbarWidth: 'none',
                         msOverflowStyle: 'none',
@@ -1411,15 +831,22 @@ const MyApplications: React.FC = () => {
                         {approvedList.map((application: ApplicationWithScholarship) => {
                           const Icon = getStatusIcon(application.status);
                           const scholarship = application.scholarships;
-                          const applicationFeePaid = !!application.is_application_fee_paid;
-                          const scholarshipFeePaid = !!application.is_scholarship_fee_paid;
+                          
+                          const packageD160Paid = !!(userProfile as any)?.has_paid_ds160_package || !!realPaidAmounts.ds160_package;
+                          const packageI539Paid = !!(userProfile as any)?.has_paid_i539_cos_package || !!realPaidAmounts.i539_cos_package;
+                          const hasPaidPackage = packageD160Paid || packageI539Paid;
+                          
+                          const applicationFeePaid = !!application.is_application_fee_paid || hasPaidPackage;
+                          const scholarshipFeePaid = !!application.is_scholarship_fee_paid || 
+                                                     !!application.acceptance_letter_url ||
+                                                     (isNewFlowUser && (!!(userProfile as any)?.is_placement_fee_paid || !!realPaidAmounts.placement)) ||
+                                                     hasPaidPackage;
                           if (!scholarship) return null;
 
-                          // Obter descrição detalhada do status
-                          const statusInfo = getStatusDescription(application);
+
 
                           return (
-                            <div key={application.id} className="bg-white rounded-3xl shadow-lg hover:shadow-xl transition-all duration-300 border border-gray-100 overflow-hidden group w-full md:flex-shrink-0 md:min-w-0 md:self-start">
+                            <div key={application.id} className="bg-white rounded-3xl shadow-lg hover:shadow-xl transition-all duration-300 border-2 border-slate-200 overflow-hidden group w-full md:flex-shrink-0 md:min-w-0 md:self-start">
                               <div className="p-4">
                                 {/* Header Section Compacto */}
                                 <div className="mb-4">
@@ -1447,46 +874,8 @@ const MyApplications: React.FC = () => {
                                   </div>
                                 </div>
 
-                                {/* Status Details - Mobile: botão colapsável; Desktop: sempre visível */}
-                                <div className="mb-4">
-                                  <button
-                                    className="w-full sm:hidden cursor-pointer bg-slate-50 hover:bg-slate-100 rounded-lg p-3 transition-colors flex items-center justify-between border border-gray-200"
-                                    onClick={() => toggleMobileExpanded(application.id)}
-                                  >
-                                    <div className="flex items-center">
-                                      <FileText className="h-4 w-4 mr-2 text-blue-600" />
-                                      <span className="text-sm font-medium text-gray-700">{t('studentDashboard.myApplications.statusDetails.title')}</span>
-                                    </div>
-                                    <ChevronDown className={`w-4 h-4 text-gray-500 transition-transform duration-300 ${mobileExpandedApps[application.id] ? 'rotate-180' : ''}`} />
-                                  </button>
-                                  <div className={`${mobileExpandedApps[application.id] ? 'max-h-96' : 'max-h-0'} sm:max-h-none overflow-hidden transition-all duration-300 ease-in-out sm:block`}>
-                                    <div className={`mt-2 sm:mt-0 rounded-lg p-3 border ${statusInfo.bgColor} ${statusInfo.borderColor}`}>
-                                      <h3 className={`font-bold text-sm ${statusInfo.color} mb-2`}>
-                                        {statusInfo.title}
-                                      </h3>
-                                      <p className="text-sm text-slate-700 leading-relaxed mb-3">
-                                        {statusInfo.description}
-                                      </p>
+                                {/* Status Details REMOVED as per user request */}
 
-                                      {/* Next Steps */}
-                                      {statusInfo.nextSteps && statusInfo.nextSteps.length > 0 && (
-                                        <div>
-                                          <h4 className={`font-semibold text-xs ${statusInfo.color} mb-2 uppercase tracking-wide`}>
-                                            {t('studentDashboard.myApplications.nextSteps')}
-                                          </h4>
-                                          <ul className="space-y-2">
-                                            {statusInfo.nextSteps.map((step, index) => (
-                                              <li key={index} className="flex items-start text-xs text-slate-700">
-                                                <span className="w-1.5 h-1.5 bg-slate-400 rounded-full mr-2 mt-1.5 flex-shrink-0"></span>
-                                                {step}
-                                              </li>
-                                            ))}
-                                          </ul>
-                                        </div>
-                                      )}
-                                    </div>
-                                  </div>
-                                </div>
 
                                 {/* Details Section */}
                                 <div className="bg-gradient-to-br from-slate-50 to-blue-50 rounded-2xl p-3 sm:p-4 mb-4 sm:mb-6 border border-slate-200">
@@ -1584,23 +973,28 @@ const MyApplications: React.FC = () => {
                                       )}
                                     </div>
 
-                                    <div className="bg-white border-2 border-slate-200 rounded-xl p-3 shadow-sm">
-                                      <div className="flex items-center justify-between mb-3">
-                                        <span className="font-semibold text-gray-900 text-sm">{t('studentDashboard.myApplications.paymentStatus.scholarshipFee')}</span>
-                                        {realPaidAmounts.scholarship !== undefined ? (
-                                          // Se há pagamento registrado, mostrar valor bruto (gross_amount_usd) ou amount
-                                          <span className="text-base font-bold text-gray-700">{formatAmount(realPaidAmounts.scholarship)}</span>
-                                        ) : scholarshipFeePromotionalCoupon ? (
-                                          // Se há cupom promocional, mostrar valor com desconto
-                                          <div className="text-right">
-                                            <div className="text-base font-bold text-gray-400 line-through">{formatAmount(Number(getFeeAmount('scholarship_fee')))}</div>
-                                            <div className="text-base font-bold text-green-600">{formatAmount(scholarshipFeePromotionalCoupon.finalAmount)}</div>
-                                          </div>
-                                        ) : (
-                                          // Sem cupom, mostrar valor normal da taxa
-                                          <span className="text-base font-bold text-gray-700">{formatAmount(Number(getFeeAmount('scholarship_fee')))}</span>
-                                        )}
-                                      </div>
+                                      <div className="bg-white border-2 border-slate-200 rounded-xl p-3 shadow-sm">
+                                        <div className="flex items-center justify-between mb-3">
+                                          <span className="font-semibold text-gray-900 text-sm">
+                                            {isNewFlowUser 
+                                              ? t('studentDashboard.myApplications.paymentStatus.placementFee') 
+                                              : t('studentDashboard.myApplications.paymentStatus.scholarshipFee')}
+                                          </span>
+                                          {realPaidAmounts.scholarship !== undefined ? (
+                                            <span className="text-base font-bold text-gray-700">{formatAmount(realPaidAmounts.scholarship)}</span>
+                                          ) : isNewFlowUser ? (
+                                            <span className="text-base font-bold text-gray-700">
+                                              {formatPlacementFee(getPlacementFee(scholarship.annual_value_with_scholarship || 0, scholarship.placement_fee_amount))}
+                                            </span>
+                                          ) : scholarshipFeePromotionalCoupon ? (
+                                            <div className="text-right">
+                                              <div className="text-base font-bold text-gray-400 line-through">{formatAmount(Number(getFeeAmount('scholarship_fee')))}</div>
+                                              <div className="text-base font-bold text-green-600">{formatAmount(scholarshipFeePromotionalCoupon.finalAmount)}</div>
+                                            </div>
+                                          ) : (
+                                            <span className="text-base font-bold text-gray-700">{formatAmount(Number(getFeeAmount('scholarship_fee')))}</span>
+                                          )}
+                                        </div>
                                       {scholarshipFeePaid ? (
                                         <div className="inline-flex items-center px-3 py-2 rounded-lg text-xs font-semibold bg-green-100 text-green-700 border border-green-200">
                                           <CheckCircle className="h-3 w-3 mr-1" />
@@ -1636,7 +1030,9 @@ const MyApplications: React.FC = () => {
                                             >
                                               {paymentBlockedLoading
                                                 ? t('studentDashboard.myApplications.paymentStatus.checking')
-                                                : t('studentDashboard.myApplications.paymentStatus.payScholarshipFee')}
+                                                : isNewFlowUser 
+                                                  ? t('studentDashboard.myApplications.paymentStatus.payPlacementFee') 
+                                                  : t('studentDashboard.myApplications.paymentStatus.payScholarshipFee')}
                                             </button>
                                           )}
                                         </>
@@ -1659,13 +1055,16 @@ const MyApplications: React.FC = () => {
                                 {/* Action Section */}
                                 {(applicationFeePaid && scholarshipFeePaid) && (
                                   <div className="border-t border-slate-200 pt-4">
-                                    <Link
-                                      to={`/student/dashboard/application/${application.id}/chat`}
+                                    <button
+                                      onClick={() => {
+                                        localStorage.setItem('selected_application_id', application.id);
+                                        navigate('/student/onboarding?step=my_applications');
+                                      }}
                                       className="inline-flex items-center justify-center w-full px-4 py-3 rounded-xl font-bold bg-gradient-to-r from-blue-600 to-blue-700 text-white shadow-lg hover:shadow-xl hover:from-blue-700 hover:to-blue-800 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 transform hover:scale-105 transition-all duration-200 text-sm"
                                     >
                                       <GraduationCap className="h-4 w-4 mr-2" />
                                       {t('studentDashboard.myApplications.applicationDetails.viewDetails')}
-                                    </Link>
+                                    </button>
                                   </div>
                                 )}
                               </div>
@@ -1697,11 +1096,10 @@ const MyApplications: React.FC = () => {
                           const scholarship = application.scholarships;
                           if (!scholarship) return null;
 
-                          // Obter descrição detalhada do status
-                          const statusInfo = getStatusDescription(application);
+
 
                           return (
-                            <div key={application.id} className="bg-white rounded-3xl hover:-translate-y-1 transition-all duration-300 border border-slate-100 group w-full max-w-full">
+                            <div key={application.id} className="bg-white rounded-3xl shadow-sm hover:shadow-lg hover:-translate-y-1 transition-all duration-300 border-2 border-slate-200 group w-full max-w-full">
                               <div className="p-4 sm:p-6">
                                 {/* Compact Mobile Header */}
                                 <div className="mb-4">
@@ -1729,46 +1127,8 @@ const MyApplications: React.FC = () => {
                                   </div>
                                 </div>
 
-                                {/* Status Details - Mobile collapsible, desktop always visible */}
-                                <div className="mb-4">
-                                  <button
-                                    className="w-full sm:hidden cursor-pointer bg-slate-50 hover:bg-slate-100 rounded-lg p-3 transition-colors flex items-center justify-between border border-gray-200"
-                                    onClick={() => toggleMobileExpanded(application.id)}
-                                  >
-                                    <div className="flex items-center">
-                                      <FileText className="h-4 w-4 mr-2 text-blue-600" />
-                                      <span className="text-sm font-medium text-gray-700">{t('studentDashboard.myApplications.statusDetails.title')}</span>
-                                    </div>
-                                    <ChevronDown className={`w-4 h-4 text-gray-500 transition-transform duration-300 ${mobileExpandedApps[application.id] ? 'rotate-180' : ''}`} />
-                                  </button>
-                                  <div className={`${mobileExpandedApps[application.id] ? 'max-h-96' : 'max-h-0'} sm:max-h-none overflow-hidden transition-all duration-300 ease-in-out sm:block`}>
-                                    <div className={`mt-2 sm:mt-0 rounded-lg p-3 border ${statusInfo.bgColor} ${statusInfo.borderColor}`}>
-                                      <h3 className={`font-bold text-sm ${statusInfo.color} mb-2`}>
-                                        {statusInfo.title}
-                                      </h3>
-                                      <p className="text-sm text-slate-700 leading-relaxed mb-3">
-                                        {statusInfo.description}
-                                      </p>
+                                {/* Status Details REMOVED as per user request to maintain consistency and avoid missing translations */}
 
-                                      {/* Next Steps */}
-                                      {statusInfo.nextSteps && statusInfo.nextSteps.length > 0 && (
-                                        <div>
-                                          <h4 className={`font-semibold text-xs ${statusInfo.color} mb-2 uppercase tracking-wide`}>
-                                            {t('studentDashboard.myApplications.nextSteps')}
-                                          </h4>
-                                          <ul className="space-y-2">
-                                            {statusInfo.nextSteps.map((step, index) => (
-                                              <li key={index} className="flex items-start text-xs text-slate-700">
-                                                <span className="w-1.5 h-1.5 bg-slate-400 rounded-full mr-2 mt-1.5 flex-shrink-0"></span>
-                                                {step}
-                                              </li>
-                                            ))}
-                                          </ul>
-                                        </div>
-                                      )}
-                                    </div>
-                                  </div>
-                                </div>
 
 
                                 {/* Not selected reason for rejected applications */}
@@ -1800,7 +1160,8 @@ const MyApplications: React.FC = () => {
                                       ...docTemplate,
                                       status: docData?.status || 'pending',
                                       review_notes: docData?.review_notes,
-                                      rejection_reason: docData?.rejection_reason
+                                      rejection_reason: docData?.rejection_reason,
+                                      uploaded_at: docData?.uploaded_at
                                     };
                                   });
 
@@ -1827,19 +1188,19 @@ const MyApplications: React.FC = () => {
                                       </button>
 
                                       <div
-                                        className={`transition-all duration-300 ease-in-out ${openChecklists[application.id]
-                                            ? 'max-h-[5000px] opacity-100'
-                                            : 'max-h-0 opacity-0 overflow-hidden'
-                                          }`}
-                                      >
-                                        <div className="space-y-3 pt-2">
-                                          {/* Required Documents */}
-                                          {allDocuments.map((doc) => {
-                                            const status = (doc.status || '').toLowerCase();
-                                            const isApproved = status === 'approved';
-                                            const isRejected = status === 'changes_requested' || status === 'rejected';
-                                            const isUnderReview = status === 'under_review';
-                                            const isPending = !isApproved && !isRejected && !isUnderReview;
+                                      className={`transition-all duration-300 ease-in-out ${openChecklists[application.id]
+                                          ? 'max-h-[5000px] opacity-100'
+                                          : 'max-h-0 opacity-0 overflow-hidden'
+                                      }`}
+                                   >
+                                     <div className="space-y-3 pt-2">
+                                       {/* Required Documents */}
+                                       {allDocuments.map((doc) => {
+                                         const status = (doc.status || '').toLowerCase();
+                                         const isApproved = status === 'approved';
+                                         const isRejected = status === 'changes_requested' || status === 'rejected';
+                                         const isUnderReview = status === 'under_review';
+                                         // const isPending = !isApproved && !isRejected && !isUnderReview;
 
                                             return (
                                               <div key={doc.type} className={`bg-white rounded-xl border-2 p-2 sm:p-4 hover:border-slate-300 transition-all duration-200 w-full max-w-full overflow-visible ${isRejected ? 'border-red-500' : 'border-slate-200'}`}>
@@ -1888,6 +1249,11 @@ const MyApplications: React.FC = () => {
                                                           }`}>
                                                           {isApproved ? t('studentDashboard.myApplications.documents.status.approved') : isRejected ? t('studentDashboard.myApplications.documents.status.changesNeeded') : isUnderReview ? t('studentDashboard.myApplications.documents.status.underReview') : t('studentDashboard.myApplications.documents.status.pending')}
                                                         </span>
+                                                        {doc?.uploaded_at && (
+                                                          <span className="text-[10px] text-slate-500 font-medium">
+                                                            Enviado em: {new Date(doc.uploaded_at).toLocaleDateString('pt-BR')}
+                                                          </span>
+                                                        )}
                                                       </div>
 
                                                       {/* Review Notes / Rejection Reason */}
@@ -1908,7 +1274,7 @@ const MyApplications: React.FC = () => {
                                                       )}
 
                                                       {/* Upload Action for Rejected Docs */}
-                                                      {isRejected && (
+                                                      {isRejected && application.status !== 'rejected' && (
                                                         <div className="mt-3 space-y-2">
                                                           <div className="flex flex-col gap-2">
                                                             <label className="cursor-pointer bg-gradient-to-r from-blue-50 to-blue-100 text-blue-700 border-2 border-blue-200 hover:from-blue-100 hover:to-blue-200 px-3 py-2 rounded-lg font-semibold transition-all duration-200 flex-1 text-center text-xs hover:shadow-md">
@@ -1968,120 +1334,96 @@ const MyApplications: React.FC = () => {
                                             );
                                           })}
 
-                                          {/* University Additional Requests */}
-                                          {reqUploads.length > 0 && (
-                                            <div className="bg-gradient-to-br from-slate-50 to-blue-50 rounded-xl border-2 border-slate-200 p-4">
-                                              <h5 className="text-sm font-bold text-slate-900 mb-3 flex items-center">
-                                                <Building className="h-4 w-4 mr-2 text-blue-600" />
-                                                {t('studentDashboard.myApplications.documents.universityAdditionalRequests')}
-                                              </h5>
-                                              <div className="space-y-2">
-                                                {reqUploads.map((req, idx) => {
-                                                  const status = (req.status || '').toLowerCase();
-                                                  const isApproved = status === 'approved';
-                                                  const isRejected = status === 'rejected';
-                                                  const isUnderReview = status === 'under_review';
-
-                                                  return (
-                                                    <div key={idx} className="bg-white rounded-lg border border-slate-200 p-3">
-                                                      <div className="flex flex-col gap-1.5">
-                                                        <div className="flex items-center">
-                                                          <div className={`w-4 h-4 rounded-full border flex items-center justify-center mr-2 ${isApproved
-                                                              ? 'bg-green-100 border-green-400'
-                                                              : isRejected
-                                                                ? 'bg-red-100 border-red-400'
-                                                                : 'bg-amber-100 border-amber-400'
-                                                            }`}>
-                                                            {isApproved ? (
-                                                              <CheckCircle className="h-3 w-3 text-green-600" />
-                                                            ) : isRejected ? (
-                                                              <XCircle className="h-3 w-3 text-red-600" />
-                                                            ) : (
-                                                              <Clock className="h-3 w-3 text-amber-600" />
-                                                            )}
-                                                          </div>
-                                                          <span className="font-medium text-slate-900 text-xs">
-                                                            <TruncatedText
-                                                              text={req.title}
-                                                              maxLength={35}
-                                                              className="font-medium text-slate-900 text-xs"
-                                                              showTooltip={true}
-                                                              tooltipPosition="top"
-                                                            />
-                                                          </span>
-                                                        </div>
-                                                        <span className={`px-2 py-1 rounded-full text-xs font-bold ${isApproved
-                                                            ? 'bg-green-100 text-green-700'
-                                                            : isRejected
-                                                              ? 'bg-red-100 text-red-700'
-                                                              : 'bg-amber-100 text-amber-700'
-                                                          }`}>
-                                                          {isApproved ? t('studentDashboard.myApplications.documents.status.approved') : isRejected ? t('studentDashboard.myApplications.documents.status.changesNeeded') : t('studentDashboard.myApplications.documents.status.underReview')}
-                                                        </span>
-                                                      </div>
-                                                      {isRejected && (req.rejection_reason || req.review_notes) && (
-                                                        <div className="mt-2 p-3 text-xs text-red-700 bg-red-50 border border-red-200 rounded-lg">
-                                                          <strong className="block mb-1">{t('studentDashboard.myApplications.documents.review')}</strong>
-                                                          <TruncatedText
-                                                            text={req.rejection_reason || req.review_notes || ''}
-                                                            maxLength={120}
-                                                            className="text-xs text-red-700 leading-relaxed"
-                                                            showTooltip={true}
-                                                            tooltipPosition="top"
-                                                          />
-                                                        </div>
-                                                      )}
-                                                    </div>
-                                                  );
-                                                })}
-                                              </div>
-                                            </div>
-                                          )}
-                                        </div>
-                                      </div>
-                                    </div>
-                                  );
-                                })()}
-                              </div>
-                            </div>
-                          );
-                        })}
-                      </div>
-                    </section>
-                  );
-                })()}
-              </div>
-            </>
-          )}
-
-          {/* Modal de confirmação para Application Fee */}
-          {pendingApplication && (
-            <ScholarshipConfirmationModal
-              isOpen={showConfirmationModal}
-              onClose={() => setShowConfirmationModal(false)}
-              scholarship={pendingApplication.scholarships!}
-              onStripeCheckout={handleStripeCheckout}
-              onPixCheckout={handlePixCheckout}
-              isProcessing={isProcessingCheckout}
-              applicationId={pendingApplication.id}
-            />
-          )}
-
-          {/* Modal de confirmação para Scholarship Fee */}
-          {pendingScholarshipFeeApplication && (
-            <ScholarshipConfirmationModal
-              isOpen={showScholarshipFeeModal}
-              onClose={() => setShowScholarshipFeeModal(false)}
-              scholarship={pendingScholarshipFeeApplication.scholarships!}
-              onStripeCheckout={handleScholarshipFeeCheckout}
-              onPixCheckout={handleScholarshipFeePixCheckout}
-              isProcessing={isProcessingScholarshipFeeCheckout}
-              feeType="scholarship_fee"
-              applicationId={pendingScholarshipFeeApplication.id}
-            />
-          )}
-        </div>
+                                       {/* University Additional Requests */}
+                                       {reqUploads.length > 0 && (
+                                         <div className="bg-gradient-to-br from-slate-50 to-blue-50 rounded-xl border-2 border-slate-200 p-4">
+                                           <h5 className="text-sm font-bold text-slate-900 mb-3 flex items-center">
+                                             <Building className="h-4 w-4 mr-2 text-blue-600" />
+                                             {t('studentDashboard.myApplications.documents.universityAdditionalRequests')}
+                                           </h5>
+                                           <div className="space-y-2">
+                                             {reqUploads.map((req, idx) => {
+                                               const status = (req.status || '').toLowerCase();
+                                               const isApproved = status === 'approved';
+                                               const isRejected = status === 'rejected';
+                                               // const isUnderReview = status === 'under_review';
+                                               
+                                               return (
+                                                 <div key={idx} className="bg-white rounded-lg border border-slate-200 p-3">
+                                                    <div className="flex flex-col gap-1.5">
+                                                      <div className="flex items-center">
+                                                       <div className={`w-4 h-4 rounded-full border flex items-center justify-center mr-2 ${
+                                                         isApproved 
+                                                           ? 'bg-green-100 border-green-400' 
+                                                           : isRejected 
+                                                             ? 'bg-red-100 border-red-400'
+                                                             : 'bg-amber-100 border-amber-400'
+                                                       }`}>
+                                                         {isApproved ? (
+                                                           <CheckCircle className="h-3 w-3 text-green-600" />
+                                                         ) : isRejected ? (
+                                                           <XCircle className="h-3 w-3 text-red-600" />
+                                                         ) : (
+                                                           <Clock className="h-3 w-3 text-amber-600" />
+                                                         )}
+                                                       </div>
+                                                       <span className="font-medium text-slate-900 text-xs">
+                                                         <TruncatedText
+                                                           text={req.title}
+                                                           maxLength={35}
+                                                           className="font-medium text-slate-900 text-xs"
+                                                           showTooltip={true}
+                                                           tooltipPosition="top"
+                                                         />
+                                                       </span>
+                                                     </div>
+                                                     <span className={`px-2 py-1 rounded-full text-xs font-bold ${
+                                                       isApproved 
+                                                         ? 'bg-green-100 text-green-700' 
+                                                         : isRejected 
+                                                           ? 'bg-red-100 text-red-700'
+                                                           : 'bg-amber-100 text-amber-700'
+                                                     }`}>
+                                                       {isApproved ? t('studentDashboard.myApplications.documents.status.approved') : isRejected ? t('studentDashboard.myApplications.documents.status.changesNeeded') : t('studentDashboard.myApplications.documents.status.underReview')}
+                                                     </span>
+                                                   </div>
+                                                   {isRejected && (req.rejection_reason || req.review_notes) && (
+                                                     <div className="mt-2 p-3 text-xs text-red-700 bg-red-50 border border-red-200 rounded-lg">
+                                                       <strong className="block mb-1">{t('studentDashboard.myApplications.documents.review')}</strong>
+                                                       <TruncatedText
+                                                         text={req.rejection_reason || req.review_notes || ''}
+                                                         maxLength={120}
+                                                         className="text-xs text-red-700 leading-relaxed"
+                                                         showTooltip={true}
+                                                         tooltipPosition="top"
+                                                       />
+                                                     </div>
+                                                   )}
+                                                 </div>
+                                               );
+                                             })}
+                                           </div>
+                                         </div>
+                                       )}
+                                     </div>
+                                   </div>
+                                 </div>
+                              );
+                            })()}
+                          </div>
+                        </div>
+                      );
+                    })}
+                  </div>
+                </section>
+              );
+            })()}
+          </div>
+        </>
+      )}
+      
       </div>
+    </div>
     </>
   );
 };

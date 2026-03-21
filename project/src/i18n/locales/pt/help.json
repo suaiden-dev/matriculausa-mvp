@@ -1,0 +1,55 @@
+{
+  "header": {
+    "title": "Centro de Ajuda",
+    "description": "Encontre respostas rápidas e orientação detalhada para todas as suas dúvidas",
+    "searchPlaceholder": "Buscar tópicos...",
+    "stats": {
+      "support247": "Suporte 24/7",
+      "quickResponse": "Resposta rápida"
+    }
+  },
+  "mainTopics": {
+    "title": "Tópicos Principais",
+    "description": "Encontre ajuda organizada por categoria",
+    "items": {
+      "profile": {
+        "title": "Criando seu perfil",
+        "description": "Orientação passo a passo para configurar suas informações acadêmicas e pessoais.",
+        "category": "Configuração"
+      },
+      "application": {
+        "title": "Entendendo o processo de candidatura",
+        "description": "Saiba como se candidatar, acompanhar seu progresso e o que esperar em cada etapa.",
+        "category": "Candidatura"
+      },
+      "payment": {
+        "title": "Pagando taxas",
+        "description": "Como pagar, verificar o status do pagamento e entender as taxas não reembolsáveis.",
+        "category": "Pagamento"
+      },
+      "documents": {
+        "title": "Fazendo upload de documentos",
+        "description": "Dicas para fazer upload de históricos escolares, documentos de identidade e outros arquivos necessários.",
+        "category": "Documentos"
+      },
+      "status": {
+        "title": "Acompanhando sua candidatura",
+        "description": "Monitore seu status e os próximos passos após a submissão.",
+        "category": "Status"
+      }
+    }
+  },
+  "sidebar": {
+    "needHelp": "Precisa de ajuda?",
+    "smartAssistant": "Assistente Inteligente",
+    "smartAssistantDesc": "Ajuda via IA",
+    "whatsappSupport": "Suporte WhatsApp",
+    "whatsappDesc": "Mensagens diretas",
+    "quickSupport": {
+      "title": "Suporte Rápido",
+      "description": "Use os botões flutuantes para ajuda instantânea - Assistente Inteligente e WhatsApp estão disponíveis 24/7.",
+      "instantAI": "Respostas instantâneas por IA",
+      "availability247": "Disponibilidade 24/7"
+    }
+  }
+}

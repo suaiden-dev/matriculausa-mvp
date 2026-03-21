@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { Link, useLocation } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
-import { Mail, Lock, User, Building, GraduationCap, CheckCircle, X, Gift, ChevronDown } from 'lucide-react';
+import { Mail, Lock, User, Building, GraduationCap, CheckCircle, X, Gift, ChevronDown, Eye, EyeOff } from 'lucide-react';
 import { useAuth } from '../hooks/useAuth';
 
 import { supabase } from '../lib/supabase';
@@ -14,7 +14,7 @@ interface AuthProps {
 }
 
 const Auth: React.FC<AuthProps> = ({ mode }) => {
-  const { t } = useTranslation();
+  const { t } = useTranslation(['auth', 'common']);
   const location = useLocation();
   const [activeTab, setActiveTab] = useState<'student' | 'university'>('student');
   const [formData, setFormData] = useState({
@@ -27,7 +27,7 @@ const Auth: React.FC<AuthProps> = ({ mode }) => {
     country: '',
     fieldOfInterest: '',
     englishLevel: '',
-    dependents: 0, // Dependents field for SUAIDEN code
+    dependents: null as number | null, // Dependents field for SUAIDEN code - initialized as null
     // University specific fields
     universityName: '',
     position: '',
@@ -43,10 +43,14 @@ const Auth: React.FC<AuthProps> = ({ mode }) => {
   const [referralCodeLoading, setReferralCodeLoading] = useState(false);
   const [referralCodeType, setReferralCodeType] = useState<'seller' | 'rewards' | null>(null);
   const [isReferralCodeLocked, setIsReferralCodeLocked] = useState(false);
+  // Estado removido: isSimplifiedSeller (sem utilidade lida)
   // Terms acceptance state
   const [termsAccepted, setTermsAccepted] = useState(false);
   // Newsletter consent state
   const [newsletterConsent, setNewsletterConsent] = useState(false);
+  // Password visibility states
+  const [showPassword, setShowPassword] = useState(false);
+  const [showConfirmPassword, setShowConfirmPassword] = useState(false);
   // Ref para evitar múltiplas execuções
   const referralCodeProcessedRef = useRef(false);
 
@@ -124,7 +128,7 @@ const Auth: React.FC<AuthProps> = ({ mode }) => {
         if (!error && data) {
           try {
             const { data: systemTypeData, error: systemTypeError } = await supabase
-              .rpc('get_seller_system_type_by_referral_code', { referral_code: codeUpper });
+              .rpc('get_seller_admin_system_type_by_code', { seller_code: codeUpper });
             
              if (!systemTypeError && systemTypeData) {
                const isSimplified = systemTypeData === 'simplified';
@@ -159,24 +163,7 @@ const Auth: React.FC<AuthProps> = ({ mode }) => {
     }
   };
 
-  // ✅ NOVA: Função para limpar código de referência
-  const clearReferralCode = () => {
-    console.log('[AUTH] 🧹 Limpando código de referência');
-    setFormData(prev => ({ ...prev, referralCode: '' }));
-    setReferralCodeValid(null);
-    setReferralCodeType(null);
-    setIsReferralCodeLocked(false);
-    referralCodeProcessedRef.current = false;
-    
-    // Limpar do localStorage permanentemente
-    localStorage.removeItem('pending_referral_code');
-    localStorage.removeItem('pending_referral_code_type');
-    localStorage.removeItem('pending_affiliate_code');
-    localStorage.removeItem('pending_seller_referral_code');
-  };
-
   // ✅ FUNÇÃO AUXILIAR: Processar código de referência
-
   const processReferralCode = async (code: string, type: 'seller' | 'rewards' | null = null) => {
     if (!code || referralCodeProcessedRef.current) {
       return;
@@ -252,10 +239,7 @@ const Auth: React.FC<AuthProps> = ({ mode }) => {
         }
         const refCodeFromUrl = urlParams.get('ref');
         
-        // ⚠️ IGNORAR códigos de Processo Seletivo (iniciam com sp_)
-        if (refCodeFromUrl && refCodeFromUrl.toLowerCase().startsWith('sp_')) {
-          console.log('[AUTH] ℹ️ Ignorando referência de Processo Seletivo (sp_) na URL');
-        } else if (refCodeFromUrl && !referralCodeProcessedRef.current) {
+        if (refCodeFromUrl && !referralCodeProcessedRef.current) {
           console.log('[AUTH] ✅ Código encontrado na URL:', refCodeFromUrl);
           
           // Detectar tipo do código
@@ -300,15 +284,8 @@ const Auth: React.FC<AuthProps> = ({ mode }) => {
         const pendingType = localStorage.getItem('pending_referral_code_type');
         
         if (pendingCode && !referralCodeProcessedRef.current) {
-          // ⚠️ IGNORAR códigos de Processo Seletivo (iniciam com sp_)
-          if (pendingCode.toLowerCase().startsWith('sp_')) {
-            console.log('[AUTH] ℹ️ Removendo referência de Processo Seletivo (sp_) do localStorage');
-            localStorage.removeItem('pending_referral_code');
-            localStorage.removeItem('pending_referral_code_type');
-          } else {
-            console.log('[AUTH] ✅ Código encontrado no localStorage:', pendingCode, 'Tipo:', pendingType);
-            await processReferralCode(pendingCode, pendingType as 'seller' | 'rewards' | null);
-          }
+          console.log('[AUTH] ✅ Código encontrado no localStorage:', pendingCode, 'Tipo:', pendingType);
+          await processReferralCode(pendingCode, pendingType as 'seller' | 'rewards' | null);
         }
         
         console.log('[AUTH] Estado final do campo unificado:', {
@@ -339,12 +316,6 @@ const Auth: React.FC<AuthProps> = ({ mode }) => {
         if (!referralCodeProcessedRef.current) {
           const pendingCode = localStorage.getItem('pending_referral_code');
           if (pendingCode && !formData.referralCode) {
-            // ⚠️ IGNORAR códigos de Processo Seletivo (iniciam com sp_)
-            if (pendingCode.toLowerCase().startsWith('sp_')) {
-              localStorage.removeItem('pending_referral_code');
-              localStorage.removeItem('pending_referral_code_type');
-              return;
-            }
             console.log('[AUTH] ✅ Código detectado via polling:', pendingCode);
             const pendingType = localStorage.getItem('pending_referral_code_type');
             await processReferralCode(pendingCode, pendingType as 'seller' | 'rewards' | null);
@@ -364,8 +335,6 @@ const Auth: React.FC<AuthProps> = ({ mode }) => {
     const code = e.target.value.toUpperCase();
     setFormData(prev => ({ ...prev, referralCode: code }));
     
-    
-
     if (code.length >= 4) {
       validateReferralCode(code);
     } else {
@@ -480,12 +449,15 @@ const Auth: React.FC<AuthProps> = ({ mode }) => {
          const directSalesCodes = ['SUAIDEN', 'BRANT'];
          const isDirectSalesCode = directSalesCodes.includes(formData.referralCode.toUpperCase());
          
-          // Validar dependents para todos os estudantes (deve ser entre 0 e 5)
-          if (activeTab === 'student' && (formData.dependents < 0 || formData.dependents > 5)) {
+          // Validar dependents para todos os estudantes (Obrigatório selecionar, deve ser entre 0 e 5)
+          if (activeTab === 'student' && (formData.dependents === null || formData.dependents < 0 || formData.dependents > 5)) {
             setError(t('authPage.messages.invalidDependents'));
             setLoading(false);
             return;
           }
+          
+          // Como a validação acima garante que não é null, usamos o valor diretamente
+          const finalDependents = formData.dependents;
         
         const userData = {
           full_name: activeTab === 'student' ? formData.full_name : formData.full_name,
@@ -515,8 +487,8 @@ const Auth: React.FC<AuthProps> = ({ mode }) => {
                scholarship_package_number: 3,
                desired_scholarship_range: 4500
              }),
-             // ✅ Dependents: Sempre salvar para todos os estudantes
-             dependents: formData.dependents
+              // ✅ Dependents: Sempre salvar para todos os estudantes
+              dependents: finalDependents
            })
         };
 
@@ -641,7 +613,7 @@ const Auth: React.FC<AuthProps> = ({ mode }) => {
               <div className={`${error.includes('já foi confirmado') ? 'bg-green-50 border border-green-200 text-green-700' : 'bg-red-50 border border-red-200 text-red-700'} px-4 py-3 rounded-2xl text-sm`}>
                 <div className={`font-medium ${error.includes('já foi confirmado') ? 'text-green-800' : 'text-red-800'} mb-1`}>
                   {error.includes('já foi confirmado') 
-                    ? 'Email Confirmado' 
+                    ? t('authPage.login.emailConfirmed') 
                     : t('authPage.login.loginFailed')}
                 </div>
                 <div>{error}</div>
@@ -806,7 +778,7 @@ const Auth: React.FC<AuthProps> = ({ mode }) => {
                         required
                         value={formData.full_name || ''}
                         onChange={handleInputChange}
-                        className="w-full pl-12 pr-4 py-3 sm:py-4 bg-white border border-slate-300 placeholder-slate-500 text-slate-900 rounded-2xl focus:outline-none focus:ring-2 focus:ring-[#05294E] focus:border-[#05294E] transition-all duration-300 text-sm sm:text-base"
+                        className="w-full pl-12 pr-4 py-3 sm:py-4 bg-white border border-slate-300 placeholder-slate-500 text-slate-900 rounded-2xl focus:outline-none focus:ring-2 focus:ring-[#05294E] focus:border-[#05294E] transition-all duration-300 text-sm sm:text-base outline-none"
                         placeholder={t('authPage.register.enterFullName')}
                       />
                     </div>
@@ -825,7 +797,7 @@ const Auth: React.FC<AuthProps> = ({ mode }) => {
                         required
                         value={formData.email || ''}
                         onChange={handleInputChange}
-                        className="appearance-none relative block w-full pl-12 pr-4 py-3 sm:py-4 bg-white border border-slate-300 placeholder-slate-500 text-slate-900 rounded-2xl focus:outline-none focus:ring-2 focus:ring-[#05294E] focus:border-[#05294E] transition-all duration-300 text-sm sm:text-base"
+                        className="appearance-none relative block w-full pl-12 pr-4 py-3 sm:py-4 bg-white border border-slate-300 placeholder-slate-500 text-slate-900 rounded-2xl focus:outline-none focus:ring-2 focus:ring-[#05294E] focus:border-[#05294E] transition-all duration-300 text-sm sm:text-base outline-none"
                         placeholder={t('authPage.register.enterEmail')}
                         autoComplete="username"
                       />
@@ -853,7 +825,8 @@ const Auth: React.FC<AuthProps> = ({ mode }) => {
                           '--PhoneInputCountrySelectArrow-opacity': '0.8',
                           '--PhoneInput-color--focus': '#05294E'
                         }}
-                        className="phone-input-custom w-full pl-4 pr-4 py-3 sm:py-4 bg-white border border-slate-300 placeholder-slate-500 text-slate-900 rounded-2xl focus:outline-none focus:ring-2 focus:ring-[#05294E] focus:border-[#05294E] transition-all duration-300 text-sm sm:text-base"
+                        maxLength={20}
+                        className="phone-input-custom w-full pl-4 pr-4 py-3 sm:py-4 bg-white border border-slate-300 placeholder-slate-500 text-slate-900 rounded-2xl transition-all duration-300 text-sm sm:text-base"
                         placeholder={t('authPage.register.enterPhone')}
                       />
                     </div>
@@ -868,14 +841,21 @@ const Auth: React.FC<AuthProps> = ({ mode }) => {
                       <input
                         id="password"
                         name="password"
-                        type="password"
+                        type={showPassword ? "text" : "password"}
                         required
                         value={formData.password || ''}
                         onChange={handleInputChange}
-                        className="w-full pl-12 pr-4 py-3 sm:py-4 bg-white border border-slate-300 placeholder-slate-500 text-slate-900 rounded-2xl focus:outline-none focus:ring-2 focus:ring-[#05294E] focus:border-[#05294E] transition-all duration-300 text-sm sm:text-base"
+                        className="w-full pl-12 pr-12 py-3 sm:py-4 bg-white border border-slate-300 placeholder-slate-500 text-slate-900 rounded-2xl focus:outline-none focus:ring-2 focus:ring-[#05294E] focus:border-[#05294E] transition-all duration-300 text-sm sm:text-base outline-none"
                         placeholder={t('authPage.register.createPassword')}
                         autoComplete="new-password"
                       />
+                      <button
+                        type="button"
+                        onClick={() => setShowPassword(!showPassword)}
+                        className="absolute right-4 top-4 text-slate-400 hover:text-slate-600 focus:outline-none transition-colors"
+                      >
+                        {showPassword ? <EyeOff className="h-5 w-5" /> : <Eye className="h-5 w-5" />}
+                      </button>
                     </div>
                   </div>
 
@@ -888,14 +868,21 @@ const Auth: React.FC<AuthProps> = ({ mode }) => {
                       <input
                         id="confirmPassword"
                         name="confirmPassword"
-                        type="password"
+                        type={showConfirmPassword ? "text" : "password"}
                         required
                         value={formData.confirmPassword || ''}
                         onChange={handleInputChange}
-                        className="w-full pl-12 pr-4 py-3 sm:py-4 bg-white border border-slate-300 placeholder-slate-500 text-slate-900 rounded-2xl focus:outline-none focus:ring-2 focus:ring-[#05294E] focus:border-[#05294E] transition-all duration-300 text-sm sm:text-base"
+                        className="w-full pl-12 pr-12 py-3 sm:py-4 bg-white border border-slate-300 placeholder-slate-500 text-slate-900 rounded-2xl focus:outline-none focus:ring-2 focus:ring-[#05294E] focus:border-[#05294E] transition-all duration-300 text-sm sm:text-base outline-none"
                         placeholder={t('authPage.register.confirmYourPassword')}
                         autoComplete="new-password"
                       />
+                      <button
+                        type="button"
+                        onClick={() => setShowConfirmPassword(!showConfirmPassword)}
+                        className="absolute right-4 top-4 text-slate-400 hover:text-slate-600 focus:outline-none transition-colors"
+                      >
+                        {showConfirmPassword ? <EyeOff className="h-5 w-5" /> : <Eye className="h-5 w-5" />}
+                      </button>
                     </div>
                   </div>
 
@@ -916,7 +903,7 @@ const Auth: React.FC<AuthProps> = ({ mode }) => {
                         value={formData.referralCode || ''}
                         onChange={handleReferralCodeChange}
                         readOnly={isReferralCodeLocked}
-                        className={`w-full pl-12 pr-4 py-3 sm:py-4 bg-white border rounded-2xl focus:outline-none focus:ring-2 transition-all duration-300 text-sm sm:text-base ${
+                        className={`w-full pl-12 pr-4 py-3 sm:py-4 bg-white border rounded-2xl focus:outline-none focus:ring-2 transition-all duration-300 text-sm sm:text-base outline-none ${
                           isReferralCodeLocked 
                             ? 'bg-gray-50 cursor-not-allowed border-slate-300' 
                             : ''
@@ -927,7 +914,7 @@ const Auth: React.FC<AuthProps> = ({ mode }) => {
                             ? 'border-red-300 focus:ring-red-500 focus:border-red-500'
                             : 'border-slate-300 focus:ring-[#05294E] focus:border-[#05294E]'
                         }`}
-                        placeholder={isReferralCodeLocked ? 'Código aplicado automaticamente' : 'Digite SELLER ou MATR code'}
+                        placeholder={isReferralCodeLocked ? t('authPage.register.referralCodeAutoApplied') : t('authPage.register.referralCodePlaceholderSellerMatr')}
                         maxLength={20}
                       />
                       {referralCodeLoading && (
@@ -944,21 +931,6 @@ const Auth: React.FC<AuthProps> = ({ mode }) => {
                         <div className="absolute right-4 top-4">
                           <X className="h-5 w-5 text-red-500" />
                         </div>
-                      )}
-
-                      {/* Botão de limpar (X) visível quando trancado ou quando há texto */}
-                      {isReferralCodeLocked && (
-                        <button
-                          type="button"
-                          onClick={(e) => {
-                            e.preventDefault();
-                            clearReferralCode();
-                          }}
-                          className="absolute right-4 top-4 text-slate-400 hover:text-red-500 transition-colors bg-white rounded-full p-0.5"
-                          title="Remover código"
-                        >
-                          <X className="h-5 w-5" />
-                        </button>
                       )}
                     </div>
                     
@@ -985,7 +957,7 @@ const Auth: React.FC<AuthProps> = ({ mode }) => {
                   {activeTab === 'student' && (
                     <div className="lg:col-span-1">
                       <label htmlFor="dependents" className="block text-sm font-bold text-slate-900 mb-2">
-                        Dependents <span className="text-xs font-normal text-slate-500">- Family members (spouse and/or children)</span>
+                        {t('authPage.register.dependentsLabel')} <span className="text-xs font-normal text-slate-500">{t('authPage.register.dependentsHint')}</span>
                       </label>
                       <div className="relative">
                         <User className="absolute left-4 top-4 h-5 w-5 text-slate-400 z-10" />
@@ -993,19 +965,20 @@ const Auth: React.FC<AuthProps> = ({ mode }) => {
                         <select
                           id="dependents"
                           name="dependents"
-                          value={formData.dependents || 0}
+                          value={formData.dependents === null ? '' : formData.dependents}
                           onChange={(e) => {
-                            const value = parseInt(e.target.value) || 0;
-                            setFormData(prev => ({ ...prev, dependents: value }));
+                            const val = e.target.value === '' ? null : parseInt(e.target.value);
+                            setFormData(prev => ({ ...prev, dependents: val }));
                           }}
-                          className="appearance-none relative block w-full pl-12 pr-12 py-3 sm:py-4 bg-white border border-slate-300 text-slate-900 rounded-2xl focus:outline-none focus:ring-2 focus:ring-[#05294E] focus:border-[#05294E] transition-all duration-300 text-sm sm:text-base cursor-pointer"
+                          className="appearance-none relative block w-full pl-12 pr-12 py-3 sm:py-4 bg-white border border-slate-300 text-slate-900 rounded-2xl focus:outline-none focus:ring-2 focus:ring-[#05294E] focus:border-[#05294E] transition-all duration-300 text-sm sm:text-base cursor-pointer outline-none"
                         >
-                          <option value={0}>0 Dependents</option>
-                          <option value={1}>1 Dependent</option>
-                          <option value={2}>2 Dependents</option>
-                          <option value={3}>3 Dependents</option>
-                          <option value={4}>4 Dependents</option>
-                          <option value={5}>5 Dependents</option>
+                          <option value="" disabled>{t('authPage.register.selectDependents')}</option>
+                          <option value={0}>0 {t('authPage.register.dependentsLabel')}</option>
+                          <option value={1}>1 {t('authPage.register.dependentsLabel').slice(0, -1)}</option>
+                          <option value={2}>2 {t('authPage.register.dependentsLabel')}</option>
+                          <option value={3}>3 {t('authPage.register.dependentsLabel')}</option>
+                          <option value={4}>4 {t('authPage.register.dependentsLabel')}</option>
+                          <option value={5}>5 {t('authPage.register.dependentsLabel')}</option>
                         </select>
                 </div>
               </div>
@@ -1040,7 +1013,7 @@ const Auth: React.FC<AuthProps> = ({ mode }) => {
                         required
                         value={formData.universityName || ''}
                         onChange={handleInputChange}
-                        className="w-full pl-12 pr-4 py-3 sm:py-4 bg-white border border-slate-300 placeholder-slate-500 text-slate-900 rounded-2xl focus:outline-none focus:ring-2 focus:ring-[#D0151C] focus:border-[#D0151C] transition-all duration-300 text-sm sm:text-base"
+                        className="w-full pl-12 pr-4 py-3 sm:py-4 bg-white border border-slate-300 placeholder-slate-500 text-slate-900 rounded-2xl focus:outline-none focus:ring-2 focus:ring-[#D0151C] focus:border-[#D0151C] transition-all duration-300 text-sm sm:text-base outline-none"
                         placeholder={t('authPage.register.enterUniversityName')}
                       />
                     </div>
@@ -1059,7 +1032,7 @@ const Auth: React.FC<AuthProps> = ({ mode }) => {
                         required
                         value={formData.full_name || ''}
                         onChange={handleInputChange}
-                        className="w-full pl-12 pr-4 py-3 sm:py-4 bg-white border border-slate-300 placeholder-slate-500 text-slate-900 rounded-2xl focus:outline-none focus:ring-2 focus:ring-[#D0151C] focus:border-[#D0151C] transition-all duration-300 text-sm sm:text-base"
+                        className="w-full pl-12 pr-4 py-3 sm:py-4 bg-white border border-slate-300 placeholder-slate-500 text-slate-900 rounded-2xl focus:outline-none focus:ring-2 focus:ring-[#D0151C] focus:border-[#D0151C] transition-all duration-300 text-sm sm:text-base outline-none"
                         placeholder={t('authPage.register.yourFullName')}
                       />
                     </div>
@@ -1078,7 +1051,7 @@ const Auth: React.FC<AuthProps> = ({ mode }) => {
                         required
                         value={formData.email || ''}
                         onChange={handleInputChange}
-                        className="w-full pl-12 pr-4 py-3 sm:py-4 bg-white border border-slate-300 placeholder-slate-500 text-slate-900 rounded-2xl focus:outline-none focus:ring-2 focus:ring-[#D0151C] focus:border-[#D0151C] transition-all duration-300 text-sm sm:text-base"
+                        className="w-full pl-12 pr-4 py-3 sm:py-4 bg-white border border-slate-300 placeholder-slate-500 text-slate-900 rounded-2xl focus:outline-none focus:ring-2 focus:ring-[#D0151C] focus:border-[#D0151C] transition-all duration-300 text-sm sm:text-base outline-none"
                         placeholder={t('authPage.register.officialUniversityEmail')}
                       />
                     </div>
@@ -1108,7 +1081,8 @@ const Auth: React.FC<AuthProps> = ({ mode }) => {
                           '--PhoneInputCountrySelectArrow-opacity': '0.8',
                           '--PhoneInput-color--focus': '#D0151C'
                         }}
-                        className="w-full pl-4 pr-4 py-3 sm:py-4 bg-white border border-slate-300 placeholder-slate-500 text-slate-900 rounded-2xl focus:outline-none focus:ring-2 focus:ring-[#D0151C] focus:border-[#D0151C] transition-all duration-300 text-sm sm:text-base"
+                        maxLength={20}
+                        className="phone-input-custom university w-full pl-4 pr-4 py-3 sm:py-4 bg-white border border-slate-300 placeholder-slate-500 text-slate-900 rounded-2xl transition-all duration-300 text-sm sm:text-base"
                         placeholder={t('authPage.register.enterContactPhone')}
                       />
                     </div>
@@ -1123,14 +1097,21 @@ const Auth: React.FC<AuthProps> = ({ mode }) => {
                       <input
                         id="password"
                         name="password"
-                        type="password"
+                        type={showPassword ? "text" : "password"}
                         required
                         value={formData.password || ''}
                         onChange={handleInputChange}
-                        className="w-full pl-12 pr-4 py-3 sm:py-4 bg-white border border-slate-300 placeholder-slate-500 text-slate-900 rounded-2xl focus:outline-none focus:ring-2 focus:ring-[#05294E] focus:border-[#05294E] transition-all duration-300 text-sm sm:text-base"
+                        className="w-full pl-12 pr-12 py-3 sm:py-4 bg-white border border-slate-300 placeholder-slate-500 text-slate-900 rounded-2xl focus:outline-none focus:ring-2 focus:ring-[#D0151C] focus:border-[#D0151C] transition-all duration-300 text-sm sm:text-base outline-none"
                         placeholder={t('authPage.register.createPassword')}
                         autoComplete="new-password"
                       />
+                      <button
+                        type="button"
+                        onClick={() => setShowPassword(!showPassword)}
+                        className="absolute right-4 top-4 text-slate-400 hover:text-slate-600 focus:outline-none transition-colors"
+                      >
+                        {showPassword ? <EyeOff className="h-5 w-5" /> : <Eye className="h-5 w-5" />}
+                      </button>
                     </div>
                   </div>
 
@@ -1143,14 +1124,21 @@ const Auth: React.FC<AuthProps> = ({ mode }) => {
                       <input
                         id="confirmPassword"
                         name="confirmPassword"
-                        type="password"
+                        type={showConfirmPassword ? "text" : "password"}
                         required
                         value={formData.confirmPassword || ''}
                         onChange={handleInputChange}
-                        className="w-full pl-12 pr-4 py-3 sm:py-4 bg-white border border-slate-300 placeholder-slate-500 text-slate-900 rounded-2xl focus:outline-none focus:ring-2 focus:ring-[#05294E] focus:border-[#05294E] transition-all duration-300 text-sm sm:text-base"
+                        className="w-full pl-12 pr-12 py-3 sm:py-4 bg-white border border-slate-300 placeholder-slate-500 text-slate-900 rounded-2xl focus:outline-none focus:ring-2 focus:ring-[#D0151C] focus:border-[#D0151C] transition-all duration-300 text-sm sm:text-base outline-none"
                         placeholder={t('authPage.register.confirmYourPassword')}
                         autoComplete="new-password"
                       />
+                      <button
+                        type="button"
+                        onClick={() => setShowConfirmPassword(!showConfirmPassword)}
+                        className="absolute right-4 top-4 text-slate-400 hover:text-slate-600 focus:outline-none transition-colors"
+                      >
+                        {showConfirmPassword ? <EyeOff className="h-5 w-5" /> : <Eye className="h-5 w-5" />}
+                      </button>
                     </div>
                   </div>
                 </div>
@@ -1190,7 +1178,7 @@ const Auth: React.FC<AuthProps> = ({ mode }) => {
             </div>
 
             {/* Newsletter Consent Checkbox */}
-            <div className="flex items-center space-x-3 mb-4">
+            <div className="flex items-center space-x-3 mb-6">
               <input
                 type="checkbox"
                 id="newsletter-consent"
@@ -1198,8 +1186,8 @@ const Auth: React.FC<AuthProps> = ({ mode }) => {
                 onChange={(e) => setNewsletterConsent(e.target.checked)}
                 className="h-4 w-4 text-[#05294E] border-gray-300 rounded focus:ring-[#05294E] flex-shrink-0"
               />
-              <label htmlFor="newsletter-consent" className="text-sm text-slate-600 cursor-pointer leading-relaxed">
-                I want to receive newsletter emails with updates and important information
+              <label htmlFor="newsletter-consent" className="text-sm text-slate-600 cursor-pointer">
+                {t('authPage.register.newsletterConsent')}
               </label>
             </div>
 

@@ -23,6 +23,8 @@ interface Student {
   is_application_fee_paid?: boolean;
   seller_referral_code?: string | null;
   system_type?: string;
+  placement_fee_flow?: boolean;
+  is_placement_fee_paid?: boolean;
 }
 
 interface FeeOverride {
@@ -55,7 +57,7 @@ const FeeManagement: React.FC = () => {
   const [currentPage, setCurrentPage] = useState(1);
   const [itemsPerPage] = useState(20);
   const { getFeeAmount } = useFeeConfig();
-  
+
 
   useEffect(() => {
     fetchStudents();
@@ -69,7 +71,7 @@ const FeeManagement: React.FC = () => {
       // Buscar todos os estudantes
       const { data: studentsData, error: studentsError } = await supabase
         .from('user_profiles')
-        .select('id, user_id, full_name, email, dependents, has_paid_selection_process_fee, has_paid_i20_control_fee, is_application_fee_paid, seller_referral_code, system_type, created_at')
+        .select('id, user_id, full_name, email, dependents, has_paid_selection_process_fee, has_paid_i20_control_fee, is_application_fee_paid, seller_referral_code, system_type, placement_fee_flow, is_placement_fee_paid, created_at')
         .eq('role', 'student')
         .order('created_at', { ascending: false });
 
@@ -92,7 +94,7 @@ const FeeManagement: React.FC = () => {
         // Dependentes só afetam Application Fee ($100 por dependente)
         const systemType = student.system_type || 'legacy';
         const dependentsExtra = systemType === 'simplified' ? 0 : (dependents * 150); // $150 por dependente apenas no Selection Process (legacy)
-        
+
         // Determinar valores base baseado no system_type do estudante
         const baseSelectionFee = systemType === 'simplified' ? 350 : 400;
         const baseScholarshipFee = systemType === 'simplified' ? 550 : 900;
@@ -196,7 +198,7 @@ const FeeManagement: React.FC = () => {
 
       // Criar tabela se não existir
       const { error: createTableError } = await supabase.rpc('create_user_fee_overrides_table_if_not_exists');
-      
+
       if (createTableError) {
         console.warn('Erro ao criar tabela, tentando continuar:', createTableError);
       }
@@ -223,10 +225,10 @@ const FeeManagement: React.FC = () => {
             ...student,
             feeOverrides: editingFees,
             calculatedFees: {
-              selection_process: editingFees.selection_process_fee || selectionProcessFee,
-              application: 0, // Application fee é variável por universidade
-              scholarship: editingFees.scholarship_fee || scholarshipFee,
-              i20_control: editingFees.i20_control_fee || i20ControlFee
+              selection_process: editingFees.selection_process_fee ?? student.calculatedFees.selection_process,
+              application: student.calculatedFees.application,
+              scholarship: editingFees.scholarship_fee ?? student.calculatedFees.scholarship,
+              i20_control: editingFees.i20_control_fee ?? student.calculatedFees.i20_control
             }
           };
         }
@@ -264,10 +266,10 @@ const FeeManagement: React.FC = () => {
             ...student,
             feeOverrides: undefined,
             calculatedFees: {
-              selection_process: selectionProcessFee + dependentsExtra,
-              application: 0, // Application fee é variável por universidade
-              scholarship: scholarshipFee,
-              i20_control: i20ControlFee
+              selection_process: student.calculatedFees.selection_process,
+              application: student.calculatedFees.application,
+              scholarship: student.calculatedFees.scholarship,
+              i20_control: student.calculatedFees.i20_control
             }
           };
         }
@@ -396,9 +398,9 @@ const FeeManagement: React.FC = () => {
                 <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                   Selection Process
                 </th>
-              <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                Application Fee
-              </th>
+                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                  Application Fee
+                </th>
                 <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                   Scholarship Fee
                 </th>
@@ -453,9 +455,8 @@ const FeeManagement: React.FC = () => {
                       />
                     ) : (
                       <div className="flex items-center">
-                        <span className={`text-sm font-medium ${
-                          student.feeOverrides ? 'text-blue-600' : 'text-gray-900'
-                        }`}>
+                        <span className={`text-sm font-medium ${student.feeOverrides ? 'text-blue-600' : 'text-gray-900'
+                          }`}>
                           ${student.calculatedFees.selection_process.toFixed(2)}
                         </span>
                         {student.feeOverrides && (
@@ -468,79 +469,90 @@ const FeeManagement: React.FC = () => {
                     )}
                   </td>
 
-                {/* Application Fee (somente referência; varia por bolsa) */}
-                <td className="px-6 py-4">
-                  <div className="flex flex-col">
-                    <div className="flex items-center">
-                      <span className="text-sm font-medium text-gray-900">Varies by scholarship</span>
-                      {student.is_application_fee_paid && (
-                        <CheckCircle className="ml-2 h-4 w-4 text-green-500" />
-                      )}
-                    </div>
-                    <span className="text-xs text-slate-500">+ $100 per dependent (applied at checkout)</span>
-                  </div>
-                </td>
-
-
-
-                  {/* Scholarship Fee */}
+                  {/* Application Fee (somente referência; varia por bolsa) */}
                   <td className="px-6 py-4">
-                    {editingStudent === student.id ? (
-                      <input
-                        type="number"
-                        value={editingFees?.scholarship_fee || ''}
-                        onChange={(e) => setEditingFees(prev => ({
-                          ...prev!,
-                          scholarship_fee: Number(e.target.value)
-                        }))}
-                        className="w-24 px-2 py-1 border border-gray-300 rounded text-sm"
-                        min="0"
-                        step="0.01"
-                      />
-                    ) : (
+                    <div className="flex flex-col">
                       <div className="flex items-center">
-                        <span className={`text-sm font-medium ${
-                          student.feeOverrides ? 'text-blue-600' : 'text-gray-900'
-                        }`}>
-                          ${student.calculatedFees.scholarship.toFixed(2)}
-                        </span>
-                        {student.feeOverrides && (
-                          <span className="ml-1 text-xs text-blue-500">(custom)</span>
-                        )}
-                      </div>
-                    )}
-                  </td>
-
-                  {/* I-20 Control Fee */}
-                  <td className="px-6 py-4">
-                    {editingStudent === student.id ? (
-                      <input
-                        type="number"
-                        value={editingFees?.i20_control_fee || ''}
-                        onChange={(e) => setEditingFees(prev => ({
-                          ...prev!,
-                          i20_control_fee: Number(e.target.value)
-                        }))}
-                        className="w-24 px-2 py-1 border border-gray-300 rounded text-sm"
-                        min="0"
-                        step="0.01"
-                      />
-                    ) : (
-                      <div className="flex items-center">
-                        <span className={`text-sm font-medium ${
-                          student.feeOverrides ? 'text-blue-600' : 'text-gray-900'
-                        }`}>
-                          ${student.calculatedFees.i20_control.toFixed(2)}
-                        </span>
-                        {student.feeOverrides && (
-                          <span className="ml-1 text-xs text-blue-500">(custom)</span>
-                        )}
-                        {student.has_paid_i20_control_fee && (
+                        <span className="text-sm font-medium text-gray-900">Varies by scholarship</span>
+                        {student.is_application_fee_paid && (
                           <CheckCircle className="ml-2 h-4 w-4 text-green-500" />
                         )}
                       </div>
-                    )}
+                      <span className="text-xs text-slate-500">+ $100 per dependent (applied at checkout)</span>
+                    </div>
                   </td>
+
+
+
+                  {/* Scholarship Fee / I-20 ou Placement Fee baseado no fluxo */}
+                  {(student as any).placement_fee_flow ? (
+                    <td className="px-6 py-4" colSpan={2}>
+                      <div className="flex items-center">
+                        <span className="text-sm font-medium text-purple-700">Placement Fee</span>
+                        {(student as any).is_placement_fee_paid ? (
+                          <CheckCircle className="ml-2 h-4 w-4 text-green-500" />
+                        ) : (
+                          <span className="ml-2 text-xs text-slate-400">Not paid</span>
+                        )}
+                      </div>
+                      <span className="text-xs text-slate-400">Placement fee flow</span>
+                    </td>
+                  ) : (
+                    <>
+                      <td className="px-6 py-4">
+                        {editingStudent === student.id ? (
+                          <input
+                            type="number"
+                            value={editingFees?.scholarship_fee || ''}
+                            onChange={(e) => setEditingFees(prev => ({
+                              ...prev!,
+                              scholarship_fee: Number(e.target.value)
+                            }))}
+                            className="w-24 px-2 py-1 border border-gray-300 rounded text-sm"
+                            min="0"
+                            step="0.01"
+                          />
+                        ) : (
+                          <div className="flex items-center">
+                            <span className={`text-sm font-medium ${student.feeOverrides ? 'text-blue-600' : 'text-gray-900'}`}>
+                              ${student.calculatedFees.scholarship.toFixed(2)}
+                            </span>
+                            {student.feeOverrides && (
+                              <span className="ml-1 text-xs text-blue-500">(custom)</span>
+                            )}
+                          </div>
+                        )}
+                      </td>
+                      <td className="px-6 py-4">
+                        {editingStudent === student.id ? (
+                          <input
+                            type="number"
+                            value={editingFees?.i20_control_fee || ''}
+                            onChange={(e) => setEditingFees(prev => ({
+                              ...prev!,
+                              i20_control_fee: Number(e.target.value)
+                            }))}
+                            className="w-24 px-2 py-1 border border-gray-300 rounded text-sm"
+                            min="0"
+                            step="0.01"
+                          />
+                        ) : (
+                          <div className="flex items-center">
+                            <span className={`text-sm font-medium ${student.feeOverrides ? 'text-blue-600' : 'text-gray-900'}`}>
+                              ${student.calculatedFees.i20_control.toFixed(2)}
+                            </span>
+                            {student.feeOverrides && (
+                              <span className="ml-1 text-xs text-blue-500">(custom)</span>
+                            )}
+                            {student.has_paid_i20_control_fee && (
+                              <CheckCircle className="ml-2 h-4 w-4 text-green-500" />
+                            )}
+                          </div>
+                        )}
+                      </td>
+                    </>
+                  )}
+
 
                   {/* Actions */}
                   <td className="px-6 py-4">
@@ -592,47 +604,48 @@ const FeeManagement: React.FC = () => {
         </div>
 
         {/* Pagination */}
-        {totalPages > 1 && (
-          <div className="px-6 py-4 border-t border-gray-200">
-            <div className="flex items-center justify-between">
-              <div className="text-sm text-gray-700">
-                Showing {startIndex + 1} to {Math.min(startIndex + itemsPerPage, filteredStudents.length)} of {filteredStudents.length} results
-              </div>
-              <nav className="flex items-center space-x-2">
-                <button
-                  onClick={() => setCurrentPage(prev => Math.max(prev - 1, 1))}
-                  disabled={currentPage === 1}
-                  className="px-3 py-1 border border-gray-300 rounded text-sm hover:bg-gray-50 disabled:opacity-50"
-                >
-                  Previous
-                </button>
-                {Array.from({ length: Math.min(5, totalPages) }, (_, i) => {
-                  const page = i + 1;
-                  return (
-                    <button
-                      key={page}
-                      onClick={() => setCurrentPage(page)}
-                      className={`px-3 py-1 border rounded text-sm ${
-                        currentPage === page
+        {
+          totalPages > 1 && (
+            <div className="px-6 py-4 border-t border-gray-200">
+              <div className="flex items-center justify-between">
+                <div className="text-sm text-gray-700">
+                  Showing {startIndex + 1} to {Math.min(startIndex + itemsPerPage, filteredStudents.length)} of {filteredStudents.length} results
+                </div>
+                <nav className="flex items-center space-x-2">
+                  <button
+                    onClick={() => setCurrentPage(prev => Math.max(prev - 1, 1))}
+                    disabled={currentPage === 1}
+                    className="px-3 py-1 border border-gray-300 rounded text-sm hover:bg-gray-50 disabled:opacity-50"
+                  >
+                    Previous
+                  </button>
+                  {Array.from({ length: Math.min(5, totalPages) }, (_, i) => {
+                    const page = i + 1;
+                    return (
+                      <button
+                        key={page}
+                        onClick={() => setCurrentPage(page)}
+                        className={`px-3 py-1 border rounded text-sm ${currentPage === page
                           ? 'bg-blue-600 text-white border-blue-600'
                           : 'border-gray-300 hover:bg-gray-50'
-                      }`}
-                    >
-                      {page}
-                    </button>
-                  );
-                })}
-                <button
-                  onClick={() => setCurrentPage(prev => Math.min(prev + 1, totalPages))}
-                  disabled={currentPage === totalPages}
-                  className="px-3 py-1 border border-gray-300 rounded text-sm hover:bg-gray-50 disabled:opacity-50"
-                >
-                  Next
-                </button>
-              </nav>
+                          }`}
+                      >
+                        {page}
+                      </button>
+                    );
+                  })}
+                  <button
+                    onClick={() => setCurrentPage(prev => Math.min(prev + 1, totalPages))}
+                    disabled={currentPage === totalPages}
+                    className="px-3 py-1 border border-gray-300 rounded text-sm hover:bg-gray-50 disabled:opacity-50"
+                  >
+                    Next
+                  </button>
+                </nav>
+              </div>
             </div>
-          </div>
-        )}
+          )
+        }
       </div>
     </div>
   );

@@ -1,16 +1,13 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { Link, useLocation, useNavigate } from 'react-router-dom';
 import {
-  GraduationCap,
-  Award,
-  FileText,
   User,
+  FileText,
   BarChart3,
   Menu,
   X,
   LogOut,
   ChevronDown,
-  Star,
   Gift,
   Bell,
   MessageSquare
@@ -40,10 +37,10 @@ const StudentDashboardLayout: React.FC<StudentDashboardLayoutProps> = ({
   loading,
   children
 }) => {
-  const { t, i18n } = useTranslation();
+  const { t, i18n } = useTranslation(['dashboard', 'common']);
   const location = useLocation();
   const navigate = useNavigate();
-  const { logout, userProfile } = useAuth();
+  const { logout } = useAuth();
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const [userMenuOpen, setUserMenuOpen] = useState(false);
   const [showNotif, setShowNotif] = useState(false);
@@ -71,27 +68,11 @@ const StudentDashboardLayout: React.FC<StudentDashboardLayoutProps> = ({
   const { unreadCount: contextChatUnreadCount, resetUnreadCount } = useUnreadMessages();
 
   // Foto de identidade
-  const { data: identityPhotoStatus, isPending: identityPhotoLoading, refetch: refetchIdentityStatus } = useIdentityPhotoStatusQuery(user?.id);
+  const { isPending: _unusedLoading, refetch: refetchIdentityStatus } = useIdentityPhotoStatusQuery(user?.id);
   const [isSelfieModalOpen, setIsSelfieModalOpen] = useState(false);
-  const hasAutoOpenedSelfie = useRef(false);
 
-  // Lógica para abrir o modal de selfie automaticamente
-  useEffect(() => {
-    // Agora o modal pode aparecer em qualquer página do dashboard (exceto possivelmente o próprio questionário para não atrapalhar)
-    // Mas seguindo a instrução: se não tiver foto, aparece o modal.
-    const isSurveyPage = location.pathname.includes('selection-survey');
-    
-    if (userProfile?.has_paid_selection_process_fee && 
-        !isSurveyPage && // Mantemos apenas para não sobrepor o questionário ativamente
-        identityPhotoStatus === null && 
-        !identityPhotoLoading && 
-        !hasAutoOpenedSelfie.current) {
-      
-      console.log('✨ [StudentDashboardLayout] Abrindo modal de selfie automaticamente (Se não houver foto)');
-      setIsSelfieModalOpen(true);
-      hasAutoOpenedSelfie.current = true;
-    }
-  }, [userProfile?.has_paid_selection_process_fee, identityPhotoStatus, identityPhotoLoading, location.pathname]);
+
+  // Removido auto-opening da selfie - agora ocorre organicamente no Onboarding
 
   // Use context count if it's been updated, otherwise use server count
   const displayChatUnreadCount = contextChatUnreadCount > 0 ? contextChatUnreadCount : serverChatUnreadCount;
@@ -114,25 +95,9 @@ const StudentDashboardLayout: React.FC<StudentDashboardLayoutProps> = ({
   const paidAt = profile?.selection_process_paid_at ? new Date(profile.selection_process_paid_at) : null;
   const isExemptedByLegacy = profile?.selection_process_fee_paid && (!paidAt || paidAt < SURVEY_THRESHOLD_DATE);
 
-  // Redirecionamento obrigatório para o questionário do processo seletivo
-  useEffect(() => {
-    // Se o usuário está isento por ser um pagamento antigo, não redireciona
-    if (isExemptedByLegacy) return;
+  // Redirecionamento obrigatório unificado removido para permitir acesso ao dashboard restrito (Chat/Perfil/Suporte) durante o onboarding.
+  // A própria Overview.tsx e o estado isRestricted já lidam com a experiência do usuário nessas etapas.
 
-    // Se o usuário pagou a taxa do processo seletivo mas ainda não passou na pesquisa,
-    // e não está na rota da pesquisa, redireciona para lá.
-    if (
-      !loading &&
-      profile?.selection_process_fee_paid &&
-      !profile?.selection_survey_passed &&
-      !location.pathname.includes('selection-survey') &&
-      !location.pathname.includes('selection-process-fee-success') &&
-      !location.pathname.includes('selection-process-fee-error')
-    ) {
-      console.log('🔒 Redirecionando para o Questionário do Processo Seletivo...');
-      navigate('/student/dashboard/selection-survey');
-    }
-  }, [profile, loading, location.pathname, navigate, isExemptedByLegacy]);
 
   // Clean up duplicate useEffect if present (lines 80-83 in original file were duplicate)
 
@@ -212,8 +177,9 @@ const StudentDashboardLayout: React.FC<StudentDashboardLayoutProps> = ({
   /* Sidebar Items Definitions */
   const allSidebarItems = [
     { id: 'overview', label: t('studentDashboard.sidebar.overview'), icon: BarChart3, path: '/student/dashboard/overview' },
-    { id: 'scholarships', label: t('studentDashboard.sidebar.browseScholarships'), icon: Award, path: '/student/dashboard/scholarships' },
-    { id: 'cart', label: t('studentDashboard.sidebar.selectedScholarships'), icon: GraduationCap, path: '/student/dashboard/cart' },
+    // TODO: FUTURE_REMOVAL - Hiding per user request
+    // { id: 'scholarships', label: t('studentDashboard.sidebar.browseScholarships'), icon: Award, path: '/student/dashboard/scholarships' },
+    // { id: 'cart', label: t('studentDashboard.sidebar.selectedScholarships'), icon: GraduationCap, path: '/student/dashboard/cart' },
     { id: 'applications', label: t('studentDashboard.sidebar.myApplications'), icon: FileText, path: '/student/dashboard/applications' },
     { id: 'chat', label: t('studentDashboard.sidebar.supportChat'), icon: MessageSquare, path: '/student/dashboard/chat' },
     { id: 'rewards', label: t('studentDashboard.sidebar.matriculaRewards'), icon: Gift, path: '/student/dashboard/rewards' },
@@ -244,19 +210,9 @@ const StudentDashboardLayout: React.FC<StudentDashboardLayoutProps> = ({
     // Em modo restrito, removemos quase tudo
     const allowedIds = ['chat', 'profile', 'rewards'];
     displayedSidebarItems = allSidebarItems.filter(item => allowedIds.includes(item.id));
-
-    // Adicionar o item do Processo Seletivo no topo
-    displayedSidebarItems.unshift({
-      id: 'selection-survey',
-      label: t('selectionSurvey.title') || 'Processo Seletivo',
-      icon: FileText,
-      path: '/student/dashboard/selection-survey'
-    });
   }
 
-
-  const isSelectionSurveyPage = location.pathname.includes('selection-survey');
-  const showSidebar = !isSelectionSurveyPage;
+  const showSidebar = true; // Sidebar sempre exibe os permitidos, visto que sem obrigações concluídas ele sequer fica no Dashboard
 
   return (
     <div className="h-screen flex flex-col lg:flex-row w-full overflow-hidden">
@@ -300,20 +256,13 @@ const StudentDashboardLayout: React.FC<StudentDashboardLayoutProps> = ({
                       className="w-full h-full object-cover"
                     />
                   ) : (
-                    <GraduationCap className="h-5 w-5 sm:h-6 sm:w-6 text-white" />
+                    <User className="h-5 w-5 sm:h-6 sm:w-6 text-white" />
                   )}
                 </div>
                 <div className="flex-1 min-w-0">
                   <h3 className="font-semibold text-slate-900 truncate text-sm sm:text-base">{profile?.name || user?.name}</h3>
-                  <p className="text-xs sm:text-sm text-slate-500 truncate">{t('studentDashboard.title').replace(' Dashboard', '')}</p>
+                  <p className="text-xs sm:text-sm text-slate-500 truncate">Painel do Estudante</p>
                 </div>
-              </div>
-
-              <div className="flex items-center justify-center mt-3">
-                <span className="inline-flex items-center px-2 sm:px-3 py-1 rounded-full text-xs font-medium bg-blue-100 text-blue-700">
-                  <Star className="h-3 w-3 mr-1" />
-                  Active {t('studentDashboard.title').replace(' Dashboard', '')}
-                </span>
               </div>
             </div>
 
@@ -325,7 +274,7 @@ const StudentDashboardLayout: React.FC<StudentDashboardLayoutProps> = ({
                 const isActive = activeTab === item.id;
 
                 // Em modo restrito, o item do Processo Seletivo deve pulsar
-                const isSelectionSurveyLink = item.id === 'selection-survey';
+
 
                 return (
                   <Link
@@ -334,9 +283,7 @@ const StudentDashboardLayout: React.FC<StudentDashboardLayoutProps> = ({
                     className={`group flex items-center justify-between px-3 sm:px-4 py-2.5 sm:py-3 rounded-xl font-medium transition-all duration-200 
                       ${isActive
                         ? 'bg-blue-600 text-white shadow-lg'
-                        : isSelectionSurveyLink
-                          ? 'bg-amber-50 text-amber-700 border border-amber-200 animate-pulse hover:bg-amber-100'
-                          : 'text-slate-600 hover:text-slate-900 hover:bg-slate-100'
+                        : 'text-slate-600 hover:text-slate-900 hover:bg-slate-100'
                       }`}
                     onClick={() => {
                       if (window.innerWidth < 1024) setSidebarOpen(false);
@@ -352,8 +299,7 @@ const StudentDashboardLayout: React.FC<StudentDashboardLayoutProps> = ({
                       <div className="relative">
                         <Icon className={`h-4 w-4 sm:h-5 sm:w-5 
                             ${isActive ? 'text-white' : ''} 
-                            ${!isActive && !isSelectionSurveyLink ? 'text-slate-500' : ''}
-                            ${!isActive && isSelectionSurveyLink ? 'text-amber-600' : ''}
+                            ${!isActive ? 'text-slate-500' : ''}
                         `} />
 
                         {item.id === 'chat' && displayChatUnreadCount > 0 && (
@@ -438,24 +384,24 @@ const StudentDashboardLayout: React.FC<StudentDashboardLayoutProps> = ({
                 {showNotif && (
                   <div className="hidden md:block absolute right-0 top-full mt-2 w-80 bg-white rounded-xl shadow-xl border border-slate-200 py-2 z-50">
                     <div className="px-4 pb-2 border-b border-slate-200 font-semibold text-slate-900 flex items-center justify-between">
-                      <span>Notifications</span>
+                      <span>{t('dashboard:studentDashboard.notifications.title')}</span>
                       <div className="flex items-center gap-2 text-xs">
-                        <button onClick={markAllNotificationsAsRead} className="text-blue-600 hover:underline">Mark all as read</button>
+                        <button onClick={markAllNotificationsAsRead} className="text-blue-600 hover:underline">{t('dashboard:studentDashboard.notifications.markAllAsRead')}</button>
                         <span className="text-slate-300">|</span>
-                        <button onClick={clearAll} className="text-red-600 hover:underline">Clear</button>
+                        <button onClick={clearAll} className="text-red-600 hover:underline">{t('dashboard:studentDashboard.notifications.clearAll')}</button>
                       </div>
                     </div>
                     <div className="max-h-80 overflow-y-auto">
                       {notifications.length === 0 ? (
-                        <div className="px-4 py-6 text-sm text-slate-500">No notifications</div>
+                        <div className="px-4 py-6 text-sm text-slate-500">{t('dashboard:studentDashboard.notifications.noNotifications')}</div>
                       ) : (
                         notifications.map((n) => (
                           <div key={n.id} className={`px-4 py-3 hover:bg-slate-50 cursor-pointer ${!n.read_at ? 'bg-slate-50' : ''}`} onClick={() => openNotification(n)}>
                             <div className="text-sm font-medium text-slate-900 flex items-center justify-between">
-                              <span>{n.title}</span>
+                              <span>{t(`dashboard:studentDashboard.notifications.${n.title}`, n.title)}</span>
                               {!n.read_at && <span className="ml-2 h-2 w-2 rounded-full bg-blue-500 inline-block"></span>}
                             </div>
-                            <div className="text-xs text-slate-600 mt-0.5">{n.message}</div>
+                            <div className="text-xs text-slate-600 mt-0.5">{t(`dashboard:studentDashboard.notifications.${n.message}`, n.message)}</div>
                             <div className="text-[10px] text-slate-400 mt-1">{new Date(n.created_at).toLocaleString()}</div>
                           </div>
                         ))
@@ -464,6 +410,8 @@ const StudentDashboardLayout: React.FC<StudentDashboardLayoutProps> = ({
                   </div>
                 )}
               </div>
+
+
 
               {/* Language Selector - Desktop */}
               <div className="hidden sm:block">
@@ -583,7 +531,7 @@ const StudentDashboardLayout: React.FC<StudentDashboardLayoutProps> = ({
       />
 
       {/* Modal de Verificação de Identidade (Selfie) */}
-      <IdentityVerificationModal 
+      <IdentityVerificationModal
         isOpen={isSelfieModalOpen}
         onClose={() => setIsSelfieModalOpen(false)}
         onSuccess={() => {

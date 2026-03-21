@@ -2,17 +2,15 @@ import React, { useEffect, useState, useRef } from 'react';
 import { useNavigate, useLocation, useSearchParams } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import { useAuth } from '../../hooks/useAuth';
-import PaymentSuccessOverlay from '../../components/PaymentSuccessOverlay';
+import PaymentStatusOverlay from '../../components/PaymentStatusOverlay';
 import { dispatchCacheInvalidationEvent, CacheInvalidationEvent } from '../../utils/cacheInvalidation';
 import { supabase } from '../../lib/supabase';
-
 
 const I20ControlFeeSuccess: React.FC = () => {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [showAnimation, setShowAnimation] = useState(false);
   const [paidAmount, setPaidAmount] = useState<number | null>(null);
-  const [promotionalCoupon, setPromotionalCoupon] = useState<string | null>(null);
   const navigate = useNavigate();
   const location = useLocation();
   const [searchParams] = useSearchParams();
@@ -21,10 +19,8 @@ const I20ControlFeeSuccess: React.FC = () => {
   const sessionId = params.get('session_id');
   const reference = searchParams.get('ref') || searchParams.get('reference');
   const paymentMethod = searchParams.get('pm') || searchParams.get('payment_method');
-  const { t } = useTranslation();
+  const { t } = useTranslation(['dashboard', 'payment', 'common']);
   const hasRunRef = useRef(false);
-
-  console.log('🔍 [I20ControlFeeSuccess] Componente renderizado com sessionId:', sessionId, 'reference:', reference);
 
   // Função para verificar pagamento Parcelow
   const verifyParcelowPayment = async (reference: string) => {
@@ -39,10 +35,7 @@ const I20ControlFeeSuccess: React.FC = () => {
 
     const poll = async () => {
       attempts++;
-      console.log(`[Parcelow] Tentativa ${attempts}/${maxAttempts}`);
-
       try {
-        // Buscar o pagamento pelo reference (que pode estar truncado)
         const { data: payment } = await supabase
           .from('individual_fee_payments')
           .select('*')
@@ -54,15 +47,11 @@ const I20ControlFeeSuccess: React.FC = () => {
           .maybeSingle();
 
         if (payment && payment.parcelow_status === 'paid') {
-          console.log('[Parcelow] ✅ Pagamento confirmado!');
           setPaidAmount(payment.amount);
           dispatchCacheInvalidationEvent(CacheInvalidationEvent.PAYMENT_COMPLETED);
           setLoading(false);
           setShowAnimation(true);
-
-          setTimeout(() => {
-            navigate('/student/dashboard/applications');
-          }, 6000);
+          setTimeout(() => navigate('/student/dashboard/applications'), 6000);
           return;
         }
 
@@ -71,10 +60,8 @@ const I20ControlFeeSuccess: React.FC = () => {
           setLoading(false);
           return;
         }
-
         setTimeout(poll, 10000);
       } catch (err) {
-        console.error('[Parcelow] Erro:', err);
         if (attempts >= maxAttempts) {
           setError('Payment verification failed');
           setLoading(false);
@@ -83,32 +70,19 @@ const I20ControlFeeSuccess: React.FC = () => {
         }
       }
     };
-
     poll();
   };
 
   useEffect(() => {
-    // Aguardar usuário estar carregado
-    if (!user) {
-      console.log('[I20ControlFeeSuccess] Aguardando autenticação do usuário...');
-      return;
-    }
-
-    if (hasRunRef.current) return;
+    if (!user || hasRunRef.current) return;
     hasRunRef.current = true;
 
-    // Detectar se é pagamento Parcelow
-    // Se houver reference e NÃO houver sessionId, é Parcelow
-    // (A Parcelow trunca a URL, então não podemos depender do payment_method)
     if (reference && !sessionId) {
-      console.log('[Parcelow] Pagamento Parcelow detectado (via reference)');
       verifyParcelowPayment(reference);
       return;
     }
     
-    // Fallback: se tiver payment_method=parcelow explicitamente
     if (paymentMethod === 'parcelow' && reference) {
-      console.log('[Parcelow] Pagamento Parcelow detectado (via payment_method)');
       verifyParcelowPayment(reference);
       return;
     }
@@ -150,177 +124,50 @@ const I20ControlFeeSuccess: React.FC = () => {
           throw new Error(data.error || data.message || 'Failed to verify session.');
         }
 
-        console.log('✅ [I20ControlFeeSuccess] Sessão verificada com sucesso:', data);
-        console.log('✅ [I20ControlFeeSuccess] Dados do pagamento (RAW):', JSON.stringify(data, null, 2));
-        console.log('✅ [I20ControlFeeSuccess] final_amount:', data.final_amount, 'tipo:', typeof data.final_amount);
-        console.log('✅ [I20ControlFeeSuccess] amount_paid:', data.amount_paid, 'tipo:', typeof data.amount_paid);
-        console.log('✅ [I20ControlFeeSuccess] promotional_coupon:', data.promotional_coupon);
+        const gAmount = data.gross_amount_usd != null ? Number(data.gross_amount_usd) : 
+                        data.final_amount != null ? Number(data.final_amount) : 
+                        data.amount_paid != null ? Number(data.amount_paid) : null;
         
-        // Extrair informações do pagamento
-        // Priorizar gross_amount_usd (valor bruto que o aluno realmente pagou), senão usar final_amount ou amount_paid
-        // Converter para número se necessário e verificar se é válido
-        const grossAmountUsd = data.gross_amount_usd != null ? Number(data.gross_amount_usd) : null;
-        const finalAmount = data.final_amount != null ? Number(data.final_amount) : null;
-        const amountPaid = data.amount_paid != null ? Number(data.amount_paid) : null;
+        if (gAmount) setPaidAmount(gAmount);
         
-        if (grossAmountUsd != null && !isNaN(grossAmountUsd) && grossAmountUsd > 0) {
-          console.log('✅ [I20ControlFeeSuccess] Usando gross_amount_usd:', grossAmountUsd);
-          setPaidAmount(grossAmountUsd);
-        } else if (finalAmount != null && !isNaN(finalAmount) && finalAmount > 0) {
-          console.log('✅ [I20ControlFeeSuccess] Usando final_amount:', finalAmount);
-          setPaidAmount(finalAmount);
-        } else if (amountPaid != null && !isNaN(amountPaid) && amountPaid > 0) {
-          console.log('✅ [I20ControlFeeSuccess] Usando amount_paid:', amountPaid);
-          setPaidAmount(amountPaid);
-        } else {
-          console.warn('⚠️ [I20ControlFeeSuccess] Nenhum valor válido encontrado! gross_amount_usd:', grossAmountUsd, 'final_amount:', finalAmount, 'amount_paid:', amountPaid);
-        }
-        if (data.promotional_coupon) {
-          console.log('✅ [I20ControlFeeSuccess] Cupom promocional detectado:', data.promotional_coupon);
-          setPromotionalCoupon(data.promotional_coupon);
-        }
-        
-        // Invalidar cache
         dispatchCacheInvalidationEvent(CacheInvalidationEvent.PAYMENT_COMPLETED);
-        
         setLoading(false);
         setShowAnimation(true);
-        
-        // Aguardar animação e redirecionar
-        setTimeout(() => {
-          navigate('/student/dashboard/applications');
-        }, 6000);
-
-        // Log Stripe payment success
-        // try {
-        //   // IP best-effort
-        //   let clientIp: string | undefined = undefined;
-        //   try {
-        //     const controller = new AbortController();
-        //     const timeout = setTimeout(() => controller.abort(), 2000);
-        //     const res = await fetch('https://api.ipify.org?format=json', { signal: controller.signal });
-        //     clearTimeout(timeout);
-        //     if (res.ok) {
-        //       const j = await res.json();
-        //       clientIp = j?.ip;
-        //     }
-        //   } catch (_) {}
-
-        //   const { data: authUser } = await supabase.auth.getUser();
-        //   const authUserId = authUser.user?.id;
-        //   if (authUserId) {
-        //     const { data: profile } = await supabase.from('user_profiles').select('id').eq('user_id', authUserId).single();
-        //     if (profile?.id) {
-        //       await supabase.rpc('log_student_action', {
-        //         p_student_id: profile.id,
-        //         p_action_type: 'fee_payment',
-        //         p_action_description: 'I-20 Control Fee paid via Stripe',
-        //         p_performed_by: authUserId,
-        //         p_performed_by_type: 'student',
-        //         p_metadata: {
-        //           fee_type: 'i20_control',
-        //           payment_method: 'stripe',
-        //           amount: getFeeAmount('i20_control_fee') || 0,
-        //           session_id: sessionId,
-        //           ip: clientIp
-        //         }
-        //       });
-        //     }
-        //   }
-        // } catch (logErr) {
-        //   console.error('[I20ControlFeeSuccess] Failed to log stripe payment:', logErr);
-        // }
+        setTimeout(() => navigate('/student/dashboard/applications'), 6000);
       } catch (err: any) {
-        console.error('❌ [I20ControlFeeSuccess] Erro ao verificar sessão:', err);
         setError(err.message || 'Error verifying payment.');
         setLoading(false);
       }
     };
 
     verifySession();
-  }, [sessionId, reference, paymentMethod, user]);
+  }, [sessionId, reference, paymentMethod, user, navigate]);
 
-  if (loading) {
-    return (
-      <div className="min-h-screen bg-green-50 flex flex-col items-center justify-center px-4">
-        <div className="bg-white rounded-2xl shadow-lg p-10 max-w-md w-full flex flex-col items-center">
-          <svg className="h-16 w-16 text-green-600 mb-4 animate-spin" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-            <circle cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" fill="none" />
-          </svg>
-            <h1 className="text-3xl font-bold text-green-700 mb-2">{t('successPages.i20ControlFee.verifying')}</h1>
-            <p className="text-slate-700 mb-6 text-center">{t('successPages.i20ControlFee.pleaseWait')}</p>
-        </div>
-      </div>
-    );
-  }
-
-  if (error) {
-    return (
-      <div className="min-h-screen bg-red-50 flex flex-col items-center justify-center px-4">
-        <div className="bg-white rounded-2xl shadow-lg p-10 max-w-md w-full flex flex-col items-center">
-          <svg className="h-16 w-16 text-red-600 mb-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 8v4m0 4h.01" />
-          </svg>
-          <h1 className="text-3xl font-bold text-red-700 mb-2">I-20 Control Fee Payment Error</h1>
-          <p className="text-slate-700 mb-6 text-center">There was a problem processing your payment.<br/>Please try again. If the error persists, contact support.</p>
-          <button 
-            className="bg-blue-600 text-white px-6 py-3 rounded-xl font-bold hover:bg-blue-700 transition-all duration-300"
-            onClick={() => navigate('/student/dashboard/applications')}
-          >
-            Back to My Applications
-          </button>
-        </div>
-      </div>
-    );
-  }
-
-  // Se deve mostrar animação, usar o overlay
-  if (showAnimation && !loading && !error) {
-    // Mesma lógica do SelectionProcessFeeSuccess
-    console.log('✅ [I20ControlFeeSuccess] Exibindo animação - paidAmount:', paidAmount);
-    const messageText = `${t('successPages.common.paymentProcessedAmount')} ${t('successPages.i20ControlFee.message')}`;
-    console.log('✅ [I20ControlFeeSuccess] Mensagem final:', messageText);
-    
-    return (
-      <div className="min-h-screen bg-green-50 flex flex-col items-center justify-center px-4 relative">
-        <PaymentSuccessOverlay
-          isSuccess={true}
-          title={t('successPages.i20ControlFee.title')}
-          message={messageText}
-        />
-      </div>
-    );
-  }
+  const getStatus = (): 'loading' | 'success' | 'error' => {
+    if (error) return 'error';
+    if (showAnimation && !loading) return 'success';
+    return 'loading';
+  };
 
   return (
-    <div className="min-h-screen bg-green-50 flex flex-col items-center justify-center px-4">
-      <div className="bg-white rounded-2xl shadow-lg p-10 max-w-md w-full flex flex-col items-center">
-        {loading ? (
-          <>
-            <svg className="h-16 w-16 text-green-600 mb-4 animate-spin" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <circle cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" fill="none" />
-            </svg>
-            <h1 className="text-3xl text-center font-bold text-green-700 mb-2">{t('successPages.i20ControlFee.verifying')}</h1>
-            <p className="text-slate-700 mb-6 text-center">{t('successPages.i20ControlFee.pleaseWait')}</p>
-          </>
-        ) : error ? (
-          <>
-            <svg className="h-16 w-16 text-red-600 mb-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 8v4m0 4h.01" />
-            </svg>
-            <h1 className="text-3xl font-bold text-red-700 mb-2">{t('successPages.i20ControlFee.errorTitle')}</h1>
-            <p className="text-slate-700 mb-6 text-center">{t('successPages.i20ControlFee.errorMessage')}<br/>{t('successPages.i20ControlFee.errorRetry')}</p>
-            <button 
-              className="bg-blue-600 text-white px-6 py-3 rounded-xl font-bold hover:bg-blue-700 transition-all duration-300"
-              onClick={() => navigate('/student/dashboard/applications')}
-            >
-              {t('successPages.i20ControlFee.button')}
-            </button>
-          </>
-        ) : null}
-      </div>
-    </div>
+    <PaymentStatusOverlay
+      status={getStatus()}
+      title={
+        getStatus() === 'loading' ? t('successPages.i20ControlFee.verifying') :
+        getStatus() === 'success' ? t('successPages.i20ControlFee.title') :
+        t('successPages.i20ControlFee.errorTitle')
+      }
+      message={
+        getStatus() === 'loading' ? t('successPages.i20ControlFee.pleaseWait') :
+        getStatus() === 'success' ? `${t('successPages.common.paymentProcessedAmount')} $${paidAmount || ''} ${t('successPages.i20ControlFee.message')}` :
+        (error || t('successPages.i20ControlFee.errorMessage'))
+      }
+      errorDetails={error}
+      onRetry={() => navigate('/student/dashboard/applications')}
+      onHome={() => navigate('/student/dashboard')}
+      showPremiumLoading={true}
+    />
   );
 };
 
-export default I20ControlFeeSuccess; 
+export default I20ControlFeeSuccess;

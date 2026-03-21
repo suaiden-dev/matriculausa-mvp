@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useCallback } from 'react';
-import { Routes, Route, useNavigate, useLocation } from 'react-router-dom';
+import { Routes, Route } from 'react-router-dom';
 import { supabase } from '../../lib/supabase';
 import { Scholarship } from '../../types';
 import { useAuth } from '../../hooks/useAuth';
@@ -11,14 +11,13 @@ import Overview from './Overview';
 import ScholarshipBrowser from './ScholarshipBrowser';
 import MyApplications from './MyApplications';
 import ProfileManagement from './ProfileManagement';
-import { GraduationCap } from 'lucide-react';
+
 import { useCartStore } from '../../stores/applicationStore';
 import DocumentsAndScholarshipChoice from './DocumentsAndScholarshipChoice';
 import CollegeEnrollmentCheckout from './CollegeEnrollmentCheckout';
 import CartPage from './CartPage';
 import ScholarshipFeeSuccess from './ScholarshipFeeSuccess';
 import ScholarshipFeeError from './ScholarshipFeeError';
-import SelectionProcessFeeSuccess from './SelectionProcessFeeSuccess';
 import SelectionProcessFeeError from './SelectionProcessFeeError';
 import ApplicationFeeSuccess from './ApplicationFeeSuccess';
 import ApplicationFeeError from './ApplicationFeeError';
@@ -34,9 +33,6 @@ import { ZelleCheckoutPage } from '../../components/ZelleCheckoutPage';
 import I20ControlFeeSuccess from './I20ControlFeeSuccess';
 import I20ControlFeeError from './I20ControlFeeError';
 import IdentityVerification from './IdentityVerification';
-import ProcessoSeletivo from './ProcessoSeletivo';
-
-
 interface StudentProfile {
   id: string;
   name: string;
@@ -66,7 +62,6 @@ interface Application {
 }
 
 const StudentDashboard: React.FC = () => {
-  const location = useLocation();
   const queryClient = useQueryClient();
   const [scholarships, setScholarships] = useState<Scholarship[]>([]);
   const [applications, setApplications] = useState<Application[]>([]);
@@ -74,8 +69,7 @@ const StudentDashboard: React.FC = () => {
   const { user, userProfile } = useAuth();
   const [dashboardLoading, setDashboardLoading] = useState(true);
   const [hasLoadedData, setHasLoadedData] = useState(false);
-  const { cart, fetchCart } = useCartStore();
-  const navigate = useNavigate();
+  const { fetchCart } = useCartStore();
   const [dashboardError, setDashboardError] = useState<string | null>(null);
   const [recentApplications, setRecentApplications] = useState<Application[]>([]);
 
@@ -92,15 +86,27 @@ const StudentDashboard: React.FC = () => {
   const [referralResult, setReferralResult] = useState<any>(null);
 
   const loadDashboardData = useCallback(async () => {
-    if (!user || !userProfile) return;
+    console.log('🔄 [Dashboard Index] loadDashboardData iniciado. Contexto:', { 
+      hasUser: !!user, 
+      hasUserProfile: !!userProfile, 
+      userId: user?.id,
+      hasLoadedData 
+    });
 
     try {
       if (!hasLoadedData) {
+        console.log('⏳ [Dashboard Index] Definindo dashboardLoading = true');
         setDashboardLoading(true);
       }
       setDashboardError(null);
-      // Buscar bolsas reais do Supabase com informações da universidade
-      // NOVO: Buscar bolsas via função RPC protegida
+
+      if (!user || !userProfile) {
+        console.warn('⚠️ [Dashboard Index] user ou userProfile nulos. Aguardando autenticação...');
+        // Se ainda não temos usuário, não marcamos como erro, apenas esperamos o próximo render
+        return;
+      }
+
+      console.log('📡 [Dashboard Index] Buscando bolsas e dados da sessão...');
       const { data: sessionData } = await supabase.auth.getSession();
       const userId = sessionData?.session?.user?.id;
       if (!userId) {
@@ -162,9 +168,18 @@ const StudentDashboard: React.FC = () => {
         setApplications([]);
         setDashboardError('Error fetching applications.');
       } else {
-        setApplications(applicationsData as Application[]);
+        // Normalizar dados da universidade (garantir que seja objeto, não array)
+        const formattedApplications = (applicationsData || []).map((app: any) => {
+          const scholarship = app.scholarship || app.scholarships;
+          if (scholarship && Array.isArray(scholarship.universities)) {
+            scholarship.universities = scholarship.universities[0];
+          }
+          return app;
+        }) as Application[];
+
+        setApplications(formattedApplications);
         // Recentes: últimas 5
-        const sorted = [...(applicationsData as Application[])].sort((a, b) => new Date(b.applied_at).getTime() - new Date(a.applied_at).getTime());
+        const sorted = [...formattedApplications].sort((a, b) => new Date(b.applied_at).getTime() - new Date(a.applied_at).getTime());
         setRecentApplications(sorted.slice(0, 5));
       }
       // Buscar perfil real do Supabase
@@ -200,11 +215,13 @@ const StudentDashboard: React.FC = () => {
         console.log('🔍 [Dashboard Index] Formatted Profile State:', formattedProfile);
         setProfile(formattedProfile);
       }
+      console.log('✅ [Dashboard Index] Dados carregados com sucesso. hasLoadedData = true');
       setHasLoadedData(true);
     } catch (error) {
-      console.error('Error loading dashboard data:', error);
+      console.error('❌ [Dashboard Index] Erro ao carregar dados do dashboard:', error);
       setDashboardError('Error loading dashboard data');
     } finally {
+      console.log('🏁 [Dashboard Index] Finalizando carregamento. dashboardLoading = false');
       setDashboardLoading(false);
     }
   }, [user, userProfile, hasLoadedData]);
@@ -331,79 +348,9 @@ const StudentDashboard: React.FC = () => {
     availableScholarships: scholarships.length
   };
 
-  const isChatRoute = location.pathname.startsWith('/student/dashboard/chat');
-
   return (
     <StudentDashboardLayout user={user} profile={profile} loading={dashboardLoading}>
-      {/* Área de proteção para o botão */}
-      <div className="floating-cart-area" />
-      {/* Botão do Carrinho */}
-      {!isChatRoute && (
-        <div
-          style={{
-            position: 'fixed',
-            bottom: '20px',
-            right: '20px',
-            zIndex: 99999,
-            display: 'flex',
-            alignItems: 'center',
-            justifyContent: 'center'
-          }}
-        >
-          <button
-            onClick={() => navigate('/student/dashboard/cart')}
-            style={{
-              backgroundColor: '#05294E',
-              color: 'white',
-              borderRadius: '50%',
-              width: '60px',
-              height: '60px',
-              display: 'flex',
-              alignItems: 'center',
-              justifyContent: 'center',
-              border: '3px solid white',
-              boxShadow: '0 8px 32px rgba(5, 41, 78, 0.3)',
-              cursor: 'pointer',
-              transition: 'all 0.2s ease',
-              position: 'relative',
-              zIndex: 99999,
-              minWidth: '60px',
-              minHeight: '60px',
-              outline: 'none'
-            }}
-            onMouseDown={(e) => e.currentTarget.style.transform = 'scale(0.95)'}
-            onMouseUp={(e) => e.currentTarget.style.transform = 'scale(1)'}
-            onTouchStart={(e) => e.currentTarget.style.transform = 'scale(0.95)'}
-            onTouchEnd={(e) => e.currentTarget.style.transform = 'scale(1)'}
-            aria-label={`Cart with ${cart.length} items`}
-          >
-            <GraduationCap style={{ width: '28px', height: '28px', color: 'white' }} />
-            {cart.length > 0 && (
-              <span
-                style={{
-                  position: 'absolute',
-                  top: '-8px',
-                  right: '-8px',
-                  backgroundColor: '#ef4444',
-                  color: 'white',
-                  borderRadius: '50%',
-                  width: '28px',
-                  height: '28px',
-                  display: 'flex',
-                  alignItems: 'center',
-                  justifyContent: 'center',
-                  fontSize: '14px',
-                  fontWeight: 'bold',
-                  border: '2px solid white',
-                  zIndex: 100000
-                }}
-              >
-                {cart.length > 99 ? '99+' : cart.length}
-              </span>
-            )}
-          </button>
-        </div>
-      )}
+      {/* Área de proteção para o botão foi removida */}
       <Routes>
         <Route
           index
@@ -455,7 +402,6 @@ const StudentDashboard: React.FC = () => {
           element={
             <ScholarshipBrowser
               scholarships={scholarships}
-              applications={applications}
             />
           }
         />
@@ -490,7 +436,6 @@ const StudentDashboard: React.FC = () => {
         <Route path="college-enrollment-checkout" element={<CollegeEnrollmentCheckout />} />
         <Route path="/scholarship-fee-success" element={<ScholarshipFeeSuccess />} />
         <Route path="/scholarship-fee-error" element={<ScholarshipFeeError />} />
-        <Route path="/selection-process-fee-success" element={<SelectionProcessFeeSuccess />} />
         <Route path="/selection-process-fee-error" element={<SelectionProcessFeeError />} />
         <Route path="/application-fee-success" element={<ApplicationFeeSuccess />} />
         <Route path="/application-fee-error" element={<ApplicationFeeError />} />
@@ -502,8 +447,6 @@ const StudentDashboard: React.FC = () => {
         <Route path="manual-review" element={<ManualReview />} />
         <Route path="zelle-payment" element={<ZelleCheckoutPage />} />
         <Route path="identity-verification" element={<IdentityVerification />} />
-        <Route path="selection-survey" element={<ProcessoSeletivo />} />
-
       </Routes>
 
       {/* Fase 5: Modal de Parabéns para Código de Referência */}

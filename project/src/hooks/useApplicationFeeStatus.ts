@@ -28,7 +28,8 @@ export const useApplicationFeeStatus = (): ApplicationFeeStatus => {
 
       // Debounce: evitar múltiplas verificações em sequência
       const now = Date.now();
-      if (now - (window as any).lastApplicationFeeCheck < 10000) { // 10 segundos de debounce
+      if ((window as any).lastApplicationFeeCheck && now - (window as any).lastApplicationFeeCheck < 10000) {
+        setLoading(false);
         return;
       }
       (window as any).lastApplicationFeeCheck = now;

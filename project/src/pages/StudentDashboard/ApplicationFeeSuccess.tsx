@@ -1,9 +1,7 @@
 import React, { useEffect, useState, useRef } from 'react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
-import { XCircle } from 'lucide-react';
 import { supabase } from '../../lib/supabase';
-import CustomLoading from '../../components/CustomLoading';
-import PaymentSuccessOverlay from '../../components/PaymentSuccessOverlay';
+import PaymentStatusOverlay from '../../components/PaymentStatusOverlay';
 import { useTranslation } from 'react-i18next';
 import { useAuth } from '../../hooks/useAuth';
 import { dispatchCacheInvalidationEvent, CacheInvalidationEvent } from '../../utils/cacheInvalidation';
@@ -16,15 +14,13 @@ const ApplicationFeeSuccess: React.FC = () => {
   const [status, setStatus] = useState<VerificationStatus>('loading');
   const [error, setError] = useState<string | null>(null);
   const [applicationFeeAmount, setApplicationFeeAmount] = useState<number>(0);
-  const [showAnimation, setShowAnimation] = useState(false);
-  const { t } = useTranslation();
+  const { t } = useTranslation(['dashboard', 'payment', 'common']);
   const { userProfile, user } = useAuth();
   const hasRunRef = useRef(false);
 
   // Helper: calcular Application Fee exibida considerando dependentes (legacy) - mesma lógica do MyApplications
   const getApplicationFeeWithDependents = (base: number): number => {
     const deps = Number(userProfile?.dependents) || 0;
-    // ✅ CORREÇÃO: Adicionar $100 por dependente para ambos os sistemas (legacy e simplified)
     return deps > 0 ? base + deps * 100 : base;
   };
 
@@ -41,11 +37,8 @@ const ApplicationFeeSuccess: React.FC = () => {
 
     const poll = async () => {
       attempts++;
-      console.log(`[Parcelow] Tentativa ${attempts}/${maxAttempts}`);
-
       try {
-        // Buscar o pagamento pelo reference (que pode estar truncado)
-        const { data: payment, error: paymentError } = await supabase
+        const { data: payment } = await supabase
           .from('individual_fee_payments')
           .select('*')
           .eq('user_id', user.id)
@@ -56,15 +49,10 @@ const ApplicationFeeSuccess: React.FC = () => {
           .maybeSingle();
 
         if (payment && payment.parcelow_status === 'paid') {
-          console.log('[Parcelow] ✅ Pagamento confirmado!');
           setApplicationFeeAmount(payment.amount);
           dispatchCacheInvalidationEvent(CacheInvalidationEvent.PAYMENT_COMPLETED);
           setStatus('success');
-          setShowAnimation(true);
-
-          setTimeout(() => {
-            navigate('/student/dashboard/applications');
-          }, 6000);
+          setTimeout(() => navigate('/student/dashboard/applications'), 6000);
           return;
         }
 
@@ -73,10 +61,8 @@ const ApplicationFeeSuccess: React.FC = () => {
           setStatus('error');
           return;
         }
-
         setTimeout(poll, 10000);
       } catch (err) {
-        console.error('[Parcelow] Erro:', err);
         if (attempts >= maxAttempts) {
           setError('Payment verification failed');
           setStatus('error');
@@ -85,37 +71,23 @@ const ApplicationFeeSuccess: React.FC = () => {
         }
       }
     };
-
     poll();
   };
 
   useEffect(() => {
-    // Aguardar usuário estar carregado
-    if (!user) {
-      console.log('[ApplicationFeeSuccess] Aguardando autenticação do usuário...');
-      return;
-    }
-
-    if (hasRunRef.current) return;
+    if (!user || hasRunRef.current) return;
     hasRunRef.current = true;
 
-    // Aceitar tanto parâmetros encurtados (ref, pm) quanto completos (reference, payment_method)
     const reference = searchParams.get('ref') || searchParams.get('reference');
     const paymentMethod = searchParams.get('pm') || searchParams.get('payment_method');
     const sessionId = searchParams.get('session_id');
 
-    // Detectar se é pagamento Parcelow
-    // Se houver reference e NÃO houver session_id, é Parcelow
-    // pm=p significa payment_method=parcelow
     if (reference && !sessionId) {
-      console.log('[Parcelow] Pagamento Parcelow detectado (via reference)');
       verifyParcelowPayment(reference);
       return;
     }
     
-    // Fallback: se tiver payment_method=parcelow ou pm=p explicitamente
     if ((paymentMethod === 'parcelow' || paymentMethod === 'p') && reference) {
-      console.log('[Parcelow] Pagamento Parcelow detectado (via payment_method)');
       verifyParcelowPayment(reference);
       return;
     }
@@ -128,126 +100,39 @@ const ApplicationFeeSuccess: React.FC = () => {
       }
 
       try {
-        // Chamar a Edge Function para verificar o pagamento e enviar notificação
         const { data: sessionData, error: sessionError } = await supabase.functions.invoke('verify-stripe-session-application-fee', {
           body: { sessionId },
         });
 
-        if (sessionError) {
-          throw new Error(`Verification failed: ${sessionError.message}`);
-        }
+        if (sessionError) throw new Error(`Verification failed: ${sessionError.message}`);
 
-        // Priorizar gross_amount_usd da resposta (valor bruto que o aluno realmente pagou)
-        // Se não estiver disponível, buscar o valor da taxa da bolsa como fallback
         if (sessionData?.gross_amount_usd !== null && sessionData?.gross_amount_usd !== undefined) {
-          // Usar o valor bruto que o aluno realmente pagou (incluindo taxas do Stripe)
           setApplicationFeeAmount(sessionData.gross_amount_usd);
         } else if (sessionData?.applicationId) {
-          // Fallback: buscar o valor da taxa da bolsa
           try {
-            const { data: application, error: appError } = await supabase
+            const { data: application } = await supabase
               .from('scholarship_applications')
-              .select(`
-                scholarship_id,
-                scholarships (
-                  application_fee_amount
-                )
-              `)
+              .select('scholarships ( application_fee_amount )')
               .eq('id', sessionData.applicationId)
               .single();
 
-            if (appError) {
-              // Usar fallback 350 se houver erro
-              setApplicationFeeAmount(350);
-            } else if (application?.scholarships) {
-              // Verifica se é array ou objeto
-              let scholarship = null;
-              if (Array.isArray(application.scholarships)) {
-                scholarship = application.scholarships[0];
-              } else {
-                scholarship = application.scholarships;
-              }
-
-              if (scholarship?.application_fee_amount) {
-                const feeAmount = Number(scholarship.application_fee_amount) || 0;
-                const finalAmount = getApplicationFeeWithDependents(feeAmount);
-                setApplicationFeeAmount(finalAmount);
-              } else {
-                setApplicationFeeAmount(350);
-              }
+            if (application?.scholarships) {
+              const scholarship: any = Array.isArray(application.scholarships) ? application.scholarships[0] : application.scholarships;
+              const feeAmount = Number(scholarship?.application_fee_amount) || 0;
+              setApplicationFeeAmount(getApplicationFeeWithDependents(feeAmount));
             } else {
               setApplicationFeeAmount(350);
             }
-          } catch (fetchError) {
+          } catch {
             setApplicationFeeAmount(350);
           }
         } else {
           setApplicationFeeAmount(350);
         }
-
-
         
-        // Invalidar cache
         dispatchCacheInvalidationEvent(CacheInvalidationEvent.PAYMENT_COMPLETED);
-        
         setStatus('success');
-        setShowAnimation(true);
-        
-        // Aguardar animação e redirecionar
-        setTimeout(() => {
-          navigate('/student/dashboard/applications');
-        }, 6000);
-
-        // Log Stripe payment success
-        // try {
-        //   // IP best-effort
-        //   let clientIp: string | undefined = undefined;
-        //   try {
-        //     const controller = new AbortController();
-        //     const timeout = setTimeout(() => controller.abort(), 2000);
-        //     const res = await fetch('https://api.ipify.org?format=json', { signal: controller.signal });
-        //     clearTimeout(timeout);
-        //     if (res.ok) {
-        //       const j = await res.json();
-        //       clientIp = j?.ip;
-        //     }
-        //   } catch (_) {}
-
-        //   // Resolve student profile
-        //   const { data: authUser } = await supabase.auth.getUser();
-        //   const authUserId = authUser.user?.id;
-        //   if (authUserId) {
-        //     const { data: profile } = await supabase.from('user_profiles').select('id').eq('user_id', authUserId).single();
-        //     const amount = (() => {
-        //       try {
-        //         if (application && Array.isArray(application.scholarships) && application.scholarships[0]?.application_fee_amount) {
-        //           return Number(application.scholarships[0].application_fee_amount) || 0;
-        //         }
-        //       } catch {}
-        //       return 0;
-        //     })();
-        //     if (profile?.id) {
-        //       await supabase.rpc('log_student_action', {
-        //         p_student_id: profile.id,
-        //         p_action_type: 'fee_payment',
-        //         p_action_description: 'Application Fee paid via Stripe',
-        //         p_performed_by: authUserId,
-        //         p_performed_by_type: 'student',
-        //         p_metadata: {
-        //           fee_type: 'application',
-        //           payment_method: 'stripe',
-        //           amount,
-        //           session_id: sessionId,
-        //           application_id: sessionData?.applicationId || null,
-        //           ip: clientIp
-        //         }
-        //       });
-        //     }
-        //   }
-        // } catch (logErr) {
-        //   console.error('[ApplicationFeeSuccess] Failed to log stripe payment:', logErr);
-        // }
-
+        setTimeout(() => navigate('/student/dashboard/applications'), 6000);
       } catch (e: any) {
         setError(e.message || 'An unknown error occurred during verification.');
         setStatus('error');
@@ -255,57 +140,27 @@ const ApplicationFeeSuccess: React.FC = () => {
     };
 
     verifySession();
-  }, [searchParams]);
-
-
-  const renderContent = () => {
-    switch (status) {
-      case 'loading':
-        return (
-          <CustomLoading 
-            color="green" 
-            title={t('successPages.applicationFee.verifying')} 
-            message={t('successPages.applicationFee.pleaseWait')} 
-          />
-        );
-      case 'success':
-        return null; // Sucesso será tratado pelo overlay
-      case 'error':
-        return (
-           <>
-            <XCircle className="text-red-500 h-16 w-16 mx-auto mb-6" />
-            <h1 className="text-3xl font-bold text-slate-800 mb-4">{t('successPages.applicationFee.errorTitle')}</h1>
-            <p className="text-slate-600 mb-6">
-              {t('successPages.applicationFee.errorMessage')}
-            </p>
-            <p className="text-sm text-red-700 bg-red-100 p-3 rounded-lg">
-              {t('successPages.applicationFee.errorDetails')} {error}
-            </p>
-          </>
-        );
-    }
-  };
-
-  // Se deve mostrar animação, usar o overlay
-  if (showAnimation && status === 'success') {
-    return (
-      <div className="min-h-[60vh] flex flex-col items-center justify-center bg-white px-4 relative">
-        <PaymentSuccessOverlay
-          isSuccess={true}
-          title={t('successPages.applicationFee.title')}
-          message={`${t('successPages.common.paymentProcessedAmount')} ${t('successPages.applicationFee.message')}`}
-        />
-      </div>
-    );
-  }
+  }, [searchParams, user]);
 
   return (
-      <div className="min-h-[60vh] flex flex-col items-center justify-center bg-white px-4">
-        <div className="bg-white rounded-2xl shadow-lg p-10 max-w-md w-full flex flex-col items-center">
-          {renderContent()}
-        </div>
-      </div>
+    <PaymentStatusOverlay
+      status={status}
+      title={
+        status === 'loading' ? t('successPages.applicationFee.verifying') :
+        status === 'success' ? t('successPages.applicationFee.title') :
+        t('successPages.applicationFee.errorTitle')
+      }
+      message={
+        status === 'loading' ? t('successPages.applicationFee.pleaseWait') :
+        status === 'success' ? `${t('successPages.common.paymentProcessedAmount')} $${applicationFeeAmount || 350}` :
+        (error || t('successPages.applicationFee.errorMessage'))
+      }
+      errorDetails={error}
+      onRetry={() => navigate('/student/dashboard/applications')}
+      onHome={() => navigate('/student/dashboard')}
+      showPremiumLoading={true}
+    />
   );
 };
 
-export default ApplicationFeeSuccess; 
+export default ApplicationFeeSuccess;

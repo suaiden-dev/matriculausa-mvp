@@ -1,0 +1,41 @@
+{
+  "title": "Contact Us",
+  "subtitle": "Get in touch with our team. We're here to help you succeed.",
+  "stats": {
+    "support": "24/7 support",
+    "response": "Quick response",
+    "expert": "Expert team"
+  },
+  "methods": {
+    "title": "Contact Methods",
+    "subtitle": "Choose the best way to reach our team",
+    "email": {
+      "title": "Email Support",
+      "description": "Send us an email and we'll respond within 24 hours",
+      "category": "Primary"
+    },
+    "phone": {
+      "title": "Phone Support",
+      "description": "Call us Monday to Friday, 9 AM - 6 PM PST",
+      "category": "Direct"
+    },
+    "location": {
+      "title": "Office Location",
+      "value": "Los Angeles, CA, USA",
+      "description": "Visit our headquarters in sunny California",
+      "category": "Physical"
+    },
+    "whatsapp": {
+      "title": "WhatsApp Support",
+      "value": "Available 24/7",
+      "description": "Get instant help through WhatsApp messaging",
+      "category": "Instant"
+    },
+    "online": {
+      "title": "Online Support",
+      "value": "Smart Assistant",
+      "description": "AI-powered help available anytime",
+      "category": "AI"
+    }
+  }
+}

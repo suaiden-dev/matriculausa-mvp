@@ -67,6 +67,7 @@ Deno.serve(async (req) => {
 
     // Metadata da sessão
     const sessionMetadata = {
+      project: 'matricula_usa',
       payment_type: 'eb3_pre_candidatura',
       service: 'Pré Candidatura Vagas EB3',
       ...(user && { student_id: user.id }),

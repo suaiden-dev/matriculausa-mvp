@@ -1,0 +1,346 @@
+{
+  "scholarships": {
+    "title": "Scholarships",
+    "subtitle": "Find the perfect scholarship for your academic journey",
+    "searchPlaceholder": "Search scholarships...",
+    "filterBy": "Filter by",
+    "amount": "Amount",
+    "type": "Type",
+    "deadline": "Deadline",
+    "apply": "Apply",
+    "viewDetails": "View Details",
+    "noResults": "No scholarships found",
+    "resultsFound": "scholarships found"
+  },
+  "scholarshipsPage": {
+    "loginRequired": {
+      "title": "Login Required",
+      "message": "Please log in to view scholarship details and access all features"
+    },
+    "featuredSection": {
+      "title": "Featured Scholarships",
+      "subtitle": "Weekly Highlights",
+      "description": "Scholarships selected by our experts for you"
+    },
+    "allScholarships": {
+      "title": "All Scholarships",
+      "description": "Explore all available scholarship opportunities for international students"
+    },
+    "filters": {
+      "min": "Min",
+      "max": "Max",
+      "allLevels": "All Levels",
+      "allFields": "All Fields",
+      "allModes": "All Modes",
+      "allPermissions": "All Permissions",
+      "allUniversities": "All Universities",
+      "university": "University",
+      "universityTooltip": "Create an account and pay the Selection Process Fee to filter by university",
+      "stem": "STEM",
+      "business": "Business",
+      "engineering": "Engineering",
+      "anyField": "Any Field",
+      "online": "Online",
+      "inPerson": "In Person",
+      "hybrid": "Hybrid",
+      "opt": "OPT",
+      "cpt": "CPT",
+      "f1": "F1",
+      "loading": "Loading...",
+      "scholarshipsFound": "scholarships found",
+      "levels": {
+        "all": "All Levels",
+        "graduate": "Graduate",
+        "doctorate": "Doctorate",
+        "undergraduate": "Undergraduate"
+      },
+      "courseModalities": {
+        "online": "Online",
+        "inPerson": "In Person",
+        "hybrid": "Hybrid",
+        "mixed": "Mixed"
+      }
+    },
+    "scholarshipCard": {
+      "university": "University:",
+      "studyMode": "Course Modality",
+      "workAuthorization": "Work Authorization",
+      "financialOverview": "Financial Overview",
+      "originalPrice": "Original Price",
+      "withScholarship": "With Scholarship",
+      "perCredit": "Per Credit",
+      "scholarshipDiscount": "Scholarship Discount",
+      "applicationFee": "Application Fee",
+      "customFee": "Custom fee set by university",
+      "standardFee": "Standard application fee",
+      "expired": "Expired",
+      "days": "days",
+      "details": "Details",
+      "applyNow": "Apply Now",
+      "notAvailable": "Not available"
+    },
+    "noResults": {
+      "title": "No scholarships found",
+      "description": "Try adjusting your search criteria to discover more opportunities",
+      "clearFilters": "Clear Filters"
+    },
+    "pagination": {
+      "previous": "Previous",
+      "next": "Next",
+      "page": "Page",
+      "of": "of"
+    },
+    "callToAction": {
+      "readyToStart": "Ready to Start?",
+      "readyToTransform": "Ready to Transform",
+      "title": "Ready to Transform Your Future?",
+      "description": "Join thousands of international students who have secured their educational dreams through our exclusive scholarship opportunities.",
+      "getStartedToday": "Get Started Today",
+      "learnMore": "Learn More"
+    },
+    "modal": {
+      "exclusive": "Exclusive",
+      "exclusiveScholarship": "Exclusive Scholarship",
+      "anyField": "Any Field",
+      "universityHidden": "University Hidden - Unlock with Selection Process",
+      "universityInfoAvailable": "University Information Available",
+      "loginRequired": "Log in to view university details",
+      "financialBreakdown": "Financial Breakdown",
+      "originalAnnualCost": "Original Annual Cost",
+      "withScholarship": "With Scholarship",
+      "annualSavings": "Annual Savings",
+      "costPerCredit": "Cost Per Credit",
+      "totalCredits": "Total Credits",
+      "coverage": "Coverage",
+      "programInformation": "Program Information",
+      "academicLevel": "Academic Level",
+      "notSpecified": "Not specified",
+      "studyMode": "Course Modality",
+      "onlineLearning": "Online Learning",
+      "inPerson": "In Person",
+      "hybridMode": "Hybrid Mode",
+      "programDuration": "Program Duration",
+      "language": "Language",
+      "workAuthorization": "Work Authorization",
+      "programDescription": "Program Description",
+      "applicationDeadline": "Application Deadline",
+      "daysLeft": "days left",
+      "deadline": "Deadline",
+      "universityInformation": "University Information",
+      "universityNameAvailable": "University Name Available",
+      "ranking": "Ranking:",
+      "universityDetailsLocked": "🔒 University details available after Selection Process payment.",
+      "unlockUniversityInfo": "Unlock university information by paying the Selection Process",
+      "unlockImage": "Log in to unlock the image",
+      "requirements": "Requirements",
+      "additionalBenefits": "Additional Benefits",
+      "expired": "Expired",
+      "scholarshipExpired": "Scholarship Expired",
+      "noLongerAccepting": "Not Available for application",
+      "canStillView": "You can still view the information, but it will not be possible to apply for this scholarship.",
+      "internalFeesTitle": "Internal University Fees",
+      "internalFeesDisclaimer": "Some fees are paid directly to the university, while others are processed through our platform.",
+      "internalFeesAvailable": "University Internal Fees Available",
+      "internalFeesNotice": "This scholarship may have additional internal fees from the university. These fees will be visible after payment of the Selection Process Fee.",
+      "universityInternalFees": "University Internal Fees",
+      "viewUniversityFeesPage": "View University Fees Page",
+      "internalFeesConditionalNote": "The fee depends on the student's process or visa type and then corresponds with the fee",
+      "i539COSPackage": "I539 COS Package",
+      "ds160Package": "DS160 Package",
+      "i539PackageDescription": "Fee required for students requesting Change of Status (COS)",
+      "ds160PackageDescription": "Fee required for students requesting Transfer",
+      "days": "days"
+    }
+  },
+  "scholarshipSelection": {
+    "header": {
+      "title": "Scholarship Selection",
+      "subtitle": "Browse through the scholarships and select which ones you would like to enroll in. You must choose at least one to proceed."
+    },
+    "errors": {
+      "loadError": "Error loading scholarships. Please try again.",
+      "alreadyLocked": "You have already passed the scholarship review. It is not possible to change the selection.",
+      "updateError": "Error updating selection. Please try again.",
+      "selectRequired": "Please select at least one scholarship to continue. Click on the scholarship cards above to add them to your selection."
+    },
+    "review": {
+      "title": "Review Your Selected Scholarships",
+      "warningTitle": "Important: This is a definitive choice",
+      "warningDescription": "By confirming, you will no longer be able to change the chosen scholarships. Please carefully review your selection below before proceeding.",
+      "unknownUniversity": "Unknown University",
+      "backButton": "Back to Selection",
+      "alreadySelected": "Already Selected",
+      "continueButton": "Continue",
+      "removeButton": "Remove Selection"
+    },
+    "completed": {
+      "title": "Scholarship Selection",
+      "subtitle": "Scholarship selection successfully completed.",
+      "cardTitle": "Step Completed",
+      "cardText": "You have already selected your scholarships and passed the review. This step is complete.",
+      "continueButton": "Continue"
+    },
+    "grid": {
+      "title": "Available Scholarships",
+      "option_count": "option",
+      "option_count_plural": "options",
+      "noResults": {
+        "title": "No scholarships found",
+        "description": "Try adjusting your filters to see more options.",
+        "clearButton": "Clear all filters"
+      }
+    },
+    "filters": {
+      "title": "Filter Scholarships",
+      "searchPlaceholder": "Search scholarship...",
+      "searchKeyword": "Search Keyword",
+      "university": "University",
+      "allUniversities": "All Universities",
+      "studyLevel": "Study Level",
+      "allLevels": "All Levels",
+      "fieldOfStudy": "Field of Study",
+      "allFields": "All Fields of Study",
+      "deliveryMode": "Delivery Mode",
+      "allDeliveryModes": "All Delivery Modes",
+      "deliveryModeOptions": {
+        "online": "Online",
+        "in_person": "In Person",
+        "hybrid": "Hybrid",
+        "mixed": "Mixed"
+      },
+      "workPermission": "Work Permission",
+      "allWorkPermissions": "All Permissions",
+      "scholarshipValue": "Scholarship Value",
+      "minValue": "Min Value",
+      "maxValue": "Max Value",
+      "deadlineDays": "Deadline (days)",
+      "minPlaceholder": "Min",
+      "maxPlaceholder": "Max",
+      "deadlinePlaceholder": "Min days left",
+      "apply": "Apply Filters",
+      "clear": "Clear",
+      "activeBadge": "Active"
+    },
+    "confirmationModal": {
+      "title": "Confirm Selection",
+      "description": "By confirming, you will no longer be able to change your selected scholarships. Please carefully review your selection before proceeding.",
+      "confirm": "Confirm and Proceed",
+      "cancel": "Review Again"
+    },
+    "quickGuide": {
+      "title": "Quick guide:",
+      "step1": "<strong>Click any scholarship card</strong> to add it to your selection",
+      "step2": "<strong>Select as many as you want</strong> - you can choose multiple options",
+      "step3": "<strong>Use filters</strong> to search by university or scholarship value",
+      "step4": "<strong>Click \"Continue\"</strong> once you've selected at least one scholarship"
+    },
+    "continueWithCount": "Continue ({{count}} selected)",
+    "continueWithCount_plural": "Continue ({{count}} selected)"
+  },
+  "universitiesPage": {
+    "header": {
+      "partnerUniversities": "Partner Universities",
+      "title": "American Universities",
+      "subtitle": "Discover world-class institutions offering exceptional education and scholarship opportunities."
+    },
+    "loginRequired": {
+      "title": "Login Required",
+      "message": "Please log in to view university details and access all features"
+    },
+    "search": {
+      "placeholder": "Search universities...",
+      "allTypes": "All Types",
+      "private": "Private",
+      "public": "Public",
+      "allStates": "All States",
+      "universitiesCount": "universidades",
+      "featured": "featured",
+      "filterByType": "Filter by university type",
+      "filterByState": "Filter by university state"
+    },
+    "loading": "Loading universities...",
+    "featured": {
+      "title": "Featured Universities",
+      "subtitle": "Weekly Highlights",
+      "description": "Discover the universities selected by our experts for you",
+      "featured": "Featured",
+      "more": "more"
+    },
+    "card": {
+      "learnMore": "Learn More"
+    },
+    "pagination": {
+      "previous": "Previous",
+      "next": "Next",
+      "page": "Page",
+      "of": "of"
+    },
+    "noResults": {
+      "title": "No universities found",
+      "description": "Try adjusting your search criteria"
+    },
+    "callToAction": {
+      "title": "Ready to Apply to Your",
+      "titleHighlight": "Dream University?",
+      "description": "Start your journey with our AI-powered platform and unlock exclusive scholarship opportunities.",
+      "findScholarships": "Find Scholarships",
+      "learnMore": "Learn More"
+    }
+  },
+  "universityDetailPage": {
+    "loading": "Loading university details...",
+    "notFound": {
+      "title": "University not found",
+      "backLink": "Back to Universities"
+    },
+    "editProfile": {
+      "editButton": "Edit Profile",
+      "saveButton": "Save",
+      "cancelButton": "Cancel",
+      "uploadingBanner": "Uploading...",
+      "changeBanner": "Change Banner",
+      "yourUniversity": "Your University",
+      "successMessage": "Profile updated successfully!",
+      "errorMessage": "Failed to update profile. Please try again."
+    },
+    "placeholders": {
+      "universityName": "University Name",
+      "location": "Location",
+      "description": "Describe your university...",
+      "addNewProgram": "Add new program",
+      "street": "Street",
+      "city": "City",
+      "state": "State",
+      "zipCode": "ZIP Code",
+      "country": "Country",
+      "website": "https://university.edu",
+      "uploadBanner": "Upload university banner image"
+    },
+    "sections": {
+      "about": "About",
+      "academicPrograms": "Academic Programs",
+      "contactInformation": "Contact Information",
+      "address": "Address",
+      "website": "Website",
+      "scholarshipOpportunities": "Scholarship Opportunities"
+    },
+    "contact": {
+      "phone": "Phone",
+      "email": "Email",
+      "admissionsEmail": "Admissions Email",
+      "fax": "Fax"
+    },
+    "buttons": {
+      "add": "Add",
+      "remove": "Remove",
+      "visitWebsite": "Visit Official Website",
+      "viewScholarships": "View Scholarships"
+    },
+    "messages": {
+      "noProgramsListed": "No programs listed",
+      "noWebsiteProvided": "No website provided",
+      "scholarshipDescription": "Discover exclusive scholarships available at",
+      "uploadError": "Failed to upload image. Please try again."
+    }
+  }
+}

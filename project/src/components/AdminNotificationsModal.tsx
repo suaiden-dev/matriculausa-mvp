@@ -1,9 +1,10 @@
 import React, { useState, useEffect } from 'react';
-import { X, Search, Filter, Bell, MessageSquare, Check, Calendar, ChevronRight } from 'lucide-react';
+import { X, Search, Bell, Check, ChevronRight } from 'lucide-react';
 import { supabase } from '../lib/supabase';
 import { useAuth } from '../hooks/useAuth';
-import { formatDistanceToNow, format } from 'date-fns';
-import { enUS } from 'date-fns/locale';
+import { format } from 'date-fns';
+import { enUS, ptBR, es } from 'date-fns/locale';
+import { useTranslation } from 'react-i18next';
 
 interface AdminNotificationsModalProps {
   isOpen: boolean;
@@ -23,12 +24,22 @@ interface Notification {
 
 const AdminNotificationsModal: React.FC<AdminNotificationsModalProps> = ({ isOpen, onClose }) => {
   const { user } = useAuth();
+  const { t, i18n } = useTranslation();
   const [notifications, setNotifications] = useState<Notification[]>([]);
   const [loading, setLoading] = useState(false);
   const [searchTerm, setSearchTerm] = useState('');
   const [filterType, setFilterType] = useState<'all' | 'payment' | 'system' | 'message'>('all');
   const [page, setPage] = useState(0);
   const [hasMore, setHasMore] = useState(true);
+
+  // Get date-fns locale based on current language
+  const getDateLocale = () => {
+    switch (i18n.language) {
+      case 'pt': return ptBR;
+      case 'es': return es;
+      default: return enUS;
+    }
+  };
 
   const fetchNotifications = async (isRefresh = false) => {
     if (!user) return;
@@ -101,8 +112,8 @@ const AdminNotificationsModal: React.FC<AdminNotificationsModalProps> = ({ isOpe
         {/* Header */}
         <div className="flex items-center justify-between px-6 py-4 border-b border-gray-100">
           <div>
-            <h2 className="text-xl font-bold text-gray-900">All Notifications</h2>
-            <p className="text-sm text-gray-500">History of all system alerts and updates</p>
+            <h2 className="text-xl font-bold text-gray-900">{t('dashboard:studentDashboard.notifications.title')}</h2>
+            <p className="text-sm text-gray-500">{t('dashboard:studentDashboard.notifications.historySubtitle', 'History of all system alerts and updates')}</p>
           </div>
           <button 
             onClick={onClose}
@@ -118,7 +129,7 @@ const AdminNotificationsModal: React.FC<AdminNotificationsModalProps> = ({ isOpe
             <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 h-5 w-5" />
             <input 
               type="text"
-              placeholder="Search notifications..."
+              placeholder={t('dashboard:studentDashboard.notifications.searchPlaceholder', 'Search notifications...')}
               className="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none transition-all"
               value={searchTerm}
               onChange={(e) => setSearchTerm(e.target.value)}
@@ -126,9 +137,9 @@ const AdminNotificationsModal: React.FC<AdminNotificationsModalProps> = ({ isOpe
           </div>
           <div className="flex items-center gap-2 overflow-x-auto pb-2 md:pb-0">
             {[
-              { id: 'all', label: 'All' },
-              { id: 'payment', label: 'Payments' },
-              { id: 'system', label: 'System' },
+              { id: 'all', label: t('common:all', 'All') },
+              { id: 'payment', label: t('payment:payment', 'Payments') },
+              { id: 'system', label: t('common:system', 'System') },
               // { id: 'message', label: 'Messages' } // Hiding for now as we query single table
             ].map(type => (
               <button
@@ -151,8 +162,8 @@ const AdminNotificationsModal: React.FC<AdminNotificationsModalProps> = ({ isOpe
           {notifications.length === 0 && !loading ? (
              <div className="flex flex-col items-center justify-center h-full text-center text-gray-500">
                <Bell className="h-12 w-12 text-gray-300 mb-4" />
-               <p className="text-lg font-medium">No notifications found</p>
-               <p className="text-sm">Try adjusting your search or filters</p>
+               <p className="text-lg font-medium">{t('dashboard:studentDashboard.notifications.noNotifications')}</p>
+               <p className="text-sm">{t('dashboard:studentDashboard.notifications.tryAdjustingFilters', 'Try adjusting your search or filters')}</p>
              </div>
           ) : (
              <div className="space-y-3">
@@ -177,7 +188,7 @@ const AdminNotificationsModal: React.FC<AdminNotificationsModalProps> = ({ isOpe
                          {notification.title}
                        </h3>
                        <span className="text-xs text-gray-400 whitespace-nowrap ml-2">
-                         {format(new Date(notification.created_at), 'MMM d, yyyy HH:mm', { locale: enUS })}
+                         {format(new Date(notification.created_at), 'MMM d, yyyy HH:mm', { locale: getDateLocale() })}
                        </span>
                      </div>
                      <p className={`text-sm ${notification.is_read ? 'text-gray-500' : 'text-gray-700'} mb-2`}>
@@ -199,7 +210,7 @@ const AdminNotificationsModal: React.FC<AdminNotificationsModalProps> = ({ isOpe
                            }}
                            className="text-sm font-medium text-blue-600 hover:text-blue-800 flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity"
                          >
-                           View Details <ChevronRight className="h-4 w-4" />
+                           {t('common:details', 'View Details')} <ChevronRight className="h-4 w-4" />
                          </a>
                        )}
                      </div>
@@ -218,7 +229,7 @@ const AdminNotificationsModal: React.FC<AdminNotificationsModalProps> = ({ isOpe
                    onClick={loadMore}
                    className="w-full py-3 bg-gray-50 hover:bg-gray-100 text-gray-600 font-medium rounded-lg transition-colors text-sm"
                  >
-                   Load More Notifications
+                   {t('common:loadMore', 'Load More')}
                  </button>
                )}
              </div>

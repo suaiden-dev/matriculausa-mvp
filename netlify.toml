@@ -1,11 +1,12 @@
 [build]
-  publish = "project/dist"
-  command = "cd project && npm run build:netlify"
+  base = "project"
+  publish = "dist"
+  command = "npm run build:netlify"
 
 [functions]
-  directory = "project/netlify/functions"
+  directory = "netlify/functions"
   node_bundler = "esbuild"
-  included_files = ["project/emailProcessor.js", "project/emailPollingService.js", "project/aiService.js", "project/graphService.js"]
+  included_files = ["emailProcessor.js", "emailPollingService.js", "aiService.js", "graphService.js"]
 
 [[redirects]]
   from = "/api/polling-user"
@@ -18,5 +19,5 @@
   status = 200
 
 [build.environment]
-  NODE_VERSION = "18"
+  NODE_VERSION = "20"
   NODE_OPTIONS = "--max_old_space_size=4096"

@@ -1,9 +1,9 @@
 import React, { useState, useMemo, useEffect } from 'react';
-import { 
-  Search, 
-  Filter, 
-  Download, 
-  ChevronLeft, 
+import {
+  Search,
+  Filter,
+  Download,
+  ChevronLeft,
   ChevronRight,
   CreditCard,
   Calendar,
@@ -31,6 +31,7 @@ interface Transaction {
   override_application?: number | null;
   override_scholarship?: number | null;
   override_i20?: number | null;
+  override_placement?: number | null;
   // Coupon fields
   coupon_code?: string | null;
   coupon_name?: string | null;
@@ -46,7 +47,7 @@ interface FinancialTransactionsTableProps {
   affiliates?: any[];
 }
 
-export const FinancialTransactionsTable: React.FC<FinancialTransactionsTableProps> = ({ 
+export const FinancialTransactionsTable: React.FC<FinancialTransactionsTableProps> = ({
   transactions,
   loading,
   affiliates = []
@@ -72,17 +73,17 @@ export const FinancialTransactionsTable: React.FC<FinancialTransactionsTableProp
     if (typeof window === 'undefined') return false;
     const hostname = window.location.hostname;
     const href = window.location.href;
-    
-    const isProduction = hostname === 'matriculausa.com' || 
-                         hostname.includes('matriculausa.com') ||
-                         href.includes('matriculausa.com');
-    
-    const isStaging = hostname === 'staging-matriculausa.netlify.app' || 
-                      hostname.includes('staging-matriculausa.netlify.app') ||
-                      hostname.includes('staging-matriculausa') ||
-                      href.includes('staging-matriculausa.netlify.app') ||
-                      href.includes('staging-matriculausa');
-    
+
+    const isProduction = hostname === 'matriculausa.com' ||
+      hostname.includes('matriculausa.com') ||
+      href.includes('matriculausa.com');
+
+    const isStaging = hostname === 'staging-matriculausa.netlify.app' ||
+      hostname.includes('staging-matriculausa.netlify.app') ||
+      hostname.includes('staging-matriculausa') ||
+      href.includes('staging-matriculausa.netlify.app') ||
+      href.includes('staging-matriculausa');
+
     return isProduction || isStaging;
   }, []);
 
@@ -107,28 +108,28 @@ export const FinancialTransactionsTable: React.FC<FinancialTransactionsTableProp
   // Get unique affiliates from transactions (matching by referral code)
   const uniqueAffiliates = useMemo(() => {
     const affiliateMap = new Map<string, any>();
-    
+
     transactions.forEach(t => {
       if (!t.seller_referral_code) return;
-      
+
       // Find affiliate by referral code (same logic as StudentApplicationsView)
-      let affiliate = affiliates.find((aff: any) => 
+      let affiliate = affiliates.find((aff: any) =>
         aff.referral_code === t.seller_referral_code
       );
-      
+
       if (!affiliate) {
         // If not found, search in sellers
-        affiliate = affiliates.find((aff: any) => 
+        affiliate = affiliates.find((aff: any) =>
           aff.sellers?.some((s: any) => s.referral_code === t.seller_referral_code)
         );
       }
-      
+
       if (affiliate && !affiliateMap.has(affiliate.id)) {
         affiliateMap.set(affiliate.id, affiliate);
       }
     });
-    
-    return Array.from(affiliateMap.values()).sort((a, b) => 
+
+    return Array.from(affiliateMap.values()).sort((a, b) =>
       (a.name || a.email || '').localeCompare(b.name || b.email || '')
     );
   }, [transactions, affiliates]);
@@ -136,19 +137,19 @@ export const FinancialTransactionsTable: React.FC<FinancialTransactionsTableProp
   // Get affiliate ID from transaction's seller_referral_code
   const getAffiliateIdFromTransaction = (transaction: Transaction): string | null => {
     if (!transaction.seller_referral_code) return null;
-    
+
     // Find affiliate by referral code (same logic as StudentApplicationsView)
-    let affiliate = affiliates.find((aff: any) => 
+    let affiliate = affiliates.find((aff: any) =>
       aff.referral_code === transaction.seller_referral_code
     );
-    
+
     if (!affiliate) {
       // If not found, search in sellers
-      affiliate = affiliates.find((aff: any) => 
+      affiliate = affiliates.find((aff: any) =>
         aff.sellers?.some((s: any) => s.referral_code === transaction.seller_referral_code)
       );
     }
-    
+
     return affiliate?.id || null;
   };
 
@@ -168,8 +169,8 @@ export const FinancialTransactionsTable: React.FC<FinancialTransactionsTableProp
 
   // Toggle payment method in filter
   const togglePaymentMethod = (method: string) => {
-    setFilterPaymentMethod(prev => 
-      prev.includes(method) 
+    setFilterPaymentMethod(prev =>
+      prev.includes(method)
         ? prev.filter(m => m !== method)
         : [...prev, method]
     );
@@ -177,8 +178,8 @@ export const FinancialTransactionsTable: React.FC<FinancialTransactionsTableProp
 
   // Toggle affiliate in filter
   const toggleAffiliate = (code: string) => {
-    setFilterAffiliate(prev => 
-      prev.includes(code) 
+    setFilterAffiliate(prev =>
+      prev.includes(code)
         ? prev.filter(c => c !== code)
         : [...prev, code]
     );
@@ -214,8 +215,8 @@ export const FinancialTransactionsTable: React.FC<FinancialTransactionsTableProp
 
   // Toggle fee type in filter
   const toggleFeeType = (feeType: string) => {
-    setFilterFeeType(prev => 
-      prev.includes(feeType) 
+    setFilterFeeType(prev =>
+      prev.includes(feeType)
         ? prev.filter(t => t !== feeType)
         : [...prev, feeType]
     );
@@ -244,6 +245,9 @@ export const FinancialTransactionsTable: React.FC<FinancialTransactionsTableProp
         return 'Scholarship Fee';
       case 'i20_control_fee':
         return 'I-20 Control Fee';
+      case 'placement':
+      case 'placement_fee':
+        return 'Placement Fee';
       default:
         return type.replace(/_/g, ' ').replace(/\b\w/g, l => l.toUpperCase());
     }
@@ -274,6 +278,9 @@ export const FinancialTransactionsTable: React.FC<FinancialTransactionsTableProp
     }
     if (feeType === 'i20_control' && transaction.override_i20) {
       return transaction.override_i20;
+    }
+    if (feeType === 'placement' && transaction.override_placement) {
+      return transaction.override_placement;
     }
     return null;
   };
@@ -315,10 +322,10 @@ export const FinancialTransactionsTable: React.FC<FinancialTransactionsTableProp
       if (shouldExcludeStudent(t.student_email)) return false;
 
       // Search filter
-      const matchesSearch = 
-      t.student_name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      t.fee_type.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      t.payment_method.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      const matchesSearch =
+        t.student_name.toLowerCase().includes(searchTerm.toLowerCase()) ||
+        t.fee_type.toLowerCase().includes(searchTerm.toLowerCase()) ||
+        t.payment_method.toLowerCase().includes(searchTerm.toLowerCase()) ||
         (t.payment_intent_id && t.payment_intent_id.toLowerCase().includes(searchTerm.toLowerCase()));
 
       if (!matchesSearch) return false;
@@ -374,9 +381,9 @@ export const FinancialTransactionsTable: React.FC<FinancialTransactionsTableProp
         bValue = new Date(b.payment_date).getTime();
       }
 
-      // Handle nulls
-      if (aValue === null) return 1;
-      if (bValue === null) return -1;
+      // Handle nulls/undefined
+      if (aValue === null || aValue === undefined) return 1;
+      if (bValue === null || bValue === undefined) return -1;
 
       if (aValue < bValue) return sortOrder === 'asc' ? -1 : 1;
       if (aValue > bValue) return sortOrder === 'asc' ? 1 : -1;
@@ -387,16 +394,16 @@ export const FinancialTransactionsTable: React.FC<FinancialTransactionsTableProp
   const totals = useMemo(() => {
     let totalGross = 0;
     let totalFees = 0;
-    
+
     filteredTransactions.forEach(transaction => {
       const gross = transaction.gross_amount_usd || transaction.amount || 0;
       const fees = transaction.fee_amount_usd || 0;
       totalGross += gross;
       totalFees += fees;
     });
-    
+
     const totalNet = totalGross - totalFees;
-    
+
     return {
       gross: totalGross,
       fees: totalFees,
@@ -413,7 +420,7 @@ export const FinancialTransactionsTable: React.FC<FinancialTransactionsTableProp
   const calculateSelectedTotals = useMemo(() => {
     let totalGross = 0;
     let totalFees = 0;
-    
+
     filteredTransactions
       .filter(t => selectedTransactions.has(t.id))
       .forEach(transaction => {
@@ -422,9 +429,9 @@ export const FinancialTransactionsTable: React.FC<FinancialTransactionsTableProp
         totalGross += gross;
         totalFees += fees;
       });
-    
+
     const totalNet = totalGross - totalFees;
-    
+
     return {
       gross: totalGross,
       fees: totalFees,
@@ -472,7 +479,7 @@ export const FinancialTransactionsTable: React.FC<FinancialTransactionsTableProp
       const gross = transaction.gross_amount_usd || transaction.amount;
       const fees = transaction.fee_amount_usd || 0;
       const net = gross - fees;
-      
+
       return [
         transaction.student_name || '',
         formatFeeType(transaction.fee_type),
@@ -539,7 +546,7 @@ export const FinancialTransactionsTable: React.FC<FinancialTransactionsTableProp
           <h2 className="text-lg font-semibold text-gray-900">Transaction Details</h2>
           <p className="text-sm text-gray-500">View all fees and detailed payments</p>
         </div>
-        
+
         <div className="flex items-center gap-3">
           <div className="relative">
             <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
@@ -551,17 +558,16 @@ export const FinancialTransactionsTable: React.FC<FinancialTransactionsTableProp
               className="pl-9 pr-4 py-2 border border-gray-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 w-full sm:w-64"
             />
           </div>
-          <button 
+          <button
             onClick={() => setShowFilters(!showFilters)}
-            className={`p-2 rounded-lg border transition-colors ${
-              hasActiveFilters 
-                ? 'bg-blue-50 text-blue-600 border-blue-200' 
-                : 'text-gray-600 hover:bg-gray-50 border-gray-200'
-            }`}
+            className={`p-2 rounded-lg border transition-colors ${hasActiveFilters
+              ? 'bg-blue-50 text-blue-600 border-blue-200'
+              : 'text-gray-600 hover:bg-gray-50 border-gray-200'
+              }`}
           >
             <Filter className="w-4 h-4" />
           </button>
-          <button 
+          <button
             onClick={exportToCSV}
             disabled={filteredTransactions.length === 0}
             className="p-2 text-gray-600 hover:bg-gray-50 rounded-lg border border-gray-200 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
@@ -851,7 +857,7 @@ export const FinancialTransactionsTable: React.FC<FinancialTransactionsTableProp
                   className="h-4 w-4 text-blue-600 focus:ring-blue-500 border-gray-300 rounded cursor-pointer"
                 />
               </th>
-              <th 
+              <th
                 className="px-6 py-4 text-left text-xs font-medium text-gray-500 uppercase tracking-wider cursor-pointer hover:bg-gray-100 transition-colors"
                 onClick={() => handleSort('payment_date')}
               >
@@ -860,7 +866,7 @@ export const FinancialTransactionsTable: React.FC<FinancialTransactionsTableProp
                   <span className="text-blue-600">{renderSortIcon('payment_date')}</span>
                 </div>
               </th>
-              <th 
+              <th
                 className="px-6 py-4 text-left text-xs font-medium text-gray-500 uppercase tracking-wider cursor-pointer hover:bg-gray-100 transition-colors"
                 onClick={() => handleSort('student_name')}
               >
@@ -869,7 +875,7 @@ export const FinancialTransactionsTable: React.FC<FinancialTransactionsTableProp
                   <span className="text-blue-600">{renderSortIcon('student_name')}</span>
                 </div>
               </th>
-              <th 
+              <th
                 className="px-6 py-4 text-left text-xs font-medium text-gray-500 uppercase tracking-wider cursor-pointer hover:bg-gray-100 transition-colors"
                 onClick={() => handleSort('fee_type')}
               >
@@ -878,7 +884,7 @@ export const FinancialTransactionsTable: React.FC<FinancialTransactionsTableProp
                   <span className="text-blue-600">{renderSortIcon('fee_type')}</span>
                 </div>
               </th>
-              <th 
+              <th
                 className="px-6 py-4 text-left text-xs font-medium text-gray-500 uppercase tracking-wider cursor-pointer hover:bg-gray-100 transition-colors"
                 onClick={() => handleSort('standard_amount')}
               >
@@ -887,7 +893,7 @@ export const FinancialTransactionsTable: React.FC<FinancialTransactionsTableProp
                   <span className="text-blue-600">{renderSortIcon('standard_amount')}</span>
                 </div>
               </th>
-              <th 
+              <th
                 className="px-6 py-4 text-left text-xs font-medium text-gray-500 uppercase tracking-wider cursor-pointer hover:bg-gray-100 transition-colors"
                 onClick={() => handleSort('payment_method')}
               >
@@ -896,7 +902,7 @@ export const FinancialTransactionsTable: React.FC<FinancialTransactionsTableProp
                   <span className="text-blue-600">{renderSortIcon('payment_method')}</span>
                 </div>
               </th>
-              <th 
+              <th
                 className="px-6 py-4 text-left text-xs font-medium text-gray-500 uppercase tracking-wider cursor-pointer hover:bg-gray-100 transition-colors"
                 onClick={() => handleSort('amount')}
               >
@@ -975,12 +981,11 @@ export const FinancialTransactionsTable: React.FC<FinancialTransactionsTableProp
                     </td>
                     <td className="px-6 py-4">
                       <div className="flex items-center gap-2">
-                        <div className={`p-1.5 rounded-full ${
-                          transaction.payment_method === 'stripe' ? 'bg-indigo-50 text-indigo-600' : 
-                          transaction.payment_method === 'zelle' ? 'bg-purple-50 text-purple-600' : 
-                          transaction.payment_method === 'parcelow' ? 'bg-teal-50 text-teal-600' :
-                          'bg-gray-100 text-gray-600'
-                        }`}>
+                        <div className={`p-1.5 rounded-full ${transaction.payment_method === 'stripe' ? 'bg-indigo-50 text-indigo-600' :
+                          transaction.payment_method === 'zelle' ? 'bg-purple-50 text-purple-600' :
+                            transaction.payment_method === 'parcelow' ? 'bg-teal-50 text-teal-600' :
+                              'bg-gray-100 text-gray-600'
+                          }`}>
                           <CreditCard className="w-3 h-3" />
                         </div>
                         <span className="text-sm text-gray-700 capitalize">{transaction.payment_method}</span>
@@ -1002,8 +1007,8 @@ export const FinancialTransactionsTable: React.FC<FinancialTransactionsTableProp
               })
             ) : (
               <tr>
-                        <td colSpan={9} className="px-6 py-8 text-center text-gray-500">
-                          No transactions found.
+                <td colSpan={9} className="px-6 py-8 text-center text-gray-500">
+                  No transactions found.
                 </td>
               </tr>
             )}
@@ -1015,7 +1020,7 @@ export const FinancialTransactionsTable: React.FC<FinancialTransactionsTableProp
       {filteredTransactions.length > 0 && (
         <div className="px-6 py-4 border-t border-gray-100 flex items-center justify-between flex-wrap gap-4">
           <div className="flex items-center gap-4">
-          <p className="text-sm text-gray-500">
+            <p className="text-sm text-gray-500">
               Showing <span className="font-medium">{startIndex + 1}</span> to <span className="font-medium">{Math.min(startIndex + itemsPerPage, filteredTransactions.length)}</span> of <span className="font-medium">{filteredTransactions.length}</span> results
             </p>
             <div className="flex items-center gap-2">
@@ -1040,22 +1045,22 @@ export const FinancialTransactionsTable: React.FC<FinancialTransactionsTableProp
             </div>
           </div>
           {totalPages > 1 && (
-          <div className="flex gap-2">
-            <button
-              onClick={() => setCurrentPage(p => Math.max(1, p - 1))}
-              disabled={currentPage === 1}
-              className="p-2 rounded-lg border border-gray-200 text-gray-600 hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
-            >
-              <ChevronLeft className="w-4 h-4" />
-            </button>
-            <button
-              onClick={() => setCurrentPage(p => Math.min(totalPages, p + 1))}
-              disabled={currentPage === totalPages}
-              className="p-2 rounded-lg border border-gray-200 text-gray-600 hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
-            >
-              <ChevronRight className="w-4 h-4" />
-            </button>
-          </div>
+            <div className="flex gap-2">
+              <button
+                onClick={() => setCurrentPage(p => Math.max(1, p - 1))}
+                disabled={currentPage === 1}
+                className="p-2 rounded-lg border border-gray-200 text-gray-600 hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+              >
+                <ChevronLeft className="w-4 h-4" />
+              </button>
+              <button
+                onClick={() => setCurrentPage(p => Math.min(totalPages, p + 1))}
+                disabled={currentPage === totalPages}
+                className="p-2 rounded-lg border border-gray-200 text-gray-600 hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+              >
+                <ChevronRight className="w-4 h-4" />
+              </button>
+            </div>
           )}
         </div>
       )}

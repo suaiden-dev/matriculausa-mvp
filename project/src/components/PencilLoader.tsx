@@ -1,256 +1,141 @@
 import React from 'react';
 
-const PencilLoader: React.FC = () => {
+interface PencilLoaderProps {
+  title?: string;
+  description?: string;
+  className?: string;
+  showIcon?: boolean;
+}
+
+/**
+ * Componente reutilizável de animação de busca (lupa) para análise de documentos
+ * Substitui a animação de spinner padrão por uma animação mais visual e atrativa
+ * Cores azuis alinhadas com o tema do site
+ */
+export const PencilLoader: React.FC<PencilLoaderProps> = ({ 
+  title = 'Analisando seus documentos...',
+  description = 'Isso pode levar até 40 segundos. Por favor, não feche esta janela.',
+  className = '',
+  showIcon = true
+}) => {
   return (
-    <div className="flex justify-center items-center">
+    <div className={`flex flex-col items-center justify-center ${className}`}>
+      <div className="loader">
+        <div className="loaderMiniContainer">
+          <div className="barContainer">
+            <span className="bar" />
+            <span className="bar bar2" />
+          </div>
+            {showIcon && (
+              <svg 
+                xmlns="http://www.w3.org/2000/svg" 
+                fill="none" 
+                viewBox="0 0 101 114" 
+                className="svgIcon"
+              >
+                <circle 
+                  strokeWidth={7} 
+                  stroke="rgb(37, 99, 235)" 
+                  transform="rotate(36.0692 46.1726 46.1727)" 
+                  r="29.5497" 
+                  cy="46.1727" 
+                  cx="46.1726"
+                  fill="rgba(37, 99, 235, 0.238)"
+                />
+                <line 
+                  strokeWidth={7} 
+                  stroke="rgb(37, 99, 235)" 
+                  y2="111.784" 
+                  x2="97.7088" 
+                  y1="67.7837" 
+                  x1="61.7089"
+                />
+              </svg>
+            )}
+        </div>
+      </div>
+      <div className="mt-6 text-center">
+        <div className="text-lg sm:text-xl font-bold text-slate-800 mb-2">
+          {title}
+        </div>
+        <div className="text-slate-500 text-center text-xs sm:text-sm px-2">
+          {description}
+        </div>
+      </div>
       <style>{`
-        .pencil-loader {
-          display: block;
-          width: 10em;
-          height: 10em;
+        .loader {
+          display: flex;
+          align-items: center;
+          justify-content: center;
         }
-
-        .pencil-loader .pencil__body1,
-        .pencil-loader .pencil__body2,
-        .pencil-loader .pencil__body3,
-        .pencil-loader .pencil__eraser,
-        .pencil-loader .pencil__eraser-skew,
-        .pencil-loader .pencil__point,
-        .pencil-loader .pencil__rotate,
-        .pencil-loader .pencil__stroke {
-          animation-duration: 3s;
-          animation-timing-function: linear;
-          animation-iteration-count: infinite;
+        .loaderMiniContainer {
+          display: flex;
+          align-items: center;
+          justify-content: center;
+          position: relative;
+          width: 130px;
+          height: fit-content;
         }
-
-        .pencil-loader .pencil__body1,
-        .pencil-loader .pencil__body2,
-        .pencil-loader .pencil__body3 {
-          transform: rotate(-90deg);
+        .barContainer {
+          width: 100%;
+          height: fit-content;
+          display: flex;
+          flex-direction: column;
+          align-items: flex-start;
+          justify-content: center;
+          gap: 10px;
+          background-position: left;
         }
-
-        .pencil-loader .pencil__body1 {
-          animation-name: pencilBody1;
+        .bar {
+          width: 100%;
+          height: 8px;
+          background: linear-gradient(
+            to right,
+            rgb(59, 130, 246),
+            rgb(147, 197, 253),
+            rgb(59, 130, 246)
+          );
+          background-size: 200% 100%;
+          border-radius: 10px;
+          animation: bar ease-in-out 3s infinite alternate-reverse;
         }
-
-        .pencil-loader .pencil__body2 {
-          animation-name: pencilBody2;
-        }
-
-        .pencil-loader .pencil__body3 {
-          animation-name: pencilBody3;
-        }
-
-        .pencil-loader .pencil__eraser {
-          animation-name: pencilEraser;
-          transform: rotate(-90deg) translate(49px,0);
-        }
-
-        .pencil-loader .pencil__eraser-skew {
-          animation-name: pencilEraserSkew;
-          animation-timing-function: ease-in-out;
-        }
-
-        .pencil-loader .pencil__point {
-          animation-name: pencilPoint;
-          transform: rotate(-90deg) translate(49px,-30px);
-        }
-
-        .pencil-loader .pencil__rotate {
-          animation-name: pencilRotate;
-        }
-
-        .pencil-loader .pencil__stroke {
-          animation-name: pencilStroke;
-          transform: translate(100px,100px) rotate(-113deg);
-        }
-
-        @keyframes pencilBody1 {
-          from,
-          to {
-            stroke-dashoffset: 351.86;
-            transform: rotate(-90deg);
+        @keyframes bar {
+          0% {
+            background-position: left;
           }
-          50% {
-            stroke-dashoffset: 150.8;
-            transform: rotate(-225deg);
+          100% {
+            background-position: right;
           }
         }
-
-        @keyframes pencilBody2 {
-          from,
-          to {
-            stroke-dashoffset: 406.84;
-            transform: rotate(-90deg);
+        .bar2 {
+          width: 50%;
+        }
+        .svgIcon {
+          position: absolute;
+          left: -25px;
+          margin-top: 18px;
+          z-index: 2;
+          width: 70%;
+          animation: search ease-in-out 3s infinite alternate-reverse;
+        }
+        @keyframes search {
+          0% {
+            transform: translateX(0%) rotate(70deg);
           }
-          50% {
-            stroke-dashoffset: 174.36;
-            transform: rotate(-225deg);
+          100% {
+            transform: translateX(100px) rotate(10deg);
           }
         }
-
-        @keyframes pencilBody3 {
-          from,
-          to {
-            stroke-dashoffset: 296.88;
-            transform: rotate(-90deg);
-          }
-          50% {
-            stroke-dashoffset: 127.23;
-            transform: rotate(-225deg);
-          }
+        .svgIcon circle,
+        .svgIcon line {
+          stroke: rgb(37, 99, 235);
         }
-
-        @keyframes pencilEraser {
-          from,
-          to {
-            transform: rotate(-45deg) translate(49px,0);
-          }
-          50% {
-            transform: rotate(0deg) translate(49px,0);
-          }
-        }
-
-        @keyframes pencilEraserSkew {
-          from,
-          32.5%,
-          67.5%,
-          to {
-            transform: skewX(0);
-          }
-          35%,
-          65% {
-            transform: skewX(-4deg);
-          }
-          37.5%, 
-          62.5% {
-            transform: skewX(8deg);
-          }
-          40%,
-          45%,
-          50%,
-          55%,
-          60% {
-            transform: skewX(-15deg);
-          }
-          42.5%,
-          47.5%,
-          52.5%,
-          57.5% {
-            transform: skewX(15deg);
-          }
-        }
-
-        @keyframes pencilPoint {
-          from,
-          to {
-            transform: rotate(-90deg) translate(49px,-30px);
-          }
-          50% {
-            transform: rotate(-225deg) translate(49px,-30px);
-          }
-        }
-
-        @keyframes pencilRotate {
-          from {
-            transform: translate(100px,100px) rotate(0);
-          }
-          to {
-            transform: translate(100px,100px) rotate(720deg);
-          }
-        }
-
-        @keyframes pencilStroke {
-          from {
-            stroke-dashoffset: 439.82;
-            transform: translate(100px,100px) rotate(-113deg);
-          }
-          50% {
-            stroke-dashoffset: 164.93;
-            transform: translate(100px,100px) rotate(-113deg);
-          }
-          75%,
-          to {
-            stroke-dashoffset: 439.82;
-            transform: translate(100px,100px) rotate(112deg);
-          }
+        .svgIcon circle {
+          fill: rgba(37, 99, 235, 0.238);
         }
       `}</style>
-      <svg 
-        xmlns="http://www.w3.org/2000/svg" 
-        height="200px" 
-        width="200px" 
-        viewBox="0 0 200 200" 
-        className="pencil-loader"
-      >
-        <defs>
-          <clipPath id="pencil-eraser">
-            <rect height={30} width={30} ry={5} rx={5} />
-          </clipPath>
-        </defs>
-        <circle 
-          transform="rotate(-113,100,100)" 
-          strokeLinecap="round" 
-          strokeDashoffset="439.82" 
-          strokeDasharray="439.82 439.82" 
-          strokeWidth={2} 
-          stroke="currentColor" 
-          fill="none" 
-          r={70} 
-          className="pencil__stroke"
-          style={{ color: '#3b82f6' }}
-        />
-        <g transform="translate(100,100)" className="pencil__rotate">
-          <g fill="none">
-            <circle 
-              transform="rotate(-90)" 
-              strokeDashoffset={402} 
-              strokeDasharray="402.12 402.12" 
-              strokeWidth={30} 
-              stroke="hsl(223,90%,50%)" 
-              r={64} 
-              className="pencil__body1" 
-            />
-            <circle 
-              transform="rotate(-90)" 
-              strokeDashoffset={465} 
-              strokeDasharray="464.96 464.96" 
-              strokeWidth={10} 
-              stroke="hsl(223,90%,60%)" 
-              r={74} 
-              className="pencil__body2" 
-            />
-            <circle 
-              transform="rotate(-90)" 
-              strokeDashoffset={339} 
-              strokeDasharray="339.29 339.29" 
-              strokeWidth={10} 
-              stroke="hsl(223,90%,40%)" 
-              r={54} 
-              className="pencil__body3" 
-            />
-          </g>
-          <g transform="rotate(-90) translate(49,0)" className="pencil__eraser">
-            <g className="pencil__eraser-skew">
-              <rect height={30} width={30} ry={5} rx={5} fill="hsl(223,90%,70%)" />
-              <rect clipPath="url(#pencil-eraser)" height={30} width={5} fill="hsl(223,90%,60%)" />
-              <rect height={20} width={30} fill="hsl(223,10%,90%)" />
-              <rect height={20} width={15} fill="hsl(223,10%,70%)" />
-              <rect height={20} width={5} fill="hsl(223,10%,80%)" />
-              <rect height={2} width={30} y={6} fill="hsla(223,10%,10%,0.2)" />
-              <rect height={2} width={30} y={13} fill="hsla(223,10%,10%,0.2)" />
-            </g>
-          </g>
-          <g transform="rotate(-90) translate(49,-30)" className="pencil__point">
-            <polygon points="15 0,30 30,0 30" fill="hsl(33,90%,70%)" />
-            <polygon points="15 0,6 30,0 30" fill="hsl(33,90%,50%)" />
-            <polygon points="15 0,20 10,10 10" fill="hsl(223,10%,10%)" />
-          </g>
-        </g>
-      </svg>
     </div>
   );
 };
 
 export default PencilLoader;
-

@@ -1,7 +1,10 @@
 import React from 'react';
 import { Zap, Globe, Award, Users, Heart, BookOpen, CheckCircle, Sparkles } from 'lucide-react';
+import { useTranslation, Trans } from 'react-i18next';
 
 const About: React.FC = () => {
+  const { t } = useTranslation('about');
+
   return (
     <div className="bg-white">
       {/* Hero Section */}
@@ -14,10 +17,10 @@ const About: React.FC = () => {
           <div className="text-center">
             <img src="/logo.png.png" alt="MatriculaUSA Logo" className="mx-auto h-16 mb-6 bg-white rounded-2xl shadow-lg p-2" />
             <h1 className="text-5xl md:text-7xl font-black mb-6 leading-tight">
-              <span className="text-white">Empowering International Education</span>
+              <span className="text-white">{t('hero.title')}</span>
             </h1>
             <p className="text-xl md:text-2xl text-slate-200 max-w-3xl mx-auto leading-relaxed">
-              MatriculaUSA is the leading digital platform connecting international students to American universities, scholarships, and life-changing opportunities. We simplify the journey to study in the United States with technology, expert guidance, and a student-first approach.
+              {t('hero.description')}
             </p>
           </div>
         </div>
@@ -31,22 +34,22 @@ const About: React.FC = () => {
               <div className="bg-[#05294E] w-16 h-16 rounded-2xl flex items-center justify-center mx-auto mb-6">
                 <Zap className="h-8 w-8 text-white" />
               </div>
-              <h3 className="text-xl font-bold mb-2 text-[#05294E]">Our Mission</h3>
-              <p className="text-slate-700">To democratize access to U.S. higher education for talented students worldwide, providing a seamless, transparent, and supportive experience from application to enrollment.</p>
+              <h3 className="text-xl font-bold mb-2 text-[#05294E]">{t('pillars.mission.title')}</h3>
+              <p className="text-slate-700">{t('pillars.mission.description')}</p>
             </div>
             <div>
               <div className="bg-[#D0151C] w-16 h-16 rounded-2xl flex items-center justify-center mx-auto mb-6">
                 <Globe className="h-8 w-8 text-white" />
               </div>
-              <h3 className="text-xl font-bold mb-2 text-[#D0151C]">Our Vision</h3>
-              <p className="text-slate-700">To be the most trusted global bridge between international students and American universities, fostering diversity, opportunity, and academic excellence.</p>
+              <h3 className="text-xl font-bold mb-2 text-[#D0151C]">{t('pillars.vision.title')}</h3>
+              <p className="text-slate-700">{t('pillars.vision.description')}</p>
             </div>
             <div>
               <div className="bg-green-600 w-16 h-16 rounded-2xl flex items-center justify-center mx-auto mb-6">
                 <Heart className="h-8 w-8 text-white" />
               </div>
-              <h3 className="text-xl font-bold mb-2 text-green-700">Our Values</h3>
-              <p className="text-slate-700">Integrity, inclusion, innovation, and a relentless commitment to student success guide every decision we make.</p>
+              <h3 className="text-xl font-bold mb-2 text-green-700">{t('pillars.values.title')}</h3>
+              <p className="text-slate-700">{t('pillars.values.description')}</p>
             </div>
           </div>
         </div>
@@ -58,27 +61,27 @@ const About: React.FC = () => {
             <div>
               <div className="inline-flex items-center bg-[#05294E]/10 rounded-full px-6 py-2 mb-6">
                 <Sparkles className="h-4 w-4 mr-2 text-[#05294E]" />
-              <span className="text-sm font-bold text-slate-700">Our Story</span>
+              <span className="text-sm font-bold text-slate-700">{t('story.badge')}</span>
               </div>
               <h2 className="text-4xl md:text-5xl font-black text-slate-900 mb-8">
-              Transforming Dreams into Reality
+              {t('story.title')}
               </h2>
             <div className="space-y-6 text-slate-700 text-lg leading-relaxed">
                 <p>
-                MatriculaUSA was founded by international education specialists who understand the unique challenges faced by students seeking to study in the United States. Our team has helped thousands of students from diverse backgrounds secure scholarships, admissions, and a smooth transition to American campus life.
+                {t('story.p1')}
                 </p>
                 <p>
-                We partner with top U.S. universities and organizations to offer exclusive opportunities, transparent processes, and ongoing support—making the American dream accessible to all.
+                {t('story.p2')}
                 </p>
               </div>
               <div className="grid grid-cols-2 gap-6 mt-8">
               <div className="bg-[#05294E]/10 p-6 rounded-2xl border border-[#05294E]/20 text-center">
                 <div className="text-3xl font-black text-[#05294E] mb-2">$50M+</div>
-                <div className="text-sm font-medium text-slate-700">in Scholarships Awarded</div>
+                <div className="text-sm font-medium text-slate-700">{t('story.stats.scholarships')}</div>
               </div>
               <div className="bg-[#D0151C]/10 p-6 rounded-2xl border border-[#D0151C]/20 text-center">
                 <div className="text-3xl font-black text-[#D0151C] mb-2">5,000+</div>
-                <div className="text-sm font-medium text-slate-700">Students Supported</div>
+                <div className="text-sm font-medium text-slate-700">{t('story.stats.students')}</div>
               </div>
             </div>
           </div>
@@ -97,32 +100,36 @@ const About: React.FC = () => {
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="text-center mb-16">
             <h2 className="text-4xl md:text-5xl font-black text-slate-900 mb-6">
-              How <span className="text-[#D0151C]">MatriculaUSA</span> Works
+              <Trans
+                i18nKey="howItWorks.title"
+                ns="about"
+                components={[<span className="text-[#D0151C]" />]}
+              />
             </h2>
             <p className="text-xl text-slate-600 max-w-2xl mx-auto">
-              We make the U.S. college application process simple, transparent, and student-friendly.
+              {t('howItWorks.description')}
             </p>
           </div>
           <div className="grid grid-cols-1 md:grid-cols-4 gap-8">
             <div className="bg-white p-8 rounded-3xl shadow-xl border border-slate-200 text-center">
               <BookOpen className="h-10 w-10 mx-auto mb-4 text-[#05294E]" />
-              <h3 className="font-bold text-lg mb-2">1. Explore</h3>
-              <p className="text-slate-600">Browse partner universities and scholarship opportunities tailored to your profile.</p>
+              <h3 className="font-bold text-lg mb-2">{t('howItWorks.steps.explore.title')}</h3>
+              <p className="text-slate-600">{t('howItWorks.steps.explore.description')}</p>
             </div>
             <div className="bg-white p-8 rounded-3xl shadow-xl border border-slate-200 text-center">
               <Users className="h-10 w-10 mx-auto mb-4 text-[#D0151C]" />
-              <h3 className="font-bold text-lg mb-2">2. Apply</h3>
-              <p className="text-slate-600">Submit your application and required documents through our secure digital platform.</p>
+              <h3 className="font-bold text-lg mb-2">{t('howItWorks.steps.apply.title')}</h3>
+              <p className="text-slate-600">{t('howItWorks.steps.apply.description')}</p>
             </div>
             <div className="bg-white p-8 rounded-3xl shadow-xl border border-slate-200 text-center">
               <Award className="h-10 w-10 mx-auto mb-4 text-green-600" />
-              <h3 className="font-bold text-lg mb-2">3. Get Matched</h3>
-              <p className="text-slate-600">Our team and technology connect you with the best-fit universities and scholarships.</p>
+              <h3 className="font-bold text-lg mb-2">{t('howItWorks.steps.match.title')}</h3>
+              <p className="text-slate-600">{t('howItWorks.steps.match.description')}</p>
             </div>
             <div className="bg-white p-8 rounded-3xl shadow-xl border border-slate-200 text-center">
               <CheckCircle className="h-10 w-10 mx-auto mb-4 text-[#05294E]" />
-              <h3 className="font-bold text-lg mb-2">4. Succeed</h3>
-              <p className="text-slate-600">Receive guidance on visa, enrollment, and your transition to U.S. campus life.</p>
+              <h3 className="font-bold text-lg mb-2">{t('howItWorks.steps.succeed.title')}</h3>
+              <p className="text-slate-600">{t('howItWorks.steps.succeed.description')}</p>
             </div>
           </div>
         </div>
@@ -131,9 +138,11 @@ const About: React.FC = () => {
       {/* Call to Action */}
       <section className="py-20 bg-white text-center">
         <div className="max-w-2xl mx-auto">
-          <h2 className="text-4xl md:text-5xl font-black text-[#05294E] mb-6">Ready to Start Your Journey?</h2>
-          <p className="text-xl text-slate-700 mb-8">Join thousands of students who have made their American dream a reality with MatriculaUSA.</p>
-          <a href="/register" className="inline-block bg-[#D0151C] text-white px-8 py-4 rounded-2xl font-bold text-lg shadow-lg hover:bg-[#B01218] transition-all duration-300">Get Started</a>
+          <h2 className="text-4xl md:text-5xl font-black text-[#05294E] mb-6">{t('cta.title')}</h2>
+          <p className="text-xl text-slate-700 mb-8">{t('cta.description')}</p>
+          <a href="/register" className="inline-block bg-[#D0151C] text-white px-8 py-4 rounded-2xl font-bold text-lg shadow-lg hover:bg-[#B01218] transition-all duration-300">
+            {t('cta.button')}
+          </a>
         </div>
       </section>
     </div>

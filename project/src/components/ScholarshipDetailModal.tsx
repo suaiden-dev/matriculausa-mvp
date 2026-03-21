@@ -1,4 +1,4 @@
-import React, { useEffect } from 'react';
+import React from 'react';
 import { createPortal } from 'react-dom';
 import { useTranslation } from 'react-i18next';
 import type { UserProfile } from '../hooks/useAuth';
@@ -14,7 +14,6 @@ import {
   GraduationCap,
   Monitor,
   MapPin,
-  Briefcase,
   Globe,
   FileText,
   CheckCircle,
@@ -25,6 +24,8 @@ import {
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { is3800Scholarship, is3800ScholarshipBlocked } from '../utils/scholarshipDeadlineValidation';
+import { getPlacementFee } from '../utils/placementFeeCalculator';
+import { formatCurrency } from '../utils/currency';
 import { ScholarshipCountdownTimer } from './ScholarshipCountdownTimer';
 import { useModal } from '../contexts/ModalContext';
 
@@ -42,7 +43,6 @@ const ScholarshipDetailModal: React.FC<ScholarshipDetailModalProps> = ({
   isOpen,
   onClose,
   userProfile,
-  user,
   userRole
 }) => {
   const { t } = useTranslation();
@@ -90,12 +90,30 @@ const ScholarshipDetailModal: React.FC<ScholarshipDetailModalProps> = ({
   const daysLeft = getDaysUntilDeadline(scholarship.deadline);
   const isExpired = !scholarship.is_active || is3800ScholarshipBlocked(scholarship) || daysLeft < 0;
 
-  // Parse internal fees
-  let internalFees = scholarship.internal_fees;
-  if (typeof internalFees === 'string') {
-    try { internalFees = JSON.parse(internalFees); } catch (e) { internalFees = []; }
+  // Parse internal fees and add fixed ones
+  let internalFeesData = scholarship.internal_fees;
+  if (typeof internalFeesData === 'string') {
+    try { internalFeesData = JSON.parse(internalFeesData); } catch (e) { internalFeesData = []; }
   }
-  const hasInternalFees = internalFees && Array.isArray(internalFees) && internalFees.length > 0;
+  
+  const baseInternalFees = Array.isArray(internalFeesData) ? internalFeesData : [];
+  
+  // Add fixed fees (I539 and DS160)
+  const fixedFees = [
+    { 
+      name: t('scholarshipsPage.modal.i539COSPackage'), 
+      amount: 1800, 
+      details: t('scholarshipsPage.modal.i539PackageDescription') 
+    },
+    { 
+      name: t('scholarshipsPage.modal.ds160Package'), 
+      amount: 1800, 
+      details: t('scholarshipsPage.modal.ds160PackageDescription') 
+    }
+  ];
+  
+  const internalFees = [...fixedFees, ...baseInternalFees];
+  const hasInternalFees = internalFees.length > 0;
   const canViewInternalFees = hasInternalFees && userProfile?.has_paid_selection_process_fee;
   const shouldShowInternalFeesNotice = hasInternalFees && !userProfile?.has_paid_selection_process_fee;
 
@@ -131,69 +149,65 @@ const ScholarshipDetailModal: React.FC<ScholarshipDetailModalProps> = ({
             onClick={(e) => e.stopPropagation()}
           >
             {/* Header with Image */}
-            <div className="relative flex-shrink-0">
-              <div className="h-40 sm:h-48 bg-gradient-to-br from-[#05294E] via-[#0a3d6e] to-[#05294E] relative">
-                {scholarship.image_url && canViewSensitive && (
-                  <img 
-                    src={scholarship.image_url} 
-                    alt="" 
-                    className="absolute inset-0 w-full h-full object-cover opacity-30"
-                  />
-                )}
-                <div className="absolute inset-0 bg-gradient-to-t from-black/60 to-transparent" />
-                
-                {/* Close Button */}
-                <button
-                  onClick={onClose}
-                  className="absolute top-3 right-3 p-2 bg-white/10 hover:bg-white/20 rounded-full transition-colors"
-                >
-                  <X className="h-5 w-5 text-white" />
-                </button>
+            <div className="relative flex-shrink-0 h-48 sm:h-72 bg-white flex items-center justify-center p-6 sm:p-10 border-b border-slate-100">
+              {(scholarship.image_url || scholarship.universities?.image_url || scholarship.universities?.logo_url) && canViewSensitive && (
+                <img 
+                  src={scholarship.image_url || scholarship.universities?.image_url || scholarship.universities?.logo_url || ''} 
+                  alt="" 
+                  className="w-full h-full object-contain"
+                />
+              )}
+              
+              {/* Close Button */}
+              <button
+                onClick={onClose}
+                className="absolute top-3 right-3 p-2 bg-slate-100/80 hover:bg-slate-200 text-slate-500 rounded-full transition-colors z-20 backdrop-blur-sm"
+              >
+                <X className="h-5 w-5" />
+              </button>
+            </div>
 
-                {/* Badges */}
-                <div className="absolute top-3 left-3 flex gap-2">
-                  {scholarship.is_exclusive && (
-                    <span className="inline-flex items-center gap-1 bg-amber-500 text-white px-2.5 py-1 rounded-full text-xs font-semibold shadow-lg">
-                      <Star className="h-3 w-3" />
-                      {t('scholarshipsPage.modal.exclusive') || 'Exclusive'}
-                    </span>
-                  )}
-                  {isExpired && (
-                    <span className="inline-flex items-center gap-1 bg-red-500 text-white px-2.5 py-1 rounded-full text-xs font-semibold shadow-lg">
-                      <AlertTriangle className="h-3 w-3" />
-                      {t('scholarshipsPage.modal.expired') || 'Expired'}
-                    </span>
-                  )}
-                </div>
+            <div className="flex-1 overflow-y-auto">
+              <div className="p-5 sm:p-6">
+                {/* Title Section relocated to Body */}
+                <div className="mb-6">
+                  <div className="flex flex-wrap gap-2 mb-3">
+                    {scholarship.is_exclusive && (
+                      <span className="inline-flex items-center gap-1 bg-amber-500 text-white px-2.5 py-1 rounded-full text-xs font-semibold shadow-lg">
+                        <Star className="h-3 w-3" />
+                        {t('scholarshipsPage.modal.exclusive') || 'Exclusive'}
+                      </span>
+                    )}
+                    {isExpired && (
+                      <span className="inline-flex items-center gap-1 bg-red-500 text-white px-2.5 py-1 rounded-full text-xs font-semibold shadow-lg">
+                        <AlertTriangle className="h-3 w-3" />
+                        {t('scholarshipsPage.modal.expired') || 'Expired'}
+                      </span>
+                    )}
+                  </div>
 
-                {/* Title Section */}
-                <div className="absolute bottom-4 left-4 right-4">
-                  <p className="text-white/70 text-sm mb-1">
+                  <p className="text-slate-500 text-sm mb-1">
                     {scholarship.field_of_study || t('scholarshipsPage.modal.anyField')}
                   </p>
-                  <h2 className="text-xl sm:text-2xl font-bold text-white leading-tight mb-2">
+                  <h2 className="text-xl sm:text-2xl font-bold text-slate-900 leading-tight mb-2">
                     {scholarship.title}
                   </h2>
-                  <div className="flex items-center gap-2 text-white/80 text-sm">
-                    <Building className="h-4 w-4" />
-                    <span className={!canViewSensitive ? 'blur-[3px]' : ''}>
-                      {canViewSensitive ? scholarship.universities?.name : '••••••••••••'}
-                    </span>
+                  <div className="flex flex-wrap items-center gap-3 text-slate-600 text-sm font-medium">
+                    <div className="flex items-center gap-1.5">
+                      <Building className="h-4 w-4 text-[#05294E]" />
+                      <span className={!canViewSensitive ? 'blur-[3px]' : ''}>
+                        {canViewSensitive ? scholarship.universities?.name : '••••••••••••'}
+                      </span>
+                    </div>
                     {canViewSensitive && scholarship.universities?.location && (
-                      <>
-                        <span className="text-white/50">•</span>
-                        <MapPin className="h-3.5 w-3.5" />
+                      <div className="flex items-center gap-1.5">
+                        <span className="text-slate-300 hidden sm:block">•</span>
+                        <MapPin className="h-4 w-4 text-[#05294E]" />
                         <span>{scholarship.universities.location}</span>
-                      </>
+                      </div>
                     )}
                   </div>
                 </div>
-              </div>
-            </div>
-
-            {/* Content */}
-            <div className="flex-1 overflow-y-auto">
-              <div className="p-5 sm:p-6">
                 
                 {/* Content Grid */}
                 <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 mb-6">
@@ -271,6 +285,19 @@ const ScholarshipDetailModal: React.FC<ScholarshipDetailModalProps> = ({
                               <td className="py-3 px-4 text-right text-slate-700 font-medium">${applicationFee.toFixed(0)}</td>
                             </tr>
                             
+                            {/* Placement Fee - exibir apenas para novos usuários */}
+                            {userProfile?.placement_fee_flow && (() => {
+                              const annualValue = scholarship.annual_value_with_scholarship ? Number(scholarship.annual_value_with_scholarship) : Number(scholarship.amount) || 0;
+                              const placementFeeAmount = scholarship.placement_fee_amount ? Number(scholarship.placement_fee_amount) : null;
+                              const placementFeeValue = getPlacementFee(annualValue, placementFeeAmount);
+                              return (
+                                <tr>
+                                  <td className="py-3 px-4 text-slate-600 font-medium">Placement Fee</td>
+                                  <td className="py-3 px-4 text-right text-blue-600 font-bold">{formatCurrency(placementFeeValue)}</td>
+                                </tr>
+                              );
+                            })()}
+                            
                             {/* Per Credit */}
                             {scholarship.original_value_per_credit && (
                               <tr className="bg-slate-50/50">
@@ -326,16 +353,18 @@ const ScholarshipDetailModal: React.FC<ScholarshipDetailModalProps> = ({
                             )}
                           </div>
                           <table className="w-full text-sm">
-                            <tbody className="divide-y divide-amber-100">
+                            <tbody className="divide-y divide-slate-100">
                               {internalFees.map((fee: any, idx: number) => (
-                                <tr key={`internal-${idx}`} className="bg-white/50">
-                                  <td className="py-3 px-4">
+                                <tr key={`internal-${idx}`} className="bg-white/50 group hover:bg-slate-50 transition-colors">
+                                  <td className="py-4 px-6">
                                     <div className="flex flex-col">
-                                      <span className="text-slate-700 font-medium">{fee.category || fee.name}</span>
-                                      {fee.details && <span className="text-[10px] text-slate-500 font-medium uppercase tracking-wide mt-0.5">{fee.details}</span>}
+                                      <span className="text-slate-700 font-bold text-sm tracking-tight">{fee.category || fee.name}</span>
+                                      {fee.details && <span className="text-[10px] text-slate-500 font-medium tracking-wide mt-1 leading-relaxed">{fee.details}</span>}
                                     </div>
                                   </td>
-                                  <td className="py-3 px-4 text-right text-slate-700 font-medium">${Number(fee.amount).toLocaleString()}</td>
+                                  <td className="py-4 px-6 text-right text-slate-900 font-black text-base">
+                                    ${Number(fee.amount).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                                  </td>
                                 </tr>
                               ))}
                             </tbody>

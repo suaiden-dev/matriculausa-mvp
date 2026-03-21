@@ -6,6 +6,7 @@ import { CheckCircle, XCircle, FileText, Calendar, Award, ChevronDown, ChevronRi
 
 interface SelectionSurveyViewProps {
     userId: string;
+    surveyPassed?: boolean;
 }
 
 interface Submission {
@@ -15,13 +16,15 @@ interface Submission {
     total: number;
     percentage: number;
     passed: boolean;
+    // Sempre usamos "answers" internamente; "respostas" é apenas para compatibilidade com o banco
     answers: Record<string, string>;
-    extra_answers: Record<string, string>;
+    respostas?: Record<string, string>;
+    extra_answers?: Record<string, string>;
     created_at: string;
     updated_at: string;
 }
 
-const SelectionSurveyView: React.FC<SelectionSurveyViewProps> = ({ userId }) => {
+const SelectionSurveyView: React.FC<SelectionSurveyViewProps> = ({ userId, surveyPassed }) => {
     const { t } = useTranslation();
     const [submission, setSubmission] = useState<Submission | null>(null);
     const [loading, setLoading] = useState(true);
@@ -31,6 +34,14 @@ const SelectionSurveyView: React.FC<SelectionSurveyViewProps> = ({ userId }) => 
         const fetchSubmission = async () => {
             try {
                 setLoading(true);
+
+                // Se não tiver userId, já libera o loading e não tenta buscar nada
+                if (!userId) {
+                    setSubmission(null);
+                    setExpandedSections({});
+                    return;
+                }
+
                 const { data, error } = await supabase
                     .from('submissions')
                     .select('*')
@@ -38,22 +49,34 @@ const SelectionSurveyView: React.FC<SelectionSurveyViewProps> = ({ userId }) => 
                     .maybeSingle();
 
                 if (error) throw error;
-                setSubmission(data);
+                
+                if (data) {
+                    // Normaliza para sempre usar "answers" dentro do componente
+                    const normalized: Submission = {
+                        ...(data as any),
+                        answers: (data as any).answers || (data as any).respostas || {},
+                        extra_answers: (data as any).extra_answers || {}
+                    };
+                    setSubmission(normalized);
 
-                // Initialize first section as expanded
-                if (data && sections.length > 0) {
-                    setExpandedSections({ [sections[0].key]: true });
+                    // Inicializa a primeira seção como expandida
+                    if (sections.length > 0) {
+                        setExpandedSections({ [sections[0].key]: true });
+                    }
+                } else {
+                    setSubmission(null);
+                    setExpandedSections({});
                 }
             } catch (error) {
                 console.error('Error fetching survey submission:', error);
+                setSubmission(null);
+                setExpandedSections({});
             } finally {
                 setLoading(false);
             }
         };
 
-        if (userId) {
-            fetchSubmission();
-        }
+        fetchSubmission();
     }, [userId]);
 
     const toggleSection = (sectionKey: string) => {
@@ -80,8 +103,16 @@ const SelectionSurveyView: React.FC<SelectionSurveyViewProps> = ({ userId }) => 
                     <FileText className="w-8 h-8 text-slate-400" />
                 </div>
                 <h3 className="text-lg font-medium text-slate-900 mb-2">No Survey Submission Found</h3>
-                <p className="text-slate-500">
-                    This student has not completed the Selection Survey yet.
+                {surveyPassed && (
+                    <div className="mb-4 inline-flex items-center px-4 py-1.5 rounded-full bg-green-100 text-green-800 text-sm font-bold border-2 border-green-200">
+                        <CheckCircle className="w-4 h-4 mr-2" />
+                        STUDENT PASSED SURVEY
+                    </div>
+                )}
+                <p className="text-slate-500 max-w-md mx-auto">
+                    {surveyPassed 
+                        ? "This student passed the Selection Survey during onboarding, but the detailed answers are not available in the database." 
+                        : "This student has not completed the Selection Survey yet."}
                 </p>
             </div>
         );
@@ -189,10 +220,11 @@ const SelectionSurveyView: React.FC<SelectionSurveyViewProps> = ({ userId }) => 
                     </div>
                 </div>
 
-                {sections.map((section, index) => {
+                {sections.map((section) => {
+                    const answers = submission.answers || {};
                     const isExpanded = !!expandedSections[section.key];
                     const sectionQuestions = questions.filter(q => q.section === section.key);
-                    const answeredCount = sectionQuestions.filter(q => submission.answers[String(q.id)]).length;
+                    const answeredCount = sectionQuestions.filter(q => answers[String(q.id)]).length;
 
                     if (answeredCount === 0) return null;
 
@@ -220,11 +252,13 @@ const SelectionSurveyView: React.FC<SelectionSurveyViewProps> = ({ userId }) => 
                                 <div className="p-6 space-y-6 bg-white">
                                     <div className="grid grid-cols-1 gap-6">
                                         {sectionQuestions.map(question => {
-                                            const answer = submission.answers[String(question.id)];
+                                            const answers = submission.answers || {};
+                                            const extraAnswers = submission.extra_answers || {};
+                                            const answer = answers[String(question.id)];
                                             if (!answer) return null;
 
                                             const correct = isCorrect(question.id, answer);
-                                            const extraAnswer = submission.extra_answers?.[String(question.id)];
+                                            const extraAnswer = extraAnswers[String(question.id)];
 
                                             return (
                                                 <div key={question.id} className="relative pl-6 border-l-2 border-slate-100 hover:border-[#05294E]/30 transition-colors">

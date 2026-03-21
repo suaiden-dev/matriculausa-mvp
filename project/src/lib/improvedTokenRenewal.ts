@@ -1,17 +1,6 @@
-import { createClient } from '@supabase/supabase-js';
+import { supabase } from './supabase';
 
-const supabase = createClient(
-  import.meta.env.VITE_SUPABASE_URL,
-  import.meta.env.VITE_SUPABASE_ANON_KEY
-);
 
-interface TokenData {
-  access_token: string;
-  refresh_token: string;
-  expires_at: string;
-  user_id: string;
-  email: string;
-}
 
 /**
  * Serviço melhorado de renovação de tokens baseado na documentação oficial do Microsoft
@@ -67,7 +56,7 @@ export class ImprovedTokenRenewalService {
       }
       
       // Encontrar conta correspondente ao email
-      const account = accounts.find(acc => acc.username === email);
+      const account = accounts.find((acc: any) => acc.username === email);
       if (!account) {
         console.error('❌ Conta não encontrada para email:', email);
         return null;

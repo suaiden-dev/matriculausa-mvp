@@ -29,6 +29,7 @@ import {
 import { useAuth } from '../../hooks/useAuth';
 import { useUniversity } from '../../context/UniversityContext';
 import { useSmartPollingNotifications } from '../../hooks/useSmartPollingNotifications';
+import { useTranslation } from 'react-i18next';
 import NotificationsModal from '../../components/NotificationsModal';
 
 import { useEnvironment } from '../../hooks/useEnvironment';
@@ -50,7 +51,9 @@ interface SidebarItem {
 }
 
 const SchoolDashboardLayout: React.FC<SchoolDashboardLayoutProps> = ({ user, children }) => {
+  const { t } = useTranslation();
   // Estado para dropdowns da sidebar
+
   const [dropdownOpen, setDropdownOpen] = useState<Record<string, boolean>>({});
   const location = useLocation();
   const navigate = useNavigate();
@@ -470,17 +473,18 @@ const SchoolDashboardLayout: React.FC<SchoolDashboardLayoutProps> = ({ user, chi
                 {showNotif && (
                   <div className="hidden md:block absolute right-0 top-full mt-2 w-80 bg-white rounded-xl shadow-xl border border-slate-200 py-2 z-50">
                     <div className="px-4 pb-2 border-b border-slate-200 font-semibold text-slate-900 flex items-center justify-between">
-                      <span>Notifications</span>
+                      <span>{t('dashboard:studentDashboard.notifications.title')}</span>
                       <div className="flex items-center gap-2 text-xs">
-                        <button onClick={markAllAsRead} className="text-blue-600 hover:underline">Mark all as read</button>
+                        <button onClick={markAllAsRead} className="text-blue-600 hover:underline">{t('dashboard:studentDashboard.notifications.markAllAsRead')}</button>
                         <span className="text-slate-300">|</span>
-                        <button onClick={clearAll} className="text-red-600 hover:underline">Clear</button>
+                        <button onClick={clearAll} className="text-red-600 hover:underline">{t('dashboard:studentDashboard.notifications.clearAll')}</button>
                       </div>
                     </div>
                     <div className="max-h-80 overflow-y-auto">
                       {notifications.length === 0 ? (
-                        <div className="px-4 py-6 text-sm text-slate-500">No notifications</div>
+                        <div className="px-4 py-6 text-sm text-slate-500">{t('dashboard:studentDashboard.notifications.noNotifications')}</div>
                       ) : (
+
                         notifications.map((n) => (
                           <div key={n.id} className={`px-4 py-3 hover:bg-slate-50 cursor-pointer ${!n.read_at ? 'bg-slate-50' : ''}`} onClick={() => openNotification(n)}>
                             <div className="text-sm font-medium text-slate-900 flex items-center justify-between">

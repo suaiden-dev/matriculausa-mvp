@@ -1,0 +1,659 @@
+{
+  "preCheckoutModal": {
+    "acceptPrefix": "I accept the ",
+    "termsAndConditionsLink": "Terms and Conditions",
+    "acceptSuffix": " of the service contract.",
+    "securePayment": "Secure Payment",
+    "securePaymentProcess": "Secure Payment Process",
+    "closeModal": "Close modal",
+    "securePaymentGateway": "Secure Payment Gateway",
+    "totalAmount": "Total Amount",
+    "referralCode": "Referral Code",
+    "yourReferralCode": "Your Referral Code",
+    "enterReferralCode": "Enter your referral code to get a discount",
+    "haveReferralCode": "I have a discount code",
+    "usingYourReferralCode": "Using the referral code you used during registration",
+    "placeholder": "Enter code",
+    "validate": "Validate",
+    "validating": "Validating...",
+    "pleaseEnterCode": "Please enter a code",
+    "invalidCode": "Invalid or inactive code",
+    "selfReferral": "You cannot use your own referral code",
+    "alreadyUsedCode": "You have already used a referral code previously",
+    "sellerReferralCodeBlocked": "You cannot use Matricula Rewards codes because you have a seller referral code",
+    "sellerReferralCodeBlockedTitle": "Matricula Rewards Blocked",
+    "sellerReferralCodeBlockedMessage": "You cannot use Matricula Rewards codes because you registered with a seller referral code. This is a system restriction to prevent conflicts between different referral systems.",
+    "sellerReferralCodeInfoTitle": "Seller Referral Code Detected",
+    "sellerReferralCodeInfoMessage": "You registered with a seller referral code, so Matricula Rewards codes are not available. You can still proceed with payment at the regular price.",
+    "validCode": "Valid code! $50 discount applied",
+    "errorValidating": "Error validating code",
+    "codeAlreadyUsed": "Code already used",
+    "discountAlreadyApplied": "Your discount has already been applied previously",
+    "continueWithoutCode": "Continue without code",
+    "goToPayment": "Go to payment",
+    "applyCodeAndContinue": "Apply code and continue",
+    "processingPayment": "Processing Payment...",
+    "mustAcceptTerms": "You must accept the terms and conditions before continuing",
+    "mustEnterValidCode": "You must enter a valid code before continuing",
+    "termsAndConditions": {
+      "title": "Terms and Conditions",
+      "termsOfUse": "Terms of Use",
+      "and": "and",
+      "privacyPolicy": "Privacy Policy",
+      "description": "before proceeding with payment"
+    },
+    "closeTerms": "Close terms",
+    "loading": "Loading...",
+    "noTermsFound": "No terms found.",
+    "confirmReading": "Confirm Reading",
+    "scrollToBottomFirst": "Read to the end",
+    "acceptTerms": "Accept and Confirm",
+    "uploadPhotoRequired": "Please upload a selfie with your document to continue.",
+    "uploadPhoto": "Upload Selfie with Document",
+    "acceptContractTerms": "I accept the service contract terms and conditions",
+    "promotionalCoupon": {
+      "title": "Selection Process Fee",
+      "discountedValue": "Discounted Value",
+      "originalValue": "Original Value",
+      "applied": "Applied",
+      "successMessage": "Code {{code}} applied! You saved ${{amount}}",
+      "enterCodePlease": "Please enter a promotional code."
+    }
+  },
+  "zelleComponent": {
+    "instructions": {
+      "title": "Zelle Payment Instructions",
+      "subtitle": "Follow these steps to complete your payment via Zelle",
+      "detailsTitle": "Zelle Payment Details",
+      "detailsSubtitle": "Send payment to the recipient below",
+      "recipientEmail": "Recipient Email",
+      "paymentAmount": "Payment Amount",
+      "youSaved": "You saved {{amount}}!",
+      "important": "Important",
+      "importantNote": "Make sure to send the exact amount of <strong>{{amount}}</strong> to <strong>{{email}}</strong> via Zelle. Any discrepancy will delay your payment processing.",
+      "uploadTitle": "Upload Payment Confirmation Screenshot *",
+      "clickToUpload": "Click to upload or drag and drop",
+      "fileFormats": "PNG, JPG up to 5MB",
+      "selectFile": "Select File",
+      "remove": "Remove",
+      "changeFile": "Change File",
+      "submitPayment": "Submit Payment",
+      "processing": "Processing...",
+      "paymentProcessing": "Payment Processing..."
+    },
+    "analyzing": {
+      "title": "Analyzing Payment...",
+      "subtitle": "Your payment confirmation is being automatically validated by our AI system."
+    },
+    "underReview": {
+      "title": "Payment Under Review",
+      "subtitle": "Your payment proof requires additional verification. Our team will review it within 48 hours.",
+      "notification": "You will be notified once the review is complete. Please do not submit another payment."
+    },
+    "success": {
+      "title": "Payment Approved Successfully!",
+      "subtitle": "Your Zelle payment has been processed and approved. You can now proceed with the next steps.",
+      "detailsTitle": "Payment Details:",
+      "originalAmount": "Original Amount:",
+      "discountApplied": "Discount Applied:",
+      "finalAmount": "Final Amount:",
+      "youSavedSuccess": "You saved!",
+      "amount": "Amount:",
+      "feeType": "Fee Type:",
+      "paymentId": "Payment ID:",
+      "submitted": "Submitted:",
+      "nextStepsTitle": "What happens next?",
+      "stepUploaded": "Payment confirmation uploaded",
+      "stepApproved": "Payment approved successfully",
+      "stepProceeding": "Proceeding to next step automatically"
+    },
+    "rejected": {
+      "title": "Payment Rejected",
+      "subtitle": "Your payment proof was not approved. Please review the reason below and upload a new payment confirmation.",
+      "reasonTitle": "Rejection Reason:",
+      "defaultReason": "Payment was rejected by admin. Please upload a new payment confirmation.",
+      "uploadNew": "Upload New Payment Proof",
+      "uploadNewNote": "Click the button above to upload a new payment confirmation screenshot"
+    },
+    "uploadModal": {
+      "uploadingTitle": "Uploading Document...",
+      "uploadingMessage": "Please wait while we upload your payment confirmation",
+      "sendingTitle": "Sending for Verification...",
+      "sendingMessage": "Your payment proof is being sent for automatic validation",
+      "analyzingTitle": "Analyzing Payment...",
+      "analyzingMessage": "Our AI is validating your payment confirmation"
+    },
+    "errors": {
+      "fileSize": "File size must be less than 5MB",
+      "fileType": "Please select an image file (JPG, PNG, etc.)",
+      "uploadRequired": "Please upload a screenshot of your payment confirmation",
+      "uploadFailed": "Failed to upload payment confirmation",
+      "alreadyPending": "You already have a payment being processed. Please wait for it to be reviewed.",
+      "checkingStatus": "Checking payment status..."
+    }
+  },
+  "zelleCheckout": {
+    "title": "ZELLE PAYMENT",
+    "subtitle": "Complete your payment via Zelle transfer",
+    "backToPaymentSelection": "Back to Payment Selection",
+    "paymentSummary": "Payment Summary",
+    "paymentMethod": "Payment Method",
+    "amount": "Amount",
+    "instructions": "Payment Instructions",
+    "step1": "Step 1: Open your Zelle app",
+    "step2": "Step 2: Send payment to",
+    "step3": "Step 3: Use the exact amount shown above",
+    "step4": "Step 4: Add a reference note",
+    "uploadReceipt": "Upload Receipt",
+    "uploadReceiptDescription": "Upload your Zelle payment receipt",
+    "dragAndDrop": "Drag and drop your file here, or click to select",
+    "supportedFormats": "Supported formats: JPG, PNG, PDF (max 10MB)",
+    "removeFile": "Remove file",
+    "paymentDetails": "Payment Details",
+    "confirmationCode": "Confirmation Code",
+    "confirmationCodePlaceholder": "Enter Zelle confirmation code",
+    "paymentDate": "Payment Date",
+    "recipientEmail": "Recipient Email",
+    "recipientEmailPlaceholder": "Email used in Zelle",
+    "recipientName": "Recipient Name",
+    "recipientNamePlaceholder": "Name used in Zelle",
+    "submitPayment": "Submit Receipt",
+    "processing": "Processing...",
+    "activeDiscount": "Active Discount",
+    "discountApplied": "Discount applied",
+    "originalAmount": "Original amount",
+    "discountedAmount": "Discounted amount",
+    "savings": "You saved",
+    "error": {
+      "fileRequired": "Please select a receipt file",
+      "detailsRequired": "Please fill in all payment details",
+      "uploadFailed": "Failed to upload receipt",
+      "paymentFailed": "Error processing payment"
+    },
+    "importantInfo": {
+      "title": "Important Information",
+      "securePayment": "Secure Payment",
+      "securePaymentDesc": "Your payment information is encrypted and secure",
+      "verificationRequired": "Verification Required",
+      "verificationRequiredDesc": "Payment will be verified automatically within 48 hours",
+      "zelleTransfer": "Zelle Transfer",
+      "zelleTransferDesc": "Complete the transfer and upload your confirmation",
+      "paymentInstructions": "Payment Instructions",
+      "step1": "Complete Zelle transfer to the provided recipient",
+      "step2": "Save the confirmation screenshot",
+      "step3": "Upload your confirmation screenshot",
+      "step4": "Wait for processing (may take up to 48 hours)"
+    },
+    "requirements": {
+      "title": "Important: Your payment confirmation MUST include:",
+      "confirmationCode": "Confirmation Code",
+      "confirmationCodeDesc": "The unique transaction code from Zelle",
+      "paymentDate": "Payment Date",
+      "paymentDateDesc": "When the transfer was completed",
+      "paymentAmount": "Payment Amount",
+      "paymentAmountDesc": "The exact amount transferred",
+      "recipient": "Recipient",
+      "recipientDesc": "Who received the payment"
+    },
+    "receiptType": {
+      "title": "Required Receipt Type",
+      "description": "To ensure quick and accurate verification, please make sure to submit the correct receipt:",
+      "correct": {
+        "title": "Correct Receipt",
+        "description": "Submit a screenshot of the confirmation receipt that appears immediately after completing the payment in the Zelle app. This is the instant confirmation generated by the app."
+      },
+      "incorrect": {
+        "title": "Not Accepted",
+        "description": "Do not submit the PDF receipt that is made available later by the app. Only the immediate app screenshot is accepted for verification."
+      },
+      "understood": "Got it, continue"
+    },
+    "steps": {
+      "title": "Complete these steps:",
+      "step1": "Complete your Zelle transfer of the required amount",
+      "step2": "Save the payment confirmation screenshot that shows all required information",
+      "step2Important": {
+        "title": "Important:",
+        "description": "Submit a screenshot of the confirmation receipt that appears immediately after completing the payment in the Zelle app. This is the instant confirmation generated by the app. Do not submit the PDF receipt that is made available later by the app."
+      },
+      "step3": "Upload your confirmation screenshot below",
+      "step4": "Wait for processing (may take up to 48 hours)"
+    },
+    "reviewDetails": "Review your payment details",
+    "zellePaymentDetails": {
+      "title": "Zelle Payment Details",
+      "subtitle": "Send your payment to the following recipient",
+      "paymentInstructions": "Zelle Payment Instructions",
+      "paymentInstructionsSubtitle": "Complete your transfer by sending the amount to the recipient below",
+      "recipientEmail": "Recipient Email",
+      "paymentAmount": "Payment Amount",
+      "important": "Important:",
+      "importantMessage": "Make sure to send the exact amount of <strong>{{amount}} USD</strong> to <strong>pay@matriculausa.com</strong> via Zelle. Any discrepancy in amount or recipient will delay your payment processing.",
+      "importantMessageSimple": "Make sure the exact payment amount matches the amount shown above.",
+      "copied": "Copied!",
+      "copiedTooltip": "Copy email"
+    }
+  },
+  "zelleWaiting": {
+    "title": "Waiting for Verification",
+    "subtitle": "We are analyzing your payment receipt",
+    "analyzingPayment": "Analyzing your payment receipt...",
+    "waitTime": "Wait time",
+    "status": {
+      "pending": "Pending",
+      "approved": "Approved",
+      "rejected": "Rejected",
+      "error": "Error"
+    },
+    "messages": {
+      "analyzing": "Analyzing your payment receipt...",
+      "approved": "Payment approved! 🎉",
+      "rejected": "Payment rejected ❌",
+      "error": "Error verifying payment",
+      "under_review": "Processing Payment"
+    },
+    "details": {
+      "analyzing": "Our team is verifying your receipt. This may take a few minutes.",
+      "analyzingAi": "Our AI is validating your payment confirmation",
+      "approved": "Your payment has been verified and approved successfully.",
+      "rejected": "Your receipt was not approved. Please check that all information is visible.",
+      "error": "An error occurred while verifying your payment. Please try again.",
+      "under_review": "Your payment proof requires additional verification. Our team will review it within 48 hours."
+    },
+    "actions": {
+      "tryAgain": "Try Again",
+      "contactSupport": "Contact Support",
+      "backToCheckout": "Back to Dashboard",
+      "uploadingDocument": "Uploading Document...",
+      "uploadingWait": "Please wait while we upload your payment confirmation",
+      "sendingDocument": "Sending for Verification...",
+      "sendingWait": "Your payment proof is being sent for automatic validation",
+      "analyzingWait": "Please wait while we analyze your payment proof"
+    },
+    "redirecting": "Redirecting to success page...",
+    "analysisTime": "Analysis time: ~40 seconds",
+    "paymentInfo": {
+      "title": "Payment Information",
+      "feeType": "Fee Type:",
+      "amount": "Amount:",
+      "paymentId": "Payment ID:"
+    },
+    "helpText": {
+      "default": "If the process takes longer than 2 minutes, please contact support.",
+      "underReview": "Your payment is under review. Please wait for verification."
+    }
+  },
+  "zelleModal": {
+    "finalAmount": "Final Amount:",
+    "feeType": "Fee Type:",
+    "paymentId": "Payment ID:",
+    "submitted": "Submitted:",
+    "paymentUnderReview": "Payment Under Review",
+    "paymentUnderReviewMessage": "You will be notified once the review is complete. Please do not submit another payment.",
+    "rejectionReason": "Rejection Reason:",
+    "paymentDetails": "Payment Details:",
+    "originalAmount": "Original Amount:",
+    "discountApplied": "Discount Applied:",
+    "amount": "Amount:",
+    "uploadNewProof": "Upload New Payment Proof",
+    "uploadNewProofHint": "Click the button above to upload a new payment confirmation screenshot",
+    "removeFile": "Remove",
+    "changeFile": "Change File"
+  },
+  "zelleSuccess": {
+    "title": "Zelle Payment Successful!",
+    "subtitle": "Thank you for your payment! Your Zelle payment has been verified and approved.",
+    "invalidStatus": {
+      "title": "Invalid Payment Status",
+      "message": "This page is only for successful Zelle payments.",
+      "returnHome": "Return Home"
+    },
+    "paymentDetails": {
+      "title": "Payment Details",
+      "subtitle": "Zelle payment verified",
+      "feeType": "Fee Type:",
+      "amount": "Amount:",
+      "status": "Status:",
+      "approved": "Approved"
+    },
+    "whatsNext": {
+      "title": "What's Next?",
+      "step1": "Your Zelle payment has been verified and approved",
+      "step2": "You can now access all features of the application process",
+      "step3": "Our team will contact you shortly with next steps"
+    },
+    "actions": {
+      "goToDashboard": "Go to Dashboard",
+      "returnHome": "Return Home"
+    },
+    "feeTypes": {
+      "i-20_control_fee": "I-20 Control Fee",
+      "application_fee": "Application Fee",
+      "scholarship_fee": "Scholarship Fee",
+      "placement_fee": "Placement Fee",
+      "selection_process": "Selection Process Fee",
+      "default": "Payment"
+    }
+  },
+  "selectionFeeStep": {
+    "main": {
+      "title": "Selection Process Fee",
+      "subtitle": "This fee covers the processing of your application, document evaluation, and initial support for your study process.",
+      "headerTitle": "Selection Process Fee",
+      "headerSubtitle": "Matricula USA - One-time fee",
+      "description": "This fee covers your application processing, document evaluation, and initial support for your study journey in the United States.",
+      "identityVerification": "Identity Verification",
+      "identityVerificationSubtitle": "This step is mandatory",
+      "identity": {
+        "success": "Photo sent successfully!",
+        "error": "Error saving photo. Please try again.",
+        "continue": "Continue",
+        "sending": "Sending...",
+        "sendPhoto": "Send",
+        "completed": "Verification Completed",
+        "completedTitle": "Verification completed!",
+        "alreadySent": "Your identity photo has already been sent. You can proceed to the questionnaire."
+      },
+      "discountApplied": "Discount Applied",
+      "couponApplied": "Coupon {{coupon}} Applied",
+      "methods": {
+        "stripe": "Credit Card"
+      },
+      "paymentProcessing": {
+        "title": "Processing Payment",
+        "subtitle": "Please wait while we process your payment..."
+      },
+      "zellePayment": "Zelle Payment",
+      "zelleProcessing": {
+        "title": "Zelle Payment Processing",
+        "subtitle": "Your Zelle payment is currently being verified."
+      },
+      "zelleUnavailable": "Zelle is currently unavailable",
+      "parcelowInstallments": "Up to 12x",
+      "parcelowVerification": "Parcelow Verification",
+      "cpfPlaceholder": "Enter your CPF",
+      "goToPayment": "Go to Payment",
+      "selectMethod": "Select Payment Method",
+      "serviceContract": "Service Contract",
+      "back": "Back",
+      "referralCode": {
+        "title": "Referral Code",
+        "subtitle": "Got a friend's code? Enter it here for a discount!",
+        "placeholder": "Enter Referral Code",
+        "validate": "Validate Code",
+        "applied": "Code applied successfully",
+        "discount": "Discount:",
+        "originalPrice": "Original Price:",
+        "totalFinal": "Final Total:"
+      },
+      "promotionalCoupon": {
+        "title": "Promotional Coupon",
+        "subtitle": "Enter your promotional coupon code",
+        "placeholder": "Enter code",
+        "validating": "Validating...",
+        "remove": "Remove Coupon",
+        "applied": "Coupon applied",
+        "couponApplied": "Coupon applied successfully",
+        "discount": "Discount:",
+        "originalPrice": "Original Price:",
+        "totalFinal": "Final Total:"
+      },
+      "processingFees": {
+        "card": "* May include processing fees",
+        "pix": "* May include processing fees",
+        "parcelow": "* Operator and platform fees may apply",
+        "zelle": "* Processing can take up to 48 hours"
+      }
+    },
+    "paid": {
+      "title": "Selection Process Fee",
+      "subtitle": "You have successfully paid the selection process fee.",
+      "paidTitle": "Payment Confirmed",
+      "paidSubtitle": "Your payment has been successfully confirmed.",
+      "continue": "Continue"
+    }
+  },
+  "paymentStep": {
+    "loading": "Loading your applications...",
+    "title": "Application Fee",
+    "securePaymentBadge": "Secure & Encrypted Payment",
+    "subtitleAllPaid": "All application fees have been processed. Click the button below to complete your onboarding.",
+    "subtitlePending": "Pay the application fee for your selected scholarship to officially confirm your choice and secure your spot.",
+    "completedTitle": "Step Completed",
+    "completedSubtitle": "The application fee for your scholarship has already been processed. This step is complete.",
+    "completedTitle2": "The application fee has been successfully processed.",
+    "continue": "Continue",
+    "enrollmentFeeLabel": "Application Fee",
+    "feeWithoutDependents": "Fee without dependents:",
+    "dependentsSingular": "dependent (+$100 each):",
+    "dependentsPlural": "dependents (+$100 each):",
+    "creditCard": "Credit Card",
+    "creditCardFees": "* May include processing fees",
+    "pixFees": "* May include processing fees",
+    "parcelowFees": "* May include operator and platform processing fees",
+    "parcelowInstallments": "Up to 12x",
+    "zelleNoFees": "No Fees",
+    "zelleProcessingTime": "Processing may take up to 48 hours",
+    "parcelowCpfTitle": "Mandatory Parcelow Verification",
+    "parcelowCpfPlaceholder": "Enter your CPF (000.000.000-00)",
+    "parcelowCpfInvalid": "Invalid CPF. Please enter all 11 digits.",
+    "parcelowCpfError": "Error saving CPF. Please try again.",
+    "goToPayment": "Go to payment",
+    "zellePendingTitle": "Zelle Payment Under Review",
+    "zellePendingMessage": "You have already initiated a Zelle payment. Please wait for confirmation before using another method. This can take up to 48 hours.",
+    "paymentConfirmed": "Payment Confirmed",
+    "paymentConfirmedSubtitle": "This fee has already been successfully processed.",
+    "noApplications": "No active applications",
+    "noApplicationsMessage": "You have not selected any scholarships yet. Go back and select at least one to proceed.",
+    "backToSelection": "Back to Selection"
+  },
+  "paymentSelector": {
+    "title": "Choose Payment Method",
+    "subtitle": "Select how you would like to pay your {{feeType}} fee",
+    "amount": "Amount",
+    "loading": {
+      "message": "Loading payment methods...",
+      "processing": "Processing payment..."
+    },
+    "promotionalCoupon": {
+      "label": "Promotional Coupon",
+      "placeholder": "ENTER CODE",
+      "validate": "Validate",
+      "validating": "Validating...",
+      "success": "Coupon applied successfully!",
+      "invalid": "Invalid or expired coupon.",
+      "error": "Error validating coupon.",
+      "validated": "Validated",
+      "remove": "Remove coupon",
+      "original": "original",
+      "withDiscount": "with discount",
+      "discountAmount": "discount",
+      "applied": "Coupon {{code}} applied! ${{amount}} discount applied.",
+      "errors": {
+        "invalid": "Invalid coupon code",
+        "generic": "Error validating coupon. Check your connection and try again.",
+        "cpfRequired": "CPF is required for Parcelow payment. Please update your profile."
+      }
+    },
+    "methods": {
+      "stripe": {
+        "title": "Stripe",
+        "description": "Pay securely with credit or debit card via Stripe"
+      },
+      "pix": {
+        "title": "PIX",
+        "description": "Instant payment system for Brazilian users"
+      },
+      "parcelow": {
+        "title": "Parcelow",
+        "description": "Pay with your credit card"
+      },
+      "zelle": {
+        "title": "Zelle",
+        "description": "Pay via Zelle transfer",
+        "descriptionDetailed": "Pay via Zelle and upload the receipt (24-48h)."
+      }
+    },
+    "feeTypes": {
+      "selection_process": "selection process",
+      "application_fee": "application",
+      "enrollment_fee": "application",
+      "scholarship_fee": "scholarship",
+      "i20_control_fee": "I-20 control fee"
+    },
+    "manualVerification": "Processing may take up to 48 hours",
+    "important": "Important:",
+    "zelleUploadNote": "After making the Zelle payment, you'll need to upload a screenshot of the confirmation showing the confirmation code, date, amount, and recipient.",
+    "includesProcessingFees": "* Includes processing fees",
+    "parcelowFeesNote": "* Provider and platform processing fees will be applied",
+    "parcelowInstallmentPreview": "or in up to {{count}} installments"
+  },
+  "paymentChoice": {
+    "title": "Choose Payment Method",
+    "subtitle": "Select how you would like to pay your {{feeType}} fee",
+    "manualVerification": "Processing may take up to 48 hours",
+    "important": "Important",
+    "amount": "Amount",
+    "zelleUploadNote": "After making the Zelle payment, you'll need to upload a screenshot of the confirmation showing the confirmation code, date, amount, and recipient.",
+    "loading": {
+      "processing": "Processing..."
+    },
+    "feeTypes": {
+      "application_fee": "application",
+      "enrollment_fee": "application",
+      "scholarship_fee": "scholarship",
+      "selection_process": "selection process"
+    },
+    "methods": {
+      "stripe": {
+        "title": "Credit Card",
+        "description": "Pay securely with credit or debit card via Stripe"
+      },
+      "pix": {
+        "title": "PIX",
+        "description": "Instant payment system for Brazilian users"
+      },
+      "zelle": {
+        "title": "Zelle",
+        "description": "Pay via Zelle transfer"
+      }
+    }
+  },
+  "scholarshipFeeStep": {
+    "loading": "Loading information...",
+    "title": "Scholarship Fee",
+    "subtitle": "This fee is the final commitment to the selected scholarship or college.",
+    "completedTitle": "Step Completed",
+    "completedSubtitle": "Your scholarship fee has been successfully processed. This step is complete.",
+    "continue": "Continue",
+    "securePayment": "Secure Payment",
+    "confirmed": "Payment Confirmed",
+    "confirmedSubtitle": "Your scholarship fee has been confirmed.",
+    "noApplications": "No applications ready",
+    "noApplicationsMessage": "You need to complete the previous steps before paying the scholarship fee.",
+    "back": "Back",
+    "zellePendingTitle": "Zelle Payment Under Review",
+    "zellePendingMessage": "You have already initiated a Zelle payment. Please wait for confirmation before using another method. This can take up to 48 hours."
+  },
+  "placementFeeStep": {
+    "loading": "Loading information...",
+    "title": "Placement Fee",
+    "subtitle": "Placement fee calculated based on the annual value of your selected scholarship.",
+    "completedTitle": "Step Completed",
+    "completedSubtitle": "Your Placement Fee has been successfully processed.",
+    "continue": "Continue",
+    "securePayment": "Secure Payment",
+    "confirmed": "Payment Confirmed",
+    "confirmedSubtitle": "Your Placement Fee has been confirmed.",
+    "noApplications": "No applications ready",
+    "noApplicationsMessage": "You need to complete the previous steps before paying the Placement Fee.",
+    "back": "Back",
+    "zellePendingTitle": "Zelle Payment Under Review",
+    "zellePendingMessage": "You have already initiated a Zelle payment. Please wait for confirmation before using another method. This can take up to 48 hours.",
+    "annualTuition": "Annual scholarship value: {{amount}}",
+    "cpfRequiredTitle": "Enter your CPF for Parcelow",
+    "cpfPlaceholder": "000.000.000-00",
+    "cpfError": "Error saving CPF. Please try again.",
+    "cpfInvalid": "CPF must be 11 digits",
+    "goToPayment": "Continue to Payment"
+  },
+  "paymentBlocker": {
+    "scholarships": {
+      "title": "Scholarships Locked",
+      "description": "To access our exclusive collection of scholarships, you need to complete the initial selection process. This is the first step of your journey to studying in the United States."
+    },
+    "universities": {
+      "title": "Universities Locked",
+      "description": "To explore our partner universities and their programs, you need to complete the initial selection process. This is the first step of your journey to studying in the United States."
+    },
+    "default": {
+      "title": "Content Locked",
+      "description": "To access this content, you need to complete the initial selection process. This is the first step of your journey to studying in the United States."
+    },
+    "selectionProcessFee": "Selection Process Fee",
+    "completeApplicationJourney": "Complete your application journey",
+    "goToDashboardAndPayFee": "Go to Dashboard & Pay Fee",
+    "learnHowItWorks": "Learn How It Works",
+    "contentLockedMessage": "This content is locked until payment is completed"
+  },
+  "successPages": {
+    "selectionProcessFee": {
+      "title": "Selection Process Fee Payment Successful!",
+      "description": "Your payment of {{amount}} has been processed successfully.",
+      "message": "You now have access to all scholarships and can apply freely.",
+      "button": "Go to Scholarships",
+      "verifying": "Verifying your payment...",
+      "pleaseWait": "Please wait while we confirm your transaction. This may take a few moments.",
+      "errorTitle": "Selection Process Fee Payment Error",
+      "errorMessage": "There was a problem processing your payment.",
+      "errorRetry": "Try again. If the error persists, please contact support."
+    },
+    "scholarshipFee": {
+      "title": "Scholarship Fee Payment Successful!",
+      "description": "Your payment of {{amount}} has been processed successfully.",
+      "message": "Your application will now proceed to the next stage.",
+      "button": "View Details",
+      "verifying": "Verifying your payment...",
+      "pleaseWait": "Please wait while we confirm your payment.",
+      "errorTitle": "Payment Processing Error",
+      "errorMessage": "There was a problem processing your payment.",
+      "errorRetry": "Try again or contact support."
+    },
+    "applicationFee": {
+      "title": "Application Fee Payment Successful!",
+      "description": "Your payment of {{amount}} has been processed successfully.",
+      "message": "Your application will now proceed to the next stage.",
+      "button": "Go to My Applications",
+      "verifying": "Verifying Payment...",
+      "pleaseWait": "Please wait while we confirm your transaction. This may take a few moments.",
+      "errorTitle": "Verification Failed",
+      "errorMessage": "There was a problem verifying your payment. Please contact support.",
+      "errorDetails": "Error details:"
+    },
+    "placementFee": {
+      "title": "Placement Fee Payment Successful!",
+      "description": "Your payment of {{amount}} has been processed successfully.",
+      "message": "Your application is now confirmed.",
+      "button": "Continue",
+      "verifying": "Verifying your payment...",
+      "pleaseWait": "Please wait while we confirm your transaction. This may take a few moments.",
+      "errorTitle": "Processing Error",
+      "errorMessage": "There was a problem processing your payment.",
+      "errorRetry": "Try again or contact support."
+    },
+    "common": {
+      "verifying": "Verifying your payment...",
+      "pleaseWait": "Please wait a moment while we process your transaction."
+    },
+    "i20ControlFee": {
+      "title": "I-20 Control Fee Payment Successful!",
+      "message": "Your I-20 document will be processed and sent shortly.",
+      "button": "Back to My Applications",
+      "verifying": "Verifying Payment...",
+      "pleaseWait": "Please wait while we confirm your payment.",
+      "errorTitle": "I-20 Control Fee Payment Error",
+      "errorMessage": "There was a problem processing your payment.",
+      "errorRetry": "Try again. If the error persists, please contact support."
+    }
+  }
+}

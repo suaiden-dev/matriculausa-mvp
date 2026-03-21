@@ -1,4 +1,4 @@
-import { useEffect, useState, useCallback } from 'react';
+import { useEffect, useState, useCallback, useMemo } from 'react';
 import { supabase } from '../lib/supabase';
 import { channelManager } from '../lib/supabaseChannelManager';
 import { useAuth } from './useAuth';
@@ -88,7 +88,7 @@ export const useGlobalStudentUnread = () => {
 
   const getUnreadCount = (studentId: string): number => countsByStudent[studentId] || 0;
 
-  return { countsByStudent, totalUnread, loading, refetch: fetchCounts, getUnreadCount };
+  return useMemo(() => ({ countsByStudent, totalUnread, loading, refetch: fetchCounts, getUnreadCount }), [countsByStudent, totalUnread, loading, fetchCounts]);
 };
 
 

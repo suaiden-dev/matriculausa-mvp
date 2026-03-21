@@ -1,0 +1,689 @@
+{
+  "rapidRegistration": {
+    "title": "Registro y Pago",
+    "subtitle": "Complete su registro e inicie su proceso de selección",
+    "form": {
+      "title": "Información Personal",
+      "fullName": "Nombre Completo",
+      "email": "Correo electrónico",
+      "phone": "Teléfono",
+      "dependents": "Número de Dependientes",
+      "dependentsSubtitle": "Miembros de la familia (cónyuge y/o hijos)",
+      "dependentOptions": {
+        "count_zero": "0 Dependientes",
+        "count_one": "1 Dependiente",
+        "count_other": "{{count}} Dependientes"
+      },
+      "termsAcceptedBadge": "Términos Vistos y Aceptados",
+      "password": "Contraseña",
+      "terms": "Acepto los Términos y Condiciones",
+      "submit": "Confirmar Registro",
+      "confirmPassword": "Confirmar Contraseña",
+      "error": {
+        "passwordsNotMatch": "Las contraseñas no coinciden",
+        "terms": "Debe aceptar los términos",
+        "general": "Ocurrió un error en el registro. Por favor, inténtelo de nuevo."
+      },
+      "placeholders": {
+        "fullName": "Ingrese su nombre completo",
+        "email": "ejemplo@email.com",
+        "phone": "Su número de teléfono",
+        "dependents": "0",
+        "password": "Cree una contraseña segura",
+        "confirmPassword": "Repita su contraseña"
+      }
+    },
+    "sidebar": {
+      "title": "Resumen del Pago",
+      "selectionFee": "Tarifa del Proceso de Selección",
+      "total": "TOTAL",
+      "currentFee": "Total a Pagar Ahora",
+      "feeExplanation": "La Tarifa del Proceso de Selección es el primer pago obligatorio en la plataforma MatriculaUSA. Desbloquea tu acceso completo para ver todas las becas e iniciar tu proceso de candidatura.",
+      "futureFeesTitle": "Tarifas Futuras",
+      "enrollmentFee": "Tarifa de Matrícula",
+      "scholarshipFee": "Tarifa de Beca",
+      "i20Fee": "Tarifa de Control I-20",
+      "futureFeesNote": "Las tarifas futuras son estimaciones y varían según la universidad.",
+      "couponApplied": "Cupón Aplicado",
+      "refundAssuranceTitle": "Garantía de Reembolso",
+      "refundAssuranceText": "Si no eres aceptado en ninguna universidad asociada, la tarifa del proceso de selección será completamente reembolsada."
+    },
+    "terms": {
+      "contractSubtitle": "Contrato de Prestación de Servicios",
+      "selfieTitle": "Verificación de Identidad",
+      "selfieSubtitle": "Para finalizar la aceptación del contrato, necesitamos una selfie suya sosteniendo su documento de identidad.",
+      "selfieStep1": "Sostenga su documento al lado de su cara",
+      "selfieStep2": "Asegúrese de que todo sea legible",
+      "clickToTakeSelfie": "Haga clic para tomar su selfie",
+      "selfieFormats": "JPG o PNG • MÁX 5MB"
+    },
+    "coupons": {
+      "promotionalLabel": "Cupón Promocional"
+    },
+    "zelle": {
+      "title": "Pago con Zelle",
+      "subtitle": "Siga las instrucciones a continuación para completar su pago.",
+      "back": "Volver"
+    },
+    "payment": {
+      "selectMethod": "Seleccione el Método de Pago",
+      "methods": {
+        "stripe": "Tarjeta de Crédito",
+        "pix": "PIX",
+        "zelle": "Zelle",
+        "parcelow": "Parcelow"
+      },
+      "notes": {
+        "processingFees": "* Pueden incluir tarifas de procesamiento",
+        "parcelowFees": "* Pueden incluir cargos del operador y procesamiento de la plataforma",
+        "zelleTime": "El procesamiento puede tardar hasta 48 horas"
+      },
+      "payWith": "Pagar con {{method}}",
+      "securePayment": "Pagar de Forma Segura",
+      "cpf": {
+        "label": "Ingrese su CPF (Obligatorio para Parcelow)",
+        "placeholder": "000.000.000-00",
+        "error": "Se requiere CPF para el pago de Parcelow."
+      },
+      "installment": "Hasta 12 cuotas con tarjeta",
+      "error": {
+        "invalidMethod": "Método de pago inválido.",
+        "notAuthenticated": "Usuario no autenticado.",
+        "generationFailed": "Error al generar el enlace de pago. Por favor, inténtelo de novo.",
+        "userIdNotFound": "ID de usuario no encontrado",
+        "saveCpfFailed": "Error al guardar el CPF"
+      }
+    }
+  },
+  "studentOnboarding": {
+    "stepper": {
+      "step": "Paso",
+      "of": "de",
+      "initiating": "Iniciando",
+      "steps": {
+        "selectionFee": "Tarifa del Proceso de Selección",
+        "selectionSurvey": "Cuestionario",
+        "scholarshipSelection": "Selección de Becas",
+        "processType": "Tipo de Proceso",
+        "documentsUpload": "Documentos",
+        "payment": "Tarifa de Matrícula",
+        "scholarshipFee": "Tarifa de Beca",
+        "placementFee": "Cuota de Colocación"
+      }
+    },
+    "processType": {
+      "title": "Situación de Visa",
+      "subtitle": "Seleccione la opción que mejor describa su situación actual con respecto a la visa estadounidense.",
+      "lockedError": "Ya ha pasado la revisión. No es posible cambiar el tipo de proceso.",
+      "selectTypeError": "Por favor seleccione un tipo de proceso",
+      "authError": "Usuario no autenticado",
+      "saveError": "Error al guardar la selección. Por favor, inténtelo de nuevo.",
+      "completed": {
+        "title": "Tipo de Proceso",
+        "subtitle": "Tipo de proceso seleccionado con éxito.",
+        "status": "Etapa Completada",
+        "description": "Ya ha seleccionado su tipo de proceso y pasado la revisión. Esta etapa está completa."
+      },
+      "continueButton": "Continuar",
+      "saving": "Guardando...",
+      "options": {
+        "initial": {
+          "label": "Primera Visa F-1 (Inicial)",
+          "description": "Nunca ha tenido una visa de estudiante F-1 o está aplicando por primera vez."
+        },
+        "transfer": {
+          "label": "Transferencia de Visa F-1",
+          "description": "Ya tiene una visa F-1 activa y desea transferirse de otra escuela en los EE. UU."
+        },
+        "changeOfStatus": {
+          "label": "Cambio de Estatus",
+          "description": "Tiene otro tipo de visa (B-2, H-1B, etc.) y desea cambiar a F-1."
+        }
+      }
+    },
+    "documentsUpload": {
+      "approvedApps": {
+        "title": "Seleccione su Beca",
+        "subtitle": "Paso completado con éxito.",
+        "scholarshipConfirmed": "¡Beca Confirmada!",
+        "scholarshipSelectedPre": "Ha seleccionado la beca ",
+        "scholarshipSelectedPost": " y la tarifa de solicitud ya ha sido pagada.",
+        "continue": "Continuar"
+      },
+      "review": {
+        "title": "Solicitudes en Revisión",
+        "subtitle": "Sus documentos están siendo revisados. Puede realizar un seguimiento del estado de cada beca a continuación.",
+        "titleApproved": "¡Felicidades! Ha sido aceptado. Seleccione la universidad a continuación para proceder con el pago."
+      },
+      "cards": {
+        "yourScholarships": "Sus Becas",
+        "applications": "{{count}} Solicitudes",
+        "status": {
+          "approved": "Aprobada",
+          "rejected": "Rechazada",
+          "underReview": "En Revisión",
+          "pending": "Pendiente",
+          "isApproved": "Aprobado",
+          "isRejected": "Rechazado",
+          "isReview": "En Análisis"
+        },
+        "reason": "Motivo:",
+        "verifyDocuments": "Verificar Documentos",
+        "sentOn": "Enviado el: {{date}}",
+        "rejectionNote": "Importante: Los documentos rechazados pueden volver a enviarse para un nuevo análisis.",
+        "selectNewFile": "Seleccionar Nuevo Archivo",
+        "selected": "✓ Seleccionada",
+        "clickToSelect": "Haga clic para seleccionar",
+        "originalValue": "Valor original",
+        "withScholarship": "Con Beca",
+        "perYear": "/ año",
+        "university": "Universidad"
+      },
+      "actions": {
+        "selectScholarship": "Seleccionar Beca",
+        "selectAScholarship": "Seleccione una Beca",
+        "confirmSelectionModal": {
+          "title": "Confirmar Selección",
+          "description": "Esta decisión es definitiva. Al confirmar, ya no podrá cambiar la beca seleccionada para este proceso de solicitud.",
+          "cancel": "Cancelar",
+          "confirm": "Confirmar"
+        }
+      },
+      "instructions": {
+        "title": "Instrucciones Importantes",
+        "descriptionPre": "Asegúrese de que los documentos enviados sean completamente legibles y ",
+        "descriptionStrong": "exclusivamente en inglés",
+        "descriptionMid": ". Si necesita una traducción certificada y de calidad, recomendamos los servicios de nuestro socio ",
+        "descriptionLink": "Lush America Translations",
+        "descriptionPost": "."
+      },
+      "acceptance": {
+        "lockMessage": "Debe pagar la tarifa <0>{{feeName}}</0> antes de que se pueda liberar su carta de aceptación.",
+        "goToPayment": "Ir al Pago"
+      },
+      "packageFees": {
+        "paidSuccess": "¡Tarifa pagada con éxito!",
+        "confirmedMessage": "Su pago ha sido confirmado. Ahora puede proceder a la carta de aceptación.",
+        "obligatoryFee": "Tarifa obligatoria • Desbloquea carta de aceptación",
+        "paymentMethod": "Método de pago",
+        "cpfRequiredTitle": "Proporcione su CPF para Parcelow",
+        "saveCpfContinue": "Continuar al Pago",
+        "noFees": "Sin Comisiones",
+        "installments12x": "Hasta en 12 cuotas"
+      }
+    }
+  },
+  "selectionSurvey": {
+    "identityVerification": "Verificación de Identidad",
+    "identityVerificationHeader": "Validar su Identidad",
+    "identityVerificationSubtitle": "Para garantizar la seguridad del proceso de selección, necesitamos una selfie con su documento antes de comenzar el cuestionario.",
+    "startSurvey": "Próximo Paso",
+    "toastPhotoSuccess": "¡Foto subida con éxito!",
+    "toastPhotoError": "Error al subir foto. Inténtelo de nuevo.",
+    "securityNotice": "Sus datos están protegidos y cifrados",
+    "profilesIdentified": "Perfil Identificado",
+    "title": "Cuestionario",
+    "subtitle": "Responda con atención. Para ser aprobado y continuar su proceso, debe alcanzar al menos un <0>80% de aciertos</0> en las preguntas.",
+    "mandatoryBadge": "Proceso de Selección Obligatorio",
+    "nextSection": "Siguiente Sección",
+    "back": "Volver",
+    "finish": "Finalizar",
+    "finishBtn": "Finalizar",
+    "submitting": "Enviando...",
+    "sections": {
+      "A": "Identificación y Perfil",
+      "B": "Pasaporte, Documentos y Línea de Tiempo",
+      "C": "Fondos, Costos y Responsabilidad Financiera",
+      "D": "Reglas de la F-1 e Estatus Legal",
+      "E": "Universidad, Desempeño y Mentalidad"
+    },
+    "sectionsInfo": "Responda todas las preguntas obligatorias para continuar.",
+    "required": "Este campo es obligatorio",
+    "toastErrorFields": "Por favor, complete todos los campos obligatorios antes de continuar.",
+    "toastErrorAuth": "Usuario no autenticado.",
+    "toastSuccess": "¡Proceso de Selección completado con éxito!",
+    "toastErrorScore": "Lamentablemente no alcanzó la puntuación mínima. Intente de nuevo.",
+    "toastErrorSave": "Error al guardar sus respuestas. Por favor, intente de nuevo.",
+    "copyright": "© 2026 Matrícula USA • Proceso de Selección de Estudiantes",
+    "results": {
+      "congratulations": "¡Felicidades!",
+      "passedMessage": "Usted es apto para proceder a la selección de becas e está un paso más cerca de su sueño",
+      "score": "Su Puntuación:",
+      "minRequired": "Mínimo necesario: 80%",
+      "ctaDashboard": "Elegir Becas",
+      "ctaDescription": "Ahora puedes continuar tu proceso y elegir las becas de tu interés.",
+      "failed": "No ha sido esta vez",
+      "failedMessage": "No alcanzó la puntuación mínima del 80% necesaria para la aprobación.",
+      "failedAdvice": "Recomendamos que revise los materiales de apoyo e intente de nuevo.",
+      "ctaRetry": "Intentar de Nuevo",
+      "ctaEdit": "Revisar Respuestas",
+      "correct": "Correctas",
+      "incorrect": "Incorrectas",
+      "neutral": "Otras",
+      "of": "de",
+      "summary": "Resumen de la Solicitud"
+    },
+    "questions": {
+      "1": {
+        "text": "Nombre completo (igual que en el pasaporte)",
+        "placeholder": "Tu nombre completo"
+      },
+      "2": {
+        "text": "Correo electrónico",
+        "placeholder": "tu@correo.com"
+      },
+      "3": {
+        "text": "WhatsApp (con código de país)",
+        "placeholder": "+34 600 000 000"
+      },
+      "4": {
+        "text": "¿Se encuentra actualmente en los EE. UU.?",
+        "extraLabel": "¿Estatus actual?"
+      },
+      "5": {
+        "text": "¿Cuál es su perfil hoy?",
+        "options": {
+          "initial": "Inicial (fuera de EE. UU. y va a solicitar visa/entrar con F-1)",
+          "cos": "COS (Cambio de Estatus: está en EE. UU. y va a cambiar a F-1)",
+          "transfer": "Transfer (ya tiene/tuvo I-20 y va a transferir de escuela)",
+          "nao_sei": "No lo sé (necesito orientación)"
+        }
+      },
+      "6": {
+        "text": "¿Cuál es su objetivo principal con el programa?",
+        "options": {
+          "a": "Estudiar y evolucionar académicamente",
+          "b": "Solo \"quedarme en EE. UU.\" (sin estudiar de verdad)",
+          "c": "Trabajar ilegalmente",
+          "d": "\"Cualquier cosa sirve\""
+        }
+      },
+      "7": {
+        "text": "¿Tiene disponibilidad mínima de estudio semanal?",
+        "options": {
+          "a": "Menos de 5h/semana",
+          "b": "5–9h/semana",
+          "c": "10–15h/semana",
+          "d": "16h+ / semana"
+        }
+      },
+      "8": {
+        "text": "¿Cuál es su nivel de inglés hoy?",
+        "options": {
+          "iniciante": "Principiante",
+          "basico": "Básico",
+          "intermediario": "Intermedio",
+          "avancado": "Avanzado"
+        }
+      },
+      "9": {
+        "text": "¿Ha estudiado en college/universidad antes?",
+        "extraLabel": "¿Qué curso y en qué país?"
+      },
+      "10": {
+        "text": "¿Está dispuesto a seguir las reglas de la visa F-1 incluso cuando sea inconveniente?",
+        "options": {
+          "a": "Sí",
+          "b": "Depende",
+          "c": "No"
+        }
+      },
+      "11": {
+        "text": "¿Tiene un pasaporte válido?",
+        "extraLabel": "Previsión de emisión"
+      },
+      "12": {
+        "text": "Fecha de vencimiento del pasaporte"
+      },
+      "13": {
+        "text": "¿Puede enviar una copia del pasaporte cuando se le solicite?",
+        "options": {
+          "a": "Sí",
+          "b": "No"
+        }
+      },
+      "14": {
+        "text": "¿Tiene comprobante de finalización de educación secundaria o superior?",
+        "options": {
+          "a": "Sí, puedo enviarlo",
+          "b": "Lo tengo, pero no sé dónde está",
+          "c": "No lo tengo"
+        }
+      },
+      "15": {
+        "text": "¿Puede organizar sus documentos en una carpeta y mantener todo actualizado?",
+        "options": {
+          "a": "Sí",
+          "b": "No"
+        }
+      },
+      "16": {
+        "text": "¿En cuánto tiempo desea iniciar el programa?",
+        "options": {
+          "a": "0–30 días",
+          "b": "31–60 días",
+          "c": "61–90 días",
+          "d": "90+ días"
+        }
+      },
+      "17": {
+        "text": "¿Puede participar en una entrevista de alineación con el equipo?",
+        "options": {
+          "a": "Sí",
+          "b": "No"
+        }
+      },
+      "18": {
+        "text": "¿Entiende que el proceso tiene etapas y que \"saltarse etapas\" retrasa y puede poner todo en riesgo?",
+        "options": {
+          "a": "Sí",
+          "b": "No"
+        }
+      },
+      "19": {
+        "text": "¿Revisa su correo electrónico diariamente?",
+        "options": {
+          "a": "Sí, todos los días",
+          "b": "Algunas veces por semana",
+          "c": "Raramente"
+        }
+      },
+      "20": {
+        "text": "¿Qué suele pasar en su vida si retrasa documentos o pagos?",
+        "placeholder": "Describa brevemente..."
+      },
+      "21": {
+        "text": "¿Por qué se requiere el comprobante de fondos?",
+        "options": {
+          "a": "Porque el gobierno quiere meterse en su vida",
+          "b": "Porque la escuela quiere meterse en su vida",
+          "c": "Porque debe demostrar a inmigración y a la universidad que puede pagar el curso y el costo de vida por al menos 1 año",
+          "d": "Ninguna de las anteriores"
+        }
+      },
+      "22": {
+        "text": "El comprobante de fondos sirve para:",
+        "options": {
+          "a": "Demostrar capacidad financiera y reducir el riesgo de violación de estatus",
+          "b": "Garantizar que trabajará en los EE. UU.",
+          "c": "Sustituir el pasaporte",
+          "d": "Evitar la entrevista en el consulado"
+        }
+      },
+      "23": {
+        "text": "Para el solicitante principal, ¿qué valor mínimo debe estar preparado para demostrar?",
+        "options": {
+          "a": "$5,000",
+          "b": "$10,000",
+          "c": "Aproximadamente $22,000",
+          "d": "$100,000"
+        }
+      },
+      "24": {
+        "text": "Por cada dependiente adicional, ¿cuál es el valor mínimo aproximado?",
+        "options": {
+          "a": "$1,000",
+          "b": "$5,000",
+          "c": "$15,000",
+          "d": "No es necesario demostrar"
+        }
+      },
+      "25": {
+        "text": "¿El comprobante de fondos debe estar a su nombre?",
+        "options": {
+          "a": "Siempre debe estar a mi nombre",
+          "b": "Puede ser de un patrocinador, siempre que sea demostrable y consistente",
+          "c": "Puede ser de palabra",
+          "d": "No existe el comprobante de fondos"
+        }
+      },
+      "26": {
+        "text": "¿Puede organizar el valor necesario (suyo o de patrocinador) para demostrar?",
+        "extraLabel": "¿Cuántos meses?",
+        "options": {
+          "a": "Sí",
+          "b": "No",
+          "c": "Aún no, pero puedo en X meses"
+        }
+      },
+      "27": {
+        "text": "¿Entiende que la matrícula (tuition) y las tarifas del proceso son cosas diferentes?",
+        "options": {
+          "a": "Sí",
+          "b": "No"
+        }
+      },
+      "28": {
+        "text": "Si tiene una beca, el objetivo es reducir la matrícula; esto no elimina su responsabilidad de pagar y mantener el estatus.",
+        "options": {
+          "verdadeiro": "Verdadero",
+          "falso": "Falso"
+        }
+      },
+      "29": {
+        "text": "¿Qué forma de pago le resulta más fácil?",
+        "options": {
+          "a": "Al contado",
+          "b": "En cuotas",
+          "c": "Depende del plan"
+        }
+      },
+      "30": {
+        "text": "¿Cuál es su presupuesto anual aproximado para la matrícula + costos del proceso?",
+        "placeholder": "Valor en USD"
+      },
+      "31": {
+        "text": "El objetivo de la visa F-1 es:",
+        "options": {
+          "a": "Estudiar en una institución autorizada",
+          "b": "Trabajar a tiempo completo",
+          "c": "Viajar como turista",
+          "d": "Vivir sin vínculo académico"
+        }
+      },
+      "32": {
+        "text": "El I-20 es:",
+        "options": {
+          "a": "Un documento de la escuela que demuestra elegibilidad/inscripción y respalda el estatus F-1",
+          "b": "Un tipo de pasaporte",
+          "c": "Una visa pegada en el pasaporte",
+          "d": "Un contrato de alquiler"
+        }
+      },
+      "33": {
+        "text": "\"Mantener el estatus\" significa:",
+        "options": {
+          "a": "Cumplir con las reglas, asistencia, carga mínima y obligaciones del programa",
+          "b": "No pagar nada y aparecer solo a veces",
+          "c": "Cambiar de escuela sin avisar",
+          "d": "Trabajar sin autorización"
+        }
+      },
+      "34": {
+        "text": "Si falto mucho y dejo de estudiar, puedo:",
+        "options": {
+          "a": "Poner mi estatus en riesgo y tener consecuencias migratorias",
+          "b": "No pasa nada",
+          "c": "Obtener un \"descuento\"",
+          "d": "Recibir la green card"
+        }
+      },
+      "35": {
+        "text": "Para cualquier decisión crítica (viaje, mudanza, pausa), debo:",
+        "options": {
+          "a": "Consultar a la escuela/DSO y seguir las instrucciones",
+          "b": "Decidir solo y luego avisar",
+          "c": "Preguntar a amigos",
+          "d": "Ignorar las reglas"
+        }
+      },
+      "36": {
+        "text": "COS (Cambio de Estatus) es:",
+        "options": {
+          "a": "Cambiar de estatus estando en los EE. UU.",
+          "b": "Comprar un boleto y entrar como turista",
+          "c": "Transferir de escuela con I-20",
+          "d": "Renovar el pasaporte"
+        }
+      },
+      "37": {
+        "text": "Transfer es:",
+        "options": {
+          "a": "Cambiar/transferir SEVIS/I-20 de una escuela a otra",
+          "b": "Hacer turismo en otro estado",
+          "c": "Cambiar de trabajo",
+          "d": "Cambiar de número de teléfono"
+        }
+      },
+      "38": {
+        "text": "Inicial es:",
+        "options": {
+          "a": "Proceso para quienes están fuera de los EE. UU. y entrarán con F-1",
+          "b": "Quien ya está estudiando y quiere transferir",
+          "c": "Quien está cambiando de estatus dentro de los EE. UU.",
+          "d": "Quien no quiere estudiar"
+        }
+      },
+      "39": {
+        "text": "Trabajar sin autorización con F-1 es:",
+        "options": {
+          "a": "Un riesgo serio y puede perjudicar el estatus",
+          "b": "Permitido siempre",
+          "c": "Recomendado por la escuela",
+          "d": "Necesario para emitir el I-20"
+        }
+      },
+      "40": {
+        "text": "Si estoy confundido sobre una regla de la F-1, debo:",
+        "options": {
+          "a": "Preguntar oficialmente a la escuela/DSO o al equipo responsable",
+          "b": "Ignorar y seguir la intuición",
+          "c": "Preguntar en un grupo de WhatsApp aleatorio",
+          "d": "Hacerlo a mi manera"
+        }
+      },
+      "41": {
+        "text": "Ser un estudiante \"profesional\" significa:",
+        "options": {
+          "a": "Cumplir plazos, asistencia, comunicación clara y consistencia",
+          "b": "Aparecer solo cuando se puede",
+          "c": "No leer correos y reclamar después",
+          "d": "Pedir excepciones siempre"
+        }
+      },
+      "42": {
+        "text": "Para no perder plazos en EE. UU., el mejor hábito es:",
+        "options": {
+          "a": "Usar calendario + recordatorios + revisar el correo diariamente",
+          "b": "Confiar en la memoria",
+          "c": "Esperar a que alguien avise",
+          "d": "Resolver solo cuando sea urgente"
+        }
+      },
+      "43": {
+        "text": "Si tengo dificultades en una materia, primero debo:",
+        "options": {
+          "a": "Buscar tutor/horario de consulta/asesor pronto",
+          "b": "Desaparecer y faltar",
+          "c": "Esperar a reprobar",
+          "d": "Culpar a la escuela"
+        }
+      },
+      "44": {
+        "text": "El networking en la universidad, de forma correcta, sirve para:",
+        "options": {
+          "a": "Abrir puertas académicas y profesionales dentro de las reglas",
+          "b": "Conseguir \"trucos\" para burlar las reglas",
+          "c": "Evitar estudiar",
+          "d": "No sirve para nada"
+        }
+      },
+      "45": {
+        "text": "¿Qué suele llevar a más personas al fracaso: la falta de inteligencia o la falta de consistencia?",
+        "options": {
+          "a": "Falta de consistencia",
+          "b": "Falta de inteligencia",
+          "c": "Suerte",
+          "d": "No lo sé"
+        }
+      },
+      "46": {
+        "text": "¿Cuál es su prioridad más importante ahora?",
+        "options": {
+          "a": "Valor",
+          "b": "Flexibilidad de tiempo",
+          "c": "Autorización de trabajo"
+        }
+      },
+      "47": {
+        "text": "¿Acepta recibir comentarios y ser corregido durante el proceso y el programa?",
+        "options": {
+          "a": "Sí",
+          "b": "No"
+        }
+      },
+      "48": {
+        "text": "Compromiso mínimo: \"Me comprometo a mantener la asistencia, cumplir con los plazos y seguir las reglas de la F-1.\"",
+        "options": {
+          "concordo": "De acuerdo",
+          "nao_concordo": "En desacuerdo"
+        }
+      },
+      "49": {
+        "text": "Escriba su plan de estudio semanal (días + horas)",
+        "placeholder": "Describa sus días y horarios de estudio..."
+      },
+      "50": {
+        "text": "Declaración final",
+        "placeholder": "Escriba su declaración...",
+        "prompt": "\"Entiendo que mi resultado depende de mi disciplina. Si no sigo el plan, puedo perjudicar mi estatus y mi proyecto.\""
+      }
+    }
+  },
+  "scholarshipConfirmationModal": {
+    "applicationFee": {
+      "title": "Confirm Your Scholarship Selection",
+      "subtitle": "Choose your payment method and secure your scholarship",
+      "feeLabel": "Application Fee:",
+      "feeDescription": "Fee to secure your approved scholarship spot",
+      "buttonText": "Yes, Secure My Scholarship (${{amount}})",
+      "warningText": "By proceeding with this payment, you're making this your final scholarship choice. This action cannot be undone."
+    },
+    "scholarshipFee": {
+      "title": "Scholarship Fee Payment",
+      "subtitle": "Choose your payment method to complete your enrollment",
+      "feeLabel": "Scholarship Fee:",
+      "feeDescription": "Final fee to complete your scholarship enrollment",
+      "buttonText": "Pay Scholarship Fee (${{amount}})",
+      "warningText": "By proceeding with this payment, you're completing your scholarship enrollment."
+    },
+    "labels": {
+      "selectedScholarship": "Selected Scholarship",
+      "scholarship": "Scholarship",
+      "university": "University",
+      "choosePaymentMethod": "Choose Payment Method",
+      "importantDecision": "Important Decision",
+      "thinkAboutIt": "Let me think about it"
+    },
+    "payment": {
+      "stripe": {
+        "title": "Stripe",
+        "description": "Pay securely with credit or debit card"
+      },
+      "pix": {
+        "title": "PIX",
+        "description": "Brazilian instant payment system"
+      },
+      "zelle": {
+        "title": "Zelle",
+        "description": "Pay via Zelle transfer",
+        "descriptionDetailed": "Pay via Zelle transfer"
+      },
+      "cancel": "Cancel"
+    },
+    "loading": {
+      "processing": "Processing payment...",
+      "redirecting": "Please wait, redirecting to checkout"
+    }
+  }
+}

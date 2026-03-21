@@ -177,6 +177,166 @@ export async function approveZelleFlow(params: {
     });
   }
 
+  // ✅ NOVO: Placement Fee logic
+  if (payment.fee_type === "placement_fee" || payment.fee_type_global === "placement_fee") {
+    // Mark on profile
+    await supabase
+      .from("user_profiles")
+      .update({
+        is_placement_fee_paid: true,
+        placement_fee_payment_method: "zelle",
+        updated_at: new Date().toISOString(),
+      })
+      .eq("user_id", payment.user_id)
+      .select();
+
+    // Record payment (individual table)
+    const approvedAt = payment.admin_approved_at || payment.created_at;
+    await recordIndividualFeePayment(
+      supabase,
+      {
+        userId: payment.user_id,
+        feeType: "placement", // individual_fee_payments usa 'placement'
+        amount: payment.amount,
+        paymentDate: approvedAt,
+        paymentMethod: "zelle",
+        zellePaymentId: payment.id,
+      },
+    );
+
+    // Log action
+    await supabase.rpc("log_student_action", {
+      p_student_id: payment.student_id,
+      p_action_type: "fee_payment",
+      p_action_description: `Placement Fee paid via Zelle (approved by admin)`,
+      p_performed_by: adminUserId,
+      p_performed_by_type: "admin",
+      p_metadata: {
+        fee_type: "placement_fee",
+        payment_method: "zelle",
+        amount: payment.amount,
+        payment_id: payment.id,
+        zelle_payment_id: payment.id,
+        ip: undefined,
+      },
+    });
+
+    // Billing
+    await supabase.rpc("register_payment_billing", {
+      user_id_param: payment.user_id,
+      fee_type_param: "placement_fee",
+      amount_param: payment.amount,
+      payment_session_id_param: `zelle_${payment.id}`,
+      payment_method_param: "zelle",
+    });
+  }
+
+  // ✅ NOVO: DS-160 Package logic
+  if (payment.fee_type === "ds160_package" || payment.fee_type_global === "ds160_package") {
+    // Mark on profile
+    await supabase
+      .from("user_profiles")
+      .update({
+        has_paid_ds160_package: true,
+        ds160_package_payment_method: "zelle",
+        updated_at: new Date().toISOString(),
+      })
+      .eq("user_id", payment.user_id)
+      .select();
+
+    // Record payment (individual table)
+    const approvedAt = payment.admin_approved_at || payment.created_at;
+    await recordIndividualFeePayment(
+      supabase,
+      {
+        userId: payment.user_id,
+        feeType: "ds160_package",
+        amount: payment.amount,
+        paymentDate: approvedAt,
+        paymentMethod: "zelle",
+        zellePaymentId: payment.id,
+      },
+    );
+
+    // Log action
+    await supabase.rpc("log_student_action", {
+      p_student_id: payment.student_id,
+      p_action_type: "fee_payment",
+      p_action_description: `DS-160 Package Fee paid via Zelle (approved by admin)`,
+      p_performed_by: adminUserId,
+      p_performed_by_type: "admin",
+      p_metadata: {
+        fee_type: "ds160_package",
+        payment_method: "zelle",
+        amount: payment.amount,
+        payment_id: payment.id,
+        zelle_payment_id: payment.id,
+      },
+    });
+
+    // Billing
+    await supabase.rpc("register_payment_billing", {
+      user_id_param: payment.user_id,
+      fee_type_param: "ds160_package",
+      amount_param: payment.amount,
+      payment_session_id_param: `zelle_${payment.id}`,
+      payment_method_param: "zelle",
+    });
+  }
+
+  // ✅ NOVO: I-539 COS Package logic
+  if (payment.fee_type === "i539_cos_package" || payment.fee_type_global === "i539_cos_package") {
+    // Mark on profile
+    await supabase
+      .from("user_profiles")
+      .update({
+        has_paid_i539_cos_package: true,
+        i539_cos_package_payment_method: "zelle",
+        updated_at: new Date().toISOString(),
+      })
+      .eq("user_id", payment.user_id)
+      .select();
+
+    // Record payment (individual table)
+    const approvedAt = payment.admin_approved_at || payment.created_at;
+    await recordIndividualFeePayment(
+      supabase,
+      {
+        userId: payment.user_id,
+        feeType: "i539_cos_package",
+        amount: payment.amount,
+        paymentDate: approvedAt,
+        paymentMethod: "zelle",
+        zellePaymentId: payment.id,
+      },
+    );
+
+    // Log action
+    await supabase.rpc("log_student_action", {
+      p_student_id: payment.student_id,
+      p_action_type: "fee_payment",
+      p_action_description: `I-539 COS Package Fee paid via Zelle (approved by admin)`,
+      p_performed_by: adminUserId,
+      p_performed_by_type: "admin",
+      p_metadata: {
+        fee_type: "i539_cos_package",
+        payment_method: "zelle",
+        amount: payment.amount,
+        payment_id: payment.id,
+        zelle_payment_id: payment.id,
+      },
+    });
+
+    // Billing
+    await supabase.rpc("register_payment_billing", {
+      user_id_param: payment.user_id,
+      fee_type_param: "i539_cos_package",
+      amount_param: payment.amount,
+      payment_session_id_param: `zelle_${payment.id}`,
+      payment_method_param: "zelle",
+    });
+  }
+
   // Application/Scholarship fees logic (applications table updates, logging, billing scholarship)
   if (
     payment.fee_type === "application_fee" ||
@@ -344,21 +504,24 @@ export async function approveZelleFlow(params: {
       .select();
   }
 
+  // Prepare notification data
+  const { data: adminProfile } = await supabase
+    .from("user_profiles")
+    .select("full_name")
+    .eq("user_id", adminUserId)
+    .single();
+  const adminName = adminProfile?.full_name || "Admin";
+  const feeTypeDisplay = payment.fee_type.replace(/_/g, ' ').replace(/\b\w/g, l => l.toUpperCase());
+
   // Student approval notification (webhook)
   try {
-    const { data: adminProfile } = await supabase
-      .from("user_profiles")
-      .select("full_name")
-      .eq("user_id", adminUserId)
-      .single();
-    const adminName = adminProfile?.full_name || "Admin";
     const approvalPayload = {
       tipo_notf: "Pagamento aprovado",
       email_aluno: payment.student_email,
       nome_aluno: payment.student_name,
       email_universidade: "",
       o_que_enviar:
-        `Seu pagamento de ${payment.fee_type} no valor de $${payment.amount} foi aprovado e processado com sucesso!`,
+        `Seu pagamento de ${feeTypeDisplay} no valor de $${payment.amount} foi aprovado e processado com sucesso!`,
       payment_id: payment.id,
       fee_type: payment.fee_type,
       amount: payment.amount,
@@ -505,8 +668,9 @@ export async function approveZelleFlow(params: {
     }
 
     if (emailAdmin) {
+      const isPlacement = payment.fee_type === "placement_fee" || payment.fee_type === "placement";
       const adminPayload = {
-        tipo_notf: "Pagamento de aluno aprovado",
+        tipo_notf: isPlacement ? `Pagamento de Placement Fee confirmado - Admin` : "Pagamento de aluno aprovado",
         email_admin: emailAdmin,
         nome_admin: "Admin MatriculaUSA",
         email_aluno: payment.student_email,
@@ -574,8 +738,9 @@ export async function approveZelleFlow(params: {
             continue;
           }
 
+          const isPlacement = payment.fee_type === "placement_fee" || payment.fee_type === "placement";
           const adminNotificationPayload = {
-            tipo_notf: "Pagamento de aluno aprovado",
+            tipo_notf: isPlacement ? `Pagamento de Placement Fee confirmado - Admin` : "Pagamento de aluno aprovado",
             email_admin: adminEmail,
             nome_admin: admin.full_name || "Admin",
             phone_admin: admin.phone || "",
@@ -588,7 +753,7 @@ export async function approveZelleFlow(params: {
             nome_affiliate_admin:
               affiliateAdminData?.user_profiles?.full_name || "N/A",
             o_que_enviar:
-              `Pagamento de ${payment.fee_type} no valor de ${payment.amount} do aluno ${payment.student_name} foi aprovado manualmente. ${
+              `Pagamento de ${feeTypeDisplay} no valor de ${payment.amount} do aluno ${payment.student_name} foi aprovado manualmente. ${
                 sellerData
                   ? `Seller responsável: ${sellerData.name} (${sellerData.referral_code})`
                   : "Sem seller associado"
@@ -599,7 +764,7 @@ export async function approveZelleFlow(params: {
             seller_id: sellerData?.user_id || null,
             referral_code: sellerData?.referral_code || null,
             commission_rate: sellerData?.commission_rate || null,
-            approved_by: "Manual Admin Approval",
+            approved_by: adminName, // Usar o nome do admin real ao invés de string genérica
           };
 
           console.log(
@@ -645,8 +810,9 @@ export async function approveZelleFlow(params: {
         }
 
         if (emailAffiliateAdmin) {
+          const isPlacement = payment.fee_type === "placement_fee" || payment.fee_type === "placement";
           const affiliateAdminPayload = {
-            tipo_notf: "Pagamento de aluno do seu seller aprovado",
+            tipo_notf: isPlacement ? `Pagamento de Placement Fee confirmado - Affiliate Admin` : "Pagamento de aluno do seu seller aprovado",
             email_affiliate_admin: emailAffiliateAdmin,
             nome_affiliate_admin: affiliateAdminData.user_profiles.full_name ||
               "Affiliate Admin",
@@ -702,8 +868,9 @@ export async function approveZelleFlow(params: {
       }
 
       if (emailSeller) {
+        const isPlacement = payment.fee_type === "placement_fee" || payment.fee_type === "placement";
         const sellerPayload = {
-          tipo_notf: "Pagamento do seu aluno aprovado",
+          tipo_notf: isPlacement ? `Pagamento de Placement Fee confirmado - Seller` : "Pagamento do seu aluno aprovado",
           email_seller: emailSeller,
           nome_seller: sellerData.name,
           phone_seller: sellerPhone || "",
@@ -766,7 +933,7 @@ export async function rejectZelleFlow(params: {
       .single();
     const adminName = adminProfile?.full_name || "Admin";
     const rejectionPayload = {
-      tipo_notf: "Pagamento rejeitado",
+      tipo_notf: "Pagamento Zelle rejeitado",
       email_aluno: payment.student_email,
       nome_aluno: payment.student_name,
       email_universidade: "",

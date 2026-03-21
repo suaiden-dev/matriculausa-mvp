@@ -1,0 +1,591 @@
+{
+  "preCheckoutModal": {
+    "acceptPrefix": "Eu aceito os ",
+    "termsAndConditionsLink": "Termos e Condições",
+    "acceptSuffix": " do contrato de prestação de serviços.",
+    "securePayment": "Pagamento Seguro",
+    "securePaymentProcess": "Processo de Pagamento Seguro",
+    "closeModal": "Fechar modal",
+    "securePaymentGateway": "Gateway de Pagamento Seguro",
+    "totalAmount": "Valor Total",
+    "referralCode": "Código de Indicação",
+    "yourReferralCode": "Seu Código de Referência",
+    "enterReferralCode": "Digite seu código de referência para obter desconto",
+    "haveReferralCode": "Tenho um código de desconto",
+    "usingYourReferralCode": "Usando o código de referência que você usou no registro",
+    "loading": "Carregando...",
+    "noTermsFound": "Nenhum termo encontrado.",
+    "confirmReading": "Confirmar Leitura",
+    "scrollToBottomFirst": "Leia até o final",
+    "acceptTerms": "Aceitar e Confirmar",
+    "uploadPhotoRequired": "Por favor, envie uma selfie com seu documento para continuar.",
+    "uploadPhoto": "Enviar Selfie com Documento",
+    "placeholder": "Digite o código",
+    "invalidCode": "Código inválido ou inativo",
+    "selfReferral": "Você não pode usar seu próprio código de referência",
+    "alreadyUsedCode": "Você já usou um código de referência anteriormente",
+    "validCode": "Código válido! Desconto de $50 aplicado",
+    "errorValidating": "Erro ao validar código",
+    "codeAlreadyUsed": "Código já utilizado",
+    "discountAlreadyApplied": "Seu desconto já foi aplicado anteriormente",
+    "continueWithoutCode": "Continuar sem código",
+    "goToPayment": "Ir para pagamento",
+    "applyCodeAndContinue": "Aplicar código e continuar",
+    "processingPayment": "Processando Pagamento...",
+    "mustAcceptTerms": "Você deve aceitar os termos e condições antes de continuar",
+    "mustEnterValidCode": "Você deve inserir um código válido antes de continuar",
+    "termsAndConditions": {
+      "title": "Termos e Condições",
+      "termsOfUse": "Termos de Uso",
+      "and": "e",
+      "privacyPolicy": "Política de Privacidade",
+      "description": "antes de prosseguir com o pagamento"
+    },
+    "closeTerms": "Fechar termos",
+    "acceptContractTerms": "Aceito os termos e condições do contrato",
+    "cancel": "Cancelar",
+    "promotionalCoupon": {
+      "title": "Taxa de Processo de Seleção",
+      "discountedValue": "Valor com Desconto",
+      "originalValue": "Valor Original",
+      "applied": "Aplicado",
+      "successMessage": "Código {{code}} aplicado! Você economizou ${{amount}}",
+      "enterCodePlease": "Por favor, insira um código promocional."
+    }
+  },
+  "zelleCheckout": {
+    "title": "Checkout de Pagamento Zelle",
+    "subtitle": "Complete seu pagamento via transferência Zelle",
+    "backToPaymentSelection": "Voltar à Seleção de Pagamento",
+    "paymentSummary": "Resumo do Pagamento",
+    "paymentMethod": "Método de Pagamento",
+    "amount": "Valor",
+    "instructions": "Instruções de Pagamento",
+    "step1": "Passo 1: Abra seu aplicativo Zelle",
+    "step2": "Passo 2: Envie o pagamento para",
+    "step3": "Passo 3: Use o valor exato mostrado acima",
+    "step4": "Passo 4: Adicione uma nota de referência",
+    "uploadReceipt": "Enviar Comprovante",
+    "uploadReceiptDescription": "Faça upload do comprovante de pagamento do Zelle",
+    "dragAndDrop": "Arraste e solte seu arquivo aqui, ou clique para selecionar",
+    "supportedFormats": "Formatos suportados: JPG, PNG, PDF (máx. 10MB)",
+    "removeFile": "Remover arquivo",
+    "paymentDetails": "Detalhes do Pagamento",
+    "confirmationCode": "Código de Confirmação",
+    "confirmationCodePlaceholder": "Digite o código de confirmação do Zelle",
+    "paymentDate": "Data do Pagamento",
+    "recipientEmail": "Email do Destinatário",
+    "recipientEmailPlaceholder": "Email usado no Zelle",
+    "recipientName": "Nome do Destinatário",
+    "recipientNamePlaceholder": "Nome usado no Zelle",
+    "submitPayment": "Enviar Comprovante",
+    "processing": "Processando...",
+    "activeDiscount": "Desconto Ativo",
+    "discountApplied": "Desconto aplicado",
+    "originalAmount": "Valor original",
+    "discountedAmount": "Valor com desconto",
+    "savings": "Você economizou",
+    "error": {
+      "fileRequired": "Por favor, selecione um arquivo de comprovante",
+      "detailsRequired": "Por favor, preencha todos os detalhes do pagamento",
+      "uploadFailed": "Falha ao fazer upload do comprovante",
+      "paymentFailed": "Erro ao processar o pagamento"
+    },
+    "importantInfo": {
+      "title": "Informações Importantes",
+      "securePayment": "Pagamento Seguro",
+      "securePaymentDesc": "Suas informações de pagamento são criptografadas e seguras",
+      "verificationRequired": "Verificação Necessária",
+      "verificationRequiredDesc": "O pagamento será verificado automaticamente em até 48 horas",
+      "zelleTransfer": "Transferência Zelle",
+      "zelleTransferDesc": "Complete a transferência e envie seu comprovante",
+      "paymentInstructions": "Instruções de Pagamento",
+      "step1": "Complete a transferência Zelle para o destinatário fornecido",
+      "step2": "Salve a captura de tela de confirmação",
+      "step3": "Envie sua captura de tela de confirmação",
+      "step4": "Aguarde o processamento (pode levar até 48 horas)"
+    },
+    "requirements": {
+      "title": "Importante: Seu comprovante de pagamento DEVE incluir:",
+      "confirmationCode": "Código de Confirmação",
+      "confirmationCodeDesc": "O código único da transação do Zelle",
+      "paymentDate": "Data do Pagamento",
+      "paymentDateDesc": "Quando a transferência foi concluída",
+      "paymentAmount": "Valor do Pagamento",
+      "paymentAmountDesc": "O valor exato transferido",
+      "recipient": "Destinatário",
+      "recipientDesc": "Quem recebeu o pagamento"
+    },
+    "receiptType": {
+      "title": "Tipo de Comprovante Requerido",
+      "description": "Para garantir uma verificação rápida e precisa, certifique-se de enviar o comprovante correto:",
+      "correct": {
+        "title": "Comprovante Correto",
+        "description": "Envie a captura de tela do comprovante que aparece imediatamente após a conclusão do pagamento no aplicativo Zelle. Esta é a confirmação instantânea gerada pelo app."
+      },
+      "incorrect": {
+        "title": "Não Aceito",
+        "description": "Não envie o comprovante em formato PDF disponibilizado posteriormente pelo aplicativo. Apenas a captura de tela imediata do app é aceita para verificação."
+      },
+      "understood": "Entendi, continuar"
+    },
+    "steps": {
+      "title": "Complete estes passos:",
+      "step1": "Complete sua transferência Zelle do valor necessário",
+      "step2": "Salve a captura de tela de confirmação do pagamento que mostra todas as informações necessárias",
+      "step2Important": {
+        "title": "Importante:",
+        "description": "Envie a captura de tela do comprovante que aparece imediatamente após a conclusão do pagamento no aplicativo Zelle. Esta é a confirmação instantânea gerada pelo app. Não envie o comprovante em formato PDF disponibilizado posteriormente pelo aplicativo."
+      },
+      "step3": "Envie sua captura de tela de confirmação abaixo",
+      "step4": "Aguarde o processamento (pode levar até 48 horas)"
+    },
+    "reviewDetails": "Revise os detalhes do seu pagamento",
+    "zellePaymentDetails": {
+      "title": "Detalhes do Pagamento Zelle",
+      "subtitle": "Envie seu pagamento para o destinatário abaixo",
+      "paymentInstructions": "Instruções de Pagamento via Zelle",
+      "paymentInstructionsSubtitle": "Complete sua transferência enviando o valor para o destinatário abaixo",
+      "recipientEmail": "Email do Destinatário",
+      "paymentAmount": "Valor do Pagamento",
+      "important": "Importante:",
+      "importantMessage": "Certifique-se de enviar o valor exato de <strong>{{amount}} USD</strong> para <strong>pay@matriculausa.com</strong> via Zelle. Qualquer discrepância no valor ou destinatário atrasará o processamento do seu pagamento.",
+      "importantMessageSimple": "Certifique-se de que o valor exato do pagamento corresponde ao valor mostrado acima.",
+      "copied": "Copiado!",
+      "copiedTooltip": "Copiar e-mail"
+    }
+  },
+  "zelleWaiting": {
+    "title": "Aguardando Verificação",
+    "subtitle": "Estamos analisando seu comprovante de pagamento",
+    "analyzingPayment": "Analisando seu comprovante de pagamento...",
+    "waitTime": "Tempo de espera",
+    "status": {
+      "pending": "Pendente",
+      "approved": "Aprovado",
+      "rejected": "Rejeitado",
+      "error": "Erro"
+    },
+    "messages": {
+      "analyzing": "Analisando seu comprovante de pagamento...",
+      "approved": "Pagamento aprovado! 🎉",
+      "rejected": "Pagamento rejeitado ❌",
+      "error": "Erro ao verificar pagamento",
+      "under_review": "Processando Pagamento"
+    },
+    "details": {
+      "analyzing": "Nossa equipe está verificando seu comprovante. Isso pode levar alguns minutos.",
+      "analyzingAi": "Nossa IA está validando seu comprovante de pagamento",
+      "approved": "Seu pagamento foi verificado e aprovado com sucesso.",
+      "rejected": "Seu comprovante não foi aprovado. Verifique se todas as informações estão visíveis.",
+      "error": "Ocorreu um erro ao verificar seu pagamento. Tente novamente.",
+      "under_review": "Seu comprovante requer verificação adicional. Nossa equipe o revisará em até 48 horas."
+    },
+    "actions": {
+      "tryAgain": "Tentar Novamente",
+      "contactSupport": "Contatar Suporte",
+      "backToCheckout": "Voltar ao Dashboard",
+      "uploadingDocument": "Enviando Documento...",
+      "uploadingWait": "Aguarde enquanto fazemos o upload do seu comprovante de pagamento",
+      "sendingDocument": "Enviando para Verificação...",
+      "sendingWait": "Seu comprovante está sendo enviado para validação automática",
+      "analyzingWait": "Aguarde enquanto analisamos seu comprovante"
+    },
+    "redirecting": "Redirecionando para página de sucesso...",
+    "analysisTime": "Tempo de análise: ~40 segundos",
+    "paymentInfo": {
+      "title": "Informações do Pagamento",
+      "feeType": "Tipo de Taxa:",
+      "amount": "Valor:",
+      "paymentId": "ID do Pagamento:"
+    },
+    "helpText": {
+      "default": "Se o processo demorar mais de 2 minutos, entre em contato com o suporte.",
+      "underReview": "Seu pagamento está em análise. Aguarde a verificação."
+    }
+  },
+  "zelleModal": {
+    "finalAmount": "Valor Final:",
+    "feeType": "Tipo de Taxa:",
+    "paymentId": "ID do Pagamento:",
+    "submitted": "Enviado em:",
+    "paymentUnderReview": "Pagamento em Análise",
+    "paymentUnderReviewMessage": "Você será notificado assim que a análise for concluída. Por favor, não envie outro pagamento.",
+    "rejectionReason": "Motivo da Rejeição:",
+    "paymentDetails": "Detalhes do Pagamento:",
+    "originalAmount": "Valor Original:",
+    "discountApplied": "Desconto Aplicado:",
+    "amount": "Valor:",
+    "uploadNewProof": "Enviar Novo Comprovante",
+    "uploadNewProofHint": "Clique no botão acima para enviar uma nova captura de tela do comprovante de pagamento",
+    "removeFile": "Remover",
+    "changeFile": "Alterar Arquivo"
+  },
+  "zelleSuccess": {
+    "title": "Pagamento Zelle Realizado com Sucesso!",
+    "subtitle": "Obrigado pelo seu pagamento! Seu pagamento Zelle foi verificado e aprovado.",
+    "invalidStatus": {
+      "title": "Status de Pagamento Inválido",
+      "message": "Esta página é apenas para pagamentos Zelle bem-sucedidos.",
+      "returnHome": "Voltar ao Início"
+    },
+    "paymentDetails": {
+      "title": "Detalhes do Pagamento",
+      "subtitle": "Pagamento Zelle verificado",
+      "feeType": "Tipo de Taxa:",
+      "amount": "Valor:",
+      "status": "Status:",
+      "approved": "Aprovado"
+    },
+    "whatsNext": {
+      "title": "Próximos Passos",
+      "step1": "Seu pagamento Zelle foi verificado e aprovado",
+      "step2": "Agora você pode acessar todos os recursos do processo de aplicação",
+      "step3": "Nossa equipe entrará em contato em breve com os próximos passos"
+    },
+    "actions": {
+      "goToDashboard": "Ir para o Dashboard",
+      "returnHome": "Voltar ao Início"
+    },
+    "feeTypes": {
+      "i-20_control_fee": "Taxa de Controle I-20",
+      "application_fee": "Taxa de Matrícula",
+      "scholarship_fee": "Taxa de Bolsa",
+      "selection_process": "Taxa de Processo de Seleção",
+      "default": "Pagamento"
+    }
+  },
+  "selectionFeeStep": {
+    "main": {
+      "title": "Taxa do Processo Seletivo",
+      "subtitle": "Esta taxa cobre o processamento de sua candidatura, avaliação de documentos e suporte inicial para o seu processo de estudo.",
+      "headerTitle": "Taxa do Processo Seletivo",
+      "headerSubtitle": "Matrícula USA - Taxa única",
+      "description": "Esta taxa cobre o processamento de sua candidatura, avaliação de documentos e suporte inicial para o seu processo de estudo nos Estados Unidos.",
+      "identityVerification": "Verificação de Identidade",
+      "identityVerificationSubtitle": "Esta etapa é obrigatória",
+      "identity": {
+        "success": "Foto enviada com sucesso!",
+        "error": "Erro ao salvar foto. Tente novamente.",
+        "continue": "Continuar",
+        "sending": "Enviando...",
+        "sendPhoto": "Enviar",
+        "completed": "Verificação Concluída",
+        "completedTitle": "Verificação concluída!",
+        "alreadySent": "Sua foto de identificação já foi enviada. Você pode prosseguir para o questionário."
+      },
+      "discountApplied": "Desconto Aplicado",
+      "couponApplied": "Cupom {{coupon}} Aplicado",
+      "methods": {
+        "stripe": "Cartão de Crédito"
+      },
+      "paymentProcessing": {
+        "title": "Processando Pagamento",
+        "subtitle": "Por favor, aguarde enquanto processamos o seu pagamento..."
+      },
+      "zellePayment": "Pagamento Zelle",
+      "zelleProcessing": {
+        "title": "Processando Pagamento Zelle",
+        "subtitle": "Seu pagamento Zelle está sendo verificado."
+      },
+      "zelleUnavailable": "Zelle não está disponível no momento",
+      "parcelowInstallments": "Em até 12x",
+      "parcelowVerification": "Verificação Parcelow",
+      "cpfPlaceholder": "Digite seu CPF",
+      "goToPayment": "Ir para Pagamento",
+      "selectMethod": "Selecione o Método de Pagamento",
+      "serviceContract": "Contrato de Serviço",
+      "back": "Voltar",
+      "referralCode": {
+        "title": "Código de Indicação",
+        "subtitle": "Tem um código de amigo? Digite aqui para ganhar desconto!",
+        "placeholder": "Inserir Código",
+        "validate": "Validar Código",
+        "applied": "Código aplicado com sucesso",
+        "discount": "Desconto:",
+        "originalPrice": "Preço Original:",
+        "totalFinal": "Total Final:"
+      },
+      "promotionalCoupon": {
+        "title": "Cupom Promocional",
+        "subtitle": "Digite seu cupom de desconto promocional",
+        "placeholder": "Inserir código",
+        "validating": "Validando...",
+        "remove": "Remover Cupom",
+        "applied": "Cupom aplicado",
+        "couponApplied": "Cupom aplicado com sucesso",
+        "discount": "Desconto:",
+        "originalPrice": "Preço Original:",
+        "totalFinal": "Total Final:"
+      },
+      "processingFees": {
+        "card": "* Podem incluir taxas de processamento",
+        "pix": "* Podem incluir taxas de processamento",
+        "parcelow": "* Taxas de operadora e processamento da plataforma",
+        "zelle": "* Processamento pode levar até 48 horas"
+      }
+    },
+    "paid": {
+      "title": "Taxa do Processo Seletivo",
+      "subtitle": "Você pagou com sucesso a taxa do processo seletivo.",
+      "paidTitle": "Pagamento Confirmado",
+      "paidSubtitle": "Seu pagamento foi confirmado com segurança.",
+      "continue": "Continuar"
+    }
+  },
+  "paymentStep": {
+    "loading": "Carregando suas aplicações...",
+    "title": "Taxa de Matrícula",
+    "securePaymentBadge": "Pagamento Seguro & Criptografado",
+    "subtitleAllPaid": "Toda a taxa de matrícula foi processada. Clique no botão abaixo para concluir seu onboarding.",
+    "subtitlePending": "Pague a taxa de matrícula da bolsa selecionada para confirmar oficialmente sua escolha e garantir sua vaga.",
+    "completedTitle": "Etapa Concluída",
+    "completedSubtitle": "A taxa de matrícula da sua bolsa já foi processada. Esta etapa está completa.",
+    "completedTitle2": "A taxa de matrícula foi processada com sucesso.",
+    "continue": "Continuar",
+    "enrollmentFeeLabel": "Taxa de Matrícula",
+    "feeWithoutDependents": "Taxa sem dependentes:",
+    "dependentsSingular": "dependente (+$100 cada):",
+    "dependentsPlural": "dependentes (+$100 cada):",
+    "creditCard": "Cartão de Crédito",
+    "creditCardFees": "* Podem incluir taxas de processamento",
+    "pixFees": "* Podem incluir taxas de processamento",
+    "parcelowFees": "* Podem incluir taxas de operadora e processamento da plataforma",
+    "parcelowInstallments": "Em até 12x",
+    "zelleNoFees": "Sem Taxas",
+    "zelleProcessingTime": "Processamento pode levar até 48 horas",
+    "parcelowCpfTitle": "Verificação Obrigatória Parcelow",
+    "parcelowCpfPlaceholder": "Digite seu CPF (000.000.000-00)",
+    "parcelowCpfInvalid": "CPF inválido. Digite os 11 dígitos.",
+    "parcelowCpfError": "Erro ao salvar CPF. Tente novamente.",
+    "goToPayment": "Ir ao pagamento",
+    "zellePendingTitle": "Pagamento Zelle em Análise",
+    "zellePendingMessage": "Você já iniciou um pagamento via Zelle. Aguarde a confirmação antes de usar outro método. Isso pode levar até 48 horas.",
+    "paymentConfirmed": "Pagamento Confirmado",
+    "paymentConfirmedSubtitle": "Esta taxa já foi processada com sucesso.",
+    "noApplications": "Nenhuma aplicação ativa",
+    "noApplicationsMessage": "Você ainda não selecionou nenhuma bolsa de estudos. Volte e selecione ao menos uma para prosseguir.",
+    "backToSelection": "Voltar para Seleção"
+  },
+  "paymentSelector": {
+    "title": "Escolha o Método de Pagamento",
+    "subtitle": "Selecione como você deseja pagar sua taxa de {{feeType}}",
+    "amount": "Valor",
+    "loading": {
+      "message": "Carregando métodos de pagamento...",
+      "processing": "Processando pagamento..."
+    },
+    "promotionalCoupon": {
+      "label": "Cupom Promocional",
+      "placeholder": "INSIRA O CÓDIGO",
+      "validate": "Validar",
+      "validating": "Validando...",
+      "success": "Cupom aplicado com sucesso!",
+      "invalid": "Cupom inválido ou expirado.",
+      "error": "Erro ao validar cupom.",
+      "validated": "Validado",
+      "remove": "Remover cupom",
+      "original": "original",
+      "withDiscount": "com desconto",
+      "discountAmount": "de desconto",
+      "applied": "Cupom {{code}} aplicado! Desconto de ${{amount}} aplicado.",
+      "errors": {
+        "invalid": "Código de cupom inválido",
+        "generic": "Erro ao validar cupom. Verifique sua conexão e tente novamente.",
+        "cpfRequired": "CPF é obrigatório para pagamento via Parcelow. Por favor, atualize seu perfil."
+      }
+    },
+    "methods": {
+      "stripe": {
+        "title": "Stripe",
+        "description": "Pague com segurança usando cartão de crédito ou débito via Stripe"
+      },
+      "pix": {
+        "title": "PIX",
+        "description": "Sistema de pagamento instantâneo para usuários brasileiros"
+      },
+      "parcelow": {
+        "title": "Parcelow",
+        "description": "Parcele no cartão de crédito"
+      },
+      "zelle": {
+        "title": "Zelle",
+        "description": "Pague via Zelle e envie o comprovante.",
+        "descriptionDetailed": "Pague via Zelle e envie o comprovante (24-48h)"
+      }
+    },
+    "feeTypes": {
+      "selection_process": "processo seletivo",
+      "application_fee": "matrícula",
+      "enrollment_fee": "matrícula",
+      "scholarship_fee": "bolsa",
+      "i20_control_fee": "taxa de controle I-20"
+    },
+    "manualVerification": "Processamento pode levar até 48 horas",
+    "important": "Importante:",
+    "zelleUploadNote": "Após o pagamento via Zelle, você precisará enviar o comprovante para verificação manual.",
+    "includesProcessingFees": "* Inclui taxas de processamento",
+    "parcelowFeesNote": "* Taxas da operadora e processamento da plataforma serão aplicadas",
+    "parcelowInstallmentPreview": "ou em até {{count}}x"
+  },
+  "paymentChoice": {
+    "title": "Escolha o Método de Pagamento",
+    "subtitle": "Selecione como você deseja pagar a taxa de {{feeType}}",
+    "manualVerification": "Processamento pode levar até 48 horas",
+    "important": "Importante",
+    "amount": "Valor",
+    "zelleUploadNote": "Após realizar o pagamento via Zelle, será necessário enviar um print da confirmação mostrando o código, data, valor e destinatário.",
+    "loading": {
+      "processing": "Processando..."
+    },
+    "feeTypes": {
+      "application_fee": "matrícula",
+      "enrollment_fee": "matrícula",
+      "scholarship_fee": "bolsa",
+      "selection_process": "processo seletivo"
+    },
+    "methods": {
+      "stripe": {
+        "title": "Cartão de Crédito",
+        "description": "Pague com segurança com cartão de crédito ou débito via Stripe"
+      },
+      "pix": {
+        "title": "PIX",
+        "description": "Sistema de pagamento instantâneo brasileiro"
+      },
+      "zelle": {
+        "title": "Zelle",
+        "description": "Pague via transferência Zelle"
+      },
+      "parcelow": {
+        "title": "Parcelow",
+        "description": "Pague com cartão brasileiro em até 21x"
+      }
+    }
+  },
+  "scholarshipFeeStep": {
+    "loading": "Carregando informações...",
+    "title": "Taxa da Bolsa",
+    "subtitle": "Esta taxa é o compromisso final com a bolsa ou faculdade selecionada.",
+    "completedTitle": "Etapa Concluída",
+    "completedSubtitle": "Sua taxa de bolsa foi processada com sucesso. Esta etapa está completa.",
+    "continue": "Continuar",
+    "securePayment": "Pagamento Seguro",
+    "confirmed": "Pagamento Confirmado",
+    "confirmedSubtitle": "Sua taxa de bolsa foi confirmada.",
+    "noApplications": "Nenhuma aplicação pronta",
+    "noApplicationsMessage": "Você precisa completar as etapas anteriores antes de pagar a taxa da bolsa.",
+    "back": "Voltar",
+    "zellePendingTitle": "Pagamento Zelle em Análise",
+    "zellePendingMessage": "Você já iniciou um pagamento via Zelle. Aguarde a confirmação antes de usar outro método. Isso pode levar até 48 horas."
+  },
+  "placementFeeStep": {
+    "loading": "Carregando informações...",
+    "title": "Taxa de Colocação",
+    "subtitle": "Taxa de colocação calculada com base no valor anual da sua bolsa selecionada.",
+    "completedTitle": "Etapa Concluída",
+    "completedSubtitle": "Sua Taxa de Colocação foi processada com sucesso.",
+    "continue": "Continuar",
+    "securePayment": "Pagamento Seguro",
+    "confirmed": "Pagamento Confirmado",
+    "confirmedSubtitle": "Sua Taxa de Colocação foi confirmada.",
+    "noApplications": "Nenhuma aplicação pronta",
+    "noApplicationsMessage": "Você precisa completar as etapas anteriores antes de pagar a Taxa de Colocação.",
+    "back": "Voltar",
+    "zellePendingTitle": "Pagamento Zelle em Análise",
+    "zellePendingMessage": "Você já iniciou um pagamento via Zelle. Aguarde a confirmação antes de usar outro método. Isso pode levar até 48 horas.",
+    "annualTuition": "Valor anual da bolsa: {{amount}}",
+    "cpfRequiredTitle": "Informe seu CPF para Parcelow",
+    "cpfPlaceholder": "000.000.000-00",
+    "cpfError": "Erro ao salvar CPF. Tente novamente.",
+    "cpfInvalid": "CPF deve ter 11 dígitos"
+  },
+  "paymentBlocker": {
+    "scholarships": {
+      "title": "Bolsas de Estudo Bloqueadas",
+      "description": "Para acessar nossa coleção exclusiva de bolsas de estudo, você precisa completar o processo de seleção inicial. Esta é a primeira etapa do seu processo para estudar nos Estados Unidos."
+    },
+    "universities": {
+      "title": "Universidades Bloqueadas",
+      "description": "Para explorar nossas universidades parceiras e seus programas, você precisa completar o processo de seleção inicial. Esta é a primeira etapa do seu processo para estudar nos Estados Unidos."
+    },
+    "default": {
+      "title": "Conteúdo Bloqueado",
+      "description": "Para acessar este conteúdo, você precisa completar o processo de seleção inicial. Esta é a primeira etapa do seu processo para estudar nos Estados Unidos."
+    },
+    "selectionProcessFee": "Taxa do Processo Seletivo",
+    "completeApplicationJourney": "Complete seu processo de candidatura",
+    "goToDashboardAndPayFee": "Ir ao Painel e Pagar Taxa",
+    "learnHowItWorks": "Aprender Como Funciona",
+    "contentLockedMessage": "Este conteúdo está bloqueado até que o pagamento seja concluído"
+  },
+  "successPages": {
+    "pixPayment": {
+      "processing": "Processando Pagamento PIX",
+      "message": "Seu pagamento PIX foi recebido e está sendo processado. Você será redirecionado automaticamente em alguns segundos.",
+      "verifying": "Verificando pagamento...",
+      "pleaseWait": "Por favor, aguarde..."
+    },
+    "selectionProcessFee": {
+      "title": "Pagamento da Taxa de Processo de Seleção Realizado com Sucesso!",
+      "description": "Seu pagamento de {{amount}} foi processado com sucesso.",
+      "message": "Agora você tem acesso a todas as bolsas e pode se candidatar livremente.",
+      "button": "Ir para Bolsas",
+      "verifying": "Verificando seu pagamento...",
+      "pleaseWait": "Aguarde enquanto confirmamos sua transação. Isso pode levar alguns instantes.",
+      "errorTitle": "Erro no Pagamento da Taxa de Processo de Seleção",
+      "errorMessage": "Houve um problema ao processar seu pagamento.",
+      "errorRetry": "Tente novamente. Se o erro persistir, entre em contato com o suporte."
+    },
+    "scholarshipFee": {
+      "title": "Pagamento da Taxa da Bolsa Realizado com Sucesso!",
+      "description": "Seu pagamento de {{amount}} foi processado com sucesso.",
+      "message": "Sua aplicação irá agora prosseguir para a próxima etapa.",
+      "button": "Ver Detalhes",
+      "verifying": "Verificando seu pagamento...",
+      "pleaseWait": "Aguarde enquanto confirmamos seu pagamento.",
+      "errorTitle": "Erro no Processamento do Pagamento",
+      "errorMessage": "Houve um problema ao processar seu pagamento.",
+      "errorRetry": "Tente novamente ou entre em contato com o suporte."
+    },
+    "applicationFee": {
+      "title": "Pagamento da Taxa de Matrícula Realizado com Sucesso!",
+      "description": "Seu pagamento de {{amount}} foi processado com sucesso.",
+      "message": "Sua aplicação irá agora prosseguir para a próxima etapa.",
+      "button": "Ir para Minhas Aplicações",
+      "verifying": "Verificando Pagamento...",
+      "pleaseWait": "Aguarde enquanto confirmamos sua transação. Isso pode levar alguns instantes.",
+      "errorTitle": "Falha na Verificação",
+      "errorMessage": "Houve um problema ao verificar seu pagamento. Entre em contato com o suporte.",
+      "errorDetails": "Detalhes do erro:"
+    },
+    "placementFee": {
+      "title": "Pagamento da Taxa de Colocação Realizado com Sucesso!",
+      "description": "Seu pagamento de {{amount}} foi processado com sucesso.",
+      "message": "Sua aplicação está agora confirmada.",
+      "button": "Continuar",
+      "verifying": "Verificando seu pagamento...",
+      "pleaseWait": "Aguarde enquanto confirmamos sua transação. Isso pode levar alguns instantes.",
+      "errorTitle": "Erro no Processamento",
+      "errorMessage": "Houve um problema ao processar seu pagamento.",
+      "errorRetry": "Tente novamente ou entre em contato com o suporte."
+    },
+    "common": {
+      "redirecting": "Redirecionando em instantes...",
+      "paymentProcessedAmount": "Seu pagamento foi processado com sucesso!",
+      "paymentError": "Houve um problema ao processar seu pagamento!",
+      "verifying": "Verificando seu pagamento...",
+      "pleaseWait": "Aguarde enquanto confirmamos sua transação. Isso pode levar alguns instantes."
+    },
+    "i20ControlFee": {
+      "title": "Pagamento da Taxa de Controle I-20 Realizado com Sucesso!",
+      "message": "Seu documento I-20 será processado e enviado em breve.",
+      "button": "Voltar para Minhas Aplicações",
+      "verifying": "Verificando Pagamento...",
+      "pleaseWait": "Aguarde enquanto confirmamos seu pagamento.",
+      "errorTitle": "Erro no Pagamento da Taxa de Controle I-20",
+      "errorMessage": "Houve um problema ao processar seu pagamento.",
+      "errorRetry": "Tente novamente. Se o erro persistir, entre em contato com o suporte."
+    }
+  }
+}

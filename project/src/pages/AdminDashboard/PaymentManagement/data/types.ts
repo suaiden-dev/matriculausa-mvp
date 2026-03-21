@@ -9,7 +9,7 @@ export interface PaymentRecord {
   scholarship_id?: string | null;
   scholarship_title?: string;
   field_of_study?: string | null;
-  fee_type: 'selection_process' | 'application' | 'scholarship' | 'i20_control_fee' | 'application_fee' | 'scholarship_fee';
+  fee_type: 'selection_process' | 'application' | 'scholarship' | 'i20_control_fee' | 'application_fee' | 'scholarship_fee' | 'placement' | 'ds160_package' | 'i539_cos_package';
   fee_type_global?: string;
   amount: number;
   status: 'paid' | 'pending' | 'failed';

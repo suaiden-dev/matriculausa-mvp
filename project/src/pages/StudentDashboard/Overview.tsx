@@ -1,47 +1,28 @@
-import React, { useEffect, useState, useRef } from 'react';
+import React, { useEffect, useState } from 'react';
 import { Link, useSearchParams } from 'react-router-dom';
-import { 
-  Award, 
-  FileText, 
-  CheckCircle, 
-  Clock, 
-  Search, 
-  Target, 
+import {
+  Award,
+  FileText,
+  CheckCircle,
+  Clock,
+  Search,
+  Target,
   BookOpen,
   ArrowUpRight,
   Calendar,
-  Building,
-  CreditCard,
-  Tag,
   Route,
   XCircle
 } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
-import { useFeeConfig } from '../../hooks/useFeeConfig';
-import { useDynamicFees } from '../../hooks/useDynamicFees';
-import { usePaymentBlocked } from '../../hooks/usePaymentBlocked';
-import { StripeCheckout } from '../../components/StripeCheckout';
-import { useAuth } from '../../hooks/useAuth';
-import { useReferralCode } from '../../hooks/useReferralCode';
-import { ProgressBar } from '../../components/ProgressBar';
-import { useStepByStepGuide } from '../../hooks/useStepByStepGuide';
-import { supabase } from '../../lib/supabase';
-import { useQueryClient } from '@tanstack/react-query';
-import { 
-  useStudentDocumentsQuery, 
-  useStudentPaidAmountsQuery, 
-  usePromotionalCouponQuery, 
-  useIdentityPhotoStatusQuery 
-} from '../../hooks/useStudentDashboardQueries';
-import { invalidateStudentDashboardDocuments, invalidateStudentDashboardCoupons } from '../../lib/queryKeys';
-import './Overview.css'; // Adicionar um arquivo de estilos dedicado para padronização visual
 
-// Componente de skeleton para valores de taxa
-const FeeSkeleton = () => (
-  <div className="animate-pulse">
-    <div className="h-4 bg-gray-300 rounded w-16"></div>
-  </div>
-);
+import { useNavigate } from 'react-router-dom';
+import { useAuth } from '../../hooks/useAuth';
+import { useStepByStepGuide } from '../../hooks/useStepByStepGuide';
+import { useCartStore } from '../../stores/applicationStore';
+import { supabase } from '../../lib/supabase';
+import StepByStepGuide from '../../components/OnboardingTour/StepByStepGuide';
+
+import './Overview.css'; // Adicionar um arquivo de estilos dedicado para padronização visual
 
 interface OverviewProps {
   profile: any;
@@ -58,39 +39,142 @@ interface OverviewProps {
 }
 
 const Overview: React.FC<OverviewProps> = ({
-  stats, 
-  recentApplications = []
+  stats,
+  recentApplications = [],
+  applications = []
 }) => {
-  const { t } = useTranslation();
-  const queryClient = useQueryClient();
+  const { t } = useTranslation(['dashboard', 'common']);
+  const navigate = useNavigate();
   const [searchParams, setSearchParams] = useSearchParams();
-  const paymentButtonRef = useRef<HTMLButtonElement>(null);
 
   const { user, userProfile, refetchUserProfile } = useAuth();
-  const { activeDiscount } = useReferralCode();
-  const { userFeeOverrides } = useFeeConfig(user?.id);
-  const { selectionProcessFeeAmount, scholarshipFeeAmount, i20ControlFeeAmount } = useDynamicFees();
-  const { openGuide } = useStepByStepGuide();
-  const { isBlocked, pendingPayment, loading: paymentBlockedLoading } = usePaymentBlocked();
+  const { isGuideOpen, openGuide, closeGuide } = useStepByStepGuide();
+
+  // Threshold para obrigatoriedade do questionário: 18/02/2026
+  const SURVEY_THRESHOLD_DATE = new Date('2026-02-18T21:50:00Z');
+  const paidAt = userProfile?.selection_process_paid_at ? new Date(userProfile.selection_process_paid_at) : null;
+  const isExemptedByLegacy = userProfile?.has_paid_selection_process_fee && (!paidAt || paidAt < SURVEY_THRESHOLD_DATE);
+
+  // Verificar qual o passo de onboarding correto baseado no banco de dados
+  const savedOnboardingStep = React.useMemo(() => {
+    if (typeof window === 'undefined') return null;
+
+    const validSteps = [
+      'selection_fee', 'identity_verification', 'selection_survey',
+      'scholarship_selection', 'process_type', 'documents_upload',
+      'payment', 'scholarship_fee', 'placement_fee', 'my_applications', 'completed'
+    ];
+
+    // 1. FONTE PRIMÁRIA: step salvo no banco de dados
+    const dbStep = (userProfile as any)?.onboarding_current_step;
+
+    if (dbStep && validSteps.includes(dbStep)) {
+      // Único bloqueio de segurança: sem taxa de seleção paga, não avança
+      if (userProfile && !userProfile.has_paid_selection_process_fee) {
+        const stepsAfterSelection = [
+          'scholarship_selection', 'process_type', 'documents_upload',
+          'payment', 'scholarship_fee', 'placement_fee', 'my_applications',
+          'waiting_approval', 'completed'
+        ];
+        if (stepsAfterSelection.includes(dbStep)) {
+          return 'selection_fee';
+        }
+      }
+      return dbStep;
+    }
+
+    // 2. FALLBACK: calcular baseado nas flags do perfil (usuários sem campo preenchido)
+    let calculatedStep: string | null = 'selection_fee';
+
+    if (userProfile) {
+      const { cart } = useCartStore.getState();
+      const hasCartItems = cart.length > 0;
+      const hasAppsInSystem = applications.length > 0;
+      const anyAppPaidOrApproved = applications.some(app =>
+        app.is_application_fee_paid ||
+        ['approved', 'enrolled', 'under_review'].includes(app.status)
+      );
+      const hasPaidPackage = !!(userProfile as any).has_paid_ds160_package || !!(userProfile as any).has_paid_i539_cos_package;
+      const anyScholarshipFeePaid = applications.some(app => app.is_scholarship_fee_paid) || userProfile.is_scholarship_fee_paid || hasPaidPackage;
+      const hasGlobalFeePaid = userProfile.is_application_fee_paid || !!userProfile.application_fee_paid_at || !!userProfile.scholarship_fee_paid_at || anyAppPaidOrApproved || hasPaidPackage;
+      const hasDocsGlobal = userProfile.documents_uploaded || !!userProfile.application_fee_paid_at || anyAppPaidOrApproved || hasPaidPackage;
+
+      // Verificar Process Type (situação do visto)
+      const userProcessTypeKey = `studentProcessType_${userProfile.id}`;
+      const storedProcessType = typeof window !== 'undefined' ? (window.localStorage.getItem(userProcessTypeKey) || window.localStorage.getItem('studentProcessType')) : null;
+      const hasProcessType = (applications.length > 0 && !!applications[0].student_process_type) || (!!storedProcessType && ['initial', 'transfer', 'change_of_status'].includes(storedProcessType));
+
+      if (userProfile.onboarding_completed) {
+        calculatedStep = 'completed';
+      } else if (!userProfile.has_paid_selection_process_fee) {
+        calculatedStep = 'selection_fee';
+      } else if (!userProfile.selection_survey_passed && !isExemptedByLegacy && !hasDocsGlobal && !hasGlobalFeePaid) {
+        calculatedStep = 'selection_survey';
+      } else if (!userProfile.selected_scholarship_id && !hasAppsInSystem && !hasCartItems && !hasDocsGlobal && !hasGlobalFeePaid) {
+        calculatedStep = 'scholarship_selection';
+      } else if (!hasProcessType && !hasDocsGlobal && !hasGlobalFeePaid) {
+        calculatedStep = 'process_type';
+      } else if (!hasDocsGlobal && userProfile.documents_status !== 'approved') {
+        calculatedStep = 'documents_upload';
+      } else if (!hasGlobalFeePaid) {
+        calculatedStep = 'payment';
+      } else if (!anyScholarshipFeePaid) {
+        calculatedStep = 'scholarship_fee';
+      } else {
+        calculatedStep = 'my_applications';
+      }
+    }
+
+    return calculatedStep;
+  }, [userProfile, applications, isExemptedByLegacy]);
+
+  const hasSavedOnboardingStep = savedOnboardingStep !== null;
+  const isOnboardingStarted = hasSavedOnboardingStep && savedOnboardingStep !== 'selection_fee' && savedOnboardingStep !== 'welcome';
+
+
   const [visibleApplications, setVisibleApplications] = useState(5); // Mostrar 5 inicialmente
-  
-  // React Query hooks para dados com cache
-  // isPending = sem dados no cache ainda (primeira carga)
-  // isFetching = buscando em background (pode ter dados em cache)
-  const { data: studentDocuments = [], isPending: documentsLoading } = useStudentDocumentsQuery(user?.id);
-  const { data: realPaidAmounts = {}, isPending: loadingPaidAmounts } = useStudentPaidAmountsQuery(user?.id);
-  const { data: selectionProcessPromotionalCoupon } = usePromotionalCouponQuery(user?.id, 'selection_process');
-  const { data: identityPhotoStatus, isPending: identityPhotoLoading } = useIdentityPhotoStatusQuery(user?.id);
-  
-  // Verificar se há pagamento Zelle pendente do tipo selection_process
-  const hasPendingSelectionProcessPayment = isBlocked && pendingPayment && pendingPayment.fee_type === 'selection_process';
-  
+  const [documentsLoading, setDocumentsLoading] = useState(true);
+  const [studentDocuments, setStudentDocuments] = useState<any[]>([]);
+
   const hasMoreApplications = recentApplications.length > visibleApplications;
   const displayedApplications = recentApplications.slice(0, visibleApplications);
-  
+
   const handleLoadMore = () => {
     setVisibleApplications(prev => Math.min(prev + 5, recentApplications.length));
   };
+
+  // Função para buscar documentos do estudante
+  const fetchStudentDocuments = React.useCallback(async () => {
+    if (!user?.id) {
+      setDocumentsLoading(false);
+      return;
+    }
+
+    try {
+      const { data, error } = await supabase
+        .from('student_documents')
+        .select('*')
+        .eq('user_id', user.id)
+        .order('uploaded_at', { ascending: false });
+
+      if (error) {
+        console.error('Erro ao buscar documentos:', error);
+        setStudentDocuments([]);
+      } else {
+        setStudentDocuments(data || []);
+      }
+    } catch (error) {
+      console.error('Erro ao buscar documentos:', error);
+      setStudentDocuments([]);
+    } finally {
+      setDocumentsLoading(false);
+    }
+  }, [user?.id]);
+
+  // Buscar documentos do estudante
+  useEffect(() => {
+    fetchStudentDocuments();
+  }, [fetchStudentDocuments]);
 
   // Configurar real-time subscription para atualizações de documentos
   useEffect(() => {
@@ -107,9 +191,8 @@ const Overview: React.FC<OverviewProps> = ({
           filter: `user_id=eq.${user.id}`
         },
         () => {
-          // Invalidar cache do React Query quando houver mudanças
-          console.log('[Overview] Realtime: Invalidando cache de documentos');
-          invalidateStudentDashboardDocuments(queryClient);
+          // Refetch documentos quando houver mudanças
+          fetchStudentDocuments();
         }
       )
       .subscribe();
@@ -117,7 +200,7 @@ const Overview: React.FC<OverviewProps> = ({
     return () => {
       supabase.removeChannel(channel);
     };
-  }, [user?.id, queryClient]);
+  }, [user?.id, fetchStudentDocuments]);
 
   // Refetch perfil quando necessário (ex: após atualização)
   useEffect(() => {
@@ -126,73 +209,39 @@ const Overview: React.FC<OverviewProps> = ({
     }
   }, [user?.id, refetchUserProfile]);
 
-  // Atualizar dados quando o componente receber foco (ex: ao voltar da página de perfil)
+  // Atualizar documentos quando o componente receber foco (ex: ao voltar da página de perfil)
   useEffect(() => {
     const handleFocus = () => {
       if (user?.id && !documentsLoading) {
-        console.log('[Overview] Window focus: Invalidando caches');
-        invalidateStudentDashboardDocuments(queryClient);
+        fetchStudentDocuments();
         refetchUserProfile();
       }
     };
 
     window.addEventListener('focus', handleFocus);
     return () => window.removeEventListener('focus', handleFocus);
-  }, [user?.id, documentsLoading, refetchUserProfile, queryClient]);
+  }, [user?.id, documentsLoading, refetchUserProfile, fetchStudentDocuments]);
 
-  // Ouvir eventos de validação de cupom promocional
-  useEffect(() => {
-    const handleCouponValidation = (event: CustomEvent) => {
-      const feeType = event.detail?.fee_type || 'selection_process';
-      if (feeType === 'selection_process') {
-        console.log('[Overview] Cupom validado - invalidando cache');
-        invalidateStudentDashboardCoupons(queryClient);
-      }
-    };
 
-    const handleCouponRemoved = () => {
-      console.log('[Overview] Cupom removido - invalidando cache');
-      invalidateStudentDashboardCoupons(queryClient);
-    };
 
-    window.addEventListener('promotionalCouponValidated', handleCouponValidation as EventListener);
-    window.addEventListener('promotionalCouponRemoved', handleCouponRemoved);
-    
-    return () => {
-      window.removeEventListener('promotionalCouponValidated', handleCouponValidation as EventListener);
-      window.removeEventListener('promotionalCouponRemoved', handleCouponRemoved);
-    };
-  }, [queryClient]);
-
-  // Abertura automática do modal de pagamento via query param ou fallback localStorage
+  // Redirecionamento automático para o onboarding via query param ou fallback localStorage
   useEffect(() => {
     const shouldOpenModal = searchParams.get('openModal') || localStorage.getItem('pending_open_modal');
-    
-    if (shouldOpenModal === 'selection_process' && !paymentBlockedLoading && paymentButtonRef.current) {
-      console.log('[Overview] Comando para abrir modal detectado:', searchParams.get('openModal') ? 'Query Param' : 'LocalStorage');
-      
-      // Aguardar um momento para garantir que o componente está totalmente renderizado
-      const timer = setTimeout(() => {
-        // Simular clique no botão de pagamento
-        paymentButtonRef.current?.click();
-        
-        // Limpar o parâmetro da URL e o localStorage
-        if (searchParams.get('openModal')) {
-          searchParams.delete('openModal');
-          setSearchParams(searchParams, { replace: true });
-        }
-        localStorage.removeItem('pending_open_modal');
-        
-        // Scroll suave até o card de pagamento
-        const paymentCard = document.getElementById('selection-process-payment');
-        if (paymentCard) {
-          paymentCard.scrollIntoView({ behavior: 'smooth', block: 'center' });
-        }
-      }, 800);
-      
-      return () => clearTimeout(timer);
+
+    if (shouldOpenModal === 'selection_process') {
+      console.log('[Overview] Redirecionando para onboarding:', searchParams.get('openModal') ? 'Query Param' : 'LocalStorage');
+
+      // Limpar o parâmetro da URL e o localStorage
+      if (searchParams.get('openModal')) {
+        searchParams.delete('openModal');
+        setSearchParams(searchParams, { replace: true });
+      }
+      localStorage.removeItem('pending_open_modal');
+
+      // Redirecionar para o fluxo de onboarding
+      navigate('/student/onboarding?step=selection_fee');
     }
-  }, [searchParams, setSearchParams, paymentBlockedLoading]);
+  }, [searchParams, setSearchParams, navigate]);
 
   const getStatusColor = (status: string) => {
     switch (status) {
@@ -213,6 +262,22 @@ const Overview: React.FC<OverviewProps> = ({
       case 'pending': return Clock;
       case 'enrolled': return CheckCircle;
       default: return Clock;
+    }
+  };
+
+  const getStatusLabel = (status: string) => {
+    switch (status) {
+      case 'approved':
+      case 'enrolled':
+        return t('studentDashboard.myApplications.statusLabels.approvedByUniversity');
+      case 'rejected':
+        return t('studentDashboard.myApplications.statusLabels.notSelectedForScholarship');
+      case 'pending':
+        return t('studentDashboard.myApplications.statusLabels.pending');
+      case 'under_review':
+        return t('studentDashboard.myApplications.statusLabels.underReview');
+      default:
+        return status.replace('_', ' ').replace(/\b\w/g, (l: string) => l.toUpperCase());
     }
   };
 
@@ -239,14 +304,14 @@ const Overview: React.FC<OverviewProps> = ({
 
   const checkDocumentsUploaded = (): boolean => {
     if (documentsLoading) return false;
-    
+
     const requiredDocTypes = ['passport', 'diploma', 'funds_proof'];
     const uploadedDocTypes = new Set(
       studentDocuments
-        .filter((doc: any) => doc.file_url && doc.status !== 'rejected')
-        .map((doc: any) => doc.type)
+        .filter(doc => doc.file_url && doc.status !== 'rejected')
+        .map(doc => doc.type)
     );
-    
+
     return requiredDocTypes.every(type => uploadedDocTypes.has(type));
   };
 
@@ -282,414 +347,107 @@ const Overview: React.FC<OverviewProps> = ({
     }
   ];
 
-  // Verificar se há application_fee ou scholarship_fee pagos nas applications
-  const hasApplicationFeePaid = recentApplications.some(app => app.is_application_fee_paid);
-  const hasScholarshipFeePaid = recentApplications.some(app => app.is_scholarship_fee_paid);
+  // Mapeamento de step de onboarding para número de exibição
+  type OnboardingStepKey =
+    | 'selection_fee' | 'identity_verification' | 'selection_survey'
+    | 'scholarship_selection' | 'process_type' | 'documents_upload'
+    | 'payment' | 'scholarship_fee' | 'placement_fee' | 'university_documents'
+    | 'waiting_approval' | 'my_applications' | 'completed';
 
-  // React Query hook já busca valores pagos automaticamente com cache
-
-  // Base fee amounts with user overrides - usar valores do useDynamicFees
-  const selectionBase = selectionProcessFeeAmount || 0;
-  const scholarshipBase = scholarshipFeeAmount || 0;
-  const i20Base = i20ControlFeeAmount || 0;
-
-  // Verificar se as taxas estão carregando (só verdadeiro na primeira carga sem cache)
-  const isFeesLoading = (selectionProcessFeeAmount === undefined || 
-                        scholarshipFeeAmount === undefined || 
-                        i20ControlFeeAmount === undefined) && !userProfile;
-
-  // ✅ CORREÇÃO: selectionBase já vem com dependentes calculados do useDynamicFees
-  // Não recalcular dependentes aqui para evitar duplicação
-  const hasI20Override = userFeeOverrides?.i20_control_fee !== undefined;
-  
-  // I-20 nunca tem dependentes, então não precisa de cálculo extra
-  const i20Extra = hasI20Override ? 0 : 0;
-
-  // Display amounts - usar valores já calculados do useDynamicFees
-  const selectionWithDependents = selectionBase; // Já inclui dependentes
-  const i20WithDependents = i20Base + i20Extra;
-
-  // Valores das taxas para o ProgressBar (Application fee é variável)
-  // ✅ CORREÇÃO: Aplicar desconto na barra de progresso se houver activeDiscount ou cupom promocional
-  const selectionFeeWithDiscount = (() => {
-    // Prioridade: cupom promocional > activeDiscount
-    if (selectionProcessPromotionalCoupon) {
-      return selectionProcessPromotionalCoupon.finalAmount;
-    }
-    if (activeDiscount?.has_discount) {
-      return Math.max(selectionWithDependents - (activeDiscount.discount_amount || 0), 0);
-    }
-    return selectionWithDependents;
-  })();
-
-  // ✅ CORREÇÃO: Prioridade: Valor real pago > Override > Valor esperado
-  const getSelectionProcessFeeDisplay = () => {
-    // Só mostrar skeleton se não houver dados em cache E estiver carregando pela primeira vez
-    if (loadingPaidAmounts && !realPaidAmounts) return <FeeSkeleton />;
-    
-    // PRIORIDADE 1 (MÁXIMA): Valor real pago quando já foi pago
-    // Se já foi pago, usar o valor realmente pago (gross_amount_usd ou amount)
-    // Isso tem prioridade sobre overrides, pois representa o valor efetivamente pago
-    if (userProfile?.has_paid_selection_process_fee && realPaidAmounts?.selection_process !== undefined && realPaidAmounts.selection_process > 0) {
-      console.log('🔍 [Overview] Selection Process Fee - Usando valor real pago:', realPaidAmounts.selection_process);
-      return `$${realPaidAmounts.selection_process.toFixed(2)}`;
-    }
-    
-    // PRIORIDADE 2: Override (só usado se ainda não foi pago)
-    if (userFeeOverrides?.selection_process_fee !== undefined) {
-      console.log('🔍 [Overview] Selection Process Fee - Usando override:', userFeeOverrides.selection_process_fee);
-      return `$${userFeeOverrides.selection_process_fee.toFixed(2)}`;
-    }
-    
-    // PRIORIDADE 3: Valor esperado (com desconto se aplicável)
-    return `$${typeof selectionFeeWithDiscount === 'number' ? selectionFeeWithDiscount.toFixed(2) : selectionFeeWithDiscount}`;
+  const STEP_NUMBER_MAP: Record<OnboardingStepKey, number> = {
+    'selection_fee': 1,
+    'identity_verification': 2,
+    'selection_survey': 2,
+    'scholarship_selection': 3,
+    'process_type': 4,
+    'documents_upload': 5,
+    'payment': 6,
+    'scholarship_fee': 7,
+    'placement_fee': 7,
+    'university_documents': 7,
+    'waiting_approval': 7,
+    'my_applications': 7,
+    'completed': 7,
   };
+  const TOTAL_ONBOARDING_STEPS = 7;
 
-  const getScholarshipFeeDisplay = () => {
-    // Só mostrar skeleton se não houver dados em cache E estiver carregando pela primeira vez
-    if (loadingPaidAmounts && !realPaidAmounts) return <FeeSkeleton />;
-    
-    // PRIORIDADE 1: Override (MÁXIMA PRIORIDADE)
-    if (userFeeOverrides?.scholarship_fee !== undefined) {
-      return `$${userFeeOverrides.scholarship_fee.toFixed(2)}`;
-    }
-    
-    // PRIORIDADE 2: Valor real pago quando já foi pago
-    if (hasScholarshipFeePaid && realPaidAmounts?.scholarship !== undefined && realPaidAmounts.scholarship > 0) {
-      return `$${realPaidAmounts.scholarship.toFixed(2)}`;
-    }
-    
-    // PRIORIDADE 3: Valor esperado
-    return `$${typeof scholarshipBase === 'number' ? scholarshipBase.toFixed(2) : scholarshipBase}`;
-  };
-
-  const getI20ControlFeeDisplay = () => {
-    // Só mostrar skeleton se não houver dados em cache E estiver carregando pela primeira vez
-    if (loadingPaidAmounts && !realPaidAmounts) return <FeeSkeleton />;
-    
-    // PRIORIDADE 1: Override (MÁXIMA PRIORIDADE)
-    if (userFeeOverrides?.i20_control_fee !== undefined) {
-      return `$${userFeeOverrides.i20_control_fee.toFixed(2)}`;
-    }
-    
-    // PRIORIDADE 2: Valor real pago quando já foi pago
-    if (userProfile?.has_paid_i20_control_fee && realPaidAmounts?.i20_control !== undefined && realPaidAmounts.i20_control > 0) {
-      return `$${realPaidAmounts.i20_control.toFixed(2)}`;
-    }
-    
-    // PRIORIDADE 3: Valor esperado
-    return `$${typeof i20WithDependents === 'number' ? i20WithDependents.toFixed(2) : i20WithDependents}`;
-  };
-
-  const dynamicFeeValues = [
-    isFeesLoading ? '...' : String(getSelectionProcessFeeDisplay()), // Selection Process Fee (valor real pago ou esperado)
-    t('feeValues.asPerUniversity'), // Application Fee (variável - não mostra valor específico)
-    isFeesLoading ? '...' : String(getScholarshipFeeDisplay()), // Scholarship Fee (valor real pago ou esperado)
-    isFeesLoading ? '...' : String(getI20ControlFeeDisplay()), // I-20 Control Fee (valor real pago ou esperado)
-  ];
-
-  // Lógica da barra de progresso dinâmica
-  let steps = [];
-  if (!userProfile?.has_paid_selection_process_fee) {
-    // Só pagou (ou está pagando) a Selection Process Fee
-    steps = [
-      {
-        label: t('studentDashboard.progressBar.selectionProcessFee'),
-        description: t('studentDashboard.progressBar.payApplicationFee'),
-        completed: false,
-        current: true,
-      },
-      {
-        label: t('studentDashboard.progressBar.applicationFee'),
-        description: t('studentDashboard.progressBar.payApplicationFee'),
-        completed: false,
-        current: false,
-      },
-      {
-        label: t('studentDashboard.progressBar.scholarshipFee'),
-        description: t('studentDashboard.progressBar.payScholarshipFee'),
-        completed: false,
-        current: false,
-      },
-      {
-        label: t('studentDashboard.progressBar.i20ControlFee'),
-        description: t('studentDashboard.progressBar.payI20Fee'),
-        completed: false,
-        current: false,
-      },
-    ];
-  } else if (!hasApplicationFeePaid) {
-    // Pagou só a Selection Process Fee
-    steps = [
-      {
-        label: t('studentDashboard.progressBar.selectionProcessFee'),
-        description: t('studentDashboard.progressBar.completed'),
-        completed: true,
-        current: false,
-      },
-      {
-        label: t('studentDashboard.progressBar.applicationFee'),
-        description: t('studentDashboard.progressBar.payApplicationFee'),
-        completed: false,
-        current: true,
-      },
-      {
-        label: t('studentDashboard.progressBar.scholarshipFee'),
-        description: t('studentDashboard.progressBar.payScholarshipFee'),
-        completed: false,
-        current: false,
-      },
-      {
-        label: t('studentDashboard.progressBar.i20ControlFee'),
-        description: t('studentDashboard.progressBar.payI20Fee'),
-        completed: false,
-        current: false,
-      },
-    ];
-  } else if (!hasScholarshipFeePaid) {
-    // Pagou Application Fee
-    steps = [
-      {
-        label: t('studentDashboard.progressBar.selectionProcessFee'),
-        description: t('studentDashboard.progressBar.completed'),
-        completed: true,
-        current: false,
-      },
-      {
-        label: t('studentDashboard.progressBar.applicationFee'),
-        description: t('studentDashboard.progressBar.completed'),
-        completed: true,
-        current: false,
-      },
-      {
-        label: t('studentDashboard.progressBar.scholarshipFee'),
-        description: t('studentDashboard.progressBar.payScholarshipFee'),
-        completed: false,
-        current: true,
-      },
-      {
-        label: t('studentDashboard.progressBar.i20ControlFee'),
-        description: t('studentDashboard.progressBar.payI20Fee'),
-        completed: false,
-        current: false,
-      },
-    ];
-  } else if (!userProfile?.has_paid_i20_control_fee) {
-    // Pagou Scholarship Fee, mas não I-20 Control Fee
-    steps = [
-      {
-        label: t('studentDashboard.progressBar.selectionProcessFee'),
-        description: t('studentDashboard.progressBar.completed'),
-        completed: true,
-        current: false,
-      },
-      {
-        label: t('studentDashboard.progressBar.applicationFee'),
-        description: t('studentDashboard.progressBar.completed'),
-        completed: true,
-        current: false,
-      },
-      {
-        label: t('studentDashboard.progressBar.scholarshipFee'),
-        description: t('studentDashboard.progressBar.completed'),
-        completed: true,
-        current: false,
-      },
-      {
-        label: t('studentDashboard.progressBar.i20ControlFee'),
-        description: t('studentDashboard.progressBar.payI20Fee'),
-        completed: false,
-        current: true,
-      },
-    ];
-  } else {
-    // Pagou tudo
-    steps = [
-      {
-        label: t('studentDashboard.progressBar.selectionProcessFee'),
-        description: t('studentDashboard.progressBar.completed'),
-        completed: true,
-        current: false,
-      },
-      {
-        label: t('studentDashboard.progressBar.applicationFee'),
-        description: t('studentDashboard.progressBar.completed'),
-        completed: true,
-        current: false,
-      },
-      {
-        label: t('studentDashboard.progressBar.scholarshipFee'),
-        description: t('studentDashboard.progressBar.completed'),
-        completed: true,
-        current: false,
-      },
-      {
-        label: t('studentDashboard.progressBar.i20ControlFee'),
-        description: t('studentDashboard.progressBar.completed'),
-        completed: true,
-        current: false,
-      },
-    ];
-  }
-
-  const allCompleted = steps.every(step => step.completed);
+  const currentStepKey = (savedOnboardingStep || 'selection_fee') as OnboardingStepKey;
+  const currentStepNumber = STEP_NUMBER_MAP[currentStepKey] ?? 1;
+  const currentStepLabel = t(`studentDashboard.progressBar.onboardingBanner.stepLabels.${currentStepKey}`);
+  const currentStepDescription = t(`studentDashboard.progressBar.onboardingBanner.stepDescriptions.${currentStepKey}`);
 
   return (
     <div className="overview-dashboard-container pt-2">
 
-      
+
       {/* Mensagem de boas‑vindas movida para o hero */}
-      
+
       {/* Alerta de desconto duplicado removido para evitar repetição com a mensagem de boas‑vindas */}
-      
-      {/* Identity Photo Status Banner - Only show if rejected */}
-      {!identityPhotoLoading && identityPhotoStatus === 'rejected' && (
-        <div className="mb-6 rounded-2xl p-4 border-2 bg-red-50 border-red-200">
-          <div className="flex items-start justify-between">
-            <div className="flex items-start space-x-3 flex-1">
-              <XCircle className="w-6 h-6 text-red-600 mt-0.5 flex-shrink-0" />
-              <div className="flex-1">
-                <h3 className="font-semibold mb-1 text-red-800">
-                  Identity Photo Rejected
-                </h3>
-                <p className="text-sm text-red-700">
-                  Your identity photo has been rejected. Please review the reason and upload a new photo.
-                </p>
-              </div>
-            </div>
-            <Link
-              to="/student/dashboard/identity-verification"
-              className="ml-4 px-4 py-2 rounded-lg font-medium text-sm transition-colors bg-red-600 hover:bg-red-700 text-white"
-            >
-              View Details
-            </Link>
-          </div>
-        </div>
-      )}
 
       {/* Welcome Message / Hero */}
-      <div className="bg-gradient-to-r from-blue-600 to-indigo-700 rounded-2xl p-4 sm:p-6 md:p-6 text-white relative overflow-hidden ring-1 ring-white/10 shadow-xl">
+      <div className="bg-gradient-to-r from-blue-600 to-indigo-700 rounded-2xl p-4 sm:p-6 md:p-6 pb-8 sm:pb-10 text-white relative overflow-hidden ring-1 ring-white/10 shadow-xl">
         <div className="absolute inset-0 bg-black/10"></div>
         <div className="relative z-10">
-          <div className="flex flex-col sm:flex-row sm:items-center space-y-3 sm:space-y-0 sm:space-x-4 mb-3 sm:mb-4">
+          <div className="flex flex-row items-center space-x-3 sm:space-x-4 mb-3 sm:mb-4">
             <div className="w-12 h-12 sm:w-14 sm:h-14 bg-white/15 backdrop-blur-sm rounded-2xl flex items-center justify-center border border-white/20">
               <Award className="h-6 w-6 sm:h-7 sm:w-7 text-white" />
             </div>
             <div className="flex-1">
-              <h2 className="text-xl sm:text-2xl md:text-3xl font-bold mb-1">
+              <h2 className="text-xl sm:text-2xl md:text-3xl font-bold">
                 {t('studentDashboard.welcome')}, {userProfile?.full_name || user?.email || t('studentDashboard.title').replace(' Dashboard', '')}!
               </h2>
             </div>
           </div>
 
-          {/* Progress Bar dentro do bloco azul */}
-          <div className="text-center text-white/90 text-sm md:text-base font-medium mb-1">
-            {allCompleted ? t('studentDashboard.progressBar.allStepsCompleted') : t('studentDashboard.progressBar.title')}
-          </div>
-          <div className="mb-2 md:mb-4">
-            <ProgressBar steps={steps} feeValues={dynamicFeeValues} />
-          </div>
-
-          {userProfile && !userProfile.has_paid_selection_process_fee && (
-            <div className="bg-white/10 backdrop-blur-sm border border-white/30 rounded-xl p-4 sm:p-6 mb-4">
-              <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between space-y-3 sm:space-y-0 mb-3 sm:mb-4">
-                <div className="flex items-center">
-                  <CreditCard className="h-4 w-4 sm:h-5 sm:w-5 text-white mr-2 sm:mr-3" />
-                  <div>
-                    <h3 className="text-base sm:text-lg md:text-xl font-bold text-white">{t('studentDashboard.selectionProcess.title')}</h3>
-                    <p className="text-blue-100 text-xs sm:text-sm">{t('studentDashboard.selectionProcess.completeApplicationProcess')}</p>
-                  </div>
-                </div>
-                <div className="text-left sm:text-right">
-                  {isFeesLoading ? (
-                    <div className="inline-block w-24 h-6 bg-white/30 rounded animate-pulse" />
-                  ) : selectionProcessPromotionalCoupon ? (
-                    <div className="flex flex-col sm:text-center">
-                      <div className="text-lg sm:text-xl md:text-2xl font-bold text-white line-through">${selectionWithDependents}</div>
-                      <div className="text-base sm:text-lg md:text-xl font-bold text-green-300">
-                        ${selectionProcessPromotionalCoupon.finalAmount.toFixed(2)}
-                      </div>
-                      <div className="flex items-center sm:justify-center mt-1">
-                        <Tag className="h-3 w-3 text-green-300 mr-1" />
-                        <span className="text-xs text-green-300 font-medium">
-                          {t('studentDashboard.recentApplications.couponApplied')} -${selectionProcessPromotionalCoupon.discountAmount.toFixed(2)}
-                        </span>
-                      </div>
-                    </div>
-                  ) : activeDiscount?.has_discount ? (
-                    <div className="flex flex-col sm:text-center">
-                      <div className="text-lg sm:text-xl md:text-2xl font-bold text-white line-through">${selectionWithDependents}</div>
-                      <div className="text-base sm:text-lg md:text-xl font-bold text-green-300">
-                        ${Math.max(selectionWithDependents - (activeDiscount.discount_amount || 0), 0)}
-                      </div>
-                      <div className="flex items-center sm:justify-center mt-1">
-                        <Tag className="h-3 w-3 text-green-300 mr-1" />
-                        <span className="text-xs text-green-300 font-medium">
-                          {t('studentDashboard.recentApplications.couponApplied')} -${activeDiscount.discount_amount}
-                        </span>
-                      </div>
-                    </div>
-                  ) : (
-                    <div className="text-lg sm:text-xl md:text-2xl font-bold text-white">${selectionWithDependents}</div>
-                  )}
-                </div>
-              </div>
-              <p className="text-blue-100 text-xs sm:text-sm mb-3 sm:mb-4 leading-relaxed">
-                {t('studentDashboard.selectionProcess.description')}
-                {(selectionProcessPromotionalCoupon || activeDiscount?.has_discount) && (
-                  <span className="block mt-1 text-green-300 font-medium">
-                    {t('studentDashboard.selectionProcess.discountApplied')}
+          {/* Indicador de passo atual do onboarding - Seamless Style Vertical */}
+          {!userProfile?.onboarding_completed && (
+            <div className="mt-6 sm:mt-0 sm:-mt-2 mb-10 flex flex-col items-center text-center mx-auto w-full max-w-3xl px-4">
+              {/* Badge da Etapa - Posicionada acima do título */}
+              {currentStepKey !== 'my_applications' && (
+                <div className="inline-flex items-center bg-white/10 backdrop-blur-md border border-white/20 rounded-full px-5 py-1.5 mb-14 sm:mb-20 shadow-xl ring-1 ring-white/10">
+                  <span className="text-white/90 font-black text-[10px] sm:text-xs md:text-sm uppercase tracking-[0.2em]">
+                    PASSO {currentStepNumber} / {TOTAL_ONBOARDING_STEPS}
                   </span>
-                )}
-              </p>
-              
-              {/* Botão de pagamento sempre visível */}
-              {hasPendingSelectionProcessPayment ? (
-                <div className="w-full sm:w-auto bg-amber-50 border-2 border-amber-200 rounded-xl p-3 sm:p-4">
-                  <div className="flex items-center justify-center">
-                    <Clock className="h-4 w-4 sm:h-5 sm:w-5 text-amber-600 mr-2 animate-spin" />
-                    <span className="text-xs sm:text-sm font-semibold text-amber-800">
-                      {t('studentDashboard.selectionProcess.processingZellePayment')}
-                    </span>
-                  </div>
-                  <p className="text-xs text-amber-700 mt-1 text-center">
-                    {t('studentDashboard.selectionProcess.pendingPaymentMessage')}
-                  </p>
                 </div>
-              ) : (
-                <StripeCheckout 
-                  ref={paymentButtonRef}
-                  productId="selectionProcess"
-                  feeType="selection_process"
-                  paymentType="selection_process"
-                  buttonText={t('studentDashboard.selectionProcess.startButton')}
-                  className="w-full sm:w-auto bg-blue-600 hover:bg-blue-700 text-white font-semibold py-3 sm:py-3 px-4 sm:px-6 rounded-xl shadow-lg hover:shadow-xl transition-all duration-200 transform hover:scale-105 cursor-pointer border-2 border-white text-sm sm:text-base disabled:opacity-50 disabled:cursor-not-allowed"
-                  successUrl={`${window.location.origin}/student/dashboard/selection-process-fee-success?session_id={CHECKOUT_SESSION_ID}`}
-                  cancelUrl={`${window.location.origin}/student/dashboard/selection-process-fee-error`}
-                  disabled={paymentBlockedLoading}
-                />
               )}
-              
-              {/* Aviso para usuários com seller_referral_code */}
-              {/* {userProfile.seller_referral_code && userProfile.seller_referral_code.trim() !== '' && (
-                <div className="mt-3 text-center">
-                  <div className="inline-flex items-center space-x-2 bg-amber-500/20 border border-amber-300/30 rounded-lg px-3 py-2">
-                    <Target className="h-4 w-4 text-amber-300" />
-                    <span className="text-amber-200 text-xs">
-                      {t('studentDashboard.selectionProcess.sellerReferralCodeInfo')}
-                    </span>
-                  </div>
-                </div>
-              )} */}
+
+              {/* Texto do passo */}
+              <div className="flex flex-col items-center justify-center min-w-0">
+                <p className="text-white font-black text-2xl sm:text-3xl md:text-4xl leading-tight tracking-tighter">{currentStepLabel}</p>
+                <p className="text-white/80 text-sm sm:text-base md:text-lg mt-2 sm:mt-3 mb-6 sm:mb-10 leading-relaxed max-w-2xl">{currentStepDescription}</p>
+              </div>
             </div>
           )}
+
+          {/* Botão de Continuar/Iniciar Onboarding - Estilo Vidro Simplificado */}
+          {(!userProfile?.onboarding_completed || recentApplications.length > 0) && (
+            <button
+              onClick={() => {
+                const targetStep = userProfile?.onboarding_completed ? 'my_applications' : (savedOnboardingStep || 'selection_fee');
+                navigate(`/student/onboarding?step=${targetStep}`);
+              }}
+              className="max-w-md mx-auto w-full group relative overflow-hidden bg-white/10 backdrop-blur-xl border border-white/20 rounded-2xl p-4 transition-all duration-500 hover:bg-white/20 hover:border-white/40 hover:scale-[1.05] active:scale-[0.95] shadow-[0_20px_40px_rgba(0,0,0,0.2)] flex items-center justify-center text-center mb-6"
+            >
+              {/* Background Glows animadas */}
+              <div className="absolute top-0 right-0 -mr-16 -mt-16 w-48 h-48 bg-blue-500/20 rounded-full blur-[80px] group-hover:bg-blue-400/30 transition-colors duration-700" />
+              <div className="absolute bottom-0 left-0 -ml-16 -mb-16 w-32 h-32 bg-indigo-500/15 rounded-full blur-[60px] group-hover:bg-indigo-400/25 transition-colors duration-700" />
+
+              <h3 className="relative text-lg md:text-xl font-black text-white uppercase tracking-widest leading-tight">
+                {userProfile?.onboarding_completed
+                  ? t('studentDashboard.progressBar.onboardingBanner.documentsPortal')
+                  : (isOnboardingStarted
+                    ? t('studentDashboard.progressBar.onboardingBanner.continueProcess')
+                    : t('studentDashboard.progressBar.onboardingBanner.startProcess'))}
+              </h3>
+            </button>
+          )}
           {/* Removed three unused mini-cards (Discover/Apply/Track) as requested */}
-        </div>
-      </div>
+        </div >
+      </div >
 
       {/* Stats Cards */}
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
-        <div 
+        <div
           onClick={(e) => {
             e.preventDefault();
             e.stopPropagation();
@@ -703,7 +461,7 @@ const Overview: React.FC<OverviewProps> = ({
           }}
           role="button"
           tabIndex={0}
-          className="bg-gradient-to-br from-blue-50 to-indigo-50 p-6 rounded-2xl shadow-md border-2 border-blue-300 hover:border-blue-400 hover:shadow-lg transition-all duration-300 flex flex-col justify-between cursor-pointer group relative overflow-hidden"
+          className="hidden bg-gradient-to-br from-blue-50 to-indigo-50 p-6 rounded-2xl shadow-md border-2 border-blue-300 hover:border-blue-400 hover:shadow-lg transition-all duration-300 flex flex-col justify-between cursor-pointer group relative overflow-hidden"
         >
           <div className="relative z-10 pointer-events-none">
             <div className="flex items-center justify-between mb-4">
@@ -721,7 +479,7 @@ const Overview: React.FC<OverviewProps> = ({
           </div>
         </div>
 
-        <div className="bg-white p-6 rounded-2xl shadow-sm border border-slate-200 hover:shadow-md transition-shadow">
+        <div className="hidden bg-white p-6 rounded-2xl shadow-sm border border-slate-200 hover:shadow-md transition-shadow">
           <div className="flex items-center justify-between">
             <div>
               <p className="text-sm font-medium text-slate-500 mb-1">{t('studentDashboard.stats.myApplications')}</p>
@@ -737,7 +495,7 @@ const Overview: React.FC<OverviewProps> = ({
           </div>
         </div>
 
-        <div className="bg-white p-6 rounded-2xl shadow-sm border border-slate-200 hover:shadow-md transition-shadow">
+        <div className="hidden bg-white p-6 rounded-2xl shadow-sm border border-slate-200 hover:shadow-md transition-shadow">
           <div className="flex items-center justify-between">
             <div>
               <p className="text-sm font-medium text-slate-500 mb-1">{t('studentDashboard.stats.approved')}</p>
@@ -753,7 +511,7 @@ const Overview: React.FC<OverviewProps> = ({
           </div>
         </div>
 
-        <div className="bg-white p-6 rounded-2xl shadow-sm border border-slate-200 hover:shadow-md transition-shadow">
+        <div className="hidden bg-white p-6 rounded-2xl shadow-sm border border-slate-200 hover:shadow-md transition-shadow">
           <div className="flex items-center justify-between">
             <div>
               <p className="text-sm font-medium text-slate-500 mb-1">{t('studentDashboard.stats.pending')}</p>
@@ -768,30 +526,32 @@ const Overview: React.FC<OverviewProps> = ({
             </div>
           </div>
         </div>
-      </div>
+      </div >
 
       {/* Quick Actions */}
-      <div className="overview-quick-actions">
-        {quickActions.map((action) => (
-          <Link
-            to={action.link}
-            key={action.title}
-            className="overview-card overview-action-card"
-          >
-            <div className={`overview-card-icon ${action.color}`}>
-              <action.icon className="h-6 w-6 text-white" />
-            </div>
-            <div className="overview-card-content">
-              <div className="overview-card-title">{action.title}</div>
-              <div className="overview-card-desc">{action.description}</div>
-              {action.count !== null && (
-                <div className="overview-card-count">{action.count}</div>
-              )}
-            </div>
-            <ArrowUpRight className="ml-auto h-5 w-5 text-slate-400 group-hover:text-slate-600 transition-colors" />
-          </Link>
-        ))}
-      </div>
+      < div className="overview-quick-actions" >
+        {
+          quickActions.map((action) => (
+            <Link
+              to={action.link}
+              key={action.title}
+              className="overview-card overview-action-card"
+            >
+              <div className={`overview-card-icon ${action.color}`}>
+                <action.icon className="h-6 w-6 text-white" />
+              </div>
+              <div className="overview-card-content">
+                <div className="overview-card-title">{action.title}</div>
+                <div className="overview-card-desc">{action.description}</div>
+                {action.count !== null && (
+                  <div className="overview-card-count">{action.count}</div>
+                )}
+              </div>
+              <ArrowUpRight className="ml-auto h-5 w-5 text-slate-400 group-hover:text-slate-600 transition-colors" />
+            </Link>
+          ))
+        }
+      </div >
       {/* Step by Step Guide */}
       {/* <div className="overview-stepbystep-wrapper">
         <div
@@ -812,8 +572,7 @@ const Overview: React.FC<OverviewProps> = ({
       {/* <div className="overview-progressbar-wrapper">
         <ProgressBar steps={steps} feeValues={dynamicFeeValues} />
       </div> */}
-      {/* Outros cards/boxes da overview seguem o mesmo padrão visual */}
-      {/* Recent Applications */}
+      {/* Recent Applications and Status */}
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 sm:gap-8">
         <div className="lg:col-span-2">
           <div className="bg-white rounded-2xl shadow-sm hover:shadow-md transition-shadow border border-slate-200 p-4 sm:p-6 lg:p-8">
@@ -839,7 +598,7 @@ const Overview: React.FC<OverviewProps> = ({
                 <div className="text-slate-500 text-xs">{t('studentDashboard.recentApplications.totalApplications')}</div>
               </div>
             </div>
-            
+
             {recentApplications.length === 0 ? (
               <div className="text-center py-6 sm:py-8">
                 <div className="w-16 h-16 sm:w-20 sm:h-20 bg-slate-100 rounded-full flex items-center justify-center mx-auto mb-4">
@@ -848,11 +607,11 @@ const Overview: React.FC<OverviewProps> = ({
                 <h4 className="text-lg sm:text-xl font-semibold text-slate-700 mb-2">{t('studentDashboard.recentApplications.noApplications')}</h4>
                 <p className="text-slate-500 mb-6 px-4">{t('studentDashboard.recentApplications.startJourneyMessage')}</p>
                 <Link
-                  to="/student/dashboard/scholarships"
+                  to="/student/onboarding"
                   className="inline-flex items-center gap-2 px-4 sm:px-6 py-3 bg-blue-600 text-white rounded-xl hover:bg-blue-700 transition-colors font-semibold text-sm sm:text-base"
                 >
                   <Search className="w-4 h-4" />
-                  {t('studentDashboard.recentApplications.browseScholarships')}
+                  Começar Processo
                 </Link>
               </div>
             ) : (
@@ -860,37 +619,38 @@ const Overview: React.FC<OverviewProps> = ({
                 {displayedApplications.map((app) => {
                   const scholarship = app.scholarship || app.scholarships;
                   const StatusIcon = getStatusIcon(app.status);
-                  
+
                   return (
                     <div key={app.id} className="group bg-slate-50 rounded-2xl p-3 sm:p-4 border border-slate-200 hover:border-slate-300 hover:shadow-md transition-all duration-300">
                       <div className="flex flex-col sm:flex-row sm:items-start gap-3 sm:gap-5">
                         {/* University Logo */}
                         <div className="flex-shrink-0 self-center sm:self-start">
-                          {scholarship?.universities?.logo_url ? (
+                          {scholarship?.image_url || scholarship?.universities?.logo_url ? (
                             <div className="relative">
-                              <img 
-                                src={scholarship.universities.logo_url} 
-                                alt={scholarship.universities.name} 
-                                className="w-36 h-20 sm:w-20 sm:h-20 rounded-2xl object-cover border-2 border-slate-200 bg-white shadow-lg hover:shadow-xl transition-all duration-300" 
+                              <img
+                                src={scholarship.image_url || scholarship.universities.logo_url}
+                                alt={scholarship?.universities?.name || 'University'}
+                                className="w-16 h-16 sm:w-20 sm:h-20 rounded-2xl object-contain border-2 border-slate-200 bg-white shadow-lg hover:shadow-xl transition-all duration-300"
                                 onError={(e) => {
                                   // Fallback para ícone se a imagem falhar
                                   e.currentTarget.style.display = 'none';
                                   e.currentTarget.nextElementSibling?.classList.remove('hidden');
+                                  e.currentTarget.nextElementSibling?.classList.add('flex');
                                 }}
                               />
                               <div className="hidden w-16 h-16 sm:w-20 sm:h-20 bg-gradient-to-br from-blue-500 to-indigo-600 rounded-2xl items-center justify-center border-2 border-slate-200 shadow-lg">
-                                <Building className="w-8 h-8 sm:w-10 sm:h-10 text-white" />
+                                <Award className="w-8 h-8 sm:w-10 sm:h-10 text-white" />
                               </div>
-                            </div>
+                            </div >
                           ) : (
                             <div className="w-16 h-16 sm:w-20 sm:h-20 bg-gradient-to-br from-blue-500 to-indigo-600 rounded-2xl flex items-center justify-center border-2 border-slate-200 shadow-lg">
-                              <Building className="w-8 h-8 sm:w-10 sm:h-10 text-white" />
+                              <Award className="w-8 h-8 sm:w-10 sm:h-10 text-white" />
                             </div>
                           )}
                         </div>
-                        
+
                         {/* Content */}
-                        <div className="flex-1 min-w-0">
+                        < div className="flex-1 min-w-0" >
                           <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between mb-2 sm:mb-3 gap-2 sm:gap-0">
                             <div className="min-w-0 flex-1">
                               <h4 className="text-base sm:text-lg font-bold text-slate-900 mb-1 group-hover:text-blue-600 transition-colors line-clamp-2">
@@ -900,19 +660,14 @@ const Overview: React.FC<OverviewProps> = ({
                                 {scholarship?.universities?.name || t('studentDashboard.recentApplications.university')}
                               </p>
                             </div>
-                            <div className={`flex w-[90px] items-center sm:w-[110px] gap-1 sm:gap-2 px-2 sm:px-3 py-1.5 sm:py-2 rounded-xl text-xs sm:text-sm font-semibold flex-shrink-0 ${getStatusColor(app.status)}`}>
+                            <div className={`flex items-center gap-1 sm:gap-2 px-2 sm:px-3 py-1.5 sm:py-2 rounded-xl text-xs sm:text-sm font-semibold flex-shrink-0 ${getStatusColor(app.status)}`}>
                               <StatusIcon className="w-3 h-3 sm:w-4 sm:h-4" />
-                              <span className="hidden sm:inline">
-                                {app.status.replace('_', ' ').replace(/\b\w/g, (l: string) => l.toUpperCase())}
-                              </span>
-                              <span className="sm:hidden">
-                                {app.status === 'approved' ? t('studentDashboard.recentApplications.status.approved') : 
-                                 app.status === 'under_review' ? t('studentDashboard.recentApplications.status.under_review') : 
-                                 t('studentDashboard.recentApplications.status.pending')}
+                              <span>
+                                {getStatusLabel(app.status)}
                               </span>
                             </div>
                           </div>
-                          
+
                           {/* Tags */}
                           <div className="flex flex-wrap items-center gap-1.5 sm:gap-2 mb-2 sm:mb-3">
                             {scholarship?.level && (
@@ -926,45 +681,45 @@ const Overview: React.FC<OverviewProps> = ({
                               </span>
                             )}
                           </div>
-                          
+
                           {/* Dates and Details */}
                           <div className="flex flex-col sm:flex-row sm:flex-wrap sm:items-center gap-2 sm:gap-4 text-xs sm:text-sm text-slate-500">
                             <div className="flex items-center gap-1">
                               <Calendar className="w-3 h-3 sm:w-4 sm:h-4 flex-shrink-0" />
-                              <span>{t('studentDashboard.recentApplications.applied')} {new Date(app.applied_at).toLocaleDateString('en-US', { 
-                                month: 'short', 
-                                day: 'numeric', 
-                                year: 'numeric' 
+                              <span>{t('studentDashboard.recentApplications.applied')} {new Date(app.applied_at).toLocaleDateString('en-US', {
+                                month: 'short',
+                                day: 'numeric',
+                                year: 'numeric'
                               })}</span>
                             </div>
                             {scholarship?.deadline && (
                               <div className="flex items-center gap-1">
                                 <Clock className="w-3 h-3 sm:w-4 sm:h-4 flex-shrink-0" />
-                                <span>{t('studentDashboard.recentApplications.deadline')} {new Date(scholarship.deadline).toLocaleDateString('en-US', { 
-                                  month: 'short', 
-                                  day: 'numeric', 
-                                  year: 'numeric' 
+                                <span>{t('studentDashboard.recentApplications.deadline')} {new Date(scholarship.deadline).toLocaleDateString('en-US', {
+                                  month: 'short',
+                                  day: 'numeric',
+                                  year: 'numeric'
                                 })}</span>
                               </div>
                             )}
                           </div>
-                        </div>
-                      </div>
-                    </div>
+                        </div >
+                      </div >
+                    </div >
                   );
                 })}
-                
+
                 {/* Load More & View All */}
                 {recentApplications.length > 0 && (
                   <div className="text-center space-y-3 sm:space-y-4">
                     {/* Contador de Applications */}
                     <div className="text-xs sm:text-sm text-slate-600">
-                      {t('studentDashboard.recentApplications.showingApplications', { 
-                        count: displayedApplications.length, 
-                        total: recentApplications.length 
+                      {t('studentDashboard.recentApplications.showingApplications', {
+                        count: displayedApplications.length,
+                        total: recentApplications.length
                       })}
                     </div>
-                    
+
                     {/* Load More Button */}
                     {hasMoreApplications && (
                       <button
@@ -977,7 +732,7 @@ const Overview: React.FC<OverviewProps> = ({
                         {t('studentDashboard.recentApplications.loadMoreApplications')}
                       </button>
                     )}
-                    
+
                     {/* View All Link */}
                     <Link
                       to="/student/dashboard/applications"
@@ -991,43 +746,43 @@ const Overview: React.FC<OverviewProps> = ({
                 )}
               </div>
             )}
-          </div>
-        </div>
+          </div >
+        </div >
 
         {/* Recommended Scholarships & Profile Status */}
-        <div className="space-y-4 sm:space-y-6">
+        < div className="space-y-4 sm:space-y-6" >
           {/* Profile Completion */}
-          <div className="bg-white rounded-2xl shadow-sm hover:shadow-md transition-shadow border border-slate-200 p-4 sm:p-6">
+          < div className="bg-white rounded-2xl shadow-sm hover:shadow-md transition-shadow border border-slate-200 p-4 sm:p-6" >
             <h3 className="text-base sm:text-lg font-bold text-slate-900 mb-3 sm:mb-4 flex items-center">
               <Target className="h-4 w-4 sm:h-5 sm:w-5 text-blue-500 mr-2" />
               {t('studentDashboard.profileStatus.title')}
             </h3>
-            
+
             <div className="space-y-3 sm:space-y-4">
               <div className="flex items-center justify-between">
                 <span className="text-sm font-medium text-slate-700">{t('studentDashboard.profileStatus.basicInformation')}</span>
                 {basicInfoComplete ? (
-                <CheckCircle className="h-4 w-4 sm:h-5 sm:w-5 text-green-500" />
+                  <CheckCircle className="h-4 w-4 sm:h-5 sm:w-5 text-green-500" />
                 ) : (
                   <Clock className="h-4 w-4 sm:h-5 sm:w-5 text-yellow-500" />
                 )}
               </div>
-              
+
               <div className="flex items-center justify-between">
                 <span className="text-sm font-medium text-slate-700">{t('studentDashboard.profileStatus.academicDetails')}</span>
                 {academicDetailsComplete ? (
                   <CheckCircle className="h-4 w-4 sm:h-5 sm:w-5 text-green-500" />
                 ) : (
-                <Clock className="h-4 w-4 sm:h-5 sm:w-5 text-yellow-500" />
+                  <Clock className="h-4 w-4 sm:h-5 sm:w-5 text-yellow-500" />
                 )}
               </div>
-              
+
               <div className="flex items-center justify-between">
                 <span className="text-sm font-medium text-slate-700">{t('studentDashboard.profileStatus.documentsUploaded')}</span>
                 {documentsComplete ? (
                   <CheckCircle className="h-4 w-4 sm:h-5 sm:w-5 text-green-500" />
                 ) : (
-                <Clock className="h-4 w-4 sm:h-5 sm:w-5 text-yellow-500" />
+                  <Clock className="h-4 w-4 sm:h-5 sm:w-5 text-yellow-500" />
                 )}
               </div>
             </div>
@@ -1046,22 +801,22 @@ const Overview: React.FC<OverviewProps> = ({
                 </Link>
               </div>
             ) : (
-            <div className="mt-4 sm:mt-6 p-3 sm:p-4 bg-gradient-to-r from-blue-50 to-blue-100 rounded-xl border border-blue-200">
-              <p className="text-sm font-medium text-blue-800 mb-2">
-                {t('studentDashboard.profileStatus.completeProfile')}
-              </p>
-              <Link
-                to="/student/dashboard/profile"
-                className="text-sm font-bold text-blue-700 hover:text-blue-800 transition-colors"
-              >
-                {t('studentDashboard.profileStatus.completeNow')} →
-              </Link>
-            </div>
+              <div className="mt-4 sm:mt-6 p-3 sm:p-4 bg-gradient-to-r from-blue-50 to-blue-100 rounded-xl border border-blue-200">
+                <p className="text-sm font-medium text-blue-800 mb-2">
+                  {t('studentDashboard.profileStatus.completeProfile')}
+                </p>
+                <Link
+                  to="/student/dashboard/profile"
+                  className="text-sm font-bold text-blue-700 hover:text-blue-800 transition-colors"
+                >
+                  {t('studentDashboard.profileStatus.completeNow')} →
+                </Link>
+              </div>
             )}
           </div>
 
           {/* Study Tips */}
-          <div className="bg-gradient-to-br from-blue-500 to-indigo-600 rounded-2xl shadow-md text-white p-4 sm:p-6 ring-1 ring-white/10">
+          < div className="bg-gradient-to-br from-blue-500 to-indigo-600 rounded-2xl shadow-md text-white p-4 sm:p-6 ring-1 ring-white/10" >
             <h3 className="text-base sm:text-lg font-bold mb-3 sm:mb-4 flex items-center">
               <BookOpen className="h-4 w-4 sm:h-5 sm:w-5 mr-2" />
               💡 {t('studentDashboard.successTips.title')}
@@ -1086,10 +841,14 @@ const Overview: React.FC<OverviewProps> = ({
                 </p>
               </div>
             </div>
-          </div>
-        </div>
-      </div>
-    </div>
+          </div >
+        </div >
+      </div >
+
+      {/* Step By Step Guide Modal */}
+      < StepByStepGuide isOpen={isGuideOpen} onClose={closeGuide} />
+
+    </div >
   );
 };
 

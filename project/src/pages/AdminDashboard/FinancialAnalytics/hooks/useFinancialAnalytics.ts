@@ -145,9 +145,8 @@ export function useFinancialAnalytics() {
       });
       
       // Filtrar paymentRecords para remover pagamentos 'manual'
-      const filteredPaymentRecords = paymentRecords.filter((record: any) => 
-        record.payment_method && record.payment_method !== 'manual'
-      );
+      // Mostrar todas as transações (incluindo manuais) para bater com os totais do dashboard
+      const filteredPaymentRecords = paymentRecords;
       
       // Transformar paymentRecords em transactions (formato esperado pela tabela)
       const transactionsWithNames = filteredPaymentRecords.map((record: any) => {
@@ -255,7 +254,29 @@ export function useFinancialAnalytics() {
           standardAmount = 900;
         } else if (feeType === 'application') {
           standardAmount = 350 + (dependents * 100);
+        } else if (feeType === 'placement') {
+          standardAmount = (record.amount || 0) / 100;
         }
+
+        // --- INÍCIO DA LÓGICA DE DESCONTO ---
+        // 1. Aplicar desconto de cupom se registrado formalmente
+        if (individualPayment?.discount_amount) {
+          standardAmount = Math.max(0, standardAmount - Number(individualPayment.discount_amount));
+        } 
+        // 2. Aplicar desconto por Seller Referral Code (Vendedor)
+        // Se tem código de vendedor e o valor padrão é 400, em 99% dos casos o valor com desconto é 350
+        else if (
+          feeType === 'selection_process' && 
+          (record.seller_referral_code || student?.seller_referral_code) &&
+          standardAmount === 400
+        ) {
+          // Se o aluno pagou algo próximo a 350 (ou menos), assumir que o valor base com desconto é 350
+          const netAmountForCheck = (record.amount || 0) / 100;
+          if (netAmountForCheck <= 360) { // Tolerância para pequenas variações de câmbio se houver
+            standardAmount = 350;
+          }
+        }
+        // --- FIM DA LÓGICA DE DESCONTO ---
 
         // Se não encontrou valor padrão, usar o amount do record (já em centavos, converter para dólares)
         if (standardAmount === 0) {
@@ -311,6 +332,7 @@ export function useFinancialAnalytics() {
           override_application: individualPayment?.override_application || null,
           override_scholarship: individualPayment?.override_scholarship || null,
           override_i20: individualPayment?.override_i20 || null,
+          override_placement: individualPayment?.override_placement || record.override_placement || null,
           coupon_code: individualPayment?.coupon_code || null,
           coupon_name: individualPayment?.coupon_name || null,
           discount_amount: individualPayment?.discount_amount || null,

@@ -1,0 +1,1348 @@
+{
+  "studentDashboard": {
+    "title": "Panel del Estudiante",
+    "subtitle": "Gestiona tus solicitudes de beca",
+    "welcome": "Bienvenido de vuelta",
+    "progressBar": {
+      "title": "Esta es tu barra de progreso de tasas de solicitud. Completa cada paso para avanzar.",
+      "allStepsCompleted": "¡Todos los pasos completados! 🎉",
+      "selectionProcessFee": "Tarifa de Proceso de Selección",
+      "applicationFee": "Tarifa de Solicitud",
+      "scholarshipFee": "Tarifa de Beca",
+      "placementFee": "Cuota de Colocación",
+      "i20ControlFee": "Tarifa de Control I-20",
+      "completed": "¡Completado!",
+      "payApplicationFee": "Paga la Tarifa de Solicitud para aplicar a una beca específica.",
+      "payScholarshipFee": "Paga la Tarifa de Beca para confirmar tu solicitud de beca.",
+      "payPlacementFee": "Paga la Cuota de Colocación para proceder con tu solicitud.",
+      "payI20Fee": "Paga la Tarifa de Control I-20 para iniciar tu proceso de validación de documentos e I-20.",
+      "daysRemaining": "Tienes 10 días después de la tarifa de beca.",
+      "onboardingBanner": {
+        "actionRequired": "ACCIÓN REQUERIDA",
+        "stoppedAt": "Se detuvo en: {{step}}",
+        "startNow": "Empezar Ahora",
+        "documentsPortal": "Portal de Documentos",
+        "continueProcess": "Continuar Proceso",
+        "startProcess": "Iniciar Proceso",
+        "stepLabels": {
+          "welcome": "Bienvenido",
+          "selection_fee": "Tarifa de Selección",
+          "identity_verification": "Verificación de Identidad",
+          "selection_survey": "Cuestionario de Perfil",
+          "scholarship_selection": "Selección de Becas",
+          "process_type": "Tipo de Proceso",
+          "documents_upload": "Envío de Documentos",
+          "payment": "Pago",
+          "scholarship_fee": "Tarifa de Beca",
+          "placement_fee": "Cuota de Colocación",
+          "university_documents": "Documentos de la Universidad",
+          "waiting_approval": "Esperando Aprobación",
+          "completed": "Completado",
+          "my_applications": "Mis Solicitudes"
+        },
+        "stepDescriptions": {
+          "selection_fee": "Paga la tarifa para desbloquear el acceso a las becas.",
+          "identity_verification": "Verifica tu identidad para continuar el proceso.",
+          "selection_survey": "Responde el cuestionario de selección con al menos 80% de aciertos.",
+          "scholarship_selection": "Elige las becas a las que deseas aplicar.",
+          "process_type": "Indica tu tipo de proceso (Inicial, Transferencia o COS).",
+          "documents_upload": "Envía tu pasaporte, diploma y comprobante de fondos.",
+          "payment": "Paga la tarifa de matrícula para asegurar tu lugar.",
+          "scholarship_fee": "Paga la tarifa de beca para confirmar tu inscripción.",
+          "placement_fee": "Esta tarifa final es su compromiso para asegurar de hecho su lugar en la institución seleccionada.",
+          "university_documents": "Envía los documentos requeridos por la universidad.",
+          "waiting_approval": "Tus documentos están en revisión. Plazo de 48h.",
+          "my_applications": "Sigue tus documentos y la carta de aceptación.",
+          "completed": "¡Proceso completado con éxito!"
+        }
+      }
+    },
+    "stepByStepTour": {
+      "title": "Tour Paso a Paso",
+      "description": "Ve todo el viaje de solicitud en detalle.",
+      "startTour": "Iniciar Tour"
+    },
+    "selectionProcess": {
+      "title": "Proceso de Selección",
+      "description": "Comienza tu viaje a la educación americana completando nuestro proceso de selección integral.",
+      "completeApplicationProcess": "Completa tu proceso de solicitud",
+      "discountApplied": "✨ ¡Tienes un cupón de descuento aplicado!",
+      "couponAppliedLabel": "Cupón aplicado",
+      "startButton": "Iniciar Proceso de Selección",
+      "processingZellePayment": "Pago Zelle en verificación",
+      "pendingPaymentMessage": "Tienes un pago Zelle pendiente de verificación. Por favor, espere la aprobación antes de iniciar un nuevo proceso."
+    },
+    "stats": {
+      "myApplications": "Mis Solicitudes",
+      "totalSubmitted": "Total enviadas",
+      "approved": "Aprobadas",
+      "successful": "Exitosas",
+      "pending": "Pendientes",
+      "underReview": "En revisión"
+    },
+    "quickActions": {
+      "findScholarships": "Encontrar Becas",
+      "findDescription": "Explora nuestra base de datos de becas",
+      "myApplications": "Mis Solicitudes",
+      "myApplicationsDescription": "Ver el estado de tus solicitudes",
+      "updateProfile": "Actualizar Perfil",
+      "updateDescription": "Completa tu información académica"
+    },
+    "sidebar": {
+      "overview": "Resumen",
+      "browseScholarships": "Explorar Becas",
+      "selectedScholarships": "Becas Seleccionadas",
+      "myApplications": "Mis Solicitudes",
+      "matriculaRewards": "Matricula Rewards",
+      "profile": "Perfil",
+      "supportChat": "Chat de Soporte"
+    },
+    "notifications": {
+      "title": "Notificaciones",
+      "markAllAsRead": "Marcar todas como leídas",
+      "clearAll": "Limpar todo",
+      "noNotifications": "No hay notificaciones",
+      "youAreAllCaughtUp": "¡Estás al día!",
+      "documentRejected": {
+        "title": "Documento Rechazado",
+        "message": "Tu documento {{fileName}} fue rechazado. Motivo: {{reason}}"
+      },
+      "Scholarship approved": "Beca aprobada",
+      "You have been selected for the scholarship.": "Has sido seleccionado para la beca."
+    },
+    "chat": {
+      "welcomeMessage": {
+        "title": "¡Bienvenido al Chat de Soporte!",
+        "body": "¡Hola! Este es tu chat de soporte. Nuestro equipo está disponible para ayudarte de 9 AM a 5 PM (Zona Horaria de Arizona). Puedes hacer preguntas sobre becas, documentos y el progreso de tu solicitud. ¡Siéntete libre de enviar mensajes y archivos adjuntos en cualquier momento!",
+        "hours": "Horario de atención: 9 AM - 5 PM (Zona Horaria de Arizona)"
+      }
+    },
+    "cartPage": {
+      "removeFromCart": "Eliminar del carrito",
+      "removeToProceed": "Elimina esta beca para proceder",
+      "cannotProceed": "No se puede proceder con becas bloqueadas",
+      "removeBlockedScholarships": "Elimina las becas bloqueadas de arriba para continuar",
+      "processing": "Procesando...",
+      "nextStep": "Siguiente Paso",
+      "clearCart": "Limpiar Carrito"
+    },
+    "selectedScholarships": {
+      "title": "Becas Seleccionadas",
+      "welcomeMessage": "¡Bienvenido a tu selección de becas!",
+      "description": "Aquí puedes ver todas las becas que has seleccionado para el proceso de solicitud. Estos son los programas en los que estás interesado en aplicar. Sigue los pasos a continuación para completar tu solicitud y comenzar tu viaje hacia estudiar en el extranjero.",
+      "noScholarshipsSelected": "No hay becas seleccionadas",
+      "notSelectedYet": "Aún no has seleccionado ninguna beca. Explora nuestros programas disponibles y agrégalos a tu selección.",
+      "browseScholarships": "Explorar Becas"
+    },
+    "documentsAndScholarshipChoice": {
+      "title": "Configuración del Proceso de Solicitud",
+      "subtitle": "Complete su proceso de solicitud de estudiante seleccionando su estado y subiendo los documentos requeridos",
+      "step1Title": "¿Cuál es su estado actual en los EE. UU.?",
+      "step1Description": "Seleccione su estado de inmigración actual para ayudarnos a brindar la mejor orientación para su proceso de solicitud.",
+      "firstTimeF1": "Primera solicitud de visa F-1",
+      "firstTimeF1Description": "Estoy fuera de los EE. UU. y necesito una visa de estudiante F-1 para estudiar en Estados Unidos.",
+      "schoolTransfer": "Transferencia de escuela",
+      "schoolTransferDescription": "Ya estoy en los EE. UU. con una visa de estudiante F-1 y quiero cambiar de escuela.",
+      "statusChange": "Cambio de Estatus",
+      "statusChangeDescription": "Ya estoy en los EE. UU. con otra visa y quiero cambiar mi estatus a estudiante.",
+      "continueToDocuments": "Continuar a Documentos",
+      "saving": "Guardando...",
+      "step2Title": "Subida de Documentos",
+      "step2Description": "Suba los documentos requeridos para su solicitud.",
+      "step2Important": "IMPORTANTE: Todos los documentos deben estar en inglés. Si sus documentos están en otro idioma, puede solicitar una traducción certificada a través de nuestro socio Lush America.",
+      "step2PartnerUrl": "www.lushamerica.com",
+      "languageError": "Este documento no está en inglés. Proporcione una versión en inglés o una traducción certificada.",
+      "accessError": "No se puede procesar {{documentType}}. El archivo puede estar corrupto o en un formato no compatible. Intente subir un nuevo archivo.",
+      "fundsDataError": "No se puede validar el comprobante de fondos. El documento puede no contener información clara del saldo bancario o estar en un formato ilegible. Intente subir un estado de cuenta bancario más claro y legible.",
+      "currencyFieldError": "Error de sistema interno al procesar datos de divisas en {{documentType}}. El documento puede no contener información de divisas válida o estar en un formato no compatible. Intente subir un documento más claro.",
+      "insufficientFundsError": "Se detectaron fondos insuficientes. El saldo mínimo requerido es de $22,000 USD.",
+      "diplomaDamagedError": "El diploma parece estar dañado o poco claro. Suba una copia clara y sin daños.",
+      "passport": "Pasaporte",
+      "passportDescription": "Suba una foto clara o un escaneo de su pasaporte.",
+      "diploma": "Diploma de Escuela Secundaria",
+      "diplomaDescription": "Suba su diploma de escuela secundaria o equivalente.",
+      "fundsProof": "Comprobante de Ingresos",
+      "fundsProofDescription": "Suba estados de cuenta bancarios o documentos financieros. Se requiere un mínimo de $22,000 USD, más $5,000 USD por cada dependiente.",
+      "documents": "documentos",
+      "dragDropFiles": "Arrastre archivos o haga clic para seleccionar",
+      "onlyPdfSupported": "Solo se admiten archivos PDF para múltiples documentos",
+      "addMoreDocuments": "Agregar más documentos",
+      "documentLimitExceeded": "Límite de {{limit}} documentos excedido",
+      "fileSizeExceeded": "El archivo {{fileName}} excede el límite de 10MB",
+      "onlyPdfAllowed": "Solo se permiten archivos PDF para comprobantes de fondos",
+      "totalSizeExceeded": "El tamaño total de los archivos excede los 10MB",
+      "mergingDocuments": "Combinando documentos...",
+      "chooseFile": "Seleccionar archivo",
+      "noFileChosen": "Ningún archivo seleccionado",
+      "continueToManualReview": "Continuar a Revisión Manual",
+      "uploadDocuments": "Subir y Analizar Documentos",
+      "uploadingDocuments": "Enviando documentos...",
+      "analyzingDocuments": "Analizando Documentos...",
+      "documentsApprovedTitle": "¡Documentos Aprobados! ✅",
+      "documentsApprovedDescription": "¡Excelente! Sus documentos han sido aprobados y está listo para proceder con el pago de la tarifa de solicitud.",
+      "proceedToPayment": "Proceder al Pago",
+      "analyzingOverlayTitle": "Analizando sus documentos...",
+      "analyzingOverlayDescription": "Esto puede tardar hasta 40 segundos. Por favor, no cierre esta ventana.",
+      "manualReviewTitle": "Documentos en Revisión",
+      "manualReviewDescription": "Nuestra inteligencia artificial no pudo identificar toda la información necesaria en los documentos enviados. ¡No se preocupe! Su documentación ha sido enviada a nuestro equipo de soporte para realizar un análisis detallado.",
+      "manualReviewTimeframe": "El análisis se completará en 48 horas y recibirá los resultados por correo electrónico.",
+      "aiProcessingFailed": "Nuestra IA no pudo procesar los documentos automáticamente.",
+      "teamAnalysisMessage": "¡No se preocupe! Los hemos enviado a nuestro equipo para un análisis detallado.",
+      "needHelp": "¿Necesita Ayuda?",
+      "smartAssistantHelp": "Asistente Inteligente:",
+      "smartAssistantDescription": "Use el botón flotante en la esquina de la pantalla para hacer preguntas en tiempo real.",
+      "supportChatHelp": "Chat de Soporte:",
+      "supportChatDescription": "Acceda al chat del equipo justo debajo de la sección 'Mis Solicitudes' en el panel.",
+      "backToOverview": "Entendido, Volver al Panel",
+      "gotItContinue": "Entendido, Continuar",
+      "passportFormatError": "Error de formato de pasaporte",
+      "passportMRZError": "Error de MRZ de pasaporte",
+      "bankStatementNotReadableError": "Estado de cuenta bancario no legible",
+      "diplomaNotReadableError": "Diploma no legible",
+      "diplomaProcessError": "Error de procesamiento de diploma",
+      "fundsValidationError": "Error de validación de fondos"
+    },
+    "documentsUploadStep": {
+      "title": "Envío de Documentos",
+      "subtitle": "Necesitamos algunos documentos para verificar su elegibilidad y procesar su solicitud.",
+      "importantNotice": "Asegúrese de que los documentos enviados sean claramente visibles y legibles. Asegúrese también de que los documentos enviados estén exclusivamente en <boldUnderline>Inglés</boldUnderline>, si no tiene los documentos traducidos le recomendamos los servicios de traducción de documentos de nuestro socio <link>Lush America Translations</link>.",
+      "uploadAndContinue": "Enviar documentos",
+      "uploadingDocuments": "Enviando documentos...",
+      "aiAnalysisInProgress": "Análisis por IA en Progreso..."
+    },
+    "myApplications": {
+      "title": "Mis Solicitudes",
+      "subtitle": "Rastrea el progreso de todas tus solicitudes de beca",
+      "totalApplications": "Solicitudes Totales",
+      "approved": "Aprobadas",
+      "pending": "Pendientes",
+      "stayUpdated": "Mantente Actualizado",
+      "important": "Importante:",
+      "emailNotification": "Recibirás notificaciones por correo electrónico sobre el estado de tu solicitud. Revisa tu bandeja de entrada regularmente.",
+      "steps": {
+        "step1Title": "Enviar Documentos",
+        "step1Description": "Sube pasaporte, diploma y comprobante de fondos",
+        "step2Title": "Revisión de la Universidad",
+        "step2Description": "La solicitud se muestra como Pendiente hasta ser aprobada",
+        "step3Title": "Pagar Tarifa de Solicitud",
+        "step3Description": "Asegura tu lugar de beca aprobada",
+        "step4Title": "Pagar Tarifa de Beca",
+        "step4Description": "Completa la inscripción e inicia tu programa",
+        "processSteps": "Pasos del Proceso"
+      },
+      "noApplications": {
+        "title": "Aún no hay solicitudes",
+        "description": "Comienza a aplicar para becas para rastrear tu progreso aquí. Te ayudaremos a encontrar las mejores oportunidades que coincidan con tu perfil.",
+        "findScholarships": "Encontrar Becas",
+        "applyEasily": "Aplicar Fácilmente",
+        "trackProgress": "Rastrear Progreso",
+        "browseOpportunities": "Explora cientos de oportunidades",
+        "simpleProcess": "Proceso de solicitud simple con orientación",
+        "monitorRealTime": "Monitorea tus solicitudes en tiempo real"
+      },
+      "sections": {
+        "approvedByUniversity": "Aprobadas por la Universidad",
+        "pendingAndInProgress": "Pendientes y en Progreso",
+        "approved": "aprobadas",
+        "applications": "solicitudes"
+      },
+      "paymentStatus": {
+        "title": "Estado del Pago",
+        "applicationFee": "Tarifa de Solicitud",
+        "applicationFeeDescription": "Requerida para procesar la solicitud",
+        "scholarshipFee": "Tarifa de Beca",
+        "scholarshipFeeDescription": "Paso final para asegurar tu lugar",
+        "placementFee": "Cuota de Colocación",
+        "placementFeeDescription": "Paso final para asegurar su colocación y soporte",
+        "paid": "Pagada",
+        "payApplicationFee": "Pagar Tarifa de Solicitud",
+        "payScholarshipFee": "Pagar Tarifa de Beca",
+        "payPlacementFee": "Pagar Cuota de Colocación",
+        "paymentCompleted": "Pago Completado",
+        "uploading": "Subiendo...",
+        "uploadDocument": "Subir Documento",
+        "selected": "Seleccionado:",
+        "checking": "Verificando...",
+        "processingZellePayment": "Procesando pago Zelle...",
+        "pendingPaymentType": "Pago pendiente: {{feeType}}"
+      },
+      "documents": {
+        "title": "Documentos",
+        "statusText": "Todos los documentos enviados y verificados",
+        "checklist": "Lista de Verificación de Documentos",
+        "passport": "Pasaporte",
+        "highSchoolDiploma": "Diploma de Secundaria",
+        "proofOfFunds": "Comprobante de Fondos",
+        "status": {
+          "approved": "Aprobado",
+          "changesNeeded": "Cambios Necesarios",
+          "underReview": "En Revisión",
+          "pending": "Pendiente"
+        },
+        "review": "Revisión:",
+        "sendNew": "Enviar Nuevo",
+        "universityAdditionalRequests": "Solicitudes Adicionales de la Universidad"
+      },
+      "applicationDetails": {
+        "viewDetails": "Ver Detalles de la Solicitud"
+      },
+      "confirmationModal": {
+        "title": "Confirma Tu Selección",
+        "importantDecision": "Decisión Importante",
+        "description": "Al proceder con este pago, estás haciendo de esta tu elección final de beca. Esta acción no se puede deshacer.",
+        "willRemoveOthers": "Esto eliminará {{count}} otra solicitud aprobada:",
+        "willRemoveOthersPlural": "Esto eliminará {{count}} otras solicitudes aprobadas:",
+        "letMeThink": "Déjame pensarlo",
+        "secureMyScholarship": "Sí, Asegurar Mi Beca"
+      },
+      "loading": "Cargando tus solicitudes...",
+      "error": "Error: {{message}}",
+      "statusLabels": {
+        "approvedByUniversity": "APROBADA POR LA UNIVERSIDAD",
+        "approved": "APROBADA",
+        "notSelectedForScholarship": "NO SELECCIONADA PARA LA BECA",
+        "pending": "PENDIENTE",
+        "underReview": "EN REVISIÓN",
+        "pendingScholarshipFee": "TARIFA DE BECA PENDIENTE"
+      }
+    },
+    "documentRequests": {
+      "status": {
+        "downloading": "Descargando...",
+        "opening": "Abriendo...",
+        "uploading": "Subiendo...",
+        "waitingForUniversity": "Esperando a la universidad"
+      },
+      "actions": {
+        "downloadAcceptanceLetter": "Descargar Carta de Aceptación",
+        "view": "Ver",
+        "uploadTransferForm": "Subir Formulario de Transferencia",
+        "upload": "Subir",
+        "downloadTransferForm": "Descargar Formulario de Transferencia",
+        "uploadTransferFormTitle": "Subir formulario de transferencia",
+        "selectTransferFormTitle": "Seleccionar formulario de transferencia",
+        "sendTransferFormTitle": "Enviar formulario de transferencia"
+      },
+      "messages": {
+        "noTransferForm": "Aún no se ha subido ningún formulario de transferencia.",
+        "failedToUploadAttachment": "Error al subir el anexo:",
+        "failedToUploadAcceptanceLetter": "Error al subir la carta de aceptación:",
+        "failedToCreateRequest": "Error al crear la solicitud:",
+        "unexpectedError": "Error inesperado:",
+        "unexpectedErrorWhileApproving": "Error inesperado al aprobar:",
+        "unexpectedErrorWhileRejecting": "Error inesperado al rechazar:",
+        "errorUploadingFile": "Error al subir el archivo:",
+        "errorUploading": "Error al subir:",
+        "userNotAuthenticated": "Usuario no autenticado. Por favor, inicie sesión de nuevo."
+      },
+      "forms": {
+        "newDocumentRequest": "Nueva Solicitud de Documento",
+        "newIndividualDocumentRequest": "Nueva Solicitud Individual de Documento",
+        "title": "Título",
+        "titleRequired": "Título *",
+        "description": "Descripción",
+        "dueDate": "Fecha de vencimiento",
+        "attachment": "Anexo",
+        "enterDocumentTitle": "Escriba el título del documento",
+        "enterDocumentDescription": "Escriba la descripción del documento",
+        "describeDocumentOptional": "Describa el documento o las instrucciones (opcional)",
+        "selectFile": "Seleccionar archivo",
+        "changeFile": "Cambiar archivo",
+        "chooseFile": "Elegir archivo",
+        "cancel": "Cancelar",
+        "createRequest": "Crear Solicitud",
+        "creating": "Creando...",
+        "transferFormDescriptionSchool": "Suba el formulario de transferencia para este estudiante. Solo visible para estudiantes de transferencia.",
+        "transferFormDescriptionStudent": "Su universidad subirá su formulario de transferencia aquí. Descárguelo cuando esté disponible.",
+        "transferForm": "Formulario de Transferencia",
+        "transferFormUploadButton": "Subir Formulario Relleno",
+        "transferFormUploaded": "Formulario de transferencia subido",
+        "transferFormUnderReview": "En revisión por la universidad",
+        "transferFormApproved": "Aprobado",
+        "transferFormRejected": "Rechazado",
+        "transferFormRejectionReason": "Motivo del rechazo",
+        "transferFormReupload": "Subir nueva versión",
+        "approveTransferForm": "Aprovar Formulario de Transferencia",
+        "rejectTransferForm": "Rechazar Formulario de Transferencia",
+        "transferFormReceived": "Formulario de Transferência Recibido",
+        "transferFormReadyMessage": "Su formulario de transferencia está listo para descargar. Descárguelo, rellénelo y envíelo de vuelta a la universidad.",
+        "sentOn": "Enviado el",
+        "studentUploads": "Subidas del estudiante:",
+        "yourUploads": "Sus subidas:",
+        "uploading": "Subiendo...",
+        "upload": "Subir",
+        "uploadNewFile": "Seleccionar archivo",
+        "removeFile": "Eliminar archivo",
+        "failedToDownloadFile": "Error al descargar el archivo.",
+        "failedToApproveDocument": "Error al aprobar el documento:",
+        "failedToRejectDocument": "Error al rechazar el documento:",
+        "errorDownloadingDocument": "Error al descargar el documento. Por favor, inténtelo de nuevo.",
+        "errorViewingDocument": "Error al visualizar el documento. Por favor, inténtelo de nuevo.",
+        "acceptanceLetter": "Carta de Aceptación",
+        "acceptanceLetterReceived": "¡Carta de Aceptación Recibida! 🎉",
+        "downloadTransferForm": "Descargar Formulario de Transferencia",
+        "view": "Ver",
+        "enrolledMessage": "¡Has sido matriculado! Revisa tu panel para los próximos pasos.",
+        "noFilesUploadedYet": "Aún no se ha subido ningún archivo.",
+        "noTransferFormUploadedYet": "Aún no se ha subido ningún formulario de transferencia.",
+        "acceptanceLetterInstructions": "La universidad enviará su carta de aceptación aquí cuando esté lista. Una vez enviada, será automáticamente matriculado."
+      },
+      "modals": {
+        "provideJustification": "Proporcione una justificación",
+        "rejectionExplanation": "Explique el motivo del rechazo de este documento. El estudiante verá este mensaje.",
+        "rejectionExplanationPlaceholder": "Ej.: El documento está cortado. Por favor, envíelo de nuevo en PDF con todas las páginas.",
+        "confirm": "Confirmar"
+      }
+    },
+    "recentApplications": {
+      "title": "Solicitudes Recientes",
+      "subtitle": "Revisa el progreso de tus solicitudes más recientes",
+      "shown": "mostradas",
+      "totalApplications": "solicitudes totales",
+      "noApplications": "Sin solicitudes por ahora",
+      "startJourneyMessage": "Comienza aplicando a becas para rastrear tu progreso aquí. Te ayudaremos a encontrar las mejores oportunidades que coincidan con tu perfil.",
+      "browseScholarships": "Explorar Becas",
+      "scholarshipApplication": "Solicitud de Beca",
+      "university": "Universidad",
+      "applied": "Aplicado el",
+      "deadline": "Fecha límite",
+      "showingApplications": "Mostrando {{count}} de {{total}} solicitudes",
+      "loadMoreApplications": "Cargar Más Solicitudes",
+      "viewAllApplications": "Ver Todas las Solicitudes",
+      "couponApplied": "Cupón aplicado",
+      "status": {
+        "approved": "Aprobada",
+        "under_review": "En Revisión",
+        "pending": "Pendiente"
+      }
+    },
+    "profileStatus": {
+      "title": "Estado del Perfil",
+      "basicInformation": "Información Básica",
+      "academicDetails": "Detalles Académicos",
+      "documentsUploaded": "Documentos Subidos",
+      "profileComplete": "¡Perfil completo!",
+      "viewProfile": "Ver Perfil",
+      "completeProfile": "Completa tu perfil para mejorar tus coincidencias con becas.",
+      "completeNow": "Completar Ahora"
+    },
+    "successTips": {
+      "title": "Consejos para el Éxito",
+      "tip1": "Completa tu perfil académico con información precisa para obtener mejores coincidencias con becas.",
+      "tip2": "Sube documentos de alta calidad y verifica que cumplan con todos los requisitos antes de enviarlos.",
+      "tip3": "Mantente atento a las notificaciones por correo electrónico y responde rápidamente a las solicitudes de las universidades."
+    },
+    "findScholarships": {
+      "title": "Encontrar Becas",
+      "subtitle": "Descubre oportunidades adaptadas a tu perfil académico",
+      "pagination": {
+        "previous": "Anterior",
+        "next": "Siguiente",
+        "showing": "Mostrando {{start}}-{{end}} de {{total}}",
+        "pageOf": "(Página {{current}} de {{total}})"
+      },
+      "searchPlaceholder": "Buscar becas...",
+      "allLevels": "Todos los Niveles",
+      "allFields": "Todas las Áreas",
+      "allModes": "Todas las Modalidades",
+      "allPermissions": "Todos los Permisos",
+      "allUniversities": "Todas las Universidades",
+      "minValue": "Valor mínimo",
+      "maxValue": "Valor máximo",
+      "deadline": "Fecha límite (días)",
+      "applyFilters": "Aplicar Filtros",
+      "scholarshipsFound": "becas encontradas",
+      "filters": {
+        "applying": "Aplicando...",
+        "loading": "Cargando...",
+        "applied": "¡Aplicado!",
+        "clearAllFilters": "Limpiar Todos los Filtros",
+        "clear": "Limpiar",
+        "active": "activo",
+        "academicLevel": "Nivel Académico",
+        "fieldOfStudy": "Área de Estudio",
+        "studyMode": "Modalidad del Curso",
+        "workAuthorization": "Autorización de Trabajo",
+        "minValue": "Valor Mínimo",
+        "maxValue": "Valor Máximo",
+        "deadlineDays": "Fecha límite (días)",
+        "undergraduate": "Pregrado",
+        "graduate": "Posgrado",
+        "postgraduate": "Postgrado",
+        "stem": "STEM",
+        "business": "Negocios",
+        "engineering": "Ingeniería",
+        "anyField": "Cualquier Área",
+        "online": "En línea",
+        "inPerson": "Presencial",
+        "hybrid": "Híbrido",
+        "opt": "OPT",
+        "cpt": "CPT",
+        "f1": "F1",
+        "h1b": "H1B",
+        "l1": "L1",
+        "search": "Buscar:",
+        "level": "Nivel:",
+        "field": "Área:",
+        "mode": "Modalidad:",
+        "work": "Trabajo:",
+        "min": "Mín:",
+        "max": "Máx:",
+        "deadline": "Fecha límite:",
+        "days": "días"
+      },
+      "featuredScholarships": {
+        "title": "Becas Destacadas",
+        "subtitle": "Estas becas se muestran destacadas y pueden tener beneficios especiales",
+        "featured": "Destacada",
+        "loading": "Cargando becas destacadas...",
+        "noFeatured": "No hay Becas Destacadas",
+        "checkBackLater": "Vuelve más tarde para oportunidades destacadas"
+      },
+      "scholarshipCard": {
+        "featured": "Destacada",
+        "exclusive": "Exclusiva",
+        "university": "Universidad:",
+        "studyMode": "Modalidad",
+        "workAuthorization": "Autorización de Trabajo",
+        "financialOverview": "Resumen Financiero",
+        "originalPrice": "Precio Original:",
+        "withScholarship": "Con Beca:",
+        "perCredit": "Por Crédito:",
+        "level": "Nivel",
+        "deadline": "Fecha Límite",
+        "daysLeft": "días restantes",
+        "days": "días",
+        "scholarshipDiscount": "Descuento de Beca",
+        "showDetails": "Ver Detalles",
+        "show": "Ver",
+        "view": "Ver",
+        "details": "Detalles",
+        "alreadyApplied": "Ya Aplicado",
+        "deselect": "Deseleccionar",
+        "selectScholarship": "Seleccionar",
+        "removeSelection": "Quitar de la Selección",
+        "checking": "Verificando...",
+        "inPerson": "Presencial",
+        "mixed": "Mixto",
+        "more": "más"
+      },
+      "noResults": {
+        "title": "No se encontraron becas",
+        "description": "Prueba ajustando tus criterios de búsqueda o limpia los filtros para descubrir más oportunidades.",
+        "clearAllFilters": "Limpiar Todos los Filtros"
+      }
+    },
+    "applicationChatPage": {
+      "title": "Chat de Solicitud",
+      "tabs": {
+        "welcome": "Bienvenida",
+        "details": "Detalles",
+        "i20": "Control Fee I-20",
+        "documents": "Documentos"
+      },
+      "welcome": {
+        "welcomeMessage": "¡Hola {{firstName}}! 👋",
+        "applicationInProgress": "Tu solicitud de admisión para {{universityName}} está en progreso.",
+        "scholarship": "Beca:",
+        "howToProceed": "Cómo Proceder",
+        "documentRequests": {
+          "title": "Verificar Solicitudes de Documentos",
+          "description": "Sube los documentos solicitados por la universidad para continuar tu proceso.",
+          "button": "Ir a Solicitudes de Documentos",
+          "acceptanceLetterAvailable": "¡Carta de Aceptación disponible!",
+          "acceptanceLetterDescription": "Tu carta de aceptación ha sido enviada por la universidad. Accede a la pestaña Documentos para visualizarla."
+        },
+        "applicationDetails": {
+          "title": "Ver Detalles de la Aplicación",
+          "description": "Consulta información de la beca, documentos y estado actual de tu solicitud.",
+          "button": "Ver Detalles de la Aplicación"
+        },
+        "i20ControlFee": {
+          "title": "Pagar Tarifa de Control I-20",
+          "description": "Paga la Tarifa de Control I-20 para solicitar tu documento oficial. Plazo: 10 días después de carta de aceptación.",
+          "button": "Pagar Tarifa de Control I-20",
+          "paidMessage": "¡Felicitaciones! La Tarifa de Control I-20 ha sido pagada exitosamente.",
+          "paidDescription": "Tu pago ha sido confirmado. Continúa siguiendo el progreso de tu solicitud.",
+          "paidDate": "Fecha de pago:",
+          "viewDetails": "Ver Detalles del Pago"
+        }
+      },
+      "chat": {
+        "title": "Chat de la Solicitud",
+        "subtitle": "Comunícate directamente con la universidad",
+        "placeholder": "Escribe tu mensaje...",
+        "sendButton": "Enviar",
+        "attachFile": "Adjuntar archivo",
+        "fileUploaded": "Archivo adjunto: {{fileName}}",
+        "messageSent": "Mensaje enviado con éxito",
+        "messageError": "Error al enviar el mensaje. Inténtalo de nuevo.",
+        "noMessages": "Aún no hay mensajes. ¡Inicia una conversación!",
+        "loading": "Cargando mensajes...",
+        "sending": "Enviando...",
+        "online": "En línea",
+        "lastSeen": "Visto por última vez {{time}}",
+        "typing": "Escribiendo...",
+        "messageStatus": {
+          "sent": "Enviado",
+          "delivered": "Entregado",
+          "read": "Leído"
+        },
+        "actions": {
+          "markAsRead": "Marcar como leído",
+          "deleteMessage": "Eliminar mensaje",
+          "downloadAttachment": "Descargar archivo adjunto"
+        },
+        "edit": {
+          "placeholder": "Edita tu mensaje...",
+          "save": "Guardar",
+          "cancel": "Cancelar"
+        },
+        "attachment": {
+          "label": "Archivo adjunto",
+          "remove": "Eliminar"
+        }
+      },
+      "studentChat": {
+        "header": {
+          "title": "Equipo de Soporte",
+          "responseTime": "Tiempo de respuesta: 1-2 horas hábiles",
+          "helpTooltip": "¿Cómo funciona el chat?"
+        },
+        "guide": {
+          "title": "Chatea con el equipo de soporte",
+          "subtitle": "Este chat te conecta directamente con el equipo de soporte. Úsalo para preguntas sobre becas, documentos y el progreso de tu solicitud. Evita compartir datos confidenciales (contraseñas o números de tarjeta).",
+          "supportsAttachments": "Envía mensajes y archivos adjuntos",
+          "businessHours": "Respuestas durante horario laboral",
+          "historySaved": "El historial de conversación se guarda",
+          "ctaStart": "Entendido",
+          "ctaLater": "Ahora no"
+        },
+        "input": {
+          "placeholder": "Escribe tu mensaje..."
+        },
+        "recipientLabel": {
+          "student": "Estudiante",
+          "support": "Administración"
+        }
+      },
+      "details": {
+        "studentInformation": {
+          "title": "Información del Estudiante",
+          "personalDetails": "Datos Personales",
+          "academicProfile": "Perfil Académico",
+          "applicationStatus": "Estado de la Solicitud",
+          "fullName": "Nombre Completo",
+          "email": "Correo Electrónico",
+          "phone": "Teléfono",
+          "country": "País",
+          "studentType": "Tipo de Proceso",
+          "initialF1VisaRequired": "Inicial - Visa F-1 Necesaria",
+          "transferCurrentF1Student": "Transferencia - Estudiante F-1 Actual",
+          "changeOfStatusFromOtherVisa": "Cambio de Estatus - De Otra Visa",
+          "applicationDate": "Fecha de la Solicitud",
+          "fieldOfInterest": "Campo de Interés",
+          "academicLevel": "Nivel Académico",
+          "gpa": "GPA",
+          "englishProficiency": "Competencia en Inglés",
+          "documentsStatus": "Estado de Documentos",
+          "approved": "aprobados"
+        },
+        "universityInformation": {
+          "title": "Información de la Universidad",
+          "universityName": "Nombre de la Universidad",
+          "location": "Ubicación",
+          "contactInformation": "Información de Contacto",
+          "website": "Sitio web:",
+          "email": "Correo:",
+          "phone": "Teléfono:"
+        },
+        "scholarshipDetails": {
+          "title": "Detalles de la Beca",
+          "scholarshipName": "Nombre de la Beca",
+          "course": "Curso",
+          "description": "Descripción"
+        },
+        "studentDocuments": {
+          "title": "Documentos del Estudiante"
+        },
+        "applicationUpdated": "Solicitud actualizada",
+        "quickActions": "Acciones Rápidas",
+        "manageDocuments": "Gestionar Documentos",
+        "contactUniversity": "Contactar Universidad"
+      },
+      "i20ControlFee": {
+        "title": "Control Fee I-20",
+        "description": "El I-20 es el Certificado de Elegibilidad oficial emitido por la universidad que comprueba tu estatus de estudiante en EUA.",
+        "deadlineInfo": "Plazo: 10 días después del pago de Tarifa de Beca.",
+        "timerInfo": "Tiempo restante para el pago:",
+        "paymentInfo": "Garantiza el procesamiento correcto de tu I-20 por la universidad.",
+        "processing": "Procesando pago...",
+        "payButton": "Pagar Tarifa I-20",
+        "headerTitle": "Tarifa de Control I-20",
+        "headerSubtitle": "Certificado oficial de elegibilidad estudiantil",
+        "valueLabel": "Importe",
+        "whatIsThisFeeTitle": "¿Qué es esta tarifa?",
+        "contactUrgently": "Contacta urgentemente",
+        "timeRemaining": "Tiempo restante:",
+        "status": "Estado:",
+        "completed": "Completado",
+        "pending": "Pendiente",
+        "paymentSuccess": {
+          "title": "¡Tarifa de Control I-20 Pagada Exitosamente!",
+          "description": "Tu pago de la Tarifa de Control I-20 ha sido procesado exitosamente. La universidad ahora procesará tu carta de aceptación.",
+          "nextSteps": "Próximos pasos:",
+          "nextStepsList": [
+            "Espera a que la universidad procese tu carta de aceptación",
+            "Tu carta de aceptación aparecerá en la pestaña Documentos cuando esté lista",
+            "Contacta con el chat de soporte si tienes alguna pregunta sobre el proceso"
+          ]
+        },
+        "paymentInformation": "Información del Pago",
+        "amountPaid": "Cantidad Pagada:",
+        "paymentDate": "Fecha de Pago:",
+        "paymentError": "Error en el pago. Por favor, inténtalo de nuevo."
+      },
+      "documents": {
+        "title": "Gestión de Documentos",
+        "subtitle": "Sube y gestiona tus documentos de solicitud",
+        "acceptanceLetter": {
+          "title": "Carta de Aceptación",
+          "description": "Tu carta de aceptación oficial de la universidad.",
+          "status": "Esperando que la universidad envíe la carta de aceptación oficial",
+          "received": "¡Carta de Aceptación Recibida!",
+          "readyForDownload": "Tu carta de aceptación oficial está lista para descargar",
+          "downloadButton": "Descargar Carta de Aceptación",
+          "viewButton": "Ver",
+          "pendingI20Title": "Carta de Aceptación - Pendiente Pago I-20",
+          "pendingI20Description": "Tu carta de aceptación estará disponible después de que completes el pago de la Tarifa de Control I-20. Una vez que el pago sea confirmado y la universidad procese tu carta de aceptación, aparecerá aquí para descargar.",
+          "payI20Button": "Pagar Tarifa de Control I-20 Ahora",
+          "paymentRequiredTitle": "Carta de Aceptación Disponible - Pago Requerido",
+          "paymentRequiredDescription": "Tu carta de aceptación ha sido enviada por la universidad. Para ver y descargar, completa el pago de la Tarifa de Control I-20.",
+          "waitingForUniversityTitle": "Carta de Aceptación - Esperando Universidad",
+          "waitingForUniversityDescription": "Tu Tarifa de Control I-20 ha sido pagada exitosamente. La universidad está procesando tu carta de aceptación. Aparecerá aquí una vez que la universidad la envíe."
+        },
+        "documentStatus": {
+          "title": "Estado de los Documentos",
+          "description": "Continúa enviando los documentos solicitados por la universidad. La carta de aceptación estará disponible solo después de que todos los documentos sean aprobados.",
+          "progress": "Progreso:",
+          "approved": "documentos aprobados"
+        },
+        "noDocumentRequests": "No se encontraron solicitudes de documentos."
+      },
+      "documentTypes": {
+        "passport": {
+          "label": "Pasaporte",
+          "description": "Copia de tu pasaporte válido"
+        },
+        "diploma": {
+          "label": "Diploma",
+          "description": "Certificado de tu título académico"
+        },
+        "funds_proof": {
+          "label": "Comprobante de Fondos",
+          "description": "Estado de cuenta bancario o comprobante de fondos"
+        }
+      },
+      "errors": {
+        "paymentSessionError": "Error al crear sesión de pago",
+        "paymentRedirectError": "Error al redirigir al pago",
+        "downloadFailed": "Error al descargar el archivo"
+      },
+      "status": {
+        "approved": "Aprobado",
+        "changesRequested": "Cambios Solicitados",
+        "underReview": "En Revisión",
+        "notSubmitted": "No Enviado",
+        "paid": "Pagado"
+      },
+      "hardcodedTexts": {
+        "authenticating": "Autenticando...",
+        "followSteps": "Siga estos pasos para completar su aplicación",
+        "checkAllInformation": "Revise toda la información de su aplicación",
+        "completeI20Payment": "Complete el pago de la tarifa de control I-20 para proceder con su aplicación"
+      }
+    },
+    "identityVerification": {
+      "title": "Verificación de Identidad",
+      "subtitle": "Verifica tu identidad subiendo una foto con tu documento de identidad",
+      "backToDashboard": "Volver al Panel",
+      "noPhotoFound": {
+        "title": "Verificación de Identidad",
+        "message": "No se encontró foto de identidad. Por favor, complete el proceso de pago para subir su foto de identidad.",
+        "goToDashboard": "Ir al Panel"
+      },
+      "status": {
+        "approved": {
+          "title": "Foto de Identidad Aprobada",
+          "message": "Su foto de identidad ha sido aprobada. Puede continuar con su solicitud."
+        },
+        "rejected": {
+          "title": "Foto de Identidad Rechazada",
+          "message": "Su foto de identidad ha sido rechazada. Por favor, revise el motivo y suba una nueva foto.",
+          "rejectionReason": "Motivo del Rechazo"
+        },
+        "pending": {
+          "title": "Foto de Identidad en Revisión",
+          "message": "Su foto de identidad está actualmente en revisión por nuestros administradores."
+        }
+      },
+      "uploadNewPhoto": {
+        "title": "Subir Nueva Foto de Identidad",
+        "termsTitle": "Términos y Condiciones",
+        "termsDescription": "Por favor, lea y acepte los términos y condiciones antes de subir una nueva foto.",
+        "scrollToBottom": "Por favor, desplácese hasta el final para continuar",
+        "acceptTerms": "He leído y acepto los términos y condiciones",
+        "termsNotAvailable": "Términos no disponibles",
+        "submitButton": "Enviar Nueva Foto",
+        "submitting": "Enviando...",
+        "successMessage": "¡Foto de identidad subida exitosamente! Será revisada por un administrador."
+      },
+      "errors": {
+        "loadingStatus": "Error al cargar el estado de verificación. Por favor, inténtelo de nuevo.",
+        "acceptingTerms": "Error al aceptar los términos. Por favor, inténtelo de nuevo.",
+        "termsRequired": "Por favor, acepte los términos primero.",
+        "photoRequired": "Por favor, suba su foto de identidad.",
+        "termAcceptanceNotFound": "Error: Registro de aceptación de términos no encontrado.",
+        "submittingPhoto": "Error al enviar la foto. Por favor, inténtelo de nuevo."
+      }
+    },
+    "myApplicationStep": {
+      "header": {
+        "my": "Mi",
+        "application": "Aplicación"
+      },
+      "tabs": {
+        "acceptanceLetter": "Carta de Aceptación"
+      },
+      "loading": "Cargando portal de gestión...",
+      "noApplication": {
+        "title": "Ninguna Aplicación Encontrada",
+        "description": "Aún no tienes una aplicación activa. Por favor, vuelve al paso anterior o contacta con soporte."
+      },
+      "back": "Volver",
+      "welcome": {
+        "congratsMessage": "¡Felicidades {{name}},<br/> has sido <approved>aprobado</approved> en <university>{{university}}</university>!",
+        "almostDone": "¡Ya falta muy poco para que todo esté listo! En esta etapa final puedes revisar los detalles de la universidad que elegiste y enviar la documentación obligatoria. Una vez que todo esté correcto, tu Carta de Aceptación estará disponible aquí mismo para descargar.",
+        "sendDocuments": "Enviar Documentos",
+        "requestedDocs": "Documentos solicitados",
+        "scholarshipDetails": "Detalles de la Beca",
+        "requirementsValues": "Requisitos y valores",
+        "needHelp": "¿Necesitas Ayuda?",
+        "mentorsReady": "Nuestros mentores están listos para ayudarte con cualquier duda sobre este proceso.",
+        "talkToSupport": "Hablar con Soporte",
+        "nextSteps": "Próximos Pasos",
+        "documentSubmission": "Envío de Documentos",
+        "acceptanceLetterReceipt": "Recepción de la Carta de Aceptación",
+        "documentAvailable": "Documento Disponible",
+        "status": {
+          "completed": "Completado",
+          "underReview": "En Revisión",
+          "actionRequired": "Acción Requerida",
+          "available": "Disponible",
+          "inProgress": "Liberación en Curso",
+          "blocked": "Bloqueado"
+        }
+      },
+      "details": {
+        "universityPartner": "University Partner",
+        "inPerson": "Presencial",
+        "online": "En Línea",
+        "exclusive": "Exclusiva",
+        "level": "Nivel",
+        "mode": "Modalidad",
+        "deadline": "Plazo",
+        "scholarshipDetails": "Detalles de la Beca",
+        "scholarshipTitle": "Título de la Beca",
+        "courseField": "Curso / Área de Estudio",
+        "enrollmentFee": "Tarifa de Matrícula",
+        "internalFees": "Tarifas Internas de la Institución",
+        "internalFeesNote": "Estas tarifas son informadas por la universidad y se pagan directamente a ellos. No forman parte del servicio de mentoría de Matricula USA.",
+        "oneTimePayment": "Pago Único",
+        "studentDocuments": "Documentos del Estudiante",
+        "diploma": "Diploma / Certificado (High School)",
+        "passport": "Pasaporte (Copia en Color)",
+        "bankStatement": "Estado de Cuenta Bancario (Financial Statement)",
+        "submittedOn": "Enviado el:",
+        "view": "Ver",
+        "download": "Descargar",
+        "finance": {
+          "originalAnnualCost": "Costo Anual Original",
+          "withExclusiveScholarship": "Con Beca Exclusiva",
+          "perYear": "/año",
+          "perCredit": "Por Crédito",
+          "guaranteedAnnualSavings": "Ahorro Anual Garantizado",
+          "financialSummary": "Resumen Financiero"
+        },
+        "institution": {
+          "title": "Institución",
+          "email": "Correo Electrónico",
+          "phone": "Teléfono",
+          "website": "Sitio Web"
+        }
+      },
+      "documents": {
+        "title": "Envío de Documentos",
+        "subtitle": "Envía los documentos solicitados por la universidad para revisión y aprobación final."
+      },
+      "acceptance": {
+        "letterOf": "Carta de",
+        "acceptance": "Aceptación",
+        "available": "Disponible",
+        "inProgress": "Liberación en Curso",
+        "successConfirmation": "Tu Confirmación de Éxito",
+        "description": "La Carta de Aceptación es el documento oficial emitido por la universidad que confirma tu admisión. Contiene detalles importantes sobre tu programa y es fundamental para el proceso de visa.",
+        "officialNote": "Este documento es emitido oficialmente por la universidad tras el análisis de tu documentación.",
+        "documentAvailable": "Documento Disponible",
+        "readyToDownload": "¡Tu carta de aceptación ya puede ser descargada!",
+        "downloadPdf": "Descargar PDF"
+      },
+      "errors": {
+        "viewDocument": "Error al visualizar documento",
+        "downloadDocument": "Error al descargar documento"
+      }
+    }
+  },
+  "profileManagement": {
+    "title": "Perfil del Estudiante",
+    "subtitle": "Gestiona tu perfil académico y preferencias",
+    "editProfile": "Editar Perfil",
+    "profileCompleteness": {
+      "title": "Integridad del Perfil",
+      "subtitle": "Completa tu perfil para desbloquear más oportunidades de becas",
+      "complete": "Completo",
+      "improveMatching": "Completa tu perfil para mejorar el emparejamiento con becas"
+    },
+    "form": {
+      "editProfile": "Editar Perfil",
+      "saving": "Guardando...",
+      "saveChanges": "Guardar Cambios",
+      "cancel": "Cancelar",
+      "fullName": "Nombre Completo",
+      "phoneNumber": "Número de Teléfono",
+      "country": "País",
+      "fieldOfInterest": "Área de Interés",
+      "academicLevel": "Nivel Académico",
+      "gpa": "GPA",
+      "englishProficiency": "Nivel de Inglés",
+      "cpfDocument": "CPF",
+      "cpfHelper": "Utilizado para validación y pagos en Brasil (formato 000.000.000-00).",
+      "placeholders": {
+        "enterFullName": "Ingresa tu nombre completo",
+        "phoneExample": "Ej: +55 11 99999-8888",
+        "yourCountry": "Tu país",
+        "selectField": "Selecciona tu área",
+        "selectLevel": "Selecciona el nivel",
+        "selectProficiency": "Selecciona el nivel de inglés"
+      },
+      "fields": {
+        "engineering": "Ingeniería",
+        "business": "Negocios",
+        "computerScience": "Ciencias de la Computación",
+        "medicine": "Medicina",
+        "law": "Derecho",
+        "arts": "Artes y Humanidades",
+        "sciences": "Ciencias Naturales",
+        "other": "Otro",
+        "highSchool": "Bachillerato / Secundaria",
+        "undergraduate": "Pregrado",
+        "graduate": "Posgrado",
+        "doctorate": "Doctorado",
+        "beginner": "Principiante",
+        "intermediate": "Intermedio",
+        "advanced": "Avanzado",
+        "native": "Nativo",
+        "toefl": "Certificado TOEFL",
+        "ielts": "Certificado IELTS"
+      }
+    },
+    "sections": {
+      "personalInformation": "Información Personal",
+      "academicInformation": "Información Académica",
+      "accountInformation": "Información de la Cuenta"
+    },
+    "labels": {
+      "fullName": "Nombre Completo",
+      "email": "Correo Electrónico",
+      "phone": "Teléfono",
+      "country": "País",
+      "fieldOfInterest": "Área de Interés",
+      "academicLevel": "Nivel Académico",
+      "gpa": "GPA",
+      "englishProficiency": "Nivel de Inglés",
+      "memberSince": "Miembro desde",
+      "profileCompleteness": "Integridad del Perfil"
+    },
+    "status": {
+      "activeStudent": "Estudiante Activo",
+      "verified": "Verificado",
+      "notProvided": "No informado",
+      "studentName": "Nombre del Estudiante",
+      "unknown": "Desconocido"
+    },
+    "messages": {
+      "profileUpdated": "¡Perfil actualizado con éxito!",
+      "uploadError": "Error al subir el avatar. Inténtalo de nuevo.",
+      "saveError": "Error al guardar los cambios del perfil. Inténtalo de nuevo.",
+      "invalidCPF": "CPF inválido. Verifica e inténtalo de nuevo.",
+      "invalidImageFile": "Por favor, selecciona un archivo de imagen",
+      "fileTooLarge": "El archivo debe pesar menos de 5MB",
+      "imageUrlError": "No se pudo obtener la URL de la imagen",
+      "avatarUpdateError": "Error al actualizar el avatar",
+      "changeProfilePicture": "Cambiar foto de perfil"
+    },
+    "tips": {
+      "completeProfile": "Completa Tu Perfil",
+      "description": "Un perfil completo nos ayuda a conectarte con las oportunidades de becas más relevantes. Considera agregar la información que falta para mejorar tus posibilidades de encontrar las becas perfectas.",
+      "addPhoneNumber": "Agregar número de teléfono",
+      "addCountry": "Agregar país",
+      "addFieldOfInterest": "Agregar área de interés",
+      "addAcademicLevel": "Agregar nivel académico",
+      "addGpa": "Agregar GPA",
+      "addEnglishProficiency": "Agregar nivel de inglés"
+    }
+  },
+  "matriculaRewards": {
+    "title": "Matricula Rewards",
+    "subtitle": "Gana créditos recomendando amigos a MatriculaUSA",
+    "balance": "Saldo",
+    "coins": "monedas",
+    "helpSupport": "Ayuda y Soporte",
+    "smartAssistant": "Asistente Inteligente",
+    "totalReferrals": "Total de Recomendaciones",
+    "totalEarnings": "Total Ganado",
+    "yourReferralCode": "Tu Código de Recomendación",
+    "yourCode": "Tu Código",
+    "yourLink": "Tu Enlace",
+    "copyLink": "Copiar Enlace",
+    "linkCopied": "Enlace Copiado",
+    "shareWithFriends": "Compartir con Amigos",
+    "facebook": "Facebook",
+    "twitter": "Twitter",
+    "linkedin": "LinkedIn",
+    "whatsapp": "WhatsApp",
+    "email": "Email",
+    "spendYourCoins": "Spend Your Coins",
+    "visitStoreDescription": "Visit our rewards store to exchange your coins for tuition discounts",
+    "visitRewardsStore": "Visit Rewards Store",
+    "recentReferrals": "Recent Referrals",
+    "recentTransactions": "Recent Transactions",
+    "noReferralsYet": "No referrals yet",
+    "shareCodeToEarn": "Share your code to start earning coins",
+    "noTransactionsYet": "No transactions yet",
+    "transactionHistory": "Your transaction history will appear here",
+    "howItWorks": "How it Works",
+    "step1Title": "Share your code",
+    "step1Description": "Share your unique referral code with friends and family",
+    "step2Title": "They pay the selection process fee",
+    "step2Description": "When they use your code and pay the selection process fee, you earn coins",
+    "step3Title": "Redeem your rewards",
+    "step3Description": "Use your coins to get tuition discounts at participating universities",
+    "participatingUniversities": "Participating Universities",
+    "universitiesDescription": "These universities accept Matricula coins as tuition discounts. Click on a university to see more details.",
+    "loadingUniversities": "Loading universities...",
+    "noParticipatingUniversities": "No participating universities yet",
+    "universitiesNotParticipating": "Universities need to opt-in to the Matricula Rewards program to accept coins for tuition discounts.",
+    "importantInformation": "Important Information",
+    "importantInfoText": "If your university is not listed above, it means they haven't opted to participate in the Matricula Rewards program yet. You can still earn coins by referring friends, but you won't be able to redeem them for tuition discounts at your university until they join the program. Consider reaching out to your university's admissions office to encourage them to participate!",
+    "searchUniversities": "Search universities by name, location, or type...",
+    "previous": "Previous",
+    "next": "Next",
+    "showingResults": "Showing {{start}} to {{end}} of {{total}} universities",
+    "referralNumber": "Referral #{{id}}",
+    "earned": "Earned",
+    "spent": "Spent",
+    "pending": "Pending",
+    "balanceAfter": "Balance: {{amount}}",
+    "tryAgain": "Try Again",
+    "errorLoadingData": "Error loading data",
+    "loading": "Loading {{title}}...",
+    "shareDescription": "Use the buttons below to quickly share your code",
+    "customRedemption": {
+      "title": "Custom Tuition Discount",
+      "subtitle": "Redeem any amount of coins as tuition discount",
+      "conversionRate": "1:1",
+      "conversionText": "1 coin = $1 USD",
+      "yourBalance": "Your Balance",
+      "minimum": "Minimum",
+      "maximum": "Maximum",
+      "coins": "coins",
+      "createCustomDiscount": "Create Custom Discount",
+      "needAtLeastCoins": "Need at least 10 coins",
+      "enterCoinsAmount": "Enter the amount of coins you want to redeem",
+      "amountOfCoins": "Amount of Coins to Redeem",
+      "enterCoinsPlaceholder": "Enter coins amount...",
+      "available": "Available",
+      "min": "Min",
+      "max": "Max",
+      "tuitionDiscount": "Tuition Discount",
+      "cost": "Cost",
+      "continueToUniversity": "Continue to University Selection",
+      "confirmCustomRedemption": "Confirm Custom Redemption",
+      "customTuitionDiscount": "Custom Tuition Discount",
+      "customRedemptionSuccess": "Successfully redeemed custom ${{amount}} tuition discount for ${{university}}!",
+      "customRedemptionSuccessEnrolled": "Successfully redeemed custom ${{amount}} tuition discount for your enrolled university: ${{university}}!"
+    },
+    "rewardsStore": {
+      "backToRewards": "Back to Rewards",
+      "title": "Rewards Store",
+      "subtitle": "Redeem your Matricula Coins for exclusive rewards",
+      "matriculaCoinsAvailable": "Matricula Coins Available",
+      "enrolledStudent": "Enrolled Student:",
+      "enrolledStudentMessage": "Your tuition discounts will automatically apply to",
+      "store": "Store",
+      "history": "History",
+      "customTuitionDiscount": "Custom Tuition Discount",
+      "redeemAnyAmount": "Redeem any amount of coins (1 coin = $1 USD)",
+      "createCustom": "Create Custom",
+      "available": "Available",
+      "offTuition": "off tuition",
+      "redeeming": "Redeeming...",
+      "redeemForUniversity": "Redeem for University",
+      "needMoreCoins": "Need {{amount}} more coins",
+      "noRewardsAvailable": "No rewards available at the moment",
+      "checkBackLater": "Check back later for new rewards!",
+      "tuitionDiscountHistory": "Tuition Discount History",
+      "noTuitionDiscounts": "No tuition discounts redeemed yet",
+      "redeemTuitionDiscounts": "Redeem tuition discounts to see your history here!",
+      "transactionHistory": "Transaction History",
+      "noTransactions": "No transactions yet",
+      "transactionHistoryMessage": "Your transaction history will appear here!",
+      "selectUniversity": "Select Your University",
+      "chooseUniversity": "Choose the university where you want to apply the tuition discount of",
+      "noteEnrolled": "Note:",
+      "youAreEnrolled": "You're enrolled at",
+      "differentUniversity": "If you select a different university, the discount will apply there instead.",
+      "searchUniversitiesPlaceholder": "Search universities by name or location...",
+      "importantInformation": "Important Information:",
+      "onlyParticipatingUniversities": "Only universities that have opted to participate in the Matricula Rewards program are shown here. If your university is not listed, it means they haven't joined the program yet. You can still earn coins by referring friends, but you won't be able to redeem them for tuition discounts at your university until they participate. Consider reaching out to your university's admissions office to encourage them to join!",
+      "noUniversitiesFound": "No universities found",
+      "adjustSearchTerms": "Try adjusting your search terms",
+      "previous": "Previous",
+      "next": "Next",
+      "confirmUniversity": "Confirm University",
+      "closeModal": "Close modal",
+      "website": "Website:",
+      "customTuitionDiscountModal": "Custom Tuition Discount",
+      "amountOfCoinsToRedeem": "Amount of Coins to Redeem",
+      "enterCoinsAmount": "Enter coins amount...",
+      "availableMinMax": "Available: {{available}} coins • Min: 10 • Max: {{max}}",
+      "tuitionDiscountPreview": "Tuition Discount",
+      "costPreview": "Cost",
+      "cancel": "Cancel",
+      "continue": "Continue",
+      "confirmAndRedeem": "Confirm & Redeem",
+      "processing": "Processing...",
+      "loadingRewardsStore": "Loading Rewards Store...",
+      "errorLoadingRewardsStore": "Error loading Rewards Store",
+      "tryAgain": "Try Again"
+    }
+  },
+  "matriculaRewardsLanding": {
+    "aiPoweredHelp": "Ayuda con IA",
+    "directMessaging": "Mensajería directa",
+    "badge": "Nuevo Programa de Recompensas",
+    "hero": {
+      "title": "Convierte tus",
+      "titleHighlight": "Referidos en Descuentos",
+      "subtitle": "en tu Matrícula",
+      "description": "Gana <strong>Matricula Coins</strong> por cada amigo que refieras y úsalos para <strong>reducir tu matrícula</strong> - 1 coin = $1 de descuento en tu pago mensual",
+      "valueCards": {
+        "referFriends": {
+          "title": "Comparte y Gana",
+          "description": "Obtén tu código único y compártelo con amigos que quieran estudiar en EE. UU."
+        },
+        "accumulateCoins": {
+          "title": "Gana Recompensas",
+          "description": "180 coins por referido exitoso - eso es $180 de descuento en tu matrícula"
+        },
+        "payLess": {
+          "title": "Ahorra Dinero",
+          "description": "Usa tus coins para reducir tus pagos mensuales de la universidad"
+        }
+      },
+      "cta": {
+        "getStarted": "Comenzar Ahora",
+        "learnMore": "Ver Cómo Funciona"
+      },
+      "demo": {
+        "title": "Demostración en Vivo",
+        "subtitle": "Tu Panel de Recompensas",
+        "description": "Mira cómo se vería tu cuenta con algunos referidos",
+        "referralCode": {
+          "title": "Tu Código de Referencia",
+          "code": "MTR2026",
+          "copy": "Copiar Código",
+          "copied": "¡Copiado!",
+          "loginToGetCode": "Inicia sesión para obtener tu código de referencia"
+        },
+        "balance": {
+          "title": "Saldo Actual",
+          "coins": "Matricula Coins",
+          "discount": "en descuentos"
+        },
+        "discount": {
+          "title": "Descuento Disponible",
+          "forTuition": "Para Matrícula",
+          "applicableTo": "Aplicable a {{count}} universidades"
+        },
+        "stats": {
+          "referred": "Amigos Referidos",
+          "signedUp": "Registrados",
+          "conversion": "Tasa de Conversión",
+          "monthsSaving": "Meses Ahorrando"
+        }
+      }
+    },
+    "stats": {
+      "activeStudents": "Estudiantes Activos",
+      "partnerUniversities": "Universidades Asociadas",
+      "discountsGiven": "En Descuentos Otorgados",
+      "satisfactionRate": "Tasa de Satisfacción"
+    },
+    "howItWorks": {
+      "title": "Cómo Funciona Matricula Rewards",
+      "subtitle": "Un sistema simple y transparente para que ahorres en tu educación mientras ayudas a tus amigos a alcanzar el sueño americano",
+      "steps": {
+        "step1": {
+          "title": "Comparte tu Código",
+          "description": "Obtén tu código único y compártelo con amigos que quieran estudiar en EE. UU.",
+          "details": "Cada código rastrea automáticamente tus referidos"
+        },
+        "step2": {
+          "title": "Tus Amigos se Registran",
+          "description": "Cuando tus amigos se registran usando tu código, ambos ganan Matricula Coins",
+          "details": "180 coins después de pagar la Cuota de Colocación (Placement Fee)"
+        },
+        "step3": {
+          "title": "Canjea Descuento en Cuotas",
+          "description": "Usa tus coins para canjear descuentos en las cuotas desde la Tienda de Recompensas",
+          "details": "Selecciona tu universidad y canjea el descuento"
+        },
+        "step4": {
+          "title": "Contacta a tu Universidad",
+          "description": "Contacta a la oficina de admisiones de tu universidad para aplicar el descuento canjeado",
+          "details": "Presenta tu código de descuento para obtener la reducción en tus cuotas"
+        }
+      },
+      "calculator": {
+        "title": "Calculadora de Matrícula Coins",
+        "description": "Mira cuántos coins puedes ganar refiriendo amigos",
+        "label": "¿Cuántos amigos puedes referir?",
+        "friends": "amigos",
+        "coinsEarned": "Coins Ganados",
+        "totalSavings": "Valor Disponible para Canje",
+        "cta": "Empieza a Ahorrar Ahora",
+        "minValue": "1 amigo",
+        "maxValue": "50+ amigos",
+        "coinsPerFriend": "180 coins",
+        "perFriend": "por amigo",
+        "coinValue": "1 coin =",
+        "usdValue": "$1 USD"
+      },
+      "actions": {
+        "shareNow": "Compartir ahora",
+        "inviteFriends": "Invitar amigos",
+        "seeEarnings": "Ver ganancias",
+        "useDiscount": "Usar descuento"
+      },
+      "journey": {
+        "startMessage": "¡Comienza tu viaje de ahorro ahora!"
+      },
+      "qrCode": {
+        "title": "Regístrate Instantáneamente",
+        "subtitle": "Escanea el código QR con tu teléfono para acceder directamente a la página de registro y comienza a ahorrar en tu matrícula hoy mismo.",
+        "description": "Acceso rápido y seguro a tu cuenta",
+        "instruction": "Usa la cámara de tu teléfono para escanear",
+        "note": "Disponible solo para dispositivos móviles",
+        "benefits": {
+          "quickAccess": {
+            "title": "Acceso Rápido y Seguro",
+            "description": "Regístrate en segundos sin escribir URLs largas"
+          },
+          "startSaving": {
+            "title": "Empieza a Ahorrar Inmediatamente",
+            "description": "Gana coins desde el primer día y aplica descuentos a tus cuotas"
+          },
+          "referFriends": {
+            "title": "Refiere Amigos y Multiplica tus Ganancias",
+            "description": "180 coins por cada amigo que se registre usando tu código y pague la Placement Fee"
+          }
+        }
+      }
+    },
+    "testimonials": {
+      "title": "Historias de Éxito",
+      "subtitle": "Únete a miles de estudiantes que ya están ahorrando en su educación y alcanzando el sueño americano",
+      "stories": [
+        {
+          "name": "Maria Santos",
+          "university": "University of California",
+          "text": "¡Ahorré $800 en la matrícula solo compartiendo Matricula con mis amigos. ¡Increíble!",
+          "savings": "Ahorró $800"
+        },
+        {
+          "name": "João Silva",
+          "university": "Arizona State University",
+          "text": "El programa me ayudó a reducir significativamente los costos de educación. ¡Lo recomiendo mucho!",
+          "savings": "Ahorró $1,200"
+        },
+        {
+          "name": "Ana Rodriguez",
+          "university": "University of Miami",
+          "text": "Fácil de usar y realmente vale la pena. ¡Obtuve un descuento para todo un semestre!",
+          "savings": "Ahorró $1,500"
+        }
+      ],
+      "stats": {
+        "activeStudents": "Estudiantes Activos",
+        "totalSavings": "Ahorro Total",
+        "averageRating": "Calificación Promedio",
+        "universities": "Universidades"
+      }
+    },
+    "benefits": {
+      "title": "¿Por qué elegir Matricula Rewards?",
+      "subtitle": "Más que un programa de referidos, es una forma inteligente de hacer tu educación más accesible",
+      "items": [
+        {
+          "title": "Ahorro Real",
+          "description": "Descuentos directos en tus cuotas universitarias",
+          "highlight": "Hasta $2,000/semestre"
+        },
+        {
+          "title": "Super Fácil",
+          "description": "Sistema simple para compartir y ganar",
+          "highlight": "3 clics para comenzar"
+        },
+        {
+          "title": "Instantáneo",
+          "description": "Coins acreditados inmediatamente después del referido",
+          "highlight": "100 coins/referido"
+        }
+      ]
+    },
+    "finalCta": {
+      "title": "¿Listo para",
+      "titleHighlight": "Ahorrar?",
+      "description": "Únete a miles de estudiantes que ya están ahorrando en educación. Tu viaje hacia una educación accesible comienza con un clic.",
+      "cards": {
+        "startNow": {
+          "title": "Comienza Ahora",
+          "description": "Obtén tu código de referido y comienza a acumular coins hoy mismo",
+          "cta": "Obtener Código"
+        },
+        "learnMore": {
+          "title": "Saber Más",
+          "description": "Descubre cómo funciona el sistema y mira ejemplos de ahorro real",
+          "cta": "Ver Detalles"
+        }
+      },
+      "trust": {
+        "free": "Gratis",
+        "quickStart": "Para empezar",
+        "support": "Soporte"
+      }
+    }
+  }
+}

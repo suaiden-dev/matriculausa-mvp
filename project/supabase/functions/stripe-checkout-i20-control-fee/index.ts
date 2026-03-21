@@ -238,6 +238,7 @@ Deno.serve(async (req) => {
 
     // Metadata para rastreamento
     const sessionMetadata: any = {
+      project: "matricula_usa",
       ...metadata,
       student_id: user.id,
       fee_type: "i20_control_fee",

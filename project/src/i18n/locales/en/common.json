@@ -1,0 +1,237 @@
+{
+  "close": "Close",
+  "nav": {
+    "home": "Home",
+    "howItWorks": "How It Works",
+    "scholarships": "Scholarships",
+    "universities": "Universities",
+    "eb3Jobs": "EB-3 Jobs",
+    "forUniversities": "For Universities",
+    "about": "About",
+    "contact": "Contact",
+    "faq": "FAQ",
+    "login": "Login",
+    "getStarted": "Get Started",
+    "dashboard": "Dashboard",
+    "profileSettings": "Profile Settings",
+    "signOut": "Sign Out",
+    "studentDashboard": "Student Dashboard",
+    "schoolDashboard": "School Dashboard",
+    "adminDashboard": "Admin Dashboard",
+    "affiliateDashboard": "Affiliate Admin Dashboard",
+    "sellerDashboard": "Seller Dashboard",
+    "viewScholarships": "View Scholarships",
+    "goToDashboard": "Go to Dashboard",
+    "startSelectionProcess": "Start Selection Process",
+    "scholarshipsPlatform": "Scholarships Platform",
+    "processingZellePayment": "Zelle payment under verification",
+    "zellePaymentPending": "Please wait for your Zelle payment verification before starting a new process."
+  },
+  "footer": {
+    "company": {
+      "title": "Company",
+      "about": "About Us",
+      "careers": "Careers",
+      "contact": "Contact",
+      "blog": "Blog",
+      "description": "MatriculaUSA is the leading platform for international students who want to study in the United States. We make the entire application, enrollment, and scholarship process easier at American universities, offering technology, expert support, and exclusive opportunities to turn your international dream into reality."
+    },
+    "students": {
+      "title": "For Students",
+      "forStudents": "For Students",
+      "scholarships": "Scholarships",
+      "matriculaRewards": "Matricula Rewards",
+      "universities": "Universities",
+      "howItWorks": "How It Works",
+      "support": "Support",
+      "faq": "FAQ",
+      "helpCenter": "Help Center"
+    },
+    "universities": {
+      "title": "For Universities",
+      "partners": "Become a Partner",
+      "dashboard": "University Dashboard",
+      "resources": "Resources"
+    },
+    "legal": {
+      "title": "Legal",
+      "privacy": "Privacy Policy",
+      "terms": "Terms of Service",
+      "cookies": "Cookie Policy"
+    },
+    "contact": {
+      "email": "info@matriculausa.com",
+      "phone": "+1 (213) 676-2544",
+      "address": "Los Angeles - CA - USA."
+    },
+    "social": {
+      "title": "Follow Us",
+      "facebook": "Facebook",
+      "twitter": "Twitter",
+      "linkedin": "LinkedIn",
+      "instagram": "Instagram"
+    },
+    "newsletter": {
+      "title": "Stay Updated",
+      "description": "Get the latest scholarship opportunities and news",
+      "placeholder": "Enter your email",
+      "subscribe": "Subscribe",
+      "subscribed": "Thank you for subscribing!"
+    },
+    "unsubscribe": {
+      "invalidLink": {
+        "title": "Invalid Link",
+        "message": "The unsubscribe link is invalid or has expired.",
+        "button": "Back to Home"
+      },
+      "alreadyUnsubscribed": {
+        "title": "Already Unsubscribed",
+        "message": "You are already unsubscribed from MatriculaUSA newsletter emails.",
+        "button": "Back to Home"
+      },
+      "success": {
+        "title": "Successfully Unsubscribed",
+        "message": "You have been successfully removed from our newsletter list. You will no longer receive campaign emails from MatriculaUSA.",
+        "important": "<strong>Important:</strong> You will still receive important emails about your account, applications, and payment confirmations.",
+        "reactivate": "If you change your mind, you can reactivate your subscription by contacting us.",
+        "button": "Back to Home"
+      },
+      "error": {
+        "title": "Error",
+        "message": "An error occurred while processing your request. Please try again later.",
+        "tryAgain": "Try Again",
+        "backToHome": "Back to Home"
+      },
+      "form": {
+        "title": "Unsubscribe from Newsletter",
+        "question": "Are you sure you want to stop receiving campaign emails from MatriculaUSA?",
+        "reasonLabel": "Reason (optional)",
+        "reasonPlaceholder": "Tell us why you're unsubscribing (optional)",
+        "reasonHelp": "Your feedback helps us improve our services",
+        "note": "<strong>Note:</strong> You will still receive important emails about your account, applications, and payment confirmations.",
+        "disclaimer": "By unsubscribing, you will no longer receive campaign emails, but you will continue to receive important emails about your account and applications.",
+        "cancel": "Cancel",
+        "confirm": "Confirm Unsubscribe",
+        "processing": "Processing..."
+      },
+      "errors": {
+        "tokenMissing": "Token or user ID not provided",
+        "configError": "Configuration error: Supabase URL not found",
+        "httpError": "HTTP Error {{status}}",
+        "checkStatusError": "Error checking status ({{status}})",
+        "checkStatusGeneric": "Error checking subscription status. Please try again.",
+        "processError": "Error processing unsubscribe request",
+        "processErrorRetry": "Error processing unsubscribe request. Please try again."
+      }
+    },
+    "copyright": "© 2026 Matrícula USA. All rights reserved."
+  },
+  "common": {
+    "select": "Select",
+    "copy": "Copy",
+    "copied": "Copied!",
+    "yes": "Yes",
+    "no": "No",
+    "expirationDate": "Status/I-94 expiration date",
+    "name": "Name",
+    "email": "Email",
+    "profile": "Profile",
+    "section": "Section",
+    "of": "of",
+    "loading": "Loading...",
+    "success": "Success",
+    "error": "Error",
+    "filter": "Filter",
+    "active": "active",
+    "apply": "Apply",
+    "language": "English",
+    "featured": "Featured",
+    "exclusive": "Exclusive",
+    "showMore": "show more",
+    "learnMore": "Learn more",
+    "search": "Search",
+    "support": "Support",
+    "welcome": "Welcome",
+    "close": "Close",
+    "back": "Back",
+    "next": "Next",
+    "saving": "Saving...",
+    "finish": "Finish"
+  },
+  "fees": {
+    "selectionProcess": "Selection Process Fee",
+    "application": "Application Fee",
+    "scholarship": "Scholarship Fee",
+    "placement": "Placement Fee",
+    "i20Control": "I-20 Control Fee",
+    "finalNonRefundable": "This fee is final and non-refundable"
+  },
+  "productNames": {
+    "selectionProcess": "Selection Process",
+    "selectionProcessFee": "Selection Process Fee",
+    "applicationFee": "Application Fee",
+    "scholarshipFee": "Scholarship Fee",
+    "placementFee": "Placement Fee",
+    "enrollmentFee": "Application Fee",
+    "collegeEnrollmentFee": "College Application Fee",
+    "i20ControlFee": "I-20 Control Fee"
+  },
+  "feeValues": {
+    "asPerUniversity": "As per university"
+  },
+  "feeDescriptions": {
+    "selectionProcess": "Selection Process Fee - Complete your application process",
+    "applicationFee": "Application Fee - Apply for a specific scholarship",
+    "scholarshipFee": "Scholarship Fee - Confirm your scholarship application",
+    "placementFee": "Placement Fee - Final step to secure your placement and support",
+    "i20ControlFee": "I-20 Control Fee - Document processing and validation"
+  },
+  "ssoCallback": {
+    "processing": {
+      "title": "Please wait a moment",
+      "preparing": "We are preparing the environment for you...",
+      "connecting": "Connecting to 323 Network...",
+      "preparingAccount": "Preparing your account...",
+      "creatingSession": "Creating session...",
+      "waitMessage": "This may take a few seconds...",
+      "secureConnection": "Securely connecting to Matrícula USA"
+    },
+    "success": {
+      "title": "All set!",
+      "newUser": "All set! Redirecting you...",
+      "returningUser": "Welcome back! Redirecting...",
+      "redirecting": "Redirecting you now...",
+      "welcomeNew": "Welcome to Matrícula US!",
+      "loginSuccess": "Login successful!"
+    },
+    "error": {
+      "title": "Oops, something went wrong",
+      "authenticationFailed": "Could not complete authentication. You will be redirected to the login page shortly.",
+      "tokenNotProvided": "Token not provided in URL",
+      "tokenValidationError": "Error validating token",
+      "sessionCreationError": "Error creating session",
+      "sessionNotCreated": "Session was not created correctly",
+      "noAuthMethod": "No authentication method available",
+      "tokenNotFoundInMagicLink": "Token or type not found in magic link",
+      "tokensNotFoundInRedirect": "Tokens not found in redirect",
+      "locationHeaderNotFound": "Location header not found in redirect",
+      "tokensNotFoundInResponse": "Tokens not found in response",
+      "supabaseUrlNotConfigured": "VITE_SUPABASE_URL not configured",
+      "tryAgain": "Try Again",
+      "goToLogin": "Go to Login"
+    }
+  },
+  "smartChat": {
+    "title": "Smart Assistant",
+    "subtitle": "Your intelligent companion",
+    "welcomeMessage": "Hello! I'm your Smart Assistant. How can I help you today? I can answer questions about scholarships, fees, application process and much more.",
+    "inputPlaceholder": "Ask me anything...",
+    "send": "Send",
+    "typing": "Typing...",
+    "close": "Close chat",
+    "you": "You",
+    "assistant": "Smart Assistant",
+    "whatsappTitle": "Contact us via WhatsApp",
+    "mobileNote": "Smart Assistant - Opens in new tab"
+  }
+}

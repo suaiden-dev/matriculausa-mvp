@@ -1,9 +1,9 @@
 import React, { useState, useEffect } from 'react';
 import { TrendingUp, Users, DollarSign, Calendar, Award, Target, Loader2 } from 'lucide-react';
 import { supabase } from '../../lib/supabase';
-import { useFeeConfig } from '../../hooks/useFeeConfig';
 import { getDisplayAmounts } from '../../utils/paymentConverter';
 import DateRangeFilter, { DateRange, DateRangePreset } from '../../components/DateRangeFilter';
+import { formatCurrency } from '../../utils/currency';
 
 interface PerformanceProps {
   sellerProfile: any;
@@ -29,7 +29,6 @@ const Performance: React.FC<PerformanceProps> = ({ sellerProfile, students }) =>
   const [performanceData, setPerformanceData] = useState<PerformanceData | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
-  const { getFeeAmount } = useFeeConfig(); // Para valores padrão, será usado para overrides específicos por estudante
   const [studentPackageFees, setStudentPackageFees] = useState<{ [key: string]: any }>({});
   const [studentDependents, setStudentDependents] = useState<{ [key: string]: number }>({});
   const [studentFeeOverrides, setStudentFeeOverrides] = useState<{ [key: string]: any }>({});
@@ -42,12 +41,6 @@ const Performance: React.FC<PerformanceProps> = ({ sellerProfile, students }) =>
   const [dateRange, setDateRange] = useState<DateRange>({ startDate: null, endDate: null });
   const [studentPaymentDates, setStudentPaymentDates] = useState<Record<string, { selection_process?: Date; scholarship?: Date; i20_control?: Date }>>({});
 
-  const formatCurrency = (amount: number) => {
-    return new Intl.NumberFormat('en-US', {
-      style: 'currency',
-      currency: 'USD'
-    }).format(amount || 0);
-  };
 
   // Função para deduplificar estudantes como no MyStudents.tsx e Overview.tsx
   const getUniqueStudents = React.useMemo(() => {
@@ -243,9 +236,9 @@ const Performance: React.FC<PerformanceProps> = ({ sellerProfile, students }) =>
   const calculateStudentAdjustedPaid = (student: any): number => {
     let total = 0;
     // ✅ CORREÇÃO: Usar valores reais pagos quando disponíveis, senão calcular com fallback
-    const realPaid = studentRealPaidAmounts[student.id] || studentRealPaidAmounts[student.user_id] || {};
-    const paymentDates = studentPaymentDates[student.id] || studentPaymentDates[student.user_id] || {};
-    const studentId = student.id || student.user_id;
+    const realPaid = studentRealPaidAmounts[student.id] || {};
+    const paymentDates = studentPaymentDates[student.id] || {};
+    const studentId = student.id;
     const deps = studentDependents[studentId] || 0;
     const systemType = studentSystemTypes[studentId] || 'legacy';
     const overrides = studentFeeOverrides[studentId] || {};
@@ -730,14 +723,14 @@ const Performance: React.FC<PerformanceProps> = ({ sellerProfile, students }) =>
                 <div
                   key={index}
                   className={`rounded-lg p-4 border-2 transition-all duration-200 ${achievement.unlocked
-                      ? 'border-green-200 bg-green-50'
-                      : 'border-gray-200 bg-gray-50'
+                    ? 'border-green-200 bg-green-50'
+                    : 'border-gray-200 bg-gray-50'
                     }`}
                 >
                   <div className="flex items-center">
                     <div className={`flex-shrink-0 w-10 h-10 rounded-full flex items-center justify-center ${achievement.unlocked
-                        ? 'bg-green-100 text-green-600'
-                        : 'bg-gray-100 text-gray-400'
+                      ? 'bg-green-100 text-green-600'
+                      : 'bg-gray-100 text-gray-400'
                       }`}>
                       <Award className="h-5 w-5" />
                     </div>

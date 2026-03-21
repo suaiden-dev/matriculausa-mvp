@@ -1,0 +1,57 @@
+{
+  "hero": {
+    "title": "Potenciando la Educación Internacional",
+    "description": "MatriculaUSA es la plataforma digital líder que conecta a estudiantes internacionales con universidades estadounidenses, becas y oportunidades que cambian vidas. Simplificamos el camino para estudiar en los Estados Unidos con tecnología, orientación experta y un enfoque centrado en el estudiante."
+  },
+  "pillars": {
+    "mission": {
+      "title": "Nuestra Misión",
+      "description": "Democratizar el acceso a la educación superior en EE. UU. para estudiantes talentosos de todo el mundo, brindando una experiencia fluida, transparente y de apoyo desde la solicitud hasta la inscripción."
+    },
+    "vision": {
+      "title": "Nuestra Visión",
+      "description": "Ser el puente global más confiable entre los estudiantes internacionales y las universidades estadounidenses, fomentando la diversidad, la oportunidad y la excelencia académica."
+    },
+    "values": {
+      "title": "Nuestros Valores",
+      "description": "La integridad, la inclusión, la innovación y un compromiso implacable con el éxito de los estudiantes guían cada decisión que tomamos."
+    }
+  },
+  "story": {
+    "badge": "Nuestra Historia",
+    "title": "Transformando Sueños em Realidad",
+    "p1": "MatriculaUSA fue fundada por especialistas en educación internacional que comprenden los desafíos únicos que enfrentan los estudiantes que buscan estudiar en los Estados Unidos. Nuestro equipo ha ayudado a miles de estudiantes de diversos orígenes a asegurar becas, admisiones y una transición sin problemas a la vida universitaria estadounidense.",
+    "p2": "Nos asociamos con las mejores universidades y organizaciones de EE. UU. para ofrecer oportunidades exclusivas, procesos transparentes y apoyo continuo, haciendo que el sueño americano sea accesible para todos.",
+    "stats": {
+      "scholarships": "en Becas Otorgadas",
+      "students": "Estudiantes Apoyados"
+    }
+  },
+  "howItWorks": {
+    "title": "Cómo Funciona <0>MatriculaUSA</0>",
+    "description": "Hacemos que el proceso de solicitud para estudiar en EE. UU. sea simple, transparente y amigable para el estudiante.",
+    "steps": {
+      "explore": {
+        "title": "1. Explora",
+        "description": "Explora universidades asociadas y oportunidades de becas adaptadas a tu perfil."
+      },
+      "apply": {
+        "title": "2. Aplica",
+        "description": "Envía tu solicitud y documentos requeridos a través de nuestra plataforma digital segura."
+      },
+      "match": {
+        "title": "3. Conéctate",
+        "description": "Nuestro equipo y tecnología te conectan con las universidades y becas que mejor encajan contigo."
+      },
+      "succeed": {
+        "title": "4. Ten Éxito",
+        "description": "Recibe orientación sobre visa, inscripción y tu transición a la vida universitaria en EE. UU."
+      }
+    }
+  },
+  "cta": {
+    "title": "¿Listo para Empezar tu Viaje?",
+    "description": "Únete a miles de estudiantes que han hecho realidad su sueño americano con MatriculaUSA.",
+    "button": "Empezar"
+  }
+}

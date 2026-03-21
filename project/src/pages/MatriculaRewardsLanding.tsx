@@ -21,7 +21,7 @@ import {
 } from '../types';
 
 const MatriculaRewardsLanding: React.FC = () => {
-  const { t } = useTranslation();
+  const { t } = useTranslation(['dashboard', 'common']);
   const navigate = useNavigate();
   const { user } = useAuth();
   const [isVisible, setIsVisible] = useState(false);

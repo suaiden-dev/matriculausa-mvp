@@ -1,0 +1,693 @@
+{
+  "rapidRegistration": {
+    "title": "Registration and Payment",
+    "subtitle": "Complete your registration and start your application process",
+    "form": {
+      "title": "Personal Information",
+      "fullName": "Full Name",
+      "email": "E-mail",
+      "phone": "Phone",
+      "dependents": "Number of Dependents",
+      "dependentsSubtitle": "Family members (spouse and/or children)",
+      "dependentOptions": {
+        "count_zero": "0 Dependents",
+        "count_one": "1 Dependent",
+        "count_other": "{{count}} Dependents"
+      },
+      "termsAcceptedBadge": "Terms Viewed and Accepted",
+      "password": "Password",
+      "terms": "I accept the Terms and Conditions",
+      "submit": "Confirm Registration",
+      "confirmPassword": "Confirm Password",
+      "error": {
+        "passwordsNotMatch": "Passwords do not match",
+        "terms": "You must accept the terms",
+        "general": "A registration error occurred. Please try again."
+      },
+      "placeholders": {
+        "fullName": "Enter your full name",
+        "email": "example@email.com",
+        "phone": "Your phone number",
+        "dependents": "0",
+        "password": "Create a strong password",
+        "confirmPassword": "Repeat your password"
+      }
+    },
+    "sidebar": {
+      "title": "Payment Summary",
+      "selectionFee": "Selection Process Fee",
+      "total": "TOTAL",
+      "currentFee": "Total to Pay Now",
+      "couponApplied": "Coupon Applied",
+      "feeExplanation": "The Selection Process Fee is the first mandatory payment on the MatriculaUSA platform. It unlocks your full access to view all scholarships and start your application process.",
+      "refundAssuranceTitle": "Refund Guarantee",
+      "refundAssuranceText": "If you are not accepted to any partner university, your selection process fee will be fully refunded.",
+      "futureFeesTitle": "Future Fees",
+      "enrollmentFee": "Application Fee",
+      "scholarshipFee": "Scholarship Fee",
+      "i20Fee": "I-20 Control Fee",
+      "futureFeesNote": "Future fees are estimates and vary by university."
+    },
+    "terms": {
+      "contractSubtitle": "Service Provision Agreement",
+      "selfieTitle": "Identity Verification",
+      "selfieSubtitle": "To complete the contract acceptance, we need a selfie of you holding your ID document.",
+      "selfieStep1": "Hold your ID next to your face",
+      "selfieStep2": "Make sure everything is legible",
+      "clickToTakeSelfie": "Click to take your selfie",
+      "selfieFormats": "JPG or PNG • MAX 5MB"
+    },
+    "coupons": {
+      "promotionalLabel": "Promotional Coupon"
+    },
+    "zelle": {
+      "title": "Payment with Zelle",
+      "subtitle": "Follow the instructions below to complete your payment.",
+      "back": "Back"
+    },
+    "payment": {
+      "selectMethod": "Select Payment Method",
+      "methods": {
+        "stripe": "Credit Card",
+        "pix": "PIX",
+        "zelle": "Zelle",
+        "parcelow": "Parcelow"
+      },
+      "notes": {
+        "processingFees": "* May include processing fees",
+        "parcelowFees": "* May include carrier and platform processing fees",
+        "zelleTime": "Processing can take up to 48 hours"
+      },
+      "payWith": "Pay with {{method}}",
+      "securePayment": "Secure Payment",
+      "cpf": {
+        "label": "Enter your CPF (Required for Parcelow)",
+        "placeholder": "000.000.000-00",
+        "error": "CPF is required for Parcelow payment."
+      },
+      "installment": "Up to 12 installments",
+      "error": {
+        "invalidMethod": "Invalid payment method.",
+        "notAuthenticated": "User not authenticated.",
+        "generationFailed": "Failed to generate payment link. Please try again.",
+        "userIdNotFound": "User ID not found",
+        "saveCpfFailed": "Error saving CPF"
+      }
+    }
+  },
+  "studentOnboarding": {
+    "stepper": {
+      "step": "Step",
+      "of": "of",
+      "initiating": "Initiating",
+      "steps": {
+        "selectionFee": "Selection Process Fee",
+        "selectionSurvey": "Questionnaire",
+        "scholarshipSelection": "Scholarship Selection",
+        "processType": "Process Type",
+        "documentsUpload": "Documents",
+        "payment": "Application Fee",
+        "scholarshipFee": "Scholarship Fee",
+        "placementFee": "Placement Fee"
+      }
+    },
+    "processType": {
+      "title": "Visa Situation",
+      "subtitle": "Select the option that best describes your current situation regarding the US visa.",
+      "lockedError": "You have already passed the review. It is not possible to change the process type.",
+      "selectTypeError": "Please select a process type",
+      "authError": "User not authenticated",
+      "saveError": "Error saving selection. Please try again.",
+      "completed": {
+        "title": "Process Type",
+        "subtitle": "Process type successfully selected.",
+        "status": "Step Completed",
+        "description": "You have already selected your process type and passed the review. This step is complete."
+      },
+      "continueButton": "Continue",
+      "saving": "Saving...",
+      "options": {
+        "initial": {
+          "label": "First F-1 Visa (Initial)",
+          "description": "You have never had an F-1 student visa or are applying for the first time."
+        },
+        "transfer": {
+          "label": "F-1 Visa Transfer",
+          "description": "You already have an active F-1 visa and wish to transfer from another school in the US."
+        },
+        "changeOfStatus": {
+          "label": "Change of Status",
+          "description": "You have another type of visa (B-2, H-1B, etc.) and wish to change to F-1."
+        }
+      }
+    },
+    "documentsUpload": {
+      "approvedApps": {
+        "title": "Select your Scholarship",
+        "subtitle": "Step completed successfully.",
+        "scholarshipConfirmed": "Scholarship Confirmed!",
+        "scholarshipSelectedPre": "You have selected the scholarship ",
+        "scholarshipSelectedPost": " and the application fee has been paid.",
+        "continue": "Continue"
+      },
+      "review": {
+        "title": "Applications Under Review",
+        "subtitle": "Your documents are being reviewed. You can track the status of each scholarship below.",
+        "titleApproved": "Congratulations! You have been accepted. Select the university below to proceed with the payment."
+      },
+      "cards": {
+        "yourScholarships": "Your Scholarships",
+        "applications": "{{count}} Applications",
+        "status": {
+          "approved": "Approved",
+          "rejected": "Rejected",
+          "underReview": "Under Review",
+          "pending": "Pending",
+          "isApproved": "Approved",
+          "isRejected": "Rejected",
+          "isReview": "Under Review"
+        },
+        "reason": "Reason:",
+        "verifyDocuments": "Verify Documents",
+        "sentOn": "Sent on: {{date}}",
+        "rejectionNote": "Important: Rejected documents can be resubmitted for a new analysis.",
+        "selectNewFile": "Select New File",
+        "selected": "✓ Selected",
+        "clickToSelect": "Click to select",
+        "originalValue": "Original value",
+        "withScholarship": "With Scholarship",
+        "perYear": "/ year",
+        "university": "University"
+      },
+      "actions": {
+        "selectScholarship": "Select Scholarship",
+        "selectAScholarship": "Select a Scholarship",
+        "confirmSelectionModal": {
+          "title": "Confirm Selection",
+          "description": "This decision is final. By confirming, you will no longer be able to change the scholarship selected for this application process.",
+          "cancel": "Cancel",
+          "confirm": "Confirm"
+        }
+      },
+      "instructions": {
+        "title": "Important Instructions",
+        "descriptionPre": "Ensure that the submitted documents are completely legible and ",
+        "descriptionStrong": "exclusively in English",
+        "descriptionMid": ". If you need certified and quality translation, we recommend the services of our partner ",
+        "descriptionLink": "Lush America Translations",
+        "descriptionPost": "."
+      },
+      "acceptance": {
+        "lockMessage": "You need to pay the <0>{{feeName}}</0> fee before your acceptance letter can be released.",
+        "goToPayment": "Go to Payment"
+      },
+      "packageFees": {
+        "paidSuccess": "Fee paid successfully!",
+        "confirmedMessage": "Your payment has been confirmed. You can now proceed to the acceptance letter.",
+        "obligatoryFee": "Mandatory fee • Unlocks acceptance letter",
+        "paymentMethod": "Payment method",
+        "cpfRequiredTitle": "Provide your CPF for Parcelow",
+        "saveCpfContinue": "Continue to Payment",
+        "noFees": "No Fees",
+        "installments12x": "Up to 12 installments"
+      }
+    }
+  },
+  "selectionSurvey": {
+    "identityVerification": "Identity Verification",
+    "identityVerificationHeader": "Validate Your Identity",
+    "identityVerificationSubtitle": "To ensure the security of the selection process, we need a selfie with your document before starting the questionnaire.",
+    "startSurvey": "Next Step",
+    "toastPhotoSuccess": "Photo uploaded successfully!",
+    "toastPhotoError": "Error uploading photo. Please try again.",
+    "securityNotice": "Your data is protected and encrypted",
+    "profilesIdentified": "Profile Identified",
+    "title": "Questionnaire",
+    "subtitle": "Answer carefully. To pass and continue your process, you must achieve at least <0>80% correct</0> on objective questions.",
+    "mandatoryBadge": "Mandatory Selection Process",
+    "nextSection": "Next Section",
+    "back": "Back",
+    "finish": "Finish",
+    "finishBtn": "Finish",
+    "submitting": "Submitting...",
+    "sections": {
+      "A": "Identity and Profile",
+      "B": "Passport, Documents, and Timeline",
+      "C": "Funds, Costs, and Financial Responsibility",
+      "D": "F-1 Rules and Legal Status",
+      "E": "University, Performance, and Mindset"
+    },
+    "sectionsInfo": "Answer all mandatory questions to continue.",
+    "required": "This field is required",
+    "toastErrorFields": "Please fill in all mandatory fields before continuing.",
+    "toastErrorAuth": "User not authenticated.",
+    "toastSuccess": "Selection Process successfully completed!",
+    "toastErrorScore": "Unfortunately you didn't reach the minimum score. Try again.",
+    "toastErrorSave": "Error saving your answers. Please try again.",
+    "copyright": "© 2026 Matrícula USA • Student Selection Process",
+    "results": {
+      "congratulations": "Congratulations!",
+      "passedMessage": "You are eligible to proceed to scholarship selection and are one step closer to your dream",
+      "score": "Your Score:",
+      "minRequired": "Minimum required: 80%",
+      "ctaDashboard": "Choose Scholarships",
+      "ctaDescription": "Now you can continue your process and choose the scholarships you are interested in.",
+      "failed": "Not this time",
+      "failedMessage": "You didn't reach the minimum score of 80% required for approval.",
+      "failedAdvice": "We recommend reviewing the support materials and trying again.",
+      "ctaRetry": "Try Again",
+      "ctaEdit": "Review Answers",
+      "correct": "Correct",
+      "incorrect": "Incorrect",
+      "neutral": "Other",
+      "of": "of",
+      "summary": "Application Summary"
+    },
+    "questions": {
+      "1": {
+        "text": "Full name (as on passport)",
+        "placeholder": "Your full name"
+      },
+      "2": {
+        "text": "Email",
+        "placeholder": "your@email.com"
+      },
+      "3": {
+        "text": "WhatsApp (with country code)",
+        "placeholder": "+1 123 456-7890"
+      },
+      "4": {
+        "text": "Are you currently in the US?",
+        "extraLabel": "Current status?"
+      },
+      "5": {
+        "text": "What is your current profile?",
+        "options": {
+          "initial": "Initial (outside the US, applying for visa/entry with F-1)",
+          "cos": "COS (Change of Status: in the US, changing to F-1 status)",
+          "transfer": "Transfer (has/had I-20 and will transfer schools)",
+          "nao_sei": "I don't know (I need guidance)"
+        }
+      },
+      "6": {
+        "text": "What is your main goal with the program?",
+        "options": {
+          "a": "Study and evolve academically",
+          "b": "Just \"stay in the US\" (without real study)",
+          "c": "Work illegally",
+          "d": "\"Anything works\""
+        }
+      },
+      "7": {
+        "text": "Do you have minimum weekly study availability?",
+        "options": {
+          "a": "Less than 5h/week",
+          "b": "5-9h/week",
+          "c": "10-15h/week",
+          "d": "16h+/week"
+        }
+      },
+      "8": {
+        "text": "What is your English level today?",
+        "options": {
+          "iniciante": "Beginner",
+          "basico": "Basic",
+          "intermediario": "Intermediate",
+          "avancado": "Advanced"
+        }
+      },
+      "9": {
+        "text": "Have you studied in college/university before?",
+        "extraLabel": "What course and in which country?"
+      },
+      "10": {
+        "text": "Are you willing to follow F-1 visa rules even when inconvenient?",
+        "options": {
+          "a": "Yes",
+          "b": "Depends",
+          "c": "No"
+        }
+      },
+      "11": {
+        "text": "Do you have a valid passport?",
+        "extraLabel": "Estimated issue date"
+      },
+      "12": {
+        "text": "Passport expiration date"
+      },
+      "13": {
+        "text": "Can you send a copy of your passport when requested?",
+        "options": {
+          "a": "Yes",
+          "b": "No"
+        }
+      },
+      "14": {
+        "text": "Do you have proof of high school or higher education completion?",
+        "options": {
+          "a": "Yes, I can send it",
+          "b": "I have it, but I don't know where",
+          "c": "I don't have it"
+        }
+      },
+      "15": {
+        "text": "Can you organize your documents in a folder and keep them updated?",
+        "options": {
+          "a": "Yes",
+          "b": "No"
+        }
+      },
+      "16": {
+        "text": "How soon do you want to start the program?",
+        "options": {
+          "a": "0–30 days",
+          "b": "31–60 days",
+          "c": "61–90 days",
+          "d": "90+ days"
+        }
+      },
+      "17": {
+        "text": "Can you participate in an alignment interview with the team?",
+        "options": {
+          "a": "Yes",
+          "b": "No"
+        }
+      },
+      "18": {
+        "text": "Do you understand that the process has steps and skipping them causes delays and risks?",
+        "options": {
+          "a": "Yes",
+          "b": "No"
+        }
+      },
+      "19": {
+        "text": "Do you check your email daily?",
+        "options": {
+          "a": "Yes, every day",
+          "b": "A few times a week",
+          "c": "Rarely"
+        }
+      },
+      "20": {
+        "text": "What usually happens if you delay documents or payments?",
+        "placeholder": "Describe briefly..."
+      },
+      "21": {
+        "text": "Why is proof of funds required?",
+        "options": {
+          "a": "Because the government wants to interfere",
+          "b": "Because the school wants to interfere",
+          "c": "Because you must prove you can pay tuition and living costs for at least 1 year",
+          "d": "None of the above"
+        }
+      },
+      "22": {
+        "text": "Proof of funds serves to:",
+        "options": {
+          "a": "Demonstrate financial capacity and reduce status violation risk",
+          "b": "Ensure you will work in the US",
+          "c": "Replace passport",
+          "d": "Avoid consulate interview"
+        }
+      },
+      "23": {
+        "text": "For the main applicant, what is the minimum value you must prove?",
+        "options": {
+          "a": "$5,000",
+          "b": "$10,000",
+          "c": "Approximately $22,000",
+          "d": "$100,000"
+        }
+      },
+      "24": {
+        "text": "For each additional dependent, what is the approximate minimum value?",
+        "options": {
+          "a": "$1,000",
+          "b": "$5,000",
+          "c": "$15,000",
+          "d": "No need to prove"
+        }
+      },
+      "25": {
+        "text": "Does the proof of funds need to be in your name?",
+        "options": {
+          "a": "Always must be in my name",
+          "b": "Can be from a sponsor, if provable and consistent",
+          "c": "Can be just verbal",
+          "d": "Proof of funds doesn't exist"
+        }
+      },
+      "26": {
+        "text": "Can you arrange the necessary amount (yours or sponsor) for proof?",
+        "extraLabel": "How many months?",
+        "options": {
+          "a": "Yes",
+          "b": "No",
+          "c": "Not yet, but in X months"
+        }
+      },
+      "27": {
+        "text": "Do you understand that tuition and process fees are different things?",
+        "options": {
+          "a": "Yes",
+          "b": "No"
+        }
+      },
+      "28": {
+        "text": "If you have a scholarship, the goal is to reduce tuition — it doesn't eliminate your responsibility to pay and maintain status.",
+        "options": {
+          "verdadeiro": "True",
+          "falso": "False"
+        }
+      },
+      "29": {
+        "text": "Which payment method is easiest for you?",
+        "options": {
+          "a": "One-time payment",
+          "b": "Installments",
+          "c": "Depends on the plan"
+        }
+      },
+      "30": {
+        "text": "What is your approximate annual budget for tuition + process costs?",
+        "placeholder": "Value in USD"
+      },
+      "31": {
+        "text": "The goal of the F-1 visa is:",
+        "options": {
+          "a": "Study at an authorized institution",
+          "b": "Work full-time",
+          "c": "Travel as a tourist",
+          "d": "Live without academic link"
+        }
+      },
+      "32": {
+        "text": "The I-20 is:",
+        "options": {
+          "a": "A school document proving eligibility/enrollment and sustaining F-1 status",
+          "b": "A type of passport",
+          "c": "A visa stuck in the passport",
+          "d": "A rental agreement"
+        }
+      },
+      "33": {
+        "text": "\"Maintaining status\" means:",
+        "options": {
+          "a": "Comply with rules, attendance, minimum load, and program obligations",
+          "b": "Pay nothing and show up sometimes",
+          "c": "Change schools without notice",
+          "d": "Work without authorization"
+        }
+      },
+      "34": {
+        "text": "If I miss lots of classes and stop studying, I can:",
+        "options": {
+          "a": "Risk my status and face immigration consequences",
+          "b": "Nothing happens",
+          "c": "Get a \"discount\"",
+          "d": "Receive a green card"
+        }
+      },
+      "35": {
+        "text": "For any critical decisions (travel, move, break), I should:",
+        "options": {
+          "a": "Consult the school/DSO and follow guidance",
+          "b": "Decide alone and then notify",
+          "c": "Ask friends",
+          "d": "Ignore rules"
+        }
+      },
+      "36": {
+        "text": "COS (Change of Status) is:",
+        "options": {
+          "a": "Change status while in the US",
+          "b": "Buy a ticket and enter as a tourist",
+          "c": "Transfer schools with I-20",
+          "d": "Renew passport"
+        }
+      },
+      "37": {
+        "text": "Transfer is:",
+        "options": {
+          "a": "Change/transfer SEVIS/I-20 from one school to another",
+          "b": "Sightseeing in another state",
+          "c": "Change jobs",
+          "d": "Change phone number"
+        }
+      },
+      "38": {
+        "text": "Initial is:",
+        "options": {
+          "a": "Process for those outside the US entering with F-1",
+          "b": "Those already studying who want to transfer",
+          "c": "Those changing status within the US",
+          "d": "Those who don't want to study"
+        }
+      },
+      "39": {
+        "text": "Working without authorization while F-1 is:",
+        "options": {
+          "a": "A serious risk that can harm status",
+          "b": "Always allowed",
+          "c": "Recommended by the school",
+          "d": "Necessary for I-20 issue"
+        }
+      },
+      "40": {
+        "text": "If I'm confused about an F-1 rule, I should:",
+        "options": {
+          "a": "Officially ask the school/DSO or team",
+          "b": "Ignore and follow intuition",
+          "c": "Ask in a random WhatsApp group",
+          "d": "Do it my way"
+        }
+      },
+      "41": {
+        "text": "Being a \"professional\" student means:",
+        "options": {
+          "a": "Meet deadlines, attendance, clear communication, and consistency",
+          "b": "Showing up only when possible",
+          "c": "Not reading emails and complaining later",
+          "d": "Always asking for exceptions"
+        }
+      },
+      "42": {
+        "text": "To not miss deadlines in the US, the best habit is:",
+        "options": {
+          "a": "Use calendar + reminders + check email daily",
+          "b": "Trust memory",
+          "c": "Wait for someone to notify",
+          "d": "Resolve only when urgent"
+        }
+      },
+      "43": {
+        "text": "If I'm struggling with a subject, I should first:",
+        "options": {
+          "a": "Seek tutor/office hours/advisor early",
+          "b": "Disappear and miss classes",
+          "c": "Wait to fail",
+          "d": "Blame the school"
+        }
+      },
+      "44": {
+        "text": "Networking at university, correctly, serves to:",
+        "options": {
+          "a": "Open academic and professional doors within rules",
+          "b": "Finding \"shortcuts\" to bypass rules",
+          "c": "Avoid studying",
+          "d": "Serve for nothing"
+        }
+      },
+      "45": {
+        "text": "What usually leads to failure: lack of intelligence or lack of consistency?",
+        "options": {
+          "a": "Lack of consistency",
+          "b": "Lack of intelligence",
+          "c": "Luck",
+          "d": "I don't know"
+        }
+      },
+      "46": {
+        "text": "What is your most important priority right now?",
+        "options": {
+          "a": "Cost",
+          "b": "Time flexibility",
+          "c": "Work authorization"
+        }
+      },
+      "47": {
+        "text": "Do you accept feedback and correction during the process and program?",
+        "options": {
+          "a": "Yes",
+          "b": "No"
+        }
+      },
+      "48": {
+        "text": "Minimum commitment: \"I commit to maintain attendance, meet deadlines, and follow F-1 rules.\"",
+        "options": {
+          "concordo": "I agree",
+          "nao_concordo": "I don't agree"
+        }
+      },
+      "49": {
+        "text": "Write your weekly study plan (days + hours)",
+        "placeholder": "Describe your study days and times..."
+      },
+      "50": {
+        "text": "Final declaration",
+        "placeholder": "Write your declaration...",
+        "prompt": "\"I understand that my result depends on my discipline. If I don't follow the plan, I can harm my status and my project.\""
+      }
+    }
+  },
+  "scholarshipConfirmationModal": {
+    "applicationFee": {
+      "title": "Confirm Your Scholarship Selection",
+      "subtitle": "Choose your payment method and secure your scholarship",
+      "feeLabel": "Application Fee:",
+      "feeDescription": "Fee to secure your approved scholarship spot",
+      "buttonText": "Yes, Secure My Scholarship (${{amount}})",
+      "warningText": "By proceeding with this payment, you're making this your final scholarship choice. This action cannot be undone."
+    },
+    "scholarshipFee": {
+      "title": "Scholarship Fee Payment",
+      "subtitle": "Choose your payment method to complete your enrollment",
+      "feeLabel": "Scholarship Fee:",
+      "feeDescription": "Final fee to complete your scholarship enrollment",
+      "buttonText": "Pay Scholarship Fee (${{amount}})",
+      "warningText": "By proceeding with this payment, you're completing your scholarship enrollment."
+    },
+    "labels": {
+      "selectedScholarship": "Selected Scholarship",
+      "scholarship": "Scholarship",
+      "university": "University",
+      "choosePaymentMethod": "Choose Payment Method",
+      "importantDecision": "Important Decision",
+      "thinkAboutIt": "Let me think about it"
+    },
+    "payment": {
+      "stripe": {
+        "title": "Stripe",
+        "description": "Pay securely with credit or debit card"
+      },
+      "pix": {
+        "title": "PIX",
+        "description": "Brazilian instant payment system"
+      },
+      "zelle": {
+        "title": "Zelle",
+        "description": "Pay via Zelle transfer",
+        "descriptionDetailed": "Pay via Zelle transfer"
+      },
+      "parcelow": {
+        "title": "Parcelow",
+        "description": "Pay with Brazilian card"
+      },
+      "cancel": "Cancel"
+    },
+    "loading": {
+      "processing": "Processing payment...",
+      "redirecting": "Please wait, redirecting to checkout"
+    }
+  }
+}

@@ -1,0 +1,73 @@
+@import 'tailwindcss';
+
+:root {
+  --background: #ffffff;
+  --foreground: #161616;
+  --card: #ffffff;
+  --card-foreground: #161616;
+  --popover: #ffffff;
+  --popover-foreground: #161616;
+  --primary: #2563eb;
+  --primary-foreground: #fafafa;
+  --secondary: #f3f4f6;
+  --secondary-foreground: #1f2937;
+  --muted: #f3f4f6;
+  --muted-foreground: #6b7280;
+  --accent: #10b981;
+  --accent-foreground: #1f2937;
+  --destructive: #ef4444;
+  --border: #f3f4f6;
+  --input: #92929d;
+  --ring: #2563eb;
+  --radius: 0.625rem;
+}
+
+.dark {
+  --background: #161616;
+  --foreground: #fafafa;
+  --card: #161616;
+  --card-foreground: #fafafa;
+  --popover: #161616;
+  --popover-foreground: #fafafa;
+  --primary: #2563eb;
+  --primary-foreground: #fafafa;
+  --secondary: #1f2937;
+  --secondary-foreground: #fafafa;
+  --muted: #1f2937;
+  --muted-foreground: #6b7280;
+  --accent: #10b981;
+  --accent-foreground: #1f2937;
+  --destructive: #7f1d1d;
+  --border: #1f2937;
+  --input: #1f2937;
+  --ring: #4b5563;
+}
+
+@theme inline {
+  --font-sans: 'Geist', 'Geist Fallback';
+  --font-mono: 'Geist Mono', 'Geist Mono Fallback';
+  --color-background: var(--background);
+  --color-foreground: var(--foreground);
+  --color-card: var(--card);
+  --color-card-foreground: var(--card-foreground);
+  --color-popover: var(--popover);
+  --color-popover-foreground: var(--popover-foreground);
+  --color-primary: var(--primary);
+  --color-primary-foreground: var(--primary-foreground);
+  --color-secondary: var(--secondary);
+  --color-secondary-foreground: var(--secondary-foreground);
+  --color-muted: var(--muted);
+  --color-muted-foreground: var(--muted-foreground);
+  --color-accent: var(--accent);
+  --color-accent-foreground: var(--accent-foreground);
+  --color-destructive: var(--destructive);
+  --color-border: var(--border);
+  --color-input: var(--input);
+  --color-ring: var(--ring);
+}
+
+@layer base {
+  body {
+    @apply bg-background text-foreground;
+  }
+}

@@ -14,8 +14,11 @@ export type ApplicationFlowStageKey =
   | 'apply'
   | 'review'
   | 'application_fee'
+  | 'placement_fee'
   | 'scholarship_fee'
   | 'i20_fee'
+  | 'ds160_package'
+  | 'i539_cos_package'
   | 'acceptance_letter'
   | 'transfer_form'
   | 'enrollment';
@@ -29,20 +32,26 @@ export interface ApplicationFlowStage {
   icon: LucideIcon;
   description: string;
   requiresTransfer?: boolean;
+  requiresProcessType?: string; // Exibir apenas para esse process_type
 }
 
 export interface StudentRecord {
   user_id: string;
   student_id: string;
+  application_id: string | null;
   has_paid_selection_process_fee: boolean;
   total_applications: number;
   application_status: string | null;
   is_application_fee_paid: boolean;
   is_scholarship_fee_paid: boolean;
   has_paid_i20_control_fee: boolean;
+  placement_fee_flow?: boolean;
+  is_placement_fee_paid?: boolean;
   acceptance_letter_status: string | null;
   student_process_type: string | null;
   transfer_form_status: string | null;
+  has_paid_ds160_package?: boolean;
+  has_paid_i539_cos_package?: boolean;
 }
 
 export const APPLICATION_FLOW_STAGES: ApplicationFlowStage[] = [
@@ -75,6 +84,13 @@ export const APPLICATION_FLOW_STAGES: ApplicationFlowStage[] = [
     description: 'Student has paid the Application Fee'
   },
   {
+    key: 'placement_fee',
+    label: 'Placement Fee',
+    shortLabel: 'Placement Fee',
+    icon: DollarSign,
+    description: 'Student has paid the Placement Fee (for placement fee flow only)'
+  },
+  {
     key: 'scholarship_fee',
     label: 'Scholarship Fee',
     shortLabel: 'Scholarship Fee',
@@ -87,6 +103,22 @@ export const APPLICATION_FLOW_STAGES: ApplicationFlowStage[] = [
     shortLabel: 'I-20 Fee',
     icon: CreditCard,
     description: 'Student has paid the I-20 Control Fee'
+  },
+  {
+    key: 'ds160_package',
+    label: 'DS-160 Package',
+    shortLabel: 'DS-160',
+    icon: FileText,
+    description: 'Student pays the DS-160 Package fee (initial F-1 students)',
+    requiresProcessType: 'initial'
+  },
+  {
+    key: 'i539_cos_package',
+    label: 'I-539 COS Package',
+    shortLabel: 'I-539',
+    icon: FileText,
+    description: 'Student pays the I-539 COS Package fee (change of status students)',
+    requiresProcessType: 'change_of_status'
   },
   {
     key: 'acceptance_letter',
@@ -141,11 +173,25 @@ export function getStepStatus(
     case 'application_fee':
       return student.is_application_fee_paid ? 'completed' : 'pending';
     
+    case 'placement_fee':
+      if (!student.placement_fee_flow) return 'skipped';
+      return student.is_placement_fee_paid ? 'completed' : 'pending';
+    
     case 'scholarship_fee':
+      if (student.placement_fee_flow) return 'skipped';
       return student.is_scholarship_fee_paid ? 'completed' : 'pending';
     
     case 'i20_fee':
+      if (student.placement_fee_flow) return 'skipped';
       return student.has_paid_i20_control_fee ? 'completed' : 'pending';
+
+    case 'ds160_package':
+      if (student.student_process_type !== 'initial') return 'skipped';
+      return student.has_paid_ds160_package ? 'completed' : 'pending';
+
+    case 'i539_cos_package':
+      if (student.student_process_type !== 'change_of_status') return 'skipped';
+      return student.has_paid_i539_cos_package ? 'completed' : 'pending';
     
     case 'acceptance_letter':
       if (student.acceptance_letter_status === 'approved' || student.acceptance_letter_status === 'sent') {
@@ -203,6 +249,10 @@ export function getCurrentStage(student: StudentRecord): {
     if (stageDef.requiresTransfer && student.student_process_type !== 'transfer') {
       continue;
     }
+    // Pular stages que requerem um process_type específico
+    if (stageDef.requiresProcessType && student.student_process_type !== stageDef.requiresProcessType) {
+      continue;
+    }
     
     const status = getStepStatus(student, stageDef.key);
     
@@ -235,8 +285,3 @@ export function getStageMetadata(stageKey: ApplicationFlowStageKey): Application
 export function isValidStageKey(stageKey: string): stageKey is ApplicationFlowStageKey {
   return APPLICATION_FLOW_STAGES.some(stage => stage.key === stageKey);
 }
-
-
-
-
-

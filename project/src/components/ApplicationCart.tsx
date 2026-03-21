@@ -23,7 +23,7 @@ const ApplicationCart: React.FC<ApplicationCartProps> = ({ isOpen, onClose }) =>
     } else {
       closeModal();
     }
-    
+
     // Cleanup quando componente desmonta
     return () => {
       if (isOpen) {
@@ -68,13 +68,13 @@ const ApplicationCart: React.FC<ApplicationCartProps> = ({ isOpen, onClose }) =>
       <div className="bg-white rounded-2xl shadow-2xl max-w-2xl w-full max-h-[90vh] overflow-hidden">
         {/* Header */}
         <div className="flex items-center justify-between p-6 border-b border-slate-200">
-                  <div className="flex items-center space-x-3">
-          <GraduationCap className="h-6 w-6 text-blue-600" />
-          <h2 className="text-2xl font-bold text-slate-900">{t('applicationCart.title')}</h2>
-          <span className="bg-blue-100 text-blue-800 px-2 py-1 rounded-full text-sm font-medium" data-testid="cart-icon">
-            {getSelectedCount()} {getSelectedCount() === 1 ? t('applicationCart.scholarshipSingular') : t('applicationCart.scholarshipPlural')}
-          </span>
-        </div>
+          <div className="flex items-center space-x-3">
+            <GraduationCap className="h-6 w-6 text-blue-600" />
+            <h2 className="text-2xl font-bold text-slate-900">{t('applicationCart.title')}</h2>
+            <span className="bg-blue-100 text-blue-800 px-2 py-1 rounded-full text-sm font-medium" data-testid="cart-icon">
+              {getSelectedCount()} {getSelectedCount() === 1 ? t('applicationCart.scholarshipSingular') : t('applicationCart.scholarshipPlural')}
+            </span>
+          </div>
           <button
             onClick={onClose}
             className="p-2 hover:bg-slate-100 rounded-xl transition-colors"
@@ -111,11 +111,11 @@ const ApplicationCart: React.FC<ApplicationCartProps> = ({ isOpen, onClose }) =>
                             {scholarship.field_of_study}
                           </span>
                         </div>
-                        
+
                         <h3 className="font-bold text-slate-900 mb-2 line-clamp-2">
                           {scholarship.title}
                         </h3>
-                        
+
                         <div className="flex items-center text-sm text-slate-600 mb-2">
                           <Building className="h-4 w-4 mr-2" />
                           {scholarship.universities?.name || scholarship.university_name || t('applicationCart.unknownUniversity')}
@@ -132,7 +132,7 @@ const ApplicationCart: React.FC<ApplicationCartProps> = ({ isOpen, onClose }) =>
                           </div>
                         </div>
                       </div>
-                      
+
                       <button
                         onClick={() => removeScholarship(scholarship.id)}
                         className="p-2 hover:bg-red-100 rounded-lg transition-colors ml-4"
@@ -171,7 +171,7 @@ const ApplicationCart: React.FC<ApplicationCartProps> = ({ isOpen, onClose }) =>
           feeType="selection_process"
           onSuccess={handleCheckoutSuccess}
           onError={handleCheckoutError}
-          successUrl={`${window.location.origin}/student/dashboard/selection-process-fee-success?session_id={CHECKOUT_SESSION_ID}`}
+          successUrl={`${window.location.origin}/student/onboarding?step=selection_fee&payment=success&session_id={CHECKOUT_SESSION_ID}`}
           cancelUrl={`${window.location.origin}/student/dashboard/selection-process-fee-error`}
         />
       )}

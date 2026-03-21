@@ -1,13 +1,14 @@
-import { useState, useEffect } from 'react';
+import { useEffect, useState, useCallback, useMemo } from 'react';
 import { supabase } from '../lib/supabase';
 import { useAuth } from './useAuth';
 
 export const useStudentUnreadMessages = () => {
   const { user, userProfile } = useAuth();
-  const [studentUnreadCounts, setStudentUnreadCounts] = useState<{[studentId: string]: number}>({});
+  const [countsByStudent, setCountsByStudent] = useState<{[studentId: string]: number}>({});
+  const [totalUnread, setTotalUnread] = useState(0);
   const [loading, setLoading] = useState(false);
 
-  const fetchStudentUnreadCounts = async () => {
+  const fetchUnreadCounts = useCallback(async () => {
     if (!user || !userProfile || (userProfile.role !== 'admin' && userProfile.role !== 'affiliate_admin')) {
       return;
     }
@@ -23,7 +24,8 @@ export const useStudentUnreadMessages = () => {
       if (conversationsError) throw conversationsError;
 
       if (!conversations || conversations.length === 0) {
-        setStudentUnreadCounts({});
+        setCountsByStudent({});
+        setTotalUnread(0);
         return;
       }
 
@@ -43,29 +45,33 @@ export const useStudentUnreadMessages = () => {
 
       // Contar mensagens não lidas por estudante
       const counts: {[studentId: string]: number} = {};
+      let currentTotalUnread = 0;
       
       conversations.forEach(conv => {
         const unreadCount = unreadMessages?.filter(msg => msg.conversation_id === conv.id).length || 0;
         if (unreadCount > 0) {
           counts[conv.student_id] = unreadCount;
+          currentTotalUnread += unreadCount;
         }
       });
 
-      setStudentUnreadCounts(counts);
+      setCountsByStudent(counts);
+      setTotalUnread(currentTotalUnread);
     } catch (e: any) {
       console.error('Failed to fetch student unread counts:', e);
-      setStudentUnreadCounts({});
+      setCountsByStudent({});
+      setTotalUnread(0);
     } finally {
       setLoading(false);
     }
-  };
+  }, [user, userProfile]);
 
   // Buscar contadores quando o usuário muda
   useEffect(() => {
     if (user && userProfile) {
-      fetchStudentUnreadCounts();
+      fetchUnreadCounts();
     }
-  }, [user, userProfile]);
+  }, [user, userProfile, fetchUnreadCounts]);
 
   // Configurar real-time para atualizações
   useEffect(() => {
@@ -86,7 +92,7 @@ export const useStudentUnreadMessages = () => {
           filter: `recipient_id=eq.${user.id}`
         },
         () => {
-          fetchStudentUnreadCounts();
+          fetchUnreadCounts();
         }
       )
       .on(
@@ -98,7 +104,7 @@ export const useStudentUnreadMessages = () => {
           filter: `recipient_id=eq.${user.id}`
         },
         () => {
-          fetchStudentUnreadCounts();
+          fetchUnreadCounts();
         }
       )
       .subscribe();
@@ -106,16 +112,11 @@ export const useStudentUnreadMessages = () => {
     return () => {
       supabase.removeChannel(channel);
     };
-  }, [user, userProfile]);
+  }, [user, userProfile, fetchUnreadCounts]);
 
-  const getUnreadCount = (studentId: string): number => {
-    return studentUnreadCounts[studentId] || 0;
-  };
+  const getUnreadCount = useCallback((studentId: string): number => {
+    return countsByStudent[studentId] || 0;
+  }, [countsByStudent]);
 
-  return {
-    studentUnreadCounts,
-    loading,
-    refetch: fetchStudentUnreadCounts,
-    getUnreadCount
-  };
+  return useMemo(() => ({ countsByStudent, totalUnread, loading, refetch: fetchUnreadCounts, getUnreadCount }), [countsByStudent, totalUnread, loading, fetchUnreadCounts, getUnreadCount]);
 };

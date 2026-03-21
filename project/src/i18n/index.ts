@@ -1,126 +1,102 @@
 import i18n from 'i18next';
 import { initReactI18next } from 'react-i18next';
 import LanguageDetector from 'i18next-browser-languagedetector';
+import resourcesToBackend from 'i18next-resources-to-backend';
 
-// ✅ OTIMIZAÇÃO: Lazy loading de traduções
-// Carregar apenas o idioma necessário, não todos de uma vez
-const resources = {
-  en: {
-    translation: () => import('./locales/en.json')
-  },
-  pt: {
-    translation: () => import('./locales/pt.json')
-  },
-  es: {
-    translation: () => import('./locales/es.json')
-  }
-};
+// ─── Namespaces disponíveis ───────────────────────────────────────────────────
+export const NAMESPACES = [
+  'common',
+  'home',
+  'auth',
+  'payment',
+  'registration',
+  'dashboard',
+  'scholarships',
+  'eb3',
+  'school',
+  'about',
+  'contact',
+  'help',
+] as const;
 
-// Função para mapear idiomas do navegador para idiomas suportados
+export type Namespace = typeof NAMESPACES[number];
+
+// ─── Função de mapeamento de idioma ──────────────────────────────────────────
 const mapBrowserLanguage = (browserLang: string): string => {
   const lang = browserLang.toLowerCase();
-  
-  // Mapeamento direto
   if (['en', 'en-us', 'en-gb', 'en-ca', 'en-au'].includes(lang)) return 'en';
   if (['pt', 'pt-br', 'pt-pt'].includes(lang)) return 'pt';
   if (['es', 'es-es', 'es-mx', 'es-ar', 'es-cl', 'es-co', 'es-pe'].includes(lang)) return 'es';
-  
-  // Fallback para idiomas similares
   if (lang.startsWith('pt')) return 'pt';
   if (lang.startsWith('es')) return 'es';
-  
-  // Fallback para inglês como padrão universal
   return 'en';
 };
 
-// Função para obter idioma preferido do usuário
 const getPreferredLanguage = (): string => {
-  // Verificar localStorage primeiro (preferência salva do usuário)
   const savedLang = localStorage.getItem('i18nextLng');
   const isFirstVisit = !localStorage.getItem('i18n_initialized');
-  
-  // Detectar idioma do navegador
   const browserLang = navigator.language || navigator.languages?.[0] || 'en';
   const mappedLang = mapBrowserLanguage(browserLang);
-  
-  // Se é primeira visita, usar idioma do navegador
-  if (isFirstVisit) {
-    return mappedLang;
-  }
-  
-  // Se não é primeira visita, verificar localStorage
-  if (savedLang && ['en', 'pt', 'es'].includes(savedLang)) {
-    return savedLang;
-  }
-  
-  // Fallback para idioma do navegador
+  if (isFirstVisit) return mappedLang;
+  if (savedLang && ['en', 'pt', 'es'].includes(savedLang)) return savedLang;
   return mappedLang;
 };
 
-// ✅ OTIMIZAÇÃO: Carregar traduções de forma assíncrona
-const loadTranslations = async (lang: string) => {
-  try {
-    const translation = await resources[lang as keyof typeof resources]?.translation();
-    return translation.default || translation;
-  } catch (error) {
-    console.error(`Error loading ${lang} translations:`, error);
-    // Fallback para inglês
-    if (lang !== 'en') {
-      const enTranslation = await resources.en.translation();
-      return enTranslation.default || enTranslation;
-    }
-    return {};
-  }
-};
-
-// Inicializar i18n
+// ─── Inicialização ────────────────────────────────────────────────────────────
 const initI18n = async () => {
   const preferredLang = getPreferredLanguage();
-  
-  // ✅ OTIMIZAÇÃO: Carregar apenas o idioma necessário
-  const initialTranslation = await loadTranslations(preferredLang);
-  
+
   await i18n
     .use(LanguageDetector)
     .use(initReactI18next)
+    .use(
+      // Lazy loading por namespace via dynamic import do Vite
+      resourcesToBackend(
+        (language: string, namespace: string) =>
+          import(`./locales/${language}/${namespace}.json`)
+      )
+    )
     .init({
-      resources: {
-        [preferredLang]: {
-          translation: initialTranslation
-        }
-      },
       lng: preferredLang,
       fallbackLng: 'en',
-      debug: false, // ✅ OTIMIZAÇÃO: Desabilitar debug em produção
-      
+
+      // defaultNS é onde o useTranslation() sem argumento busca primeiro
+      defaultNS: 'common',
+
+      // fallbackNS: ordem de busca quando a chave não é encontrada no namespace principal
+      // A otimização é feita por componente via useTranslation(['namespace', 'common'])
+      // que controla QUAIS namespaces são carregados para cada página
+      fallbackNS: ['common', 'home', 'auth', 'payment', 'registration', 'dashboard', 'scholarships', 'eb3', 'school', 'about', 'contact', 'help'],
+
+      ns: NAMESPACES,
+
+      // Pré-carrega TODOS os namespaces do idioma preferido para garantir compatibilidade
+      preload: [preferredLang],
+
+      debug: false,
+
       interpolation: {
-        escapeValue: false
+        escapeValue: false,
       },
-      
+
       detection: {
         order: ['localStorage', 'navigator', 'htmlTag'],
         caches: ['localStorage'],
-        convertDetectedLanguage: (lng: string) => {
-          return mapBrowserLanguage(lng);
-        }
-      }
+        convertDetectedLanguage: (lng: string) => mapBrowserLanguage(lng),
+      },
     });
 
-  // ✅ OTIMIZAÇÃO: Carregar outros idiomas de forma lazy quando necessário
+  // Quando o idioma muda, pré-carrega todos os namespaces do novo idioma
   i18n.on('languageChanged', async (lng) => {
-    if (!i18n.hasResourceBundle(lng, 'translation')) {
-      const translation = await loadTranslations(lng);
-      i18n.addResourceBundle(lng, 'translation', translation, true, true);
-    }
+    if (!['en', 'pt', 'es'].includes(lng)) return;
+    // O resourcesToBackend carregará os namespaces sob demanda automaticamente
   });
 
-  // Marcar como inicializado
   localStorage.setItem('i18n_initialized', 'true');
-  
+
   return i18n;
 };
 
-// Inicializar e exportar
 const i18nInstance = initI18n();
 
 export default i18nInstance;

@@ -12,7 +12,6 @@ import {
   Zap,
   CheckCircle,
   DollarSign,
-  FileText,
   Brain,
   UserCheck,
   CreditCard,
@@ -88,7 +87,7 @@ const ForStudents: React.FC = () => {
 
 // Hero Section Component
 const HeroSection: React.FC<{ onCTAClick: () => void }> = ({ onCTAClick }) => {
-  const { t } = useTranslation();
+  const { t } = useTranslation(['home', 'common']);
   const controls = useAnimation();
   const { ref, inView } = useInView({ triggerOnce: true, threshold: 0.2 });
 
@@ -241,7 +240,7 @@ const HeroSection: React.FC<{ onCTAClick: () => void }> = ({ onCTAClick }) => {
 
 // Benefits Section Component
 const BenefitsSection: React.FC<{ onCTAClick: () => void }> = ({ onCTAClick }) => {
-  const { t } = useTranslation();
+  const { t } = useTranslation(['home', 'common']);
   const controls = useAnimation();
   const { ref, inView } = useInView({ triggerOnce: true, threshold: 0.1 });
   const [visibleCards, setVisibleCards] = React.useState<number[]>([]);
@@ -473,7 +472,7 @@ const BenefitsSection: React.FC<{ onCTAClick: () => void }> = ({ onCTAClick }) =
 
 // How It Works Section Component
 const HowItWorksSection: React.FC<{ onCTAClick: () => void }> = ({ onCTAClick }) => {
-  const { t } = useTranslation();
+  const { t } = useTranslation(['home', 'common']);
   const { ref } = useInView({ triggerOnce: true, threshold: 0.1 });
 
   const steps = [
@@ -508,19 +507,12 @@ const HowItWorksSection: React.FC<{ onCTAClick: () => void }> = ({ onCTAClick })
     {
       step: 5,
       icon: Award,
-      titleKey: "forStudents.howItWorks.steps.scholarshipFee.title",
-      descriptionKey: "forStudents.howItWorks.steps.scholarshipFee.description",
-      priceKey: "forStudents.howItWorks.steps.scholarshipFee.price"
+      titleKey: "forStudents.howItWorks.steps.placementFee.title",
+      descriptionKey: "forStudents.howItWorks.steps.placementFee.description",
+      priceKey: "forStudents.howItWorks.steps.placementFee.price"
     },
     {
       step: 6,
-      icon: FileText,
-      titleKey: "forStudents.howItWorks.steps.i20Fee.title",
-      descriptionKey: "forStudents.howItWorks.steps.i20Fee.description",
-      priceKey: "forStudents.howItWorks.steps.i20Fee.price"
-    },
-    {
-      step: 7,
       icon: CheckCircle,
       titleKey: "forStudents.howItWorks.steps.spotGuaranteed.title",
       descriptionKey: "forStudents.howItWorks.steps.spotGuaranteed.description",
@@ -623,7 +615,7 @@ const HowItWorksSection: React.FC<{ onCTAClick: () => void }> = ({ onCTAClick })
 
 // Comparison Section Component - Before vs After
 const ComparisonSection: React.FC<{ onCTAClick: () => void }> = ({ onCTAClick }) => {
-  const { t } = useTranslation();
+  const { t } = useTranslation(['home', 'common']);
   const controls = useAnimation();
   const { ref, inView } = useInView({ triggerOnce: true, threshold: 0.1 });
 
@@ -792,7 +784,7 @@ const ComparisonSection: React.FC<{ onCTAClick: () => void }> = ({ onCTAClick })
 
 // Special Offer Section Component
 const SpecialOfferSection: React.FC<{ onCTAClick: () => void }> = ({ onCTAClick }) => {
-  const { t } = useTranslation();
+  const { t } = useTranslation(['home', 'common']);
   const controls = useAnimation();
   const { ref, inView } = useInView({ triggerOnce: true, threshold: 0.1 });
 
@@ -932,7 +924,7 @@ const SpecialOfferSection: React.FC<{ onCTAClick: () => void }> = ({ onCTAClick 
 
 // Guarantee Section Component
 const GuaranteeSection: React.FC<{ onCTAClick: () => void }> = ({ onCTAClick }) => {
-  const { t } = useTranslation();
+  const { t } = useTranslation(['home', 'common']);
   const controls = useAnimation();
   const { ref, inView } = useInView({ triggerOnce: true, threshold: 0.1 });
 
@@ -1075,7 +1067,7 @@ const GuaranteeSection: React.FC<{ onCTAClick: () => void }> = ({ onCTAClick }) 
 
 // Social Proof Section Component - Prova Social
 const SocialProofSection: React.FC<{ onCTAClick: () => void }> = ({ onCTAClick }) => {
-  const { t } = useTranslation();
+  const { t } = useTranslation(['home', 'common']);
   const controls = useAnimation();
   const { ref, inView } = useInView({ triggerOnce: true, threshold: 0.1 });
   const [currentIndex, setCurrentIndex] = React.useState(0);
@@ -1330,10 +1322,9 @@ const SocialProofSection: React.FC<{ onCTAClick: () => void }> = ({ onCTAClick }
 
 // Matricula Rewards Section Component
 const MatriculaRewardsSection: React.FC<{ onCTAClick: () => void }> = ({ onCTAClick }) => {
-  const { t } = useTranslation();
+  const { t } = useTranslation(['home', 'common']);
   const controls = useAnimation();
   const { ref, inView } = useInView({ triggerOnce: true, threshold: 0.1 });
-  const [calculatorFriends, setCalculatorFriends] = React.useState(5);
 
   useEffect(() => {
     if (inView) {
@@ -1367,11 +1358,6 @@ const MatriculaRewardsSection: React.FC<{ onCTAClick: () => void }> = ({ onCTACl
     }
   };
 
-  const calculateSavings = (friends: number) => {
-    const coins = friends * 180;
-    const dollars = coins;
-    return { coins, dollars };
-  };
 
   const steps = [
     {

@@ -464,6 +464,7 @@ Deno.serve(async (req) => {
 
     // Monta o metadata para o Stripe (valores base serão atualizados após cálculo do markup)
     const sessionMetadata: any = {
+      project: "matricula_usa",
       ...metadata, // Primeiro o metadata recebido
       student_id: user.id,
       fee_type: "application_fee",

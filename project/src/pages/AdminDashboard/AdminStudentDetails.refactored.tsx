@@ -1,4 +1,4 @@
-﻿import React, { useState, Suspense, lazy, useCallback, useEffect } from 'react';
+import React, { useState, Suspense, lazy, useCallback, useEffect } from 'react';
 import { useParams, useNavigate, useSearchParams } from 'react-router-dom';
 import { supabase } from '../../lib/supabase';
 import { useAuth } from '../../hooks/useAuth';
@@ -16,7 +16,8 @@ import { useDocumentRequestHandlers } from '../../hooks/useDocumentRequestHandle
 import { generateTermAcceptancePDF, StudentTermAcceptanceData } from '../../utils/pdfGenerator';
 import { recordIndividualFeePayment } from '../../lib/paymentRecorder';
 import { useStudentLogs } from '../../hooks/useStudentLogs';
-import { getGrossPaidAmounts } from '../../utils/paymentConverter';
+import { getRealPaidAmounts } from '../../utils/paymentConverter';
+import { getPlacementFee } from '../../utils/placementFeeCalculator';
 
 // Componentes de UI Base
 import {
@@ -198,8 +199,6 @@ const AdminStudentDetails: React.FC = () => {
       reviewed_at: identityPhotoAcceptance.identity_photo_reviewed_at
     });
   }
-  const [realPaidAmounts, setRealPaidAmounts] = useState<Record<string, number>>({});
-  const [loadingPaidAmounts, setLoadingPaidAmounts] = useState<Record<string, boolean>>({});
   const pendingZellePayments = pendingZelleQuery.data || [];
 
   // Função para atualizar student localmente (mantida para compatibilidade com hooks que dependem de setStudent)
@@ -236,7 +235,11 @@ const AdminStudentDetails: React.FC = () => {
   };
 
   const { saving, saveProfile, markFeeAsPaid, approveDocument, rejectDocument } = useAdminStudentActions();
-  const { getFeeAmount, formatFeeAmount, hasOverride, userSystemType, userFeeOverrides, loadUserFeeOverrides } = useFeeConfig(student?.user_id);
+  const { getFeeAmount, formatFeeAmount, hasOverride, userSystemType: configSystemType, userFeeOverrides, loadUserFeeOverrides } = useFeeConfig(student?.user_id);
+  
+  // ✅ PRIORIDADE: Usar system_type do objeto student se disponível, fallback para configSystemType
+  const userSystemType = student?.system_type || configSystemType;
+
   const { logAction } = useStudentLogs(student?.student_id || '');
 
   /**
@@ -260,7 +263,9 @@ const AdminStudentDetails: React.FC = () => {
       has_paid_application: boolean;
       has_paid_scholarship: boolean;
       has_paid_i20: boolean;
-    }
+      has_paid_placement: boolean;
+    },
+    applications?: any[]
   ): Record<string, number> => {
     const normalized: Record<string, number> = {};
 
@@ -280,7 +285,9 @@ const AdminStudentDetails: React.FC = () => {
       // ✅ CORREÇÃO: Valores que vêm de getGrossPaidAmounts já foram processados corretamente
       // e podem ter pequenas variações devido a taxas do Stripe, conversão de moeda, etc.
       // Para valores razoáveis (entre $50 e $2000), sempre aceitar o valor real pago
-      const isReasonableRange = realPaidAmounts.selection_process >= 50 && realPaidAmounts.selection_process <= 2000;
+      // ✅ VALIDAÇÃO RIGOROSA: Evitar que valores em BRL (geralmente > 1000) sejam exibidos como USD
+      // Para o Selection Process, o máximo esperado com dependentes é em torno de $800-900 (legacy) ou $350 (simplified)
+      const isReasonableRange = realPaidAmounts.selection_process >= 50 && realPaidAmounts.selection_process <= 1000;
 
       if (isReasonableRange) {
         // Valor está em range razoável, aceitar diretamente (já foi processado pelo paymentConverter)
@@ -340,11 +347,21 @@ const AdminStudentDetails: React.FC = () => {
     } else if (paymentFlags?.has_paid_scholarship) {
       // ✅ NOVO: Fallback para pagamentos legados
       console.log(`[AdminStudentDetails] 💡 Pagamento legado detectado para scholarship - calculando valor esperado`);
-      const expectedScholarship = sysType === 'simplified' ? 900 : 900;
-      if (feeOverrides?.scholarship_fee !== undefined) {
-        normalized.scholarship = feeOverrides.scholarship_fee;
+
+      // Tentar buscar valor específico da bolsa
+      const enrolledApp: any = applications?.find((app: any) => app.status === 'enrolled' && app.is_scholarship_fee_paid);
+      const paidApp: any = enrolledApp || applications?.find((app: any) => app.is_scholarship_fee_paid);
+      const scholarship: any = paidApp?.scholarships ? (Array.isArray(paidApp.scholarships) ? paidApp.scholarships[0] : paidApp.scholarships) : null;
+
+      if (scholarship?.scholarship_fee_amount) {
+        normalized.scholarship = Number(scholarship.scholarship_fee_amount);
       } else {
-        normalized.scholarship = expectedScholarship;
+        const expectedScholarship = sysType === 'simplified' ? 550 : 900;
+        if (feeOverrides?.scholarship_fee !== undefined) {
+          normalized.scholarship = feeOverrides.scholarship_fee;
+        } else {
+          normalized.scholarship = expectedScholarship;
+        }
       }
     }
 
@@ -394,10 +411,47 @@ const AdminStudentDetails: React.FC = () => {
     } else if (paymentFlags?.has_paid_application) {
       // ✅ NOVO: Fallback para pagamentos legados
       console.log(`[AdminStudentDetails] 💡 Pagamento legado detectado para application - calculando valor esperado`);
-      const expectedApplicationFee = feeAmountFn('application_fee');
+
+      // Tentar buscar valor específico da bolsa
+      const enrolledApp: any = applications?.find((app: any) => app.status === 'enrolled' && app.is_application_fee_paid);
+      const paidApp: any = enrolledApp || applications?.find((app: any) => app.is_application_fee_paid);
+      const scholarship: any = paidApp?.scholarships ? (Array.isArray(paidApp.scholarships) ? paidApp.scholarships[0] : paidApp.scholarships) : null;
+
+      let expectedApplicationFee: number;
+      if (scholarship?.application_fee_amount) {
+        expectedApplicationFee = Number(scholarship.application_fee_amount);
+      } else {
+        expectedApplicationFee = feeAmountFn('application_fee');
+      }
+
       normalized.application = expectedApplicationFee;
       if (dependents > 0) {
         normalized.application += dependents * 100;
+      }
+    }
+
+    // Placement Fee
+    if (realPaidAmounts.placement !== undefined && realPaidAmounts.placement > 0) {
+      // Para Placement Fee, aceitar o valor real pago se for razoável (entre $100 e $35000)
+      const isReasonableRange = realPaidAmounts.placement >= 100 && realPaidAmounts.placement <= 35000;
+      if (isReasonableRange) {
+        normalized.placement = realPaidAmounts.placement;
+        console.log(`[AdminStudentDetails] ✅ Aceitando valor real pago para placement: ${realPaidAmounts.placement}`);
+      } else {
+        console.log(`[AdminStudentDetails] ⚠️ Valor de placement fora do range razoável: ${realPaidAmounts.placement}`);
+        if (feeOverrides?.placement_fee !== undefined) {
+          normalized.placement = feeOverrides.placement_fee;
+        } else {
+          normalized.placement = Number(applications?.find((app: any) => app.is_placement_fee_paid)?.placement_fee_amount || 0);
+        }
+      }
+    } else if (paymentFlags?.has_paid_placement) {
+      console.log(`[AdminStudentDetails] 💡 Pagamento legado detectado para placement - buscando valor na aplicação`);
+      const paidApp = applications?.find((app: any) => app.is_placement_fee_paid);
+      if (paidApp?.placement_fee_amount) {
+        normalized.placement = Number(paidApp.placement_fee_amount);
+      } else if (feeOverrides?.placement_fee !== undefined) {
+        normalized.placement = feeOverrides.placement_fee;
       }
     }
 
@@ -505,7 +559,24 @@ const AdminStudentDetails: React.FC = () => {
   const [rejectStudentReason, setRejectStudentReason] = useState('');
   const [pendingRejectAppId, setPendingRejectAppId] = useState<string | null>(null);
 
-  // Estados de dados secundários (alguns ainda são locais)
+  // Estados de dados secundários
+  const [realPaidAmounts, setRealPaidAmounts] = useState<Record<string, number>>({});
+  const [loadingPaidAmounts, setLoadingPaidAmounts] = useState<Record<string, boolean>>({});
+
+  // ✅ LOG DE DEBUG PARA STEPHANIE/OUTROS USUÁRIOS COM DISCREPÂNCIA
+  React.useEffect(() => {
+    if (student) {
+      console.log(`[AdminStudentDetails] 🔍 DEBUG Student Info:`, {
+        name: student.student_name,
+        email: student.student_email,
+        student_system_type: student.system_type,
+        config_system_type: configSystemType,
+        final_system_type: userSystemType,
+        realPaidAmounts_exists: !!realPaidAmounts,
+        selection_process_paid: realPaidAmounts?.selection_process
+      });
+    }
+  }, [student, configSystemType, userSystemType, realPaidAmounts]);
   const [referralInfo, setReferralInfo] = useState<any>(null);
   const [hasMatriculaRewardsDiscount, setHasMatriculaRewardsDiscount] = useState(false);
   const [matriculaRewardsInfo, setMatriculaRewardsInfo] = useState<{
@@ -515,7 +586,7 @@ const AdminStudentDetails: React.FC = () => {
     usedAt: string;
   } | null>(null);
   const [loadingMatriculaRewards, setLoadingMatriculaRewards] = useState(false);
-  // termAcceptances, realPaidAmounts e pendingZellePayments agora vêm dos React Query hooks (definidos acima)
+  // termAcceptances e pendingZellePayments agora vêm dos React Query hooks (definidos acima)
 
   // Estados de edição
   const [isEditingProcessType, setIsEditingProcessType] = useState(false);
@@ -696,9 +767,11 @@ const AdminStudentDetails: React.FC = () => {
         scholarship: true,
         i20_control: true,
         application: true,
+        placement: true,
       });
       try {
-        const amounts = await getGrossPaidAmounts(student.user_id, ['selection_process', 'scholarship', 'i20_control', 'application']);
+        const feeTypes: any[] = ['selection_process', 'scholarship', 'i20_control', 'application', 'placement', 'ds160_package', 'i539_cos_package'];
+        const amounts = await getRealPaidAmounts(student.user_id, feeTypes as any);
 
         // ✅ DEBUG: Log detalhado dos valores ANTES da normalização
         console.log(`[AdminStudentDetails] 🔍 DEBUG - Valores BRUTOS retornados por getGrossPaidAmounts para ${student.student_email}:`, {
@@ -714,7 +787,8 @@ const AdminStudentDetails: React.FC = () => {
           has_paid_selection: student.has_paid_selection_process_fee,
           has_paid_application: student.is_application_fee_paid,
           has_paid_scholarship: student.is_scholarship_fee_paid,
-          has_paid_i20: student.has_paid_i20_control_fee
+          has_paid_i20: student.has_paid_i20_control_fee,
+          has_paid_placement: student.is_placement_fee_paid
         });
 
         // ✅ APLICAR VALIDAÇÃO: Usar a mesma lógica do Payment Management
@@ -732,7 +806,8 @@ const AdminStudentDetails: React.FC = () => {
             has_paid_selection: student.has_paid_selection_process_fee,
             has_paid_application: student.is_application_fee_paid,
             has_paid_scholarship: student.is_scholarship_fee_paid,
-            has_paid_i20: student.has_paid_i20_control_fee
+            has_paid_i20: student.has_paid_i20_control_fee,
+            has_paid_placement: student.is_placement_fee_paid
           }
         });
 
@@ -749,8 +824,10 @@ const AdminStudentDetails: React.FC = () => {
             has_paid_selection: student.has_paid_selection_process_fee,
             has_paid_application: student.is_application_fee_paid,
             has_paid_scholarship: student.is_scholarship_fee_paid,
-            has_paid_i20: student.has_paid_i20_control_fee
-          }
+            has_paid_i20: !!student.has_paid_i20_control_fee,
+            has_paid_placement: !!student.is_placement_fee_paid
+          },
+          student.all_applications
         );
 
         console.log('[AdminStudentDetails] 🔍 DEBUG - Resultado da normalização:', {
@@ -770,6 +847,7 @@ const AdminStudentDetails: React.FC = () => {
           scholarship: false,
           i20_control: false,
           application: false,
+          placement: false,
         });
         isLoadingRef.current = false;
       }
@@ -789,7 +867,8 @@ const AdminStudentDetails: React.FC = () => {
     student?.has_paid_selection_process_fee,
     student?.is_application_fee_paid,
     student?.is_scholarship_fee_paid,
-    student?.has_paid_i20_control_fee
+    student?.has_paid_i20_control_fee,
+    student?.is_placement_fee_paid
   ]);
 
   // Função para recarregar realPaidAmounts (força recarregamento mesmo se dependências não mudaram)
@@ -806,10 +885,11 @@ const AdminStudentDetails: React.FC = () => {
       scholarship: true,
       i20_control: true,
       application: true,
+      placement: true,
     });
 
     try {
-      const amounts = await getGrossPaidAmounts(student.user_id, ['selection_process', 'scholarship', 'i20_control', 'application']);
+      const amounts = await getRealPaidAmounts(student.user_id, ['selection_process', 'scholarship', 'i20_control', 'application', 'placement', 'ds160_package', 'i539_cos_package']);
 
       // ✅ APLICAR VALIDAÇÃO: Usar a mesma lógica do Payment Management
       const hasMatrFromSellerCode = !!(student?.seller_referral_code && /^MATR/i.test(student.seller_referral_code));
@@ -823,10 +903,11 @@ const AdminStudentDetails: React.FC = () => {
         hasMatrFromSellerCode,
         // ✅ NOVO: Passar flags de pagamento para fallback de pagamentos legados
         {
-          has_paid_selection: student.has_paid_selection_process_fee,
-          has_paid_application: student.is_application_fee_paid,
-          has_paid_scholarship: student.is_scholarship_fee_paid,
-          has_paid_i20: student.has_paid_i20_control_fee
+          has_paid_selection: !!student.has_paid_selection_process_fee,
+          has_paid_application: !!student.is_application_fee_paid,
+          has_paid_scholarship: !!student.is_scholarship_fee_paid,
+          has_paid_i20: !!student.has_paid_i20_control_fee,
+          has_paid_placement: !!student.is_placement_fee_paid
         }
       );
 
@@ -841,6 +922,7 @@ const AdminStudentDetails: React.FC = () => {
         scholarship: false,
         i20_control: false,
         application: false,
+        placement: false,
       });
     }
   }, [
@@ -856,7 +938,8 @@ const AdminStudentDetails: React.FC = () => {
     student?.has_paid_selection_process_fee,
     student?.is_application_fee_paid,
     student?.is_scholarship_fee_paid,
-    student?.has_paid_i20_control_fee
+    student?.has_paid_i20_control_fee,
+    student?.is_placement_fee_paid
   ]);
 
   // Carregar referral info quando necessário (ainda é local pois depende de seller_referral_code)
@@ -1214,7 +1297,7 @@ const AdminStudentDetails: React.FC = () => {
     }
   }, [student, dependents, saveProfile, profileId, queryClient, user, logAction]);
 
-  const handleMarkAsPaid = useCallback((feeType: 'selection_process' | 'application' | 'scholarship' | 'i20_control') => {
+  const handleMarkAsPaid = useCallback((feeType: 'selection_process' | 'application' | 'scholarship' | 'i20_control' | 'placement' | 'ds160_package' | 'i539_cos_package') => {
     setPendingPayment({ fee_type: feeType, payment_method: 'manual' });
     setPaymentAmount(getFeeAmount(feeType));
     setShowPaymentModal(true);
@@ -1223,11 +1306,13 @@ const AdminStudentDetails: React.FC = () => {
   const handleConfirmPayment = useCallback(async () => {
     if (!student || !pendingPayment) return;
 
-    const feeType = pendingPayment.fee_type as 'selection_process' | 'application' | 'scholarship' | 'i20_control';
+    const feeType = pendingPayment.fee_type as 'selection_process' | 'application' | 'scholarship' | 'i20_control' | 'placement' | 'ds160_package' | 'i539_cos_package';
+    const paymentMethodValue = pendingPayment.payment_method;
+    const paymentDate = new Date().toISOString();
     let applicationId: string | undefined = undefined;
 
-    // Para Application Fee e Scholarship Fee, buscar a aplicação aprovada ou mais recente
-    if (feeType === 'application' || feeType === 'scholarship') {
+    // Para Application Fee, Scholarship Fee e Placement Fee, buscar a aplicação aprovada ou mais recente
+    if (feeType === 'application' || feeType === 'scholarship' || feeType === 'placement') {
       const approvedApps = student?.all_applications?.filter((app: any) => app.status === 'approved') || [];
 
       if (approvedApps.length > 1) {
@@ -1272,14 +1357,10 @@ const AdminStudentDetails: React.FC = () => {
     }
 
     // Validar que applicationId está presente quando necessário
-    if ((feeType === 'application' || feeType === 'scholarship') && !applicationId) {
-      alert(`Application ID is required for ${feeType === 'application' ? 'application' : 'scholarship'} fees. Please ensure the student has an approved application.`);
+    if ((feeType === 'application' || feeType === 'scholarship' || feeType === 'placement') && !applicationId) {
+      alert(`Application ID is required for ${feeType} fees. Please ensure the student has an approved application.`);
       return;
     }
-
-    // Registrar pagamento na tabela individual_fee_payments
-    const paymentDate = new Date().toISOString();
-    const paymentMethodValue = (paymentMethod || 'manual') as 'stripe' | 'zelle' | 'manual';
 
     // ✅ IMPORTANTE: Ativar loading ANTES de registrar o pagamento
     // Isso evita mostrar o valor antigo enquanto o novo valor está sendo carregado
@@ -1400,31 +1481,8 @@ const AdminStudentDetails: React.FC = () => {
       setPendingPayment(null);
 
       // ✅ IMPORTANTE: Atualizar realPaidAmounts após registrar pagamento
-      // O loading já foi ativado antes de registrar o pagamento
-      // Buscar novamente os valores pagos para refletir o pagamento recém-registrado
-      try {
-        const updatedAmounts = await getGrossPaidAmounts(student.user_id, ['selection_process', 'scholarship', 'i20_control', 'application']);
-
-        // ✅ APLICAR VALIDAÇÃO: Usar a mesma lógica do Payment Management
-        const hasMatrFromSellerCode = !!(student?.seller_referral_code && /^MATR/i.test(student.seller_referral_code));
-        const normalizedAmounts = validateAndNormalizePaidAmounts(
-          updatedAmounts,
-          userSystemType,
-          userFeeOverrides,
-          getFeeAmount,
-          student?.dependents || 0,
-          hasMatriculaRewardsDiscount,
-          hasMatrFromSellerCode
-        );
-
-        setRealPaidAmounts(normalizedAmounts);
-        console.log('[PaymentStatusCard] ✅ realPaidAmounts atualizado após pagamento:', normalizedAmounts);
-      } catch (updateError) {
-        console.error('[PaymentStatusCard] Erro ao atualizar realPaidAmounts:', updateError);
-      } finally {
-        // Desativar loading após atualizar
-        setLoadingPaidAmounts(prev => ({ ...prev, [feeType]: false }));
-      }
+      await reloadRealPaidAmounts();
+      setLoadingPaidAmounts(prev => ({ ...prev, [feeType]: false }));
 
       // Invalidar queries relacionadas
       queryClient.invalidateQueries({ queryKey: queryKeys.students.details(profileId) });
@@ -2268,6 +2326,29 @@ const AdminStudentDetails: React.FC = () => {
         console.error('Erro ao atualizar documents_status:', profileUpdateError);
       }
 
+      // Marcar todos os documentos individuais como aprovados para limpar o overview de admins
+      try {
+        await Promise.all([
+          supabase
+            .from('student_documents')
+            .update({ status: 'approved', approved_at: new Date().toISOString() })
+            .eq('user_id', student.user_id)
+            .eq('status', 'pending'),
+          supabase
+            .from('document_request_uploads')
+            .update({
+              status: 'approved',
+              reviewed_at: new Date().toISOString(),
+              reviewed_by: user?.id
+            })
+            .eq('uploaded_by', student.user_id)
+            .in('status', ['pending', 'under_review'])
+        ]);
+        console.log('✅ [APPROVE] Documentos individuais marcados como aprovados');
+      } catch (docUpdateError) {
+        console.error('⚠️ [APPROVE] Erro ao atualizar documentos individuais:', docUpdateError);
+      }
+
       // Webhook e notificação
       try {
         const { data: userData } = await supabase
@@ -2491,6 +2572,9 @@ const AdminStudentDetails: React.FC = () => {
     { key: 'apply', label: 'Application' },
     { key: 'review', label: 'Review' },
     { key: 'application_fee', label: 'App Fee' },
+    { key: 'placement_fee', label: 'Placement Fee' },
+    { key: 'ds160_package', label: 'DS-160 Package' },
+    { key: 'i539_cos_package', label: 'I-539 Package' },
     { key: 'scholarship_fee', label: 'Scholarship Fee' },
     { key: 'i20_fee', label: 'I-20 Fee' },
     { key: 'acceptance_letter', label: 'Acceptance' },
@@ -2502,8 +2586,34 @@ const AdminStudentDetails: React.FC = () => {
     if (step.key === 'transfer_form') {
       return student?.student_process_type === 'transfer';
     }
-    return true;
+    if (step.key === 'ds160_package') {
+      return student?.student_process_type === 'initial';
+    }
+    if (step.key === 'i539_cos_package') {
+      return student?.student_process_type === 'change_of_status';
+    }
+    if (student?.placement_fee_flow) {
+      // No fluxo de placement, removemos as taxas que são substituídas
+      // MANTEMOS 'application_fee' pois ela ainda existe nesse fluxo
+      return !['scholarship_fee', 'i20_fee'].includes(step.key);
+    } else {
+      // No fluxo normal, removemos a placement_fee
+      return step.key !== 'placement_fee';
+    }
   });
+
+  // LOG DE DEPURAÇÃO
+  useEffect(() => {
+    if (student) {
+      console.log('🔍 [PlacementFeeDebug] Student data:', {
+        email: student.student_email,
+        placement_fee_flow: student.placement_fee_flow,
+        is_placement_fee_paid: student.is_placement_fee_paid,
+        is_scholarship_fee_paid: student.is_scholarship_fee_paid
+      });
+      console.log('🔍 [PlacementFeeDebug] Steps keys:', steps.map(s => s.key));
+    }
+  }, [student, steps]);
 
   const getStepStatus = useCallback((step: { key: string; label: string }) => {
     if (!student) return 'pending';
@@ -2520,6 +2630,12 @@ const AdminStudentDetails: React.FC = () => {
         return 'pending';
       case 'application_fee':
         return student.is_application_fee_paid ? 'completed' : 'pending';
+      case 'placement_fee':
+        return student.is_placement_fee_paid ? 'completed' : 'pending';
+      case 'ds160_package':
+        return student.has_paid_ds160_package ? 'completed' : 'pending';
+      case 'i539_cos_package':
+        return student.has_paid_i539_cos_package ? 'completed' : 'pending';
       case 'scholarship_fee':
         return student.is_scholarship_fee_paid ? 'completed' : 'pending';
       case 'i20_fee':
@@ -2621,6 +2737,9 @@ const AdminStudentDetails: React.FC = () => {
           selection_process_fee: editingFees.selection_process,
           scholarship_fee: editingFees.scholarship,
           i20_control_fee: editingFees.i20_control,
+          placement_fee: editingFees.placement,
+          ds160_package_fee: editingFees.ds160_package,
+          i539_cos_package_fee: editingFees.i539_cos_package,
           updated_at: new Date().toISOString()
         }, {
           onConflict: 'user_id'
@@ -2631,7 +2750,10 @@ const AdminStudentDetails: React.FC = () => {
       console.log('✅ [handleSaveEditFees] Overrides salvos no banco:', {
         selection_process: editingFees.selection_process,
         scholarship: editingFees.scholarship,
-        i20_control: editingFees.i20_control
+        i20_control: editingFees.i20_control,
+        placement: editingFees.placement,
+        ds160_package: editingFees.ds160_package,
+        i539_cos_package: editingFees.i539_cos_package
       });
 
       // Log da ação
@@ -2645,6 +2767,9 @@ const AdminStudentDetails: React.FC = () => {
             selection_process_fee: editingFees.selection_process,
             scholarship_fee: editingFees.scholarship,
             i20_control_fee: editingFees.i20_control,
+            placement_fee: editingFees.placement,
+            ds160_package_fee: editingFees.ds160_package,
+            i539_cos_package_fee: editingFees.i539_cos_package,
             updated_by: user?.email || 'Platform Admin'
           }
         );
@@ -2742,13 +2867,16 @@ const AdminStudentDetails: React.FC = () => {
       selection_process_fee?: number;
       scholarship_fee?: number;
       i20_control_fee?: number;
+      placement_fee?: number;
+      ds160_package_fee?: number;
+      i539_cos_package_fee?: number;
     } | null = null;
 
     try {
       // ✅ Forçar nova query sem cache adicionando timestamp
       const { data: overrideData, error: overrideError } = await supabase
         .from('user_fee_overrides')
-        .select('selection_process_fee, scholarship_fee, i20_control_fee, updated_at')
+        .select('selection_process_fee, scholarship_fee, i20_control_fee, placement_fee, ds160_package_fee, i539_cos_package_fee, updated_at')
         .eq('user_id', student.user_id)
         .maybeSingle();
 
@@ -2761,6 +2889,9 @@ const AdminStudentDetails: React.FC = () => {
           selection_process_fee: overrideData.selection_process_fee != null ? Number(overrideData.selection_process_fee) : undefined,
           scholarship_fee: overrideData.scholarship_fee != null ? Number(overrideData.scholarship_fee) : undefined,
           i20_control_fee: overrideData.i20_control_fee != null ? Number(overrideData.i20_control_fee) : undefined,
+          placement_fee: overrideData.placement_fee != null ? Number(overrideData.placement_fee) : undefined,
+          ds160_package_fee: overrideData.ds160_package_fee != null ? Number(overrideData.ds160_package_fee) : undefined,
+          i539_cos_package_fee: overrideData.i539_cos_package_fee != null ? Number(overrideData.i539_cos_package_fee) : undefined,
         };
         console.log('✅ [handleStartEditFees] Overrides encontrados no banco:', currentOverrides);
       } else {
@@ -2868,10 +2999,61 @@ const AdminStudentDetails: React.FC = () => {
       }
     }
 
+    // Placement Fee
+    let placementValue: number;
+    if (student.is_placement_fee_paid && realPaidAmounts?.placement !== undefined && realPaidAmounts?.placement !== null) {
+      placementValue = realPaidAmounts.placement;
+    } else {
+      if (currentOverrides?.placement_fee !== undefined && currentOverrides?.placement_fee !== null) {
+        placementValue = currentOverrides.placement_fee;
+      } else {
+        // Tentar o valor configurado no perfil ou calcular via getPlacementFee
+        if (student?.placement_fee_amount) {
+          placementValue = Number(student.placement_fee_amount);
+        } else {
+          // Buscar da aplicação principal/scholarship
+          const scholarship = student.all_applications?.find((app: any) => app.status !== 'rejected')?.scholarships;
+          const scholarshipData = Array.isArray(scholarship) ? scholarship[0] : scholarship;
+          if (scholarshipData?.annual_value_with_scholarship) {
+            placementValue = getPlacementFee(Number(scholarshipData.annual_value_with_scholarship));
+          } else {
+            placementValue = getFeeAmount('placement_fee');
+          }
+        }
+      }
+    }
+
+    // DS-160 Package Fee
+    let ds160PackageValue: number;
+    if (student.has_paid_ds160_package && realPaidAmounts?.ds160_package !== undefined && realPaidAmounts?.ds160_package !== null) {
+      ds160PackageValue = realPaidAmounts.ds160_package;
+    } else {
+      if (currentOverrides?.ds160_package_fee !== undefined && currentOverrides?.ds160_package_fee !== null) {
+        ds160PackageValue = currentOverrides.ds160_package_fee;
+      } else {
+        ds160PackageValue = getFeeAmount('ds160_package');
+      }
+    }
+
+    // I-539 COS Package Fee
+    let i539PackageValue: number;
+    if (student.has_paid_i539_cos_package && realPaidAmounts?.i539_cos_package !== undefined && realPaidAmounts?.i539_cos_package !== null) {
+      i539PackageValue = realPaidAmounts.i539_cos_package;
+    } else {
+      if (currentOverrides?.i539_cos_package_fee !== undefined && currentOverrides?.i539_cos_package_fee !== null) {
+        i539PackageValue = currentOverrides.i539_cos_package_fee;
+      } else {
+        i539PackageValue = getFeeAmount('i539_cos_package');
+      }
+    }
+
     const finalFees = {
       selection_process: selectionProcessValue,
       scholarship: scholarshipValue,
-      i20_control: i20ControlValue
+      i20_control: i20ControlValue,
+      placement: placementValue,
+      ds160_package: ds160PackageValue,
+      i539_cos_package: i539PackageValue
     };
 
     console.log('✅ [handleStartEditFees] Valores finais para edição:', finalFees);
@@ -2898,7 +3080,7 @@ const AdminStudentDetails: React.FC = () => {
   // Funções de Transfer Form e Document Requests agora vêm dos hooks personalizados
 
   // Handler para atualizar método de pagamento
-  const handleUpdatePaymentMethod = useCallback(async (feeType: string) => {
+  const handleUpdatePaymentMethod = useCallback(async (feeType: 'selection_process' | 'application' | 'scholarship' | 'i20_control' | 'placement' | 'ds160_package' | 'i539_cos_package' | string) => {
     if (!student || !isPlatformAdmin) return;
 
     setSavingPaymentMethod(true);
@@ -2938,6 +3120,27 @@ const AdminStudentDetails: React.FC = () => {
         const { error } = await supabase
           .from('user_profiles')
           .update({ i20_control_fee_payment_method: method })
+          .eq('id', student.student_id);
+
+        if (error) throw error;
+      } else if (feeType === 'ds160_package') {
+        const { error } = await supabase
+          .from('user_profiles')
+          .update({ ds160_package_payment_method: method })
+          .eq('id', student.student_id);
+
+        if (error) throw error;
+      } else if (feeType === 'i539_cos_package') {
+        const { error } = await supabase
+          .from('user_profiles')
+          .update({ i539_cos_package_payment_method: method })
+          .eq('id', student.student_id);
+
+        if (error) throw error;
+      } else if (feeType === 'placement') {
+        const { error } = await supabase
+          .from('user_profiles')
+          .update({ placement_fee_payment_method: method })
           .eq('id', student.student_id);
 
         if (error) throw error;
@@ -3023,26 +3226,26 @@ const AdminStudentDetails: React.FC = () => {
 
       {/* Zelle Payments Pending Alert */}
       {pendingZellePayments.length > 0 && (
-        <div className="bg-yellow-50 border border-yellow-200 rounded-xl p-4">
+        <div className="bg-blue-50 border border-blue-200 rounded-xl p-4">
           <div className="flex items-center justify-between">
             <div className="flex items-center space-x-3">
               <div className="flex-shrink-0">
-                <div className="w-8 h-8 bg-yellow-100 rounded-full flex items-center justify-center">
-                  <Clock className="w-4 h-4 text-yellow-600" />
+                <div className="w-8 h-8 bg-blue-100 rounded-full flex items-center justify-center">
+                  <Clock className="w-4 h-4 text-blue-600" />
                 </div>
               </div>
               <div>
-                <h3 className="text-sm font-medium text-yellow-800">
+                <h3 className="text-sm font-medium text-blue-800">
                   Pending Zelle Payment Approvals
                 </h3>
-                <p className="text-sm text-yellow-700">
+                <p className="text-sm text-blue-700">
                   This student has a Zelle payment awaiting administrative approval.
                 </p>
               </div>
             </div>
             <button
               onClick={handleGoToZellePayments}
-              className="px-4 py-2 bg-yellow-600 hover:bg-yellow-700 text-white text-sm font-medium rounded-lg transition-colors duration-200 flex items-center space-x-2"
+              className="px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white text-sm font-medium rounded-lg transition-colors duration-200 flex items-center space-x-2"
             >
               <span>Review Payments</span>
               <ExternalLink className="w-4 h-4" />
@@ -3257,12 +3460,6 @@ const AdminStudentDetails: React.FC = () => {
             <Suspense fallback={<div className="animate-pulse bg-slate-100 h-64 rounded-2xl"></div>}>
               <PaymentStatusCard
                 student={student}
-                fees={{
-                  selection_process: getFeeAmount('selection_process'),
-                  application: getFeeAmount('application_fee'),
-                  scholarship: getFeeAmount('scholarship_fee'),
-                  i20_control: getFeeAmount('i20_control_fee'),
-                }}
                 realPaidAmounts={realPaidAmounts}
                 loadingPaidAmounts={loadingPaidAmounts}
                 editingFees={editingFees}
@@ -3274,7 +3471,6 @@ const AdminStudentDetails: React.FC = () => {
                 dependents={dependents}
                 hasOverride={hasOverride}
                 userSystemType={userSystemType}
-                userFeeOverrides={userFeeOverrides}
                 hasMatriculaRewardsDiscount={hasMatriculaRewardsDiscount}
                 onStartEditFees={handleStartEditFees}
                 onSaveEditFees={handleSaveEditFees}
@@ -3435,6 +3631,7 @@ const AdminStudentDetails: React.FC = () => {
           <Suspense fallback={<TabLoadingSkeleton />}>
             <SelectionSurveyView
               userId={student?.user_id || ''}
+              surveyPassed={student?.selection_survey_passed}
             />
           </Suspense>
         </div>

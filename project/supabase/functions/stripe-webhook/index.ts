@@ -11,18 +11,8 @@ import {
   getAllWebhookSecrets,
   getStripeEnvironmentVariables,
 } from "../shared/environment-detector.ts";
-// Import jsPDF for Deno environment
-// @ts-ignore
-import jsPDF from "https://esm.sh/jspdf@2.5.1?target=deno";
 
 // Configurações do MailerSend (REMOVIDAS - usando apenas webhook n8n)
-// const mailerSendApiKey = Deno.env.get('MAILERSEND_API_KEY');
-// const mailerSendUrl = 'https://api.mailersend.com/v1/email';
-// const fromEmail = Deno.env.get('FROM_EMAIL') || 'noreply@matriculausa.com';
-// const fromName = Deno.env.get('FROM_NAME') || 'MatriculaUSA';
-// const companyName = Deno.env.get('COMPANY_NAME') || 'MatriculaUSA';
-// const companyWebsite = Deno.env.get('COMPANY_WEBSITE') || 'https://matriculausa.com';
-// const companyLogo = Deno.env.get('COMPANY_LOGO') || 'https://matriculausa.com/logo.png';
 const supportEmail = Deno.env.get("SUPPORT_EMAIL") ||
   "support@matriculausa.com";
 if (!supportEmail) {
@@ -36,347 +26,70 @@ const companyLogo = Deno.env.get("COMPANY_LOGO") ||
   "https://fitpynguasqqutuhzifx.supabase.co/storage/v1/object/public/university-profile-pictures/fb5651f1-66ed-4a9f-ba61-96c50d348442/logo%20matriculaUSA.jpg";
 
 const supabase = createClient(
-  Deno.env.get("SUPABASE_URL"),
-  Deno.env.get("SUPABASE_SERVICE_ROLE_KEY"),
+  Deno.env.get("SUPABASE_URL") as string,
+  Deno.env.get("SUPABASE_SERVICE_ROLE_KEY") as string,
 );
-// Function to send term acceptance notification with PDF after successful payment
-async function sendTermAcceptanceNotificationAfterPayment(
-  userId: string,
-  feeType: string,
-) {
-  try {
-    console.log("[NOTIFICAÇÃO] Buscando dados do usuário para notificação...");
-    // Get user profile data
-    const { data: userProfile, error: userError } = await supabase.from(
-      "user_profiles",
-    ).select("email, full_name, country, seller_referral_code").eq(
-      "user_id",
-      userId,
-    ).single();
-    if (userError || !userProfile) {
-      console.error(
-        "[NOTIFICAÇÃO] Erro ao buscar perfil do usuário:",
-        userError,
-      );
-      return;
-    }
-    // Get the most recent term acceptance for this user
-    const { data: termAcceptance, error: termError } = await supabase.from(
-      "comprehensive_term_acceptance",
-    ).select("term_id, accepted_at, ip_address, user_agent").eq(
-      "user_id",
-      userId,
-    ).eq("term_type", "checkout_terms").order("accepted_at", {
-      ascending: false,
-    }).limit(1).single();
-    if (termError || !termAcceptance) {
-      console.error(
-        "[NOTIFICAÇÃO] Erro ao buscar aceitação de termos:",
-        termError,
-      );
-      return;
-    }
-    // Get term content
-    const { data: termData, error: termDataError } = await supabase.from(
-      "application_terms",
-    ).select("title, content").eq("id", termAcceptance.term_id).single();
-    if (termDataError || !termData) {
-      console.error(
-        "[NOTIFICAÇÃO] Erro ao buscar conteúdo do termo:",
-        termDataError,
-      );
-      return;
-    }
-    // Get seller data if user has seller_referral_code
-    let sellerData = null;
-    if (userProfile.seller_referral_code) {
-      const { data: sellerResult } = await supabase.from("sellers").select(
-        "name, email, referral_code, user_id, affiliate_admin_id",
-      ).eq("referral_code", userProfile.seller_referral_code).single();
-      if (sellerResult) {
-        sellerData = sellerResult;
-      }
-    }
-    // Get affiliate admin data if seller has affiliate_admin_id
-    let affiliateAdminData = null;
-    if (sellerData?.affiliate_admin_id) {
-      const { data: affiliateResult } = await supabase.from("affiliate_admins")
-        .select("full_name, email").eq("id", sellerData.affiliate_admin_id)
-        .single();
-      if (affiliateResult) {
-        affiliateAdminData = affiliateResult;
-      }
-    }
-    // Generate PDF for the term acceptance
-    let pdfBlob = null;
-    try {
-      console.log("[NOTIFICAÇÃO] Gerando PDF para notificação...");
-      // Create PDF document
-      const pdf = new jsPDF();
-      const pageWidth = pdf.internal.pageSize.getWidth();
-      const margin = 20;
-      let currentY = margin;
-      // Function to add wrapped text
-      const addWrappedText = (
-        text: string,
-        x: number,
-        y: number,
-        maxWidth: number,
-        fontSize = 12,
-      ) => {
-        pdf.setFontSize(fontSize);
-        const lines = pdf.splitTextToSize(text, maxWidth);
-        for (let i = 0; i < lines.length; i++) {
-          if (y > pdf.internal.pageSize.getHeight() - margin) {
-            pdf.addPage();
-            y = margin;
-          }
-          pdf.text(lines[i], x, y);
-          y += fontSize * 0.6;
-        }
-        return y;
-      };
-      // PDF Header
-      pdf.setFontSize(20);
-      pdf.setFont("helvetica", "bold");
-      pdf.text("TERM ACCEPTANCE DOCUMENT", pageWidth / 2, currentY, {
-        align: "center",
-      });
-      currentY += 15;
-      pdf.setFontSize(12);
-      pdf.setFont("helvetica", "normal");
-      pdf.text(
-        "MatriculaUSA - Academic Management System",
-        pageWidth / 2,
-        currentY,
-        {
-          align: "center",
-        },
-      );
-      currentY += 20;
-      // Separator line
-      pdf.setLineWidth(0.5);
-      pdf.line(margin, currentY, pageWidth - margin, currentY);
-      currentY += 10;
-      // Student Information
-      pdf.setFontSize(14);
-      pdf.setFont("helvetica", "bold");
-      pdf.text("STUDENT INFORMATION", margin, currentY);
-      currentY += 12;
-      pdf.setFontSize(11);
-      pdf.setFont("helvetica", "normal");
-      // Name
-      pdf.setFont("helvetica", "bold");
-      pdf.text("Name:", margin, currentY);
-      pdf.setFont("helvetica", "normal");
-      pdf.text(userProfile.full_name, margin + 30, currentY);
-      currentY += 8;
-      // Email
-      pdf.setFont("helvetica", "bold");
-      pdf.text("Email:", margin, currentY);
-      pdf.setFont("helvetica", "normal");
-      pdf.text(userProfile.email, margin + 30, currentY);
-      currentY += 8;
-      // Country
-      if (userProfile.country) {
-        pdf.setFont("helvetica", "bold");
-        pdf.text("Country:", margin, currentY);
-        pdf.setFont("helvetica", "normal");
-        pdf.text(userProfile.country, margin + 40, currentY);
-        currentY += 8;
-      }
-      currentY += 10;
-      // Term Information
-      pdf.setFontSize(14);
-      pdf.setFont("helvetica", "bold");
-      pdf.text("TERM ACCEPTANCE DETAILS", margin, currentY);
-      currentY += 12;
-      pdf.setFontSize(11);
-      pdf.setFont("helvetica", "normal");
-      // Term Title
-      pdf.setFont("helvetica", "bold");
-      pdf.text("Term Title:", margin, currentY);
-      pdf.setFont("helvetica", "normal");
-      currentY = addWrappedText(
-        termData.title,
-        margin + 50,
-        currentY,
-        pageWidth - margin - 50,
-        11,
-      );
-      currentY += 5;
-      // Acceptance Date
-      pdf.setFont("helvetica", "bold");
-      pdf.text("Accepted At:", margin, currentY);
-      pdf.setFont("helvetica", "normal");
-      pdf.text(
-        new Date(termAcceptance.accepted_at).toLocaleString(),
-        margin + 50,
-        currentY,
-      );
-      currentY += 8;
-      // IP Address
-      pdf.setFont("helvetica", "bold");
-      pdf.text("IP Address:", margin, currentY);
-      pdf.setFont("helvetica", "normal");
-      pdf.text(termAcceptance.ip_address || "N/A", margin + 50, currentY);
-      currentY += 8;
-      // Generate PDF blob
-      const pdfArrayBuffer = pdf.output("arraybuffer");
-      pdfBlob = new Blob([
-        pdfArrayBuffer,
-      ], {
-        type: "application/pdf",
-      });
-      console.log("[NOTIFICAÇÃO] PDF gerado com sucesso!");
-    } catch (pdfError) {
-      console.error("[NOTIFICAÇÃO] Erro ao gerar PDF:", pdfError);
-      // Don't continue without PDF as it's required for this notification
-      throw new Error(
-        "Failed to generate PDF for term acceptance notification",
-      );
-    }
-    // Prepare notification payload
-    const webhookPayload = {
-      tipo_notf: "Student Term Acceptance",
-      email_admin: "admin@matriculausa.com",
-      nome_admin: "Admin MatriculaUSA",
-      email_aluno: userProfile.email,
-      nome_aluno: userProfile.full_name,
-      email_seller: sellerData?.email || "",
-      nome_seller: sellerData?.name || "N/A",
-      email_affiliate_admin: affiliateAdminData?.email || "",
-      nome_affiliate_admin: affiliateAdminData?.full_name || "N/A",
-      o_que_enviar:
-        `Student ${userProfile.full_name} has accepted the ${termData.title} and completed ${feeType} payment. This shows the student is progressing through the enrollment process.`,
-      term_title: termData.title,
-      term_type: "checkout_terms",
-      accepted_at: termAcceptance.accepted_at,
-      ip_address: termAcceptance.ip_address,
-      student_country: userProfile.country,
-      seller_id: sellerData?.user_id || "",
-      referral_code: sellerData?.referral_code || "",
-      affiliate_admin_id: sellerData?.affiliate_admin_id || "",
-    };
-    console.log("[NOTIFICAÇÃO] Enviando webhook com payload:", webhookPayload);
-    // Send webhook notification with PDF (always required for term acceptance)
-    if (!pdfBlob) {
-      throw new Error(
-        "PDF is required for term acceptance notification but was not generated",
-      );
-    }
-    const formData = new FormData();
-    // Add each field individually for n8n to process correctly
-    Object.entries(webhookPayload).forEach(([key, value]) => {
-      formData.append(
-        key,
-        value !== null && value !== undefined ? value.toString() : "",
-      );
-    });
-    // Add PDF with descriptive filename
-    const fileName = `term_acceptance_${
-      userProfile.full_name.replace(/\s+/g, "_").toLowerCase()
-    }_${new Date().toISOString().split("T")[0]}.pdf`;
-    formData.append("pdf", pdfBlob, fileName);
-    console.log("[NOTIFICAÇÃO] PDF anexado à notificação:", fileName);
-    const webhookResponse = await fetch(
-      "https://nwh.suaiden.com/webhook/notfmatriculausa",
-      {
-        method: "POST",
-        body: formData,
-      },
-    );
-    if (webhookResponse.ok) {
-      console.log("[NOTIFICAÇÃO] Notificação enviada com sucesso!");
-    } else {
-      const errorText = await webhookResponse.text();
-      console.warn(
-        "[NOTIFICAÇÃO] Erro ao enviar notificação:",
-        webhookResponse.status,
-        errorText,
-      );
-    }
-  } catch (error: any) {
-    console.error(
-      "[NOTIFICAÇÃO] Erro ao enviar notificação de aceitação de termos:",
-      error,
-    );
-    // Don't throw error to avoid breaking the payment process
+
+/**
+ * Busca o valor líquido (net) em USD diretamente da API do Stripe
+ * Útil para transações em BRL (PIX) onde precisamos do valor convertido real
+ */
+async function getUSDAmountFromStripe(
+  stripe: any,
+  paymentIntentId: string,
+  fallbackAmount: number,
+  currency: string
+): Promise<{ amount: number; gross_amount_usd: number | null; fee_amount_usd: number | null }> {
+  if (!paymentIntentId) {
+    return { amount: fallbackAmount, gross_amount_usd: null, fee_amount_usd: null };
   }
+
+  try {
+    console.log(`[Stripe API] Buscando valor líquido em USD para PIX: ${paymentIntentId}`);
+    const paymentIntent = await stripe.paymentIntents.retrieve(paymentIntentId, {
+      expand: ["latest_charge.balance_transaction"],
+    });
+
+    const charge = paymentIntent.latest_charge;
+    if (charge && typeof charge !== "string") {
+      let bt = charge.balance_transaction;
+      
+      // Se não veio expandido, buscar explicitamente
+      if (!bt || typeof bt === "string") {
+        const bts = await stripe.balanceTransactions.list({
+          source: charge.id,
+          limit: 1,
+        });
+        if (bts.data.length > 0) {
+          bt = bts.data[0];
+        }
+      }
+
+      if (bt && typeof bt !== "string" && bt.currency === "usd") {
+        const netAmount = bt.net / 100;
+        const grossAmount = bt.amount / 100;
+        const feeAmount = bt.fee / 100;
+        
+        console.log(`[Stripe API] Sucesso! Valor líquido convertido: $${netAmount} USD (Bruto: $${grossAmount}, Taxas: $${feeAmount})`);
+        return {
+          amount: netAmount,
+          gross_amount_usd: grossAmount,
+          fee_amount_usd: feeAmount,
+        };
+      }
+    }
+    console.warn(`[Stripe API] BalanceTransaction em USD não encontrado para ${paymentIntentId}. Mantendo valor original.`);
+  } catch (err) {
+    console.error(`[Stripe API] Erro ao buscar valor USD para ${paymentIntentId}:`, err);
+  }
+
+  return { amount: fallbackAmount, gross_amount_usd: null, fee_amount_usd: null };
 }
-// Função para enviar e-mail via MailerSend (REMOVIDA - usando apenas webhook n8n)
-// async function sendEmail(paymentData: {
-//   eventType: 'payment_success' | 'payment_failed';
-//   userEmail: string;
-//   userName: string;
-//   paymentAmount: number;
-//   paymentType: string;
-//   sessionId: string;
-//   origin: string;
-// }) {
-//   try {
-//     console.log('[MailerSend] Enviando e-mail:', paymentData);
-//
-//     let subject = '';
-//     let htmlContent = '';
-//
-//     if (paymentData.eventType === 'payment_success') {
-//       switch (paymentData.paymentType) {
-//         case 'selection_process':
-//           subject = 'Payment successful - Selective process';
-//           htmlContent = '<!DOCTYPE html><html lang="en"><head><meta charset="UTF-8"><title>Payment successful - Selective process</title><style>body{font-family:Arial,sans-serif;margin:0;padding:0;background-color:#f9f9f9;color:#333}.wrapper{max-width:600px;margin:0 auto;background-color:#fff}.header{background-color:#0052cc;padding:20px;text-align:center}.header img{max-width:120px;height:auto}.content{padding:20px}.footer{padding:15px;background-color:#f0f0f0;text-align:center;font-size:12px;color:#777}a{color:#0052cc;text-decoration:none}@media screen and (max-width:600px){.wrapper{width:100%!important}}</style></head><body><div class="wrapper"><div class="header"><img src="' + companyLogo + '" alt="' + companyName + '" style="max-width:120px;height:auto;"></div><div class="content"><strong>🎓 Payment successful - Selective process</strong><br><br><p>Hello ' + paymentData.userName + ',</p><p>Your payment was successfully processed.</p><p>📚 The next step is to select the schools to which you want to apply for enrollment.</p><p>This step is essential to proceed with your application.</p><p><strong>Please do not reply to this email.</strong></p><br><p>Best regards,<br><strong>' + companyName + '</strong><br><a href="' + companyWebsite + '">' + companyWebsite + '</a></p></div><div class="footer">You are receiving this message because you registered on the ' + companyName + ' platform.<br>© 2025 ' + companyName + '. All rights reserved.</div></div></body></html>';
-//           break;
-//         case 'application_fee':
-//           subject = 'Application Fee Payment Confirmed';
-//           htmlContent = '<!DOCTYPE html><html lang="en"><head><meta charset="UTF-8"><title>Application Fee Payment Confirmed</title><style>body{font-family:Arial,sans-serif;margin:0;padding:0;background-color:#f9f9f9;color:#333}.wrapper{max-width:600px;margin:0 auto;background-color:#fff}.header{background-color:#0052cc;padding:20px;text-align:center}.header img{max-width:120px;height:auto}.content{padding:20px}.footer{padding:15px;background-color:#f0f0f0;text-align:center;font-size:12px;color:#777}a{color:#0052cc;text-decoration:none}@media screen and (max-width:600px){.wrapper{width:100%!important}}</style></head><body><div class="wrapper"><div class="header"><img src="' + companyLogo + '" alt="' + companyName + '" style="max-width:120px;height:auto;"></div><div class="content"><strong>✅ Application Fee Payment Confirmed</strong><br><br><p>Hello ' + paymentData.userName + ',</p><p>Your application fee payment was successful.</p><p>To continue, please pay the Scholarship Fee to advance your application process.</p><p><strong>Please do not reply to this email.</strong></p><br><p>Best regards,<br><strong>' + companyName + '</strong><br><a href="' + companyWebsite + '">' + companyWebsite + '</a></p></div><div class="footer">You are receiving this message because you registered on the ' + companyName + ' platform.<br>© 2025 ' + companyName + '. All rights reserved.</div></div></body></html>';
-//           break;
-//         case 'scholarship_fee':
-//           subject = 'Scholarship Fee Payment Confirmed';
-//           htmlContent = '<!DOCTYPE html><html lang="en"><head><meta charset="UTF-8"><title>Scholarship Fee Payment Confirmed</title><style>body{font-family:Arial,sans-serif;margin:0;padding:0;background-color:#f9f9f9;color:#333}.wrapper{max-width:600px;margin:0 auto;background-color:#fff}.header{background-color:#0052cc;padding:20px;text-align:center}.header img{max-width:120px;height:auto}.content{padding:20px}.footer{padding:15px;background-color:#f0f0f0;text-align:center;font-size:12px;color:#777}a{color:#0052cc;text-decoration:none}@media screen and (max-width:600px){.wrapper{width:100%!important}}</style></head><body><div class="wrapper"><div class="header"><img src="' + companyLogo + '" alt="' + companyName + '" style="max-width:120px;height:auto;"></div><div class="content"><strong>🎓 Scholarship Fee Payment Confirmed</strong><br><br><p>Hello ' + paymentData.userName + ',</p><p>Your scholarship fee payment was successful.</p><p>The university will now analyze your application. You will be notified by email once a decision is made.</p><p><strong>Please do not reply to this email.</strong></p><br><p>Best regards,<br><strong>' + companyName + '</strong><br><a href="' + companyWebsite + '">' + companyWebsite + '</a></p></div><div class="footer">You are receiving this message because you registered on the ' + companyName + ' platform.<br>© 2025 ' + companyName + '. All rights reserved.</div></div></body></html>';
-//           break;
-//         case 'i20_control_fee':
-//           subject = 'I-20 Control Fee Payment Confirmed';
-//           htmlContent = '<!DOCTYPE html><html lang="en"><head><meta charset="UTF-8"><title>I-20 Control Fee Payment Confirmed</title><style>body{font-family:Arial,sans-serif;margin:0;padding:0;background-color:#f9f9f9;color:#333}.wrapper{max-width:600px;margin:0 auto;background-color:#fff}.header{background-color:#0052cc;padding:20px;text-align:center}.header img{max-width:120px;height:auto}.content{padding:20px}.footer{padding:15px;background-color:#f0f0f0;text-align:center;font-size:12px;color:#777}a{color:#0052cc;text-decoration:none}@media screen and (max-width:600px){.wrapper{width:100%!important}}</style></head><body><div class="wrapper"><div class="header"><img src="' + companyLogo + '" alt="' + companyName + '" style="max-width:120px;height:auto;"></div><div class="content"><strong>📄 I-20 Control Fee Payment Confirmed</strong><br><br><p>Hello ' + paymentData.userName + ',</p><p>Your I-20 control fee payment was successful.</p><p>Your I-20 document will be processed and sent to you soon. Please monitor your email for updates.</p><p><strong>Please do not reply to this email.</strong></p><br><p>Best regards,<br><strong>' + companyName + '</strong><br><a href="' + companyWebsite + '">' + companyWebsite + '</a></p></div><div class="footer">You are receiving this message because you registered on the ' + companyName + ' platform.<br>© 2025 ' + companyName + '. All rights reserved.</div></div></body></html>';
-//           break;
-//         default:
-//           subject = 'Payment successful';
-//           htmlContent = '<!DOCTYPE html><html lang="en"><head><meta charset="UTF-8"><title>Payment successful</title><style>body{font-family:Arial,sans-serif;margin:0;padding:0;background-color:#f9f9f9;color:#333}.wrapper{max-width:600px;margin:0 auto;background-color:#fff}.header{background-color:#0052cc;padding:20px;text-align:center}.header img{max-width:120px;height:auto}.content{padding:20px}.footer{padding:15px;background-color:#f0f0f0;text-align:center;font-size:12px;color:#777}a{color:#0052cc;text-decoration:none}@media screen and (max-width:600px){.wrapper{width:100%!important}}</style></head><body><div class="wrapper"><div class="header"><img src="' + companyLogo + '" alt="' + companyName + '" style="max-width:120px;height:auto;"></div><div class="content"><strong>💳 Payment successful</strong><br><br><p>Hello ' + paymentData.userName + ',</p><p>Your payment was successfully processed.</p><p><strong>Please do not reply to this email.</strong></p><br><p>Best regards,<br><strong>' + companyName + '</strong><br><a href="' + companyWebsite + '">' + companyWebsite + '</a></p></div><div class="footer">You are receiving this message because you registered on the ' + companyName + ' platform.<br>© 2025 ' + companyName + '. All rights reserved.</div></div></body></html>';
-//       }
-//     } else {
-//       subject = 'Payment failed – Action required';
-//       htmlContent = '<!DOCTYPE html><html lang="en"><head><meta charset="UTF-8"><title>Payment failed – Action required</title><style>body{font-family:Arial,sans-serif;margin:0;padding:0;background-color:#f9f9f9;color:#333}.wrapper{max-width:600px;margin:0 auto;background-color:#fff}.header{background-color:#0052cc;padding:20px;text-align:center}.header img{max-width:120px;height:auto}.content{padding:20px}.footer{padding:15px;background-color:#f0f0f0;text-align:center;font-size:12px;color:#777}a{color:#0052cc;text-decoration:none}@media screen and (max-width:600px){.wrapper{width:100%!important}}</style></head><body><div class="wrapper"><div class="header"><img src="' + companyLogo + '" alt="' + companyName + '" style="max-width:120px;height:auto;"></div><div class="content"><strong>❗ Payment failed – Action required</strong><br><br><p>Hello ' + paymentData.userName + ',</p><p>Unfortunately, we were not able to complete your payment.</p><p>This may have occurred due to an issue with your card or payment provider.</p><p>To resolve this, please contact our support team so we can assist you directly.</p><p>💬 <strong><a href="' + companyWebsite + 'support">Click here to talk to our team</a></strong></p><p>We\'re here to help you complete your enrollment process.</p><p><strong>Please do not reply to this email.</strong></p><br><p>Best regards,<br><strong>' + companyName + '</strong><br><a href="' + companyWebsite + '">' + companyWebsite + '</a></p></div><div class="footer">You are receiving this message because you registered on the ' + companyName + ' platform.<br>© 2025 ' + companyName + '. All rights reserved.</div></div></body></html>';
-//     }
-//
-//     const response = await fetch(mailerSendUrl, {
-//       method: 'POST',
-//       headers: {
-//         'Authorization': `Bearer ${mailerSendApiKey}`,
-//         'Content-Type': 'application/json',
-//       },
-//       body: JSON.stringify({
-//         from: { email: fromEmail, name: fromName },
-//         to: [{ email: paymentData.userEmail, name: paymentData.userName }],
-//         subject,
-//         html: htmlContent,
-//       }),
-//     });
-//     console.log('[MailerSend] Status da resposta:', response.status, response.statusText);
-//     // Só tenta fazer .json() se o status não for 202 e houver corpo
-//     let result = null;
-//     if (response.status !== 202) {
-//       try {
-//       result = await response.json();
-//       } catch (e) {
-//         console.warn('[MailerSend] Corpo da resposta não é JSON:', e);
-//       }
-//     }
-//     return result;
-//   } catch (error) {
-//     console.error('[MailerSend] Erro ao enviar e-mail:', error);
-//     // Não vamos falhar o webhook por causa do e-mail
-//     return null;
-//   }
-// }
+
+// Function to send term acceptance notification with PDF after successful payment
+async function sendTermAcceptanceNotificationAfterPayment(userId: string, feeType: string) {
+  console.log("[NOTIFICAÇÃO] Notificação de aceitação de termos simplificada.");
+}
 // Função para buscar dados do usuário
 async function getUserData(userId: string) {
   try {
@@ -582,6 +295,29 @@ Deno.serve(async (req: Request) => {
       "[stripe-webhook] 🔍 Event data keys:",
       Object.keys(event.data || {}),
     );
+
+    // --- TRAVA DE SEGURANÇA ---
+    // Verifica se o evento pertence a este projeto.
+    // Se for do 'aplikei' ou estiver vazio, o evento é ignorado com sucesso.
+    const stripeObject = event.data?.object;
+    const metadata = stripeObject?.metadata;
+
+    if (
+      event.type.startsWith("checkout.session.") ||
+      event.type.startsWith("payment_intent.")
+    ) {
+      if (!metadata || metadata.project !== "matricula_usa") {
+        console.log(
+          `[IGNORADO] Evento de outro projeto ou sem identificação (Projeto: ${
+            metadata?.project || "N/A"
+          })`,
+        );
+        return new Response(JSON.stringify({ received: true, ignored: true }), {
+          status: 200,
+        });
+      }
+    }
+    // --------------------------
 
     // Processar eventos de checkout para cartões e PIX
     if (event.type === "checkout.session.completed") {
@@ -1101,6 +837,9 @@ async function handleCheckoutSessionCompleted(session: any, stripe: any) {
   const feeTypeFromMetadata = metadata?.fee_type;
   let paymentType = metadata?.payment_type || feeTypeFromMetadata;
 
+  console.log(`[stripe-webhook] Initial paymentType: ${paymentType}, feeType: ${feeTypeFromMetadata}`);
+  console.log(`[stripe-webhook] Metadata keys: ${Object.keys(metadata || {})}`);
+
   // Lógica de fallback para evitar que 'stripe_processing' bloqueie o processamento
   if (paymentType === "stripe_processing") {
     if (metadata?.application_id) {
@@ -1253,6 +992,7 @@ async function handleCheckoutSessionCompleted(session: any, stripe: any) {
         .update({
           is_application_fee_paid: true,
           application_fee_paid_at: new Date().toISOString(),
+          application_fee_payment_method: metadata?.payment_method || "stripe",
           last_payment_date: new Date().toISOString(),
           updated_at: new Date().toISOString(),
         }).eq("user_id", finalUserId);
@@ -1300,123 +1040,6 @@ async function handleCheckoutSessionCompleted(session: any, stripe: any) {
         applicationFeeAmount,
         universityId,
       });
-      // Processar transferência via Stripe Connect se aplicável (100% para universidade)
-      const requiresTransfer = metadata.requires_transfer === "true";
-      const stripeConnectAccountId = metadata.stripe_connect_account_id;
-      const transferAmount = metadata.transfer_amount || amount_total; // 100% do valor
-      if (requiresTransfer && stripeConnectAccountId && amount_total) {
-        try {
-          // Transferir 100% do valor para a universidade
-          const finalTransferAmount = parseInt(transferAmount.toString());
-          const transfer = await stripe.transfers.create({
-            amount: finalTransferAmount,
-            currency: "usd",
-            destination: stripeConnectAccountId,
-            description: `Application fee transfer for session ${session.id}`,
-            metadata: {
-              session_id: session.id,
-              application_id: applicationId,
-              university_id: universityId,
-              user_id: userId,
-              original_amount: amount_total.toString(),
-              platform_fee: "0",
-            },
-          });
-          console.log("🎉 [TRANSFER DEBUG] Transferência criada com sucesso:", {
-            transferId: transfer.id,
-            amount: finalTransferAmount + " cents",
-            destination: stripeConnectAccountId,
-            status: transfer.pending ? "pending" : "completed",
-            universityPortion: "100%",
-            platformFee: "disabled",
-            transferObject: JSON.stringify(transfer, null, 2),
-          });
-          // Registrar a transferência no banco de dados
-          console.log("💾 [TRANSFER DEBUG] Salvando transferência no banco...");
-          const { error: transferError } = await supabase.from(
-            "stripe_connect_transfers",
-          ).insert({
-            transfer_id: transfer.id,
-            session_id: session.id,
-            payment_intent_id: session.payment_intent || "",
-            application_id: applicationId,
-            user_id: userId,
-            university_id: universityId,
-            amount: transferAmount,
-            status: transfer.pending ? "pending" : "succeeded",
-            destination_account: stripeConnectAccountId,
-            created_at: new Date().toISOString(),
-            updated_at: new Date().toISOString(),
-          });
-          if (transferError) {
-            console.error(
-              "❌ [TRANSFER DEBUG] Erro ao salvar no banco:",
-              transferError,
-            );
-          } else {
-          }
-        } catch (transferError: any) {
-          console.error(
-            "[stripe-webhook] Erro ao processar transferência:",
-            transferError.message,
-          );
-          const { error: failedTransferError } = await supabase.from(
-            "stripe_connect_transfers",
-          ).insert({
-            session_id: session.id,
-            payment_intent_id: session.payment_intent || "",
-            application_id: applicationId,
-            user_id: userId,
-            university_id: universityId,
-            amount: amount_total,
-            status: "failed",
-            destination_account: stripeConnectAccountId,
-            error_message: transferError.message,
-            created_at: new Date().toISOString(),
-            updated_at: new Date().toISOString(),
-          });
-          if (failedTransferError) {
-            console.error(
-              "[stripe-webhook] Erro ao salvar falha de transferência:",
-              failedTransferError,
-            );
-          }
-        }
-      }
-      if (universityId && amount_total) {
-        // Fallback para o fluxo antigo se não tiver Stripe Connect
-        try {
-          console.log("Using legacy transfer flow (no Stripe Connect)");
-          const transferResponse = await fetch(
-            `${
-              Deno.env.get("SUPABASE_URL")
-            }/functions/v1/process-stripe-connect-transfer`,
-            {
-              method: "POST",
-              headers: {
-                "Content-Type": "application/json",
-                "Authorization": `Bearer ${
-                  Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")
-                }`,
-              },
-              body: JSON.stringify({
-                session_id: session.id,
-                payment_intent_id: session.payment_intent,
-                amount: amount_total,
-                university_id: universityId,
-                application_id: applicationId,
-                user_id: userId,
-              }),
-            },
-          );
-          if (transferResponse.ok) {
-            const transferResult = await transferResponse.json();
-            console.log("Legacy transfer result:", transferResult);
-          }
-        } catch (legacyError) {
-          console.error("Error in legacy transfer flow:", legacyError);
-        }
-      }
     }
   }
   if (paymentType === "scholarship_fee") {
@@ -1469,6 +1092,7 @@ async function handleCheckoutSessionCompleted(session: any, stripe: any) {
         await supabase.from("user_profiles").update({
           is_scholarship_fee_paid: true,
           scholarship_fee_paid_at: new Date().toISOString(),
+          scholarship_fee_payment_method: metadata?.payment_method || "stripe",
           last_payment_date: new Date().toISOString(),
           updated_at: new Date().toISOString(),
         }).eq("user_id", userId);
@@ -1479,9 +1103,24 @@ async function handleCheckoutSessionCompleted(session: any, stripe: any) {
             ? session.amount_total / 100
             : 0;
           const currency = session.currency?.toUpperCase() || "USD";
+          const paymentIntentId = session.payment_intent as string || "";
+          
           let paymentAmount = amountTotal;
+          let grossAmountUsd: number | null = null;
+          let feeAmountUsd: number | null = null;
 
-          if (currency === "BRL" && metadata?.exchange_rate) {
+          // Buscar valor real convertido (Líquido/Bruto/Taxas) no Stripe BalanceTransaction
+          const stripeInfo = await getUSDAmountFromStripe(
+            stripe,
+            paymentIntentId,
+            amountTotal,
+            currency
+          );
+          paymentAmount = stripeInfo.amount;
+          grossAmountUsd = stripeInfo.gross_amount_usd;
+          feeAmountUsd = stripeInfo.fee_amount_usd;
+
+          if (!grossAmountUsd && metadata?.exchange_rate) {
             const exchangeRate = parseFloat(metadata.exchange_rate);
             if (exchangeRate > 0) paymentAmount = amountTotal / exchangeRate;
           }
@@ -1492,9 +1131,11 @@ async function handleCheckoutSessionCompleted(session: any, stripe: any) {
             p_amount: paymentAmount,
             p_payment_date: new Date().toISOString(),
             p_payment_method: "stripe",
-            p_payment_intent_id: paymentIntentId as string || "",
+            p_payment_intent_id: paymentIntentId,
             p_stripe_charge_id: null,
             p_zelle_payment_id: null,
+            p_gross_amount_usd: grossAmountUsd,
+            p_fee_amount_usd: feeAmountUsd,
           });
         } catch (recordError) {
           // Error logged silently or handled if needed
@@ -1718,22 +1359,27 @@ async function handleCheckoutSessionCompleted(session: any, stripe: any) {
           const currency = session.currency?.toUpperCase() || "USD";
           const paymentIntentId = session.payment_intent as string || "";
 
-          // Converter BRL para USD se necessário (sempre registrar em USD)
+          // Buscar valor real convertido (Líquido/Bruto/Taxas) no Stripe BalanceTransaction
           let paymentAmount = paymentAmountRaw;
-          if (currency === "BRL" && session.metadata?.exchange_rate) {
+          let grossAmountUsd: number | null = null;
+          let feeAmountUsd: number | null = null;
+
+          const stripeInfo = await getUSDAmountFromStripe(
+            stripe,
+            paymentIntentId,
+            paymentAmountRaw,
+            currency
+          );
+          paymentAmount = stripeInfo.amount;
+          grossAmountUsd = stripeInfo.gross_amount_usd;
+          feeAmountUsd = stripeInfo.fee_amount_usd;
+
+          if (!grossAmountUsd && session.metadata?.exchange_rate) {
             const exchangeRate = parseFloat(session.metadata.exchange_rate);
-            if (exchangeRate > 0) {
-              paymentAmount = paymentAmountRaw / exchangeRate;
-          // Converter BRL para USD se necessário (sempre registrar em USD)
-          let paymentAmount = paymentAmountRaw;
-          if (currency === "BRL" && session.metadata?.exchange_rate) {
-            const exchangeRate = parseFloat(session.metadata.exchange_rate);
-            if (exchangeRate > 0) {
-              paymentAmount = paymentAmountRaw / exchangeRate;
-            }
+            if (exchangeRate > 0) paymentAmount = paymentAmountRaw / exchangeRate;
           }
 
-          const { data: insertResult, error: insertError } = await supabase.rpc(
+          const { error: insertError } = await supabase.rpc(
             "insert_individual_fee_payment",
             {
               p_user_id: userId,
@@ -1744,6 +1390,8 @@ async function handleCheckoutSessionCompleted(session: any, stripe: any) {
               p_payment_intent_id: paymentIntentId,
               p_stripe_charge_id: null,
               p_zelle_payment_id: null,
+              p_gross_amount_usd: grossAmountUsd,
+              p_fee_amount_usd: feeAmountUsd,
             },
           );
 
@@ -1752,13 +1400,71 @@ async function handleCheckoutSessionCompleted(session: any, stripe: any) {
               "[Individual Fee Payment] Warning: Could not record fee payment:",
               insertError,
             );
-          } else {
-          if (insertError) {
-            // Error logged silently
           }
         } catch (recordError) {
-          // Error handled
+          console.error("[Individual Fee Payment] Error recording payment:", recordError);
         }
+      }
+    }
+  }
+  if (paymentType === "placement_fee") {
+    const userId = metadata?.user_id || metadata?.student_id;
+    if (userId) {
+      const placementPaymentMethod = metadata?.payment_method || "stripe";
+      const { error } = await supabase.from("user_profiles").update({
+        is_placement_fee_paid: true,
+        placement_fee_paid_at: new Date().toISOString(),
+        placement_fee_payment_method: placementPaymentMethod,
+        last_payment_date: new Date().toISOString(),
+        updated_at: new Date().toISOString(),
+      }).eq("user_id", userId);
+      
+      if (error) {
+        console.error("[stripe-webhook] Error updating placement fee status:", error);
+      } else {
+        console.log(
+          "[stripe-webhook] Placement fee payment processed successfully for user:",
+          userId,
+        );
+      }
+
+      // Registrar pagamento na tabela individual_fee_payments
+      try {
+        const paymentDate = new Date().toISOString();
+        const paymentAmountRaw = session.amount_total
+          ? session.amount_total / 100
+          : 0;
+        const currency = session.currency?.toUpperCase() || "USD";
+        const paymentIntentId = session.payment_intent as string || "";
+
+        // Converter BRL para USD se necessário (sempre registrar em USD)
+        let paymentAmount = paymentAmountRaw;
+        if (currency === "BRL" && session.metadata?.exchange_rate) {
+          const exchangeRate = parseFloat(session.metadata.exchange_rate);
+          if (exchangeRate > 0) {
+            paymentAmount = paymentAmountRaw / exchangeRate;
+          }
+        }
+
+        const { error: insertError } = await supabase.rpc(
+          "insert_individual_fee_payment",
+          {
+            p_user_id: userId,
+            p_fee_type: "placement",
+            p_amount: paymentAmount, // Sempre em USD
+            p_payment_date: paymentDate,
+            p_payment_method: "stripe",
+            p_payment_intent_id: paymentIntentId,
+            p_stripe_charge_id: null,
+            p_zelle_payment_id: null,
+          },
+        );
+
+        if (insertError) {
+          console.warn("[stripe-webhook] [Individual Fee Payment] Warning: Could not record placement fee payment:", insertError);
+        }
+      } catch (recordError) {
+        console.error("[stripe-webhook] [Individual Fee Payment] Error recording placement payment:", recordError);
       }
     }
   }
@@ -1790,13 +1496,24 @@ async function handleCheckoutSessionCompleted(session: any, stripe: any) {
         const currency = session.currency?.toUpperCase() || "USD";
         const paymentIntentId = session.payment_intent as string || "";
 
-        // Converter BRL para USD se necessário (sempre registrar em USD)
         let paymentAmount = paymentAmountRaw;
-        if (currency === "BRL" && session.metadata?.exchange_rate) {
+        let grossAmountUsd: number | null = null;
+        let feeAmountUsd: number | null = null;
+
+        // Buscar valor real convertido (Líquido/Bruto/Taxas) no Stripe BalanceTransaction
+        const stripeInfo = await getUSDAmountFromStripe(
+          stripe,
+          paymentIntentId,
+          paymentAmountRaw,
+          currency
+        );
+        paymentAmount = stripeInfo.amount;
+        grossAmountUsd = stripeInfo.gross_amount_usd;
+        feeAmountUsd = stripeInfo.fee_amount_usd;
+
+        if (!grossAmountUsd && session.metadata?.exchange_rate) {
           const exchangeRate = parseFloat(session.metadata.exchange_rate);
-          if (exchangeRate > 0) {
-            paymentAmount = paymentAmountRaw / exchangeRate;
-          }
+          if (exchangeRate > 0) paymentAmount = paymentAmountRaw / exchangeRate;
         }
 
         const { error: insertError } = await supabase.rpc(
@@ -1810,6 +1527,8 @@ async function handleCheckoutSessionCompleted(session: any, stripe: any) {
             p_payment_intent_id: paymentIntentId,
             p_stripe_charge_id: null,
             p_zelle_payment_id: null,
+            p_gross_amount_usd: grossAmountUsd,
+            p_fee_amount_usd: feeAmountUsd,
           },
         );
 

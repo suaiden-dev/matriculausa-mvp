@@ -95,26 +95,33 @@ const SellerDashboard: React.FC = () => {
       console.log('🔄 [SELLER_DASHBOARD] Carregando dados do seller...');
 
       // Search for seller profile
+      // Priorizar seller com affiliate_admin_id (o correto) quando há múltiplos
       let seller: any = null;
       const { data: sellerData, error: sellerError } = await supabase
         .from('sellers')
         .select('*')
         .eq('email', user?.email)
         .eq('is_active', true)
-        .single();
+        .order('affiliate_admin_id', { ascending: false, nullsFirst: false })
+        .order('created_at', { ascending: false })
+        .limit(1)
+        .maybeSingle();
 
-      if (sellerError) {
+      if (sellerError || !sellerData) {
         // If seller not found, try searching by user_id
-        if (sellerError.code === 'PGRST116') {
+        if (!sellerData || sellerError?.code === 'PGRST116') {
           
           const { data: sellerByUserId, error: sellerByUserIdError } = await supabase
             .from('sellers')
             .select('*')
             .eq('user_id', user?.id)
             .eq('is_active', true)
-            .single();
+            .order('affiliate_admin_id', { ascending: false, nullsFirst: false })
+            .order('created_at', { ascending: false })
+            .limit(1)
+            .maybeSingle();
           
-          if (sellerByUserIdError) {
+          if (sellerByUserIdError || !sellerByUserId) {
             // If seller not found by user_id, create a new one
             
             // First, search for an affiliate_admin to associate
@@ -154,7 +161,7 @@ const SellerDashboard: React.FC = () => {
             seller = sellerByUserId;
           }
         } else {
-          throw new Error(`Error searching for seller: ${sellerError.message}`);
+          throw new Error(`Error searching for seller: ${sellerError?.message || 'Unknown error'}`);
         }
       } else {
         seller = sellerData;

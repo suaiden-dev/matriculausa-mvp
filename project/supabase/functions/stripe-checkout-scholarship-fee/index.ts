@@ -236,6 +236,7 @@ Deno.serve(async (req) => {
       : (scholarships_ids || undefined);
 
     const sessionMetadata: any = {
+      project: "matricula_usa",
       ...metadata,
       student_id: user.id,
       fee_type: "scholarship_fee",

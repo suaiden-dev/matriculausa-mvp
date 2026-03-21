@@ -19,6 +19,9 @@ export interface StudentRecord {
   student_created_at: string;
   has_paid_selection_process_fee: boolean;
   has_paid_i20_control_fee: boolean;
+  selection_survey_passed?: boolean;
+  placement_fee_flow?: boolean;
+  is_placement_fee_paid?: boolean;
   selection_process_fee_payment_method?: string | null;
   i20_control_fee_payment_method?: string | null;
   seller_referral_code: string | null;
@@ -44,6 +47,13 @@ export interface StudentRecord {
   all_applications?: any[];
   admin_notes?: string | null;
   documents_status?: 'pending' | 'analyzing' | 'approved' | 'rejected' | 'under_review' | null;
+  scholarship_fee_amount?: number | null;
+  placement_fee_amount?: number | null;
+  has_paid_ds160_package: boolean;
+  has_paid_i539_cos_package: boolean;
+  ds160_package_payment_method?: string | null;
+  i539_cos_package_payment_method?: string | null;
+  system_type?: 'legacy' | 'simplified' | null;
 }
 
 /**
@@ -53,7 +63,6 @@ export interface StudentRecord {
 export const useStudentDetails = (profileId: string | undefined) => {
   const [student, setStudent] = useState<StudentRecord | null>(null);
   const [loading, setLoading] = useState(true);
-  const [loadingSecondaryData, setLoadingSecondaryData] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
   // Load critical student data
@@ -66,7 +75,7 @@ export const useStudentDetails = (profileId: string | undefined) => {
 
       // Try RPC first for better performance
       let s: any = null;
-      let useRpc = true;
+      let useRpc = true; // Reativado após atualização da RPC no banco
 
       try {
         const { data: rpcData, error: rpcError } = await supabase.rpc(
@@ -114,12 +123,18 @@ export const useStudentDetails = (profileId: string | undefined) => {
             created_at,
             has_paid_selection_process_fee,
             has_paid_i20_control_fee,
+            selection_survey_passed,
+            placement_fee_flow,
+            is_placement_fee_paid,
             selection_process_fee_payment_method,
             i20_control_fee_payment_method,
             role,
             seller_referral_code,
             admin_notes,
             documents_status,
+            ds160_package_payment_method,
+            i539_cos_package_payment_method,
+            system_type,
             scholarship_applications (
               id,
               scholarship_id,
@@ -165,10 +180,20 @@ export const useStudentDetails = (profileId: string | undefined) => {
         throw new Error('Failed to load student data');
       }
 
-      // Format the student record
+      // ✅ CORREÇÃO: Priorizar aplicação enrolled, depois approved com application fee pago, depois approved
       const applications = s.scholarship_applications || [];
+      const enrolledApp = applications.find((app: any) => app.status === 'enrolled');
+      const approvedWithFeeApp = applications.find((app: any) => app.status === 'approved' && app.is_application_fee_paid);
       const approvedApp = applications.find((app: any) => app.status === 'approved');
-      const mainApp = approvedApp || applications[0] || {};
+      const mainApp = enrolledApp || approvedWithFeeApp || approvedApp || applications[0] || {};
+
+      // ✅ CORREÇÃO: Verificar se ALGUMA aplicação tem os fees pagos (priorizando enrolled)
+      const is_application_fee_paid = enrolledApp?.is_application_fee_paid || 
+                                      applications.some((app: any) => app.is_application_fee_paid) || 
+                                      false;
+      const is_scholarship_fee_paid = enrolledApp?.is_scholarship_fee_paid || 
+                                      mainApp?.is_scholarship_fee_paid || 
+                                      false;
 
       const formatted: StudentRecord = {
         student_id: s.id,
@@ -188,6 +213,9 @@ export const useStudentDetails = (profileId: string | undefined) => {
         student_created_at: s.created_at,
         has_paid_selection_process_fee: s.has_paid_selection_process_fee,
         has_paid_i20_control_fee: s.has_paid_i20_control_fee,
+        selection_survey_passed: s.selection_survey_passed,
+        placement_fee_flow: s.placement_fee_flow,
+        is_placement_fee_paid: s.is_placement_fee_paid,
         selection_process_fee_payment_method: s.selection_process_fee_payment_method,
         i20_control_fee_payment_method: s.i20_control_fee_payment_method,
         seller_referral_code: s.seller_referral_code,
@@ -195,8 +223,8 @@ export const useStudentDetails = (profileId: string | undefined) => {
         scholarship_id: mainApp.scholarship_id || null,
         application_status: mainApp.status || null,
         applied_at: mainApp.applied_at || null,
-        is_application_fee_paid: mainApp.is_application_fee_paid || false,
-        is_scholarship_fee_paid: mainApp.is_scholarship_fee_paid || false,
+        is_application_fee_paid,
+        is_scholarship_fee_paid,
         application_fee_payment_method: mainApp.application_fee_payment_method || null,
         scholarship_fee_payment_method: mainApp.scholarship_fee_payment_method || null,
         acceptance_letter_status: mainApp.acceptance_letter_status || null,
@@ -212,6 +240,11 @@ export const useStudentDetails = (profileId: string | undefined) => {
         all_applications: applications,
         admin_notes: s.admin_notes,
         documents_status: s.documents_status || null,
+        has_paid_ds160_package: s.has_paid_ds160_package || false,
+        has_paid_i539_cos_package: s.has_paid_i539_cos_package || false,
+        ds160_package_payment_method: s.ds160_package_payment_method || null,
+        i539_cos_package_payment_method: s.i539_cos_package_payment_method || null,
+        system_type: s.system_type || null,
       };
 
       setStudent(formatted);
@@ -234,7 +267,6 @@ export const useStudentDetails = (profileId: string | undefined) => {
     student,
     setStudent,
     loading,
-    loadingSecondaryData,
     error,
     refetch: loadCriticalData,
   };

@@ -1,16 +1,16 @@
-import React from 'react';
+import React, { useState as useStateReact, useEffect } from 'react';
 import { supabase } from '../../lib/supabase';
-import { useState as useStateReact, useEffect } from 'react';
-import { useFeeConfig } from '../../hooks/useFeeConfig';
 import { getDisplayAmounts } from '../../utils/paymentConverter';
 import {
   GraduationCap,
-  DollarSign,
   TrendingUp,
   ArrowUpRight,
-  Activity,
-  Target
+  Target,
+  DollarSign,
+  Activity
 } from 'lucide-react';
+import { formatCurrency } from '../../utils/currency';
+import { useFeeConfig } from '../../hooks/useFeeConfig';
 
 interface OverviewProps {
   stats: {
@@ -27,7 +27,7 @@ interface OverviewProps {
 
 const Overview: React.FC<OverviewProps> = ({ stats, sellerProfile, students = [], onRefresh, onNavigate }) => {
   const recentStudents = students.slice(0, 5);
-  const { getFeeAmount } = useFeeConfig(); // Para valores padrão, será usado para overrides específicos por estudante
+  const { getFeeAmount } = useFeeConfig();
   const [studentPackageFees, setStudentPackageFees] = useStateReact<{ [key: string]: any }>({});
   const [studentDependents, setStudentDependents] = useStateReact<{ [key: string]: number }>({});
   const [studentFeeOverrides, setStudentFeeOverrides] = useStateReact<{ [key: string]: any }>({});
@@ -305,12 +305,6 @@ const Overview: React.FC<OverviewProps> = ({ stats, sellerProfile, students = []
     return total;
   }, [getUniqueStudents, studentPackageFees, studentDependents, studentFeeOverrides, studentRealPaidAmounts, loadingRealPaidAmounts]);
 
-  const formatCurrency = (amount: number) => {
-    return new Intl.NumberFormat('en-US', {
-      style: 'currency',
-      currency: 'USD'
-    }).format(amount);
-  };
 
   const handleViewAllStudents = () => {
     // Usar o sistema de views interno em vez de navegação por URL
@@ -398,7 +392,7 @@ const Overview: React.FC<OverviewProps> = ({ stats, sellerProfile, students = []
                   <div className="h-4 w-24 bg-slate-200 rounded animate-pulse" />
                 ) : (
                   <span className="text-sm font-medium text-emerald-600">
-                    {getUniqueStudents.length > 0 ? (adjustedTotalRevenue / getUniqueStudents.length).toFixed(2) : 0} per student
+                    {getUniqueStudents.length > 0 ? formatCurrency(adjustedTotalRevenue / getUniqueStudents.length) : formatCurrency(0)} per student
                   </span>
                 )}
               </div>

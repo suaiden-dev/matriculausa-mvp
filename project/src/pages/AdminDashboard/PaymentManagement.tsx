@@ -17,15 +17,13 @@ import { getPageNumbers as getPageNumbersUtil, pagingGoTo, pagingNext, pagingPre
 import { calculateSelectedTotalsUtil } from './PaymentManagement/utils/totals';
 import { supabase } from '../../lib/supabase';
 import { useAuth } from '../../hooks/useAuth';
-import { useFeeConfig } from '../../hooks/useFeeConfig';
-import { UniversityPaymentRequestService, type UniversityPaymentRequest } from '../../services/UniversityPaymentRequestService';
-import { AffiliatePaymentRequestService } from '../../services/AffiliatePaymentRequestService';
+import { type UniversityPaymentRequest } from '../../services/UniversityPaymentRequestService';
 import { useQueryClient } from '@tanstack/react-query';
 import { queryKeys } from '../../lib/queryKeys';
-import { 
-  usePaymentsQuery, 
-  useZellePaymentsQuery, 
-  useUniversityRequestsQuery, 
+import {
+  usePaymentsQuery,
+  useZellePaymentsQuery,
+  useUniversityRequestsQuery,
   useAffiliateRequestsQuery,
   useUniversitiesQuery,
   useAffiliatesQuery
@@ -48,7 +46,7 @@ import {
 import { PaymentsTab } from './PaymentManagement/components/PaymentsTab';
 import { AffiliateRequests } from './PaymentManagement/components/AffiliateRequests';
 import { ZellePayments } from './PaymentManagement/components/ZellePayments';
-import { 
+import {
   CreditCard
 } from 'lucide-react';
 import DocumentViewerModal from '../../components/DocumentViewerModal';
@@ -56,7 +54,7 @@ import ZellePaymentReviewModal from '../../components/ZellePaymentReviewModal';
 import { UniversityRequestDetailsModal } from './PaymentManagement/components/Modals/UniversityRequestDetailsModal';
 import { AffiliateRequestDetailsModal } from './PaymentManagement/components/Modals/AffiliateRequestDetailsModal';
 import { PaymentDetailsModal } from './PaymentManagement/components/PaymentDetailsModal';
- 
+
 import RejectUniversityModal from './PaymentManagement/components/Modals/RejectUniversityModal';
 import MarkUniversityPaidModal from './PaymentManagement/components/Modals/MarkUniversityPaidModal';
 import UniversityAddNotesModal from './PaymentManagement/components/Modals/UniversityAddNotesModal';
@@ -69,9 +67,6 @@ import Tabs from './PaymentManagement/components/Tabs';
 import { useAdminPaymentsState } from './PaymentManagement/state/useAdminPaymentsState';
 import type { PaymentRecord, PaymentStats } from './PaymentManagement/data/types';
 import { UniversityRequests } from './PaymentManagement/components/UniversityRequests';
-import { loadPaymentsBaseDataOptimized } from './PaymentManagement/data/loaders/paymentsLoaderOptimized';
-import { getPaymentDatesForUsersLoaderOptimized } from './PaymentManagement/data/loaders/paymentDatesLoaderOptimized';
-import { transformPaymentsToRecordsAndStats } from './PaymentManagement/utils/transformPayments';
 import { usePaymentsBackendPagination } from './PaymentManagement/hooks/usePaymentsBackendPagination';
 import { createAffiliateUIHandlers } from './PaymentManagement/handlers/affiliateHandlers';
 import { createUniversityUIHandlers } from './PaymentManagement/handlers/universityHandlers';
@@ -85,6 +80,9 @@ const FEE_TYPES = [
   { value: 'application', label: 'Application Fee', color: 'bg-green-100 text-green-800' },
   { value: 'scholarship', label: 'Scholarship Fee', color: 'bg-blue-100 text-[#05294E]' },
   { value: 'i20_control_fee', label: 'I-20 Control Fee', color: 'bg-orange-100 text-orange-800' },
+  { value: 'placement', label: 'Placement Fee', color: 'bg-purple-100 text-purple-800' },
+  { value: 'ds160_package', label: 'DS-160 Package', color: 'bg-indigo-100 text-indigo-800' },
+  { value: 'i539_cos_package', label: 'I-539 COS Package', color: 'bg-rose-100 text-rose-800' },
 ];
 
 const STATUS_OPTIONS = [
@@ -96,12 +94,10 @@ const STATUS_OPTIONS = [
 
 const PaymentManagement = (): React.JSX.Element => {
   const { user } = useAuth();
-  const { getFeeAmount } = useFeeConfig();
   const queryClient = useQueryClient();
   const [searchParams] = useSearchParams();
   const [payments, setPayments] = useState<PaymentRecord[]>([]);
-  const [loading, setLoading] = useState(false); // Começar como false, será atualizado pelos hooks
-  const [, setError] = useState<string | null>(null);
+  const [loading, setLoading] = useState(false);
   const [stats, setStats] = useState<PaymentStats>({
     totalRevenue: 0,
     totalPayments: 0,
@@ -212,7 +208,7 @@ const PaymentManagement = (): React.JSX.Element => {
   const shouldLoadZelle = activeTab === 'zelle-payments';
   const shouldLoadUniversityRequests = activeTab === 'university-requests';
   const shouldLoadAffiliateRequests = activeTab === 'affiliate-requests';
-  
+
   const paymentsQuery = usePaymentsQuery(shouldLoadPayments);
   const zellePaymentsQuery = useZellePaymentsQuery(shouldLoadZelle);
   const universityRequestsQuery = useUniversityRequestsQuery(shouldLoadUniversityRequests);
@@ -245,7 +241,6 @@ const PaymentManagement = (): React.JSX.Element => {
   const loadingUniversityRequests = universityRequestsQuery.isLoading;
   const loadingAffiliateRequests = affiliateRequestsQuery.isLoading;
 
-  // Backend pagination for Payments tab (supports specific university or all)
   usePaymentsBackendPagination({
     activeTab,
     filters,
@@ -260,8 +255,8 @@ const PaymentManagement = (): React.JSX.Element => {
   useEffect(() => {
     if (activeTab === 'payments') {
       if (!filters?.university || filters.university === 'all') {
-      setBackendTotalCount(null);
-      
+        setBackendTotalCount(null);
+
         // React Query gerencia o cache automaticamente
         if (paymentsQuery.data) {
           setPayments(paymentsQuery.data.paymentRecords);
@@ -272,19 +267,16 @@ const PaymentManagement = (): React.JSX.Element => {
         // Quando desabilitada, isLoading é false por padrão no React Query
         if (shouldLoadPayments) {
           setLoading(paymentsQuery.isLoading || paymentsQuery.isFetching);
-      } else {
-          // Se não deve carregar, não está em loading
+        } else {
           setLoading(false);
         }
       }
-      // Se university não é 'all', o usePaymentsBackendPagination gerencia o loading
-          } else {
-      // Quando não está na aba payments, não precisa de loading
+    } else {
       setLoading(false);
       if (activeTab !== 'payments') {
         setPayments([]);
       }
-      }
+    }
   }, [activeTab, filters?.university, paymentsQuery.data, paymentsQuery.isLoading, paymentsQuery.isFetching, shouldLoadPayments]);
 
   // Realtime updates for Affiliate Requests - invalidar query quando houver mudança
@@ -299,7 +291,7 @@ const PaymentManagement = (): React.JSX.Element => {
       .subscribe();
 
     return () => {
-      try { supabase.removeChannel(channel); } catch (_) {}
+      try { supabase.removeChannel(channel); } catch (_) { }
     };
   }, [activeTab, queryClient]);
 
@@ -395,7 +387,7 @@ const PaymentManagement = (): React.JSX.Element => {
     }
   };
 
-  
+
 
   const loadAdminBalance = async () => {
     try {
@@ -428,7 +420,7 @@ const PaymentManagement = (): React.JSX.Element => {
         queryClient.invalidateQueries({ queryKey: queryKeys.payments.references.universities }),
         queryClient.invalidateQueries({ queryKey: queryKeys.payments.references.affiliates }),
       ]);
-      
+
       // Aguardar as queries refetcharem após a invalidação
       await Promise.all([
         paymentsQuery.refetch(),
@@ -537,7 +529,7 @@ const PaymentManagement = (): React.JSX.Element => {
     }
   };
 
-  
+
 
   const addZelleAdminNotes = async (paymentId: string) => {
     if (!user?.id) {
@@ -573,63 +565,63 @@ const PaymentManagement = (): React.JSX.Element => {
         const targetUserId = payment.user_id;
         if (targetUserId) {
           const { data: { session } } = await supabase.auth.getSession();
-          const accessToken = session?.access_token; 
+          const accessToken = session?.access_token;
 
           if (accessToken) {
-             const feeLabel = FEE_TYPES.find(f => f.value === payment.fee_type)?.label || 'Fee';
-             
-             // Determine redirection link based on Fee Type
-             let link = '/student/dashboard'; // Default
-             
-             if (payment.fee_type === 'selection_process') {
-               link = '/student/dashboard/scholarships';
-             } else if (payment.fee_type === 'application' || payment.fee_type === 'application_fee') {
-               link = '/student/dashboard/applications';
-             } else if (['scholarship', 'scholarship_fee', 'i20_control_fee', 'i-20_control_fee'].includes(payment.fee_type)) {
-               // Try to find the latest application to redirect to chat
-               try {
-                 // First try using payment.student_id (Profile ID)
-                 let studentProfileId = payment.student_id;
-                 
-                 // If not available, try to fetch profile from user_id
-                 if (!studentProfileId && payment.user_id) {
-                    const { data: profile } = await supabase.from('user_profiles').select('id').eq('user_id', payment.user_id).single();
-                    if (profile) studentProfileId = profile.id;
-                 }
+            const feeLabel = FEE_TYPES.find(f => f.value === payment.fee_type)?.label || 'Fee';
 
-                 if (studentProfileId) {
-                   const { data: apps } = await supabase
-                     .from('scholarship_applications')
-                     .select('id')
-                     .eq('student_id', studentProfileId)
-                     .order('created_at', { ascending: false })
-                     .limit(1);
-                   
-                   if (apps && apps.length > 0) {
-                     link = `/student/dashboard/application/${apps[0].id}/chat`;
-                   }
-                 }
-               } catch (e) {
-                 console.warn('Error fetching application for redirection:', e);
-               }
-             }
+            // Determine redirection link based on Fee Type
+            let link = '/student/dashboard'; // Default
 
-             const notificationPayload = {
-               user_id: targetUserId,
-               title: 'Payment Approved',
-               message: `Your manual payment for ${feeLabel} has been approved by an administrator.`,
-               link: link,
-             };
+            if (payment.fee_type === 'selection_process') {
+              link = '/student/dashboard/scholarships';
+            } else if (payment.fee_type === 'application' || payment.fee_type === 'application_fee') {
+              link = '/student/dashboard/applications';
+            } else if (['scholarship', 'scholarship_fee', 'i20_control_fee', 'i-20_control_fee'].includes(payment.fee_type)) {
+              // Try to find the latest application to redirect to chat
+              try {
+                // First try using payment.student_id (Profile ID)
+                let studentProfileId = payment.student_id;
+
+                // If not available, try to fetch profile from user_id
+                if (!studentProfileId && payment.user_id) {
+                  const { data: profile } = await supabase.from('user_profiles').select('id').eq('user_id', payment.user_id).single();
+                  if (profile) studentProfileId = profile.id;
+                }
+
+                if (studentProfileId) {
+                  const { data: apps } = await supabase
+                    .from('scholarship_applications')
+                    .select('id')
+                    .eq('student_id', studentProfileId)
+                    .order('created_at', { ascending: false })
+                    .limit(1);
+
+                  if (apps && apps.length > 0) {
+                    link = `/student/dashboard/application/${apps[0].id}/chat`;
+                  }
+                }
+              } catch (e) {
+                console.warn('Error fetching application for redirection:', e);
+              }
+            }
+
+            const notificationPayload = {
+              user_id: targetUserId,
+              title: 'Payment Approved',
+              message: `Your manual payment for ${feeLabel} has been approved by an administrator.`,
+              link: link,
+            };
 
             // Non-blocking fetch
             fetch(`${import.meta.env.VITE_SUPABASE_FUNCTIONS_URL}/create-student-notification`, {
-               method: 'POST',
-               headers: {
-                 'Content-Type': 'application/json',
-                 'Authorization': `Bearer ${accessToken}`,
-               },
-               body: JSON.stringify(notificationPayload),
-             }).catch(console.error);
+              method: 'POST',
+              headers: {
+                'Content-Type': 'application/json',
+                'Authorization': `Bearer ${accessToken}`,
+              },
+              body: JSON.stringify(notificationPayload),
+            }).catch(console.error);
           }
         }
       } catch (notifError) {
@@ -717,13 +709,13 @@ const PaymentManagement = (): React.JSX.Element => {
   // Calcular paginação (usar utils de filtro/ordenação)
   const filteredPayments = filterPaymentsUtil(payments, filters as any, affiliates);
   const sortedPayments = sortPaymentsUtil(filteredPayments, sortBy, sortOrder);
-  
+
   // ✅ CORREÇÃO: Aplicar filtro client-side mesmo quando usa backend pagination
   // (para filtros que não são suportados no backend, como paymentMethod)
   const paymentsToDisplay = backendTotalCount !== null
     ? filterPaymentsUtil(payments, filters as any, affiliates) // aplicar filtro client-side nos dados do backend
     : sortedPayments;
-  
+
   let totalPages = Math.ceil(sortedPayments.length / itemsPerPage);
   const startIndex = (currentPage - 1) * itemsPerPage;
   const endIndex = startIndex + itemsPerPage;
@@ -732,8 +724,8 @@ const PaymentManagement = (): React.JSX.Element => {
     : sortedPayments.slice(startIndex, endIndex);
   if (backendTotalCount !== null) {
     // ✅ CORREÇÃO: Usar count dos dados filtrados quando há filtro de paymentMethod
-    const filteredCount = filters.paymentMethod && filters.paymentMethod !== 'all' 
-      ? paymentsToDisplay.length 
+    const filteredCount = filters.paymentMethod && filters.paymentMethod !== 'all'
+      ? paymentsToDisplay.length
       : backendTotalCount ?? payments.length;
     totalPages = Math.max(1, Math.ceil(filteredCount / itemsPerPage));
   }
@@ -827,8 +819,8 @@ const PaymentManagement = (): React.JSX.Element => {
 
   // ✅ Mostrar skeleton se está carregando/buscando dados E está na aba payments
   // Mostrar skeleton quando está carregando pela primeira vez (isLoading) ou quando não há dados e está buscando
-  const isFetchingPayments = shouldLoadPayments && (paymentsQuery.isFetching || paymentsQuery.isLoading);
-  const shouldShowSkeleton = activeTab === 'payments' && isFetchingPayments && (paymentsQuery.isLoading || payments.length === 0);
+  const isFetchingPayments = (shouldLoadPayments && (paymentsQuery.isFetching || paymentsQuery.isLoading)) || loading;
+  const shouldShowSkeleton = activeTab === 'payments' && isFetchingPayments && (paymentsQuery.isLoading || loading || payments.length === 0);
   if (shouldShowSkeleton) {
     return <PaymentManagementSkeleton />;
   }
@@ -1019,7 +1011,7 @@ const PaymentManagement = (): React.JSX.Element => {
         />
       )}
 
-      
+
 
       {/* Add Zelle Admin Notes Modal */}
       <ZelleAddNotesModal

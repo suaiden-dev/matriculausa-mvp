@@ -222,7 +222,9 @@ export const PaymentMethodSelector: React.FC<PaymentMethodSelectorProps> = ({
 
       <div className="space-y-4">
         <div className="grid gap-4">
-          {paymentMethods.map((method) => {
+          {paymentMethods
+            .filter(method => method.id !== 'pix' || pixAmountWithFees <= 3000)
+            .map((method) => {
             const isSelected = selectedMethod === method.id;
             
             return (

@@ -1,0 +1,630 @@
+{
+  "home": {
+    "hero": {
+      "title": "Tu Puerta de Entrada a las Universidades Americanas",
+      "subtitle": "Descubre becas exclusivas y desbloquea tu potencial en los Estados Unidos",
+      "description": "Conéctate con las mejores universidades, accede a becas exclusivas y recibe apoyo personalizado durante todo tu proceso para estudiar en los EE. UU.",
+      "cta": "Inicia Tu Proceso",
+      "watchVideo": "Ver Video",
+      "stats": {
+        "successRate": {
+          "title": "95% Tasa de Éxito",
+          "subtitle": "Matrícula de estudiantes"
+        },
+        "scholarships": {
+          "title": "$50M+",
+          "subtitle": "En becas"
+        }
+      }
+    },
+    "featuredUniversities": {
+      "lockedTitle": "Universidades Bloqueadas",
+      "lockedDescription": "Completa el proceso de selección para desbloquear información detallada de las universidades",
+      "goToDashboard": "Ir al Panel",
+      "loginToView": "Iniciar Sesión para Ver",
+      "featured": "Destacadas"
+    },
+    "features": {
+      "whyChoose": "¿Por qué elegir MatriculaUSA?",
+      "title": "¿Por Qué Elegir MatriculaUSA?",
+      "subtitle": "Todo lo que necesitas para tener éxito en tu camino educativo americano",
+      "smartMatching": {
+        "title": "Emparejamiento Inteligente",
+        "description": "Sistema impulsado por IA que encuentra las mejores universidades y becas para tu perfil"
+      },
+      "exclusiveScholarships": {
+        "title": "Becas Exclusivas",
+        "description": "Accede a becas no disponibles en ningún otro lugar, específicamente para estudiantes internacionales"
+      },
+      "personalSupport": {
+        "title": "Soporte Personal",
+        "description": "Equipo dedicado para guiarte en cada paso del proceso de solicitud"
+      },
+      "fastProcess": {
+        "title": "Proceso Rápido",
+        "description": "Proceso de solicitud simplificado con respuestas rápidas y gestión eficiente de documentos"
+      }
+    },
+    "stats": {
+      "students": "Estudiantes Colocados",
+      "universities": "Universidades Asociadas",
+      "scholarships": "Becas Disponibles",
+      "successRate": "Tasa de Éxito"
+    },
+    "trustIndicators": {
+      "studentsEnrolled": "estudiantes matriculados",
+      "rating": "4.8 de calificación",
+      "setupTime": "Configuración en 5 Minutos",
+      "successRate": "95% Tasa de Éxito",
+      "secure": "100% Seguro"
+    },
+    "faq": {
+      "title": "Preguntas Frecuentes",
+      "mainTitle": "Todo lo que Necesitas Saber",
+      "subtitle": "Obtén respuestas a las preguntas más comunes sobre tasas, pagos y o proceso de candidatura en MatriculaUSA",
+      "badge": "Preguntas y Respuestas",
+      "quickAnswers": "Respuestas Rápidas",
+      "questionsFound": "{{count}} pregunta encontrada",
+      "questionsFound_plural": "{{count}} preguntas encontradas",
+      "footerContact": "Usa los botones flotantes para ayuda instantánea o contáctanos directamente en info@matriculausa.com",
+      "instantAiResponses": "Respuestas instantáneas por IA",
+      "availability": "Disponibilidad 24/7",
+      "questions": {
+        "q1": {
+          "question": "¿Qué tarifas o pagos son necesarios para usar MatriculaUSA?",
+          "answer": "MatriculaUSA es gratuito para crear tu perfil y explorar universidades. Sin embargo, una vez que inicias el proceso de solicitud y eres aprobado para una beca, todas las tarifas asociadas con el flujo de admisión e inscripción se vuelven obligatorias. Se presentan claramente antes de cualquier pago."
+        },
+        "q2": {
+          "question": "¿Qué es la Cuota del Proceso de Selección?",
+          "answer": "La Cuota del Proceso de Selección $400 es el primer pago obligatorio en la plataforma MatriculaUSA. Desbloquea tu acceso completo para ver todas las becas e iniciar tu proceso de solicitud."
+        },
+        "q3": {
+          "question": "¿Qué es la Cuota de Colocación (Placement Fee)?",
+          "answer": "La Cuota de Colocación cubre el soporte especializado para asegurar su beca e inscripción. Cubre el trabajo profesional, incluyendo el análisis académico, la identificación de opciones universitarias, la negociación de becas y el apoyo en el proceso de inscripción. Esta cuota es variable y está directamente ligada al monto de la beca."
+        },
+        "q4": {
+          "question": "¿Qué es la Cuota de Solicitud?",
+          "answer": "La Cuota de Solicitud varía por universidad y es un pago requerido para procesar formalmente tu solicitud después de haber sido aceptado. Este monto confirma tu intención de inscribirte y es gestionado directamente por la plataforma."
+        },
+        "q5": {
+          "question": "¿Existe apoyo para el proceso de visa de estudiante?",
+          "answer": "¡Sí! La Cuota de Colocación incluye soporte especializado para su proceso de visa de estudiante. Nuestro equipo lo guía a través de todos los pasos necesarios para garantizar que tenga los documentos correctos para su llegada a los EE. UU."
+        },
+        "q6": {
+          "question": "¿Existen otras tarifas que deba conocer?",
+          "answer": "Todas las tarifas obligatorias para su proceso de solicitud e inscripción se enumeran en su panel de control antes de cualquier pago. Algunas universidades pueden tener tarifas adicionales (por ejemplo, depósitos de alojamiento, tarifas de orientación), pero estas siempre serán comunicadas directamente por la universidad o por nosotros con anticipación."
+        },
+        "q7": {
+          "question": "¿Cómo puedo pagar estas tarifas?",
+          "answer": "Puede pagar todas las tarifas directamente a través de la plataforma MatriculaUSA utilizando tarjetas de crédito o débito internacionales. Los pagos se procesan de forma segura a través de Stripe y recibirá una confirmación por cada transacción."
+        },
+        "q8": {
+          "question": "¿Es segura mi información de pago?",
+          "answer": "Sí. Todos los pagos son procesados por Stripe, un líder mundial en seguridad de pagos. MatriculaUSA no almacena los datos de su tarjeta y todas las transacciones están cifradas para su protección."
+        },
+        "q9": {
+          "question": "¿Puedo obtener un reembolso?",
+          "answer": "Tiene derecho a un reembolso total de las tarifas pagadas si su solicitud no tiene éxito o no es aprobado para una beca. Sin embargo, si se retira del proceso o cambia de opinión después de iniciar la solicitud, las tarifas pagadas no son reembolsables, ya que el procesamiento y el soporte ya habrán comenzado."
+        },
+        "q10": {
+          "question": "¿Tengo que pagar todas las tarifas a la vez?",
+          "answer": "No. Las tarifas son compras independientes y se pagan por etapas a medida que avanzas en el proceso. Primero pagas la Cuota de Proceso de Selección, luego la Cuota de Solicitud (si corresponde) y finalmente la Cuota de Colocación asociada a la beca elegida."
+        },
+        "q11": {
+          "question": "¿Con quién puedo contactar si tengo preguntas sobre tarifas o pagos?",
+          "answer": "¡Nuestro equipo de soporte está disponible a través de chat o correo electrónico en cualquier momento para responder cualquier pregunta sobre tarifas, pagos o su proceso de solicitud. Estamos aquí para ayudarle en cada paso del camino!"
+        }
+      }
+    },
+    "threeSteps": {
+      "title": "Tres Pasos para Tu Educación Americana",
+      "subtitle": "Proceso Simple",
+      "step1": {
+        "title": "Crea Tu Perfil",
+        "description": "Construye tu perfil completo de estudiante con historial académico, metas y preferencias para ayudarnos a encontrar la combinación perfecta."
+      },
+      "step2": {
+        "title": "Descubre Oportunidades",
+        "description": "Navega a través de nuestra selección curada de escuelas y oportunidades exclusivas de becas adaptadas a tu perfil e intereses."
+      },
+      "step3": {
+        "title": "Completa la Inscripción",
+        "description": "Postúlate con nuestro proceso simplificado y recibe apoyo integral hasta que estés inscrito con éxito en la institución elegida."
+      }
+    },
+    "successStories": {
+      "title": "Historias de Éxito",
+      "subtitle": "Estudiantes reales, resultados reales. Mira cómo MatriculaUSA transformó su viaje educativo a los Estados Unidos.",
+      "testimonial1": {
+        "text": "MatriculaUSA hizo realidad mi sueño de estudiar en América. ¡Las oportunidades de becas y el apoyo fueron increíbles!",
+        "author": "Gustavo Santos",
+        "field": "Ciencias de la Computación"
+      },
+      "testimonial2": {
+        "text": "El proceso de inscripción fue perfecto. Desde la solicitud hasta el apoyo para la visa, MatriculaUSA me guió en cada paso del camino.",
+        "author": "Carlos Rodriguez",
+        "field": "Escuela de Negocios"
+      },
+      "testimonial3": {
+        "text": "Encontré becas exclusivas que no estaban disponibles en ningún otro lugar. MatriculaUSA realmente abre puertas a oportunidades.",
+        "author": "Ana Chen",
+        "field": "Ingeniería"
+      }
+    },
+    "cta": {
+      "title": "¿Listo para Iniciar Tu Sueño Americano?",
+      "subtitle": "Únete a miles de estudiantes internacionales que han encontrado su camino hacia la educación americana a través de la plataforma integral de MatriculaUSA.",
+      "button": "Inicia Tu Proceso Hoy",
+      "learnMore": "Saber Más",
+      "badge": "Únete a más de 5,000 {{students}}",
+      "features": {
+        "freeToStart": "Gratis para comenzar",
+        "noHiddenFees": "Sin tarifas ocultas",
+        "expertSupport": "Soporte experto incluido"
+      }
+    },
+    "enrollmentConfirmed": {
+      "title": "¡Inscripción Confirmada!",
+      "university": "Harvard University"
+    },
+    "about": {
+      "cta": {
+        "questions": "¿Todavía tienes preguntas?"
+      }
+    }
+  },
+  "howItWorks": {
+    "title": "Cómo Funciona",
+    "subtitle": "Tu camino a una universidad de EE. UU., paso a paso",
+    "journey": "Tu Jornada",
+    "stats": {
+      "setup": "Configuración en 5 Minutos",
+      "success": "95% Tasa de Éxito",
+      "secure": "100% Seguro"
+    },
+    "steps": {
+      "profile": {
+        "title": "Crea Tu Perfil",
+        "description": "Completa tu información académica y personal. Nuestra IA encuentra tus mejores opciones.",
+        "items": [
+          "Historial académico y logros",
+          "Objetivos profesionales y preferencias",
+          "Requisitos financieros",
+          "Añadir dependientes (si los hay)"
+        ]
+      },
+      "selectionFee": {
+        "title": "Pagar Cuota de Selección ($400)",
+        "description": "Desbloquea todas las becas. Esta tarifa es final y no reembolsable. (+$150 por dependiente)",
+        "items": [
+          "Acceso para navegar becas",
+          "Iniciar proceso de solicitud",
+          "Tarifa única"
+        ]
+      },
+      "documents": {
+        "title": "Elige Becas y Sube Documentos",
+        "description": "Elige becas y sube tus documentos. Revisión rápida.",
+        "items": [
+          "Selecciona múltiples becas",
+          "Carga segura de documentos",
+          "Análisis inicial automatizado"
+        ]
+      },
+      "applicationFee": {
+        "title": "Pagar Cuota de Solicitud (Según universidad)",
+        "description": "Confirma tu universidad. Esta tarifa es final y no reembolsable. (+$100 por dependiente)",
+        "items": [
+          "Ver becas aprobadas",
+          "Confirmar elección de universidad",
+          "Asegura tu lugar"
+        ]
+      },
+      "placementFee": {
+        "title": "Cuota de Colocación",
+        "description": "En MatrículaUSA, la cuota de colocación es una tarifa de servicio que incluye soporte total para asegurar su beca, matrícula y apoyo especializado para su proceso de visa.",
+        "items": [
+          "Análisis de su perfil académico y financiero",
+          "Identificación de las mejores opciones de universidad para usted",
+          "Negociación o garantía de oportunidades de beca",
+          "Coordinación de documentación con la institución",
+          "Soporte al proceso de matrícula",
+          "Soporte completo al proceso de visa"
+        ]
+      }
+    },
+    "whyUs": {
+      "title": "¿Por Qué MatriculaUSA?",
+      "smartDiscovery": {
+        "title": "Descubrimiento Inteligente",
+        "description": "IA encuentra las mejores becas para ti"
+      },
+      "documentManagement": {
+        "title": "Gestión de Documentos",
+        "description": "Sube y rastrea todos tus documentos fácilmente"
+      },
+      "personalSupport": {
+        "title": "Soporte Personal",
+        "description": "Nuestro equipo te ayuda en cada paso"
+      },
+      "successTracking": {
+        "title": "Seguimiento de Éxito",
+        "description": "Ve tu progreso y siguientes pasos en tiempo real"
+      }
+    },
+    "successStories": {
+      "title": "Historias de Éxito",
+      "story1": {
+        "text": "\"Encontré becas exclusivas que no estaban disponibles en ningún otro lugar. MatriculaUSA realmente abre puertas a oportunidades.\"",
+        "name": "Ana Chen",
+        "major": "Ingeniería"
+      },
+      "story2": {
+        "text": "\"Gracias a MatriculaUSA, recibí una beca completa y apoyo durante todo mi proceso de visa. ¡El equipo siempre estuvo ahí para mí!\"",
+        "name": "Lucas Silva",
+        "major": "Ciencias de la Computación"
+      },
+      "story3": {
+        "text": "\"El proceso de solicitud fue tan fácil y transparente. Me sentí apoyada en cada paso. ¡Muy recomendable!\"",
+        "name": "Priya Patel",
+        "major": "Negocios"
+      },
+      "story4": {
+        "text": "\"Nunca pensé que estudiar en EE. UU. fuera posible para mí. ¡MatriculaUSA hizo mi sueño realidad!\"",
+        "name": "Ahmed Hassan",
+        "major": "Ingeniería"
+      },
+      "story5": {
+        "text": "\"Desde el primer contacto hasta mi llegada a EE. UU., todo fue fluido y profesional. ¡Gracias, MatriculaUSA!\"",
+        "name": "Maria Gomez",
+        "major": "Negocios"
+      }
+    },
+    "faq": {
+      "title": "Preguntas Frecuentes",
+      "q1": {
+        "question": "¿Qué tarifas o pagos se requieren para usar MatriculaUSA?",
+        "answer": "MatriculaUSA es gratuito para crear tu perfil y explorar universidades. Sin embargo, una vez que inicias el proceso de solicitud y eres aprobado para una beca, todas las tarifas asociadas con el flujo de admisión y matrícula se vuelven obligatorias. Se presentan claramente antes de cualquier pago. Todas las tarifas son finales y no reembolsables."
+      },
+      "q2": {
+        "question": "¿Qué es la Cuota del Proceso de Selección?",
+        "answer": "La Cuota del Proceso de Selección $400 es el primer pago obligatorio en la plataforma MatriculaUSA. Desbloquea tu acceso completo para ver todas las becas e iniciar tu proceso de solicitud. Esta tarifa es final y no reembolsable."
+      },
+      "q3": {
+        "question": "¿Qué es la Cuota de Colocación (Placement Fee)?",
+        "answer": "La cuota de colocación cubre el trabajo profesional necesario para conectar e inscribir con éxito a un estudiante en el programa universitario correcto. Esta cuota es variable y está directamente vinculada al monto de la beca: cuanto mayor sea la cuota de colocación, menor será su matrícula anual (tuition)."
+      },
+      "q4": {
+        "question": "¿Qué es la Cuota de Solicitud?",
+        "answer": "La Cuota de Solicitud varía por universidad y es un pago requerido para procesar formalmente tu solicitud después de haber sido aceptado. Este monto confirma tu intención de inscribirte y es gestionado directamente por la plataforma. Esta tarifa es final y no reembolsable."
+      },
+      "q5": {
+        "question": "¿Cómo elijo mi beca?",
+        "answer": "Tras el pago de la Cuota del Proceso de Selección y el envío de los documentos, nuestra IA y el equipo de soporte apresentarán las mejores opciones de beca para su perfil. Podrá entonces elegir la que mejor se adapte a su presupuesto y objetivos."
+      },
+      "q6": {
+        "question": "¿Hay otras tarifas que deba conocer?",
+        "answer": "Todas las tarifas obligatorias para tu proceso de solicitud y matrícula están listadas en tu panel antes de cualquier pago. Algunas universidades pueden tener tarifas adicionales (ej: depósitos de vivienda, tarifas de orientación), pero estas siempre serán comunicadas directamente por la universidad o por nosotros con anticipación. Todas las tarifas son finales y no reembolsables."
+      },
+      "q7": {
+        "question": "¿Cómo puedo pagar estas tarifas?",
+        "answer": "Puedes pagar todas las tarifas directamente a través de la plataforma MatriculaUSA usando tarjetas de crédito o débito internacionales. Los pagos se procesan de forma segura vía Stripe, y recibirás una confirmación por cada transacción. Todas las tarifas son finales y no reembolsables."
+      },
+      "q8": {
+        "question": "¿Es segura mi información de pago?",
+        "answer": "Sí. Todos los pagos son procesados por Stripe, líder global en seguridad de pagos. MatriculaUSA no almacena los detalles de tu tarjeta, y todas las transacciones están encriptadas para tu protección."
+      },
+      "q9": {
+        "question": "¿Puedo obtener un reembolso?",
+        "answer": "Tienes derecho a un reembolso total de las tarifas pagadas si tu solicitud no es exitosa o no eres aprobado para una beca. Sin embargo, si te retiras del proceso o cambias de opinión después de iniciar la solicitud, las tarifas pagadas no son reembolsables, ya que el procesamiento y soporte ya habrán comenzado. Todas las tarifas son finales y no reembolsables."
+      },
+      "q10": {
+        "question": "¿Tengo que pagar todas las tarifas a la vez?",
+        "answer": "No. Las tarifas son separadas y se pagan por etapas. Usted paga primero la Cuota del Proceso de Selección, luego la Cuota de Solicitud (si corresponde) y, finalmente, la Cuota de Colocación asociada a la beca elegida. Todas son obligatorias, pero se pagan en diferentes momentos."
+      },
+      "q11": {
+        "question": "¿A quién puedo contactar si tengo preguntas sobre tarifas o pagos?",
+        "answer": "Nuestro equipo de soporte está disponible vía chat o correo electrónico en cualquier momento para responder cualquier pregunta sobre tarifas, pagos o tu proceso de solicitud. ¡Estamos aquí para ayudarte en cada paso!"
+      }
+    }
+  },
+
+  "forStudents": {
+    "hero": {
+      "title": "Estudia en los EE. UU. con",
+      "titleHighlight": "becas de estudio exclusivas",
+      "subtitle": "Proceso de Selección con IA",
+      "description": "Estudia pagando <span class=\"text-[#D0151C] font-bold\">hasta un 50% menos</span>, con becas híbridas y la oportunidad de trabajar legalmente — por solo <span class=\"text-yellow-400 font-bold\">$400</span> para comenzar.",
+      "ctaButton": "Comenzar Ahora",
+      "trustElements": {
+        "approval24h": "Aprobación en 24h",
+        "guaranteed": "100% Garantizado",
+        "approved": "+10.000 aprobados"
+      }
+    },
+    "benefits": {
+      "title": "Ventajas que marcan la diferencia",
+      "subtitle": "Descubre por qué miles de estudiantes eligen Matrícula USA para cumplir su sueño americano",
+      "ctaButton": "Descubrir mi beca ideal",
+      "benefits": {
+        "economy": {
+          "title": "Ahorro Real",
+          "description": "Paga hasta un 50% menos del valor total de la universidad con nuestras becas exclusivas",
+          "highlight": "Hasta 50% OFF"
+        },
+        "fastApproval": {
+          "title": "Aprobación Rápida",
+          "description": "Proceso optimizado con IA que acelera tu aprobación hasta en un 80%",
+          "highlight": "24h"
+        },
+        "hybridMode": {
+          "title": "Modalidad Híbrida",
+          "description": "Estudia online y presencialmente, ahorrando en alojamiento y comida",
+          "highlight": "Flexible"
+        },
+        "multipleOpportunities": {
+          "title": "Múltiples Oportunidades",
+          "description": "Aplica a varias universidades simultáneamente y aumenta tus posibilidades",
+          "highlight": "3+ Opciones"
+        },
+        "guaranteed": {
+          "title": "Aprobación Garantizada",
+          "description": "Si no eres aprobado siguiendo nuestro proceso, te devolvemos tu dinero",
+          "highlight": "100%"
+        },
+        "support": {
+          "title": "Soporte Completo",
+          "description": "Acompañamiento desde la solicitud hasta el embarque a los EE. UU.",
+          "highlight": "24/7"
+        }
+      }
+    },
+    "howItWorks": {
+      "title": "Cómo Funciona",
+      "subtitle": "Proceso simple y transparente en 6 pasos para garantizar tu beca de estudios",
+      "ctaButton": "COMENZAR AHORA",
+      "ctaDescription": "Comienza hoy mismo tu viaje para estudiar en los EE. UU.",
+      "steps": {
+        "processFee": {
+          "title": "Cuota del Proceso de Selección",
+          "description": "Inicia tu viaje con nuestro análisis de perfil e búsqueda personalizada por solo $400",
+          "price": "$400"
+        },
+        "scholarshipChoice": {
+          "title": "Elección de Beca",
+          "description": "Nuestra IA identifica las mejores oportunidades y tú eliges la ideal para tu presupuesto",
+          "price": "Gratis"
+        },
+        "application": {
+          "title": "Solicitud",
+          "description": "Nos encargamos de todo el envío de documentación a las universidades asociadas",
+          "price": "✓"
+        },
+        "enrollmentFee": {
+          "title": "Cuota de Inscripción",
+          "description": "Cuota obligatoria de la universidad para procesar tu inscripción oficial tras la aceptación",
+          "price": "Variable"
+        },
+        "placementFee": {
+          "title": "Cuota de Colocación",
+          "description": "Cubre el trabajo profesional de conexión, negociación de becas y soporte hasta el embarque",
+          "price": "Variable"
+        },
+        "spotGuaranteed": {
+          "title": "Cupo Garantizado",
+          "description": "Tu lugar está garantizado y estás listo para tu viaje en los EE. UU.",
+          "price": "✓"
+        }
+      }
+    },
+    "comparison": {
+      "title": "De gastos altos e incertidumbre... a un ahorro real y aprobación garantizada",
+      "subtitle": "Mira la diferencia real entre estudiar por tu cuenta vs. con Matrícula USA",
+      "ctaButton": "QUIERO AHORRAR",
+      "before": {
+        "title": "Sin Matrícula USA",
+        "subtitle": "Proceso tradicional",
+        "costLabel": "Costo total: $15.000 - $25.000",
+        "items": [
+          "Proceso lento y complejo",
+          "Alto riesgo de rechazo",
+          "Sin soporte especializado",
+          "Costos ocultos y sorpresas",
+          "Dificultad para conseguir becas",
+          "Proceso manual y burocrático"
+        ]
+      },
+      "after": {
+        "title": "Con Matrícula USA",
+        "subtitle": "Proceso optimizado con IA",
+        "savingsLabel": "Ahorro promedio: $8.000 - $15.000",
+        "items": [
+          "Proceso rápido y simplificado",
+          "Aprobación garantizada o devolución de dinero",
+          "Soporte dedicado 24/7",
+          "Transparencia total en los costos",
+          "Acceso a becas exclusivas",
+          "Proceso automatizado e eficiente"
+        ]
+      }
+    },
+    "specialOffer": {
+      "title": "Obtén prioridad en las becas más competitivas y beneficios exclusivos",
+      "subtitle": "Al inscribirte hoy, garantizas:",
+      "urgencyTitle": "Atención: Cupos Limitados",
+      "urgencyDescription": "Las becas se liberan por orden de inscripción. <span class=\"text-[#D0151C] font-bold\">Cada día de retraso puede significar perder el cupo de tus sueños.</span>",
+      "ctaButton": "QUIERO MI BECA AHORA",
+      "ctaDescription": "⏰ Oferta por tiempo limitado",
+      "benefits": [
+        {
+          "title": "Análisis en 24h",
+          "description": "Análisis de perfil en 24 horas para conocer tus mejores opciones de inmediato"
+        },
+        {
+          "title": "Prioridad en Becas",
+          "description": "Prioridad en becas con cupos limitados"
+        },
+        {
+          "title": "Acceso Anticipado",
+          "description": "Acceso anticipado a las becas híbridas (las más solicitadas)"
+        },
+        {
+          "title": "Soporte Dedicado",
+          "description": "Soporte dedicado para completar tu inscripción sin errores"
+        }
+      ]
+    },
+    "guarantee": {
+      "title": "Aprobación garantizada o te devolvemos tu dinero",
+      "subtitle": "Sabemos que invertir en tu futuro requiere confianza. Por eso, Matrícula USA es el único programa que ofrece:",
+      "ctaButton": "COMENZAR SIN RIESGOS",
+      "guarantees": [
+        {
+          "title": "Garantía de Aprobación",
+          "description": "Si sigues nuestro proceso y no eres aprobado, te reembolsamos la Cuota del Proceso de Selección íntegramente."
+        },
+        {
+          "title": "Proceso Transparente",
+          "description": "Sin cuotas ocultas ni costos sorpresa. Sabes exactamente cuánto vas a pagar de principio a fin."
+        },
+        {
+          "title": "Soporte hasta la Llegada",
+          "description": "No nos detenemos tras el acepto de la universidad. Nuestro equipo acompaña todo el proceso hasta el embarque."
+        }
+      ],
+      "bottomMessage": "El riesgo es todo nuestro. Para ti, es solo aprovechar la oportunidad."
+    },
+    "faq": {
+      "title": "Preguntas Frecuentes",
+      "subtitle": "Encuentra respuestas a las preguntas más comunes sobre nuestro proceso de selección",
+      "contact": "¿Todavía tienes preguntas? Contacta con nuestro equipo de soporte",
+      "items": [
+        {
+          "question": "¿Qué está incluido en la cuota del proceso de selección?",
+          "answer": "$400 incluye un análisis completo del perfil, búsqueda personalizada de becas mediante IA, solicitudes a múltiples universidades, seguimiento del proceso y soporte hasta la aprobación."
+        },
+        {
+          "question": "¿Qué é la Cuota de Colocación (Placement Fee)?",
+          "answer": "La Cuota de Colocación cubre el soporte especializado para asegurar tu beca e inscripción. Se refiere al trabajo de análisis de perfil, identificación de mejores opciones, negociación de becas y soporte en tu viaje. Es variable y está directamente ligada al monto de la beca: cuanto mayor sea la cuota de colocación, menor será su matrícula anual."
+        },
+        {
+          "question": "¿Puedo solicitar tantas becas como quiera?",
+          "answer": "¡Sí! Con una sola cuota puedes solicitar todas las becas compatibles con tu perfil. Nuestra IA identifica las mejores oportunidades y tú eliges cuántas quieres probar."
+        },
+        {
+          "question": "¿Cómo funciona la garantía?",
+          "answer": "Si sigues nuestro proceso completo y no eres aprobado en ninguna universidad, te reembolsamos el 100% de la cuota del proceso de selección."
+        },
+        {
+          "question": "¿Qué universidades participan?",
+          "answer": "Trabajamos con más de 45 universidades americanas acreditadas, incluidas la Universidad Estatal de Arizona, la Universidad Internacional de Florida, la Universidad de California y muchas otras."
+        },
+        {
+          "question": "¿Necesito hablar inglés?",
+          "answer": "Sí, se requiere un nivel básico de inglés. Algunas universidades aceptan una prueba de competencia interna u ofrecen programas preparatorios para quienes necesitan mejorar el idioma."
+        },
+        {
+          "question": "¿Cuánto tiempo se tarda en saber si fui aprobado?",
+          "answer": "El proceso de análisis y respuesta de las universidades varía entre 2 y 8 semanas. Recibirás actualizaciones constantes sobre el estado de tu solicitud."
+        }
+      ]
+    },
+    "socialProof": {
+      "title": "Más de 150 estudiantes aprobados solo en 2026",
+      "subtitle": "Mira lo que dicen nuestros estudiantes sobre su experiencia",
+      "ctaButton": "SÉ EL PRÓXIMO APROBADO",
+      "statistics": {
+        "approved": "Estudiantes aprobados",
+        "approvalRate": "Tasa de aprobación",
+        "averageSavings": "Ahorro promedio",
+        "partnerUniversities": "Universidades asociadas"
+      },
+      "testimonials": [
+        {
+          "name": "Gustavo Santos",
+          "university": "University of California",
+          "course": "Ciencias de la Computación",
+          "text": "¡Conseguí una beca del 40% y estoy cumpliendo mi sueño de estudiar en los EE. UU.! El proceso fue mucho más simple de lo que imaginaba.",
+          "savings": "$18,000"
+        },
+        {
+          "name": "João Santos",
+          "university": "Arizona State University",
+          "course": "Administración de Empresas",
+          "text": "La modalidad híbrida fue perfecta para mí. Ahorré mucho en alojamiento y sigo teniendo la experiencia presencial.",
+          "savings": "$22,000"
+        },
+        {
+          "name": "Ana Costa",
+          "university": "Florida International University",
+          "course": "Negocios Internacionales",
+          "text": "¡Aprobada en 3 universidades diferentes! La IA realmente encontró las mejores opciones para mi perfil.",
+          "savings": "$25,000"
+        },
+        {
+          "name": "Carlos Mendes",
+          "university": "Northern Arizona University",
+          "course": "Ingeniería",
+          "text": "Increíble lo rápido que fue el proceso. ¡En 3 semanas ya tenía 2 aprobaciones con excelentes becas!",
+          "savings": "$30,000"
+        },
+        {
+          "name": "Fernanda Lima",
+          "university": "University of South Florida",
+          "course": "Marketing",
+          "text": "El soporte fue fantástico de principio a fin. ¡Ahora estoy estudiando y trabajando legalmente en los EE. UU.!",
+          "savings": "$20,000"
+        },
+        {
+          "name": "Roberto Silva",
+          "university": "California State University",
+          "course": "Ciencia de Datos",
+          "text": "Conseguí una beca híbrida que me permite estudiar online y presencialmente. ¡Perfecto para mi situación!",
+          "savings": "$35,000"
+        }
+      ]
+    }
+  },
+  "stepByStepGuide": {
+    "title": "Guía Paso a Paso",
+    "subtitle": "Cómo funciona el proceso de solicitud",
+    "closeButton": "Cerrar guía paso a paso",
+    "progress": "{{current}} de {{total}}",
+    "previous": "Anterior",
+    "next": "Siguiente",
+    "startNow": "¡Comenzar ahora!",
+    "steps": {
+      "step1": {
+        "title": "¡Bienvenido a Matrícula USA! 🎓",
+        "description": "Te guiaremos a través de todo el proceso de solicitud de becas en los EE. UU. ¡Es más fácil de lo que piensas!"
+      },
+      "step2": {
+        "title": "1. Explora Becas",
+        "description": "Explora nuestra lista de becas. Cada una tiene información detallada sobre valores, requisitos y universidades asociadas. ¡Haz clic en las que te interesen!"
+      },
+      "step3": {
+        "title": "2. Añadir a la Lista de Selección",
+        "description": "Selecciona las becas a las que quieres aplicar y añádelas a tu lista de selección. Puedes elegir múltiples becas y gestionar tus selecciones fácilmente."
+      },
+      "step4": {
+        "title": "3. Subir Documentos",
+        "description": "Sube tus documentos: Pasaporte, Diploma de Secundaria y un Extracto Bancario. Nuestro equipo revisará todo y te dará feedback."
+      },
+      "step5": {
+        "title": "4. Cuota de Colocación y Soporte Final",
+        "description": "Después de la aprobación de la universidad, procedes con la Cuota de Colocación. Esto cubre nuestros servicios profesionales para asegurar tu inscripción y apoyarte hasta tu llegada."
+      },
+      "step6": {
+        "title": "5. Cupo Garantizado",
+        "description": "Una vez completado el proceso, ¡tu lugar está garantizado y estás listo para comenzar tu viaje americano!"
+      }
+    },
+    "expandImage": "Expandir imagen",
+    "previewNotAvailable": "Previa no disponible"
+  },
+  "scholarshipDeadline": {
+    "3800Expired": "No disponible",
+    "3800Expiring": "¡Últimas horas para postularse! El plazo vence mañana (6 de noviembre)",
+    "3800ExpiringShort": "El plazo expira mañana"
+  }
+}

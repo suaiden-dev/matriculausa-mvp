@@ -1,0 +1,346 @@
+{
+  "scholarships": {
+    "title": "Scholarships",
+    "subtitle": "Find the perfect scholarship for your academic journey",
+    "searchPlaceholder": "Search scholarships...",
+    "filterBy": "Filter by",
+    "amount": "Amount",
+    "type": "Type",
+    "deadline": "Deadline",
+    "apply": "Apply",
+    "viewDetails": "View Details",
+    "noResults": "No scholarships found",
+    "resultsFound": "scholarships found"
+  },
+  "scholarshipsPage": {
+    "loginRequired": {
+      "title": "Inicio de Sesión Requerido",
+      "message": "Por favor, inicie sesión para ver los detalles de las becas y acceder a todas las funciones"
+    },
+    "featuredSection": {
+      "title": "Becas Destacadas",
+      "subtitle": "Lo Más Destacado de la Semana",
+      "description": "Becas seleccionadas por nuestros expertos para usted"
+    },
+    "allScholarships": {
+      "title": "Todas las Becas",
+      "description": "Explore todas las oportunidades de becas disponibles para estudiantes internacionales"
+    },
+    "filters": {
+      "min": "Mín",
+      "max": "Máx",
+      "allLevels": "Todos los Niveles",
+      "allFields": "Todas las Áreas",
+      "allModes": "Todas las Modalidades",
+      "allPermissions": "Todos los Permisos",
+      "allUniversities": "Todas las Universidades",
+      "university": "Universidad",
+      "universityTooltip": "Crea una cuenta y paga la Selection Process Fee para filtrar por universidad",
+      "stem": "STEM",
+      "business": "Negocios",
+      "engineering": "Ingeniería",
+      "anyField": "Cualquier Área",
+      "online": "En Línea",
+      "inPerson": "Presencial",
+      "hybrid": "Híbrido",
+      "opt": "OPT",
+      "cpt": "CPT",
+      "f1": "F1",
+      "loading": "Cargando...",
+      "scholarshipsFound": "becas encontradas",
+      "levels": {
+        "all": "Todos los Niveles",
+        "graduate": "Posgrado",
+        "doctorate": "Doctorado",
+        "undergraduate": "Pregrado"
+      },
+      "courseModalities": {
+        "online": "En Línea",
+        "inPerson": "Presencial",
+        "hybrid": "Híbrido",
+        "mixed": "Mixto"
+      }
+    },
+    "scholarshipCard": {
+      "university": "Universidad:",
+      "studyMode": "Modalidad del Curso",
+      "workAuthorization": "Autorización de Trabajo",
+      "financialOverview": "Resumen Financiero",
+      "originalPrice": "Precio Original",
+      "withScholarship": "Con Beca",
+      "perCredit": "Por Crédito",
+      "scholarshipDiscount": "Descuento de Beca",
+      "applicationFee": "Tarifa de Solicitud",
+      "customFee": "Tarifa personalizada de la universidad",
+      "standardFee": "Tarifa de solicitud estándar",
+      "expired": "Expirada",
+      "days": "días",
+      "details": "Detalles",
+      "applyNow": "Aplicar Ahora",
+      "notAvailable": "No disponible"
+    },
+    "noResults": {
+      "title": "No se encontraron becas",
+      "description": "Intente ajustar sus criterios de búsqueda para descubrir más oportunidades",
+      "clearFilters": "Limpiar Filtros"
+    },
+    "pagination": {
+      "previous": "Anterior",
+      "next": "Siguiente",
+      "page": "Página",
+      "of": "de"
+    },
+    "callToAction": {
+      "readyToStart": "¿Listo para Empezar?",
+      "readyToTransform": "¿Listo para Transformar tu Futuro?",
+      "title": "¿Listo para Transformar tu Futuro?",
+      "description": "Únase a miles de estudiantes internacionales que han asegurado sus sueños educativos a través de nuestras oportunidades exclusivas de becas.",
+      "getStartedToday": "Empieza Hoy Mismo",
+      "learnMore": "Más Información"
+    },
+    "modal": {
+      "exclusive": "Exclusivo",
+      "exclusiveScholarship": "Beca Exclusiva",
+      "anyField": "Cualquier Área",
+      "universityHidden": "Universidad Oculta - Desbloquear con el Proceso de Selección",
+      "universityInfoAvailable": "Información de la Universidad Disponible",
+      "loginRequired": "Inicie sesión para ver los detalles de la universidad",
+      "financialBreakdown": "Desglose Financiero",
+      "originalAnnualCost": "Costo Anual Original",
+      "withScholarship": "Con Beca",
+      "annualSavings": "Ahorro Anual",
+      "costPerCredit": "Costo por Crédito",
+      "totalCredits": "Créditos Totales",
+      "coverage": "Cobertura",
+      "programInformation": "Información del Programa",
+      "academicLevel": "Nivel Académico",
+      "notSpecified": "No especificado",
+      "studyMode": "Modalidad del Curso",
+      "onlineLearning": "Aprendizaje en Línea",
+      "inPerson": "Presencial",
+      "hybridMode": "Modalidad Híbrida",
+      "programDuration": "Duración del Programa",
+      "language": "Idioma",
+      "workAuthorization": "Autorización de Trabajo",
+      "programDescription": "Descripción del Programa",
+      "applicationDeadline": "Fecha Límite de Aplicación",
+      "daysLeft": "días restantes",
+      "deadline": "Fecha Límite",
+      "universityInformation": "Información de la Universidad",
+      "universityNameAvailable": "Nombre de la Universidad Disponible",
+      "ranking": "Ranking:",
+      "universityDetailsLocked": "🔒 Los detalles de la universidad estarán disponibles después del pago del Proceso de Selección.",
+      "unlockUniversityInfo": "Desbloquea la información de la universidad pagando el Proceso de Selección",
+      "unlockImage": "Inicia sesión para desbloquear la imagen",
+      "requirements": "Requisitos",
+      "additionalBenefits": "Beneficios Adicionales",
+      "expired": "Expirada",
+      "scholarshipExpired": "Beca Expirada",
+      "noLongerAccepting": "No disponible para aplicación",
+      "canStillView": "Aún puede ver la información, pero no será posible aplicar a esta beca.",
+      "internalFeesTitle": "Tarifas Internas de la Universidad",
+      "internalFeesDisclaimer": "Algunas tarifas se pagan directamente a la universidad, mientras que otras se procesan a través de nuestra plataforma.",
+      "internalFeesAvailable": "Tarifas Internas de la Universidad Disponibles",
+      "internalFeesNotice": "Esta beca puede tener tarifas internas adicionales de la universidad. Estas tarifas serán visibles después del pago de la Tarifa de Proceso de Selección.",
+      "universityInternalFees": "Tarifas Internas de la Universidad",
+      "viewUniversityFeesPage": "Ver Página de Tarifas de la Universidad",
+      "internalFeesConditionalNote": "La tarifa depende del tipo de proceso o visa del estudiante y luego corresponde con la tarifa",
+      "i539COSPackage": "I539 COS Package",
+      "ds160Package": "DS160 Package",
+      "i539PackageDescription": "Tarifa requerida para estudiantes que solicitan Cambio de Status (COS)",
+      "ds160PackageDescription": "Tarifa requerida para estudiantes que solicitan Transferencia",
+      "days": "días"
+    }
+  },
+  "scholarshipSelection": {
+    "header": {
+      "title": "Selección de Becas",
+      "subtitle": "Navegue por las becas y seleccione en cuáles le gustaría inscribirse. Es necesario elegir al menos una para continuar."
+    },
+    "errors": {
+      "loadError": "Error al cargar las becas. Inténtalo de nuevo.",
+      "alreadyLocked": "Ya has pasado por la revisión de becas. No es posible cambiar la selección.",
+      "updateError": "Error al actualizar la selección. Inténtalo de nuevo.",
+      "selectRequired": "Por favor, seleccione al menos una beca para continuar. Haga clic en las tarjetas de beca arriba para añadirlas a su selección."
+    },
+    "review": {
+      "title": "Revise sus Becas Seleccionadas",
+      "warningTitle": "Importante: Esta es una elección definitiva",
+      "warningDescription": "Al confirmar, ya no podrá cambiar las becas elegidas. Revise cuidadosamente su selección a continuación antes de continuar.",
+      "unknownUniversity": "Universidad Desconocida",
+      "backButton": "Volver a la Selección",
+      "alreadySelected": "Ya Seleccionada",
+      "continueButton": "Continuar",
+      "removeButton": "Eliminar Selección"
+    },
+    "completed": {
+      "title": "Selección de Becas",
+      "subtitle": "Selección de becas completada con éxito.",
+      "cardTitle": "Etapa Completada",
+      "cardText": "Ya has seleccionado tus becas y pasado por la revisión. Esta etapa está completa.",
+      "continueButton": "Continuar"
+    },
+    "grid": {
+      "title": "Becas Disponibles",
+      "option_count": "opción",
+      "option_count_plural": "opciones",
+      "noResults": {
+        "title": "No se encontraron becas",
+        "description": "Intente ajustar sus filtros para ver más opciones.",
+        "clearButton": "Limpiar todos los filtros"
+      }
+    },
+    "filters": {
+      "title": "Filtrar Becas",
+      "searchPlaceholder": "Buscar beca...",
+      "searchKeyword": "Palabra clave",
+      "university": "Universidad",
+      "allUniversities": "Todas las Universidades",
+      "studyLevel": "Nivel de Estudio",
+      "allLevels": "Todos los Niveles",
+      "fieldOfStudy": "Área de Estudio",
+      "allFields": "Todas las Áreas de Estudio",
+      "deliveryMode": "Modalidad",
+      "allDeliveryModes": "Todas las Modalidades",
+      "deliveryModeOptions": {
+        "online": "Online",
+        "in_person": "Presencial",
+        "hybrid": "Híbrido",
+        "mixed": "Mixto"
+      },
+      "workPermission": "Permiso de Trabajo",
+      "allWorkPermissions": "Todos los Permisos",
+      "scholarshipValue": "Valor de la Beca",
+      "minValue": "Valor Mínimo",
+      "maxValue": "Valor Máximo",
+      "deadlineDays": "Plazo (dias)",
+      "minPlaceholder": "Mín",
+      "maxPlaceholder": "Máx",
+      "deadlinePlaceholder": "Mín días restantes",
+      "apply": "Aplicar Filtros",
+      "clear": "Limpiar",
+      "activeBadge": "Activo"
+    },
+    "confirmationModal": {
+      "title": "Confirmar Selección",
+      "description": "Al confirmar, ya no podrás cambiar las becas seleccionadas. Por favor, revisa cuidadosamente tu selección antes de continuar.",
+      "confirm": "Confirmar y Continuar",
+      "cancel": "Revisar de Nuevo"
+    },
+    "quickGuide": {
+      "title": "Guía rápida:",
+      "step1": "<strong>Haz clic en cualquier tarjeta de beca</strong> para añadirla a tu selección",
+      "step2": "<strong>Selecciona tantas como quieras</strong> - puedes elegir múltiples opciones",
+      "step3": "<strong>Usa filtros</strong> para buscar por universidad o valor de la beca",
+      "step4": "<strong>Haz clic en \"Continuar\"</strong> una vez que hayas seleccionado al menos una beca"
+    },
+    "continueWithCount": "Continuar ({{count}} seleccionada)",
+    "continueWithCount_plural": "Continuar ({{count}} seleccionadas)"
+  },
+  "universitiesPage": {
+    "header": {
+      "partnerUniversities": "Universidades Asociadas",
+      "title": "Universidades Americanas",
+      "subtitle": "Descubra instituciones de clase mundial que ofrecen educación excepcional y oportunidades de becas."
+    },
+    "loginRequired": {
+      "title": "Inicio de Sesión Requerido",
+      "message": "Inicie sesión para ver los detalles de las universidades y acceder a todas las funciones"
+    },
+    "search": {
+      "placeholder": "Buscar universidades...",
+      "allTypes": "Todos los Tipos",
+      "private": "Privada",
+      "public": "Pública",
+      "allStates": "Todos los Estados",
+      "universitiesCount": "universidades",
+      "featured": "destacadas",
+      "filterByType": "Filtrar por tipo de universidad",
+      "filterByState": "Filtrar por estado de la universidad"
+    },
+    "loading": "Cargando universidades...",
+    "featured": {
+      "title": "Universidades Destacadas",
+      "subtitle": "Lo Más Destacado de la Semana",
+      "description": "Descubra las universidades seleccionadas por nuestros expertos para usted",
+      "featured": "Destacada",
+      "more": "más"
+    },
+    "card": {
+      "learnMore": "Más Información"
+    },
+    "pagination": {
+      "previous": "Anterior",
+      "next": "Siguiente",
+      "page": "Página",
+      "of": "de"
+    },
+    "noResults": {
+      "title": "No se encontraron universidades",
+      "description": "Intente ajustar sus criterios de búsqueda"
+    },
+    "callToAction": {
+      "title": "¿Listo para Aplicar a tu",
+      "titleHighlight": "Universidad de Ensueño?",
+      "description": "Comience su viaje con nuestra plataforma impulsada por IA y desbloquee oportunidades exclusivas de becas.",
+      "findScholarships": "Encontrar Becas",
+      "learnMore": "Más Información"
+    }
+  },
+  "universityDetailPage": {
+    "loading": "Cargando detalles de la universidad...",
+    "notFound": {
+      "title": "Universidad no encontrada",
+      "backLink": "Volver a Universidades"
+    },
+    "editProfile": {
+      "editButton": "Editar Perfil",
+      "saveButton": "Guardar",
+      "cancelButton": "Cancelar",
+      "uploadingBanner": "Subiendo...",
+      "changeBanner": "Cambiar Banner",
+      "yourUniversity": "Tu Universidad",
+      "successMessage": "¡Perfil actualizado con éxito!",
+      "errorMessage": "Error al actualizar el perfil. Inténtalo de nuevo."
+    },
+    "placeholders": {
+      "universityName": "Nombre de la Universidad",
+      "location": "Ubicación",
+      "description": "Describa su universidad...",
+      "addNewProgram": "Añadir nuevo programa",
+      "street": "Calle",
+      "city": "Ciudad",
+      "state": "Estado",
+      "zipCode": "Código Postal",
+      "country": "País",
+      "website": "https://universidad.edu",
+      "uploadBanner": "Cargar imagen del banner de la universidad"
+    },
+    "sections": {
+      "about": "Acerca de",
+      "academicPrograms": "Programas Académicos",
+      "contactInformation": "Información de Contacto",
+      "address": "Dirección",
+      "website": "Sitio Web",
+      "scholarshipOpportunities": "Oportunidades de Becas"
+    },
+    "contact": {
+      "phone": "Teléfono",
+      "email": "Correo Electrónico",
+      "admissionsEmail": "Correo de Admisiones",
+      "fax": "Fax"
+    },
+    "buttons": {
+      "add": "Añadir",
+      "remove": "Eliminar",
+      "visitWebsite": "Visitar Sitio Web Oficial",
+      "viewScholarships": "Ver Becas"
+    },
+    "messages": {
+      "noProgramsListed": "No hay programas listados",
+      "noWebsiteProvided": "No se proporcionó sitio web",
+      "scholarshipDescription": "Descubra becas exclusivas disponibles en",
+      "uploadError": "Error al subir la imagen. Inténtalo de nuevo."
+    }
+  }
+}

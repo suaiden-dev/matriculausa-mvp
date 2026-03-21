@@ -66,6 +66,7 @@ export interface Scholarship {
   work_permissions?: string[];
   // Novos campos para taxas dinâmicas
   application_fee_amount?: number;
+  placement_fee_amount?: number;
   scholarship_fee_amount?: number;
   internal_fees?: any[];
   is_stripe_connect_enabled?: boolean;
@@ -80,6 +81,7 @@ export interface Scholarship {
     logo_url?: string;
     location: string;
     is_approved: boolean;
+    image_url?: string;
     university_fees_page_url?: string;
   } | null;
 }
@@ -171,6 +173,7 @@ export interface UserProfile {
   affiliate_code?: string | null; // Friend referral code
   system_type?: "legacy" | "simplified"; // System type inherited from seller
   selection_survey_passed?: boolean;
+  student_process_type?: string | null;
 }
 
 export interface EmailAttachment {

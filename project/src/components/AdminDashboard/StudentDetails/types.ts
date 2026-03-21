@@ -20,6 +20,9 @@ export interface StudentRecord {
   student_created_at: string;
   has_paid_selection_process_fee: boolean;
   has_paid_i20_control_fee: boolean;
+  placement_fee_flow?: boolean;
+  is_placement_fee_paid?: boolean;
+  placement_fee_amount?: number | string | null;
   selection_process_fee_payment_method?: string | null;
   i20_control_fee_payment_method?: string | null;
   seller_referral_code: string | null;
@@ -33,6 +36,10 @@ export interface StudentRecord {
   scholarship_fee_payment_method?: string | null;
   acceptance_letter_status: string | null;
   student_process_type: string | null;
+  has_paid_ds160_package: boolean;
+  has_paid_i539_cos_package: boolean;
+  ds160_package_payment_method?: string | null;
+  i539_cos_package_payment_method?: string | null;
   payment_status: string | null;
   reviewed_at: string | null;
   reviewed_by: string | null;
@@ -43,6 +50,8 @@ export interface StudentRecord {
   is_locked: boolean;
   all_applications?: any[];
   admin_notes?: string | null;
+  scholarship_fee_amount?: number | string | null;
+  scholarship_title?: string | null;
 }
 
 export interface ReferralInfo {
@@ -84,7 +93,7 @@ export interface TermAcceptance {
 }
 
 export interface PendingPayment {
-  fee_type: 'selection_process' | 'application' | 'scholarship' | 'i20_control';
+  fee_type: 'selection_process' | 'application' | 'scholarship' | 'i20_control' | 'placement' | 'ds160_package' | 'i539_cos_package';
   payment_method: 'stripe' | 'zelle' | 'manual';
   amount?: number;
   scholarship_id?: string | null;

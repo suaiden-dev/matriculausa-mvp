@@ -628,7 +628,7 @@ Deno.serve(async (req) => {
 
     console.log('[validate-zelle-payment-result] Processing validation result for payment:', payment_id, 'Valid:', valid);
 
-    // Buscar o pagamento
+    // Buscar o pagamento informado pelo n8n
     const { data: payment, error: fetchError } = await supabase
       .from('zelle_payments')
       .select('*')
@@ -640,7 +640,51 @@ Deno.serve(async (req) => {
       return corsResponse({ error: 'Payment not found' }, 404);
     }
 
-    // Atualizar status do pagamento
+    // --- Lógica de Unificação (Merge) ---
+    // Se o registro atual não possui comprovante, é provável que seja o duplicado criado pelo n8n.
+    // Vamos tentar encontrar o registro original criado pela Edge Function que tem a imagem.
+    let targetPaymentId = payment_id;
+    let finalPaymentData = payment;
+
+    if (!payment.screenshot_url) {
+      console.log(`[validate-zelle-payment-result] Registro ${payment_id} não possui comprovante. Buscando registro original da EF...`);
+      
+      const tenMinutesAgo = new Date(new Date(payment.created_at).getTime() - 10 * 60 * 1000).toISOString();
+      const tenMinutesAfter = new Date(new Date(payment.created_at).getTime() + 10 * 60 * 1000).toISOString();
+
+      const { data: originalPayment, error: findOriginalError } = await supabase
+        .from('zelle_payments')
+        .select('*')
+        .eq('user_id', payment.user_id)
+        .eq('amount', payment.amount)
+        // Verificamos tanto fee_type quanto fee_type_global para garantir o match
+        .or(`fee_type.eq."${payment.fee_type}",fee_type_global.eq."${payment.fee_type_global}"`)
+        .not('screenshot_url', 'is', null)
+        .neq('id', payment_id)
+        .gt('created_at', tenMinutesAgo)
+        .lt('created_at', tenMinutesAfter)
+        .order('created_at', { ascending: false })
+        .limit(1)
+        .maybeSingle();
+
+      if (originalPayment) {
+        console.log(`[validate-zelle-payment-result] Registro original com imagem encontrado: ${originalPayment.id}. Unificando e removendo o duplicado.`);
+        targetPaymentId = originalPayment.id;
+        finalPaymentData = originalPayment;
+
+        // Deletar o registro duplicado (do n8n)
+        const { error: deleteError } = await supabase
+          .from('zelle_payments')
+          .delete()
+          .eq('id', payment_id);
+          
+        if (deleteError) {
+          console.warn('[validate-zelle-payment-result] Falha ao remover duplicado:', deleteError);
+        }
+      }
+    }
+
+    // Atualizar status do pagamento (no registro correto)
     const newStatus = valid ? 'verified' : 'rejected';
     const { error: updateError } = await supabase
       .from('zelle_payments')
@@ -650,7 +694,7 @@ Deno.serve(async (req) => {
         verified_at: valid ? new Date().toISOString() : null,
         updated_at: new Date().toISOString(),
         metadata: {
-          ...payment.metadata,
+          ...finalPaymentData.metadata,
           validation_result: {
             valid,
             reason,
@@ -660,12 +704,15 @@ Deno.serve(async (req) => {
           }
         }
       })
-      .eq('id', payment_id);
+      .eq('id', targetPaymentId);
 
     if (updateError) {
       console.error('[validate-zelle-payment-result] Error updating payment status:', updateError);
       return corsResponse({ error: 'Failed to update payment status' }, 500);
     }
+
+    // Usar os dados do pagamento unificado para as próximas etapas
+    const paymentToProcess = finalPaymentData;
 
     // Se o pagamento foi validado, atualizar o sistema automaticamente
     if (valid) {
@@ -673,34 +720,32 @@ Deno.serve(async (req) => {
       
       try {
         // Atualizar perfil do usuário baseado no tipo de taxa
-        if (payment.fee_type === 'scholarship_fee') {
+        if (paymentToProcess.fee_type === 'scholarship_fee') {
           const { error: profileError } = await supabase
             .from('user_profiles')
             .update({ 
               is_scholarship_fee_paid: true,
               updated_at: new Date().toISOString()
             })
-            .eq('user_id', payment.user_id);
+            .eq('user_id', paymentToProcess.user_id);
 
           if (profileError) {
             console.error('[validate-zelle-payment-result] Error updating user profile for scholarship fee:', profileError);
           } else {
             console.log('[validate-zelle-payment-result] User profile updated for scholarship fee');
-            
-            // Note: Term acceptance notification with PDF is only sent for selection_process_fee
           }
         }
 
         // Se for application_fee, criar ou atualizar aplicação
-        if (payment.fee_type === 'application_fee' && payment.metadata?.scholarships_ids) {
-          const scholarshipsIds = payment.metadata.scholarships_ids;
+        if (paymentToProcess.fee_type === 'application_fee' && paymentToProcess.metadata?.scholarships_ids) {
+          const scholarshipsIds = paymentToProcess.metadata.scholarships_ids;
           const scholarshipId = Array.isArray(scholarshipsIds) ? scholarshipsIds[0] : scholarshipsIds;
           
           // Verificar se já existe uma aplicação
           const { data: existingApp, error: findError } = await supabase
             .from('scholarship_applications')
             .select('id, status')
-            .eq('student_id', payment.user_id)
+            .eq('student_id', paymentToProcess.user_id)
             .eq('scholarship_id', scholarshipId)
             .single();
 
@@ -732,7 +777,7 @@ Deno.serve(async (req) => {
             const { error: createAppError } = await supabase
               .from('scholarship_applications')
               .insert({
-                student_id: payment.user_id,
+                student_id: paymentToProcess.user_id,
                 scholarship_id: scholarshipId,
                 status: 'under_review', // Nova aplicação sempre começa com este status
                 created_at: new Date().toISOString(),
@@ -748,14 +793,14 @@ Deno.serve(async (req) => {
         }
 
         // Se for selection_process, atualizar perfil do usuário
-        if (payment.fee_type === 'selection_process') {
+        if (paymentToProcess.fee_type === 'selection_process') {
           const { error: profileError } = await supabase
             .from('user_profiles')
             .update({ 
               has_paid_selection_process_fee: true,
               updated_at: new Date().toISOString()
             })
-            .eq('user_id', payment.user_id);
+            .eq('user_id', paymentToProcess.user_id);
 
           if (profileError) {
             console.error('[validate-zelle-payment-result] Error updating user profile for selection process fee:', profileError);
@@ -765,7 +810,7 @@ Deno.serve(async (req) => {
             // Send term acceptance notification with PDF after successful payment
             try {
               console.log('[NOTIFICAÇÃO] Enviando notificação de aceitação de termos com PDF após pagamento Zelle bem-sucedido...');
-              await sendTermAcceptanceNotificationAfterPayment(payment.user_id, 'selection_process');
+              await sendTermAcceptanceNotificationAfterPayment(paymentToProcess.user_id, 'selection_process');
               console.log('[NOTIFICAÇÃO] Notificação enviada com sucesso');
             } catch (notificationError) {
               console.error('[NOTIFICAÇÃO] Erro ao enviar notificação:', notificationError);
@@ -775,45 +820,58 @@ Deno.serve(async (req) => {
         }
 
         // Se for enrollment_fee, atualizar perfil do usuário
-        if (payment.fee_type === 'enrollment_fee') {
+        if (paymentToProcess.fee_type === 'enrollment_fee') {
           const { error: profileError } = await supabase
             .from('user_profiles')
             .update({ 
               has_paid_college_enrollment_fee: true,
               updated_at: new Date().toISOString()
             })
-            .eq('user_id', payment.user_id);
+            .eq('user_id', paymentToProcess.user_id);
 
           if (profileError) {
             console.error('[validate-zelle-payment-result] Error updating user profile for enrollment fee:', profileError);
           } else {
             console.log('[validate-zelle-payment-result] User profile updated for enrollment fee');
-            
-            // Note: Term acceptance notification with PDF is only sent for selection_process_fee
           }
         }
 
         // Se for i20_control, atualizar perfil do usuário
-        if (payment.fee_type === 'i20_control' || payment.fee_type === 'i-20_control_fee') {
+        if (paymentToProcess.fee_type === 'i20_control' || paymentToProcess.fee_type === 'i-20_control_fee') {
           const { error: profileError } = await supabase
             .from('user_profiles')
             .update({ 
               has_paid_i20_control_fee: true,
               updated_at: new Date().toISOString()
             })
-            .eq('user_id', payment.user_id);
+            .eq('user_id', paymentToProcess.user_id);
 
           if (profileError) {
             console.error('[validate-zelle-payment-result] Error updating user profile for i20 control fee:', profileError);
           } else {
             console.log('[validate-zelle-payment-result] User profile updated for i20 control fee');
-            
-            // Note: Term acceptance notification with PDF is only sent for selection_process_fee
+          }
+        }
+
+        // Se for placement_fee, atualizar perfil do usuário
+        if (paymentToProcess.fee_type === 'placement_fee') {
+          const { error: profileError } = await supabase
+            .from('user_profiles')
+            .update({ 
+              is_placement_fee_paid: true,
+              updated_at: new Date().toISOString()
+            })
+            .eq('user_id', paymentToProcess.user_id);
+
+          if (profileError) {
+            console.error('[validate-zelle-payment-result] Error updating user profile for placement fee:', profileError);
+          } else {
+            console.log('[validate-zelle-payment-result] User profile updated for placement fee');
           }
         }
 
         // Enviar notificação para universidade se for application_fee
-        if (payment.fee_type === 'application_fee' && payment.metadata?.scholarships_ids) {
+        if (paymentToProcess.fee_type === 'application_fee' && paymentToProcess.metadata?.scholarships_ids) {
           try {
             console.log('[validate-zelle-payment-result] Sending notification to university for application fee payment...');
             
@@ -821,13 +879,13 @@ Deno.serve(async (req) => {
             const { data: alunoData, error: alunoError } = await supabase
               .from('user_profiles')
               .select('full_name, email')
-              .eq('user_id', payment.user_id)
+              .eq('user_id', paymentToProcess.user_id)
               .single();
             
             if (alunoError || !alunoData) {
               console.warn('[validate-zelle-payment-result] Student not found for notification:', alunoError);
             } else {
-              const scholarshipsIds = payment.metadata.scholarships_ids;
+              const scholarshipsIds = paymentToProcess.metadata.scholarships_ids;
               const scholarshipId = Array.isArray(scholarshipsIds) ? scholarshipsIds[0] : scholarshipsIds;
               
               // Buscar dados da bolsa
@@ -850,7 +908,7 @@ Deno.serve(async (req) => {
                   const emailUniversidade = contact.admissionsEmail || contact.email || '';
                   
                   // Montar mensagem para n8n
-                  const mensagem = `O aluno ${alunoData.full_name} pagou a taxa de aplicação de $${payment.amount} via Zelle para a bolsa "${scholarship.title}" da universidade ${universidade.name}. Acesse o painel para revisar a candidatura.`;
+                  const mensagem = `O aluno ${alunoData.full_name} pagou a taxa de aplicação de $${paymentToProcess.amount} via Zelle para a bolsa "${scholarship.title}" da universidade ${universidade.name}. Acesse o painel para revisar a candidatura.`;
                   const payload = {
                     tipo_notf: 'Novo pagamento de application fee',
                     email_aluno: alunoData.email,

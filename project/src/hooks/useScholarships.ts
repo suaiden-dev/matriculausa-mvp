@@ -27,10 +27,6 @@ export function useScholarships() {
         setLoading(true);
         setError(null);
         
-        // Buscar user_id do usuário autenticado
-        const { data: sessionData } = await supabase.auth.getSession();
-        const userId = sessionData?.session?.user?.id;
-        
         // Query unificada para visitantes e usuários autenticados
         const { data, error } = await supabase
           .from('scholarships')
@@ -63,7 +59,8 @@ export function useScholarships() {
             scholarship_type,
             work_permissions,
             application_fee_amount,
-            universities (id, name, logo_url, location, is_approved, university_fees_page_url)
+            placement_fee_amount,
+            universities (id, name, logo_url, image_url, location, is_approved, university_fees_page_url)
           `);
           // Removido filtro is_active=true - estudantes podem ver bolsas inativas mas não podem aplicar
         

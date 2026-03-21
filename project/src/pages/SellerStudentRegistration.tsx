@@ -35,7 +35,6 @@ const SellerStudentRegistration: React.FC = () => {
   
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
-  const [showVerificationModal, setShowVerificationModal] = useState(false);
   const [sellerReferralCodeValid, setSellerReferralCodeValid] = useState<boolean | null>(null);
   const [, setSellerReferralCodeLoading] = useState(false);
   const [termsAccepted, setTermsAccepted] = useState(false);
@@ -250,7 +249,8 @@ const SellerStudentRegistration: React.FC = () => {
       
       await register(formData.email, formData.password, registerData);
       
-      setShowVerificationModal(true);
+      // ✅ MODIFICADO: Não mostrar modal de verificação - login agora é automático
+      // O AuthRedirect vai detectar o usuário logado e redirecionar automaticamente
     } catch (err: any) {
       console.error('Registration error:', err);
       setError(err.message || 'An error occurred during registration');

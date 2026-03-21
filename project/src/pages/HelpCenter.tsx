@@ -1,9 +1,44 @@
 import React, { useState } from 'react';
-import { User, FileText, CreditCard, UploadCloud, CheckCircle, HelpCircle, MessageCircle, Search, BookOpen, Phone, Mail, Clock, ChevronRight } from 'lucide-react';
+import { User, FileText, CreditCard, UploadCloud, CheckCircle, HelpCircle, MessageCircle, Search, Phone, Mail, Clock } from 'lucide-react';
 import SmartChat from '../components/SmartChat';
+import { useTranslation } from 'react-i18next';
 
 const HelpCenter: React.FC = () => {
+  const { t } = useTranslation(['help', 'common']);
   const [searchQuery, setSearchQuery] = useState('');
+
+  const topics = [
+    {
+      icon: User,
+      title: t('help:mainTopics.items.profile.title'),
+      description: t('help:mainTopics.items.profile.description'),
+      category: t('help:mainTopics.items.profile.category')
+    },
+    {
+      icon: FileText,
+      title: t('help:mainTopics.items.application.title'),
+      description: t('help:mainTopics.items.application.description'),
+      category: t('help:mainTopics.items.application.category')
+    },
+    {
+      icon: CreditCard,
+      title: t('help:mainTopics.items.payment.title'),
+      description: t('help:mainTopics.items.payment.description'),
+      category: t('help:mainTopics.items.payment.category')
+    },
+    {
+      icon: UploadCloud,
+      title: t('help:mainTopics.items.documents.title'),
+      description: t('help:mainTopics.items.documents.description'),
+      category: t('help:mainTopics.items.documents.category')
+    },
+    {
+      icon: CheckCircle,
+      title: t('help:mainTopics.items.status.title'),
+      description: t('help:mainTopics.items.status.description'),
+      category: t('help:mainTopics.items.status.category')
+    }
+  ];
 
   return (
     <div className="min-h-screen bg-gray-50">
@@ -16,11 +51,11 @@ const HelpCenter: React.FC = () => {
             </div>
             
             <h1 className="text-4xl md:text-5xl font-bold text-gray-900 mb-4">
-              Help Center
+              {t('help:header.title')}
             </h1>
             
             <p className="text-xl text-gray-600 max-w-2xl mx-auto mb-8">
-              Find quick answers and detailed guidance for all your questions
+              {t('help:header.description')}
             </p>
             
             <div className="max-w-md mx-auto relative">
@@ -29,7 +64,7 @@ const HelpCenter: React.FC = () => {
                 type="text"
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
-                placeholder="Search topics..."
+                placeholder={t('help:header.searchPlaceholder')}
                 className="w-full pl-10 pr-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#05294E] focus:border-transparent"
               />
             </div>
@@ -38,11 +73,11 @@ const HelpCenter: React.FC = () => {
             <div className="flex justify-center items-center space-x-8 mt-8 text-sm text-gray-500">
               <div className="flex items-center space-x-2">
                 <div className="w-2 h-2 bg-blue-500 rounded-full"></div>
-                <span>24/7 support</span>
+                <span>{t('help:header.stats.support247')}</span>
               </div>
               <div className="flex items-center space-x-2">
                 <div className="w-2 h-2 bg-[#05294E] rounded-full"></div>
-                <span>Quick response</span>
+                <span>{t('help:header.stats.quickResponse')}</span>
               </div>
             </div>
           </div>
@@ -55,43 +90,16 @@ const HelpCenter: React.FC = () => {
           {/* Main Content */}
           <div className="lg:col-span-3">
             <div className="mb-8">
-              <h2 className="text-2xl font-semibold text-gray-900 mb-2">Main Topics</h2>
-              <p className="text-gray-600">Find help organized by category</p>
+              <h2 className="text-2xl font-semibold text-gray-900 mb-2">
+                {t('help:mainTopics.title')}
+              </h2>
+              <p className="text-gray-600">
+                {t('help:mainTopics.description')}
+              </p>
             </div>
             
             <div className="grid gap-4">
-              {[
-                {
-                  icon: User,
-                  title: "Creating your profile",
-                  description: "Step-by-step guidance to set up your academic and personal information.",
-                  category: "Setup"
-                },
-                {
-                  icon: FileText,
-                  title: "Understanding the application process",
-                  description: "Learn how to apply, track your progress, and what to expect at each stage.",
-                  category: "Application"
-                },
-                {
-                  icon: CreditCard,
-                  title: "Paying fees",
-                  description: "How to pay, check payment status, and understand non-refundable fees.",
-                  category: "Payment"
-                },
-                {
-                  icon: UploadCloud,
-                  title: "Uploading documents",
-                  description: "Tips for uploading transcripts, IDs, and other required files.",
-                  category: "Documents"
-                },
-                {
-                  icon: CheckCircle,
-                  title: "Tracking your application",
-                  description: "Monitor your status and next steps after submission.",
-                  category: "Status"
-                }
-              ].map((item, index) => (
+              {topics.map((item, index) => (
                 <div
                   key={index}
                   className="group bg-white rounded-lg border border-gray-200 p-6 hover:border-[#05294E] hover:shadow-md transition-all duration-200 cursor-pointer"
@@ -121,11 +129,13 @@ const HelpCenter: React.FC = () => {
             </div>
           </div>
 
-                    {/* Sidebar */}
+          {/* Sidebar */}
           <div className="lg:col-span-1 space-y-6">
             {/* Contact Options */}
             <div className="bg-white rounded-lg border border-gray-200 p-6">
-              <h3 className="text-lg font-semibold text-gray-900 mb-4">Need help?</h3>
+              <h3 className="text-lg font-semibold text-gray-900 mb-4">
+                {t('help:sidebar.needHelp')}
+              </h3>
               
               <div className="space-y-3">
                 <div className="flex items-center p-3 border border-gray-200 rounded-lg hover:border-[#05294E] hover:bg-gray-50 transition-colors cursor-pointer">
@@ -133,19 +143,29 @@ const HelpCenter: React.FC = () => {
                     <MessageCircle className="h-5 w-5 text-blue-600" />
                   </div>
                   <div className="flex-1">
-                    <p className="font-medium text-gray-900">Smart Assistant</p>
-                    <p className="text-sm text-gray-600">AI-powered help</p>
+                    <p className="font-medium text-gray-900">
+                      {t('help:sidebar.smartAssistant')}
+                    </p>
+                    <p className="text-sm text-gray-600">
+                      {t('help:sidebar.smartAssistantDesc')}
+                    </p>
                   </div>
                   <div className="w-2 h-2 bg-blue-500 rounded-full"></div>
                 </div>
 
-                <div className="flex items-center p-3 border border-gray-200 rounded-lg hover:border-[#05294E] hover:bg-gray-50 transition-colors cursor-pointer">
+                <div className="flex items-center p-3 border border-gray-200 rounded-lg hover:border-[#05294E] hover:bg-gray-50 transition-colors cursor-pointer"
+                  onClick={() => window.open('https://wa.me/12136762544', '_blank')}
+                >
                   <div className="w-10 h-10 bg-green-100 rounded-lg flex items-center justify-center mr-3">
                     <Phone className="h-5 w-5 text-green-600" />
                   </div>
                   <div className="flex-1">
-                    <p className="font-medium text-gray-900">WhatsApp Support</p>
-                    <p className="text-sm text-gray-600">Direct messaging</p>
+                    <p className="font-medium text-gray-900">
+                      {t('help:sidebar.whatsappSupport')}
+                    </p>
+                    <p className="text-sm text-gray-600">
+                      {t('help:sidebar.whatsappDesc')}
+                    </p>
                   </div>
                   <div className="w-2 h-2 bg-green-500 rounded-full"></div>
                 </div>
@@ -158,21 +178,23 @@ const HelpCenter: React.FC = () => {
                 <div className="w-8 h-8 bg-white/20 rounded-lg flex items-center justify-center mr-3">
                   <Mail className="h-5 w-5 text-white" />
                 </div>
-                <h3 className="text-lg font-semibold">Quick Support</h3>
+                <h3 className="text-lg font-semibold">
+                  {t('help:sidebar.quickSupport.title')}
+                </h3>
               </div>
               
               <p className="text-blue-100 mb-4 text-sm">
-                Use the floating buttons for instant help - Smart Assistant and WhatsApp are available 24/7.
+                {t('help:sidebar.quickSupport.description')}
               </p>
               
               <div className="space-y-2 text-sm">
                 <div className="flex items-center">
                   <CheckCircle className="h-4 w-4 text-green-400 mr-2" />
-                  <span>Instant AI responses</span>
+                  <span>{t('help:sidebar.quickSupport.instantAI')}</span>
                 </div>
                 <div className="flex items-center">
                   <Clock className="h-4 w-4 text-blue-400 mr-2" />
-                  <span>24/7 availability</span>
+                  <span>{t('help:sidebar.quickSupport.availability247')}</span>
                 </div>
               </div>
             </div>
@@ -186,4 +208,4 @@ const HelpCenter: React.FC = () => {
   );
 };
 
-export default HelpCenter; 
+export default HelpCenter;

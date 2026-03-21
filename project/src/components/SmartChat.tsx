@@ -1,7 +1,7 @@
 import React, { useState, useRef, useEffect } from 'react';
+import { useTranslation } from 'react-i18next';
 
 interface SmartChatProps {
-  isStudentPage?: boolean;
 }
 
 interface Message {
@@ -10,7 +10,8 @@ interface Message {
   timestamp: Date;
 }
 
-const SmartChat: React.FC<SmartChatProps> = ({ isStudentPage = false }) => {
+const SmartChat: React.FC<SmartChatProps> = () => {
+  const { t } = useTranslation(['common']);
   const [isChatOpen, setIsChatOpen] = useState(false);
   const [messages, setMessages] = useState<Message[]>([]);
   const [inputValue, setInputValue] = useState('');
@@ -49,7 +50,7 @@ const SmartChat: React.FC<SmartChatProps> = ({ isStudentPage = false }) => {
       // Adicionar mensagem de boas-vindas
       setMessages([{
         sender: 'AI',
-        content: 'Hello! I\'m your Smart Assistant. How can I help you today? I can answer questions about scholarships, fees, application process and much more.',
+        content: t('common:smartChat.welcomeMessage'),
         timestamp: new Date()
       }]);
 
@@ -103,7 +104,7 @@ const SmartChat: React.FC<SmartChatProps> = ({ isStudentPage = false }) => {
       const formattedResponse = (data.response || '(no response)').replace(/\n/g, '<br>');
       appendMessage('AI', formattedResponse);
     } catch (err) {
-      appendMessage('AI', '<span style="color:#ff8181">Error sending message. Please try again.</span>');
+      appendMessage('AI', `<span style="color:#ff8181">${t('common:errors.uploadFailed')}</span>`);
     } finally {
       setIsLoading(false);
       inputRef.current?.focus();
@@ -139,10 +140,12 @@ const SmartChat: React.FC<SmartChatProps> = ({ isStudentPage = false }) => {
     const handleClickOutside = (event: MouseEvent) => {
       const modal = document.getElementById('smart-assistant-modal');
       const toggleBtn = document.getElementById('smart-assistant-toggle');
+      const whatsappBtn = document.getElementById('whatsapp-toggle');
 
       if (isChatOpen &&
         modal && !modal.contains(event.target as Node) &&
-        toggleBtn && !toggleBtn.contains(event.target as Node)) {
+        toggleBtn && !toggleBtn.contains(event.target as Node) &&
+        whatsappBtn && !whatsappBtn.contains(event.target as Node)) {
         closeChat();
       }
     };
@@ -164,7 +167,7 @@ const SmartChat: React.FC<SmartChatProps> = ({ isStudentPage = false }) => {
           }`}
         style={{
           position: 'fixed',
-          bottom: isStudentPage ? '100px' : '20px',
+          bottom: '20px',
           right: '20px',
           width: '64px',
           height: '64px',
@@ -178,7 +181,7 @@ const SmartChat: React.FC<SmartChatProps> = ({ isStudentPage = false }) => {
           WebkitUserSelect: 'none',
           userSelect: 'none'
         }}
-        title={isMobile ? "Smart Assistant - Opens in new tab" : "Smart Assistant - Ask me anything!"}
+        title={isMobile ? t('common:smartChat.mobileNote') : t('common:smartChat.welcomeMessage')}
       >
         {/* Ícone Smart Assistant - área clicável reduzida */}
         <div
@@ -189,7 +192,7 @@ const SmartChat: React.FC<SmartChatProps> = ({ isStudentPage = false }) => {
             minHeight: '48px',
             pointerEvents: 'auto'
           }}
-          title={isMobile ? "Smart Assistant - Opens in new tab" : "Smart Assistant - Ask me anything!"}
+          title={isMobile ? t('common:smartChat.mobileNote') : t('common:smartChat.welcomeMessage')}
         >
           <svg width="30" height="30" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
             <path d="M20 2H4C2.9 2 2 2.9 2 4V22L6 18H20C21.1 18 22 17.1 22 16V4C22 2.9 21.1 2 20 2ZM20 16H6L4 18V4H20V16Z" fill="currentColor" />
@@ -200,15 +203,19 @@ const SmartChat: React.FC<SmartChatProps> = ({ isStudentPage = false }) => {
         </div>
       </div>
 
-      {/* WhatsApp Button - Com animação de dropdown */}
       <div
+        id="whatsapp-toggle"
         className={`fixed rounded-full bg-[#25D366] text-white flex items-center justify-center cursor-pointer shadow-[0_0_0_0,0_6px_20px_rgba(10,20,40,0.6)] z-[1000] font-['Montserrat',Arial,sans-serif] transition-all duration-500 ease-out border-[3px] border-white group relative ${isChatOpen ? 'opacity-100 scale-100' : 'opacity-0 scale-50 pointer-events-none'
           }`}
+        onClick={(e) => {
+          e.stopPropagation();
+          window.open('https://wa.me/12136762544', '_blank');
+        }}
         style={{
           position: 'fixed',
           bottom: isChatOpen
-            ? (isStudentPage ? '180px' : '100px')
-            : (isStudentPage ? '100px' : '20px'),
+            ? '100px'
+            : '20px',
           right: '20px',
           width: '64px',
           height: '64px',
@@ -222,31 +229,21 @@ const SmartChat: React.FC<SmartChatProps> = ({ isStudentPage = false }) => {
           WebkitUserSelect: 'none',
           userSelect: 'none'
         }}
-        title="Contact us via WhatsApp"
+        title={t('common:smartChat.whatsappTitle')}
       >
-        <a
-          href="https://wa.me/12136762544"
-          target="_blank"
-          rel="noopener noreferrer"
+        <div
           className="w-full h-full flex items-center justify-center"
           aria-label="Contact us via WhatsApp"
-          style={{
-            // Melhorias para iOS
-            WebkitTapHighlightColor: 'transparent',
-            WebkitTouchCallout: 'none',
-            WebkitUserSelect: 'none',
-            userSelect: 'none'
-          }}
         >
           <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 32 32" width="30" height="30" fill="white">
             <path d="M16.001 3.2c-7.11 0-12.8 5.689-12.8 12.8 0 2.226.584 4.344 1.696 6.24L3.2 28.8l6.832-1.744c1.824.96 3.872 1.472 5.969 1.472 7.11 0 12.8-5.689 12.8-12.8s-5.69-12.8-12.8-12.8zm0 23.2c-1.761 0-3.481-.455-5.024-1.328l-.36-.2-4.063 1.04 1.072-3.952-.208-.376c-1.016-1.808-1.552-3.856-1.552-5.936 0-6.065 4.935-11 11-11s11 4.935 11 11-4.936 11-11 11zm6.225-8.145c-.339-.17-2.004-.988-2.316-1.104-.311-.113-.536-.17-.76.17-.226.339-.87 1.104-1.068 1.33-.197.226-.394.254-.733.085s-1.429-.526-2.723-1.678c-1.006-.896-1.684-2.003-1.881-2.343-.197-.34-.021-.522.149-.691.154-.152.339-.395.509-.593.17-.198.226-.34.339-.566.113-.226.057-.425-.028-.593-.084-.17-.76-1.833-1.04-2.512-.273-.654-.55-.566-.76-.577l-.648-.011c-.226 0-.593.085-.903.425s-1.184 1.155-1.184 2.82 1.211 3.267 1.379 3.494c.17.226 2.379 3.632 5.767 5.088.807.348 1.438.557 1.929.713.81.258 1.548.221 2.131.134.65-.097 2.004-.818 2.288-1.608.283-.79.283-1.47.198-1.609-.085-.14-.311-.226-.65-.396z" />
           </svg>
-        </a>
+        </div>
       </div>
 
       {/* Modal do Smart Assistant - APENAS para Desktop */}
       {isChatOpen && !isMobile && (
-        <div className={`fixed inset-0 z-[10003] flex items-end justify-end p-4 pr-24 pointer-events-none ${isStudentPage ? 'pb-[100px]' : 'pb-5'}`}>
+        <div className={`fixed inset-0 z-[10003] flex items-end justify-end p-4 pr-24 pointer-events-none pb-5`}>
           {/* Modal do Chat */}
           <div
             id="smart-assistant-modal"
@@ -263,8 +260,8 @@ const SmartChat: React.FC<SmartChatProps> = ({ isStudentPage = false }) => {
                   </svg>
                 </div>
                 <div>
-                  <h3 className="text-lg font-bold text-gray-900">Smart Assistant</h3>
-                  <p className="text-xs text-gray-500">Your intelligent companion</p>
+                  <h3 className="text-lg font-bold text-gray-900">{t('common:smartChat.title')}</h3>
+                  <p className="text-xs text-gray-500">{t('common:smartChat.subtitle')}</p>
                 </div>
               </div>
 
@@ -272,7 +269,7 @@ const SmartChat: React.FC<SmartChatProps> = ({ isStudentPage = false }) => {
               <button
                 onClick={closeChat}
                 className="p-2 hover:bg-gray-100 rounded-xl transition-colors duration-200"
-                title="Close chat"
+                title={t('common:smartChat.close')}
               >
                 <svg width="20" height="20" className="text-gray-600" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
                   <path d="M18 6L6 18M6 6L18 18" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
@@ -309,13 +306,13 @@ const SmartChat: React.FC<SmartChatProps> = ({ isStudentPage = false }) => {
                         ? 'bg-white/20 text-white'
                         : 'bg-[#05294E] text-white'
                         }`}>
-                        {message.sender === 'You' ? 'Y' : 'AI'}
+                        {message.sender === 'You' ? t('common:smartChat.you') : 'AI'}
                       </div>
                       <span className="font-semibold text-xs truncate flex-1">
-                        {message.sender === 'You' ? 'You' : 'Smart Assistant'}
+                        {message.sender === 'You' ? t('common:smartChat.you') : t('common:smartChat.assistant')}
                       </span>
                       <span className="text-xs opacity-70 flex-shrink-0">
-                        {message.timestamp.toLocaleTimeString('en-US', {
+                        {message.timestamp.toLocaleTimeString(undefined, {
                           hour: '2-digit',
                           minute: '2-digit'
                         })}
@@ -335,7 +332,7 @@ const SmartChat: React.FC<SmartChatProps> = ({ isStudentPage = false }) => {
                     <div className="w-6 h-6 rounded-full bg-[#05294E] flex items-center justify-center text-xs font-bold text-white flex-shrink-0">
                       AI
                     </div>
-                    <span className="font-semibold text-xs flex-1">Smart Assistant</span>
+                    <span className="font-semibold text-xs flex-1">{t('common:smartChat.assistant')}</span>
                   </div>
                   <div className="flex items-center gap-2 text-xs text-gray-600">
                     <div className="flex gap-1">
@@ -343,7 +340,7 @@ const SmartChat: React.FC<SmartChatProps> = ({ isStudentPage = false }) => {
                       <div className="w-2 h-2 bg-[#05294E] rounded-full animate-bounce" style={{ animationDelay: '0.1s' }}></div>
                       <div className="w-2 h-2 bg-[#05294E] rounded-full animate-bounce" style={{ animationDelay: '0.2s' }}></div>
                     </div>
-                    <span className="font-medium">Typing...</span>
+                    <span className="font-medium">{t('common:smartChat.typing')}</span>
                   </div>
                 </div>
               )}
@@ -359,7 +356,7 @@ const SmartChat: React.FC<SmartChatProps> = ({ isStudentPage = false }) => {
                     value={inputValue}
                     onChange={(e) => setInputValue(e.target.value)}
                     onKeyDown={handleKeyDown}
-                    placeholder="Ask me anything..."
+                    placeholder={t('common:smartChat.inputPlaceholder')}
                     disabled={isLoading}
                     className="w-full px-4 py-3 border-2 border-gray-200 rounded-xl bg-gray-50 text-gray-800 text-sm focus:outline-none focus:border-[#05294E] focus:bg-white transition-all duration-300 disabled:opacity-50 group-hover:border-gray-300 group-hover:bg-white"
                   />
@@ -369,7 +366,7 @@ const SmartChat: React.FC<SmartChatProps> = ({ isStudentPage = false }) => {
                   disabled={isLoading || !inputValue.trim()}
                   className="px-6 py-3 bg-[#05294E] text-white border-none rounded-xl cursor-pointer font-semibold text-sm shadow-lg transition-all duration-300 hover:bg-[#041f3f] hover:shadow-xl hover:scale-105 disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:scale-100 disabled:hover:shadow-lg flex items-center justify-center gap-2"
                 >
-                  <span>Send</span>
+                  <span>{t('common:smartChat.send')}</span>
                   <svg width="18" height="18" className="group-hover:translate-x-1 transition-transform duration-300" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
                     <path d="M22 2L11 13M22 2L15 22L11 13M22 2L2 9L11 13" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
                   </svg>

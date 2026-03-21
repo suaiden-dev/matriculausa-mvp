@@ -1,5 +1,5 @@
 import React from 'react';
-import { CreditCard, Clock, CheckCircle2, XCircle, Grid3X3, List, Eye, CheckCircle, DollarSign, User } from 'lucide-react';
+import { CreditCard, Clock, CheckCircle2, XCircle, Grid3X3, List, Eye, CheckCircle, User } from 'lucide-react';
 import { formatCentsToDollars } from '../../../utils/currency';
 import { PaymentRecord } from '../../../types/payment';
 
@@ -119,7 +119,7 @@ const ZellePaymentsSection: React.FC<ZellePaymentsSectionProps> = ({
                       </span>
                     </div>
                     <div className="mb-4">
-                      <div className="text-2xl font-bold text-gray-900 mb-2">${formatCentsToDollars(payment.amount)}</div>
+                      <div className="text-2xl font-bold text-gray-900 mb-2">${formatCentsToDollars(payment.amount, true)}</div>
                       <p className="text-sm text-gray-600 capitalize">{payment.fee_type.replace('_', ' ')}</p>
                     </div>
                     <div className="text-sm text-gray-500 mb-4">{new Date(payment.created_at).toLocaleDateString()}</div>
@@ -178,7 +178,7 @@ const ZellePaymentsSection: React.FC<ZellePaymentsSectionProps> = ({
                             </div>
                           </td>
                           <td className="px-6 py-4 whitespace-nowrap"><div className="text-sm text-gray-900 capitalize">{payment.fee_type.replace('_', ' ')}</div></td>
-                          <td className="px-6 py-4 whitespace-nowrap"><div className="text-sm text-gray-900"><div className="font-medium">${formatCentsToDollars(payment.amount)}</div></div></td>
+                          <td className="px-6 py-4 whitespace-nowrap"><div className="text-sm text-gray-900"><div className="font-medium">${formatCentsToDollars(payment.amount, true)}</div></div></td>
                           <td className="px-6 py-4 whitespace-nowrap">
                             <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${payment.zelle_status === 'pending_verification' ? 'bg-yellow-100 text-yellow-800' : payment.zelle_status === 'approved' ? 'bg-green-100 text-green-800' : payment.zelle_status === 'rejected' ? 'bg-red-100 text-red-800' : 'bg-gray-100 text-gray-800'}`}>
                               {payment.zelle_status === 'pending_verification' && <Clock className="w-3 h-3 mr-1" />}
@@ -214,7 +214,7 @@ const ZellePaymentsSection: React.FC<ZellePaymentsSectionProps> = ({
 };
 
 const MessageSquare = (props: any) => (
-  <svg {...props} viewBox="0 0 24 24" fill="none" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 10h8M8 14h6m-2 7l-4-4H7a4 4 0 01-4-4V7a4 4 0 014-4h10a4 4 0 014 4v6a4 4 0 01-4 4h-1l-4 4z"/></svg>
+  <svg {...props} viewBox="0 0 24 24" fill="none" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 10h8M8 14h6m-2 7l-4-4H7a4 4 0 01-4-4V7a4 4 0 014-4h10a4 4 0 014 4v6a4 4 0 01-4 4h-1l-4 4z" /></svg>
 );
 
 export default ZellePaymentsSection;

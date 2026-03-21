@@ -64,7 +64,8 @@ import {
   Globe,
   Users,
   MessageCircle,
-  ExternalLink
+  ExternalLink,
+  DollarSign
 } from 'lucide-react';
 
 interface StudentRecord {
@@ -94,10 +95,15 @@ interface StudentRecord {
   applied_at: string | null;
   is_application_fee_paid: boolean;
   is_scholarship_fee_paid: boolean;
+  selection_survey_passed?: boolean;
+  placement_fee_flow?: boolean;
+  is_placement_fee_paid?: boolean;
+  placement_fee_amount?: number | null;
   application_fee_payment_method?: string | null;
   scholarship_fee_payment_method?: string | null;
   acceptance_letter_status: string | null;
   student_process_type: string | null;
+  system_type?: string | null;
   payment_status: string | null;
   scholarship_title: string | null;
   university_name: string | null;
@@ -129,7 +135,6 @@ const AdminStudentDetails: React.FC = () => {
   const navigate = useNavigate();
   const [student, setStudent] = useState<StudentRecord | null>(null);
   const [loading, setLoading] = useState(true);
-  const [loadingSecondaryData, setLoadingSecondaryData] = useState(false);
   const [expandedApps, setExpandedApps] = useState<{ [key: string]: boolean }>({});
   const [dependents, setDependents] = useState<number>(0);
   const [approvingDocs, setApprovingDocs] = useState<{ [key: string]: boolean }>({});
@@ -611,20 +616,23 @@ const AdminStudentDetails: React.FC = () => {
 
       // Processar cada pagamento, usando o mais recente para cada fee_type
       payments?.forEach(payment => {
-        // ✅ PRIORIDADE: Usar gross_amount_usd quando disponível (valor bruto em USD)
-        // Se não tiver, usar amount (mas pode estar em BRL para PIX, então verificar)
-        let amountUSD = payment.gross_amount_usd
-          ? Number(payment.gross_amount_usd)
-          : Number(payment.amount);
-
-        // Se não tem gross_amount_usd e o valor é muito alto, provavelmente é BRL
-        // Não usar esse valor para evitar mostrar valores incorretos
-        if (!payment.gross_amount_usd && amountUSD > 1000 && payment.payment_method === 'stripe') {
-          console.log(`[AdminDashboard] Ignorando valor provavelmente BRL para ${payment.fee_type}: ${amountUSD}`);
-          return;
-        }
+        // ✅ PRIORIDADE PARA DETALHES DO ESTUDANTE: Usar amount (que agora é o valor líquido sem taxas)
+        // O gross_amount_usd é usado apenas no Payment Management (valor bruto pago pelo aluno)
+        let amountUSD = Number(payment.amount);
 
         const feeType = payment.fee_type as keyof typeof amounts;
+
+        // ✅ LÓGICA DE SANITIZAÇÃO PARA DADOS LEGADOS:
+        // Se o valor é muito alto (> esperado * 2) e não temos confirmação de que é USD (via gross_amount_usd),
+        // provavelmente é um erro de BRL salvo como USD.
+        const expectedBase = feeType === 'selection_process'
+          ? (student?.system_type === 'simplified' ? 350 : 400)
+          : (feeType === 'scholarship' ? 900 : (feeType === 'application' ? 100 : 900));
+
+        if (!payment.gross_amount_usd && amountUSD > expectedBase * 2) {
+          console.log(`[AdminStudentDetails] Sanitizando valor provavelmente BRL para ${feeType}: ${amountUSD} (esperado ~${expectedBase})`);
+          return;
+        }
 
         // Só definir se ainda não foi definido (usar o mais recente, que vem primeiro devido ao order)
         if (feeType === 'selection_process' && !amounts.selection_process) {
@@ -858,6 +866,7 @@ const AdminStudentDetails: React.FC = () => {
 
         let lockedApplication = null;
         let activeApplication = null;
+        let enrolledApp = null;
         if (s.scholarship_applications && s.scholarship_applications.length > 0) {
 
           if (isStephanie) {
@@ -879,7 +888,7 @@ const AdminStudentDetails: React.FC = () => {
           }
 
           // Priorizar aplicação enrolled, depois approved com application fee pago, depois approved
-          const enrolledApp = s.scholarship_applications.find((app: any) => app.status === 'enrolled');
+          enrolledApp = s.scholarship_applications.find((app: any) => app.status === 'enrolled');
           const approvedWithFeeApp = s.scholarship_applications.find((app: any) => app.status === 'approved' && app.is_application_fee_paid);
           const anyApprovedApp = s.scholarship_applications.find((app: any) => app.status === 'approved');
 
@@ -954,6 +963,7 @@ const AdminStudentDetails: React.FC = () => {
           i20_control_fee_payment_method: s.i20_control_fee_payment_method || null,
           seller_referral_code: s.seller_referral_code || null,
           admin_notes: s.admin_notes || null,
+          placement_fee_flow: s.placement_fee_flow || false,
           application_id: lockedApplication?.id || null,
           scholarship_id: lockedApplication?.scholarship_id || null,
           application_status: lockedApplication?.status || null,
@@ -1128,8 +1138,6 @@ const AdminStudentDetails: React.FC = () => {
       if (!student || loading) return; // Aguardar dados críticos
 
       try {
-        setLoadingSecondaryData(true);
-
         // ✅ OTIMIZAÇÃO: Tentar usar RPC consolidada primeiro (reduz múltiplas queries para 1)
         let useRpc = true;
 
@@ -1167,18 +1175,30 @@ const AdminStudentDetails: React.FC = () => {
             // Processar real paid amounts
             if (data.real_paid_amounts && typeof data.real_paid_amounts === 'object') {
               const amounts: typeof realPaidAmounts = {};
-              if (data.real_paid_amounts.selection_process) {
-                amounts.selection_process = Number(data.real_paid_amounts.selection_process);
-              }
-              if (data.real_paid_amounts.application) {
-                amounts.application = Number(data.real_paid_amounts.application);
-              }
-              if (data.real_paid_amounts.scholarship) {
-                amounts.scholarship = Number(data.real_paid_amounts.scholarship);
-              }
-              if (data.real_paid_amounts.i20_control) {
-                amounts.i20_control = Number(data.real_paid_amounts.i20_control);
-              }
+              
+              // Helper para sanitização (mesma lógica do fetchRealPaidAmounts)
+              const sanitizeAmount = (val: any, feeType: string) => {
+                if (!val) return undefined;
+                const amount = Number(val);
+                const expectedBase = feeType === 'selection_process'
+                  ? (student?.system_type === 'simplified' ? 350 : 400)
+                  : (feeType === 'scholarship' ? 900 : (feeType === 'application' ? 100 : 900));
+                
+                // Nota: A RPC não retorna gross_amount_usd explicitamente no json consolidado,
+                // mas retorna o 'amount' que para novos pagamentos já é o líquido correto.
+                // Se o valor for absurdamente alto, ainda é seguro sanitizar para o detalhe do admin.
+                if (amount > expectedBase * 2) {
+                  console.log(`[AdminStudentDetails] Sanitizando valor RPC para ${feeType}: ${amount}`);
+                  return undefined;
+                }
+                return amount;
+              };
+
+              amounts.selection_process = sanitizeAmount(data.real_paid_amounts.selection_process, 'selection_process');
+              amounts.application = sanitizeAmount(data.real_paid_amounts.application, 'application');
+              amounts.scholarship = sanitizeAmount(data.real_paid_amounts.scholarship, 'scholarship');
+              amounts.i20_control = sanitizeAmount(data.real_paid_amounts.i20_control, 'i20_control');
+              
               setRealPaidAmounts(amounts);
             } else {
               setRealPaidAmounts({});
@@ -1226,7 +1246,7 @@ const AdminStudentDetails: React.FC = () => {
       } catch (e) {
         console.error('Error loading secondary data:', e);
       } finally {
-        setLoadingSecondaryData(false);
+        // Finalized loading secondary data
       }
     };
 
@@ -1305,6 +1325,8 @@ const AdminStudentDetails: React.FC = () => {
         return 'pending';
       case 'application_fee':
         return st.is_application_fee_paid ? 'completed' : 'pending';
+      case 'placement_fee':
+        return st.is_placement_fee_paid ? 'completed' : 'pending';
       case 'scholarship_fee':
         return st.is_scholarship_fee_paid ? 'completed' : 'pending';
       case 'i20_fee':
@@ -1334,6 +1356,7 @@ const AdminStudentDetails: React.FC = () => {
     { key: 'apply', label: 'Application', icon: FileText },
     { key: 'review', label: 'Review', icon: Eye },
     { key: 'application_fee', label: 'App Fee', icon: CreditCard },
+    { key: 'placement_fee', label: 'Placement Fee', icon: DollarSign },
     { key: 'scholarship_fee', label: 'Scholarship Fee', icon: Award },
     { key: 'i20_fee', label: 'I-20 Fee', icon: CreditCard },
     { key: 'acceptance_letter', label: 'Acceptance', icon: FileText },
@@ -1341,14 +1364,34 @@ const AdminStudentDetails: React.FC = () => {
     { key: 'enrollment', label: 'Enrollment', icon: Award }
   ];
 
-  // Filtrar steps baseado no student_process_type
+
+  // Filtrar steps baseado no student_process_type e flow
   const steps = allSteps.filter(step => {
     if (step.key === 'transfer_form') {
-      // Só mostrar transfer_form se o student_process_type for 'transfer'
       return student?.student_process_type === 'transfer';
     }
-    return true;
+    if (student?.placement_fee_flow) {
+      // No fluxo de placement, removemos scholarhsip_fee e i20_fee
+      // MANTEMOS 'application_fee' pois ela ainda existe nesse fluxo
+      return !['scholarship_fee', 'i20_fee'].includes(step.key);
+    } else {
+      // No fluxo normal, removemos a placement_fee
+      return step.key !== 'placement_fee';
+    }
   });
+
+  // LOG DE DEPURAÇÃO
+  useEffect(() => {
+    if (student) {
+      console.log('🔍 [PlacementFeeDebug - ORIGINAL] Student data:', {
+        email: student.student_email,
+        placement_fee_flow: student.placement_fee_flow,
+        is_placement_fee_paid: student.is_placement_fee_paid,
+        is_scholarship_fee_paid: student.is_scholarship_fee_paid
+      });
+      console.log('🔍 [PlacementFeeDebug - ORIGINAL] Steps keys:', steps.map(s => s.key));
+    }
+  }, [student, steps]);
 
   const approveableTypes = new Set(['passport', 'funds_proof', 'diploma']);
   const handleApproveDocument = async (applicationId: string, docType: string) => {
@@ -1438,114 +1481,108 @@ const AdminStudentDetails: React.FC = () => {
       });
 
       // Log da ação
-      try {
-        await supabase.rpc('log_student_action', {
-          p_student_id: student?.student_id,
-          p_action_type: 'document_rejection',
-          p_action_description: `Document ${docType} rejected by platform admin: ${reason}`,
-          p_performed_by: user?.id || '',
-          p_performed_by_type: 'admin',
-          p_metadata: {
-            document_type: docType,
-            application_id: applicationId,
-            rejection_reason: reason,
-            rejected_by: user?.email || 'Platform Admin'
-          }
-        });
-      } catch (logError) {
-        console.error('Failed to log document rejection:', logError);
-      }
-
-      // ENVIAR NOTIFICAÇÕES PARA O ALUNO
-      console.log('📤 [handleRejectDocument] Enviando notificações de rejeição para o aluno...');
-
-      try {
-        // Buscar nome do admin
-
-
-        // 1. ENVIAR EMAIL VIA WEBHOOK (payload idêntico ao da universidade)
-        const rejectionPayload = {
-          tipo_notf: "Changes Requested",
-          email_aluno: student.student_email,
-          nome_aluno: student.student_name,
-          email_universidade: user?.email,
-          o_que_enviar: `Your document <strong>${docType}</strong> for the request <strong>${docType}</strong> has been rejected. Reason: <strong>${reason}</strong>. Please review and upload a corrected version.`
-        };
-
-        console.log('📤 [handleRejectDocument] Payload de rejeição:', rejectionPayload);
-
-        const webhookResponse = await fetch('https://nwh.suaiden.com/webhook/notfmatriculausa', {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-          },
-          body: JSON.stringify(rejectionPayload),
-        });
-
-        if (webhookResponse.ok) {
-          console.log('✅ [handleRejectDocument] Email de rejeição enviado com sucesso!');
-        } else {
-          console.warn('⚠️ [handleRejectDocument] Erro ao enviar email de rejeição:', webhookResponse.status);
-        }
-      } catch (webhookError) {
-        console.error('❌ [handleRejectDocument] Erro ao enviar webhook de rejeição:', webhookError);
-        // Não falhar o processo se o webhook falhar
-      }
-
-      // 2. ENVIAR NOTIFICAÇÃO IN-APP PARA O ALUNO (SINO)
-      console.log('📤 [handleRejectDocument] Enviando notificação in-app para o aluno...');
-
-      try {
-        // Obter labels amigáveis para os documentos
-        const docLabels: Record<string, string> = {
-          passport: 'Passport',
-          diploma: 'High School Diploma',
-          funds_proof: 'Proof of Funds',
-        };
-        const docLabel = docLabels[docType] || docType;
-
-        // Usar Edge Function que tem service role para criar notificação
-        const { data: { session } } = await supabase.auth.getSession();
-        const accessToken = session?.access_token;
-
-        if (!accessToken) {
-          console.error('❌ [handleRejectDocument] Access token não encontrado');
-          return;
-        }
-
-        // Preparar payload - usar user_id (UUID) que a Edge Function vai converter para student_id
-        // A Edge Function busca o student_id (user_profiles.id) a partir do user_id
-        const notificationPayload = {
-          user_id: student.user_id, // UUID que referencia auth.users.id
-          title: 'Document Rejected',
-          message: `Your ${docLabel} document has been rejected. Reason: ${reason}. Please review and upload a corrected version.`,
-          link: '/student/dashboard/applications',
-        };
-
-        const response = await fetch(`${import.meta.env.VITE_SUPABASE_FUNCTIONS_URL}/create-student-notification`, {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-            'Authorization': `Bearer ${accessToken}`,
-          },
-          body: JSON.stringify(notificationPayload),
-        });
-
-        if (!response.ok) {
-          const errorText = await response.text();
-          console.error('❌ [handleRejectDocument] Erro ao criar notificação:', response.status, errorText);
-        } else {
-          await response.json(); // Result não usado, apenas para consumir a resposta
-        }
-      } catch (notificationError) {
-        console.error('❌ [handleRejectDocument] Erro ao enviar notificação in-app:', notificationError);
-        // Não falhar o processo se a notificação in-app falhar
-      }
-
-      // Fechar modal e limpar dados
+      // Fechar modal e limpar dados o mais rápido possível (UX primeiro)
       setShowRejectDocModal(false);
       setRejectDocData(null);
       setRejectDocReason('');
+
+      // Log da ação (assíncrono, sem travar a UI)
+      (async () => {
+        try {
+          await supabase.rpc('log_student_action', {
+            p_student_id: student?.student_id,
+            p_action_type: 'document_rejection',
+            p_action_description: `Document ${docType} rejected by platform admin: ${reason}`,
+            p_performed_by: user?.id || '',
+            p_performed_by_type: 'admin',
+            p_metadata: {
+              document_type: docType,
+              application_id: applicationId,
+              rejection_reason: reason,
+              rejected_by: user?.email || 'Platform Admin'
+            }
+          });
+        } catch (logError) {
+          console.error('Failed to log document rejection:', logError);
+        }
+      })();
+
+      // ENVIAR NOTIFICAÇÕES PARA O ALUNO (assíncrono, sem bloquear)
+      (async () => {
+        console.log('📤 [handleRejectDocument] Enviando notificações de rejeição para o aluno...');
+
+        try {
+          const rejectionPayload = {
+            tipo_notf: "Changes Requested",
+            email_aluno: student.student_email,
+            nome_aluno: student.student_name,
+            email_universidade: user?.email,
+            o_que_enviar: `Your document <strong>${docType}</strong> for the request <strong>${docType}</strong> has been rejected. Reason: <strong>${reason}</strong>. Please review and upload a corrected version.`
+          };
+
+          console.log('📤 [handleRejectDocument] Payload de rejeição:', rejectionPayload);
+
+          const webhookResponse = await fetch('https://nwh.suaiden.com/webhook/notfmatriculausa', {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/json',
+            },
+            body: JSON.stringify(rejectionPayload),
+          });
+
+          if (webhookResponse.ok) {
+            console.log('✅ [handleRejectDocument] Email de rejeição enviado com sucesso!');
+          } else {
+            console.warn('⚠️ [handleRejectDocument] Erro ao enviar email de rejeição:', webhookResponse.status);
+          }
+        } catch (webhookError) {
+          console.error('❌ [handleRejectDocument] Erro ao enviar webhook de rejeição:', webhookError);
+        }
+
+        console.log('📤 [handleRejectDocument] Enviando notificação in-app para o aluno...');
+
+        try {
+          const docLabels: Record<string, string> = {
+            passport: 'Passport',
+            diploma: 'High School Diploma',
+            funds_proof: 'Proof of Funds',
+          };
+          const docLabel = docLabels[docType] || docType;
+
+          const { data: { session } } = await supabase.auth.getSession();
+          const accessToken = session?.access_token;
+
+          if (!accessToken) {
+            console.error('❌ [handleRejectDocument] Access token não encontrado');
+            return;
+          }
+
+          const notificationPayload = {
+            user_id: student.user_id,
+            title: 'Document Rejected',
+            message: `Your ${docLabel} document has been rejected. Reason: ${reason}. Please review and upload a corrected version.`,
+            link: '/student/dashboard/applications',
+          };
+
+          const response = await fetch(`${import.meta.env.VITE_SUPABASE_FUNCTIONS_URL}/create-student-notification`, {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/json',
+              'Authorization': `Bearer ${accessToken}`,
+            },
+            body: JSON.stringify(notificationPayload),
+          });
+
+          if (!response.ok) {
+            const errorText = await response.text();
+            console.error('❌ [handleRejectDocument] Erro ao criar notificação:', response.status, errorText);
+          } else {
+            await response.json();
+          }
+        } catch (notificationError) {
+          console.error('❌ [handleRejectDocument] Erro ao enviar notificação in-app:', notificationError);
+        }
+      })();
 
     } catch (error: any) {
       console.error('Erro ao rejeitar documento:', error);
@@ -2426,6 +2463,28 @@ const AdminStudentDetails: React.FC = () => {
 
       if (profileUpdateError) {
         console.error('Erro ao atualizar documents_status:', profileUpdateError);
+      }
+
+      // Marcar todos os documentos individuais como aprovados para limpar o overview de admins
+      try {
+        await Promise.all([
+          supabase
+            .from('student_documents')
+            .update({ status: 'approved', approved_at: new Date().toISOString() })
+            .eq('user_id', student.user_id)
+            .eq('status', 'pending'),
+          supabase
+            .from('document_request_uploads')
+            .update({ 
+               status: 'approved', 
+               reviewed_at: new Date().toISOString(),
+               reviewed_by: user?.id
+            })
+            .eq('uploaded_by', student.user_id)
+            .in('status', ['pending', 'under_review'])
+        ]);
+      } catch (docUpdateError) {
+        console.error('Erro ao atualizar documentos individuais:', docUpdateError);
       }
 
       // Webhook e notificação
@@ -3705,14 +3764,6 @@ const AdminStudentDetails: React.FC = () => {
 
   return (
     <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6 space-y-6">
-      {/* Indicador de carregamento de dados secundários */}
-      {loadingSecondaryData && (
-        <div className="bg-blue-50 border border-blue-200 rounded-xl p-3 flex items-center gap-3">
-          <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-blue-600"></div>
-          <p className="text-sm text-blue-700">Carregando informações adicionais...</p>
-        </div>
-      )}
-
       <div className="flex items-center justify-between">
         <div>
           <h1 className="text-2xl font-bold text-slate-900">Student Details</h1>
@@ -6025,6 +6076,7 @@ const AdminStudentDetails: React.FC = () => {
           <Suspense fallback={<TabLoadingSkeleton />}>
             <SelectionSurveyView
               userId={student.user_id}
+              surveyPassed={student.selection_survey_passed}
             />
           </Suspense>
         </div>

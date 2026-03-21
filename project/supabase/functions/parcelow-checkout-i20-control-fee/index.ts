@@ -1,20 +1,20 @@
-import 'jsr:@supabase/functions-js/edge-runtime.d.ts';
-import { createClient } from 'npm:@supabase/supabase-js@2.49.1';
-import { getParcelowConfig } from '../shared/parcelow/config.ts';
-import { getRedirectOrigin } from '../shared/environment-detector.ts';
-import { getParcelowAccessToken } from '../shared/parcelow/auth.ts';
+import "jsr:@supabase/functions-js/edge-runtime.d.ts";
+import { createClient } from "npm:@supabase/supabase-js@2.49.1";
+import { getParcelowConfig } from "../shared/parcelow/config.ts";
+import { getRedirectOrigin } from "../shared/environment-detector.ts";
+import { getParcelowAccessToken } from "../shared/parcelow/auth.ts";
 
 const supabase = createClient(
-  Deno.env.get('SUPABASE_URL') ?? '',
-  Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') ?? ''
+  Deno.env.get("SUPABASE_URL") ?? "",
+  Deno.env.get("SUPABASE_SERVICE_ROLE_KEY") ?? "",
 );
 
 function corsResponse(body: any, status = 200) {
   const headers = {
-    'Access-Control-Allow-Origin': '*',
-    'Access-Control-Allow-Methods': 'POST, OPTIONS',
-    'Access-Control-Allow-Headers': 'Content-Type, Authorization',
-    'Content-Type': 'application/json',
+    "Access-Control-Allow-Origin": "*",
+    "Access-Control-Allow-Methods": "POST, OPTIONS",
+    "Access-Control-Allow-Headers": "Content-Type, Authorization",
+    "Content-Type": "application/json",
   };
 
   if (status === 204) {
@@ -29,38 +29,55 @@ function corsResponse(body: any, status = 200) {
 
 Deno.serve(async (req) => {
   try {
-    console.log('[parcelow-checkout-i20-control-fee] 🚀 Iniciando função');
-    
-    if (req.method === 'OPTIONS') {
+    console.log("[parcelow-checkout-i20-control-fee] 🚀 Iniciando função");
+
+    if (req.method === "OPTIONS") {
       return corsResponse(null, 204);
     }
 
     const config = getParcelowConfig(req);
-    
+
     if (!config.clientId || !config.clientSecret) {
-      console.error('[parcelow-checkout-i20-control-fee] ❌ Credenciais Parcelow não configuradas');
-      return corsResponse({ error: 'Parcelow configuration error' }, 500);
+      console.error(
+        "[parcelow-checkout-i20-control-fee] ❌ Credenciais Parcelow não configuradas",
+      );
+      return corsResponse({ error: "Parcelow configuration error" }, 500);
     }
 
-    const { amount, metadata, promotional_coupon } = await req.json();
-    
-    console.log('[parcelow-checkout-i20-control-fee] 📥 Payload recebido:', { amount, metadata, promotional_coupon });
-    
-    const authHeader = req.headers.get('Authorization');
+    const { amount, metadata, promotional_coupon, cpf: bodyCpf } = await req.json();
+
+    console.log("[parcelow-checkout-i20-control-fee] 📥 Payload recebido:", {
+      amount,
+      metadata,
+      promotional_coupon,
+      hasBodyCpf: !!bodyCpf,
+    });
+
+    const authHeader = req.headers.get("Authorization");
     if (!authHeader) {
-      console.error('[parcelow-checkout-i20-control-fee] ❌ Header de autorização não encontrado');
-      return corsResponse({ error: 'No authorization header' }, 401);
+      console.error(
+        "[parcelow-checkout-i20-control-fee] ❌ Header de autorização não encontrado",
+      );
+      return corsResponse({ error: "No authorization header" }, 401);
     }
 
-    const token = authHeader.replace('Bearer ', '');
-    const { data: { user }, error: authError } = await supabase.auth.getUser(token);
-    
+    const token = authHeader.replace("Bearer ", "");
+    const { data: { user }, error: authError } = await supabase.auth.getUser(
+      token,
+    );
+
     if (authError || !user) {
-      console.error('[parcelow-checkout-i20-control-fee] ❌ Erro de autenticação:', authError);
-      return corsResponse({ error: 'Invalid token' }, 401);
+      console.error(
+        "[parcelow-checkout-i20-control-fee] ❌ Erro de autenticação:",
+        authError,
+      );
+      return corsResponse({ error: "Invalid token" }, 401);
     }
 
-    console.log('[parcelow-checkout-i20-control-fee] ✅ Usuário autenticado:', user.id);
+    console.log(
+      "[parcelow-checkout-i20-control-fee] ✅ Usuário autenticado:",
+      user.id,
+    );
 
     // Buscar taxas do pacote do usuário
     type UserPackageFees = {
@@ -72,48 +89,69 @@ Deno.serve(async (req) => {
     let userPackageFees: UserPackageFees | null = null;
     try {
       const { data: packageData, error: packageError } = await supabase
-        .rpc('get_user_package_fees', {
-          user_id_param: user.id
+        .rpc("get_user_package_fees", {
+          user_id_param: user.id,
         });
 
       if (!packageError && packageData && packageData.length > 0) {
         userPackageFees = packageData[0];
-        console.log('[parcelow-checkout-i20-control-fee] ✅ Taxas do pacote encontradas:', userPackageFees);
+        console.log(
+          "[parcelow-checkout-i20-control-fee] ✅ Taxas do pacote encontradas:",
+          userPackageFees,
+        );
       }
     } catch (err) {
-      console.error('[parcelow-checkout-i20-control-fee] ❌ Erro ao buscar taxas do pacote:', err);
+      console.error(
+        "[parcelow-checkout-i20-control-fee] ❌ Erro ao buscar taxas do pacote:",
+        err,
+      );
     }
 
     // Valor original fixo para validação do cupom
     const originalAmountForCouponValidation = 900; // Valor padrão fixo do I-20 Control Fee
-    console.log('[parcelow-checkout-i20-control-fee] 💰 Valor original para validação do cupom (fixo):', originalAmountForCouponValidation);
+    console.log(
+      "[parcelow-checkout-i20-control-fee] 💰 Valor original para validação do cupom (fixo):",
+      originalAmountForCouponValidation,
+    );
 
     // Verificar se há cupom promocional
     let promotionalCouponData: any = null;
     let finalAmount = amount || 900; // Se não enviou amount, usar padrão
-    
+
     if (promotional_coupon && promotional_coupon.trim()) {
       try {
         const normalizedCoupon = promotional_coupon.trim().toUpperCase();
-        console.log('[parcelow-checkout-i20-control-fee] 🎟️ Validando cupom promocional:', normalizedCoupon);
-        
+        console.log(
+          "[parcelow-checkout-i20-control-fee] 🎟️ Validando cupom promocional:",
+          normalizedCoupon,
+        );
+
         const { data: couponValidation, error: couponError } = await supabase
-          .rpc('validate_promotional_coupon', {
+          .rpc("validate_promotional_coupon", {
             user_id_param: user.id,
             coupon_code_param: normalizedCoupon,
-            fee_type_param: 'i20_control_fee',
-            purchase_amount_param: originalAmountForCouponValidation
+            fee_type_param: "i20_control_fee",
+            purchase_amount_param: originalAmountForCouponValidation,
           });
 
         if (couponError) {
-          console.error('[parcelow-checkout-i20-control-fee] ❌ Erro ao validar cupom promocional:', couponError);
+          console.error(
+            "[parcelow-checkout-i20-control-fee] ❌ Erro ao validar cupom promocional:",
+            couponError,
+          );
         } else if (couponValidation && couponValidation.success) {
           promotionalCouponData = couponValidation;
           finalAmount = couponValidation.final_amount;
-          console.log('[parcelow-checkout-i20-control-fee] ✅ Cupom promocional válido! Novo valor:', finalAmount);
+          console.log(
+            "[parcelow-checkout-i20-control-fee] ✅ Cupom promocional válido! Novo valor:",
+            finalAmount,
+          );
         }
       } catch (error) {
-        console.error('[parcelow-checkout-i20-control-fee] ❌ Erro ao verificar cupom promocional:', error);
+        console.error(
+          "[parcelow-checkout-i20-control-fee] ❌ Erro ao verificar cupom promocional:",
+          error,
+        );
       }
     }
 
@@ -125,19 +163,37 @@ Deno.serve(async (req) => {
 
     // Buscar perfil do usuário para obter CPF
     const { data: profile, error: profileError } = await supabase
-      .from('user_profiles')
-      .select('id, full_name, email, cpf_document, phone')
-      .eq('user_id', user.id)
+      .from("user_profiles")
+      .select("id, full_name, email, cpf_document, phone")
+      .eq("user_id", user.id)
       .single();
 
     if (profileError || !profile) {
-      console.error('[parcelow-checkout-i20-control-fee] ❌ Erro ao buscar perfil:', profileError);
-      return corsResponse({ error: 'User profile not found' }, 404);
+      console.error(
+        "[parcelow-checkout-i20-control-fee] ❌ Erro ao buscar perfil:",
+        profileError,
+      );
+      return corsResponse({ error: "User profile not found" }, 404);
     }
 
-    if (!profile.cpf_document) {
-      console.error('[parcelow-checkout-i20-control-fee] ❌ CPF é obrigatório para pagamento via Parcelow');
-      return corsResponse({ error: 'document_number_required', message: 'CPF is required for Parcelow payment' }, 400);
+    // Definir CPF final (Body > Profile)
+    const rawCpf = bodyCpf || profile.cpf_document;
+    const finalCpf = rawCpf ? String(rawCpf).replace(/\D/g, "") : null;
+
+    console.log("[parcelow-checkout-i20-control-fee] 📄 Verificação de documento:", {
+      profileCpf: !!profile.cpf_document,
+      bodyCpf: !!bodyCpf,
+      finalCpfLength: finalCpf?.length || 0,
+    });
+
+    if (!finalCpf || finalCpf.length < 11) {
+      console.error(
+        "[parcelow-checkout-i20-control-fee] ❌ CPF não encontrado no perfil nem no body",
+      );
+      return corsResponse({
+        error: "document_number_required",
+        message: "CPF is required for Parcelow payment (neither found in profile nor request body)",
+      }, 400);
     }
 
     // Obter token de acesso
@@ -149,75 +205,101 @@ Deno.serve(async (req) => {
 
     // URLs de redirect dinâmicas conforme ambiente (matriculausa.com, staging ou localhost)
     const origin = getRedirectOrigin(req);
-    console.log('[parcelow-checkout-i20-control-fee] 🔗 Origin determinado:', origin);
-    
-    // URLs encurtadas para evitar truncamento pela Parcelow
-    // ref = reference, pm=p = payment_method=parcelow
-    const redirectSuccess = `${origin}/student/dashboard/i20-control-fee-success?ref=${encodeURIComponent(reference)}&pm=p`;
-    const redirectFailed = `${origin}/student/dashboard/i20-control-fee-error?ref=${encodeURIComponent(reference)}&pm=p`;
+    console.log(
+      "[parcelow-checkout-i20-control-fee] 🔗 Origin determinado:",
+      origin,
+    );
+
+    // URLs de redirect após pagamento Parcelow
+    // Apontar para o onboarding, passo my_applications onde o I-20 é gerenciado
+    const redirectSuccess =
+      `${origin}/student/onboarding?step=my_applications&payment=success&ref=${
+        encodeURIComponent(reference)
+      }&pm=p`;
+    const redirectFailed =
+      `${origin}/student/onboarding?step=my_applications&payment=cancelled&ref=${
+        encodeURIComponent(reference)
+      }&pm=p`;
 
     // URL do webhook
-    const webhookUrl = `${Deno.env.get('SUPABASE_URL')}/functions/v1/parcelow-webhook`;
+    const webhookUrl = `${
+      Deno.env.get("SUPABASE_URL")
+    }/functions/v1/parcelow-webhook`;
 
     // Preparar dados do pedido no formato esperado pela API Parcelow
     // IMPORTANTE: A API Parcelow espera o valor em CENTAVOS (USD cents)
     const amountInCents = Math.round(finalAmount * 100);
-    
+
     const orderPayload = {
       reference: reference,
       items: [{
         reference: reference,
-        description: 'Payment for I-20 Control Fee',
+        description: "Payment for I-20 Control Fee",
         quantity: 1,
-        amount: amountInCents // em centavos (USD cents)
+        amount: amountInCents, // em centavos (USD cents)
       }],
       client: {
         name: profile.full_name,
         email: profile.email,
-        cpf: profile.cpf_document.replace(/\D/g, ''), // apenas números
-        phone: profile.phone || ''
+        cpf: finalCpf,
+        phone: profile.phone || "",
       },
       redirect: {
         success: redirectSuccess,
-        failed: redirectFailed
+        failed: redirectFailed,
       },
       notify_url: webhookUrl,
       webhook_url: webhookUrl,
       metadata: {
         user_id: user.id,
-        fee_type: 'i20_control_fee',
+        fee_type: "i20_control_fee",
         timestamp: Date.now().toString(),
-        ...(userPackageFees ? {
-          user_has_package: 'true',
-          package_name: userPackageFees.package_name
-        } : { user_has_package: 'false' }),
+        ...(userPackageFees
+          ? {
+            user_has_package: "true",
+            package_name: userPackageFees.package_name,
+          }
+          : { user_has_package: "false" }),
         ...(metadata || {}),
-        ...(promotionalCouponData ? {
-          promotional_coupon: promotionalCouponData.coupon_code,
-          original_amount: originalAmountForCouponValidation.toString(),
-          discount_amount: promotionalCouponData.discount_amount.toString(),
-          final_amount: finalAmount.toString()
-        } : {})
-      }
+        ...(promotionalCouponData
+          ? {
+            promotional_coupon: promotionalCouponData.coupon_code,
+            original_amount: originalAmountForCouponValidation.toString(),
+            discount_amount: promotionalCouponData.discount_amount.toString(),
+            final_amount: finalAmount.toString(),
+          }
+          : {}),
+      },
     };
 
-    console.log('[parcelow-checkout-i20-control-fee] 🛒 Criando pedido na Parcelow...');
-    console.log('[parcelow-checkout-i20-control-fee] 🔍 Order Payload:', JSON.stringify(orderPayload, null, 2));
-    
+    console.log(
+      "[parcelow-checkout-i20-control-fee] 🛒 Criando pedido na Parcelow...",
+    );
+    console.log(
+      "[parcelow-checkout-i20-control-fee] 🔍 Order Payload:",
+      JSON.stringify(orderPayload, null, 2),
+    );
+
     const orderResponse = await fetch(`${config.apiBaseUrl}/api/orders`, {
-      method: 'POST',
+      method: "POST",
       headers: {
-        'Content-Type': 'application/json',
-        'Accept': 'application/json',
-        'Authorization': `Bearer ${accessToken}`,
+        "Content-Type": "application/json",
+        "Accept": "application/json",
+        "Authorization": `Bearer ${accessToken}`,
       },
       body: JSON.stringify(orderPayload),
     });
 
     if (!orderResponse.ok) {
       const error = await orderResponse.text();
-      console.error('[parcelow-checkout-i20-control-fee] ❌ Erro ao criar pedido na Parcelow:', error);
-      return corsResponse({ error: 'Failed to create Parcelow order', details: error }, 500);
+      console.error(
+        "[parcelow-checkout-i20-control-fee] ❌ Erro ao criar pedido na Parcelow:",
+        error,
+      );
+      return corsResponse({
+        error: "Failed to create Parcelow order",
+        details: error,
+      }, 500);
     }
 
     const parcelowOrder = await orderResponse.json();
@@ -225,74 +307,102 @@ Deno.serve(async (req) => {
     // Parcelow pode retornar 200 com success: false (ex.: email do cliente já existente)
     if (parcelowOrder.success === false && parcelowOrder.message) {
       const msg = String(parcelowOrder.message);
-      const isEmailExists = /email.*existente|já existe|already exists/i.test(msg);
+      const isEmailExists = /email.*existente|já existe|already exists/i.test(
+        msg,
+      );
       return corsResponse({
-        error: isEmailExists ? 'parcelow_client_email_exists' : 'parcelow_order_rejected',
+        error: isEmailExists
+          ? "parcelow_client_email_exists"
+          : "parcelow_order_rejected",
         message: msg,
-        details: msg
+        details: msg,
       }, 400);
     }
 
-    console.log('[parcelow-checkout-i20-control-fee] ✅ Pedido criado na Parcelow');
+    console.log(
+      "[parcelow-checkout-i20-control-fee] ✅ Pedido criado na Parcelow",
+    );
 
     // A resposta da Parcelow pode ter diferentes formatos, vamos extrair os dados corretamente
-    const orderId = parcelowOrder.data?.order_id || parcelowOrder.order_id || parcelowOrder.id;
-    const checkoutUrl = parcelowOrder.data?.url_checkout || parcelowOrder.checkout_url || parcelowOrder.url;
+    const orderId = parcelowOrder.data?.order_id || parcelowOrder.order_id ||
+      parcelowOrder.id;
+    const checkoutUrl = parcelowOrder.data?.url_checkout ||
+      parcelowOrder.checkout_url || parcelowOrder.url;
 
     if (!orderId || !checkoutUrl) {
-      console.error('[parcelow-checkout-i20-control-fee] ❌ Resposta da Parcelow não contém order_id ou checkout_url:', parcelowOrder);
-      return corsResponse({ 
-        error: 'Invalid Parcelow response', 
-        details: 'Missing order_id or checkout_url in response',
-        response: parcelowOrder
+      console.error(
+        "[parcelow-checkout-i20-control-fee] ❌ Resposta da Parcelow não contém order_id ou checkout_url:",
+        parcelowOrder,
+      );
+      return corsResponse({
+        error: "Invalid Parcelow response",
+        details: "Missing order_id or checkout_url in response",
+        response: parcelowOrder,
       }, 500);
     }
 
-    console.log('[parcelow-checkout-i20-control-fee] ✅ Order ID:', orderId);
-    console.log('[parcelow-checkout-i20-control-fee] ✅ Checkout URL:', checkoutUrl);
+    console.log("[parcelow-checkout-i20-control-fee] ✅ Order ID:", orderId);
+    console.log(
+      "[parcelow-checkout-i20-control-fee] ✅ Checkout URL:",
+      checkoutUrl,
+    );
 
     // Registrar no banco de dados
-    const { error: insertError } = await supabase.rpc('insert_individual_fee_payment', {
-      p_user_id: user.id,
-      p_fee_type: 'i20_control',
-      p_amount: finalAmount,
-      p_payment_date: new Date().toISOString(),
-      p_payment_method: 'parcelow',
-      p_parcelow_order_id: String(orderId),
-      p_parcelow_checkout_url: checkoutUrl,
-      p_parcelow_reference: reference // Salvar reference para buscar no webhook
-    });
+    const { error: insertError } = await supabase.rpc(
+      "insert_individual_fee_payment",
+      {
+        p_user_id: user.id,
+        p_fee_type: "i20_control",
+        p_amount: finalAmount,
+        p_payment_date: new Date().toISOString(),
+        p_payment_method: "parcelow",
+        p_parcelow_order_id: String(orderId),
+        p_parcelow_checkout_url: checkoutUrl,
+        p_parcelow_reference: reference, // Salvar reference para buscar no webhook
+      },
+    );
 
     if (insertError) {
-      console.error('[parcelow-checkout-i20-control-fee] ❌ Erro ao registrar pagamento:', insertError);
+      console.error(
+        "[parcelow-checkout-i20-control-fee] ❌ Erro ao registrar pagamento:",
+        insertError,
+      );
     } else {
-      console.log('[parcelow-checkout-i20-control-fee] ✅ Pagamento registrado com sucesso!');
+      console.log(
+        "[parcelow-checkout-i20-control-fee] ✅ Pagamento registrado com sucesso!",
+      );
     }
 
     // Log action
     try {
-      await supabase.rpc('log_student_action', {
+      await supabase.rpc("log_student_action", {
         p_student_id: profile.id,
-        p_action_type: 'checkout_session_created',
-        p_action_description: `Parcelow checkout session created for i20_control_fee (${orderId})`,
+        p_action_type: "checkout_session_created",
+        p_action_description:
+          `Parcelow checkout session created for i20_control_fee (${orderId})`,
         p_performed_by: user.id,
-        p_performed_by_type: 'student',
+        p_performed_by_type: "student",
         p_metadata: {
-          fee_type: 'i20_control_fee',
-          payment_method: 'parcelow',
+          fee_type: "i20_control_fee",
+          payment_method: "parcelow",
           order_id: orderId,
           amount: finalAmount,
-          package_name: userPackageFees?.package_name || null
-        }
+          package_name: userPackageFees?.package_name || null,
+        },
       });
     } catch (logError) {
-      console.error('Failed to log checkout creation:', logError);
+      console.error("Failed to log checkout creation:", logError);
     }
 
     return corsResponse({ checkout_url: checkoutUrl }, 200);
-
   } catch (error: any) {
-    console.error('[parcelow-checkout-i20-control-fee] ❌ Erro geral na função:', error);
-    return corsResponse({ error: 'Internal server error', details: error.message }, 500);
+    console.error(
+      "[parcelow-checkout-i20-control-fee] ❌ Erro geral na função:",
+      error,
+    );
+    return corsResponse({
+      error: "Internal server error",
+      details: error.message,
+    }, 500);
   }
 });

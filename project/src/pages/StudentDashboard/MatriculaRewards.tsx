@@ -34,7 +34,7 @@ import { invalidateStudentDashboardRewards } from '../../lib/queryKeys';
 import NotificationService from '../../services/NotificationService';
 
 const MatriculaRewards: React.FC = () => {
-  const { t } = useTranslation();
+  const { t } = useTranslation(['dashboard', 'common']);
   
   // Logos oficiais em SVG simplificados (inline), sem dependências externas
   const FacebookLogo = () => (
@@ -424,10 +424,11 @@ const MatriculaRewards: React.FC = () => {
         {/* Hero / Balance */}
         <Card className="relative overflow-hidden">
           <div className="absolute inset-0 bg-gradient-to-r from-blue-600/10 via-indigo-600/10 to-purple-600/10" />
-          <div className="relative z-10 grid gap-4 sm:gap-6 p-4 sm:p-6 md:grid-cols-3 md:items-center">
-            <div className="md:col-span-2">
+          <div className="relative z-10 p-4 sm:p-6 md:p-10">
+            <div className="w-full lg:max-w-4xl pr-0 md:pr-40">
               <h1 className="text-xl sm:text-2xl md:text-3xl font-bold text-slate-900">{t('matriculaRewards.title')}</h1>
               <p className="text-sm sm:text-base text-slate-600 mt-1">{t('matriculaRewards.subtitle')}</p>
+              
               <div className="mt-4 inline-flex items-baseline gap-2 rounded-xl bg-slate-100 px-3 py-1.5 sm:px-4 sm:py-2">
                 <span className="text-xs sm:text-sm font-medium text-slate-600">{t('matriculaRewards.balance')}</span>
                 <span className="text-2xl sm:text-3xl font-extrabold text-slate-900">{formatCoins(credits?.balance || 0)}</span>
@@ -436,12 +437,12 @@ const MatriculaRewards: React.FC = () => {
               
               {/* Referral Code - Integrated in Hero */}
               {affiliateCode && (
-                <div className="mt-6 max-w-lg">
-                  <div className="bg-white rounded-xl border-2 border-blue-200 p-3 sm:p-4 shadow-md">
+                <div className="mt-6 w-full space-y-3">
+                  <div className="bg-white rounded-xl border-2 border-blue-200 p-3 sm:p-4 shadow-md transition-all hover:shadow-lg">
                     <div className="flex items-center justify-between gap-2">
                       <div className="flex items-center gap-2 sm:gap-3 flex-1 min-w-0">
-                        <div className="w-8 h-8 sm:w-10 sm:h-10 bg-blue-100 rounded-full flex items-center justify-center flex-shrink-0">
-                          <Gift className="h-4 w-4 sm:h-5 sm:w-5 text-blue-600" />
+                        <div className="w-8 h-8 sm:w-10 sm:h-10 bg-blue-100 rounded-full flex items-center justify-center flex-shrink-0 text-blue-600">
+                          <Gift className="h-4 w-4 sm:h-5 sm:w-5" />
                         </div>
                         <div className="flex-1 min-w-0">
                           <p className="text-[10px] font-medium text-slate-500">{t('matriculaRewards.yourCode')}</p>
@@ -469,12 +470,12 @@ const MatriculaRewards: React.FC = () => {
                     </div>
                   </div>
 
-                  {/* Referral Link - New Element */}
-                  <div className="bg-white rounded-xl border-2 border-indigo-200 p-3 sm:p-4 shadow-md mt-2">
+                  {/* Referral Link - Expanded */}
+                  <div className="bg-white rounded-xl border-2 border-indigo-200 p-3 sm:p-4 shadow-md transition-all hover:shadow-lg">
                     <div className="flex items-center justify-between gap-2">
                       <div className="flex items-center gap-2 sm:gap-3 flex-1 min-w-0">
-                        <div className="w-8 h-8 sm:w-10 sm:h-10 bg-indigo-100 rounded-full flex items-center justify-center flex-shrink-0">
-                          <Link2 className="h-4 w-4 sm:h-5 sm:w-5 text-indigo-600" />
+                        <div className="w-8 h-8 sm:w-10 sm:h-10 bg-indigo-100 rounded-full flex items-center justify-center flex-shrink-0 text-indigo-600">
+                          <Link2 className="h-4 w-4 sm:h-5 sm:w-5" />
                         </div>
                         <div className="flex-1 min-w-0">
                           <p className="text-[10px] font-medium text-slate-500">{t('matriculaRewards.yourLink')}</p>
@@ -505,15 +506,15 @@ const MatriculaRewards: React.FC = () => {
               )}
               
               {/* Stats */}
-              <div className="mt-4 grid grid-cols-2 gap-4 max-w-md">
-                <Card className="p-4 gap-0">
+              <div className="mt-6 grid grid-cols-2 gap-4 w-full lg:max-w-2xl">
+                <Card className="p-4 gap-0 hover:border-blue-200 transition-colors">
                   <div className="flex items-center justify-between">
                     <span className="text-sm text-slate-600">{t('matriculaRewards.totalReferrals')}</span>
                     <span className="inline-flex h-8 w-8 items-center justify-center rounded-lg bg-blue-100 text-blue-600"><Users className="h-4 w-4"/></span>
                   </div>
                   <div className="mt-2 text-2xl font-bold text-slate-900">{referrals?.length || 0}</div>
                 </Card>
-                <Card className="p-4 gap-0">
+                <Card className="p-4 gap-0 hover:border-purple-200 transition-colors">
                   <div className="flex items-center justify-between">
                     <span className="text-sm text-slate-600">{t('matriculaRewards.totalEarnings')}</span>
                     <span className="inline-flex h-8 w-8 items-center justify-center rounded-lg bg-purple-100 text-purple-600"><TrendingUp className="h-4 w-4"/></span>
@@ -522,9 +523,11 @@ const MatriculaRewards: React.FC = () => {
                 </Card>
               </div>
             </div>
-            <div className="md:col-span-1 flex items-center justify-center">
-              <div className="h-28 w-28 rounded-full bg-gradient-to-br from-blue-600 to-indigo-600 shadow-lg ring-4 ring-white/60 flex items-center justify-center">
-                <img src="/favicon-branco.png" className="h-14 w-14 object-contain" alt={t('matriculaRewards.coins')} />
+
+            {/* Coin Symbol - Positioned Absolutely at top right */}
+            <div className="hidden md:flex absolute top-6 right-6 lg:top-10 lg:right-10 items-center justify-center">
+              <div className="h-24 w-24 lg:h-32 lg:w-32 rounded-full bg-gradient-to-br from-blue-600 to-indigo-600 shadow-xl ring-4 ring-white/60 flex items-center justify-center">
+                <img src="/favicon-branco.png" className="h-12 w-12 lg:h-16 lg:w-16 object-contain" alt={t('matriculaRewards.coins')} />
               </div>
             </div>
           </div>
@@ -879,7 +882,7 @@ const MatriculaRewards: React.FC = () => {
         </Card>
       </div>
 
-      {/* Coin styling kept for subtle animation */}
+      {/* Coin styling */}
       <style dangerouslySetInnerHTML={{__html:`
         .coin-simple{display:none}
       `}} />

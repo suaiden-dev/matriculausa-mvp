@@ -1,5 +1,5 @@
 import React, { useState, useRef, useEffect } from 'react';
-import { getDisplayFilename, getTooltipFilename, shouldNormalize } from '../utils/filenameNormalizer';
+import { getDisplayFilename, getTooltipFilename } from '../utils/filenameNormalizer';
 
 interface TruncatedTextProps {
   text: string;
@@ -53,9 +53,12 @@ const TruncatedText: React.FC<TruncatedTextProps> = ({
         onMouseEnter={() => isTruncated && showTooltip && setShowTooltipState(true)}
         onMouseLeave={() => setShowTooltipState(false)}
         style={{
-          wordBreak: breakWords ? 'break-all' : 'break-word',
-          overflowWrap: 'break-word',
-          hyphens: 'auto'
+          wordBreak: breakWords ? 'break-all' : 'normal',
+          overflowWrap: breakWords ? 'break-word' : 'normal',
+          whiteSpace: breakWords ? 'normal' : 'nowrap',
+          overflow: breakWords ? 'visible' : 'hidden',
+          textOverflow: breakWords ? 'clip' : 'ellipsis',
+          maxWidth: '100%'
         }}
       >
         {truncatedText}
