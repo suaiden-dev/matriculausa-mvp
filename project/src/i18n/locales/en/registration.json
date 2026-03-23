@@ -222,6 +222,7 @@
     "toastPhotoError": "Error uploading photo. Please try again.",
     "securityNotice": "Your data is protected and encrypted",
     "profilesIdentified": "Profile Identified",
+    "identityVerifiedSuccess": "You have already submitted your identity photo and it is under review.",
     "title": "Questionnaire",
     "subtitle": "Answer carefully. To pass and continue your process, you must achieve at least <0>80% correct</0> on objective questions.",
     "mandatoryBadge": "Mandatory Selection Process",

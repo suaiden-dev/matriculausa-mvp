@@ -222,6 +222,7 @@
     "toastPhotoError": "Erro ao enviar foto. Tente novamente.",
     "securityNotice": "Seus dados estão protegidos e criptografados",
     "profilesIdentified": "Perfil Identificado",
+    "identityVerifiedSuccess": "Você já enviou sua foto de identidade e ela está em análise.",
     "title": "Questionário",
     "subtitle": "Responda com atenção. Para ser aprovado e continuar seu processo, você precisa atingir no mínimo <0>80% de acerto</0> nas questões.",
     "mandatoryBadge": "Processo Seletivo Obrigatório",

@@ -221,6 +221,80 @@
       "goToLogin": "Go to Login"
     }
   },
+  "components": {
+    "identityPhotoUpload": {
+      "titleInstructions": "How to take the correct photo",
+      "instructions": "Take a selfie holding a photo ID (passport, RG, CNH or others) next to your face. Make sure both your face and ID are clearly visible.",
+      "exampleAlt": "Example photo with document",
+      "uploading": "Uploading photo...",
+      "clickToUpload": "Click to upload photo",
+      "fileTypes": "JPG or PNG (maximum 5MB)",
+      "success": "Photo uploaded successfully",
+      "preview": "Photo preview",
+      "previewAlt": "Identity photo preview",
+      "remove": "Remove",
+      "changeFile": "Change File",
+      "submitPayment": "Submit Payment",
+      "processing": "Processing...",
+      "paymentProcessing": "Payment Processing...",
+      "errors": {
+        "onlyImages": "Please select only image files (JPEG or PNG).",
+        "maxSize": "File is too large. Limit is 5MB.",
+        "unauthenticated": "User not authenticated.",
+        "generic": "An error occurred while uploading the photo. Please try again."
+      }
+    },
+    "analyzing": {
+      "title": "Analyzing Payment...",
+      "subtitle": "Your payment confirmation is being automatically validated by our AI system."
+    },
+    "underReview": {
+      "title": "Payment Under Review",
+      "subtitle": "Your payment proof requires additional verification. Our team will review it within 48 hours.",
+      "notification": "You will be notified once the review is completed. Please do not submit another payment."
+    },
+    "success": {
+      "title": "Payment Approved Successfully!",
+      "subtitle": "Your Zelle payment has been processed and approved. You can now proceed with the next steps.",
+      "detailsTitle": "Payment Details:",
+      "originalAmount": "Original Amount:",
+      "discountApplied": "Discount Applied:",
+      "finalAmount": "Final Amount:",
+      "youSavedSuccess": "You saved!",
+      "amount": "Amount:",
+      "feeType": "Fee Type:",
+      "paymentId": "Payment ID:",
+      "submitted": "Submitted on:",
+      "nextStepsTitle": "What happens now?",
+      "stepUploaded": "Payment confirmation uploaded",
+      "stepApproved": "Payment approved successfully",
+      "stepProceeding": "Automatically proceeding to the next step"
+    },
+    "rejected": {
+      "title": "Payment Rejected",
+      "subtitle": "Your payment proof was not approved. Please review the reason below and upload a new payment confirmation.",
+      "reasonTitle": "Rejection Reason:",
+      "defaultReason": "The payment was rejected by the administrator. Please upload a new payment confirmation.",
+      "uploadNew": "Upload New Payment Proof",
+      "uploadNewNote": "Click the button above to upload a new payment confirmation screenshot"
+    },
+    "uploadModal": {
+      "uploadingTitle": "Uploading Document...",
+      "uploadingMessage": "Please wait while we upload your payment confirmation",
+      "sendingTitle": "Sending for Verification...",
+      "sendingMessage": "Your payment proof is being sent for automatic validation",
+      "analyzingTitle": "Analyzing Payment...",
+      "analyzingMessage": "Our AI is validating your payment confirmation"
+    },
+    "errors": {
+      "fileSize": "File size must be less than 5MB",
+      "fileType": "Please select an image file (JPG, PNG, etc.)",
+      "uploadRequired": "Please upload a screenshot of your payment confirmation",
+      "uploadFailed": "Failed to upload payment confirmation",
+      "alreadyPending": "You already have a payment in process. Please wait for review.",
+      "checkingStatus": "Checking payment status..."
+    }
+  },
   "smartChat": {
     "title": "Smart Assistant",
     "subtitle": "Your intelligent companion",

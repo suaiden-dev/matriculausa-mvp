@@ -77,7 +77,8 @@
       "days": "days",
       "details": "Details",
       "applyNow": "Apply Now",
-      "notAvailable": "Not available"
+      "notAvailable": "Not available",
+      "placementFee": "Placement Fee"
     },
     "noResults": {
       "title": "No scholarships found",

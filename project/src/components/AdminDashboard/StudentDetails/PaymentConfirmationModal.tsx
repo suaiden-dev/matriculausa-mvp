@@ -13,6 +13,8 @@ interface PaymentConfirmationModalProps {
   onPaymentMethodChange: (method: string) => void;
   onAmountChange: (amount: number) => void;
   isProcessing: boolean;
+  zelleProofFile?: File | null;
+  onZelleProofFileChange?: (file: File | null) => void;
 }
 
 /**
@@ -28,6 +30,8 @@ const PaymentConfirmationModal: React.FC<PaymentConfirmationModalProps> = ({
   onPaymentMethodChange,
   onAmountChange,
   isProcessing,
+  zelleProofFile,
+  onZelleProofFileChange,
 }) => {
   if (!isOpen || !pendingPayment) return null;
 
@@ -45,7 +49,12 @@ const PaymentConfirmationModal: React.FC<PaymentConfirmationModalProps> = ({
             <label className="block text-sm font-medium text-slate-700 mb-2">Payment Method</label>
             <select
               value={paymentMethod}
-              onChange={(e) => onPaymentMethodChange(e.target.value)}
+              onChange={(e) => {
+                onPaymentMethodChange(e.target.value);
+                if (e.target.value !== 'zelle' && onZelleProofFileChange) {
+                  onZelleProofFileChange(null);
+                }
+              }}
               className="w-full px-3 py-2 border border-slate-300 rounded-lg"
             >
               <option value="manual">Outside Platform</option>
@@ -64,6 +73,33 @@ const PaymentConfirmationModal: React.FC<PaymentConfirmationModalProps> = ({
               step="0.01"
             />
           </div>
+          {paymentMethod === 'zelle' && onZelleProofFileChange && (
+            <div>
+              <label className="block text-sm font-medium text-slate-700 mb-2">
+                Zelle Proof of Payment (Optional)
+              </label>
+              <div className="flex items-center gap-3">
+                <label className="flex items-center gap-2 px-3 py-2 bg-slate-50 border border-slate-200 rounded-lg cursor-pointer hover:bg-slate-100 transition font-medium text-slate-700 w-full justify-center">
+                  <svg className="w-5 h-5" fill="none" stroke="currentColor" strokeWidth={2} viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M15 13l-3-3m0 0l-3 3m3-3v12" />
+                  </svg>
+                  <span>{zelleProofFile ? 'Change file' : 'Select file (PDF/Image)'}</span>
+                  <input
+                    type="file"
+                    className="sr-only"
+                    accept="image/*,.pdf"
+                    onChange={(e) => onZelleProofFileChange(e.target.files ? e.target.files[0] : null)}
+                    disabled={isProcessing}
+                  />
+                </label>
+              </div>
+              {zelleProofFile && (
+                <p className="mt-2 text-xs text-slate-600 font-medium truncate">
+                  Selected: {zelleProofFile.name}
+                </p>
+              )}
+            </div>
+          )}
           <div className="flex items-center space-x-3 pt-4">
             <button
               onClick={onConfirm}

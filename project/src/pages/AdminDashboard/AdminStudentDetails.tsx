@@ -5,6 +5,7 @@ import { useFeeConfig } from '../../hooks/useFeeConfig';
 import { useAuth } from '../../hooks/useAuth';
 import { useStudentLogs } from '../../hooks/useStudentLogs';
 import { recordIndividualFeePayment } from '../../lib/paymentRecorder';
+import { approveZelleFlow } from './PaymentManagement/data/services/zelleOrchestrator';
 import DocumentViewerModal from '../../components/DocumentViewerModal';
 import { generateTermAcceptancePDF, StudentTermAcceptanceData } from '../../utils/pdfGenerator';
 
@@ -214,6 +215,8 @@ const AdminStudentDetails: React.FC = () => {
     feeName: string;
   } | null>(null);
   const [selectedPaymentMethod, setSelectedPaymentMethod] = useState<'stripe' | 'zelle' | 'manual'>('manual');
+  const [zelleProofFile, setZelleProofFile] = useState<File | null>(null);
+  const [isUploadingZelle, setIsUploadingZelle] = useState(false);
   // Criação de Document Request pelo Admin
   const [showNewRequestModal, setShowNewRequestModal] = useState(false);
   const [creatingDocumentRequest, setCreatingDocumentRequest] = useState(false);
@@ -2036,6 +2039,7 @@ const AdminStudentDetails: React.FC = () => {
           applicationId = selectedApplicationId;
           console.log('🔍 DEBUG Using selectedApplicationId:', selectedApplicationId);
         } else {
+          showToast('Please select an application', 'error');
           console.error('❌ Multiple applications but no selection made!');
           return; // Não prosseguir sem seleção
         }
@@ -2052,10 +2056,134 @@ const AdminStudentDetails: React.FC = () => {
       selectedPaymentMethod
     });
 
+    if (selectedPaymentMethod === 'zelle') {
+      const key = `${student?.student_id}:${feeType}`;
+      if (markingAsPaid[key]) return;
+      setMarkingAsPaid(prev => ({ ...prev, [key]: true }));
+      setIsUploadingZelle(true);
+
+      try {
+        let paymentAmount = 0;
+        let feeTypeGlobalForZelle: string = feeType;
+        let feeTypeForZelle: string = feeType;
+        
+        let targetApplicationForAmount = applicationId;
+        
+        // 1. Calcular o amount da mesma forma que o markFeeAsPaid faria
+        if (feeType === 'selection_process') {
+          const base = Number(getFeeAmount('selection_process'));
+          const systemType = student?.system_type || 'legacy';
+          paymentAmount = systemType === 'simplified' ? base : base + (student?.dependents || 0) * 150;
+          feeTypeGlobalForZelle = 'selection_process';
+          feeTypeForZelle = 'selection_process_fee';
+        } else if (feeType === 'i20_control') {
+          paymentAmount = Number(getFeeAmount('i20_control_fee'));
+          feeTypeGlobalForZelle = 'i20_control_fee';
+          feeTypeForZelle = 'i20_control_fee';
+        } else if (feeType === 'application' || feeType === 'scholarship') {
+          if (!targetApplicationForAmount) {
+            const { data: apps } = await supabase.from('scholarship_applications').select('id, status').eq('student_id', student?.student_id).order('created_at', { ascending: false });
+            const targetApp = apps?.find(app => app.status === 'approved') || apps?.[0];
+            if (!targetApp) throw new Error('No application found for this student');
+            targetApplicationForAmount = targetApp.id;
+          }
+          
+          if (feeType === 'scholarship') {
+            paymentAmount = Number(getFeeAmount('scholarship_fee'));
+            feeTypeGlobalForZelle = 'scholarship';
+            feeTypeForZelle = 'scholarship_fee';
+          } else {
+            const { data: appData } = await supabase.from('scholarship_applications').select('scholarships(application_fee_amount)').eq('id', targetApplicationForAmount).single();
+            const scholarship = Array.isArray(appData?.scholarships) ? appData.scholarships[0] : appData?.scholarships;
+            paymentAmount = scholarship?.application_fee_amount ? Number(scholarship.application_fee_amount) : Number(getFeeAmount('application_fee'));
+            const studentDependents = dependents || Number(student?.dependents || 0);
+            if (studentDependents > 0) paymentAmount += studentDependents * 100;
+            feeTypeGlobalForZelle = 'application';
+            feeTypeForZelle = 'application_fee';
+          }
+        }
+        
+        let proofUrl = 'manual-admin-approve';
+        
+        if (zelleProofFile) {
+          const fileExt = zelleProofFile.name.split('.').pop() || 'png';
+          const fileName = `admin_uploads/${Date.now()}-${Math.random().toString(36).substring(2)}.${fileExt}`;
+          
+          const { error: uploadError } = await supabase.storage.from('zelle_comprovantes').upload(fileName, zelleProofFile);
+          if (uploadError) throw uploadError;
+          
+          const { data: { publicUrl } } = supabase.storage.from('zelle_comprovantes').getPublicUrl(fileName);
+          proofUrl = publicUrl;
+        }
+
+        // 3. Pegar informações da bolsa para o array
+        let scholarshipIdForInsert = null;
+        if (targetApplicationForAmount) {
+           const { data: qApp } = await supabase.from('scholarship_applications').select('scholarship_id').eq('id', targetApplicationForAmount).single();
+           if (qApp) scholarshipIdForInsert = qApp.scholarship_id;
+        }
+
+        const { data: newZelleRecord, error: zInserError } = await supabase.from('zelle_payments').insert({
+          user_id: student?.user_id,
+          student_profile_id: student?.student_id,
+          fee_type: feeTypeForZelle,
+          fee_type_global: feeTypeGlobalForZelle,
+          amount: paymentAmount,
+          payment_amount: paymentAmount.toString(),
+          recipient_name: student?.student_name,
+          recipient_email: student?.student_email,
+          confirmation_code: 'ADMIN_MANUAL',
+          payment_date: new Date().toISOString().split('T')[0],
+          screenshot_url: proofUrl,
+          status: 'approved',
+          admin_approved_by: user?.id,
+          admin_approved_at: new Date().toISOString(),
+          admin_notes: 'Manual upload by Admin',
+          scholarships_ids: scholarshipIdForInsert ? [scholarshipIdForInsert] : [],
+        }).select('*').single();
+
+        if (zInserError) throw zInserError;
+
+        await approveZelleFlow({
+          supabase,
+          adminUserId: user?.id || '',
+          payment: {
+            id: newZelleRecord.id,
+            user_id: student!.user_id,
+            student_id: student!.student_id,
+            student_email: student!.student_email,
+            student_name: student!.student_name,
+            fee_type: feeTypeForZelle,
+            fee_type_global: feeTypeGlobalForZelle,
+            amount: paymentAmount,
+            created_at: newZelleRecord.created_at,
+            admin_approved_at: newZelleRecord.admin_approved_at,
+            scholarships_ids: newZelleRecord.scholarships_ids,
+            scholarship_id: scholarshipIdForInsert
+          }
+        });
+
+        showToast('Zelle payment processed and approved successfully!', 'success');
+        setShowPaymentModal(false);
+        setPendingPayment(null);
+        setSelectedApplicationId(null);
+        setZelleProofFile(null);
+        setTimeout(() => window.location.reload(), 2000);
+      } catch (err: any) {
+         console.error('Error processing manual Zelle flow:', err);
+         showToast(`Error processing Zelle payment: ${err.message}`, 'error');
+      } finally {
+        setMarkingAsPaid(prev => ({ ...prev, [key]: false }));
+        setIsUploadingZelle(false);
+      }
+      return;
+    }
+
     await markFeeAsPaid(feeType, applicationId, selectedPaymentMethod);
     setShowPaymentModal(false);
     setPendingPayment(null);
     setSelectedApplicationId(null); // Reset selection
+    setZelleProofFile(null);
   };
 
   const markFeeAsPaid = async (
@@ -6413,7 +6541,10 @@ const AdminStudentDetails: React.FC = () => {
               </label>
               <select
                 value={selectedPaymentMethod}
-                onChange={(e) => setSelectedPaymentMethod(e.target.value as 'stripe' | 'zelle' | 'manual')}
+                onChange={(e) => {
+                  setSelectedPaymentMethod(e.target.value as 'stripe' | 'zelle' | 'manual');
+                  if (e.target.value !== 'zelle') setZelleProofFile(null);
+                }}
                 className="w-full px-3 py-2 border border-slate-300 rounded-lg text-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
               >
                 <option value="stripe">Stripe</option>
@@ -6422,12 +6553,41 @@ const AdminStudentDetails: React.FC = () => {
               </select>
             </div>
 
+            {selectedPaymentMethod === 'zelle' && (
+              <div className="mb-6">
+                <label className="block text-sm font-medium text-slate-700 mb-2">
+                  Zelle Proof of Payment (Optional)
+                </label>
+                <div className="flex items-center gap-3">
+                  <label className="flex items-center gap-2 px-3 py-2 bg-slate-50 border border-slate-200 rounded-lg cursor-pointer hover:bg-slate-100 transition font-medium text-slate-700 w-full justify-center">
+                    <svg className="w-5 h-5" fill="none" stroke="currentColor" strokeWidth={2} viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M15 13l-3-3m0 0l-3 3m3-3v12" />
+                    </svg>
+                    <span>{zelleProofFile ? 'Change file' : 'Select file (PDF/Image)'}</span>
+                    <input
+                      type="file"
+                      className="sr-only"
+                      accept="image/*,.pdf"
+                      onChange={(e) => setZelleProofFile(e.target.files ? e.target.files[0] : null)}
+                      disabled={isUploadingZelle || markingAsPaid[`${student?.student_id}:${pendingPayment.feeType}`]}
+                    />
+                  </label>
+                </div>
+                {zelleProofFile && (
+                  <p className="mt-2 text-xs text-slate-600 font-medium truncate">
+                    Selected: {zelleProofFile.name}
+                  </p>
+                )}
+              </div>
+            )}
+
             <div className="flex space-x-3">
               <button
                 onClick={() => {
                   setShowPaymentModal(false);
                   setPendingPayment(null);
                   setSelectedApplicationId(null);
+                  setZelleProofFile(null);
                 }}
                 className="flex-1 px-4 py-2 border border-slate-300 text-slate-700 rounded-lg hover:bg-slate-50 transition-colors"
               >

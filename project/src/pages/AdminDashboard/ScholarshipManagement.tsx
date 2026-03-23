@@ -12,7 +12,6 @@ import {
   Zap,
   List,
   Grid3X3,
-  X,
   AlertCircle,
   AlertTriangle,
   Edit,
@@ -46,9 +45,7 @@ const ScholarshipManagement: React.FC<ScholarshipManagementProps> = ({
   const [maxAmount, setMaxAmount] = useState('');
   const [viewMode, setViewMode] = useState<'grid' | 'list'>('list');
   const [sortBy, setSortBy] = useState<'recent' | 'applicants' | 'views' | 'deadline'>('recent');
-  // Estados do modal de detalhes
-  const [selectedScholarship, setSelectedScholarship] = useState<any | null>(null);
-  const [showModal, setShowModal] = useState(false);
+
   // Estados para ativar/desativar
   const [statusConfirmationModal, setStatusConfirmationModal] = useState<{
     isOpen: boolean;
@@ -62,10 +59,7 @@ const ScholarshipManagement: React.FC<ScholarshipManagementProps> = ({
   // Dados para os filtros
   const [universities, setUniversities] = useState<any[]>([]);
   const [courses, setCourses] = useState<any[]>([]);
-  const closeModal = () => {
-    setShowModal(false);
-    setSelectedScholarship(null);
-  };
+
 
   const handleEdit = (scholarshipId: string) => {
     navigate(`/admin/dashboard/scholarships/edit/${scholarshipId}`);
@@ -634,18 +628,27 @@ const ScholarshipManagement: React.FC<ScholarshipManagementProps> = ({
                     </div>
                   </div>
 
-                  {/* Amount */}
-                  <div className="flex items-center justify-between mb-4">
-                    <div>
-                      <p className="text-sm font-medium text-slate-500 mb-1">Annual Value With Scholarship</p>
-                      <p className="text-2xl font-bold text-green-600">
-                                                {formatCurrency(Number(scholarship.annual_value_with_scholarship ?? 0))}
-                      </p>
+                  {/* Amount & Placement Fee */}
+                  <div className="flex flex-col gap-4 mb-4">
+                    <div className="flex items-center justify-between">
+                      <div>
+                        <p className="text-sm font-medium text-slate-500 mb-1">Annual Value With Scholarship</p>
+                        <p className="text-2xl font-bold text-green-600">
+                          {formatCurrency(Number(scholarship.annual_value_with_scholarship ?? 0))}
+                        </p>
+                      </div>
+                      <div className="text-right">
+                        <p className="text-sm font-medium text-slate-500 mb-1">Level</p>
+                        <p className="text-sm font-bold text-slate-900 capitalize">
+                          {scholarship.level}
+                        </p>
+                      </div>
                     </div>
-                    <div className="text-right">
-                      <p className="text-sm font-medium text-slate-500 mb-1">Level</p>
-                      <p className="text-sm font-bold text-slate-900 capitalize">
-                        {scholarship.level}
+                    
+                    <div className="pt-3 border-t border-slate-100">
+                      <p className="text-sm font-medium text-slate-500 mb-1">Placement Fee</p>
+                      <p className="text-xl font-bold text-green-600">
+                        {formatCurrency(Number(scholarship.placement_fee_amount ?? 0))}
                       </p>
                     </div>
                   </div>
@@ -717,18 +720,7 @@ const ScholarshipManagement: React.FC<ScholarshipManagementProps> = ({
                   </div>
                 </div>
 
-                {/* Actions */}
-                <div className="px-6 pb-6 space-y-2">
-                  <button
-                    className="w-full bg-slate-100 text-slate-700 py-2.5 px-4 rounded-xl hover:bg-slate-200 transition-colors font-medium text-sm flex items-center justify-center"
-                    onClick={() => {
-                      setSelectedScholarship(scholarship);
-                      setShowModal(true);
-                    }}
-                  >
-                    <Eye className="h-4 w-4 mr-2" />
-                    View Details
-                  </button>
+                <div className="px-6 pb-6 pt-2">
                   <div className="grid grid-cols-2 gap-2">
                     <button
                       className="bg-[#05294E] text-white py-2.5 px-4 rounded-xl hover:bg-[#05294E]/90 transition-colors font-medium text-sm flex items-center justify-center"
@@ -738,11 +730,11 @@ const ScholarshipManagement: React.FC<ScholarshipManagementProps> = ({
                       Edit
                     </button>
                     <button
-                      className={`${scholarship.is_active ? 'bg-red-100 text-red-700 hover:bg-red-200' : 'bg-green-100 text-green-700 hover:bg-green-200'} py-2.5 px-4 rounded-xl transition-colors font-medium text-sm flex items-center justify-center`}
+                      className={`${scholarship.is_active ? 'bg-green-100 text-green-700 hover:bg-green-200' : 'bg-red-100 text-red-700 hover:bg-red-200'} py-2.5 px-4 rounded-xl transition-colors font-medium text-sm flex items-center justify-center`}
                       onClick={() => handleToggleStatus(scholarship)}
                     >
                       <Power className="h-4 w-4 mr-1" />
-                      {scholarship.is_active ? 'Deactivate' : 'Activate'}
+                      {scholarship.is_active ? 'ON' : 'OFF'}
                     </button>
                   </div>
                 </div>
@@ -758,11 +750,11 @@ const ScholarshipManagement: React.FC<ScholarshipManagementProps> = ({
                 <th className="px-4 py-2 text-left">Title</th>
                 <th className="px-4 py-2 text-left">Course</th>
                 <th className="px-4 py-2 text-left">University</th>
-                <th className="px-4 py-2 text-left">Amount</th>
-                <th className="px-4 py-2 text-left">Level</th>
-                <th className="px-4 py-2 text-left">Status</th>
-                <th className="px-4 py-2 text-left">Deadline</th>
-                <th className="px-4 py-2 text-left">Actions</th>
+                <th className="px-4 py-2 text-center">Amount</th>
+                <th className="px-4 py-2 text-center">Placement Fee</th>
+                <th className="px-4 py-2 text-center">Level</th>
+                <th className="px-4 py-2 text-center">Deadline</th>
+                <th className="px-4 py-2 text-center">Actions</th>
               </tr>
             </thead>
             <tbody>
@@ -771,13 +763,12 @@ const ScholarshipManagement: React.FC<ScholarshipManagementProps> = ({
                   <td className="px-4 py-2 font-medium text-slate-900">{scholarship.title}</td>
                   <td className="px-4 py-2 text-slate-600">{scholarship.field_of_study || 'Not specified'}</td>
                   <td className="px-4 py-2 text-slate-600">{scholarship.universities?.name || 'Unknown University'}</td>
-                  <td className="px-4 py-2 text-green-600 font-bold">{formatCurrency(Number(scholarship.annual_value_with_scholarship ?? 0))}</td>
-                  <td className="px-4 py-2 text-slate-600">{scholarship.level}</td>
+                  <td className="px-4 py-2 text-center text-green-600 font-bold">{formatCurrency(Number(scholarship.annual_value_with_scholarship ?? 0))}</td>
+                  <td className="px-4 py-2 text-center text-green-600 font-bold">{formatCurrency(Number(scholarship.placement_fee_amount ?? 0))}</td>
+                  <td className="px-4 py-2 text-center text-slate-600">{scholarship.level}</td>
+
                   <td className="px-4 py-2">
-                    <span className={`px-2 py-1 rounded-full text-xs font-medium ${scholarship.is_active ? 'bg-green-100 text-green-700' : 'bg-slate-100 text-slate-600'}`}>{scholarship.is_active ? 'Active' : 'Inactive'}</span>
-                  </td>
-                  <td className="px-4 py-2">
-                    <div className="flex items-center gap-2">
+                    <div className="flex items-center justify-center gap-2">
                       <span className="text-slate-600">{new Date(scholarship.deadline).toLocaleDateString()}</span>
                       {(() => {
                         const deadlineInfo = getDeadlineStatus(scholarship.deadline);
@@ -796,18 +787,8 @@ const ScholarshipManagement: React.FC<ScholarshipManagementProps> = ({
                     </div>
                   </td>
                   <td className="px-4 py-2">
-                    <div className="flex items-center gap-2">
-                      <button 
-                        className="bg-slate-100 text-slate-700 py-1 px-3 rounded-lg hover:bg-slate-200 transition-colors text-xs font-medium flex items-center" 
-                        title="View details"
-                        onClick={() => {
-                          setSelectedScholarship(scholarship);
-                          setShowModal(true);
-                        }}
-                      >
-                        <Eye className="h-3 w-3 mr-1" />
-                        View
-                      </button>
+                    <div className="flex items-center justify-center gap-2">
+
                       <button 
                         className="bg-[#05294E] text-white py-1 px-3 rounded-lg hover:bg-[#05294E]/90 transition-colors text-xs font-medium flex items-center" 
                         title="Edit scholarship"
@@ -817,12 +798,12 @@ const ScholarshipManagement: React.FC<ScholarshipManagementProps> = ({
                         Edit
                       </button>
                       <button 
-                        className={`${scholarship.is_active ? 'bg-red-100 text-red-700 hover:bg-red-200' : 'bg-green-100 text-green-700 hover:bg-green-200'} py-1 px-3 rounded-lg transition-colors text-xs font-medium flex items-center`}
-                        title={scholarship.is_active ? 'Deactivate scholarship' : 'Activate scholarship'}
+                        className={`${scholarship.is_active ? 'bg-green-100 text-green-700 hover:bg-green-200' : 'bg-red-100 text-red-700 hover:bg-red-200'} py-1 px-3 rounded-lg transition-colors text-xs font-medium flex items-center`}
+                        title={scholarship.is_active ? 'Bolsa Ativa' : 'Bolsa Inativa'}
                         onClick={() => handleToggleStatus(scholarship)}
                       >
                         <Power className="h-3 w-3 mr-1" />
-                        {scholarship.is_active ? 'Off' : 'On'}
+                        {scholarship.is_active ? 'ON' : 'OFF'}
                       </button>
                     </div>
                   </td>
@@ -906,164 +887,7 @@ const ScholarshipManagement: React.FC<ScholarshipManagementProps> = ({
         </div>
       )}
 
-      {/* Details Modal */}
-      {showModal && selectedScholarship && (
-        <Dialog open={showModal} onClose={closeModal} className="fixed z-50 inset-0 overflow-y-auto">
-          <div className="flex items-center justify-center min-h-screen px-4">
-            <div className="fixed inset-0 bg-black opacity-30" />
-            <div className="relative bg-white rounded-xl shadow-xl max-w-2xl w-full mx-auto p-6 z-50 max-h-[90vh] overflow-y-auto">
-              <div className="flex items-center justify-between mb-6">
-                <Dialog.Title className="text-2xl font-bold text-gray-900">
-                  {selectedScholarship.title}
-                </Dialog.Title>
-                <button
-                  onClick={closeModal}
-                  className="text-gray-400 hover:text-gray-600"
-                >
-                  <X className="h-6 w-6" />
-                </button>
-              </div>
-              
-              <div className="space-y-6">
-                <div>
-                  <h3 className="text-sm font-medium text-gray-500 mb-2">Description</h3>
-                  <p className="text-gray-900">{selectedScholarship.description || 'No description provided'}</p>
-                </div>
 
-                <div className="grid grid-cols-2 gap-4">
-                  <div>
-                    <h3 className="text-sm font-medium text-gray-500 mb-2">University</h3>
-                    <p className="text-gray-900">{selectedScholarship.universities?.name || 'N/A'}</p>
-                  </div>
-                  <div>
-                    <h3 className="text-sm font-medium text-gray-500 mb-2">Level</h3>
-                    <p className="text-gray-900 capitalize">{selectedScholarship.level}</p>
-                  </div>
-                  <div>
-                    <h3 className="text-sm font-medium text-gray-500 mb-2">Field of Study</h3>
-                    <p className="text-gray-900">{selectedScholarship.field_of_study || 'N/A'}</p>
-                  </div>
-                  <div>
-                    <h3 className="text-sm font-medium text-gray-500 mb-2">Deadline</h3>
-                    <p className="text-gray-900">{(() => {
-                      // Parse da data como local para evitar problemas de timezone
-                      const [year, month, day] = selectedScholarship.deadline.split('-').map(Number);
-                      const deadlineDate = new Date(year, month - 1, day);
-                      return deadlineDate.toLocaleDateString();
-                    })()}</p>
-                  </div>
-                  <div>
-                    <h3 className="text-sm font-medium text-gray-500 mb-2">Annual Value</h3>
-                    <p className="font-semibold text-green-600">
-                      {formatCurrency(Number(selectedScholarship.annual_value_with_scholarship ?? 0))}
-                    </p>
-                  </div>
-                  <div>
-                    <h3 className="text-sm font-medium text-gray-500 mb-2">Status</h3>
-                    <span className={`px-2 py-1 rounded-full text-xs font-medium ${selectedScholarship.is_active ? 'bg-green-100 text-green-700' : 'bg-gray-100 text-gray-600'}`}>
-                      {selectedScholarship.is_active ? 'Active' : 'Inactive'}
-                    </span>
-                  </div>
-                </div>
-
-                {/* Internal Fees Section */}
-                {(() => {
-                  let fees: any[] = [];
-                  if (Array.isArray(selectedScholarship.internal_fees)) {
-                    fees = selectedScholarship.internal_fees;
-                  } else if (typeof selectedScholarship.internal_fees === 'string') {
-                    try {
-                      fees = JSON.parse(selectedScholarship.internal_fees);
-                    } catch (e) {
-                      fees = [];
-                    }
-                  }
-                  
-                  if (fees && fees.length > 0) {
-                    return (
-                      <div>
-                        <h3 className="text-sm font-medium text-gray-500 mb-2">University Internal Fees</h3>
-                        <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                          {fees.map((fee: any, idx: number) => (
-                            <div key={idx} className="bg-slate-50 p-3 rounded-lg border border-slate-200">
-                              <div className="flex justify-between items-center">
-                                <div>
-                                  <p className="font-medium text-slate-900 text-sm">{fee.category || fee.name}</p>
-                                  <p className="text-xs text-slate-500">{fee.details || fee.frequency}</p>
-                                </div>
-                                <span className="font-semibold text-[#05294E] text-sm whitespace-nowrap ml-2">
-                                  {new Intl.NumberFormat('en-US', {
-                                    style: 'currency',
-                                    currency: 'USD',
-                                    minimumFractionDigits: 2
-                                  }).format(Number(fee.amount || 0))}
-                                </span>
-                              </div>
-                            </div>
-                          ))}
-                        </div>
-                      </div>
-                    );
-                  }
-                  return null;
-                })()}
-
-                {selectedScholarship.requirements && selectedScholarship.requirements.length > 0 && (
-                  <div>
-                    <h3 className="text-sm font-medium text-gray-500 mb-2">Requirements</h3>
-                    <ul className="list-disc list-inside space-y-1 text-gray-900">
-                      {selectedScholarship.requirements.map((req: string, index: number) => (
-                        <li key={index}>{req}</li>
-                      ))}
-                    </ul>
-                  </div>
-                )}
-
-                {selectedScholarship.eligibility && selectedScholarship.eligibility.length > 0 && (
-                  <div>
-                    <h3 className="text-sm font-medium text-gray-500 mb-2">Eligibility</h3>
-                    <ul className="list-disc list-inside space-y-1 text-gray-900">
-                      {selectedScholarship.eligibility.map((item: string, index: number) => (
-                        <li key={index}>{item}</li>
-                      ))}
-                    </ul>
-                  </div>
-                )}
-
-                {selectedScholarship.benefits && selectedScholarship.benefits.length > 0 && (
-                  <div>
-                    <h3 className="text-sm font-medium text-gray-500 mb-2">Benefits</h3>
-                    <ul className="list-disc list-inside space-y-1 text-gray-900">
-                      {selectedScholarship.benefits.map((benefit: string, index: number) => (
-                        <li key={index}>{benefit}</li>
-                      ))}
-                    </ul>
-                  </div>
-                )}
-
-                <div className="flex space-x-3 pt-4 border-t">
-                  <button
-                    onClick={() => {
-                      closeModal();
-                      handleEdit(selectedScholarship.id);
-                    }}
-                    className="flex-1 bg-[#05294E] text-white py-2 px-4 rounded-lg hover:bg-[#05294E]/90 transition-colors font-medium"
-                  >
-                    <Edit className="h-4 w-4 inline-block mr-2" />
-                    Edit Scholarship
-                  </button>
-                  <button
-                    onClick={closeModal}
-                    className="px-4 py-2 text-gray-700 bg-gray-100 rounded-lg hover:bg-gray-200 transition-colors"
-                  >
-                    Close
-                  </button>
-                </div>
-              </div>
-            </div>
-          </div>
-        </Dialog>
-      )}
 
       {/* Status Confirmation Modal */}
       {statusConfirmationModal && (

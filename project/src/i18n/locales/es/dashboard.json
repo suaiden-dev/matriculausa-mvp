@@ -857,7 +857,7 @@
         "courseField": "Curso / Área de Estudio",
         "enrollmentFee": "Tarifa de Matrícula",
         "internalFees": "Tarifas Internas de la Institución",
-        "internalFeesNote": "Estas tarifas son informadas por la universidad y se pagan directamente a ellos. No forman parte del servicio de mentoría de Matricula USA.",
+        "internalFeesNote": "Algunas tarifas se pagan directamente a la universidad, mientras que otras se procesan a través de nuestra plataforma",
         "oneTimePayment": "Pago Único",
         "studentDocuments": "Documentos del Estudiante",
         "diploma": "Diploma / Certificado (High School)",

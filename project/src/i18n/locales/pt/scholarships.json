@@ -78,7 +78,8 @@
       "days": "dias",
       "details": "Detalhes",
       "applyNow": "Candidatar-se",
-      "notAvailable": "Não disponível"
+      "notAvailable": "Não disponível",
+      "placementFee": "Taxa de Colocação"
     },
     "noResults": {
       "title": "Nenhuma bolsa encontrada",
