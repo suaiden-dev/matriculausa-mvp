@@ -304,5 +304,13 @@
     "assistant": "Assistente Inteligente",
     "whatsappTitle": "Entre em contato via WhatsApp",
     "mobileNote": "Smart Assistant - Abre em nova aba"
+  },
+  "notFound": {
+    "title": "404",
+    "heading": "Página Não Encontrada",
+    "description": "Ops! Parece que a página que você está procurando não existe ou foi movida. Verifique a URL ou use os botões abaixo para voltar.",
+    "backToHome": "Voltar para o Início",
+    "goToDashboard": "Ir para o meu Painel",
+    "helpLink": "Precisa de ajuda? Entre em contato"
   }
 }

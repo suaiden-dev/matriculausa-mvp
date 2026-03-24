@@ -106,82 +106,82 @@ const AppContent = () => {
       <Suspense fallback={<PageSkeleton />}>
         <Routes>
           <Route path="/" element={<Home />} />
-        <Route path="/about" element={<About />} />
-        <Route path="/login" element={<Auth mode="login" />} />
-        <Route path="/register" element={<Auth mode="register" />} />
-        <Route path="/auth" element={<Auth mode="register" />} />
-        <Route path="/forgot-password" element={<ForgotPassword />} />
-        <Route path="/admin/register" element={<AdminRegistration />} />
-        <Route path="/seller/register" element={<SellerRegistration />} />
-        <Route path="/student/register" element={<SellerStudentRegistration />} />
-        <Route path="/scholarships" element={<Scholarships />} />
-        <Route path="/selection-fee-registration" element={<QuickRegistration />} />
-        <Route path="/schools" element={<Universities />} />
-        <Route path="/schools/:slug" element={<UniversityDetail />} />
-        <Route path="/how-it-works" element={<HowItWorks />} />
-        <Route path="/processo-detalhado" element={<ProcessoDetalhado />} />
-        <Route path="/matricula-rewards" element={<MatriculaRewardsLanding />} />
-        {/* Student Routes */}
-        <Route path="/student/terms" element={<StudentTermsAcceptance />} />
-        <Route path="/student/onboarding" element={<StudentOnboarding />} />
-        <Route path="/student/dashboard/*" element={<StudentDashboard />} />
-        {/* School Routes */}
-        <Route path="/school/termsandconditions" element={<TermsAndConditions />} />
-        <Route
-          path="/school/setup-profile"
-          element={
-            <Suspense fallback={<div className="flex items-center justify-center min-h-screen">Carregando...</div>}>
-              <SchoolProfileSetup />
-            </Suspense>
-          }
-        />
-        {/* New Scholarship is nested inside SchoolDashboard provider */}
-        <Route path="/school/dashboard/*" element={<SchoolDashboard />} />
-        {/* Admin Dashboard Direct Route */}
-        <Route path="/admin/dashboard/*" element={<AdminDashboard />} />
-        {/* Affiliate Admin Dashboard */}
-        <Route path="/affiliate-admin/dashboard/*" element={<AffiliateAdminDashboard />} />
-        {/* Seller Dashboard */}
-        <Route path="/seller/dashboard/*" element={<SellerDashboard />} />
-        {/* Seller Student Details */}
-        <Route path="/seller/student/:studentId" element={<SellerDashboard />} />
-        {/* Placeholder routes for other pages */}
-        <Route path="/services" element={<div className="min-h-screen bg-gray-50 flex items-center justify-center"><div className="text-2xl text-gray-600">Services page coming soon...</div></div>} />
-        <Route path="/contact" element={<ContactUs />} />
-        <Route path="/faq" element={<FAQ />} />
-        <Route path="/help" element={<HelpCenter />} />
-        <Route path="/support" element={<SupportCenter />} />
-        <Route path="/privacy-policy" element={<PrivacyPolicy />} />
-        <Route path="/terms-of-service" element={<TermsOfService />} />
-        <Route path="/for-universities" element={<ForUniversities />} />
-        <Route path="/for-students" element={<ForStudents />} />
-        <Route path="/success" element={<SuccessPage />} />
-        <Route path="/application-fee-cancel" element={<ApplicationFeeCancel />} />
-        <Route path="/payment-error" element={<PaymentErrorPage />} />
-        <Route path="/scholarship-fee-success" element={<ScholarshipFeeSuccess />} />
-        <Route path="/email-oauth-callback" element={<EmailOAuthCallback />} />
-        <Route path="/auth-callback" element={<AuthCallback />} />
-        <Route path="/microsoft-email" element={<MicrosoftCallback />} />
-        {/* SSO 323 Network - Suporta ambas as rotas para compatibilidade */}
-        <Route path="/auth/callback" element={<Auth323NetworkCallback />} />
-        <Route path="/auth/323-network/callback" element={<Auth323NetworkCallback />} />
-        <Route path="/eb3-jobs" element={<EB3JobsLanding />} />
-        <Route path="/unsubscribe" element={<UnsubscribeNewsletter />} />
+          <Route path="/about" element={<About />} />
+          <Route path="/login" element={<Auth mode="login" />} />
+          <Route path="/register" element={<Auth mode="register" />} />
+          <Route path="/auth" element={<Auth mode="register" />} />
+          <Route path="/forgot-password" element={<ForgotPassword />} />
+          <Route path="/admin/register" element={<AdminRegistration />} />
+          <Route path="/seller/register" element={<SellerRegistration />} />
+          <Route path="/student/register" element={<SellerStudentRegistration />} />
+          <Route path="/scholarships" element={<Scholarships />} />
+          <Route path="/selection-fee-registration" element={<QuickRegistration />} />
+          <Route path="/schools" element={<Universities />} />
+          <Route path="/schools/:slug" element={<UniversityDetail />} />
+          <Route path="/how-it-works" element={<HowItWorks />} />
+          <Route path="/processo-detalhado" element={<ProcessoDetalhado />} />
+          <Route path="/matricula-rewards" element={<MatriculaRewardsLanding />} />
+          {/* Student Routes */}
+          <Route path="/student/terms" element={<StudentTermsAcceptance />} />
+          <Route path="/student/onboarding" element={<StudentOnboarding />} />
+          <Route path="/student/dashboard/*" element={<StudentDashboard />} />
+          {/* School Routes */}
+          <Route path="/school/termsandconditions" element={<TermsAndConditions />} />
+          <Route
+            path="/school/setup-profile"
+            element={
+              <Suspense fallback={<div className="flex items-center justify-center min-h-screen">Carregando...</div>}>
+                <SchoolProfileSetup />
+              </Suspense>
+            }
+          />
+          {/* New Scholarship is nested inside SchoolDashboard provider */}
+          <Route path="/school/dashboard/*" element={<SchoolDashboard />} />
+          {/* Admin Dashboard Direct Route */}
+          <Route path="/admin/dashboard/*" element={<AdminDashboard />} />
+          {/* Affiliate Admin Dashboard */}
+          <Route path="/affiliate-admin/dashboard/*" element={<AffiliateAdminDashboard />} />
+          {/* Seller Dashboard */}
+          <Route path="/seller/dashboard/*" element={<SellerDashboard />} />
+          {/* Seller Student Details */}
+          <Route path="/seller/student/:studentId" element={<SellerDashboard />} />
+          {/* Placeholder routes for other pages */}
+          <Route path="/services" element={<div className="min-h-screen bg-gray-50 flex items-center justify-center"><div className="text-2xl text-gray-600">Services page coming soon...</div></div>} />
+          <Route path="/contact" element={<ContactUs />} />
+          <Route path="/faq" element={<FAQ />} />
+          <Route path="/help" element={<HelpCenter />} />
+          <Route path="/support" element={<SupportCenter />} />
+          <Route path="/privacy-policy" element={<PrivacyPolicy />} />
+          <Route path="/terms-of-service" element={<TermsOfService />} />
+          <Route path="/for-universities" element={<ForUniversities />} />
+          <Route path="/for-students" element={<ForStudents />} />
+          <Route path="/success" element={<SuccessPage />} />
+          <Route path="/application-fee-cancel" element={<ApplicationFeeCancel />} />
+          <Route path="/payment-error" element={<PaymentErrorPage />} />
+          <Route path="/scholarship-fee-success" element={<ScholarshipFeeSuccess />} />
+          <Route path="/email-oauth-callback" element={<EmailOAuthCallback />} />
+          <Route path="/auth-callback" element={<AuthCallback />} />
+          <Route path="/microsoft-email" element={<MicrosoftCallback />} />
+          {/* SSO 323 Network - Suporta ambas as rotas para compatibilidade */}
+          <Route path="/auth/callback" element={<Auth323NetworkCallback />} />
+          <Route path="/auth/323-network/callback" element={<Auth323NetworkCallback />} />
+          <Route path="/eb3-jobs" element={<EB3JobsLanding />} />
+          <Route path="/unsubscribe" element={<UnsubscribeNewsletter />} />
 
-        <Route path="/checkout/zelle/waiting" element={<ZelleWaitingPage />} />
-        <Route path="/checkout/zelle" element={<ZelleCheckoutPage />} />
-        <Route path="/checkout/success" element={<CheckoutSuccess />} />
-        <Route path="/zelle/success" element={<ZellePaymentSuccess />} />
+          <Route path="/checkout/zelle/waiting" element={<ZelleWaitingPage />} />
+          <Route path="/checkout/zelle" element={<ZelleCheckoutPage />} />
+          <Route path="/checkout/success" element={<CheckoutSuccess />} />
+          <Route path="/zelle/success" element={<ZellePaymentSuccess />} />
 
-        {/* Smart Assistant Route */}
-        <Route path="/smart-assistant" element={<SmartAssistantLayout />} />
+          {/* Smart Assistant Route */}
+          <Route path="/smart-assistant" element={<SmartAssistantLayout />} />
 
-        {/* Catch-all route for 404 */}
-        <Route path="*" element={<div className="min-h-screen bg-gray-50 flex items-center justify-center"><div className="text-2xl text-gray-600">Page not found</div></div>} />
-      </Routes>
-    </Suspense>
-  </Layout>
-);
+          {/* Catch-all route for 404 */}
+          <Route path="*" element={<NotFound />} />
+        </Routes>
+      </Suspense>
+    </Layout>
+  );
 };
 
 const App: React.FC = () => {

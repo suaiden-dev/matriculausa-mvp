@@ -124,8 +124,8 @@
     "step3": "Step 3: Use the exact amount shown above",
     "step4": "Step 4: Add a reference note",
     "uploadReceipt": "Upload Receipt",
-    "uploadReceiptDescription": "Upload your Zelle payment receipt",
-    "dragAndDrop": "Drag and drop your file here, or click to select",
+    "uploadReceiptDescription": "Cargue su comprobante de transferencia aquí <span class='text-red-500 font-bold'>*</span>",
+    "dragAndDrop": "Arrastre un archivo o haga clic para seleccionar <span class='text-red-500 font-bold'>*</span>",
     "supportedFormats": "Supported formats: JPG, PNG, PDF (max 10MB)",
     "removeFile": "Remove file",
     "paymentDetails": "Payment Details",
@@ -202,10 +202,12 @@
     "zellePaymentDetails": {
       "title": "Detalles del Pago Zelle",
       "subtitle": "Envíe su pago al siguiente destinatario",
+      "paymentInstructions": "Instrucciones de Pago via Zelle",
+      "paymentInstructionsSubtitle": "1- Realice la transferencia al destinatario informado abajo.<br/>2- Luego, envíe su comprobante en el campo de carga abajo.<span class='text-red-600 font-bold'>*</span>",
       "recipientEmail": "Correo del Destinatario",
       "paymentAmount": "Monto del Pago",
       "important": "Importante:",
-      "importantMessage": "Asegúrese de enviar el monto exacto de <strong>{{amount}} USD</strong> a <strong>pay@matriculausa.com</strong> vía Zelle. Cualquier discrepancia en el monto o destinatario retrasará el procesamiento de su pago.",
+      "importantMessage": "<span class='text-red-600 font-bold'>* El envío del comprobante es obligatorio y necesario para continuar su proceso.</span>",
       "importantMessageSimple": "Asegúrese de que el monto exacto del pago coincida con el monto mostrado arriba."
     }
   },

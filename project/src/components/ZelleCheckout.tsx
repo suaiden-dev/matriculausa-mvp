@@ -1,5 +1,5 @@
 import React, { useState, useRef, useEffect } from 'react';
-import { Upload, CheckCircle, AlertCircle, X, Clock, Loader2, FileUp, Send, Sparkles, Info, Copy, Check } from 'lucide-react';
+import { Upload, CheckCircle, AlertCircle, X, Clock, Loader2, FileUp, Send, Sparkles, Copy, Check } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 import { useAuth } from '../hooks/useAuth';
 import { usePaymentBlocked } from '../hooks/usePaymentBlocked';
@@ -738,16 +738,19 @@ export const ZelleCheckout: React.FC<ZelleCheckoutProps> = ({
           </div>
         )}
         <div className="space-y-0 border border-slate-300 rounded-[2rem] overflow-hidden shadow-sm">
-          <div className="bg-white py-6 md:py-8 border-b border-slate-100 px-4 md:px-6">
-            <h3 className="text-xl font-bold text-gray-900 mb-2">{t('payment:zelleCheckout.zellePaymentDetails.paymentInstructions')}</h3>
-            <p className="text-base text-gray-500 mb-8 font-medium">{t('payment:zelleCheckout.zellePaymentDetails.paymentInstructionsSubtitle')}</p>
+          <div className="bg-white pt-6 md:pt-8 pb-0 border-b border-slate-100 px-4 md:px-6">
+            <h3 className="text-2xl font-bold text-gray-900 mb-2">{t('payment:zelleCheckout.zellePaymentDetails.paymentInstructions')}</h3>
+            <div 
+              className="text-lg text-gray-500 mb-4 font-medium space-y-2"
+              dangerouslySetInnerHTML={{ __html: t('payment:zelleCheckout.zellePaymentDetails.paymentInstructionsSubtitle') }}
+            />
 
             {/* Detalhes do Pagamento Zelle (Card Interno) */}
-            <div className="bg-gray-50/50 rounded-[1.5rem] py-8 space-y-6 border border-slate-100/50 px-0">
+            <div className="bg-gray-50/50 rounded-[1.5rem] pt-4 pb-2 space-y-6 border border-slate-100/50 px-0">
 
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <div className="space-y-2">
-                  <label className="text-xs font-bold text-gray-500 uppercase ml-1">{t('payment:zelleCheckout.zellePaymentDetails.recipientEmail')}</label>
+                  <label className="text-lg font-bold text-gray-900 ml-1">{t('payment:zelleCheckout.zellePaymentDetails.recipientEmail')}</label>
                   <div className="bg-white border border-slate-300 rounded-2xl px-6 py-4 font-mono text-lg text-gray-700 font-bold shadow-sm flex items-center justify-between h-16 group">
                     <span>pay@matriculausa.com</span>
                     <button 
@@ -765,18 +768,17 @@ export const ZelleCheckout: React.FC<ZelleCheckoutProps> = ({
                   </div>
                 </div>
                 <div className="space-y-2">
-                  <label className="text-xs font-bold text-gray-500 uppercase ml-1">{t('payment:zelleCheckout.zellePaymentDetails.paymentAmount')}</label>
-                  <div className="bg-white border border-slate-300 rounded-2xl px-6 py-4 font-black text-xl text-gray-900 shadow-sm flex items-center h-16">
+                  <label className="text-lg font-bold text-gray-900 ml-1">{t('payment:zelleCheckout.zellePaymentDetails.paymentAmount')}</label>
+                  <div className="bg-white border border-slate-300 rounded-2xl px-6 py-4 font-black text-lg text-gray-900 shadow-sm flex items-center h-16">
                     ${amount.toFixed(2)} USD
                   </div>
                 </div>
               </div>
 
               {/* Box Importante */}
-              <div className="bg-gray-100/50 border border-slate-300 rounded-2xl p-4 flex gap-3 items-start mx-0">
-                <Info className="w-5 h-5 text-gray-400 mt-0.5 shrink-0" />
-                <div className="text-[13px] leading-relaxed text-gray-600 font-medium">
-                  <span className="font-bold text-gray-700 text-sm">{t('payment:zelleCheckout.zellePaymentDetails.important')}</span><br />
+              <div className="bg-gray-100/50 border border-red-600 rounded-2xl p-4 mx-0 text-red-600 font-bold">
+                <div className="text-lg leading-relaxed">
+                  <span className="text-lg">{t('payment:zelleCheckout.zellePaymentDetails.important')}</span><br />
                   <span dangerouslySetInnerHTML={{ __html: t('payment:zelleCheckout.zellePaymentDetails.importantMessage', { amount: amount.toFixed(2) }) }} />
                 </div>
               </div>
@@ -784,8 +786,11 @@ export const ZelleCheckout: React.FC<ZelleCheckoutProps> = ({
           </div>
 
           {/* Sessão: Upload do Comprovante (Agora dentro do mesmo container) */}
-          <div className="bg-white px-4 md:px-6 py-10 space-y-6">
-            <h3 className="font-bold text-gray-900 text-lg">{t('payment:zelleCheckout.uploadReceiptDescription')} *</h3>
+          <div className="bg-white px-4 md:px-6 pt-4 pb-10 space-y-6">
+            <h3 
+              className="font-bold text-gray-900 text-2xl"
+              dangerouslySetInnerHTML={{ __html: t('payment:zelleCheckout.uploadReceiptDescription') }}
+            />
             
             <div 
               className={`border-2 border-dashed rounded-[2rem] p-4 md:p-8 text-center transition-all cursor-pointer ${comprovantePreview ? 'border-blue-300 bg-blue-50/50' : 'border-slate-300 hover:border-blue-300 bg-gray-50/30'}`}
@@ -806,7 +811,7 @@ export const ZelleCheckout: React.FC<ZelleCheckoutProps> = ({
                     <Upload className="w-10 h-10 text-gray-300" />
                   </div>
                   <div className="space-y-2">
-                    <p className="text-lg font-bold text-gray-700">{t('payment:zelleCheckout.dragAndDrop')}</p>
+                    <p className="text-lg font-bold text-gray-700" dangerouslySetInnerHTML={{ __html: t('payment:zelleCheckout.dragAndDrop') }} />
                     <p className="text-xs text-gray-400 font-medium uppercase tracking-wider">{t('payment:zelleCheckout.supportedFormats')}</p>
                   </div>
                 </div>
