@@ -15,7 +15,10 @@ import {
   AlertCircle,
   AlertTriangle,
   Edit,
-  Power
+  Power,
+  ArrowUpDown,
+  ArrowUp,
+  ArrowDown
 } from 'lucide-react';
 import { supabase } from '../../lib/supabase';
 
@@ -44,7 +47,7 @@ const ScholarshipManagement: React.FC<ScholarshipManagementProps> = ({
   const [minAmount, setMinAmount] = useState('');
   const [maxAmount, setMaxAmount] = useState('');
   const [viewMode, setViewMode] = useState<'grid' | 'list'>('list');
-  const [sortBy, setSortBy] = useState<'recent' | 'applicants' | 'views' | 'deadline'>('recent');
+  const [sortBy, setSortBy] = useState<'recent' | 'applicants' | 'views' | 'deadline' | 'amount_asc' | 'amount_desc'>('recent');
 
   // Estados para ativar/desativar
   const [statusConfirmationModal, setStatusConfirmationModal] = useState<{
@@ -227,6 +230,14 @@ const ScholarshipManagement: React.FC<ScholarshipManagementProps> = ({
         if (daysA < 0 && daysB >= 0) return -1;
         if (daysA >= 0 && daysB < 0) return 1;
         return daysA - daysB;
+      case 'amount_asc':
+        const valAAsc = a.annual_value_with_scholarship || a.amount || a.scholarshipvalue || 0;
+        const valBAsc = b.annual_value_with_scholarship || b.amount || b.scholarshipvalue || 0;
+        return Number(valAAsc) - Number(valBAsc);
+      case 'amount_desc':
+        const valADesc = a.annual_value_with_scholarship || a.amount || a.scholarshipvalue || 0;
+        const valBDesc = b.annual_value_with_scholarship || b.amount || b.scholarshipvalue || 0;
+        return Number(valBDesc) - Number(valADesc);
       case 'recent':
       default:
         // Ordenar por data de criação (mais recente primeiro)
@@ -412,6 +423,8 @@ const ScholarshipManagement: React.FC<ScholarshipManagementProps> = ({
                   <option value="applicants">Most Applicants</option>
                   <option value="views">Most Views</option>
                   <option value="deadline">Deadline (Soonest First)</option>
+                  <option value="amount_desc">Amount (Highest First)</option>
+                  <option value="amount_asc">Amount (Lowest First)</option>
                 </select>
               </div>
             </div>
@@ -750,7 +763,25 @@ const ScholarshipManagement: React.FC<ScholarshipManagementProps> = ({
                 <th className="px-4 py-2 text-left">Title</th>
                 <th className="px-4 py-2 text-left">Course</th>
                 <th className="px-4 py-2 text-left">University</th>
-                <th className="px-4 py-2 text-center">Amount</th>
+                <th className="px-4 py-2 text-center">
+                  <button 
+                    onClick={() => {
+                      if (sortBy === 'amount_desc') setSortBy('amount_asc');
+                      else if (sortBy === 'amount_asc') setSortBy('recent');
+                      else setSortBy('amount_desc');
+                    }}
+                    className="flex items-center justify-center gap-1 w-full hover:text-[#05294E] transition-colors"
+                  >
+                    Amount
+                    {sortBy === 'amount_desc' ? (
+                      <ArrowDown className="h-4 w-4" />
+                    ) : sortBy === 'amount_asc' ? (
+                      <ArrowUp className="h-4 w-4" />
+                    ) : (
+                      <ArrowUpDown className="h-4 w-4 text-slate-400" />
+                    )}
+                  </button>
+                </th>
                 <th className="px-4 py-2 text-center">Placement Fee</th>
                 <th className="px-4 py-2 text-center">Level</th>
                 <th className="px-4 py-2 text-center">Deadline</th>
