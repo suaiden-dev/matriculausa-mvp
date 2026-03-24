@@ -233,7 +233,13 @@
       "changeFile": "Alterar Arquivo",
       "submitPayment": "Enviar Pagamento",
       "processing": "Processando...",
-      "paymentProcessing": "Processamento de Pagamento..."
+      "paymentProcessing": "Processamento de Pagamento...",
+      "errors": {
+        "onlyImages": "Por favor, selecione apenas arquivos de imagem (JPEG ou PNG).",
+        "maxSize": "O arquivo é muito grande. O limite é 5MB.",
+        "unauthenticated": "Usuário não autenticado.",
+        "generic": "Ocorreu um erro ao enviar a foto. Tente novamente."
+      }
     },
     "analyzing": {
       "title": "Analisando Pagamento...",

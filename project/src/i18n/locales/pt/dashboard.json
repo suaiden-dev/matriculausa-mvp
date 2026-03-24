@@ -845,7 +845,7 @@
         "courseField": "Curso / Área de Estudo",
         "enrollmentFee": "Taxa de Matrícula",
         "internalFees": "Taxas Internas da Instituição",
-        "internalFeesNote": "Estas taxas são informadas pela universidade e pagas diretamente a eles. Elas não fazem parte do serviço de mentoria da Matricula USA.",
+        "internalFeesNote": "Algumas taxas são pagas diretamente à universidade, enquanto outras são processadas por meio de nossa plataforma",
         "oneTimePayment": "Pagamento Único",
         "studentDocuments": "Documentos do Estudante",
         "diploma": "Diploma / Certificado (High School)",

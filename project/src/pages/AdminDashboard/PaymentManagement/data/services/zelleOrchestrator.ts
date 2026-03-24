@@ -513,19 +513,39 @@ export async function approveZelleFlow(params: {
   const adminName = adminProfile?.full_name || "Admin";
   const feeTypeDisplay = payment.fee_type.replace(/_/g, ' ').replace(/\b\w/g, l => l.toUpperCase());
 
-  // Student approval notification (webhook)
+  // Student approval notification (webhook) - NOW MAPPED EXACTLY LIKE STRIPE
   try {
+    let tipoNotfAluno = "Pagamento aprovado";
+    let oQueEnviar = `Seu pagamento de ${feeTypeDisplay} no valor de $${payment.amount} foi aprovado e processado com sucesso!`;
+
+    if (payment.fee_type === 'selection_process') {
+      tipoNotfAluno = "Pagamento de selection process confirmado";
+      oQueEnviar = `O pagamento da taxa de processo seletivo foi confirmado para ${payment.student_name}. Agora você pode selecionar as escolas para aplicar.`;
+    } else if (payment.fee_type === 'application_fee') {
+      tipoNotfAluno = "Pagamento de application fee confirmado";
+    } else if (payment.fee_type === 'placement_fee' || payment.fee_type === 'placement') {
+      tipoNotfAluno = "Pagamento de placement fee confirmado";
+    } else if (payment.fee_type === 'i20_control' || payment.fee_type === 'i20_control_fee') {
+      tipoNotfAluno = "Pagamento de i20 control fee confirmado";
+      oQueEnviar = `O pagamento do I-20 Control Fee no valor de $${payment.amount} foi pago e aprovado. Informaremos quando o documento estiver pronto!`;
+    } else if (payment.fee_type === 'ds160_package') {
+      tipoNotfAluno = "Pagamento de ds160_package confirmado";
+    }
+
     const approvalPayload = {
-      tipo_notf: "Pagamento aprovado",
+      tipo_notf: tipoNotfAluno,
       email_aluno: payment.student_email,
       nome_aluno: payment.student_name,
       email_universidade: "",
-      o_que_enviar:
-        `Seu pagamento de ${feeTypeDisplay} no valor de $${payment.amount} foi aprovado e processado com sucesso!`,
+      o_que_enviar: oQueEnviar,
       payment_id: payment.id,
       fee_type: payment.fee_type,
       amount: payment.amount,
       approved_by: adminName,
+      payment_method: "zelle",
+      currency: "USD",
+      currency_symbol: "$",
+      formatted_amount: `$${payment.amount}`
     };
     console.log(
       "📧 [zelleOrchestrator] Enviando webhook de aprovação para aluno:",
@@ -729,6 +749,20 @@ export async function approveZelleFlow(params: {
         console.log(
           `📧 [zelleOrchestrator] Enviando notificações para ${adminUsers.length} administradores...`,
         );
+
+        let tipoNotfAdmin = "Pagamento de aluno aprovado";
+        if (payment.fee_type === 'selection_process') {
+          tipoNotfAdmin = "Pagamento de selection process confirmado";
+        } else if (payment.fee_type === 'application_fee') {
+          tipoNotfAdmin = "Pagamento de application fee confirmado";
+        } else if (payment.fee_type === 'placement_fee' || payment.fee_type === 'placement') {
+          tipoNotfAdmin = "Pagamento de Placement Fee confirmado - Admin";
+        } else if (payment.fee_type === 'i20_control' || payment.fee_type === 'i20_control_fee') {
+          tipoNotfAdmin = "Pagamento de i20 control fee confirmado";
+        } else if (payment.fee_type === 'ds160_package') {
+          tipoNotfAdmin = "Pagamento de ds160_package confirmado";
+        }
+
         for (const admin of adminUsers) {
           let adminEmail = admin.email;
           if (isDevelopment && devBlockedEmails.includes(adminEmail)) {
@@ -738,9 +772,8 @@ export async function approveZelleFlow(params: {
             continue;
           }
 
-          const isPlacement = payment.fee_type === "placement_fee" || payment.fee_type === "placement";
           const adminNotificationPayload = {
-            tipo_notf: isPlacement ? `Pagamento de Placement Fee confirmado - Admin` : "Pagamento de aluno aprovado",
+            tipo_notf: tipoNotfAdmin,
             email_admin: adminEmail,
             nome_admin: admin.full_name || "Admin",
             phone_admin: admin.phone || "",
@@ -765,6 +798,10 @@ export async function approveZelleFlow(params: {
             referral_code: sellerData?.referral_code || null,
             commission_rate: sellerData?.commission_rate || null,
             approved_by: adminName, // Usar o nome do admin real ao invés de string genérica
+            payment_method: "zelle",
+            currency: "USD",
+            currency_symbol: "$",
+            formatted_amount: `$${payment.amount}`
           };
 
           console.log(

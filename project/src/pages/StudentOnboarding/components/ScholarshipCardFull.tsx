@@ -43,13 +43,7 @@ const ScholarshipCardFullComponent: React.FC<ScholarshipCardFullProps> = ({
   const [brokenImage, setBrokenImage] = useState<boolean>(false);
   const isBlocked = is3800ScholarshipBlocked(scholarship);
 
-  const getApplicationFeeWithDependents = (sch: any): string => {
-    const base = sch?.application_fee_amount ? Number(sch.application_fee_amount) : 350;
-    const systemType = userProfile?.system_type || 'legacy';
-    const deps = Number(userProfile?.dependents) || 0;
-    const finalAmount = systemType === 'legacy' && deps > 0 ? base + deps * 100 : base;
-    return formatCurrency(finalAmount);
-  };
+
 
   // Usar o ID da bolsa como parte da chave para garantir que cada card seja único
   const uniqueCardKey = `scholarship-card-${scholarship.id}`;
@@ -79,9 +73,9 @@ const ScholarshipCardFullComponent: React.FC<ScholarshipCardFullProps> = ({
       <div className="relative h-32 sm:h-36 overflow-hidden flex-shrink-0 bg-gradient-to-b from-slate-100/50 to-white">
         <div className="absolute inset-x-0 bottom-0 h-16 bg-gradient-t from-white to-transparent"></div>
 
-        {scholarship.image_url && userProfile?.has_paid_selection_process_fee && !brokenImage ? (
+        {(scholarship.image_url || scholarship.universities?.image_url || scholarship.universities?.logo_url) && (userProfile?.has_paid_selection_process_fee || userProfile?.has_paid_subscription) && !brokenImage ? (
           <img
-            src={scholarship.image_url}
+            src={scholarship.image_url || scholarship.universities?.image_url || scholarship.universities?.logo_url || ''}
             alt={scholarship.title}
             onError={() => setBrokenImage(true)}
             className="w-full h-full object-contain p-4 group-hover:scale-[1.02] transition-transform duration-700"
@@ -247,12 +241,7 @@ const ScholarshipCardFullComponent: React.FC<ScholarshipCardFullProps> = ({
               return null;
             })()}
 
-            <div className="flex items-center justify-between">
-              <span className="text-slate-400 text-xs font-medium">{t('scholarshipsPage.scholarshipCard.applicationFee')}</span>
-              <span className="text-slate-500 text-xs font-bold">
-                {getApplicationFeeWithDependents(scholarship)}
-              </span>
-            </div>
+
 
             {/* Placement Fee - exibir apenas para novos usuários */}
             {userProfile?.placement_fee_flow && (() => {
@@ -261,7 +250,7 @@ const ScholarshipCardFullComponent: React.FC<ScholarshipCardFullProps> = ({
               const placementFee = getPlacementFee(annualValue, placementFeeAmount);
               return (
                 <div className="flex items-center justify-between pt-1.5 border-t border-slate-100">
-                  <span className="text-slate-400 text-xs font-medium">{t('scholarshipsPage.scholarshipCard.placementFee', 'Placement Fee')}</span>
+                  <span className="text-slate-400 text-xs font-medium">{t('scholarships:scholarshipsPage.scholarshipCard.placementFee', 'Placement Fee')}</span>
                   <span className="text-blue-600 text-xs font-black">{formatCurrency(placementFee)}</span>
                 </div>
               );

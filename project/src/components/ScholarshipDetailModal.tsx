@@ -292,7 +292,7 @@ const ScholarshipDetailModal: React.FC<ScholarshipDetailModalProps> = ({
                               const placementFeeValue = getPlacementFee(annualValue, placementFeeAmount);
                               return (
                                 <tr>
-                                  <td className="py-3 px-4 text-slate-600 font-medium">Placement Fee</td>
+                                  <td className="py-3 px-4 text-slate-600 font-medium">{t('scholarships:scholarshipsPage.scholarshipCard.placementFee', 'Placement Fee')}</td>
                                   <td className="py-3 px-4 text-right text-blue-600 font-bold">{formatCurrency(placementFeeValue)}</td>
                                 </tr>
                               );
