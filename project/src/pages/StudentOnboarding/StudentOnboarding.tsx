@@ -600,13 +600,15 @@ const StudentOnboarding: React.FC = () => {
       <div className="w-full max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 xl:px-12 py-4 sm:py-6 lg:py-8 flex-1 flex flex-col relative z-10">
         {true && (
           <div className="mb-4 sm:mb-6 flex justify-between items-center">
-            <button
-              onClick={handleBack}
-               className="flex items-center space-x-2 text-gray-600 hover:text-gray-900 transition-colors bg-white hover:bg-gray-50 px-4 py-2 rounded-xl shadow-sm border border-gray-100"
-            >
-              <ArrowLeft className="w-5 h-5" />
-              <span className="font-medium">{t('common:common.back')}</span>
-            </button>
+            {window.location.hostname === 'localhost' && (
+              <button
+                onClick={handleBack}
+                className="flex items-center space-x-2 text-gray-600 hover:text-gray-900 transition-colors bg-white hover:bg-gray-50 px-4 py-2 rounded-xl shadow-sm border border-gray-100"
+              >
+                <ArrowLeft className="w-5 h-5" />
+                <span className="font-medium">{t('common:common.back')}</span>
+              </button>
+            )}
 
             <div className="flex items-center gap-3">
               {/* Notifications Bell */}

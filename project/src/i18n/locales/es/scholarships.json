@@ -77,7 +77,8 @@
       "days": "días",
       "details": "Detalles",
       "applyNow": "Aplicar Ahora",
-      "notAvailable": "No disponible"
+      "notAvailable": "No disponible",
+      "placementFee": "Tarifa de Colocación"
     },
     "noResults": {
       "title": "No se encontraron becas",

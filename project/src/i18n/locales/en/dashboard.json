@@ -841,7 +841,7 @@
         "courseField": "Course / Field of Study",
         "enrollmentFee": "Application Fee",
         "internalFees": "Institutional Internal Fees",
-        "internalFeesNote": "These fees are reported by the university and paid directly to them. They are not part of Matricula USA's mentoring service.",
+        "internalFeesNote": "Some fees are paid directly to the university, while others are processed through our platform",
         "oneTimePayment": "One-Time Payment",
         "studentDocuments": "Student Documents",
         "diploma": "Diploma / Certificate (High School)",

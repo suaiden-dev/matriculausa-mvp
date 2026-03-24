@@ -104,7 +104,7 @@ export const IdentityVerificationStep: React.FC<IdentityVerificationStepProps> =
   const title = t('selectionSurvey.identityVerification') || 'Verificação de Identidade';
   const completedTitle = t('selectionSurvey.profilesIdentified') || 'Identidade Confirmada';
   const alreadySentText = t('selectionSurvey.identityVerifiedSuccess') || 'Você já enviou sua foto de identidade e ela está em análise.';
-  const continueBtn = t('common.next') || 'Próximo';
+  const continueBtn = t('common:common.next') || 'Próximo';
 
   if (alreadyVerified) {
     return (
@@ -149,6 +149,17 @@ export const IdentityVerificationStep: React.FC<IdentityVerificationStepProps> =
             hideInternalActions={true}
           />
           <div className="flex justify-end gap-3 mt-6">
+            {uploadedPath && (
+              <button
+                onClick={() => {
+                  setUploadedPath(null);
+                  if (photoUploadRef.current) photoUploadRef.current.clear();
+                }}
+                className="px-6 py-3 text-red-600 hover:bg-red-50 font-bold rounded-xl transition-all border border-red-100"
+              >
+                {t('common:components.identityPhotoUpload.remove') || 'Remover'}
+              </button>
+            )}
             <button
               onClick={handleSendPhoto}
               disabled={!uploadedPath || saving}
@@ -156,7 +167,7 @@ export const IdentityVerificationStep: React.FC<IdentityVerificationStepProps> =
                 !uploadedPath ? 'opacity-40 cursor-not-allowed grayscale-[0.5]' : 'hover:scale-[1.02] active:scale-[0.98]'
               }`}
             >
-              {saving ? t('common.saving') || 'Salvando...' : continueBtn}
+              {saving ? t('common:common.saving') || 'Salvando...' : continueBtn}
             </button>
           </div>
         </div>

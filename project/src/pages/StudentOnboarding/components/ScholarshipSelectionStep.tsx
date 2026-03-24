@@ -333,27 +333,46 @@ export const ScholarshipSelectionStep: React.FC<StepProps> = ({ onNext, onBack: 
       return [];
     }
 
-    // Separar bolsas em destaque das demais (usando is_highlighted, igual ao ScholarshipBrowser)
-    const featured: any[] = [];
-    const regular: any[] = [];
+    const priorityMatch = (name: string | undefined | null): boolean => {
+      if (!name) return false;
+      const n = String(name).toLowerCase();
+      return n.includes('caroline') || n.includes('oikos');
+    };
 
-    filteredScholarships.forEach((scholarship: any) => {
-      if (scholarship.is_highlighted) {
-        featured.push(scholarship);
-      } else {
-        regular.push(scholarship);
-      }
+    // 1. Separar e ordenar destaques (baseado na ordem original de destaque)
+    const featured = filteredScholarships
+      .filter((s: any) => s.is_highlighted)
+      .sort((a, b) => (a.featured_order ?? 999) - (b.featured_order ?? 999));
+
+    // 2. Separar regulares
+    const regular = filteredScholarships.filter((s: any) => !s.is_highlighted);
+
+    // 3. Combinar respeitando o limite de 6 destaques iniciais (padrão do site)
+    const combined = [...featured.slice(0, 6), ...regular];
+
+    // 4. Aplicar ordenação cirúrgica idêntica à da Landing Page
+    const withIndex = combined.map((s, idx) => ({ s, idx }));
+    withIndex.sort((a, b) => {
+      // Prioridade 1: Disponibilidade (Indisponíveis/Bloqueadas vão para o final)
+      const aBlocked = !a.s.is_active || is3800ScholarshipBlocked(a.s);
+      const bBlocked = !b.s.is_active || is3800ScholarshipBlocked(b.s);
+      if (aBlocked !== bBlocked) return aBlocked ? 1 : -1;
+
+      // Prioridade 2: Universidades parceiras específicas
+      const aName = a.s.universities?.name || a.s.university_name || '';
+      const bName = b.s.universities?.name || b.s.university_name || '';
+      const aPr = priorityMatch(aName) ? 0 : 1;
+      const bPr = priorityMatch(bName) ? 0 : 1;
+      if (aPr !== bPr) return aPr - bPr;
+
+      // Prioridade 3: Destaque
+      if (a.s.is_highlighted !== b.s.is_highlighted) return a.s.is_highlighted ? -1 : 1;
+
+      // Estabilidade
+      return a.idx - b.idx;
     });
 
-    // Ordenar bolsas em destaque por featured_order
-    featured.sort((a, b) => {
-      const orderA = a.featured_order ?? 999;
-      const orderB = b.featured_order ?? 999;
-      return orderA - orderB;
-    });
-
-    // Combinar: featured primeiro (máximo 6, igual ao ScholarshipBrowser), depois as regulares
-    return [...featured.slice(0, 6), ...regular];
+    return withIndex.map(x => x.s);
   }, [filteredScholarships]);
 
   // Resetar página quando filtros mudarem

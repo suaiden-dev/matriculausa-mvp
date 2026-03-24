@@ -644,11 +644,12 @@ export async function getRealPaidAmounts(
           `[paymentConverter] ✅ Parcelow payment: ${amountUSD.toFixed(2)} USD`,
         );
       } else {
-        // ✅ Outros métodos (manual/outside): não processar, deixar usar valores fixos
+        // ✅ Outros métodos (manual/outside): usar o valor bruto conforme registrado no banco de dados.
+        // O valor salvo para esses métodos já é em USD e deve ser refletido na UI.
+        amountUSD = payment.gross_amount_usd ? Number(payment.gross_amount_usd) : Number(payment.amount);
         console.log(
-          `[paymentConverter] ℹ️ Payment method '${payment.payment_method}' sem payment_intent_id, não processando - use valores fixos como fallback`,
+          `[paymentConverter] ✅ Payment method '${payment.payment_method}': usando valor salvo no banco ${amountUSD.toFixed(2)} USD`,
         );
-        continue;
       }
 
       // Mapear fee_type para a chave correta

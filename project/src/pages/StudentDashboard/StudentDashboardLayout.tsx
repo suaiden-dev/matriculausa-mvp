@@ -194,21 +194,13 @@ const StudentDashboardLayout: React.FC<StudentDashboardLayoutProps> = ({
   // 1. Pagou a taxa recentemente (pós-threshold) MAS ainda não passou na prova.
   const isRestricted = !loading && !isExemptedByLegacy && selectionFeePaid && !surveyPassed;
 
-  console.log('🔍 [Dashboard Layout] Sidebar Logic:', {
-    profileId: profile?.id,
-    selectionFeePaid,
-    surveyPassed,
-    isExemptedByLegacy,
-    paidAt: profile?.selection_process_paid_at,
-    isRestricted,
-    loading
-  });
-
   let displayedSidebarItems = allSidebarItems;
 
   if (isRestricted) {
-    // Em modo restrito, removemos quase tudo
-    const allowedIds = ['chat', 'profile', 'rewards'];
+    // Em modo restrito, garantimos que os itens essenciais continuem visíveis.
+    // O questionário e o guia de onboarding estão dentro da Visão Geral, 
+    // portanto 'overview' NÃO deve ser escondido.
+    const allowedIds = ['overview', 'applications', 'chat', 'profile', 'rewards'];
     displayedSidebarItems = allSidebarItems.filter(item => allowedIds.includes(item.id));
   }
 

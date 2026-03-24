@@ -18,6 +18,7 @@ import { recordIndividualFeePayment } from '../../lib/paymentRecorder';
 import { useStudentLogs } from '../../hooks/useStudentLogs';
 import { getRealPaidAmounts } from '../../utils/paymentConverter';
 import { getPlacementFee } from '../../utils/placementFeeCalculator';
+import { approveZelleFlow } from './PaymentManagement/data/services/zelleOrchestrator';
 
 // Componentes de UI Base
 import {
@@ -551,6 +552,8 @@ const AdminStudentDetails: React.FC = () => {
   const [pendingPayment, setPendingPayment] = useState<any>(null);
   const [paymentMethod, setPaymentMethod] = useState('manual');
   const [paymentAmount, setPaymentAmount] = useState(0);
+  const [zelleProofFile, setZelleProofFile] = useState<File | null>(null);
+  const [isUploadingZelle, setIsUploadingZelle] = useState(false);
 
   // Estados para aprovar/rejeitar aplicação
   const [approvingStudent, setApprovingStudent] = useState(false);
@@ -1307,7 +1310,7 @@ const AdminStudentDetails: React.FC = () => {
     if (!student || !pendingPayment) return;
 
     const feeType = pendingPayment.fee_type as 'selection_process' | 'application' | 'scholarship' | 'i20_control' | 'placement' | 'ds160_package' | 'i539_cos_package';
-    const paymentMethodValue = pendingPayment.payment_method;
+    const paymentMethodValue = paymentMethod;
     const paymentDate = new Date().toISOString();
     let applicationId: string | undefined = undefined;
 
@@ -1362,6 +1365,98 @@ const AdminStudentDetails: React.FC = () => {
       return;
     }
 
+    if (paymentMethodValue === 'zelle') {
+      setIsUploadingZelle(true);
+      try {
+        let feeTypeGlobalForZelle: string = feeType;
+        let feeTypeForZelle: string = feeType;
+        
+        let targetApplicationForAmount = applicationId;
+        
+        if (feeType === 'selection_process') {
+          feeTypeForZelle = 'selection_process_fee';
+          feeTypeGlobalForZelle = 'selection_process';
+        } else if (feeType === 'application') {
+          feeTypeForZelle = 'application_fee';
+          feeTypeGlobalForZelle = 'application';
+        } else if (feeType === 'scholarship') {
+          feeTypeForZelle = 'scholarship_fee';
+          feeTypeGlobalForZelle = 'scholarship';
+        } else if (feeType === 'i20_control') {
+          feeTypeForZelle = 'i20_control_fee';
+          feeTypeGlobalForZelle = 'i20_control_fee';
+        } else if (feeType === 'placement') {
+          feeTypeForZelle = 'placement_fee';
+          feeTypeGlobalForZelle = 'placement_fee';
+        }
+
+        let proofUrl = 'manual-admin-approve';
+        
+        if (zelleProofFile) {
+          const fileExt = zelleProofFile.name.split('.').pop() || 'png';
+          // ✅ FIX: The RLS policy on zelle_comprovantes requires users to upload to their own folder (auth.uid() == folder).
+          // We use the admin's ID (user.id) to bypass the RLS correctly.
+          const fileName = `zelle-payments/${user?.id}/admin_upload_${Date.now()}-${Math.random().toString(36).substring(2)}.${fileExt}`;
+          const { error: uploadError } = await supabase.storage
+            .from('zelle_comprovantes')
+            .upload(fileName, zelleProofFile);
+          
+          if (uploadError) throw uploadError;
+          
+          const { data: { publicUrl } } = supabase.storage
+            .from('zelle_comprovantes')
+            .getPublicUrl(fileName);
+            
+          proofUrl = publicUrl;
+        }
+
+        const { data: zellePayment, error: zelleError } = await supabase
+          .from('zelle_payments')
+          .insert([{
+            user_id: student.user_id,
+            fee_type: feeTypeForZelle,
+            amount: finalPaymentAmount,
+            screenshot_url: proofUrl,
+            status: 'approved',
+            admin_approved_by: user?.id,
+            admin_approved_at: new Date().toISOString(),
+            confirmation_code: 'ADMIN_MANUAL',
+            scholarships_ids: targetApplicationForAmount ? [targetApplicationForAmount] : null
+          }])
+          .select()
+          .single();
+
+        if (zelleError) throw zelleError;
+
+        await approveZelleFlow({
+          supabase,
+          adminUserId: user?.id || '',
+          payment: {
+            ...zellePayment,
+            student_email: student?.student_email || (student as any)?.email || '',
+            student_name: student?.student_name || (student as any)?.full_name || '',
+            fee_type_global: feeTypeGlobalForZelle,
+          }
+        });
+        
+        setShowPaymentModal(false);
+        setPendingPayment(null);
+        setPaymentAmount(0);
+        setPaymentMethod('manual');
+        setZelleProofFile(null);
+        
+        setTimeout(() => window.location.reload(), 2000);
+        
+        return;
+      } catch (e: any) {
+        console.error('Error in zelle manual flow:', e);
+        alert('Error uploading manual zelle proof: ' + e.message);
+        return;
+      } finally {
+        setIsUploadingZelle(false);
+      }
+    }
+
     // ✅ IMPORTANTE: Ativar loading ANTES de registrar o pagamento
     // Isso evita mostrar o valor antigo enquanto o novo valor está sendo carregado
     setLoadingPaidAmounts(prev => ({ ...prev, [feeType]: true }));
@@ -1378,10 +1473,10 @@ const AdminStudentDetails: React.FC = () => {
 
       const recordResult = await recordIndividualFeePayment(supabase, {
         userId: student.user_id,
-        feeType: feeType,
+        feeType: feeType as any,
         amount: finalPaymentAmount,
         paymentDate: paymentDate,
-        paymentMethod: paymentMethodValue,
+        paymentMethod: paymentMethodValue as any,
         paymentIntentId: null,
         stripeChargeId: null,
         zellePaymentId: null,
@@ -3663,7 +3758,10 @@ const AdminStudentDetails: React.FC = () => {
       {/* Modals */}
       <PaymentConfirmationModal
         isOpen={showPaymentModal}
-        onClose={() => setShowPaymentModal(false)}
+        onClose={() => {
+          setShowPaymentModal(false);
+          setZelleProofFile(null);
+        }}
         onConfirm={handleConfirmPayment}
         pendingPayment={pendingPayment}
         student={student}
@@ -3671,7 +3769,9 @@ const AdminStudentDetails: React.FC = () => {
         amount={paymentAmount}
         onPaymentMethodChange={setPaymentMethod}
         onAmountChange={setPaymentAmount}
-        isProcessing={saving}
+        isProcessing={saving || isUploadingZelle}
+        zelleProofFile={zelleProofFile}
+        onZelleProofFileChange={setZelleProofFile}
       />
 
       <RejectDocumentModal
