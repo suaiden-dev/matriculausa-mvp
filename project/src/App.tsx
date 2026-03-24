@@ -10,55 +10,60 @@ import Layout from './components/Layout';
 import AuthRedirect from './components/AuthRedirect';
 import Home from './pages/Home';
 import About from './pages/About';
-import Auth from './pages/Auth';
 import Scholarships from './pages/Scholarships';
-import QuickRegistration from './pages/QuickRegistration';
 import Universities from './pages/Universities';
 import UniversityDetail from './pages/UniversityDetail';
 import HowItWorks from './pages/HowItWorks';
 import ProcessoDetalhado from './pages/ProcessoDetalhado';
 import TermsAndConditions from './pages/TermsAndConditions';
 import StudentTermsAcceptance from './pages/StudentTermsAcceptance';
-import { captureUtmFromUrl } from './utils/utmTracker';
-// ✅ OTIMIZAÇÃO: Lazy loading do SchoolProfileSetup para evitar carregar cities.json (208 MB) no início
-const SchoolProfileSetup = React.lazy(() => import('./pages/SchoolProfileSetup'));
-import { SchoolDashboard } from './pages/SchoolDashboard/index';
-import StudentDashboard from './pages/StudentDashboard/index';
-import AdminDashboard from './pages/AdminDashboard/index';
-import AffiliateAdminDashboard from './pages/AffiliateAdminDashboard/index';
-import SellerDashboard from './pages/SellerDashboard/index';
-import ForgotPassword from './pages/ForgotPassword';
-import AdminRegistration from './pages/AdminRegistration';
-import SellerRegistration from './pages/SellerRegistration';
-import SellerStudentRegistration from './pages/SellerStudentRegistration';
-import StudentOnboarding from './pages/StudentOnboarding/StudentOnboarding';
-import SuccessPage from './pages/SuccessPage';
 import ScholarshipFeeSuccess from './pages/StudentDashboard/ScholarshipFeeSuccess';
 import ApplicationFeeCancel from './pages/ApplicationFeeCancel';
 import PaymentErrorPage from './pages/PaymentErrorPage';
-import MatriculaRewardsLanding from './pages/MatriculaRewardsLanding';
-import SupportCenter from './pages/SupportCenter';
-import FAQ from './pages/FAQ';
-import ContactUs from './pages/ContactUs';
-import HelpCenter from './pages/HelpCenter';
-import PrivacyPolicy from './pages/PrivacyPolicy';
-import TermsOfService from './pages/TermsOfService';
-import ForUniversities from './pages/ForUniversities';
-import ForStudents from './pages/ForStudents';
-import EmailOAuthCallback from './pages/EmailOAuthCallback';
-import AuthCallback from './pages/AuthCallback';
-import MicrosoftCallback from './pages/MicrosoftCallback';
-import Auth323NetworkCallback from './pages/Auth323NetworkCallback';
+import { captureUtmFromUrl } from './utils/utmTracker';
 import { useReferralCodeCapture } from './hooks/useReferralCodeCapture';
 import { ZelleCheckoutPage } from './components/ZelleCheckoutPage';
 import { ZelleWaitingPage } from './components/ZelleWaitingPage';
-import CheckoutSuccess from './pages/CheckoutSuccess';
-import ZellePaymentSuccess from './pages/ZellePaymentSuccess';
 import SmartAssistantLayout from './components/SmartAssistantLayout';
 import { Toaster } from 'react-hot-toast';
 
-import EB3JobsLanding from './pages/EB3JobsLanding';
-import UnsubscribeNewsletter from './pages/UnsubscribeNewsletter';
+// ✅ OTIMIZAÇÃO: Lazy loading de Dashboards e páginas pesadas para reduzir bundle inicial
+const StudentDashboard = React.lazy(() => import('./pages/StudentDashboard/index'));
+const AdminDashboard = React.lazy(() => import('./pages/AdminDashboard/index'));
+const AffiliateAdminDashboard = React.lazy(() => import('./pages/AffiliateAdminDashboard/index'));
+const SellerDashboard = React.lazy(() => import('./pages/SellerDashboard/index'));
+const SchoolDashboard = React.lazy(() => import('./pages/SchoolDashboard/index').then(m => ({ default: m.SchoolDashboard })));
+const SchoolProfileSetup = React.lazy(() => import('./pages/SchoolProfileSetup'));
+const Auth = React.lazy(() => import('./pages/Auth'));
+const ForgotPassword = React.lazy(() => import('./pages/ForgotPassword'));
+const AdminRegistration = React.lazy(() => import('./pages/AdminRegistration'));
+const SellerRegistration = React.lazy(() => import('./pages/SellerRegistration'));
+const SellerStudentRegistration = React.lazy(() => import('./pages/SellerStudentRegistration'));
+const StudentOnboarding = React.lazy(() => import('./pages/StudentOnboarding/StudentOnboarding'));
+const QuickRegistration = React.lazy(() => import('./pages/QuickRegistration'));
+const SuccessPage = React.lazy(() => import('./pages/SuccessPage'));
+const CheckoutSuccess = React.lazy(() => import('./pages/CheckoutSuccess'));
+const ZellePaymentSuccess = React.lazy(() => import('./pages/ZellePaymentSuccess'));
+const EB3JobsLanding = React.lazy(() => import('./pages/EB3JobsLanding'));
+const MatriculaRewardsLanding = React.lazy(() => import('./pages/MatriculaRewardsLanding'));
+const SupportCenter = React.lazy(() => import('./pages/SupportCenter'));
+const FAQ = React.lazy(() => import('./pages/FAQ'));
+const ContactUs = React.lazy(() => import('./pages/ContactUs'));
+const HelpCenter = React.lazy(() => import('./pages/HelpCenter'));
+const PrivacyPolicy = React.lazy(() => import('./pages/PrivacyPolicy'));
+const TermsOfService = React.lazy(() => import('./pages/TermsOfService'));
+const ForUniversities = React.lazy(() => import('./pages/ForUniversities'));
+const ForStudents = React.lazy(() => import('./pages/ForStudents'));
+const EmailOAuthCallback = React.lazy(() => import('./pages/EmailOAuthCallback'));
+const AuthCallback = React.lazy(() => import('./pages/AuthCallback'));
+const MicrosoftCallback = React.lazy(() => import('./pages/MicrosoftCallback'));
+const Auth323NetworkCallback = React.lazy(() => import('./pages/Auth323NetworkCallback'));
+const UnsubscribeNewsletter = React.lazy(() => import('./pages/UnsubscribeNewsletter'));
+
+// Fallback de Loading
+import PageSkeleton from './components/PageSkeleton';
+
+
 
 // Componente interno que usa o hook dentro do contexto do Router
 const AppContent = () => {
@@ -98,8 +103,9 @@ const AppContent = () => {
 
   return (
     <Layout>
-      <Routes>
-        <Route path="/" element={<Home />} />
+      <Suspense fallback={<PageSkeleton />}>
+        <Routes>
+          <Route path="/" element={<Home />} />
         <Route path="/about" element={<About />} />
         <Route path="/login" element={<Auth mode="login" />} />
         <Route path="/register" element={<Auth mode="register" />} />
@@ -173,15 +179,16 @@ const AppContent = () => {
         {/* Catch-all route for 404 */}
         <Route path="*" element={<div className="min-h-screen bg-gray-50 flex items-center justify-center"><div className="text-2xl text-gray-600">Page not found</div></div>} />
       </Routes>
-    </Layout>
-  );
+    </Suspense>
+  </Layout>
+);
 };
 
 const App: React.FC = () => {
   return (
     <HelmetProvider>
       <QueryClientProvider client={queryClient}>
-        <Router>
+        <Router future={{ v7_startTransition: true, v7_relativeSplatPath: true }}>
           <AuthProvider>
             <PaymentBlockedProvider>
               <UnreadMessagesProvider>

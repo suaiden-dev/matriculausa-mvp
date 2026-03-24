@@ -37,28 +37,19 @@ interface FilterState {
 }
 
 const AffiliateManagement: React.FC = () => {
-  console.log('🚀 [AffiliateManagement] Componente renderizado');
+
 
   const { affiliates, allSellers, allStudents, loading, error, refetch } = useAffiliateData();
   const navigate = useNavigate();
   const { isDevelopment } = useEnvironment();
 
-  console.log('🚀 [AffiliateManagement] Dados recebidos:', {
-    affiliates: affiliates.length,
-    allSellers: allSellers.length,
-    allStudents: allStudents.length,
-    loading,
-    isDevelopment
-  });
+
 
   // Filtrar affiliates com email @uorak.com
   const filteredAffiliates = useMemo(() => {
     const shouldFilter = !isDevelopment; // Filtrar em produção e staging
 
-    console.log('🔍 [AffiliateManagement] Filtro affiliates:', {
-      shouldFilter,
-      totalAffiliates: affiliates.length
-    });
+
 
     if (!shouldFilter) {
       return affiliates;
@@ -67,16 +58,11 @@ const AffiliateManagement: React.FC = () => {
     const filtered = affiliates.filter((aff: any) => {
       const email = aff.email?.toLowerCase() || '';
       const shouldExclude = email.includes('@uorak.com');
-      if (shouldExclude) {
-        console.log('🔍 [AffiliateManagement] Excluindo affiliate:', email);
-      }
+
       return !shouldExclude;
     });
 
-    console.log('🔍 [AffiliateManagement] Affiliates filtrados:', {
-      antes: affiliates.length,
-      depois: filtered.length
-    });
+
 
     return filtered;
   }, [affiliates, isDevelopment]);
@@ -85,10 +71,7 @@ const AffiliateManagement: React.FC = () => {
   const filteredSellers = useMemo(() => {
     const shouldFilter = !isDevelopment; // Filtrar em produção e staging
 
-    console.log('🔍 [AffiliateManagement] Filtro sellers:', {
-      shouldFilter,
-      totalSellers: allSellers.length
-    });
+
 
     if (!shouldFilter) {
       return allSellers;
@@ -1101,15 +1084,15 @@ const AffiliateManagement: React.FC = () => {
 
         <div className="bg-white rounded-xl border border-slate-200 p-6">
           <div className="flex items-center justify-between">
-            <div>
+            <div className="space-y-1">
               <p className="text-sm font-medium text-slate-600">Total Revenue</p>
-              <p className="text-2xl font-bold text-green-600">
+              <div className="text-2xl font-bold text-green-600 min-h-[32px]">
                 {isLoadingRealPaidAmounts ? (
                   <div className="animate-pulse bg-slate-200 h-8 w-32 rounded"></div>
                 ) : (
                   `$${totalStats.totalRevenue.toLocaleString()}`
                 )}
-              </p>
+              </div>
             </div>
             <div className="p-3 bg-green-100 rounded-lg">
               <DollarSign className="h-6 w-6 text-green-600" />
@@ -1306,45 +1289,45 @@ const AffiliateManagement: React.FC = () => {
                           <p className="text-lg font-bold text-slate-900">{affiliate.total_students}</p>
                           <p className="text-xs text-slate-600">Students</p>
                         </div>
-                        <div>
-                          <p className="text-lg font-bold text-green-600">
+                        <div className="text-center">
+                          <div className="text-lg font-bold text-green-600 min-h-[24px]">
                             {isLoadingRealPaidAmounts ? (
-                              <div className="animate-pulse bg-slate-200 h-6 w-20 rounded"></div>
+                              <div className="animate-pulse bg-slate-200 h-6 w-20 rounded mx-auto"></div>
                             ) : (
                               `$${affiliate.total_revenue.toLocaleString()}`
                             )}
-                          </p>
+                          </div>
                           <p className="text-xs text-slate-600">Total Revenue</p>
                         </div>
-                        <div>
+                        <div className="text-center">
                           {(() => {
                             const paymentInfo = getAffiliatePaymentInfo(affiliate.user_id, affiliate.total_revenue);
                             return (
                               <>
-                                <p className="text-lg font-bold text-purple-600">
+                                <div className="text-lg font-bold text-purple-600 min-h-[24px]">
                                   {paymentInfo.isLoading ? (
-                                    <div className="animate-pulse bg-slate-200 h-6 w-16 rounded"></div>
+                                    <div className="animate-pulse bg-slate-200 h-6 w-16 rounded mx-auto"></div>
                                   ) : (
                                     `$${paymentInfo.outsidePayments.toLocaleString()}`
                                   )}
-                                </p>
+                                </div>
                                 <p className="text-xs text-slate-600">Outside Payments</p>
                               </>
                             );
                           })()}
                         </div>
-                        <div>
+                        <div className="text-center">
                           {(() => {
                             const paymentInfo = getAffiliatePaymentInfo(affiliate.user_id, affiliate.total_revenue);
                             return (
                               <>
-                                <p className="text-lg font-bold text-orange-600">
+                                <div className="text-lg font-bold text-orange-600 min-h-[24px]">
                                   {paymentInfo.isLoading ? (
-                                    <div className="animate-pulse bg-slate-200 h-6 w-16 rounded"></div>
+                                    <div className="animate-pulse bg-slate-200 h-6 w-16 rounded mx-auto"></div>
                                   ) : (
                                     `$${paymentInfo.availableBalance.toLocaleString()}`
                                   )}
-                                </p>
+                                </div>
                                 <p className="text-xs text-slate-600">Available Balance</p>
                               </>
                             );

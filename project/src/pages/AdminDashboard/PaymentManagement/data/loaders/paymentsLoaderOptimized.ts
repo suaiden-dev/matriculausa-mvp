@@ -11,12 +11,14 @@ import { SupabaseClient } from '@supabase/supabase-js';
 /**
  * Verifica se está em produção ou staging
  */
-function shouldFilter(): boolean {
+/**
+ * Valor pré-calculado para evitar acesso repetido ao window.location dentro de loops
+ */
+const IS_PROD_OR_STAGING = ((): boolean => {
   if (typeof window === 'undefined') return false;
   const hostname = window.location.hostname;
   const href = window.location.href;
   
-  // Verificações mais robustas
   const isProduction = hostname === 'matriculausa.com' || 
                        hostname.includes('matriculausa.com') ||
                        href.includes('matriculausa.com');
@@ -27,19 +29,14 @@ function shouldFilter(): boolean {
                     href.includes('staging-matriculausa.netlify.app') ||
                     href.includes('staging-matriculausa');
   
-  const result = isProduction || isStaging;
-  
-  // Debug temporário
-  console.log('🔍 [PaymentManagement] shouldFilter debug:', {
-    hostname,
-    href,
-    isProduction,
-    isStaging,
-    result,
-    windowLocation: window.location
-  });
-  
-  return result;
+  return isProduction || isStaging;
+})();
+
+/**
+ * Verifica se está em produção ou staging
+ */
+function shouldFilter(): boolean {
+  return IS_PROD_OR_STAGING;
 }
 
 /**

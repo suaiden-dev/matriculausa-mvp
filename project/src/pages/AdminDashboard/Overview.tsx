@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useMemo } from 'react';
+import React, { useState, useMemo } from 'react';
 import { Link } from 'react-router-dom';
 import {
   Building,
@@ -15,256 +15,48 @@ import {
   ChevronRight,
   XCircle
 } from 'lucide-react';
-import { supabase } from '../../lib/supabase';
-import { UniversityPaymentRequestService } from '../../services/UniversityPaymentRequestService';
-import { AffiliatePaymentRequestService } from '../../services/AffiliatePaymentRequestService';
-import { useEnvironment } from '../../hooks/useEnvironment';
 import PendingPaymentsSummary from '../../components/AdminDashboard/PendingPaymentsSummary';
 import PendingDocumentsOverview from '../../components/AdminDashboard/PendingDocumentsOverview';
 import PendingConversationsOverview from '../../components/AdminDashboard/PendingConversationsOverview';
-import { useAuth } from '../../hooks/useAuth';
+
+
 
 interface OverviewProps {
-  stats: {
-    totalUniversities: number;
-    pendingUniversities: number;
-    approvedUniversities: number;
-    totalStudents: number;
-    totalScholarships: number;
-    totalApplications: number;
-    totalFunding: number;
-    monthlyGrowth: number;
-  };
+  stats: any;
   universities: any[];
   users: any[];
-  applications: any[];
+  pendingStats: {
+    universityRequestsCount: number;
+    universityRequestsAmount: number;
+    affiliateRequestsCount: number;
+    affiliateRequestsAmount: number;
+    zellePaymentsCount: number;
+    zellePaymentsAmount: number;
+    pendingConversations: any[];
+    loadingPayments: boolean;
+    loadingConversations: boolean;
+  };
   error: string | null;
   onApprove?: (universityId: string) => void;
   onReject?: (universityId: string) => void;
 }
 
-const Overview: React.FC<OverviewProps> = ({ stats, universities, users, applications, error, onApprove, onReject }) => {
-  const { isDevelopment } = useEnvironment();
+const Overview: React.FC<OverviewProps> = ({ 
+  stats, 
+  universities, 
+  users, 
+  pendingStats,
+  error, 
+  onApprove, 
+  onReject 
+}) => {
   const [currentPage, setCurrentPage] = useState(1);
-  const [loadingPayments, setLoadingPayments] = useState(true);
-  const [universityRequestsCount, setUniversityRequestsCount] = useState(0);
-  const [affiliateRequestsCount, setAffiliateRequestsCount] = useState(0);
-  const [zellePaymentsCount, setZellePaymentsCount] = useState(0);
-  const [universityRequestsAmount, setUniversityRequestsAmount] = useState(0);
-  const [affiliateRequestsAmount, setAffiliateRequestsAmount] = useState(0);
-  const [zellePaymentsAmount, setZellePaymentsAmount] = useState(0);
-  const [pendingConversations, setPendingConversations] = useState<any[]>([]);
-  const [loadingConversations, setLoadingConversations] = useState(true);
-  const { user } = useAuth();
+  const UNIVERSITIES_PER_PAGE = 4;
 
-  const UNIVERSITIES_PER_PAGE = 4; // Reduzido para caber melhor no layout compacto
-
-
-  // Função para verificar se deve filtrar (produção, staging ou local para testes)
-  const shouldFilter = useMemo(() => {
-    const hostname = window.location.hostname;
-    const href = window.location.href;
-
-    const isProd = hostname === 'matriculausa.com' ||
-      hostname.includes('matriculausa.com') ||
-      href.includes('matriculausa.com');
-
-    const isStaging = hostname === 'staging-matriculausa.netlify.app' ||
-      hostname.includes('staging-matriculausa.netlify.app') ||
-      hostname.includes('staging-matriculausa') ||
-      href.includes('staging-matriculausa.netlify.app') ||
-      href.includes('staging-matriculausa');
-
-    const result = isProd || isStaging;
-
-    console.log('🔍 [Overview] shouldFilter debug:', {
-      hostname,
-      href,
-      isDevelopment,
-      isProd,
-      isStaging,
-      result
-    });
-
-    return result;
-  }, [isDevelopment]);
-
-  // Função para verificar se deve excluir um email
-  const shouldExcludeEmail = (email: string | null | undefined): boolean => {
-    if (!email) return false;
-    if (!shouldFilter) return false; // Em desenvolvimento, não excluir
-    return email.toLowerCase().includes('@uorak.com');
-  };
-
-  // Filtrar usuários, universidades e aplicações excluindo @uorak.com em produção/staging
-  const filteredUsers = useMemo(() => {
-    if (!shouldFilter) return users;
-    console.log('🔍 [Overview] Filtrando usuários:', { total: users.length, shouldFilter });
-    const filtered = users.filter((user: any) => {
-      const email = user.email || user.user?.email || '';
-      return !shouldExcludeEmail(email);
-    });
-    console.log('🔍 [Overview] Usuários filtrados:', { antes: users.length, depois: filtered.length });
-    return filtered;
-  }, [users, shouldFilter]);
-
-  const filteredUniversities = useMemo(() => {
-    if (!shouldFilter) return universities;
-    console.log('🔍 [Overview] Filtrando universidades:', { total: universities.length, shouldFilter });
-    const filtered = universities.filter((university: any) => {
-      // Verificar se a universidade tem um usuário associado com email @uorak.com
-      const email = university.user?.email || university.email || '';
-      return !shouldExcludeEmail(email);
-    });
-    console.log('🔍 [Overview] Universidades filtradas:', { antes: universities.length, depois: filtered.length });
-    return filtered;
-  }, [universities, shouldFilter]);
-
-  const filteredApplications = useMemo(() => {
-    if (!shouldFilter) return applications;
-    console.log('🔍 [Overview] Filtrando aplicações:', { total: applications.length, shouldFilter });
-    const filtered = applications.filter((application: any) => {
-      const email = application.user?.email || application.student_email || application.user_email || '';
-      return !shouldExcludeEmail(email);
-    });
-    console.log('🔍 [Overview] Aplicações filtradas:', { antes: applications.length, depois: filtered.length });
-    return filtered;
-  }, [applications, shouldFilter]);
-
-  // Recalcular stats baseado nos dados filtrados
-  const filteredStats = useMemo(() => {
-    const filteredPendingUniversities = filteredUniversities.filter((u: any) => !u.is_approved);
-    const filteredApprovedUniversities = filteredUniversities.filter((u: any) => u.is_approved);
-    const filteredStudents = filteredUsers.filter((u: any) => u.role === 'student');
-
-    return {
-      ...stats,
-      totalUniversities: filteredUniversities.length,
-      pendingUniversities: filteredPendingUniversities.length,
-      approvedUniversities: filteredApprovedUniversities.length,
-      totalStudents: filteredStudents.length,
-      totalApplications: filteredApplications.length
-    };
-  }, [stats, filteredUniversities, filteredUsers, filteredApplications]);
-
-  // Carregar dados de pagamentos pendentes
-  useEffect(() => {
-    const loadPendingPaymentsCounts = async () => {
-      try {
-        setLoadingPayments(true);
-
-        // Carregar University Payment Requests
-        try {
-          const universityRequests = await UniversityPaymentRequestService.listAllPaymentRequests();
-          const pendingUniversity = universityRequests.filter(r => r.status === 'pending');
-          setUniversityRequestsCount(pendingUniversity.length);
-          setUniversityRequestsAmount(pendingUniversity.reduce((sum, r) => sum + (r.amount_usd || 0), 0));
-        } catch (error) {
-          console.error('Error loading university requests:', error);
-          setUniversityRequestsCount(0);
-          setUniversityRequestsAmount(0);
-        }
-
-        // Carregar Affiliate Payment Requests
-        try {
-          const affiliateRequests = await AffiliatePaymentRequestService.listAllPaymentRequests();
-          const pendingAffiliate = affiliateRequests.filter(r => r.status === 'pending');
-          setAffiliateRequestsCount(pendingAffiliate.length);
-          setAffiliateRequestsAmount(pendingAffiliate.reduce((sum, r) => sum + (r.amount_usd || 0), 0));
-        } catch (error) {
-          console.error('Error loading affiliate requests:', error);
-          setAffiliateRequestsCount(0);
-          setAffiliateRequestsAmount(0);
-        }
-
-        // Carregar Zelle Payments
-        try {
-          const { data: zellePaymentsData, error: zelleError } = await supabase
-            .from('zelle_payments')
-            .select('*')
-            .eq('status', 'pending_verification')
-            .gt('amount', 0);
-
-          if (zelleError) {
-            console.error('Error loading zelle payments:', zelleError);
-            setZellePaymentsCount(0);
-            setZellePaymentsAmount(0);
-          } else {
-            // Buscar user_profiles para obter os emails
-            let filteredZellePayments = zellePaymentsData || [];
-            if (zellePaymentsData && zellePaymentsData.length > 0) {
-              const userIds = zellePaymentsData.map((p: any) => p.user_id).filter(Boolean);
-              const { data: userProfiles, error: usersError } = await supabase
-                .from('user_profiles')
-                .select('user_id, email')
-                .in('user_id', userIds);
-
-              if (!usersError && userProfiles) {
-                // Adicionar email aos pagamentos
-                filteredZellePayments = zellePaymentsData.map((payment: any) => ({
-                  ...payment,
-                  user_profile: userProfiles.find((profile: any) => profile.user_id === payment.user_id)
-                }));
-
-                // Filtrar pagamentos de usuários @uorak.com em produção/staging
-                if (shouldFilter) {
-                  console.log('🔍 [Overview] Filtrando Zelle payments:', { total: filteredZellePayments.length, shouldFilter });
-                  filteredZellePayments = filteredZellePayments.filter((payment: any) => {
-                    const email = payment.user_profile?.email || '';
-                    return !shouldExcludeEmail(email);
-                  });
-                  console.log('🔍 [Overview] Zelle payments filtrados:', { depois: filteredZellePayments.length });
-                }
-              }
-            }
-            setZellePaymentsCount(filteredZellePayments.length);
-            setZellePaymentsAmount(filteredZellePayments.reduce((sum: number, p: any) => sum + (parseFloat(p.amount) || 0), 0));
-          }
-        } catch (error) {
-          console.error('Error loading zelle payments:', error);
-          setZellePaymentsCount(0);
-          setZellePaymentsAmount(0);
-        }
-      } finally {
-        setLoadingPayments(false);
-      }
-    };
-
-    loadPendingPaymentsCounts();
-  }, [shouldFilter]);
-
-  // Carregar conversas pendentes
-  useEffect(() => {
-    const loadPendingConversations = async () => {
-      if (!user) return;
-
-      try {
-        setLoadingConversations(true);
-
-        const { data, error } = await supabase
-          .rpc('get_unread_admin_student_chat_notifications', {
-            user_id_param: user.id
-          });
-
-        if (error) {
-          console.error('Error loading pending conversations:', error);
-          setPendingConversations([]);
-        } else {
-          setPendingConversations(data || []);
-        }
-      } catch (error) {
-        console.error('Error loading pending conversations:', error);
-        setPendingConversations([]);
-      } finally {
-        setLoadingConversations(false);
-      }
-    };
-
-    loadPendingConversations();
-  }, [user]);
-
-  // Filtrar universidades pendentes usando dados filtrados
-  const pendingUniversities = filteredUniversities.filter((u: any) => !u.is_approved);
+  // Filtrar universidades pendentes (os dados já vêm filtrados por email do pai)
+  const pendingUniversities = useMemo(() => 
+    universities.filter((u: any) => !u.is_approved)
+  , [universities]);
 
   // Calcular paginação
   const totalPages = Math.ceil(pendingUniversities.length / UNIVERSITIES_PER_PAGE);
@@ -272,20 +64,13 @@ const Overview: React.FC<OverviewProps> = ({ stats, universities, users, applica
   const currentUniversities = pendingUniversities.slice(startIndex, startIndex + UNIVERSITIES_PER_PAGE);
 
   const handleApprove = (universityId: string) => {
-    if (onApprove) {
-      onApprove(universityId);
-    } else {
-      console.log('Approve university:', universityId);
-    }
+    onApprove?.(universityId);
   };
 
   const handleReject = (universityId: string) => {
-    if (onReject) {
-      onReject(universityId);
-    } else {
-      console.log('Reject university:', universityId);
-    }
+    onReject?.(universityId);
   };
+
 
   return (
     <div className="space-y-8">
@@ -312,10 +97,10 @@ const Overview: React.FC<OverviewProps> = ({ stats, universities, users, applica
           <div className="flex items-center justify-between">
             <div>
               <p className="text-sm font-medium text-slate-500 mb-1">Total Universities</p>
-              <p className="text-3xl font-bold text-slate-900">{filteredStats.totalUniversities}</p>
+              <p className="text-3xl font-bold text-slate-900">{stats.totalUniversities}</p>
               <div className="flex items-center mt-2">
                 <TrendingUp className="h-4 w-4 text-green-500 mr-1" />
-                <span className="text-sm font-medium text-green-600">+{filteredStats.monthlyGrowth}% this month</span>
+                <span className="text-sm font-medium text-green-600">+{stats.monthlyGrowth}% this month</span>
               </div>
             </div>
             <div className="w-14 h-14 bg-gradient-to-br from-blue-500 to-blue-600 rounded-2xl flex items-center justify-center shadow-lg group-hover:scale-110 transition-transform duration-300">
@@ -331,10 +116,10 @@ const Overview: React.FC<OverviewProps> = ({ stats, universities, users, applica
           <div className="flex items-center justify-between">
             <div>
               <p className="text-sm font-medium text-slate-500 mb-1">Total Users</p>
-              <p className="text-3xl font-bold text-slate-900">{filteredUsers.length}</p>
+              <p className="text-3xl font-bold text-slate-900">{users.length}</p>
               <div className="flex items-center mt-2">
                 <Users className="h-4 w-4 text-blue-500 mr-1" />
-                <span className="text-sm font-medium text-blue-600">{filteredStats.totalStudents} students</span>
+                <span className="text-sm font-medium text-blue-600">{stats.totalStudents} students</span>
               </div>
             </div>
             <div className="w-14 h-14 bg-gradient-to-br from-green-500 to-green-600 rounded-2xl flex items-center justify-center shadow-lg group-hover:scale-110 transition-transform duration-300">
@@ -350,7 +135,7 @@ const Overview: React.FC<OverviewProps> = ({ stats, universities, users, applica
           <div className="flex items-center justify-between">
             <div>
               <p className="text-sm font-medium text-slate-500 mb-1">Total Scholarships</p>
-              <p className="text-3xl font-bold text-slate-900">{filteredStats.totalScholarships}</p>
+              <p className="text-3xl font-bold text-slate-900">{stats.totalScholarships}</p>
             </div>
             <div className="w-14 h-14 bg-gradient-to-br from-[#05294E] to-blue-600 rounded-2xl flex items-center justify-center shadow-lg group-hover:scale-110 transition-transform duration-300">
               <Award className="h-7 w-7 text-white" />
@@ -362,7 +147,7 @@ const Overview: React.FC<OverviewProps> = ({ stats, universities, users, applica
           <div className="flex items-center justify-between">
             <div>
               <p className="text-sm font-medium text-slate-500 mb-1">Applications</p>
-              <p className="text-3xl font-bold text-slate-900">{filteredStats.totalApplications}</p>
+              <p className="text-3xl font-bold text-slate-900">{stats.totalApplications}</p>
               <div className="flex items-center mt-2">
                 <FileText className="h-4 w-4 text-orange-500 mr-1" />
                 <span className="text-sm font-medium text-orange-600">Active submissions</span>
@@ -380,14 +165,15 @@ const Overview: React.FC<OverviewProps> = ({ stats, universities, users, applica
         {/* Pending Payment Approvals - 2/3 width */}
         <div className="lg:col-span-2 space-y-8">
           <PendingPaymentsSummary
-            universityRequestsCount={universityRequestsCount}
-            affiliateRequestsCount={affiliateRequestsCount}
-            zellePaymentsCount={zellePaymentsCount}
-            universityRequestsAmount={universityRequestsAmount}
-            affiliateRequestsAmount={affiliateRequestsAmount}
-            zellePaymentsAmount={zellePaymentsAmount}
-            loading={loadingPayments}
+            universityRequestsCount={pendingStats.universityRequestsCount}
+            affiliateRequestsCount={pendingStats.affiliateRequestsCount}
+            zellePaymentsCount={pendingStats.zellePaymentsCount}
+            universityRequestsAmount={pendingStats.universityRequestsAmount}
+            affiliateRequestsAmount={pendingStats.affiliateRequestsAmount}
+            zellePaymentsAmount={pendingStats.zellePaymentsAmount}
+            loading={pendingStats.loadingPayments}
           />
+
           <PendingDocumentsOverview />
         </div>
 
@@ -524,9 +310,10 @@ const Overview: React.FC<OverviewProps> = ({ stats, universities, users, applica
 
           {/* Pending Conversations */}
           <PendingConversationsOverview
-            conversations={pendingConversations}
-            loading={loadingConversations}
+            conversations={pendingStats.pendingConversations}
+            loading={pendingStats.loadingConversations}
           />
+
         </div>
       </div>
     </div>
