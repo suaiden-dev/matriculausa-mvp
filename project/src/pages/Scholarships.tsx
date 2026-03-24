@@ -67,13 +67,6 @@ const Scholarships: React.FC = () => {
   );
 
   useEffect(() => {
-    if (isAuthenticated) {
-      console.log('🐞 [DEBUG] canViewSensitive:', canViewSensitive, {
-        role: user?.role,
-        hasSelectionFee: (userProfile as any)?.has_paid_selection_process_fee,
-        hasAppFee: (userProfile as any)?.has_paid_application_fee
-      });
-    }
   }, [isAuthenticated, canViewSensitive, userProfile, user]);
 
   // Get min and max scholarship values from data
@@ -138,27 +131,7 @@ const Scholarships: React.FC = () => {
           .order('featured_order', { ascending: true });
 
         if (!scholarshipsError && scholarshipsData) {
-          // Log de depuração para bolsas da St. Francis College ou bolsas sem imagem
-      const sfcBolsas = scholarshipsData.filter((s: any) => 
-        s.universities?.name?.toLowerCase().includes('francis') || 
-        s.title?.toLowerCase().includes('francis')
-      );
-      if (sfcBolsas.length > 0) {
-        console.log('🐞 [DEBUG] Bolsas da St. Francis encontradas:', sfcBolsas.map((s: any) => ({
-          titulo: s.title,
-          scholarship_img: s.image_url,
-          university_obj: s.universities,
-          uni_logo: s.universities?.logo_url,
-          uni_img: s.universities?.image_url
-        })));
-      } else if (scholarshipsData.length > 0) {
-        console.log('🐞 [DEBUG] Nenhuma bolsa da St. Francis no retorno. Total de bolsas:', scholarshipsData.length);
-        // Verificar se os objetos universities estão presentes no retorno global
-        const comUni = scholarshipsData.filter((s: any) => s.universities).length;
-        console.log('🐞 [DEBUG] Bolsas com universidade carregada no join:', comUni, '/', scholarshipsData.length);
-      }
-
-      setFeaturedScholarships(scholarshipsData);
+          setFeaturedScholarships(scholarshipsData);
 
           // Fetch universities of featured scholarships to display information
           const universityIds = scholarshipsData.map(s => s.university_id).filter(Boolean);
@@ -702,24 +675,19 @@ const Scholarships: React.FC = () => {
                     )}
 
                     {/* Scholarship Image */}
-                    <div className="relative h-48 w-full overflow-hidden flex items-center justify-center ">
+                    <div className="relative h-48 w-full overflow-hidden flex items-center justify-center bg-gradient-to-b from-slate-50 to-white">
+                      <div className="absolute inset-x-0 bottom-0 h-20 bg-gradient-to-t from-white to-transparent z-0"></div>
                       {(scholarship.image_url || scholarship.universities?.image_url || scholarship.universities?.logo_url) && canViewSensitive ? (
                         <img
                           src={scholarship.image_url || scholarship.universities?.image_url || scholarship.universities?.logo_url || ''}
                           alt={scholarship.title}
-                          onError={(e) => {
-                            console.error(`❌ [ERROR] Falha ao carregar imagem para ${scholarship.title}. URL:`, (e.target as HTMLImageElement).src);
-                          }}
-                          className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-500"
+                          className="relative z-10 w-full h-full object-contain p-6 group-hover:scale-105 transition-transform duration-700"
                         />
                       ) : (
-                        <div className="flex items-center justify-center w-full h-full text-slate-400 bg-gradient-to-br from-[#05294E]/5 to-slate-100">
+                        <div className="relative z-10 flex items-center justify-center w-full h-full text-slate-400">
                           <Building className="h-16 w-16 text-[#05294E]/30" />
                         </div>
                       )}
-
-                      {/* Gradient Overlay for better text contrast */}
-                      <div className="absolute inset-0 bg-gradient-to-t from-black/20 via-transparent to-transparent"></div>
                       
                         {/* Top Left Badges */}
                        <div className="absolute top-4 left-4 flex flex-col gap-2 z-20">
@@ -766,15 +734,21 @@ const Scholarships: React.FC = () => {
                           </span>
                         </div>
 
-                        {/* University Info */}
-                        <div className={`flex items-center text-slate-600 mb-4 p-3 bg-gradient-to-r from-slate-50 to-slate-100 rounded-xl border border-slate-200`}>
-                          <Building className="h-4 w-4 mr-2 text-[#05294E] flex-shrink-0" />
-                          <span className="text-xs font-semibold mr-2 text-slate-500">{t('scholarshipsPage.scholarshipCard.university')}</span>
-                          <span className={`text-sm font-medium ${shouldApplyBlur ? 'blur-sm text-slate-400' : 'text-slate-700'}`}>
-                            {canViewSensitive
-                              ? (featuredUniversities.find(u => u.id === scholarship.university_id)?.name || 'Unknown University')
-                              : '********'}
-                          </span>
+                        {/* University Info Box */}
+                        <div className="flex items-center gap-3 py-2 px-3 bg-slate-50 rounded-xl border border-slate-200 mb-4">
+                          <div className="w-8 h-8 rounded-lg bg-white shadow-sm flex items-center justify-center border border-slate-200 flex-shrink-0">
+                            <Building className="h-4 w-4 text-[#05294E]" />
+                          </div>
+                          <div className="flex-1 min-w-0">
+                            <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest leading-none mb-1">
+                              {t('scholarshipsPage.scholarshipCard.university')}
+                            </p>
+                            <p className={`text-sm font-bold truncate ${shouldApplyBlur ? 'blur-sm text-slate-400' : 'text-slate-700'}`}>
+                              {canViewSensitive
+                                ? (featuredUniversities.find(u => u.id === scholarship.university_id)?.name || 'Unknown University')
+                                : '********'}
+                            </p>
+                          </div>
                         </div>
 
                         {/* Program Details */}
@@ -1042,24 +1016,19 @@ const Scholarships: React.FC = () => {
                      )}
 
                     {/* Scholarship Image */}
-                    <div className="relative h-48 w-full overflow-hidden flex items-center justify-center">
+                    <div className="relative h-48 w-full overflow-hidden flex items-center justify-center bg-gradient-to-b from-slate-50 to-white">
+                      <div className="absolute inset-x-0 bottom-0 h-20 bg-gradient-to-t from-white to-transparent z-0"></div>
                       {(scholarship.image_url || scholarship.universities?.image_url || scholarship.universities?.logo_url) && canViewSensitive ? (
                         <img
                           src={scholarship.image_url || scholarship.universities?.image_url || scholarship.universities?.logo_url || ''}
                           alt={scholarship.title}
-                          onError={(e) => {
-                            console.error(`❌ [ERROR] Falha ao carregar imagem para ${scholarship.title}. URL:`, (e.target as HTMLImageElement).src);
-                          }}
-                          className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-500"
+                          className="relative z-10 w-full h-full object-contain p-6 group-hover:scale-105 transition-transform duration-700"
                         />
                       ) : (
-                        <div className="flex items-center justify-center w-full h-full text-slate-400 bg-gradient-to-br from-[#05294E]/5 to-slate-100">
+                        <div className="relative z-10 flex items-center justify-center w-full h-full text-slate-400">
                           <Building className="h-16 w-16 text-[#05294E]/30" />
                         </div>
                       )}
-
-                      {/* Gradient Overlay for better text contrast */}
-                      <div className="absolute inset-0 bg-gradient-to-t from-black/20 via-transparent to-transparent"></div>
 
                       {/* Top Right Badges */}
                       <div className="absolute top-4 right-4 flex flex-col gap-2">
@@ -1109,15 +1078,21 @@ const Scholarships: React.FC = () => {
                           </span>
                         </div>
 
-                        {/* University Info */}
-                        <div className={`flex items-center text-slate-600 mb-4 p-3 bg-gradient-to-r from-slate-50 to-slate-100 rounded-xl border border-slate-200`}>
-                          <Building className="h-4 w-4 mr-2 text-[#05294E] flex-shrink-0" />
-                          <span className="text-xs font-semibold mr-2 text-slate-500">{t('scholarshipsPage.scholarshipCard.university')}</span>
-                          <span className={`text-sm font-medium ${shouldApplyBlur ? 'blur-sm text-slate-400' : 'text-slate-700'}`}>
-                            {canViewSensitive
-                              ? (scholarship.universities?.name || scholarship.university_name || 'Unknown University')
-                              : '********'}
-                          </span>
+                        {/* University Info Box */}
+                        <div className="flex items-center gap-3 py-2 px-3 bg-slate-50 rounded-xl border border-slate-200 mb-4">
+                          <div className="w-8 h-8 rounded-lg bg-white shadow-sm flex items-center justify-center border border-slate-200 flex-shrink-0">
+                            <Building className="h-4 w-4 text-[#05294E]" />
+                          </div>
+                          <div className="flex-1 min-w-0">
+                            <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest leading-none mb-1">
+                              {t('scholarshipsPage.scholarshipCard.university')}
+                            </p>
+                            <p className={`text-sm font-bold truncate ${shouldApplyBlur ? 'blur-sm text-slate-400' : 'text-slate-700'}`}>
+                              {canViewSensitive
+                                ? (scholarship.universities?.name || scholarship.university_name || 'Unknown University')
+                                : '********'}
+                            </p>
+                          </div>
                         </div>
                         {/* Program Details */}
                         <div className="grid grid-cols-1 gap-3 mb-4">
