@@ -826,10 +826,6 @@ const QuickRegistration: React.FC = () => {
           )}
 
           <div className="bg-white rounded-[2.5rem] shadow-2xl border border-slate-200 p-8 overflow-hidden">
-            <div className="mb-8 text-center">
-              <h2 className="text-3xl font-black text-gray-900 mb-2 uppercase tracking-tight">{t('rapidRegistration.zelle.title')}</h2>
-              <p className="text-gray-500 font-medium">{t('rapidRegistration.zelle.subtitle')}</p>
-            </div>
             <ZelleCheckout
               amount={currentFee}
               feeType="selection_process"
@@ -1332,8 +1328,8 @@ const QuickRegistration: React.FC = () => {
                     {[
                       { id: 'stripe' as const, name: t('rapidRegistration.payment.methods.stripe'), icon: StripeIcon },
                       { id: 'pix' as const, name: t('rapidRegistration.payment.methods.pix'), icon: PixIcon },
-                      { id: 'zelle' as const, name: t('rapidRegistration.payment.methods.zelle'), icon: ZelleIcon },
-                      { id: 'parcelow' as const, name: t('rapidRegistration.payment.methods.parcelow'), icon: ParcelowIcon }
+                      { id: 'parcelow' as const, name: t('rapidRegistration.payment.methods.parcelow'), icon: ParcelowIcon },
+                      { id: 'zelle' as const, name: t('rapidRegistration.payment.methods.zelle'), icon: ZelleIcon }
                     ].map((method) => {
                       const Icon = method.icon;
                       const isSelected = selectedMethod === method.id;
