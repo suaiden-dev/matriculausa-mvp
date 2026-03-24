@@ -78,7 +78,7 @@
         "parcelowFees": "* Podem incluir taxas de operadora e processamento da plataforma",
         "zelleTime": "Processamento pode levar até 48 horas"
       },
-      "payWith": "Pagar com {{method}}",
+      "payWith": "Continuar com {{method}}",
       "securePayment": "Pagar de Forma Segura",
       "cpf": {
         "label": "Informe seu CPF (Obrigatório para Parcelow)",
