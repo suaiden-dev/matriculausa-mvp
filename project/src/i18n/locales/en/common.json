@@ -307,5 +307,13 @@
     "assistant": "Smart Assistant",
     "whatsappTitle": "Contact us via WhatsApp",
     "mobileNote": "Smart Assistant - Opens in new tab"
+  },
+  "notFound": {
+    "title": "404",
+    "heading": "Page Not Found",
+    "description": "Oops! It seems the page you're looking for doesn't exist or has been moved. Check the URL or use the buttons below to go back.",
+    "backToHome": "Back to Home",
+    "goToDashboard": "Go to my Dashboard",
+    "helpLink": "Need help? Contact us"
   }
 }

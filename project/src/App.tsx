@@ -59,6 +59,7 @@ import { Toaster } from 'react-hot-toast';
 
 import EB3JobsLanding from './pages/EB3JobsLanding';
 import UnsubscribeNewsletter from './pages/UnsubscribeNewsletter';
+import NotFound from './pages/NotFound';
 
 // Componente interno que usa o hook dentro do contexto do Router
 const AppContent = () => {
@@ -171,7 +172,7 @@ const AppContent = () => {
         <Route path="/smart-assistant" element={<SmartAssistantLayout />} />
 
         {/* Catch-all route for 404 */}
-        <Route path="*" element={<div className="min-h-screen bg-gray-50 flex items-center justify-center"><div className="text-2xl text-gray-600">Page not found</div></div>} />
+        <Route path="*" element={<NotFound />} />
       </Routes>
     </Layout>
   );
