@@ -9,7 +9,7 @@ import {
   DollarSign,
   Building,
   ArrowRight,
-  GraduationCap,
+  GraduationCap
 } from 'lucide-react';
 import { Link, useLocation, useNavigate } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
@@ -879,14 +879,14 @@ const MyApplications: React.FC = () => {
 
                                 {/* Details Section */}
                                 <div className="bg-gradient-to-br from-slate-50 to-blue-50 rounded-2xl p-3 sm:p-4 mb-4 sm:mb-6 border border-slate-200">
-                                  <div className="grid grid-cols-1 gap-3 sm:gap-4">
+                                  <div className="grid grid-cols-2 gap-3 sm:gap-4">
                                     <div className="flex items-center">
                                       <div className="bg-green-100 p-2 rounded-lg mr-3 flex-shrink-0">
                                         <DollarSign className="h-4 w-4 sm:h-5 sm:w-5 text-green-600" />
                                       </div>
                                       <div className="min-w-0 flex-1">
-                                        <p className="text-xs text-gray-600 mb-1 font-medium">{t('studentDashboard.myApplications.scholarshipDetails.annualScholarshipValue')}</p>
-                                        <p className="font-bold text-base sm:text-lg text-green-700 truncate">
+                                        <p className="text-[10px] text-gray-600 mb-1 font-medium">{t('studentDashboard.myApplications.scholarshipDetails.annualScholarshipValue')}</p>
+                                        <p className="font-bold text-sm sm:text-base text-green-700 truncate">
                                           {formatAmount(scholarship.annual_value_with_scholarship ?? 0)}
                                         </p>
                                       </div>
@@ -897,16 +897,42 @@ const MyApplications: React.FC = () => {
                                         <Calendar className="h-4 w-4 sm:h-5 sm:w-5 text-blue-600" />
                                       </div>
                                       <div className="min-w-0 flex-1">
-                                        <p className="text-xs text-gray-600 mb-1 font-medium">{t('studentDashboard.myApplications.scholarshipDetails.applicationDate')}</p>
-                                        <p className="font-semibold text-gray-900 text-xs sm:text-sm">
+                                        <p className="text-[10px] text-gray-600 mb-1 font-medium">{t('studentDashboard.myApplications.scholarshipDetails.applicationDate')}</p>
+                                        <p className="font-semibold text-gray-900 text-[10px] sm:text-xs">
                                           {new Date(application.applied_at).toLocaleDateString('en-US', {
-                                            year: 'numeric',
-                                            month: 'short',
-                                            day: 'numeric'
+                                            year: 'numeric', month: 'short', day: 'numeric'
                                           })}
                                         </p>
                                       </div>
                                     </div>
+
+                                    {scholarship.min_gpa && (
+                                      <div className="flex items-center">
+                                        <div className="bg-amber-100 p-2 rounded-lg mr-3 flex-shrink-0">
+                                          <span className="text-amber-600 font-bold text-xs">GPA</span>
+                                        </div>
+                                        <div className="min-w-0 flex-1">
+                                          <p className="text-[10px] text-gray-600 mb-1 font-medium">GPA Mínimo</p>
+                                          <p className="font-bold text-sm sm:text-base text-amber-700 truncate">
+                                            {scholarship.min_gpa}
+                                          </p>
+                                        </div>
+                                      </div>
+                                    )}
+
+                                    {scholarship.min_english_proficiency && (
+                                      <div className="flex items-center">
+                                        <div className="bg-indigo-100 p-2 rounded-lg mr-3 flex-shrink-0">
+                                          <span className="text-indigo-600 font-bold text-xs">ENG</span>
+                                        </div>
+                                        <div className="min-w-0 flex-1">
+                                          <p className="text-[10px] text-gray-600 mb-1 font-medium">Inglês Mínimo</p>
+                                          <p className="font-bold text-sm sm:text-base text-indigo-700 truncate">
+                                            {t(`dashboard.academicInfo.englishProficiencyLevels.${scholarship.min_english_proficiency}`)}
+                                          </p>
+                                        </div>
+                                      </div>
+                                    )}
                                   </div>
                                 </div>
 
@@ -1115,7 +1141,7 @@ const MyApplications: React.FC = () => {
                                   </div>
 
                                   {/* Line 2: University + Level */}
-                                  <div className="flex items-center gap-2 mb-2">
+                                  <div className="flex items-center gap-2 mb-3">
                                     <div className="flex items-center text-slate-600 flex-1 min-w-0 max-w-[calc(100%-80px)] overflow-hidden">
                                       <Building className="h-4 w-4 mr-2 text-slate-500 flex-shrink-0" />
                                       <span className="font-medium text-sm truncate">{scholarship.universities?.name}</span>
@@ -1125,6 +1151,22 @@ const MyApplications: React.FC = () => {
                                       <span className="whitespace-nowrap">{getLevelLabel(scholarship.level)}</span>
                                     </span>
                                   </div>
+
+                                  {/* Line 3: Requirements */}
+                                  {(scholarship.min_gpa || scholarship.min_english_proficiency) && (
+                                    <div className="flex flex-wrap gap-2 mb-2">
+                                      {scholarship.min_gpa && (
+                                        <div className="flex items-center bg-amber-50 border border-amber-200 px-2 py-1 rounded-lg text-amber-800 text-[10px] font-bold">
+                                          GPA {scholarship.min_gpa}
+                                        </div>
+                                      )}
+                                      {scholarship.min_english_proficiency && (
+                                        <div className="flex items-center bg-indigo-50 border border-indigo-200 px-2 py-1 rounded-lg text-indigo-800 text-[10px] font-bold uppercase">
+                                          {t(`dashboard.academicInfo.englishProficiencyLevels.${scholarship.min_english_proficiency}`)}
+                                        </div>
+                                      )}
+                                    </div>
+                                  )}
                                 </div>
 
                                 {/* Status Details REMOVED as per user request to maintain consistency and avoid missing translations */}

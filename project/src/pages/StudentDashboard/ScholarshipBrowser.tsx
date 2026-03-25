@@ -536,6 +536,13 @@ const ScholarshipBrowser: React.FC<ScholarshipBrowserProps> = ({
     const searchWords = appliedSearch.trim().toLowerCase().split(/\s+/).filter(Boolean);
 
     const filtered = scholarships.filter(scholarship => {
+      // Filtro de bolsas de teste (is_test)
+      const isUorakUser = user?.email?.toLowerCase().endsWith('@uorak.com') || userProfile?.email?.toLowerCase().endsWith('@uorak.com');
+      const isAdmin = user?.role === 'admin';
+      if (scholarship.is_test && !isUorakUser && !isAdmin) {
+        return false;
+      }
+
       // Filtro de favoritos
       if (showOnlyFavorites && !isFavorite(scholarship.id)) {
         return false;
@@ -1846,6 +1853,8 @@ const ScholarshipBrowser: React.FC<ScholarshipBrowserProps> = ({
         isOpen={isModalOpen}
         onClose={closeScholarshipModal}
         userProfile={userProfile}
+        user={user as any}
+        userRole={user?.role || null}
       />
 
       {/* PreCheckoutModal para Matricula Rewards */}

@@ -71,6 +71,24 @@ export const SelectionSurveyStep: React.FC<StepProps> = ({ onNext }) => {
                 next[4] = isUSA ? 'Sim' : 'Não';
                 hasChanged = true;
             }
+
+            // Novos campos: Interesse, Nível Acadêmico e GPA
+            if (!next[3.1] && userProfile?.field_of_interest) {
+                next[3.1] = userProfile.field_of_interest;
+                hasChanged = true;
+            }
+            if (!next[3.2] && userProfile?.academic_level) {
+                next[3.2] = userProfile.academic_level;
+                hasChanged = true;
+            }
+            if (!next[3.3] && userProfile?.gpa) {
+                next[3.3] = String(userProfile.gpa);
+                hasChanged = true;
+            }
+            if (!next[8] && userProfile?.english_proficiency) {
+                next[8] = userProfile.english_proficiency;
+                hasChanged = true;
+            }
             
             return hasChanged ? next : prev;
         });
@@ -253,7 +271,13 @@ export const SelectionSurveyStep: React.FC<StepProps> = ({ onNext }) => {
 
             const { error: profileError } = await supabase
                 .from('user_profiles')
-                .update({ selection_survey_passed: passed })
+                .update({ 
+                    selection_survey_passed: passed,
+                    field_of_interest: currentAnswers[3.1],
+                    academic_level: currentAnswers[3.2],
+                    gpa: currentAnswers[3.3] ? parseFloat(String(currentAnswers[3.3]).replace(',', '.')) : null,
+                    english_proficiency: currentAnswers[8]
+                })
                 .eq('user_id', user.id);
 
             if (profileError) throw profileError;

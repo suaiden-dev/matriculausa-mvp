@@ -4,7 +4,6 @@ import { supabase } from '../../lib/supabase';
 import { getDocumentStatusDisplay } from '../../utils/documentStatusMapper';
 import type { Application, UserProfile, Scholarship } from '../../types';
 import DocumentViewerModal from '../../components/DocumentViewerModal';
-import { useFeeConfig } from '../../hooks/useFeeConfig';
 import { useAuth } from '../../hooks/useAuth';
 import { FileText, UserCircle, CheckCircle2 } from 'lucide-react';
 const FUNCTIONS_URL = import.meta.env.VITE_SUPABASE_FUNCTIONS_URL as string;
@@ -45,7 +44,6 @@ const StudentDetails: React.FC = () => {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const { user } = useAuth();
-  const { getFeeAmount, formatFeeAmount } = useFeeConfig();
   const [previewUrl, setPreviewUrl] = useState<string | null>(null);
   const [activeTab, setActiveTab] = useState<'details' | 'chat' | 'documents'>('details');
 
@@ -1268,7 +1266,7 @@ const StudentDetails: React.FC = () => {
       }
 
       // Atualizar estado local
-      setTransferForm(prev => ({
+      setTransferForm((prev: any) => ({
         ...prev,
         transfer_form_url: publicUrl,
         transfer_form_status: 'sent',
@@ -2036,6 +2034,24 @@ const StudentDetails: React.FC = () => {
                         <dd className="text-base text-slate-700 leading-relaxed">{application.scholarships.description}</dd>
                       </div>
                     </div>
+                    {application.scholarships.min_gpa && (
+                      <div className="flex items-start space-x-3">
+                        <div className="w-2 h-2 bg-[#05294E] rounded-full mt-2 flex-shrink-0"></div>
+                        <div className="flex-1">
+                          <dt className="text-sm font-medium text-slate-600">Minimum GPA</dt>
+                          <dd className="text-base font-semibold text-slate-900">{application.scholarships.min_gpa}</dd>
+                        </div>
+                      </div>
+                    )}
+                    {application.scholarships.min_english_proficiency && (
+                      <div className="flex items-start space-x-3">
+                        <div className="w-2 h-2 bg-[#05294E] rounded-full mt-2 flex-shrink-0"></div>
+                        <div className="flex-1">
+                          <dt className="text-sm font-medium text-slate-600">Minimum English Proficiency</dt>
+                          <dd className="text-base font-semibold text-slate-900">{application.scholarships.min_english_proficiency.toUpperCase()}</dd>
+                        </div>
+                      </div>
+                    )}
                   </div>
                 </div>
               </div>
@@ -2099,10 +2115,7 @@ const StudentDetails: React.FC = () => {
                                 {/* Botões posicionados abaixo das informações */}
                                 <div className="flex items-center space-x-2 mt-3">
                                   {/* Botões de ação para documentos Under Review */}
-                                  {d?.file_url && status !== 'approved' && (
-                                    status !== 'rejected' || 
-                                    (status === 'rejected' && d.uploaded_at && d.rejected_at && new Date(d.uploaded_at) > new Date(d.rejected_at))
-                                  ) && application.status !== 'enrolled' && application.acceptance_letter_status !== 'approved' && (
+                                  {d?.file_url && status !== 'approved' && status !== 'rejected' && application.status !== 'enrolled' && application.acceptance_letter_status !== 'approved' && (
                                     <div className="flex items-center space-x-2 mr-3">
                                       <button
                                         onClick={() => d && approveDoc(d.type)}
@@ -2247,7 +2260,7 @@ const StudentDetails: React.FC = () => {
             <div className="flex-1 flex flex-col">
               <ApplicationChat
                 messages={chat.messages}
-                onSend={chat.sendMessage as any}
+                onSend={chat.sendMessage} // Corrected typage
                 loading={chat.loading}
                 isSending={chat.isSending}
                 error={chat.error}
