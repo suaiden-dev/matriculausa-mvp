@@ -240,6 +240,9 @@ const AdminScholarshipEdit: React.FC = () => {
         university_id: defaultUni.id,
         internal_fees: [] as { category: string; amount: string; details: string; }[],
         image_url: defaultUni.defaultImage || '',
+        min_gpa: '',
+        min_english_proficiency: '',
+        is_test: false,
       });
       setImagePreview(defaultUni.defaultImage || null);
       setImageFile(null);
