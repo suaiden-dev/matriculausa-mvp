@@ -23,6 +23,19 @@ import { useAuth } from '../../hooks/useAuth';
 const MAX_IMAGE_SIZE_MB = 2;
 const ALLOWED_IMAGE_TYPES = ['image/jpeg', 'image/png', 'image/webp'];
 
+const ALLOWED_UNIVERSITIES = [
+  {
+    id: 'b8bd2998-bb6e-402c-bbaf-c2da16e64241',
+    name: 'Caroline University',
+    defaultImage: 'https://fitpynguasqqutuhzifx.supabase.co/storage/v1/object/public/user-avatars/caroline%20loho.png'
+  },
+  {
+    id: '100aeaa6-cba8-4577-8aff-30104a9aefcc',
+    name: 'Oikos University Los Angeles',
+    defaultImage: 'https://fitpynguasqqutuhzifx.supabase.co/storage/v1/object/public/user-avatars/oikos%20logo.svg'
+  }
+];
+
 const AdminScholarshipEdit: React.FC = () => {
   const navigate = useNavigate();
   const { id } = useParams<{ id: string }>();
@@ -197,6 +210,45 @@ const AdminScholarshipEdit: React.FC = () => {
     }
   }, [isEditMode, isDataRestored, loadScholarshipData]);
 
+  // Reset form when entering "new" mode
+  useEffect(() => {
+    if (!isEditMode) {
+      const defaultUni = ALLOWED_UNIVERSITIES[0];
+      setFormData({
+        title: '',
+        description: '',
+        amount: '',
+        deadline: '',
+        requirements: [''],
+        field_of_study: '',
+        level: 'undergraduate',
+        delivery_mode: 'in_person',
+        eligibility: [''],
+        benefits: [''],
+        is_exclusive: false,
+        is_active: true,
+        original_annual_value: '',
+        original_value_per_credit: '',
+        annual_value_with_scholarship: '',
+        work_permissions: [] as string[],
+        application_fee_amount: '350.00',
+        scholarship_fee_amount: '',
+        placement_fee_amount: '',
+        scholarship_type: '',
+        visaassistance: '',
+        needcpt: false,
+        university_id: defaultUni.id,
+        internal_fees: [] as { category: string; amount: string; details: string; }[],
+        image_url: defaultUni.defaultImage || '',
+      });
+      setImagePreview(defaultUni.defaultImage || null);
+      setImageFile(null);
+      setSuccess(false);
+      setError(null);
+      setIsDataRestored(false);
+    }
+  }, [isEditMode]);
+
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement>) => {
     const { name, value } = e.target;
 
@@ -211,10 +263,24 @@ const AdminScholarshipEdit: React.FC = () => {
       }
     }
 
-    setFormData(prev => ({
-      ...prev,
-      [name]: value
-    }));
+    setFormData(prev => {
+      const next = {
+        ...prev,
+        [name]: value
+      };
+
+      // Se estiver em modo de criação (!id), ao trocar a universidade, 
+      // vinculamos a imagem padrão correspondente, desde que o usuário não tenha feito upload manual
+      if (name === 'university_id' && !isEditMode && !imageFile) {
+        const uni = ALLOWED_UNIVERSITIES.find(u => u.id === value);
+        if (uni?.defaultImage) {
+          next.image_url = uni.defaultImage;
+          setImagePreview(uni.defaultImage);
+        }
+      }
+
+      return next;
+    });
   };
 
   const handleCheckboxChange = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -539,38 +605,16 @@ const AdminScholarshipEdit: React.FC = () => {
           </button>
 
           <div className="flex items-center justify-between">
-            <div className="flex items-center gap-4">
-              <div>
-                <h1 className="text-3xl font-bold text-slate-900">
-                  {isEditMode ? 'Edit Scholarship' : 'Create New Scholarship'}
-                </h1>
-                <p className="text-slate-600 mt-2">
-                  {isEditMode
-                    ? 'Update scholarship details and requirements'
-                    : 'Define a new scholarship opportunity for international students'
-                  }
-                </p>
-              </div>
-
-              {/* Test Scholarship Toggle - only on localhost */}
-              {window.location.hostname === 'localhost' && (
-                <div className="flex items-center bg-amber-50 border border-amber-200 px-4 py-2 rounded-xl shadow-sm">
-                  <div className="flex flex-col mr-4">
-                    <span className="text-xs font-bold text-amber-700 uppercase tracking-wider">Modo de Teste</span>
-                    <span className="text-[10px] text-amber-600 leading-tight">Visível apenas p/ @uorak.com</span>
-                  </div>
-                  <label className="relative inline-flex items-center cursor-pointer">
-                    <input
-                      type="checkbox"
-                      name="is_test"
-                      checked={formData.is_test}
-                      onChange={handleCheckboxChange}
-                      className="sr-only peer"
-                    />
-                    <div className="w-11 h-6 bg-slate-200 peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-amber-300 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-amber-500"></div>
-                  </label>
-                </div>
-              )}
+            <div>
+              <h1 className="text-3xl font-bold text-slate-900">
+                {isEditMode ? 'Edit Scholarship' : 'New Scholarship'}
+              </h1>
+              <p className="text-slate-600 mt-2">
+                {isEditMode
+                  ? 'Update scholarship details and requirements'
+                  : 'Define a new scholarship opportunity for international students'
+                }
+              </p>
             </div>
           </div>
         </div>
@@ -678,43 +722,22 @@ const AdminScholarshipEdit: React.FC = () => {
 
                 <div>
                   <label className="block text-sm font-medium text-slate-700 mb-2">
-                    University ID *
+                    University *
                   </label>
-                  <input
-                    type="text"
+                  <select
                     name="university_id"
                     value={formData.university_id}
                     onChange={handleInputChange}
                     className="w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-[#05294E] focus:border-[#05294E] transition-all duration-200"
-                    placeholder="Enter university ID"
                     required
-                  />
-                </div>
-              </div>
-            </div>
-
-            {/* Academic Requirements */}
-            <div>
-              <h2 className="text-xl font-bold text-slate-900 mb-6 flex items-center">
-                <BookOpen className="h-5 w-5 mr-2 text-blue-600" />
-                Academic Requirements
-              </h2>
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                <div>
-                  <label className="block text-sm font-medium text-slate-700 mb-2">
-                    Minimum GPA (0.0 - 4.0)
-                  </label>
-                  <input
-                    type="number"
-                    name="min_gpa"
-                    value={formData.min_gpa}
-                    onChange={handleInputChange}
-                    step="0.1"
-                    min="0"
-                    max="4"
-                    className="w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-[#05294E] focus:border-[#05294E] transition-all duration-200"
-                    placeholder="e.g., 3.0"
-                  />
+                  >
+                    <option value="" disabled>Select a university</option>
+                    {ALLOWED_UNIVERSITIES.map(uni => (
+                      <option key={uni.id} value={uni.id}>
+                        {uni.name}
+                      </option>
+                    ))}
+                  </select>
                 </div>
                 <div>
                   <label className="block text-sm font-medium text-slate-700 mb-2">
