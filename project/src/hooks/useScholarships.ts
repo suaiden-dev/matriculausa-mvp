@@ -60,6 +60,8 @@ export function useScholarships() {
             work_permissions,
             application_fee_amount,
             placement_fee_amount,
+            min_gpa,
+            min_english_proficiency,
             universities (id, name, logo_url, image_url, location, is_approved, university_fees_page_url)
           `);
           // Removido filtro is_active=true - estudantes podem ver bolsas inativas mas não podem aplicar

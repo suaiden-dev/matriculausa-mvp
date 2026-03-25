@@ -68,6 +68,8 @@ export interface Scholarship {
   application_fee_amount?: number;
   placement_fee_amount?: number;
   scholarship_fee_amount?: number;
+  min_gpa?: number;
+  min_english_proficiency?: string;
   internal_fees?: any[];
   is_stripe_connect_enabled?: boolean;
   university_stripe_account_id?: string;

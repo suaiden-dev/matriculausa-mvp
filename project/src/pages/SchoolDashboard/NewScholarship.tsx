@@ -71,6 +71,8 @@ const NewScholarship: React.FC = () => {
     application_fee_amount: '350.00',
     placement_fee_amount: '',
     internal_fees: [] as { category: string; amount: string; details: string; }[],
+    min_gpa: '',
+    min_english_proficiency: '',
   });
 
   // Helper texts for work permissions
@@ -207,6 +209,8 @@ const NewScholarship: React.FC = () => {
               details: f.details || ''
             }));
           })(),
+          min_gpa: scholarship.min_gpa?.toString() || '',
+          min_english_proficiency: scholarship.min_english_proficiency || '',
         });
 
         // Set image preview if exists
@@ -583,6 +587,8 @@ const NewScholarship: React.FC = () => {
           application_fee_amount: Number(formData.application_fee_amount),
           placement_fee_amount: formData.placement_fee_amount ? Number(formData.placement_fee_amount) : null,
           internal_fees: internalFees,
+          min_gpa: formData.min_gpa ? Number(formData.min_gpa) : null,
+          min_english_proficiency: formData.min_english_proficiency || null,
         };
 
         // Only set image_url to null if we're not preserving the existing image
@@ -873,6 +879,51 @@ const NewScholarship: React.FC = () => {
                       className="w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-[#05294E] focus:border-[#05294E] transition-all duration-200"
                       placeholder="Describe the scholarship, its purpose, and any special features"
                     />
+                  </div>
+                </div>
+              </div>
+
+              {/* Academic Requirements */}
+              <div>
+                <h2 className="text-xl font-bold text-slate-900 mb-6 flex items-center">
+                  <BookOpen className="h-5 w-5 mr-2 text-blue-600" />
+                  Academic Requirements
+                </h2>
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                  <div>
+                    <label className="block text-sm font-medium text-slate-700 mb-2">
+                      Minimum GPA (0.0 - 4.0)
+                    </label>
+                    <input
+                      type="number"
+                      name="min_gpa"
+                      value={formData.min_gpa}
+                      onChange={handleInputChange}
+                      step="0.1"
+                      min="0"
+                      max="4"
+                      className="w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-[#05294E] focus:border-[#05294E] transition-all duration-200"
+                      placeholder="e.g., 3.0"
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-sm font-medium text-slate-700 mb-2">
+                      Minimum English Proficiency
+                    </label>
+                    <select
+                      name="min_english_proficiency"
+                      value={formData.min_english_proficiency}
+                      onChange={handleInputChange}
+                      className="w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-[#05294E] focus:border-[#05294E] transition-all duration-200"
+                    >
+                      <option value="">No preference</option>
+                      <option value="beginner">Beginner</option>
+                      <option value="intermediate">Intermediate</option>
+                      <option value="advanced">Advanced</option>
+                      <option value="native">Native</option>
+                      <option value="toefl">TOEFL Certified</option>
+                      <option value="ielts">IELTS Certified</option>
+                    </select>
                   </div>
                 </div>
               </div>

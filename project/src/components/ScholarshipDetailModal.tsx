@@ -468,6 +468,29 @@ const ScholarshipDetailModal: React.FC<ScholarshipDetailModalProps> = ({
                           </div>
                         )}
 
+                        {/* Academic Requirements */}
+                        {(scholarship.min_gpa || scholarship.min_english_proficiency) && (
+                          <div className="pt-4 border-t border-slate-200 space-y-4">
+                            {scholarship.min_gpa && (
+                              <div className="group">
+                                <p className="text-[10px] uppercase tracking-wider text-slate-400 font-bold mb-1">GPA Mínimo</p>
+                                <div className="text-slate-700 font-medium">
+                                  <span>{Number(scholarship.min_gpa).toFixed(1)}</span>
+                                </div>
+                              </div>
+                            )}
+
+                            {scholarship.min_english_proficiency && (
+                              <div className="group">
+                                <p className="text-[10px] uppercase tracking-wider text-slate-400 font-bold mb-1">{t('dashboard:profileManagement.form.englishProficiency')}</p>
+                                <div className="text-slate-700 font-medium">
+                                  <span>{t(`dashboard:profileManagement.form.fields.${scholarship.min_english_proficiency}`)}</span>
+                                </div>
+                              </div>
+                            )}
+                          </div>
+                        )}
+
                         {/* Requirements Moved Here */}
                         {scholarship.requirements && (
                           <div className="pt-4 border-t border-slate-200">

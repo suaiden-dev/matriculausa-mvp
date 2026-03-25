@@ -12,7 +12,6 @@ import {
   Target,
   Clock,
   Info,
-  RefreshCw,
   Plus,
   X,
   FileText,
@@ -64,6 +63,8 @@ const AdminScholarshipEdit: React.FC = () => {
     needcpt: false,
     university_id: '',
     internal_fees: [] as { category: string; amount: string; details: string; }[],
+    min_gpa: '',
+    min_english_proficiency: '',
   });
 
   // Helper texts for work permissions
@@ -162,6 +163,8 @@ const AdminScholarshipEdit: React.FC = () => {
                 } catch { return []; }
               })()
               : [],
+          min_gpa: scholarship.min_gpa?.toString() || '',
+          min_english_proficiency: scholarship.min_english_proficiency || '',
         });
 
         // Set image preview if exists
@@ -279,7 +282,7 @@ const AdminScholarshipEdit: React.FC = () => {
     setImagePreview(null);
   };
 
-  const uploadImageToStorage = async (scholarshipId: string): Promise<string | null> => {
+  const uploadImageToStorage = async (_scholarshipId: string): Promise<string | null> => {
     if (!imageFile || !user) return null;
 
     try {
@@ -290,7 +293,7 @@ const AdminScholarshipEdit: React.FC = () => {
       const fileName = `scholarship-${Date.now()}-${Math.random().toString(36).substring(7)}.${fileExt}`;
 
       // Upload to scholarship-images bucket
-      const { data, error } = await supabase.storage
+      const { data: _data, error } = await supabase.storage
         .from('scholarship-images')
         .upload(fileName, imageFile, {
           cacheControl: '3600',
@@ -424,6 +427,8 @@ const AdminScholarshipEdit: React.FC = () => {
               amount: Number(fee.amount),
               details: fee.details
             })),
+          min_gpa: formData.min_gpa ? Number(formData.min_gpa) : null,
+          min_english_proficiency: formData.min_english_proficiency || null,
         };
 
         if (formData.scholarship_fee_amount) {
@@ -675,6 +680,51 @@ const AdminScholarshipEdit: React.FC = () => {
                     placeholder="Enter university ID"
                     required
                   />
+                </div>
+              </div>
+            </div>
+
+            {/* Academic Requirements */}
+            <div>
+              <h2 className="text-xl font-bold text-slate-900 mb-6 flex items-center">
+                <BookOpen className="h-5 w-5 mr-2 text-blue-600" />
+                Academic Requirements
+              </h2>
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                <div>
+                  <label className="block text-sm font-medium text-slate-700 mb-2">
+                    Minimum GPA (0.0 - 4.0)
+                  </label>
+                  <input
+                    type="number"
+                    name="min_gpa"
+                    value={formData.min_gpa}
+                    onChange={handleInputChange}
+                    step="0.1"
+                    min="0"
+                    max="4"
+                    className="w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-[#05294E] focus:border-[#05294E] transition-all duration-200"
+                    placeholder="e.g., 3.0"
+                  />
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-slate-700 mb-2">
+                    Minimum English Proficiency
+                  </label>
+                  <select
+                    name="min_english_proficiency"
+                    value={formData.min_english_proficiency}
+                    onChange={handleInputChange}
+                    className="w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-[#05294E] focus:border-[#05294E] transition-all duration-200"
+                  >
+                    <option value="">No preference</option>
+                    <option value="beginner">Beginner</option>
+                    <option value="intermediate">Intermediate</option>
+                    <option value="advanced">Advanced</option>
+                    <option value="native">Native</option>
+                    <option value="toefl">TOEFL Certified</option>
+                    <option value="ielts">IELTS Certified</option>
+                  </select>
                 </div>
               </div>
             </div>
