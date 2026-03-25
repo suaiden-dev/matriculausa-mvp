@@ -70,6 +70,7 @@ export interface Scholarship {
   scholarship_fee_amount?: number;
   min_gpa?: number;
   min_english_proficiency?: string;
+  is_test?: boolean;
   internal_fees?: any[];
   is_stripe_connect_enabled?: boolean;
   university_stripe_account_id?: string;

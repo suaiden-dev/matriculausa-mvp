@@ -277,6 +277,32 @@
         "text": "WhatsApp (with country code)",
         "placeholder": "+1 123 456-7890"
       },
+      "3_1": {
+        "text": "What is your main course or field of interest?",
+        "options": {
+          "engineering": "Engineering",
+          "business": "Business",
+          "computer-science": "Computer Science",
+          "medicine": "Medicine",
+          "law": "Law",
+          "arts": "Arts & Humanities",
+          "sciences": "Natural Sciences",
+          "other": "Other"
+        }
+      },
+      "3_2": {
+        "text": "What is your current academic level?",
+        "options": {
+          "high-school": "High School",
+          "undergraduate": "Bachelor's / Undergraduate",
+          "graduate": "Master's / Graduate",
+          "doctorate": "Doctorate"
+        }
+      },
+      "3_3": {
+        "text": "What is your approximate GPA?",
+        "placeholder": "e.g., 3.5"
+      },
       "4": {
         "text": "Are you currently in the US?",
         "extraLabel": "Current status?"
@@ -311,10 +337,11 @@
       "8": {
         "text": "What is your English level today?",
         "options": {
-          "iniciante": "Beginner",
-          "basico": "Basic",
-          "intermediario": "Intermediate",
-          "avancado": "Advanced"
+          "beginner": "Beginner",
+          "intermediate": "Intermediate",
+          "advanced": "Advanced",
+          "native": "Native",
+          "toefl": "Already have TOEFL / IELTS"
         }
       },
       "9": {

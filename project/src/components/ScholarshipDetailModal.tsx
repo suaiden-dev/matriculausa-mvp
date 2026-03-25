@@ -43,10 +43,19 @@ const ScholarshipDetailModal: React.FC<ScholarshipDetailModalProps> = ({
   isOpen,
   onClose,
   userProfile,
+  user,
   userRole
 }) => {
   const { t } = useTranslation();
   const { openModal, closeModal } = useModal();
+
+  // Trava de segurança para bolsas de teste (is_test)
+  const isUorakUser = user?.email?.toLowerCase().endsWith('@uorak.com') || (userProfile as any)?.email?.toLowerCase().endsWith('@uorak.com');
+  const isAdmin = userRole === 'admin';
+  
+  if (scholarship?.is_test && !isUorakUser && !isAdmin) {
+    return null;
+  }
   
   const getApplicationFeeWithDependents = (base: number): number => {
     const deps = Number(userProfile?.dependents) || 0;

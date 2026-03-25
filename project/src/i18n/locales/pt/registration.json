@@ -276,6 +276,32 @@
         "text": "WhatsApp (com DDI)",
         "placeholder": "+55 11 99999-9999"
       },
+      "3_1": {
+        "text": "Qual o seu curso ou área de interesse principal?",
+        "options": {
+          "engineering": "Engenharia",
+          "business": "Negócios",
+          "computer-science": "Ciência da Computação",
+          "medicine": "Medicina",
+          "law": "Direito",
+          "arts": "Artes e Humanidades",
+          "sciences": "Ciências Naturais",
+          "other": "Outro"
+        }
+      },
+      "3_2": {
+        "text": "Qual o seu nível acadêmico atual?",
+        "options": {
+          "high-school": "Ensino Médio",
+          "undergraduate": "Bacharelado / Graduação",
+          "graduate": "Mestrado / Pós-graduação",
+          "doctorate": "Doutorado"
+        }
+      },
+      "3_3": {
+        "text": "Qual o seu GPA (Média de Notas) aproximado?",
+        "placeholder": "Ex: 3.5"
+      },
       "4": {
         "text": "Você está atualmente nos EUA?",
         "extraLabel": "Qual status atual?",
@@ -311,10 +337,11 @@
       "8": {
         "text": "Qual é o seu nível de inglês hoje?",
         "options": {
-          "iniciante": "Iniciante",
-          "basico": "Básico",
-          "intermediario": "Intermediário",
-          "avancado": "Avançado"
+          "beginner": "Iniciante",
+          "intermediate": "Intermediário",
+          "advanced": "Avançado",
+          "native": "Nativo",
+          "toefl": "Já possuo TOEFL / IELTS"
         }
       },
       "9": {

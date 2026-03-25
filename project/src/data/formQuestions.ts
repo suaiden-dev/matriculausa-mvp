@@ -34,6 +34,32 @@ export const questions: Question[] = [
   { id: 2, section: 'A', sectionTitle: 'selectionSurvey.sections.A', text: 'selectionSurvey.questions.2.text', type: 'email', required: true, placeholder: 'selectionSurvey.questions.2.placeholder' },
   { id: 3, section: 'A', sectionTitle: 'selectionSurvey.sections.A', text: 'selectionSurvey.questions.3.text', type: 'text', required: true, placeholder: 'selectionSurvey.questions.3.placeholder' },
   {
+    id: 3.1, section: 'A', sectionTitle: 'selectionSurvey.sections.A', text: 'selectionSurvey.questions.3_1.text', type: 'radio', required: true, scored: false,
+    options: [
+      { label: 'selectionSurvey.questions.3_1.options.engineering', value: 'engineering' },
+      { label: 'selectionSurvey.questions.3_1.options.business', value: 'business' },
+      { label: 'selectionSurvey.questions.3_1.options.computer-science', value: 'computer-science' },
+      { label: 'selectionSurvey.questions.3_1.options.medicine', value: 'medicine' },
+      { label: 'selectionSurvey.questions.3_1.options.law', value: 'law' },
+      { label: 'selectionSurvey.questions.3_1.options.arts', value: 'arts' },
+      { label: 'selectionSurvey.questions.3_1.options.sciences', value: 'sciences' },
+      { label: 'selectionSurvey.questions.3_1.options.other', value: 'other' },
+    ]
+  },
+  {
+    id: 3.2, section: 'A', sectionTitle: 'selectionSurvey.sections.A', text: 'selectionSurvey.questions.3_2.text', type: 'radio', required: true, scored: false,
+    options: [
+      { label: 'selectionSurvey.questions.3_2.options.high-school', value: 'high-school' },
+      { label: 'selectionSurvey.questions.3_2.options.undergraduate', value: 'undergraduate' },
+      { label: 'selectionSurvey.questions.3_2.options.graduate', value: 'graduate' },
+      { label: 'selectionSurvey.questions.3_2.options.doctorate', value: 'doctorate' },
+    ]
+  },
+  {
+    id: 3.3, section: 'A', sectionTitle: 'selectionSurvey.sections.A', text: 'selectionSurvey.questions.3_3.text', type: 'number', required: true, scored: false,
+    placeholder: '0.0', prompt: '0.0 - 4.0'
+  },
+  {
     id: 4, section: 'A', sectionTitle: 'selectionSurvey.sections.A', text: 'selectionSurvey.questions.4.text', type: 'yesno', required: true,
   },
   {
@@ -64,12 +90,13 @@ export const questions: Question[] = [
     ]
   },
   {
-    id: 8, section: 'A', sectionTitle: 'selectionSurvey.sections.A', text: 'selectionSurvey.questions.8.text', type: 'radio', required: true,
+    id: 8, section: 'A', sectionTitle: 'selectionSurvey.sections.A', text: 'selectionSurvey.questions.8.text', type: 'radio', required: true, scored: false,
     options: [
-      { label: 'selectionSurvey.questions.8.options.iniciante', value: 'iniciante', correct: null },
-      { label: 'selectionSurvey.questions.8.options.basico', value: 'basico', correct: null },
-      { label: 'selectionSurvey.questions.8.options.intermediario', value: 'intermediario', correct: null },
-      { label: 'selectionSurvey.questions.8.options.avancado', value: 'avancado', correct: null },
+      { label: 'selectionSurvey.questions.8.options.beginner', value: 'beginner' },
+      { label: 'selectionSurvey.questions.8.options.intermediate', value: 'intermediate' },
+      { label: 'selectionSurvey.questions.8.options.advanced', value: 'advanced' },
+      { label: 'selectionSurvey.questions.8.options.native', value: 'native' },
+      { label: 'selectionSurvey.questions.8.options.toefl', value: 'toefl' },
     ]
   },
   {

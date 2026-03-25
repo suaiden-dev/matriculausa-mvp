@@ -276,6 +276,32 @@
         "text": "WhatsApp (con código de país)",
         "placeholder": "+34 600 000 000"
       },
+      "3_1": {
+        "text": "¿Cuál es su curso o área de interés principal?",
+        "options": {
+          "engineering": "Ingeniería",
+          "business": "Negocios",
+          "computer-science": "Ciencias de la Computación",
+          "medicine": "Medicina",
+          "law": "Derecho",
+          "arts": "Artes y Humanidades",
+          "sciences": "Ciencias Naturales",
+          "other": "Otro"
+        }
+      },
+      "3_2": {
+        "text": "¿Cuál es su nivel académico actual?",
+        "options": {
+          "high-school": "Educación Secundaria",
+          "undergraduate": "Bachillerato / Grado",
+          "graduate": "Maestría / Posgrado",
+          "doctorate": "Doctorado"
+        }
+      },
+      "3_3": {
+        "text": "¿Cuál es su GPA aproximado?",
+        "placeholder": "Ej: 3.5"
+      },
       "4": {
         "text": "¿Se encuentra actualmente en los EE. UU.?",
         "extraLabel": "¿Estatus actual?"
@@ -310,10 +336,11 @@
       "8": {
         "text": "¿Cuál es su nivel de inglés hoy?",
         "options": {
-          "iniciante": "Principiante",
-          "basico": "Básico",
-          "intermediario": "Intermedio",
-          "avancado": "Avanzado"
+          "beginner": "Principiante",
+          "intermediate": "Intermedio",
+          "advanced": "Avanzado",
+          "native": "Nativo",
+          "toefl": "Ya poseo TOEFL / IELTS"
         }
       },
       "9": {
