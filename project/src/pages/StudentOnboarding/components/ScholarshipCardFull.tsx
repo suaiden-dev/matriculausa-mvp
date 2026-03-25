@@ -1,26 +1,23 @@
 import React, { useState } from 'react';
 import {
   Building,
-  Clock,
   AlertTriangle,
   Star,
-  GraduationCap
+  GraduationCap,
+  DollarSign
 } from 'lucide-react';
 import { getPlacementFee } from '../../../utils/placementFeeCalculator';
 import { useTranslation } from 'react-i18next';
 import {
   getFieldBadgeColor,
-  getDaysUntilDeadlineDisplay,
-  getDeadlineStatus,
   getLevelIcon,
   getDeliveryModeLabel,
   getLevelLabel,
   getFieldOfStudyLabel
 } from '../../../utils/scholarshipHelpers.tsx';
 import { formatCurrency } from '../../../utils/currency';
-import { is3800Scholarship, is3800ScholarshipBlocked } from '../../../utils/scholarshipDeadlineValidation';
-import { ScholarshipCountdownTimer } from '../../../components/ScholarshipCountdownTimer';
-import { ScholarshipExpiryWarning } from '../../../components/ScholarshipExpiryWarning';
+import { is3800ScholarshipBlocked } from '../../../utils/scholarshipDeadlineValidation';
+
 
 interface ScholarshipCardFullProps {
   scholarship: any;
@@ -87,36 +84,26 @@ const ScholarshipCardFullComponent: React.FC<ScholarshipCardFullProps> = ({
         )}
 
         {/* Top Badges */}
-        <div className="absolute top-4 left-4 right-4 flex justify-between items-start">
-          {/* Days Left Badge */}
-          {is3800Scholarship(scholarship) ? (
-            <ScholarshipCountdownTimer scholarship={scholarship} />
-          ) : (
-            <div className={`px-3 py-1.5 rounded-full text-xs font-bold shadow-sm border flex items-center gap-1.5 backdrop-blur-md ${getDeadlineStatus(scholarship.deadline).bg
-              } ${getDeadlineStatus(scholarship.deadline).color} border-white/50`}>
-              <Clock className="h-3.5 w-3.5" />
-              <span>{getDaysUntilDeadlineDisplay(scholarship.deadline)} {t('studentDashboard.findScholarships.scholarshipCard.days')}</span>
-            </div>
-          )}
-
+        <div className="absolute top-4 left-4 right-4 flex justify-end items-start z-20">
           <div className="flex flex-col items-end gap-2">
-            <div className="flex items-center gap-2">
-
-              {scholarship.is_highlighted && (
-                <div className="bg-gradient-to-r from-yellow-400 to-orange-500 text-white px-3 py-1.5 rounded-xl text-xs font-black flex items-center shadow-lg uppercase tracking-wider h-9">
-                  <Star className="h-3.5 w-3.5 mr-1.5 fill-current" />
-                  {t('common.featured')}
-                </div>
-              )}
-            </div>
+            {!scholarship.is_active || isBlocked ? (
+              <div className="bg-red-500 text-white px-3 py-1.5 rounded-full text-[10px] font-bold flex items-center gap-1.5 shadow-lg">
+                <AlertTriangle className="h-3 w-3" />
+                <span className="uppercase tracking-wider">{t('scholarshipsPage.scholarshipCard.notAvailable')}</span>
+              </div>
+            ) : (scholarship.is_highlighted || scholarship.featured) && (
+              <div className="bg-gradient-to-r from-yellow-400 to-orange-500 text-white px-3 py-1.5 rounded-full text-[10px] font-black flex items-center shadow-lg uppercase tracking-wider">
+                <Star className="h-3.5 w-3.5 mr-1.5 fill-current" />
+                {t('common.featured')}
+              </div>
+            )}
           </div>
         </div>
       </div>
 
       {/* Card Content */}
       <div className="p-4 sm:p-5 flex-1 flex flex-col">
-        {/* Warning for $3800 scholarships */}
-        <ScholarshipExpiryWarning scholarship={scholarship} variant="badge" className="mb-2" />
+
 
         {/* Title and Secondary Badges */}
         <div className="mb-2">
@@ -137,14 +124,14 @@ const ScholarshipCardFullComponent: React.FC<ScholarshipCardFullProps> = ({
               <span className="capitalize">{getLevelLabel(scholarship.level || 'undergraduate', t)}</span>
             </span>
             {scholarship.is_exclusive && (
-              <span className="bg-[#D0151C] text-white px-2.5 py-1 rounded-lg text-[10px] font-bold uppercase tracking-wider shadow-sm">
-                {t('scholarshipsPage.modal.exclusive')}
+              <span className="bg-gradient-to-r from-[#D0151C] to-red-600 text-white px-2.5 py-1 rounded-full text-[10px] font-bold uppercase tracking-wider shadow-sm flex items-center gap-1">
+                <Star className="h-3 w-3" />
+                {t('common.exclusive')}
               </span>
             )}
           </div>
         </div>
-
-        {/* Info Boxes Section */}
+        {/* Info Boxes Section */}
         <div className="space-y-1.5 mb-2">
           {/* University Info Box */}
           <div className="flex items-center gap-3 py-1.5 px-2.5 bg-slate-50 rounded-xl border border-slate-100">
@@ -152,10 +139,10 @@ const ScholarshipCardFullComponent: React.FC<ScholarshipCardFullProps> = ({
               <Building className="h-4 w-4 text-[#05294E]" />
             </div>
             <div className="flex-1 min-w-0">
-              <p className="text-[9px] font-bold text-slate-400 uppercase tracking-widest leading-none">
+              <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest leading-none mb-1">
                 {t('studentDashboard.findScholarships.scholarshipCard.university')}
               </p>
-              <p className="text-xs font-bold text-slate-700 truncate">
+              <p className="text-sm font-bold text-slate-700 truncate">
                 {scholarship.universities?.name || scholarship.university_name || '********'}
               </p>
             </div>
@@ -165,11 +152,11 @@ const ScholarshipCardFullComponent: React.FC<ScholarshipCardFullProps> = ({
           {scholarship.delivery_mode && (
             <div className="flex items-center justify-between p-2.5 bg-white rounded-xl border border-gray-200 shadow-sm">
               <div className="flex items-center gap-2">
-                <span className="text-xs font-bold text-grey-900">
+                <span className="text-xs font-bold text-slate-700">
                   {t('studentDashboard.findScholarships.scholarshipCard.studyMode')}
                 </span>
               </div>
-              <span className="px-2 py-0.5 rounded-md text-[10px] font-black uppercase tracking-tight text-grey-900">
+              <span className="px-2 py-0.5 rounded-md text-[10px] font-black uppercase tracking-tight text-slate-900">
                 {getDeliveryModeLabel(scholarship.delivery_mode, t)}
               </span>
             </div>
@@ -178,14 +165,14 @@ const ScholarshipCardFullComponent: React.FC<ScholarshipCardFullProps> = ({
           {/* Work Permissions Info Box */}
           {scholarship.work_permissions && scholarship.work_permissions.length > 0 && (
             <div className="flex items-center justify-between p-2.5 bg-white rounded-xl border border-gray-200 shadow-sm">
-              <span className="text-xs font-bold text-grey-900 whitespace-nowrap mr-2">
+              <span className="text-xs font-bold text-slate-700 whitespace-nowrap mr-2">
                 {t('studentDashboard.findScholarships.scholarshipCard.workAuthorization')}
               </span>
               <div className="flex flex-wrap justify-end gap-1.5">
                 {scholarship.work_permissions.slice(0, 3).map((permission: string, index: number) => (
                   <span
                     key={index}
-                    className="px-2 py-0.5 bg-gray-100 text-grey-900 rounded-md text-[10px] font-black uppercase border border-gray-200"
+                    className="px-2 py-0.5 bg-gray-100 text-slate-700 rounded-md text-[10px] font-black uppercase border border-gray-200"
                   >
                     {permission}
                   </span>
@@ -196,8 +183,9 @@ const ScholarshipCardFullComponent: React.FC<ScholarshipCardFullProps> = ({
         </div>
 
         {/* Financial Overview Table View */}
-        <div className="bg-white rounded-2xl p-4 border border-gray-200 shadow-sm">
-          <h4 className="text-[11px] font-black text-grey-900 mb-3 flex items-center gap-1.5 uppercase tracking-widest">
+        <div className="bg-gradient-to-br from-white to-slate-50 rounded-2xl p-4 border border-slate-200 shadow-sm">
+          <h4 className="text-[11px] font-black text-slate-800 mb-3 flex items-center gap-1.5 uppercase tracking-widest">
+            <DollarSign className="h-3.5 w-3.5 text-green-600" />
             {t('studentDashboard.findScholarships.scholarshipCard.financialOverview')}
           </h4>
 
@@ -211,7 +199,7 @@ const ScholarshipCardFullComponent: React.FC<ScholarshipCardFullProps> = ({
 
             <div className="flex items-center justify-between">
               <span className="text-slate-400 text-xs font-medium">{t('studentDashboard.findScholarships.scholarshipCard.withScholarship')}</span>
-              <span className="text-emerald-600 font-black text-base">
+              <span className="text-green-700 font-extrabold text-base">
                 {formatCurrency(Number(scholarship.annual_value_with_scholarship || scholarship.amount || 0))}
               </span>
             </div>
@@ -234,14 +222,12 @@ const ScholarshipCardFullComponent: React.FC<ScholarshipCardFullProps> = ({
                     <span className="text-slate-400 text-xs font-medium">
                       {t('studentDashboard.findScholarships.scholarshipCard.scholarshipDiscount')}
                     </span>
-                    <span className="text-emerald-500 text-xs font-black">{discountPercent}% OFF</span>
+                    <span className="text-green-600 text-xs font-black">{discountPercent}% OFF</span>
                   </div>
                 );
               }
               return null;
             })()}
-
-
 
             {/* Placement Fee - exibir apenas para novos usuários */}
             {userProfile?.placement_fee_flow && (() => {

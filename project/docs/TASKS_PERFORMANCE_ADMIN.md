@@ -59,9 +59,9 @@
 - **Arquivo:** `src/pages/AdminDashboard/AffiliateManagement.tsx`
 - **Problema:** Após otimizações da Fase 1, dados de afiliados sumiram e há erro de DOM (hydration mismatch)
 - **O que fazer:**
-  - [ ] Debugar o componente `AffiliateManagement` para identificar a causa do sumiço dos dados
-  - [ ] Investigar o erro de DOM (hydration mismatch) e corrigi-lo
-  - [ ] Validar que os dados de afiliados são carregados corretamente
+  - [x] Debugar o componente `AffiliateManagement` para identificar a causa do sumiço dos dados
+  - [x] Investigar o erro de DOM (hydration mismatch) e corrigi-lo
+  - [x] Validar que os dados de afiliados são carregados corretamente
 - **Ganho estimado:** Estabilidade do dashboard
 
 ---
@@ -113,11 +113,20 @@
 - [x] **TASK-07: Otimização do Overview Admin (Consolidação de Dados)**
     - [x] Centralizar buscas de dados no component pai (AdminDashboard)
     - [x] Implementar filtros de e-mail de teste no nível do servidor (RPC/SQL)
-    - [x] Remover lógica redundante de busca e filtragem no Overview.tsx
-    - [x] Estabilizar logs do SupabaseChannelManager
-view.tsx
-
-todas as rotas após a mudança
+    - [x] Remover lógica redundante
+    - [x] Investigações adicionais e correções solicitadas
+    - [x] Debugging erro de carregamento no Netlify (AdminScholarshipEdit)
+- [x] Fase- [ ] Otimização da ordenação de bolsas no Onboarding do Aluno
+    - [x] Refatorar `ScholarshipSelectionStep.tsx` para ordenação por preço (Tuition)
+    - [/] Validar ordenação criando novo perfil de estudante
+    - [ ] Implementar lógica visual de Destaque (6 primeiras após ativos)
+    - [x] Ajustar tempo de redirecionamento (800ms)
+    - [x] Adicionar medição de tempo (`console.time`)
+    - [x] Validar melhorias via teste/browser.
+- [/] Fase 7: Ordenação por Tuition (Onboarding)
+    - [/] Alterar `sortedScholarships` em `ScholarshipSelectionStep.tsx`
+    - [ ] Remover prioridade de "Blocked" (verificando intenção do usuário)
+    - [ ] Validar no browser os cards de $3800 no topo.
 - **Ganho estimado:** −3 a −8s no primeiro carregamento
 
 ---
@@ -127,14 +136,14 @@ todas as rotas após a mudança
 - **Arquivo:** `src/pages/AdminDashboard/index.tsx`
 - **Problema:** Apenas `PaymentManagement` usa lazy loading. Os outros módulos pesados carregam junto
 - **O que fazer:**
-  - [ ] Converter para `lazy()`: `AffiliateManagement` (99 KB)
-  - [ ] Converter para `lazy()`: `MatriculaRewardsAdmin` (94 KB)
-  - [ ] Converter para `lazy()`: `NewsletterManagement` (68 KB)
-  - [ ] Converter para `lazy()`: `TermsManagement` (45 KB)
-  - [ ] Converter para `lazy()`: `CouponManagement` (39 KB)
-  - [ ] Converter para `lazy()`: `AdminStudentDetailsRefactored` (166 KB)
-  - [ ] Criar skeletons de loading para cada seção (ou usar um genérico)
-  - [ ] Testar acesso a cada rota após mudança
+  - [x] Converter para `lazy()`: `AffiliateManagement` (99 KB)
+  - [x] Converter para `lazy()`: `MatriculaRewardsAdmin` (94 KB)
+  - [x] Converter para `lazy()`: `NewsletterManagement` (68 KB)
+  - [x] Converter para `lazy()`: `TermsManagement` (45 KB)
+  - [x] Converter para `lazy()`: `CouponManagement` (39 KB)
+  - [x] Converter para `lazy()`: `AdminStudentDetailsRefactored` (166 KB)
+  - [x ] Criar skeletons de loading para cada seção (ou usar um genérico)
+  - [ x] Testar acesso a cada rota após mudança
 - **Ganho estimado:** −1 a −2s no carregamento inicial do dashboard
 
 ---
@@ -178,11 +187,11 @@ todas as rotas após a mudança
 - **Arquivo:** `src/utils/paymentConverter.ts`
 - **Problema:** `getGrossPaidAmounts` é chamada individualmente para cada usuário → 100+ queries ao banco
 - **O que fazer:**
-  - [ ] Criar função `getGrossPaidAmountsBatch(userIds: string[], feeTypes: string[])` que:
+  - [x] Criar função `getGrossPaidAmountsBatch(userIds: string[], feeTypes: string[])` que:
     - Faz 1 única query com `.in('user_id', userIds)`
     - Retorna `Map<userId, Record<feeType, amount>>`
-  - [ ] A lógica de transformação (gross_amount_usd, parcelow_status, etc.) deve ser aplicada em memória
-  - [ ] Exportar a nova função de `paymentConverter.ts`
+  - [x] A lógica de transformação (gross_amount_usd, parcelow_status, etc.) deve ser aplicada em memória
+  - [x] Exportar a nova função de `paymentConverter.ts`
 - **Ganho estimado:** Reduz de ~100 queries para 1 query
 
 ---
@@ -192,10 +201,10 @@ todas as rotas após a mudança
 - **Arquivo:** `src/pages/AdminDashboard/PaymentManagement/hooks/usePaymentQueries.ts`
 - **Problema:** O loop de batches chama `getGrossPaidAmounts` individualmente
 - **O que fazer:**
-  - [ ] Substituir o loop de batches por uma única chamada a `getGrossPaidAmountsBatch(uniqueUserIds, [...])`
-  - [ ] Remover a lógica de `batchSize`, `batches`, `batchPromises` (simplifica o código)
-  - [ ] Validar que os valores de pagamento continuam corretos após a mudança
-  - [ ] Comparar resultado com a versão antiga em dev
+  - [x] Substituir o loop de batches por uma única chamada a `getGrossPaidAmountsBatch(uniqueUserIds, [...])`
+  - [x] Remover a lógica de `batchSize`, `batches`, `batchPromises` (simplifica o código)
+  - [x] Validar que os valores de pagamento continuam corretos após a mudança
+  - [x] Comparar resultado com a versão antiga em dev
 - **Ganho estimado:** −5 a −20s no carregamento do Payment Management
 
 ---

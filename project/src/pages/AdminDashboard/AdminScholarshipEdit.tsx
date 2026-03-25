@@ -63,6 +63,7 @@ const AdminScholarshipEdit: React.FC = () => {
     needcpt: false,
     university_id: '',
     internal_fees: [] as { category: string; amount: string; details: string; }[],
+    image_url: '',
     min_gpa: '',
     min_english_proficiency: '',
     is_test: false,
@@ -164,6 +165,7 @@ const AdminScholarshipEdit: React.FC = () => {
                 } catch { return []; }
               })()
               : [],
+          image_url: scholarship.image_url || '',
           min_gpa: scholarship.min_gpa?.toString() || '',
           min_english_proficiency: scholarship.min_english_proficiency || '',
           is_test: scholarship.is_test || false,
@@ -284,15 +286,15 @@ const AdminScholarshipEdit: React.FC = () => {
     setImagePreview(null);
   };
 
-  const uploadImageToStorage = async (_scholarshipId: string): Promise<string | null> => {
+  const uploadImageToStorage = async (scholarshipId: string): Promise<string | null> => {
     if (!imageFile || !user) return null;
 
     try {
       setUploadingImage(true);
 
-      // Create unique filename
+      // Create unique filename using scholarshipId for better organization
       const fileExt = imageFile.name.split('.').pop();
-      const fileName = `scholarship-${Date.now()}-${Math.random().toString(36).substring(7)}.${fileExt}`;
+      const fileName = `scholarship-${scholarshipId}-${Date.now()}.${fileExt}`;
 
       // Upload to scholarship-images bucket
       const { data: _data, error } = await supabase.storage
@@ -400,8 +402,32 @@ const AdminScholarshipEdit: React.FC = () => {
     }
 
     try {
+      console.time('scholarship_save_total');
+      let imageUrl = formData.image_url;
+
+      // 1. Upload image FIRST if a new file is provided
+      if (imageFile) {
+        console.time('image_upload');
+        // generate a temporary ID if we don't have one (for new scholarships)
+        // however, the current uploadImageToStorage expects scholarshipId
+        // we can use a random uuid for the filename if it's a new scholarship
+        const uploadId = (isEditMode && id) ? id : crypto.randomUUID();
+        try {
+          const uploadedUrl = await uploadImageToStorage(uploadId);
+          if (uploadedUrl) {
+            imageUrl = uploadedUrl;
+          }
+        } catch (imageError) {
+          console.error('Error uploading image:', imageError);
+          // Continue even if image fails? User might prefer to know.
+          throw new Error('Failed to upload image. Please try again.');
+        }
+        console.timeEnd('image_upload');
+      }
+
       // Helper to build payload
-      const buildPayload = (includeWP: boolean, includeDM: boolean, preserveImage: boolean = false) => {
+      const buildPayload = () => {
+        console.log('Building payload with formData:', formData);
         const payload: any = {
           title: formData.title,
           description: formData.description,
@@ -429,6 +455,9 @@ const AdminScholarshipEdit: React.FC = () => {
               amount: Number(fee.amount),
               details: fee.details
             })),
+          work_permissions: formData.work_permissions.filter((wp) => wp !== 'F1'),
+          delivery_mode: formData.delivery_mode,
+          image_url: imageUrl,
           min_gpa: formData.min_gpa ? Number(formData.min_gpa) : null,
           min_english_proficiency: formData.min_english_proficiency || null,
           is_test: formData.is_test,
@@ -446,81 +475,36 @@ const AdminScholarshipEdit: React.FC = () => {
           payload.placement_fee_amount = null;
         }
 
-        // Only set image_url to null if we're not preserving the existing image
-        if (!preserveImage) {
-          payload.image_url = null; // Will be updated after image upload
-        }
-
-        if (includeWP) payload.work_permissions = formData.work_permissions.filter((wp) => wp !== 'F1');
-        if (includeDM) payload.delivery_mode = formData.delivery_mode;
+        console.log('Final payload built:', payload);
         return payload;
       };
 
-      let scholarshipId: string;
-
+      console.time('db_operation');
       if (isEditMode && id) {
-        // Update existing scholarship (try with WP first, fallback without)
-        const preserveImage = !imageFile;
-        let { error: updateErr } = await supabase
+        // Update existing scholarship - Single call, no fallback needed as columns exist
+        const { error: updateErr } = await supabase
           .from('scholarships')
-          .update(buildPayload(true, true, preserveImage))
+          .update(buildPayload())
           .eq('id', id);
 
-        if (updateErr && (String(updateErr.message || '').includes('work_permissions') || String(updateErr.message || '').includes('delivery_mode'))) {
-          const res2 = await supabase
-            .from('scholarships')
-            .update(buildPayload(false, false, preserveImage))
-            .eq('id', id);
-          updateErr = res2.error || null;
-        }
         if (updateErr) throw updateErr;
-        scholarshipId = id;
       } else {
-        // Insert new scholarship (try with WP first, fallback without)
-        let insertResp = await supabase
+        // Insert new scholarship
+        const { error: insertErr } = await supabase
           .from('scholarships')
-          .insert(buildPayload(true, true, false))
-          .select('id')
-          .single();
+          .insert(buildPayload());
 
-        if (insertResp.error && (String(insertResp.error.message || '').includes('work_permissions') || String(insertResp.error.message || '').includes('delivery_mode'))) {
-          insertResp = await supabase
-            .from('scholarships')
-            .insert(buildPayload(false, false, false))
-            .select('id')
-            .single();
-        }
-
-        if (insertResp.error) throw insertResp.error;
-        scholarshipId = insertResp.data!.id;
+        if (insertErr) throw insertErr;
       }
-
-      // Upload image if provided
-      if (imageFile && scholarshipId) {
-        try {
-          const imageUrl = await uploadImageToStorage(scholarshipId);
-          if (imageUrl) {
-            // Update scholarship with image URL
-            const { error: updateError } = await supabase
-              .from('scholarships')
-              .update({ image_url: imageUrl })
-              .eq('id', scholarshipId);
-
-            if (updateError) {
-              console.error('Error updating scholarship with image URL:', updateError);
-            }
-          }
-        } catch (imageError) {
-          console.error('Error uploading image:', imageError);
-        }
-      }
+      console.timeEnd('db_operation');
 
       setSuccess(true);
+      console.timeEnd('scholarship_save_total');
 
-      // Aguardar um pouco antes de navegar para mostrar a mensagem de sucesso
+      // Reduzido de 2000ms para 800ms para melhor UX
       setTimeout(() => {
         navigate('/admin/dashboard/scholarships');
-      }, 2000);
+      }, 800);
     } catch (error: any) {
       console.error('Error saving scholarship:', error);
       setError(`Error saving scholarship: ${error.message}`);
