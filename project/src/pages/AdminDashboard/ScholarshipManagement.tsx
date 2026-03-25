@@ -37,17 +37,23 @@ const ScholarshipManagement: React.FC<ScholarshipManagementProps> = ({
   onRefresh
 }) => {
   const navigate = useNavigate();
-  const [searchTerm, setSearchTerm] = useState('');
-  const [statusFilter, setStatusFilter] = useState('all');
-  const [levelFilter, setLevelFilter] = useState('all');
-  const [universityFilter, setUniversityFilter] = useState('all');
-  const [courseFilter, setCourseFilter] = useState('all');
-  const [deliveryModeFilter, setDeliveryModeFilter] = useState('all');
-  const [deadlineFilter, setDeadlineFilter] = useState<'all' | 'expired' | 'urgent' | '14days' | 'soon' | 'normal'>('all');
-  const [minAmount, setMinAmount] = useState('');
-  const [maxAmount, setMaxAmount] = useState('');
-  const [viewMode, setViewMode] = useState<'grid' | 'list'>('list');
-  const [sortBy, setSortBy] = useState<'recent' | 'applicants' | 'views' | 'deadline' | 'amount_asc' | 'amount_desc'>('recent');
+  // Chave para persistência no sessionStorage
+  const STORAGE_KEY = 'admin-scholarships-filters';
+
+  // Carregar filtros salvos ou usar defaults
+  const savedFilters = JSON.parse(sessionStorage.getItem(STORAGE_KEY) || '{}');
+
+  const [searchTerm, setSearchTerm] = useState(savedFilters.searchTerm || '');
+  const [statusFilter, setStatusFilter] = useState(savedFilters.statusFilter || 'all');
+  const [levelFilter, setLevelFilter] = useState(savedFilters.levelFilter || 'all');
+  const [universityFilter, setUniversityFilter] = useState(savedFilters.universityFilter || 'all');
+  const [courseFilter, setCourseFilter] = useState(savedFilters.courseFilter || 'all');
+  const [deliveryModeFilter, setDeliveryModeFilter] = useState(savedFilters.deliveryModeFilter || 'all');
+  const [deadlineFilter, setDeadlineFilter] = useState<'all' | 'expired' | 'urgent' | '14days' | 'soon' | 'normal'>(savedFilters.deadlineFilter || 'all');
+  const [minAmount, setMinAmount] = useState(savedFilters.minAmount || '');
+  const [maxAmount, setMaxAmount] = useState(savedFilters.maxAmount || '');
+  const [viewMode, setViewMode] = useState<'grid' | 'list'>(savedFilters.viewMode || 'list');
+  const [sortBy, setSortBy] = useState<'recent' | 'applicants' | 'views' | 'deadline' | 'amount_asc' | 'amount_desc'>(savedFilters.sortBy || 'recent');
 
   // Estados para ativar/desativar
   const [statusConfirmationModal, setStatusConfirmationModal] = useState<{
@@ -57,8 +63,8 @@ const ScholarshipManagement: React.FC<ScholarshipManagementProps> = ({
   } | null>(null);
   const [updatingStatus, setUpdatingStatus] = useState(false);
   // Estados da paginação
-  const [currentPage, setCurrentPage] = useState(1);
-  const [itemsPerPage, setItemsPerPage] = useState(12);
+  const [currentPage, setCurrentPage] = useState(savedFilters.currentPage || 1);
+  const [itemsPerPage, setItemsPerPage] = useState(savedFilters.itemsPerPage || 12);
   // Dados para os filtros
   const [universities, setUniversities] = useState<any[]>([]);
   const [courses, setCourses] = useState<any[]>([]);
@@ -137,8 +143,32 @@ const ScholarshipManagement: React.FC<ScholarshipManagementProps> = ({
 
   const handleViewModeChange = (mode: 'grid' | 'list') => {
     setViewMode(mode);
-    localStorage.setItem('scholarship-view-mode', mode);
+    localStorage.setItem('scholarship-view-mode', mode); // Fallback local storage for view mode specifically
   };
+
+  // Efeito para salvar filtros no sessionStorage
+  useEffect(() => {
+    const filtersToSave = {
+      searchTerm,
+      statusFilter,
+      levelFilter,
+      universityFilter,
+      courseFilter,
+      deliveryModeFilter,
+      deadlineFilter,
+      minAmount,
+      maxAmount,
+      viewMode,
+      sortBy,
+      currentPage,
+      itemsPerPage
+    };
+    sessionStorage.setItem(STORAGE_KEY, JSON.stringify(filtersToSave));
+  }, [
+    searchTerm, statusFilter, levelFilter, universityFilter, courseFilter, 
+    deliveryModeFilter, deadlineFilter, minAmount, maxAmount, viewMode, 
+    sortBy, currentPage, itemsPerPage
+  ]);
 
   // Funções de deadline - devem ser definidas antes de serem usadas
   const getDaysUntilDeadline = (deadline: string) => {
@@ -868,7 +898,7 @@ const ScholarshipManagement: React.FC<ScholarshipManagementProps> = ({
             <div className="flex items-center gap-2">
               {/* Previous Button */}
               <button
-                onClick={() => setCurrentPage(prev => Math.max(prev - 1, 1))}
+                onClick={() => setCurrentPage((prev: number) => Math.max(prev - 1, 1))}
                 disabled={currentPage === 1}
                 className="px-3 py-2 text-sm font-medium text-slate-700 bg-white border border-slate-300 rounded-lg hover:bg-slate-50 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
               >
@@ -907,7 +937,7 @@ const ScholarshipManagement: React.FC<ScholarshipManagementProps> = ({
               
               {/* Next Button */}
               <button
-                onClick={() => setCurrentPage(prev => Math.min(prev + 1, totalPages))}
+                onClick={() => setCurrentPage((prev: number) => Math.min(prev + 1, totalPages))}
                 disabled={currentPage === totalPages}
                 className="px-3 py-2 text-sm font-medium text-slate-700 bg-white border border-slate-300 rounded-lg hover:bg-slate-50 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
               >
