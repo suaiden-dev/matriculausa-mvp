@@ -761,6 +761,22 @@ const AdminScholarshipEdit: React.FC = () => {
                     <option value="ielts">IELTS Certified</option>
                   </select>
                 </div>
+                <div>
+                  <label className="block text-sm font-medium text-slate-700 mb-2">
+                    Minimum GPA Requirement
+                  </label>
+                  <input
+                    type="number"
+                    name="min_gpa"
+                    step="0.01"
+                    min="0"
+                    max="4.0"
+                    value={formData.min_gpa}
+                    onChange={handleInputChange}
+                    className="w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-[#05294E] focus:border-[#05294E] transition-all duration-200"
+                    placeholder="e.g., 3.50"
+                  />
+                </div>
               </div>
             </div>
 
