@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useMemo, useCallback } from 'react';
-import { Award, Building, DollarSign, X, CheckCircle2, Info, Search, GraduationCap, BookOpen, Monitor, Briefcase, Calendar, ChevronDown, ChevronUp, Filter } from 'lucide-react';
+import { Award, Building, DollarSign, X, CheckCircle2, Info, Search, GraduationCap, BookOpen, Monitor, Briefcase, ChevronDown, ChevronUp, Filter, Globe } from 'lucide-react';
 import { useAuth } from '../../../hooks/useAuth';
 import { useCartStore } from '../../../stores/applicationStore';
 import { useScholarships } from '../../../hooks/useScholarships';
@@ -36,7 +36,8 @@ export const ScholarshipSelectionStep: React.FC<StepProps> = ({ onNext, onBack: 
   const [selectedUniversity, setSelectedUniversity] = useState<string>('all');
   const [minValue, setMinValue] = useState<string>('');
   const [maxValue, setMaxValue] = useState<string>('');
-  const [deadlineDays, setDeadlineDays] = useState<string>('');
+  const [selectedGPA, setSelectedGPA] = useState<string>('');
+  const [selectedEnglishLevel, setSelectedEnglishLevel] = useState<string>('all');
   const [filtersExpanded, setFiltersExpanded] = useState<boolean>(false);
   const [isReviewing, setIsReviewing] = useState(false);
   const [isTransitioning, setIsTransitioning] = useState(false);
@@ -178,17 +179,18 @@ export const ScholarshipSelectionStep: React.FC<StepProps> = ({ onNext, onBack: 
     };
   }, [allScholarships]);
 
-  // Função para calcular dias até o deadline
-  const getDaysUntilDeadline = useCallback((deadline: string) => {
-    if (!deadline) return Infinity;
-    const today = new Date();
-    today.setHours(0, 0, 0, 0);
-    const [year, month, day] = deadline.split('-').map(Number);
-    const deadlineDate = new Date(year, month - 1, day);
-    deadlineDate.setHours(23, 59, 59, 999);
-    const diffTime = deadlineDate.getTime() - today.getTime();
-    const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
-    return diffDays;
+  // Mapeamento de ordem de proficiência em inglês
+  const englishOrder: Record<string, number> = {
+    'beginner': 1,
+    'intermediate': 2,
+    'advanced': 3,
+    'native': 4,
+    'toefl': 5
+  };
+
+  const getEnglishOrderValue = useCallback((level: string | null | undefined) => {
+    if (!level) return 0;
+    return englishOrder[level.toLowerCase()] || 0;
   }, []);
 
   // Função para obter label do delivery mode
@@ -217,6 +219,13 @@ export const ScholarshipSelectionStep: React.FC<StepProps> = ({ onNext, onBack: 
     return allScholarships.filter((scholarship: any) => {
       // 1. Filtrar apenas universidades aprovadas
       if (!scholarship.universities?.is_approved) {
+        return false;
+      }
+
+      // 1.1 Filtrar bolsas de teste (is_test)
+      const isUorakUser = user?.email?.toLowerCase().endsWith('@uorak.com') || (userProfile as any)?.email?.toLowerCase().endsWith('@uorak.com');
+      const isAdminUser = user?.role === 'admin';
+      if (scholarship.is_test && !isUorakUser && !isAdminUser) {
         return false;
       }
 
@@ -298,14 +307,23 @@ export const ScholarshipSelectionStep: React.FC<StepProps> = ({ onNext, onBack: 
         }
       }
 
-      // 11. Filtro de deadline
-      if (deadlineDays && deadlineDays !== '') {
-        const deadlineDaysNum = Number(deadlineDays);
-        if (!isNaN(deadlineDaysNum) && scholarship.deadline) {
-          const daysLeft = getDaysUntilDeadline(scholarship.deadline);
-          if (daysLeft < deadlineDaysNum) {
+      // 11. Filtro de GPA
+      if (selectedGPA && selectedGPA !== '') {
+        const studentGPA = parseFloat(selectedGPA.replace(',', '.'));
+        if (!isNaN(studentGPA) && scholarship.min_gpa) {
+          if (studentGPA < scholarship.min_gpa) {
             return false;
           }
+        }
+      }
+
+      // 12. Filtro de Proficiência em Inglês
+      if (selectedEnglishLevel !== 'all') {
+        const studentLevelOrder = getEnglishOrderValue(selectedEnglishLevel);
+        const minRequiredOrder = getEnglishOrderValue(scholarship.min_english_proficiency);
+        
+        if (studentLevelOrder < minRequiredOrder) {
+          return false;
         }
       }
 
@@ -321,10 +339,14 @@ export const ScholarshipSelectionStep: React.FC<StepProps> = ({ onNext, onBack: 
     selectedUniversity,
     minValue,
     maxValue,
-    deadlineDays,
+    selectedGPA,
+    selectedEnglishLevel,
     desiredScholarshipRange,
     minScholarshipValue,
-    getDaysUntilDeadline
+    getEnglishOrderValue,
+    user?.email,
+    userProfile?.email,
+    user?.role
   ]);
 
   // Separar bolsas em destaque e ordenar
@@ -375,7 +397,7 @@ export const ScholarshipSelectionStep: React.FC<StepProps> = ({ onNext, onBack: 
   // Resetar página quando filtros mudarem
   useEffect(() => {
     setCurrentPage(1);
-  }, [selectedUniversity, minValue, maxValue, searchTerm, selectedLevel, selectedField, selectedDeliveryMode, selectedWorkPermission, deadlineDays]);
+  }, [selectedUniversity, minValue, maxValue, searchTerm, selectedLevel, selectedField, selectedDeliveryMode, selectedWorkPermission, selectedGPA, selectedEnglishLevel]);
 
   // Paginação
   const totalPages = Math.ceil(sortedScholarships.length / ITEMS_PER_PAGE);
@@ -394,7 +416,8 @@ export const ScholarshipSelectionStep: React.FC<StepProps> = ({ onNext, onBack: 
     selectedUniversity !== 'all' ||
     minValue !== '' ||
     maxValue !== '' ||
-    deadlineDays !== '';
+    selectedGPA !== '' ||
+    selectedEnglishLevel !== 'all';
 
   const clearFilters = () => {
     setSearchTerm('');
@@ -405,7 +428,8 @@ export const ScholarshipSelectionStep: React.FC<StepProps> = ({ onNext, onBack: 
     setSelectedUniversity('all');
     setMinValue('');
     setMaxValue('');
-    setDeadlineDays('');
+    setSelectedGPA('');
+    setSelectedEnglishLevel('all');
   };
 
   // Verificar se há bolsas bloqueadas no carrinho (para a revisão)
@@ -961,26 +985,48 @@ export const ScholarshipSelectionStep: React.FC<StepProps> = ({ onNext, onBack: 
                     />
                   </div>
 
-                {/* Deadline Filter */}
-                <div>
-                  <label htmlFor="deadline-days" className="block text-xs font-medium text-slate-700 mb-1.5">
-                    <Calendar className="h-3 w-3 inline mr-1" />
-                    {t('scholarshipSelection.filters.deadlineDays')}
-                  </label>
-                  <input
-                    id="deadline-days"
-                    type="number"
-                    placeholder={t('scholarshipSelection.filters.deadlinePlaceholder')}
-                    value={deadlineDays}
-                    onChange={(e) => {
-                      const value = e.target.value;
-                      if (value === '' || (Number(value) >= 0)) {
-                        setDeadlineDays(value);
-                      }
-                    }}
-                    className="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-600 focus:border-blue-600 text-sm"
-                  />
-                </div>
+                  {/* GPA Filter */}
+                  <div>
+                    <label htmlFor="gpa" className="block text-xs font-medium text-slate-700 mb-1.5">
+                      <Award className="h-3 w-3 inline mr-1" />
+                      {t('scholarshipSelection.filters.minGPA')}
+                    </label>
+                    <input
+                      id="gpa"
+                      type="text"
+                      inputMode="decimal"
+                      placeholder="Ex: 3.5"
+                      value={selectedGPA}
+                      onChange={(e) => {
+                        const value = e.target.value;
+                        if (value === '' || /^[0-9.,]*$/.test(value)) {
+                          setSelectedGPA(value);
+                        }
+                      }}
+                      className="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-600 focus:border-blue-600 text-sm"
+                    />
+                  </div>
+
+                  {/* English Level Filter */}
+                  <div>
+                    <label htmlFor="english-level" className="block text-xs font-medium text-slate-700 mb-1.5">
+                      <Globe className="h-3 w-3 inline mr-1" />
+                      {t('scholarshipSelection.filters.englishLevel')}
+                    </label>
+                    <select
+                      id="english-level"
+                      value={selectedEnglishLevel}
+                      onChange={(e) => setSelectedEnglishLevel(e.target.value)}
+                      className="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-600 focus:border-blue-600 text-sm"
+                    >
+                      <option value="all">{t('scholarshipSelection.filters.allEnglishLevels')}</option>
+                      <option value="beginner">{t('dashboard:profileManagement.form.fields.beginner')}</option>
+                      <option value="intermediate">{t('dashboard:profileManagement.form.fields.intermediate')}</option>
+                      <option value="advanced">{t('dashboard:profileManagement.form.fields.advanced')}</option>
+                      <option value="native">{t('dashboard:profileManagement.form.fields.native')}</option>
+                      <option value="toefl">{t('dashboard:profileManagement.form.fields.toefl')}</option>
+                    </select>
+                  </div>
               </div>
                 </div>
               )}
@@ -1092,7 +1138,8 @@ export const ScholarshipSelectionStep: React.FC<StepProps> = ({ onNext, onBack: 
           isOpen={!!selectedScholarshipForModal}
           onClose={() => setSelectedScholarshipForModal(null)}
           userProfile={userProfile}
-          userRole={user?.role}
+          user={user as any}
+          userRole={user?.role || null}
         />
       )}
 

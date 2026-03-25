@@ -64,6 +64,9 @@ const AdminScholarshipEdit: React.FC = () => {
     university_id: '',
     internal_fees: [] as { category: string; amount: string; details: string; }[],
     image_url: '',
+    min_gpa: '',
+    min_english_proficiency: '',
+    is_test: false,
   });
 
   // Helper texts for work permissions
@@ -163,6 +166,9 @@ const AdminScholarshipEdit: React.FC = () => {
               })()
               : [],
           image_url: scholarship.image_url || '',
+          min_gpa: scholarship.min_gpa?.toString() || '',
+          min_english_proficiency: scholarship.min_english_proficiency || '',
+          is_test: scholarship.is_test || false,
         });
 
         // Set image preview if exists
@@ -291,7 +297,7 @@ const AdminScholarshipEdit: React.FC = () => {
       const fileName = `scholarship-${scholarshipId}-${Date.now()}.${fileExt}`;
 
       // Upload to scholarship-images bucket
-      const { error } = await supabase.storage
+      const { data: _data, error } = await supabase.storage
         .from('scholarship-images')
         .upload(fileName, imageFile, {
           cacheControl: '3600',
@@ -421,6 +427,7 @@ const AdminScholarshipEdit: React.FC = () => {
 
       // Helper to build payload
       const buildPayload = () => {
+        console.log('Building payload with formData:', formData);
         const payload: any = {
           title: formData.title,
           description: formData.description,
@@ -450,7 +457,10 @@ const AdminScholarshipEdit: React.FC = () => {
             })),
           work_permissions: formData.work_permissions.filter((wp) => wp !== 'F1'),
           delivery_mode: formData.delivery_mode,
-          image_url: imageUrl
+          image_url: imageUrl,
+          min_gpa: formData.min_gpa ? Number(formData.min_gpa) : null,
+          min_english_proficiency: formData.min_english_proficiency || null,
+          is_test: formData.is_test,
         };
 
         if (formData.scholarship_fee_amount) {
@@ -465,6 +475,7 @@ const AdminScholarshipEdit: React.FC = () => {
           payload.placement_fee_amount = null;
         }
 
+        console.log('Final payload built:', payload);
         return payload;
       };
 
@@ -528,16 +539,38 @@ const AdminScholarshipEdit: React.FC = () => {
           </button>
 
           <div className="flex items-center justify-between">
-            <div>
-              <h1 className="text-3xl font-bold text-slate-900">
-                {isEditMode ? 'Edit Scholarship' : 'Create New Scholarship'}
-              </h1>
-              <p className="text-slate-600 mt-2">
-                {isEditMode
-                  ? 'Update scholarship details and requirements'
-                  : 'Define a new scholarship opportunity for international students'
-                }
-              </p>
+            <div className="flex items-center gap-4">
+              <div>
+                <h1 className="text-3xl font-bold text-slate-900">
+                  {isEditMode ? 'Edit Scholarship' : 'Create New Scholarship'}
+                </h1>
+                <p className="text-slate-600 mt-2">
+                  {isEditMode
+                    ? 'Update scholarship details and requirements'
+                    : 'Define a new scholarship opportunity for international students'
+                  }
+                </p>
+              </div>
+
+              {/* Test Scholarship Toggle - only on localhost */}
+              {window.location.hostname === 'localhost' && (
+                <div className="flex items-center bg-amber-50 border border-amber-200 px-4 py-2 rounded-xl shadow-sm">
+                  <div className="flex flex-col mr-4">
+                    <span className="text-xs font-bold text-amber-700 uppercase tracking-wider">Modo de Teste</span>
+                    <span className="text-[10px] text-amber-600 leading-tight">Visível apenas p/ @uorak.com</span>
+                  </div>
+                  <label className="relative inline-flex items-center cursor-pointer">
+                    <input
+                      type="checkbox"
+                      name="is_test"
+                      checked={formData.is_test}
+                      onChange={handleCheckboxChange}
+                      className="sr-only peer"
+                    />
+                    <div className="w-11 h-6 bg-slate-200 peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-amber-300 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-amber-500"></div>
+                  </label>
+                </div>
+              )}
             </div>
           </div>
         </div>
@@ -656,6 +689,51 @@ const AdminScholarshipEdit: React.FC = () => {
                     placeholder="Enter university ID"
                     required
                   />
+                </div>
+              </div>
+            </div>
+
+            {/* Academic Requirements */}
+            <div>
+              <h2 className="text-xl font-bold text-slate-900 mb-6 flex items-center">
+                <BookOpen className="h-5 w-5 mr-2 text-blue-600" />
+                Academic Requirements
+              </h2>
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                <div>
+                  <label className="block text-sm font-medium text-slate-700 mb-2">
+                    Minimum GPA (0.0 - 4.0)
+                  </label>
+                  <input
+                    type="number"
+                    name="min_gpa"
+                    value={formData.min_gpa}
+                    onChange={handleInputChange}
+                    step="0.1"
+                    min="0"
+                    max="4"
+                    className="w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-[#05294E] focus:border-[#05294E] transition-all duration-200"
+                    placeholder="e.g., 3.0"
+                  />
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-slate-700 mb-2">
+                    Minimum English Proficiency
+                  </label>
+                  <select
+                    name="min_english_proficiency"
+                    value={formData.min_english_proficiency}
+                    onChange={handleInputChange}
+                    className="w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-[#05294E] focus:border-[#05294E] transition-all duration-200"
+                  >
+                    <option value="">No preference</option>
+                    <option value="beginner">Beginner</option>
+                    <option value="intermediate">Intermediate</option>
+                    <option value="advanced">Advanced</option>
+                    <option value="native">Native</option>
+                    <option value="toefl">TOEFL Certified</option>
+                    <option value="ielts">IELTS Certified</option>
+                  </select>
                 </div>
               </div>
             </div>
