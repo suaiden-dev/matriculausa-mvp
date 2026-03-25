@@ -8,25 +8,21 @@ import {
   Award,
   Settings,
   BarChart3,
-  Search,
   Menu,
   X,
   LogOut,
   User,
   ChevronDown,
   Shield,
-  Activity,
   AlertTriangle,
   CheckCircle,
   CreditCard,
-  DollarSign,
   Tag,
   Mail
 } from 'lucide-react';
 import { useAuth } from '../../hooks/useAuth';
 import AdminStudentChatNotifications from '../../components/AdminStudentChatNotifications';
-import { useAdminStudentChatNotifications } from '../../hooks/useAdminStudentChatNotifications';
-import { useUnreadMessagesCount } from '../../hooks/useUnreadMessagesCount';
+import { useAdminNotifications } from '../../contexts/AdminNotificationsContext';
 import { useUnreadMessages } from '../../contexts/UnreadMessagesContext';
 
 interface AdminDashboardLayoutProps {
@@ -45,17 +41,12 @@ const AdminDashboardLayout: React.FC<AdminDashboardLayoutProps> = ({
   const { logout } = useAuth();
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const [userMenuOpen, setUserMenuOpen] = useState(false);
-  const { unreadCount: serverUnreadCount } = useAdminStudentChatNotifications();
-  const { unreadCount: contextUnreadCount, updateUnreadCount } = useUnreadMessages();
-  const { unreadCount: messagesFallbackUnreadCount } = useUnreadMessagesCount();
+  const { unreadCount: adminUnreadCount } = useAdminNotifications();
+  const { updateUnreadCount } = useUnreadMessages();
 
-  // Use context count if it's been updated, otherwise use server count
-  const displayUnreadCount =
-    contextUnreadCount > 0
-      ? contextUnreadCount
-      : serverUnreadCount > 0
-        ? serverUnreadCount
-        : messagesFallbackUnreadCount;
+  // No admin, o contador global já é sincronizado pelo AdminNotificationsContext
+  // Mas usamos o valor do contexto de notificações por segurança
+  const displayUnreadCount = adminUnreadCount;
 
   const getActiveTab = () => {
     const path = location.pathname;

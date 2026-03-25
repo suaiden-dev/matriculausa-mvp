@@ -1,20 +1,18 @@
 import React, { useState } from 'react';
-import { Bell, MessageSquare, X, Check, CheckCheck } from 'lucide-react';
-import { useAdminStudentChatNotifications, AdminStudentChatNotification } from '../hooks/useAdminStudentChatNotifications';
-import { useUnreadMessages } from '../contexts/UnreadMessagesContext';
+import { Bell, MessageSquare, X, CheckCheck } from 'lucide-react';
+import { useAdminNotifications } from '../contexts/AdminNotificationsContext';
+import { AdminStudentChatNotification } from '../hooks/useAdminStudentChatNotifications';
 import { formatDistanceToNow } from 'date-fns';
 import { enUS } from 'date-fns/locale';
 import AdminNotificationsModal from './AdminNotificationsModal';
 
 interface AdminStudentChatNotificationsProps {
   onNotificationClick?: (notification: AdminStudentChatNotification) => void;
-  updateUnreadCountLocally?: (newCount: number) => void;
   className?: string;
 }
 
 const AdminStudentChatNotifications: React.FC<AdminStudentChatNotificationsProps> = ({
   onNotificationClick,
-  updateUnreadCountLocally,
   className = ''
 }) => {
   const {
@@ -24,25 +22,19 @@ const AdminStudentChatNotifications: React.FC<AdminStudentChatNotificationsProps
     error,
     markAsRead,
     markAllAsRead
-  } = useAdminStudentChatNotifications();
-  
-  const { decrementUnreadCount, resetUnreadCount } = useUnreadMessages();
+  } = useAdminNotifications();
 
   const [isOpen, setIsOpen] = useState(false);
   const [isModalOpen, setIsModalOpen] = useState(false);
 
   const handleNotificationClick = (notification: AdminStudentChatNotification) => {
     markAsRead(notification.id);
-    // Decrement local counter immediately
-    decrementUnreadCount();
     onNotificationClick?.(notification);
     setIsOpen(false);
   };
 
   const handleMarkAllAsRead = () => {
     markAllAsRead();
-    // Reset local counter immediately
-    resetUnreadCount();
   };
 
   const getNotificationIcon = (type: string) => {

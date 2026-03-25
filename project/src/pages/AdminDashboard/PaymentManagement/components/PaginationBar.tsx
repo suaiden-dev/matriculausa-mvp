@@ -1,4 +1,3 @@
-import React from 'react';
 
 interface PaginationBarProps {
   currentPage: number;
@@ -18,7 +17,6 @@ interface PaginationBarProps {
 
 export function PaginationBar(props: PaginationBarProps) {
   const { currentPage, totalPages, startIndex, endIndex, totalItems, itemsPerPage, onFirst, onPrev, onNext, onLast, onGoTo, onItemsPerPageChange, pageNumbers } = props;
-  if (totalPages <= 1) return null;
   return (
     <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-6">
       <div className="flex flex-col sm:flex-row items-center justify-between gap-4">

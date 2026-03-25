@@ -1,4 +1,3 @@
-import React from 'react';
 import { StatsHeader } from './StatsHeader';
 import { FiltersBar } from './FiltersBar';
 import { BulkActionsBar } from './BulkActionsBar';
@@ -138,7 +137,7 @@ export function PaymentsTab(props: PaymentsTabProps) {
         <PaymentsGrid currentPayments={currentPayments} FEE_TYPES={FEE_TYPES} handleViewDetails={handleViewDetails} isLoading={props.isLoading} /> // ✅ NOVO: Passar estado de loading
       )}
 
-      {sortedPayments.length > 0 && totalPages > 1 && (
+      {sortedPayments.length > 0 && (
         <PaginationBar
           currentPage={currentPage}
           totalPages={totalPages}
