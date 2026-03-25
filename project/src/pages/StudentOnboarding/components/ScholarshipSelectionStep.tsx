@@ -42,6 +42,7 @@ export const ScholarshipSelectionStep: React.FC<StepProps> = ({ onNext, onBack: 
   const [isTransitioning, setIsTransitioning] = useState(false);
   const [removingScholarshipId, setRemovingScholarshipId] = useState<string | null>(null);
   const [showConfirmModal, setShowConfirmModal] = useState(false);
+  const scholarshipsGridRef = React.useRef<HTMLDivElement>(null);
 
   const ITEMS_PER_PAGE = 12;
 
@@ -535,6 +536,13 @@ export const ScholarshipSelectionStep: React.FC<StepProps> = ({ onNext, onBack: 
     }
   };
 
+  // Scroll to top when page changes
+  useEffect(() => {
+    if (!isReviewing && !scholarshipsLoading) {
+      scholarshipsGridRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+    }
+  }, [currentPage, isReviewing, scholarshipsLoading]);
+
   // Loading skeleton
   if (loading) {
     return (
@@ -987,7 +995,7 @@ export const ScholarshipSelectionStep: React.FC<StepProps> = ({ onNext, onBack: 
             </div>
 
           {/* Scholarships Grid */}
-          <div>
+          <div ref={scholarshipsGridRef} className="scroll-mt-6">
             <div className="mb-4 flex items-center justify-between">
               <h3 className="text-lg font-semibold text-slate-900">
                 {t('scholarshipSelection.grid.title')}
