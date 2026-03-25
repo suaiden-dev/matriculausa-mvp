@@ -23,9 +23,9 @@
 - **Arquivo:** `src/pages/AdminDashboard/index.tsx`
 - **Problema:** A RPC `get_admin_users_data` é chamada 2 vezes (linhas 220 e 234), dobrando o tempo de uma query sem motivo
 - **O que fazer:**
-  - [ ] Remover a primeira chamada (linha 220) que busca só emails
-  - [ ] Usar o resultado da segunda chamada (linha 234) para extrair os emails também
-  - [ ] Validar que os emails continuam sendo populados corretamente nas universidades
+  - [x] Remover a primeira chamada (linha 220) que busca só emails
+  - [x] Usar o resultado da segunda chamada (linha 234) para extrair os emails também
+  - [x] Validar que os emails continuam sendo populados corretamente nas universidades
 - **Ganho estimado:** −800ms por carregamento
 
 ---
@@ -35,10 +35,10 @@
 - **Arquivo:** `src/pages/AdminDashboard/index.tsx`
 - **Problema:** Todas as queries rodam em sequência com `await` individual. Total: ~6s esperando o banco
 - **O que fazer:**
-  - [ ] Agrupar queries independentes em um único `Promise.all()`
-  - [ ] Separar as queries que dependem de resultado anterior (ex: user_cart depende de scholarship IDs)
-  - [ ] Manter tratamento de erros independente por query
-  - [ ] Testar que todos os dados chegam corretamente após refatoração
+  - [x] Agrupar queries independentes em um único `Promise.all()`
+  - [x] Separar as queries que dependem de resultado anterior (ex: user_cart depende de scholarship IDs)
+  - [x] Manter tratamento de erros independente por query
+  - [x] Testar que todos os dados chegam corretamente após refatoração
 - **Ganho estimado:** −3 a −5s por carregamento
 
 ---
@@ -161,10 +161,10 @@ todas as rotas após a mudança
 - **Arquivo:** `src/pages/AdminDashboard/AdminDashboardLayout.tsx` + novo Context
 - **Problema:** `useAdminStudentChatNotifications` executa suas queries toda vez que o layout é remontado (a cada navegação interna)
 - **O que fazer:**
-  - [ ] Verificar se o hook está remontando a cada troca de rota
-  - [ ] Se sim: mover o hook para um Context de nível superior que persiste entre rotas
-  - [ ] Ou: adicionar `staleTime` alto + `refetchOnMount: false` para usar cache entre navegações
-  - [ ] Testar que notificações novas ainda chegam via realtime (Supabase channel)
+  - [x] Verificar se o hook está remontando a cada troca de rota
+  - [x] Se sim: mover o hook para um Context de nível superior que persiste entre rotas
+  - [x] Ou: adicionar `staleTime` alto + `refetchOnMount: false` para usar cache entre navegações
+  - [x] Testar que notificações novas ainda chegam via realtime (Supabase channel)
 - **Ganho estimado:** −1 a −2s por navegação entre páginas
 
 ---
@@ -205,10 +205,10 @@ todas as rotas após a mudança
 - **Arquivo:** `src/pages/AdminDashboard/PaymentManagement/data/loaders/paymentsLoaderOptimized.ts`
 - **Problema:** Queries de `scholarship_applications`, `zelle_payments` e `user_profiles` são independentes mas rodam em sequência
 - **O que fazer:**
-  - [ ] Agrupar as 3 queries iniciais em `Promise.all()`
-  - [ ] Ajustar a query de `userProfiles` (para zelle) para rodar paralelamente à de applications
-  - [ ] Manter a query de `overrides` e `systemTypes` em Promise.all após ter os userIds
-  - [ ] Testar que os dados continuam completos e corretos
+  - [x] Agrupar as 3 queries iniciais em `Promise.all()`
+  - [x] Ajustar a query de `userProfiles` (para zelle) para rodar paralelamente à de applications
+  - [x] Manter a query de `overrides` e `systemTypes` em Promise.all após ter os userIds
+  - [x] Testar que os dados continuam completos e corretos
 - **Ganho estimado:** −2 a −4s no carregamento
 
 ---
@@ -218,10 +218,10 @@ todas as rotas após a mudança
 - **Arquivo:** `src/pages/AdminDashboard/PaymentManagement/data/loaders/zelleLoader.ts`
 - **Problema:** Em produção, faz 4 queries sendo que as queries 3 e 4 buscam dados já carregados nas queries 1 e 2
 - **O que fazer:**
-  - [ ] Identificar quais `user_ids` e `emails` de `@uorak.com` existem nos dados já carregados (query 2)
-  - [ ] Calcular `finalCount` subtraindo os `@uorak.com` usando arrays já em memória
-  - [ ] Remover por completo as queries 3 e 4
-  - [ ] Testar em dev e simular ambiente de produção (forçar `IS_FILTERED_ENV = true`)
+  - [x] Identificar quais `user_ids` e `emails` de `@uorak.com` existem nos dados já carregados (query 2)
+  - [x] Calcular `finalCount` subtraindo os `@uorak.com` usando arrays já em memória
+  - [x] Remover por completo as queries 3 e 4
+  - [x] Testar em dev e simular ambiente de produção (forçar `IS_FILTERED_ENV = true`)
 - **Ganho estimado:** −1 a −2s em produção
 
 ---
@@ -235,9 +235,9 @@ todas as rotas após a mudança
 - **Arquivo:** `src/pages/AdminDashboard/AdminStudentDetails.tsx`
 - **Problema:** Arquivo legacy de 326 KB. A versão em uso é `AdminStudentDetails.refactored.tsx`. O antigo pode estar no bundle
 - **O que fazer:**
-  - [ ] Buscar no projeto inteiro por imports de `AdminStudentDetails` (sem `.refactored`)
-  - [ ] Se nenhum import ativo encontrado, deletar o arquivo
-  - [ ] Verificar se o build continua funcionando após remoção
+  - [x] Buscar no projeto inteiro por imports de `AdminStudentDetails` (sem `.refactored`)
+  - [x] Se nenhum import ativo encontrado, deletar o arquivo
+  - [x] Verificar se o build continua funcionando após remoção
 - **Ganho estimado:** −326 KB do bundle JS
 
 ---
@@ -247,8 +247,8 @@ todas as rotas após a mudança
 - **Arquivo:** `src/pages/QuickRegistration.tsx.tmp`
 - **Problema:** Arquivo `.tmp` de 71 KB que provavelmente está sendo incluído no bundle ou causando confusão
 - **O que fazer:**
-  - [ ] Confirmar que o arquivo não é necessário
-  - [ ] Deletar `QuickRegistration.tsx.tmp`
+  - [x] Confirmar que o arquivo não é necessário
+  - [x] Deletar `QuickRegistration.tsx.tmp`
 - **Ganho estimado:** Limpeza do repositório
 
 ---

@@ -1,4 +1,4 @@
-import React, { useState, useEffect, lazy, Suspense, useMemo } from 'react';
+import React, { useState, useEffect, lazy, Suspense } from 'react';
 import { Routes, Route, useLocation } from 'react-router-dom';
 import { supabase } from '../../lib/supabase';
 import { University, Scholarship } from '../../types';
@@ -88,20 +88,6 @@ const AdminDashboard: React.FC = () => {
   // Track se já carregamos dados uma vez para cache inteligente
   const [hasLoadedData, setHasLoadedData] = useState(false);
   
-  // ✅ Detectar rota atual para carregar apenas dados necessários (memoizado)
-  const routeInfo = useMemo(() => {
-    const currentPath = location.pathname;
-    return {
-      isPaymentsRoute: currentPath.includes('/payments'),
-      isOverviewRoute: currentPath.endsWith('/admin/dashboard') || currentPath.endsWith('/admin/dashboard/'),
-      isUniversitiesRoute: currentPath.includes('/universities'),
-      isScholarshipsRoute: currentPath.includes('/scholarships'),
-      isUsersRoute: currentPath.includes('/users'),
-      isSettingsRoute: currentPath.includes('/settings'),
-    };
-  }, [location.pathname]);
-  
-  const { isPaymentsRoute, isOverviewRoute, isUniversitiesRoute, isScholarshipsRoute, isUsersRoute, isSettingsRoute } = routeInfo;
   
   // Estados para modais de confirmação
   const [confirmationModal, setConfirmationModal] = useState<{
@@ -141,9 +127,7 @@ const AdminDashboard: React.FC = () => {
     affiliateRequestsAmount: 0,
     zellePaymentsCount: 0,
     zellePaymentsAmount: 0,
-    pendingConversations: [] as any[],
-    loadingPayments: true,
-    loadingConversations: true
+    loadingPayments: true
   });
 
 
@@ -228,20 +212,16 @@ const AdminDashboard: React.FC = () => {
         usersRes,
         statsRes,
         universityPayoutsRes,
-        affiliatePayoutsRes,
-        zellePaymentsRes,
-        conversationsRes
+        zellePaymentsRes
       ] = await Promise.all([
         universitiesQuery,
         supabase.from('scholarships').select('*, universities!inner(name)').order('created_at', { ascending: false }),
         applicationsQuery,
         supabase.rpc('get_admin_users_data'),
         supabase.rpc('get_admin_dashboard_stats_v2'),
-        // Novas buscas consolidadas
-        supabase.from('university_payout_requests').select('status, amount_usd').eq('status', 'pending').eq('request_type', 'university_payment'),
-        supabase.from('university_payout_requests').select('status, amount_usd').eq('status', 'pending').eq('request_type', 'affiliate_payout'),
-        supabase.from('zelle_payments').select('amount').eq('status', 'pending_verification').gt('amount', 0),
-        supabase.rpc('get_unread_admin_student_chat_notifications', { user_id_param: user?.id })
+        // Busca consolidada de solicitações de pagamento (university e affiliate)
+        supabase.from('university_payout_requests').select('status, amount_usd, request_type').eq('status', 'pending').in('request_type', ['university_payment', 'affiliate_payout']),
+        supabase.from('zelle_payments').select('amount').eq('status', 'pending_verification').gt('amount', 0)
       ]);
 
 
@@ -330,8 +310,9 @@ const AdminDashboard: React.FC = () => {
       setApplications(processedApplications);
 
       // Processar dados de pagamentos pendentes
-      const pendingUni = universityPayoutsRes.data || [];
-      const pendingAff = affiliatePayoutsRes.data || [];
+      const allPayoutRequests = universityPayoutsRes.data || [];
+      const pendingUni = allPayoutRequests.filter(r => r.request_type === 'university_payment');
+      const pendingAff = allPayoutRequests.filter(r => r.request_type === 'affiliate_payout');
       const pendingZelle = zellePaymentsRes.data || [];
 
       setPendingStats({
@@ -341,9 +322,7 @@ const AdminDashboard: React.FC = () => {
         affiliateRequestsAmount: pendingAff.reduce((sum, r) => sum + (r.amount_usd || 0), 0),
         zellePaymentsCount: pendingZelle.length,
         zellePaymentsAmount: pendingZelle.reduce((sum, p) => sum + (parseFloat(p.amount) || 0), 0),
-        pendingConversations: conversationsRes.data || [],
-        loadingPayments: false,
-        loadingConversations: false
+        loadingPayments: false
       });
 
       // Calcular estatísticas consolidadas para os cards do topo
@@ -565,7 +544,6 @@ const AdminDashboard: React.FC = () => {
                   stats={stats}
                   universities={universities}
                   users={users}
-                  applications={applications}
                   pendingStats={pendingStats}
                   error={error}
                   onApprove={handleApproveUniversity}

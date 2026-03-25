@@ -18,8 +18,7 @@ import {
 import PendingPaymentsSummary from '../../components/AdminDashboard/PendingPaymentsSummary';
 import PendingDocumentsOverview from '../../components/AdminDashboard/PendingDocumentsOverview';
 import PendingConversationsOverview from '../../components/AdminDashboard/PendingConversationsOverview';
-
-
+import { useAdminNotifications } from '../../contexts/AdminNotificationsContext';
 
 interface OverviewProps {
   stats: any;
@@ -32,9 +31,7 @@ interface OverviewProps {
     affiliateRequestsAmount: number;
     zellePaymentsCount: number;
     zellePaymentsAmount: number;
-    pendingConversations: any[];
     loadingPayments: boolean;
-    loadingConversations: boolean;
   };
   error: string | null;
   onApprove?: (universityId: string) => void;
@@ -50,6 +47,7 @@ const Overview: React.FC<OverviewProps> = ({
   onApprove, 
   onReject 
 }) => {
+  const { notifications: pendingConversations, loading: loadingConversations } = useAdminNotifications();
   const [currentPage, setCurrentPage] = useState(1);
   const UNIVERSITIES_PER_PAGE = 4;
 
@@ -310,8 +308,8 @@ const Overview: React.FC<OverviewProps> = ({
 
           {/* Pending Conversations */}
           <PendingConversationsOverview
-            conversations={pendingStats.pendingConversations}
-            loading={pendingStats.loadingConversations}
+            conversations={pendingConversations}
+            loading={loadingConversations}
           />
 
         </div>
