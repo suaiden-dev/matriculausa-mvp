@@ -319,6 +319,7 @@ const ProfileManagement: React.FC<ProfileManagementProps> = ({
                   type="text"
                   value={formData.name}
                   onChange={(e) => handleInputChange('name', e.target.value)}
+                  maxLength={100}
                   className="w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-600 focus:border-blue-600 transition-all duration-200"
                   placeholder={t('profileManagement.form.placeholders.enterFullName')}
                 />
@@ -331,6 +332,7 @@ const ProfileManagement: React.FC<ProfileManagementProps> = ({
                   defaultCountry="BR"
                   value={formData.phone}
                   onChange={(value) => handleInputChange('phone', value || '')}
+                  maxLength={25}
                   className="w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-600 focus:border-blue-600 transition-all duration-200"
                   placeholder={t('profileManagement.form.placeholders.phoneExample')}
                   limitMaxLength
@@ -343,6 +345,7 @@ const ProfileManagement: React.FC<ProfileManagementProps> = ({
                   type="text"
                   value={formData.country}
                   onChange={(e) => handleInputChange('country', e.target.value)}
+                  maxLength={50}
                   className="w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-600 focus:border-blue-600 transition-all duration-200"
                   placeholder={t('profileManagement.form.placeholders.yourCountry')}
                 />

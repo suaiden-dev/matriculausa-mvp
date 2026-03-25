@@ -879,11 +879,16 @@ export const UniversityDocumentsStep: React.FC<StepProps> = ({ onBack }) => {
                      {/* Left: Program Info */}
                      <div className="lg:col-span-2 space-y-12">
                         {/* Meta Grid */}
-                        <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+                        <div className="grid grid-cols-2 md:grid-cols-5 gap-4">
                           {[
                             { label: t('studentDashboard.myApplicationStep.details.level'), val: applicationDetails.scholarships?.level || 'N/A' },
                             { label: t('studentDashboard.myApplicationStep.details.mode'), val: applicationDetails.scholarships?.delivery_mode === 'in_person' ? t('studentDashboard.myApplicationStep.details.inPerson') : t('studentDashboard.myApplicationStep.details.online') },
-                            { label: t('studentDashboard.myApplicationStep.details.deadline'), val: applicationDetails.scholarships?.deadline ? new Date(applicationDetails.scholarships.deadline).toLocaleDateString() : 'N/A' }
+                            { label: t('studentDashboard.myApplicationStep.details.deadline'), val: applicationDetails.scholarships?.deadline ? new Date(applicationDetails.scholarships.deadline).toLocaleDateString() : 'N/A' },
+                            ...(applicationDetails.scholarships?.min_gpa ? [{ label: "GPA Mínimo", val: applicationDetails.scholarships.min_gpa }] : []),
+                            ...(applicationDetails.scholarships?.min_english_proficiency ? [{ 
+                              label: "Inglês Mínimo", 
+                              val: t(`dashboard.academicInfo.englishProficiencyLevels.${applicationDetails.scholarships.min_english_proficiency}`) 
+                            }] : [])
                           ].map((item, i) => (
                             <div key={i} className="bg-white p-4 rounded-2xl shadow-sm border border-slate-300">
                               <div className="flex items-center gap-2 mb-2">

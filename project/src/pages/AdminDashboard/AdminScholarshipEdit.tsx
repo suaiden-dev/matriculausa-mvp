@@ -24,13 +24,13 @@ const MAX_IMAGE_SIZE_MB = 2;
 const ALLOWED_IMAGE_TYPES = ['image/jpeg', 'image/png', 'image/webp'];
 
 const ALLOWED_UNIVERSITIES = [
-  { 
-    id: 'b8bd2998-bb6e-402c-bbaf-c2da16e64241', 
+  {
+    id: 'b8bd2998-bb6e-402c-bbaf-c2da16e64241',
     name: 'Caroline University',
     defaultImage: 'https://fitpynguasqqutuhzifx.supabase.co/storage/v1/object/public/user-avatars/caroline%20loho.png'
   },
-  { 
-    id: '100aeaa6-cba8-4577-8aff-30104a9aefcc', 
+  {
+    id: '100aeaa6-cba8-4577-8aff-30104a9aefcc',
     name: 'Oikos University Los Angeles',
     defaultImage: 'https://fitpynguasqqutuhzifx.supabase.co/storage/v1/object/public/user-avatars/oikos%20logo.svg'
   }
@@ -77,6 +77,9 @@ const AdminScholarshipEdit: React.FC = () => {
     university_id: '',
     internal_fees: [] as { category: string; amount: string; details: string; }[],
     image_url: '',
+    min_gpa: '',
+    min_english_proficiency: '',
+    is_test: false,
   });
 
   // Helper texts for work permissions
@@ -176,6 +179,9 @@ const AdminScholarshipEdit: React.FC = () => {
               })()
               : [],
           image_url: scholarship.image_url || '',
+          min_gpa: scholarship.min_gpa?.toString() || '',
+          min_english_proficiency: scholarship.min_english_proficiency || '',
+          is_test: scholarship.is_test || false,
         });
 
         // Set image preview if exists
@@ -357,7 +363,7 @@ const AdminScholarshipEdit: React.FC = () => {
       const fileName = `scholarship-${scholarshipId}-${Date.now()}.${fileExt}`;
 
       // Upload to scholarship-images bucket
-      const { error } = await supabase.storage
+      const { data: _data, error } = await supabase.storage
         .from('scholarship-images')
         .upload(fileName, imageFile, {
           cacheControl: '3600',
@@ -487,6 +493,7 @@ const AdminScholarshipEdit: React.FC = () => {
 
       // Helper to build payload
       const buildPayload = () => {
+        console.log('Building payload with formData:', formData);
         const payload: any = {
           title: formData.title,
           description: formData.description,
@@ -516,7 +523,10 @@ const AdminScholarshipEdit: React.FC = () => {
             })),
           work_permissions: formData.work_permissions.filter((wp) => wp !== 'F1'),
           delivery_mode: formData.delivery_mode,
-          image_url: imageUrl
+          image_url: imageUrl,
+          min_gpa: formData.min_gpa ? Number(formData.min_gpa) : null,
+          min_english_proficiency: formData.min_english_proficiency || null,
+          is_test: formData.is_test,
         };
 
         if (formData.scholarship_fee_amount) {
@@ -531,6 +541,7 @@ const AdminScholarshipEdit: React.FC = () => {
           payload.placement_fee_amount = null;
         }
 
+        console.log('Final payload built:', payload);
         return payload;
       };
 
@@ -726,6 +737,25 @@ const AdminScholarshipEdit: React.FC = () => {
                         {uni.name}
                       </option>
                     ))}
+                  </select>
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-slate-700 mb-2">
+                    Minimum English Proficiency
+                  </label>
+                  <select
+                    name="min_english_proficiency"
+                    value={formData.min_english_proficiency}
+                    onChange={handleInputChange}
+                    className="w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-[#05294E] focus:border-[#05294E] transition-all duration-200"
+                  >
+                    <option value="">No preference</option>
+                    <option value="beginner">Beginner</option>
+                    <option value="intermediate">Intermediate</option>
+                    <option value="advanced">Advanced</option>
+                    <option value="native">Native</option>
+                    <option value="toefl">TOEFL Certified</option>
+                    <option value="ielts">IELTS Certified</option>
                   </select>
                 </div>
               </div>

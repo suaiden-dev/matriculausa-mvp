@@ -227,6 +227,13 @@ const Scholarships: React.FC = () => {
       ? (value >= desiredScholarshipRange)
       : (minScholarshipValue === null || (value >= minScholarshipValue));
     
+    // Filtro de bolsas de teste (is_test)
+    const isUorakUser = user?.email?.toLowerCase().endsWith('@uorak.com') || (userProfile as any)?.email?.toLowerCase().endsWith('@uorak.com');
+    const isAdmin = user?.role === 'admin';
+    if (scholarship.is_test && !isUorakUser && !isAdmin) {
+      return false;
+    }
+    
     return matchesSearch && matchesRange && matchesLevel && matchesField && matchesDeliveryMode && matchesWorkPermission && matchesDesiredRange;
   });
 
@@ -258,6 +265,13 @@ const Scholarships: React.FC = () => {
     const matchesDesiredRange = desiredScholarshipRange !== null
       ? (value >= desiredScholarshipRange)
       : (minScholarshipValue === null || (value >= minScholarshipValue));
+    
+    // Filtro de bolsas de teste (is_test)
+    const isUorakUser = user?.email?.toLowerCase().endsWith('@uorak.com') || (userProfile as any)?.email?.toLowerCase().endsWith('@uorak.com');
+    const isAdmin = user?.role === 'admin';
+    if (scholarship.is_test && !isUorakUser && !isAdmin) {
+      return false;
+    }
     
     return matchesSearch && matchesRange && matchesLevel && matchesField && matchesDeliveryMode && matchesWorkPermission && matchesDesiredRange;
   };

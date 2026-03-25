@@ -43,10 +43,19 @@ const ScholarshipDetailModal: React.FC<ScholarshipDetailModalProps> = ({
   isOpen,
   onClose,
   userProfile,
+  user,
   userRole
 }) => {
   const { t } = useTranslation();
   const { openModal, closeModal } = useModal();
+
+  // Trava de segurança para bolsas de teste (is_test)
+  const isUorakUser = user?.email?.toLowerCase().endsWith('@uorak.com') || (userProfile as any)?.email?.toLowerCase().endsWith('@uorak.com');
+  const isAdmin = userRole === 'admin';
+  
+  if (scholarship?.is_test && !isUorakUser && !isAdmin) {
+    return null;
+  }
   
   const getApplicationFeeWithDependents = (base: number): number => {
     const deps = Number(userProfile?.dependents) || 0;
@@ -465,6 +474,29 @@ const ScholarshipDetailModal: React.FC<ScholarshipDetailModalProps> = ({
                                   </span>
                                 ))}
                              </div>
+                          </div>
+                        )}
+
+                        {/* Academic Requirements */}
+                        {(scholarship.min_gpa || scholarship.min_english_proficiency) && (
+                          <div className="pt-4 border-t border-slate-200 space-y-4">
+                            {scholarship.min_gpa && (
+                              <div className="group">
+                                <p className="text-[10px] uppercase tracking-wider text-slate-400 font-bold mb-1">GPA Mínimo</p>
+                                <div className="text-slate-700 font-medium">
+                                  <span>{Number(scholarship.min_gpa).toFixed(1)}</span>
+                                </div>
+                              </div>
+                            )}
+
+                            {scholarship.min_english_proficiency && (
+                              <div className="group">
+                                <p className="text-[10px] uppercase tracking-wider text-slate-400 font-bold mb-1">{t('dashboard:profileManagement.form.englishProficiency')}</p>
+                                <div className="text-slate-700 font-medium">
+                                  <span>{t(`dashboard:profileManagement.form.fields.${scholarship.min_english_proficiency}`)}</span>
+                                </div>
+                              </div>
+                            )}
                           </div>
                         )}
 
