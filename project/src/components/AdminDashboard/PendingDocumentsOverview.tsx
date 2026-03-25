@@ -92,185 +92,39 @@ const PendingDocumentsOverview: React.FC = () => {
     // ... rest of state stays the same
 
     useEffect(() => {
-        fetchStudentDocuments();
-        fetchDocumentRequests();
-        fetchIdentityPhotos();
+        fetchAllPendingDocuments();
     }, []);
 
-    const fetchStudentDocuments = async () => {
+    const fetchAllPendingDocuments = async () => {
         try {
-            setLoading(prev => ({ ...prev, studentDocuments: true }));
-            // Buscar documentos de estudantes
-            let query = supabase
-                .from('student_documents')
-                .select(`
-          *,
-          user_profiles:user_id!inner (
-            full_name, 
-            email, 
-            id, 
-            user_id,
-            documents_status,
-            has_paid_selection_process_fee,
-            scholarship_applications!scholarship_applications_student_id_fkey(id, status)
-          )
-        `)
-                .in('status', ['pending', 'under_review'])
-                .neq('user_profiles.documents_status', 'approved')
-                .eq('user_profiles.has_paid_selection_process_fee', true);
+            setLoading({ 
+                studentDocuments: true, 
+                documentRequests: true, 
+                identityPhotos: true 
+            });
+            
+            // Batch loading usando RPC para evitar N+1 roundtrips e redundância de dados
+            const { data, error } = await supabase.rpc('get_pending_documents_batch');
 
-            const { data, error } = await query
-                .order('uploaded_at', { ascending: false })
-                .limit(50);
+            if (error) {
+                console.error('Error fetching pending documents batch:', error);
+                return;
+            }
 
-            if (error) console.error('Error fetching student documents:', error);
-
-            if (!error && data) {
-                // Filtrar usuários de teste e usuários com status 'enrolled'
-                const filteredData = data.filter(doc => {
-                    const hasEnrolledApplication = doc.user_profiles?.scholarship_applications?.some(
-                        (app: { id: string; status: string }) => app.status === 'enrolled'
-                    );
-
-                    const isUorakTest = doc.user_profiles?.email?.endsWith('@uorak.com');
-                    if (isUorakTest) return false;
-
-                    const hasApplications = doc.user_profiles?.scholarship_applications && doc.user_profiles.scholarship_applications.length > 0;
-                    if (!hasApplications) {
-                        return false;
-                    }
-
-                    if (hasEnrolledApplication) {
-                        return false;
-                    }
-
-                    return true;
-                });
-                
-                setStudentDocuments(filteredData as StudentDocument[]);
+            if (data) {
+                setStudentDocuments(data.student_documents || []);
+                setDocumentRequests(data.document_requests || []);
+                setIdentityPhotos(data.identity_photos || []);
             }
 
         } catch (error) {
-            console.error('Error fetching student documents:', error);
+            console.error('Unexpected error in fetchAllPendingDocuments:', error);
         } finally {
-            setLoading(prev => ({ ...prev, studentDocuments: false }));
-        }
-    };
-
-    const fetchDocumentRequests = async () => {
-        try {
-            setLoading(prev => ({ ...prev, documentRequests: true }));
-            // Buscar uploads de requests pendentes
-            let query = supabase
-                .from('document_request_uploads')
-                .select(`
-          *,
-          user_profiles:uploaded_by!inner (
-            full_name, 
-            email, 
-            id, 
-            user_id,
-            documents_status,
-            has_paid_selection_process_fee,
-            scholarship_applications!scholarship_applications_student_id_fkey(id, status)
-          ),
-          document_requests:document_request_id (title)
-        `)
-                .in('status', ['pending', 'under_review'])
-                .neq('user_profiles.documents_status', 'approved')
-                .eq('user_profiles.has_paid_selection_process_fee', true);
-
-            const { data, error } = await query
-                .order('uploaded_at', { ascending: false })
-                .limit(50);
-
-            if (error) console.error('Error fetching document requests:', error);
-
-            if (!error && data) {
-                // Filtrar usuários de teste e usuários com status 'enrolled'
-                const filteredData = data.filter(req => {
-                    const hasEnrolledApplication = req.user_profiles?.scholarship_applications?.some(
-                        (app: { id: string; status: string }) => app.status === 'enrolled'
-                    );
-
-                    const isUorakTest = req.user_profiles?.email?.endsWith('@uorak.com');
-                    if (isUorakTest) return false;
-
-                    const hasApplications = req.user_profiles?.scholarship_applications && req.user_profiles.scholarship_applications.length > 0;
-                    if (!hasApplications) {
-                        return false;
-                    }
-
-                    if (hasEnrolledApplication) {
-                        return false;
-                    }
-
-                    return true;
-                });
-                
-                setDocumentRequests(filteredData as DocumentRequestUpload[]);
-            }
-
-        } catch (error) {
-            console.error('Error fetching document requests:', error);
-        } finally {
-            setLoading(prev => ({ ...prev, documentRequests: false }));
-        }
-    };
-
-    const fetchIdentityPhotos = async () => {
-        try {
-            setLoading(prev => ({ ...prev, identityPhotos: true }));
-            // Buscar fotos de identidade pendentes
-            let query = supabase
-                .from('comprehensive_term_acceptance')
-                .select(`
-          *,
-          user_profiles:user_id!inner (
-            full_name, 
-            email, 
-            id, 
-            user_id,
-            documents_status,
-            has_paid_selection_process_fee,
-            scholarship_applications!scholarship_applications_student_id_fkey(id, status)
-          )
-        `)
-                .eq('identity_photo_status', 'pending')
-                .not('identity_photo_path', 'is', null)
-                .neq('user_profiles.documents_status', 'approved')
-                .eq('user_profiles.has_paid_selection_process_fee', true);
-
-            const { data, error } = await query
-                .order('created_at', { ascending: false })
-                .limit(50);
-
-            if (error) console.error('Error fetching identity photos:', error);
-
-            if (!error && data) {
-                // Filtrar usuários de teste e usuários com status 'enrolled'
-                const filteredData = data.filter(item => {
-                    const isUorakTest = item.user_profiles?.email?.endsWith('@uorak.com');
-                    if (isUorakTest) return false;
-
-                    const hasEnrolledApplication = item.user_profiles?.scholarship_applications?.some(
-                        (app: { id: string; status: string }) => app.status === 'enrolled'
-                    );
-
-                    if (hasEnrolledApplication) {
-                        return false;
-                    }
-
-                    return true;
-                });
-                
-                setIdentityPhotos(filteredData as IdentityVerification[]);
-            }
-
-        } catch (error) {
-            console.error('Error fetching identity photos:', error);
-        } finally {
-            setLoading(prev => ({ ...prev, identityPhotos: false }));
+            setLoading({ 
+                studentDocuments: false, 
+                documentRequests: false, 
+                identityPhotos: false 
+            });
         }
     };
 
@@ -308,7 +162,7 @@ const PendingDocumentsOverview: React.FC = () => {
                 },
                 () => {
                     // Recarregar documentos quando houver mudanças
-                    fetchStudentDocuments();
+                    fetchAllPendingDocuments();
                 }
             )
             // Escutar mudanças em document_request_uploads
@@ -320,17 +174,16 @@ const PendingDocumentsOverview: React.FC = () => {
                     table: 'document_request_uploads'
                 },
                 (payload: any) => {
-                    // Só recarregar se o status for pending ou under_review
+                    // Só recarregar se o status for pending ou under_review ou mudou disso
                     const newStatus = payload.new?.status;
                     const oldStatus = payload.old?.status;
 
                     if (
                         newStatus === 'pending' ||
                         newStatus === 'under_review' ||
-                        oldStatus === 'pending' ||
-                        oldStatus === 'under_review'
+                        oldStatus === 'pending' || oldStatus === 'under_review'
                     ) {
-                        fetchDocumentRequests();
+                        fetchAllPendingDocuments();
                     }
                 }
             )
@@ -348,7 +201,7 @@ const PendingDocumentsOverview: React.FC = () => {
                     const oldStatus = payload.old?.identity_photo_status;
                     
                     if (newStatus === 'pending' || oldStatus === 'pending') {
-                        fetchIdentityPhotos();
+                        fetchAllPendingDocuments();
                     }
                 }
             );

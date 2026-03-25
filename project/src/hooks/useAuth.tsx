@@ -1,4 +1,4 @@
-import React, { createContext, useContext, useState, useEffect, useCallback, useMemo, ReactNode } from 'react';
+import React, { createContext, useContext, useState, useEffect, useCallback, useMemo, useRef, ReactNode } from 'react';
 import { User as SupabaseUser } from '@supabase/supabase-js';
 import { supabase } from '../lib/supabase';
 import { StoredUtmAttribution } from '../types/utm';
@@ -117,6 +117,7 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
   const [supabaseUser, setSupabaseUser] = useState<SupabaseUser | null>(null);
   const [userProfile, setUserProfile] = useState<UserProfile | null>(null);
   const [loading, setLoading] = useState<boolean>(true);
+  const isProcessingRef = useRef<boolean>(false);
 
   useEffect(() => {
     // Detectar fluxo de recuperação de senha
@@ -657,16 +658,32 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
           // se falhar, seguimos com o profile atual
         }
 
-        setUserProfile(profile);
-        const builtUser = await buildUser(session.user, profile);
-        setUser(builtUser);
-        setSupabaseUser(session.user);
+        const builtUserResult = await buildUser(session.user, profile);
 
         // Salvar no cache para evitar flicker em próximas navegações
-        if (profile && builtUser) {
-          localStorage.setItem('cached_user', JSON.stringify(builtUser));
+        if (profile && builtUserResult) {
+          localStorage.setItem('cached_user', JSON.stringify(builtUserResult));
           localStorage.setItem('cached_user_profile', JSON.stringify(profile));
         }
+
+        // ✅ ESTABILIZAÇÃO: Só atualizar estado se houver mudança real para evitar loops
+        setUserProfile(prev => {
+          if (!profile) return null;
+          if (JSON.stringify(prev) === JSON.stringify(profile)) return prev;
+          return profile;
+        });
+
+        setUser(prev => {
+          if (!builtUserResult) return null;
+          // Comparação simplificada por campos chave
+          if (prev?.id === builtUserResult.id && prev?.role === builtUserResult.role && prev?.email === builtUserResult.email) return prev;
+          return builtUserResult;
+        });
+
+        setSupabaseUser(prev => {
+          if (prev?.id === session.user?.id && prev?.email === session.user?.email && prev?.updated_at === session.user?.updated_at) return prev;
+          return session.user;
+        });
 
         // Refetch do perfil APENAS se for um registro recente (detetado via localStorage)
         // Isso evita chamadas redundantes em cada refresh de página normal
@@ -799,17 +816,32 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
       }
     }
 
-    supabase.auth.getSession().then(async ({ data: { session } }) => {
+    const handleAuthEvent = async (session: any) => {
+      if (isProcessingRef.current) return;
+      isProcessingRef.current = true;
+      try {
+        console.log('🔄 [USEAUTH] Iniciando processamento de auth event...');
+        await fetchAndSetUser(session);
+      } catch (err) {
+        console.error('❌ [USEAUTH] Erro crítico no processamento de auth:', err);
+      } finally {
+        if (isMounted) {
+          setLoading(false);
+          isProcessingRef.current = false;
+          console.log('✅ [USEAUTH] Processamento de auth finalizado.');
+        }
+      }
+    };
+
+    supabase.auth.getSession().then(({ data: { session } }) => {
       if (!isMounted) return;
-      await fetchAndSetUser(session);
-      setLoading(false);
+      handleAuthEvent(session);
     });
 
     const { data: { subscription } } = supabase.auth.onAuthStateChange(
       async (_, session) => {
-        if (!isMounted) return; // Proteção contra updates após unmount
-        await fetchAndSetUser(session);
-        setLoading(false);
+        if (!isMounted) return;
+        handleAuthEvent(session);
       }
     );
     return () => {

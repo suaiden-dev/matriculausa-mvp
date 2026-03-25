@@ -1,7 +1,7 @@
 import React from 'react';
 import { CreditCard, Clock, CheckCircle2, XCircle, Grid3X3, List, Eye, CheckCircle, User, MessageSquare } from 'lucide-react';
 import { Link } from 'react-router-dom';
-import { formatCentsToDollars } from '../../../../utils/currency';
+import { convertCentsToDollars, formatCurrency } from '../../../../utils/currency';
 import ZellePaymentsSkeleton from '../../../../components/ZellePaymentsSkeleton';
 
 export interface ZellePaymentsProps {
@@ -130,7 +130,7 @@ function ZellePaymentsBase(props: ZellePaymentsProps) {
 										</div>
 
 										<div className="mb-4">
-											<div className="text-2xl font-bold text-gray-900 mb-2">${formatCentsToDollars(payment.amount, true)}</div>
+											<div className="text-2xl font-bold text-gray-900 mb-2">{formatCurrency(convertCentsToDollars(payment.amount), true, 'pt-BR')}</div>
 											<p className="text-sm text-gray-600 capitalize">{payment.fee_type.replace('_', ' ')}</p>
 										</div>
 
@@ -196,7 +196,7 @@ function ZellePaymentsBase(props: ZellePaymentsProps) {
 														</div>
 													</td>
 													<td className="px-6 py-4 whitespace-nowrap"><div className="text-sm text-gray-900 capitalize">{payment.fee_type.replace('_', ' ')}</div></td>
-													<td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900 font-medium">${formatCentsToDollars(payment.amount, true)}</td>
+													<td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900 font-medium">{formatCurrency(convertCentsToDollars(payment.amount), true, 'pt-BR')}</td>
 													<td className="px-6 py-4 whitespace-nowrap">
 														<span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${payment.zelle_status === 'pending_verification' ? 'bg-yellow-100 text-yellow-800' :
 																payment.zelle_status === 'approved' ? 'bg-green-100 text-green-800' :

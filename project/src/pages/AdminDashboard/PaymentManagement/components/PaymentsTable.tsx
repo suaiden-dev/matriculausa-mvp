@@ -1,6 +1,6 @@
 import React from 'react';
 import { AlertCircle, User, Building2, Eye, CheckCircle, XCircle, Calendar } from 'lucide-react';
-import { formatCentsToDollars } from '../../../../utils/currency';
+import { convertCentsToDollars, formatCurrency } from '../../../../utils/currency';
 
 export interface PaymentsTableProps {
 	viewMode: 'grid' | 'list';
@@ -161,7 +161,7 @@ function PaymentsTableBase(props: PaymentsTableProps) {
 									<td className="px-6 py-4 whitespace-nowrap">
 										<div className="flex items-center">
 											<div className="flex-shrink-0 h-10 w-10">
-												<div className="h-10 w-10 rounded-full bg-gray-300 flex items-center justify-center">
+											<div className="h-10 w-10 rounded-full bg-gray-300 flex items-center justify-center">
 													<User className="h-5 w-5 text-gray-600" />
 												</div>
 											</div>
@@ -188,7 +188,7 @@ function PaymentsTableBase(props: PaymentsTableProps) {
 										{props.isLoading ? (
 											<div className="animate-pulse bg-slate-200 h-4 w-16 rounded"></div>
 										) : (
-											`$${formatCentsToDollars(payment.amount)}`
+											formatCurrency(convertCentsToDollars(payment.amount), true, 'pt-BR')
 										)}
 									</td>
 									<td className="px-6 py-4 whitespace-nowrap">

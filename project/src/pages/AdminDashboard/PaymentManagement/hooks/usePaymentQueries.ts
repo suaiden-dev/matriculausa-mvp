@@ -9,7 +9,7 @@ import { AffiliatePaymentRequestService } from '../../../../services/AffiliatePa
 import { getPaymentDatesForUsersLoaderOptimized } from '../data/loaders/paymentDatesLoaderOptimized';
 import { transformPaymentsToRecordsAndStats } from '../utils/transformPayments';
 import { useFeeConfig } from '../../../../hooks/useFeeConfig';
-import { getGrossPaidAmounts } from '../../../../utils/paymentConverter';
+import { getGrossPaidAmountsBatch } from '../../../../utils/paymentConverter';
 // import type { PaymentRecord, PaymentStats } from '../data/types';
 
 /**
@@ -33,48 +33,11 @@ export function usePaymentsQuery(enabled: boolean = true) {
       ];
       const uniqueUserIds = [...new Set(allUserIds)];
       
-      // ✅ CORREÇÃO: Buscar valores brutos pagos (COM taxas do Stripe) de individual_fee_payments
-      // Para Payment Management do superADMIN, mostrar o valor que o aluno realmente pagou (bruto)
-      // Processar em batches para evitar sobrecarga
-      const batchSize = 10; // Reduzir batch size para evitar sobrecarga de chamadas ao Stripe
-      const batches: string[][] = [];
-      for (let i = 0; i < uniqueUserIds.length; i += batchSize) {
-        batches.push(uniqueUserIds.slice(i, i + batchSize));
-      }
-      
-      const realPaymentAmounts = new Map<string, { selection_process?: number; scholarship?: number; i20_control?: number; application?: number; placement?: number; ds160_package?: number; i539_cos_package?: number }>();
-      
-      // Processar batches em paralelo
-      const batchPromises = batches.map(async (batch) => {
-        const batchResults = await Promise.allSettled(
-          batch.map(async (userId) => {
-            try {
-              const amounts = await getGrossPaidAmounts(userId, ['selection_process', 'scholarship', 'i20_control', 'application', 'placement', 'ds160_package', 'i539_cos_package']);
-              return { userId, amounts };
-            } catch (error) {
-              console.error(`Erro ao buscar valores brutos pagos para user_id ${userId}:`, error);
-              return { userId, amounts: {} };
-            }
-          })
-        );
-        
-        batchResults.forEach((result) => {
-          if (result.status === 'fulfilled' && result.value) {
-            const { userId, amounts } = result.value;
-            realPaymentAmounts.set(userId, {
-              selection_process: amounts.selection_process,
-              scholarship: amounts.scholarship,
-              i20_control: amounts.i20_control,
-              application: amounts.application,
-              placement: amounts.placement,
-              ds160_package: amounts.ds160_package,
-              i539_cos_package: amounts.i539_cos_package,
-            });
-          }
-        });
-      });
-      
-      await Promise.allSettled(batchPromises);
+      // ✅ TASK-10: 1 única query para todos os usuários (elimina N+1)
+      const realPaymentAmounts = await getGrossPaidAmountsBatch(
+        uniqueUserIds,
+        ['selection_process', 'scholarship', 'i20_control', 'application', 'placement', 'ds160_package', 'i539_cos_package']
+      );
 
       const individualPaymentDates = await getPaymentDatesForUsersLoaderOptimized(supabase, uniqueUserIds);
 
