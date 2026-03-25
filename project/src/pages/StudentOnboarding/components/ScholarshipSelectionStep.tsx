@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useMemo, useCallback } from 'react';
-import { Award, Building, DollarSign, X, CheckCircle2, Info, Search, GraduationCap, BookOpen, Monitor, Briefcase, ChevronDown, ChevronUp, Filter, Globe } from 'lucide-react';
+import { Award, Building, DollarSign, X, CheckCircle2, Info, Search, GraduationCap, BookOpen, Monitor, Briefcase, ChevronDown, ChevronUp, Filter } from 'lucide-react';
 import { useAuth } from '../../../hooks/useAuth';
 import { useCartStore } from '../../../stores/applicationStore';
 import { useScholarships } from '../../../hooks/useScholarships';
@@ -43,6 +43,7 @@ export const ScholarshipSelectionStep: React.FC<StepProps> = ({ onNext, onBack: 
   const [isTransitioning, setIsTransitioning] = useState(false);
   const [removingScholarshipId, setRemovingScholarshipId] = useState<string | null>(null);
   const [showConfirmModal, setShowConfirmModal] = useState(false);
+  const scholarshipsGridRef = React.useRef<HTMLDivElement>(null);
 
   const ITEMS_PER_PAGE = 12;
 
@@ -231,7 +232,12 @@ export const ScholarshipSelectionStep: React.FC<StepProps> = ({ onNext, onBack: 
 
       // 2. Filtro de busca
       if (searchWords.length > 0) {
-        const text = `${scholarship.title} ${scholarship.description || ''} ${(scholarship.universities?.name || '')}`.toLowerCase();
+        const text = `
+          ${scholarship.title} 
+          ${scholarship.description || ''} 
+          ${scholarship.universities?.name || ''} 
+          ${scholarship.field_of_study || ''}
+        `.toLowerCase();
         const matchesSearch = searchWords.every(word => text.includes(word));
         if (!matchesSearch) return false;
       }
@@ -559,6 +565,13 @@ export const ScholarshipSelectionStep: React.FC<StepProps> = ({ onNext, onBack: 
     }
   };
 
+  // Scroll to top when page changes
+  useEffect(() => {
+    if (!isReviewing && !scholarshipsLoading) {
+      scholarshipsGridRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+    }
+  }, [currentPage, isReviewing, scholarshipsLoading]);
+
   // Loading skeleton
   if (loading) {
     return (
@@ -828,9 +841,9 @@ export const ScholarshipSelectionStep: React.FC<StepProps> = ({ onNext, onBack: 
             {/* Filter Content - Animatable */}
             {filtersExpanded && (
               <div className="p-4 border-t border-slate-100 animate-in slide-in-from-top-2 duration-200">
-                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                <div className="grid grid-cols-1 md:grid-cols-3 lg:grid-cols-4 gap-4">
                   {/* Search Bar */}
-                  <div className="md:col-span-2 lg:col-span-1">
+                  <div className="md:col-span-3 lg:col-span-1">
                     <label htmlFor="search" className="block text-xs font-medium text-slate-700 mb-1.5">
                       <Search className="h-3 w-3 inline mr-1" />
                       {t('scholarshipSelection.filters.searchKeyword')}
@@ -985,7 +998,8 @@ export const ScholarshipSelectionStep: React.FC<StepProps> = ({ onNext, onBack: 
                     />
                   </div>
 
-                  {/* GPA Filter */}
+                  {/* GPA and English Filters hidden temporarily until data is complete */}
+                  {/* 
                   <div>
                     <label htmlFor="gpa" className="block text-xs font-medium text-slate-700 mb-1.5">
                       <Award className="h-3 w-3 inline mr-1" />
@@ -1007,7 +1021,6 @@ export const ScholarshipSelectionStep: React.FC<StepProps> = ({ onNext, onBack: 
                     />
                   </div>
 
-                  {/* English Level Filter */}
                   <div>
                     <label htmlFor="english-level" className="block text-xs font-medium text-slate-700 mb-1.5">
                       <Globe className="h-3 w-3 inline mr-1" />
@@ -1027,13 +1040,30 @@ export const ScholarshipSelectionStep: React.FC<StepProps> = ({ onNext, onBack: 
                       <option value="toefl">{t('dashboard:profileManagement.form.fields.toefl')}</option>
                     </select>
                   </div>
-              </div>
+                  */}
+
+                  {/* Clear Filters Button - Positioned at column 4 on LG, column 3 on MD */}
+                  <div className="md:col-start-3 lg:col-start-4 flex items-end justify-end h-full">
+                    <button
+                      onClick={clearFilters}
+                      disabled={!hasActiveFilters}
+                      className={`flex items-center justify-center px-6 py-2 rounded-lg text-sm font-medium transition-all duration-200 ${
+                        hasActiveFilters
+                          ? 'bg-red-50 text-red-600 hover:bg-red-100 border border-red-200'
+                          : 'bg-slate-50 text-slate-400 border border-slate-100 cursor-not-allowed'
+                      }`}
+                    >
+                      <X className="h-4 w-4 mr-2" />
+                      {t('scholarshipSelection.filters.clear')}
+                    </button>
+                  </div>
+                </div>
                 </div>
               )}
             </div>
 
           {/* Scholarships Grid */}
-          <div>
+          <div ref={scholarshipsGridRef} className="scroll-mt-6">
             <div className="mb-4 flex items-center justify-between">
               <h3 className="text-lg font-semibold text-slate-900">
                 {t('scholarshipSelection.grid.title')}
