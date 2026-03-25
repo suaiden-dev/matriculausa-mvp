@@ -59,6 +59,7 @@ const AuthCallback = React.lazy(() => import('./pages/AuthCallback'));
 const MicrosoftCallback = React.lazy(() => import('./pages/MicrosoftCallback'));
 const Auth323NetworkCallback = React.lazy(() => import('./pages/Auth323NetworkCallback'));
 const UnsubscribeNewsletter = React.lazy(() => import('./pages/UnsubscribeNewsletter'));
+const NotFound = React.lazy(() => import('./pages/NotFound'));
 
 // Fallback de Loading
 import PageSkeleton from './components/PageSkeleton';
