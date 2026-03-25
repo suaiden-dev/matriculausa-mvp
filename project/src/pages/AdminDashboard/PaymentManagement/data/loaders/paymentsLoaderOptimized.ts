@@ -11,12 +11,14 @@ import { SupabaseClient } from '@supabase/supabase-js';
 /**
  * Verifica se está em produção ou staging
  */
-function shouldFilter(): boolean {
+/**
+ * Valor pré-calculado para evitar acesso repetido ao window.location dentro de loops
+ */
+const IS_PROD_OR_STAGING = ((): boolean => {
   if (typeof window === 'undefined') return false;
   const hostname = window.location.hostname;
   const href = window.location.href;
   
-  // Verificações mais robustas
   const isProduction = hostname === 'matriculausa.com' || 
                        hostname.includes('matriculausa.com') ||
                        href.includes('matriculausa.com');
@@ -27,26 +29,14 @@ function shouldFilter(): boolean {
                     href.includes('staging-matriculausa.netlify.app') ||
                     href.includes('staging-matriculausa');
   
-  const result = isProduction || isStaging;
-  
-  // Debug temporário
-  console.log('🔍 [PaymentManagement] shouldFilter debug:', {
-    hostname,
-    href,
-    isProduction,
-    isStaging,
-    result,
-    windowLocation: window.location
-  });
-  
-  return result;
-}
+  return isProduction || isStaging;
+})();
 
 /**
  * Verifica se deve excluir estudante com email @uorak.com
  */
 function shouldExcludeStudent(email: string | null | undefined): boolean {
-  if (!shouldFilter()) return false; // Em localhost, não excluir
+  if (!IS_PROD_OR_STAGING) return false; // Em localhost, não excluir
   if (!email) return false; // Se não tem email, não excluir
   return email.toLowerCase().includes('@uorak.com');
 }
@@ -86,9 +76,10 @@ export async function loadPaymentsBaseDataOptimized(supabase: SupabaseClient): P
   console.log('🚀 [PaymentManagement] loadPaymentsBaseDataOptimized iniciado');
   console.time('[payments] baseDataOptimized');
   try {
-    const { data: applications, error: appsError } = await supabase
-      .from('scholarship_applications')
-      .select(`
+    // BLOCO 1: Queries iniciais independentes que podem rodar em paralelo
+    const [appsRes, zelleRes, stripeRes] = await Promise.all([
+      // 1. Scholarship Applications
+      supabase.from('scholarship_applications').select(`
         id,
         student_id,
         scholarship_id,
@@ -134,59 +125,11 @@ export async function loadPaymentsBaseDataOptimized(supabase: SupabaseClient): P
             name
           )
         )
-      `);
-    if (appsError) throw appsError;
-
-    // Filtrar aplicações de estudantes com email @uorak.com (exceto em localhost)
-    const filterActive = shouldFilter();
-    console.log('🔍 [PaymentManagement] Filtro ativo:', filterActive);
-    console.log('🔍 [PaymentManagement] Applications antes do filtro:', (applications || []).length);
-    
-    const filteredApplications = filterActive
-      ? (applications || []).filter((app: any) => {
-          const email = app.user_profiles?.email?.toLowerCase() || '';
-          return !shouldExcludeStudent(email);
-        })
-      : (applications || []);
-      
-    console.log('🔍 [PaymentManagement] Applications depois do filtro:', filteredApplications.length);
-
-    const { data: zellePaymentsRaw, error: zelleError } = await supabase
-      .from('zelle_payments')
-      .select('*')
-      .eq('status', 'approved');
-    if (zelleError) {
-      console.error('Error loading Zelle payments:', zelleError);
-    }
-
-    let zellePayments: any[] = [];
-    if (zellePaymentsRaw && zellePaymentsRaw.length > 0) {
-      const userIds = zellePaymentsRaw.map((p) => p.user_id);
-      const { data: userProfiles, error: usersError } = await supabase
-        .from('user_profiles')
-        .select('id, user_id, full_name, email, has_paid_selection_process_fee, is_application_fee_paid, is_scholarship_fee_paid, has_paid_i20_control_fee, selection_process_fee_payment_method, i20_control_fee_payment_method, scholarship_package_id, dependents, seller_referral_code, placement_fee_flow, is_placement_fee_paid, placement_fee_payment_method, has_paid_ds160_package, has_paid_i539_cos_package, ds160_package_payment_method, i539_cos_package_payment_method')
-        .in('user_id', userIds);
-      if (usersError) {
-        console.error('Error loading user profiles for Zelle payments:', usersError);
-      } else {
-        zellePayments = zellePaymentsRaw.map((payment) => ({
-          ...payment,
-          user_profiles: userProfiles?.find((profile) => profile.user_id === payment.user_id),
-        }));
-        
-        // Filtrar pagamentos Zelle de estudantes com email @uorak.com (exceto em localhost)
-        if (shouldFilter()) {
-          zellePayments = zellePayments.filter((payment: any) => {
-            const email = payment.user_profiles?.email?.toLowerCase() || '';
-            return !shouldExcludeStudent(email);
-          });
-        }
-      }
-    }
-
-    const { data: stripeUsersRaw, error: stripeError } = await supabase
-      .from('user_profiles')
-      .select(`
+      `),
+      // 2. Zelle Payments Approved
+      supabase.from('zelle_payments').select('*').eq('status', 'approved'),
+      // 3. User Profiles for "Stripe/Others" (who paid something)
+      supabase.from('user_profiles').select(`
         id,
         user_id,
         full_name,
@@ -208,53 +151,75 @@ export async function loadPaymentsBaseDataOptimized(supabase: SupabaseClient): P
         has_paid_i539_cos_package,
         ds160_package_payment_method,
         i539_cos_package_payment_method
-      `)
-      .or('has_paid_selection_process_fee.eq.true,is_application_fee_paid.eq.true,is_scholarship_fee_paid.eq.true,has_paid_i20_control_fee.eq.true,is_placement_fee_paid.eq.true,has_paid_ds160_package.eq.true,has_paid_i539_cos_package.eq.true');
-    if (stripeError) {
-      console.error('Error loading Stripe users:', stripeError);
+      `).or('has_paid_selection_process_fee.eq.true,is_application_fee_paid.eq.true,is_scholarship_fee_paid.eq.true,has_paid_i20_control_fee.eq.true,is_placement_fee_paid.eq.true,has_paid_ds160_package.eq.true,has_paid_i539_cos_package.eq.true')
+    ]);
+
+    if (appsRes.error) throw appsRes.error;
+    const applications = appsRes.data || [];
+    const zellePaymentsRaw = zelleRes.data || [];
+    const stripeUsersRaw = stripeRes.data || [];
+
+    if (zelleRes.error) console.error('Error loading Zelle payments:', zelleRes.error);
+    if (stripeRes.error) console.error('Error loading Stripe users:', stripeRes.error);
+
+    // Processamento e filtragem pós-Bloco 1
+    const filteredApplications = IS_PROD_OR_STAGING
+      ? applications.filter((app: any) => !shouldExcludeStudent(app.user_profiles?.email))
+      : applications;
+
+    const applicationUserIdsSet = new Set(filteredApplications.map((app: any) => app.user_profiles?.user_id).filter(Boolean));
+    
+    // Filtrar stripe users que já possuem aplicação para evitar duplicatas na lista
+    let stripeUsers = stripeUsersRaw.filter((user: any) => !applicationUserIdsSet.has(user.user_id));
+    if (IS_PROD_OR_STAGING) {
+      stripeUsers = stripeUsers.filter((user: any) => !shouldExcludeStudent(user.email));
     }
 
-    let stripeUsers: any[] = [];
-    if (stripeUsersRaw && stripeUsersRaw.length > 0) {
-      const applicationUserIds = filteredApplications?.map((app: any) => app.user_profiles?.user_id).filter(Boolean) || [];
-      stripeUsers = stripeUsersRaw.filter((user: any) => !applicationUserIds.includes(user.user_id));
-      
-      // Filtrar usuários Stripe com email @uorak.com (exceto em localhost)
-      if (shouldFilter()) {
-        stripeUsers = stripeUsers.filter((user: any) => {
-          const email = user.email?.toLowerCase() || '';
-          return !shouldExcludeStudent(email);
-        });
-      }
+    // Coletar userIds para o Bloco 2
+    const zelleUserIds = [...new Set(zellePaymentsRaw.map(p => p.user_id).filter(Boolean))];
+    const uniqueUserIdsForMetas = [...new Set([
+      ...Array.from(applicationUserIdsSet) as string[],
+      ...zelleUserIds as string[],
+      ...stripeUsers.map((user: any) => user.user_id).filter(Boolean) as string[]
+    ])];
+
+    // BLOCO 2: Queries de enriquecimento (dependentes dos dados do Bloco 1)
+    const [zelleProfilesRes, overridesMap, systemTypesRes] = await Promise.all([
+      // 4. Profiles para pagamentos Zelle
+      zelleUserIds.length > 0 
+        ? supabase.from('user_profiles').select('id, user_id, full_name, email, has_paid_selection_process_fee, is_application_fee_paid, is_scholarship_fee_paid, has_paid_i20_control_fee, selection_process_fee_payment_method, i20_control_fee_payment_method, scholarship_package_id, dependents, seller_referral_code, placement_fee_flow, is_placement_fee_paid, placement_fee_payment_method, has_paid_ds160_package, has_paid_i539_cos_package, ds160_package_payment_method, i539_cos_package_payment_method').in('user_id', zelleUserIds)
+        : Promise.resolve({ data: [], error: null }),
+      // 5. Overrides em batch
+      getOverridesBatch(supabase, uniqueUserIdsForMetas),
+      // 6. System Types
+      uniqueUserIdsForMetas.length > 0
+        ? supabase.from('user_profiles').select('user_id, system_type').in('user_id', uniqueUserIdsForMetas)
+        : Promise.resolve({ data: [], error: null })
+    ]);
+
+    // Enriquecer Zelle Payments e aplicar filtro final
+    let zellePayments = zellePaymentsRaw.map(payment => ({
+      ...payment,
+      user_profiles: zelleProfilesRes.data?.find(p => p.user_id === payment.user_id)
+    }));
+
+    if (IS_PROD_OR_STAGING) {
+      zellePayments = zellePayments.filter(p => !shouldExcludeStudent(p.user_profiles?.email));
     }
 
-    const allUserIds = [
-      ...(filteredApplications?.map((app: any) => app.user_profiles?.user_id).filter(Boolean) || []),
-      ...(zellePayments?.map((payment: any) => payment.user_profiles?.user_id).filter(Boolean) || []),
-      ...(stripeUsers?.map((user: any) => user.user_id).filter(Boolean) || []),
-    ];
-    const uniqueUserIds = [...new Set(allUserIds)];
-
-    // OTIMIZAÇÃO: Buscar overrides em batch
-    const overridesMap = await getOverridesBatch(supabase, uniqueUserIds);
-
+    // Mapear System Types
     const userSystemTypesMap = new Map<string, string>();
-    if (uniqueUserIds.length > 0) {
-      // Buscar system_type em batch (já otimizado)
-      const { data: systemTypes, error: systemTypesError } = await supabase
-        .from('user_profiles')
-        .select('user_id, system_type')
-        .in('user_id', uniqueUserIds);
-      if (!systemTypesError) {
-        systemTypes?.forEach((st) => {
-          userSystemTypesMap.set(st.user_id, st.system_type || 'legacy');
-        });
-      } else {
-        console.warn('⚠️ [DEBUG] Erro ao buscar system_type:', systemTypesError);
-      }
-    }
+    systemTypesRes.data?.forEach(st => {
+      userSystemTypesMap.set(st.user_id, st.system_type || 'legacy');
+    });
 
-    return { applications: filteredApplications || [], zellePayments, stripeUsers, overridesMap, userSystemTypesMap };
+    return { 
+      applications: filteredApplications, 
+      zellePayments, 
+      stripeUsers, 
+      overridesMap: overridesMap || {}, 
+      userSystemTypesMap 
+    };
   } finally {
     console.timeEnd('[payments] baseDataOptimized');
   }

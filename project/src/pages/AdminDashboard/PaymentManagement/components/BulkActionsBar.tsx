@@ -1,6 +1,6 @@
 import React from 'react';
 import { CheckSquare } from 'lucide-react';
-import { formatCentsToDollars } from '../../../../utils/currency';
+import { convertCentsToDollars, formatCurrency } from '../../../../utils/currency';
 
 export interface SelectedTotals {
 	totalCount: number;
@@ -37,7 +37,7 @@ function BulkActionsBarBase({ selectedTotals, onClearSelection }: BulkActionsBar
 				<div className="bg-green-50 rounded-lg p-4">
 					<div className="text-sm font-medium text-green-600 mb-1">Total Selected</div>
 					<div className="text-2xl font-bold text-green-900">
-						${formatCentsToDollars(selectedTotals.totalAmount).toLocaleString()}
+						{formatCurrency(convertCentsToDollars(selectedTotals.totalAmount), true, 'pt-BR')}
 					</div>
 				</div>
 				{Object.entries(selectedTotals.breakdownByMethod).map(([method, data]) => {
@@ -54,7 +54,7 @@ function BulkActionsBarBase({ selectedTotals, onClearSelection }: BulkActionsBar
 								{methodLabel}
 							</div>
 							<div className={`text-xl font-bold text-${methodColor}-900`}>
-								${formatCentsToDollars(data.amount).toLocaleString()}
+								{formatCurrency(convertCentsToDollars(data.amount), true, 'pt-BR')}
 							</div>
 							<div className={`text-xs text-${methodColor}-600`}>
 								{data.count} payments

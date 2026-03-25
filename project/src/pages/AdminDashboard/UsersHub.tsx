@@ -5,14 +5,14 @@ import StudentApplicationsView from '../../components/AdminDashboard/StudentAppl
 import CompletedApplicationsView from '../../components/AdminDashboard/CompletedApplicationsView';
 import FeeManagement from '../../components/AdminDashboard/FeeManagement';
 import AdminChatPage from './AdminChatPage';
-import { useUnreadMessagesCount } from '../../hooks/useUnreadMessagesCount';
+import { useAdminNotifications } from '../../contexts/AdminNotificationsContext';
 
 const UsersHub: React.FC = () => {
   const [searchParams] = useSearchParams();
   const [activeTab, setActiveTab] = useState<'applications' | 'completed' | 'feeManagement' | 'messages'>('applications');
   const [selectedConversationId, setSelectedConversationId] = useState<string | null>(null);
   const [selectedRecipientId, setSelectedRecipientId] = useState<string | null>(null);
-  const { unreadCount } = useUnreadMessagesCount();
+  const { unreadCount } = useAdminNotifications();
 
   // Read URL parameters on component mount
   useEffect(() => {

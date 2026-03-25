@@ -25,20 +25,18 @@ class SupabaseChannelManager {
     this.referenceCounts.set(channelName, count + 1);
 
     if (count > 0) {
-      console.log(
-        `[ChannelManager] Channel ${channelName} already has ${count} subscribers, incrementing...`,
-      );
+      // console.log(`[ChannelManager] Channel ${channelName} already has ${count} subscribers, incrementing...`);
       return this.channels.get(channelName);
     }
 
     const channel = this.getChannel(channelName, config);
     channel.subscribe((status: string) => {
-      console.log(
-        `[ChannelManager] Subscription status for ${channelName}:`,
-        status,
-      );
+      if (status === 'SUBSCRIBED') {
+        // console.log(`[ChannelManager] ✅ Subscribed to ${channelName}`);
+      } else if (status === 'CLOSED' || status === 'CHANNEL_ERROR') {
+        // console.warn(`[ChannelManager] ⚠️ Subscription ${status} for ${channelName}`);
+      }
     });
-    console.log(`[ChannelManager] Subscribed to new channel: ${channelName}`);
     return channel;
   }
 
@@ -49,19 +47,12 @@ class SupabaseChannelManager {
     const count = this.referenceCounts.get(channelName) || 0;
 
     if (count <= 0) {
-      console.log(
-        `[ChannelManager] Channel ${channelName} has no active subscribers, skipping...`,
-      );
       return;
     }
 
     if (count > 1) {
       this.referenceCounts.set(channelName, count - 1);
-      console.log(
-        `[ChannelManager] Channel ${channelName} still has ${
-          count - 1
-        } subscribers, holding...`,
-      );
+      // console.log(`[ChannelManager] Channel ${channelName} still has ${count - 1} subscribers, holding...`);
       return;
     }
 
@@ -70,20 +61,16 @@ class SupabaseChannelManager {
     if (channel) {
       try {
         supabase.removeChannel(channel);
-        console.log(
-          `[ChannelManager] Last subscriber left. Removed channel: ${channelName}`,
-        );
+        // console.log(`[ChannelManager] ℹ️ Channel removed: ${channelName}`);
       } catch (error) {
-        console.warn(
-          `[ChannelManager] Error removing channel ${channelName}:`,
-          error,
-        );
+        // console.warn(`[ChannelManager] ❌ Error removing channel ${channelName}:`, error);
       }
     }
 
     this.channels.delete(channelName);
     this.referenceCounts.delete(channelName);
   }
+
 
   /**
    * Unsubscribe from all channels

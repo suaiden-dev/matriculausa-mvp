@@ -85,7 +85,7 @@ export async function fetchPayments(params: FetchPaymentsParams) {
                 is_application_fee_paid,
                 is_scholarship_fee_paid,
                 scholarship_id,
-                user_profiles:id(user_id, full_name, email, phone, country, dependents, system_type),
+                user_profiles!student_id(user_id, full_name, email, phone, country, dependents, system_type),
                 scholarships:id(id, title, amount, application_fee_amount, scholarship_type, field_of_study, level, university_id, universities(name))
                 `,
                 { count: 'exact' }
