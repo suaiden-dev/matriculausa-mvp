@@ -23,6 +23,19 @@ import { useAuth } from '../../hooks/useAuth';
 const MAX_IMAGE_SIZE_MB = 2;
 const ALLOWED_IMAGE_TYPES = ['image/jpeg', 'image/png', 'image/webp'];
 
+const ALLOWED_UNIVERSITIES = [
+  { 
+    id: 'b8bd2998-bb6e-402c-bbaf-c2da16e64241', 
+    name: 'Caroline University',
+    defaultImage: 'https://fitpynguasqqutuhzifx.supabase.co/storage/v1/object/public/user-avatars/caroline%20loho.png'
+  },
+  { 
+    id: '100aeaa6-cba8-4577-8aff-30104a9aefcc', 
+    name: 'Oikos University Los Angeles',
+    defaultImage: 'https://fitpynguasqqutuhzifx.supabase.co/storage/v1/object/public/user-avatars/oikos%20logo.svg'
+  }
+];
+
 const AdminScholarshipEdit: React.FC = () => {
   const navigate = useNavigate();
   const { id } = useParams<{ id: string }>();
@@ -191,6 +204,45 @@ const AdminScholarshipEdit: React.FC = () => {
     }
   }, [isEditMode, isDataRestored, loadScholarshipData]);
 
+  // Reset form when entering "new" mode
+  useEffect(() => {
+    if (!isEditMode) {
+      const defaultUni = ALLOWED_UNIVERSITIES[0];
+      setFormData({
+        title: '',
+        description: '',
+        amount: '',
+        deadline: '',
+        requirements: [''],
+        field_of_study: '',
+        level: 'undergraduate',
+        delivery_mode: 'in_person',
+        eligibility: [''],
+        benefits: [''],
+        is_exclusive: false,
+        is_active: true,
+        original_annual_value: '',
+        original_value_per_credit: '',
+        annual_value_with_scholarship: '',
+        work_permissions: [] as string[],
+        application_fee_amount: '350.00',
+        scholarship_fee_amount: '',
+        placement_fee_amount: '',
+        scholarship_type: '',
+        visaassistance: '',
+        needcpt: false,
+        university_id: defaultUni.id,
+        internal_fees: [] as { category: string; amount: string; details: string; }[],
+        image_url: defaultUni.defaultImage || '',
+      });
+      setImagePreview(defaultUni.defaultImage || null);
+      setImageFile(null);
+      setSuccess(false);
+      setError(null);
+      setIsDataRestored(false);
+    }
+  }, [isEditMode]);
+
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement>) => {
     const { name, value } = e.target;
 
@@ -205,10 +257,24 @@ const AdminScholarshipEdit: React.FC = () => {
       }
     }
 
-    setFormData(prev => ({
-      ...prev,
-      [name]: value
-    }));
+    setFormData(prev => {
+      const next = {
+        ...prev,
+        [name]: value
+      };
+
+      // Se estiver em modo de criação (!id), ao trocar a universidade, 
+      // vinculamos a imagem padrão correspondente, desde que o usuário não tenha feito upload manual
+      if (name === 'university_id' && !isEditMode && !imageFile) {
+        const uni = ALLOWED_UNIVERSITIES.find(u => u.id === value);
+        if (uni?.defaultImage) {
+          next.image_url = uni.defaultImage;
+          setImagePreview(uni.defaultImage);
+        }
+      }
+
+      return next;
+    });
   };
 
   const handleCheckboxChange = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -530,7 +596,7 @@ const AdminScholarshipEdit: React.FC = () => {
           <div className="flex items-center justify-between">
             <div>
               <h1 className="text-3xl font-bold text-slate-900">
-                {isEditMode ? 'Edit Scholarship' : 'Create New Scholarship'}
+                {isEditMode ? 'Edit Scholarship' : 'New Scholarship'}
               </h1>
               <p className="text-slate-600 mt-2">
                 {isEditMode
@@ -645,17 +711,22 @@ const AdminScholarshipEdit: React.FC = () => {
 
                 <div>
                   <label className="block text-sm font-medium text-slate-700 mb-2">
-                    University ID *
+                    University *
                   </label>
-                  <input
-                    type="text"
+                  <select
                     name="university_id"
                     value={formData.university_id}
                     onChange={handleInputChange}
                     className="w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-[#05294E] focus:border-[#05294E] transition-all duration-200"
-                    placeholder="Enter university ID"
                     required
-                  />
+                  >
+                    <option value="" disabled>Select a university</option>
+                    {ALLOWED_UNIVERSITIES.map(uni => (
+                      <option key={uni.id} value={uni.id}>
+                        {uni.name}
+                      </option>
+                    ))}
+                  </select>
                 </div>
               </div>
             </div>
