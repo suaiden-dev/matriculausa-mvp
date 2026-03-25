@@ -18,7 +18,9 @@ import {
   Power,
   ArrowUpDown,
   ArrowUp,
-  ArrowDown
+  ArrowDown,
+  Filter,
+  X
 } from 'lucide-react';
 import { supabase } from '../../lib/supabase';
 
@@ -65,6 +67,32 @@ const ScholarshipManagement: React.FC<ScholarshipManagementProps> = ({
   // Estados da paginação
   const [currentPage, setCurrentPage] = useState(savedFilters.currentPage || 1);
   const [itemsPerPage, setItemsPerPage] = useState(savedFilters.itemsPerPage || 12);
+  // Função para limpar todos os filtros
+  const clearFilters = () => {
+    setSearchTerm('');
+    setStatusFilter('all');
+    setLevelFilter('all');
+    setUniversityFilter('all');
+    setCourseFilter('all');
+    setDeliveryModeFilter('all');
+    setDeadlineFilter('all');
+    setMinAmount('');
+    setMaxAmount('');
+    setSortBy('recent');
+    setCurrentPage(1);
+  };
+
+  const hasActiveFilters = searchTerm !== '' || 
+    statusFilter !== 'all' || 
+    levelFilter !== 'all' || 
+    universityFilter !== 'all' || 
+    courseFilter !== 'all' || 
+    deliveryModeFilter !== 'all' || 
+    deadlineFilter !== 'all' || 
+    minAmount !== '' || 
+    maxAmount !== '' || 
+    sortBy !== 'recent';
+
   // Dados para os filtros
   const [universities, setUniversities] = useState<any[]>([]);
   const [courses, setCourses] = useState<any[]>([]);
@@ -342,218 +370,213 @@ const ScholarshipManagement: React.FC<ScholarshipManagementProps> = ({
 
   return (
     <div className="space-y-6">
-      {/* Filters */}
-      <div className="bg-white rounded-2xl shadow-sm border border-slate-200 p-6">
-        <div className="space-y-6">
-          {/* Search Bar */}
-          <div className="relative">
-            <Search className="absolute left-4 top-3.5 h-5 w-5 text-slate-400" />
+      {/* Filters Section */}
+      <div className="bg-white rounded-2xl shadow-sm border border-slate-200 overflow-hidden">
+        <div className="p-5 border-b border-slate-100 flex items-center justify-between bg-slate-50/50">
+          <div className="flex items-center gap-2">
+            <Filter className="w-4 h-4 text-slate-500" />
+            <span className="font-semibold text-slate-800">Filters & Search</span>
+          </div>
+          <div className="flex items-center gap-3">
+            {/* View Mode Toggle */}
+            <div className="flex bg-white border border-slate-200 rounded-lg p-1 mr-2">
+              <button
+                onClick={() => handleViewModeChange('grid')}
+                className={`flex items-center px-2 py-1.5 rounded-md transition-all duration-200 ${
+                  viewMode === 'grid' ? 'bg-[#05294E] text-white shadow-sm' : 'text-slate-500 hover:text-slate-700'
+                }`}
+                title="Grid view"
+              >
+                <Grid3X3 className="h-3.5 w-3.5" />
+              </button>
+              <button
+                onClick={() => handleViewModeChange('list')}
+                className={`flex items-center px-2 py-1.5 rounded-md transition-all duration-200 ${
+                  viewMode === 'list' ? 'bg-[#05294E] text-white shadow-sm' : 'text-slate-500 hover:text-slate-700'
+                }`}
+                title="List view"
+              >
+                <List className="h-3.5 w-3.5" />
+              </button>
+            </div>
+          </div>
+        </div>
+
+        <div className="p-6 space-y-5">
+          {/* Main Search - Full Width */}
+          <div className="relative group">
+            <Search className="absolute left-4 top-3.5 h-5 w-5 text-slate-400 group-focus-within:text-[#05294E] transition-colors" />
             <input
               type="text"
-              placeholder="Search scholarships..."
+              placeholder="Search by scholarship title, university or course..."
               value={searchTerm}
               onChange={(e) => setSearchTerm(e.target.value)}
-              className="w-full pl-12 pr-4 py-3 bg-slate-50 border border-slate-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-[#05294E] focus:border-[#05294E] transition-all duration-200"
+              className="w-full pl-12 pr-4 py-3.5 bg-slate-50 border border-slate-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-[#05294E]/10 focus:border-[#05294E] transition-all duration-200 text-slate-800"
             />
           </div>
 
-          {/* Filter Controls */}
-          <div className="flex flex-col lg:flex-row gap-4">
-            {/* Filter Dropdowns */}
-            <div className="flex flex-wrap gap-3 flex-1">
-              <div className="min-w-[140px]">
-                <label className="block text-xs font-medium text-slate-600 mb-1">Status</label>
-                <select
-                  value={statusFilter}
-                  onChange={(e) => setStatusFilter(e.target.value)}
-                  className="w-full px-3 py-2.5 bg-slate-50 border border-slate-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#05294E] focus:border-[#05294E] transition-all duration-200 text-sm"
-                  title="Filter by scholarship status"
-                >
-                  <option value="all">All Status</option>
-                  <option value="active">Active</option>
-                  <option value="inactive">Inactive</option>
-                </select>
-              </div>
-
-              <div className="min-w-[140px]">
-                <label className="block text-xs font-medium text-slate-600 mb-1">Level</label>
-                <select
-                  value={levelFilter}
-                  onChange={(e) => setLevelFilter(e.target.value)}
-                  className="w-full px-3 py-2.5 bg-slate-50 border border-slate-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#05294E] focus:border-[#05294E] transition-all duration-200 text-sm"
-                  title="Filter by academic level"
-                >
-                  <option value="all">All Levels</option>
-                  <option value="undergraduate">Undergraduate</option>
-                  <option value="graduate">Graduate</option>
-                  <option value="doctorate">Doctorate</option>
-                </select>
-              </div>
-
-              <div className="min-w-[180px]">
-                <label className="block text-xs font-medium text-slate-600 mb-1">University</label>
-                <select
-                  value={universityFilter}
-                  onChange={(e) => setUniversityFilter(e.target.value)}
-                  className="w-full px-3 py-2.5 bg-slate-50 border border-slate-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#05294E] focus:border-[#05294E] transition-all duration-200 text-sm"
-                  title="Filter by university"
-                >
-                  <option value="all">All Universities</option>
-                  {universities.map((university, index) => (
-                    <option key={index} value={university.name}>
-                      {university.name}
-                    </option>
-                  ))}
-                </select>
-              </div>
-
-              <div className="min-w-[180px]">
-                <label className="block text-xs font-medium text-slate-600 mb-1">Course</label>
-                <select
-                  value={courseFilter}
-                  onChange={(e) => setCourseFilter(e.target.value)}
-                  className="w-full px-3 py-2.5 bg-slate-50 border border-slate-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#05294E] focus:border-[#05294E] transition-all duration-200 text-sm"
-                  title="Filter by course"
-                >
-                  <option value="all">All Courses</option>
-                  {courses.map((course, index) => (
-                    <option key={index} value={course.name}>
-                      {course.name}
-                    </option>
-                  ))}
-                </select>
-              </div>
-
-              <div className="min-w-[160px]">
-                <label className="block text-xs font-medium text-slate-600 mb-1">Deadline</label>
-                <select
-                  value={deadlineFilter}
-                  onChange={(e) => setDeadlineFilter(e.target.value as 'all' | 'expired' | 'urgent' | '14days' | 'soon' | 'normal')}
-                  className="w-full px-3 py-2.5 bg-slate-50 border border-slate-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#05294E] focus:border-[#05294E] transition-all duration-200 text-sm"
-                  title="Filter by deadline status"
-                >
-                  <option value="all">All Deadlines</option>
-                  <option value="expired">Expired</option>
-                  <option value="urgent">Urgent (≤7 days)</option>
-                  <option value="14days">14 Days</option>
-                  <option value="soon">Soon (≤30 days)</option>
-                  <option value="normal">Normal</option>
-                </select>
-              </div>
-
-              <div className="min-w-[160px]">
-                <label className="block text-xs font-medium text-slate-600 mb-1">Sort By</label>
-                <select
-                  value={sortBy}
-                  onChange={(e) => setSortBy(e.target.value as 'recent' | 'applicants' | 'views' | 'deadline')}
-                  className="w-full px-3 py-2.5 bg-slate-50 border border-slate-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#05294E] focus:border-[#05294E] transition-all duration-200 text-sm"
-                  title="Sort scholarships"
-                >
-                  <option value="recent">Most Recent</option>
-                  <option value="applicants">Most Applicants</option>
-                  <option value="views">Most Views</option>
-                  <option value="deadline">Deadline (Soonest First)</option>
-                  <option value="amount_desc">Amount (Highest First)</option>
-                  <option value="amount_asc">Amount (Lowest First)</option>
-                </select>
-              </div>
+          {/* Filter Grid */}
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-x-6 gap-y-4">
+            {/* Primary Filters Group */}
+            <div>
+              <label className="block text-xs font-bold text-slate-500 uppercase tracking-wider mb-2">Status</label>
+              <select
+                value={statusFilter}
+                onChange={(e) => setStatusFilter(e.target.value)}
+                className="w-full px-3 py-2.5 bg-white border border-slate-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#05294E] focus:border-[#05294E] text-sm font-medium"
+              >
+                <option value="all">All Status</option>
+                <option value="active">Active</option>
+                <option value="inactive">Inactive</option>
+              </select>
             </div>
 
-            {/* Delivery Mode and Amount Filters */}
-            <div className="flex flex-wrap gap-3 mt-4">
-              <div className="min-w-[160px]">
-                <label className="block text-xs font-medium text-slate-600 mb-1">Modality</label>
-                <select
-                  value={deliveryModeFilter}
-                  onChange={(e) => setDeliveryModeFilter(e.target.value)}
-                  className="w-full px-3 py-2.5 bg-slate-50 border border-slate-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#05294E] focus:border-[#05294E] transition-all duration-200 text-sm"
-                  title="Filter by course modality"
-                >
-                  <option value="all">All Modalities</option>
-                  <option value="in_person">In-Person</option>
-                  <option value="hybrid">Hybrid</option>
-                  <option value="online">Online</option>
-                </select>
-              </div>
+            <div>
+              <label className="block text-xs font-bold text-slate-500 uppercase tracking-wider mb-2">Academic Level</label>
+              <select
+                value={levelFilter}
+                onChange={(e) => setLevelFilter(e.target.value)}
+                className="w-full px-3 py-2.5 bg-white border border-slate-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#05294E] focus:border-[#05294E] text-sm font-medium"
+              >
+                <option value="all">All Levels</option>
+                <option value="undergraduate">Undergraduate</option>
+                <option value="graduate">Graduate</option>
+                <option value="doctorate">Doctorate</option>
+              </select>
+            </div>
 
-              <div className="min-w-[140px]">
-                <label className="block text-xs font-medium text-slate-600 mb-1">Min Amount ($)</label>
+            <div>
+              <label className="block text-xs font-bold text-slate-500 uppercase tracking-wider mb-2">University</label>
+              <select
+                value={universityFilter}
+                onChange={(e) => setUniversityFilter(e.target.value)}
+                className="w-full px-3 py-2.5 bg-white border border-slate-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#05294E] focus:border-[#05294E] text-sm font-medium"
+              >
+                <option value="all">All Universities</option>
+                {universities.map((u, i) => <option key={i} value={u.name}>{u.name}</option>)}
+              </select>
+            </div>
+
+            <div>
+              <label className="block text-xs font-bold text-slate-500 uppercase tracking-wider mb-2">Course / Field</label>
+              <select
+                value={courseFilter}
+                onChange={(e) => setCourseFilter(e.target.value)}
+                className="w-full px-3 py-2.5 bg-white border border-slate-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#05294E] focus:border-[#05294E] text-sm font-medium"
+              >
+                <option value="all">All Courses</option>
+                {courses.map((c, i) => <option key={i} value={c.name}>{c.name}</option>)}
+              </select>
+            </div>
+
+            {/* Secondary Filters Group */}
+            <div>
+              <label className="block text-xs font-bold text-slate-500 uppercase tracking-wider mb-2">Deadline</label>
+              <select
+                value={deadlineFilter}
+                onChange={(e) => setDeadlineFilter(e.target.value as any)}
+                className="w-full px-3 py-2.5 bg-white border border-slate-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#05294E] focus:border-[#05294E] text-sm font-medium"
+              >
+                <option value="all">All Deadlines</option>
+                <option value="expired">Expired</option>
+                <option value="urgent">Urgent (&le;7 days)</option>
+                <option value="14days">Next 14 days</option>
+                <option value="soon">Soon (&le;30 days)</option>
+                <option value="normal">Normal (&gt;30 days)</option>
+              </select>
+            </div>
+
+            <div>
+              <label className="block text-xs font-bold text-slate-500 uppercase tracking-wider mb-2">Modality</label>
+              <select
+                value={deliveryModeFilter}
+                onChange={(e) => setDeliveryModeFilter(e.target.value)}
+                className="w-full px-3 py-2.5 bg-white border border-slate-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#05294E] focus:border-[#05294E] text-sm font-medium"
+              >
+                <option value="all">All Modalities</option>
+                <option value="in_person">In-Person</option>
+                <option value="hybrid">Hybrid</option>
+                <option value="online">Online</option>
+              </select>
+            </div>
+
+            {/* Price Range */}
+            <div className="md:col-span-1 lg:col-span-1 grid grid-cols-2 gap-2">
+              <div>
+                <label className="block text-xs font-bold text-slate-500 uppercase tracking-wider mb-2">Min Amount ($)</label>
                 <input
                   type="number"
                   placeholder="0"
                   value={minAmount}
                   onChange={(e) => setMinAmount(e.target.value)}
-                  className="w-full px-3 py-2.5 bg-slate-50 border border-slate-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#05294E] focus:border-[#05294E] transition-all duration-200 text-sm"
-                  title="Minimum scholarship amount"
-                  min="0"
-                  step="100"
+                  className="w-full px-3 py-2.5 bg-white border border-slate-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#05294E] focus:border-[#05294E] text-sm font-medium"
                 />
               </div>
-
-              <div className="min-w-[140px]">
-                <label className="block text-xs font-medium text-slate-600 mb-1">Max Amount ($)</label>
+              <div>
+                <label className="block text-xs font-bold text-slate-500 uppercase tracking-wider mb-2">Max Amount ($)</label>
                 <input
                   type="number"
-                  placeholder="No limit"
+                  placeholder="&infin;"
                   value={maxAmount}
                   onChange={(e) => setMaxAmount(e.target.value)}
-                  className="w-full px-3 py-2.5 bg-slate-50 border border-slate-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#05294E] focus:border-[#05294E] transition-all duration-200 text-sm"
-                  title="Maximum scholarship amount"
-                  min="0"
-                  step="100"
+                  className="w-full px-3 py-2.5 bg-white border border-slate-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#05294E] focus:border-[#05294E] text-sm font-medium"
                 />
               </div>
             </div>
 
-            {/* View Mode Toggle */}
-            <div className="flex items-end">
-              <div className="flex bg-slate-50 border border-slate-200 rounded-lg p-1">
-                <button
-                  onClick={() => handleViewModeChange('grid')}
-                  className={`flex items-center px-3 py-2 rounded-md transition-all duration-200 ${
-                    viewMode === 'grid' ? 'bg-white text-[#05294E] shadow-sm' : 'text-slate-500 hover:text-slate-700'
-                  }`}
-                  title="Grid view"
+            <div>
+              <label className="block text-xs font-bold text-slate-500 uppercase tracking-wider mb-2">Sort By</label>
+              <div className="flex gap-2">
+                <select
+                  value={sortBy}
+                  onChange={(e) => setSortBy(e.target.value as any)}
+                  className="flex-1 px-3 py-2.5 bg-white border border-slate-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#05294E] focus:border-[#05294E] text-sm font-medium"
                 >
-                  <Grid3X3 className="h-4 w-4" />
-                </button>
-                <button
-                  onClick={() => handleViewModeChange('list')}
-                  className={`flex items-center px-3 py-2 rounded-md transition-all duration-200 ${
-                    viewMode === 'list' ? 'bg-white text-[#05294E] shadow-sm' : 'text-slate-500 hover:text-slate-700'
-                  }`}
-                  title="List view"
-                >
-                  <List className="h-4 w-4" />
-                </button>
+                  <option value="recent">Most Recent</option>
+                  <option value="deadline">Soonest Deadline</option>
+                  <option value="amount_desc">Highest Amount</option>
+                  <option value="amount_asc">Lowest Amount</option>
+                  <option value="applicants">Most Applicants</option>
+                  <option value="views">Most Viewed</option>
+                </select>
+
+                {hasActiveFilters && (
+                  <button
+                    onClick={clearFilters}
+                    className="p-2.5 text-red-500 hover:bg-red-50 border border-red-100 rounded-lg transition-colors group flex-shrink-0"
+                    title="Clear Filters"
+                  >
+                    <X className="w-5 h-5" />
+                  </button>
+                )}
               </div>
             </div>
           </div>
-        </div>
-
-        <div className="mt-4 flex items-center justify-between text-sm text-slate-600">
-          <div>
-            <span className="font-medium">{filteredScholarships.length}</span>
-            <span className="ml-1">
-              scholarship{filteredScholarships.length !== 1 ? 's' : ''} found
-            </span>
-          </div>
-          <div className="flex items-center gap-4">
-            <div className="flex items-center gap-2">
-              <label className="text-sm text-slate-600">Show:</label>
-              <select
-                value={itemsPerPage}
-                onChange={(e) => {
-                  setItemsPerPage(Number(e.target.value));
-                  setCurrentPage(1);
-                }}
-                className="px-2 py-1 border border-slate-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-[#05294E] focus:border-[#05294E]"
-              >
-                <option value={6}>6 per page</option>
-                <option value={12}>12 per page</option>
-                <option value={24}>24 per page</option>
-                <option value={48}>48 per page</option>
-              </select>
+          {/* Count and Items per page selection */}
+          <div className="pt-4 mt-2 border-t border-slate-100 flex items-center justify-between text-sm text-slate-600">
+            <div>
+              <span className="font-medium text-[#05294E]">{filteredScholarships.length}</span>
+              <span className="ml-1">
+                scholarship{filteredScholarships.length !== 1 ? 's' : ''} found
+              </span>
+            </div>
+            <div className="flex items-center gap-4">
+              <div className="flex items-center gap-2">
+                <label className="text-sm text-slate-600">Show:</label>
+                <select
+                  value={itemsPerPage}
+                  onChange={(e) => {
+                    setItemsPerPage(Number(e.target.value));
+                    setCurrentPage(1);
+                  }}
+                  className="px-2 py-1 bg-white border border-slate-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-[#05294E] focus:border-[#05294E]"
+                >
+                  <option value={6}>6 per page</option>
+                  <option value={12}>12 per page</option>
+                  <option value={24}>24 per page</option>
+                  <option value={48}>48 per page</option>
+                </select>
+              </div>
             </div>
           </div>
         </div>
