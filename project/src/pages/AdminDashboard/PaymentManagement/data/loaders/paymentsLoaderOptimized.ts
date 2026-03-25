@@ -33,17 +33,10 @@ const IS_PROD_OR_STAGING = ((): boolean => {
 })();
 
 /**
- * Verifica se está em produção ou staging
- */
-function shouldFilter(): boolean {
-  return IS_PROD_OR_STAGING;
-}
-
-/**
  * Verifica se deve excluir estudante com email @uorak.com
  */
 function shouldExcludeStudent(email: string | null | undefined): boolean {
-  if (!shouldFilter()) return false; // Em localhost, não excluir
+  if (!IS_PROD_OR_STAGING) return false; // Em localhost, não excluir
   if (!email) return false; // Se não tem email, não excluir
   return email.toLowerCase().includes('@uorak.com');
 }
@@ -170,8 +163,7 @@ export async function loadPaymentsBaseDataOptimized(supabase: SupabaseClient): P
     if (stripeRes.error) console.error('Error loading Stripe users:', stripeRes.error);
 
     // Processamento e filtragem pós-Bloco 1
-    const filterActive = shouldFilter();
-    const filteredApplications = filterActive
+    const filteredApplications = IS_PROD_OR_STAGING
       ? applications.filter((app: any) => !shouldExcludeStudent(app.user_profiles?.email))
       : applications;
 
@@ -179,7 +171,7 @@ export async function loadPaymentsBaseDataOptimized(supabase: SupabaseClient): P
     
     // Filtrar stripe users que já possuem aplicação para evitar duplicatas na lista
     let stripeUsers = stripeUsersRaw.filter((user: any) => !applicationUserIdsSet.has(user.user_id));
-    if (filterActive) {
+    if (IS_PROD_OR_STAGING) {
       stripeUsers = stripeUsers.filter((user: any) => !shouldExcludeStudent(user.email));
     }
 
@@ -211,7 +203,7 @@ export async function loadPaymentsBaseDataOptimized(supabase: SupabaseClient): P
       user_profiles: zelleProfilesRes.data?.find(p => p.user_id === payment.user_id)
     }));
 
-    if (filterActive) {
+    if (IS_PROD_OR_STAGING) {
       zellePayments = zellePayments.filter(p => !shouldExcludeStudent(p.user_profiles?.email));
     }
 
