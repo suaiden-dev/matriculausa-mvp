@@ -196,15 +196,6 @@ const AdminDashboard: React.FC = () => {
       // Reduzimos de 8 queries sequenciais para 5 paralelas
       const isDev = window.location.hostname === 'localhost';
 
-      let universitiesQuery = supabase.from('universities').select('*').order('created_at', { ascending: false });
-      let applicationsQuery = supabase.from('scholarship_applications').select('*, scholarships!inner(title, amount, universities!inner(name))').order('created_at', { ascending: false });
-
-      if (!isDev) {
-        // Filtrar e-mails de teste diretamente no banco para performance em produção
-        universitiesQuery = universitiesQuery.not('email', 'ilike', '%@uorak.com%');
-        applicationsQuery = applicationsQuery.not('email', 'ilike', '%@uorak.com%');
-      }
-
       const [
         universitiesRes,
         scholarshipsRes,
@@ -214,9 +205,9 @@ const AdminDashboard: React.FC = () => {
         universityPayoutsRes,
         zellePaymentsRes
       ] = await Promise.all([
-        universitiesQuery,
+        supabase.from('universities').select('*').order('created_at', { ascending: false }),
         supabase.from('scholarships').select('*, universities!inner(name)').order('created_at', { ascending: false }),
-        applicationsQuery,
+        supabase.from('scholarship_applications').select('*, scholarships!inner(title, amount, universities!inner(name))').order('created_at', { ascending: false }),
         supabase.rpc('get_admin_users_data'),
         supabase.rpc('get_admin_dashboard_stats_v2'),
         // Busca consolidada de solicitações de pagamento (university e affiliate)
@@ -264,12 +255,21 @@ const AdminDashboard: React.FC = () => {
         cartCounts[s.scholarship_id] = Number(s.cart_count);
       });
 
+      // ✅ FILTRAGEM DE TESTE (FRONTEND): Excluir dados de teste (@uorak.com) em produção
+      const shouldFilterTestEmails = !isDev;
+
       // Processar dados para o estado do componente
-      const processedUniversities = universitiesData.map((university: any) => ({
-        ...university,
-        user_email: userEmails[university.user_id] || null,
-        user_profile: userProfilesMap[university.user_id] || null
-      }));
+      const processedUniversities = universitiesData
+        .filter((u: any) => {
+          if (!shouldFilterTestEmails) return true;
+          const email = userEmails[u.user_id] || '';
+          return !email.toLowerCase().includes('@uorak.com');
+        })
+        .map((university: any) => ({
+          ...university,
+          user_email: userEmails[university.user_id] || null,
+          user_profile: userProfilesMap[university.user_id] || null
+        }));
 
       const processedScholarships = scholarshipsData.map((scholarship: any) => ({
         ...scholarship,
@@ -277,32 +277,47 @@ const AdminDashboard: React.FC = () => {
         cart_count: cartCounts[scholarship.id] || 0
       }));
 
-      const finalUsersData = adminUsersData.map((u: any) => ({
-        id: u.id,
-        user_id: u.id,
-        full_name: u.full_name || 'Unknown User',
-        email: u.email || 'Email not available',
-        role: u.role || u.raw_user_meta_data?.role || 'student',
-        country: u.country,
-        field_of_interest: u.field_of_interest,
-        status: u.status || 'active',
-        applications_count: 0,
-        created_at: u.created_at,
-        last_active: u.last_active || u.created_at
-      }));
+      const finalUsersData = adminUsersData
+        .filter((u: any) => {
+          if (!shouldFilterTestEmails) return true;
+          return !(u.email || '').toLowerCase().includes('@uorak.com');
+        })
+        .map((u: any) => ({
+          id: u.id,
+          user_id: u.id,
+          full_name: u.full_name || 'Unknown User',
+          email: u.email || 'Email not available',
+          role: u.role || u.raw_user_meta_data?.role || 'student',
+          country: u.country,
+          field_of_interest: u.field_of_interest,
+          status: u.status || 'active',
+          applications_count: 0,
+          created_at: u.created_at,
+          last_active: u.last_active || u.created_at
+        }));
 
-      const processedApplications = applicationsData.map((app: any) => ({
-        id: app.id,
-        student_name: userProfilesMap[app.student_id]?.full_name || 'Student User',
-        student_email: userEmails[app.student_id] || '',
-        scholarship_title: app.scholarships?.title || 'Unknown Scholarship',
-        university_name: app.scholarships?.universities?.name || 'Unknown University',
-        amount: app.scholarships?.amount || 0,
-        status: app.status,
-        applied_at: app.applied_at,
-        reviewed_at: app.reviewed_at,
-        notes: app.notes
-      }));
+      const processedApplications = applicationsData
+        .filter((app: any) => {
+          if (!shouldFilterTestEmails) return true;
+          const email = userEmails[app.student_id] || '';
+          return !email.toLowerCase().includes('@uorak.com');
+        })
+        .map((app: any) => ({
+          id: app.id,
+          student_name: userProfilesMap[app.student_id]?.full_name || 'Student User',
+          student_email: userEmails[app.student_id] || '',
+          scholarship_title: app.scholarships?.title || 'Unknown Scholarship',
+          university_name: app.scholarships?.universities?.name || 'Unknown University',
+          amount: app.scholarships?.amount || 0,
+          status: app.status,
+          applied_at: app.applied_at,
+          reviewed_at: app.reviewed_at,
+          notes: app.notes
+        }));
+      
+      if (shouldFilterTestEmails) {
+        console.log(`✅ [Dashboard] Filtros aplicados em produção: Excluídos perfis de teste @uorak.com`);
+      }
 
       setUniversities(processedUniversities);
       setUsers(finalUsersData);
