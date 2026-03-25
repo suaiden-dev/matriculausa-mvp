@@ -77,7 +77,7 @@
       "days": "días",
       "details": "Detalles",
       "applyNow": "Aplicar Ahora",
-      "notAvailable": "No disponible",
+      "notAvailable": "Agotada",
       "placementFee": "Tarifa de Colocación"
     },
     "noResults": {
@@ -137,7 +137,7 @@
       "additionalBenefits": "Beneficios Adicionales",
       "expired": "Expirada",
       "scholarshipExpired": "Beca Expirada",
-      "noLongerAccepting": "No disponible para aplicación",
+      "noLongerAccepting": "Agotada para aplicación",
       "canStillView": "Aún puede ver la información, pero no será posible aplicar a esta beca.",
       "internalFeesTitle": "Tarifas Internas de la Universidad",
       "internalFeesDisclaimer": "Algunas tarifas se pagan directamente a la universidad, mientras que otras se procesan a través de nuestra plataforma.",

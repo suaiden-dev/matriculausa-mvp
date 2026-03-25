@@ -78,7 +78,7 @@
       "days": "dias",
       "details": "Detalhes",
       "applyNow": "Candidatar-se",
-      "notAvailable": "Não disponível",
+      "notAvailable": "Esgotada",
       "placementFee": "Taxa de Colocação"
     },
     "noResults": {
@@ -138,7 +138,7 @@
       "additionalBenefits": "Benefícios Adicionais",
       "expired": "Expirada",
       "scholarshipExpired": "Bolsa Expirada",
-      "noLongerAccepting": "Esta bolsa não está mais aceitando novas aplicações.",
+      "noLongerAccepting": "Esgotada para aplicação, esta bolsa não está mais aceitando novas aplicações.",
       "canStillView": "Você ainda pode visualizar as informações, mas não será possível aplicar para esta bolsa.",
       "internalFeesTitle": "Taxas Internas da Universidade",
       "internalFeesDisclaimer": "Algumas taxas são pagas diretamente à universidade, enquanto outras são processadas por meio da nossa plataforma.",

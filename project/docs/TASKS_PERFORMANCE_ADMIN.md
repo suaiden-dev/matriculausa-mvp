@@ -113,11 +113,20 @@
 - [x] **TASK-07: Otimização do Overview Admin (Consolidação de Dados)**
     - [x] Centralizar buscas de dados no component pai (AdminDashboard)
     - [x] Implementar filtros de e-mail de teste no nível do servidor (RPC/SQL)
-    - [x] Remover lógica redundante de busca e filtragem no Overview.tsx
-    - [x] Estabilizar logs do SupabaseChannelManager
-view.tsx
-
-todas as rotas após a mudança
+    - [x] Remover lógica redundante
+    - [x] Investigações adicionais e correções solicitadas
+    - [x] Debugging erro de carregamento no Netlify (AdminScholarshipEdit)
+- [x] Fase- [ ] Otimização da ordenação de bolsas no Onboarding do Aluno
+    - [x] Refatorar `ScholarshipSelectionStep.tsx` para ordenação por preço (Tuition)
+    - [/] Validar ordenação criando novo perfil de estudante
+    - [ ] Implementar lógica visual de Destaque (6 primeiras após ativos)
+    - [x] Ajustar tempo de redirecionamento (800ms)
+    - [x] Adicionar medição de tempo (`console.time`)
+    - [x] Validar melhorias via teste/browser.
+- [/] Fase 7: Ordenação por Tuition (Onboarding)
+    - [/] Alterar `sortedScholarships` em `ScholarshipSelectionStep.tsx`
+    - [ ] Remover prioridade de "Blocked" (verificando intenção do usuário)
+    - [ ] Validar no browser os cards de $3800 no topo.
 - **Ganho estimado:** −3 a −8s no primeiro carregamento
 
 ---
