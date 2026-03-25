@@ -370,6 +370,21 @@ const ScholarshipManagement: React.FC<ScholarshipManagementProps> = ({
 
   return (
     <div className="space-y-6">
+      {/* Header with New Scholarship Button */}
+      <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
+        <div>
+          <h1 className="text-2xl font-bold text-slate-900">Scholarship Management</h1>
+          <p className="text-slate-500 text-sm">Manage and monitor all scholarships in the platform</p>
+        </div>
+        <button
+          onClick={() => navigate('/admin/dashboard/scholarships/new')}
+          className="bg-[#05294E] text-white px-6 py-3 rounded-xl font-bold hover:bg-[#05294E]/90 transition-all shadow-sm flex items-center justify-center gap-2"
+        >
+          <Award className="h-5 w-5" />
+          + New Scholarship
+        </button>
+      </div>
+
       {/* Filters Section */}
       <div className="bg-white rounded-2xl shadow-sm border border-slate-200 overflow-hidden">
         <div className="p-5 border-b border-slate-100 flex items-center justify-between bg-slate-50/50">

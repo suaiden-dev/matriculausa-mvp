@@ -571,6 +571,7 @@ const AdminDashboard: React.FC = () => {
             <Route path="universities/:universityId" element={<UniversityDetails />} />
             <Route path="users" element={<UsersHub />} />
             <Route path="scholarships" element={<ScholarshipManagement scholarships={scholarships} stats={componentStats.scholarships} onRefresh={loadAdminData} />} />
+            <Route path="scholarships/new" element={<AdminScholarshipEdit />} />
             <Route path="scholarships/edit/:id" element={<AdminScholarshipEdit />} />
             <Route path="payments" element={<PaymentManagement />} />
             <Route path="settings" element={<SystemSettings userManagementProps={{ users, stats: componentStats.users, onSuspend: handleSuspendUser, onRefresh: loadAdminData }} />} />
