@@ -2,6 +2,7 @@
 import "jsr:@supabase/functions-js/edge-runtime.d.ts";
 import Stripe from "npm:stripe@17.7.0";
 import { createClient } from "npm:@supabase/supabase-js@2.49.1";
+import { notifyCheckoutInitiated } from "../utils/checkout-notifier.ts";
 
 const supabase = createClient(
   Deno.env.get("SUPABASE_URL") ?? "",
@@ -155,9 +156,9 @@ Deno.serve(async (req) => {
     const session = await stripe.checkout.sessions.create(sessionConfig);
     console.log("[stripe-checkout-placement-fee] ✅ Sessão criada:", session.id);
 
-    // Log da ação
+    // Log da ação + notifier de checkout abandonado
     try {
-      const { data: userProfile } = await supabase.from("user_profiles").select("id").eq("user_id", user.id).single();
+      const { data: userProfile } = await supabase.from("user_profiles").select("id, full_name, email, phone").eq("user_id", user.id).single();
       if (userProfile) {
         await supabase.rpc("log_student_action", {
           p_student_id: userProfile.id,
@@ -167,6 +168,18 @@ Deno.serve(async (req) => {
           p_performed_by_type: "student",
           p_metadata: { fee_type: "placement_fee", payment_method: "stripe", session_id: session.id, amount: explicitAmount },
         });
+
+        // === RECUPERAÇÃO DE CHECKOUT ABANDONADO ===
+        notifyCheckoutInitiated({
+          fee_type: "placement_fee",
+          payment_method: "stripe",
+          student_id: user.id,
+          student_name: userProfile.full_name ?? null,
+          student_email: userProfile.email ?? user.email ?? null,
+          student_phone: userProfile.phone ?? null,
+          checkout_url: session.url,
+        }).catch((err) => console.warn("[stripe-checkout-placement-fee] Notifier error (ignorado):", err));
+        // ==========================================
       }
     } catch (logError) {
       console.error("[stripe-checkout-placement-fee] Failed to log:", logError);

@@ -6,6 +6,7 @@ import {
   calculateCardAmountWithFees,
   calculatePIXAmountWithFees,
 } from "../utils/stripe-fee-calculator.ts";
+import { notifyCheckoutInitiated } from "../utils/checkout-notifier.ts";
 
 const supabase = createClient(
   Deno.env.get("SUPABASE_URL") ?? "",
@@ -123,7 +124,7 @@ Deno.serve(async (req) => {
     // Busca o perfil do usuário para obter o user_profiles.id correto e informações de dependentes
     const { data: userProfile, error: profileError } = await supabase
       .from("user_profiles")
-      .select("id, user_id, system_type, dependents")
+      .select("id, user_id, system_type, dependents, full_name, email, phone")
       .eq("user_id", user.id)
       .single();
 
@@ -679,6 +680,18 @@ Deno.serve(async (req) => {
     } catch (logError) {
       console.error("Failed to log checkout session creation:", logError);
     }
+
+    // === RECUPERAÇÃO DE CHECKOUT ABANDONADO ===
+    notifyCheckoutInitiated({
+      fee_type: "application_fee",
+      payment_method: "stripe",
+      student_id: user.id,
+      student_name: userProfile?.full_name ?? null,
+      student_email: userProfile?.email ?? user.email ?? null,
+      student_phone: userProfile?.phone ?? null,
+      checkout_url: session.url,
+    }).catch((err) => console.warn("[stripe-checkout-application-fee] Notifier error (ignorado):", err));
+    // ==========================================
 
     return corsResponse({ session_url: session.url }, 200);
   } catch (error) {
