@@ -8,6 +8,7 @@ export type OnboardingStep =
   | "payment"
   | "scholarship_fee"
   | "placement_fee"
+  | "reinstatement_fee"
   | "my_applications"
   | "completed";
 
@@ -23,6 +24,7 @@ export interface OnboardingState {
   applicationFeePaid: boolean;
   scholarshipFeePaid: boolean;
   placementFeePaid: boolean;
+  reinstatementFeePaid: boolean;
   universityDocumentsUploaded: boolean;
   onboardingCompleted: boolean;
   isNewFlowUser: boolean;
@@ -41,4 +43,5 @@ export interface StepProps {
   onNext: () => void;
   onBack: () => void;
   onComplete?: () => void;
+  currentStep?: OnboardingStep;
 }

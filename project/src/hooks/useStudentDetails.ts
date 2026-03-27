@@ -54,6 +54,9 @@ export interface StudentRecord {
   ds160_package_payment_method?: string | null;
   i539_cos_package_payment_method?: string | null;
   system_type?: 'legacy' | 'simplified' | null;
+  has_paid_reinstatement_package?: boolean;
+  visa_transfer_active?: boolean;
+  reinstatement_package_payment_method?: string | null;
 }
 
 /**
@@ -135,6 +138,8 @@ export const useStudentDetails = (profileId: string | undefined) => {
             ds160_package_payment_method,
             i539_cos_package_payment_method,
             system_type,
+            has_paid_reinstatement_package,
+            visa_transfer_active,
             scholarship_applications (
               id,
               scholarship_id,
@@ -242,6 +247,9 @@ export const useStudentDetails = (profileId: string | undefined) => {
         documents_status: s.documents_status || null,
         has_paid_ds160_package: s.has_paid_ds160_package || false,
         has_paid_i539_cos_package: s.has_paid_i539_cos_package || false,
+        has_paid_reinstatement_package: s.has_paid_reinstatement_package || false,
+        visa_transfer_active: s.visa_transfer_active,
+        reinstatement_package_payment_method: s.reinstatement_package_payment_method || null,
         ds160_package_payment_method: s.ds160_package_payment_method || null,
         i539_cos_package_payment_method: s.i539_cos_package_payment_method || null,
         system_type: s.system_type || null,

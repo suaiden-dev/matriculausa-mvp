@@ -8,7 +8,7 @@ import { generateUUID } from '../utils/uuid';
 import { config } from '../lib/config';
 
 interface ZelleCheckoutProps {
-  feeType: 'selection_process' | 'application_fee' | 'enrollment_fee' | 'scholarship_fee' | 'i20_control_fee' | 'placement_fee' | 'ds160_package' | 'i539_cos_package';
+  feeType: 'selection_process' | 'application_fee' | 'enrollment_fee' | 'scholarship_fee' | 'i20_control_fee' | 'placement_fee' | 'ds160_package' | 'i539_cos_package' | 'reinstatement_package';
   amount: number;
   scholarshipsIds?: string[];
   onSuccess?: () => void;
@@ -217,6 +217,15 @@ export const ZelleCheckout: React.FC<ZelleCheckoutProps> = ({
             .update({ 
               has_paid_i20_control_fee: true,
               i20_control_fee_payment_method: 'zelle',
+              updated_at: new Date().toISOString()
+            })
+            .eq('user_id', user.id);
+        } else if (feeType === 'reinstatement_package') {
+          await supabase
+            .from('user_profiles')
+            .update({ 
+              has_paid_reinstatement_package: true,
+              reinstatement_package_payment_method: 'zelle',
               updated_at: new Date().toISOString()
             })
             .eq('user_id', user.id);

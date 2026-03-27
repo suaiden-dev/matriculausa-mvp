@@ -483,6 +483,10 @@ export const useFeeConfig = (userId?: string) => {
         case "i539_cos_package_fee":
           override = userFeeOverrides.i539_cos_package_fee;
           break;
+        case "reinstatement_fee":
+          // Reinstatement fee currently has no override field in the table
+          override = undefined;
+          break;
       }
 
       if (override !== undefined && override !== null) {
@@ -546,6 +550,9 @@ export const useFeeConfig = (userId?: string) => {
     }
     if (feeType === "application_fee") {
       return feeConfig.application_fee_default;
+    }
+    if (feeType === "reinstatement_fee") {
+      return 500;
     }
     return feeConfig.application_fee_default;
   };

@@ -146,8 +146,8 @@
       "universityInternalFees": "University Internal Fees",
       "viewUniversityFeesPage": "View University Fees Page",
       "internalFeesConditionalNote": "The fee depends on the student's process or visa type and then corresponds with the fee",
-      "i539COSPackage": "I539 COS Package",
-      "ds160Package": "DS160 Package",
+      "i539COSPackage": "I539 Package Fee",
+      "ds160Package": "DS160 Package Fee - INITIAL",
       "i539PackageDescription": "Fee required for students requesting Change of Status (COS)",
       "ds160PackageDescription": "Fee required for students requesting Transfer",
       "days": "days"
@@ -233,9 +233,9 @@
     },
     "quickGuide": {
       "title": "Quick guide:",
-      "step1": "<strong>Click any scholarship card</strong> to add it to your selection",
-      "step2": "<strong>Select as many as you want</strong> - you can choose multiple options",
-      "step3": "<strong>Use filters</strong> to search by university or scholarship value",
+      "step1": "<strong>Use filters</strong> to search by university or scholarship value",
+      "step2": "<strong>Click any scholarship card</strong> to add it to your selection",
+      "step3": "<strong>Select as many as you want</strong> - you can choose multiple options",
       "step4": "<strong>Click \"Continue\"</strong> once you've selected at least one scholarship"
     },
     "continueWithCount": "Continue ({{count}} selected)",

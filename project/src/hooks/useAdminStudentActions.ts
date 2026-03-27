@@ -30,7 +30,7 @@ export const useAdminStudentActions = () => {
   // Mark fee as paid
   const markFeeAsPaid = useCallback(async (
     userId: string,
-    feeType: 'selection_process' | 'application' | 'scholarship' | 'i20_control' | 'placement' | 'ds160_package' | 'i539_cos_package',
+    feeType: 'selection_process' | 'application' | 'scholarship' | 'i20_control' | 'placement' | 'ds160_package' | 'i539_cos_package' | 'reinstatement_fee',
     amount: number,
     paymentMethod: string,
     applicationId?: string
@@ -42,7 +42,7 @@ export const useAdminStudentActions = () => {
       // to have access to all necessary data (paymentDate, etc.)
 
       // Update the appropriate fee status
-      if (feeType === 'selection_process' || feeType === 'i20_control' || feeType === 'ds160_package' || feeType === 'i539_cos_package') {
+      if (feeType === 'selection_process' || feeType === 'i20_control' || feeType === 'ds160_package' || feeType === 'i539_cos_package' || feeType === 'reinstatement_fee') {
         let fieldName: string;
         let methodField: string;
 
@@ -55,6 +55,9 @@ export const useAdminStudentActions = () => {
         } else if (feeType === 'ds160_package') {
           fieldName = 'has_paid_ds160_package';
           methodField = 'ds160_package_payment_method';
+        } else if (feeType === 'reinstatement_fee') {
+          fieldName = 'has_paid_reinstatement_package';
+          methodField = 'reinstatement_package_payment_method';
         } else {
           fieldName = 'has_paid_i539_cos_package';
           methodField = 'i539_cos_package_payment_method';
@@ -210,7 +213,7 @@ export const useAdminStudentActions = () => {
   // Update payment method
   const updatePaymentMethod = useCallback(async (
     userId: string,
-    feeType: 'selection_process' | 'i20_control' | 'ds160_package' | 'i539_cos_package',
+    feeType: 'selection_process' | 'i20_control' | 'ds160_package' | 'i539_cos_package' | 'reinstatement_fee',
     method: string
   ) => {
     try {
@@ -223,6 +226,8 @@ export const useAdminStudentActions = () => {
         fieldName = 'i20_control_fee_payment_method';
       } else if (feeType === 'ds160_package') {
         fieldName = 'ds160_package_payment_method';
+      } else if (feeType === 'reinstatement_fee') {
+        fieldName = 'reinstatement_package_payment_method';
       } else {
         fieldName = 'i539_cos_package_payment_method';
       }

@@ -108,7 +108,8 @@
         "documentsUpload": "Documents",
         "payment": "Application Fee",
         "scholarshipFee": "Scholarship Fee",
-        "placementFee": "Placement Fee"
+        "placementFee": "Placement Fee",
+        "reinstatementFee": "Reinstatement Fee"
       }
     },
     "processType": {
@@ -138,6 +139,13 @@
         "changeOfStatus": {
           "label": "Change of Status",
           "description": "You have another type of visa (B-2, H-1B, etc.) and wish to change to F-1."
+        }
+      },
+      "activeStatus": {
+        "label": "Is your status active?",
+        "options": {
+          "yes": "Yes",
+          "no": "No (terminated/cancelled)"
         }
       }
     },
@@ -198,7 +206,7 @@
         "descriptionPost": "."
       },
       "acceptance": {
-        "lockMessage": "You need to pay the <0>{{feeName}}</0> fee before your acceptance letter can be released.",
+        "lockMessage": "You need to pay <0>{{feeName}}</0> before your acceptance letter can be released.",
         "goToPayment": "Go to Payment"
       },
       "packageFees": {
@@ -717,5 +725,15 @@
       "processing": "Processing payment...",
       "redirecting": "Please wait, redirecting to checkout"
     }
+  },
+  "reinstatementFeeStep": {
+    "title": "Reinstatement Fee",
+    "subtitle": "To proceed with your transfer process, payment of the reinstatement fee is required.",
+    "feeLabel": "Reinstatement Fee",
+    "description": "",
+    "securePayment": "Secure Payment",
+    "annualTuition": "Annual scholarship value: {{amount}}",
+    "confirmedMessage": "Your reinstatement fee has been successfully confirmed.",
+    "paidSuccess": "Payment Confirmed"
   }
 }

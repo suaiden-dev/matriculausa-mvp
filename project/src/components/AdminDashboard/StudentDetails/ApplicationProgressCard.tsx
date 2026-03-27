@@ -39,6 +39,7 @@ const ApplicationProgressCard: React.FC<ApplicationProgressCardProps> = React.me
       case 'application_fee': return 'Student pays the application fee';
       case 'scholarship_fee': return 'Student pays the scholarship fee';
       case 'placement_fee': return 'Student pays the placement fee';
+      case 'reinstatement_fee': return 'Transfer student pays the reinstatement fee (inactive visa)';
       case 'acceptance_letter': return 'University sends acceptance letter';
       case 'transfer_form': return 'University sends transfer form (for transfer students)';
       case 'i20_fee': return 'Student pays I-20 control fee';

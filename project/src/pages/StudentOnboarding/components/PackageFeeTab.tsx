@@ -6,7 +6,6 @@ import { ZelleCheckout } from '../../../components/ZelleCheckout';
 import { getExchangeRate, calculateCardAmountWithFees, calculatePIXTotalWithIOF } from '../../../utils/stripeFeeCalculator';
 import { usePaymentBlocked } from '../../../hooks/usePaymentBlocked';
 
-const PACKAGE_FEE_AMOUNT = 1800;
 
 const PixIcon = ({ className }: { className?: string }) => (
   <svg className={className} xmlns="http://www.w3.org/2000/svg" viewBox="0 0 48 48">
@@ -42,7 +41,8 @@ const StripeIcon = ({ className }: { className?: string }) => (
 type PaymentMethod = 'stripe' | 'pix' | 'parcelow' | 'zelle';
 
 interface PackageFeeTabProps {
-  feeType: 'ds160_package' | 'i539_cos_package';
+  feeType: 'ds160_package' | 'i539_cos_package' | 'reinstatement_package';
+  amount: number;
   feeLabel: string;
   isPaid: boolean;
   supabaseUrl?: string;
@@ -65,6 +65,7 @@ interface PackageFeeTabProps {
   setCpfError: (v: string | null) => void;
   userProfile: any;
   onPaymentSuccess: () => void;
+  currentStep: string;
 }
 
 export const PackageFeeTab: React.FC<PackageFeeTabProps> = ({
@@ -89,6 +90,8 @@ export const PackageFeeTab: React.FC<PackageFeeTabProps> = ({
   setCpfError,
   userProfile,
   onPaymentSuccess,
+  amount,
+  currentStep,
 }) => {
   const { t } = useTranslation(['registration', 'common', 'scholarships', 'payment']);
   const [exchangeRate, setExchangeRate] = useState<number | null>(null);
@@ -112,16 +115,16 @@ export const PackageFeeTab: React.FC<PackageFeeTabProps> = ({
     setLoading(true);
     setError(null);
     try {
-      console.log('[PackageFeeTab] Starting Stripe Checkout...', { paymentMethod, feeType, finalAmount: PACKAGE_FEE_AMOUNT });
+      console.log('[PackageFeeTab] Starting Stripe Checkout...', { paymentMethod, feeType, finalAmount: amount });
       const token = await getAccessToken();
       console.log('[PackageFeeTab] Access Token obtained:', !!token);
       if (!token) throw new Error(t('rapidRegistration.payment.error.notAuthenticated'));
 
-      const currentUrl = window.location.href.split('?')[0];
-      const successUrl = `${currentUrl}?step=my_applications&payment=success&session_id={CHECKOUT_SESSION_ID}&fee_type=${feeType}`;
-      const cancelUrl = `${currentUrl}?step=my_applications&payment=cancelled`;
+      const currentUrl = window.location.origin + window.location.pathname;
+      const successUrl = `${currentUrl}?step=${currentStep}&payment=success&session_id={CHECKOUT_SESSION_ID}&fee_type=${feeType}`;
+      const cancelUrl = `${currentUrl}?step=${currentStep}&payment=cancelled`;
 
-      let finalAmount = PACKAGE_FEE_AMOUNT;
+      let finalAmount = amount;
 
       const payload: any = {
         success_url: successUrl,
@@ -136,8 +139,10 @@ export const PackageFeeTab: React.FC<PackageFeeTabProps> = ({
         payload.metadata.exchange_rate = exchangeRate.toString();
       }
 
-      console.log('[PackageFeeTab] Calling Edge Function:', `${SUPABASE_URL}/functions/v1/stripe-checkout-package-fee`);
-      const response = await fetch(`${SUPABASE_URL}/functions/v1/stripe-checkout-package-fee`, {
+      const functionName = 'stripe-checkout-package-fee';
+
+      console.log('[PackageFeeTab] Calling Edge Function:', `${SUPABASE_URL}/functions/v1/${functionName}`);
+      const response = await fetch(`${SUPABASE_URL}/functions/v1/${functionName}`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
         body: JSON.stringify(payload),
@@ -179,11 +184,13 @@ export const PackageFeeTab: React.FC<PackageFeeTabProps> = ({
       console.log('[PackageFeeTab] Access Token obtained for Parcelow:', !!token);
       if (!token) throw new Error(t('rapidRegistration.payment.error.notAuthenticated'));
 
-      console.log('[PackageFeeTab] Calling Parcelow Edge Function:', `${SUPABASE_URL}/functions/v1/parcelow-checkout-package-fee`);
-      const response = await fetch(`${SUPABASE_URL}/functions/v1/parcelow-checkout-package-fee`, {
+      const functionName = 'parcelow-checkout-package-fee';
+
+      console.log('[PackageFeeTab] Calling Parcelow Edge Function:', `${SUPABASE_URL}/functions/v1/${functionName}`);
+      const response = await fetch(`${SUPABASE_URL}/functions/v1/${functionName}`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
-        body: JSON.stringify({ amount: PACKAGE_FEE_AMOUNT, fee_type: feeType }),
+        body: JSON.stringify({ amount: amount, fee_type: feeType }),
       });
 
       console.log('[PackageFeeTab] Parcelow Response status:', response.status);
@@ -247,8 +254,8 @@ export const PackageFeeTab: React.FC<PackageFeeTabProps> = ({
     }
   };
 
-  const pixAmount = exchangeRate ? calculatePIXTotalWithIOF(PACKAGE_FEE_AMOUNT, exchangeRate).totalWithIOF : null;
-  const cardAmount = calculateCardAmountWithFees(PACKAGE_FEE_AMOUNT);
+  const pixAmount = exchangeRate ? calculatePIXTotalWithIOF(amount, exchangeRate).totalWithIOF : null;
+  const cardAmount = calculateCardAmountWithFees(amount);
 
 
 
@@ -287,7 +294,7 @@ export const PackageFeeTab: React.FC<PackageFeeTabProps> = ({
               </div>
             </div>
             <div className="flex flex-col md:items-end gap-1">
-              <span className="text-4xl font-black text-slate-900 tracking-tighter">$1,800</span>
+              <span className="text-4xl font-black text-slate-900 tracking-tighter">${amount.toLocaleString('en-US')}</span>
               <span className="text-xs text-slate-400 font-bold uppercase tracking-widest">USD</span>
             </div>
           </div>
@@ -326,7 +333,7 @@ export const PackageFeeTab: React.FC<PackageFeeTabProps> = ({
                   <div className="border border-amber-200 border-t-0 rounded-b-[2rem] overflow-hidden bg-white shadow-sm">
                     <ZelleCheckout
                       feeType={feeType as any}
-                      amount={PACKAGE_FEE_AMOUNT}
+                      amount={amount}
                       isPendingVerification={hasZellePendingPackageFee}
                       onProcessingChange={(isProcessing) => {
                         if (isProcessing) refetchPaymentStatus();
@@ -432,7 +439,7 @@ export const PackageFeeTab: React.FC<PackageFeeTabProps> = ({
                       </div>
                     </div>
                     <div className="text-right flex flex-col items-end shrink-0">
-                      <div className="text-slate-900 text-xl font-black uppercase tracking-tight">USD ${PACKAGE_FEE_AMOUNT.toLocaleString('en-US', { minimumFractionDigits: 2 })}</div>
+                      <div className="text-slate-900 text-xl font-black uppercase tracking-tight">USD ${amount.toLocaleString('en-US', { minimumFractionDigits: 2 })}</div>
                       <span className="text-[10px] font-bold text-slate-900 mt-1 block uppercase tracking-widest leading-tight">{t('studentOnboarding.documentsUpload.packageFees.installments12x')}</span>
                     </div>
                   </div>
@@ -520,7 +527,7 @@ export const PackageFeeTab: React.FC<PackageFeeTabProps> = ({
                       </div>
                     </div>
                     <div className="text-right shrink-0">
-                      <div className="text-slate-900 text-xl font-black uppercase tracking-tight">USD $1,800.00</div>
+                      <div className="text-slate-900 text-xl font-black uppercase tracking-tight">USD ${amount.toLocaleString('en-US', { minimumFractionDigits: 2 })}</div>
                       <span className="text-[10px] font-bold text-slate-900 mt-1 block uppercase tracking-widest leading-tight text-right">{t('studentOnboarding.documentsUpload.packageFees.noFees')}</span>
                     </div>
                   </div>
@@ -534,7 +541,7 @@ export const PackageFeeTab: React.FC<PackageFeeTabProps> = ({
                   <div className="border border-slate-200 border-t-0 rounded-b-[2rem] overflow-hidden bg-white shadow-sm">
                     <ZelleCheckout
                       feeType={feeType as any}
-                      amount={PACKAGE_FEE_AMOUNT}
+                      amount={amount}
                       onClose={() => {
                         console.log('[PackageFeeTab] Zelle onClose triggered');
                         setShowZelle(false);
