@@ -18,7 +18,6 @@ import { recordIndividualFeePayment } from '../../lib/paymentRecorder';
 import { useStudentLogs } from '../../hooks/useStudentLogs';
 import { getRealPaidAmounts } from '../../utils/paymentConverter';
 import { getPlacementFee } from '../../utils/placementFeeCalculator';
-import { approveZelleFlow } from './PaymentManagement/data/services/zelleOrchestrator';
 
 // Componentes de UI Base
 import {
@@ -1377,29 +1376,22 @@ const AdminStudentDetails: React.FC = () => {
     if (paymentMethodValue === 'zelle') {
       setIsUploadingZelle(true);
       try {
-        let feeTypeGlobalForZelle: string = feeType;
         let feeTypeForZelle: string = feeType;
         
         let targetApplicationForAmount = applicationId;
         
         if (feeType === 'selection_process') {
           feeTypeForZelle = 'selection_process_fee';
-          feeTypeGlobalForZelle = 'selection_process';
         } else if (feeType === 'application') {
           feeTypeForZelle = 'application_fee';
-          feeTypeGlobalForZelle = 'application';
         } else if (feeType === 'scholarship') {
           feeTypeForZelle = 'scholarship_fee';
-          feeTypeGlobalForZelle = 'scholarship';
         } else if (feeType === 'i20_control') {
           feeTypeForZelle = 'i20_control_fee';
-          feeTypeGlobalForZelle = 'i20_control_fee';
         } else if (feeType === 'placement') {
           feeTypeForZelle = 'placement_fee';
-          feeTypeGlobalForZelle = 'placement_fee';
         } else if (feeType === 'reinstatement_fee') {
           feeTypeForZelle = 'reinstatement_package';
-          feeTypeGlobalForZelle = 'reinstatement_fee';
         }
 
         let proofUrl = 'manual-admin-approve';
@@ -1422,16 +1414,14 @@ const AdminStudentDetails: React.FC = () => {
           proofUrl = publicUrl;
         }
 
-        const { data: zellePayment, error: zelleError } = await supabase
+        const { error: zelleError } = await supabase
           .from('zelle_payments')
           .insert([{
             user_id: student.user_id,
             fee_type: feeTypeForZelle,
             amount: finalPaymentAmount,
             screenshot_url: proofUrl,
-            status: 'approved',
-            admin_approved_by: user?.id,
-            admin_approved_at: new Date().toISOString(),
+            status: 'pending_verification',
             confirmation_code: 'ADMIN_MANUAL',
             scholarships_ids: targetApplicationForAmount ? [targetApplicationForAmount] : null
           }])
@@ -1440,16 +1430,7 @@ const AdminStudentDetails: React.FC = () => {
 
         if (zelleError) throw zelleError;
 
-        await approveZelleFlow({
-          supabase,
-          adminUserId: user?.id || '',
-          payment: {
-            ...zellePayment,
-            student_email: student?.student_email || (student as any)?.email || '',
-            student_name: student?.student_name || (student as any)?.full_name || '',
-            fee_type_global: feeTypeGlobalForZelle,
-          }
-        });
+        alert('Comprovante de pagamento Zelle enviado! Agora ele está pendente de revisão na aba "Zelle Payments".');
         
         setShowPaymentModal(false);
         setPendingPayment(null);
@@ -1457,7 +1438,9 @@ const AdminStudentDetails: React.FC = () => {
         setPaymentMethod('manual');
         setZelleProofFile(null);
         
-        setTimeout(() => window.location.reload(), 2000);
+        // Invalidar queries para que a UI reflita que o processo foi iniciado
+        queryClient.invalidateQueries({ queryKey: queryKeys.students.details(profileId) });
+        queryClient.invalidateQueries({ queryKey: queryKeys.students.secondaryData(student?.user_id) });
         
         return;
       } catch (e: any) {
