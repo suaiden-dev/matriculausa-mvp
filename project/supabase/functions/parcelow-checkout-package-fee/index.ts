@@ -4,6 +4,7 @@ import { createClient } from "npm:@supabase/supabase-js@2.49.1";
 import { getParcelowConfig } from "../shared/parcelow/config.ts";
 import { getRedirectOrigin } from "../shared/environment-detector.ts";
 import { getParcelowAccessToken } from "../shared/parcelow/auth.ts";
+import { notifyCheckoutInitiated } from "../utils/checkout-notifier.ts";
 
 const supabase = createClient(
   Deno.env.get("SUPABASE_URL") ?? "",
@@ -228,6 +229,18 @@ Deno.serve(async (req: Request) => {
     } catch (logError) {
       console.error("Failed to log checkout creation:", logError);
     }
+
+    // === RECUPERAÇÃO DE CHECKOUT ABANDONADO ===
+    notifyCheckoutInitiated({
+      fee_type: fee_type,
+      payment_method: "parcelow",
+      student_id: user.id,
+      student_name: profile.full_name ?? null,
+      student_email: profile.email ?? null,
+      student_phone: profile.phone ?? null,
+      checkout_url: checkoutUrl,
+    }).catch((err) => console.warn("[parcelow-checkout-package-fee] Notifier error (ignorado):", err));
+    // ==========================================
 
     console.log("[parcelow-checkout-package-fee] ✅ Sucesso! Retornando checkoutUrl");
     return corsResponse({ checkout_url: checkoutUrl }, 200);

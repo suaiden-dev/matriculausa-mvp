@@ -587,6 +587,8 @@ export const useSelectionFeeStep = (onNext: () => void) => {
         ...(Object.keys(metadata).length > 0 && { metadata }),
       };
 
+      console.log('🚀 [useSelectionFeeStep] Iniciando Checkout:', { apiUrl, paymentMethod, requestBody });
+
       const response = await fetch(apiUrl, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` },
@@ -595,6 +597,7 @@ export const useSelectionFeeStep = (onNext: () => void) => {
       if (!response.ok) { const errorData = await response.json(); throw new Error(errorData.error || 'Error creating checkout session'); }
       const data = await response.json();
       const redirectUrl = data.session_url || data.checkout_url;
+      console.log('✅ [useSelectionFeeStep] Sessão criada:', { redirectUrl });
       if (redirectUrl) { window.location.href = redirectUrl; } else { throw new Error('Session/Checkout URL not found'); }
     } catch (err: any) {
       console.error('Error processing checkout:', err);
