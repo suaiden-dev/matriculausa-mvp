@@ -75,7 +75,7 @@ const StripeIcon = ({ className }: { className?: string }) => (
     </div>
 );
 
-export const ReinstatementFeeStep: React.FC<StepProps> = ({ onNext, onBack, currentStep }) => {
+export const ReinstatementFeeStep: React.FC<StepProps> = ({ onNext, currentStep }) => {
     const { t } = useTranslation(['registration', 'payment']);
     const { userProfile } = useAuth();
     const { formatFeeAmount } = useFeeConfig(userProfile?.user_id);
@@ -556,22 +556,6 @@ export const ReinstatementFeeStep: React.FC<StepProps> = ({ onNext, onBack, curr
                 </div>
             </div>
             
-            <div className="flex justify-start mt-8">
-                <button
-                    onClick={onBack}
-                    className="flex items-center gap-2 text-slate-400 hover:text-slate-600 font-bold uppercase tracking-widest text-xs transition-colors"
-                >
-                    <ArrowLeft className="w-4 h-4" />
-                    {t('registration:rapidRegistration.zelle.back')}
-                </button>
-            </div>
         </div>
     );
 };
-
-const ArrowLeft = ({ className }: { className?: string }) => (
-    <svg className={className} xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-        <line x1="19" y1="12" x2="5" y2="12"></line>
-        <polyline points="12 19 5 12 12 5"></polyline>
-    </svg>
-);
