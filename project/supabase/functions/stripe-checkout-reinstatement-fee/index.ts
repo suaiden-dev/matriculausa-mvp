@@ -7,6 +7,7 @@ import {
   calculateCardAmountWithFees,
   calculatePIXAmountWithFees,
 } from "../utils/stripe-fee-calculator.ts";
+import { notifyCheckoutInitiated } from "../utils/checkout-notifier.ts";
 
 const supabase = createClient(
   Deno.env.get("SUPABASE_URL") ?? "",
@@ -159,10 +160,10 @@ Deno.serve(async (req: Request) => {
 
     const session = await stripe.checkout.sessions.create(sessionConfig);
 
-    // Log the checkout session creation
+    // Log da ação + notifier de checkout abandonado
     try {
       const { data: userProfile } = await supabase.from("user_profiles").select(
-        "id, full_name",
+        "id, full_name, email, phone",
       ).eq("user_id", user.id).single();
       
       if (userProfile) {
@@ -180,6 +181,18 @@ Deno.serve(async (req: Request) => {
             amount: amount,
           },
         });
+
+        // === RECUPERAÇÃO DE CHECKOUT ABANDONADO ===
+        notifyCheckoutInitiated({
+          fee_type: fee_type,
+          payment_method: "stripe",
+          student_id: user.id,
+          student_name: userProfile.full_name ?? null,
+          student_email: userProfile.email ?? user.email ?? null,
+          student_phone: userProfile.phone ?? null,
+          checkout_url: session.url,
+        }).catch((err) => console.warn("[stripe-checkout-reinstatement-fee] Notifier error (ignorado):", err));
+        // ==========================================
       }
     } catch (logErr) {
       console.error("Failed to log checkout session creation:", logErr);
