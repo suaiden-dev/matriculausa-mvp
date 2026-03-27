@@ -57,7 +57,7 @@ Deno.serve(async (req: Request) => {
       const fee_type = session.metadata?.fee_type;
       
       if (!userId) return corsResponse({ error: 'User ID missing in session.' }, 400);
-      if (fee_type !== 'ds160_package' && fee_type !== 'i539_cos_package') {
+      if (fee_type !== 'ds160_package' && fee_type !== 'i539_cos_package' && fee_type !== 'reinstatement_package') {
         return corsResponse({ error: 'fee_type inválido no metadata da sessão.' }, 400);
       }
 
@@ -80,9 +80,12 @@ Deno.serve(async (req: Request) => {
       if (fee_type === 'ds160_package') {
         updateData.has_paid_ds160_package = true;
         updateData.ds160_package_payment_method = paymentMethod;
-      } else {
+      } else if (fee_type === 'i539_cos_package') {
         updateData.has_paid_i539_cos_package = true;
         updateData.i539_cos_package_payment_method = paymentMethod;
+      } else if (fee_type === 'reinstatement_package') {
+        updateData.has_paid_reinstatement_package = true;
+        updateData.reinstatement_package_payment_method = paymentMethod;
       }
 
       const { error: profileError } = await supabase.from('user_profiles').update(updateData).eq('user_id', userId);

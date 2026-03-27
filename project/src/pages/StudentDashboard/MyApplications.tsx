@@ -912,7 +912,7 @@ const MyApplications: React.FC = () => {
                                           <span className="text-amber-600 font-bold text-xs">GPA</span>
                                         </div>
                                         <div className="min-w-0 flex-1">
-                                          <p className="text-[10px] text-gray-600 mb-1 font-medium">GPA Mínimo</p>
+                                          <p className="text-[10px] text-gray-600 mb-1 font-medium">{t('dashboard:academicInfo.minGpa')}</p>
                                           <p className="font-bold text-sm sm:text-base text-amber-700 truncate">
                                             {scholarship.min_gpa}
                                           </p>
@@ -926,9 +926,9 @@ const MyApplications: React.FC = () => {
                                           <span className="text-indigo-600 font-bold text-xs">ENG</span>
                                         </div>
                                         <div className="min-w-0 flex-1">
-                                          <p className="text-[10px] text-gray-600 mb-1 font-medium">Inglês Mínimo</p>
+                                          <p className="text-[10px] text-gray-600 mb-1 font-medium">{t('dashboard:academicInfo.minEnglishProficiency')}</p>
                                           <p className="font-bold text-sm sm:text-base text-indigo-700 truncate">
-                                            {t(`dashboard.academicInfo.englishProficiencyLevels.${scholarship.min_english_proficiency}`)}
+                                            {t(`dashboard:academicInfo.englishProficiencyLevels.${scholarship.min_english_proficiency}`)}
                                           </p>
                                         </div>
                                       </div>
@@ -1162,7 +1162,7 @@ const MyApplications: React.FC = () => {
                                       )}
                                       {scholarship.min_english_proficiency && (
                                         <div className="flex items-center bg-indigo-50 border border-indigo-200 px-2 py-1 rounded-lg text-indigo-800 text-[10px] font-bold uppercase">
-                                          {t(`dashboard.academicInfo.englishProficiencyLevels.${scholarship.min_english_proficiency}`)}
+                                          {t(`dashboard:academicInfo.englishProficiencyLevels.${scholarship.min_english_proficiency}`)}
                                         </div>
                                       )}
                                     </div>

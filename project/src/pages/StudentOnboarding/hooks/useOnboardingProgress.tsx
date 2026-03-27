@@ -7,7 +7,7 @@ import { useCartStore } from '../../../stores/applicationStore';
 const VALID_STEPS: OnboardingStep[] = [
   'selection_fee', 'identity_verification', 'selection_survey',
   'scholarship_selection', 'process_type', 'documents_upload',
-  'payment', 'scholarship_fee', 'placement_fee', 'my_applications', 'completed'
+  'payment', 'scholarship_fee', 'placement_fee', 'reinstatement_fee', 'my_applications', 'completed'
 ];
 
 export const useOnboardingProgress = () => {
@@ -37,6 +37,7 @@ export const useOnboardingProgress = () => {
       applicationFeePaid: userProfile?.is_application_fee_paid || false,
       scholarshipFeePaid: (userProfile as any)?.is_scholarship_fee_paid || false,
       placementFeePaid: (userProfile as any)?.is_placement_fee_paid || false,
+      reinstatementFeePaid: (userProfile as any)?.has_paid_reinstatement_package || false,
       universityDocumentsUploaded: false,
       onboardingCompleted: userProfile?.onboarding_completed || false,
       isNewFlowUser: (userProfile as any)?.placement_fee_flow || false,
@@ -143,9 +144,6 @@ export const useOnboardingProgress = () => {
         .maybeSingle();
       const identityVerified = !!photoAcceptance?.identity_photo_path || !!(freshProfile as any).identity_verified;
 
-      if (profileError && (profileError.code === '406' || profileError.code === '403')) {
-        console.log('[OnboardingHook] ⚠️ Fallback RPC disparado para status:', { fee: selectionFeePaid, id: identityVerified });
-      }
 
       // 2. Verificar se já selecionou as bolsas
       let scholarshipsSelected = false;
@@ -189,9 +187,12 @@ export const useOnboardingProgress = () => {
       const isNewFlowUser = !!freshProfile.placement_fee_flow;
       const scholarshipFeePaid = !!freshProfile.is_scholarship_fee_paid;
       const placementFeePaid = !!freshProfile.is_placement_fee_paid;
+      const reinstatementFeePaid = !!(freshProfile as any).has_paid_reinstatement_package;
       const onboardingCompleted = !!freshProfile.onboarding_completed;
       
-      // ALGORITMO DE CÁLCULO DE ETAPA MÁXIMA PERMITIDA (Linear)
+      const isTransferInactive = freshProfile.student_process_type === 'transfer' && freshProfile.visa_transfer_active === false;
+      
+      
       let maxAllowedStep: OnboardingStep = 'selection_fee';
       if (!selectionFeePaid) maxAllowedStep = 'selection_fee';
       else if (!identityVerified) maxAllowedStep = 'identity_verification';
@@ -202,6 +203,7 @@ export const useOnboardingProgress = () => {
       else if (!applicationFeePaid) maxAllowedStep = 'payment';
       else if (isNewFlowUser && !placementFeePaid) maxAllowedStep = 'placement_fee';
       else if (!isNewFlowUser && !scholarshipFeePaid) maxAllowedStep = 'scholarship_fee';
+      else if (isTransferInactive && !reinstatementFeePaid) maxAllowedStep = 'reinstatement_fee';
       else if (!documentsApproved) maxAllowedStep = 'documents_upload'; // Trava final: para ver aplicações, precisa de aprovação
       else maxAllowedStep = 'my_applications';
 
@@ -251,6 +253,7 @@ export const useOnboardingProgress = () => {
         applicationFeePaid,
         scholarshipFeePaid,
         placementFeePaid,
+        reinstatementFeePaid,
         universityDocumentsUploaded: false,
         onboardingCompleted,
         isNewFlowUser,
@@ -275,7 +278,7 @@ export const useOnboardingProgress = () => {
     checkProgress();
   }, [checkProgress]);
 
-  const markStepComplete = useCallback(async (step: OnboardingStep) => {
+  const markStepComplete = useCallback(async () => {
     await checkProgress();
   }, [checkProgress]);
 

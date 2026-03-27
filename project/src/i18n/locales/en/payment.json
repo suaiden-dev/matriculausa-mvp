@@ -428,6 +428,8 @@
     "dependentsSingular": "dependent (+$100 each):",
     "dependentsPlural": "dependents (+$100 each):",
     "creditCard": "Credit Card",
+    "pix": "PIX",
+    "parcelow": "Parcelow",
     "creditCardFees": "* May include processing fees",
     "pixFees": "* May include processing fees",
     "parcelowFees": "* May include operator and platform processing fees",
@@ -438,6 +440,9 @@
     "parcelowCpfPlaceholder": "Enter your CPF (000.000.000-00)",
     "parcelowCpfInvalid": "Invalid CPF. Please enter all 11 digits.",
     "parcelowCpfError": "Error saving CPF. Please try again.",
+    "cpfRequiredTitle": "Provide your CPF for Parcelow",
+    "cpfPlaceholder": "000.000.000-00",
+    "payWith": "Pay with {{method}}",
     "goToPayment": "Go to payment",
     "zellePendingTitle": "Zelle Payment Under Review",
     "zellePendingMessage": "You have already initiated a Zelle payment. Please wait for confirmation before using another method. This can take up to 48 hours.",
@@ -445,7 +450,10 @@
     "paymentConfirmedSubtitle": "This fee has already been successfully processed.",
     "noApplications": "No active applications",
     "noApplicationsMessage": "You have not selected any scholarships yet. Go back and select at least one to proceed.",
-    "backToSelection": "Back to Selection"
+    "backToSelection": "Back to Selection",
+    "error": {
+      "generationFailed": "Failed to generate payment link. Please try again."
+    }
   },
   "paymentSelector": {
     "title": "Choose Payment Method",

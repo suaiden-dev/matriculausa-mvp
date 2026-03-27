@@ -158,6 +158,10 @@
     "saving": "Salvando...",
     "finish": "Finalizar"
   },
+  "connectors": {
+    "and": " e ",
+    "theFee": "a taxa "
+  },
   "fees": {
     "selectionProcess": "Taxa do Processo Seletivo",
     "application": "Taxa de Matrícula",
@@ -312,5 +316,23 @@
     "backToHome": "Voltar para o Início",
     "goToDashboard": "Ir para o meu Painel",
     "helpLink": "Precisa de ajuda? Entre em contato"
+  },
+  "successPages": {
+    "applicationFee": {
+      "verifying": "Verificando Taxa de Matrícula...",
+      "pleaseWait": "Estamos processando seu pagamento. Por favor, não feche esta página."
+    },
+    "scholarshipFee": {
+      "verifying": "Verificando Taxa de Bolsa...",
+      "pleaseWait": "Estamos processando seu pagamento. Por favor, não feche esta página."
+    },
+    "placementFee": {
+      "verifying": "Verificando Taxa de Colocação...",
+      "pleaseWait": "Estamos processando seu pagamento. Por favor, não feche esta página."
+    },
+    "i20ControlFee": {
+      "verifying": "Verificando Taxa de Controle I-20...",
+      "pleaseWait": "Estamos processando seu pagamento. Por favor, não feche esta página."
+    }
   }
 }

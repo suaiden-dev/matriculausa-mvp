@@ -38,7 +38,7 @@
       "selectionFee": "Tarifa del Proceso de Selección",
       "total": "TOTAL",
       "currentFee": "Total a Pagar Ahora",
-      "feeExplanation": "La Tarifa del Proceso de Selección es el primer pago obligatorio en la plataforma MatriculaUSA. Desbloquea tu acceso completo para ver todas las becas e iniciar tu proceso de candidatura.",
+      "feeExplanation": "La Tarifa del Proceso de Selección é o primer pago obligatorio en la plataforma MatriculaUSA. Desbloquea tu acceso completo para ver todas las becas e iniciar tu proceso de candidatura.",
       "futureFeesTitle": "Tarifas Futuras",
       "enrollmentFee": "Tarifa de Matrícula",
       "scholarshipFee": "Tarifa de Beca",
@@ -108,7 +108,8 @@
         "documentsUpload": "Documentos",
         "payment": "Tarifa de Matrícula",
         "scholarshipFee": "Tarifa de Beca",
-        "placementFee": "Cuota de Colocación"
+        "placementFee": "Cuota de Colocación",
+        "reinstatementFee": "Tarifa de Reintegración"
       }
     },
     "processType": {
@@ -139,6 +140,13 @@
           "label": "Cambio de Estatus",
           "description": "Tiene otro tipo de visa (B-2, H-1B, etc.) y desea cambiar a F-1."
         }
+      },
+      "activeStatus": {
+        "label": "¿Su estatus está activo?",
+        "options": {
+          "yes": "Sí",
+          "no": "No (terminado/cancelado)"
+        }
       }
     },
     "documentsUpload": {
@@ -163,7 +171,7 @@
           "rejected": "Rechazada",
           "underReview": "En Revisión",
           "pending": "Pendiente",
-          "isApproved": "Aprobado",
+          "isApproved": "Aprovado",
           "isRejected": "Rechazado",
           "isReview": "En Análisis"
         },
@@ -198,7 +206,7 @@
         "descriptionPost": "."
       },
       "acceptance": {
-        "lockMessage": "Debe pagar la tarifa <0>{{feeName}}</0> antes de que se pueda liberar su carta de aceptación.",
+        "lockMessage": "Debe pagar <0>{{feeName}}</0> antes de que se pueda liberar su carta de aceptación.",
         "goToPayment": "Ir al Pago"
       },
       "packageFees": {
@@ -216,7 +224,7 @@
   "selectionSurvey": {
     "identityVerification": "Verificación de Identidad",
     "identityVerificationHeader": "Validar su Identidad",
-    "identityVerificationSubtitle": "Para garantizar la seguridad del proceso de selección, necesitamos una selfie con su documento antes de comenzar el cuestionario.",
+    "identityVerificationSubtitle": "Para garantizar la segurança del proceso de selección, necesitamos una selfie con su documento antes de comenzar el cuestionario.",
     "startSurvey": "Próximo Paso",
     "toastPhotoSuccess": "¡Foto subida con éxito!",
     "toastPhotoError": "Error al subir foto. Inténtelo de nuevo.",
@@ -231,7 +239,7 @@
     "finishBtn": "Finalizar",
     "submitting": "Enviando...",
     "sections": {
-      "A": "Identificación y Perfil",
+      "A": "Identificación e Perfil",
       "B": "Pasaporte, Documentos y Línea de Tiempo",
       "C": "Fondos, Costos y Responsabilidad Financiera",
       "D": "Reglas de la F-1 e Estatus Legal",
@@ -344,7 +352,7 @@
         }
       },
       "9": {
-        "text": "¿Ha estudiado en college/universidad antes?",
+        "text": "¿Ha estudiado en college/universidade antes?",
         "extraLabel": "¿Qué curso y en qué país?"
       },
       "10": {
@@ -470,7 +478,7 @@
         "options": {
           "a": "Sí",
           "b": "No",
-          "c": "Aún no, pero puedo en X meses"
+          "c": "Aún no, mas puedo en X meses"
         }
       },
       "27": {
@@ -509,7 +517,7 @@
         }
       },
       "32": {
-        "text": "El I-20 es:",
+        "text": "El I-20 é:",
         "options": {
           "a": "Un documento de la escuela que demuestra elegibilidad/inscripción y respalda el estatus F-1",
           "b": "Un tipo de pasaporte",
@@ -581,7 +589,7 @@
         }
       },
       "40": {
-        "text": "Si estoy confundido sobre una regla de la F-1, debo:",
+        "text": "Si estoy confundido sobre una regra de la F-1, debo:",
         "options": {
           "a": "Preguntar oficialmente a la escuela/DSO o al equipo responsable",
           "b": "Ignorar y seguir la intuición",
@@ -669,48 +677,62 @@
   },
   "scholarshipConfirmationModal": {
     "applicationFee": {
-      "title": "Confirm Your Scholarship Selection",
-      "subtitle": "Choose your payment method and secure your scholarship",
-      "feeLabel": "Application Fee:",
-      "feeDescription": "Fee to secure your approved scholarship spot",
-      "buttonText": "Yes, Secure My Scholarship (${{amount}})",
-      "warningText": "By proceeding with this payment, you're making this your final scholarship choice. This action cannot be undone."
+      "title": "Confirme su selección de beca",
+      "subtitle": "Elija un método de pago y asegure su beca",
+      "feeLabel": "Tarifa de solicitud:",
+      "feeDescription": "Tarifa para asegurar su cupo de beca aprobado",
+      "buttonText": "Sí, asegurar mi beca (${{amount}})",
+      "warningText": "Al proceder con este pago, esta será su elección final de beca. Esta acción no puede deshacerse."
     },
     "scholarshipFee": {
-      "title": "Scholarship Fee Payment",
-      "subtitle": "Choose your payment method to complete your enrollment",
-      "feeLabel": "Scholarship Fee:",
-      "feeDescription": "Final fee to complete your scholarship enrollment",
-      "buttonText": "Pay Scholarship Fee (${{amount}})",
-      "warningText": "By proceeding with this payment, you're completing your scholarship enrollment."
+      "title": "Pago de tarifa de beca",
+      "subtitle": "Elija un método de pago para completar su inscripción",
+      "feeLabel": "Tarifa de beca:",
+      "feeDescription": "Tarifa final para completar su inscripción a la beca",
+      "buttonText": "Pagar tarifa de beca (${{amount}})",
+      "warningText": "Al proceder con este pago, está completando su inscripción a la beca."
     },
     "labels": {
-      "selectedScholarship": "Selected Scholarship",
-      "scholarship": "Scholarship",
-      "university": "University",
-      "choosePaymentMethod": "Choose Payment Method",
-      "importantDecision": "Important Decision",
-      "thinkAboutIt": "Let me think about it"
+      "selectedScholarship": "Beca seleccionada",
+      "scholarship": "Beca",
+      "university": "Universidad",
+      "choosePaymentMethod": "Elija el método de pago",
+      "importantDecision": "Decisión importante",
+      "thinkAboutIt": "Déjame pensarlo"
     },
     "payment": {
       "stripe": {
         "title": "Stripe",
-        "description": "Pay securely with credit or debit card"
+        "description": "Pague de forma segura con tarjeta de crédito o débito"
       },
       "pix": {
         "title": "PIX",
-        "description": "Brazilian instant payment system"
+        "description": "Sistema de pago instantáneo brasileño"
       },
       "zelle": {
         "title": "Zelle",
-        "description": "Pay via Zelle transfer",
-        "descriptionDetailed": "Pay via Zelle transfer"
+        "description": "Pague mediante transferencia Zelle",
+        "descriptionDetailed": "Pague mediante transferencia Zelle"
       },
-      "cancel": "Cancel"
+      "parcelow": {
+        "title": "Parcelow",
+        "description": "Pague con tarjeta brasileña"
+      },
+      "cancel": "Cancelar"
     },
     "loading": {
-      "processing": "Processing payment...",
-      "redirecting": "Please wait, redirecting to checkout"
+      "processing": "Procesando pago...",
+      "redirecting": "Espere, redireccionando al pago"
     }
+  },
+  "reinstatementFeeStep": {
+    "title": "Cuota de Reintegración",
+    "subtitle": "Para continuar con su proceso de transferencia, se requiere el pago de la tarifa de reintegración.",
+    "feeLabel": "Tarifa de Reintegración",
+    "description": "",
+    "securePayment": "Pago Seguro",
+    "annualTuition": "Valor anual de la beca: {{amount}}",
+    "confirmedMessage": "Su tarifa de reintegración ha sido confirmada con éxito.",
+    "paidSuccess": "Pago Confirmado"
   }
 }

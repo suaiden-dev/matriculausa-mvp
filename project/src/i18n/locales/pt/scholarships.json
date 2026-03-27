@@ -147,8 +147,8 @@
       "universityInternalFees": "Taxas Internas da Universidade",
       "viewUniversityFeesPage": "Ver Página de Taxas da Universidade",
       "internalFeesConditionalNote": "A taxa depende do tipo de processo ou visto do aluno e daí corresponde com a taxa",
-      "i539COSPackage": "I539 COS Package",
-      "ds160Package": "DS160 Package",
+      "i539COSPackage": "Taxa I539 Package",
+      "ds160Package": "Taxa DS160 Package - INITIAL",
       "i539PackageDescription": "Taxa necessária para estudantes que solicitam Mudança de Status (Change of Status)",
       "ds160PackageDescription": "Taxa necessária para estudantes que solicitam Transferência",
       "days": "dias"
@@ -234,9 +234,9 @@
     },
     "quickGuide": {
       "title": "Guia rápido:",
-      "step1": "<strong>Clique em qualquer card de bolsa</strong> para adicioná-lo à sua seleção",
-      "step2": "<strong>Selecione quantas quiser</strong> - você pode escolher múltiplas opções",
-      "step3": "<strong>Use filtros</strong> para buscar por universidade ou valor da bolsa",
+      "step1": "<strong>Use filtros</strong> para buscar por universidade ou valor da bolsa",
+      "step2": "<strong>Clique em qualquer card de bolsa</strong> para adicioná-lo à sua seleção",
+      "step3": "<strong>Selecione quantas quiser</strong> - você pode escolher múltiplas opções",
       "step4": "<strong>Clique em \"Continuar\"</strong> após selecionar ao menos uma bolsa"
     },
     "continueWithCount": "Continuar ({{count}} selecionada)",

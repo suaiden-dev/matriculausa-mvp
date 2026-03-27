@@ -941,7 +941,27 @@ Deno.serve(async (req: Request) => {
       }
     }
 
-    // 1b. Se ainda não temos userId, tentar por email (comportamento original)
+    // 1b. Se ainda não temos userId, tentar localizar o usuário via logs de Checkouts
+    // (Útil quando o email na Parcelow é diferente do email do aluno no sistema)
+    if (!userId) {
+      console.log(`[parcelow-webhook] 🔍 Buscando usuário via Checkout Logs para Parcelow Order: ${parcelowOrder.id}`);
+      
+      const { data: checkoutLog } = await supabase
+        .from('student_action_logs')
+        .select('performed_by')
+        .eq('action_type', 'checkout_session_created')
+        .filter('metadata->>order_id', 'eq', String(parcelowOrder.id))
+        .order('created_at', { ascending: false })
+        .limit(1)
+        .maybeSingle();
+
+      if (checkoutLog) {
+        userId = checkoutLog.performed_by;
+        console.log(`[parcelow-webhook] 🎯 Usuário localizado via Checkouts Logs: ${userId}`);
+      }
+    }
+
+    // 1c. Se ainda não temos userId, tentar por email (comportamento original)
     if (!userId && clientEmail) {
       const { data: authUser, error: authError } = await supabase.auth.admin
         .listUsers();
@@ -953,11 +973,7 @@ Deno.serve(async (req: Request) => {
 
     if (!userId) {
       console.error(
-        "[parcelow-webhook] ❌ Usuário não encontrado (email:",
-        clientEmail,
-        ", reference:",
-        reference,
-        ")",
+        `[parcelow-webhook] ❌ Usuário não encontrado (email: ${clientEmail} , reference: ${reference} )`,
       );
       return new Response(JSON.stringify({ error: "User not found" }), {
         status: 404,
@@ -1125,6 +1141,8 @@ Deno.serve(async (req: Request) => {
         feeType = "ds160_package";
       } else if (reference.startsWith("i539_")) {
         feeType = "i539_cos_package";
+      } else if (reference.startsWith("rein_")) {
+        feeType = "reinstatement_package";
       } else {
         // Fallback para metadata se existir (Parcelow Sandbox às vezes retorna, Produção raramente)
         const metaFee = parcelowOrder.metadata?.fee_type;
@@ -1132,12 +1150,15 @@ Deno.serve(async (req: Request) => {
           if (
             metaFee === "application_fee" || metaFee === "selection_process" ||
             metaFee === "scholarship_fee" || metaFee === "i20_control" ||
-            metaFee === "i20_control_fee"
+            metaFee === "i20_control_fee" || metaFee === "reinstatement_fee" ||
+            metaFee === "reinstatement_package"
           ) {
             // Normalizar para nomes padrão
             if (metaFee === "i20_control_fee") feeType = "i20_control";
             else if (metaFee === "selection_process_fee") {
               feeType = "selection_process";
+            } else if (metaFee === "reinstatement_fee") {
+              feeType = "reinstatement_package";
             } else feeType = metaFee;
           }
         }
@@ -1608,6 +1629,30 @@ Deno.serve(async (req: Request) => {
             );
           } else {
             console.log("[parcelow-webhook] ✅ I539 COS package status atualizado!");
+          }
+          break;
+
+        case "reinstatement_package":
+        case "reinstatement_fee":
+          console.log("[parcelow-webhook] 🔄 Processando reinstatement_package...");
+
+          const { error: reinUpdateError } = await supabase
+            .from("user_profiles")
+            .update({
+              has_paid_reinstatement_package: true,
+              reinstatement_package_payment_method: "parcelow",
+            })
+            .eq("user_id", userId);
+
+          if (reinUpdateError) {
+            console.error(
+              "[parcelow-webhook] ❌ Erro ao atualizar reinstatement_package:",
+              reinUpdateError,
+            );
+          } else {
+            console.log(
+              "[parcelow-webhook] ✅ Reinstatement package status atualizado!",
+            );
           }
           break;
 

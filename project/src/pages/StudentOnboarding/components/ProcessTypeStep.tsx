@@ -8,6 +8,7 @@ import { StepProps, ProcessType } from '../types';
 export const ProcessTypeStep: React.FC<StepProps> = ({ onNext }) => {
   const { userProfile, refetchUserProfile, updateUserProfile } = useAuth();
   const [selectedType, setSelectedType] = useState<ProcessType | null>(null);
+  const [visaTransferActive, setVisaTransferActive] = useState<boolean>(true);
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [isLocked, setIsLocked] = useState(false);
@@ -23,7 +24,11 @@ export const ProcessTypeStep: React.FC<StepProps> = ({ onNext }) => {
     if (savedType && ['initial', 'transfer', 'change_of_status'].includes(savedType)) {
       setSelectedType(savedType);
     }
-  }, [userProfile?.id]);
+
+    if (userProfile?.visa_transfer_active !== undefined) {
+      setVisaTransferActive(userProfile.visa_transfer_active);
+    }
+  }, [userProfile?.id, userProfile?.student_process_type, userProfile?.visa_transfer_active]);
 
   // Verificar se já passou pela review (tem documentos enviados)
   useEffect(() => {
@@ -68,7 +73,10 @@ export const ProcessTypeStep: React.FC<StepProps> = ({ onNext }) => {
     try {
       const { error: profileError } = await supabase
         .from('user_profiles')
-        .update({ student_process_type: selectedType })
+        .update({ 
+          student_process_type: selectedType,
+          visa_transfer_active: selectedType === 'transfer' ? visaTransferActive : true
+        })
         .eq('id', userProfile.id);
 
       if (profileError) {
@@ -80,7 +88,10 @@ export const ProcessTypeStep: React.FC<StepProps> = ({ onNext }) => {
 
       // Forçar atualização do Cache React Context
       if (updateUserProfile) {
-        await updateUserProfile({ student_process_type: selectedType });
+        await updateUserProfile({ 
+          student_process_type: selectedType,
+          visa_transfer_active: selectedType === 'transfer' ? visaTransferActive : true
+        });
       } else if (refetchUserProfile) {
         await refetchUserProfile();
       }
@@ -194,41 +205,106 @@ export const ProcessTypeStep: React.FC<StepProps> = ({ onNext }) => {
               const OptionIcon = option.icon;
 
               return (
-                <div
-                  key={option.value}
-                  onClick={() => !isLocked && handleSelect(option.value as ProcessType)}
-                  className={`group relative p-5 md:p-8 rounded-[1.5rem] md:rounded-[2rem] border transition-all duration-300 cursor-pointer overflow-hidden ${
-                    isSelected
-                      ? 'bg-blue-600 border-blue-400 shadow-xl shadow-blue-500/30 scale-[1.02]'
-                      : 'bg-slate-50 border-slate-200 hover:bg-slate-100 hover:border-blue-200 hover:scale-[1.01]'
-                  } ${isLocked ? 'opacity-50 cursor-not-allowed grayscale' : ''}`}
-                >
-                  {/* Background Glow for Selected */}
-                  {isSelected && (
-                     <div className="absolute top-0 right-0 w-96 h-96 bg-white/20 rounded-full blur-[100px] -mr-32 -mt-32 pointer-events-none" />
-                  )}
+                <div key={option.value} className="space-y-4">
+                  <div
+                    onClick={() => !isLocked && handleSelect(option.value as ProcessType)}
+                    className={`group relative p-5 md:p-8 rounded-[1.5rem] md:rounded-[2rem] border transition-all duration-300 cursor-pointer overflow-hidden ${
+                      isSelected
+                        ? 'bg-blue-600 border-blue-400 shadow-xl shadow-blue-500/30 scale-[1.02]'
+                        : 'bg-slate-50 border-slate-200 hover:bg-slate-100 hover:border-blue-200 hover:scale-[1.01]'
+                    } ${isLocked ? 'opacity-50 cursor-not-allowed grayscale' : ''}`}
+                  >
+                    {/* Background Glow for Selected */}
+                    {isSelected && (
+                       <div className="absolute top-0 right-0 w-96 h-96 bg-white/20 rounded-full blur-[100px] -mr-32 -mt-32 pointer-events-none" />
+                    )}
 
-                  <div className="relative z-10 flex flex-col md:flex-row items-center gap-4 md:gap-8">
-                    {/* Icon Box */}
-                    <div className={`w-14 h-14 md:w-20 md:h-20 rounded-2xl md:rounded-3xl flex items-center justify-center flex-shrink-0 transition-all duration-500 ${
-                      isSelected 
-                        ? 'bg-white text-blue-600 shadow-xl rotate-3' 
-                        : 'bg-white text-slate-400 shadow-sm border border-slate-100 group-hover:text-blue-600 group-hover:scale-110'
-                    }`}>
-                      <OptionIcon className={`w-7 h-7 md:w-10 md:h-10 ${isSelected ? 'scale-110' : ''} transition-transform duration-300`} />
+                    <div className="relative z-10 flex flex-col md:flex-row items-center gap-4 md:gap-8">
+                      {/* Icon Box */}
+                      <div className={`w-14 h-14 md:w-20 md:h-20 rounded-2xl md:rounded-3xl flex items-center justify-center flex-shrink-0 transition-all duration-500 ${
+                        isSelected 
+                          ? 'bg-white text-blue-600 shadow-xl rotate-3' 
+                          : 'bg-white text-slate-400 shadow-sm border border-slate-100 group-hover:text-blue-600 group-hover:scale-110'
+                      }`}>
+                        <OptionIcon className={`w-7 h-7 md:w-10 md:h-10 ${isSelected ? 'scale-110' : ''} transition-transform duration-300`} />
+                      </div>
+
+                      {/* Content */}
+                      <div className="flex-1 text-center md:text-left space-y-2">
+                        <h3 className={`text-base md:text-xl font-black uppercase tracking-tight ${isSelected ? 'text-white' : 'text-gray-900'}`}>
+                          {option.label}
+                        </h3>
+                        <p className={`text-sm md:text-base font-medium leading-relaxed ${isSelected ? 'text-blue-100' : 'text-slate-500'}`}>
+                          {option.description}
+                        </p>
+                      </div>
                     </div>
 
-                    {/* Content */}
-                    <div className="flex-1 text-center md:text-left space-y-2">
-                      <h3 className={`text-base md:text-xl font-black uppercase tracking-tight ${isSelected ? 'text-white' : 'text-gray-900'}`}>
-                        {option.label}
-                      </h3>
-                      <p className={`text-sm md:text-base font-medium leading-relaxed ${isSelected ? 'text-blue-100' : 'text-slate-500'}`}>
-                        {option.description}
-                      </p>
-                    </div>
-
+                    {/* Radio Options for Active Status - Unified inside the same card area if it looks good, 
+                        but keeping it as a "drawer" or "nested extension" as requested ("se abriria a partir desse componente") */}
                   </div>
+
+                  {/* Active Status Question for Transfer Students - Nested and Unified */}
+                  {option.value === 'transfer' && selectedType === 'transfer' && (
+                    <div className="mx-4 md:mx-8 p-6 md:p-8 bg-blue-50/30 border-x border-b border-blue-100 rounded-b-[1.5rem] md:rounded-b-[2rem] -mt-8 pt-12 space-y-6 animate-in fade-in slide-in-from-top-4 duration-500 shadow-inner">
+                      <div className="space-y-4">
+                        <div className="text-left">
+                          <h4 className="text-base md:text-lg font-black text-slate-900 uppercase tracking-tight">
+                            {t('studentOnboarding.processType.activeStatus.label')}
+                          </h4>
+                        </div>
+                        
+                        <div className="flex flex-col gap-4">
+                          {[
+                            { value: true, label: t('studentOnboarding.processType.activeStatus.options.yes') },
+                            { value: false, label: t('studentOnboarding.processType.activeStatus.options.no') }
+                          ].map((statusOpt) => {
+                            // Dividir o texto se tiver parênteses para organizar melhor
+                            const hasParenthesis = statusOpt.label.includes('(');
+                            const [mainLabel, subLabel] = hasParenthesis 
+                              ? [statusOpt.label.split('(')[0], '(' + statusOpt.label.split('(')[1]]
+                              : [statusOpt.label, null];
+
+                            return (
+                              <div 
+                                key={String(statusOpt.value)}
+                                onClick={() => !isLocked && setVisaTransferActive(statusOpt.value)}
+                                className={`flex items-start gap-4 p-5 md:p-6 rounded-2xl border cursor-pointer transition-all ${
+                                  visaTransferActive === statusOpt.value
+                                    ? 'bg-white border-blue-500 shadow-lg ring-1 ring-blue-500 scale-[1.01]'
+                                    : 'bg-white/50 border-slate-200 hover:border-blue-200 hover:bg-white'
+                                } ${isLocked ? 'opacity-50 cursor-not-allowed' : ''}`}
+                              >
+                                <div className={`mt-1 w-6 h-6 rounded-full border-2 flex items-center justify-center flex-shrink-0 transition-all ${
+                                  visaTransferActive === statusOpt.value
+                                    ? 'border-blue-600 bg-blue-600'
+                                    : 'border-slate-300 bg-white'
+                                }`}>
+                                  {visaTransferActive === statusOpt.value && (
+                                    <div className="w-2 h-2 rounded-full bg-white shadow-sm" />
+                                  )}
+                                </div>
+                                <div className="flex flex-col text-left">
+                                  <span className={`text-base md:text-lg font-black uppercase tracking-tight ${
+                                    visaTransferActive === statusOpt.value ? 'text-blue-700' : 'text-slate-700'
+                                  }`}>
+                                    {mainLabel}
+                                  </span>
+                                  {subLabel && (
+                                    <span className={`text-xs md:text-sm font-bold uppercase tracking-wide opacity-70 ${
+                                      visaTransferActive === statusOpt.value ? 'text-blue-600' : 'text-slate-500'
+                                    }`}>
+                                      {subLabel}
+                                    </span>
+                                  )}
+                                </div>
+                              </div>
+                            );
+                          })}
+                        </div>
+                      </div>
+                    </div>
+                  )}
                 </div>
               );
             })}

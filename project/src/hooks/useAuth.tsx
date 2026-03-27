@@ -47,6 +47,8 @@ export interface UserProfile {
   // Novos campos para progresso do aluno
   documents_status?: 'pending' | 'analyzing' | 'approved' | 'rejected';
   documents_uploaded?: boolean;
+  visa_transfer_active?: boolean;
+  registration_completed_at?: string | null;
   selected_scholarship_id?: string | null;
   selected_application_id?: string | null;
   has_paid_college_enrollment_fee?: boolean;

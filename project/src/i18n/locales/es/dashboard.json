@@ -1344,5 +1344,15 @@
         "support": "Soporte"
       }
     }
+  },
+  "academicInfo": {
+    "minEnglishProficiency": "Inglés Mínimo",
+    "minGpa": "GPA Mínimo",
+    "englishProficiencyLevels": {
+      "beginner": "Principiante",
+      "intermediate": "Intermedio",
+      "advanced": "Avanzado",
+      "native": "Nativo"
+    }
   }
 }

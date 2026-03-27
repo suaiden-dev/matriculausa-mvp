@@ -265,6 +265,7 @@ const AdminStudentDetails: React.FC = () => {
       has_paid_scholarship: boolean;
       has_paid_i20: boolean;
       has_paid_placement: boolean;
+      has_paid_reinstatement?: boolean;
     },
     applications?: any[]
   ): Record<string, number> => {
@@ -446,14 +447,22 @@ const AdminStudentDetails: React.FC = () => {
           normalized.placement = Number(applications?.find((app: any) => app.is_placement_fee_paid)?.placement_fee_amount || 0);
         }
       }
-    } else if (paymentFlags?.has_paid_placement) {
-      console.log(`[AdminStudentDetails] 💡 Pagamento legado detectado para placement - buscando valor na aplicação`);
-      const paidApp = applications?.find((app: any) => app.is_placement_fee_paid);
-      if (paidApp?.placement_fee_amount) {
-        normalized.placement = Number(paidApp.placement_fee_amount);
-      } else if (feeOverrides?.placement_fee !== undefined) {
-        normalized.placement = feeOverrides.placement_fee;
+    }
+
+    // REINSTATEMENT FEE
+    if (realPaidAmounts.reinstatement_fee !== undefined && realPaidAmounts.reinstatement_fee > 0) {
+      const expectedReinstatement = 500;
+      // Verificação simples de range como no placement
+      const isReasonableReinstatement = realPaidAmounts.reinstatement_fee >= 100 && realPaidAmounts.reinstatement_fee <= 2500;
+      
+      if (isReasonableReinstatement) {
+        normalized.reinstatement_fee = realPaidAmounts.reinstatement_fee;
+      } else {
+        console.log(`[AdminStudentDetails] ⚠️ Valor de reinstatement_fee fora do range razoável: ${realPaidAmounts.reinstatement_fee}, usando $500`);
+        normalized.reinstatement_fee = expectedReinstatement;
       }
+    } else if (paymentFlags?.has_paid_reinstatement) {
+      normalized.reinstatement_fee = 500;
     }
 
     return normalized;
@@ -1300,7 +1309,7 @@ const AdminStudentDetails: React.FC = () => {
     }
   }, [student, dependents, saveProfile, profileId, queryClient, user, logAction]);
 
-  const handleMarkAsPaid = useCallback((feeType: 'selection_process' | 'application' | 'scholarship' | 'i20_control' | 'placement' | 'ds160_package' | 'i539_cos_package') => {
+  const handleMarkAsPaid = useCallback((feeType: 'selection_process' | 'application' | 'scholarship' | 'i20_control' | 'placement' | 'ds160_package' | 'i539_cos_package' | 'reinstatement_fee') => {
     setPendingPayment({ fee_type: feeType, payment_method: 'manual' });
     setPaymentAmount(getFeeAmount(feeType));
     setShowPaymentModal(true);
@@ -1309,7 +1318,7 @@ const AdminStudentDetails: React.FC = () => {
   const handleConfirmPayment = useCallback(async () => {
     if (!student || !pendingPayment) return;
 
-    const feeType = pendingPayment.fee_type as 'selection_process' | 'application' | 'scholarship' | 'i20_control' | 'placement' | 'ds160_package' | 'i539_cos_package';
+    const feeType = pendingPayment.fee_type as 'selection_process' | 'application' | 'scholarship' | 'i20_control' | 'placement' | 'ds160_package' | 'i539_cos_package' | 'reinstatement_fee';
     const paymentMethodValue = paymentMethod;
     const paymentDate = new Date().toISOString();
     let applicationId: string | undefined = undefined;
@@ -2668,6 +2677,7 @@ const AdminStudentDetails: React.FC = () => {
     { key: 'review', label: 'Review' },
     { key: 'application_fee', label: 'App Fee' },
     { key: 'placement_fee', label: 'Placement Fee' },
+    { key: 'reinstatement_fee', label: 'Reinstatement Fee' },
     { key: 'ds160_package', label: 'DS-160 Package' },
     { key: 'i539_cos_package', label: 'I-539 Package' },
     { key: 'scholarship_fee', label: 'Scholarship Fee' },
@@ -2680,6 +2690,9 @@ const AdminStudentDetails: React.FC = () => {
   const steps = allSteps.filter(step => {
     if (step.key === 'transfer_form') {
       return student?.student_process_type === 'transfer';
+    }
+    if (step.key === 'reinstatement_fee') {
+      return student?.student_process_type === 'transfer' && student?.visa_transfer_active === false;
     }
     if (step.key === 'ds160_package') {
       return student?.student_process_type === 'initial';
@@ -2727,6 +2740,8 @@ const AdminStudentDetails: React.FC = () => {
         return student.is_application_fee_paid ? 'completed' : 'pending';
       case 'placement_fee':
         return student.is_placement_fee_paid ? 'completed' : 'pending';
+      case 'reinstatement_fee':
+        return student.has_paid_reinstatement_package ? 'completed' : 'pending';
       case 'ds160_package':
         return student.has_paid_ds160_package ? 'completed' : 'pending';
       case 'i539_cos_package':
@@ -3236,6 +3251,13 @@ const AdminStudentDetails: React.FC = () => {
         const { error } = await supabase
           .from('user_profiles')
           .update({ placement_fee_payment_method: method })
+          .eq('id', student.student_id);
+
+        if (error) throw error;
+      } else if (feeType === 'reinstatement_fee') {
+        const { error } = await supabase
+          .from('user_profiles')
+          .update({ reinstatement_package_payment_method: method })
           .eq('id', student.student_id);
 
         if (error) throw error;

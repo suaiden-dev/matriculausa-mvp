@@ -52,6 +52,9 @@ export interface StudentRecord {
   admin_notes?: string | null;
   scholarship_fee_amount?: number | string | null;
   scholarship_title?: string | null;
+  has_paid_reinstatement_package?: boolean;
+  visa_transfer_active?: boolean;
+  reinstatement_package_payment_method?: string | null;
 }
 
 export interface ReferralInfo {
@@ -93,7 +96,7 @@ export interface TermAcceptance {
 }
 
 export interface PendingPayment {
-  fee_type: 'selection_process' | 'application' | 'scholarship' | 'i20_control' | 'placement' | 'ds160_package' | 'i539_cos_package';
+  fee_type: 'selection_process' | 'application' | 'scholarship' | 'i20_control' | 'placement' | 'ds160_package' | 'i539_cos_package' | 'reinstatement_fee';
   payment_method: 'stripe' | 'zelle' | 'manual';
   amount?: number;
   scholarship_id?: string | null;
