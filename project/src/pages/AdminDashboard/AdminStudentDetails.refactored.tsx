@@ -1397,6 +1397,9 @@ const AdminStudentDetails: React.FC = () => {
         } else if (feeType === 'placement') {
           feeTypeForZelle = 'placement_fee';
           feeTypeGlobalForZelle = 'placement_fee';
+        } else if (feeType === 'reinstatement_fee') {
+          feeTypeForZelle = 'reinstatement_package';
+          feeTypeGlobalForZelle = 'reinstatement_fee';
         }
 
         let proofUrl = 'manual-admin-approve';
@@ -2688,18 +2691,20 @@ const AdminStudentDetails: React.FC = () => {
   ];
 
   const steps = allSteps.filter(step => {
-    if (step.key === 'transfer_form') {
-      return student?.student_process_type === 'transfer';
-    }
-    if (step.key === 'reinstatement_fee') {
-      return student?.student_process_type === 'transfer' && student?.visa_transfer_active === false;
-    }
-    if (step.key === 'ds160_package') {
-      return student?.student_process_type === 'initial';
-    }
-    if (step.key === 'i539_cos_package') {
-      return student?.student_process_type === 'change_of_status';
-    }
+    // 1. Regras para tipos de processo
+    if (step.key === 'transfer_form') return student?.student_process_type === 'transfer';
+    if (step.key === 'ds160_package') return student?.student_process_type === 'initial';
+    if (step.key === 'i539_cos_package') return student?.student_process_type === 'change_of_status';
+    
+    // 2. Regra especial para Reinstatement (8 passos no total para Transfer Inativo)
+    const isTransferInactive = student?.student_process_type === 'transfer' && student?.visa_transfer_active === false;
+    
+    if (step.key === 'reinstatement_fee') return isTransferInactive;
+    
+    // Se for Transfer Inativo, removemos scholarship_fee e i20_fee para manter 8 passos no progresso
+    if (isTransferInactive && ['scholarship_fee', 'i20_fee'].includes(step.key)) return false;
+
+    // 3. Regras para Placement Flow vs Normal Flow
     if (student?.placement_fee_flow) {
       // No fluxo de placement, removemos as taxas que são substituídas
       // MANTEMOS 'application_fee' pois ela ainda existe nesse fluxo

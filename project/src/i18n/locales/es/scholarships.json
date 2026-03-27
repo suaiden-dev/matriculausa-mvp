@@ -148,8 +148,10 @@
       "internalFeesConditionalNote": "La tarifa depende del tipo de proceso o visa del estudiante y luego corresponde con la tarifa",
       "i539COSPackage": "Tarifa I539 Package",
       "ds160Package": "Tarifa DS160 Package - INITIAL",
+      "reinstatementPackage": "Tarifa de Reinstatement",
       "i539PackageDescription": "Tarifa requerida para estudiantes que solicitan Cambio de Status (COS)",
       "ds160PackageDescription": "Tarifa requerida para estudiantes que solicitan Transferencia",
+      "reinstatementPackageDescription": "Tarifa requerida para estudiantes de transferencia que tienen un estatus de visa inactivo/terminado.",
       "days": "días"
     }
   },

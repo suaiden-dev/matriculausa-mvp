@@ -110,8 +110,10 @@ export async function loadPaymentsBaseDataOptimized(supabase: SupabaseClient): P
           placement_fee_payment_method,
           has_paid_ds160_package,
           has_paid_i539_cos_package,
+          has_paid_reinstatement_package,
           ds160_package_payment_method,
-          i539_cos_package_payment_method
+          i539_cos_package_payment_method,
+          reinstatement_package_payment_method
         ),
         scholarships (
           id,
@@ -149,9 +151,11 @@ export async function loadPaymentsBaseDataOptimized(supabase: SupabaseClient): P
         placement_fee_payment_method,
         has_paid_ds160_package,
         has_paid_i539_cos_package,
+        has_paid_reinstatement_package,
         ds160_package_payment_method,
-        i539_cos_package_payment_method
-      `).or('has_paid_selection_process_fee.eq.true,is_application_fee_paid.eq.true,is_scholarship_fee_paid.eq.true,has_paid_i20_control_fee.eq.true,is_placement_fee_paid.eq.true,has_paid_ds160_package.eq.true,has_paid_i539_cos_package.eq.true')
+        i539_cos_package_payment_method,
+        reinstatement_package_payment_method
+      `).or('has_paid_selection_process_fee.eq.true,is_application_fee_paid.eq.true,is_scholarship_fee_paid.eq.true,has_paid_i20_control_fee.eq.true,is_placement_fee_paid.eq.true,has_paid_ds160_package.eq.true,has_paid_i539_cos_package.eq.true,has_paid_reinstatement_package.eq.true')
     ]);
 
     if (appsRes.error) throw appsRes.error;
@@ -187,7 +191,7 @@ export async function loadPaymentsBaseDataOptimized(supabase: SupabaseClient): P
     const [zelleProfilesRes, overridesMap, systemTypesRes] = await Promise.all([
       // 4. Profiles para pagamentos Zelle
       zelleUserIds.length > 0 
-        ? supabase.from('user_profiles').select('id, user_id, full_name, email, has_paid_selection_process_fee, is_application_fee_paid, is_scholarship_fee_paid, has_paid_i20_control_fee, selection_process_fee_payment_method, i20_control_fee_payment_method, scholarship_package_id, dependents, seller_referral_code, placement_fee_flow, is_placement_fee_paid, placement_fee_payment_method, has_paid_ds160_package, has_paid_i539_cos_package, ds160_package_payment_method, i539_cos_package_payment_method').in('user_id', zelleUserIds)
+        ? supabase.from('user_profiles').select('id, user_id, full_name, email, has_paid_selection_process_fee, is_application_fee_paid, is_scholarship_fee_paid, has_paid_i20_control_fee, selection_process_fee_payment_method, i20_control_fee_payment_method, scholarship_package_id, dependents, seller_referral_code, placement_fee_flow, is_placement_fee_paid, placement_fee_payment_method, has_paid_ds160_package, has_paid_i539_cos_package, has_paid_reinstatement_package, ds160_package_payment_method, i539_cos_package_payment_method, reinstatement_package_payment_method').in('user_id', zelleUserIds)
         : Promise.resolve({ data: [], error: null }),
       // 5. Overrides em batch
       getOverridesBatch(supabase, uniqueUserIdsForMetas),
