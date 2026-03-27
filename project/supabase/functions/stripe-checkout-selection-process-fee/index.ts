@@ -6,6 +6,7 @@ import {
   calculateCardAmountWithFees,
   calculatePIXAmountWithFees,
 } from "../utils/stripe-fee-calculator.ts";
+import { notifyCheckoutInitiated } from "../utils/checkout-notifier.ts";
 
 // O Stripe fará a conversão de moeda automaticamente
 // quando payment_method_types incluir 'pix' e a moeda for USD
@@ -855,6 +856,26 @@ Deno.serve(async (req) => {
       } catch (logError) {
         console.error("Failed to log checkout session creation:", logError);
       }
+
+      // === RECUPERAÇÃO DE CHECKOUT ABANDONADO ===
+      // Notifica o n8n que um checkout foi iniciado (falha é silenciosa)
+      try {
+        const { data: n8nProfile } = await supabase.from("user_profiles")
+          .select("full_name, email, phone").eq("user_id", user.id).maybeSingle();
+
+        await notifyCheckoutInitiated({
+          fee_type: "selection_process",
+          payment_method: payment_method === "pix" ? "stripe" : "stripe", // Stripe lida com PIX e Cartão
+          student_id: user.id,
+          student_name: n8nProfile?.full_name ?? null,
+          student_email: n8nProfile?.email ?? user.email ?? null,
+          student_phone: n8nProfile?.phone ?? null,
+          checkout_url: session.url,
+        });
+      } catch (notifyErr) {
+        console.warn("[stripe-checkout-selection-process-fee] Erro ao disparar notifier (ignorado):", notifyErr);
+      }
+      // ==========================================
 
       return corsResponse({ session_url: session.url }, 200);
     } catch (stripeError: any) {

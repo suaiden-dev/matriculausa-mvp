@@ -3,6 +3,7 @@ import 'jsr:@supabase/functions-js/edge-runtime.d.ts';
 import Stripe from 'npm:stripe@17.7.0';
 import { createClient } from 'npm:@supabase/supabase-js@2.49.1';
 import { getStripeConfig } from '../stripe-config.ts';
+import { notifyCheckoutInitiated } from '../utils/checkout-notifier.ts';
 
 const supabase = createClient(Deno.env.get('SUPABASE_URL') ?? '', Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') ?? '');
 
@@ -231,6 +232,31 @@ Deno.serve(async (req) => {
         console.error('[stripe-checkout] Erro ao processar dedução de créditos:', error);
       }
     }
+
+    // === RECUPERAÇÃO DE CHECKOUT ABANDONADO ===
+    // Notifica o n8n que um checkout foi iniciado (falha é silenciosa)
+    if (fee_type === 'selection_process') {
+      try {
+        const { data: notifierProfile } = await supabase
+          .from('user_profiles')
+          .select('full_name, email, phone')
+          .eq('user_id', user.id)
+          .maybeSingle();
+
+        await notifyCheckoutInitiated({
+          fee_type: 'selection_process',
+          payment_method: 'stripe',
+          student_id: user.id,
+          student_name: notifierProfile?.full_name ?? null,
+          student_email: notifierProfile?.email ?? user.email ?? null,
+          student_phone: notifierProfile?.phone ?? null,
+          checkout_url: session.url,
+        });
+      } catch (notifyErr) {
+        console.warn('[stripe-checkout] Erro ao disparar notifier (ignorado):', notifyErr);
+      }
+    }
+    // ==========================================
 
     return corsResponse({ session_url: session.url }, 200);
   } catch (error) {
