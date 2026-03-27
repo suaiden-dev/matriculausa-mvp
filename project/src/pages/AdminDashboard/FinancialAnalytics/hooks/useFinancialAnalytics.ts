@@ -158,7 +158,8 @@ export function useFinancialAnalytics() {
         const feeTypeKey = record.fee_type === 'selection_process' ? 'selection_process' :
                           record.fee_type === 'application' ? 'application' :
                           record.fee_type === 'scholarship' ? 'scholarship' :
-                          record.fee_type === 'i20_control_fee' ? 'i20_control' : record.fee_type;
+                          record.fee_type === 'i20_control_fee' ? 'i20_control' : 
+                          record.fee_type === 'reinstatement_fee' ? 'reinstatement_fee' : record.fee_type;
         
         // Buscar user_id do record (pode estar em student_id ou user_id)
         const userId = student?.user_id || record.student_id || record.user_id;
@@ -169,7 +170,8 @@ export function useFinancialAnalytics() {
           const normalizedRecordFeeType = record.fee_type === 'selection_process' ? 'selection_process' :
                                          record.fee_type === 'application' ? 'application' :
                                          record.fee_type === 'scholarship' ? 'scholarship' :
-                                         record.fee_type === 'i20_control_fee' ? 'i20_control' : record.fee_type;
+                                         record.fee_type === 'i20_control_fee' ? 'i20_control' : 
+                                         record.fee_type === 'reinstatement_fee' ? 'reinstatement_fee' : record.fee_type;
           
           // 1. Tentar match exato por payment_intent_id (mais confiável para Stripe)
           if (record.payment_intent_id) {
@@ -256,6 +258,8 @@ export function useFinancialAnalytics() {
           standardAmount = 350 + (dependents * 100);
         } else if (feeType === 'placement') {
           standardAmount = (record.amount || 0) / 100;
+        } else if (feeType === 'reinstatement_fee') {
+          standardAmount = 500;
         }
 
         // --- INÍCIO DA LÓGICA DE DESCONTO ---

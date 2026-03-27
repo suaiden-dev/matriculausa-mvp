@@ -182,7 +182,7 @@ function calculateNetAmountFromGross(
 export async function getDisplayAmounts(
   userId: string,
   feeTypes:
-    ("selection_process" | "scholarship" | "i20_control" | "application" | "placement" | "ds160_package" | "i539_cos_package")[],
+    ("selection_process" | "scholarship" | "i20_control" | "application" | "placement" | "ds160_package" | "i539_cos_package" | "reinstatement_package")[],
 ): Promise<Record<string, number>> {
   try {
     // 1. Buscar system_type, dependents e scholarship_package_id do usuário
@@ -222,6 +222,7 @@ export async function getDisplayAmounts(
       "application": "application_fee",
       "ds160_package": "ds160_package",
       "i539_cos_package": "i539_cos_package",
+      "reinstatement_package": "reinstatement_package",
     };
 
     const feeTypesForCoupon = feeTypes.map((ft) => couponFeeTypeMap[ft] || ft);
@@ -250,6 +251,8 @@ export async function getDisplayAmounts(
           ? "ds160_package"
           : coupon.fee_type === "i539_cos_package"
           ? "i539_cos_package"
+          : coupon.fee_type === "reinstatement_package"
+          ? "reinstatement_package"
           : null;
 
         if (feeTypeKey && !couponAmounts[feeTypeKey] && coupon.final_amount) {
@@ -441,7 +444,7 @@ export async function getDisplayAmounts(
 export async function getRealPaidAmounts(
   userId: string,
   feeTypes:
-    ("selection_process" | "scholarship" | "i20_control" | "application" | "placement" | "ds160_package" | "i539_cos_package")[],
+    ("selection_process" | "scholarship" | "i20_control" | "application" | "placement" | "ds160_package" | "i539_cos_package" | "reinstatement_package")[],
 ): Promise<Record<string, number>> {
   try {
     // ✅ CORREÇÃO: Buscar também payment_date, gross_amount_usd e parcelow_status (Parcelow failed não conta como pago)
@@ -582,6 +585,8 @@ export async function getRealPaidAmounts(
           ? "ds160_package"
           : payment.fee_type === "i539_cos_package"
           ? "i539_cos_package"
+          : payment.fee_type === "reinstatement_package"
+          ? "reinstatement_package"
           : null;
 
       if (feeTypeKey) {
@@ -604,7 +609,7 @@ export async function getRealPaidAmounts(
  */
 export async function getRealPaidAmount(
   userId: string,
-  feeType: "selection_process" | "scholarship" | "i20_control" | "application" | "placement" | "ds160_package" | "i539_cos_package",
+  feeType: "selection_process" | "scholarship" | "i20_control" | "application" | "placement" | "ds160_package" | "i539_cos_package" | "reinstatement_package",
 ): Promise<number | null> {
   const amounts = await getRealPaidAmounts(userId, [feeType]);
   return amounts[feeType] || null;
@@ -620,7 +625,7 @@ export async function getRealPaidAmount(
 export async function getGrossPaidAmounts(
   userId: string,
   feeTypes:
-    ("selection_process" | "scholarship" | "i20_control" | "application" | "placement" | "ds160_package" | "i539_cos_package")[],
+    ("selection_process" | "scholarship" | "i20_control" | "application" | "placement" | "ds160_package" | "i539_cos_package" | "reinstatement_package")[],
 ): Promise<Record<string, number>> {
   try {
     const { data: payments, error } = await supabase
@@ -666,6 +671,8 @@ export async function getGrossPaidAmounts(
         ? "ds160_package"
         : payment.fee_type === "i539_cos_package"
         ? "i539_cos_package"
+        : payment.fee_type === "reinstatement_package"
+        ? "reinstatement_package"
         : null;
 
       if (feeTypeKey) {
@@ -699,7 +706,7 @@ export async function getGrossPaidAmounts(
  */
 export async function getGrossPaidAmountsBatch(
   userIds: string[],
-  feeTypes: ("selection_process" | "scholarship" | "i20_control" | "application" | "placement" | "ds160_package" | "i539_cos_package")[],
+  feeTypes: ("selection_process" | "scholarship" | "i20_control" | "application" | "placement" | "ds160_package" | "i539_cos_package" | "reinstatement_package")[],
 ): Promise<Map<string, Record<string, number>>> {
   if (userIds.length === 0) return new Map();
 
@@ -742,6 +749,7 @@ export async function getGrossPaidAmountsBatch(
         : payment.fee_type === "placement" ? "placement"
         : payment.fee_type === "ds160_package" ? "ds160_package"
         : payment.fee_type === "i539_cos_package" ? "i539_cos_package"
+        : payment.fee_type === "reinstatement_package" ? "reinstatement_package"
         : null;
 
       if (!feeTypeKey) continue;
