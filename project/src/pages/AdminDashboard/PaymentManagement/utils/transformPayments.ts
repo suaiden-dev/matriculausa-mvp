@@ -8,7 +8,7 @@ interface TransformInputs {
   userSystemTypesMap: Map<string, string>;
   individualPaymentDates: Map<string, Map<string, string>>;
   getFeeAmount: (key: 'i20_control_fee' | 'application_fee') => number;
-  realPaymentAmounts?: Map<string, { selection_process?: number; scholarship?: number; i20_control?: number; application?: number; placement?: number; ds160_package?: number; i539_cos_package?: number }>;
+  realPaymentAmounts?: Map<string, { selection_process?: number; scholarship?: number; i20_control?: number; application?: number; placement?: number; ds160_package?: number; i539_cos_package?: number; reinstatement_package?: number }>;
 }
 
 export function transformPaymentsToRecordsAndStats({
@@ -31,6 +31,7 @@ export function transformPaymentsToRecordsAndStats({
     placement_fee: boolean;
     ds160_package: boolean;
     i539_cos_package: boolean;
+    reinstatement_fee: boolean;
   } } = {};
 
   // Applications → registros
@@ -190,7 +191,7 @@ export function transformPaymentsToRecordsAndStats({
         seller_referral_code: student.seller_referral_code,
         scholarships_ids: scholarship.id ? [scholarship.id] : [],
       } as PaymentRecord);
-      if (!globalFeesProcessed[student.user_id]) globalFeesProcessed[student.user_id] = { selection_process: false, i20_control: false, application_fee: false, placement_fee: false, ds160_package: false, i539_cos_package: false };
+      if (!globalFeesProcessed[student.user_id]) globalFeesProcessed[student.user_id] = { selection_process: false, i20_control: false, application_fee: false, placement_fee: false, ds160_package: false, i539_cos_package: false, reinstatement_fee: false };
       globalFeesProcessed[student.user_id].selection_process = true;
     }
 
@@ -215,7 +216,7 @@ export function transformPaymentsToRecordsAndStats({
         seller_referral_code: student.seller_referral_code,
         scholarships_ids: scholarship.id ? [scholarship.id] : [],
       } as PaymentRecord);
-      if (!globalFeesProcessed[student.user_id]) globalFeesProcessed[student.user_id] = { selection_process: false, i20_control: false, application_fee: false, placement_fee: false, ds160_package: false, i539_cos_package: false };
+      if (!globalFeesProcessed[student.user_id]) globalFeesProcessed[student.user_id] = { selection_process: false, i20_control: false, application_fee: false, placement_fee: false, ds160_package: false, i539_cos_package: false, reinstatement_fee: false };
       globalFeesProcessed[student.user_id].application_fee = true;
     }
 
@@ -263,7 +264,7 @@ export function transformPaymentsToRecordsAndStats({
         seller_referral_code: student.seller_referral_code,
         scholarships_ids: scholarship.id ? [scholarship.id] : [],
       } as PaymentRecord);
-      if (!globalFeesProcessed[student.user_id]) globalFeesProcessed[student.user_id] = { selection_process: false, i20_control: false, application_fee: false, placement_fee: false, ds160_package: false, i539_cos_package: false };
+      if (!globalFeesProcessed[student.user_id]) globalFeesProcessed[student.user_id] = { selection_process: false, i20_control: false, application_fee: false, placement_fee: false, ds160_package: false, i539_cos_package: false, reinstatement_fee: false };
       globalFeesProcessed[student.user_id].i20_control = true;
     }
 
@@ -297,7 +298,7 @@ export function transformPaymentsToRecordsAndStats({
         seller_referral_code: student.seller_referral_code,
         scholarships_ids: scholarship.id ? [scholarship.id] : [],
       } as PaymentRecord);
-      if (!globalFeesProcessed[student.user_id]) globalFeesProcessed[student.user_id] = { selection_process: false, i20_control: false, application_fee: false, placement_fee: false, ds160_package: false, i539_cos_package: false };
+      if (!globalFeesProcessed[student.user_id]) globalFeesProcessed[student.user_id] = { selection_process: false, i20_control: false, application_fee: false, placement_fee: false, ds160_package: false, i539_cos_package: false, reinstatement_fee: false };
       globalFeesProcessed[student.user_id].ds160_package = true;
     }
 
@@ -331,7 +332,7 @@ export function transformPaymentsToRecordsAndStats({
         seller_referral_code: student.seller_referral_code,
         scholarships_ids: scholarship.id ? [scholarship.id] : [],
       } as PaymentRecord);
-      if (!globalFeesProcessed[student.user_id]) globalFeesProcessed[student.user_id] = { selection_process: false, i20_control: false, application_fee: false, placement_fee: false, ds160_package: false, i539_cos_package: false };
+      if (!globalFeesProcessed[student.user_id]) globalFeesProcessed[student.user_id] = { selection_process: false, i20_control: false, application_fee: false, placement_fee: false, ds160_package: false, i539_cos_package: false, reinstatement_fee: false };
       globalFeesProcessed[student.user_id].i539_cos_package = true;
     }
 
@@ -371,7 +372,7 @@ export function transformPaymentsToRecordsAndStats({
         scholarships_ids: scholarship.id ? [scholarship.id] : [],
       } as PaymentRecord);
       
-      if (!globalFeesProcessed[student.user_id]) globalFeesProcessed[student.user_id] = { selection_process: false, i20_control: false, application_fee: false, placement_fee: false, ds160_package: false, i539_cos_package: false };
+      if (!globalFeesProcessed[student.user_id]) globalFeesProcessed[student.user_id] = { selection_process: false, i20_control: false, application_fee: false, placement_fee: false, ds160_package: false, i539_cos_package: false, reinstatement_fee: false };
       globalFeesProcessed[student.user_id].placement_fee = true;
     }
 
@@ -404,7 +405,7 @@ export function transformPaymentsToRecordsAndStats({
         scholarships_ids: scholarship.id ? [scholarship.id] : [],
       } as PaymentRecord);
       
-      if (!globalFeesProcessed[student.user_id]) globalFeesProcessed[student.user_id] = { selection_process: false, i20_control: false, application_fee: false, placement_fee: false, ds160_package: false, i539_cos_package: false };
+      if (!globalFeesProcessed[student.user_id]) globalFeesProcessed[student.user_id] = { selection_process: false, i20_control: false, application_fee: false, placement_fee: false, ds160_package: false, i539_cos_package: false, reinstatement_fee: false };
       globalFeesProcessed[student.user_id].ds160_package = true;
     }
 
@@ -437,8 +438,41 @@ export function transformPaymentsToRecordsAndStats({
         scholarships_ids: scholarship.id ? [scholarship.id] : [],
       } as PaymentRecord);
       
-      if (!globalFeesProcessed[student.user_id]) globalFeesProcessed[student.user_id] = { selection_process: false, i20_control: false, application_fee: false, placement_fee: false, ds160_package: false, i539_cos_package: false };
+      if (!globalFeesProcessed[student.user_id]) globalFeesProcessed[student.user_id] = { selection_process: false, i20_control: false, application_fee: false, placement_fee: false, ds160_package: false, i539_cos_package: false, reinstatement_fee: false };
       globalFeesProcessed[student.user_id].i539_cos_package = true;
+    }
+
+    // ✅ NOVO: Reinstatement Fee (global)
+    if (student.has_paid_reinstatement_package && !globalFeesProcessed[student.user_id]?.reinstatement_fee) {
+      let reinstatementFeeAmount: number;
+      if (realPaid?.reinstatement_package !== undefined && realPaid.reinstatement_package > 0) {
+        reinstatementFeeAmount = Math.round(realPaid.reinstatement_package * 100);
+      } else {
+        reinstatementFeeAmount = 50000; // $500.00 fallback
+      }
+
+      paymentRecords.push({
+        id: `${student.user_id}-reinstatement`,
+        student_id: student.id,
+        student_name: studentName,
+        student_email: studentEmail,
+        university_id: university.id,
+        university_name: universityName,
+        scholarship_id: scholarship.id,
+        scholarship_title: scholarshipTitle,
+        field_of_study: scholarship?.field_of_study || null,
+        fee_type: 'reinstatement_fee',
+        amount: reinstatementFeeAmount,
+        status: 'paid',
+        payment_date: individualPaymentDates.get(student.user_id)?.get('reinstatement_package') || student.last_payment_date || app.paid_at || app.created_at,
+        created_at: app.created_at,
+        payment_method: student.reinstatement_package_payment_method || 'manual',
+        seller_referral_code: student.seller_referral_code,
+        scholarships_ids: scholarship.id ? [scholarship.id] : [],
+      } as PaymentRecord);
+      
+      if (!globalFeesProcessed[student.user_id]) globalFeesProcessed[student.user_id] = { selection_process: false, i20_control: false, application_fee: false, placement_fee: false, ds160_package: false, i539_cos_package: false, reinstatement_fee: false };
+      globalFeesProcessed[student.user_id].reinstatement_fee = true;
     }
   });
 
@@ -946,6 +980,36 @@ export function transformPaymentsToRecordsAndStats({
         payment_date: individualPaymentDates.get(stripeUser.user_id)?.get('i539_cos_package') || stripeUser.last_payment_date || stripeUser.created_at,
         created_at: stripeUser.created_at,
         payment_method: stripeUser.i539_cos_package_payment_method || 'manual',
+        seller_referral_code: stripeUser.seller_referral_code,
+        scholarships_ids: [],
+      } as PaymentRecord);
+    }
+
+    // ✅ NOVO: Reinstatement Fee amount logic
+    let reinstatementPackageAmount: number;
+    if (realPaid?.reinstatement_package !== undefined && realPaid.reinstatement_package > 0) {
+      reinstatementPackageAmount = Math.round(realPaid.reinstatement_package * 100);
+    } else {
+      reinstatementPackageAmount = 50000;
+    }
+
+    if (stripeUser.has_paid_reinstatement_package) {
+      paymentRecords.push({
+        id: `stripe-${stripeUser.user_id}-reinstatement`,
+        student_id: stripeUser.id,
+        student_name: studentName,
+        student_email: studentEmail,
+        university_id: '00000000-0000-0000-0000-000000000000',
+        university_name: 'No University Selected',
+        scholarship_id: '00000000-0000-0000-0000-000000000000',
+        scholarship_title: 'No Scholarship Selected',
+        field_of_study: null,
+        fee_type: 'reinstatement_fee',
+        amount: reinstatementPackageAmount,
+        status: 'paid',
+        payment_date: individualPaymentDates.get(stripeUser.user_id)?.get('reinstatement_package') || stripeUser.last_payment_date || stripeUser.created_at,
+        created_at: stripeUser.created_at,
+        payment_method: stripeUser.reinstatement_package_payment_method || 'manual',
         seller_referral_code: stripeUser.seller_referral_code,
         scholarships_ids: [],
       } as PaymentRecord);

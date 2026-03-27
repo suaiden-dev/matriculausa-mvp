@@ -231,10 +231,12 @@ export const ScholarshipCardExpandable: React.FC<ScholarshipCardExpandableProps>
                   const placementFeeAmount = scholarship.placement_fee_amount ? Number(scholarship.placement_fee_amount) : null;
                   const placementFeeValue = getPlacementFee(annualValue, placementFeeAmount);
                   return (
-                    <div className="flex items-center justify-between pt-1 border-t border-slate-200 mt-1">
-                      <span className="text-xs text-slate-500">{t('studentDashboard.progressBar.placementFee') || 'Placement Fee'}</span>
-                      <span className="text-xs font-bold text-blue-600">{formatCurrency(placementFeeValue)}</span>
-                    </div>
+                    <>
+                      <div className="flex items-center justify-between pt-1 border-t border-slate-200 mt-1">
+                        <span className="text-xs text-slate-500">{t('scholarships:scholarshipsPage.scholarshipCard.placementFee', 'Placement Fee')}</span>
+                        <span className="text-xs font-bold text-blue-600">{formatCurrency(placementFeeValue)}</span>
+                      </div>
+                    </>
                   );
                 })()}
               </div>

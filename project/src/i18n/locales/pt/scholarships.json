@@ -149,8 +149,10 @@
       "internalFeesConditionalNote": "A taxa depende do tipo de processo ou visto do aluno e daí corresponde com a taxa",
       "i539COSPackage": "Taxa I539 Package",
       "ds160Package": "Taxa DS160 Package - INITIAL",
+      "reinstatementPackage": "Taxa de Reinstatement",
       "i539PackageDescription": "Taxa necessária para estudantes que solicitam Mudança de Status (Change of Status)",
       "ds160PackageDescription": "Taxa necessária para estudantes que solicitam Transferência",
+      "reinstatementPackageDescription": "Taxa necessária para estudantes transfer que possuem o status do visto inativo/terminado.",
       "days": "dias"
     }
   },

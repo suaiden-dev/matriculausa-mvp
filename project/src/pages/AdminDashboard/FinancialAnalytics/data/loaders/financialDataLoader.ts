@@ -69,7 +69,9 @@ async function loadApplications(): Promise<any[]> {
         selection_process_fee_payment_method,
         i20_control_fee_payment_method,
         placement_fee_payment_method,
+        reinstatement_package_payment_method,
         is_placement_fee_paid,
+        has_paid_reinstatement_package,
         seller_referral_code
       ),
       scholarships (
@@ -104,6 +106,7 @@ async function loadApplicationsPrev(prevRange: DateRange): Promise<any[]> {
         is_application_fee_paid,
         is_scholarship_fee_paid,
         has_paid_i20_control_fee,
+        has_paid_reinstatement_package,
         scholarship_package_id,
         dependents,
         created_at
@@ -138,7 +141,7 @@ async function loadZellePayments(_currentRange: DateRange): Promise<any[]> {
     const userIds = zellePaymentsRaw.map((p) => p.user_id).filter(Boolean);
     const { data: userProfiles, error: usersError } = await supabase
       .from('user_profiles')
-      .select('id, user_id, full_name, email, has_paid_selection_process_fee, is_application_fee_paid, is_scholarship_fee_paid, has_paid_i20_control_fee, is_placement_fee_paid, selection_process_fee_payment_method, i20_control_fee_payment_method, placement_fee_payment_method, scholarship_package_id, dependents, seller_referral_code')
+      .select('id, user_id, full_name, email, has_paid_selection_process_fee, is_application_fee_paid, is_scholarship_fee_paid, has_paid_i20_control_fee, is_placement_fee_paid, has_paid_reinstatement_package, selection_process_fee_payment_method, i20_control_fee_payment_method, placement_fee_payment_method, reinstatement_package_payment_method, scholarship_package_id, dependents, seller_referral_code')
       .in('user_id', userIds);
     
     if (usersError) {
@@ -204,10 +207,12 @@ async function loadStripeUsers(applications: any[]): Promise<any[]> {
       i20_control_fee_payment_method,
       placement_fee_payment_method,
       is_placement_fee_paid,
+      has_paid_reinstatement_package,
+      reinstatement_package_payment_method,
       seller_referral_code
     `)
     .eq('role', 'student')
-    .or('has_paid_selection_process_fee.eq.true,is_application_fee_paid.eq.true,is_scholarship_fee_paid.eq.true,has_paid_i20_control_fee.eq.true,is_placement_fee_paid.eq.true');
+    .or('has_paid_selection_process_fee.eq.true,is_application_fee_paid.eq.true,is_scholarship_fee_paid.eq.true,has_paid_i20_control_fee.eq.true,is_placement_fee_paid.eq.true,has_paid_reinstatement_package.eq.true');
     // Removido filtro de período para igualar Payment Management
   
   if (error) throw error;
@@ -394,7 +399,7 @@ async function loadIndividualFeePayments(): Promise<any[]> {
   // Fetch user profiles for payment methods (selection_process and i20_control)
   const { data: userProfiles } = await supabase
     .from('user_profiles')
-    .select('user_id, selection_process_fee_payment_method, i20_control_fee_payment_method, placement_fee_payment_method')
+    .select('user_id, selection_process_fee_payment_method, i20_control_fee_payment_method, placement_fee_payment_method, reinstatement_package_payment_method')
     .in('user_id', userIds);
 
   // Fetch scholarship applications for payment methods (application_fee and scholarship_fee)
@@ -549,6 +554,8 @@ async function loadIndividualFeePayments(): Promise<any[]> {
       }
     } else if (payment.fee_type === 'placement' || payment.fee_type === 'placement_fee') {
       paymentMethod = userProfile?.placement_fee_payment_method || 'manual';
+    } else if (payment.fee_type === 'reinstatement' || payment.fee_type === 'reinstatement_fee' || payment.fee_type === 'reinstatement_package') {
+      paymentMethod = userProfile?.reinstatement_package_payment_method || 'manual';
     } else {
       // Fallback to payment_method from individual_fee_payments if fee_type doesn't match
       paymentMethod = payment.payment_method || 'manual';
@@ -682,7 +689,8 @@ export async function loadFinancialData(
                       payment.fee_type === 'scholarship' || payment.fee_type === 'scholarship_fee' ? 'scholarship' :
                       payment.fee_type === 'i20_control' || payment.fee_type === 'i20_control_fee' ? 'i20_control' :
                       payment.fee_type === 'application' || payment.fee_type === 'application_fee' ? 'application' : 
-                      payment.fee_type === 'placement' || payment.fee_type === 'placement_fee' ? 'placement' : null;
+                      payment.fee_type === 'placement' || payment.fee_type === 'placement_fee' ? 'placement' : 
+                      payment.fee_type === 'reinstatement' || payment.fee_type === 'reinstatement_fee' || payment.fee_type === 'reinstatement_package' ? 'reinstatement_fee' : null;
 
     if (feeTypeKey && (userAmounts as any)[feeTypeKey] === undefined) {
       (userAmounts as any)[feeTypeKey] = amountUSD;

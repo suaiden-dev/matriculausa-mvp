@@ -148,8 +148,10 @@
       "internalFeesConditionalNote": "The fee depends on the student's process or visa type and then corresponds with the fee",
       "i539COSPackage": "I539 Package Fee",
       "ds160Package": "DS160 Package Fee - INITIAL",
+      "reinstatementPackage": "Reinstatement Fee",
       "i539PackageDescription": "Fee required for students requesting Change of Status (COS)",
       "ds160PackageDescription": "Fee required for students requesting Transfer",
+      "reinstatementPackageDescription": "Fee required for transfer students who have an inactive/terminated visa status.",
       "days": "days"
     }
   },

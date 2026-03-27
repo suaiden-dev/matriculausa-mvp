@@ -337,6 +337,59 @@ export async function approveZelleFlow(params: {
     });
   }
 
+  // ✅ NOVO: Reinstatement Fee logic
+  if (payment.fee_type === "reinstatement_package" || payment.fee_type_global === "reinstatement_fee") {
+    // Mark on profile
+    await supabase
+      .from("user_profiles")
+      .update({
+        has_paid_reinstatement_package: true,
+        reinstatement_package_payment_method: "zelle",
+        updated_at: new Date().toISOString(),
+      })
+      .eq("user_id", payment.user_id)
+      .select();
+
+    // Record payment (individual table)
+    const approvedAt = payment.admin_approved_at || payment.created_at;
+    await recordIndividualFeePayment(
+      supabase,
+      {
+        userId: payment.user_id,
+        feeType: "reinstatement_fee",
+        amount: payment.amount,
+        paymentDate: approvedAt,
+        paymentMethod: "zelle",
+        zellePaymentId: payment.id,
+      },
+    );
+
+    // Log action
+    await supabase.rpc("log_student_action", {
+      p_student_id: payment.student_id,
+      p_action_type: "fee_payment",
+      p_action_description: `Reinstatement Fee paid via Zelle (approved by admin)`,
+      p_performed_by: adminUserId,
+      p_performed_by_type: "admin",
+      p_metadata: {
+        fee_type: "reinstatement_fee",
+        payment_method: "zelle",
+        amount: payment.amount,
+        payment_id: payment.id,
+        zelle_payment_id: payment.id,
+      },
+    });
+
+    // Billing
+    await supabase.rpc("register_payment_billing", {
+      user_id_param: payment.user_id,
+      fee_type_param: "reinstatement_fee",
+      amount_param: payment.amount,
+      payment_session_id_param: `zelle_${payment.id}`,
+      payment_method_param: "zelle",
+    });
+  }
+
   // Application/Scholarship fees logic (applications table updates, logging, billing scholarship)
   if (
     payment.fee_type === "application_fee" ||
@@ -530,6 +583,8 @@ export async function approveZelleFlow(params: {
       oQueEnviar = `O pagamento do I-20 Control Fee no valor de $${payment.amount} foi pago e aprovado. Informaremos quando o documento estiver pronto!`;
     } else if (payment.fee_type === 'ds160_package') {
       tipoNotfAluno = "Pagamento de ds160_package confirmado";
+    } else if (payment.fee_type === 'reinstatement_package' || payment.fee_type === 'reinstatement_fee') {
+      tipoNotfAluno = "Pagamento de reinstatement_fee confirmado";
     }
 
     const approvalPayload = {
@@ -761,6 +816,8 @@ export async function approveZelleFlow(params: {
           tipoNotfAdmin = "Pagamento de i20 control fee confirmado";
         } else if (payment.fee_type === 'ds160_package') {
           tipoNotfAdmin = "Pagamento de ds160_package confirmado";
+        } else if (payment.fee_type === 'reinstatement_package' || payment.fee_type === 'reinstatement_fee') {
+          tipoNotfAdmin = "Pagamento de reinstatement_fee confirmado";
         }
 
         for (const admin of adminUsers) {

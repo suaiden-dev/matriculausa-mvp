@@ -235,10 +235,12 @@ const ScholarshipCardFullComponent: React.FC<ScholarshipCardFullProps> = ({
               const placementFeeAmount = scholarship.placement_fee_amount ? Number(scholarship.placement_fee_amount) : null;
               const placementFee = getPlacementFee(annualValue, placementFeeAmount);
               return (
-                <div className="flex items-center justify-between pt-1.5 border-t border-slate-100">
-                  <span className="text-slate-400 text-xs font-medium">{t('scholarships:scholarshipsPage.scholarshipCard.placementFee', 'Placement Fee')}</span>
-                  <span className="text-blue-600 text-xs font-black">{formatCurrency(placementFee)}</span>
-                </div>
+                <>
+                  <div className="flex items-center justify-between pt-1.5 border-t border-slate-100">
+                    <span className="text-slate-400 text-xs font-medium">{t('scholarships:scholarshipsPage.scholarshipCard.placementFee', 'Placement Fee')}</span>
+                    <span className="text-blue-600 text-xs font-black">{formatCurrency(placementFee)}</span>
+                  </div>
+                </>
               );
             })()}
           </div>
