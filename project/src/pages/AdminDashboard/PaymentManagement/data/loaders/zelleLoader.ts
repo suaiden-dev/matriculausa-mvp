@@ -19,10 +19,10 @@ export async function loadZellePaymentsLoader(
   // ✅ BUSCAR TODOS OS REGISTROS: Sem paginação, buscar todos os pagamentos Zelle
   const query = supabase
     .from('zelle_payments')
-    .select('*', { count: 'exact' })
+    .select('*')
     .gt('amount', 0)
     .order('created_at', { ascending: false });
-  const { data: zellePaymentsData, error: zelleError, count } = signal
+  const { data: zellePaymentsData, error: zelleError } = signal
     ? await query.abortSignal(signal)
     : await query;
   if (zelleError) throw zelleError;
@@ -77,40 +77,9 @@ export async function loadZellePaymentsLoader(
     }
   }
 
-  // ✅ CONTAGEM PRECISA: Em produção, precisamos contar apenas os registros não filtrados
-  // Fazer uma query separada para contar registros excluindo @uorak.com
-  let finalCount = count || 0;
-  
-  if (!isDevelopment && count && count > 0) {
-    // Buscar todos os user_ids de zelle_payments para contar quantos são @uorak.com
-    const { data: allZelleUserIds, error: countError } = await supabase
-      .from('zelle_payments')
-      .select('user_id')
-      .gt('amount', 0);
-    
-    if (!countError && allZelleUserIds && allZelleUserIds.length > 0) {
-      const uniqueUserIds = [...new Set(allZelleUserIds.map((p: any) => p.user_id).filter(Boolean))];
-      const { data: allUserProfiles } = await supabase
-        .from('user_profiles')
-        .select('user_id, email')
-        .in('user_id', uniqueUserIds);
-      
-      // Contar quantos pagamentos são de @uorak.com
-      const uorakUserIds = new Set(
-        allUserProfiles
-          ?.filter((p: any) => p.email?.toLowerCase().includes('@uorak.com'))
-          .map((p: any) => p.user_id) || []
-      );
-      
-      // Contar quantos pagamentos são de usuários @uorak.com
-      const uorakPaymentsCount = allZelleUserIds.filter((p: any) => 
-        uorakUserIds.has(p.user_id)
-      ).length;
-      
-      // Ajustar o count subtraindo os @uorak.com
-      finalCount = Math.max(0, count - uorakPaymentsCount);
-    }
-  }
+  // ✅ CONTAGEM PRECISA: Como buscamos todos os registros e filtramos em memória, 
+  // o records.length já representa o count correto pós-filtro.
+  const finalCount = records.length;
   
   return { records, count: finalCount };
 }

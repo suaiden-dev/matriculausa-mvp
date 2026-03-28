@@ -13,8 +13,6 @@ const LayoutContent: React.FC<LayoutProps> = ({ children }) => {
   const location = useLocation();
   const { isModalOpen } = useModal();
   
-  console.log('[Layout] 🔍 Layout renderizado - pathname:', location.pathname, 'Timestamp:', new Date().toISOString());
-  
   const hideHeader = location.pathname.startsWith('/school') ||
                      location.pathname.startsWith('/admin') ||
                      (location.pathname.startsWith('/student') && location.pathname !== '/student/register') ||
@@ -35,14 +33,6 @@ const LayoutContent: React.FC<LayoutProps> = ({ children }) => {
                        location.pathname.includes('/applications') ||
                        location.pathname.includes('/onboarding') ||
                        isModalOpen; // 🎯 NOVA CONDIÇÃO: esconder quando modal está aberto
-  
-  // Debug log
-  console.log('🔍 Layout Debug:', {
-    pathname: location.pathname,
-    hideSmartChat,
-    isModalOpen,
-    shouldShow: !isAdmin && !hideSmartChat
-  });
 
   useEffect(() => {
     window.scrollTo({ top: 0, left: 0, behavior: 'smooth' });

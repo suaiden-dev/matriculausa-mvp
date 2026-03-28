@@ -98,6 +98,8 @@ const AdminApplicationView: React.FC = () => {
             <div><strong>Scholarship:</strong> {application.scholarships?.title || application.scholarships?.name}</div>
             <div><strong>Annual Value with Scholarship:</strong> ${Number(application.scholarships?.annual_value_with_scholarship || 0).toLocaleString()}</div>
             {application.scholarships?.course && <div><strong>Course:</strong> {application.scholarships.course}</div>}
+            {application.scholarships?.min_gpa && <div><strong>Min GPA:</strong> {application.scholarships.min_gpa}</div>}
+            {application.scholarships?.min_english_proficiency && <div><strong>Min English:</strong> {application.scholarships.min_english_proficiency.toUpperCase()}</div>}
             {application.scholarships?.country && <div><strong>Country:</strong> {application.scholarships.country}</div>}
             <div className="md:col-span-2"><strong>Description:</strong> {application.scholarships?.description}</div>
           </div>
@@ -165,12 +167,11 @@ const AdminApplicationView: React.FC = () => {
           <h3 className="text-xl font-bold text-[#05294E] mb-4">Chat (Read-only)</h3>
           <ApplicationChat
             messages={messages}
-            onSend={undefined}
+            onSend={() => {}}
             loading={chatLoading}
             isSending={false}
             error={null}
             currentUserId={''}
-            readOnly={true}
           />
         </div>
         {previewUrl && (

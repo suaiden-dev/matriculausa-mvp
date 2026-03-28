@@ -42,13 +42,6 @@ export function transformPaymentsToRecordsAndStats({
 
     const studentName = student.full_name || 'Unknown Student';
     const studentEmail = student.email || '';
-    if (studentEmail.includes('chieko998')) {
-      console.log(`🔍 [PaymentManagement] Processing app for ${studentEmail}:`, {
-        placement_fee_flow: student.placement_fee_flow,
-        is_placement_fee_paid: student.is_placement_fee_paid,
-        has_user_id: !!student.user_id
-      });
-    }
     const universityName = university.name || 'Unknown University';
     const scholarshipTitle = scholarship.title || 'Unknown Scholarship';
     if (!studentName || !universityName) return;
@@ -80,7 +73,6 @@ export function transformPaymentsToRecordsAndStats({
         selectionProcessFee = Math.round(realPaid.selection_process * 100);
       } else {
         // Valor muito discrepante, usar cálculo fixo
-        console.log(`[PaymentManagement] Valor de selection_process muito discrepante para ${studentEmail}: ${realPaid.selection_process} (esperado ~${expectedSelectionProcessWithDeps}), usando cálculo fixo`);
         if (userOverrides.selection_process_fee !== undefined) {
           selectionProcessFee = Math.round(userOverrides.selection_process_fee * 100);
         } else {
@@ -103,7 +95,6 @@ export function transformPaymentsToRecordsAndStats({
         i20ControlFee = Math.round(realPaid.i20_control * 100);
       } else {
         // Valor muito discrepante, usar cálculo fixo
-        console.log(`[PaymentManagement] Valor de i20_control muito discrepante para ${studentEmail}: ${realPaid.i20_control} (esperado ~${expectedI20Control}), usando cálculo fixo`);
         if (userOverrides.i20_control_fee !== undefined) {
           i20ControlFee = Math.round(userOverrides.i20_control_fee * 100);
         } else {
@@ -126,7 +117,6 @@ export function transformPaymentsToRecordsAndStats({
         scholarshipFee = Math.round(realPaid.scholarship * 100);
       } else {
         // Valor muito discrepante, usar cálculo fixo
-        console.log(`[PaymentManagement] Valor de scholarship muito discrepante para ${studentEmail}: ${realPaid.scholarship} (esperado ~${expectedScholarship}), usando cálculo fixo`);
         if (userOverrides.scholarship_fee !== undefined) {
           scholarshipFee = Math.round(userOverrides.scholarship_fee * 100);
         } else {
@@ -156,7 +146,6 @@ export function transformPaymentsToRecordsAndStats({
         applicationFee = Math.round(realPaid.application * 100);
       } else {
         // Valor muito discrepante, usar cálculo fixo
-        console.log(`[PaymentManagement] Valor de application muito discrepante para ${studentEmail}: ${realPaid.application} (esperado ~${expectedApplicationFeeWithDeps / 100}), usando cálculo fixo`);
         if (scholarship?.application_fee_amount) {
           const rawValue = parseFloat(scholarship.application_fee_amount);
           applicationFee = rawValue > 1000 ? Math.round(rawValue) : Math.round(rawValue * 100);
@@ -695,7 +684,6 @@ export function transformPaymentsToRecordsAndStats({
         selectionProcessFee = Math.round(realPaid.selection_process * 100);
       } else {
         // Valor muito discrepante, usar cálculo fixo
-        console.log(`[PaymentManagement] Valor de selection_process muito discrepante para ${studentName} (${studentEmail}): ${realPaid.selection_process} (esperado ~${expectedSelectionProcessWithDeps}), usando cálculo fixo`);
         if (userOverrides.selection_process_fee !== undefined) {
           selectionProcessFee = Math.round(userOverrides.selection_process_fee * 100);
         } else {
@@ -718,7 +706,6 @@ export function transformPaymentsToRecordsAndStats({
         i20ControlFee = Math.round(realPaid.i20_control * 100);
       } else {
         // Valor muito discrepante, usar cálculo fixo
-        console.log(`[PaymentManagement] Valor de i20_control muito discrepante para ${studentName} (${studentEmail}): ${realPaid.i20_control} (esperado ~${expectedI20Control}), usando cálculo fixo`);
         if (userOverrides.i20_control_fee !== undefined) {
           i20ControlFee = Math.round(userOverrides.i20_control_fee * 100);
         } else {
@@ -741,7 +728,6 @@ export function transformPaymentsToRecordsAndStats({
         scholarshipFee = Math.round(realPaid.scholarship * 100);
       } else {
         // Valor muito discrepante, usar cálculo fixo
-        console.log(`[PaymentManagement] Valor de scholarship muito discrepante para ${studentName} (${studentEmail}): ${realPaid.scholarship} (esperado ~${expectedScholarship}), usando cálculo fixo`);
         if (userOverrides.scholarship_fee !== undefined) {
           scholarshipFee = Math.round(userOverrides.scholarship_fee * 100);
         } else {
@@ -767,7 +753,6 @@ export function transformPaymentsToRecordsAndStats({
         applicationFee = Math.round(realPaid.application * 100);
       } else {
         // Valor muito discrepante, usar cálculo fixo
-        console.log(`[PaymentManagement] Valor de application muito discrepante para ${studentName} (${studentEmail}): ${realPaid.application} (esperado ~${expectedApplicationFeeWithDeps}), usando cálculo fixo`);
         applicationFee = Math.round(expectedApplicationFee * 100);
         if (systemType === 'legacy' && dependents > 0) {
           applicationFee += dependents * 10000; // $100 por dependente

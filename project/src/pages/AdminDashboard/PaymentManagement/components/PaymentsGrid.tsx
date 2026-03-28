@@ -1,6 +1,6 @@
 import React from 'react';
 import { User, Building2, DollarSign, Calendar } from 'lucide-react';
-import { formatCentsToDollars } from '../../../../utils/currency';
+import { convertCentsToDollars, formatCurrency } from '../../../../utils/currency';
 
 export interface PaymentsGridProps {
 	currentPayments: any[];
@@ -32,7 +32,7 @@ function PaymentsGridBase({ currentPayments, FEE_TYPES, handleViewDetails, isLoa
 							{isLoading ? (
 								<div className="animate-pulse bg-slate-200 h-4 w-16 rounded"></div>
 							) : (
-								<span className="font-bold text-green-700">${formatCentsToDollars(payment.amount)}</span>
+								<span className="font-bold text-green-700">{formatCurrency(convertCentsToDollars(payment.amount), true, 'pt-BR')}</span>
 							)}
 						</div>
 						<div className="flex items-center gap-2 mb-1">

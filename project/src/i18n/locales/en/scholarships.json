@@ -77,7 +77,7 @@
       "days": "days",
       "details": "Details",
       "applyNow": "Apply Now",
-      "notAvailable": "Not available",
+      "notAvailable": "Sold out",
       "placementFee": "Placement Fee"
     },
     "noResults": {
@@ -137,7 +137,7 @@
       "additionalBenefits": "Additional Benefits",
       "expired": "Expired",
       "scholarshipExpired": "Scholarship Expired",
-      "noLongerAccepting": "Not Available for application",
+      "noLongerAccepting": "Sold out for application",
       "canStillView": "You can still view the information, but it will not be possible to apply for this scholarship.",
       "internalFeesTitle": "Internal University Fees",
       "internalFeesDisclaimer": "Some fees are paid directly to the university, while others are processed through our platform.",
@@ -214,6 +214,9 @@
       "scholarshipValue": "Scholarship Value",
       "minValue": "Min Value",
       "maxValue": "Max Value",
+      "minGPA": "Minimum GPA",
+      "englishLevel": "English Level",
+      "allEnglishLevels": "All Levels",
       "deadlineDays": "Deadline (days)",
       "minPlaceholder": "Min",
       "maxPlaceholder": "Max",

@@ -47,14 +47,19 @@ export const convertCentsToDollars = (cents: number | null | undefined, forceDol
  * Formata um valor numérico para exibição como moeda (USD) com separadores de milhares
  * @param amount - O valor a ser formatado
  * @param includeSymbol - Se deve incluir o símbolo '$' (padrão: true)
+ * @param locale - A localidade para formatação (padrão: 'en-US')
  * @returns String formatada (ex: "$10,000.00" ou "10,000.00")
  */
-export const formatCurrency = (amount: number | null | undefined, includeSymbol: boolean = true): string => {
+export const formatCurrency = (
+  amount: number | null | undefined, 
+  includeSymbol: boolean = true,
+  locale: string = 'en-US'
+): string => {
   if (amount === null || amount === undefined) {
     return includeSymbol ? '$0.00' : '0.00';
   }
 
-  const formatter = new Intl.NumberFormat('en-US', {
+  const formatter = new Intl.NumberFormat(locale, {
     style: includeSymbol ? 'currency' : 'decimal',
     currency: 'USD',
     minimumFractionDigits: 2,

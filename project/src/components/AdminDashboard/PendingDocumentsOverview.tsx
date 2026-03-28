@@ -10,13 +10,14 @@ import {
     User,
     CheckCircle
 } from 'lucide-react';
-import { useEnvironment } from '../../hooks/useEnvironment';
+// import { useEnvironment } from '../../hooks/useEnvironment';
 
 
 // Tipos para os documentos
 interface LoadingState {
     studentDocuments: boolean;
     documentRequests: boolean;
+    identityPhotos: boolean;
 }
 
 interface StudentDocument {
@@ -58,142 +59,72 @@ interface DocumentRequestUpload {
     };
 }
 
+interface IdentityVerification {
+    id: string;
+    user_id: string;
+    identity_photo_status: string;
+    identity_photo_path: string;
+    created_at: string;
+    user_profiles?: {
+        full_name: string;
+        email: string;
+        id: string; 
+        user_id: string;
+        scholarship_applications?: Array<{
+            id: string;
+            status: string;
+        }>;
+    };
+}
+
 const PendingDocumentsOverview: React.FC = () => {
-    const { isDevelopment } = useEnvironment();
-    const [loading, setLoading] = useState<LoadingState>({ studentDocuments: true, documentRequests: true });
+    // const { isDevelopment } = useEnvironment();
+    const [loading, setLoading] = useState<LoadingState>({ 
+        studentDocuments: true, 
+        documentRequests: true, 
+        identityPhotos: true 
+    });
 
     const [studentDocuments, setStudentDocuments] = useState<StudentDocument[]>([]);
     const [documentRequests, setDocumentRequests] = useState<DocumentRequestUpload[]>([]);
+    const [identityPhotos, setIdentityPhotos] = useState<IdentityVerification[]>([]);
+    
+    // ... rest of state stays the same
 
     useEffect(() => {
-        fetchStudentDocuments();
-        fetchDocumentRequests();
+        fetchAllPendingDocuments();
     }, []);
 
-    const fetchStudentDocuments = async () => {
+    const fetchAllPendingDocuments = async () => {
         try {
-            setLoading(prev => ({ ...prev, studentDocuments: true }));
-            // Buscar documentos de estudantes
-            let query = supabase
-                .from('student_documents')
-                .select(`
-          *,
-          user_profiles:user_id!inner (
-            full_name, 
-            email, 
-            id, 
-            user_id,
-            documents_status,
-            has_paid_selection_process_fee,
-            scholarship_applications(id, status)
-          )
-        `)
-                .in('status', ['pending', 'under_review'])
-                .neq('user_profiles.documents_status', 'approved')
-                .eq('user_profiles.has_paid_selection_process_fee', true);
+            setLoading({ 
+                studentDocuments: true, 
+                documentRequests: true, 
+                identityPhotos: true 
+            });
+            
+            // Batch loading usando RPC para evitar N+1 roundtrips e redundância de dados
+            const { data, error } = await supabase.rpc('get_pending_documents_batch');
 
-            // Filtrar emails de teste diretamente na query se não estiver em dev
-            if (!isDevelopment) {
-                query = query.not('user_profiles.email', 'ilike', '%@uorak.com%');
+            if (error) {
+                console.error('Error fetching pending documents batch:', error);
+                return;
             }
 
-            const { data, error } = await query
-                .order('uploaded_at', { ascending: false })
-                .limit(50);
-
-            if (!error && data) {
-                // Filtrar usuários de teste e usuários com status 'enrolled'
-                const filteredData = data.filter(doc => {
-                    // Filtrar emails de teste (exceto em desenvolvimento)
-                    if (!isDevelopment && doc.user_profiles?.email?.toLowerCase().includes('@uorak.com')) {
-                        return false;
-                    }
-                    
-                    // Filtrar usuários que já estão enrolled
-                    const hasEnrolledApplication = doc.user_profiles?.scholarship_applications?.some(
-                        (app: { id: string; status: string }) => app.status === 'enrolled'
-                    );
-
-                    // Filtrar usuários que ainda não selecionaram nenhuma bolsa
-                    const hasApplications = doc.user_profiles?.scholarship_applications && doc.user_profiles.scholarship_applications.length > 0;
-                    if (!hasApplications) {
-                        return false;
-                    }
-
-                    return !hasEnrolledApplication;
-                });
-                
-                setStudentDocuments(filteredData as StudentDocument[]);
+            if (data) {
+                setStudentDocuments(data.student_documents || []);
+                setDocumentRequests(data.document_requests || []);
+                setIdentityPhotos(data.identity_photos || []);
             }
 
         } catch (error) {
-            console.error('Error fetching student documents:', error);
+            console.error('Unexpected error in fetchAllPendingDocuments:', error);
         } finally {
-            setLoading(prev => ({ ...prev, studentDocuments: false }));
-        }
-    };
-
-    const fetchDocumentRequests = async () => {
-        try {
-            setLoading(prev => ({ ...prev, documentRequests: true }));
-            // Buscar uploads de requests pendentes
-            let query = supabase
-                .from('document_request_uploads')
-                .select(`
-          *,
-          user_profiles:uploaded_by!inner (
-            full_name, 
-            email, 
-            id, 
-            user_id,
-            documents_status,
-            has_paid_selection_process_fee,
-            scholarship_applications(id, status)
-          ),
-          document_requests:document_request_id (title)
-        `)
-                .in('status', ['pending', 'under_review'])
-                .neq('user_profiles.documents_status', 'approved')
-                .eq('user_profiles.has_paid_selection_process_fee', true);
-
-            // Filtrar emails de teste diretamente na query se não estiver em dev
-            if (!isDevelopment) {
-                query = query.not('user_profiles.email', 'ilike', '%@uorak.com%');
-            }
-
-            const { data, error } = await query
-                .order('uploaded_at', { ascending: false })
-                .limit(50);
-
-            if (!error && data) {
-                // Filtrar usuários de teste e usuários com status 'enrolled'
-                const filteredData = data.filter(req => {
-                    // Filtrar emails de teste (exceto em desenvolvimento)
-                    if (!isDevelopment && req.user_profiles?.email?.toLowerCase().includes('@uorak.com')) {
-                        return false;
-                    }
-                    
-                    // Filtrar usuários que já estão enrolled
-                    const hasEnrolledApplication = req.user_profiles?.scholarship_applications?.some(
-                        (app: { id: string; status: string }) => app.status === 'enrolled'
-                    );
-
-                    // Filtrar usuários que ainda não selecionaram nenhuma bolsa
-                    const hasApplications = req.user_profiles?.scholarship_applications && req.user_profiles.scholarship_applications.length > 0;
-                    if (!hasApplications) {
-                        return false;
-                    }
-
-                    return !hasEnrolledApplication;
-                });
-                
-                setDocumentRequests(filteredData as DocumentRequestUpload[]);
-            }
-
-        } catch (error) {
-            console.error('Error fetching document requests:', error);
-        } finally {
-            setLoading(prev => ({ ...prev, documentRequests: false }));
+            setLoading({ 
+                studentDocuments: false, 
+                documentRequests: false, 
+                identityPhotos: false 
+            });
         }
     };
 
@@ -231,7 +162,7 @@ const PendingDocumentsOverview: React.FC = () => {
                 },
                 () => {
                     // Recarregar documentos quando houver mudanças
-                    fetchStudentDocuments();
+                    fetchAllPendingDocuments();
                 }
             )
             // Escutar mudanças em document_request_uploads
@@ -243,17 +174,34 @@ const PendingDocumentsOverview: React.FC = () => {
                     table: 'document_request_uploads'
                 },
                 (payload: any) => {
-                    // Só recarregar se o status for pending ou under_review
+                    // Só recarregar se o status for pending ou under_review ou mudou disso
                     const newStatus = payload.new?.status;
                     const oldStatus = payload.old?.status;
 
                     if (
                         newStatus === 'pending' ||
                         newStatus === 'under_review' ||
-                        oldStatus === 'pending' ||
-                        oldStatus === 'under_review'
+                        oldStatus === 'pending' || oldStatus === 'under_review'
                     ) {
-                        fetchDocumentRequests();
+                        fetchAllPendingDocuments();
+                    }
+                }
+            )
+            // Escutar mudanças em comprehensive_term_acceptance (identity photos)
+            .on(
+                'postgres_changes',
+                {
+                    event: '*',
+                    schema: 'public',
+                    table: 'comprehensive_term_acceptance'
+                },
+                (payload: any) => {
+                    // Recarregar se o status mudar para pending ou de pending para outra coisa
+                    const newStatus = payload.new?.identity_photo_status;
+                    const oldStatus = payload.old?.identity_photo_status;
+                    
+                    if (newStatus === 'pending' || oldStatus === 'pending') {
+                        fetchAllPendingDocuments();
                     }
                 }
             );
@@ -265,8 +213,11 @@ const PendingDocumentsOverview: React.FC = () => {
     }, []); // Array vazio = executar apenas uma vez ao montar
 
     const unifiedGroups = Array.from(
-        [...studentDocuments.map(d => ({ ...d, source: 'student' })), 
-         ...documentRequests.map(r => ({ ...r, source: 'request', user_id: r.uploaded_by }))]
+        [
+            ...studentDocuments.map(d => ({ ...d, source: 'student' })), 
+            ...documentRequests.map(r => ({ ...r, source: 'request', user_id: r.uploaded_by })),
+            ...identityPhotos.map(i => ({ ...i, source: 'identity', uploaded_at: i.created_at }))
+        ]
         .reduce((acc, item: any) => {
             const userId = item.user_id;
             if (!acc.has(userId)) {
@@ -276,7 +227,8 @@ const PendingDocumentsOverview: React.FC = () => {
                     count: 0,
                     last_uploaded: item.uploaded_at,
                     studentDocs: [] as string[],
-                    requestDocs: [] as string[]
+                    requestDocs: [] as string[],
+                    hasIdentityPhoto: false
                 });
             }
             const group = acc.get(userId)!;
@@ -289,18 +241,21 @@ const PendingDocumentsOverview: React.FC = () => {
                 if (!group.studentDocs.includes(item.type)) {
                     group.studentDocs.push(item.type);
                 }
-            } else {
+            } else if (item.source === 'request') {
                 const title = item.document_requests?.title || 'Document Request';
                 if (!group.requestDocs.includes(title)) {
                     group.requestDocs.push(title);
                 }
+            } else if (item.source === 'identity') {
+                group.hasIdentityPhoto = true;
             }
             return acc;
         }, new Map<string, any>()).values()
     ).sort((a, b) => new Date(b.last_uploaded).getTime() - new Date(a.last_uploaded).getTime());
 
-    const isLoading = loading.studentDocuments || loading.documentRequests;
+    const isLoading = loading.studentDocuments || loading.documentRequests || loading.identityPhotos;
     const totalCount = unifiedGroups.length;
+    const totalItems = studentDocuments.length + documentRequests.length + identityPhotos.length;
 
     return (
         <div className="bg-white rounded-2xl shadow-sm border border-slate-200 overflow-hidden">
@@ -314,9 +269,9 @@ const PendingDocumentsOverview: React.FC = () => {
                         <div>
                             <div className="flex items-center space-x-2">
                                 <h3 className="text-lg font-bold text-slate-900">Pending Documents Review</h3>
-                                {(studentDocuments.length + documentRequests.length) > 0 && (
+                                {totalItems > 0 && (
                                     <span className="bg-indigo-100 text-indigo-600 py-0.5 px-2 rounded-full text-xs font-bold">
-                                        {studentDocuments.length + documentRequests.length}
+                                        {totalItems}
                                     </span>
                                 )}
                             </div>
@@ -351,7 +306,7 @@ const PendingDocumentsOverview: React.FC = () => {
                         <p className="text-slate-500 text-sm">No pending documents to review.</p>
                     </div>
                 ) : (
-                    <div className="space-y-3">
+                    <div className="space-y-3 max-h-[440px] overflow-y-auto pr-1">
                         {unifiedGroups.map((group) => (
                             <div key={group.user_id} className="p-4 border border-slate-100 rounded-xl hover:border-indigo-100 hover:bg-indigo-50/30 transition-all group">
                                 <div className="flex items-center justify-between gap-4">
@@ -383,6 +338,12 @@ const PendingDocumentsOverview: React.FC = () => {
                                             <div className="flex items-center bg-purple-50 text-purple-700 px-2 py-1 rounded text-[10px] uppercase font-bold tracking-wider">
                                                 <Files className="h-3 w-3 mr-1" />
                                                 Requests: {group.requestDocs.join(', ')}
+                                            </div>
+                                        )}
+                                        {group.hasIdentityPhoto && (
+                                            <div className="flex items-center bg-amber-50 text-amber-700 px-2 py-1 rounded text-[10px] uppercase font-bold tracking-wider">
+                                                <User className="h-3 w-3 mr-1" />
+                                                Identity Photo Verification
                                             </div>
                                         )}
                                     </div>
