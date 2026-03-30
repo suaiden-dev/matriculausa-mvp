@@ -69,17 +69,33 @@ export const IdentityVerificationStep: React.FC<IdentityVerificationStepProps> =
         .limit(1)
         .maybeSingle();
 
-      const { error } = await supabase
+      // Estratégia: tentar UPDATE primeiro (caso registro já exista pelo PreCheckoutModal).
+      // O .select() no final retorna as linhas afetadas — se não houver nenhuma, fazemos INSERT.
+      const { data: updated, error: updateError } = await supabase
         .from('comprehensive_term_acceptance')
-        .insert({
-          user_id: user.id,
-          term_id: latestTerm?.id,
-          term_type: 'checkout_terms',
+        .update({
           identity_photo_path: uploadedPath,
           identity_photo_status: 'pending',
-          accepted_at: new Date().toISOString(),
-        });
-      if (error) throw error;
+        })
+        .eq('user_id', user.id)
+        .select('id');
+
+      if (updateError) throw updateError;
+
+      // Se nenhuma linha foi atualizada, o registro não existe ainda — criar
+      if (!updated || updated.length === 0) {
+        const { error: insertError } = await supabase
+          .from('comprehensive_term_acceptance')
+          .insert({
+            user_id: user.id,
+            term_id: latestTerm?.id,
+            term_type: 'checkout_terms',
+            identity_photo_path: uploadedPath,
+            identity_photo_status: 'pending',
+            accepted_at: new Date().toISOString(),
+          });
+        if (insertError) throw insertError;
+      }
 
       setAlreadyVerified(true);
       toast.success(t('selectionSurvey.toastPhotoSuccess') || 'Sucesso!');
