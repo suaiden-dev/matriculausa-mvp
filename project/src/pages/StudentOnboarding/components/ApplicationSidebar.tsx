@@ -1,6 +1,7 @@
 import React from 'react';
-import { CheckCircle2, Clock, AlertCircle, Lock } from 'lucide-react';
+import { CheckCircle2, Clock, AlertCircle, Lock, ArrowRight } from 'lucide-react';
 import { motion } from 'framer-motion';
+import { useTranslation } from 'react-i18next';
 
 interface Step {
   id: string;
@@ -17,6 +18,7 @@ interface ApplicationSidebarProps {
 }
 
 export const ApplicationSidebar: React.FC<ApplicationSidebarProps> = ({ steps, activeStep, onStepClick }) => {
+  const { t } = useTranslation('common');
   return (
     <div className="flex flex-col gap-3">
       {steps.map((step, index) => {
@@ -58,10 +60,16 @@ export const ApplicationSidebar: React.FC<ApplicationSidebarProps> = ({ steps, a
             initial={{ opacity: 0, x: -20 }}
             animate={{ opacity: 1, x: 0 }}
             transition={{ delay: index * 0.1 }}
-            onClick={() => onStepClick(step.id)}
+            onClick={() => {
+              if (step.variant !== 'error' || isActive) {
+                onStepClick(step.id);
+              }
+            }}
             className={`w-full group relative flex flex-col p-4 rounded-2xl border transition-all text-left ${
               styles.container
-            } ${isActive ? 'ring-2 ring-blue-500 ring-offset-2 border-blue-500 !bg-white scale-[1.02] shadow-xl shadow-blue-500/10' : ''}`}
+            } ${isActive ? 'ring-2 ring-blue-500 ring-offset-2 border-blue-500 !bg-white scale-[1.02] shadow-xl shadow-blue-500/10' : ''} ${
+              step.variant === 'error' && !isActive ? 'cursor-not-allowed opacity-60 grayscale' : ''
+            }`}
           >
             <div className="flex items-center justify-between mb-1">
               <span className={`text-[10px] font-black uppercase tracking-widest ${styles.statusText}`}>
@@ -75,7 +83,16 @@ export const ApplicationSidebar: React.FC<ApplicationSidebarProps> = ({ steps, a
             }`}>
               {step.title}
             </h4>
-            
+
+            {step.variant !== 'error' && !isActive && (
+              <div className="flex items-center gap-1 mt-2">
+                <span className="text-[10px] font-black uppercase tracking-widest text-blue-500 group-hover:text-blue-700 transition-colors">
+                  {t('labels.clickToAccess')}
+                </span>
+                <ArrowRight className="w-3 h-3 text-blue-500 group-hover:text-blue-700 group-hover:translate-x-0.5 transition-all" />
+              </div>
+            )}
+
             {/* Linha conectora visual (Exceto último) */}
             {index < steps.length - 1 && (
               <div className="hidden lg:block absolute left-1/2 -bottom-3 w-0.5 h-3 bg-slate-200 z-0" />

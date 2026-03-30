@@ -960,14 +960,14 @@ const DocumentsView: React.FC<DocumentsViewProps> = ({
                           try {
                             setUploadingAcceptanceLetter(true);
                             const sanitized = acceptanceLetterFile.name.replace(/[^a-zA-Z0-9._-]/g, '_');
-                            const storageKey = `acceptance_letters/${Date.now()}_${sanitized}`;
-                            const { data: uploadData, error: uploadError } = await supabase.storage
-                              .from('document-attachments')
-                              .upload(storageKey, acceptanceLetterFile);
-                            if (uploadError) throw uploadError;
-                            const { data: { publicUrl } } = supabase.storage
-                              .from('document-attachments')
-                              .getPublicUrl(uploadData?.path || storageKey);
+                            const storageKey = `${studentId}/acceptance_letters/${Date.now()}_${sanitized}`;
+                             const { data: uploadData, error: uploadError } = await supabase.storage
+                               .from('document-attachments')
+                               .upload(storageKey, acceptanceLetterFile);
+                             if (uploadError) throw uploadError;
+                             const { data: { publicUrl } } = supabase.storage
+                               .from('document-attachments')
+                               .getPublicUrl(uploadData?.path || storageKey);
 
                             const { error: updateError } = await supabase
                               .from('scholarship_applications')
@@ -1080,7 +1080,7 @@ const DocumentsView: React.FC<DocumentsViewProps> = ({
                           try {
                             setUploadingAcceptanceLetter(true);
                             const sanitized = acceptanceLetterFile.name.replace(/[^a-zA-Z0-9._-]/g, '_');
-                            const storageKey = `acceptance_letters/${Date.now()}_${sanitized}`;
+                            const storageKey = `${studentId}/acceptance_letters/${Date.now()}_${sanitized}`;
                             const { data: uploadData, error: uploadError } = await supabase.storage
                               .from('document-attachments')
                               .upload(storageKey, acceptanceLetterFile);

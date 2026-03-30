@@ -51,7 +51,7 @@ const DocumentRequestsCard: React.FC<DocumentRequestsCardProps> = ({
   onDocumentUploaded,
   showAcceptanceLetter = true  // Por padrão mostra a acceptance letter
 }) => {
-  const { t } = useTranslation();
+  const { t } = useTranslation('dashboard');
 
   const [requests, setRequests] = useState<DocumentRequest[]>([]);
   const [uploads, setUploads] = useState<{ [requestId: string]: DocumentRequestUpload[] }>({});
@@ -68,9 +68,6 @@ const DocumentRequestsCard: React.FC<DocumentRequestsCardProps> = ({
   const [pendingRejectUploadId, setPendingRejectUploadId] = useState<string | null>(null);
   const [rejectNotes, setRejectNotes] = useState('');
   const [error, setError] = useState<string | null>(null);
-  const [universityId, setUniversityId] = useState<string | undefined>(undefined);
-  const [signedUrls, setSignedUrls] = useState<{ [key: string]: string | null }>({});
-  const [loadingUrls, setLoadingUrls] = useState<{ [key: string]: boolean }>({});
   const [loadingAttachmentUrls, setLoadingAttachmentUrls] = useState<{ [requestId: string]: boolean }>({});
   const [acceptanceLetterSignedUrls, setAcceptanceLetterSignedUrls] = useState<{ [key: string]: string | null }>({});
 
@@ -86,16 +83,18 @@ const DocumentRequestsCard: React.FC<DocumentRequestsCardProps> = ({
 
   // Função utilitária para extrair caminho relativo da URL completa
   const getRelativePath = (fullUrl: string) => {
-    const baseUrl = 'https://fitpynguasqqutuhzifx.supabase.co/storage/v1/object/public/document-attachments/';
+    const bucketName = 'document-attachments';
+    const baseUrl = `https://fitpynguasqqutuhzifx.supabase.co/storage/v1/object/public/${bucketName}/`;
     if (!fullUrl) return '';
     if (fullUrl.startsWith(baseUrl)) {
       return fullUrl.replace(baseUrl, '');
     }
     // Se for URL de outro bucket ou formato, tentar simplificar
-    if (fullUrl.includes('/storage/v1/object/public/')) {
-      const parts = fullUrl.split('/storage/v1/object/public/');
+    if (fullUrl.includes('/storage/v1/object/')) {
+      const parts = fullUrl.split('/storage/v1/object/');
       if (parts.length > 1) {
         const pathParts = parts[1].split('/');
+        pathParts.shift(); // remove 'public' ou 'authenticated'
         pathParts.shift(); // remove bucket name
         return pathParts.join('/');
       }
@@ -208,7 +207,6 @@ const DocumentRequestsCard: React.FC<DocumentRequestsCardProps> = ({
       } else if (appData.scholarships && typeof appData.scholarships === 'object') {
         universityId = (appData.scholarships as any).university_id;
       }
-      setUniversityId(universityId); // garantir que o estado global é atualizado
       // console.log('[DEBUG] appData:', appData);
       // console.log('[DocumentRequestsCard] universityId:', universityId);
       // Buscar requests normais
@@ -1116,24 +1114,6 @@ const DocumentRequestsCard: React.FC<DocumentRequestsCardProps> = ({
     }
   };
 
-  const getSignedUrl = async (filePath: string, uploadId: string) => {
-    if (loadingUrls[uploadId]) return;
-    setLoadingUrls(prev => ({ ...prev, [uploadId]: true }));
-    try {
-      // console.log('[LOG] Gerando signedUrl para uploadId:', uploadId, 'filePath:', filePath);
-      const { data, error } = await supabase.storage.from('document-attachments').createSignedUrl(filePath, 60 * 60);
-      // console.log('[LOG] Resultado signedUrl:', { uploadId, filePath, data, error });
-      setSignedUrls(prev => ({ ...prev, [uploadId]: error ? null : data.signedUrl }));
-      if (error) {
-        // console.error('[LOG] Erro ao gerar signedUrl:', error, error?.message);
-      }
-    } catch (e) {
-      // console.error('[LOG] Exception ao gerar signedUrl:', e);
-      setSignedUrls(prev => ({ ...prev, [uploadId]: null }));
-    } finally {
-      setLoadingUrls(prev => ({ ...prev, [uploadId]: false }));
-    }
-  };
 
   const getAttachmentSignedUrl = async (filePath: string, requestId: string) => {
     if (loadingAttachmentUrls[requestId]) return;
@@ -1161,17 +1141,25 @@ const DocumentRequestsCard: React.FC<DocumentRequestsCardProps> = ({
     // eslint-disable-next-line
   }, [requests]);
 
-  // Gerar signedUrl para acceptance_letter_url
+  // Gerar signedUrl para acceptance_letter_url e transfer_form_url
   useEffect(() => {
     const fetchSignedUrls = async () => {
+      // Acceptance Letter
       if (acceptanceLetter?.acceptance_letter_url && !acceptanceLetterSignedUrls['acceptance_letter_url']) {
         const filePath = getRelativePath(acceptanceLetter.acceptance_letter_url);
         const { data, error } = await supabase.storage.from('document-attachments').createSignedUrl(filePath, 60 * 60);
         setAcceptanceLetterSignedUrls(prev => ({ ...prev, acceptance_letter_url: error ? null : data.signedUrl }));
       }
+      
+      // Transfer Form
+      if (transferForm?.transfer_form_url && !acceptanceLetterSignedUrls['transfer_form_url']) {
+        const filePath = getRelativePath(transferForm.transfer_form_url);
+        const { data, error } = await supabase.storage.from('document-attachments').createSignedUrl(filePath, 60 * 60);
+        setAcceptanceLetterSignedUrls(prev => ({ ...prev, transfer_form_url: error ? null : data.signedUrl }));
+      }
     };
     fetchSignedUrls();
-  }, [acceptanceLetter]);
+  }, [acceptanceLetter, transferForm, acceptanceLetterSignedUrls]);
 
 
   // Handler para rejeitar upload
@@ -1509,7 +1497,7 @@ const DocumentRequestsCard: React.FC<DocumentRequestsCardProps> = ({
   };
 
   return (
-    <div className="w-full space-y-12 pb-12">
+    <div className="w-full space-y-6 md:space-y-12 pb-12">
       {error && (
         <div className="p-4 bg-red-50 border border-red-200 rounded-2xl flex items-center gap-3 text-red-600">
           <AlertCircle className="w-5 h-5" />
@@ -1522,16 +1510,16 @@ const DocumentRequestsCard: React.FC<DocumentRequestsCardProps> = ({
 
       {/* ÁREA DE DOWNLOAD: FORMULÁRIOS DA FACULDADE */}
       {!isSchool && (
-        <section className="bg-slate-50/50 rounded-[2.5rem] p-8 md:p-12 border border-slate-200">
-          <div className="flex items-center gap-4 mb-10">
-            <div className="p-4 bg-blue-600 rounded-3xl shadow-lg shadow-blue-500/20">
-              <Download className="w-8 h-8 text-white" />
+        <section className="bg-slate-50/50 rounded-[1.5rem] md:rounded-[2.5rem] p-6 md:p-12 border border-slate-200">
+          <div className="flex items-center gap-3 md:gap-4 mb-6 md:mb-10">
+            <div className="p-3 md:p-4 bg-blue-600 rounded-2xl md:rounded-3xl shadow-lg shadow-blue-500/20">
+              <Download className="w-6 h-6 md:w-8 md:h-8 text-white" />
             </div>
             <div>
-              <h2 className="text-3xl font-black uppercase tracking-tight text-slate-900 leading-none">
+              <h2 className="text-xl md:text-3xl font-black uppercase tracking-tight text-slate-900 leading-none">
                 {t('studentDashboard.documentRequests.documentSections.download')}
               </h2>
-              <p className="text-slate-500 font-bold uppercase tracking-widest text-[10px] md:text-xs mt-2">
+              <p className="text-slate-500 font-bold uppercase tracking-widest text-[9px] md:text-xs mt-1 md:mt-2">
                 {t('studentDashboard.documentRequests.documentSections.downloadDescription')}
               </p>
             </div>
@@ -1540,14 +1528,14 @@ const DocumentRequestsCard: React.FC<DocumentRequestsCardProps> = ({
           <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
             {/* 1. Templates das Requisições */}
             {requests.filter(r => r.attachment_url).map(req => (
-              <div key={`download-${req.id}`} className="bg-white p-6 rounded-3xl border border-slate-200 flex items-center justify-between group hover:border-blue-400 transition-all shadow-sm hover:shadow-md">
-                <div className="flex items-center gap-4 min-w-0">
-                  <div className="w-14 h-14 bg-blue-50 rounded-2xl flex items-center justify-center flex-shrink-0 group-hover:bg-blue-100 transition-colors">
-                    <FileText className="w-7 h-7 text-blue-600" />
+              <div key={`download-${req.id}`} className="bg-white p-4 md:p-6 rounded-2xl md:rounded-3xl border border-slate-200 flex items-center justify-between group hover:border-blue-400 transition-all shadow-sm hover:shadow-md">
+                <div className="flex items-center gap-3 md:gap-4 min-w-0">
+                  <div className="w-10 h-10 md:w-14 md:h-14 bg-blue-50 rounded-xl md:rounded-2xl flex items-center justify-center flex-shrink-0 group-hover:bg-blue-100 transition-colors">
+                    <FileText className="w-5 h-5 md:w-7 md:h-7 text-blue-600" />
                   </div>
                   <div className="min-w-0">
-                    <h4 className="font-bold text-slate-900 truncate text-lg leading-tight">{req.title}</h4>
-                    <p className="text-[10px] text-slate-500 font-black uppercase tracking-widest mt-1">Template Oficial</p>
+                    <h4 className="font-bold text-slate-900 truncate text-sm md:text-lg leading-tight">{req.title}</h4>
+                    <p className="text-[9px] md:text-[10px] text-slate-500 font-black uppercase tracking-widest mt-1">Template Oficial</p>
                   </div>
                 </div>
                 <button
@@ -1566,19 +1554,19 @@ const DocumentRequestsCard: React.FC<DocumentRequestsCardProps> = ({
 
             {/* 2. Acceptance Letter (Apenas se liberada) */}
             {showAcceptanceLetter && acceptanceLetter && (acceptanceLetter.acceptance_letter_status === 'approved' || acceptanceLetter.acceptance_letter_status === 'sent') && (
-              <div className="bg-emerald-50 p-6 rounded-3xl border border-emerald-200 flex items-center justify-between group hover:border-emerald-400 transition-all shadow-sm col-span-1 md:col-span-2">
-                <div className="flex items-center gap-4 min-w-0">
-                  <div className="w-14 h-14 bg-emerald-100 rounded-2xl flex items-center justify-center flex-shrink-0">
-                    <CheckCircle2 className="w-8 h-8 text-emerald-600" />
+              <div className="bg-emerald-50 p-4 md:p-6 rounded-2xl md:rounded-3xl border border-emerald-200 flex flex-col sm:flex-row items-center justify-between gap-4 md:gap-0 group hover:border-emerald-400 transition-all shadow-sm col-span-1 md:col-span-2">
+                <div className="flex items-center gap-3 md:gap-4 min-w-0 w-full sm:w-auto">
+                  <div className="w-12 h-12 md:w-14 md:h-14 bg-emerald-100 rounded-xl md:rounded-2xl flex items-center justify-center flex-shrink-0">
+                    <CheckCircle2 className="w-6 h-6 md:w-8 md:h-8 text-emerald-600" />
                   </div>
                   <div className="min-w-0">
-                    <h4 className="font-bold text-slate-900 truncate text-xl leading-tight">{t('studentDashboard.documentRequests.forms.acceptanceLetter')}</h4>
-                    <p className="text-[10px] text-emerald-600 font-black uppercase tracking-widest mt-1">{t('studentDashboard.documentRequests.forms.acceptanceLetterReceived')}</p>
+                    <h4 className="font-bold text-slate-900 truncate text-base md:text-xl leading-tight">{t('studentDashboard.documentRequests.forms.acceptanceLetter')}</h4>
+                    <p className="text-[9px] md:text-[10px] text-emerald-600 font-black uppercase tracking-widest mt-1">{t('studentDashboard.documentRequests.forms.acceptanceLetterReceived')}</p>
                   </div>
                 </div>
                 <button
                   onClick={() => {
-                    const signedUrl = acceptanceLetter.acceptance_letter_url;
+                    const signedUrl = acceptanceLetterSignedUrls['acceptance_letter_url'] || acceptanceLetter.acceptance_letter_url;
                     if (signedUrl) setPreviewUrl(signedUrl);
                   }}
                   className="px-8 py-4 bg-emerald-600 text-white rounded-2xl font-black uppercase tracking-widest text-sm hover:bg-emerald-700 transition-all shadow-lg shadow-emerald-500/20 active:scale-95 flex items-center gap-2"
@@ -1603,7 +1591,7 @@ const DocumentRequestsCard: React.FC<DocumentRequestsCardProps> = ({
                 </div>
                 <button
                   onClick={() => {
-                    const signedUrl = transferForm.transfer_form_url;
+                    const signedUrl = acceptanceLetterSignedUrls['transfer_form_url'] || transferForm.transfer_form_url;
                     if (signedUrl) setPreviewUrl(signedUrl);
                   }}
                   className="px-8 py-4 bg-blue-600 text-white rounded-2xl font-black uppercase tracking-widest text-sm hover:bg-blue-700 transition-all shadow-lg shadow-blue-500/20 active:scale-95 flex items-center gap-2"
@@ -1619,14 +1607,14 @@ const DocumentRequestsCard: React.FC<DocumentRequestsCardProps> = ({
 
 
       {/* ÁREA DE ENVIO: UPLOAD DE DOCUMENTOS */}
-      <section className="bg-white rounded-[2.5rem] p-8 md:p-12 border border-slate-200 shadow-2xl shadow-slate-200/50">
-        <div className="flex items-center gap-4 mb-10">
-          <div className="p-4 bg-emerald-600 rounded-3xl shadow-lg shadow-emerald-500/20">
-            <Upload className="w-8 h-8 text-white" />
+      <section className="bg-white rounded-[1.5rem] md:rounded-[2.5rem] p-6 md:p-12 border border-slate-200 shadow-2xl shadow-slate-200/50">
+        <div className="flex items-center gap-3 md:gap-4 mb-8 md:mb-10">
+          <div className="p-3 md:p-4 bg-emerald-600 rounded-2xl md:rounded-3xl shadow-lg shadow-emerald-500/20">
+            <Upload className="w-6 h-6 md:w-8 md:h-8 text-white" />
           </div>
           <div>
-             <h3 className="text-3xl font-black uppercase tracking-tighter text-slate-900 leading-none">Arquivos para Envio</h3>
-             <p className="text-slate-500 font-medium mt-2">Envie os documentos solicitados abaixo em formato PDF.</p>
+             <h3 className="text-xl md:text-3xl font-black uppercase tracking-tighter text-slate-900 leading-none">{t('studentDashboard.documentRequests.uploadSection.title')}</h3>
+             <p className="text-slate-500 font-medium text-xs md:text-base mt-1 md:mt-2">{t('studentDashboard.documentRequests.uploadSection.description')}</p>
           </div>
         </div>
 
@@ -1634,19 +1622,19 @@ const DocumentRequestsCard: React.FC<DocumentRequestsCardProps> = ({
         <div className="space-y-6">
           {/* Item Especial: Transfer Form (Apenas para Transfer) */}
           {studentType === 'transfer' && (
-            <div className="bg-slate-50/50 rounded-3xl p-6 md:p-8 border border-slate-200 group hover:border-blue-300 transition-all hover:bg-white text-left">
-              <div className="flex flex-col lg:flex-row items-start lg:items-center justify-between gap-8">
-                <div className="flex gap-5 min-w-0 flex-1">
-                   <div className="w-16 h-16 bg-white rounded-2xl flex items-center justify-center border border-slate-200 flex-shrink-0 shadow-sm group-hover:border-blue-200 group-hover:bg-blue-50 transition-all">
-                      <FileText className="w-8 h-8 text-slate-400 group-hover:text-blue-600" />
+            <div className="bg-slate-50/50 rounded-2xl md:rounded-3xl p-5 md:p-8 border border-slate-200 group hover:border-blue-300 transition-all hover:bg-white text-left">
+              <div className="flex flex-col lg:flex-row items-start lg:items-center justify-between gap-6 md:gap-8">
+                <div className="flex gap-4 md:gap-5 min-w-0 flex-1">
+                   <div className="w-12 h-12 md:w-16 md:h-16 bg-white rounded-xl md:rounded-2xl flex items-center justify-center border border-slate-200 flex-shrink-0 shadow-sm group-hover:border-blue-200 group-hover:bg-blue-50 transition-all">
+                      <FileText className="w-6 h-6 md:w-8 md:h-8 text-slate-400 group-hover:text-blue-600" />
                    </div>
-                   <div className="min-w-0">
-                      <h4 className="font-black text-slate-900 truncate text-xl uppercase tracking-tighter leading-tight">{t('studentDashboard.documentRequests.forms.transferForm')}</h4>
-                      <p className="text-slate-500 text-sm font-medium mt-1 leading-relaxed">Envie o formulário de transferência preenchido e assinado.</p>
+                   <div className="min-w-0 flex-1">
+                      <h4 className="font-black text-slate-900 text-lg md:text-xl uppercase tracking-tighter leading-tight break-words">{t('studentDashboard.documentRequests.forms.transferForm')}</h4>
+                      <p className="text-slate-500 text-xs md:text-sm font-medium mt-1 leading-relaxed break-words">{t('studentDashboard.documentRequests.forms.transferFormUploadDescriptionStudent')}</p>
                    </div>
                 </div>
 
-                <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-4 w-full lg:w-auto">
+                <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-4 w-full lg:w-auto shrink-0 self-end lg:self-center">
                    {/* Status do Transfer Form */}
                    {transferFormUploads.map(upload => {
                       const status = normalizeStatus(upload.status);
@@ -1655,7 +1643,7 @@ const DocumentRequestsCard: React.FC<DocumentRequestsCardProps> = ({
                       const isReview = status === 'under_review';
 
                       return (
-                        <div key={upload.id} className={`flex items-center gap-3 px-5 py-3 rounded-2xl border shadow-sm w-full lg:w-72 transition-all ${
+                        <div key={upload.id} className={`flex items-center gap-3 px-5 py-3 rounded-2xl border shadow-sm w-full lg:w-64 transition-all ${
                           isApproved ? 'bg-emerald-50 border-emerald-200' :
                           isRejected ? 'bg-red-50 border-red-200' : 'bg-blue-50 border-blue-200'
                         }`}>
@@ -1679,11 +1667,11 @@ const DocumentRequestsCard: React.FC<DocumentRequestsCardProps> = ({
                    })}
 
                    {!isSchool && (
-                      <div className="flex gap-2 w-full sm:w-auto">
-                         <label className="flex-1 sm:flex-none flex items-center justify-center gap-2 px-8 py-4 bg-white border-2 border-slate-200 rounded-2xl font-black uppercase tracking-widest text-[10px] hover:border-blue-600 hover:text-blue-600 cursor-pointer transition-all active:scale-95">
-                            <Paperclip className="w-4 h-4" />
+                      <div className="flex gap-2 w-full sm:w-auto justify-end sm:justify-start">
+                         <label className="flex-1 sm:flex-none flex items-center justify-center gap-2 px-6 py-4 bg-white border-2 border-slate-200 rounded-2xl font-black uppercase tracking-widest text-[10px] hover:border-blue-600 hover:text-blue-600 cursor-pointer transition-all active:scale-95">
+                            <Paperclip className="w-4 h-4 shrink-0" />
                             {selectedTransferFormFile ? (
-                              <span className="truncate max-w-[100px]">{selectedTransferFormFile.name}</span>
+                              <span className="truncate max-w-[120px] md:max-w-[150px]">{selectedTransferFormFile.name}</span>
                             ) : 'Anexar PDF'}
                             <input 
                               type="file" 
@@ -1711,8 +1699,8 @@ const DocumentRequestsCard: React.FC<DocumentRequestsCardProps> = ({
                         <AlertCircle className="w-6 h-6 text-red-600" />
                      </div>
                      <div className="flex-1">
-                        <p className="font-black uppercase tracking-widest text-[10px] text-red-600 mb-2">Atenção: Necessário Correção</p>
-                        <p className="text-red-900 font-medium text-sm leading-relaxed">
+                        <p className="font-black uppercase tracking-widest text-[10px] text-red-600 mb-2 text-left">Atenção: Necessário Correção</p>
+                        <p className="text-red-900 font-medium text-sm leading-relaxed text-left">
                           {transferFormUploads.find(u => normalizeStatus(u.status) === 'rejected')?.rejection_reason || 'Por favor, revise o formulário e envie novamente.'}
                         </p>
                      </div>
@@ -1722,44 +1710,45 @@ const DocumentRequestsCard: React.FC<DocumentRequestsCardProps> = ({
           )}
 
           {requests.map(req => (
-            <div key={`upload-${req.id}`} className="bg-slate-50/50 rounded-3xl p-6 md:p-8 border border-slate-200 group hover:border-emerald-300 transition-all hover:bg-white text-left">
-              <div className="flex flex-col lg:flex-row items-start lg:items-center justify-between gap-8">
-                <div className="flex gap-5 min-w-0 flex-1">
-                   <div className="w-16 h-16 bg-white rounded-2xl flex items-center justify-center border border-slate-200 flex-shrink-0 shadow-sm group-hover:border-emerald-200 group-hover:bg-emerald-50 transition-all">
-                      <FileText className="w-8 h-8 text-slate-400 group-hover:text-emerald-600" />
+            <div key={`upload-${req.id}`} className="bg-slate-50/50 rounded-2xl md:rounded-3xl p-5 md:p-8 border border-slate-200 group hover:border-emerald-300 transition-all hover:bg-white text-left">
+              <div className="flex flex-col lg:flex-row items-start lg:items-center justify-between gap-6 md:gap-8">
+                <div className="flex gap-4 md:gap-5 min-w-0 flex-1">
+                   <div className="w-12 h-12 md:w-16 md:h-16 bg-white rounded-xl md:rounded-2xl flex items-center justify-center border border-slate-200 flex-shrink-0 shadow-sm group-hover:border-emerald-200 group-hover:bg-emerald-50 transition-all">
+                      <FileText className="w-6 h-6 md:w-8 md:h-8 text-slate-400 group-hover:text-emerald-600" />
                    </div>
-                   <div className="min-w-0">
-                      <h4 className="font-black text-slate-900 truncate text-xl uppercase tracking-tighter leading-tight">{req.title}</h4>
-                      <p className="text-slate-500 text-sm font-medium mt-1 leading-relaxed">{req.description}</p>
+                   <div className="min-w-0 flex-1">
+                      <h4 className="font-black text-slate-900 text-lg md:text-xl uppercase tracking-tighter leading-tight break-words">{req.title}</h4>
+                      <p className="text-slate-500 text-xs md:text-sm font-medium mt-1 leading-relaxed break-words line-clamp-3 md:line-clamp-none">{req.description}</p>
                    </div>
                 </div>
 
-                <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-4 w-full lg:w-auto">
+                <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-3 md:gap-4 w-full lg:w-auto shrink-0 self-end lg:self-center">
                    {/* Status Atual do Documento */}
                    {uploads[req.id]?.map(upload => {
                       const status = normalizeStatus(upload.status);
                       const isApproved = status === 'approved';
                       const isRejected = status === 'rejected';
                       const isReview = status === 'under_review';
+                      const statusLabel = isReview ? 'Em Análise' : status.replace('_', ' ').replace(/\b\w/g, l => l.toUpperCase());
 
                       return (
-                        <div key={upload.id} className={`flex items-center gap-3 px-5 py-3 rounded-2xl border shadow-sm w-full lg:w-72 transition-all ${
+                        <div key={upload.id} className={`flex items-center gap-4 px-5 py-3 rounded-2xl border shadow-sm w-full lg:w-64 transition-all ${
                           isApproved ? 'bg-emerald-50 border-emerald-200' :
                           isRejected ? 'bg-red-50 border-red-200' : 'bg-blue-50 border-blue-200'
                         }`}>
                            <div className={`w-8 h-8 rounded-full flex items-center justify-center flex-shrink-0 ${
                               isApproved ? 'bg-emerald-500' : isRejected ? 'bg-red-500' : 'bg-blue-500'
                            }`}>
-                              {isApproved ? <CheckCircle2 className="w-5 h-5 text-white" /> : 
-                               isRejected ? <AlertCircle className="w-5 h-5 text-white" /> : 
-                               <Clock className="w-5 h-5 text-white" />}
+                              {isApproved ? <CheckCircle2 className="w-4 h-4 text-white" /> : 
+                               isRejected ? <AlertCircle className="w-4 h-4 text-white" /> : 
+                               <Clock className="w-4 h-4 text-white" />}
                            </div>
                            <div className="min-w-0 flex-1">
                               <p className="text-[10px] font-black uppercase tracking-widest text-slate-400 leading-none mb-1">Status</p>
                               <p className={`font-bold text-sm truncate ${
                                 isApproved ? 'text-emerald-700' : isRejected ? 'text-red-700' : 'text-blue-700'
                               }`}>
-                                 {isReview ? 'Em Análise' : status.replace('_', ' ').replace(/\b\w/g, l => l.toUpperCase())}
+                                 {statusLabel}
                               </p>
                            </div>
                         </div>
@@ -1768,23 +1757,23 @@ const DocumentRequestsCard: React.FC<DocumentRequestsCardProps> = ({
 
                    {/* Ação de Upload */}
                    {!isSchool && (
-                      <div className="flex gap-2 w-full sm:w-auto">
-                         <label className="flex-1 sm:flex-none flex items-center justify-center gap-2 px-8 py-4 bg-white border-2 border-slate-200 rounded-2xl font-black uppercase tracking-widest text-[10px] hover:border-emerald-600 hover:text-emerald-600 cursor-pointer transition-all active:scale-95">
-                            <Paperclip className="w-4 h-4" />
+                      <div className="flex gap-2 w-full sm:w-auto justify-end sm:justify-start">
+                         <label className="flex-1 sm:flex-none flex items-center justify-center gap-2 px-6 md:px-8 py-3.5 md:py-4 bg-white border-2 border-slate-200 rounded-xl md:rounded-2xl font-black uppercase tracking-widest text-[9px] md:text-[10px] hover:border-emerald-600 hover:text-emerald-600 cursor-pointer transition-all active:scale-95">
+                            <Paperclip className="w-4 h-4 shrink-0" />
                             {selectedFiles[req.id] ? (
-                              <span className="truncate max-w-[100px]">{selectedFiles[req.id]?.name}</span>
+                              <span className="truncate max-w-[120px] md:max-w-[150px]">{selectedFiles[req.id]?.name}</span>
                             ) : 'Anexar PDF'}
                             <input 
-                              type="file" 
-                              className="sr-only" 
-                              accept=".pdf"
-                              onChange={e => handleFileSelect(req.id, e.target.files ? e.target.files[0] : null)}
+                               type="file" 
+                               className="sr-only" 
+                               accept=".pdf"
+                               onChange={e => handleFileSelect(req.id, e.target.files ? e.target.files[0] : null)}
                             />
                          </label>
                          <button
                            disabled={!selectedFiles[req.id] || uploading[req.id]}
                            onClick={() => handleSendUpload(req.id)}
-                           className="flex-1 sm:flex-none px-8 py-4 bg-emerald-600 text-white rounded-2xl font-black uppercase tracking-widest text-[10px] hover:bg-emerald-700 disabled:opacity-50 transition-all shadow-xl shadow-emerald-500/10 active:scale-95"
+                           className="flex-1 sm:flex-none px-6 md:px-8 py-3.5 md:py-4 bg-emerald-600 text-white rounded-xl md:rounded-2xl font-black uppercase tracking-widest text-[9px] md:text-[10px] hover:bg-emerald-700 disabled:opacity-50 transition-all shadow-xl shadow-emerald-500/10 active:scale-95"
                          >
                             {uploading[req.id] ? 'Enviando...' : 'Enviar'}
                          </button>
@@ -1795,13 +1784,13 @@ const DocumentRequestsCard: React.FC<DocumentRequestsCardProps> = ({
 
                {/* Feedback de Rejeição */}
                {uploads[req.id]?.some(u => normalizeStatus(u.status) === 'rejected') && (
-                  <div className="mt-6 p-6 bg-red-50 rounded-[1.5rem] border border-red-100 flex gap-4 items-start">
-                     <div className="w-10 h-10 bg-red-100 rounded-xl flex items-center justify-center flex-shrink-0">
-                        <AlertCircle className="w-6 h-6 text-red-600" />
+                  <div className="mt-4 md:mt-6 p-5 md:p-6 bg-red-50 rounded-xl md:rounded-[1.5rem] border border-red-100 flex gap-3 md:gap-4 items-start">
+                     <div className="w-8 h-8 md:w-10 md:h-10 bg-red-100 rounded-lg md:rounded-xl flex items-center justify-center flex-shrink-0">
+                        <AlertCircle className="w-5 h-5 md:w-6 md:h-6 text-red-600" />
                      </div>
                      <div className="flex-1">
-                        <p className="font-black uppercase tracking-widest text-[10px] text-red-600 mb-2">Atenção: Necessário Correção</p>
-                        <p className="text-red-900 font-medium text-sm leading-relaxed">
+                        <p className="font-black uppercase tracking-widest text-[8px] md:text-[10px] text-red-600 mb-1 md:mb-2 text-left">Atenção: Necessário Correção</p>
+                        <p className="text-red-900 font-medium text-xs md:text-sm leading-relaxed text-left">
                           {uploads[req.id].find(u => normalizeStatus(u.status) === 'rejected')?.rejection_reason || 'Por favor, revise o arquivo e envie novamente seguindo as instruções.'}
                         </p>
                      </div>
@@ -1815,7 +1804,7 @@ const DocumentRequestsCard: React.FC<DocumentRequestsCardProps> = ({
                 <div className="w-24 h-24 bg-slate-50 rounded-full flex items-center justify-center mx-auto mb-6">
                   <FileText className="w-12 h-12 text-slate-200" />
                 </div>
-                <h4 className="text-xl font-bold text-slate-400 uppercase tracking-tight">Nenhuma solicitação no momento</h4>
+                <h4 className="text-xl font-bold text-slate-400 uppercase tracking-tight">{t('studentDashboard.documentRequests.uploadSection.noRequests')}</h4>
              </div>
           )}
         </div>

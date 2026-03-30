@@ -107,7 +107,7 @@ export const useTransferForm = (
       
       // Sanitizar nome do arquivo
       const sanitized = sanitizeFileName(transferFormFile.name);
-      const storagePath = `transfer-forms/${Date.now()}_${sanitized}`;
+      const storagePath = `${student.user_id}/transfer-forms/${Date.now()}_${sanitized}`;
       
       // Upload para Supabase Storage
       const { data: uploadData, error: uploadError } = await supabase.storage

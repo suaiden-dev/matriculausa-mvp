@@ -338,5 +338,25 @@
       "verifying": "Verifying I-20 Control Fee...",
       "pleaseWait": "We are processing your payment. Please do not close this page."
     }
+  },
+  "labels": {
+    "clickToAccess": "Click to access",
+    "continue": "Continue",
+    "loading": "Loading...",
+    "back": "Back",
+    "download": "Download"
+  },
+  "errors": {
+    "unexpected": "An unexpected error occurred. Please try again."
+  },
+  "status": {
+    "under_review": "Under Review",
+    "action_required": "Action Required",
+    "approved": "Approved",
+    "blocked": "Blocked",
+    "rejected": "Rejected",
+    "completed": "Completed",
+    "waiting_acceptance": "Waiting for Acceptance Letter",
+    "loading": "Loading..."
   }
 }

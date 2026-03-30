@@ -81,6 +81,9 @@
       "notAvailable": "Esgotada",
       "placementFee": "Taxa de Colocação"
     },
+    "labels": {
+      "amount": "Valor"
+    },
     "noResults": {
       "title": "Nenhuma bolsa encontrada",
       "description": "Tente ajustar seus critérios de busca para descobrir mais oportunidades",

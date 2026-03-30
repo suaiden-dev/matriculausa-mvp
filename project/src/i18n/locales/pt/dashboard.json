@@ -167,7 +167,7 @@
       "shown": "mostradas",
       "status": {
         "approved": "Aprovada",
-        "under_review": "Revisão",
+        "under_review": "Em Análise",
         "pending": "Pendente"
       },
       "unknownUniversity": "Universidade Desconhecida",
@@ -800,8 +800,16 @@
         "my": "Minha",
         "application": "Aplicação"
       },
+      "navigation": {
+        "backToSteps": "Voltar para as Etapas"
+      },
       "tabs": {
         "acceptanceLetter": "Carta de Aceite"
+      },
+      "sidebar": {
+        "documents": "Envio de Documentos",
+        "ds160": "Emissão da Carta de Aceite",
+        "i539": "Pagamento da Taxa"
       },
       "loading": "Carregando portal de gerenciamento...",
       "noApplication": {
@@ -821,6 +829,7 @@
         "documentSubmission": "Envio de Documentos",
         "acceptanceLetterReceipt": "Recebimento da Carta de Aceite",
         "documentAvailable": "Documento Disponível",
+        "documentAvailableAction": "Documento Disponível (clique para abrir)",
         "status": {
           "completed": "Concluído",
           "underReview": "Em Análise",
@@ -843,14 +852,23 @@
           "button": "Ver Recibo"
         },
         "initialAnalysis": {
-          "title": "AGUARDANDO LIBERAÇÃO DOS FORMULÁRIOS",
-          "description": "Próximo Passo: Em até 24h você receberá seus formulários de matrícula. Fique atento a esta página para baixar os arquivos, preenchê-los e nos enviar de volta para finalizarmos sua Carta de Aceite!",
-          "processing": "Processamento: {{current}}/24h"
+          "title": "AGUARDANDO FORMULÁRIOS DE MATRÍCULA",
+          "description": "Próximo Passo: Em até 24 horas você receberá seus formulários de matrícula. Fique atento a esta página para baixar os arquivos, preenchê-los e nos enviar de volta para finalizarmos sua Carta de Aceite!",
+          "processing": "Processando: {{current}}/24h"
         },
         "pendingFee": {
-          "title": "Tudo certo com seus pagamentos!",
-          "description": "Agora, a faculdade está validando as informações. Volte em até 24 horas para baixar e preencher seus formulários de matrícula.",
+          "title": "Sua Carta de Aceite chegou!",
+          "description": "Excelente notícia! Sua carta de aceite foi emitida pela universidade. O próximo passo é realizar o pagamento da taxa {{feeName}} para iniciar seu processo de visto.",
           "button": "Ir para Pagamento"
+        },
+        "waitingAcceptance": {
+          "title": "Aguardando Carta de Aceite",
+          "description": "Seus documentos foram aprovados! A universidade está processando a emissão da sua Carta de Aceite oficial. Assim que estiver pronta, ela aparecerá aqui para download."
+        },
+        "approved": {
+          "title": "Parabéns, Processo Concluído!",
+          "description": "Sua carta de aceite está disponível e todos os pagamentos foram confirmados. Você já pode baixar seu documento e seguir para as próximas etapas do seu intercâmbio!",
+          "button": "Ver Carta de Aceite"
         },
         "generalWait": {
           "title": "Em Revisão",
@@ -932,6 +950,11 @@
         "upload": "Área de Envio (Upload)",
         "uploadDescription": "Envie aqui seus formulários preenchidos e o pack de documentos (extrato, passaporte, etc)."
       },
+      "uploadSection": {
+        "title": "Arquivos para Envio",
+        "description": "Envie os documentos solicitados abaixo em formato PDF.",
+        "noRequests": "Nenhuma solicitação no momento"
+      },
       "actions": {
         "downloadAcceptanceLetter": "Baixar Carta de Aceitação",
         "view": "Visualizar",
@@ -973,6 +996,7 @@
         "creating": "Criando...",
         "transferFormDescriptionSchool": "Envie o formulário de transferência para este estudante. Visível apenas para estudantes de transferência.",
         "transferFormDescriptionStudent": "Sua universidade enviará seu formulário de transferência aqui. Baixe-o quando disponível.",
+        "transferFormUploadDescriptionStudent": "Envie o formulário de transferência preenchido e assinado.",
         "transferForm": "Formulário de Transferência",
         "transferFormUploadButton": "Enviar Formulário Preenchido",
         "transferFormUploaded": "Formulário de transferência enviado",

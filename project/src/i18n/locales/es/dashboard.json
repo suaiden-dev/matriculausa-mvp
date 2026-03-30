@@ -307,6 +307,17 @@
       }
     },
     "documentRequests": {
+      "documentSections": {
+        "download": "Área de Descarga",
+        "downloadDescription": "Descargue los formularios oficiales de matrícula de la universidad para completar.",
+        "upload": "Área de Carga",
+        "uploadDescription": "Suba aquí sus formularios completados y el paquete de documentos (extracto bancario, pasaporte, etc)."
+      },
+      "uploadSection": {
+        "title": "Archivos para Envío",
+        "description": "Envíe los documentos solicitados a continuación en formato PDF.",
+        "noRequests": "No hay solicitudes en este momento"
+      },
       "status": {
         "downloading": "Descargando...",
         "opening": "Abriendo...",
@@ -354,6 +365,7 @@
         "creating": "Creando...",
         "transferFormDescriptionSchool": "Suba el formulario de transferencia para este estudiante. Solo visible para estudiantes de transferencia.",
         "transferFormDescriptionStudent": "Su universidad subirá su formulario de transferencia aquí. Descárguelo cuando esté disponible.",
+        "transferFormUploadDescriptionStudent": "Envíe el formulario de transferencia completado y firmado.",
         "transferForm": "Formulario de Transferencia",
         "transferFormUploadButton": "Subir Formulario Relleno",
         "transferFormUploaded": "Formulario de transferencia subido",
@@ -392,6 +404,9 @@
         "rejectionExplanation": "Explique el motivo del rechazo de este documento. El estudiante verá este mensaje.",
         "rejectionExplanationPlaceholder": "Ej.: El documento está cortado. Por favor, envíelo de nuevo en PDF con todas las páginas.",
         "confirm": "Confirmar"
+      },
+      "errors": {
+        "onlyPdfAllowed": "Solo se permiten archivos PDF."
       }
     },
     "recentApplications": {
@@ -821,20 +836,61 @@
         "description": "Aún no tienes una aplicación activa. Por favor, vuelve al paso anterior o contacta con soporte."
       },
       "back": "Volver",
+      "status": {
+        "verifyingPayment": {
+          "title": "¡Tus pagos están completos!",
+          "description": "Ahora, la universidad está validando la información. Vuelve en 24 horas para descargar y completar tus formularios de inscripción.",
+          "button": "Ver Recibo"
+        },
+        "pendingDocs": {
+          "title": "Acción Requerida: Documentos Necesarios",
+          "description": "Tu universidad ha solicitado documentos adicionales. Por favor, revísalos y súbelos para continuar con tu proceso.",
+          "button": "Subir Documentos"
+        },
+        "initialAnalysis": {
+          "title": "ESPERANDO LIBERACIÓN DE FORMULARIOS",
+          "description": "Próximo Paso: En 24 horas recibirás tus formularios de inscripción. ¡Mantente atento a esta página para descargar los archivos, completarlos y enviárnoslos de vuelta para finalizar tu Carta de Aceptación!",
+          "processing": "Procesando: {{current}}/24h"
+        },
+        "waitingAcceptance": {
+          "title": "Esperando Carta de Aceptación",
+          "description": "¡Tus documentos han sido aprobados! La universidad está procesando la emisión de tu Carta de Aceptación oficial. Una vez que esté lista, aparecerá aquí para descargar."
+        },
+        "pendingFee": {
+          "title": "¡Tu Carta de Aceptación ha llegado!",
+          "description": "¡Excelente noticia! Tu carta de aceptación ya fue emitida por la universidad. El próximo paso es realizar el pago de la tarifa del paquete (DS160/I539) para iniciar tu proceso de visa.",
+          "button": "Ir al Pago"
+        },
+        "approved": {
+          "title": "¡Felicidades, Proceso Completado!",
+          "description": "Tu carta de aceptación está disponible y todos los pagos han sido confirmados. ¡Ya puedes descargar tu documento y continuar con los próximos pasos de tu intercambio!",
+          "button": "Ver Carta de Aceptación"
+        },
+        "generalWait": {
+          "title": "En Revisión",
+          "description": "Estamos revisando tu documentación. Pronto recibirás actualizaciones sobre tu carta de aceptación."
+        }
+      },
       "welcome": {
-        "congratsMessage": "¡Felicidades {{name}},<br/> has sido <approved>aprobado</approved> en <university>{{university}}</university>!",
-        "almostDone": "¡Ya falta muy poco para que todo esté listo! En esta etapa final puedes revisar los detalles de la universidad que elegiste y enviar la documentación obligatoria. Una vez que todo esté correcto, tu Carta de Aceptación estará disponible aquí mismo para descargar.",
+        "congratsMessage": "Próximos Pasos",
+        "almostDone": "Sigue aquí las etapas finales de tu proceso de admisión.",
+        "congratsMessageShort": "Próximos Pasos",
+        "almostDoneShort": "Sigue aquí las etapas finales de tu proceso de admisión.",
+        "actionDocuments": "Documentos",
+        "actionDetails": "Detalles",
         "sendDocuments": "Enviar Documentos",
         "requestedDocs": "Documentos solicitados",
         "scholarshipDetails": "Detalles de la Beca",
         "requirementsValues": "Requisitos y valores",
         "needHelp": "¿Necesitas Ayuda?",
+        "supportDescription": "Nuestros mentores están listos para ayudarte con cualquier duda sobre este proceso.",
         "mentorsReady": "Nuestros mentores están listos para ayudarte con cualquier duda sobre este proceso.",
         "talkToSupport": "Hablar con Soporte",
         "nextSteps": "Próximos Pasos",
         "documentSubmission": "Envío de Documentos",
         "acceptanceLetterReceipt": "Recepción de la Carta de Aceptación",
         "documentAvailable": "Documento Disponible",
+        "documentAvailableAction": "Documento Disponible (haz clic para abrir)",
         "status": {
           "completed": "Completado",
           "underReview": "En Revisión",
@@ -842,9 +898,18 @@
           "available": "Disponible",
           "inProgress": "Liberación en Curso",
           "blocked": "Bloqueado"
+        },
+        "details": {
+          "scholarshipInfo": "Información de la Beca",
+          "program": "Programa",
+          "institution": {
+            "details": "Detalles de la Institución"
+          }
         }
       },
       "details": {
+        "scholarshipInfo": "Información de la Beca",
+        "program": "Programa",
         "universityPartner": "University Partner",
         "inPerson": "Presencial",
         "online": "En Línea",
@@ -878,7 +943,8 @@
           "title": "Institución",
           "email": "Correo Electrónico",
           "phone": "Teléfono",
-          "website": "Sitio Web"
+          "website": "Sitio Web",
+          "details": "Detalles de la Institución"
         }
       },
       "documents": {
@@ -901,7 +967,145 @@
         "viewDocument": "Error al visualizar documento",
         "downloadDocument": "Error al descargar documento"
       }
-    }
+    },
+    "documentRequests": {
+        "documentSections": {
+          "download": "Área de Descarga",
+          "downloadDescription": "Descarga los formularios oficiales de inscripción de la universidad para completarlos.",
+          "upload": "Área de Envío",
+          "uploadDescription": "Sube aquí tus formularios completados y el paquete de documentos (extracto bancario, pasaporte, etc)."
+        },
+        "status": {
+          "downloading": "Descargando...",
+          "opening": "Abriendo...",
+          "uploading": "Subiendo...",
+          "waitingForUniversity": "Esperando a la universidad"
+        },
+        "actions": {
+          "downloadAcceptanceLetter": "Descargar Carta de Aceptación",
+          "view": "Ver",
+          "uploadTransferForm": "Subir Formulario de Transferencia",
+          "upload": "Subir",
+          "downloadTransferForm": "Descargar Formulario de Transferencia",
+          "uploadTransferFormTitle": "Subir formulario de transferencia",
+          "selectTransferFormTitle": "Seleccionar formulario de transferencia",
+          "sendTransferFormTitle": "Enviar formulario de transferencia"
+        },
+        "messages": {
+          "noTransferForm": "Aún no se ha subido ningún formulario de transferencia.",
+          "failedToUploadAttachment": "Error al subir el archivo adjunto:",
+          "failedToUploadAcceptanceLetter": "Error al subir la carta de aceptación:",
+          "failedToCreateRequest": "Error al crear la solicitud:",
+          "unexpectedError": "Error inesperado:",
+          "unexpectedErrorWhileApproving": "Error inesperado al aprobar:",
+          "unexpectedErrorWhileRejecting": "Error inesperado al rechazar:",
+          "errorUploadingFile": "Error al subir el archivo:",
+          "errorUploading": "Error al subir:",
+          "userNotAuthenticated": "Usuario no autenticado. Por favor, inicia sesión nuevamente."
+        },
+        "forms": {
+          "newDocumentRequest": "Nueva Solicitud de Documento",
+          "newIndividualDocumentRequest": "Nueva Solicitud Individual de Documento",
+          "title": "Título",
+          "titleRequired": "Título *",
+          "description": "Descripción",
+          "dueDate": "Fecha límite",
+          "attachment": "Archivo adjunto",
+          "enterDocumentTitle": "Ingresa el título del documento",
+          "enterDocumentDescription": "Ingresa la descripción del documento",
+          "describeDocumentOptional": "Describe el documento o las instrucciones (opcional)",
+          "selectFile": "Seleccionar archivo",
+          "changeFile": "Cambiar archivo",
+          "chooseFile": "Elige un archivo",
+          "cancel": "Cancelar",
+          "createRequest": "Crear Solicitud",
+          "creating": "Creando...",
+          "transferFormDescriptionSchool": "Sube el formulario de transferencia para este estudiante. Solo visible para estudiantes de transferencia.",
+          "transferFormDescriptionStudent": "Tu universidad subirá aquí tu formulario de transferencia. Descárgalo cuando esté disponible.",
+          "transferForm": "Formulario de Transferencia",
+          "transferFormUploadButton": "Subir Formulario Completado",
+          "transferFormUploaded": "Formulario de transferencia subido",
+          "transferFormUnderReview": "En revisión por la universidad",
+          "transferFormApproved": "Aprobado",
+          "transferFormRejected": "Rechazado",
+          "transferFormRejectionReason": "Motivo del rechazo",
+          "transferFormReupload": "Subir nueva versión",
+          "approveTransferForm": "Aprobar Formulario de Transferencia",
+          "rejectTransferForm": "Rechazar Formulario de Transferencia",
+          "transferFormReceived": "Formulario de Transferencia Recibido",
+          "transferFormReadyMessage": "Tu formulario de transferencia está listo para descargar. Descárgalo, complétalo y envíalo de vuelta a la universidad.",
+          "sentOn": "Enviado el",
+          "studentUploads": "Archivos del estudiante:",
+          "yourUploads": "Tus archivos:",
+          "uploading": "Subiendo...",
+          "upload": "Subir",
+          "uploadNewFile": "Seleccionar archivo",
+          "removeFile": "Eliminar archivo",
+          "failedToDownloadFile": "Error al descargar el archivo.",
+          "failedToApproveDocument": "Error al aprobar el documento:",
+          "failedToRejectDocument": "Error al rechazar el documento:",
+          "errorDownloadingDocument": "Error al descargar el documento. Por favor, inténtalo de nuevo.",
+          "errorViewingDocument": "Error al visualizar el documento. Por favor, inténtalo de nuevo.",
+          "acceptanceLetter": "Carta de Aceptación",
+          "acceptanceLetterReceived": "¡Carta de Aceptación Recibida! 🎉",
+          "downloadTransferForm": "Descargar Formulario de Transferencia",
+          "view": "Ver",
+          "enrolledMessage": "¡Has sido inscrito! Revisa tu panel para los próximos pasos.",
+          "noFilesUploadedYet": "Aún no se han subido archivos.",
+          "documentRequestsDescription": "Ahora que has llegado a esta etapa, debes revisar y subir los documentos solicitados por tu universidad para continuar. Después de esto, la escuela podrá analizar tu solicitud y enviarte la carta de aceptación.",
+          "acceptanceLetterInstructions": "La universidad enviará aquí tu carta de aceptación cuando esté lista. Una vez subida, serás inscrito automáticamente."
+        },
+        "modals": {
+          "provideJustification": "Proporciona una justificación",
+          "rejectionExplanation": "Explica el motivo del rechazo de este documento. El estudiante verá este mensaje.",
+          "rejectionExplanationPlaceholder": "Ej.: El documento está cortado. Por favor, envíalo nuevamente en PDF con todas las páginas.",
+          "confirm": "Confirmar"
+        }
+      },
+      "identityVerification": {
+        "title": "Verificación de Identidad",
+        "subtitle": "Verifica tu identidad subiendo una foto con tu documento de identidad",
+        "backToDashboard": "Volver al Panel",
+        "noPhotoFound": {
+          "title": "Verificación de Identidad",
+          "message": "No se encontró foto de identidad. Por favor, completa el proceso de pago para subir tu foto de identidad.",
+          "goToDashboard": "Ir al Panel"
+        },
+        "status": {
+          "approved": {
+            "title": "Foto de Identidad Aprobada",
+            "message": "Tu foto de identidad ha sido aprobada. Puedes continuar con tu solicitud."
+          },
+          "rejected": {
+            "title": "Foto de Identidad Rechazada",
+            "message": "Tu foto de identidad ha sido rechazada. Por favor, revisa el motivo y sube una nueva foto.",
+            "rejectionReason": "Motivo del Rechazo"
+          },
+          "pending": {
+            "title": "Foto de Identidad en Revisión",
+            "message": "Tu foto de identidad está siendo revisada por nuestros administradores."
+          }
+        },
+        "uploadNewPhoto": {
+          "title": "Subir Nueva Foto de Identidad",
+          "termsTitle": "Términos y Condiciones",
+          "termsDescription": "Por favor, lee y acepta los términos y condiciones antes de subir una nueva foto.",
+          "scrollToBottom": "Por favor, desplázate hasta el final para continuar",
+          "acceptTerms": "He leído y acepto los términos y condiciones",
+          "termsNotAvailable": "Términos no disponibles",
+          "submitButton": "Enviar Nueva Foto",
+          "submitting": "Enviando...",
+          "successMessage": "¡Foto de identidad subida exitosamente! Será revisada por un administrador."
+        },
+        "errors": {
+          "loadingStatus": "Error al cargar el estado de verificación. Por favor, inténtalo de nuevo.",
+          "acceptingTerms": "Error al aceptar los términos. Por favor, inténtalo de nuevo.",
+          "termsRequired": "Por favor, acepta primero los términos.",
+          "photoRequired": "Por favor, sube tu foto de identidad.",
+          "termAcceptanceNotFound": "Error: No se encontró el registro de aceptación de términos.",
+          "submittingPhoto": "Error al enviar la foto. Por favor, inténtalo de nuevo."
+        }
+      }
   },
   "profileManagement": {
     "title": "Perfil del Estudiante",

@@ -2,7 +2,8 @@ import React, { useState, useEffect, useMemo, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { 
   AlertCircle, Award, GraduationCap, Download, 
-  MapPin, Clock, Mail, Globe, CreditCard, Sparkles
+  MapPin, Clock, Mail, Globe, CreditCard, Sparkles,
+  ArrowRight, ArrowLeft, CheckCircle2, Lock
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { format } from 'date-fns';
@@ -24,7 +25,7 @@ export const UniversityDocumentsStep: React.FC<StepProps> = ({ onBack }) => {
     const { t } = useTranslation(['registration', 'common', 'scholarships', 'dashboard', 'auth']);
     const navigate = useNavigate();
     const { user, userProfile } = useAuth();
-    const { getFeeAmount } = useFeeConfig();
+    const { getFeeAmount, formatFeeAmount } = useFeeConfig(user?.id);
 
     // 1. ESTADOS
     const [loading, setLoading] = useState(true);
@@ -53,22 +54,119 @@ export const UniversityDocumentsStep: React.FC<StepProps> = ({ onBack }) => {
     // 2. HOOKS DE CÁLCULO (Sempre No Topo)
     const isPlacementFlow = !!(userProfile as any)?.placement_fee_flow;
 
+    const scholarshipAmount = useMemo(() => {
+        const scholarship = applicationDetails?.scholarships;
+        if (!scholarship) return 0;
+
+        return Number(
+            scholarship.annual_value_with_scholarship ??
+            scholarship.amount ??
+            scholarship.annual_value ??
+            scholarship.scholarship_amount ??
+            0
+        );
+    }, [applicationDetails]);
+
+    const getRelativePath = (fullUrl: string, bucketName = 'document-attachments') => {
+        const baseUrl = `https://fitpynguasqqutuhzifx.supabase.co/storage/v1/object/public/${bucketName}/`;
+        if (!fullUrl) return '';
+        if (fullUrl.startsWith(baseUrl)) return fullUrl.replace(baseUrl, '');
+
+        if (fullUrl.includes('/storage/v1/object/public/')) {
+            const parts = fullUrl.split('/storage/v1/object/public/');
+            if (parts.length > 1) {
+                const pathParts = parts[1].split('/');
+                pathParts.shift();
+                return pathParts.join('/');
+            }
+        }
+
+        return fullUrl.startsWith('/') ? fullUrl.slice(1) : fullUrl;
+    };
+
+    const handleViewDocument = async (docUrl: string, bucketName = 'document-attachments') => {
+        if (!docUrl) return;
+        try {
+            let previewSource = docUrl;
+            if (docUrl.includes(`supabase.co/storage/v1/object/public/${bucketName}/`)) {
+                const filePath = getRelativePath(docUrl, bucketName);
+                const { data, error } = await supabase.storage.from(bucketName).createSignedUrl(filePath, 60 * 60);
+                if (error || !data?.signedUrl) throw error || new Error('Failed to create signed URL');
+                previewSource = data.signedUrl;
+            }
+            setPreviewUrl(previewSource);
+        } catch (err) {
+            console.error('Error viewing document:', err);
+            alert(t('dashboard:studentDashboard.documentRequests.errors.errorViewingDocument') || 'Erro ao visualizar documento');
+        }
+    };
+
+    const handleDownloadDocument = async (docUrl: string, fileName = 'acceptance_letter.pdf', bucketName = 'document-attachments') => {
+        if (!docUrl) return;
+        try {
+            let downloadUrl = docUrl;
+            if (docUrl.includes(`supabase.co/storage/v1/object/public/${bucketName}/`)) {
+                const filePath = getRelativePath(docUrl, bucketName);
+                const { data, error } = await supabase.storage.from(bucketName).createSignedUrl(filePath, 60 * 60);
+                if (error || !data?.signedUrl) throw error || new Error('Failed to create signed URL');
+                downloadUrl = data.signedUrl;
+            }
+            const response = await fetch(downloadUrl);
+            if (!response.ok) throw new Error('Failed to download document');
+            const blob = await response.blob();
+            const url = window.URL.createObjectURL(blob);
+            const link = document.createElement('a');
+            link.href = url;
+            link.download = fileName.endsWith('.pdf') ? fileName : `${fileName}.pdf`;
+            document.body.appendChild(link);
+            link.click();
+            document.body.removeChild(link);
+            window.URL.revokeObjectURL(url);
+        } catch (err) {
+            console.error('Error downloading document:', err);
+            alert(t('dashboard:studentDashboard.documentRequests.errors.errorDownloadingDocument') || 'Erro ao baixar documento');
+        }
+    };
+
     const studentProcessType = applicationDetails?.student_process_type;
     const showDs160Tab = isPlacementFlow && studentProcessType === 'initial';
     const showI539Tab = isPlacementFlow && (studentProcessType === 'change_of_status' || (studentProcessType === 'transfer' && userProfile?.visa_transfer_active === false));
     const packageFeeRequired = (showDs160Tab && !ds160PackagePaid) || (showI539Tab && !i539PackagePaid);
 
-    const hasPendingRequests = useMemo(() => {
-        if (!documentRequests || documentRequests.length === 0) return false;
-        return documentRequests.some(req => {
-            const uploads = req.document_request_uploads || [];
-            return !uploads.some((u: any) => u.status === 'approved');
-        });
-    }, [documentRequests]);
+    const { hasPendingUploads, hasUnderReviewDocs, allDocsApproved, pendingDocNames } = useMemo(() => {
+        if (!documentRequests || documentRequests.length === 0) {
+            return { hasPendingUploads: false, hasUnderReviewDocs: false, allDocsApproved: false, pendingDocNames: [] };
+        }
 
-    const allDocsApproved = useMemo(() => {
-        if (!documentRequests || documentRequests.length === 0) return false;
-        return documentRequests.every(req => (req.document_request_uploads || []).some((u: any) => u.status === 'approved'));
+        const pendingNames: string[] = [];
+        let hasPending = false;
+        let hasReview = false;
+        let allApproved = true;
+
+        documentRequests.forEach(req => {
+            const uploads = req.document_request_uploads || [];
+            const isApproved = uploads.some((u: any) => u.status === 'approved');
+            const isUnderReview = uploads.some((u: any) => u.status === 'under_review');
+
+            if (isApproved) {
+                // Ok
+            } else if (isUnderReview) {
+                hasReview = true;
+                allApproved = false;
+            } else {
+                // Pending or Rejected without new upload
+                hasPending = true;
+                allApproved = false;
+                pendingNames.push(req.title);
+            }
+        });
+
+        return {
+            hasPendingUploads: hasPending,
+            hasUnderReviewDocs: hasReview,
+            allDocsApproved: allApproved,
+            pendingDocNames: pendingNames
+        };
     }, [documentRequests]);
 
     const currentStatusInfo = useMemo(() => {
@@ -82,7 +180,7 @@ export const UniversityDocumentsStep: React.FC<StepProps> = ({ onBack }) => {
             };
         }
 
-        // 1. Pagamento em Verificação (Prioridade Máxima)
+        // 1. Pagamento em Verificação (Zelle)
         if (hasPendingZelle) return { 
             status: 'under_review' as const, 
             title: t('dashboard:studentDashboard.myApplicationStep.status.verifyingPayment.title'), 
@@ -91,17 +189,75 @@ export const UniversityDocumentsStep: React.FC<StepProps> = ({ onBack }) => {
             action: () => {} 
         };
 
-        // 2. Documentos Pendentes
-        if (hasPendingRequests) return { 
-            status: 'pending_documents' as const, 
-            title: t('dashboard:studentDashboard.myApplicationStep.status.pendingDocs.title'), 
-            description: t('dashboard:studentDashboard.myApplicationStep.status.pendingDocs.description'), 
-            nextStepLabel: t('dashboard:studentDashboard.myApplicationStep.status.pendingDocs.button'), 
-            action: () => setActiveTab('documents') 
+        // 2. CARTA DE ACEITE DISPONÍVEL (Prioridade Máxima após Zelle)
+        if (applicationDetails.acceptance_letter_url) {
+            // 2.1 Pagamento do Pacote Pendente (DS160/I539)
+            if (packageFeeRequired) {
+                const feeName = showDs160Tab 
+                    ? t('scholarships:scholarshipsPage.modal.ds160Package') 
+                    : t('scholarships:scholarshipsPage.modal.i539COSPackage');
+
+                return { 
+                    status: 'pending_package_fee' as const, 
+                    title: t('dashboard:studentDashboard.myApplicationStep.status.pendingFee.title'), 
+                    description: t('dashboard:studentDashboard.myApplicationStep.status.pendingFee.description', { feeName }), 
+                    nextStepLabel: t('dashboard:studentDashboard.myApplicationStep.status.pendingFee.button'), 
+                    action: () => setActiveTab(showDs160Tab ? 'ds160' : 'i539') 
+                };
+            }
+            
+            // 2.2 Tudo pronto (Carta emitida e Taxas pagas)
+            return { 
+                status: 'approved' as const, 
+                title: t('dashboard:studentDashboard.myApplicationStep.status.approved.title'), 
+                description: t('dashboard:studentDashboard.myApplicationStep.status.approved.description'), 
+                nextStepLabel: t('dashboard:studentDashboard.myApplicationStep.status.approved.button'), 
+                action: () => setActiveTab('acceptance') 
+            };
+        }
+
+        // 3. Status de Matrícula Concluída (Fallback de sucesso sem carta explícita)
+        if (applicationDetails.status === 'enrolled') {
+            return {
+                status: 'approved' as const,
+                title: t('dashboard:studentDashboard.myApplicationStep.status.approved.title'),
+                description: t('dashboard:studentDashboard.myApplicationStep.status.approved.description'),
+                nextStepLabel: t('dashboard:studentDashboard.myApplicationStep.status.approved.button'),
+                action: () => setActiveTab('acceptance')
+            };
+        }
+
+        // 4. Ação Necessária: Documentos Pendentes/Rejeitados
+        if (hasPendingUploads) {
+            const docList = pendingDocNames.length > 0 ? ` (${pendingDocNames.join(', ')})` : '';
+            return { 
+                status: 'pending_documents' as const, 
+                title: t('dashboard:studentDashboard.myApplicationStep.status.pendingDocs.title'), 
+                description: `${t('dashboard:studentDashboard.myApplicationStep.status.pendingDocs.description')}${docList}`, 
+                nextStepLabel: t('dashboard:studentDashboard.myApplicationStep.status.pendingDocs.button'), 
+                action: () => setActiveTab('documents') 
+            };
+        }
+
+        // 5. Documentos em Análise (Aguardando Admin)
+        if (hasUnderReviewDocs) return {
+            status: 'under_review_docs' as const,
+            title: t('dashboard:studentDashboard.myApplicationStep.status.generalWait.title'),
+            description: t('dashboard:studentDashboard.myApplicationStep.status.generalWait.description'),
+            nextStepLabel: '',
+            action: () => {}
         };
 
-        // 3. Análise Inicial (Nenhum documento solicitado ainda)
-        // Se documentRequests.length === 0, significa que estamos no status de espera das 24h
+        // 6. Aguardando Carta de Aceite (Docs aprovados, mas sem carta ainda)
+        if (allDocsApproved) return {
+            status: 'under_review' as const,
+            title: t('dashboard:studentDashboard.myApplicationStep.status.waitingAcceptance.title'),
+            description: t('dashboard:studentDashboard.myApplicationStep.status.waitingAcceptance.description'),
+            nextStepLabel: '',
+            action: () => {}
+        };
+
+        // 7. Espera Inicial (Nenhum documento solicitado ainda)
         if (documentRequests.length === 0) return { 
             status: 'under_review' as const, 
             title: t('dashboard:studentDashboard.myApplicationStep.status.initialAnalysis.title'), 
@@ -109,28 +265,10 @@ export const UniversityDocumentsStep: React.FC<StepProps> = ({ onBack }) => {
             nextStepLabel: '', 
             action: () => {},
             progress: {
-              current: 12, // Mocking some progress for demo, ideally this would come from backend
+              current: 12,
               total: 24,
               label: "Processamento"
             }
-        };
-
-        // 4. Pagamento do Pacote (Só após docs estarem ok)
-        if (packageFeeRequired && allDocsApproved) return { 
-            status: 'pending_package_fee' as const, 
-            title: t('dashboard:studentDashboard.myApplicationStep.status.pendingFee.title'), 
-            description: t('dashboard:studentDashboard.myApplicationStep.status.pendingFee.description'), 
-            nextStepLabel: t('dashboard:studentDashboard.myApplicationStep.status.pendingFee.button'), 
-            action: () => setActiveTab(showDs160Tab ? 'ds160' : 'i539') 
-        };
-
-        // 5. Aprovado / Download
-        if (applicationDetails.acceptance_letter_url) return { 
-            status: 'approved' as const, 
-            title: t('dashboard:studentDashboard.myApplicationStep.status.approved.title'), 
-            description: t('dashboard:studentDashboard.myApplicationStep.status.approved.description'), 
-            nextStepLabel: t('dashboard:studentDashboard.myApplicationStep.status.approved.button'), 
-            action: () => setActiveTab('acceptance') 
         };
 
         return { 
@@ -140,24 +278,37 @@ export const UniversityDocumentsStep: React.FC<StepProps> = ({ onBack }) => {
             nextStepLabel: '', 
             action: () => { } 
         };
-    }, [hasPendingRequests, hasPendingZelle, packageFeeRequired, applicationDetails, t, showDs160Tab, documentRequests.length, allDocsApproved]);
+    }, [pendingDocNames, hasPendingUploads, hasUnderReviewDocs, hasPendingZelle, packageFeeRequired, applicationDetails, t, showDs160Tab, documentRequests.length, allDocsApproved]);
 
     const sidebarSteps = useMemo(() => [
         { 
             id: 'documents', 
-            title: t('studentDashboard.myApplicationStep.welcome.actionDocuments'), 
+            title: t('dashboard:studentDashboard.myApplicationStep.welcome.actionDocuments'), 
             status: allDocsApproved 
-                ? t('studentDashboard.myApplicationStep.welcome.status.completed') 
-                : (documentRequests.length > 0 ? t('studentDashboard.myApplicationStep.welcome.status.underReview') : t('studentDashboard.myApplicationStep.welcome.status.inProgress')), 
-            variant: (allDocsApproved ? 'success' : (documentRequests.length > 0 ? 'warning' : 'info')) as any 
+                ? t('dashboard:studentDashboard.myApplicationStep.welcome.status.completed') 
+                : (hasUnderReviewDocs ? t('dashboard:studentDashboard.myApplicationStep.welcome.status.underReview') : t('dashboard:studentDashboard.myApplicationStep.welcome.status.inProgress')), 
+            variant: (allDocsApproved ? 'success' : (hasUnderReviewDocs ? 'warning' : 'info')) as any 
+        },
+        { 
+            id: 'acceptance', 
+            title: t('dashboard:studentDashboard.myApplicationStep.tabs.acceptanceLetter'),
+            status: applicationDetails?.acceptance_letter_url 
+                ? t('dashboard:studentDashboard.myApplicationStep.welcome.documentAvailable') 
+                : (!allDocsApproved
+                    ? t('dashboard:studentDashboard.myApplicationStep.welcome.status.blocked')
+                    : t('dashboard:studentDashboard.myApplicationStep.welcome.status.inProgress')), 
+            variant: (applicationDetails?.acceptance_letter_url ? 'success' : (!allDocsApproved ? 'error' : 'info')) as any,
+            completed: !!applicationDetails?.acceptance_letter_url
         },
         ...(showDs160Tab ? [{ 
             id: 'ds160', 
             title: t('scholarships:scholarshipsPage.modal.ds160Package'), 
             status: ds160PackagePaid 
-                ? t('registration:studentDashboard.myApplicationStep.welcome.status.completed') 
-                : t('registration:studentDashboard.myApplicationStep.welcome.status.actionRequired'), 
-            variant: (ds160PackagePaid ? 'success' : 'warning') as any 
+                ? t('dashboard:studentDashboard.myApplicationStep.welcome.status.completed') 
+                : (!applicationDetails?.acceptance_letter_url 
+                    ? t('dashboard:studentDashboard.myApplicationStep.welcome.status.blocked')
+                    : t('dashboard:studentDashboard.myApplicationStep.welcome.status.actionRequired')), 
+            variant: (ds160PackagePaid ? 'success' : (!applicationDetails?.acceptance_letter_url ? 'error' : 'warning')) as any 
         }] : []),
         ...(showI539Tab ? [{ 
             id: 'i539', 
@@ -165,19 +316,13 @@ export const UniversityDocumentsStep: React.FC<StepProps> = ({ onBack }) => {
                 ? t('registration:studentOnboarding.stepper.steps.reinstatement_fee')
                 : t('scholarships:scholarshipsPage.modal.i539COSPackage'), 
             status: i539PackagePaid 
-                ? t('registration:studentDashboard.myApplicationStep.welcome.status.completed') 
-                : t('registration:studentDashboard.myApplicationStep.welcome.status.actionRequired'), 
-            variant: (i539PackagePaid ? 'success' : 'warning') as any 
+                ? t('dashboard:studentDashboard.myApplicationStep.welcome.status.completed') 
+                : (!applicationDetails?.acceptance_letter_url 
+                    ? t('dashboard:studentDashboard.myApplicationStep.welcome.status.blocked')
+                    : t('dashboard:studentDashboard.myApplicationStep.welcome.status.actionRequired')), 
+            variant: (i539PackagePaid ? 'success' : (!applicationDetails?.acceptance_letter_url ? 'error' : 'warning')) as any 
         }] : []),
-        { 
-            id: 'acceptance', 
-            title: t('studentDashboard.myApplicationStep.tabs.acceptanceLetter'), 
-            status: applicationDetails?.acceptance_letter_url 
-                ? t('dashboard:studentDashboard.myApplicationStep.welcome.documentAvailable') 
-                : t('dashboard:studentDashboard.myApplicationStep.welcome.status.inProgress'), 
-            variant: (applicationDetails?.acceptance_letter_url ? 'success' : 'info') as any 
-        }
-    ], [t, allDocsApproved, documentRequests.length, showDs160Tab, ds160PackagePaid, showI539Tab, i539PackagePaid, applicationDetails?.acceptance_letter_url, studentProcessType, userProfile?.visa_transfer_active]);
+    ], [t, allDocsApproved, documentRequests.length, showDs160Tab, ds160PackagePaid, showI539Tab, i539PackagePaid, applicationDetails?.acceptance_letter_url, studentProcessType, userProfile?.visa_transfer_active, packageFeeRequired]);
 
     const fetchApplicationDetails = useCallback(async (isRefresh = false) => {
         if (!userProfile?.id) {
@@ -308,7 +453,7 @@ export const UniversityDocumentsStep: React.FC<StepProps> = ({ onBack }) => {
             <div className="flex flex-col items-center justify-center py-20 text-center space-y-4">
                 <AlertCircle className="w-16 h-16 text-amber-500" />
                 <h3 className="text-2xl font-black uppercase tracking-tight">{t('common:errors.unexpected')}</h3>
-                <p className="text-slate-600 max-w-md mx-auto">{t('studentDashboard.myApplicationStep.welcome.noApplicationFound')}</p>
+                <p className="text-slate-600 max-w-md mx-auto">{t('dashboard:studentDashboard.myApplicationStep.noApplication.description')}</p>
                 <button onClick={onBack} className="bg-slate-900 text-white px-8 py-4 rounded-xl font-bold uppercase tracking-widest text-xs hover:bg-slate-800 transition-all">
                     {t('common:labels.back')}
                 </button>
@@ -317,15 +462,27 @@ export const UniversityDocumentsStep: React.FC<StepProps> = ({ onBack }) => {
     }
 
     return (
-        <div className="space-y-8 pb-24 max-w-[1600px] mx-auto px-4 md:px-8">
-            <div className="flex flex-col md:flex-row md:items-end justify-between gap-6 mt-6 md:mt-0">
-                <h2 className="text-4xl md:text-6xl font-black text-slate-900 uppercase tracking-tighter leading-none">
-                    {t('studentDashboard.myApplicationStep.header.my')} <span className="text-blue-600">{t('studentDashboard.myApplicationStep.header.application')}</span>
+        <div className="space-y-6 md:space-y-8 pb-24 max-w-[1600px] mx-auto px-4 md:px-8">
+            <div className="flex flex-col md:flex-row md:items-end justify-between gap-4 md:gap-6 mt-2 md:mt-0">
+                <h2 className="text-2xl md:text-6xl font-black text-slate-900 uppercase tracking-tighter leading-none">
+                    {t('dashboard:studentDashboard.myApplicationStep.header.my')} <span className="text-blue-600">{t('dashboard:studentDashboard.myApplicationStep.header.application')}</span>
                 </h2>
             </div>
 
             <div className="grid grid-cols-1 lg:grid-cols-12 gap-12 items-start">
                 <main className="lg:col-span-9 space-y-8">
+                    {activeTab !== 'welcome' && (
+                        <button 
+                            onClick={() => setActiveTab('welcome')}
+                            className="flex items-center gap-2 text-slate-500 hover:text-slate-900 transition-colors mb-2 group w-fit"
+                        >
+                            <ArrowLeft className="w-4 h-4 group-hover:-translate-x-1 transition-transform" />
+                            <span className="text-[10px] font-black uppercase tracking-widest">
+                                {t('dashboard:studentDashboard.myApplicationStep.navigation.backToSteps')}
+                            </span>
+                        </button>
+                    )}
+
                     <ApplicationStatusHero 
                         status={currentStatusInfo.status}
                         title={currentStatusInfo.title}
@@ -333,7 +490,6 @@ export const UniversityDocumentsStep: React.FC<StepProps> = ({ onBack }) => {
                         nextStepLabel={currentStatusInfo.nextStepLabel}
                         onNextStepClick={currentStatusInfo.action} 
                         showButton={currentStatusInfo.status !== 'under_review'} 
-                        progress={(currentStatusInfo as any).progress}
                     />
 
                     <AnimatePresence mode="wait">
@@ -346,89 +502,107 @@ export const UniversityDocumentsStep: React.FC<StepProps> = ({ onBack }) => {
                         >
                             {activeTab === 'welcome' && (
                                 <div className="grid grid-cols-1 gap-6">
-                                    <div className="bg-white rounded-[2.5rem] p-8 md:p-12 shadow-2xl relative overflow-hidden group border border-slate-100">
-                                        <div className="relative z-10 grid grid-cols-1 lg:grid-cols-12 gap-12">
-                                            <div className="lg:col-span-8 space-y-10">
-                                                <div className="flex items-center gap-6">
-                                                    <div className="w-16 h-16 bg-blue-600 rounded-2xl flex items-center justify-center shadow-xl transform group-hover:rotate-6 transition-transform">
-                                                        <Sparkles className="w-8 h-8 text-white" />
+                                    <div className="bg-white rounded-[2rem] md:rounded-[2.5rem] p-6 md:p-12 shadow-2xl relative overflow-hidden group border border-slate-100">
+                                        <div className="relative z-10 grid grid-cols-1 lg:grid-cols-12 gap-6 md:gap-12">
+                                            <div className="lg:col-span-12 space-y-6 md:space-y-10">
+                                                <div className="flex items-center gap-4 md:gap-6">
+                                                    <div className="w-12 h-12 md:w-16 md:h-16 bg-blue-600 rounded-xl md:rounded-2xl flex items-center justify-center shadow-xl transform group-hover:rotate-6 transition-transform">
+                                                        <Sparkles className="w-6 h-6 md:w-8 md:h-8 text-white" />
                                                     </div>
-                                                    <h3 className="text-3xl font-black text-gray-900 uppercase tracking-tighter">
+                                                    <h3 className="text-xl md:text-4xl font-black text-slate-900 uppercase tracking-tighter">
                                                         {t('dashboard:studentDashboard.myApplicationStep.welcome.congratsMessage')}
                                                     </h3>
                                                 </div>
-                                                
-                                                <div className="grid grid-cols-1 gap-4">
-                                                    {[
-                                                        { 
-                                                            id: 'payment', 
-                                                            label: t('dashboard:studentDashboard.myApplicationStep.welcome.checklist.payment'),
-                                                            completed: true,
-                                                            current: false,
-                                                            status: t('dashboard:studentDashboard.myApplicationStep.welcome.status.completed')
-                                                        },
-                                                        { 
-                                                            id: 'waitingForms', 
-                                                            label: t('dashboard:studentDashboard.myApplicationStep.welcome.checklist.waitingForms'),
-                                                            completed: documentRequests.length > 0,
-                                                            current: documentRequests.length === 0,
-                                                            status: documentRequests.length === 0 ? t('common:labels.nextStep') : t('dashboard:studentDashboard.myApplicationStep.welcome.status.completed')
-                                                        },
-                                                        { 
-                                                            id: 'uploadDocs', 
-                                                            label: t('dashboard:studentDashboard.myApplicationStep.welcome.checklist.uploadDocs'),
-                                                            completed: allDocsApproved,
-                                                            current: documentRequests.length > 0 && !allDocsApproved,
-                                                            status: allDocsApproved ? t('dashboard:studentDashboard.myApplicationStep.welcome.status.completed') : (documentRequests.length > 0 ? t('common:labels.nextStep') : t('dashboard:studentDashboard.myApplicationStep.welcome.status.blocked'))
-                                                        },
-                                                        { 
-                                                            id: 'acceptance', 
-                                                            label: t('dashboard:studentDashboard.myApplicationStep.welcome.checklist.acceptance'),
-                                                            completed: !!applicationDetails.acceptance_letter_url,
-                                                            current: allDocsApproved && !applicationDetails.acceptance_letter_url,
-                                                            status: !!applicationDetails.acceptance_letter_url ? t('dashboard:studentDashboard.myApplicationStep.welcome.status.completed') : (allDocsApproved ? t('common:labels.nextStep') : t('dashboard:studentDashboard.myApplicationStep.welcome.status.blocked'))
-                                                        }
-                                                    ].map((step, idx) => (
-                                                        <div 
-                                                            key={step.id} 
-                                                            className={`flex items-center gap-4 p-6 rounded-2xl border-2 transition-all ${
-                                                                step.current 
-                                                                    ? 'bg-blue-50 border-blue-200 shadow-lg shadow-blue-500/5' 
-                                                                    : 'bg-slate-50 border-slate-100'
-                                                            } ${!step.completed && !step.current ? 'opacity-40' : ''}`}
-                                                        >
-                                                            <div className={`w-8 h-8 rounded-full flex items-center justify-center font-black text-xs shrink-0 ${
-                                                                step.completed 
-                                                                    ? 'bg-emerald-500 text-white' 
-                                                                    : step.current 
-                                                                        ? 'bg-blue-600 text-white animate-pulse' 
-                                                                        : 'bg-slate-200 text-slate-500'
-                                                            }`}>
-                                                                {step.completed ? '✓' : idx + 1}
-                                                            </div>
-                                                            <div className="flex-1">
-                                                                <h4 className={`font-bold uppercase tracking-tight text-sm ${
-                                                                    step.current ? 'text-blue-900' : 'text-slate-700'
+                                                <div className="grid grid-cols-1 md:grid-cols-2 gap-3 md:gap-4">
+                                                    {sidebarSteps.map((step, idx) => {
+                                                        const isCurrent = (step.id === 'documents' && !allDocsApproved) || 
+                                                                        (step.id === 'ds160' && !ds160PackagePaid && allDocsApproved && !i539PackagePaid) ||
+                                                                        (step.id === 'i539' && !i539PackagePaid && allDocsApproved && !ds160PackagePaid) ||
+                                                                        (step.id === 'acceptance' && allDocsApproved && (!packageFeeRequired || ds160PackagePaid || i539PackagePaid) && !applicationDetails.acceptance_letter_url);
+                                                        const isLastOdd = sidebarSteps.length % 2 !== 0 && idx === sidebarSteps.length - 1;
+
+                                                        return (
+                                                            <motion.button 
+                                                                key={step.id} 
+                                                                whileHover={step.variant !== 'error' ? { scale: 1.02, y: -2 } : {}}
+                                                                whileTap={step.variant !== 'error' ? { scale: 0.98 } : {}}
+                                                                onClick={() => {
+                                                                    if (step.variant !== 'error') {
+                                                                        setActiveTab(step.id as any);
+                                                                    }
+                                                                }}
+                                                                className={`group flex items-center gap-4 p-6 rounded-2xl border-2 transition-all text-left w-full ${
+                                                                    isCurrent 
+                                                                        ? 'bg-blue-50 border-blue-200 shadow-lg shadow-blue-500/5 ring-4 ring-blue-500/10' 
+                                                                        : 'bg-white border-slate-100 hover:border-blue-200 hover:bg-slate-50 shadow-sm'
+                                                                } ${step.variant === 'error' ? 'cursor-not-allowed opacity-50 grayscale' : 'cursor-pointer hover:shadow-xl hover:shadow-blue-500/5'} ${isLastOdd ? 'md:col-span-2' : 'col-span-1'}`}
+                                                            >
+                                                                <div className={`w-8 h-10 rounded-xl flex items-center justify-center font-black text-xs shrink-0 ${
+                                                                    step.completed 
+                                                                        ? 'bg-emerald-500 text-white shadow-lg shadow-emerald-500/20' 
+                                                                        : isCurrent 
+                                                                            ? 'bg-blue-600 text-white shadow-lg shadow-blue-500/30' 
+                                                                            : 'bg-slate-200 text-slate-500 shadow-inner'
                                                                 }`}>
-                                                                    {step.label}
-                                                                </h4>
-                                                            </div>
-                                                            <span className={`text-[10px] font-black uppercase tracking-widest ${
-                                                                step.completed ? 'text-emerald-600' : step.current ? 'text-blue-600' : 'text-slate-400'
-                                                            }`}>
-                                                                {step.status}
-                                                            </span>
-                                                        </div>
-                                                    ))}
+                                                                    {step.completed ? '✓' : idx + 1}
+                                                                </div>
+                                                                
+                                                                <div className="flex-1 min-w-0">
+                                                                    <div className="flex items-center justify-between mb-1">
+                                                                        <span className={`text-[9px] md:text-[10px] font-black uppercase tracking-widest ${
+                                                                            step.completed ? 'text-emerald-600' : isCurrent ? 'text-blue-600' : 'text-slate-400'
+                                                                        }`}>
+                                                                            {step.status}
+                                                                        </span>
+                                                                        
+                                                                        {step.variant !== 'error' && !step.completed && isCurrent && (
+                                                                            <span className="flex items-center gap-1.5 text-[9px] md:text-[10px] font-black text-white uppercase tracking-tight bg-blue-600 px-3 py-1 rounded-full border border-blue-500 shadow-lg shadow-blue-500/20 group-hover:bg-blue-700 transition-all">
+                                                                                {t('common:labels.clickToAccess')}
+                                                                                <ArrowRight className="w-3 h-3 group-hover:translate-x-0.5 transition-transform" />
+                                                                            </span>
+                                                                        )}
+                                                                        
+                                                                        {step.completed && (
+                                                                             <div className="bg-emerald-100 p-1 rounded-full">
+                                                                                <CheckCircle2 className="w-3 h-3 text-emerald-600" />
+                                                                             </div>
+                                                                        )}
+                                                                        
+                                                                        {step.variant === 'error' && (
+                                                                             <div className="bg-slate-100 p-1 rounded-full">
+                                                                                <Lock className="w-3 h-3 text-slate-400" />
+                                                                             </div>
+                                                                        )}
+                                                                    </div>
+                                                                    
+                                                                    <h4 className={`font-black uppercase tracking-tight text-sm md:text-base truncate ${
+                                                                        isCurrent ? 'text-blue-900' : 'text-slate-900 group-hover:text-blue-700'
+                                                                    }`}>
+                                                                        {step.title}
+                                                                    </h4>
+                                                                </div>
+                                                                
+                                                                {step.variant !== 'error' && !step.completed && (
+                                                                    <ArrowRight className={`w-4 h-4 shrink-0 transition-all ${
+                                                                        isCurrent ? 'text-blue-400' : 'text-slate-200 group-hover:text-blue-400 group-hover:translate-x-1'
+                                                                    }`} />
+                                                                )}
+                                                            </motion.button>
+                                                        );
+                                                    })}
                                                 </div>
-                                            </div>
-                                            <div className="lg:col-span-4">
-                                                <div className="bg-gray-900 rounded-[2.5rem] p-8 text-white space-y-6 shadow-2xl">
-                                                    <h4 className="text-xs font-black uppercase tracking-widest text-white/40">{t('studentDashboard.myApplicationStep.welcome.needHelp')}</h4>
-                                                    <p className="font-bold text-lg leading-tight">{t('studentDashboard.myApplicationStep.welcome.supportDescription')}</p>
-                                                    <button onClick={() => navigate('/student/dashboard/chat')} className="w-full py-4 bg-white text-gray-900 rounded-xl font-black uppercase tracking-widest text-xs hover:bg-blue-50 transition-colors">
-                                                        {t('studentDashboard.myApplicationStep.welcome.talkToSupport')}
-                                                    </button>
+
+                                                {/* Card de Suporte - Menor e centralizado */}
+                                                <div className="pt-4">
+                                                    <div className="bg-gray-900 rounded-[2rem] p-6 text-white space-y-4 shadow-2xl max-w-md mx-auto border border-gray-800">
+                                                        <div className="flex flex-col items-center text-center space-y-3">
+                                                            <h4 className="text-[10px] font-black uppercase tracking-widest text-white/40">{t('dashboard:studentDashboard.myApplicationStep.welcome.needHelp')}</h4>
+                                                            <p className="font-bold text-sm leading-tight">{t('dashboard:studentDashboard.myApplicationStep.welcome.supportDescription')}</p>
+                                                            <button onClick={() => navigate('/student/dashboard/chat')} className="w-full py-3 bg-white text-gray-900 rounded-xl font-black uppercase tracking-widest text-[10px] hover:bg-blue-50 transition-colors shadow-lg shadow-white/5">
+                                                                {t('dashboard:studentDashboard.myApplicationStep.welcome.talkToSupport')}
+                                                            </button>
+                                                        </div>
+                                                    </div>
                                                 </div>
                                             </div>
                                         </div>
@@ -454,14 +628,14 @@ export const UniversityDocumentsStep: React.FC<StepProps> = ({ onBack }) => {
                                 <div className="space-y-8 pb-12">
                                     <div className="bg-white rounded-[2.5rem] p-12 shadow-2xl border border-slate-200 text-center">
                                         <CreditCard className="w-16 h-16 text-blue-600 mx-auto mb-6" />
-                                        <h3 className="text-3xl font-black uppercase tracking-tight mb-4">{t('studentDashboard.applicationChatPage.tabs.i20ControlFee')}</h3>
-                                        <p className="text-slate-600 mb-8 max-w-md mx-auto">{t('studentDashboard.applicationChatPage.i20ControlFee.description')}</p>
-                                        <button 
+                                        <h3 className="text-3xl font-black uppercase tracking-tight mb-4">{t('dashboard:studentDashboard.applicationChatPage.tabs.i20')}</h3>
+                                        <p className="text-slate-600 mb-8 max-w-md mx-auto">{t('dashboard:studentDashboard.applicationChatPage.welcome.i20ControlFee.description')}</p>
+                                        <button
                                             disabled={i20Loading}
-                                            onClick={handleProceedPayment} 
+                                            onClick={handleProceedPayment}
                                             className="px-12 py-5 bg-blue-600 text-white rounded-2xl font-black uppercase tracking-widest hover:bg-blue-700 transition-all shadow-xl hover:shadow-blue-500/20 disabled:opacity-50"
                                         >
-                                            {i20Loading ? t('common:labels.loading') : t('studentDashboard.applicationChatPage.i20ControlFee.button')}
+                                            {i20Loading ? t('common:labels.loading') : t('dashboard:studentDashboard.applicationChatPage.welcome.i20ControlFee.button')}
                                         </button>
                                     </div>
                                 </div>
@@ -492,6 +666,9 @@ export const UniversityDocumentsStep: React.FC<StepProps> = ({ onBack }) => {
                                     userProfile={userProfile}
                                     onPaymentSuccess={fetchApplicationDetails}
                                     currentStep="my_applications"
+                                    universityLogo={applicationDetails.scholarships?.universities?.logo_url || applicationDetails.scholarships?.image_url}
+                                    universityName={applicationDetails.scholarships?.universities?.name}
+                                    scholarshipTitle={applicationDetails.scholarships?.title}
                                 />
                             )}
                             {activeTab === 'i539' && (
@@ -519,44 +696,61 @@ export const UniversityDocumentsStep: React.FC<StepProps> = ({ onBack }) => {
                                     userProfile={userProfile}
                                     onPaymentSuccess={fetchApplicationDetails}
                                     currentStep="my_applications"
+                                    universityLogo={applicationDetails.scholarships?.universities?.logo_url || applicationDetails.scholarships?.image_url}
+                                    universityName={applicationDetails.scholarships?.universities?.name}
+                                    scholarshipTitle={applicationDetails.scholarships?.title}
                                 />
                             )}
                             {activeTab === 'acceptance' && (
                                 <div className="space-y-8 pb-12">
                                     {/* University Details (Unificado) */}
-                                    <div className="bg-white rounded-[2.5rem] overflow-hidden shadow-2xl border border-slate-200">
-                                        <div className="bg-slate-900 p-8 md:p-12 text-white relative">
-                                            <div className="absolute top-0 right-0 p-8 opacity-10">
+                                    <div className="bg-white rounded-[1.5rem] md:rounded-[2.5rem] overflow-hidden shadow-2xl border border-slate-200">
+                                        <div className="bg-slate-900 p-6 md:p-12 text-white relative">
+                                            <div className="absolute top-0 right-0 p-8 opacity-10 hidden md:block">
                                                 <GraduationCap className="w-48 h-48" />
                                             </div>
-                                            <div className="relative z-10 flex flex-col md:flex-row items-center gap-8">
-                                                <div className="w-32 h-32 bg-white rounded-3xl p-4 shadow-2xl flex items-center justify-center">
-                                                    <GraduationCap className="w-16 h-16 text-blue-600" />
+                                            <div className="relative z-10 flex flex-col md:flex-row items-center gap-6 md:gap-8 text-center md:text-left">
+                                                <div className="w-20 h-20 md:w-32 md:h-32 bg-white rounded-2xl md:rounded-3xl p-4 shadow-2xl flex items-center justify-center">
+                                                    <GraduationCap className="w-10 h-10 md:w-16 md:h-16 text-blue-600" />
                                                 </div>
-                                                <div className="space-y-4 text-center md:text-left">
-                                                    <h3 className="text-3xl md:text-5xl font-black uppercase tracking-tighter leading-none">
+                                                <div className="space-y-3 md:space-y-4">
+                                                    <h3 className="text-2xl md:text-5xl font-black uppercase tracking-tighter leading-tight md:leading-none">
                                                         {applicationDetails.scholarships?.universities?.name}
                                                     </h3>
-                                                    <div className="flex items-center justify-center md:justify-start gap-4 text-white/60 font-bold uppercase tracking-widest text-xs">
-                                                        <span className="flex items-center gap-2"><MapPin className="w-4 h-4" />{applicationDetails.scholarships?.universities?.location}</span>
-                                                        <span className="flex items-center gap-2"><Clock className="w-4 h-4" />{format(new Date(applicationDetails.created_at), 'dd/MM/yyyy')}</span>
+                                                    <div className="flex flex-wrap items-center justify-center md:justify-start gap-3 md:gap-4 text-white/60 font-bold uppercase tracking-widest text-[9px] md:text-xs">
+                                                        <span className="flex items-center gap-1.5 md:gap-2"><MapPin className="w-3.5 h-3.5 md:w-4 md:h-4" />{applicationDetails.scholarships?.universities?.location}</span>
+                                                        <span className="flex items-center gap-1.5 md:gap-2"><Clock className="w-3.5 h-3.5 md:w-4 md:h-4" />{format(new Date(applicationDetails.created_at), 'dd/MM/yyyy')}</span>
                                                     </div>
                                                 </div>
                                             </div>
                                         </div>
-                                        <div className="p-8 md:p-12 grid grid-cols-1 md:grid-cols-2 gap-12 border-b border-slate-100">
+                                        <div className="p-6 md:p-12 grid grid-cols-1 md:grid-cols-2 gap-8 md:gap-12 border-b border-slate-100">
                                             <div className="space-y-8">
                                                 <div>
-                                                    <h4 className="text-xs font-black text-slate-400 uppercase tracking-widest mb-4">{t('studentDashboard.myApplicationStep.details.scholarshipInfo')}</h4>
+                                                    <h4 className="text-xs font-black text-slate-400 uppercase tracking-widest mb-4">{t('dashboard:studentDashboard.myApplicationStep.details.scholarshipInfo')}</h4>
                                                     <div className="bg-slate-50 p-6 rounded-2xl space-y-4">
-                                                        <div className="flex justify-between font-bold"><span>{t('studentDashboard.myApplicationStep.details.program')}</span><span className="text-blue-600 uppercase">{applicationDetails.scholarships?.degree_type}</span></div>
-                                                        <div className="flex justify-between font-bold"><span>{t('scholarships:scholarshipsPage.labels.amount')}</span><span className="text-emerald-600">${applicationDetails.scholarships?.amount}</span></div>
+                                                        <div className="flex justify-between font-bold"><span>{t('dashboard:studentDashboard.myApplicationStep.details.program')}</span><span className="text-blue-600 uppercase">{applicationDetails.scholarships?.degree_type}</span></div>
+                                                            <div className="flex justify-between font-bold"><span>{t('scholarships:scholarships.amount')}</span><span className="text-emerald-600">{formatFeeAmount(scholarshipAmount)}</span></div>
+                                                            {applicationDetails.scholarships?.application_fee_amount != null && (
+                                                                <div className="flex justify-between font-semibold text-sm"><span>{t('scholarships:scholarshipsPage.scholarshipCard.applicationFee')}</span><span className="text-blue-600">{formatFeeAmount(getFeeAmount('application_fee', applicationDetails.scholarships.application_fee_amount))}</span></div>
+                                                            )}
+                                                            {applicationDetails.scholarships?.placement_fee_amount != null && (
+                                                                <div className="flex justify-between font-semibold text-sm"><span>{t('scholarships:scholarshipsPage.scholarshipCard.placementFee')}</span><span className="text-blue-600">{formatFeeAmount(getFeeAmount('placement_fee', applicationDetails.scholarships.placement_fee_amount))}</span></div>
+                                                            )}
+                                                            {Array.isArray(applicationDetails.scholarships?.internal_fees) && applicationDetails.scholarships.internal_fees.length > 0 && (
+                                                                <div className="space-y-1">
+                                                                    <span className="block text-xs text-slate-500 uppercase tracking-widest">{t('scholarships:scholarshipsPage.modal.internalFeesTitle', 'Internal fees')}</span>
+                                                                    {applicationDetails.scholarships.internal_fees.map((fee: any, idx: number) => (
+                                                                        <div key={idx} className="flex justify-between text-sm"><span>{fee.category || fee.name}</span><span>{formatFeeAmount(Number(fee.amount))}</span></div>
+                                                                    ))}
+                                                                </div>
+                                                            )}
                                                     </div>
                                                 </div>
                                             </div>
                                             <div className="space-y-8">
                                                 <div>
-                                                    <h4 className="text-xs font-black text-slate-400 uppercase tracking-widest mb-4">{t('studentDashboard.myApplicationStep.details.institution.details')}</h4>
+                                                    <h4 className="text-xs font-black text-slate-400 uppercase tracking-widest mb-4">{t('dashboard:studentDashboard.myApplicationStep.details.institution.details')}</h4>
                                                     <div className="bg-slate-50 p-6 rounded-2xl space-y-4 font-bold text-sm">
                                                         <div className="flex items-center gap-3"><Mail className="w-4 h-4 text-slate-400" />{applicationDetails.scholarships?.universities?.contact?.email}</div>
                                                         <div className="flex items-center gap-3"><Globe className="w-4 h-4 text-slate-400" />{applicationDetails.scholarships?.universities?.website}</div>
@@ -566,18 +760,28 @@ export const UniversityDocumentsStep: React.FC<StepProps> = ({ onBack }) => {
                                         </div>
 
                                         {/* Status da Carta (Integrado) */}
-                                        <div className="p-12 text-center">
-                                            <div className="w-20 h-20 bg-emerald-50 rounded-full flex items-center justify-center mx-auto mb-6">
-                                                <Award className={`w-10 h-10 ${applicationDetails?.acceptance_letter_url ? 'text-emerald-500' : 'text-slate-300'}`} />
+                                        <div className="p-8 md:p-12 text-center">
+                                            <div className="w-16 h-16 md:w-20 md:h-20 bg-emerald-50 rounded-full flex items-center justify-center mx-auto mb-4 md:mb-6">
+                                                <Award className={`w-8 h-8 md:w-10 md:h-10 ${applicationDetails?.acceptance_letter_url ? 'text-emerald-500' : 'text-slate-300'}`} />
                                             </div>
-                                            <h3 className="text-2xl font-black uppercase tracking-tight mb-4">{t('studentDashboard.myApplicationStep.tabs.acceptanceLetter')}</h3>
+                                            <h3 className="text-xl md:text-2xl font-black uppercase tracking-tight mb-3 md:mb-4">{t('dashboard:studentDashboard.myApplicationStep.tabs.acceptanceLetter')}</h3>
                                             
                                             {applicationDetails?.acceptance_letter_url ? (
                                                 <div className="space-y-6">
-                                                    <p className="text-emerald-600 font-bold">{t('dashboard:studentDashboard.myApplicationStep.welcome.documentAvailable')}</p>
-                                                    <a href={applicationDetails.acceptance_letter_url} target="_blank" rel="noreferrer" className="inline-flex items-center gap-2 px-8 py-4 bg-emerald-600 text-white rounded-xl font-black uppercase tracking-widest hover:bg-emerald-700 transition-all shadow-lg hover:rotate-1">
+                                                    <p
+                                                        className="text-emerald-600 font-bold cursor-pointer hover:underline"
+                                                        role="button"
+                                                        title={t('dashboard:studentDashboard.myApplicationStep.welcome.documentAvailable')}
+                                                        onClick={() => handleViewDocument(applicationDetails.acceptance_letter_url)}
+                                                    >
+                                                        {t('dashboard:studentDashboard.myApplicationStep.welcome.documentAvailableAction')}
+                                                    </p>
+                                                    <button
+                                                        onClick={() => handleDownloadDocument(applicationDetails.acceptance_letter_url, 'acceptance_letter.pdf')}
+                                                        className="inline-flex items-center gap-2 px-8 py-4 bg-emerald-600 text-white rounded-xl font-black uppercase tracking-widest hover:bg-emerald-700 transition-all shadow-lg hover:rotate-1"
+                                                    >
                                                         <Download className="w-5 h-5" /> {t('common:labels.download')}
-                                                    </a>
+                                                    </button>
                                                 </div>
                                             ) : (
                                                 <div className="max-w-md mx-auto p-6 bg-slate-50 rounded-2xl border border-dashed border-slate-300">
