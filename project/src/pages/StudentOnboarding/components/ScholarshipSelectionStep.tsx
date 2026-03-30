@@ -456,6 +456,12 @@ export const ScholarshipSelectionStep: React.FC<StepProps> = ({ onNext, onBack: 
     const isSelected = selectedIds.has(scholarship.id);
     console.log('🔄 [ScholarshipSelection] Toggling scholarship:', scholarship.id, 'isSelected:', isSelected);
 
+    // Bloquear se tentar adicionar mais de 4 bolsas
+    if (!isSelected && selectedIds.size >= 4) {
+      alert('Você atingiu o limite máximo de 4 bolsas de estudo selecionadas.');
+      return;
+    }
+
     try {
       // Marcar que estamos fazendo uma atualização manual
       isManuallyUpdatingRef.current = true;
@@ -1054,6 +1060,7 @@ export const ScholarshipSelectionStep: React.FC<StepProps> = ({ onNext, onBack: 
                   key={`scholarship-${scholarship.id}`}
                   scholarship={scholarship}
                   isSelected={selectedIds.has(String(scholarship.id))}
+                  isLimitReached={selectedIds.size >= 4}
                   onToggle={() => toggleSelection(scholarship)}
                   userProfile={userProfile}
                   isLocked={isLocked}

@@ -381,5 +381,25 @@
       "verifying": "Verificando Tarifa de Control I-20...",
       "pleaseWait": "Estamos procesando su pago. Por favor, no cierre esta página."
     }
+  },
+  "labels": {
+    "clickToAccess": "Haz clic para acceder",
+    "continue": "Continuar",
+    "loading": "Cargando...",
+    "back": "Volver",
+    "download": "Descargar"
+  },
+  "errors": {
+    "unexpected": "Ocurrió un error inesperado. Por favor, inténtalo de nuevo."
+  },
+  "status": {
+    "under_review": "En Revisión",
+    "action_required": "Acción Requerida",
+    "approved": "Aprobado",
+    "blocked": "Bloqueado",
+    "rejected": "Rechazado",
+    "completed": "Completado",
+    "waiting_acceptance": "Esperando Carta de Aceptación",
+    "loading": "Cargando..."
   }
 }

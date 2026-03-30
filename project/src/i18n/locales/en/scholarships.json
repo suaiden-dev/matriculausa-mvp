@@ -80,6 +80,9 @@
       "notAvailable": "Sold out",
       "placementFee": "Placement Fee"
     },
+    "labels": {
+      "amount": "Amount"
+    },
     "noResults": {
       "title": "No scholarships found",
       "description": "Try adjusting your search criteria to discover more opportunities",

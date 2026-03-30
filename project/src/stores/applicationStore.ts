@@ -168,6 +168,12 @@ export const useCartStore = create<CartState>((set, get) => ({
       return;
     }
 
+    // Verificar limite máximo de 4 bolsas
+    if (cart.length >= 4) {
+      alert('Você atingiu o limite máximo de 4 bolsas de estudo selecionadas.');
+      return;
+    }
+
     // Verificar se a bolsa está ativa antes de adicionar ao carrinho
     if (!scholarship.is_active) {
       alert('Esta bolsa não está mais aceitando aplicações.');
