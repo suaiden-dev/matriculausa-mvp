@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { Link, useLocation } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
-import { Mail, Lock, User, Building, GraduationCap, CheckCircle, X, Gift, ChevronDown, Eye, EyeOff } from 'lucide-react';
+import { Mail, Lock, User, Building, GraduationCap, CheckCircle, X, Gift, ChevronDown, Eye, EyeOff, AlertCircle } from 'lucide-react';
 import { useAuth } from '../hooks/useAuth';
 
 import { supabase } from '../lib/supabase';
@@ -745,7 +745,12 @@ const Auth: React.FC<AuthProps> = ({ mode }) => {
 
         {/* Form Container */}
         <div className="bg-slate-50 rounded-2xl sm:rounded-3xl p-4 sm:p-6 lg:p-8 shadow-lg border border-slate-200 mx-4 sm:mx-0">
-          {error && (
+          {error && 
+            error !== t('authPage.messages.invalidDependents') && 
+            error !== t('authPage.messages.passwordsNotMatch') && 
+            error !== t('authPage.messages.invalidPasswordChars') && 
+            error !== t('authPage.messages.weakPassword') && 
+            error !== t('authPage.messages.invalidPhone') && (
             <div className="bg-red-50 border border-red-200 text-red-700 px-4 py-3 rounded-2xl text-sm mb-6">
               <div className="font-medium text-red-800 mb-1">{t('authPage.messages.registrationFailed')}</div>
               {error}
@@ -826,9 +831,19 @@ const Auth: React.FC<AuthProps> = ({ mode }) => {
                           '--PhoneInput-color--focus': '#05294E'
                         }}
                         maxLength={20}
-                        className="phone-input-custom w-full pl-4 pr-4 py-3 sm:py-4 bg-white border border-slate-300 placeholder-slate-500 text-slate-900 rounded-2xl transition-all duration-300 text-sm sm:text-base"
+                        className={`phone-input-custom w-full pl-4 pr-4 py-3 sm:py-4 bg-white border placeholder-slate-500 text-slate-900 rounded-2xl transition-all duration-300 text-sm sm:text-base ${
+                          error === t('authPage.messages.invalidPhone') 
+                            ? 'border-red-500 ring-2 ring-red-500/10' 
+                            : 'border-slate-300'
+                        }`}
                         placeholder={t('authPage.register.enterPhone')}
                       />
+                      {error === t('authPage.messages.invalidPhone') && (
+                        <div className="mt-2 flex items-center text-red-500 text-xs font-bold animate-in fade-in slide-in-from-top-1 duration-200">
+                          <AlertCircle className="h-3.5 w-3.5 mr-1.5 flex-shrink-0" />
+                          <span>{error}</span>
+                        </div>
+                      )}
                     </div>
                   </div>
 
@@ -845,7 +860,11 @@ const Auth: React.FC<AuthProps> = ({ mode }) => {
                         required
                         value={formData.password || ''}
                         onChange={handleInputChange}
-                        className="w-full pl-12 pr-12 py-3 sm:py-4 bg-white border border-slate-300 placeholder-slate-500 text-slate-900 rounded-2xl focus:outline-none focus:ring-2 focus:ring-[#05294E] focus:border-[#05294E] transition-all duration-300 text-sm sm:text-base outline-none"
+                        className={`w-full pl-12 pr-12 py-3 sm:py-4 bg-white border placeholder-slate-500 text-slate-900 rounded-2xl focus:outline-none focus:ring-2 transition-all duration-300 text-sm sm:text-base outline-none ${
+                          error === t('authPage.messages.invalidPasswordChars') || error === t('authPage.messages.weakPassword')
+                            ? 'border-red-500 focus:ring-red-500 focus:border-red-500'
+                            : 'border-slate-300 focus:ring-[#05294E] focus:border-[#05294E]'
+                        }`}
                         placeholder={t('authPage.register.createPassword')}
                         autoComplete="new-password"
                       />
@@ -857,6 +876,12 @@ const Auth: React.FC<AuthProps> = ({ mode }) => {
                         {showPassword ? <EyeOff className="h-5 w-5" /> : <Eye className="h-5 w-5" />}
                       </button>
                     </div>
+                    {(error === t('authPage.messages.invalidPasswordChars') || error === t('authPage.messages.weakPassword')) && (
+                      <div className="mt-2 flex items-center text-red-500 text-xs font-bold animate-in fade-in slide-in-from-top-1 duration-200">
+                        <AlertCircle className="h-3.5 w-3.5 mr-1.5 flex-shrink-0" />
+                        <span>{error}</span>
+                      </div>
+                    )}
                   </div>
 
                   <div className="lg:col-span-1">
@@ -872,7 +897,11 @@ const Auth: React.FC<AuthProps> = ({ mode }) => {
                         required
                         value={formData.confirmPassword || ''}
                         onChange={handleInputChange}
-                        className="w-full pl-12 pr-12 py-3 sm:py-4 bg-white border border-slate-300 placeholder-slate-500 text-slate-900 rounded-2xl focus:outline-none focus:ring-2 focus:ring-[#05294E] focus:border-[#05294E] transition-all duration-300 text-sm sm:text-base outline-none"
+                        className={`w-full pl-12 pr-12 py-3 sm:py-4 bg-white border placeholder-slate-500 text-slate-900 rounded-2xl focus:outline-none focus:ring-2 transition-all duration-300 text-sm sm:text-base outline-none ${
+                          error === t('authPage.messages.passwordsNotMatch')
+                            ? 'border-red-500 focus:ring-red-500 focus:border-red-500'
+                            : 'border-slate-300 focus:ring-[#05294E] focus:border-[#05294E]'
+                        }`}
                         placeholder={t('authPage.register.confirmYourPassword')}
                         autoComplete="new-password"
                       />
@@ -884,6 +913,12 @@ const Auth: React.FC<AuthProps> = ({ mode }) => {
                         {showConfirmPassword ? <EyeOff className="h-5 w-5" /> : <Eye className="h-5 w-5" />}
                       </button>
                     </div>
+                    {error === t('authPage.messages.passwordsNotMatch') && (
+                      <div className="mt-2 flex items-center text-red-500 text-xs font-bold animate-in fade-in slide-in-from-top-1 duration-200">
+                        <AlertCircle className="h-3.5 w-3.5 mr-1.5 flex-shrink-0" />
+                        <span>{error}</span>
+                      </div>
+                    )}
                   </div>
 
                   <div className="lg:col-span-1">
@@ -970,7 +1005,11 @@ const Auth: React.FC<AuthProps> = ({ mode }) => {
                             const val = e.target.value === '' ? null : parseInt(e.target.value);
                             setFormData(prev => ({ ...prev, dependents: val }));
                           }}
-                          className="appearance-none relative block w-full pl-12 pr-12 py-3 sm:py-4 bg-white border border-slate-300 text-slate-900 rounded-2xl focus:outline-none focus:ring-2 focus:ring-[#05294E] focus:border-[#05294E] transition-all duration-300 text-sm sm:text-base cursor-pointer outline-none"
+                          className={`appearance-none relative block w-full pl-12 pr-12 py-3 sm:py-4 bg-white border text-slate-900 rounded-2xl focus:outline-none focus:ring-2 transition-all duration-300 text-sm sm:text-base cursor-pointer outline-none ${
+                            error === t('authPage.messages.invalidDependents')
+                              ? 'border-red-500 focus:ring-red-500 focus:border-red-500'
+                              : 'border-slate-300 focus:ring-[#05294E] focus:border-[#05294E]'
+                          }`}
                         >
                           <option value="" disabled>{t('authPage.register.selectDependents')}</option>
                           <option value={0}>0 {t('authPage.register.dependentsLabel')}</option>
@@ -980,7 +1019,13 @@ const Auth: React.FC<AuthProps> = ({ mode }) => {
                           <option value={4}>4 {t('authPage.register.dependentsLabel')}</option>
                           <option value={5}>5 {t('authPage.register.dependentsLabel')}</option>
                         </select>
-                </div>
+                        {error === t('authPage.messages.invalidDependents') && (
+                          <div className="mt-2 flex items-center text-red-500 text-xs font-bold animate-in fade-in slide-in-from-top-1 duration-200">
+                            <AlertCircle className="h-3.5 w-3.5 mr-1.5 flex-shrink-0" />
+                            <span>{error}</span>
+                          </div>
+                        )}
+                      </div>
               </div>
             )}
 
@@ -1082,9 +1127,19 @@ const Auth: React.FC<AuthProps> = ({ mode }) => {
                           '--PhoneInput-color--focus': '#D0151C'
                         }}
                         maxLength={20}
-                        className="phone-input-custom university w-full pl-4 pr-4 py-3 sm:py-4 bg-white border border-slate-300 placeholder-slate-500 text-slate-900 rounded-2xl transition-all duration-300 text-sm sm:text-base"
+                        className={`phone-input-custom university w-full pl-4 pr-4 py-3 sm:py-4 bg-white border placeholder-slate-500 text-slate-900 rounded-2xl transition-all duration-300 text-sm sm:text-base ${
+                          error === t('authPage.messages.invalidPhone') 
+                            ? 'border-red-500 ring-2 ring-red-500/10' 
+                            : 'border-slate-300'
+                        }`}
                         placeholder={t('authPage.register.enterContactPhone')}
                       />
+                      {error === t('authPage.messages.invalidPhone') && (
+                        <div className="mt-2 flex items-center text-red-500 text-xs font-bold animate-in fade-in slide-in-from-top-1 duration-200">
+                          <AlertCircle className="h-3.5 w-3.5 mr-1.5 flex-shrink-0" />
+                          <span>{error}</span>
+                        </div>
+                      )}
                     </div>
                   </div>
 
@@ -1101,7 +1156,11 @@ const Auth: React.FC<AuthProps> = ({ mode }) => {
                         required
                         value={formData.password || ''}
                         onChange={handleInputChange}
-                        className="w-full pl-12 pr-12 py-3 sm:py-4 bg-white border border-slate-300 placeholder-slate-500 text-slate-900 rounded-2xl focus:outline-none focus:ring-2 focus:ring-[#D0151C] focus:border-[#D0151C] transition-all duration-300 text-sm sm:text-base outline-none"
+                        className={`w-full pl-12 pr-12 py-3 sm:py-4 bg-white border placeholder-slate-500 text-slate-900 rounded-2xl focus:outline-none focus:ring-2 transition-all duration-300 text-sm sm:text-base outline-none ${
+                          error === t('authPage.messages.invalidPasswordChars') || error === t('authPage.messages.weakPassword')
+                            ? 'border-red-500 focus:ring-red-500 focus:border-red-500'
+                            : 'border-slate-300 focus:ring-[#D0151C] focus:border-[#D0151C]'
+                        }`}
                         placeholder={t('authPage.register.createPassword')}
                         autoComplete="new-password"
                       />
@@ -1113,6 +1172,12 @@ const Auth: React.FC<AuthProps> = ({ mode }) => {
                         {showPassword ? <EyeOff className="h-5 w-5" /> : <Eye className="h-5 w-5" />}
                       </button>
                     </div>
+                    {(error === t('authPage.messages.invalidPasswordChars') || error === t('authPage.messages.weakPassword')) && (
+                      <div className="mt-2 flex items-center text-red-500 text-xs font-bold animate-in fade-in slide-in-from-top-1 duration-200">
+                        <AlertCircle className="h-3.5 w-3.5 mr-1.5 flex-shrink-0" />
+                        <span>{error}</span>
+                      </div>
+                    )}
                   </div>
 
                   <div className="lg:col-span-1">
@@ -1128,7 +1193,11 @@ const Auth: React.FC<AuthProps> = ({ mode }) => {
                         required
                         value={formData.confirmPassword || ''}
                         onChange={handleInputChange}
-                        className="w-full pl-12 pr-12 py-3 sm:py-4 bg-white border border-slate-300 placeholder-slate-500 text-slate-900 rounded-2xl focus:outline-none focus:ring-2 focus:ring-[#D0151C] focus:border-[#D0151C] transition-all duration-300 text-sm sm:text-base outline-none"
+                        className={`w-full pl-12 pr-12 py-3 sm:py-4 bg-white border placeholder-slate-500 text-slate-900 rounded-2xl focus:outline-none focus:ring-2 transition-all duration-300 text-sm sm:text-base outline-none ${
+                          error === t('authPage.messages.passwordsNotMatch')
+                            ? 'border-red-500 focus:ring-red-500 focus:border-red-500'
+                            : 'border-slate-300 focus:ring-[#D0151C] focus:border-[#D0151C]'
+                        }`}
                         placeholder={t('authPage.register.confirmYourPassword')}
                         autoComplete="new-password"
                       />
@@ -1140,6 +1209,12 @@ const Auth: React.FC<AuthProps> = ({ mode }) => {
                         {showConfirmPassword ? <EyeOff className="h-5 w-5" /> : <Eye className="h-5 w-5" />}
                       </button>
                     </div>
+                    {error === t('authPage.messages.passwordsNotMatch') && (
+                      <div className="mt-2 flex items-center text-red-500 text-xs font-bold animate-in fade-in slide-in-from-top-1 duration-200">
+                        <AlertCircle className="h-3.5 w-3.5 mr-1.5 flex-shrink-0" />
+                        <span>{error}</span>
+                      </div>
+                    )}
                   </div>
                 </div>
               </>

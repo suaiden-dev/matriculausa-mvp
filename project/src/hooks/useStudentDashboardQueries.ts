@@ -363,6 +363,50 @@ export function useIdentityPhotoStatusQuery(userId?: string) {
 }
 
 /**
+ * Hook para buscar TODAS as scholarships (incluindo inativas)
+ * Usado no ScholarshipSelectionStep onde estudantes precisam ver bolsas inativas (com aviso de bloqueio).
+ * Cache: 10 minutos
+ */
+export function useAllScholarshipsQuery() {
+  return useQuery({
+    queryKey: [...queryKeys.studentDashboard.scholarships.list(), 'all'] as const,
+    queryFn: async () => {
+      const cached = requestCache.get('scholarships_list_all');
+      if (cached) return cached;
+
+      const { data, error } = await supabase
+        .from('scholarships')
+        .select(`
+          *,
+          universities (
+            id,
+            name,
+            logo_url,
+            image_url,
+            location,
+            is_approved,
+            university_fees_page_url
+          )
+        `)
+        .order('created_at', { ascending: false });
+
+      if (error) {
+        console.error('[useAllScholarshipsQuery] Erro:', error);
+        return [];
+      }
+
+      const scholarships = data || [];
+      requestCache.set('scholarships_list_all', scholarships, undefined, 10 * 60 * 1000);
+      return scholarships;
+    },
+    staleTime: 10 * 60 * 1000,
+    gcTime: 15 * 60 * 1000,
+    refetchOnWindowFocus: false,
+    refetchOnMount: false,
+  });
+}
+
+/**
  * Hook para buscar scholarships disponíveis
  * Cache: 10 minutos (dados estáveis)
  */
