@@ -3626,13 +3626,25 @@ const AdminStudentDetails: React.FC = () => {
                 return path && String(path).trim() !== '';
               });
 
-              // Fallback: se não encontrar por caminho, usar o primeiro checkout_terms disponível
+              // Fallback 1: se não encontrar por caminho, usar o primeiro checkout_terms disponível
               if (!identityPhotoAcceptance && checkoutTermsAcceptances.length > 0) {
                 console.log('ℹ️ [AdminStudentDetails] identityPhotoAcceptance não encontrada por path — usando primeiro checkout_terms como fallback');
                 identityPhotoAcceptance = checkoutTermsAcceptances[0];
               }
 
-              if (termAcceptances.length > 0 || checkoutTermsAcceptances.length > 0) {
+              // Fallback 2: usuários novos podem ter a foto salva em outros term_types (terms_of_service, privacy_policy).
+              // Isso ocorre quando o UPDATE no IdentityVerificationStep atualiza registros existentes antes de existir um checkout_terms.
+              if (!identityPhotoAcceptance) {
+                identityPhotoAcceptance = combinedTermAcceptances.find((acc: any) => {
+                  const path = acc.identity_photo_path || acc.identity_photo || acc.photo_path || null;
+                  return path && String(path).trim() !== '';
+                });
+                if (identityPhotoAcceptance) {
+                  console.log('ℹ️ [AdminStudentDetails] Foto encontrada em registro não-checkout_terms:', identityPhotoAcceptance.term_type);
+                }
+              }
+
+              if (termAcceptances.length > 0 || combinedTermAcceptances.length > 0) {
                 // Debug logs (useful during local development)
                 console.log('🔍 [AdminStudentDetails] checkoutTermsAcceptances:', checkoutTermsAcceptances);
                 console.log('🔍 [AdminStudentDetails] identityPhotoAcceptance:', identityPhotoAcceptance);
