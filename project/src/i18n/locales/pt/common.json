@@ -156,7 +156,15 @@
     "back": "Voltar",
     "next": "Próximo",
     "saving": "Salvando...",
-    "finish": "Finalizar"
+    "finish": "Finalizar",
+    "status": {
+      "completed": "Concluído",
+      "action_required": "Ação Requerida",
+      "under_review": "Em Análise",
+      "approved": "Aprovado",
+      "rejected": "Rejeitado",
+      "blocked": "Bloqueado"
+    }
   },
   "connectors": {
     "and": " e ",
@@ -334,5 +342,19 @@
       "verifying": "Verificando Taxa de Controle I-20...",
       "pleaseWait": "Estamos processando seu pagamento. Por favor, não feche esta página."
     }
+  },
+  "labels": {
+    "clickToAccess": "Clique para acessar",
+    "continue": "Continuar"
+  },
+  "status": {
+    "under_review": "Em Análise",
+    "action_required": "Ação Necessária",
+    "approved": "Aprovado",
+    "blocked": "Bloqueado",
+    "rejected": "Rejeitado",
+    "completed": "Concluído",
+    "waiting_acceptance": "Aguardando Carta de Aceite",
+    "loading": "Carregando..."
   }
 }

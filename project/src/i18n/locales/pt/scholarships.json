@@ -81,6 +81,9 @@
       "notAvailable": "Esgotada",
       "placementFee": "Taxa de Colocação"
     },
+    "labels": {
+      "amount": "Valor"
+    },
     "noResults": {
       "title": "Nenhuma bolsa encontrada",
       "description": "Tente ajustar seus critérios de busca para descobrir mais oportunidades",
@@ -159,7 +162,7 @@
   "scholarshipSelection": {
     "header": {
       "title": "Escolha de Bolsas",
-      "subtitle": "Navegue pelas bolsas e selecione quais gostaria de se matricular. É necessário escolher ao menos uma para prosseguir."
+      "subtitle": "Navegue pelas bolsas e selecione quais gostaria de se matricular (máximo de 4). É necessário escolher ao menos uma para prosseguir."
     },
     "errors": {
       "loadError": "Erro ao carregar bolsas. Tente novamente.",
@@ -238,7 +241,7 @@
       "title": "Guia rápido:",
       "step1": "<strong>Use filtros</strong> para buscar por universidade ou valor da bolsa",
       "step2": "<strong>Clique em qualquer card de bolsa</strong> para adicioná-lo à sua seleção",
-      "step3": "<strong>Selecione quantas quiser</strong> - você pode escolher múltiplas opções",
+      "step3": "<strong>Selecione até 4 bolsas</strong> - você pode escolher até 4 opções simultaneamente",
       "step4": "<strong>Clique em \"Continuar\"</strong> após selecionar ao menos uma bolsa"
     },
     "continueWithCount": "Continuar ({{count}} selecionada)",
