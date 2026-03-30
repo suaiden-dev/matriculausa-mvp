@@ -142,7 +142,7 @@ export const PaymentStep: React.FC<StepProps> = ({ onNext, onBack }) => {
     } finally {
       setLoading(false);
     }
-  }, [userProfile?.id, applications.length]);
+  }, [userProfile?.id]);
 
   useEffect(() => {
     fetchApplications();

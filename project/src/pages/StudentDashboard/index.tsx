@@ -1,10 +1,8 @@
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useEffect } from 'react';
 import { Routes, Route } from 'react-router-dom';
-import { supabase } from '../../lib/supabase';
-import { Scholarship } from '../../types';
 import { useAuth } from '../../hooks/useAuth';
 import { useQueryClient } from '@tanstack/react-query';
-import { setupCacheInvalidationListener, CacheInvalidationEvent } from '../../utils/cacheInvalidation';
+import { setupCacheInvalidationListener } from '../../utils/cacheInvalidation';
 
 import StudentDashboardLayout from './StudentDashboardLayout';
 import Overview from './Overview';
@@ -33,234 +31,35 @@ import { ZelleCheckoutPage } from '../../components/ZelleCheckoutPage';
 import I20ControlFeeSuccess from './I20ControlFeeSuccess';
 import I20ControlFeeError from './I20ControlFeeError';
 import IdentityVerification from './IdentityVerification';
-interface StudentProfile {
-  id: string;
-  name: string;
-  email: string;
-  phone?: string;
-  country?: string;
-  field_of_interest?: string;
-  academic_level?: string;
-  gpa?: number;
-  english_proficiency?: string;
-  cpf_document?: string;
-  created_at: string;
-  updated_at: string;
-  selection_process_fee_paid?: boolean;
-  selection_process_paid_at?: string | null;
-  selection_survey_passed?: boolean;
-}
-
-interface Application {
-  id: string;
-  scholarship_id: string;
-  student_id: string;
-  status: 'pending' | 'approved' | 'rejected' | 'under_review' | 'enrolled';
-  applied_at: string;
-  notes?: string;
-  scholarship?: Scholarship;
-}
 
 const StudentDashboard: React.FC = () => {
   const queryClient = useQueryClient();
-  const [scholarships, setScholarships] = useState<Scholarship[]>([]);
-  const [applications, setApplications] = useState<Application[]>([]);
-  const [profile, setProfile] = useState<StudentProfile | null>(null);
-  const { user, userProfile } = useAuth();
-  const [dashboardLoading, setDashboardLoading] = useState(true);
-  const [hasLoadedData, setHasLoadedData] = useState(false);
+  const { user } = useAuth();
   const { fetchCart } = useCartStore();
-  const [dashboardError, setDashboardError] = useState<string | null>(null);
-  const [recentApplications, setRecentApplications] = useState<Application[]>([]);
 
-
-
-
-  // Fase 5: Referral Code System
+  // Referral Code System
   const {
     hasUsedReferralCode,
     applyReferralCodeFromURL,
     loading: referralLoading
   } = useReferralCode();
-  const [showCongratulationsModal, setShowCongratulationsModal] = useState(false);
-  const [referralResult, setReferralResult] = useState<any>(null);
+  const [showCongratulationsModal, setShowCongratulationsModal] = React.useState(false);
+  const [referralResult, setReferralResult] = React.useState<any>(null);
 
-  const loadDashboardData = useCallback(async () => {
-    console.log('🔄 [Dashboard Index] loadDashboardData iniciado. Contexto:', { 
-      hasUser: !!user, 
-      hasUserProfile: !!userProfile, 
-      userId: user?.id,
-      hasLoadedData 
-    });
-
-    try {
-      if (!hasLoadedData) {
-        console.log('⏳ [Dashboard Index] Definindo dashboardLoading = true');
-        setDashboardLoading(true);
-      }
-      setDashboardError(null);
-
-      if (!user || !userProfile) {
-        console.warn('⚠️ [Dashboard Index] user ou userProfile nulos. Aguardando autenticação...');
-        // Se ainda não temos usuário, não marcamos como erro, apenas esperamos o próximo render
-        return;
-      }
-
-      console.log('📡 [Dashboard Index] Buscando bolsas e dados da sessão...');
-      const { data: sessionData } = await supabase.auth.getSession();
-      const userId = sessionData?.session?.user?.id;
-      if (!userId) {
-        setScholarships([]);
-        setDashboardError('Usuário não autenticado');
-      } else {
-        const { data: realScholarships, error: scholarshipsError } = await supabase
-          .from('scholarships')
-          .select(`
-            id,
-            title,
-            description,
-            amount,
-            deadline,
-            requirements,
-            field_of_study,
-            level,
-            delivery_mode,
-            eligibility,
-            benefits,
-            is_exclusive,
-            is_active,
-            university_id,
-            created_at,
-            updated_at,
-            needcpt,
-            visaassistance,
-            scholarshipvalue,
-            image_url,
-            original_value_per_credit,
-            original_annual_value,
-            annual_value_with_scholarship,
-            scholarship_type,
-            work_permissions,
-            application_fee_amount,
-            internal_fees,
-            universities (id, name, logo_url, location, is_approved, university_fees_page_url)
-          `);
-        // Removido filtro is_active=true - estudantes podem ver bolsas inativas mas não podem aplicar
-
-        if (scholarshipsError) {
-          setScholarships([]);
-          setDashboardError('Error fetching scholarships.');
-        } else {
-          // Ajustar formato casando com o tipo Scholarship (universities no plural para objeto singular)
-          const formattedScholarships = (realScholarships || []).map((s: any) => ({
-            ...s,
-            universities: Array.isArray(s.universities) ? s.universities[0] : s.universities
-          })) as Scholarship[];
-          setScholarships(formattedScholarships);
-        }
-      }
-      // Buscar applications reais do Supabase
-      const { data: applicationsData, error: applicationsError } = await supabase
-        .from('scholarship_applications')
-        .select(`*,scholarship:scholarships(*,universities!inner(id, name, logo_url, location, is_approved, university_fees_page_url))`)
-        .eq('student_id', userProfile.id);
-      if (applicationsError) {
-        setApplications([]);
-        setDashboardError('Error fetching applications.');
-      } else {
-        // Normalizar dados da universidade (garantir que seja objeto, não array)
-        const formattedApplications = (applicationsData || []).map((app: any) => {
-          const scholarship = app.scholarship || app.scholarships;
-          if (scholarship && Array.isArray(scholarship.universities)) {
-            scholarship.universities = scholarship.universities[0];
-          }
-          return app;
-        }) as Application[];
-
-        setApplications(formattedApplications);
-        // Recentes: últimas 5
-        const sorted = [...formattedApplications].sort((a, b) => new Date(b.applied_at).getTime() - new Date(a.applied_at).getTime());
-        setRecentApplications(sorted.slice(0, 5));
-      }
-      // Buscar perfil real do Supabase
-      const { data: profileData, error } = await supabase
-        .from('user_profiles')
-        .select('*')
-        .eq('user_id', user.id)
-        .single();
-
-      console.log('🔍 [Dashboard Index] Raw Profile Data from DB:', profileData);
-
-      if (error) {
-        setProfile(null);
-        setDashboardError('Error fetching profile.');
-      } else if (profileData) {
-        const formattedProfile = {
-          id: profileData.id,
-          name: profileData.full_name || user.name || user.email?.split('@')[0] || '',
-          email: user.email,
-          phone: profileData.phone || '',
-          country: profileData.country || '',
-          field_of_interest: profileData.field_of_interest || '',
-          academic_level: profileData.academic_level || '',
-          gpa: profileData.gpa || 0,
-          english_proficiency: profileData.english_proficiency || '',
-          cpf_document: profileData.cpf_document || '',
-          created_at: profileData.created_at,
-          updated_at: profileData.updated_at,
-          selection_process_fee_paid: profileData.has_paid_selection_process_fee,
-          selection_process_paid_at: profileData.selection_process_paid_at,
-          selection_survey_passed: profileData.selection_survey_passed
-        };
-        console.log('🔍 [Dashboard Index] Formatted Profile State:', formattedProfile);
-        setProfile(formattedProfile);
-      }
-      console.log('✅ [Dashboard Index] Dados carregados com sucesso. hasLoadedData = true');
-      setHasLoadedData(true);
-    } catch (error) {
-      console.error('❌ [Dashboard Index] Erro ao carregar dados do dashboard:', error);
-      setDashboardError('Error loading dashboard data');
-    } finally {
-      console.log('🏁 [Dashboard Index] Finalizando carregamento. dashboardLoading = false');
-      setDashboardLoading(false);
-    }
-  }, [user, userProfile, hasLoadedData]);
-
-  // Setup cache invalidation listener
+  // Setup cache invalidation listener — invalida queries do React Query automaticamente
   useEffect(() => {
     const cleanup = setupCacheInvalidationListener(queryClient);
+    return () => { cleanup(); };
+  }, [queryClient]);
 
-    // Além de invalidar o React Query, forçar o recarregamento dos dados locais do dashboard
-    const handleInvalidation = (e: any) => {
-      const { event } = e.detail;
-      if (event === CacheInvalidationEvent.PROFILE_UPDATED || event === CacheInvalidationEvent.PAYMENT_COMPLETED) {
-        console.log('🔄 [Dashboard Index] Refreshing data due to cache invalidation event:', event);
-        loadDashboardData();
-      }
-    };
-
-    window.addEventListener('cache-invalidation', handleInvalidation as EventListener);
-
-    return () => {
-      cleanup();
-      window.removeEventListener('cache-invalidation', handleInvalidation as EventListener);
-    };
-  }, [queryClient, loadDashboardData]);
-
-  useEffect(() => {
-    if (user && userProfile && !hasLoadedData) {
-      loadDashboardData();
-    }
-  }, [user, userProfile, hasLoadedData]);
-
-  // Load cart from database when user is available
+  // Carregar carrinho quando usuário estiver disponível
   useEffect(() => {
     if (user?.id) {
       fetchCart(user.id);
     }
   }, [user?.id, fetchCart]);
 
-  // Fase 5: Aplicar código de referência da URL automaticamente
+  // Aplicar código de referência da URL automaticamente
   useEffect(() => {
     const applyReferralCode = async () => {
       if (user && !hasUsedReferralCode && !referralLoading) {
@@ -271,167 +70,20 @@ const StudentDashboard: React.FC = () => {
         }
       }
     };
-
     applyReferralCode();
   }, [user, hasUsedReferralCode, referralLoading, applyReferralCodeFromURL]);
 
-  const handleApplyScholarship = async (scholarshipId: string) => {
-    if (!user) return;
-
-    // Check if already applied
-    const alreadyApplied = applications.some(app => app.scholarship_id === scholarshipId);
-    if (alreadyApplied) {
-      alert('You have already applied for this scholarship');
-      return;
-    }
-
-    try {
-      // Mock application creation
-      const newApplication: Application = {
-        id: Date.now().toString(),
-        scholarship_id: scholarshipId,
-        student_id: user.id,
-        status: 'pending',
-        applied_at: new Date().toISOString(),
-        scholarship: scholarships.find(s => s.id === scholarshipId)
-      };
-
-      setApplications(prev => [...prev, newApplication]);
-      alert('Application submitted successfully!');
-    } catch (error) {
-      console.error('Error applying for scholarship:', error);
-      alert('Error submitting application. Please try again.');
-    }
-  };
-
-  const handleProfileUpdate = async (updatedData: Partial<StudentProfile>) => {
-    if (!user || !profile) return;
-
-    try {
-      // Atualiza no Supabase
-      const { error } = await supabase
-        .from('user_profiles')
-        .update({
-          full_name: updatedData.name,
-          phone: updatedData.phone,
-          country: updatedData.country,
-          field_of_interest: updatedData.field_of_interest,
-          academic_level: updatedData.academic_level,
-          // Envia null quando vazio; limita a 2 casas decimais para evitar overflow de precisão
-          gpa: updatedData.gpa === undefined ? null : updatedData.gpa,
-          english_proficiency: updatedData.english_proficiency,
-          cpf_document: (updatedData as any).cpf_document || null,
-          updated_at: new Date().toISOString()
-        })
-        .eq('user_id', user.id);
-
-      if (error) throw error;
-
-      // Atualiza localmente
-      const updatedProfile = {
-        ...profile,
-        ...updatedData,
-        updated_at: new Date().toISOString()
-      };
-      setProfile(updatedProfile);
-    } catch (error) {
-      console.error('Error updating profile:', error);
-      alert('Error updating profile. Please try again.');
-    }
-  };
-
-  // Calculate stats
-  const stats = {
-    totalApplications: applications.length,
-    approvedApplications: applications.filter(app => app.status === 'approved' || app.status === 'enrolled').length,
-    pendingApplications: applications.filter(app => app.status === 'pending' || app.status === 'under_review').length,
-    availableScholarships: scholarships.length
-  };
-
   return (
-    <StudentDashboardLayout user={user} profile={profile} loading={dashboardLoading}>
-      {/* Área de proteção para o botão foi removida */}
+    <StudentDashboardLayout>
       <Routes>
-        <Route
-          index
-          element={
-            dashboardLoading ? (
-              <div className="p-8 text-center text-lg text-slate-500">Loading dashboard...</div>
-            ) : dashboardError ? (
-              <div className="p-8 text-center text-red-500">{dashboardError}</div>
-            ) : (
-              <>
-                {console.log('🔍 [StudentDashboard] Renderizando Overview com stats:', stats)}
-                <Overview
-                  profile={profile}
-                  scholarships={scholarships}
-                  applications={applications}
-                  stats={stats}
-                  onApplyScholarship={handleApplyScholarship}
-                  recentApplications={recentApplications}
-                />
-              </>
-            )
-          }
-        />
-        <Route
-          path="overview"
-          element={
-            dashboardLoading ? (
-              <div className="p-8 text-center text-lg text-slate-500">Loading dashboard...</div>
-            ) : dashboardError ? (
-              <div className="p-8 text-center text-red-500">{dashboardError}</div>
-            ) : (
-              <>
-                {console.log('🔍 [StudentDashboard] Renderizando Overview (path) com stats:', stats)}
-                <Overview
-                  profile={profile}
-                  scholarships={scholarships}
-                  applications={applications}
-                  stats={stats}
-                  onApplyScholarship={handleApplyScholarship}
-                  recentApplications={recentApplications}
-                />
-              </>
-            )
-          }
-        />
+        <Route index element={<Overview />} />
+        <Route path="overview" element={<Overview />} />
         <Route path="cart" element={<CartPage />} />
-        <Route
-          path="scholarships"
-          element={
-            <ScholarshipBrowser
-              scholarships={scholarships}
-            />
-          }
-        />
-        <Route
-          path="applications"
-          element={
-            <MyApplications />
-          }
-        />
-        <Route
-          path="application/:applicationId/chat"
-          element={
-            <ApplicationChatPage />
-          }
-        />
-        <Route
-          path="chat"
-          element={
-            <StudentChatPage />
-          }
-        />
-        <Route
-          path="profile"
-          element={
-            <ProfileManagement
-              profile={profile}
-              onUpdateProfile={handleProfileUpdate}
-            />
-          }
-        />
+        <Route path="scholarships" element={<ScholarshipBrowser />} />
+        <Route path="applications" element={<MyApplications />} />
+        <Route path="application/:applicationId/chat" element={<ApplicationChatPage />} />
+        <Route path="chat" element={<StudentChatPage />} />
+        <Route path="profile" element={<ProfileManagement />} />
         <Route path="documents-and-scholarship-choice" element={<DocumentsAndScholarshipChoice />} />
         <Route path="college-enrollment-checkout" element={<CollegeEnrollmentCheckout />} />
         <Route path="/scholarship-fee-success" element={<ScholarshipFeeSuccess />} />
@@ -449,7 +101,6 @@ const StudentDashboard: React.FC = () => {
         <Route path="identity-verification" element={<IdentityVerification />} />
       </Routes>
 
-      {/* Fase 5: Modal de Parabéns para Código de Referência */}
       {referralResult && (
         <ReferralCongratulationsModal
           isOpen={showCongratulationsModal}

@@ -19,36 +19,27 @@ import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../../hooks/useAuth';
 import { useStepByStepGuide } from '../../hooks/useStepByStepGuide';
 import { useCartStore } from '../../stores/applicationStore';
-import { supabase } from '../../lib/supabase';
 import StepByStepGuide from '../../components/OnboardingTour/StepByStepGuide';
+import {
+  useStudentApplicationsQuery,
+  useStudentDocumentsQuery,
+  useScholarshipsQuery
+} from '../../hooks/useStudentDashboardQueries';
 
-import './Overview.css'; // Adicionar um arquivo de estilos dedicado para padronização visual
+import './Overview.css';
 
-interface OverviewProps {
-  profile: any;
-  scholarships: any[];
-  applications: any[];
-  stats: {
-    totalApplications: number;
-    approvedApplications: number;
-    pendingApplications: number;
-    availableScholarships: number;
-  };
-  onApplyScholarship: (scholarshipId: string) => Promise<void>;
-  recentApplications?: any[];
-}
-
-const Overview: React.FC<OverviewProps> = ({
-  stats,
-  recentApplications = [],
-  applications = []
-}) => {
+const Overview: React.FC = () => {
   const { t } = useTranslation(['dashboard', 'common']);
   const navigate = useNavigate();
   const [searchParams, setSearchParams] = useSearchParams();
 
   const { user, userProfile, refetchUserProfile } = useAuth();
   const { isGuideOpen, openGuide, closeGuide } = useStepByStepGuide();
+
+  // Hooks de dados — declarados antes dos useMemos que dependem deles
+  const { data: applications = [] } = useStudentApplicationsQuery(userProfile?.id);
+  const { data: scholarships = [] } = useScholarshipsQuery();
+  const { data: studentDocuments = [], isLoading: documentsLoading } = useStudentDocumentsQuery(user?.id);
 
   // Threshold para obrigatoriedade do questionário: 18/02/2026
   const SURVEY_THRESHOLD_DATE = new Date('2026-02-18T21:50:00Z');
@@ -132,9 +123,20 @@ const Overview: React.FC<OverviewProps> = ({
   const isOnboardingStarted = hasSavedOnboardingStep && savedOnboardingStep !== 'selection_fee' && savedOnboardingStep !== 'welcome';
 
 
-  const [visibleApplications, setVisibleApplications] = useState(5); // Mostrar 5 inicialmente
-  const [documentsLoading, setDocumentsLoading] = useState(true);
-  const [studentDocuments, setStudentDocuments] = useState<any[]>([]);
+  // Stats computadas localmente a partir dos dados do hook
+  const stats = {
+    totalApplications: applications.length,
+    approvedApplications: applications.filter((app: any) => app.status === 'approved' || app.status === 'enrolled').length,
+    pendingApplications: applications.filter((app: any) => ['pending', 'under_review', 'submitted'].includes(app.status)).length,
+    availableScholarships: scholarships.length,
+  };
+
+  // Aplicações recentes ordenadas por data
+  const recentApplications = [...applications]
+    .sort((a: any, b: any) => new Date(b.applied_at ?? b.created_at ?? 0).getTime() - new Date(a.applied_at ?? a.created_at ?? 0).getTime())
+    .slice(0, 5);
+
+  const [visibleApplications, setVisibleApplications] = useState(5);
 
   const hasMoreApplications = recentApplications.length > visibleApplications;
   const displayedApplications = recentApplications.slice(0, visibleApplications);
@@ -143,65 +145,6 @@ const Overview: React.FC<OverviewProps> = ({
     setVisibleApplications(prev => Math.min(prev + 5, recentApplications.length));
   };
 
-  // Função para buscar documentos do estudante
-  const fetchStudentDocuments = React.useCallback(async () => {
-    if (!user?.id) {
-      setDocumentsLoading(false);
-      return;
-    }
-
-    try {
-      const { data, error } = await supabase
-        .from('student_documents')
-        .select('*')
-        .eq('user_id', user.id)
-        .order('uploaded_at', { ascending: false });
-
-      if (error) {
-        console.error('Erro ao buscar documentos:', error);
-        setStudentDocuments([]);
-      } else {
-        setStudentDocuments(data || []);
-      }
-    } catch (error) {
-      console.error('Erro ao buscar documentos:', error);
-      setStudentDocuments([]);
-    } finally {
-      setDocumentsLoading(false);
-    }
-  }, [user?.id]);
-
-  // Buscar documentos do estudante
-  useEffect(() => {
-    fetchStudentDocuments();
-  }, [fetchStudentDocuments]);
-
-  // Configurar real-time subscription para atualizações de documentos
-  useEffect(() => {
-    if (!user?.id) return;
-
-    const channel = supabase
-      .channel(`student-documents-${user.id}`)
-      .on(
-        'postgres_changes',
-        {
-          event: '*',
-          schema: 'public',
-          table: 'student_documents',
-          filter: `user_id=eq.${user.id}`
-        },
-        () => {
-          // Refetch documentos quando houver mudanças
-          fetchStudentDocuments();
-        }
-      )
-      .subscribe();
-
-    return () => {
-      supabase.removeChannel(channel);
-    };
-  }, [user?.id, fetchStudentDocuments]);
-
   // Refetch perfil quando necessário (ex: após atualização)
   useEffect(() => {
     if (user?.id) {
@@ -209,18 +152,6 @@ const Overview: React.FC<OverviewProps> = ({
     }
   }, [user?.id, refetchUserProfile]);
 
-  // Atualizar documentos quando o componente receber foco (ex: ao voltar da página de perfil)
-  useEffect(() => {
-    const handleFocus = () => {
-      if (user?.id && !documentsLoading) {
-        fetchStudentDocuments();
-        refetchUserProfile();
-      }
-    };
-
-    window.addEventListener('focus', handleFocus);
-    return () => window.removeEventListener('focus', handleFocus);
-  }, [user?.id, documentsLoading, refetchUserProfile, fetchStudentDocuments]);
 
 
 

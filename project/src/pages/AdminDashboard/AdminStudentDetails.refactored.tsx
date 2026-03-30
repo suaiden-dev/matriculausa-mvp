@@ -1394,43 +1394,43 @@ const AdminStudentDetails: React.FC = () => {
           feeTypeForZelle = 'reinstatement_package';
         }
 
-        let proofUrl = 'manual-admin-approve';
-        
-        if (zelleProofFile) {
-          const fileExt = zelleProofFile.name.split('.').pop() || 'png';
-          // ✅ FIX: The RLS policy on zelle_comprovantes requires users to upload to their own folder (auth.uid() == folder).
-          // We use the admin's ID (user.id) to bypass the RLS correctly.
-          const fileName = `zelle-payments/${user?.id}/admin_upload_${Date.now()}-${Math.random().toString(36).substring(2)}.${fileExt}`;
-          const { error: uploadError } = await supabase.storage
-            .from('zelle_comprovantes')
-            .upload(fileName, zelleProofFile);
-          
-          if (uploadError) throw uploadError;
-          
-          const { data: { publicUrl } } = supabase.storage
-            .from('zelle_comprovantes')
-            .getPublicUrl(fileName);
-            
-          proofUrl = publicUrl;
+        if (!zelleProofFile) {
+          alert('Para registrar como Zelle, é obrigatório anexar o comprovante para análise da inteligência artificial.');
+          setIsUploadingZelle(false);
+          return;
         }
 
-        const { error: zelleError } = await supabase
-          .from('zelle_payments')
-          .insert([{
-            user_id: student.user_id,
+        const fileExt = zelleProofFile.name.split('.').pop() || 'png';
+        // ✅ FIX: The RLS policy on zelle_comprovantes requires users to upload to their own folder (auth.uid() == folder).
+        // We use the admin's ID (user.id) to bypass the RLS correctly.
+        const fileName = `zelle-payments/${user?.id}/admin_upload_${Date.now()}-${Math.random().toString(36).substring(2)}.${fileExt}`;
+        const { error: uploadError } = await supabase.storage
+          .from('zelle_comprovantes')
+          .upload(fileName, zelleProofFile);
+        
+        if (uploadError) throw uploadError;
+        
+        const { data: { publicUrl } } = supabase.storage
+          .from('zelle_comprovantes')
+          .getPublicUrl(fileName);
+          
+        let proofUrl = publicUrl;
+
+        // Dispara a Edge Function para criar o gateway com a IA do n8n (mesmo fluxo do aluno)
+        const { error: functionError } = await supabase.functions.invoke('create-zelle-payment', {
+          body: {
             fee_type: feeTypeForZelle,
             amount: finalPaymentAmount,
-            screenshot_url: proofUrl,
-            status: 'pending_verification',
-            confirmation_code: 'ADMIN_MANUAL',
-            scholarships_ids: targetApplicationForAmount ? [targetApplicationForAmount] : null
-          }])
-          .select()
-          .single();
+            comprovante_url: proofUrl,
+            target_user_id: student.user_id, // Delega o pagamento ao aluno
+            scholarships_ids: targetApplicationForAmount ? [targetApplicationForAmount] : null,
+            metadata: { source: 'admin_dashboard_manual' }
+          }
+        });
 
-        if (zelleError) throw zelleError;
+        if (functionError) throw functionError;
 
-        alert('Comprovante de pagamento Zelle enviado! Agora ele está pendente de revisão na aba "Zelle Payments".');
+        alert('Comprovante Zelle submetido com sucesso! O pagamento está sendo analisado pela inteligência artificial n8n.');
         
         setShowPaymentModal(false);
         setPendingPayment(null);

@@ -47,9 +47,14 @@ const Overview: React.FC<OverviewProps> = ({
   onApprove, 
   onReject 
 }) => {
-  const { notifications: pendingConversations, loading: loadingConversations } = useAdminNotifications();
+  const { notifications: allNotifications, loading: loadingConversations } = useAdminNotifications();
   const [currentPage, setCurrentPage] = useState(1);
   const UNIVERSITIES_PER_PAGE = 4;
+
+  // Filtrar apenas notificações de CHAT para o card de conversas pendentes
+  const pendingConversations = useMemo(() => 
+    allNotifications.filter(n => n.source === 'chat')
+  , [allNotifications]);
 
   // Filtrar universidades pendentes (os dados já vêm filtrados por email do pai)
   const pendingUniversities = useMemo(() => 

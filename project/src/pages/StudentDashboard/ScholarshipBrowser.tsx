@@ -35,17 +35,16 @@ import { ApplicationFeeBlockedMessage } from '../../components/ApplicationFeeBlo
 import { useApplicationFeeStatus } from '../../hooks/useApplicationFeeStatus';
 import { is3800Scholarship } from '../../utils/scholarshipDeadlineValidation';
 import { ScholarshipExpiryWarning } from '../../components/ScholarshipExpiryWarning';
+import { useScholarshipsQuery } from '../../hooks/useStudentDashboardQueries';
+
 import { ScholarshipCountdownTimer } from '../../components/ScholarshipCountdownTimer';
 
-interface ScholarshipBrowserProps {
-  scholarships: any[];
-}
-
-const ScholarshipBrowser: React.FC<ScholarshipBrowserProps> = ({
-  scholarships
-}) => {
+const ScholarshipBrowser: React.FC = () => {
   const { t } = useTranslation(['dashboard', 'scholarships', 'common']);
   const { selectionProcessFee } = useDynamicFees();
+
+  // Busca de bolsas via React Query (cache compartilhado, sem duplicação de chamadas)
+  const { data: scholarships = [] } = useScholarshipsQuery();
 
   // Universidades a serem ocultadas (case-insensitive, igualdade exata de nome)
   const EXCLUDED_UNIVERSITY_NAMES = useMemo(() => new Set([
