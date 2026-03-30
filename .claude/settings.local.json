@@ -1,0 +1,22 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(claude mcp:*)",
+      "Bash(node -e \"JSON.parse\\(require\\(''fs''\\).readFileSync\\(''project/src/i18n/locales/en/dashboard.json'',''utf8''\\)\\); console.log\\(''EN: OK''\\)\")",
+      "Bash(node -e \"JSON.parse\\(require\\(''fs''\\).readFileSync\\(''project/src/i18n/locales/es/dashboard.json'',''utf8''\\)\\); console.log\\(''ES: OK''\\)\")",
+      "Bash(node -e \"try { JSON.parse\\(require\\(''fs''\\).readFileSync\\(''c:/Users/victurib/Matricula USA/matriculausa-mvp/project/src/i18n/locales/en/dashboard.json'',''utf8''\\)\\); console.log\\(''OK''\\) } catch\\(e\\) { console.log\\(''Error at line:'', e.message\\) }\")",
+      "Bash(node -e \":*)",
+      "Bash(node -e \"JSON.parse\\(require\\(''fs''\\).readFileSync\\(''c:/Users/victurib/Matricula USA/matriculausa-mvp/project/src/i18n/locales/en/dashboard.json'',''utf8''\\)\\); console.log\\(''EN: OK''\\)\")",
+      "Bash(node -e \"JSON.parse\\(require\\(''fs''\\).readFileSync\\(''c:/Users/victurib/Matricula USA/matriculausa-mvp/project/src/i18n/locales/es/dashboard.json'',''utf8''\\)\\); console.log\\(''ES: OK''\\)\")",
+      "Bash(node -e \"JSON.parse\\(require\\(''fs''\\).readFileSync\\(''project/src/i18n/locales/es/dashboard.json'',''utf8''\\)\\); console.log\\(''ES dashboard: OK''\\)\")",
+      "Bash(node -e \"JSON.parse\\(require\\(''fs''\\).readFileSync\\(''project/src/i18n/locales/en/dashboard.json'',''utf8''\\)\\); console.log\\(''EN dashboard: OK''\\)\")",
+      "Bash(node -e \"JSON.parse\\(require\\(''fs''\\).readFileSync\\(''project/src/i18n/locales/en/common.json'',''utf8''\\)\\); console.log\\(''EN common: OK''\\)\")",
+      "Bash(node -e \"JSON.parse\\(require\\(''fs''\\).readFileSync\\(''project/src/i18n/locales/es/common.json'',''utf8''\\)\\); console.log\\(''ES common: OK''\\)\")",
+      "Bash(node -e \"const d = JSON.parse\\(require\\(''fs''\\).readFileSync\\(''project/src/i18n/locales/es/dashboard.json'',''utf8''\\)\\); const m = d.studentDashboard.myApplicationStep; console.log\\(''details:'', JSON.stringify\\(m.details, null, 2\\)\\); console.log\\(''documentRequests at studentDashboard level:'', !!d.studentDashboard.documentRequests\\); console.log\\(''documentRequests inside myApplicationStep:'', !!m.documentRequests\\); console.log\\(''identityVerification at studentDashboard level:'', !!d.studentDashboard.identityVerification\\); console.log\\(''identityVerification inside myApplicationStep:'', !!m.identityVerification\\);\")",
+      "Bash(node -e \"var d = JSON.parse\\(require\\(''fs''\\).readFileSync\\(''project/src/i18n/locales/es/dashboard.json'',''utf8''\\)\\); var m = d.studentDashboard.myApplicationStep; console.log\\(''details in myApplicationStep:'', JSON.stringify\\(m.details\\)\\); console.log\\(''documentRequests at studentDashboard level:'', !!d.studentDashboard.documentRequests\\); console.log\\(''documentRequests inside myApplicationStep:'', !!m.documentRequests\\); console.log\\(''identityVerification at studentDashboard level:'', !!d.studentDashboard.identityVerification\\);\")",
+      "Bash(node -e \"JSON.parse\\(require\\(''fs''\\).readFileSync\\(''en/dashboard.json'',''utf8''\\)\\); console.log\\(''EN OK''\\)\")",
+      "Bash(node -e \"JSON.parse\\(require\\(''fs''\\).readFileSync\\(''es/dashboard.json'',''utf8''\\)\\); console.log\\(''ES OK''\\)\")",
+      "Bash(node -e \"JSON.parse\\(require\\(''fs''\\).readFileSync\\(''pt/dashboard.json'',''utf8''\\)\\); console.log\\(''PT OK''\\)\")"
+    ]
+  }
+}

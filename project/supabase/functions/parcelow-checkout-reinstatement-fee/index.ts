@@ -31,7 +31,7 @@ function corsResponse(body: any, status = 200) {
 
 Deno.serve(async (req: Request) => {
   try {
-    console.log("[parcelow-checkout-package-fee] 🚀 Iniciando função");
+    console.log("[parcelow-checkout-reinstatement-fee] 🚀 Iniciando função");
 
     if (req.method === "OPTIONS") {
       return corsResponse(null, 204);
@@ -41,23 +41,15 @@ Deno.serve(async (req: Request) => {
 
     if (!config.clientId || !config.clientSecret) {
       console.error(
-        "[parcelow-checkout-package-fee] ❌ Credenciais Parcelow não configuradas",
+        "[parcelow-checkout-reinstatement-fee] ❌ Credenciais Parcelow não configuradas",
       );
       return corsResponse({ error: "Parcelow configuration error" }, 500);
     }
 
-    const { amount, fee_type, metadata, cpf: bodyCpf } = await req.json();
-
-    console.log("[parcelow-checkout-package-fee] 📥 Payload recebido:", {
-      amount,
-      fee_type,
-      metadata,
-      hasBodyCpf: !!bodyCpf,
-    });
+    const { metadata, cpf: bodyCpf } = await req.json();
     
-    if (fee_type !== 'ds160_package' && fee_type !== 'i539_cos_package') {
-       return corsResponse({ error: "fee_type inválido" }, 400);
-    }
+    const fee_type = 'reinstatement_package';
+    const amount = 500; // Valor fixo Reinstatement
 
     const authHeader = req.headers.get("Authorization");
     if (!authHeader) {
@@ -73,9 +65,6 @@ Deno.serve(async (req: Request) => {
       return corsResponse({ error: "Invalid token" }, 401);
     }
 
-    // Valor original fixo ($1800)
-    const finalAmount = amount || 1800;
-
     // Buscar perfil do usuário para obter CPF
     const { data: profile, error: profileError } = await supabase
       .from("user_profiles")
@@ -87,23 +76,13 @@ Deno.serve(async (req: Request) => {
       return corsResponse({ error: "User profile not found" }, 404);
     }
 
-    // Definir CPF final (Body > Profile)
     const rawCpf = bodyCpf || profile.cpf_document;
     const finalCpf = rawCpf ? String(rawCpf).replace(/\D/g, "") : null;
 
-    console.log("[parcelow-checkout-package-fee] 📄 Verificação de documento:", {
-      profileCpf: !!profile.cpf_document,
-      bodyCpf: !!bodyCpf,
-      finalCpfLength: finalCpf?.length || 0,
-    });
-
     if (!finalCpf || finalCpf.length < 11) {
-      console.error(
-        "[parcelow-checkout-package-fee] ❌ CPF não encontrado no perfil nem no body",
-      );
       return corsResponse({
         error: "document_number_required",
-        message: "CPF is required for Parcelow payment (neither found in profile nor request body)",
+        message: "CPF is required for Parcelow payment",
       }, 400);
     }
 
@@ -111,7 +90,7 @@ Deno.serve(async (req: Request) => {
     const accessToken = await getParcelowAccessToken(config);
 
     // Gerar ID de referência único
-    const reference = `${fee_type === 'ds160_package' ? 'ds16' : 'i539'}_${Math.random().toString(36).substring(2, 8)}`; 
+    const reference = `rein_${Math.random().toString(36).substring(2, 8)}`; 
 
     // URLs de redirect
     const origin = getRedirectOrigin(req);
@@ -128,13 +107,13 @@ Deno.serve(async (req: Request) => {
       Deno.env.get("SUPABASE_URL")
     }/functions/v1/parcelow-webhook`;
 
-    const amountInCents = Math.round(finalAmount * 100);
+    const amountInCents = Math.round(amount * 100);
 
     const orderPayload = {
       reference: reference,
       items: [{
         reference: reference,
-        description: fee_type === 'ds160_package' ? "Payment for DS160 Package" : "Payment for I539 COS Package",
+        description: "Payment for Reinstatement Fee",
         quantity: 1,
         amount: amountInCents,
       }],
@@ -177,53 +156,58 @@ Deno.serve(async (req: Request) => {
     }
 
     const parcelowOrder = await orderResponse.json();
-
-    if (parcelowOrder.success === false && parcelowOrder.message) {
-      return corsResponse({
-        error: "parcelow_order_rejected",
-        message: String(parcelowOrder.message),
-      }, 400);
-    }
-
     const orderId = parcelowOrder.data?.order_id || parcelowOrder.order_id || parcelowOrder.id;
     const checkoutUrl = parcelowOrder.data?.url_checkout || parcelowOrder.checkout_url || parcelowOrder.url;
 
     // Registrar no banco de dados
-    console.log("[parcelow-checkout-package-fee] 📝 Registrando no banco...");
-    const { error: insertError } = await supabase.rpc(
+    console.log(`[parcelow-checkout-reinstatement-fee] 📝 Registrando intenção de pagamento no banco: ${reference}`);
+    const { data: rpcData, error: rpcError } = await supabase.rpc(
       "insert_individual_fee_payment",
       {
         p_user_id: user.id,
         p_fee_type: fee_type,
-        p_amount: finalAmount,
+        p_amount: amount,
         p_payment_date: new Date().toISOString(),
         p_payment_method: "parcelow",
         p_parcelow_order_id: String(orderId),
         p_parcelow_checkout_url: checkoutUrl,
         p_parcelow_reference: reference,
+        // Passando campos nulos explicitamente para garantir compatibilidade com a assinatura da RPC
+        p_payment_intent_id: null,
+        p_stripe_charge_id: null,
+        p_zelle_payment_id: null,
+        p_gross_amount_usd: null,
+        p_fee_amount_usd: null,
       },
     );
-    
-    if (insertError) {
-      console.error("[parcelow-checkout-package-fee] ❌ Erro no insert_individual_fee_payment:", insertError);
-    } else {
-      console.log("[parcelow-checkout-package-fee] ✅ Registro concluído");
-    }
 
+    if (rpcError) {
+      console.error(
+        "[parcelow-checkout-reinstatement-fee] ❌ Erro ao registrar intenção de pagamento na RPC:",
+        rpcError,
+      );
+      // Não bloqueamos o checkout, mas logamos o erro crítico
+    } else {
+      console.log(
+        "[parcelow-checkout-reinstatement-fee] ✅ Intenção de pagamento registrada com sucesso:",
+        rpcData,
+      );
+    }
+    
     // Log action
     try {
       await supabase.rpc("log_student_action", {
         p_student_id: profile.id,
         p_action_type: "checkout_session_created",
         p_action_description:
-          `Parcelow checkout session created for ${fee_type} (${orderId})`,
+          `Parcelow checkout session created for Reinstatement Fee (${orderId})`,
         p_performed_by: user.id,
         p_performed_by_type: "student",
         p_metadata: {
           fee_type: fee_type,
           payment_method: "parcelow",
           order_id: orderId,
-          amount: finalAmount,
+          amount: amount,
         },
       });
     } catch (logError) {
@@ -239,17 +223,15 @@ Deno.serve(async (req: Request) => {
       student_email: profile.email ?? null,
       student_phone: profile.phone ?? null,
       checkout_url: checkoutUrl,
-    }).catch((err) => console.warn("[parcelow-checkout-package-fee] Notifier error (ignorado):", err));
+    }).catch((err) => console.warn("[parcelow-checkout-reinstatement-fee] Notifier error (ignorado):", err));
     // ==========================================
 
-    console.log("[parcelow-checkout-package-fee] ✅ Sucesso! Retornando checkoutUrl");
     return corsResponse({ checkout_url: checkoutUrl }, 200);
   } catch (error: any) {
-    console.error("[parcelow-checkout-package-fee] ❌ Erro geral:", error);
+    console.error("[parcelow-checkout-reinstatement-fee] ❌ Erro geral:", error);
     return corsResponse({
       error: "Internal server error",
       details: error.message,
-      stack: error.stack
     }, 500);
   }
 });

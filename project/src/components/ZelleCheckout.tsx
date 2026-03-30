@@ -8,7 +8,7 @@ import { generateUUID } from '../utils/uuid';
 import { config } from '../lib/config';
 
 interface ZelleCheckoutProps {
-  feeType: 'selection_process' | 'application_fee' | 'enrollment_fee' | 'scholarship_fee' | 'i20_control_fee' | 'placement_fee' | 'ds160_package' | 'i539_cos_package';
+  feeType: 'selection_process' | 'application_fee' | 'enrollment_fee' | 'scholarship_fee' | 'i20_control_fee' | 'placement_fee' | 'ds160_package' | 'i539_cos_package' | 'reinstatement_package';
   amount: number;
   scholarshipsIds?: string[];
   onSuccess?: () => void;
@@ -92,6 +92,37 @@ export const ZelleCheckout: React.FC<ZelleCheckoutProps> = ({
   useEffect(() => {
     isProcessingRef.current = isProcessing;
   }, [isProcessing]);
+
+  // === RECUPERAÇÃO DE CHECKOUT ABANDONADO (ZELLE) ===
+  // Notifica o n8n quando o aluno vê as instruções do Zelle para selection_process.
+  // Executado apenas uma vez na montagem, somente se estiver na tela de instruções.
+  // Para desabilitar: comente o bloco abaixo.
+  useEffect(() => {
+    if (step !== 'instructions' || !user?.id) return;
+
+    console.log('📡 [ZelleCheckout] Enviando notificação de checkout iniciado ao n8n...', { feeType });
+
+    // Buscar perfil completo para ter nome e telefone
+    supabase.from('user_profiles').select('full_name, phone, email').eq('user_id', user.id).maybeSingle().then(({ data: profile }) => {
+      supabase.functions.invoke('forward-notification-to-n8n', {
+        body: {
+          target: 'abandoned_cart',
+          event: 'checkout_initiated',
+          fee_type: feeType,
+          payment_method: 'zelle',
+          student_id: user.id,
+          student_name: profile?.full_name ?? null,
+          student_email: profile?.email ?? user.email ?? null,
+          student_phone: profile?.phone ?? null,
+        },
+      }).then(res => {
+        console.log('✅ [ZelleCheckout] Notificação enviada:', res);
+      }).catch((err) => {
+        console.warn('[ZelleCheckout] Erro ao notificar carrinho abandonado (ignorado):', err);
+      });
+    });
+  }, [step, feeType, user?.id]);
+  // ===================================================
 
   const handleMockSuccess = async () => {
     setLoading(true);
@@ -186,6 +217,15 @@ export const ZelleCheckout: React.FC<ZelleCheckoutProps> = ({
             .update({ 
               has_paid_i20_control_fee: true,
               i20_control_fee_payment_method: 'zelle',
+              updated_at: new Date().toISOString()
+            })
+            .eq('user_id', user.id);
+        } else if (feeType === 'reinstatement_package') {
+          await supabase
+            .from('user_profiles')
+            .update({ 
+              has_paid_reinstatement_package: true,
+              reinstatement_package_payment_method: 'zelle',
               updated_at: new Date().toISOString()
             })
             .eq('user_id', user.id);

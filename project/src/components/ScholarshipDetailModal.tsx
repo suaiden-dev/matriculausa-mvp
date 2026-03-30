@@ -118,6 +118,11 @@ const ScholarshipDetailModal: React.FC<ScholarshipDetailModalProps> = ({
       name: t('scholarshipsPage.modal.ds160Package'), 
       amount: 1800, 
       details: t('scholarshipsPage.modal.ds160PackageDescription') 
+    },
+    { 
+      name: t('scholarshipsPage.modal.reinstatementPackage'), 
+      amount: 500, 
+      details: t('scholarshipsPage.modal.reinstatementPackageDescription') 
     }
   ];
   

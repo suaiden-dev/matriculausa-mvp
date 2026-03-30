@@ -158,6 +158,11 @@
     "saving": "Saving...",
     "finish": "Finish"
   },
+  "connectors": {
+    "and": " and ",
+    "theFee": "the ",
+    "fee": " fee"
+  },
   "fees": {
     "selectionProcess": "Selection Process Fee",
     "application": "Application Fee",
@@ -315,5 +320,43 @@
     "backToHome": "Back to Home",
     "goToDashboard": "Go to my Dashboard",
     "helpLink": "Need help? Contact us"
+  },
+  "successPages": {
+    "applicationFee": {
+      "verifying": "Verifying Application Fee...",
+      "pleaseWait": "We are processing your payment. Please do not close this page."
+    },
+    "scholarshipFee": {
+      "verifying": "Verifying Scholarship Fee...",
+      "pleaseWait": "We are processing your payment. Please do not close this page."
+    },
+    "placementFee": {
+      "verifying": "Verifying Placement Fee...",
+      "pleaseWait": "We are processing your payment. Please do not close this page."
+    },
+    "i20ControlFee": {
+      "verifying": "Verifying I-20 Control Fee...",
+      "pleaseWait": "We are processing your payment. Please do not close this page."
+    }
+  },
+  "labels": {
+    "clickToAccess": "Click to access",
+    "continue": "Continue",
+    "loading": "Loading...",
+    "back": "Back",
+    "download": "Download"
+  },
+  "errors": {
+    "unexpected": "An unexpected error occurred. Please try again."
+  },
+  "status": {
+    "under_review": "Under Review",
+    "action_required": "Action Required",
+    "approved": "Approved",
+    "blocked": "Blocked",
+    "rejected": "Rejected",
+    "completed": "Completed",
+    "waiting_acceptance": "Waiting for Acceptance Letter",
+    "loading": "Loading..."
   }
 }

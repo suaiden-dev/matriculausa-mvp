@@ -796,8 +796,16 @@
         "my": "My",
         "application": "Application"
       },
+      "navigation": {
+        "backToSteps": "Back to Steps"
+      },
       "tabs": {
         "acceptanceLetter": "Acceptance Letter"
+      },
+      "siderbar": {
+        "documents": "Documents Submission",
+        "ds160": "Acceptance Letter Issuance",
+        "i539": "Fee Payment"
       },
       "loading": "Loading management portal...",
       "noApplication": {
@@ -805,20 +813,56 @@
         "description": "You don't have an active application yet. Please go back to the previous step or contact support."
       },
       "back": "Back",
+      "status": {
+        "verifyingPayment": {
+          "title": "Your payments are all set!",
+          "description": "Now, the college is validating the information. Come back within 24 hours to download and complete your enrollment forms.",
+          "button": "View Receipt"
+        },
+        "pendingDocs": {
+          "title": "Action Required: Documents Needed",
+          "description": "Your university has requested additional documents. Please review and upload them to continue your process.",
+          "button": "Upload Documents"
+        },
+        "initialAnalysis": {
+          "title": "WAITING FOR ENROLLMENT FORMS",
+          "description": "Next Step: Within 24 hours you will receive your enrollment forms. Stay on this page to download the files, complete them, and send them back to us so we can finalize your Acceptance Letter!",
+          "processing": "Processing: {{current}}/24h"
+        },
+        "waitingAcceptance": {
+          "title": "Waiting for Acceptance Letter",
+          "description": "Your documents have been approved! The university is now processing the issuance of your official Acceptance Letter. Once it's ready, it will appear here for download."
+        },
+        "pendingFee": {
+          "title": "Your Acceptance Letter has arrived!",
+          "description": "Excellent news! Your acceptance letter has been issued by the university. The next step is to complete the {{feeName}} payment to start your visa process.",
+          "button": "Go to Payment"
+        },
+        "approved": {
+          "title": "Congratulations, Process Complete!",
+          "description": "Your acceptance letter is available and all payments have been confirmed. You can now download your document and proceed to the next steps of your exchange program!",
+          "button": "View Acceptance Letter"
+        },
+        "generalWait": {
+          "title": "Documents Under Review",
+          "description": "We have received your documents. Our team is now reviewing everything to issue your official Acceptance Letter soon."
+        }
+      },
       "welcome": {
-        "congratsMessage": "Congratulations {{name}},<br/> you have been <approved>approved</approved> at <university>{{university}}</university>",
-        "almostDone": "You're almost there! In this final step, you can review the details of the university you chose and submit the required documentation. Once everything is in order, your Acceptance Letter will be available right here for you to download.",
-        "sendDocuments": "Submit Documents",
-        "requestedDocs": "Requested documents",
-        "scholarshipDetails": "Scholarship Details",
-        "requirementsValues": "Requirements and values",
+        "congratsMessage": "Next Steps",
+        "almostDone": "Track the final stages of your admission process here.",
+        "congratsMessageShort": "Next Steps",
+        "almostDoneShort": "Track the final stages of your admission process here.",
+        "actionDocuments": "Documents",
+        "actionDetails": "Details",
         "needHelp": "Need Help?",
-        "mentorsReady": "Our mentors are ready to help with any questions about this process.",
+        "supportDescription": "Our mentors are ready to help with any questions about this process.",
         "talkToSupport": "Talk to Support",
         "nextSteps": "Next Steps",
         "documentSubmission": "Document Submission",
         "acceptanceLetterReceipt": "Acceptance Letter Receipt",
         "documentAvailable": "Document Available",
+        "documentAvailableAction": "Document Available (click to open)",
         "status": {
           "completed": "Completed",
           "underReview": "Under Review",
@@ -826,69 +870,227 @@
           "available": "Available",
           "inProgress": "Release in Progress",
           "blocked": "Blocked"
+        },
+        "details": {
+          "scholarshipInfo": "Scholarship Information",
+          "program": "Program",
+          "universityPartner": "University Partner",
+          "inPerson": "In-Person",
+          "online": "Online",
+          "exclusive": "Exclusive",
+          "level": "Level",
+          "mode": "Mode",
+          "deadline": "Deadline",
+          "scholarshipDetails": "Scholarship Details",
+          "scholarshipTitle": "Scholarship Title",
+          "courseField": "Course / Field of Study",
+          "enrollmentFee": "Application Fee",
+          "internalFees": "Institutional Internal Fees",
+          "internalFeesNote": "Some fees are paid directly to the university, while others are processed through our platform",
+          "oneTimePayment": "One-Time Payment",
+          "studentDocuments": "Student Documents",
+          "diploma": "Diploma / Certificate (High School)",
+          "passport": "Passport (Color Copy)",
+          "bankStatement": "Bank Statement (Financial Statement)",
+          "submittedOn": "Submitted on:",
+          "view": "View",
+          "download": "Download",
+          "finance": {
+            "originalAnnualCost": "Original Annual Cost",
+            "withExclusiveScholarship": "With Exclusive Scholarship",
+            "perYear": "/year",
+            "perCredit": "Per Credit",
+            "guaranteedAnnualSavings": "Guaranteed Annual Savings",
+            "financialSummary": "Financial Summary"
+          },
+          "institution": {
+            "title": "Institution",
+            "email": "Email",
+            "phone": "Phone",
+            "website": "Website",
+            "details": "Institution Details"
+          }
+        },
+        "documents": {
+          "title": "Document Submission",
+          "subtitle": "Submit the documents requested by the university for review and final approval."
+        },
+        "acceptance": {
+          "letterOf": "Acceptance",
+          "acceptance": "Letter",
+          "available": "Available",
+          "inProgress": "Release in Progress",
+          "successConfirmation": "Your Confirmation of Success",
+          "description": "The Acceptance Letter is the official document issued by the university confirming your admission. It contains important details about your program and is essential for the visa process.",
+          "officialNote": "This document is officially issued by the university after reviewing your documentation.",
+          "documentAvailable": "Document Available",
+          "readyToDownload": "Your acceptance letter is ready to download!",
+          "downloadPdf": "Download PDF",
+          "waitingForUniversity": "Waiting for university processing"
+        },
+        "errors": {
+          "viewDocument": "Error viewing document",
+          "downloadDocument": "Error downloading document"
         }
       },
       "details": {
-        "universityPartner": "University Partner",
-        "inPerson": "In-Person",
-        "online": "Online",
-        "exclusive": "Exclusive",
-        "level": "Level",
-        "mode": "Mode",
-        "deadline": "Deadline",
-        "scholarshipDetails": "Scholarship Details",
-        "scholarshipTitle": "Scholarship Title",
-        "courseField": "Course / Field of Study",
-        "enrollmentFee": "Application Fee",
-        "internalFees": "Institutional Internal Fees",
-        "internalFeesNote": "Some fees are paid directly to the university, while others are processed through our platform",
-        "oneTimePayment": "One-Time Payment",
-        "studentDocuments": "Student Documents",
-        "diploma": "Diploma / Certificate (High School)",
-        "passport": "Passport (Color Copy)",
-        "bankStatement": "Bank Statement (Financial Statement)",
-        "submittedOn": "Submitted on:",
-        "view": "View",
-        "download": "Download",
-        "finance": {
-          "originalAnnualCost": "Original Annual Cost",
-          "withExclusiveScholarship": "With Exclusive Scholarship",
-          "perYear": "/year",
-          "perCredit": "Per Credit",
-          "guaranteedAnnualSavings": "Guaranteed Annual Savings",
-          "financialSummary": "Financial Summary"
-        },
+        "scholarshipInfo": "Scholarship Information",
+        "program": "Program",
         "institution": {
-          "title": "Institution",
-          "email": "Email",
-          "phone": "Phone",
-          "website": "Website"
+          "details": "Institution Details"
         }
       },
-      "documents": {
-        "title": "Document Submission",
-        "subtitle": "Submit the documents requested by the university for review and final approval."
+      "documentRequests": {
+        "documentSections": {
+          "download": "Download Area",
+          "downloadDescription": "Download the official enrollment forms from the college to complete.",
+          "upload": "Upload Area",
+          "uploadDescription": "Upload your completed forms and document pack here (bank statement, passport, etc)."
+        },
+        "status": {
+          "downloading": "Downloading...",
+          "opening": "Opening...",
+          "uploading": "Uploading...",
+          "waitingForUniversity": "Waiting for university"
+        },
+        "actions": {
+          "downloadAcceptanceLetter": "Download Acceptance Letter",
+          "view": "View",
+          "uploadTransferForm": "Upload Transfer Form",
+          "upload": "Upload",
+          "downloadTransferForm": "Download Transfer Form",
+          "uploadTransferFormTitle": "Upload transfer form",
+          "selectTransferFormTitle": "Select transfer form",
+          "sendTransferFormTitle": "Send transfer form"
+        },
+        "messages": {
+          "noTransferForm": "No transfer form uploaded yet.",
+          "failedToUploadAttachment": "Failed to upload attachment:",
+          "failedToUploadAcceptanceLetter": "Failed to upload acceptance letter:",
+          "failedToCreateRequest": "Failed to create request:",
+          "unexpectedError": "Unexpected error:",
+          "unexpectedErrorWhileApproving": "Unexpected error while approving:",
+          "unexpectedErrorWhileRejecting": "Unexpected error while rejecting:",
+          "errorUploadingFile": "Error uploading file:",
+          "errorUploading": "Error uploading:",
+          "userNotAuthenticated": "User not authenticated. Please log in again."
+        },
+        "forms": {
+          "newDocumentRequest": "New Document Request",
+          "newIndividualDocumentRequest": "New Individual Document Request",
+          "title": "Title",
+          "titleRequired": "Title *",
+          "description": "Description",
+          "dueDate": "Due date",
+          "attachment": "Attachment",
+          "enterDocumentTitle": "Enter document title",
+          "enterDocumentDescription": "Enter document description",
+          "describeDocumentOptional": "Describe the document or instructions (optional)",
+          "selectFile": "Select file",
+          "changeFile": "Change file",
+          "chooseFile": "Choose a file",
+          "cancel": "Cancel",
+          "createRequest": "Create Request",
+          "creating": "Creating...",
+          "transferFormDescriptionSchool": "Upload the transfer form for this student. Only visible for transfer students.",
+          "transferFormDescriptionStudent": "Your university will upload your transfer form here. Download it when available.",
+          "transferForm": "Transfer Form",
+          "transferFormUploadButton": "Upload Filled Form",
+          "transferFormUploaded": "Transfer form uploaded",
+          "transferFormUnderReview": "Under university review",
+          "transferFormApproved": "Approved",
+          "transferFormRejected": "Rejected",
+          "transferFormRejectionReason": "Rejection reason",
+          "transferFormReupload": "Upload new version",
+          "approveTransferForm": "Approve Transfer Form",
+          "rejectTransferForm": "Reject Transfer Form",
+          "transferFormReceived": "Transfer Form Received",
+          "transferFormReadyMessage": "Your transfer form is ready for download. Download it, fill it out, and send it back to the university.",
+          "sentOn": "Sent on",
+          "studentUploads": "Student uploads:",
+          "yourUploads": "Your uploads:",
+          "uploading": "Uploading...",
+          "upload": "Upload",
+          "uploadNewFile": "Select file",
+          "removeFile": "Remove file",
+          "failedToDownloadFile": "Failed to download file.",
+          "failedToApproveDocument": "Failed to approve the document:",
+          "failedToRejectDocument": "Failed to reject the document:",
+          "errorDownloadingDocument": "Error downloading document. Please try again.",
+          "errorViewingDocument": "Error viewing document. Please try again.",
+          "acceptanceLetter": "Acceptance Letter",
+          "acceptanceLetterReceived": "Acceptance Letter Received! 🎉",
+          "downloadTransferForm": "Download Transfer Form",
+          "view": "View",
+          "enrolledMessage": "You have been enrolled! Check your dashboard for next steps.",
+          "noFilesUploadedYet": "No files uploaded yet.",
+          "documentRequestsDescription": "Now that you've reached this stage, you must review and upload the documents requested by your university to continue your process. After this, the school will be able to analyze your application and send your acceptance letter.",
+          "acceptanceLetterInstructions": "The university will send your acceptance letter here when it's ready. Once uploaded, you will be automatically enrolled."
+        },
+        "modals": {
+          "provideJustification": "Provide a justification",
+          "rejectionExplanation": "Explain the reason for rejecting this document. The student will see this message.",
+          "rejectionExplanationPlaceholder": "Ex.: The document is cut off. Please send it again in PDF with all pages.",
+          "confirm": "Confirm"
+        }
       },
-      "acceptance": {
-        "letterOf": "Acceptance",
-        "acceptance": "Letter",
-        "available": "Available",
-        "inProgress": "Release in Progress",
-        "successConfirmation": "Your Confirmation of Success",
-        "description": "The Acceptance Letter is the official document issued by the university confirming your admission. It contains important details about your program and is essential for the visa process.",
-        "officialNote": "This document is officially issued by the university after reviewing your documentation.",
-        "documentAvailable": "Document Available",
-        "readyToDownload": "Your acceptance letter is ready to download!",
-        "downloadPdf": "Download PDF",
-        "waitingForUniversity": "Waiting for university processing"
-      },
-      "errors": {
-        "viewDocument": "Error viewing document",
-        "downloadDocument": "Error downloading document"
+      "identityVerification": {
+        "title": "Identity Verification",
+        "subtitle": "Verify your identity by uploading a photo with your ID document",
+        "backToDashboard": "Back to Dashboard",
+        "noPhotoFound": {
+          "title": "Identity Verification",
+          "message": "No identity photo found. Please complete the checkout process to upload your identity photo.",
+          "goToDashboard": "Go to Dashboard"
+        },
+        "status": {
+          "approved": {
+            "title": "Identity Photo Approved",
+            "message": "Your identity photo has been approved. You can proceed with your application."
+          },
+          "rejected": {
+            "title": "Identity Photo Rejected",
+            "message": "Your identity photo has been rejected. Please review the reason and upload a new photo.",
+            "rejectionReason": "Rejection Reason"
+          },
+          "pending": {
+            "title": "Identity Photo Under Review",
+            "message": "Your identity photo is currently under review by our administrators."
+          }
+        },
+        "uploadNewPhoto": {
+          "title": "Upload New Identity Photo",
+          "termsTitle": "Terms and Conditions",
+          "termsDescription": "Please read and accept the terms and conditions before uploading a new photo.",
+          "scrollToBottom": "Please scroll to the bottom to continue",
+          "acceptTerms": "I have read and accept the terms and conditions",
+          "termsNotAvailable": "Terms not available",
+          "submitButton": "Submit New Photo",
+          "submitting": "Submitting...",
+          "successMessage": "Identity photo uploaded successfully! It will be reviewed by an administrator."
+        },
+        "errors": {
+          "loadingStatus": "Error loading verification status. Please try again.",
+          "acceptingTerms": "Error accepting terms. Please try again.",
+          "termsRequired": "Please accept the terms first.",
+          "photoRequired": "Please upload your identity photo.",
+          "termAcceptanceNotFound": "Error: Term acceptance record not found.",
+          "submittingPhoto": "Error submitting photo. Please try again."
+        }
       }
     },
-
     "documentRequests": {
+      "documentSections": {
+        "download": "Download Area",
+        "downloadDescription": "Download the official enrollment forms from the college to complete.",
+        "upload": "Upload Area",
+        "uploadDescription": "Upload your completed forms and document pack here (bank statement, passport, etc)."
+      },
+      "uploadSection": {
+        "title": "Files for Submission",
+        "description": "Submit the requested documents below in PDF format.",
+        "noRequests": "No requests at the moment"
+      },
       "status": {
         "downloading": "Downloading...",
         "opening": "Opening...",
@@ -936,6 +1138,7 @@
         "creating": "Creating...",
         "transferFormDescriptionSchool": "Upload the transfer form for this student. Only visible for transfer students.",
         "transferFormDescriptionStudent": "Your university will upload your transfer form here. Download it when available.",
+        "transferFormUploadDescriptionStudent": "Submit the completed and signed transfer form.",
         "transferForm": "Transfer Form",
         "transferFormUploadButton": "Upload Filled Form",
         "transferFormUploaded": "Transfer form uploaded",
@@ -966,6 +1169,7 @@
         "view": "View",
         "enrolledMessage": "You have been enrolled! Check your dashboard for next steps.",
         "noFilesUploadedYet": "No files uploaded yet.",
+        "noTransferFormUploadedYet": "No transfer form uploaded yet.",
         "documentRequestsDescription": "Now that you've reached this stage, you must review and upload the documents requested by your university to continue your process. After this, the school will be able to analyze your application and send your acceptance letter.",
         "acceptanceLetterInstructions": "The university will send your acceptance letter here when it's ready. Once uploaded, you will be automatically enrolled."
       },
@@ -974,505 +1178,474 @@
         "rejectionExplanation": "Explain the reason for rejecting this document. The student will see this message.",
         "rejectionExplanationPlaceholder": "Ex.: The document is cut off. Please send it again in PDF with all pages.",
         "confirm": "Confirm"
-      }
-    },
-    "identityVerification": {
-      "title": "Identity Verification",
-      "subtitle": "Verify your identity by uploading a photo with your ID document",
-      "backToDashboard": "Back to Dashboard",
-      "noPhotoFound": {
-        "title": "Identity Verification",
-        "message": "No identity photo found. Please complete the checkout process to upload your identity photo.",
-        "goToDashboard": "Go to Dashboard"
-      },
-      "status": {
-        "approved": {
-          "title": "Identity Photo Approved",
-          "message": "Your identity photo has been approved. You can proceed with your application."
-        },
-        "rejected": {
-          "title": "Identity Photo Rejected",
-          "message": "Your identity photo has been rejected. Please review the reason and upload a new photo.",
-          "rejectionReason": "Rejection Reason"
-        },
-        "pending": {
-          "title": "Identity Photo Under Review",
-          "message": "Your identity photo is currently under review by our administrators."
-        }
-      },
-      "uploadNewPhoto": {
-        "title": "Upload New Identity Photo",
-        "termsTitle": "Terms and Conditions",
-        "termsDescription": "Please read and accept the terms and conditions before uploading a new photo.",
-        "scrollToBottom": "Please scroll to the bottom to continue",
-        "acceptTerms": "I have read and accept the terms and conditions",
-        "termsNotAvailable": "Terms not available",
-        "submitButton": "Submit New Photo",
-        "submitting": "Submitting...",
-        "successMessage": "Identity photo uploaded successfully! It will be reviewed by an administrator."
       },
       "errors": {
-        "loadingStatus": "Error loading verification status. Please try again.",
-        "acceptingTerms": "Error accepting terms. Please try again.",
-        "termsRequired": "Please accept the terms first.",
-        "photoRequired": "Please upload your identity photo.",
-        "termAcceptanceNotFound": "Error: Term acceptance record not found.",
-        "submittingPhoto": "Error submitting photo. Please try again."
+        "onlyPdfAllowed": "Only PDF files are allowed."
       }
-    }
-  },
-  "profileManagement": {
-    "title": "Student Profile",
-    "subtitle": "Manage your academic profile and preferences",
-    "editProfile": "Edit Profile",
-    "profileCompleteness": {
-      "title": "Profile Completeness",
-      "subtitle": "Complete your profile to unlock more scholarship opportunities",
-      "complete": "Complete",
-      "improveMatching": "Complete your profile to improve scholarship matching"
     },
-    "form": {
+    "profileManagement": {
+      "title": "Student Profile",
+      "subtitle": "Manage your academic profile and preferences",
       "editProfile": "Edit Profile",
-      "saving": "Saving...",
-      "saveChanges": "Save Changes",
-      "cancel": "Cancel",
-      "fullName": "Full Name",
-      "phoneNumber": "Phone Number",
-      "country": "Country",
-      "fieldOfInterest": "Field of Interest",
-      "academicLevel": "Academic Level",
-      "gpa": "GPA",
-      "englishProficiency": "English Proficiency",
-      "cpfDocument": "CPF (Brazilian Tax ID)",
-      "cpfHelper": "Used for validation and payments in Brazil (format 000.000.000-00).",
-      "placeholders": {
-        "enterFullName": "Enter your full name",
-        "phoneExample": "Ex: +55 11 99999-8888",
-        "yourCountry": "Your country",
-        "selectField": "Select your field",
-        "selectLevel": "Select level",
-        "selectProficiency": "Select proficiency"
+      "profileCompleteness": {
+        "title": "Profile Completeness",
+        "subtitle": "Complete your profile to unlock more scholarship opportunities",
+        "complete": "Complete",
+        "improveMatching": "Complete your profile to improve scholarship matching"
       },
-      "fields": {
-        "engineering": "Engineering",
-        "business": "Business",
-        "computerScience": "Computer Science",
-        "medicine": "Medicine",
-        "law": "Law",
-        "arts": "Arts & Humanities",
-        "sciences": "Natural Sciences",
-        "other": "Other",
-        "highSchool": "High School",
-        "undergraduate": "Undergraduate",
-        "graduate": "Graduate",
-        "doctorate": "Doctorate",
+      "form": {
+        "editProfile": "Edit Profile",
+        "saving": "Saving...",
+        "saveChanges": "Save Changes",
+        "cancel": "Cancel",
+        "fullName": "Full Name",
+        "phoneNumber": "Phone Number",
+        "country": "Country",
+        "fieldOfInterest": "Field of Interest",
+        "academicLevel": "Academic Level",
+        "gpa": "GPA",
+        "englishProficiency": "English Proficiency",
+        "cpfDocument": "CPF (Brazilian Tax ID)",
+        "cpfHelper": "Used for validation and payments in Brazil (format 000.000.000-00).",
+        "placeholders": {
+          "enterFullName": "Enter your full name",
+          "phoneExample": "Ex: +55 11 99999-8888",
+          "yourCountry": "Your country",
+          "selectField": "Select your field",
+          "selectLevel": "Select level",
+          "selectProficiency": "Select proficiency"
+        },
+        "fields": {
+          "engineering": "Engineering",
+          "business": "Business",
+          "computerScience": "Computer Science",
+          "medicine": "Medicine",
+          "law": "Law",
+          "arts": "Arts & Humanities",
+          "sciences": "Natural Sciences",
+          "other": "Other",
+          "highSchool": "High School",
+          "undergraduate": "Undergraduate",
+          "graduate": "Graduate",
+          "doctorate": "Doctorate",
+          "beginner": "Beginner",
+          "intermediate": "Intermediate",
+          "advanced": "Advanced",
+          "native": "Native",
+          "toefl": "TOEFL Certified",
+          "ielts": "IELTS Certified"
+        }
+      },
+      "sections": {
+        "personalInformation": "Personal Information",
+        "academicInformation": "Academic Information",
+        "accountInformation": "Account Information"
+      },
+      "labels": {
+        "fullName": "Full Name",
+        "email": "Email",
+        "phone": "Phone",
+        "country": "Country",
+        "fieldOfInterest": "Field of Interest",
+        "academicLevel": "Academic Level",
+        "gpa": "GPA",
+        "englishProficiency": "English Proficiency",
+        "memberSince": "Member Since",
+        "profileCompleteness": "Profile Completeness"
+      },
+      "status": {
+        "activeStudent": "Active Student",
+        "verified": "Verified",
+        "notProvided": "Not provided",
+        "studentName": "Student Name",
+        "unknown": "Unknown"
+      },
+      "messages": {
+        "profileUpdated": "Profile updated successfully!",
+        "uploadError": "Failed to upload avatar. Please try again.",
+        "saveError": "Failed to save profile changes. Please try again.",
+        "invalidCPF": "Invalid CPF. Please check and try again.",
+        "invalidImageFile": "Please select an image file",
+        "fileTooLarge": "File size must be less than 5MB",
+        "imageUrlError": "Could not get image URL",
+        "avatarUpdateError": "Failed to update avatar",
+        "changeProfilePicture": "Change profile picture"
+      },
+      "tips": {
+        "completeProfile": "Complete Your Profile",
+        "description": "A complete profile helps us match you with the most relevant scholarship opportunities. Consider adding the missing information to improve your chances of finding the perfect scholarships.",
+        "addPhoneNumber": "Add phone number",
+        "addCountry": "Add country",
+        "addFieldOfInterest": "Add field of interest",
+        "addAcademicLevel": "Add academic level",
+        "addGpa": "Add GPA",
+        "addEnglishProficiency": "Add English proficiency"
+      }
+    },
+    "matriculaRewards": {
+      "title": "Matricula Rewards",
+      "subtitle": "Earn credits by referring friends to MatriculaUSA",
+      "balance": "Balance",
+      "coins": "coins",
+      "helpSupport": "Help & Support",
+      "smartAssistant": "Smart Assistant",
+      "totalReferrals": "Total Referrals",
+      "totalEarnings": "Total Earnings",
+      "yourReferralCode": "Your Referral Code",
+      "yourCode": "Your Code",
+      "yourLink": "Your Link",
+      "copyLink": "Copy Link",
+      "linkCopied": "Link Copied",
+      "shareWithFriends": "Share with Friends",
+      "facebook": "Facebook",
+      "twitter": "Twitter",
+      "linkedin": "LinkedIn",
+      "whatsapp": "WhatsApp",
+      "email": "Email",
+      "spendYourCoins": "Spend Your Coins",
+      "visitStoreDescription": "Visit our rewards store to exchange your coins for tuition discounts",
+      "visitRewardsStore": "Visit Rewards Store",
+      "recentReferrals": "Recent Referrals",
+      "recentTransactions": "Recent Transactions",
+      "noReferralsYet": "No referrals yet",
+      "shareCodeToEarn": "Share your code to start earning coins",
+      "noTransactionsYet": "No transactions yet",
+      "transactionHistory": "Your transaction history will appear here",
+      "howItWorks": "How it Works",
+      "step1Title": "Share your code",
+      "step1Description": "Share your unique referral code with friends and family",
+      "step2Title": "They pay the selection process fee",
+      "step2Description": "When they use your code and pay the selection process fee, you earn coins",
+      "step3Title": "Redeem your rewards",
+      "step3Description": "When referred pays the I-20 Control Fee, you earn 180 coins.",
+      "notificationSent": "Notification sent successfully!",
+      "stages": {
+        "selection": "Selection Process",
+        "application": "Application Fee",
+        "scholarship": "Scholarship Fee",
+        "i20": "I-20 Control"
+      },
+      "referralProgress": "Referral Progress",
+      "notifyFriend": "Notify Friend",
+      "inProgress": "In Progress",
+      "completed": "Completed",
+      "invitedOn": "Invited on {{date}}",
+      "nudgeCooldown": "Please wait {{minutes}} min before notifying again",
+      "participatingUniversities": "Participating Universities",
+      "universitiesDescription": "These universities accept Matricula coins as tuition discounts. Click on a university to see more details.",
+      "loadingUniversities": "Loading universities...",
+      "noParticipatingUniversities": "No participating universities yet",
+      "universitiesNotParticipating": "Universities need to opt-in to the Matricula Rewards program to accept coins for tuition discounts.",
+      "importantInformation": "Important Information",
+      "importantInfoText": "If your university is not listed above, it means they haven't opted to participate in the Matricula Rewards program yet. You can still earn coins by referring friends, but you won't be able to redeem them for tuition discounts at your university until they join the program. Consider reaching out to your university's admissions office to encourage them to participate!",
+      "searchUniversities": "Search universities by name, location, or type...",
+      "previous": "Previous",
+      "next": "Next",
+      "showingResults": "Showing {{start}} to {{end}} of {{total}} universities",
+      "referralNumber": "Referral #{{id}}",
+      "earned": "Earned",
+      "spent": "Spent",
+      "pending": "Pending",
+      "balanceAfter": "Balance: {{amount}}",
+      "tryAgain": "Try Again",
+      "errorLoadingData": "Error loading data",
+      "loading": "Loading {{title}}...",
+      "shareDescription": "Use the buttons below to quickly share your code",
+      "customRedemption": {
+        "title": "Custom Tuition Discount",
+        "subtitle": "Redeem any amount of coins as tuition discount",
+        "conversionRate": "1:1",
+        "conversionText": "1 coin = $1 USD",
+        "yourBalance": "Your Balance",
+        "minimum": "Minimum",
+        "maximum": "Maximum",
+        "coins": "coins",
+        "createCustomDiscount": "Create Custom Discount",
+        "needAtLeastCoins": "Need at least 10 coins",
+        "enterCoinsAmount": "Enter the amount of coins you want to redeem",
+        "amountOfCoins": "Amount of Coins to Redeem",
+        "enterCoinsPlaceholder": "Enter coins amount...",
+        "available": "Available",
+        "min": "Min",
+        "max": "Max",
+        "tuitionDiscount": "Tuition Discount",
+        "cost": "Cost",
+        "continueToUniversity": "Continue to University Selection",
+        "confirmCustomRedemption": "Confirm Custom Redemption",
+        "customTuitionDiscount": "Custom Tuition Discount",
+        "customRedemptionSuccess": "Successfully redeemed custom ${{amount}} tuition discount for ${{university}}!",
+        "customRedemptionSuccessEnrolled": "Successfully redeemed custom ${{amount}} tuition discount for your enrolled university: ${{university}}!"
+      },
+      "rewardsStore": {
+        "backToRewards": "Back to Rewards",
+        "title": "Rewards Store",
+        "subtitle": "Redeem your Matricula Coins for exclusive rewards",
+        "matriculaCoinsAvailable": "Matricula Coins Available",
+        "enrolledStudent": "Enrolled Student:",
+        "enrolledStudentMessage": "Your tuition discounts will automatically apply to",
+        "store": "Store",
+        "history": "History",
+        "customTuitionDiscount": "Custom Tuition Discount",
+        "redeemAnyAmount": "Redeem any amount of coins (1 coin = $1 USD)",
+        "createCustom": "Create Custom",
+        "available": "Available",
+        "offTuition": "off tuition",
+        "redeeming": "Redeeming...",
+        "redeemForUniversity": "Redeem for University",
+        "needMoreCoins": "Need {{amount}} more coins",
+        "noRewardsAvailable": "No rewards available at the moment",
+        "checkBackLater": "Check back later for new rewards!",
+        "tuitionDiscountHistory": "Tuition Discount History",
+        "noTuitionDiscounts": "No tuition discounts redeemed yet",
+        "redeemTuitionDiscounts": "Redeem tuition discounts to see your history here!",
+        "transactionHistory": "Transaction History",
+        "noTransactions": "No transactions yet",
+        "transactionHistoryMessage": "Your transaction history will appear here!",
+        "selectUniversity": "Select Your University",
+        "chooseUniversity": "Choose the university where you want to apply the tuition discount of",
+        "noteEnrolled": "Note:",
+        "youAreEnrolled": "You're enrolled at",
+        "differentUniversity": "If you select a different university, the discount will apply there instead.",
+        "searchUniversitiesPlaceholder": "Search universities by name or location...",
+        "importantInformation": "Important Information:",
+        "onlyParticipatingUniversities": "Only universities that have opted to participate in the Matricula Rewards program are shown here. If your university is not listed, it means they haven't joined the program yet. You can still earn coins by referring friends, but you won't be able to redeem them for tuition discounts at your university until they participate. Consider reaching out to your university's admissions office to encourage them to join!",
+        "noUniversitiesFound": "No universities found",
+        "adjustSearchTerms": "Try adjusting your search terms",
+        "previous": "Previous",
+        "next": "Next",
+        "confirmUniversity": "Confirm University",
+        "closeModal": "Close modal",
+        "website": "Website:",
+        "customTuitionDiscountModal": "Custom Tuition Discount",
+        "amountOfCoinsToRedeem": "Amount of Coins to Redeem",
+        "enterCoinsAmount": "Enter coins amount...",
+        "availableMinMax": "Available: {{available}} coins • Min: 10 • Max: {{max}}",
+        "tuitionDiscountPreview": "Tuition Discount",
+        "costPreview": "Cost",
+        "cancel": "Cancel",
+        "continue": "Continue",
+        "confirmAndRedeem": "Confirm & Redeem",
+        "processing": "Processing...",
+        "loadingRewardsStore": "Loading Rewards Store...",
+        "errorLoadingRewardsStore": "Error loading Rewards Store",
+        "tryAgain": "Try Again"
+      }
+    },
+    "matriculaRewardsLanding": {
+      "aiPoweredHelp": "AI-powered help",
+      "directMessaging": "Direct messaging",
+      "badge": "New Rewards Program",
+      "hero": {
+        "title": "Turn Your",
+        "titleHighlight": "Referrals into Discounts",
+        "subtitle": "on Your Tuition",
+        "description": "Earn <strong>Matricula Coins</strong> for every friend you refer and use them to <strong>reduce your tuition</strong> - 1 coin = $1 off your monthly payment",
+        "valueCards": {
+          "referFriends": {
+            "title": "Share & Earn",
+            "description": "Get your unique code and share with friends who want to study in the USA"
+          },
+          "accumulateCoins": {
+            "title": "Earn Rewards",
+            "description": "180 coins per referral that completes the Placement Fee payment"
+          },
+          "payLess": {
+            "title": "Save Money",
+            "description": "Use your coins to reduce your monthly university payments"
+          }
+        },
+        "cta": {
+          "getStarted": "Start Now",
+          "learnMore": "See How It Works"
+        },
+        "demo": {
+          "title": "Live Demo",
+          "subtitle": "Your Rewards Dashboard",
+          "description": "See what your account would look like with some referrals",
+          "referralCode": {
+            "title": "Your Referral Code",
+            "code": "MTR2026",
+            "copy": "Copy Code",
+            "copied": "Copied!",
+            "loginToGetCode": "Login to get your referral code"
+          },
+          "balance": {
+            "title": "Current Balance",
+            "coins": "Matricula Coins",
+            "discount": "in discounts"
+          },
+          "discount": {
+            "title": "Available Discount",
+            "forTuition": "For Tuition",
+            "applicableTo": "Applicable to {{count}} universities"
+          },
+          "stats": {
+            "referred": "Friends Referred",
+            "signedUp": "Signed Up",
+            "conversion": "Conversion Rate",
+            "monthsSaving": "Months Saving"
+          }
+        }
+      },
+      "stats": {
+        "activeStudents": "Active Students",
+        "partnerUniversities": "Partner Universities",
+        "discountsGiven": "In Discounts Given",
+        "satisfactionRate": "Satisfaction Rate"
+      },
+      "howItWorks": {
+        "title": "How Matricula Rewards Works",
+        "subtitle": "A simple and transparent system for you to save on your education while helping your friends achieve the American dream",
+        "steps": {
+          "step1": {
+            "title": "Share Your Code",
+            "description": "Get your unique code and share with friends who want to study in the USA",
+            "details": "Each code automatically tracks your referrals"
+          },
+          "step2": {
+            "title": "Friends Sign Up",
+            "description": "When your friends register using your code, you both earn Matricula Coins",
+            "details": "180 coins after Placement Fee is paid"
+          },
+          "step3": {
+            "title": "Redeem Fee Discount",
+            "description": "Use your coins to redeem fee discounts from the Rewards Store",
+            "details": "Select your university and redeem the discount"
+          },
+          "step4": {
+            "title": "Contact Your University",
+            "description": "Contact your university's admissions office to apply the redeemed discount",
+            "details": "Present your discount code to get the reduction on your fees"
+          }
+        },
+        "calculator": {
+          "title": "Matrícula Coins Calculator",
+          "description": "See how many coins you can earn by referring friends",
+          "label": "How many friends can you refer?",
+          "friends": "friends",
+          "coinsEarned": "Coins Earned",
+          "totalSavings": "Value Available for Redemption",
+          "cta": "Start Saving Now",
+          "minValue": "1 friend",
+          "maxValue": "50+ friends",
+          "coinsPerFriend": "180 coins",
+          "perFriend": "per friend",
+          "coinValue": "1 coin =",
+          "usdValue": "$1 USD"
+        },
+        "actions": {
+          "shareNow": "Share now",
+          "inviteFriends": "Invite friends",
+          "seeEarnings": "See earnings",
+          "useDiscount": "Use discount"
+        },
+        "journey": {
+          "startMessage": "Start your savings journey now!"
+        },
+        "qrCode": {
+          "title": "Register Instantly",
+          "subtitle": "Scan the QR code with your phone to access the registration page directly and start saving on your tuition today.",
+          "description": "Quick and secure access to your account",
+          "instruction": "Use your phone's camera to scan",
+          "note": "Available for mobile devices only",
+          "benefits": {
+            "quickAccess": {
+              "title": "Quick and Secure Access",
+              "description": "Register in seconds without typing long URLs"
+            },
+            "startSaving": {
+              "title": "Start Saving Immediately",
+              "description": "Earn coins from day one and apply discounts to your fees"
+            },
+            "referFriends": {
+              "title": "Refer Friends and Multiply Your Earnings",
+              "description": "180 coins for each friend who pays the Placement Fee using your code"
+            }
+          }
+        }
+      },
+      "testimonials": {
+        "title": "Success Stories",
+        "subtitle": "Join thousands of students who are already saving on their education and achieving the American dream",
+        "stories": [
+          {
+            "name": "Maria Santos",
+            "university": "University of California",
+            "text": "I saved $800 on tuition just by sharing Matricula with my friends. Amazing!",
+            "savings": "Saved $800"
+          },
+          {
+            "name": "João Silva",
+            "university": "Arizona State University",
+            "text": "The program helped me significantly reduce education costs. Highly recommend!",
+            "savings": "Saved $1,200"
+          },
+          {
+            "name": "Ana Rodriguez",
+            "university": "University of Miami",
+            "text": "Easy to use and really pays off. I got a discount for an entire semester!",
+            "savings": "Saved $1,500"
+          }
+        ],
+        "stats": {
+          "activeStudents": "Active Students",
+          "totalSavings": "Total Savings",
+          "averageRating": "Average Rating",
+          "universities": "Universities"
+        }
+      },
+      "benefits": {
+        "title": "Why Choose Matricula Rewards?",
+        "subtitle": "More than a referral program, it's a smart way to make your education more accessible",
+        "items": [
+          {
+            "title": "Real Savings",
+            "description": "Direct discounts on your university fees",
+            "highlight": "Up to $2,000/semester"
+          },
+          {
+            "title": "Super Easy",
+            "description": "Simple system to share and earn",
+            "highlight": "3 clicks to start"
+          },
+          {
+            "title": "Instant",
+            "description": "Coins credited immediately after referral",
+            "highlight": "100 coins/referral"
+          }
+        ]
+      },
+      "finalCta": {
+        "title": "Ready to",
+        "titleHighlight": "Save?",
+        "description": "Join thousands of students who are already saving on education. Your journey to accessible education starts with one click.",
+        "cards": {
+          "startNow": {
+            "title": "Start Now",
+            "description": "Get your referral code and start accumulating coins today",
+            "cta": "Get Code"
+          },
+          "learnMore": {
+            "title": "Learn More",
+            "description": "Discover how the system works and see real savings examples",
+            "cta": "View Details"
+          }
+        },
+        "trust": {
+          "free": "Free",
+          "quickStart": "To start",
+          "support": "Support"
+        }
+      }
+    },
+    "academicInfo": {
+      "minEnglishProficiency": "Minimum English",
+      "minGpa": "Minimum GPA",
+      "englishProficiencyLevels": {
         "beginner": "Beginner",
         "intermediate": "Intermediate",
         "advanced": "Advanced",
-        "native": "Native",
-        "toefl": "TOEFL Certified",
-        "ielts": "IELTS Certified"
-      }
-    },
-    "sections": {
-      "personalInformation": "Personal Information",
-      "academicInformation": "Academic Information",
-      "accountInformation": "Account Information"
-    },
-    "labels": {
-      "fullName": "Full Name",
-      "email": "Email",
-      "phone": "Phone",
-      "country": "Country",
-      "fieldOfInterest": "Field of Interest",
-      "academicLevel": "Academic Level",
-      "gpa": "GPA",
-      "englishProficiency": "English Proficiency",
-      "memberSince": "Member Since",
-      "profileCompleteness": "Profile Completeness"
-    },
-    "status": {
-      "activeStudent": "Active Student",
-      "verified": "Verified",
-      "notProvided": "Not provided",
-      "studentName": "Student Name",
-      "unknown": "Unknown"
-    },
-    "messages": {
-      "profileUpdated": "Profile updated successfully!",
-      "uploadError": "Failed to upload avatar. Please try again.",
-      "saveError": "Failed to save profile changes. Please try again.",
-      "invalidCPF": "Invalid CPF. Please check and try again.",
-      "invalidImageFile": "Please select an image file",
-      "fileTooLarge": "File size must be less than 5MB",
-      "imageUrlError": "Could not get image URL",
-      "avatarUpdateError": "Failed to update avatar",
-      "changeProfilePicture": "Change profile picture"
-    },
-    "tips": {
-      "completeProfile": "Complete Your Profile",
-      "description": "A complete profile helps us match you with the most relevant scholarship opportunities. Consider adding the missing information to improve your chances of finding the perfect scholarships.",
-      "addPhoneNumber": "Add phone number",
-      "addCountry": "Add country",
-      "addFieldOfInterest": "Add field of interest",
-      "addAcademicLevel": "Add academic level",
-      "addGpa": "Add GPA",
-      "addEnglishProficiency": "Add English proficiency"
-    }
-  },
-  "matriculaRewards": {
-    "title": "Matricula Rewards",
-    "subtitle": "Earn credits by referring friends to MatriculaUSA",
-    "balance": "Balance",
-    "coins": "coins",
-    "helpSupport": "Help & Support",
-    "smartAssistant": "Smart Assistant",
-    "totalReferrals": "Total Referrals",
-    "totalEarnings": "Total Earnings",
-    "yourReferralCode": "Your Referral Code",
-    "yourCode": "Your Code",
-    "yourLink": "Your Link",
-    "copyLink": "Copy Link",
-    "linkCopied": "Link Copied",
-    "shareWithFriends": "Share with Friends",
-    "facebook": "Facebook",
-    "twitter": "Twitter",
-    "linkedin": "LinkedIn",
-    "whatsapp": "WhatsApp",
-    "email": "Email",
-    "spendYourCoins": "Spend Your Coins",
-    "visitStoreDescription": "Visit our rewards store to exchange your coins for tuition discounts",
-    "visitRewardsStore": "Visit Rewards Store",
-    "recentReferrals": "Recent Referrals",
-    "recentTransactions": "Recent Transactions",
-    "noReferralsYet": "No referrals yet",
-    "shareCodeToEarn": "Share your code to start earning coins",
-    "noTransactionsYet": "No transactions yet",
-    "transactionHistory": "Your transaction history will appear here",
-    "howItWorks": "How it Works",
-    "step1Title": "Share your code",
-    "step1Description": "Share your unique referral code with friends and family",
-    "step2Title": "They pay the selection process fee",
-    "step2Description": "When they use your code and pay the selection process fee, you earn coins",
-    "step3Title": "Redeem your rewards",
-    "step3Description": "When referred pays the I-20 Control Fee, you earn 180 coins.",
-    "notificationSent": "Notification sent successfully!",
-    "stages": {
-      "selection": "Selection Process",
-      "application": "Application Fee",
-      "scholarship": "Scholarship Fee",
-      "i20": "I-20 Control"
-    },
-    "referralProgress": "Referral Progress",
-    "notifyFriend": "Notify Friend",
-    "inProgress": "In Progress",
-    "completed": "Completed",
-    "invitedOn": "Invited on {{date}}",
-    "nudgeCooldown": "Please wait {{minutes}} min before notifying again",
-    "participatingUniversities": "Participating Universities",
-    "universitiesDescription": "These universities accept Matricula coins as tuition discounts. Click on a university to see more details.",
-    "loadingUniversities": "Loading universities...",
-    "noParticipatingUniversities": "No participating universities yet",
-    "universitiesNotParticipating": "Universities need to opt-in to the Matricula Rewards program to accept coins for tuition discounts.",
-    "importantInformation": "Important Information",
-    "importantInfoText": "If your university is not listed above, it means they haven't opted to participate in the Matricula Rewards program yet. You can still earn coins by referring friends, but you won't be able to redeem them for tuition discounts at your university until they join the program. Consider reaching out to your university's admissions office to encourage them to participate!",
-    "searchUniversities": "Search universities by name, location, or type...",
-    "previous": "Previous",
-    "next": "Next",
-    "showingResults": "Showing {{start}} to {{end}} of {{total}} universities",
-    "referralNumber": "Referral #{{id}}",
-    "earned": "Earned",
-    "spent": "Spent",
-    "pending": "Pending",
-    "balanceAfter": "Balance: {{amount}}",
-    "tryAgain": "Try Again",
-    "errorLoadingData": "Error loading data",
-    "loading": "Loading {{title}}...",
-    "shareDescription": "Use the buttons below to quickly share your code",
-    "customRedemption": {
-      "title": "Custom Tuition Discount",
-      "subtitle": "Redeem any amount of coins as tuition discount",
-      "conversionRate": "1:1",
-      "conversionText": "1 coin = $1 USD",
-      "yourBalance": "Your Balance",
-      "minimum": "Minimum",
-      "maximum": "Maximum",
-      "coins": "coins",
-      "createCustomDiscount": "Create Custom Discount",
-      "needAtLeastCoins": "Need at least 10 coins",
-      "enterCoinsAmount": "Enter the amount of coins you want to redeem",
-      "amountOfCoins": "Amount of Coins to Redeem",
-      "enterCoinsPlaceholder": "Enter coins amount...",
-      "available": "Available",
-      "min": "Min",
-      "max": "Max",
-      "tuitionDiscount": "Tuition Discount",
-      "cost": "Cost",
-      "continueToUniversity": "Continue to University Selection",
-      "confirmCustomRedemption": "Confirm Custom Redemption",
-      "customTuitionDiscount": "Custom Tuition Discount",
-      "customRedemptionSuccess": "Successfully redeemed custom ${{amount}} tuition discount for ${{university}}!",
-      "customRedemptionSuccessEnrolled": "Successfully redeemed custom ${{amount}} tuition discount for your enrolled university: ${{university}}!"
-    },
-    "rewardsStore": {
-      "backToRewards": "Back to Rewards",
-      "title": "Rewards Store",
-      "subtitle": "Redeem your Matricula Coins for exclusive rewards",
-      "matriculaCoinsAvailable": "Matricula Coins Available",
-      "enrolledStudent": "Enrolled Student:",
-      "enrolledStudentMessage": "Your tuition discounts will automatically apply to",
-      "store": "Store",
-      "history": "History",
-      "customTuitionDiscount": "Custom Tuition Discount",
-      "redeemAnyAmount": "Redeem any amount of coins (1 coin = $1 USD)",
-      "createCustom": "Create Custom",
-      "available": "Available",
-      "offTuition": "off tuition",
-      "redeeming": "Redeeming...",
-      "redeemForUniversity": "Redeem for University",
-      "needMoreCoins": "Need {{amount}} more coins",
-      "noRewardsAvailable": "No rewards available at the moment",
-      "checkBackLater": "Check back later for new rewards!",
-      "tuitionDiscountHistory": "Tuition Discount History",
-      "noTuitionDiscounts": "No tuition discounts redeemed yet",
-      "redeemTuitionDiscounts": "Redeem tuition discounts to see your history here!",
-      "transactionHistory": "Transaction History",
-      "noTransactions": "No transactions yet",
-      "transactionHistoryMessage": "Your transaction history will appear here!",
-      "selectUniversity": "Select Your University",
-      "chooseUniversity": "Choose the university where you want to apply the tuition discount of",
-      "noteEnrolled": "Note:",
-      "youAreEnrolled": "You're enrolled at",
-      "differentUniversity": "If you select a different university, the discount will apply there instead.",
-      "searchUniversitiesPlaceholder": "Search universities by name or location...",
-      "importantInformation": "Important Information:",
-      "onlyParticipatingUniversities": "Only universities that have opted to participate in the Matricula Rewards program are shown here. If your university is not listed, it means they haven't joined the program yet. You can still earn coins by referring friends, but you won't be able to redeem them for tuition discounts at your university until they participate. Consider reaching out to your university's admissions office to encourage them to join!",
-      "noUniversitiesFound": "No universities found",
-      "adjustSearchTerms": "Try adjusting your search terms",
-      "previous": "Previous",
-      "next": "Next",
-      "confirmUniversity": "Confirm University",
-      "closeModal": "Close modal",
-      "website": "Website:",
-      "customTuitionDiscountModal": "Custom Tuition Discount",
-      "amountOfCoinsToRedeem": "Amount of Coins to Redeem",
-      "enterCoinsAmount": "Enter coins amount...",
-      "availableMinMax": "Available: {{available}} coins • Min: 10 • Max: {{max}}",
-      "tuitionDiscountPreview": "Tuition Discount",
-      "costPreview": "Cost",
-      "cancel": "Cancel",
-      "continue": "Continue",
-      "confirmAndRedeem": "Confirm & Redeem",
-      "processing": "Processing...",
-      "loadingRewardsStore": "Loading Rewards Store...",
-      "errorLoadingRewardsStore": "Error loading Rewards Store",
-      "tryAgain": "Try Again"
-    }
-  },
-  "matriculaRewardsLanding": {
-    "aiPoweredHelp": "AI-powered help",
-    "directMessaging": "Direct messaging",
-    "badge": "New Rewards Program",
-    "hero": {
-      "title": "Turn Your",
-      "titleHighlight": "Referrals into Discounts",
-      "subtitle": "on Your Tuition",
-      "description": "Earn <strong>Matricula Coins</strong> for every friend you refer and use them to <strong>reduce your tuition</strong> - 1 coin = $1 off your monthly payment",
-      "valueCards": {
-        "referFriends": {
-          "title": "Share & Earn",
-          "description": "Get your unique code and share with friends who want to study in the USA"
-        },
-        "accumulateCoins": {
-          "title": "Earn Rewards",
-          "description": "180 coins per referral that completes the Placement Fee payment"
-        },
-        "payLess": {
-          "title": "Save Money",
-          "description": "Use your coins to reduce your monthly university payments"
-        }
-      },
-      "cta": {
-        "getStarted": "Start Now",
-        "learnMore": "See How It Works"
-      },
-      "demo": {
-        "title": "Live Demo",
-        "subtitle": "Your Rewards Dashboard",
-        "description": "See what your account would look like with some referrals",
-        "referralCode": {
-          "title": "Your Referral Code",
-          "code": "MTR2026",
-          "copy": "Copy Code",
-          "copied": "Copied!",
-          "loginToGetCode": "Login to get your referral code"
-        },
-        "balance": {
-          "title": "Current Balance",
-          "coins": "Matricula Coins",
-          "discount": "in discounts"
-        },
-        "discount": {
-          "title": "Available Discount",
-          "forTuition": "For Tuition",
-          "applicableTo": "Applicable to {{count}} universities"
-        },
-        "stats": {
-          "referred": "Friends Referred",
-          "signedUp": "Signed Up",
-          "conversion": "Conversion Rate",
-          "monthsSaving": "Months Saving"
-        }
-      }
-    },
-    "stats": {
-      "activeStudents": "Active Students",
-      "partnerUniversities": "Partner Universities",
-      "discountsGiven": "In Discounts Given",
-      "satisfactionRate": "Satisfaction Rate"
-    },
-    "howItWorks": {
-      "title": "How Matricula Rewards Works",
-      "subtitle": "A simple and transparent system for you to save on your education while helping your friends achieve the American dream",
-      "steps": {
-        "step1": {
-          "title": "Share Your Code",
-          "description": "Get your unique code and share with friends who want to study in the USA",
-          "details": "Each code automatically tracks your referrals"
-        },
-        "step2": {
-          "title": "Friends Sign Up",
-          "description": "When your friends register using your code, you both earn Matricula Coins",
-          "details": "180 coins after Placement Fee is paid"
-        },
-        "step3": {
-          "title": "Redeem Fee Discount",
-          "description": "Use your coins to redeem fee discounts from the Rewards Store",
-          "details": "Select your university and redeem the discount"
-        },
-        "step4": {
-          "title": "Contact Your University",
-          "description": "Contact your university's admissions office to apply the redeemed discount",
-          "details": "Present your discount code to get the reduction on your fees"
-        }
-      },
-      "calculator": {
-        "title": "Matrícula Coins Calculator",
-        "description": "See how many coins you can earn by referring friends",
-        "label": "How many friends can you refer?",
-        "friends": "friends",
-        "coinsEarned": "Coins Earned",
-        "totalSavings": "Value Available for Redemption",
-        "cta": "Start Saving Now",
-        "minValue": "1 friend",
-        "maxValue": "50+ friends",
-        "coinsPerFriend": "180 coins",
-        "perFriend": "per friend",
-        "coinValue": "1 coin =",
-        "usdValue": "$1 USD"
-      },
-      "actions": {
-        "shareNow": "Share now",
-        "inviteFriends": "Invite friends",
-        "seeEarnings": "See earnings",
-        "useDiscount": "Use discount"
-      },
-      "journey": {
-        "startMessage": "Start your savings journey now!"
-      },
-      "qrCode": {
-        "title": "Register Instantly",
-        "subtitle": "Scan the QR code with your phone to access the registration page directly and start saving on your tuition today.",
-        "description": "Quick and secure access to your account",
-        "instruction": "Use your phone's camera to scan",
-        "note": "Available for mobile devices only",
-        "benefits": {
-          "quickAccess": {
-            "title": "Quick and Secure Access",
-            "description": "Register in seconds without typing long URLs"
-          },
-          "startSaving": {
-            "title": "Start Saving Immediately",
-            "description": "Earn coins from day one and apply discounts to your fees"
-          },
-          "referFriends": {
-            "title": "Refer Friends and Multiply Your Earnings",
-            "description": "180 coins for each friend who pays the Placement Fee using your code"
-          }
-        }
-      }
-    },
-    "testimonials": {
-      "title": "Success Stories",
-      "subtitle": "Join thousands of students who are already saving on their education and achieving the American dream",
-      "stories": [
-        {
-          "name": "Maria Santos",
-          "university": "University of California",
-          "text": "I saved $800 on tuition just by sharing Matricula with my friends. Amazing!",
-          "savings": "Saved $800"
-        },
-        {
-          "name": "João Silva",
-          "university": "Arizona State University",
-          "text": "The program helped me significantly reduce education costs. Highly recommend!",
-          "savings": "Saved $1,200"
-        },
-        {
-          "name": "Ana Rodriguez",
-          "university": "University of Miami",
-          "text": "Easy to use and really pays off. I got a discount for an entire semester!",
-          "savings": "Saved $1,500"
-        }
-      ],
-      "stats": {
-        "activeStudents": "Active Students",
-        "totalSavings": "Total Savings",
-        "averageRating": "Average Rating",
-        "universities": "Universities"
-      }
-    },
-    "benefits": {
-      "title": "Why Choose Matricula Rewards?",
-      "subtitle": "More than a referral program, it's a smart way to make your education more accessible",
-      "items": [
-        {
-          "title": "Real Savings",
-          "description": "Direct discounts on your university fees",
-          "highlight": "Up to $2,000/semester"
-        },
-        {
-          "title": "Super Easy",
-          "description": "Simple system to share and earn",
-          "highlight": "3 clicks to start"
-        },
-        {
-          "title": "Instant",
-          "description": "Coins credited immediately after referral",
-          "highlight": "100 coins/referral"
-        }
-      ]
-    },
-    "finalCta": {
-      "title": "Ready to",
-      "titleHighlight": "Save?",
-      "description": "Join thousands of students who are already saving on education. Your journey to accessible education starts with one click.",
-      "cards": {
-        "startNow": {
-          "title": "Start Now",
-          "description": "Get your referral code and start accumulating coins today",
-          "cta": "Get Code"
-        },
-        "learnMore": {
-          "title": "Learn More",
-          "description": "Discover how the system works and see real savings examples",
-          "cta": "View Details"
-        }
-      },
-      "trust": {
-        "free": "Free",
-        "quickStart": "To start",
-        "support": "Support"
+        "native": "Native"
       }
     }
   }

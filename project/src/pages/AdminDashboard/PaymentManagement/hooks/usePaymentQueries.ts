@@ -36,7 +36,7 @@ export function usePaymentsQuery(enabled: boolean = true) {
       // ✅ TASK-10: 1 única query para todos os usuários (elimina N+1)
       const realPaymentAmounts = await getGrossPaidAmountsBatch(
         uniqueUserIds,
-        ['selection_process', 'scholarship', 'i20_control', 'application', 'placement', 'ds160_package', 'i539_cos_package']
+        ['selection_process', 'scholarship', 'i20_control', 'application', 'placement', 'ds160_package', 'i539_cos_package', 'reinstatement_package']
       );
 
       const individualPaymentDates = await getPaymentDatesForUsersLoaderOptimized(supabase, uniqueUserIds);

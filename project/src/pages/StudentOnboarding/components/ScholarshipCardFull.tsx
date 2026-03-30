@@ -26,6 +26,7 @@ interface ScholarshipCardFullProps {
   userProfile?: any;
   isLocked?: boolean;
   onViewDetails?: () => void;
+  isLimitReached?: boolean;
 }
 
 const ScholarshipCardFullComponent: React.FC<ScholarshipCardFullProps> = ({
@@ -34,7 +35,8 @@ const ScholarshipCardFullComponent: React.FC<ScholarshipCardFullProps> = ({
   onToggle,
   userProfile,
   isLocked = false,
-  onViewDetails
+  onViewDetails,
+  isLimitReached = false
 }) => {
   const { t } = useTranslation(['registration', 'scholarships', 'common']);
   const [brokenImage, setBrokenImage] = useState<boolean>(false);
@@ -53,11 +55,11 @@ const ScholarshipCardFullComponent: React.FC<ScholarshipCardFullProps> = ({
       className={`group relative bg-white rounded-2xl sm:rounded-3xl shadow-md hover:shadow-xl transition-all duration-300 overflow-hidden border-2 ${isSelected
         ? 'border-blue-600 border-[3px] bg-blue-50/50 shadow-lg shadow-blue-100/50'
         : 'border-slate-200/60 hover:border-slate-300'
-        } flex flex-col h-full hover:-translate-y-1 transform-gpu ${!scholarship.is_active || isBlocked || isLocked ? 'cursor-not-allowed' : 'cursor-pointer' // Fix: Ensure cursor is pointer when clickable
+        } flex flex-col h-full hover:-translate-y-1 transform-gpu ${!scholarship.is_active || isBlocked || isLocked || (isLimitReached && !isSelected) ? 'cursor-not-allowed' : 'cursor-pointer' // Fix: Ensure cursor is pointer when clickable
         }`}
       onClick={() => {
         // Fix: Make entire card clickable
-        if (!scholarship.is_active || isBlocked || isLocked) return;
+        if (!scholarship.is_active || isBlocked || isLocked || (isLimitReached && !isSelected)) return;
         onToggle();
       }}
       style={{
@@ -235,10 +237,12 @@ const ScholarshipCardFullComponent: React.FC<ScholarshipCardFullProps> = ({
               const placementFeeAmount = scholarship.placement_fee_amount ? Number(scholarship.placement_fee_amount) : null;
               const placementFee = getPlacementFee(annualValue, placementFeeAmount);
               return (
-                <div className="flex items-center justify-between pt-1.5 border-t border-slate-100">
-                  <span className="text-slate-400 text-xs font-medium">{t('scholarships:scholarshipsPage.scholarshipCard.placementFee', 'Placement Fee')}</span>
-                  <span className="text-blue-600 text-xs font-black">{formatCurrency(placementFee)}</span>
-                </div>
+                <>
+                  <div className="flex items-center justify-between pt-1.5 border-t border-slate-100">
+                    <span className="text-slate-400 text-xs font-medium">{t('scholarships:scholarshipsPage.scholarshipCard.placementFee', 'Placement Fee')}</span>
+                    <span className="text-blue-600 text-xs font-black">{formatCurrency(placementFee)}</span>
+                  </div>
+                </>
               );
             })()}
           </div>
@@ -273,8 +277,8 @@ const ScholarshipCardFullComponent: React.FC<ScholarshipCardFullProps> = ({
                 e.stopPropagation();
                 onToggle();
               }}
-              disabled={isLocked}
-              className={`group/btn w-full h-10 px-4 rounded-xl font-bold text-sm flex items-center justify-center transition-all duration-300 relative overflow-hidden backdrop-blur-md border border-white/20 shadow-lg hover:shadow-xl ${isLocked
+              disabled={isLocked || (isLimitReached && !isSelected)}
+              className={`group/btn w-full h-10 px-4 rounded-xl font-bold text-sm flex items-center justify-center transition-all duration-300 relative overflow-hidden backdrop-blur-md border border-white/20 shadow-lg hover:shadow-xl ${isLocked || (isLimitReached && !isSelected)
                 ? 'bg-slate-300/80 text-slate-500 cursor-not-allowed'
                 : isSelected
                   ? 'bg-gradient-to-r from-blue-600/90 to-blue-700/90 text-white hover:from-blue-600 hover:to-blue-700'
@@ -304,6 +308,7 @@ export const ScholarshipCardFull = React.memo(ScholarshipCardFullComponent, (pre
   const propsEqual =
     prevProps.scholarship.id === nextProps.scholarship.id &&
     prevProps.isSelected === nextProps.isSelected &&
+    prevProps.isLimitReached === nextProps.isLimitReached &&
     prevProps.isLocked === nextProps.isLocked &&
     prevProps.userProfile?.id === nextProps.userProfile?.id;
 

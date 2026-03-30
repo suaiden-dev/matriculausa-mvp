@@ -1,12 +1,11 @@
 import React, { useState } from 'react';
-import { CreditCard, Check, Loader2, AlertCircle, X } from 'lucide-react';
+import { CreditCard, Check, Loader2, AlertCircle, X, Shield } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 import { supabase } from '../../../lib/supabase';
 import { ZelleCheckout } from '../../../components/ZelleCheckout';
 import { getExchangeRate, calculateCardAmountWithFees, calculatePIXTotalWithIOF } from '../../../utils/stripeFeeCalculator';
 import { usePaymentBlocked } from '../../../hooks/usePaymentBlocked';
 
-const PACKAGE_FEE_AMOUNT = 1800;
 
 const PixIcon = ({ className }: { className?: string }) => (
   <svg className={className} xmlns="http://www.w3.org/2000/svg" viewBox="0 0 48 48">
@@ -42,7 +41,8 @@ const StripeIcon = ({ className }: { className?: string }) => (
 type PaymentMethod = 'stripe' | 'pix' | 'parcelow' | 'zelle';
 
 interface PackageFeeTabProps {
-  feeType: 'ds160_package' | 'i539_cos_package';
+  feeType: 'ds160_package' | 'i539_cos_package' | 'reinstatement_package';
+  amount: number;
   feeLabel: string;
   isPaid: boolean;
   supabaseUrl?: string;
@@ -65,6 +65,10 @@ interface PackageFeeTabProps {
   setCpfError: (v: string | null) => void;
   userProfile: any;
   onPaymentSuccess: () => void;
+  currentStep: string;
+  universityLogo?: string;
+  universityName?: string;
+  scholarshipTitle?: string;
 }
 
 export const PackageFeeTab: React.FC<PackageFeeTabProps> = ({
@@ -89,6 +93,11 @@ export const PackageFeeTab: React.FC<PackageFeeTabProps> = ({
   setCpfError,
   userProfile,
   onPaymentSuccess,
+  amount,
+  currentStep,
+  universityLogo,
+  universityName,
+  scholarshipTitle,
 }) => {
   const { t } = useTranslation(['registration', 'common', 'scholarships', 'payment']);
   const [exchangeRate, setExchangeRate] = useState<number | null>(null);
@@ -112,16 +121,16 @@ export const PackageFeeTab: React.FC<PackageFeeTabProps> = ({
     setLoading(true);
     setError(null);
     try {
-      console.log('[PackageFeeTab] Starting Stripe Checkout...', { paymentMethod, feeType, finalAmount: PACKAGE_FEE_AMOUNT });
+      console.log('[PackageFeeTab] Starting Stripe Checkout...', { paymentMethod, feeType, finalAmount: amount });
       const token = await getAccessToken();
       console.log('[PackageFeeTab] Access Token obtained:', !!token);
       if (!token) throw new Error(t('rapidRegistration.payment.error.notAuthenticated'));
 
-      const currentUrl = window.location.href.split('?')[0];
-      const successUrl = `${currentUrl}?step=my_applications&payment=success&session_id={CHECKOUT_SESSION_ID}&fee_type=${feeType}`;
-      const cancelUrl = `${currentUrl}?step=my_applications&payment=cancelled`;
+      const currentUrl = window.location.origin + window.location.pathname;
+      const successUrl = `${currentUrl}?step=${currentStep}&payment=success&session_id={CHECKOUT_SESSION_ID}&fee_type=${feeType}`;
+      const cancelUrl = `${currentUrl}?step=${currentStep}&payment=cancelled`;
 
-      let finalAmount = PACKAGE_FEE_AMOUNT;
+      let finalAmount = amount;
 
       const payload: any = {
         success_url: successUrl,
@@ -136,8 +145,10 @@ export const PackageFeeTab: React.FC<PackageFeeTabProps> = ({
         payload.metadata.exchange_rate = exchangeRate.toString();
       }
 
-      console.log('[PackageFeeTab] Calling Edge Function:', `${SUPABASE_URL}/functions/v1/stripe-checkout-package-fee`);
-      const response = await fetch(`${SUPABASE_URL}/functions/v1/stripe-checkout-package-fee`, {
+      const functionName = 'stripe-checkout-package-fee';
+
+      console.log('[PackageFeeTab] Calling Edge Function:', `${SUPABASE_URL}/functions/v1/${functionName}`);
+      const response = await fetch(`${SUPABASE_URL}/functions/v1/${functionName}`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
         body: JSON.stringify(payload),
@@ -179,11 +190,13 @@ export const PackageFeeTab: React.FC<PackageFeeTabProps> = ({
       console.log('[PackageFeeTab] Access Token obtained for Parcelow:', !!token);
       if (!token) throw new Error(t('rapidRegistration.payment.error.notAuthenticated'));
 
-      console.log('[PackageFeeTab] Calling Parcelow Edge Function:', `${SUPABASE_URL}/functions/v1/parcelow-checkout-package-fee`);
-      const response = await fetch(`${SUPABASE_URL}/functions/v1/parcelow-checkout-package-fee`, {
+      const functionName = 'parcelow-checkout-package-fee';
+
+      console.log('[PackageFeeTab] Calling Parcelow Edge Function:', `${SUPABASE_URL}/functions/v1/${functionName}`);
+      const response = await fetch(`${SUPABASE_URL}/functions/v1/${functionName}`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
-        body: JSON.stringify({ amount: PACKAGE_FEE_AMOUNT, fee_type: feeType }),
+        body: JSON.stringify({ amount: amount, fee_type: feeType }),
       });
 
       console.log('[PackageFeeTab] Parcelow Response status:', response.status);
@@ -247,8 +260,8 @@ export const PackageFeeTab: React.FC<PackageFeeTabProps> = ({
     }
   };
 
-  const pixAmount = exchangeRate ? calculatePIXTotalWithIOF(PACKAGE_FEE_AMOUNT, exchangeRate).totalWithIOF : null;
-  const cardAmount = calculateCardAmountWithFees(PACKAGE_FEE_AMOUNT);
+  const pixAmount = exchangeRate ? calculatePIXTotalWithIOF(amount, exchangeRate).totalWithIOF : null;
+  const cardAmount = calculateCardAmountWithFees(amount);
 
 
 
@@ -268,292 +281,281 @@ export const PackageFeeTab: React.FC<PackageFeeTabProps> = ({
   }
 
   return (
-    <div className="space-y-8 pb-12">
-      <div className="bg-white rounded-[3rem] shadow-2xl border border-gray-100 overflow-hidden relative">
-        <div className="absolute top-0 right-0 w-80 h-80 bg-blue-500/5 rounded-full blur-[100px] -mr-40 -mt-40 pointer-events-none" />
-
-        {/* Header */}
-        <div className="bg-slate-50 px-8 py-10 md:p-12 border-b border-slate-100">
-          <div className="flex flex-col md:flex-row md:items-center justify-between gap-8 text-center md:text-left">
-            <div className="flex flex-col md:flex-row items-center gap-6">
-              <div className="w-20 h-20 bg-blue-600 rounded-[2rem] flex items-center justify-center shadow-xl shadow-blue-500/20 shrink-0">
-                <CreditCard className="w-10 h-10 text-white" />
-              </div>
-              <div>
-                <h2 className="text-[22px] md:text-3xl font-black text-gray-900 uppercase tracking-tighter leading-none mb-1">
-                  {feeLabel}
-                </h2>
-                <p className="text-slate-500 text-sm font-medium">{t('studentOnboarding.documentsUpload.packageFees.obligatoryFee')}</p>
-              </div>
-            </div>
-            <div className="flex flex-col md:items-end gap-1">
-              <span className="text-4xl font-black text-slate-900 tracking-tighter">$1,800</span>
-              <span className="text-xs text-slate-400 font-bold uppercase tracking-widest">USD</span>
-            </div>
-          </div>
-        </div>
-
-        {/* Content */}
-        <div className="p-6 md:p-12 space-y-8">
-
-
-          {error && (
-            <div className="bg-red-50 border border-red-200 rounded-2xl p-4 flex items-center gap-3">
-              <AlertCircle className="w-5 h-5 text-red-500 flex-shrink-0" />
-              <p className="text-sm text-red-700">{error}</p>
-            </div>
-          )}
-
-
-
+    <div className="space-y-10 pb-20 w-full mx-auto animate-fadeIn">
+      <div className="relative overflow-hidden">
+        <div className="grid grid-cols-1 gap-8 items-start relative z-10 w-full">
           <div className="space-y-6">
-            <p className="text-[22px] font-black text-slate-900 uppercase tracking-tight mb-4">{t('studentOnboarding.documentsUpload.packageFees.paymentMethod')}</p>
-            
-            <div className="flex flex-col gap-4">
-              {hasZellePendingPackageFee ? (
-                <div className="flex flex-col gap-0">
-                  <div className="bg-amber-50 border border-amber-200 rounded-t-[2rem] px-6 py-4 flex items-start gap-4">
-                    <div className="w-10 h-10 bg-amber-100 rounded-2xl flex items-center justify-center border border-amber-200 flex-shrink-0 mt-0.5">
-                      <AlertCircle className="w-5 h-5 text-amber-600" />
-                    </div>
-                    <div>
-                      <p className="text-sm font-black text-amber-700 uppercase tracking-tight">{t('paymentStep.zellePendingTitle', { ns: 'payment' })}</p>
-                      <p className="text-xs text-amber-600/80 font-medium mt-0.5 leading-relaxed">
-                        {t('paymentStep.zellePendingMessage', { ns: 'payment' })}
-                      </p>
-                    </div>
-                  </div>
-                  <div className="border border-amber-200 border-t-0 rounded-b-[2rem] overflow-hidden bg-white shadow-sm">
-                    <ZelleCheckout
-                      feeType={feeType as any}
-                      amount={PACKAGE_FEE_AMOUNT}
-                      isPendingVerification={hasZellePendingPackageFee}
-                      onProcessingChange={(isProcessing) => {
-                        if (isProcessing) refetchPaymentStatus();
-                      }}
-                      hideHeader={true}
-                      onClose={() => {
-                        console.log('[PackageFeeTab] Zelle onClose triggered');
-                        setShowZelle(false);
-                      }}
-                      onSuccess={() => {
-                        console.log('[PackageFeeTab] Zelle onSuccess triggered');
-                        setShowZelle(false);
-                        onPaymentSuccess();
-                      }}
-                    />
-                  </div>
-                </div>
-              ) : (
-                <>
-              {/* Stripe Card */}
-              <button
-                onClick={() => { setSelectedPaymentMethod('stripe'); handleStripeCheckout('stripe'); setShowZelle(false); setShowInlineCpf(false); }}
-                disabled={loading}
-                className="group/btn relative bg-white border border-gray-200 px-6 py-6 md:p-8 rounded-[2rem] text-left hover:scale-[1.01] active:scale-95 transition-all shadow-sm hover:shadow-md disabled:opacity-50 hover:border-blue-600/30 hover:bg-blue-50/10 block w-full"
-              >
-                <div className="flex items-center justify-between w-full">
-                  <div className="flex items-center gap-4 sm:gap-5 -ml-1 md:ml-0">
-                    <div className="w-14 h-14 flex items-center justify-center bg-slate-50 rounded-2xl group-hover/btn:bg-slate-100 transition-colors shrink-0">
-                      <StripeIcon className="w-9 h-9" />
-                    </div>
-                    <div>
-                      <div className="font-black text-slate-900 text-base uppercase tracking-tight">{t('rapidRegistration.payment.methods.stripe')}</div>
-                      <div className="hidden md:block text-[10px] font-bold text-slate-400 mt-1 uppercase tracking-wide leading-tight">{t('rapidRegistration.payment.notes.processingFees')}</div>
-                    </div>
-                  </div>
-                  <div className="text-right shrink-0">
-                    <div className="text-slate-900 text-xl font-black uppercase tracking-tight">
-                      USD ${cardAmount.toFixed(2)}
-                    </div>
-                  </div>
-                </div>
-                <div className="md:hidden mt-1.5 text-[10px] font-bold text-slate-400 uppercase tracking-wide leading-tight">
-                  {t('rapidRegistration.payment.notes.processingFees')}
-                </div>
-                {loading && selectedPaymentMethod === 'stripe' && (
-                  <div className="absolute inset-0 bg-white/80 backdrop-blur-sm rounded-[2rem] flex items-center justify-center z-10">
-                    <Loader2 className="w-8 h-8 text-blue-600 animate-spin" />
-                  </div>
-                )}
-              </button>
+            <div className="group relative bg-white border border-slate-200 rounded-[2.5rem] transition-all shadow-sm hover:shadow-xl overflow-hidden">
+              <div className="absolute top-0 right-0 w-64 h-64 bg-blue-500/5 rounded-full blur-[80px] -mr-32 -mt-32 pointer-events-none" />
 
-              {/* PIX */}
-              {pixAmount && pixAmount <= 3000 && (
-                <button
-                  onClick={() => { setSelectedPaymentMethod('pix'); handleStripeCheckout('pix'); setShowZelle(false); setShowInlineCpf(false); }}
-                  disabled={loading}
-                  className="group/btn relative bg-white border border-gray-200 px-6 py-6 md:p-8 rounded-[2rem] text-left hover:scale-[1.01] active:scale-95 transition-all shadow-sm hover:shadow-md disabled:opacity-50 hover:border-blue-600/30 hover:bg-blue-50/10 block w-full"
-                >
-                  <div className="flex items-center justify-between w-full">
-                    <div className="flex items-center gap-4 sm:gap-5 -ml-1 md:ml-0">
-                      <div className="w-14 h-14 flex items-center justify-center bg-slate-50 rounded-2xl group-hover/btn:bg-slate-100 transition-colors shrink-0">
-                        <PixIcon className="w-9 h-9" />
-                      </div>
-                      <div>
-                        <div className="font-black text-slate-900 text-base uppercase tracking-tight">{t('rapidRegistration.payment.methods.pix')}</div>
-                        <div className="hidden md:block text-[10px] font-bold text-slate-400 mt-1 uppercase tracking-wide leading-tight">{t('rapidRegistration.payment.notes.processingFees')}</div>
-                      </div>
+              {/* Branding Header inspired by Step 6 */}
+              <div className="p-8 md:p-12 border-b border-slate-100 bg-slate-50/50">
+                <div className="flex flex-col items-center text-center space-y-6">
+                  {universityLogo ? (
+                    <div className="w-28 h-28 bg-white rounded-[2rem] flex items-center justify-center border border-gray-100 shadow-sm overflow-hidden transform hover:scale-105 transition-transform duration-500">
+                      <img src={universityLogo} alt={universityName} className="w-full h-full object-contain p-4" />
                     </div>
-                    <div className="text-right shrink-0">
-                      <div className="text-slate-900 text-xl font-black uppercase tracking-tight">
-                        {pixAmount ? `R$ ${pixAmount.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}` : '...'}
-                      </div>
-                    </div>
-                  </div>
-                  <div className="md:hidden mt-1.5 text-[10px] font-bold text-slate-400 uppercase tracking-wide leading-tight">
-                    {t('rapidRegistration.payment.notes.processingFees')}
-                  </div>
-                  {loading && selectedPaymentMethod === 'pix' && (
-                    <div className="absolute inset-0 bg-white/80 backdrop-blur-sm rounded-[2rem] flex items-center justify-center z-10">
-                      <Loader2 className="w-8 h-8 text-[#4db6ac] animate-spin" />
+                  ) : (
+                    <div className="w-24 h-24 bg-blue-600 rounded-[2rem] flex items-center justify-center shadow-xl shadow-blue-500/20">
+                      <CreditCard className="w-10 h-10 text-white" />
                     </div>
                   )}
-                </button>
-              )}
 
-              {/* Parcelow */}
-              <div className="flex flex-col">
-                <button
-                  onClick={() => { setSelectedPaymentMethod('parcelow'); handleParcelowCheckout(); setShowZelle(false); }}
-                  disabled={loading}
-                  className={`group/btn relative bg-white border px-6 py-6 md:p-8 text-left hover:scale-[1.01] active:scale-95 transition-all shadow-sm hover:shadow-md disabled:opacity-50 hover:border-blue-600/30 hover:bg-blue-50/10 block w-full ${
-                    showInlineCpf ? 'rounded-t-[2rem] border-slate-200 border-b-0 bg-slate-50/30' : 'rounded-[2rem] border-gray-200'
-                  }`}
-                >
-                  <div className="flex items-center justify-between w-full">
-                    <div className="flex items-center gap-4 sm:gap-5 -ml-1 md:ml-0">
-                      <div className="w-14 h-14 flex items-center justify-center bg-slate-50 rounded-2xl group-hover/btn:bg-slate-100 transition-colors px-2 shrink-0">
-                        <ParcelowIcon className="w-full h-10" />
-                      </div>
-                      <div>
-                        <div className="font-black text-slate-900 text-base uppercase tracking-tight">{t('rapidRegistration.payment.methods.parcelow')}</div>
-                        <div className="hidden md:block text-[10px] font-bold text-slate-400 mt-1 uppercase tracking-wide leading-tight">{t('rapidRegistration.payment.notes.parcelowFees')}</div>
+                  <div className="space-y-2">
+                    <div className="inline-flex items-center bg-blue-500/10 border border-blue-500/20 px-4 py-1.5 rounded-full mb-2">
+                      <Shield className="w-3.5 h-3.5 text-blue-600 mr-2" />
+                      <span className="text-[10px] font-black text-blue-600 uppercase tracking-widest">
+                        {t('paymentStep.securePaymentBadge', { ns: 'payment' })}
+                      </span>
+                    </div>
+                    <h2 className="text-3xl md:text-5xl font-black text-slate-900 uppercase tracking-tighter leading-none">
+                      {feeLabel}
+                    </h2>
+                    <p className="text-sm md:text-base text-slate-500 font-bold uppercase tracking-widest flex items-center justify-center gap-2">
+                      {universityName || scholarshipTitle}
+                    </p>
+                  </div>
+
+                  <div className="pt-4">
+                    <div className="text-5xl md:text-7xl font-black text-slate-900 tracking-tighter flex flex-col items-center">
+                      <span className="text-sm text-slate-400 font-black uppercase tracking-[0.3em] mb-1">Total Amount</span>
+                      <div className="flex items-start">
+                        <span className="text-2xl mt-2 mr-1 text-slate-400">$</span>
+                        {amount.toLocaleString('en-US')}
+                        <span className="text-sm mt-auto mb-3 ml-2 text-slate-400 uppercase tracking-widest">USD</span>
                       </div>
                     </div>
-                    <div className="text-right flex flex-col items-end shrink-0">
-                      <div className="text-slate-900 text-xl font-black uppercase tracking-tight">USD ${PACKAGE_FEE_AMOUNT.toLocaleString('en-US', { minimumFractionDigits: 2 })}</div>
-                      <span className="text-[10px] font-bold text-slate-900 mt-1 block uppercase tracking-widest leading-tight">{t('studentOnboarding.documentsUpload.packageFees.installments12x')}</span>
-                    </div>
                   </div>
-                  <div className="md:hidden mt-1.5 text-[10px] font-bold text-slate-400 uppercase tracking-wide leading-tight">
-                    {t('rapidRegistration.payment.notes.parcelowFees')}
-                  </div>
-                  {loading && selectedPaymentMethod === 'parcelow' && !showInlineCpf && (
-                    <div className="absolute inset-0 bg-white/80 backdrop-blur-sm rounded-[2rem] flex items-center justify-center z-10">
-                      <Loader2 className="w-8 h-8 text-orange-500 animate-spin" />
+                </div>
+              </div>
+
+              {/* Payment Methods Section */}
+              <div className="p-6 md:p-12 space-y-8">
+                <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
+                  <h3 className="text-2xl font-black text-slate-900 uppercase tracking-tight">
+                    {t('studentOnboarding.documentsUpload.packageFees.paymentMethod')}
+                  </h3>
+                  {error && (
+                    <div className="bg-red-50 border border-red-100 px-4 py-2 rounded-xl flex items-center gap-2 animate-shake">
+                      <AlertCircle className="w-4 h-4 text-red-500" />
+                      <span className="text-xs font-bold text-red-600">{error}</span>
                     </div>
                   )}
-                </button>
+                </div>
 
-                {showInlineCpf && (
-                  <div className="p-6 bg-blue-50 border border-slate-200 border-t-0 rounded-b-[2rem] space-y-4 animate-in fade-in slide-in-from-top-2 duration-300">
-                    <div className="flex items-center justify-between mb-2">
-                      <h4 className="text-xs font-black text-slate-900 uppercase tracking-widest">{t('studentOnboarding.documentsUpload.packageFees.cpfRequiredTitle')}</h4>
-                      <button onClick={() => setShowInlineCpf(false)} title={t('common.close')}>
-                        <X className="w-4 h-4 text-slate-400 hover:text-slate-600" />
-                      </button>
-                    </div>
-                    <div className="space-y-4">
-                      <div className="relative">
-                        <input
-                          type="text"
-                          placeholder="000.000.000-00"
-                          value={inlineCpf}
-                          onChange={(e) => {
-                            const val = e.target.value.replace(/\D/g, '').substring(0, 11);
-                            // Máscara simples para CPF
-                            let masked = val;
-                            if (val.length > 9) masked = val.replace(/(\d{3})(\d{3})(\d{3})(\d{2})/, '$1.$2.$3-$4');
-                            else if (val.length > 6) masked = val.replace(/(\d{3})(\d{3})(\d{1,3})/, '$1.$2.$3');
-                            else if (val.length > 3) masked = val.replace(/(\d{3})(\d{1,3})/, '$1.$2');
-                            
-                            setInlineCpf(masked);
-                            if (cpfError) setCpfError(null);
-                          }}
-                          className={`w-full bg-white border ${cpfError ? 'border-red-300 ring-4 ring-red-500/10' : 'border-slate-200'} rounded-xl px-4 py-3 text-lg font-bold text-slate-900 tracking-widest focus:ring-4 focus:ring-blue-500/10 focus:border-blue-500/50 outline-none transition-all placeholder:text-slate-300`}
+                <div className="grid grid-cols-1 gap-4">
+                  {hasZellePendingPackageFee ? (
+                    <div className="flex flex-col gap-0 border-2 border-amber-200 rounded-[2.5rem] overflow-hidden">
+                      <div className="bg-amber-50 px-6 py-4 flex items-start gap-4">
+                        <div className="w-10 h-10 bg-amber-100 rounded-2xl flex items-center justify-center border border-amber-200 flex-shrink-0 mt-0.5">
+                          <AlertCircle className="w-5 h-5 text-amber-600" />
+                        </div>
+                        <div>
+                          <p className="text-sm font-black text-amber-700 uppercase tracking-tight">
+                            {t('paymentStep.zellePendingTitle', { ns: 'payment' })}
+                          </p>
+                          <p className="text-xs text-amber-600/80 font-medium mt-0.5 leading-relaxed">
+                            {t('paymentStep.zellePendingMessage', { ns: 'payment' })}
+                          </p>
+                        </div>
+                      </div>
+                      <div className="bg-white p-2">
+                        <ZelleCheckout
+                          feeType={feeType as any}
+                          amount={amount}
+                          isPendingVerification={hasZellePendingPackageFee}
+                          onProcessingChange={(isProcessing) => isProcessing && refetchPaymentStatus()}
+                          hideHeader={true}
+                          onSuccess={onPaymentSuccess}
                         />
-                        {savingCpf && (
-                          <div className="absolute right-3 top-3">
-                            <Loader2 className="w-6 h-6 text-blue-500 animate-spin" />
+                      </div>
+                    </div>
+                  ) : (
+                    <>
+                      {/* Credit Card / Stripe */}
+                      <button
+                        onClick={() => { setSelectedPaymentMethod('stripe'); handleStripeCheckout('stripe'); }}
+                        disabled={loading}
+                        className="group/btn relative bg-white border border-slate-200 p-5 md:p-6 rounded-[2rem] text-left hover:scale-[1.01] active:scale-[0.98] transition-all shadow-sm hover:shadow-md hover:border-blue-600/30 hover:bg-blue-50/10"
+                      >
+                        <div className="flex items-center justify-between">
+                          <div className="flex items-center gap-5">
+                            <StripeIcon className="w-14 h-14" />
+                            <div>
+                              <div className="font-black text-slate-900 text-lg uppercase tracking-tight">
+                                {t('rapidRegistration.payment.methods.stripe')}
+                              </div>
+                              <div className="text-[10px] font-bold text-slate-400 mt-0.5 uppercase tracking-wide">
+                                {t('rapidRegistration.payment.notes.processingFees')}
+                              </div>
+                            </div>
+                          </div>
+                          <div className="text-right">
+                            <div className="text-slate-900 text-2xl font-black tracking-tighter">
+                              ${cardAmount.toFixed(2)}
+                            </div>
+                            <span className="text-[9px] font-black text-slate-400 uppercase tracking-widest">INC. FEES</span>
+                          </div>
+                        </div>
+                        {loading && selectedPaymentMethod === 'stripe' && (
+                          <div className="absolute inset-0 bg-white/80 backdrop-blur-sm rounded-[2rem] flex items-center justify-center z-10">
+                            <Loader2 className="w-8 h-8 text-blue-600 animate-spin" />
+                          </div>
+                        )}
+                      </button>
+
+                      {/* PIX */}
+                      {pixAmount && pixAmount <= 3000 && (
+                        <button
+                          onClick={() => { setSelectedPaymentMethod('pix'); handleStripeCheckout('pix'); }}
+                          disabled={loading}
+                          className="group/btn relative bg-white border border-slate-200 p-5 md:p-6 rounded-[2rem] text-left hover:scale-[1.01] active:scale-[0.98] transition-all shadow-sm hover:shadow-md hover:border-blue-600/30 hover:bg-blue-50/10"
+                        >
+                          <div className="flex items-center justify-between">
+                            <div className="flex items-center gap-5">
+                              <div className="w-14 h-14 bg-slate-50 rounded-2xl flex items-center justify-center group-hover/btn:bg-slate-100 transition-colors">
+                                <PixIcon className="w-10 h-10" />
+                              </div>
+                              <div>
+                                <div className="font-black text-slate-900 text-lg uppercase tracking-tight">PIX</div>
+                                <div className="text-[10px] font-bold text-slate-400 mt-0.5 uppercase tracking-wide">
+                                  {t('rapidRegistration.payment.notes.processingFees')}
+                                </div>
+                              </div>
+                            </div>
+                            <div className="text-right">
+                              <div className="text-slate-900 text-2xl font-black tracking-tighter">
+                                R$ {pixAmount.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
+                              </div>
+                              <span className="text-[9px] font-black text-slate-400 uppercase tracking-widest">CONVERTED</span>
+                            </div>
+                          </div>
+                        </button>
+                      )}
+
+                      {/* Parcelow */}
+                      <div className="flex flex-col">
+                        <button
+                          onClick={() => { setSelectedPaymentMethod('parcelow'); handleParcelowCheckout(); }}
+                          disabled={loading}
+                          className={`group/btn relative bg-white border p-5 md:p-6 text-left hover:scale-[1.01] active:scale-[0.98] transition-all shadow-sm hover:shadow-md hover:border-blue-600/30 hover:bg-blue-50/10 ${
+                            showInlineCpf ? 'rounded-t-[2rem] border-slate-200 border-b-0 bg-slate-50/50' : 'rounded-[2rem] border-slate-200'
+                          }`}
+                        >
+                          <div className="flex items-center justify-between">
+                            <div className="flex items-center gap-5">
+                              <ParcelowIcon className="w-16 h-14" />
+                              <div>
+                                <div className="font-black text-slate-900 text-lg uppercase tracking-tight">Parcelow</div>
+                                <div className="text-[10px] font-bold text-slate-400 mt-0.5 uppercase tracking-wide leading-tight">
+                                  {t('rapidRegistration.payment.notes.parcelowFees')}
+                                </div>
+                              </div>
+                            </div>
+                            <div className="text-right">
+                              <div className="text-slate-900 text-2xl font-black tracking-tighter">
+                                ${amount.toLocaleString('en-US', { minimumFractionDigits: 2 })}
+                              </div>
+                              <span className="text-[9px] font-black text-blue-600 uppercase tracking-widest bg-blue-50 px-2 py-0.5 rounded-full border border-blue-100">
+                                {t('studentOnboarding.documentsUpload.packageFees.installments12x')}
+                              </span>
+                            </div>
+                          </div>
+                        </button>
+
+                        {showInlineCpf && (
+                          <div className="p-6 bg-blue-50 border border-slate-200 border-t-0 rounded-b-[2rem] space-y-4 animate-in fade-in slide-in-from-top-2">
+                             <div className="flex items-center justify-between">
+                                <h4 className="text-[10px] font-black text-blue-700 uppercase tracking-[0.2em] flex items-center gap-2">
+                                  <Shield className="w-3.5 h-3.5" />
+                                  {t('studentOnboarding.documentsUpload.packageFees.cpfRequiredTitle')}
+                                </h4>
+                                <button onClick={() => setShowInlineCpf(false)} className="text-slate-400 hover:text-slate-600 transition-colors">
+                                  <X className="w-4 h-4" />
+                                </button>
+                             </div>
+                             <div className="relative">
+                               <input
+                                 type="text"
+                                 placeholder="000.000.000-00"
+                                 value={inlineCpf}
+                                 onChange={(e) => {
+                                  const val = e.target.value.replace(/\D/g, '').substring(0, 11);
+                                  let masked = val.replace(/(\d{3})(\d)/, '$1.$2').replace(/(\d{3})(\d)/, '$1.$2').replace(/(\d{3})(\d{1,2})$/, '$1-$2');
+                                  setInlineCpf(masked);
+                                  setCpfError(null);
+                                 }}
+                                 className="w-full bg-white border border-blue-200 rounded-2xl px-5 py-4 text-xl font-black text-slate-900 tracking-tighter focus:ring-4 focus:ring-blue-500/10 outline-none transition-all"
+                               />
+                               {cpfError && (
+                                 <p className="text-[10px] font-black text-red-500 uppercase tracking-widest mt-2 flex items-center gap-2">
+                                   <AlertCircle className="w-3 h-3" />
+                                   {cpfError}
+                                 </p>
+                               )}
+                               <button 
+                                 onClick={handleSaveCpf}
+                                 disabled={savingCpf || inlineCpf.replace(/\D/g, '').length !== 11}
+                                 className="w-full mt-4 bg-slate-900 text-white py-4 rounded-2xl font-black uppercase tracking-widest text-xs hover:bg-slate-800 transition-all shadow-lg active:scale-95 disabled:opacity-50"
+                               >
+                                 {savingCpf ? <Loader2 className="w-5 h-5 animate-spin mx-auto" /> : t('studentOnboarding.documentsUpload.packageFees.saveCpfContinue')}
+                               </button>
+                             </div>
                           </div>
                         )}
                       </div>
-                      {cpfError && (
-                        <p className="text-[10px] font-black text-red-500 uppercase tracking-widest flex items-center gap-2">
-                          <AlertCircle className="w-3 h-3" />
-                          {cpfError}
-                        </p>
-                      )}
-                      <button
-                        onClick={handleSaveCpf}
-                        disabled={savingCpf || inlineCpf.replace(/\D/g, '').length !== 11}
-                        className="w-full bg-slate-900 text-white py-3.5 rounded-xl font-bold uppercase tracking-widest text-xs hover:bg-slate-800 transition-all shadow-lg active:scale-95 disabled:opacity-50 disabled:grayscale disabled:scale-100"
-                      >
-                        {t('studentOnboarding.documentsUpload.packageFees.saveCpfContinue')}
-                      </button>
-                    </div>
-                  </div>
-                )}
-              </div>
 
-              {/* Zelle */}
-              <div className="flex flex-col">
-                <button
-                  onClick={() => { setShowZelle(!showZelle); setSelectedPaymentMethod('zelle'); setShowInlineCpf(false); }}
-                  disabled={loading}
-                  className={`group/btn relative bg-white border px-6 py-6 md:p-8 text-left hover:scale-[1.01] active:scale-[0.99] transition-all shadow-sm hover:shadow-md disabled:opacity-50 hover:border-blue-600/30 hover:bg-blue-50/10 block w-full ${
-                    showZelle ? 'rounded-t-[2rem] border-slate-200 border-b-0 bg-slate-50/30' : 'rounded-[2rem] border-gray-200'
-                  }`}
-                >
-                  <div className="flex items-center justify-between w-full">
-                    <div className="flex items-center gap-4 sm:gap-5 -ml-1 md:ml-0">
-                      <div className="w-14 h-14 flex items-center justify-center bg-slate-50 rounded-2xl group-hover/btn:bg-slate-100 transition-colors shrink-0">
-                        <ZelleIcon className="w-9 h-9" />
-                      </div>
-                      <div>
-                        <div className="font-black text-slate-900 text-base uppercase tracking-tight">{t('rapidRegistration.payment.methods.zelle')}</div>
-                        <div className="hidden md:flex text-[10px] font-bold text-slate-500 mt-1 uppercase tracking-wide leading-tight items-center gap-1">
-                          <AlertCircle className="w-3 h-3" />
-                          {t('rapidRegistration.payment.notes.zelleTime')}
-                        </div>
-                      </div>
-                    </div>
-                    <div className="text-right shrink-0">
-                      <div className="text-slate-900 text-xl font-black uppercase tracking-tight">USD $1,800.00</div>
-                      <span className="text-[10px] font-bold text-slate-900 mt-1 block uppercase tracking-widest leading-tight text-right">{t('studentOnboarding.documentsUpload.packageFees.noFees')}</span>
-                    </div>
-                  </div>
-                  <div className="md:hidden mt-1.5 text-[10px] font-bold text-slate-500 uppercase tracking-wide leading-tight flex items-center gap-1">
-                    <AlertCircle className="w-3 h-3" />
-                    {t('rapidRegistration.payment.notes.zelleTime')}
-                  </div>
-                </button>
+                      {/* Zelle */}
+                      <div className="flex flex-col">
+                        <button
+                          onClick={() => { setShowZelle(!showZelle); setSelectedPaymentMethod('zelle'); }}
+                          disabled={loading}
+                          className={`group/btn relative bg-white border p-5 md:p-6 text-left hover:scale-[1.01] active:scale-[0.98] transition-all shadow-sm hover:shadow-md hover:border-blue-600/30 hover:bg-blue-50/10 ${
+                            showZelle ? 'rounded-t-[2rem] border-slate-200 border-b-0 bg-slate-50/50' : 'rounded-[2rem] border-slate-200'
+                          }`}
+                        >
+                          <div className="flex items-center justify-between">
+                            <div className="flex items-center gap-5">
+                              <div className="w-14 h-14 bg-slate-50 rounded-2xl flex items-center justify-center group-hover/btn:bg-slate-100 transition-colors">
+                                <ZelleIcon className="w-10 h-10" />
+                              </div>
+                              <div>
+                                <div className="font-black text-slate-900 text-lg uppercase tracking-tight">Zelle</div>
+                                <div className="flex items-center gap-1.5 text-[10px] font-bold text-slate-400 mt-0.5 uppercase tracking-wide">
+                                  <AlertCircle className="w-3 h-3" />
+                                  {t('rapidRegistration.payment.notes.zelleTime')}
+                                </div>
+                              </div>
+                            </div>
+                            <div className="text-right">
+                              <div className="text-slate-900 text-2xl font-black tracking-tighter">
+                                ${amount.toLocaleString('en-US', { minimumFractionDigits: 2 })}
+                              </div>
+                              <span className="text-[9px] font-black text-emerald-600 uppercase tracking-widest bg-emerald-50 px-2 py-0.5 rounded-full border border-emerald-100">
+                                {t('studentOnboarding.documentsUpload.packageFees.noFees')}
+                              </span>
+                            </div>
+                          </div>
+                        </button>
 
-                {showZelle && (
-                  <div className="border border-slate-200 border-t-0 rounded-b-[2rem] overflow-hidden bg-white shadow-sm">
-                    <ZelleCheckout
-                      feeType={feeType as any}
-                      amount={PACKAGE_FEE_AMOUNT}
-                      onClose={() => {
-                        console.log('[PackageFeeTab] Zelle onClose triggered');
-                        setShowZelle(false);
-                      }}
-                      onSuccess={() => {
-                        console.log('[PackageFeeTab] Zelle onSuccess triggered');
-                        setShowZelle(false);
-                        onPaymentSuccess();
-                      }}
-                    />
-                  </div>
-                )}
+                        {showZelle && (
+                          <div className="border border-slate-200 border-t-0 rounded-b-[2rem] overflow-hidden bg-white shadow-xl animate-in fade-in slide-in-from-top-2">
+                            <ZelleCheckout
+                              feeType={feeType as any}
+                              amount={amount}
+                              onSuccess={() => { setShowZelle(false); onPaymentSuccess(); }}
+                            />
+                          </div>
+                        )}
+                      </div>
+                    </>
+                  )}
+                </div>
               </div>
-            </>
-            )}
+            </div>
           </div>
         </div>
       </div>
-    </div>
     </div>
   );
 };

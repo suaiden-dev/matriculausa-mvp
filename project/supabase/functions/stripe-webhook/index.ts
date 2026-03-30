@@ -1619,6 +1619,95 @@ async function handleCheckoutSessionCompleted(session: any, stripe: any) {
       // --- FIM MATRICULA REWARDS ---
     }
   }
+
+  if (paymentType === "ds160_package" || paymentType === "i539_cos_package") {
+    const finalUserId = metadata?.user_id || metadata?.student_id || metadata?.client_reference_id || session.client_reference_id;
+    
+    if (finalUserId) {
+      console.log(`[stripe-webhook] Processing ${paymentType} for user: ${finalUserId}`);
+      const paymentMethod = metadata?.payment_method || "stripe";
+      const updateData: any = {
+        updated_at: new Date().toISOString(),
+      };
+
+      if (paymentType === "ds160_package") {
+        updateData.has_paid_ds160_package = true;
+        updateData.ds160_package_payment_method = paymentMethod;
+      } else if (paymentType === "i539_cos_package") {
+        updateData.has_paid_i539_cos_package = true;
+        updateData.i539_cos_package_payment_method = paymentMethod;
+      }
+
+      const { error: profileError } = await supabase
+        .from("user_profiles")
+        .update(updateData)
+        .eq("user_id", finalUserId);
+
+      if (profileError) {
+        console.error(`[stripe-webhook] Error updating profile for ${paymentType}:`, profileError);
+      } else {
+        console.log(`[stripe-webhook] ${paymentType} profile updated successfully for user:`, finalUserId);
+      }
+
+      // Registrar pagamento na individual_fee_payments
+      try {
+        const paymentDate = new Date().toISOString();
+        const paymentAmountRaw = session.amount_total ? session.amount_total / 100 : 0;
+        const currency = session.currency?.toUpperCase() || "USD";
+        const paymentIntentId = session.payment_intent as string || "";
+
+        const stripeInfo = await getUSDAmountFromStripe(
+          stripe,
+          paymentIntentId,
+          paymentAmountRaw,
+          currency
+        );
+
+        const { error: insertError } = await supabase.rpc("insert_individual_fee_payment", {
+          p_user_id: finalUserId,
+          p_fee_type: paymentType,
+          p_amount: stripeInfo.amount,
+          p_payment_date: paymentDate,
+          p_payment_method: "stripe",
+          p_payment_intent_id: paymentIntentId,
+          p_stripe_charge_id: null,
+          p_zelle_payment_id: null,
+          p_gross_amount_usd: stripeInfo.gross_amount_usd,
+          p_fee_amount_usd: stripeInfo.fee_amount_usd,
+        });
+        
+        if (insertError) console.error(`[stripe-webhook] Error inserting payment record for ${paymentType}:`, insertError);
+        else console.log(`[stripe-webhook] ${paymentType} payment record inserted successfully.`);
+      } catch (recordError) {
+        console.error(`[stripe-webhook] Exception recording ${paymentType} payment:`, recordError);
+      }
+
+      // Log da ação do estudante
+      try {
+        const { data: userProfile } = await supabase.from('user_profiles').select('id').eq('user_id', finalUserId).single();
+        if (userProfile) {
+          await supabase.rpc('log_student_action', {
+            p_student_id: userProfile.id,
+            p_action_type: 'fee_payment',
+            p_action_description: `${paymentType} payment verified via Stripe`,
+            p_performed_by: finalUserId,
+            p_performed_by_type: 'student',
+            p_metadata: {
+              fee_type: paymentType,
+              payment_method: paymentMethod,
+              amount: session.amount_total ? session.amount_total / 100 : 0,
+              session_id: sessionId,
+              payment_intent_id: session.payment_intent as string || ""
+            }
+          });
+        }
+      } catch (logErr) {
+        console.error('[stripe-webhook] Log error:', logErr);
+      }
+    } else {
+      console.error(`[stripe-webhook] No userId found for ${paymentType} processing.`);
+    }
+  }
   // BLOCO DUPLICADO REMOVIDO - i20_control_fee já é processado nas linhas 1528-1615
   // Este bloco estava causando duplicação de créditos de MatriculaCoins (trigger executado 2x)
 

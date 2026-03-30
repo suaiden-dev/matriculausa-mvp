@@ -405,6 +405,8 @@
     "dependentsSingular": "dependiente (+$100 cada uno):",
     "dependentsPlural": "dependientes (+$100 cada uno):",
     "creditCard": "Tarjeta de Crédito",
+    "pix": "PIX",
+    "parcelow": "Parcelow",
     "creditCardFees": "* Pueden incluir tarifas de procesamiento",
     "pixFees": "* Pueden incluir tarifas de procesamiento",
     "parcelowFees": "* Pueden incluir tarifas de operadora y procesamiento de la plataforma",
@@ -415,6 +417,9 @@
     "parcelowCpfPlaceholder": "Ingresa tu CPF (000.000.000-00)",
     "parcelowCpfInvalid": "CPF inválido. Ingresa los 11 dígitos.",
     "parcelowCpfError": "Error al guardar CPF. Inténtalo de nuevo.",
+    "cpfRequiredTitle": "Informe su CPF para Parcelow",
+    "cpfPlaceholder": "000.000.000-00",
+    "payWith": "Pagar con {{method}}",
     "goToPayment": "Ir al pago",
     "zellePendingTitle": "Pago Zelle en Análisis",
     "zellePendingMessage": "Ya iniciaste un pago vía Zelle. Espera la confirmación antes de usar otro método. Esto puede tomar hasta 48 horas.",
@@ -422,7 +427,10 @@
     "paymentConfirmedSubtitle": "Esta tarifa ya fue procesada con éxito.",
     "noApplications": "Ninguna aplicación activa",
     "noApplicationsMessage": "Aún no has seleccionado ninguna beca. Vuelve y selecciona al menos una para continuar.",
-    "backToSelection": "Volver a Selección"
+    "backToSelection": "Volver a Selección",
+    "error": {
+      "generationFailed": "Error al generar el enlace de pago. Inténtalo de nuevo."
+    }
   },
   "paymentSelector": {
     "title": "Choose Payment Method",

@@ -158,6 +158,10 @@
     "saving": "Guardando...",
     "finish": "Finalizar"
   },
+  "connectors": {
+    "and": " y ",
+    "theFee": "la tarifa "
+  },
   "fees": {
     "selectionProcess": "Tarifa del Proceso de Selección",
     "application": "Tarifa de Solicitud",
@@ -359,5 +363,43 @@
     "backToHome": "Volver al Inicio",
     "goToDashboard": "Ir a mi Panel",
     "helpLink": "¿Necesitas ayuda? Contáctanos"
+  },
+  "successPages": {
+    "applicationFee": {
+      "verifying": "Verificando Tarifa de Solicitud...",
+      "pleaseWait": "Estamos procesando su pago. Por favor, no cierre esta página."
+    },
+    "scholarshipFee": {
+      "verifying": "Verificando Tarifa de Beca...",
+      "pleaseWait": "Estamos procesando su pago. Por favor, no cierre esta página."
+    },
+    "placementFee": {
+      "verifying": "Verificando Tarifa de Colocación...",
+      "pleaseWait": "Estamos procesando su pago. Por favor, no cierre esta página."
+    },
+    "i20ControlFee": {
+      "verifying": "Verificando Tarifa de Control I-20...",
+      "pleaseWait": "Estamos procesando su pago. Por favor, no cierre esta página."
+    }
+  },
+  "labels": {
+    "clickToAccess": "Haz clic para acceder",
+    "continue": "Continuar",
+    "loading": "Cargando...",
+    "back": "Volver",
+    "download": "Descargar"
+  },
+  "errors": {
+    "unexpected": "Ocurrió un error inesperado. Por favor, inténtalo de nuevo."
+  },
+  "status": {
+    "under_review": "En Revisión",
+    "action_required": "Acción Requerida",
+    "approved": "Aprobado",
+    "blocked": "Bloqueado",
+    "rejected": "Rechazado",
+    "completed": "Completado",
+    "waiting_acceptance": "Esperando Carta de Aceptación",
+    "loading": "Cargando..."
   }
 }

@@ -108,6 +108,7 @@
         "documentsUpload": "Documentos",
         "payment": "Taxa de Matrícula",
         "scholarshipFee": "Taxa da Bolsa",
+        "reinstatement_fee": "Taxa de Reintegração",
         "placementFee": "Taxa de Colocação"
       }
     },
@@ -138,6 +139,13 @@
         "changeOfStatus": {
           "label": "Mudança de Status (Change of Status)",
           "description": "Você possui outro tipo de visto (B-2, H-1B, etc.) e deseja alterar para F-1."
+        }
+      },
+      "activeStatus": {
+        "label": "O seu status está ativo?",
+        "options": {
+          "yes": "Sim",
+          "no": "Não (terminado/cancelado)"
         }
       }
     },
@@ -198,7 +206,7 @@
         "descriptionPost": "."
       },
       "acceptance": {
-        "lockMessage": "Você precisa pagar a taxa <0>{{feeName}}</0> antes de houver a liberação da sua carta de aceite.",
+        "lockMessage": "Você precisa pagar <0>{{feeName}}</0> antes de houver a liberação da sua carta de aceite.",
         "goToPayment": "Ir para Pagamento"
       },
       "packageFees": {
@@ -717,5 +725,15 @@
       "processing": "Processando pagamento...",
       "redirecting": "Aguarde, estamos redirecionando para o checkout"
     }
+  },
+  "reinstatementFeeStep": {
+    "title": "Taxa de Reintegração",
+    "subtitle": "Para prosseguir com seu processo de transferência, é necessário o pagamento da taxa de reintegração (reinstatement).",
+    "feeLabel": "Taxa de Reintegração",
+    "description": "",
+    "securePayment": "Pagamento Seguro",
+    "annualTuition": "Valor anual da bolsa: {{amount}}",
+    "confirmedMessage": "Sua taxa de reintegração foi confirmada com sucesso.",
+    "paidSuccess": "Pagamento Confirmado"
   }
 }

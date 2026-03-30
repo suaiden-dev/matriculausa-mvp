@@ -348,6 +348,8 @@
     "dependentsSingular": "dependente (+$100 cada):",
     "dependentsPlural": "dependentes (+$100 cada):",
     "creditCard": "Cartão de Crédito",
+    "pix": "PIX",
+    "parcelow": "Parcelow",
     "creditCardFees": "* Podem incluir taxas de processamento",
     "pixFees": "* Podem incluir taxas de processamento",
     "parcelowFees": "* Podem incluir taxas de operadora e processamento da plataforma",
@@ -358,6 +360,9 @@
     "parcelowCpfPlaceholder": "Digite seu CPF (000.000.000-00)",
     "parcelowCpfInvalid": "CPF inválido. Digite os 11 dígitos.",
     "parcelowCpfError": "Erro ao salvar CPF. Tente novamente.",
+    "cpfRequiredTitle": "Informe seu CPF para Parcelow",
+    "cpfPlaceholder": "000.000.000-00",
+    "payWith": "Pagar com {{method}}",
     "goToPayment": "Ir ao pagamento",
     "zellePendingTitle": "Pagamento Zelle em Análise",
     "zellePendingMessage": "Você já iniciou um pagamento via Zelle. Aguarde a confirmação antes de usar outro método. Isso pode levar até 48 horas.",
@@ -365,7 +370,10 @@
     "paymentConfirmedSubtitle": "Esta taxa já foi processada com sucesso.",
     "noApplications": "Nenhuma aplicação ativa",
     "noApplicationsMessage": "Você ainda não selecionou nenhuma bolsa de estudos. Volte e selecione ao menos uma para prosseguir.",
-    "backToSelection": "Voltar para Seleção"
+    "backToSelection": "Voltar para Seleção",
+    "error": {
+      "generationFailed": "Falha ao gerar link de pagamento. Tente novamente."
+    }
   },
   "paymentSelector": {
     "title": "Escolha o Método de Pagamento",

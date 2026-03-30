@@ -32,6 +32,8 @@ interface StudentRecord {
   total_applications: number;
   all_applications: any[];
   most_recent_activity?: Date;
+  has_paid_reinstatement_package?: boolean;
+  visa_transfer_active?: boolean;
 }
 
 /**
@@ -57,6 +59,8 @@ export function useStudentsQuery() {
           is_placement_fee_paid,
           role,
           seller_referral_code,
+          has_paid_reinstatement_package,
+          visa_transfer_active,
           scholarship_applications!scholarship_applications_student_id_fkey (
               id,
               scholarship_id,
@@ -166,7 +170,9 @@ export function useStudentsQuery() {
           // Guardar todas as aplicações para o modal
           all_applications: student.scholarship_applications || [],
           // Campo para ordenação por atividade recente
-          most_recent_activity: mostRecentActivity
+          most_recent_activity: mostRecentActivity,
+          has_paid_reinstatement_package: student.has_paid_reinstatement_package || false,
+          visa_transfer_active: student.visa_transfer_active ?? true // Default to true if not set
         };
       }) || [];
 

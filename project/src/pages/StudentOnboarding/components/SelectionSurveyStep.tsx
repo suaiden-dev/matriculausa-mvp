@@ -1,4 +1,5 @@
 import { useState, useCallback, useMemo, useEffect } from 'react';
+import { motion, AnimatePresence } from 'framer-motion';
 import { questions, sections, calculateScore } from '@/data/formQuestions';
 import ProgressBar from '@/components/form/ProgressBar';
 import QuestionField from '@/components/form/QuestionField';
@@ -202,10 +203,7 @@ export const SelectionSurveyStep: React.FC<StepProps> = ({ onNext }) => {
         if (currentSection < sections.length - 1) {
             const nextIndex = currentSection + 1;
             setCurrentSection(nextIndex);
-            
-            if (!checkSectionComplete(nextIndex)) {
-                scrollToTop();
-            }
+            scrollToTop();
         }
     }, [currentSection, validateSection, sections.length, t, checkSectionComplete]);
 
@@ -213,10 +211,7 @@ export const SelectionSurveyStep: React.FC<StepProps> = ({ onNext }) => {
         if (currentSection > 0) {
             const backIndex = currentSection - 1;
             setCurrentSection(backIndex);
-            
-            if (!checkSectionComplete(backIndex)) {
-                scrollToTop();
-            }
+            scrollToTop();
         }
     }, [currentSection, checkSectionComplete]);
 
@@ -414,20 +409,31 @@ export const SelectionSurveyStep: React.FC<StepProps> = ({ onNext }) => {
                         completedSections={[]} 
                     />
 
-                    <div className="mt-8 space-y-8 sm:space-y-10">
-                        {currentQuestions.map((q) => (
-                            <QuestionField
-                            key={q.id}
-                            question={q}
-                            value={answers[q.id]}
-                            extraValue={extraAnswers[q.id]}
-                            error={errors[q.id]}
-                            onChange={(val, customId) => handleAnswer(customId ?? q.id, val)}
-                            onExtraChange={(val) => handleExtraAnswer(q.id, val)}
-                            answers={answers}
-                        />
-                    ))}
-                </div>
+                    <div className="mt-8">
+                        <AnimatePresence mode="wait">
+                            <motion.div
+                                key={currentSection}
+                                initial={{ y: 20, opacity: 0 }}
+                                animate={{ y: 0, opacity: 1 }}
+                                exit={{ y: -20, opacity: 0 }}
+                                transition={{ duration: 0.4, ease: "easeOut" }}
+                                className="space-y-8 sm:space-y-10"
+                            >
+                                {currentQuestions.map((q) => (
+                                    <QuestionField
+                                        key={q.id}
+                                        question={q}
+                                        value={answers[q.id]}
+                                        extraValue={extraAnswers[q.id]}
+                                        error={errors[q.id]}
+                                        onChange={(val, customId) => handleAnswer(customId ?? q.id, val)}
+                                        onExtraChange={(val) => handleExtraAnswer(q.id, val)}
+                                        answers={answers}
+                                    />
+                                ))}
+                            </motion.div>
+                        </AnimatePresence>
+                    </div>
 
                 <div className="mt-12 flex flex-col-reverse sm:flex-row justify-between items-center gap-4">
                     <div className="flex gap-4 w-full sm:w-auto">

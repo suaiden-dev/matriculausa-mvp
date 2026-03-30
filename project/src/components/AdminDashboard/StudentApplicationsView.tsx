@@ -75,6 +75,8 @@ export interface StudentRecord {
   total_applications: number;
   all_applications: any[];
   most_recent_activity?: Date;
+  has_paid_reinstatement_package?: boolean;
+  visa_transfer_active?: boolean;
 }
 
 const StudentApplicationsView: React.FC = () => {
@@ -650,6 +652,9 @@ const StudentApplicationsView: React.FC = () => {
         return student.is_placement_fee_paid ? 'completed' : 'pending';
       case 'scholarship_fee':
         return student.is_scholarship_fee_paid ? 'completed' : 'pending';
+      case 'reinstatement_fee':
+        if (student.student_process_type !== 'transfer' || student.visa_transfer_active) return 'skipped';
+        return student.has_paid_reinstatement_package ? 'completed' : 'pending';
       case 'i20_fee':
         if (student.placement_fee_flow) return 'skipped';
         return student.has_paid_i20_control_fee ? 'completed' : 'pending';
@@ -881,6 +886,7 @@ const StudentApplicationsView: React.FC = () => {
       { key: 'application_fee', label: 'App Fee', icon: DollarSign, shortLabel: 'App Fee' },
       { key: 'placement_fee', label: 'Placement Fee', icon: DollarSign, shortLabel: 'Placement Fee' },
       { key: 'scholarship_fee', label: 'Scholarship Fee', icon: Award, shortLabel: 'Scholarship Fee' },
+      { key: 'reinstatement_fee', label: 'Reinstatement Fee', icon: DollarSign, shortLabel: 'Reinstatement Fee' },
       { key: 'i20_fee', label: 'I-20 Fee', icon: CreditCard, shortLabel: 'I-20 Fee' },
       { key: 'acceptance_letter', label: 'Acceptance', icon: BookOpen, shortLabel: 'Acceptance' },
       { key: 'transfer_form', label: 'Transfer Form', icon: FileText, shortLabel: 'Transfer Form' },
@@ -891,6 +897,9 @@ const StudentApplicationsView: React.FC = () => {
     const steps = allSteps.filter(step => {
       if (step.key === 'transfer_form') {
         return student?.student_process_type === 'transfer';
+      }
+      if (step.key === 'reinstatement_fee') {
+        return student?.student_process_type === 'transfer' && !student.visa_transfer_active;
       }
       if (student?.placement_fee_flow) {
         // No fluxo de placement, removemos scholarhsip_fee e i20_fee

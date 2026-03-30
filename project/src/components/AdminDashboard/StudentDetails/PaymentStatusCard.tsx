@@ -23,9 +23,9 @@ interface PaymentStatusCardProps {
   onCancelEditFees: () => void;
   onResetFees: () => Promise<void>;
   onEditFeesChange: (fees: any) => void;
-  onMarkAsPaid: (feeType: 'selection_process' | 'application' | 'scholarship' | 'i20_control' | 'placement' | 'ds160_package' | 'i539_cos_package') => void;
+  onMarkAsPaid: (feeType: 'selection_process' | 'application' | 'scholarship' | 'i20_control' | 'placement' | 'ds160_package' | 'i539_cos_package' | 'reinstatement_fee') => void;
   onEditPaymentMethod: (feeType: string) => void;
-  onUpdatePaymentMethod: (feeType: 'selection_process' | 'application' | 'scholarship' | 'i20_control' | 'placement' | 'ds160_package' | 'i539_cos_package' | string) => Promise<void>;
+  onUpdatePaymentMethod: (feeType: 'selection_process' | 'application' | 'scholarship' | 'i20_control' | 'placement' | 'ds160_package' | 'i539_cos_package' | 'reinstatement_fee' | string) => Promise<void>;
   onCancelPaymentMethod: () => void;
   onPaymentMethodChange: (method: string) => void;
   formatFeeAmount: (amount: number | string, forceDollars?: boolean) => string;
@@ -986,6 +986,98 @@ const PaymentStatusCard: React.FC<PaymentStatusCardProps> = React.memo((props) =
                 </div>
               </div>
             </>
+          );
+        })()}
+
+        {/* Reinstatement Fee — apenas para alunos transfer com visto inativo */}
+        {student.student_process_type === 'transfer' && student.visa_transfer_active === false && (() => {
+          const isPaid = !!student.has_paid_reinstatement_package;
+          return (
+            <div className="bg-slate-50 rounded-xl p-4">
+              <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-4">
+                <div className="flex-1">
+                  <dt className="text-sm font-medium text-slate-600">Reinstatement Fee</dt>
+                  <dd className="text-sm text-slate-500 mt-1">Required for transfer students with inactive visa</dd>
+                  <dd className="text-sm font-semibold text-slate-700 mt-1 flex items-center">
+                    {isPaid && realPaidAmounts?.reinstatement_fee !== undefined && realPaidAmounts?.reinstatement_fee !== null
+                      ? formatFeeAmount(realPaidAmounts.reinstatement_fee, true)
+                      : formatFeeAmount(500, true)}
+                  </dd>
+                </div>
+                <div className="flex flex-col gap-3">
+                  {isPaid ? (
+                    <div className="flex flex-col gap-3">
+                      <div className="flex items-center space-x-2">
+                        <CheckCircle className="h-5 w-5 text-green-600" />
+                        <span className="text-sm font-medium text-green-600">Paid</span>
+                      </div>
+                      {isPlatformAdmin && (
+                        <div className="flex flex-col gap-3">
+                          {editingPaymentMethod === 'reinstatement_fee' ? (
+                            <div className="flex flex-col gap-3">
+                              <select
+                                value={newPaymentMethod}
+                                onChange={(e) => onPaymentMethodChange(e.target.value)}
+                                className="text-sm px-3 py-2 border border-slate-300 rounded-lg w-full max-w-[150px]"
+                                disabled={savingPaymentMethod}
+                              >
+                                <option value="manual">Outside</option>
+                                <option value="stripe">Stripe</option>
+                                <option value="zelle">Zelle</option>
+                              </select>
+                              <div className="flex items-center gap-2">
+                                <button
+                                  onClick={() => onUpdatePaymentMethod('reinstatement_fee')}
+                                  disabled={savingPaymentMethod}
+                                  className="px-4 py-2 bg-green-600 hover:bg-green-700 text-white text-sm rounded-lg flex items-center space-x-2"
+                                >
+                                  <Save className="w-4 h-4" />
+                                  <span>{savingPaymentMethod ? 'Saving...' : 'Save'}</span>
+                                </button>
+                                <button
+                                  onClick={onCancelPaymentMethod}
+                                  className="px-4 py-2 bg-slate-600 hover:bg-slate-700 text-white text-sm rounded-lg flex items-center space-x-2"
+                                >
+                                  <X className="w-4 h-4" />
+                                  <span>Cancel</span>
+                                </button>
+                              </div>
+                            </div>
+                          ) : (
+                            <button
+                              onClick={() => {
+                                onEditPaymentMethod('reinstatement_fee');
+                                onPaymentMethodChange(student.reinstatement_package_payment_method || 'manual');
+                              }}
+                              className="px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white text-sm rounded-lg flex items-center space-x-2 w-fit"
+                            >
+                              <Edit3 className="w-4 h-4" />
+                              <span>Edit Method</span>
+                            </button>
+                          )}
+                        </div>
+                      )}
+                    </div>
+                  ) : (
+                    <div className="flex flex-col gap-3">
+                      <div className="flex items-center space-x-2">
+                        <XCircle className="h-5 w-5 text-red-600" />
+                        <span className="text-sm font-medium text-red-600">Not Paid</span>
+                      </div>
+                      {isPlatformAdmin && (
+                        <button
+                          onClick={() => onMarkAsPaid('reinstatement_fee')}
+                          className="px-4 py-2 bg-[#05294E] hover:bg-[#05294E]/90 text-white text-sm rounded-lg flex items-center space-x-2 w-fit"
+                        >
+                          <CheckCircle className="w-4 h-4" />
+                          <span>Mark as Paid</span>
+                        </button>
+                      )}
+                    </div>
+                  )}
+                </div>
+              </div>
+            </div>
           );
         })()}
 

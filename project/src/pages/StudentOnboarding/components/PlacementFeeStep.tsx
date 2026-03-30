@@ -80,7 +80,7 @@ const StripeIcon = ({ className }: { className?: string }) => (
     </div>
 );
 
-export const PlacementFeeStep: React.FC<StepProps> = ({ onNext, onBack }) => {
+export const PlacementFeeStep: React.FC<StepProps> = ({ onNext, onBack, currentStep }) => {
     const { t } = useTranslation('payment');
     const { userProfile } = useAuth();
     const { formatFeeAmount } = useFeeConfig(userProfile?.user_id);
@@ -179,8 +179,8 @@ export const PlacementFeeStep: React.FC<StepProps> = ({ onNext, onBack }) => {
                     scholarships_ids: [application.scholarship_id],
                     amount: placementFeeAmount,
                     payment_method: method,
-                    success_url: `${window.location.origin}/student/onboarding?step=placement_fee&payment=success&session_id={CHECKOUT_SESSION_ID}`,
-                    cancel_url: `${window.location.origin}/student/onboarding?step=placement_fee&payment=cancelled`,
+                    success_url: `${window.location.origin}/student/onboarding?step=${currentStep}&payment=success&session_id={CHECKOUT_SESSION_ID}`,
+                    cancel_url: `${window.location.origin}/student/onboarding?step=${currentStep}&payment=cancelled`,
                     metadata: {
                         application_id: application.id,
                         selected_scholarship_id: application.scholarship_id,

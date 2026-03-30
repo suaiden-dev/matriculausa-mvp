@@ -206,7 +206,7 @@
         "title": "Escolha Bolsas e Envie Documentos",
         "description": "Escolha bolsas e envie seus documentos. Revisão rápida.",
         "items": [
-          "Selecione múltiplas bolsas",
+          "Selecione até 4 bolsas",
           "Upload seguro de documentos",
           "Análise inicial automatizada"
         ]
@@ -509,7 +509,7 @@
         },
         {
           "question": "Posso me inscrever em quantas bolsas quiser?",
-          "answer": "Sim! Com uma única taxa você pode aplicar para todas as bolsas compatíveis com seu perfil. Nossa IA identifica as melhores oportunidades e você escolhe quantas quer tentar."
+          "answer": "Sim! Com uma única taxa você pode aplicar para até 4 bolsas compatíveis com seu perfil. Nossa IA identifica as melhores oportunidades e você escolhe até 4 opções para tentar."
         },
         {
           "question": "Como funciona a garantia?",
@@ -604,7 +604,7 @@
       },
       "step3": {
         "title": "2. Adicionar à Lista de Seleção",
-        "description": "Selecione as bolsas para as quais deseja se candidatar e adicione-as à sua lista de seleção. Você pode escolher múltiplas bolsas e gerenciar suas seleções facilmente."
+        "description": "Selecione as bolsas para as quais deseja se candidatar (máximo de 4). Você pode gerenciar suas seleções facilmente."
       },
       "step4": {
         "title": "3. Enviar Documentos",

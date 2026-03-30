@@ -96,6 +96,8 @@ export function useStudentDetailsQuery(profileId: string | undefined) {
             ds160_package_payment_method,
             i539_cos_package_payment_method,
             system_type,
+            has_paid_reinstatement_package,
+            visa_transfer_active,
             role,
             seller_referral_code,
             admin_notes,
@@ -246,6 +248,9 @@ export function useStudentDetailsQuery(profileId: string | undefined) {
         student_process_type: mainApp.student_process_type || null,
         has_paid_ds160_package: !!s.has_paid_ds160_package,
         has_paid_i539_cos_package: !!s.has_paid_i539_cos_package,
+        has_paid_reinstatement_package: !!s.has_paid_reinstatement_package,
+        visa_transfer_active: s.visa_transfer_active, // Removido o ?? true para permitir valor false do banco
+        reinstatement_package_payment_method: s.reinstatement_package_payment_method || null,
         ds160_package_payment_method: s.ds160_package_payment_method || null,
         i539_cos_package_payment_method: s.i539_cos_package_payment_method || null,
         system_type: s.system_type || null,

@@ -146,10 +146,12 @@
       "universityInternalFees": "Tarifas Internas de la Universidad",
       "viewUniversityFeesPage": "Ver Página de Tarifas de la Universidad",
       "internalFeesConditionalNote": "La tarifa depende del tipo de proceso o visa del estudiante y luego corresponde con la tarifa",
-      "i539COSPackage": "I539 COS Package",
-      "ds160Package": "DS160 Package",
+      "i539COSPackage": "Tarifa I539 Package",
+      "ds160Package": "Tarifa DS160 Package - INITIAL",
+      "reinstatementPackage": "Tarifa de Reinstatement",
       "i539PackageDescription": "Tarifa requerida para estudiantes que solicitan Cambio de Status (COS)",
       "ds160PackageDescription": "Tarifa requerida para estudiantes que solicitan Transferencia",
+      "reinstatementPackageDescription": "Tarifa requerida para estudiantes de transferencia que tienen un estatus de visa inactivo/terminado.",
       "days": "días"
     }
   },
@@ -233,9 +235,9 @@
     },
     "quickGuide": {
       "title": "Guía rápida:",
-      "step1": "<strong>Haz clic en cualquier tarjeta de beca</strong> para añadirla a tu selección",
-      "step2": "<strong>Selecciona tantas como quieras</strong> - puedes elegir múltiples opciones",
-      "step3": "<strong>Usa filtros</strong> para buscar por universidad o valor de la beca",
+      "step1": "<strong>Usa filtros</strong> para buscar por universidad o valor de la beca",
+      "step2": "<strong>Haz clic en cualquier tarjeta de beca</strong> para añadirla a tu selección",
+      "step3": "<strong>Selecciona tantas como quieras</strong> - puedes elegir múltiples opciones",
       "step4": "<strong>Haz clic en \"Continuar\"</strong> una vez que hayas seleccionado al menos una beca"
     },
     "continueWithCount": "Continuar ({{count}} seleccionada)",

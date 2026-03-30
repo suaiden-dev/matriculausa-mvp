@@ -88,7 +88,7 @@ const ParcelowIcon = ({ className }: { className?: string }) => (
 import { useTranslation } from 'react-i18next';
 import { usePaymentBlocked } from '../../../hooks/usePaymentBlocked';
 
-export const ScholarshipFeeStep: React.FC<StepProps> = ({ onNext, onBack }) => {
+export const ScholarshipFeeStep: React.FC<StepProps> = ({ onNext, onBack, currentStep }) => {
   const { userProfile } = useAuth();
   const { t } = useTranslation(['payment', 'common']);
   const { getFeeAmount, formatFeeAmount } = useFeeConfig(userProfile?.user_id);
@@ -259,8 +259,8 @@ export const ScholarshipFeeStep: React.FC<StepProps> = ({ onNext, onBack }) => {
           scholarships_ids: [application.scholarship_id],
           amount: baseAmount,
           payment_method: method,
-          success_url: `${window.location.origin}/student/onboarding?step=scholarship_fee&payment=success&session_id={CHECKOUT_SESSION_ID}`,
-          cancel_url: `${window.location.origin}/student/onboarding?step=scholarship_fee&payment=cancelled`,
+          success_url: `${window.location.origin}/student/onboarding?step=${currentStep}&payment=success&session_id={CHECKOUT_SESSION_ID}`,
+          cancel_url: `${window.location.origin}/student/onboarding?step=${currentStep}&payment=cancelled`,
           metadata: {
             application_id: application.id,
             selected_scholarship_id: application.scholarship_id,

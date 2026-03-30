@@ -83,6 +83,7 @@ const FEE_TYPES = [
   { value: 'placement', label: 'Placement Fee', color: 'bg-purple-100 text-purple-800' },
   { value: 'ds160_package', label: 'DS-160 Package', color: 'bg-indigo-100 text-indigo-800' },
   { value: 'i539_cos_package', label: 'I-539 COS Package', color: 'bg-rose-100 text-rose-800' },
+  { value: 'reinstatement_fee', label: 'Reinstatement Fee', color: 'bg-amber-100 text-amber-800' },
 ];
 
 const STATUS_OPTIONS = [

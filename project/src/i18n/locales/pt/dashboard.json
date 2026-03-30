@@ -43,7 +43,7 @@
           "selection_fee": "Esta taxa cobre o processamento de sua candidatura, avaliação de documentos e suporte inicial para o seu processo de estudo.",
           "identity_verification": "Para garantir a segurança do processo seletivo, valide sua identidade com uma selfie e seu documento.",
           "selection_survey": "Responda com atenção. Para ser aprovado e continuar seu processo, você precisa atingir no mínimo 80% de acerto.",
-          "scholarship_selection": "Navegue pelas bolsas e selecione quais gostaria de se matricular. É necessário escolher ao menos uma para prosseguir.",
+          "scholarship_selection": "Navegue pelas bolsas e selecione quais gostaria de se matricular (máximo de 4). É necessário escolher ao menos uma para prosseguir.",
           "process_type": "Selecione a opção que melhor descreve sua situação atual em relação ao visto americano.",
           "documents_upload": "Envie seus documentos básicos (Passaporte, Diploma e Extrato) em inglês para análise da universidade.",
           "payment": "Garanta sua vaga pagando a taxa de matrícula da instituição escolhida.",
@@ -167,7 +167,7 @@
       "shown": "mostradas",
       "status": {
         "approved": "Aprovada",
-        "under_review": "Revisão",
+        "under_review": "Em Análise",
         "pending": "Pendente"
       },
       "unknownUniversity": "Universidade Desconhecida",
@@ -183,7 +183,7 @@
     "findScholarships": {
       "title": "Encontrar Bolsas",
       "subtitle": "Descubra oportunidades adaptadas ao seu perfil acadêmico",
-      "description": "Navegue pelas bolsas e selecione quais gostaria de se matricular. É necessário escolher ao menos uma para prosseguir.",
+      "description": "Navegue pelas bolsas e selecione quais gostaria de se matricular (máximo de 4). É necessário escolher ao menos uma para prosseguir.",
       "pagination": {
         "previous": "Anterior",
         "next": "Próximo",
@@ -287,7 +287,7 @@
     "selectedScholarships": {
       "title": "Bolsas Selecionadas",
       "welcomeMessage": "Bem-vindo à sua seleção de bolsas!",
-      "description": "Aqui você pode ver todas as bolsas que selecionou para o processo de candidatura. Estes são os programas nos quais você tem interesse em se candidatar. Siga os passos abaixo para completar sua candidatura e iniciar sua jornada para estudar no exterior.",
+      "description": "Aqui você pode ver todas as bolsas que selecionou para o processo de candidatura (máximo de 4). Estes são os programas nos quais você tem interesse em se candidatar. Siga os passos abaixo para completar sua candidatura e iniciar sua jornada para estudar no exterior.",
       "noScholarshipsSelected": "Nenhuma bolsa selecionada",
       "notSelectedYet": "Você ainda não selecionou nenhuma bolsa. Navegue pelos nossos programas disponíveis e adicione-os à sua seleção.",
       "browseScholarships": "Navegar Bolsas"
@@ -800,8 +800,16 @@
         "my": "Minha",
         "application": "Aplicação"
       },
+      "navigation": {
+        "backToSteps": "Voltar para as Etapas"
+      },
       "tabs": {
         "acceptanceLetter": "Carta de Aceite"
+      },
+      "sidebar": {
+        "documents": "Envio de Documentos",
+        "ds160": "Emissão da Carta de Aceite",
+        "i539": "Pagamento da Taxa"
       },
       "loading": "Carregando portal de gerenciamento...",
       "noApplication": {
@@ -810,19 +818,18 @@
       },
       "back": "Voltar",
       "welcome": {
-        "congratsMessage": "Parabéns {{name}},<br/> você foi <approved>aprovado</approved> na <university>{{university}}</university>",
-        "almostDone": "Falta muito pouco para tudo ficar pronto! Nesta etapa final você pode rever os detalhes da universidade que escolheu e enviar a documentação obrigatória. Assim que tudo estiver certo, sua Carta de Aceite estará liberada aqui mesmo para você baixar.",
-        "sendDocuments": "Enviar Documentos",
-        "requestedDocs": "Documentos solicitados",
-        "scholarshipDetails": "Detalhes da Bolsa",
-        "requirementsValues": "Requisitos e valores",
+        "congratsMessage": "Próximos Passos",
+        "almostDone": "Acompanhe aqui as etapas finais do seu processo de admissão.",
+        "actionDocuments": "Documentos",
+        "actionDetails": "Detalhes",
         "needHelp": "Precisa de Ajuda?",
-        "mentorsReady": "Nossos mentores estão prontos para ajudar com qualquer dúvida sobre este processo.",
+        "supportDescription": "Nossos mentores estão prontos para ajudar com qualquer dúvida sobre este processo.",
         "talkToSupport": "Falar com Suporte",
         "nextSteps": "Próximas Etapas",
         "documentSubmission": "Envio de Documentos",
         "acceptanceLetterReceipt": "Recebimento da Carta de Aceite",
         "documentAvailable": "Documento Disponível",
+        "documentAvailableAction": "Documento Disponível (clique para abrir)",
         "status": {
           "completed": "Concluído",
           "underReview": "Em Análise",
@@ -830,9 +837,47 @@
           "available": "Disponível",
           "inProgress": "Liberação em Andamento",
           "blocked": "Bloqueado"
+        },
+        "checklist": {
+          "payment": "Pagamento da Taxa de Matrícula e Placement Fee",
+          "waitingForms": "Aguardando Formulários da Faculdade",
+          "uploadDocs": "Preenchimento e Reenvio de Documentos",
+          "acceptance": "Emissão da Carta de Aceite"
+        }
+      },
+      "status": {
+        "verifyingPayment": {
+          "title": "Tudo certo com seus pagamentos!",
+          "description": "Agora, a faculdade está validando as informações. Volte em até 24 horas para baixar e preencher seus formulários de matrícula.",
+          "button": "Ver Recibo"
+        },
+        "initialAnalysis": {
+          "title": "AGUARDANDO FORMULÁRIOS DE MATRÍCULA",
+          "description": "Próximo Passo: Em até 24 horas você receberá seus formulários de matrícula. Fique atento a esta página para baixar os arquivos, preenchê-los e nos enviar de volta para finalizarmos sua Carta de Aceite!",
+          "processing": "Processando: {{current}}/24h"
+        },
+        "pendingFee": {
+          "title": "Sua Carta de Aceite chegou!",
+          "description": "Excelente notícia! Sua carta de aceite foi emitida pela universidade. O próximo passo é realizar o pagamento da taxa {{feeName}} para iniciar seu processo de visto.",
+          "button": "Ir para Pagamento"
+        },
+        "waitingAcceptance": {
+          "title": "Aguardando Carta de Aceite",
+          "description": "Seus documentos foram aprovados! A universidade está processando a emissão da sua Carta de Aceite oficial. Assim que estiver pronta, ela aparecerá aqui para download."
+        },
+        "approved": {
+          "title": "Parabéns, Processo Concluído!",
+          "description": "Sua carta de aceite está disponível e todos os pagamentos foram confirmados. Você já pode baixar seu documento e seguir para as próximas etapas do seu intercâmbio!",
+          "button": "Ver Carta de Aceite"
+        },
+        "generalWait": {
+          "title": "Em Revisão",
+          "description": "Estamos analisando sua documentação. Em breve você receberá atualizações sobre sua carta de aceitação."
         }
       },
       "details": {
+        "scholarshipInfo": "Informações da Bolsa",
+        "program": "Programa",
         "universityPartner": "University Partner",
         "inPerson": "Presencial",
         "online": "Online",
@@ -864,6 +909,7 @@
         },
         "institution": {
           "title": "Instituição",
+          "details": "Detalhes da Instituição",
           "email": "Email",
           "phone": "Telefone",
           "website": "Website"
@@ -897,6 +943,17 @@
         "opening": "Abrindo...",
         "uploading": "Enviando...",
         "waitingForUniversity": "Aguardando universidade"
+      },
+      "documentSections": {
+        "download": "Área de Download",
+        "downloadDescription": "Baixe os formulários oficiais da faculdade para preencher.",
+        "upload": "Área de Envio (Upload)",
+        "uploadDescription": "Envie aqui seus formulários preenchidos e o pack de documentos (extrato, passaporte, etc)."
+      },
+      "uploadSection": {
+        "title": "Arquivos para Envio",
+        "description": "Envie os documentos solicitados abaixo em formato PDF.",
+        "noRequests": "Nenhuma solicitação no momento"
       },
       "actions": {
         "downloadAcceptanceLetter": "Baixar Carta de Aceitação",
@@ -939,6 +996,7 @@
         "creating": "Criando...",
         "transferFormDescriptionSchool": "Envie o formulário de transferência para este estudante. Visível apenas para estudantes de transferência.",
         "transferFormDescriptionStudent": "Sua universidade enviará seu formulário de transferência aqui. Baixe-o quando disponível.",
+        "transferFormUploadDescriptionStudent": "Envie o formulário de transferência preenchido e assinado.",
         "transferForm": "Formulário de Transferência",
         "transferFormUploadButton": "Enviar Formulário Preenchido",
         "transferFormUploaded": "Formulário de transferência enviado",
@@ -1518,6 +1576,16 @@
         "quickStart": "Para começar",
         "support": "Suporte"
       }
+    }
+  },
+  "academicInfo": {
+    "minEnglishProficiency": "Inglês Mínimo",
+    "minGpa": "GPA Mínimo",
+    "englishProficiencyLevels": {
+      "beginner": "Iniciante",
+      "intermediate": "Intermediário",
+      "advanced": "Avançado",
+      "native": "Nativo"
     }
   }
 }

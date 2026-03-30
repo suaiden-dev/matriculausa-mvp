@@ -49,21 +49,17 @@ Deno.serve(async (req: Request) => {
       },
     });
 
-    console.log(`🔧 Using Stripe in ${config.environment.environment} mode`);
+    console.log(`🔧 Using Stripe in ${config.environment.environment} mode for Reinstatement`);
 
     const {
       success_url,
       cancel_url,
-      fee_type,
-      amount,
       metadata,
       payment_method,
     } = await req.json();
     
-    // fee_type must be either 'ds160_package' or 'i539_cos_package'
-    if (fee_type !== 'ds160_package' && fee_type !== 'i539_cos_package') {
-      return corsResponse({ error: "fee_type inválido para esta função. Use ds160_package ou i539_cos_package." }, 400);
-    }
+    const fee_type = 'reinstatement_package';
+    const amount = 500; // Valor fixo Reinstatement
 
     const mode = "payment";
 
@@ -80,33 +76,17 @@ Deno.serve(async (req: Request) => {
       return corsResponse({ error: "Invalid token" }, 401);
     }
 
-    // Determinar valor original
-    // O valor para esses pacotes é de $1800 conforme definido no frontend
-    const originalAmount = amount || 1800;
-    console.log(
-      `[stripe-checkout-package-fee] 💰 Valor original (${fee_type}):`,
-      originalAmount,
-    );
-
     // Lógica para PIX (conversão USD -> BRL)
     let exchangeRate = 1;
     if (payment_method === "pix") {
-      // Priorizar taxa de câmbio enviada pelo frontend (se disponível) para garantir consistência
       const frontendExchangeRate = metadata?.exchange_rate
         ? parseFloat(metadata.exchange_rate)
         : null;
 
       if (frontendExchangeRate && frontendExchangeRate > 0) {
         exchangeRate = frontendExchangeRate;
-        console.log(
-          "[stripe-checkout-package-fee] 💱 Usando taxa de câmbio do frontend:",
-          exchangeRate,
-        );
       } else {
         try {
-          console.log(
-            "[stripe-checkout-package-fee] 💱 Obtendo taxa de câmbio com margem comercial...",
-          );
           const response = await fetch(
             "https://api.exchangerate-api.com/v4/latest/USD",
           );
@@ -115,10 +95,10 @@ Deno.serve(async (req: Request) => {
             const baseRate = parseFloat(data.rates.BRL);
             exchangeRate = baseRate * 1.04; // 4% de margem
           } else {
-            exchangeRate = 5.6; // Taxa de fallback
+            exchangeRate = 5.6;
           }
         } catch (apiError) {
-          console.error("[stripe-checkout-package-fee] ❌ Erro na API de câmbio:", apiError);
+          console.error("[stripe-checkout-reinstatement-fee] ❌ Erro na API de câmbio:", apiError);
           exchangeRate = 5.6; 
         }
       }
@@ -149,28 +129,19 @@ Deno.serve(async (req: Request) => {
       metadata: sessionMetadata,
     };
 
-    // Garantir valor mínimo
-    const minAmount = 0.50;
-    let finalAmount = originalAmount;
-    if (finalAmount < minAmount) {
-      finalAmount = minAmount;
-    }
-
-    // Sempre aplicar markup de taxas do Stripe
     let grossAmountInCents: number;
     if (payment_method === "pix") {
       grossAmountInCents = calculatePIXAmountWithFees(
-        finalAmount,
+        amount,
         exchangeRate,
       );
     } else {
-      grossAmountInCents = calculateCardAmountWithFees(finalAmount);
+      grossAmountInCents = calculateCardAmountWithFees(amount);
     }
 
-    // Adicionar valores base e gross ao metadata
-    sessionMetadata.base_amount = finalAmount.toString();
+    sessionMetadata.base_amount = amount.toString();
     sessionMetadata.gross_amount = (grossAmountInCents / 100).toString();
-    sessionMetadata.fee_amount = ((grossAmountInCents / 100) - finalAmount).toString();
+    sessionMetadata.fee_amount = ((grossAmountInCents / 100) - amount).toString();
     sessionMetadata.markup_enabled = "true";
 
     sessionConfig.line_items = [
@@ -178,8 +149,8 @@ Deno.serve(async (req: Request) => {
         price_data: {
           currency: payment_method === "pix" ? "brl" : "usd",
           product_data: {
-            name: fee_type === 'ds160_package' ? "DS160 Package" : "I539 COS Package",
-            description: fee_type === 'ds160_package' ? "Application and handling for DS160 form" : "Handling and guidance for I539 Change of Status form",
+            name: "Reinstatement Fee",
+            description: "Processing fee for F-1 Visa Reinstatement",
           },
           unit_amount: grossAmountInCents,
         },
@@ -196,24 +167,20 @@ Deno.serve(async (req: Request) => {
       ).eq("user_id", user.id).single();
       
       if (userProfile) {
-        const { error: logError } = await supabase.rpc("log_student_action", {
+        await supabase.rpc("log_student_action", {
           p_student_id: userProfile.id,
           p_action_type: "checkout_session_created",
           p_action_description:
-            `Stripe checkout session created for ${fee_type} (${session.id})`,
+            `Stripe checkout session created for Reinstatement Fee (${session.id})`,
           p_performed_by: user.id,
           p_performed_by_type: "student",
           p_metadata: {
             fee_type: fee_type,
             payment_method: "stripe",
             session_id: session.id,
-            amount: finalAmount || null,
+            amount: amount,
           },
         });
-        
-        if (logError) {
-          console.error("Failed to log checkout session creation (RPC):", logError);
-        }
 
         // === RECUPERAÇÃO DE CHECKOUT ABANDONADO ===
         notifyCheckoutInitiated({
@@ -224,7 +191,7 @@ Deno.serve(async (req: Request) => {
           student_email: userProfile.email ?? user.email ?? null,
           student_phone: userProfile.phone ?? null,
           checkout_url: session.url,
-        }).catch((err) => console.warn("[stripe-checkout-package-fee] Notifier error (ignorado):", err));
+        }).catch((err) => console.warn("[stripe-checkout-reinstatement-fee] Notifier error (ignorado):", err));
         // ==========================================
       }
     } catch (logErr) {
@@ -237,7 +204,6 @@ Deno.serve(async (req: Request) => {
     return corsResponse({ 
       error: "Internal server error",
       details: error.message,
-      stack: error.stack
     }, 500);
   }
 });
