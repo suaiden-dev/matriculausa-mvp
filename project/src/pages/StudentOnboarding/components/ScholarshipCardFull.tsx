@@ -70,7 +70,7 @@ const ScholarshipCardFullComponent: React.FC<ScholarshipCardFullProps> = ({
       <div className="relative h-32 sm:h-36 overflow-hidden flex-shrink-0 bg-gradient-to-b from-slate-100/50 to-white">
         <div className="absolute inset-x-0 bottom-0 h-16 bg-gradient-t from-white to-transparent"></div>
 
-        {(scholarship.image_url || scholarship.universities?.image_url || scholarship.universities?.logo_url) && (userProfile?.has_paid_selection_process_fee || userProfile?.has_paid_subscription) && !brokenImage ? (
+        {(scholarship.image_url || scholarship.universities?.image_url || scholarship.universities?.logo_url) && !brokenImage ? (
           <img
             src={scholarship.image_url || scholarship.universities?.image_url || scholarship.universities?.logo_url || ''}
             alt={scholarship.title}
@@ -307,7 +307,9 @@ export const ScholarshipCardFull = React.memo(ScholarshipCardFullComponent, (pre
     prevProps.scholarship.id === nextProps.scholarship.id &&
     prevProps.isSelected === nextProps.isSelected &&
     prevProps.isLocked === nextProps.isLocked &&
-    prevProps.userProfile?.id === nextProps.userProfile?.id;
+    prevProps.userProfile?.id === nextProps.userProfile?.id &&
+    prevProps.userProfile?.has_paid_selection_process_fee === nextProps.userProfile?.has_paid_selection_process_fee &&
+    prevProps.userProfile?.has_paid_subscription === nextProps.userProfile?.has_paid_subscription;
 
   return propsEqual;
 });

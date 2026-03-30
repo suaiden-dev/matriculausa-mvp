@@ -26,17 +26,26 @@ import { supabase } from '../../lib/supabase';
 import { useAuth } from '../../hooks/useAuth';
 import { validateCPF } from '../../utils/cpfValidation';
 
-interface ProfileManagementProps {
-  profile: any;
-  onUpdateProfile: (data: any) => void;
-}
+interface ProfileManagementProps {}
 
-const ProfileManagement: React.FC<ProfileManagementProps> = ({
-  profile,
-  onUpdateProfile
-}) => {
+const ProfileManagement: React.FC<ProfileManagementProps> = () => {
   const { t } = useTranslation(['dashboard', 'common']);
-  const { user } = useAuth();
+  const { user, userProfile, refetchUserProfile } = useAuth();
+
+  // Mapeia userProfile para a forma esperada pelo componente
+  const profile = userProfile ? {
+    name: userProfile.full_name || '',
+    email: (userProfile as any).email || user?.email || '',
+    phone: (userProfile as any).phone || '',
+    country: (userProfile as any).country || '',
+    field_of_interest: (userProfile as any).field_of_interest || '',
+    academic_level: (userProfile as any).academic_level || '',
+    gpa: (userProfile as any).gpa ?? null,
+    english_proficiency: (userProfile as any).english_proficiency || '',
+    cpf_document: (userProfile as any).cpf_document || '',
+    created_at: (userProfile as any).created_at,
+  } : null;
+
   const fileInputRef = useRef<HTMLInputElement>(null);
   const [isEditing, setIsEditing] = useState(false);
   const [uploading, setUploading] = useState(false);
@@ -129,11 +138,8 @@ const ProfileManagement: React.FC<ProfileManagementProps> = ({
 
 
       
-      // Call the parent component's update function
-      onUpdateProfile({ 
-        ...formData, 
-        avatar_url: publicUrl 
-      });
+      // Notificar atualização no contexto de auth
+      await refetchUserProfile();
 
     } catch (err: any) {
       setUploadError(err.message || t('profileManagement.messages.uploadError'));
@@ -166,12 +172,30 @@ const ProfileManagement: React.FC<ProfileManagementProps> = ({
           ? null
           : Math.min(4, Math.max(0, Math.round(parsedGpa * 100) / 100));
 
+      // Update no Supabase diretamente no componente
       const updatedData = {
         ...formData,
         gpa: normalizedGpa
       };
-      
-      await onUpdateProfile(updatedData);
+
+      const { error: updateError } = await supabase
+        .from('user_profiles')
+        .update({
+          full_name: updatedData.name,
+          phone: updatedData.phone,
+          country: updatedData.country,
+          field_of_interest: updatedData.field_of_interest,
+          academic_level: updatedData.academic_level,
+          gpa: updatedData.gpa,
+          english_proficiency: updatedData.english_proficiency,
+          cpf_document: updatedData.cpf_document,
+        })
+        .eq('user_id', user!.id);
+
+      if (updateError) throw updateError;
+
+      // Atualizar o contexto de auth com o novo perfil
+      await refetchUserProfile();
       
       setIsEditing(false);
       setSuccessMessage(t('profileManagement.messages.profileUpdated'));

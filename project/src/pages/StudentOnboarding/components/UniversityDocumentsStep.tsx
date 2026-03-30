@@ -95,11 +95,8 @@ export const UniversityDocumentsStep: React.FC<StepProps> = ({ onBack }) => {
   useEffect(() => {
     getExchangeRate().then(rate => setExchangeRate(rate));
   }, []);
-  useEffect(() => {
-    fetchApplicationDetails();
-  }, [userProfile?.id]);
 
-  const fetchApplicationDetails = async (isRefresh = false) => {
+  const fetchApplicationDetails = useCallback(async (isRefresh = false) => {
     if (!userProfile?.id) {
       if (!isRefresh) setLoading(false);
       return;
@@ -177,7 +174,11 @@ export const UniversityDocumentsStep: React.FC<StepProps> = ({ onBack }) => {
     } finally {
       if (!isRefresh) setLoading(false);
     }
-  };
+  }, [userProfile?.id, userProfile?.selected_application_id, userProfile?.user_id]);
+
+  useEffect(() => {
+    fetchApplicationDetails();
+  }, [userProfile?.id, fetchApplicationDetails]);
 
 
 

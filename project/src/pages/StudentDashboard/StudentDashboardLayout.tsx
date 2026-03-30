@@ -25,18 +25,11 @@ import { useIdentityPhotoStatusQuery } from '../../hooks/useStudentDashboardQuer
 // import StepByStepButton from '../../components/OnboardingTour/StepByStepButton';
 
 interface StudentDashboardLayoutProps {
-  user: any;
-  profile: any;
-  loading: boolean;
   children: React.ReactNode;
 }
 
-const StudentDashboardLayout: React.FC<StudentDashboardLayoutProps> = ({
-  user,
-  profile,
-  loading,
-  children
-}) => {
+const StudentDashboardLayout: React.FC<StudentDashboardLayoutProps> = ({ children }) => {
+  const { user, userProfile: profile, loading } = useAuth();
   const { t, i18n } = useTranslation(['dashboard', 'common']);
   const location = useLocation();
   const navigate = useNavigate();
@@ -93,7 +86,7 @@ const StudentDashboardLayout: React.FC<StudentDashboardLayoutProps> = ({
   // Threshold para obrigatoriedade do questionário: 18/02/2026 às 21:50 UTC (aproximadamente agora)
   const SURVEY_THRESHOLD_DATE = new Date('2026-02-18T21:50:00Z');
   const paidAt = profile?.selection_process_paid_at ? new Date(profile.selection_process_paid_at) : null;
-  const isExemptedByLegacy = profile?.selection_process_fee_paid && (!paidAt || paidAt < SURVEY_THRESHOLD_DATE);
+  const isExemptedByLegacy = profile?.has_paid_selection_process_fee && (!paidAt || paidAt < SURVEY_THRESHOLD_DATE);
 
   // Redirecionamento obrigatório unificado removido para permitir acesso ao dashboard restrito (Chat/Perfil/Suporte) durante o onboarding.
   // A própria Overview.tsx e o estado isRestricted já lidam com a experiência do usuário nessas etapas.
@@ -187,7 +180,7 @@ const StudentDashboardLayout: React.FC<StudentDashboardLayoutProps> = ({
   ];
 
   /* Lógica de Bloqueio: Se pagou e não passou, entra em modo restrito */
-  const selectionFeePaid = profile?.selection_process_fee_paid;
+  const selectionFeePaid = profile?.has_paid_selection_process_fee;
   const surveyPassed = profile?.selection_survey_passed;
 
   // Bloqueado se:
@@ -252,7 +245,7 @@ const StudentDashboardLayout: React.FC<StudentDashboardLayoutProps> = ({
                   )}
                 </div>
                 <div className="flex-1 min-w-0">
-                  <h3 className="font-semibold text-slate-900 truncate text-sm sm:text-base">{profile?.name || user?.name}</h3>
+                  <h3 className="font-semibold text-slate-900 truncate text-sm sm:text-base">{profile?.full_name || user?.name}</h3>
                   <p className="text-xs sm:text-sm text-slate-500 truncate">Painel do Estudante</p>
                 </div>
               </div>
@@ -431,7 +424,7 @@ const StudentDashboardLayout: React.FC<StudentDashboardLayoutProps> = ({
                     )}
                   </div>
                   <div className="hidden sm:block text-left min-w-0">
-                    <p className="font-semibold text-slate-900 text-xs sm:text-sm truncate">{profile?.name || user?.name}</p>
+                    <p className="font-semibold text-slate-900 text-xs sm:text-sm truncate">{profile?.full_name || user?.name}</p>
                     <p className="text-xs text-slate-500 truncate">Student</p>
                   </div>
                   <ChevronDown className="h-3 w-3 sm:h-4 sm:w-4 text-slate-400 flex-shrink-0" />
@@ -440,7 +433,7 @@ const StudentDashboardLayout: React.FC<StudentDashboardLayoutProps> = ({
                 {userMenuOpen && (
                   <div className="absolute right-0 top-full mt-2 w-56 sm:w-64 max-w-[90vw] bg-white rounded-xl shadow-xl border border-slate-200 py-2 z-50 overflow-visible">
                     <div className="px-3 sm:px-4 py-3 border-b border-slate-100">
-                      <p className="font-semibold text-slate-900 text-sm sm:text-base truncate">{profile?.name || user?.name}</p>
+                      <p className="font-semibold text-slate-900 text-sm sm:text-base truncate">{profile?.full_name || user?.name}</p>
                       <p className="text-xs sm:text-sm text-slate-500 truncate max-w-[180px]" style={{ direction: 'ltr', textOverflow: 'ellipsis', overflow: 'hidden', whiteSpace: 'nowrap' }} title={user?.email}>{user?.email}</p>
                     </div>
 

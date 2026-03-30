@@ -1,7 +1,7 @@
-import { useState, useEffect, useCallback } from 'react';
+import { useCallback } from 'react';
+import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { useAuth } from './useAuth';
 import { supabase } from '../lib/supabase';
-import React from 'react';
 
 interface ReferralCodeResponse {
   success: boolean;
@@ -22,45 +22,47 @@ interface ActiveDiscount {
   expires_at?: string;
 }
 
+const REFERRAL_QUERY_KEY = (userId?: string) => ['referral-discount', userId] as const;
+const REFERRAL_USAGE_KEY = (userId?: string) => ['referral-usage', userId] as const;
+
+/**
+ * Hook de código de referência — otimizado com React Query.
+ * Todas as instâncias compartilham o mesmo cache, eliminando
+ * chamadas duplicadas ao banco quando o hook é usado em múltiplos componentes.
+ */
 export const useReferralCode = () => {
   const { user } = useAuth();
-  const [loading, setLoading] = useState(false);
-  const [error, setError] = useState<string | null>(null);
-  const [activeDiscount, setActiveDiscount] = useState<ActiveDiscount | null>(null);
-  const [hasUsedReferralCode, setHasUsedReferralCode] = useState(false);
+  const queryClient = useQueryClient();
 
-  const checkReferralCodeUsage = useCallback(async () => {
-    if (!user?.id) return;
-    
-    try {
+  // Query 1: verifica se o usuário já usou um código de referência
+  const { data: hasUsedReferralCode = false } = useQuery({
+    queryKey: REFERRAL_USAGE_KEY(user?.id),
+    queryFn: async () => {
+      if (!user?.id) return false;
       const { data, error } = await supabase
         .from('used_referral_codes')
         .select('id')
         .eq('user_id', user.id)
         .limit(1);
+      if (error) return false;
+      return !!(data && data.length > 0);
+    },
+    enabled: !!user?.id,
+    staleTime: 5 * 60 * 1000, // 5 minutos — dado estável
+    gcTime: 10 * 60 * 1000,
+    refetchOnWindowFocus: false,
+  });
 
-      if (error) {
-        console.error('Error checking referral code usage:', error);
-      } else {
-        setHasUsedReferralCode(data && data.length > 0);
-      }
-    } catch (error) {
-      console.error('Error checking referral code usage:', error);
-    }
-  }, [user?.id]);
+  // Query 2: busca o desconto ativo do usuário
+  const { data: activeDiscount = null, isLoading: loading } = useQuery<ActiveDiscount | null>({
+    queryKey: REFERRAL_QUERY_KEY(user?.id),
+    queryFn: async () => {
+      if (!user?.id) return null;
 
-  const checkActiveDiscount = useCallback(async () => {
-    if (!user?.id) {
-      console.log('🔍 [useReferralCode] Sem user.id, não verificando desconto');
-      return;
-    }
-    
-    console.log('🔍 [useReferralCode] Verificando desconto ativo para user:', user.id);
-    
-    // PRIMEIRO: Verificar diretamente na tabela used_referral_codes
-    let appliedCodeFromTable: any = null;
-    try {
-      console.log('🔍 [useReferralCode] Buscando códigos usados diretamente na tabela...');
+      console.log('🔍 [useReferralCode] Verificando desconto ativo para user:', user.id);
+
+      // Verificar diretamente na tabela used_referral_codes
+      let appliedCodeFromTable: any = null;
       const { data: usedCodes, error: usedCodesError } = await supabase
         .from('used_referral_codes')
         .select('*')
@@ -70,107 +72,59 @@ export const useReferralCode = () => {
 
       if (usedCodesError) {
         console.error('❌ [useReferralCode] Erro ao buscar códigos usados:', usedCodesError);
+      } else if (usedCodes && usedCodes.length > 0) {
+        appliedCodeFromTable = usedCodes.find((code: any) => code.status === 'applied') || usedCodes[0];
+        console.log('🔍 [useReferralCode] Código encontrado na tabela:', appliedCodeFromTable);
       } else {
-        console.log('🔍 [useReferralCode] Códigos encontrados na tabela:', usedCodes);
-        if (usedCodes && usedCodes.length > 0) {
-          // Procurar por um código com status 'applied'
-          appliedCodeFromTable = usedCodes.find(code => code.status === 'applied');
-          if (appliedCodeFromTable) {
-            console.log('✅ [useReferralCode] Código aplicado encontrado na tabela:', appliedCodeFromTable);
-          } else {
-            console.log('⚠️ [useReferralCode] Nenhum código com status "applied" encontrado. Status encontrados:', usedCodes.map(c => c.status));
-            // Se não encontrou com status 'applied', tentar com qualquer status (fallback)
-            appliedCodeFromTable = usedCodes[0];
-            console.log('⚠️ [useReferralCode] Usando primeiro código encontrado como fallback:', appliedCodeFromTable);
-          }
-        } else {
-          console.log('ℹ️ [useReferralCode] Nenhum código usado encontrado na tabela');
-        }
+        console.log('ℹ️ [useReferralCode] Nenhum código usado encontrado na tabela');
       }
-    } catch (error) {
-      console.error('❌ [useReferralCode] Erro ao buscar códigos usados:', error);
-    }
 
-    // SEGUNDO: Chamar a função RPC
-    try {
-      const { data, error } = await supabase.rpc('get_user_active_discount', {
+      // Chamar a RPC para obter desconto ativo
+      const { data: rpcData, error: rpcError } = await supabase.rpc('get_user_active_discount', {
         user_id_param: user.id
       });
 
-      if (error) {
-        console.error('❌ [useReferralCode] Erro ao verificar desconto via RPC:', error);
-        // Se a RPC falhou mas temos um código na tabela, usar como fallback
+      if (rpcError || !rpcData?.has_discount) {
         if (appliedCodeFromTable) {
-          console.log('🔄 [useReferralCode] RPC falhou, usando código da tabela como fallback');
-          setActiveDiscount({
+          console.log('🔄 [useReferralCode] RPC sem resultado, usando fallback da tabela:', appliedCodeFromTable.affiliate_code);
+          return {
             has_discount: true,
             affiliate_code: appliedCodeFromTable.affiliate_code,
             discount_amount: appliedCodeFromTable.discount_amount || 50,
             stripe_coupon_id: appliedCodeFromTable.stripe_coupon_id,
             referrer_id: appliedCodeFromTable.referrer_id,
             applied_at: appliedCodeFromTable.applied_at,
-            expires_at: appliedCodeFromTable.expires_at
-          });
+            expires_at: appliedCodeFromTable.expires_at,
+          } as ActiveDiscount;
         }
-      } else {
-        console.log('✅ [useReferralCode] Resultado do desconto via RPC:', data);
-        // Se a RPC retornou sem desconto mas temos um código na tabela, usar como fallback
-        if (!data?.has_discount && appliedCodeFromTable) {
-          console.log('🔄 [useReferralCode] RPC não encontrou desconto, mas temos código na tabela. Usando como fallback');
-          setActiveDiscount({
-            has_discount: true,
-            affiliate_code: appliedCodeFromTable.affiliate_code,
-            discount_amount: appliedCodeFromTable.discount_amount || 50,
-            stripe_coupon_id: appliedCodeFromTable.stripe_coupon_id,
-            referrer_id: appliedCodeFromTable.referrer_id,
-            applied_at: appliedCodeFromTable.applied_at,
-            expires_at: appliedCodeFromTable.expires_at
-          });
-        } else {
-          setActiveDiscount(data);
-        }
+        if (rpcError) console.error('❌ [useReferralCode] Erro via RPC:', rpcError);
+        return rpcData ?? null;
       }
-    } catch (error) {
-      console.error('❌ [useReferralCode] Erro ao verificar desconto via RPC:', error);
-      // Se a RPC deu erro mas temos um código na tabela, usar como fallback
-      if (appliedCodeFromTable) {
-        console.log('🔄 [useReferralCode] RPC deu erro, usando código da tabela como fallback');
-        setActiveDiscount({
-          has_discount: true,
-          affiliate_code: appliedCodeFromTable.affiliate_code,
-          discount_amount: appliedCodeFromTable.discount_amount || 50,
-          stripe_coupon_id: appliedCodeFromTable.stripe_coupon_id,
-          referrer_id: appliedCodeFromTable.referrer_id,
-          applied_at: appliedCodeFromTable.applied_at,
-          expires_at: appliedCodeFromTable.expires_at
-        });
-      }
-    }
-  }, [user?.id]);
 
-  // Verificar se usuário já usou código de referência
-  useEffect(() => {
-    if (user?.id) {
-      checkReferralCodeUsage();
-      checkActiveDiscount();
-    }
-  }, [user?.id, checkReferralCodeUsage, checkActiveDiscount]);
+      console.log('✅ [useReferralCode] Desconto ativo via RPC:', rpcData);
+      return rpcData as ActiveDiscount;
+    },
+    enabled: !!user?.id,
+    staleTime: 5 * 60 * 1000, // 5 minutos — desconto raramente muda
+    gcTime: 10 * 60 * 1000,
+    refetchOnWindowFocus: false,
+  });
 
+  // Valida um código de referência via Edge Function
   const validateReferralCode = useCallback(async (affiliateCode: string): Promise<ReferralCodeResponse> => {
-    if (!user) {
-      return { success: false, error: 'Usuário não autenticado' };
-    }
+    if (!user) return { success: false, error: 'Usuário não autenticado' };
 
     console.log('🔍 [useReferralCode] Validando código de referência:', affiliateCode);
-    setLoading(true);
-    setError(null);
 
     try {
+      const session = await supabase.auth.getSession();
+      const token = session.data.session?.access_token;
+
       const response = await fetch(`${import.meta.env.VITE_SUPABASE_URL}/functions/v1/validate-referral-code`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
-          'Authorization': `Bearer ${(await supabase.auth.getSession()).data.session?.access_token}`,
+          'Authorization': `Bearer ${token}`,
         },
         body: JSON.stringify({ affiliate_code: affiliateCode }),
       });
@@ -179,23 +133,18 @@ export const useReferralCode = () => {
       console.log('🔍 [useReferralCode] Resultado da validação:', result);
 
       if (result.success) {
-        console.log('🔍 [useReferralCode] ✅ Código válido, atualizando estado local...');
-        // Atualiza o estado local
-        setHasUsedReferralCode(true);
-        await checkActiveDiscount();
-        console.log('🔍 [useReferralCode] ✅ Estado atualizado com sucesso');
+        console.log('✅ [useReferralCode] Código válido, invalidando cache para re-fetch...');
+        // Invalidar o cache para forçar re-fetch com o novo desconto
+        queryClient.invalidateQueries({ queryKey: REFERRAL_USAGE_KEY(user.id) });
+        queryClient.invalidateQueries({ queryKey: REFERRAL_QUERY_KEY(user.id) });
       }
 
       return result;
-    } catch (error) {
-      console.error('🔍 [useReferralCode] Erro ao validar código:', error);
-      const errorMessage = 'Erro ao validar código de referência';
-      setError(errorMessage);
-      return { success: false, error: errorMessage };
-    } finally {
-      setLoading(false);
+    } catch (err) {
+      console.error('❌ [useReferralCode] Erro ao validar código:', err);
+      return { success: false, error: 'Erro ao validar código de referência' };
     }
-  }, [user, checkActiveDiscount]);
+  }, [user, queryClient]);
 
   const getReferralCodeFromURL = useCallback((): string | null => {
     const urlParams = new URLSearchParams(window.location.search);
@@ -204,40 +153,22 @@ export const useReferralCode = () => {
 
   const applyReferralCodeFromURL = useCallback(async (): Promise<ReferralCodeResponse | null> => {
     const codeFromURL = getReferralCodeFromURL();
-    
-    if (!codeFromURL || hasUsedReferralCode) {
-      return null;
-    }
-
+    if (!codeFromURL || hasUsedReferralCode) return null;
     return await validateReferralCode(codeFromURL);
   }, [getReferralCodeFromURL, hasUsedReferralCode, validateReferralCode]);
 
-  // Função de teste para debug
   const testReferralCode = useCallback(async (testCode: string): Promise<ReferralCodeResponse> => {
-    console.log('🧪 TESTE: Aplicando código de referência:', testCode);
     return await validateReferralCode(testCode);
   }, [validateReferralCode]);
 
-  // Memoizar o retorno para evitar re-renderizações
-  const memoizedReturn = React.useMemo(() => ({
+  return {
     loading,
-    error,
+    error: null,
     activeDiscount,
     hasUsedReferralCode,
     validateReferralCode,
     getReferralCodeFromURL,
     applyReferralCodeFromURL,
-    testReferralCode
-  }), [
-    loading,
-    error,
-    activeDiscount,
-    hasUsedReferralCode,
-    validateReferralCode,
-    getReferralCodeFromURL,
-    applyReferralCodeFromURL,
-    testReferralCode
-  ]);
-
-  return memoizedReturn;
+    testReferralCode,
+  };
 };

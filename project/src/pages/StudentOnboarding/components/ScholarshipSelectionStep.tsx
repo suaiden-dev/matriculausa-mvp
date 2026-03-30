@@ -2,12 +2,11 @@ import React, { useState, useEffect, useMemo, useCallback } from 'react';
 import { Award, Building, DollarSign, X, CheckCircle2, Info, Search, GraduationCap, BookOpen, Monitor, Briefcase, ChevronDown, ChevronUp, Filter } from 'lucide-react';
 import { useAuth } from '../../../hooks/useAuth';
 import { useCartStore } from '../../../stores/applicationStore';
-import { useScholarships } from '../../../hooks/useScholarships';
+import { useAllScholarshipsQuery } from '../../../hooks/useStudentDashboardQueries';
 import { usePackageScholarshipFilter } from '../../../hooks/usePackageScholarshipFilter';
 import { StepProps } from '../types';
 import { ScholarshipCardFull } from './ScholarshipCardFull';
 import ScholarshipDetailModal from '../../../components/ScholarshipDetailModal';
-import { supabase } from '../../../lib/supabase';
 import { useTranslation } from 'react-i18next';
 import { is3800ScholarshipBlocked } from '../../../utils/scholarshipDeadlineValidation';
 import { formatAmount } from '../../../utils/scholarshipHelpers';
@@ -19,14 +18,14 @@ export const ScholarshipSelectionStep: React.FC<StepProps> = ({ onNext, onBack: 
   const { t } = useTranslation(['registration', 'scholarships', 'common']);
   const { user, userProfile } = useAuth();
   const { cart, addToCart, removeFromCart, fetchCart } = useCartStore();
-  const { scholarships: allScholarships, loading: scholarshipsLoading, error: scholarshipsError } = useScholarships();
+  const { data: allScholarships = [], isLoading: scholarshipsLoading, isError: scholarshipsIsError } = useAllScholarshipsQuery();
   const { minScholarshipValue, loading: packageFilterLoading } = usePackageScholarshipFilter();
   const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
   const [currentPage, setCurrentPage] = useState(1);
   const [error, setError] = useState<string | null>(null);
   const isManuallyUpdatingRef = React.useRef(false);
   const lastCartRef = React.useRef<string>('');
-  const [isLocked, setIsLocked] = useState(false);
+
   const [selectedScholarshipForModal, setSelectedScholarshipForModal] = useState<any | null>(null);
   const [searchTerm, setSearchTerm] = useState<string>('');
   const [selectedLevel, setSelectedLevel] = useState<string>('all');
@@ -56,40 +55,13 @@ export const ScholarshipSelectionStep: React.FC<StepProps> = ({ onNext, onBack: 
     }
   }, [user?.id, fetchCart]);
 
-  // Verificar se já passou pela review (tem process type selecionado)
-  // IMPORTANTE: Só considerar bloqueado se o usuário já pagou a taxa de seleção
-  // Isso evita mostrar "Etapa Concluída" quando há dados antigos
-  useEffect(() => {
-    const checkIfLocked = async () => {
-      if (!userProfile?.id) return;
-      
-      // Só verificar se já passou pela review se o usuário já pagou a taxa de seleção
-      if (!userProfile.has_paid_selection_process_fee) {
-        setIsLocked(false);
-        return;
-      }
-      
-      try {
-        // Verificar se há aplicações com process type (indica que já passou pela review)
-        const { data: applications } = await supabase
-          .from('scholarship_applications')
-          .select('student_process_type')
-          .eq('student_id', userProfile.id)
-          .limit(1);
-        
-        // Só considerar bloqueado se realmente há aplicações criadas com process type
-        // Não usar localStorage para evitar dados antigos
-        const hasProcessType = applications && applications.length > 0 && !!applications[0].student_process_type;
-        
-        setIsLocked(hasProcessType ? true : false);
-      } catch (error) {
-        console.error('Error checking if locked:', error);
-        setIsLocked(false);
-      }
-    };
-    
-    checkIfLocked();
-  }, [userProfile?.id, userProfile?.has_paid_selection_process_fee]);
+  // isLocked: o usuário já escolheu o tipo de processo (passou da seleção de bolsas)
+  // Derivado diretamente do perfil — sem query adicional
+  const isLocked = useMemo(() => {
+    if (!userProfile?.has_paid_selection_process_fee) return false;
+    return !!(userProfile?.student_process_type &&
+      ['initial', 'transfer', 'change_of_status'].includes(userProfile.student_process_type));
+  }, [userProfile?.has_paid_selection_process_fee, userProfile?.student_process_type]);
 
   useEffect(() => {
     // Sincronizar selectedIds com cart
@@ -470,7 +442,7 @@ export const ScholarshipSelectionStep: React.FC<StepProps> = ({ onNext, onBack: 
   };
 
   const loading = scholarshipsLoading || packageFilterLoading;
-  const displayError = error || (scholarshipsError ? 'Erro ao carregar bolsas. Tente novamente.' : null);
+  const displayError = error || (scholarshipsIsError ? 'Erro ao carregar bolsas. Tente novamente.' : null);
 
   const toggleSelection = useCallback(async (scholarship: any) => {
     if (!user?.id) return;

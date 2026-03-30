@@ -1,22 +1,46 @@
-import React, { useEffect, useState, useCallback } from 'react';
+import React, { useEffect, useState, useCallback, Suspense } from 'react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
 import { ArrowLeft, Bell, Clock } from 'lucide-react';
 import { useAuth } from '../../hooks/useAuth';
 import { useOnboardingProgress } from './hooks/useOnboardingProgress';
 import { StepIndicator } from './components/StepIndicator';
-import { SelectionFeeStep } from './components/SelectionFeeStep';
-import { ScholarshipSelectionStep } from './components/ScholarshipSelectionStep';
-import { ProcessTypeStep } from './components/ProcessTypeStep';
-import { DocumentsUploadStep } from './components/DocumentsUploadStep';
-import { PaymentStep } from './components/PaymentStep'; // Payment step component
-import { ScholarshipFeeStep } from './components/ScholarshipFeeStep';
-import { PlacementFeeStep } from './components/PlacementFeeStep';
-import { UniversityDocumentsStep } from './components/UniversityDocumentsStep';
-import { SelectionSurveyStep } from './components/SelectionSurveyStep';
-import { IdentityVerificationStep } from './components/IdentityVerificationStep';
-import { ReinstatementFeeStep } from './components/ReinstatementFeeStep';
 import { OnboardingStep } from './types';
 import PaymentSuccessOverlay from '../../components/PaymentSuccessOverlay';
+
+// Lazy loading de cada step — cada um vira um chunk separado no bundle
+const SelectionFeeStep = React.lazy(() =>
+  import('./components/SelectionFeeStep').then(m => ({ default: m.SelectionFeeStep }))
+);
+const IdentityVerificationStep = React.lazy(() =>
+  import('./components/IdentityVerificationStep').then(m => ({ default: m.IdentityVerificationStep }))
+);
+const SelectionSurveyStep = React.lazy(() =>
+  import('./components/SelectionSurveyStep').then(m => ({ default: m.SelectionSurveyStep }))
+);
+const ScholarshipSelectionStep = React.lazy(() =>
+  import('./components/ScholarshipSelectionStep').then(m => ({ default: m.ScholarshipSelectionStep }))
+);
+const ProcessTypeStep = React.lazy(() =>
+  import('./components/ProcessTypeStep').then(m => ({ default: m.ProcessTypeStep }))
+);
+const DocumentsUploadStep = React.lazy(() =>
+  import('./components/DocumentsUploadStep').then(m => ({ default: m.DocumentsUploadStep }))
+);
+const PaymentStep = React.lazy(() =>
+  import('./components/PaymentStep').then(m => ({ default: m.PaymentStep }))
+);
+const ScholarshipFeeStep = React.lazy(() =>
+  import('./components/ScholarshipFeeStep').then(m => ({ default: m.ScholarshipFeeStep }))
+);
+const PlacementFeeStep = React.lazy(() =>
+  import('./components/PlacementFeeStep').then(m => ({ default: m.PlacementFeeStep }))
+);
+const ReinstatementFeeStep = React.lazy(() =>
+  import('./components/ReinstatementFeeStep').then(m => ({ default: m.ReinstatementFeeStep }))
+);
+const UniversityDocumentsStep = React.lazy(() =>
+  import('./components/UniversityDocumentsStep').then(m => ({ default: m.UniversityDocumentsStep }))
+);
 
 import { useTranslation } from 'react-i18next';
 import LanguageSelector from '../../components/LanguageSelector';
@@ -540,33 +564,47 @@ const StudentOnboarding: React.FC = () => {
   
   if (state.universityDocumentsUploaded && currentIdx > allSteps.indexOf('my_applications')) completedSteps.push('my_applications');
 
+  const StepFallback = (
+    <div className="min-h-[300px] flex items-center justify-center">
+      <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600" />
+    </div>
+  );
+
   const renderStep = () => {
-    switch (state.currentStep) {
-      case 'selection_fee':
-        return <SelectionFeeStep onNext={handleNext} onBack={handleBack} />;
-      case 'identity_verification':
-        return <IdentityVerificationStep onNext={handleNext} onBack={handleBack} />;
-      case 'selection_survey':
-        return <SelectionSurveyStep onNext={handleNext} onBack={handleBack} />;
-      case 'scholarship_selection':
-        return <ScholarshipSelectionStep onNext={handleNext} onBack={handleBack} />;
-      case 'process_type':
-        return <ProcessTypeStep onNext={handleNext} onBack={handleBack} />;
-      case 'documents_upload':
-        return <DocumentsUploadStep onNext={handleNext} onBack={handleBack} />;
-      case 'payment':
-        return <PaymentStep onNext={handleNext} onBack={handleBack} />;
-      case 'scholarship_fee':
-        return <ScholarshipFeeStep onNext={handleNext} onBack={handleBack} currentStep={state.currentStep} />;
-      case 'placement_fee':
-        return <PlacementFeeStep onNext={handleNext} onBack={handleBack} currentStep={state.currentStep} />;
-      case 'reinstatement_fee':
-        return <ReinstatementFeeStep onNext={handleNext} onBack={handleBack} currentStep={state.currentStep} />;
-      case 'my_applications':
-        return <UniversityDocumentsStep onNext={handleNext} onBack={handleBack} />;
-      default:
-        return <SelectionFeeStep onNext={handleNext} onBack={handleBack} />;
-    }
+    const stepContent = (() => {
+      switch (state.currentStep) {
+        case 'selection_fee':
+          return <SelectionFeeStep onNext={handleNext} onBack={handleBack} />;
+        case 'identity_verification':
+          return <IdentityVerificationStep onNext={handleNext} onBack={handleBack} />;
+        case 'selection_survey':
+          return <SelectionSurveyStep onNext={handleNext} onBack={handleBack} />;
+        case 'scholarship_selection':
+          return <ScholarshipSelectionStep onNext={handleNext} onBack={handleBack} />;
+        case 'process_type':
+          return <ProcessTypeStep onNext={handleNext} onBack={handleBack} />;
+        case 'documents_upload':
+          return <DocumentsUploadStep onNext={handleNext} onBack={handleBack} />;
+        case 'payment':
+          return <PaymentStep onNext={handleNext} onBack={handleBack} />;
+        case 'scholarship_fee':
+          return <ScholarshipFeeStep onNext={handleNext} onBack={handleBack} currentStep={state.currentStep} />;
+        case 'placement_fee':
+          return <PlacementFeeStep onNext={handleNext} onBack={handleBack} currentStep={state.currentStep} />;
+        case 'reinstatement_fee':
+          return <ReinstatementFeeStep onNext={handleNext} onBack={handleBack} currentStep={state.currentStep} />;
+        case 'my_applications':
+          return <UniversityDocumentsStep onNext={handleNext} onBack={handleBack} />;
+        default:
+          return <SelectionFeeStep onNext={handleNext} onBack={handleBack} />;
+      }
+    })();
+
+    return (
+      <Suspense fallback={StepFallback}>
+        {stepContent}
+      </Suspense>
+    );
   };
 
   if (showPaymentAnimation || isVerifyingPayment) {
@@ -621,7 +659,7 @@ const StudentOnboarding: React.FC = () => {
               </button>
             )}
 
-            <div className="flex items-center gap-3">
+            <div className="flex items-center gap-3 ml-auto">
               {/* Notifications Bell */}
               <div className="relative notifications-container">
                 <button
