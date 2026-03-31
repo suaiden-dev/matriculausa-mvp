@@ -836,7 +836,7 @@
           "actionRequired": "Ação Necessária",
           "available": "Disponível",
           "inProgress": "Liberação em Andamento",
-          "blocked": "Bloqueado"
+          "blocked": "Liberação em Andamento"
         },
         "checklist": {
           "payment": "Pagamento da Taxa de Matrícula e Placement Fee",
@@ -857,17 +857,17 @@
           "processing": "Processando: {{current}}/24h"
         },
         "pendingFee": {
-          "title": "Sua Carta de Aceite chegou!",
-          "description": "Excelente notícia! Sua carta de aceite foi emitida pela universidade. O próximo passo é realizar o pagamento da taxa {{feeName}} para iniciar seu processo de visto.",
+          "title": "Sua Carta está Pronta!",
+          "description": "Boa notícia! Sua carta de aceite foi emitida pela universidade. Para liberá-la para download, realize o pagamento da taxa {{feeName}}.",
           "button": "Ir para Pagamento"
         },
-        "waitingAcceptance": {
-          "title": "Aguardando Carta de Aceite",
-          "description": "Seus documentos foram aprovados! A universidade está processando a emissão da sua Carta de Aceite oficial. Assim que estiver pronta, ela aparecerá aqui para download."
+        "waiting_acceptance": {
+          "title": "Liberação em Andamento",
+          "description": "Documentação aprovada! A universidade está processando a emissão da sua Carta de Aceite oficial."
         },
         "approved": {
-          "title": "Parabéns, Processo Concluído!",
-          "description": "Sua carta de aceite está disponível e todos os pagamentos foram confirmados. Você já pode baixar seu documento e seguir para as próximas etapas do seu intercâmbio!",
+          "title": "Parabéns, Documento Liberado!",
+          "description": "Sua carta de aceite já está disponível para download.",
           "button": "Ver Carta de Aceite"
         },
         "generalWait": {
@@ -951,8 +951,8 @@
         "uploadDescription": "Envie aqui seus formulários preenchidos e o pack de documentos (extrato, passaporte, etc)."
       },
       "uploadSection": {
-        "title": "Arquivos para Envio",
-        "description": "Envie os documentos solicitados abaixo em formato PDF.",
+        "title": "Envio de Documentos",
+        "description": "Faça o upload dos documentos preenchidos abaixo em formato PDF.",
         "noRequests": "Nenhuma solicitação no momento"
       },
       "actions": {
@@ -1028,13 +1028,24 @@
         "enrolledMessage": "Você foi matriculado! Verifique seu painel para os próximos passos.",
         "noFilesUploadedYet": "Nenhum arquivo enviado ainda.",
         "noTransferFormUploadedYet": "Nenhum formulário de transferência enviado ainda.",
-        "acceptanceLetterInstructions": "A universidade enviará sua carta de aceitação aqui quando estiver pronta. Uma vez enviada, você será automaticamente matriculado."
+        "acceptanceLetterInstructions": "A universidade enviará sua carta de aceitação aqui quando estiver pronta. Uma vez enviada, você será automaticamente matriculado.",
+        "templateOfficial": "Template Oficial",
+        "attachPdf": "Anexar PDF",
+        "sendingButton": "Enviando...",
+        "sendButton": "Enviar",
+        "inAnalysis": "Em Análise"
       },
       "modals": {
         "provideJustification": "Fornecer uma justificativa",
         "rejectionExplanation": "Explique o motivo da rejeição deste documento. O aluno verá esta mensagem.",
         "rejectionExplanationPlaceholder": "Ex.: O documento está cortado. Envie novamente em PDF com todas as páginas.",
-        "confirm": "Confirmar"
+        "confirm": "Confirmar",
+        "correctionReason": "Motivo da Rejeição",
+        "adminNotice": "Aviso do Admin",
+        "rejectionAttention": "Atenção: Motivo da Rejeição",
+        "viewCorrectionReason": "Ver motivo da rejeição",
+        "understandClose": "Entendi, Fechar",
+        "pleaseReviewRejection": "Por favor, revise o arquivo e envie novamente seguindo as instruções."
       }
     },
     "identityVerification": {

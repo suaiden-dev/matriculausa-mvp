@@ -102,6 +102,7 @@
     "modal": {
       "exclusive": "Exclusivo",
       "exclusiveScholarship": "Beca Exclusiva",
+      "yourScholarship": "Tu Beca",
       "anyField": "Cualquier Área",
       "universityHidden": "Universidad Oculta - Desbloquear con el Proceso de Selección",
       "universityInfoAvailable": "Información de la Universidad Disponible",

@@ -18,6 +18,7 @@ interface ScholarshipItem {
   annual_value_with_scholarship?: number;
   original_value_per_credit?: number;
   application_fee_amount?: number;
+  placement_fee_amount?: number;
   field_of_study?: string;
   level?: string;
   delivery_mode?: string;
@@ -50,7 +51,26 @@ const AdminScholarshipSelection: React.FC<AdminScholarshipSelectionProps> = ({ s
   const [selectedScholarship, setSelectedScholarship] = useState<ScholarshipItem | null>(null);
   const [isModalOpen, setIsModalOpen] = useState(false);
 
+  // Filters
+  const [universities, setUniversities] = useState<{ id: string; name: string }[]>([]);
+  const [filterUniversityId, setFilterUniversityId] = useState('');
+  const [filterScholarshipMin, setFilterScholarshipMin] = useState('');
+  const [filterScholarshipMax, setFilterScholarshipMax] = useState('');
+  const [filterAppFeeMin, setFilterAppFeeMin] = useState('');
+  const [filterAppFeeMax, setFilterAppFeeMax] = useState('');
+
   const canMutate = !!(user && (user.role === 'admin' || user.role === 'school'));
+
+  useEffect(() => {
+    supabase
+      .from('universities')
+      .select('id, name')
+      .in('name', ['Caroline University', 'Oikos University Los Angeles'])
+      .order('name')
+      .then(({ data }) => {
+        if (data) setUniversities(data);
+      });
+  }, []);
 
   const loadData = useCallback(async () => {
     setLoading(true);
@@ -61,17 +81,31 @@ const AdminScholarshipSelection: React.FC<AdminScholarshipSelectionProps> = ({ s
 
       let baseSelect = supabase
         .from('scholarships')
-        .select(`*, universities(name, location)`, { count: 'exact' })
+        .select(`*, universities(name)`, { count: 'exact' })
         .order('title', { ascending: true });
 
       if (query) {
         baseSelect = baseSelect.ilike('title', `%${query}%`);
       }
+      if (filterUniversityId) {
+        baseSelect = baseSelect.eq('university_id', filterUniversityId);
+      }
+      if (filterScholarshipMin !== '') {
+        baseSelect = baseSelect.gte('annual_value_with_scholarship', Number(filterScholarshipMin));
+      }
+      if (filterScholarshipMax !== '') {
+        baseSelect = baseSelect.lte('annual_value_with_scholarship', Number(filterScholarshipMax));
+      }
+      if (filterAppFeeMin !== '') {
+        baseSelect = baseSelect.gte('placement_fee_amount', Number(filterAppFeeMin));
+      }
+      if (filterAppFeeMax !== '') {
+        baseSelect = baseSelect.lte('placement_fee_amount', Number(filterAppFeeMax));
+      }
 
       const { data: scholarshipsData, error: scholarshipsError, count } = await baseSelect.range(from, to);
       
       if (scholarshipsError) {
-        console.error('Erro ao buscar bolsas:', scholarshipsError);
         throw scholarshipsError;
       }
       
@@ -93,13 +127,6 @@ const AdminScholarshipSelection: React.FC<AdminScholarshipSelectionProps> = ({ s
         .eq('student_id', studentProfileId)
         .order('created_at', { ascending: false });
       if (appsErr) throw appsErr;
-      
-      console.log('🔍 [ADMIN SCHOLARSHIP SELECTION] Applications loaded:', {
-        studentProfileId,
-        apps_count: apps?.length || 0,
-        apps_data: apps?.map(app => ({ id: app.id, status: app.status, scholarship_title: (app as any).scholarships?.title }))
-      });
-      
       setApplications(apps || []);
 
       // Process type sugerido a partir da aplicação mais recente
@@ -115,7 +142,7 @@ const AdminScholarshipSelection: React.FC<AdminScholarshipSelectionProps> = ({ s
     } finally {
       setLoading(false);
     }
-  }, [query, page, pageSize, studentProfileId, studentUserId]);
+  }, [query, page, pageSize, studentProfileId, studentUserId, filterUniversityId, filterScholarshipMin, filterScholarshipMax, filterAppFeeMin, filterAppFeeMax]);
 
   useEffect(() => {
     loadData();
@@ -316,21 +343,90 @@ const AdminScholarshipSelection: React.FC<AdminScholarshipSelectionProps> = ({ s
               className="flex-1 px-3 py-2 border border-slate-300 rounded-lg text-sm"
             />
             <button
-              onClick={loadData}
+              onClick={() => { setPage(1); loadData(); }}
               disabled={loading}
               className="px-4 py-2 rounded-lg bg-[#05294E] text-white text-sm hover:bg-[#041f38] disabled:opacity-50"
             >
               {loading ? 'Searching...' : 'Search'}
             </button>
-            {!!query && (
+            {(!!query || !!filterUniversityId || !!filterScholarshipMin || !!filterScholarshipMax || !!filterAppFeeMin || !!filterAppFeeMax) && (
               <button
-                onClick={() => { setQuery(''); setPage(1); }}
+                onClick={() => {
+                  setQuery('');
+                  setFilterUniversityId('');
+                  setFilterScholarshipMin('');
+                  setFilterScholarshipMax('');
+                  setFilterAppFeeMin('');
+                  setFilterAppFeeMax('');
+                  setPage(1);
+                }}
                 disabled={loading}
                 className="px-3 py-2 rounded-lg border border-slate-300 text-slate-600 text-sm hover:bg-slate-50 disabled:opacity-50"
               >
                 Clear
               </button>
             )}
+          </div>
+
+          {/* Filters */}
+          <div className="mb-4 p-3 bg-slate-50 border border-slate-200 rounded-xl grid grid-cols-1 gap-3">
+            <div>
+              <label className="block text-xs font-medium text-slate-600 mb-1">University</label>
+              <select
+                value={filterUniversityId}
+                onChange={(e) => { setFilterUniversityId(e.target.value); setPage(1); }}
+                className="w-full px-3 py-2 border border-slate-300 rounded-lg text-sm bg-white"
+              >
+                <option value="">All universities</option>
+                {universities.map((u) => (
+                  <option key={u.id} value={u.id}>{u.name}</option>
+                ))}
+              </select>
+            </div>
+            <div className="grid grid-cols-2 gap-3">
+              <div>
+                <label className="block text-xs font-medium text-slate-600 mb-1">Scholarship value ($/yr) — min</label>
+                <input
+                  type="text"
+                  inputMode="numeric"
+                  value={filterScholarshipMin}
+                  onChange={(e) => { if (/^\d*$/.test(e.target.value)) { setFilterScholarshipMin(e.target.value); setPage(1); } }}
+                  className="w-full px-3 py-2 border border-slate-300 rounded-lg text-sm"
+                />
+              </div>
+              <div>
+                <label className="block text-xs font-medium text-slate-600 mb-1">Scholarship value ($/yr) — max</label>
+                <input
+                  type="text"
+                  inputMode="numeric"
+                  value={filterScholarshipMax}
+                  onChange={(e) => { if (/^\d*$/.test(e.target.value)) { setFilterScholarshipMax(e.target.value); setPage(1); } }}
+                  className="w-full px-3 py-2 border border-slate-300 rounded-lg text-sm"
+                />
+              </div>
+            </div>
+            <div className="grid grid-cols-2 gap-3">
+              <div>
+                <label className="block text-xs font-medium text-slate-600 mb-1">Placement fee ($) — min</label>
+                <input
+                  type="text"
+                  inputMode="numeric"
+                  value={filterAppFeeMin}
+                  onChange={(e) => { if (/^\d*$/.test(e.target.value)) { setFilterAppFeeMin(e.target.value); setPage(1); } }}
+                  className="w-full px-3 py-2 border border-slate-300 rounded-lg text-sm"
+                />
+              </div>
+              <div>
+                <label className="block text-xs font-medium text-slate-600 mb-1">Placement fee ($) — max</label>
+                <input
+                  type="text"
+                  inputMode="numeric"
+                  value={filterAppFeeMax}
+                  onChange={(e) => { if (/^\d*$/.test(e.target.value)) { setFilterAppFeeMax(e.target.value); setPage(1); } }}
+                  className="w-full px-3 py-2 border border-slate-300 rounded-lg text-sm"
+                />
+              </div>
+            </div>
           </div>
 
           <div className="mb-4">
@@ -369,6 +465,18 @@ const AdminScholarshipSelection: React.FC<AdminScholarshipSelectionProps> = ({ s
                     <div className="min-w-0 flex-1 cursor-pointer" onClick={() => handleViewScholarship(s)}>
                       <div className="font-semibold text-slate-900 truncate hover:text-[#05294E] transition-colors">{s.title}</div>
                       <div className="text-xs text-slate-600">{s.universities?.name || 'University'}</div>
+                      <div className="flex items-center gap-3 mt-1">
+                        {s.annual_value_with_scholarship != null && (
+                          <span className="text-xs text-emerald-700 font-medium">
+                            Scholarship: ${Number(s.annual_value_with_scholarship).toLocaleString('en-US')}/yr
+                          </span>
+                        )}
+                        {s.placement_fee_amount != null && (
+                          <span className="text-xs text-blue-700 font-medium">
+                            Placement fee: ${Number(s.placement_fee_amount).toLocaleString('en-US')}
+                          </span>
+                        )}
+                      </div>
                       {existing && (
                         <div className="mt-1 inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium bg-green-100 text-green-700">
                           Application: {existing.status || 'pending'}
@@ -473,21 +581,7 @@ const AdminScholarshipSelection: React.FC<AdminScholarshipSelectionProps> = ({ s
               {(applications || []).length === 0 && (
                 <div className="p-4 text-sm text-slate-500">No applications yet.</div>
               )}
-              {(() => {
-                console.log('🎨 [ADMIN SCHOLARSHIP SELECTION] Renderizando aplicações:', {
-                  total: applications.length,
-                  applications: applications.map((a: any) => ({
-                    id: a.id,
-                    status: a.status,
-                    scholarship_title: a.scholarships?.title
-                  }))
-                });
-                return (applications || []).map((a: any) => {
-                  console.log('🎨 [ADMIN SCHOLARSHIP SELECTION] Renderizando aplicação individual:', {
-                    id: a.id,
-                    status: a.status,
-                    statusDisplay: String(a.status || 'pending').replace('_',' ')
-                  });
+              {(applications || []).map((a: any) => {
                   return (
                     <div key={a.id} className="p-3">
                       <div className="text-sm font-semibold text-slate-900">{a.scholarships?.title || a.scholarship_id}</div>
@@ -531,8 +625,7 @@ const AdminScholarshipSelection: React.FC<AdminScholarshipSelectionProps> = ({ s
                   </div>
                 </div>
                   );
-                });
-              })()}
+                })}
             </div>
           </div>
         </div>

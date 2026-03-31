@@ -829,18 +829,18 @@
           "description": "Next Step: Within 24 hours you will receive your enrollment forms. Stay on this page to download the files, complete them, and send them back to us so we can finalize your Acceptance Letter!",
           "processing": "Processing: {{current}}/24h"
         },
-        "waitingAcceptance": {
-          "title": "Waiting for Acceptance Letter",
-          "description": "Your documents have been approved! The university is now processing the issuance of your official Acceptance Letter. Once it's ready, it will appear here for download."
+        "waiting_acceptance": {
+          "title": "Release in Progress",
+          "description": "Documentation approved! The university is now processing the issuance of your official Acceptance Letter."
         },
         "pendingFee": {
-          "title": "Your Acceptance Letter has arrived!",
-          "description": "Excellent news! Your acceptance letter has been issued by the university. The next step is to complete the {{feeName}} payment to start your visa process.",
+          "title": "Your Letter is Ready!",
+          "description": "Great news! Your acceptance letter has been issued by the university. To release it for download, please pay the {{feeName}} fee.",
           "button": "Go to Payment"
         },
         "approved": {
-          "title": "Congratulations, Process Complete!",
-          "description": "Your acceptance letter is available and all payments have been confirmed. You can now download your document and proceed to the next steps of your exchange program!",
+          "title": "Congratulations, Document Released!",
+          "description": "Your acceptance letter is now available for download.",
           "button": "View Acceptance Letter"
         },
         "generalWait": {
@@ -869,7 +869,7 @@
           "actionRequired": "Action Required",
           "available": "Available",
           "inProgress": "Release in Progress",
-          "blocked": "Blocked"
+          "blocked": "Coming Soon"
         },
         "details": {
           "scholarshipInfo": "Scholarship Information",
@@ -1025,13 +1025,24 @@
           "enrolledMessage": "You have been enrolled! Check your dashboard for next steps.",
           "noFilesUploadedYet": "No files uploaded yet.",
           "documentRequestsDescription": "Now that you've reached this stage, you must review and upload the documents requested by your university to continue your process. After this, the school will be able to analyze your application and send your acceptance letter.",
-          "acceptanceLetterInstructions": "The university will send your acceptance letter here when it's ready. Once uploaded, you will be automatically enrolled."
+          "acceptanceLetterInstructions": "The university will send your acceptance letter here when it's ready. Once uploaded, you will be automatically enrolled.",
+          "templateOfficial": "Official Template",
+          "attachPdf": "Attach PDF",
+          "sendingButton": "Sending...",
+          "sendButton": "Send",
+          "inAnalysis": "Under Review"
         },
         "modals": {
           "provideJustification": "Provide a justification",
           "rejectionExplanation": "Explain the reason for rejecting this document. The student will see this message.",
           "rejectionExplanationPlaceholder": "Ex.: The document is cut off. Please send it again in PDF with all pages.",
-          "confirm": "Confirm"
+          "confirm": "Confirm",
+          "correctionReason": "Rejection Reason",
+          "adminNotice": "Admin Notice",
+          "rejectionAttention": "Attention: Correction Needed",
+          "viewCorrectionReason": "View rejection reason",
+          "understandClose": "Understood, Close",
+          "pleaseReviewRejection": "Please review the file and upload again following the instructions."
         }
       },
       "identityVerification": {
@@ -1087,8 +1098,8 @@
         "uploadDescription": "Upload your completed forms and document pack here (bank statement, passport, etc)."
       },
       "uploadSection": {
-        "title": "Files for Submission",
-        "description": "Submit the requested documents below in PDF format.",
+        "title": "Document Upload",
+        "description": "Upload your completed documents below in PDF format.",
         "noRequests": "No requests at the moment"
       },
       "status": {
@@ -1171,13 +1182,24 @@
         "noFilesUploadedYet": "No files uploaded yet.",
         "noTransferFormUploadedYet": "No transfer form uploaded yet.",
         "documentRequestsDescription": "Now that you've reached this stage, you must review and upload the documents requested by your university to continue your process. After this, the school will be able to analyze your application and send your acceptance letter.",
-        "acceptanceLetterInstructions": "The university will send your acceptance letter here when it's ready. Once uploaded, you will be automatically enrolled."
+        "acceptanceLetterInstructions": "The university will send your acceptance letter here when it's ready. Once uploaded, you will be automatically enrolled.",
+        "templateOfficial": "Official Template",
+        "attachPdf": "Attach PDF",
+        "sendingButton": "Sending...",
+        "sendButton": "Send",
+        "inAnalysis": "Under Review"
       },
       "modals": {
         "provideJustification": "Provide a justification",
         "rejectionExplanation": "Explain the reason for rejecting this document. The student will see this message.",
         "rejectionExplanationPlaceholder": "Ex.: The document is cut off. Please send it again in PDF with all pages.",
-        "confirm": "Confirm"
+        "confirm": "Confirm",
+        "correctionReason": "Rejection Reason",
+        "adminNotice": "Admin Notice",
+        "rejectionAttention": "Attention: Rejection Reason",
+        "viewCorrectionReason": "View rejection reason",
+        "understandClose": "Understood, Close",
+        "pleaseReviewRejection": "Please review the file and upload again following the instructions."
       },
       "errors": {
         "onlyPdfAllowed": "Only PDF files are allowed."
