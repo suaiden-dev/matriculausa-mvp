@@ -345,7 +345,16 @@
   },
   "labels": {
     "clickToAccess": "Clique para acessar",
-    "continue": "Continuar"
+    "continue": "Continuar",
+    "loading": "Carregando...",
+    "back": "Voltar",
+    "download": "Baixar",
+    "view": "Visualizar",
+    "seeMore": "Ver mais",
+    "seeLess": "Ver menos",
+    "website": "Site",
+    "acceptanceLetterSoon": "Sua carta de aceite será disponibilizada aqui em breve.",
+    "clickToDownload": "Clique abaixo para visualizar ou baixar seu documento."
   },
   "status": {
     "under_review": "Em Análise",
