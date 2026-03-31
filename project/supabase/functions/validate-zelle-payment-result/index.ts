@@ -657,8 +657,6 @@ Deno.serve(async (req) => {
         .select('*')
         .eq('user_id', payment.user_id)
         .eq('amount', payment.amount)
-        // Verificamos tanto fee_type quanto fee_type_global para garantir o match
-        .or(`fee_type.eq."${payment.fee_type}",fee_type_global.eq."${payment.fee_type_global}"`)
         .not('screenshot_url', 'is', null)
         .neq('id', payment_id)
         .gt('created_at', tenMinutesAgo)
