@@ -258,18 +258,26 @@ export const UniversityDocumentsStep: React.FC<StepProps> = ({ onBack }) => {
         };
 
         // 7. Espera Inicial (Nenhum documento solicitado ainda)
-        if (documentRequests.length === 0) return { 
-            status: 'under_review' as const, 
-            title: t('dashboard:studentDashboard.myApplicationStep.status.initialAnalysis.title'), 
-            description: t('dashboard:studentDashboard.myApplicationStep.status.initialAnalysis.description'), 
-            nextStepLabel: '', 
-            action: () => {},
-            progress: {
-              current: 12,
-              total: 24,
-              label: "Processamento"
-            }
-        };
+        if (documentRequests.length === 0) {
+            const hoursElapsed = applicationDetails?.created_at
+                ? Math.min(
+                    Math.floor((Date.now() - new Date(applicationDetails.created_at).getTime()) / (1000 * 60 * 60)),
+                    24
+                  )
+                : 0;
+            return {
+                status: 'under_review' as const,
+                title: t('dashboard:studentDashboard.myApplicationStep.status.initialAnalysis.title'),
+                description: t('dashboard:studentDashboard.myApplicationStep.status.initialAnalysis.description'),
+                nextStepLabel: '',
+                action: () => {},
+                progress: {
+                  current: hoursElapsed,
+                  total: 24,
+                  label: "Processamento"
+                }
+            };
+        }
 
         return { 
             status: 'under_review' as const, 
@@ -354,10 +362,22 @@ export const UniversityDocumentsStep: React.FC<StepProps> = ({ onBack }) => {
             if (data) {
                 setApplicationDetails(data);
 
-                const { data: reqs } = await supabase
+                const universityId = (data.scholarships as any)?.university_id
+                    || (data.scholarships as any)?.universities?.id;
+
+                const reqQuery = supabase
                     .from('document_requests')
-                    .select('id, title, status, document_request_uploads(status)')
-                    .eq('scholarship_application_id', data.id);
+                    .select('id, title, status, document_request_uploads(status)');
+
+                if (universityId) {
+                    reqQuery.or(
+                        `scholarship_application_id.eq.${data.id},and(is_global.eq.true,university_id.eq.${universityId})`
+                    );
+                } else {
+                    reqQuery.eq('scholarship_application_id', data.id);
+                }
+
+                const { data: reqs } = await reqQuery;
 
                 if (reqs) {
                     setDocumentRequests(reqs);
@@ -516,9 +536,9 @@ export const UniversityDocumentsStep: React.FC<StepProps> = ({ onBack }) => {
                                                 <div className="grid grid-cols-1 md:grid-cols-2 gap-3 md:gap-4">
                                                     {sidebarSteps.map((step, idx) => {
                                                         const isCurrent = (step.id === 'documents' && !allDocsApproved) || 
-                                                                        (step.id === 'ds160' && !ds160PackagePaid && allDocsApproved && !i539PackagePaid) ||
-                                                                        (step.id === 'i539' && !i539PackagePaid && allDocsApproved && !ds160PackagePaid) ||
-                                                                        (step.id === 'acceptance' && allDocsApproved && (!packageFeeRequired || ds160PackagePaid || i539PackagePaid) && !applicationDetails.acceptance_letter_url);
+                                                                        (step.id === 'acceptance' && allDocsApproved && !applicationDetails?.acceptance_letter_url) ||
+                                                                        (step.id === 'ds160' && allDocsApproved && !!applicationDetails?.acceptance_letter_url && !ds160PackagePaid && !i539PackagePaid) ||
+                                                                        (step.id === 'i539' && allDocsApproved && !!applicationDetails?.acceptance_letter_url && !i539PackagePaid && !ds160PackagePaid);
                                                         const isLastOdd = sidebarSteps.length % 2 !== 0 && idx === sidebarSteps.length - 1;
 
                                                         return (
@@ -531,32 +551,42 @@ export const UniversityDocumentsStep: React.FC<StepProps> = ({ onBack }) => {
                                                                         setActiveTab(step.id as any);
                                                                     }
                                                                 }}
-                                                                className={`group flex items-center gap-4 p-6 rounded-2xl border-2 transition-all text-left w-full ${
+                                                                className={`group flex items-center gap-4 p-6 rounded-[2rem] border-2 transition-all text-left w-full relative overflow-hidden ${
                                                                     isCurrent 
-                                                                        ? 'bg-blue-50 border-blue-200 shadow-lg shadow-blue-500/5 ring-4 ring-blue-500/10' 
+                                                                        ? 'bg-gradient-to-br from-blue-50 to-white border-blue-400 shadow-2xl shadow-blue-500/10 ring-4 ring-blue-500/5' 
                                                                         : 'bg-white border-slate-100 hover:border-blue-200 hover:bg-slate-50 shadow-sm'
-                                                                } ${step.variant === 'error' ? 'cursor-not-allowed opacity-50 grayscale' : 'cursor-pointer hover:shadow-xl hover:shadow-blue-500/5'} ${isLastOdd ? 'md:col-span-2' : 'col-span-1'}`}
+                                                                } ${step.variant === 'error' ? 'cursor-not-allowed opacity-40 grayscale translate-y-0 shadow-none' : 'cursor-pointer hover:shadow-2xl hover:shadow-blue-500/5'} ${isLastOdd ? 'md:col-span-2' : 'col-span-1'}`}
                                                             >
-                                                                <div className={`w-8 h-10 rounded-xl flex items-center justify-center font-black text-xs shrink-0 ${
+                                                                {/* Efeito de destaque para o step atual */}
+                                                                {isCurrent && (
+                                                                    <div className="absolute inset-0 bg-gradient-to-r from-blue-600/5 to-transparent opacity-0 group-hover:opacity-100 transition-opacity" />
+                                                                )}
+
+                                                                <div className={`w-10 h-10 md:w-12 md:h-12 rounded-2xl flex items-center justify-center font-black text-sm md:text-lg shrink-0 transition-all ${
                                                                     step.completed 
-                                                                        ? 'bg-emerald-500 text-white shadow-lg shadow-emerald-500/20' 
+                                                                        ? 'bg-emerald-500 text-white shadow-lg shadow-emerald-500/20 rotate-12 group-hover:rotate-0' 
                                                                         : isCurrent 
-                                                                            ? 'bg-blue-600 text-white shadow-lg shadow-blue-500/30' 
-                                                                            : 'bg-slate-200 text-slate-500 shadow-inner'
+                                                                            ? 'bg-blue-600 text-white shadow-xl shadow-blue-500/30 ring-4 ring-blue-500/20' 
+                                                                            : 'bg-slate-100 text-slate-400 shadow-inner border border-slate-200'
                                                                 }`}>
                                                                     {step.completed ? '✓' : idx + 1}
                                                                 </div>
                                                                 
-                                                                <div className="flex-1 min-w-0">
-                                                                    <div className="flex items-center justify-between mb-1">
-                                                                        <span className={`text-[9px] md:text-[10px] font-black uppercase tracking-widest ${
-                                                                            step.completed ? 'text-emerald-600' : isCurrent ? 'text-blue-600' : 'text-slate-400'
-                                                                        }`}>
-                                                                            {step.status}
-                                                                        </span>
+                                                                <div className="flex-1 min-w-0 relative z-10">
+                                                                    <div className="flex items-center justify-between mb-2">
+                                                                        <div className="flex flex-col">
+                                                                            <span className={`text-[8px] md:text-[10px] font-black uppercase tracking-widest ${
+                                                                                step.completed ? 'text-emerald-600' : isCurrent ? 'text-blue-600' : 'text-slate-400'
+                                                                            }`}>
+                                                                                {step.status}
+                                                                            </span>
+                                                                            {isCurrent && !step.completed && (
+                                                                                <div className="w-8 h-1 bg-blue-600 rounded-full mt-1 animate-pulse" />
+                                                                            )}
+                                                                        </div>
                                                                         
                                                                         {step.variant !== 'error' && !step.completed && isCurrent && (
-                                                                            <span className="flex items-center gap-1.5 text-[9px] md:text-[10px] font-black text-white uppercase tracking-tight bg-blue-600 px-3 py-1 rounded-full border border-blue-500 shadow-lg shadow-blue-500/20 group-hover:bg-blue-700 transition-all">
+                                                                            <span className="flex items-center gap-1.5 text-[8px] md:text-[9px] font-black text-white uppercase tracking-tight bg-blue-600 px-3 py-1.5 rounded-full border border-blue-500 shadow-lg shadow-blue-500/20 group-hover:bg-blue-700 transition-all animate-bounce-subtle">
                                                                                 {t('common:labels.clickToAccess')}
                                                                                 <ArrowRight className="w-3 h-3 group-hover:translate-x-0.5 transition-transform" />
                                                                             </span>
@@ -575,7 +605,7 @@ export const UniversityDocumentsStep: React.FC<StepProps> = ({ onBack }) => {
                                                                         )}
                                                                     </div>
                                                                     
-                                                                    <h4 className={`font-black uppercase tracking-tight text-sm md:text-base truncate ${
+                                                                    <h4 className={`font-black uppercase tracking-tight text-base md:text-xl truncate ${
                                                                         isCurrent ? 'text-blue-900' : 'text-slate-900 group-hover:text-blue-700'
                                                                     }`}>
                                                                         {step.title}

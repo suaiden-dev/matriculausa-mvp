@@ -68,6 +68,7 @@ const DocumentRequestsCard: React.FC<DocumentRequestsCardProps> = ({
   const [pendingRejectUploadId, setPendingRejectUploadId] = useState<string | null>(null);
   const [rejectNotes, setRejectNotes] = useState('');
   const [error, setError] = useState<string | null>(null);
+  const [isLoading, setIsLoading] = useState(true);
   const [loadingAttachmentUrls, setLoadingAttachmentUrls] = useState<{ [requestId: string]: boolean }>({});
   const [acceptanceLetterSignedUrls, setAcceptanceLetterSignedUrls] = useState<{ [key: string]: string | null }>({});
 
@@ -193,6 +194,7 @@ const DocumentRequestsCard: React.FC<DocumentRequestsCardProps> = ({
   // 2. Buscar logo da universidade junto com o universityId
   const fetchRequests = useCallback(async () => {
     setError(null);
+    setIsLoading(true);
     try {
       // Buscar a aplicação para obter o university_id e logo
       const { data: appData, error: appError } = await supabase
@@ -296,6 +298,8 @@ const DocumentRequestsCard: React.FC<DocumentRequestsCardProps> = ({
     } catch (e: any) {
       setError('Failed to fetch document requests: ' + (e.message || e));
       setRequests([]);
+    } finally {
+      setIsLoading(false);
     }
   }, [applicationId, isSchool, studentType]);
 
@@ -541,12 +545,17 @@ const DocumentRequestsCard: React.FC<DocumentRequestsCardProps> = ({
   };
 
   const handleSendUpload = async (requestId: string) => {
+    if (uploading[requestId]) return;
+    
     console.log('[UPLOAD] 🚀 Iniciando upload de documento', { requestId });
     const file = selectedFiles[requestId];
     if (!file) {
       console.log('[UPLOAD] ⚠️ Nenhum arquivo selecionado');
       return;
     }
+    
+    setUploading(prev => ({ ...prev, [requestId]: true }));
+    
     try {
       if (!currentUserId) throw new Error('User ID not found');
       const sanitizedName = sanitizeFileName(file.name);
@@ -1268,8 +1277,11 @@ const DocumentRequestsCard: React.FC<DocumentRequestsCardProps> = ({
 
   // Funções para Transfer Form
   const handleStudentUploadTransferForm = async () => {
+    if (uploadingTransferForm) return;
     if (!selectedTransferFormFile || !applicationId) return;
 
+    setUploadingTransferForm(true);
+    
     try {
       if (!currentUserId) throw new Error('User ID not found');
       // Upload do arquivo
@@ -1496,6 +1508,71 @@ const DocumentRequestsCard: React.FC<DocumentRequestsCardProps> = ({
     }
   };
 
+  if (isLoading) {
+    return (
+      <div className="w-full space-y-6 md:space-y-12 pb-12 animate-pulse">
+        {/* Download Area Skeleton */}
+        {!isSchool && (
+          <div className="bg-slate-50/50 rounded-[1.5rem] md:rounded-[2.5rem] p-6 md:p-12 border border-slate-200">
+            <div className="flex items-center gap-3 md:gap-4 mb-6 md:mb-10">
+              <div className="w-14 h-14 md:w-16 md:h-16 bg-slate-200 rounded-2xl md:rounded-3xl flex-shrink-0" />
+              <div className="space-y-2 flex-1">
+                <div className="h-6 bg-slate-200 rounded-lg w-48" />
+                <div className="h-3 bg-slate-200 rounded w-72" />
+              </div>
+            </div>
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+              <div className="bg-white p-4 md:p-6 rounded-2xl md:rounded-3xl border border-slate-200 flex items-center justify-between">
+                <div className="flex items-center gap-3 md:gap-4">
+                  <div className="w-10 h-10 md:w-14 md:h-14 bg-slate-200 rounded-xl md:rounded-2xl flex-shrink-0" />
+                  <div className="space-y-2">
+                    <div className="h-4 bg-slate-200 rounded w-32" />
+                    <div className="h-3 bg-slate-200 rounded w-20" />
+                  </div>
+                </div>
+                <div className="w-12 h-12 bg-slate-200 rounded-2xl flex-shrink-0" />
+              </div>
+            </div>
+          </div>
+        )}
+
+        {/* Files for Submission Skeleton */}
+        <div className="bg-white rounded-[1.5rem] md:rounded-[2.5rem] p-6 md:p-12 border border-slate-200 shadow-2xl shadow-slate-200/50">
+          <div className="flex items-center gap-3 md:gap-4 mb-8 md:mb-10">
+            <div className="w-14 h-14 md:w-16 md:h-16 bg-slate-200 rounded-2xl md:rounded-3xl flex-shrink-0" />
+            <div className="space-y-2 flex-1">
+              <div className="h-7 bg-slate-200 rounded-lg w-56" />
+              <div className="h-3 bg-slate-200 rounded w-64" />
+            </div>
+          </div>
+          <div className="space-y-6">
+            {[1, 2].map(i => (
+              <div key={i} className="bg-slate-50/50 rounded-2xl md:rounded-3xl p-5 md:p-8 border border-slate-200">
+                <div className="flex flex-col gap-4">
+                  <div className="flex gap-4 md:gap-5 items-center">
+                    <div className="w-12 h-12 md:w-16 md:h-16 bg-slate-200 rounded-xl md:rounded-2xl flex-shrink-0" />
+                    <div className="flex-1 space-y-2">
+                      <div className="h-5 bg-slate-200 rounded w-40" />
+                      <div className="h-3 bg-slate-200 rounded w-64" />
+                      <div className="h-3 bg-slate-200 rounded w-48" />
+                    </div>
+                  </div>
+                  <div className="flex items-center gap-3">
+                    <div className="h-10 bg-slate-200 rounded-2xl w-36" />
+                    <div className="ml-auto flex gap-2">
+                      <div className="h-10 bg-slate-200 rounded-xl w-28" />
+                      <div className="h-10 bg-slate-200 rounded-xl w-20" />
+                    </div>
+                  </div>
+                </div>
+              </div>
+            ))}
+          </div>
+        </div>
+      </div>
+    );
+  }
+
   return (
     <div className="w-full space-y-6 md:space-y-12 pb-12">
       {error && (
@@ -1623,40 +1700,43 @@ const DocumentRequestsCard: React.FC<DocumentRequestsCardProps> = ({
           {/* Item Especial: Transfer Form (Apenas para Transfer) */}
           {studentType === 'transfer' && (
             <div className="bg-slate-50/50 rounded-2xl md:rounded-3xl p-5 md:p-8 border border-slate-200 group hover:border-blue-300 transition-all hover:bg-white text-left">
-              <div className="flex flex-col lg:flex-row items-start lg:items-center justify-between gap-6 md:gap-8">
-                <div className="flex gap-4 md:gap-5 min-w-0 flex-1">
+              <div className="flex flex-col gap-4">
+                <div className="flex gap-4 md:gap-5 items-center">
                    <div className="w-12 h-12 md:w-16 md:h-16 bg-white rounded-xl md:rounded-2xl flex items-center justify-center border border-slate-200 flex-shrink-0 shadow-sm group-hover:border-blue-200 group-hover:bg-blue-50 transition-all">
                       <FileText className="w-6 h-6 md:w-8 md:h-8 text-slate-400 group-hover:text-blue-600" />
                    </div>
-                   <div className="min-w-0 flex-1">
-                      <h4 className="font-black text-slate-900 text-lg md:text-xl uppercase tracking-tighter leading-tight break-words">{t('studentDashboard.documentRequests.forms.transferForm')}</h4>
-                      <p className="text-slate-500 text-xs md:text-sm font-medium mt-1 leading-relaxed break-words">{t('studentDashboard.documentRequests.forms.transferFormUploadDescriptionStudent')}</p>
+                   <div className="min-w-0 flex-1 overflow-hidden">
+                      <h4 className="font-black text-slate-900 text-lg md:text-xl uppercase tracking-tighter leading-tight truncate">{t('studentDashboard.documentRequests.forms.transferForm')}</h4>
+                      <p className="text-slate-500 text-xs md:text-sm font-medium mt-1 leading-relaxed line-clamp-2">{t('studentDashboard.documentRequests.forms.transferFormUploadDescriptionStudent')}</p>
                    </div>
                 </div>
 
-                <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-4 w-full lg:w-auto shrink-0 self-end lg:self-center">
-                   {/* Status do Transfer Form */}
-                   {transferFormUploads.map(upload => {
-                      const status = normalizeStatus(upload.status);
+                <div className="flex flex-col sm:flex-row sm:items-center gap-3 w-full">
+                   {/* Status do Transfer Form - apenas o upload mais recente */}
+                   {(() => {
+                      const latestUpload = transferFormUploads.slice().sort((a, b) =>
+                        new Date(b.uploaded_at).getTime() - new Date(a.uploaded_at).getTime()
+                      )[0];
+                      if (!latestUpload) return null;
+                      const status = normalizeStatus(latestUpload.status);
                       const isApproved = status === 'approved';
                       const isRejected = status === 'rejected';
                       const isReview = status === 'under_review';
-
                       return (
-                        <div key={upload.id} className={`flex items-center gap-3 px-5 py-3 rounded-2xl border shadow-sm w-full lg:w-64 transition-all ${
+                        <div className={`flex items-center gap-3 px-4 py-2.5 rounded-2xl border shadow-sm flex-shrink-0 self-start sm:self-auto transition-all ${
                           isApproved ? 'bg-emerald-50 border-emerald-200' :
                           isRejected ? 'bg-red-50 border-red-200' : 'bg-blue-50 border-blue-200'
                         }`}>
-                           <div className={`w-8 h-8 rounded-full flex items-center justify-center flex-shrink-0 ${
+                           <div className={`w-7 h-7 rounded-full flex items-center justify-center flex-shrink-0 ${
                               isApproved ? 'bg-emerald-500' : isRejected ? 'bg-red-500' : 'bg-blue-500'
                            }`}>
-                              {isApproved ? <CheckCircle2 className="w-5 h-5 text-white" /> : 
-                               isRejected ? <AlertCircle className="w-5 h-5 text-white" /> : 
-                               <Clock className="w-5 h-5 text-white" />}
+                              {isApproved ? <CheckCircle2 className="w-4 h-4 text-white" /> :
+                               isRejected ? <AlertCircle className="w-4 h-4 text-white" /> :
+                               <Clock className="w-4 h-4 text-white" />}
                            </div>
-                           <div className="min-w-0 flex-1">
-                              <p className="text-[10px] font-black uppercase tracking-widest text-slate-400 leading-none mb-1">Status</p>
-                              <p className={`font-bold text-sm truncate ${
+                           <div>
+                              <p className="text-[10px] font-black uppercase tracking-widest text-slate-400 leading-none mb-0.5">Status</p>
+                              <p className={`font-bold text-sm ${
                                 isApproved ? 'text-emerald-700' : isRejected ? 'text-red-700' : 'text-blue-700'
                               }`}>
                                  {isReview ? 'Em Análise' : status.replace('_', ' ').replace(/\b\w/g, l => l.toUpperCase())}
@@ -1664,18 +1744,18 @@ const DocumentRequestsCard: React.FC<DocumentRequestsCardProps> = ({
                            </div>
                         </div>
                       );
-                   })}
+                   })()}
 
                    {!isSchool && (
-                      <div className="flex gap-2 w-full sm:w-auto justify-end sm:justify-start">
-                         <label className="flex-1 sm:flex-none flex items-center justify-center gap-2 px-6 py-4 bg-white border-2 border-slate-200 rounded-2xl font-black uppercase tracking-widest text-[10px] hover:border-blue-600 hover:text-blue-600 cursor-pointer transition-all active:scale-95">
+                      <div className="flex gap-2 sm:ml-auto w-full sm:w-auto">
+                         <label className="flex-1 sm:flex-none flex items-center justify-center gap-2 px-4 py-2.5 bg-white border-2 border-slate-200 rounded-xl font-black uppercase tracking-widest text-[10px] hover:border-blue-600 hover:text-blue-600 cursor-pointer transition-all active:scale-95">
                             <Paperclip className="w-4 h-4 shrink-0" />
                             {selectedTransferFormFile ? (
-                              <span className="truncate max-w-[120px] md:max-w-[150px]">{selectedTransferFormFile.name}</span>
+                              <span className="truncate max-w-[80px]">{selectedTransferFormFile.name}</span>
                             ) : 'Anexar PDF'}
-                            <input 
-                              type="file" 
-                              className="sr-only" 
+                            <input
+                              type="file"
+                              className="sr-only"
                               accept=".pdf"
                               onChange={e => setSelectedTransferFormFile(e.target.files ? e.target.files[0] : null)}
                             />
@@ -1683,7 +1763,7 @@ const DocumentRequestsCard: React.FC<DocumentRequestsCardProps> = ({
                          <button
                            disabled={!selectedTransferFormFile || uploadingTransferForm}
                            onClick={() => handleStudentUploadTransferForm()}
-                           className="flex-1 sm:flex-none px-8 py-4 bg-blue-600 text-white rounded-2xl font-black uppercase tracking-widest text-[10px] hover:bg-blue-700 disabled:opacity-50 transition-all shadow-xl shadow-blue-500/10 active:scale-95"
+                           className="flex-1 sm:flex-none px-4 py-2.5 bg-blue-600 text-white rounded-xl font-black uppercase tracking-widest text-[10px] hover:bg-blue-700 disabled:opacity-50 transition-all shadow-xl shadow-blue-500/10 active:scale-95"
                          >
                             {uploadingTransferForm ? 'Enviando...' : 'Enviar'}
                          </button>
@@ -1692,60 +1772,71 @@ const DocumentRequestsCard: React.FC<DocumentRequestsCardProps> = ({
                 </div>
               </div>
 
-               {/* Feedback de Rejeição Especial para Transfer Form */}
-               {transferFormUploads.some(u => normalizeStatus(u.status) === 'rejected') && (
-                  <div className="mt-6 p-6 bg-red-50 rounded-[1.5rem] border border-red-100 flex gap-4 items-start">
-                     <div className="w-10 h-10 bg-red-100 rounded-xl flex items-center justify-center flex-shrink-0">
-                        <AlertCircle className="w-6 h-6 text-red-600" />
-                     </div>
-                     <div className="flex-1">
-                        <p className="font-black uppercase tracking-widest text-[10px] text-red-600 mb-2 text-left">Atenção: Necessário Correção</p>
-                        <p className="text-red-900 font-medium text-sm leading-relaxed text-left">
-                          {transferFormUploads.find(u => normalizeStatus(u.status) === 'rejected')?.rejection_reason || 'Por favor, revise o formulário e envie novamente.'}
-                        </p>
-                     </div>
-                  </div>
-               )}
+               {/* Feedback de Rejeição Transfer Form - apenas se o upload mais recente foi rejeitado */}
+               {(() => {
+                  const latestTransferUpload = transferFormUploads.slice().sort((a, b) =>
+                    new Date(b.uploaded_at).getTime() - new Date(a.uploaded_at).getTime()
+                  )[0];
+                  if (!latestTransferUpload || normalizeStatus(latestTransferUpload.status) !== 'rejected') return null;
+                  return (
+                    <div className="mt-4 md:mt-6 p-4 md:p-5 bg-red-50 rounded-xl md:rounded-[1.5rem] border border-red-100 flex gap-3 items-start">
+                       <div className="w-8 h-8 bg-red-100 rounded-lg flex items-center justify-center flex-shrink-0 mt-0.5">
+                          <AlertCircle className="w-4 h-4 text-red-600" />
+                       </div>
+                       <div className="flex-1 min-w-0">
+                          <p className="font-black uppercase tracking-widest text-[9px] text-red-600 mb-1 text-left">Atenção: Necessário Correção</p>
+                          <div className="max-h-32 overflow-y-auto">
+                            <p className="text-red-900 font-medium text-xs md:text-sm leading-relaxed text-left break-words">
+                              {latestTransferUpload.rejection_reason || 'Por favor, revise o formulário e envie novamente.'}
+                            </p>
+                          </div>
+                       </div>
+                    </div>
+                  );
+               })()}
             </div>
           )}
 
           {requests.map(req => (
             <div key={`upload-${req.id}`} className="bg-slate-50/50 rounded-2xl md:rounded-3xl p-5 md:p-8 border border-slate-200 group hover:border-emerald-300 transition-all hover:bg-white text-left">
-              <div className="flex flex-col lg:flex-row items-start lg:items-center justify-between gap-6 md:gap-8">
-                <div className="flex gap-4 md:gap-5 min-w-0 flex-1">
+              <div className="flex flex-col gap-4">
+                <div className="flex gap-4 md:gap-5 items-center">
                    <div className="w-12 h-12 md:w-16 md:h-16 bg-white rounded-xl md:rounded-2xl flex items-center justify-center border border-slate-200 flex-shrink-0 shadow-sm group-hover:border-emerald-200 group-hover:bg-emerald-50 transition-all">
                       <FileText className="w-6 h-6 md:w-8 md:h-8 text-slate-400 group-hover:text-emerald-600" />
                    </div>
-                   <div className="min-w-0 flex-1">
-                      <h4 className="font-black text-slate-900 text-lg md:text-xl uppercase tracking-tighter leading-tight break-words">{req.title}</h4>
-                      <p className="text-slate-500 text-xs md:text-sm font-medium mt-1 leading-relaxed break-words line-clamp-3 md:line-clamp-none">{req.description}</p>
+                   <div className="min-w-0 flex-1 overflow-hidden">
+                      <h4 className="font-black text-slate-900 text-lg md:text-xl uppercase tracking-tighter leading-tight truncate" title={req.title}>{req.title}</h4>
+                      <p className="text-slate-500 text-xs md:text-sm font-medium mt-1 leading-relaxed line-clamp-2">{req.description}</p>
                    </div>
                 </div>
 
-                <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-3 md:gap-4 w-full lg:w-auto shrink-0 self-end lg:self-center">
-                   {/* Status Atual do Documento */}
-                   {uploads[req.id]?.map(upload => {
-                      const status = normalizeStatus(upload.status);
+                <div className="flex flex-col sm:flex-row sm:items-center gap-3 w-full">
+                   {/* Status Atual do Documento - apenas o upload mais recente */}
+                   {(() => {
+                      const latestUpload = uploads[req.id]?.slice().sort((a, b) =>
+                        new Date(b.uploaded_at).getTime() - new Date(a.uploaded_at).getTime()
+                      )[0];
+                      if (!latestUpload) return null;
+                      const status = normalizeStatus(latestUpload.status);
                       const isApproved = status === 'approved';
                       const isRejected = status === 'rejected';
                       const isReview = status === 'under_review';
                       const statusLabel = isReview ? 'Em Análise' : status.replace('_', ' ').replace(/\b\w/g, l => l.toUpperCase());
-
                       return (
-                        <div key={upload.id} className={`flex items-center gap-4 px-5 py-3 rounded-2xl border shadow-sm w-full lg:w-64 transition-all ${
+                        <div className={`flex items-center gap-3 px-4 py-2.5 rounded-2xl border shadow-sm flex-shrink-0 self-start sm:self-auto transition-all ${
                           isApproved ? 'bg-emerald-50 border-emerald-200' :
                           isRejected ? 'bg-red-50 border-red-200' : 'bg-blue-50 border-blue-200'
                         }`}>
-                           <div className={`w-8 h-8 rounded-full flex items-center justify-center flex-shrink-0 ${
+                           <div className={`w-7 h-7 rounded-full flex items-center justify-center flex-shrink-0 ${
                               isApproved ? 'bg-emerald-500' : isRejected ? 'bg-red-500' : 'bg-blue-500'
                            }`}>
-                              {isApproved ? <CheckCircle2 className="w-4 h-4 text-white" /> : 
-                               isRejected ? <AlertCircle className="w-4 h-4 text-white" /> : 
+                              {isApproved ? <CheckCircle2 className="w-4 h-4 text-white" /> :
+                               isRejected ? <AlertCircle className="w-4 h-4 text-white" /> :
                                <Clock className="w-4 h-4 text-white" />}
                            </div>
-                           <div className="min-w-0 flex-1">
-                              <p className="text-[10px] font-black uppercase tracking-widest text-slate-400 leading-none mb-1">Status</p>
-                              <p className={`font-bold text-sm truncate ${
+                           <div>
+                              <p className="text-[10px] font-black uppercase tracking-widest text-slate-400 leading-none mb-0.5">Status</p>
+                              <p className={`font-bold text-sm ${
                                 isApproved ? 'text-emerald-700' : isRejected ? 'text-red-700' : 'text-blue-700'
                               }`}>
                                  {statusLabel}
@@ -1753,19 +1844,19 @@ const DocumentRequestsCard: React.FC<DocumentRequestsCardProps> = ({
                            </div>
                         </div>
                       );
-                   })}
+                   })()}
 
                    {/* Ação de Upload */}
                    {!isSchool && (
-                      <div className="flex gap-2 w-full sm:w-auto justify-end sm:justify-start">
-                         <label className="flex-1 sm:flex-none flex items-center justify-center gap-2 px-6 md:px-8 py-3.5 md:py-4 bg-white border-2 border-slate-200 rounded-xl md:rounded-2xl font-black uppercase tracking-widest text-[9px] md:text-[10px] hover:border-emerald-600 hover:text-emerald-600 cursor-pointer transition-all active:scale-95">
+                      <div className="flex gap-2 sm:ml-auto w-full sm:w-auto">
+                         <label className="flex-1 sm:flex-none flex items-center justify-center gap-2 px-4 py-2.5 bg-white border-2 border-slate-200 rounded-xl font-black uppercase tracking-widest text-[9px] md:text-[10px] hover:border-emerald-600 hover:text-emerald-600 cursor-pointer transition-all active:scale-95">
                             <Paperclip className="w-4 h-4 shrink-0" />
                             {selectedFiles[req.id] ? (
-                              <span className="truncate max-w-[120px] md:max-w-[150px]">{selectedFiles[req.id]?.name}</span>
+                              <span className="truncate max-w-[80px]">{selectedFiles[req.id]?.name}</span>
                             ) : 'Anexar PDF'}
-                            <input 
-                               type="file" 
-                               className="sr-only" 
+                            <input
+                               type="file"
+                               className="sr-only"
                                accept=".pdf"
                                onChange={e => handleFileSelect(req.id, e.target.files ? e.target.files[0] : null)}
                             />
@@ -1773,7 +1864,7 @@ const DocumentRequestsCard: React.FC<DocumentRequestsCardProps> = ({
                          <button
                            disabled={!selectedFiles[req.id] || uploading[req.id]}
                            onClick={() => handleSendUpload(req.id)}
-                           className="flex-1 sm:flex-none px-6 md:px-8 py-3.5 md:py-4 bg-emerald-600 text-white rounded-xl md:rounded-2xl font-black uppercase tracking-widest text-[9px] md:text-[10px] hover:bg-emerald-700 disabled:opacity-50 transition-all shadow-xl shadow-emerald-500/10 active:scale-95"
+                           className="flex-1 sm:flex-none px-4 py-2.5 bg-emerald-600 text-white rounded-xl font-black uppercase tracking-widest text-[9px] md:text-[10px] hover:bg-emerald-700 disabled:opacity-50 transition-all shadow-xl shadow-emerald-500/10 active:scale-95"
                          >
                             {uploading[req.id] ? 'Enviando...' : 'Enviar'}
                          </button>
@@ -1782,20 +1873,28 @@ const DocumentRequestsCard: React.FC<DocumentRequestsCardProps> = ({
                 </div>
               </div>
 
-               {/* Feedback de Rejeição */}
-               {uploads[req.id]?.some(u => normalizeStatus(u.status) === 'rejected') && (
-                  <div className="mt-4 md:mt-6 p-5 md:p-6 bg-red-50 rounded-xl md:rounded-[1.5rem] border border-red-100 flex gap-3 md:gap-4 items-start">
-                     <div className="w-8 h-8 md:w-10 md:h-10 bg-red-100 rounded-lg md:rounded-xl flex items-center justify-center flex-shrink-0">
-                        <AlertCircle className="w-5 h-5 md:w-6 md:h-6 text-red-600" />
-                     </div>
-                     <div className="flex-1">
-                        <p className="font-black uppercase tracking-widest text-[8px] md:text-[10px] text-red-600 mb-1 md:mb-2 text-left">Atenção: Necessário Correção</p>
-                        <p className="text-red-900 font-medium text-xs md:text-sm leading-relaxed text-left">
-                          {uploads[req.id].find(u => normalizeStatus(u.status) === 'rejected')?.rejection_reason || 'Por favor, revise o arquivo e envie novamente seguindo as instruções.'}
-                        </p>
-                     </div>
-                  </div>
-               )}
+               {/* Feedback de Rejeição - apenas se o upload mais recente foi rejeitado */}
+               {(() => {
+                  const latestUpload = uploads[req.id]?.slice().sort((a, b) =>
+                    new Date(b.uploaded_at).getTime() - new Date(a.uploaded_at).getTime()
+                  )[0];
+                  if (!latestUpload || normalizeStatus(latestUpload.status) !== 'rejected') return null;
+                  return (
+                    <div className="mt-4 md:mt-6 p-4 md:p-5 bg-red-50 rounded-xl md:rounded-[1.5rem] border border-red-100 flex gap-3 items-start">
+                       <div className="w-8 h-8 bg-red-100 rounded-lg flex items-center justify-center flex-shrink-0 mt-0.5">
+                          <AlertCircle className="w-4 h-4 text-red-600" />
+                       </div>
+                       <div className="flex-1 min-w-0">
+                          <p className="font-black uppercase tracking-widest text-[9px] text-red-600 mb-1 text-left">Atenção: Necessário Correção</p>
+                          <div className="max-h-32 overflow-y-auto">
+                            <p className="text-red-900 font-medium text-xs md:text-sm leading-relaxed text-left break-words">
+                              {latestUpload.rejection_reason || 'Por favor, revise o arquivo e envie novamente seguindo as instruções.'}
+                            </p>
+                          </div>
+                       </div>
+                    </div>
+                  );
+               })()}
             </div>
           ))}
 

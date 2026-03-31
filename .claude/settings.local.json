@@ -16,7 +16,22 @@
       "Bash(node -e \"var d = JSON.parse\\(require\\(''fs''\\).readFileSync\\(''project/src/i18n/locales/es/dashboard.json'',''utf8''\\)\\); var m = d.studentDashboard.myApplicationStep; console.log\\(''details in myApplicationStep:'', JSON.stringify\\(m.details\\)\\); console.log\\(''documentRequests at studentDashboard level:'', !!d.studentDashboard.documentRequests\\); console.log\\(''documentRequests inside myApplicationStep:'', !!m.documentRequests\\); console.log\\(''identityVerification at studentDashboard level:'', !!d.studentDashboard.identityVerification\\);\")",
       "Bash(node -e \"JSON.parse\\(require\\(''fs''\\).readFileSync\\(''en/dashboard.json'',''utf8''\\)\\); console.log\\(''EN OK''\\)\")",
       "Bash(node -e \"JSON.parse\\(require\\(''fs''\\).readFileSync\\(''es/dashboard.json'',''utf8''\\)\\); console.log\\(''ES OK''\\)\")",
-      "Bash(node -e \"JSON.parse\\(require\\(''fs''\\).readFileSync\\(''pt/dashboard.json'',''utf8''\\)\\); console.log\\(''PT OK''\\)\")"
+      "Bash(node -e \"JSON.parse\\(require\\(''fs''\\).readFileSync\\(''pt/dashboard.json'',''utf8''\\)\\); console.log\\(''PT OK''\\)\")",
+      "WebFetch(domain:supabase.com)",
+      "Skill(update-config)",
+      "Skill(update-config:*)",
+      "Bash(npx @supabase/mcp-server-supabase --version)",
+      "Bash(grep -E \"\\\\.sql$\")",
+      "Bash(grep -A 50 \"CREATE TABLE scholarship_applications\" project/supabase/migrations/*.sql)",
+      "Bash(xargs grep:*)",
+      "Bash(xargs head:*)",
+      "Bash(grep -r \"document_requests\\\\|status\" project/supabase/migrations/*.sql)",
+      "Bash(grep -r \"document_request_uploads\\\\|approval\\\\|approve\\\\|reject\" project/supabase/migrations/*.sql)",
+      "Bash(grep -A 30 \"CREATE TABLE.*document_request\" project/supabase/migrations/*.sql)",
+      "Bash(grep -B 5 -A 50 'CREATE TABLE.*document_request' project/supabase/migrations/20250*.sql)",
+      "Bash(head -150 project/supabase/migrations/20240*.sql)",
+      "Read(//c/Users/**)",
+      "Bash(grep -r \"document_requests\" project/supabase/migrations/*.sql)"
     ]
   }
 }
