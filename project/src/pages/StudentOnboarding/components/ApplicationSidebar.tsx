@@ -1,5 +1,5 @@
 import React from 'react';
-import { CheckCircle2, Clock, AlertCircle, Lock, ArrowRight } from 'lucide-react';
+import { CheckCircle2, Clock, AlertCircle, ArrowRight } from 'lucide-react';
 import { motion } from 'framer-motion';
 import { useTranslation } from 'react-i18next';
 
@@ -9,6 +9,7 @@ interface Step {
   status: string;
   variant: 'success' | 'warning' | 'error' | 'info' | 'default';
   isClickable?: boolean;
+  disabled?: boolean;
 }
 
 interface ApplicationSidebarProps {
@@ -47,7 +48,7 @@ export const ApplicationSidebar: React.FC<ApplicationSidebarProps> = ({ steps, a
           },
           default: {
             container: 'bg-slate-50 border-slate-200 hover:border-blue-300',
-            icon: <Lock className="w-5 h-5 text-slate-400" />,
+            icon: <Clock className="w-5 h-5 text-slate-400" />,
             statusText: 'text-slate-400'
           }
         };
@@ -61,14 +62,14 @@ export const ApplicationSidebar: React.FC<ApplicationSidebarProps> = ({ steps, a
             animate={{ opacity: 1, x: 0 }}
             transition={{ delay: index * 0.1 }}
             onClick={() => {
-              if (step.variant !== 'error' || isActive) {
+              if (!step.disabled && (step.variant !== 'error' || isActive)) {
                 onStepClick(step.id);
               }
             }}
             className={`w-full group relative flex flex-col p-4 rounded-2xl border transition-all text-left ${
               styles.container
             } ${isActive ? 'ring-2 ring-blue-500 ring-offset-2 border-blue-500 !bg-white scale-[1.02] shadow-xl shadow-blue-500/10' : ''} ${
-              step.variant === 'error' && !isActive ? 'cursor-not-allowed opacity-60 grayscale' : ''
+              (step.variant === 'error' || step.disabled) && !isActive ? 'cursor-not-allowed opacity-60 grayscale' : ''
             }`}
           >
             <div className="flex items-center justify-between mb-1">
@@ -84,7 +85,7 @@ export const ApplicationSidebar: React.FC<ApplicationSidebarProps> = ({ steps, a
               {step.title}
             </h4>
 
-            {step.variant !== 'error' && !isActive && (
+            {step.variant !== 'error' && !step.disabled && !isActive && (
               <div className="flex items-center gap-1 mt-2">
                 <span className="text-[10px] font-black uppercase tracking-widest text-blue-500 group-hover:text-blue-700 transition-colors">
                   {t('labels.clickToAccess')}

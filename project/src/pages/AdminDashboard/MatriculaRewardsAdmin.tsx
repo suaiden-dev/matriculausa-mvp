@@ -4,14 +4,9 @@ import {
   Users, 
   TrendingUp, 
   Award, 
-  Eye, 
-  Shield, 
-  Activity,
   Download,
   RefreshCw,
   AlertTriangle,
-  Crown,
-  Target,
   DollarSign,
   XCircle,
   CheckCircle,
@@ -24,9 +19,7 @@ import {
 } from 'lucide-react';
 import { supabase } from '../../lib/supabase';
 import { useAuth } from '../../hooks/useAuth';
-import MatriculaRewardsModeration from './MatriculaRewardsModeration';
 import { PayoutService } from '../../services/PayoutService';
-import type { TuitionRedemption } from '../../types';
 
 interface MatriculaRewardsStats {
   totalUsers: number;
@@ -42,6 +35,7 @@ interface MatriculaRewardsStats {
   couponUsage: CouponUsageStats;
   couponUsageDetails: CouponUsageDetail[];
   recentRedemptions: RedemptionEntry[];
+  referralList: ReferralEntry[];
 }
 
 interface TopReferrer {
@@ -104,13 +98,23 @@ interface RedemptionEntry {
   redeemedAt: string | null;
 }
 
+interface ReferralEntry {
+  id: string;
+  fullName: string;
+  email: string;
+  referrerName: string;
+  referrerCode: string;
+  createdAt: string;
+  isConverted: boolean;
+}
+
 const MatriculaRewardsAdmin: React.FC = () => {
   const [stats, setStats] = useState<MatriculaRewardsStats | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
-  const [activeTab, setActiveTab] = useState<'overview' | 'referrers' | 'activity' | 'moderation' | 'payouts' | 'students'>('overview');
+  const [activeTab, setActiveTab] = useState<'overview' | 'referrals' | 'payouts' | 'students'>('overview');
   // const [searchTerm, setSearchTerm] = useState('');
-  const [dateRange, setDateRange] = useState('30d');
+  const [dateRange, setDateRange] = useState('all');
   const { user } = useAuth();
   const lastFetchKeyRef = useRef<string | null>(null);
 
@@ -170,32 +174,7 @@ const MatriculaRewardsAdmin: React.FC = () => {
     }
   };
 
-  const formatPaymentDetails = (details: any, method: string) => {
-    if (!details) return null;
-    
-    const formatKey = (key: string) => {
-      return key.replace(/_/g, ' ').replace(/\b\w/g, l => l.toUpperCase());
-    };
 
-    const formatValue = (key: string, value: any) => {
-      // Mask sensitive data
-      if (key.includes('account_number') || key.includes('routing_number') || key.includes('iban') || key.includes('swift')) {
-        return String(value).replace(/./g, '*');
-      }
-      return String(value);
-    };
-
-    return (
-      <div className="text-xs space-y-1 max-w-xs">
-        {Object.entries(details).map(([key, value]) => (
-          <div key={key} className="flex justify-between items-start">
-            <span className="font-medium text-slate-600 flex-shrink-0">{formatKey(key)}:</span>
-            <span className="text-slate-800 text-right break-all">{formatValue(key, value)}</span>
-          </div>
-        ))}
-      </div>
-    );
-  };
 
   const getPayoutStatusConfig = (status: string) => {
     switch (status) {
@@ -450,14 +429,7 @@ const MatriculaRewardsAdmin: React.FC = () => {
       // Period
       const start = getRangeStart(dateRange).toISOString();
 
-      // 1) Agregados de universidades
-      const { data: uniAccounts, error: uniAccErr } = await supabase
-        .from('university_rewards_account')
-        .select('balance_coins,total_received_coins,total_discounts_sent,total_discount_amount');
-      if (uniAccErr) console.warn('[Admin] university_rewards_account error:', uniAccErr);
-      const aggBalance = (uniAccounts || []).reduce((sum: number, r: any)=> sum + (Number(r.balance_coins||0)), 0);
-
-      // 2) Tuition redemptions in the period - abordagem alternativa
+      // 1) Tuition redemptions in the period - para Atividade Recente e Detalhes
       const { data: tuitionRedemptionsRaw, error: trErr } = await supabase
         .from('tuition_redemptions')
         .select(`
@@ -472,9 +444,7 @@ const MatriculaRewardsAdmin: React.FC = () => {
         .gte('redeemed_at', start)
         .order('redeemed_at', { ascending: false })
         .limit(10);
-      if (trErr) {
-        console.warn('[Admin] tuition_redemptions error:', trErr);
-      }
+      if (trErr) console.warn('[Admin] tuition_redemptions error:', trErr);
       
       // Buscar perfis dos usuários para as redenções encontradas
       const userIds = (tuitionRedemptionsRaw || []).map(r => r.user_id);
@@ -489,8 +459,6 @@ const MatriculaRewardsAdmin: React.FC = () => {
         userProfiles = profilesData || [];
       }
       
-      console.log('[Admin] User profiles loaded:', userProfiles?.length || 0);
-      
       // Combinar os dados
       const tuitionRedemptions = (tuitionRedemptionsRaw || []).map(redemption => {
         const userProfile = (userProfiles || []).find(up => up.user_id === redemption.user_id);
@@ -500,11 +468,7 @@ const MatriculaRewardsAdmin: React.FC = () => {
         };
       });
 
-      const redemptionsCountPeriod = (tuitionRedemptions || []).length;
-      const totalCoinsToUniversitiesPeriod = (tuitionRedemptions || []).reduce((s: number, r: any)=> s + Number(r.cost_coins_paid||0), 0);
-      const totalUsdTuitionPeriod = (tuitionRedemptions || []).reduce((s: number, r: any)=> s + Number(r.discount_amount||0), 0);
-
-      // 3) Payouts in the period
+      // 2) Payouts in the period
       const { data: payoutsData, error: poErr } = await supabase
         .from('university_payout_requests')
         .select('status, created_at')
@@ -512,9 +476,8 @@ const MatriculaRewardsAdmin: React.FC = () => {
         .gte('created_at', start)
         .order('created_at', { ascending: false });
       if (poErr) console.warn('[Admin] payout_requests error:', poErr);
-      const payoutCounts = (payoutsData||[]).reduce((acc: any, p: any)=> { acc[p.status] = (acc[p.status]||0)+1; return acc; }, {} as Record<string,number>);
 
-      // 4) Atividade recente combinando tuition redemptions e payouts
+      // 3) Atividade recente combinando tuition redemptions e payouts
       const recentRedemptions: any[] = (tuitionRedemptions||[]).map((r: any) => ({
         id: r.id || `${r.user_id}-${r.redeemed_at}`,
         type: 'redemption',
@@ -540,11 +503,17 @@ const MatriculaRewardsAdmin: React.FC = () => {
         createdAt: p.created_at
       }));
 
-      // 5) Manter chamadas existentes (afiliados) sem quebrar layout
-      console.log('🔍 [MatriculaRewardsAdmin] Loading stats for dateRange:', dateRange);
       const { data: generalStats, error: statsError } = await supabase
         .rpc('get_matricula_rewards_admin_stats', { date_range: dateRange });
       if (statsError) console.warn('get_matricula_rewards_admin_stats failed:', statsError);
+
+      const { data: couponDetails, error: couponError } = await supabase
+        .rpc('get_matricula_rewards_coupon_usage', { date_range: dateRange });
+      if (couponError) console.warn('get_matricula_rewards_coupon_usage failed:', couponError);
+
+      const { data: detailedReferrals, error: detailedReferralsError } = await supabase
+        .rpc('get_matricula_rewards_detailed_referrals', { date_range: dateRange });
+      if (detailedReferralsError) console.warn('get_matricula_rewards_detailed_referrals failed:', detailedReferralsError);
 
       const { data: topReferrers, error: referrersError } = await supabase
         .rpc('get_top_referrers', { limit_count: 10 });
@@ -565,20 +534,43 @@ const MatriculaRewardsAdmin: React.FC = () => {
       const topStudentsByBalance = [...rows].sort((a,b)=> Number(b.current_balance||0) - Number(a.current_balance||0)).slice(0,5).map(mapRow);
       const topStudentsBySpent = [...rows].sort((a,b)=> Number(b.total_spent||0) - Number(a.total_spent||0)).slice(0,5).map(mapRow);
 
+      const statsResult = generalStats?.[0] || {};
+
       const finalStats = {
-        totalUsers: generalStats?.[0]?.total_users || 0,
-        totalReferrals: generalStats?.[0]?.total_referrals || 0,
-        // Substituir os cards por dados de tuition/admin mantendo layout
-        totalCoinsSpent: totalCoinsToUniversitiesPeriod, // Coins Spent (period)
-        totalCoinsEarned: aggBalance, // Coins Earned (saldo agregado universidades)
-        conversionRate: generalStats?.[0]?.conversion_rate || 0,
-        averageCoinsPerUser: generalStats?.[0]?.average_coins_per_user || 0,
+        totalUsers: Number(statsResult.total_active_affiliates || 0),
+        totalReferrals: Number(statsResult.total_referrals || 0),
+        totalCoinsSpent: Number(statsResult.total_coins_spent || 0),
+        totalCoinsEarned: Number(statsResult.total_coins_earned || 0),
+        conversionRate: Number(statsResult.avg_referrals_per_affiliate || 0), // Re-usando como métrica de média
+        averageCoinsPerUser: 0,
         topReferrers: topReferrers || [],
         recentActivity: [...recentRedemptions, ...recentPayouts].sort((a,b)=> new Date(b.createdAt).getTime()-new Date(a.createdAt).getTime()).slice(0,10),
         topStudentsByBalance,
         topStudentsBySpent,
-        couponUsage: { totalUsed: 0, usedInRange: 0 },
-        couponUsageDetails: [],
+        couponUsage: { 
+          totalUsed: Number(statsResult.total_coupons_redeemed || 0), 
+          usedInRange: Number(statsResult.total_coupons_redeemed || 0) 
+        },
+        couponUsageDetails: (couponDetails || []).map((c: any) => ({
+          id: c.id,
+          fullName: c.student_name,
+          userEmail: c.student_email,
+          referrerName: c.referrer_name,
+          referrerEmail: c.referrer_email,
+          affiliateCode: c.referrer_code,
+          discountAmount: Number(c.discount_amount || 0),
+          status: c.status,
+          appliedAt: c.applied_at
+        })),
+        referralList: (detailedReferrals || []).map((r: any) => ({
+          id: r.id,
+          fullName: r.student_name,
+          email: r.student_email,
+          referrerName: r.referrer_name,
+          referrerCode: r.referrer_code,
+          createdAt: r.created_at,
+          isConverted: r.is_converted
+        })),
         recentRedemptions: recentRedemptions as any
       } as any;
 
@@ -740,6 +732,7 @@ const MatriculaRewardsAdmin: React.FC = () => {
           <nav className="-mb-px flex space-x-8">
               {[
               { id: 'overview', label: 'Overview', icon: BarChart3 },
+              { id: 'referrals', label: 'Referrals', icon: Users },
               { id: 'payouts', label: 'Payout Requests', icon: DollarSign },
               { id: 'students', label: 'Students', icon: GraduationCap },
             ].map((tab) => {
@@ -781,7 +774,7 @@ const MatriculaRewardsAdmin: React.FC = () => {
 
                 <div className="flex items-center justify-between p-4 bg-slate-50 rounded-lg border border-slate-200">
                   <div>
-                    <p className="text-sm font-medium text-slate-600">Total Referrals</p>
+                    <p className="text-sm font-medium text-slate-600">Registros (Referrals)</p>
                     <p className="text-2xl font-bold text-slate-900">{stats.totalReferrals.toLocaleString()}</p>
                   </div>
                   <div className="bg-green-100 p-3 rounded-lg">
@@ -1020,6 +1013,69 @@ const MatriculaRewardsAdmin: React.FC = () => {
                     </table>
                   </div>
                 </div>
+            </div>
+          </div>
+        )}
+
+        {/* Referrals Tab */}
+        {activeTab === 'referrals' && stats && (
+          <div className="space-y-6">
+            <div className="bg-white rounded-xl shadow-sm border border-slate-200 p-6">
+              <div className="flex items-center justify-between mb-6">
+                <div>
+                  <h3 className="text-lg font-semibold text-slate-900">Detailed Referrals List</h3>
+                  <p className="text-sm text-slate-600 mt-1">
+                    Total of {stats.referralList.length} students who registered through a referral link.
+                  </p>
+                </div>
+                <div className="flex items-center space-x-2 bg-slate-50 px-3 py-1.5 rounded-lg border border-slate-200">
+                  <Users className="h-4 w-4 text-slate-500" />
+                  <span className="text-sm font-semibold text-slate-700">{stats.referralList.length} Referrals</span>
+                </div>
+              </div>
+
+              <div className="overflow-x-auto">
+                <table className="min-w-full divide-y divide-slate-200">
+                  <thead>
+                    <tr className="bg-slate-50">
+                      <th className="px-6 py-3 text-left text-xs font-medium text-slate-500 uppercase tracking-wider">Student</th>
+                      <th className="px-6 py-3 text-left text-xs font-medium text-slate-500 uppercase tracking-wider">Referrer</th>
+                      <th className="px-6 py-3 text-left text-xs font-medium text-slate-500 uppercase tracking-wider">Date</th>
+                      <th className="px-6 py-3 text-left text-xs font-medium text-slate-500 uppercase tracking-wider">Status</th>
+                    </tr>
+                  </thead>
+                  <tbody className="bg-white divide-y divide-slate-200">
+                    {stats.referralList.map((ref) => (
+                      <tr key={ref.id} className="hover:bg-slate-50 transition-colors">
+                        <td className="px-6 py-4 whitespace-nowrap">
+                          <div className="text-sm font-medium text-slate-900">{ref.fullName}</div>
+                          <div className="text-xs text-slate-500">{ref.email}</div>
+                        </td>
+                        <td className="px-6 py-4 whitespace-nowrap">
+                          <div className="text-sm text-slate-900">{ref.referrerName}</div>
+                          <div className="text-xs font-mono text-slate-500">{ref.referrerCode}</div>
+                        </td>
+                        <td className="px-6 py-4 whitespace-nowrap text-sm text-slate-500">
+                          {new Date(ref.createdAt).toLocaleDateString()}
+                        </td>
+                        <td className="px-6 py-4 whitespace-nowrap">
+                          {ref.isConverted ? (
+                            <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-green-100 text-green-800">
+                              <CheckCircle2 className="h-3 w-3 mr-1" />
+                              Converted (Paid)
+                            </span>
+                          ) : (
+                            <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-blue-100 text-blue-800">
+                              <Clock className="h-3 w-3 mr-1" />
+                              Registered
+                            </span>
+                          )}
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
             </div>
           </div>
         )}
