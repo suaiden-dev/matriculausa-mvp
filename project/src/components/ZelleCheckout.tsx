@@ -48,14 +48,20 @@ export const ZelleCheckout: React.FC<ZelleCheckoutProps> = ({
   const isLocalhost = config.isDevelopment();
 
   const [loading, setLoading] = useState(false);
-  const [step, setStep] = useState<'instructions' | 'analyzing' | 'success' | 'under_review' | 'rejected'>(
-    (isPendingVerification || (isBlocked && blockedPendingPayment?.fee_type === feeType)) ? 'under_review' : 'instructions'
-  );
+  const [step, setStep] = useState<'instructions' | 'analyzing' | 'success' | 'under_review' | 'rejected'>(() => {
+    const savedStep = sessionStorage.getItem(`zelle_checkout_step_${feeType}`);
+    if (savedStep && ['analyzing', 'under_review', 'success', 'rejected'].includes(savedStep)) {
+      return savedStep as any;
+    }
+    return (isPendingVerification || (isBlocked && blockedPendingPayment?.fee_type === feeType)) ? 'under_review' : 'instructions';
+  });
 
+  const [zellePaymentId, setZellePaymentId] = useState<string | null>(() => {
+    return sessionStorage.getItem(`zelle_checkout_payment_id_${feeType}`);
+  });
   const [comprovanteFile, setComprovanteFile] = useState<File | null>(null);
   const [comprovantePreview, setComprovantePreview] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
-  const [zellePaymentId, setZellePaymentId] = useState<string | null>(null);
   const [paymentStatus, setPaymentStatus] = useState<'analyzing' | 'approved' | 'under_review' | 'rejected'>('analyzing');
   const [rejectionReason, setRejectionReason] = useState<string | null>(null);
   const [isProcessing, setIsProcessing] = useState(false);
@@ -276,7 +282,8 @@ export const ZelleCheckout: React.FC<ZelleCheckoutProps> = ({
     currentZellePaymentId: string | null,
     currentRejectionReason: string | null
   ): any => {
-    if (approvedPayment && approvedPayment.fee_type === feeType) {
+    // Ser tolerante com fee_type nulo para garantir recuperação se o n8n falhar ao salvar a taxa
+    if (approvedPayment && (approvedPayment.fee_type === feeType || !approvedPayment.fee_type || approvedPayment.fee_type === '')) {
       if (!pendingPayment || approvedPayment.id === pendingPayment.id) {
         return {
           step: 'success',
@@ -298,7 +305,7 @@ export const ZelleCheckout: React.FC<ZelleCheckoutProps> = ({
       };
     }
 
-    if (rejectedPayment && rejectedPayment.fee_type === feeType) {
+    if (rejectedPayment && (rejectedPayment.fee_type === feeType || !rejectedPayment.fee_type || rejectedPayment.fee_type === '')) {
       const isNewUpload = (currentStep === 'instructions' || currentStep === 'analyzing' || currentStep === 'under_review') && 
                           currentZellePaymentId && 
                           currentZellePaymentId !== rejectedPayment.id;
@@ -326,7 +333,7 @@ export const ZelleCheckout: React.FC<ZelleCheckoutProps> = ({
       };
     }
 
-    if (pendingPayment && pendingPayment.fee_type === feeType) {
+    if (pendingPayment && (pendingPayment.fee_type === feeType || !pendingPayment.fee_type || pendingPayment.fee_type === '')) {
       const paymentId = pendingPayment.id;
       
       switch (pendingPayment.status) {
@@ -399,7 +406,7 @@ export const ZelleCheckout: React.FC<ZelleCheckoutProps> = ({
   useEffect(() => {
     if (!paymentBlockedLoading && step === 'instructions' && !zellePaymentId) {
       console.log('[ZelleCheckout] Checking initial state...', { feeType, blockedPending: !!blockedPendingPayment, blockedApproved: !!blockedApprovedPayment });
-      if (blockedPendingPayment && blockedPendingPayment.fee_type === feeType) {
+      if (blockedPendingPayment && (blockedPendingPayment.fee_type === feeType || !blockedPendingPayment.fee_type || blockedPendingPayment.fee_type === '')) {
         console.log('[ZelleCheckout] Found pending payment for this fee');
         const newState = determinePaymentState(blockedPendingPayment, blockedRejectedPayment, blockedApprovedPayment, 'instructions', null, null);
         setStep(newState.step);
@@ -485,13 +492,31 @@ export const ZelleCheckout: React.FC<ZelleCheckoutProps> = ({
     }
   }, [blockedPendingPayment?.id, blockedPendingPayment?.status, blockedRejectedPayment?.id, blockedRejectedPayment?.status, blockedApprovedPayment?.id, blockedApprovedPayment?.status, paymentBlockedLoading, feeType]);
 
+  // Sincronizar passo e ID com storage para persistência no refresh
+  useEffect(() => {
+    if (step && step !== 'instructions') {
+      sessionStorage.setItem(`zelle_checkout_step_${feeType}`, step);
+    } else {
+      sessionStorage.removeItem(`zelle_checkout_step_${feeType}`);
+    }
+  }, [step, feeType]);
+
+  useEffect(() => {
+    if (zellePaymentId) {
+      sessionStorage.setItem(`zelle_checkout_payment_id_${feeType}`, zellePaymentId);
+    } else {
+      sessionStorage.removeItem(`zelle_checkout_payment_id_${feeType}`);
+    }
+  }, [zellePaymentId, feeType]);
+
   useEffect(() => {
     if (!zellePaymentId || step === 'rejected' || step === 'success' || step === 'instructions') return;
     if (step !== 'analyzing' && step !== 'under_review') return;
 
     const pollPaymentStatus = async () => {
       try {
-        const { data: paymentData } = await supabase.from('zelle_payments').select('id, status, admin_notes').eq('id', zellePaymentId).eq('fee_type', feeType).maybeSingle();
+        // Remover filtro de fee_type ao buscar por ID único para ser mais resiliente
+        const { data: paymentData } = await supabase.from('zelle_payments').select('id, status, admin_notes').eq('id', zellePaymentId).maybeSingle();
         if (!paymentData) return;
 
         if (paymentData.status === 'rejected') {
@@ -530,6 +555,39 @@ export const ZelleCheckout: React.FC<ZelleCheckoutProps> = ({
     const interval = setInterval(pollPaymentStatus, 10000);
     return () => clearInterval(interval);
   }, [zellePaymentId, step, feeType]);
+
+  // ✅ TIMEOUT & SCROLL: Transição de "Análise de IA" para "Em Revisão Manual" após 40 segundos
+  // Também garante que a página role para o topo ao iniciar a análise.
+  useEffect(() => {
+    if (step === 'analyzing') {
+      // Auto-scroll para o topo para garantir visibilidade do modal de análise
+      window.scrollTo({ top: 0, behavior: 'instant' });
+      if (document.documentElement) document.documentElement.scrollTop = 0;
+      if (document.body) document.body.scrollTop = 0;
+
+      console.log('⏱️ [ZelleCheckout] Iniciando temporizador de 40s para análise redundante...');
+      
+      const timer = setTimeout(() => {
+        if (stepRef.current === 'analyzing') {
+          console.log('🚨 [ZelleCheckout] Timeout de 40s atingido. Transicionando para "under_review"...');
+          setStep('under_review');
+          setPaymentStatus('under_review');
+          setIsProcessing(true);
+          onProcessingChange?.(true);
+          
+          // Sincronizar refs para evitar race conditions nos outros efeitos
+          stepRef.current = 'under_review';
+          paymentStatusRef.current = 'under_review';
+          isProcessingRef.current = true;
+        }
+      }, 40000); // 40 segundos
+      
+      return () => {
+        console.log('🧹 [ZelleCheckout] Limpando temporizador de análise.');
+        clearTimeout(timer);
+      };
+    }
+  }, [step, onProcessingChange]);
 
   const copyEmail = () => {
     navigator.clipboard.writeText("pay@matriculausa.com");

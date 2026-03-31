@@ -155,11 +155,24 @@ const QuickRegistration: React.FC = () => {
   const [fieldErrors, setFieldErrors] = useState<Record<string, string>>({});
   const [couponCode, setCouponCode] = useState('');
   const [isCouponValid, setIsCouponValid] = useState(false);
-  const [selectedMethod, setSelectedMethod] = useState<'stripe' | 'pix' | 'zelle' | 'parcelow'>('stripe');
-  const [showZelleCheckout, setShowZelleCheckout] = useState(false);
+  const [selectedMethod, setSelectedMethod] = useState<'stripe' | 'pix' | 'zelle' | 'parcelow'>(() => {
+    return (sessionStorage.getItem('matricula_quick_selected_method') as any) || 'stripe';
+  });
+  const [showZelleCheckout, setShowZelleCheckout] = useState(() => {
+    return sessionStorage.getItem('matricula_quick_show_zelle') === 'true';
+  });
   const [isZelleProcessing, setIsZelleProcessing] = useState(false);
   const [showPassword, setShowPassword] = useState(false);
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
+
+  // Persistir método selecionado e estado do modal Zelle
+  useEffect(() => {
+    sessionStorage.setItem('matricula_quick_selected_method', selectedMethod);
+  }, [selectedMethod]);
+
+  useEffect(() => {
+    sessionStorage.setItem('matricula_quick_show_zelle', String(showZelleCheckout));
+  }, [showZelleCheckout]);
 
   // Loading Progress State
   const [loadingStep, setLoadingStep] = useState('');
@@ -779,6 +792,11 @@ const QuickRegistration: React.FC = () => {
         clearInterval(fetchInterval);
         setLoadingProgress(100);
         setLoadingStep("Redirecionando para o pagamento...");
+        
+        // Limpar persistência antes de redirecionar para fora
+        sessionStorage.removeItem('matricula_quick_selected_method');
+        sessionStorage.removeItem('matricula_quick_show_zelle');
+        
         // Pequeno delay para o usuário ver o 100%
         await new Promise(resolve => setTimeout(resolve, 800));
         window.location.href = paymentUrl;
@@ -829,7 +847,11 @@ const QuickRegistration: React.FC = () => {
             <ZelleCheckout
               amount={currentFee}
               feeType="selection_process"
-              onSuccess={() => navigate('/student/onboarding?step=selection_fee&payment=success')}
+              onSuccess={() => {
+                sessionStorage.removeItem('matricula_quick_selected_method');
+                sessionStorage.removeItem('matricula_quick_show_zelle');
+                navigate('/student/onboarding?step=selection_fee&payment=success');
+              }}
               onProcessingChange={setIsZelleProcessing}
             />
           </div>
