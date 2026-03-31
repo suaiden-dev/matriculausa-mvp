@@ -1,4 +1,5 @@
 import 'jsr:@supabase/functions-js/edge-runtime.d.ts'
+// @ts-ignore
 import { createClient } from 'npm:@supabase/supabase-js@2.49.1'
 
 // @ts-ignore
@@ -97,7 +98,7 @@ Deno.serve(async (req: Request) => {
       .select('id, status, amount, fee_type_global')
       .eq('user_id', user_id)
       .in('fee_type_global', searchValues.length > 0 ? searchValues : [normalizedFeeTypeGlobal])
-      .eq('status', 'pending')
+      .in('status', ['pending', 'pending_verification'])
       .order('created_at', { ascending: false })
       .limit(1)
       .maybeSingle()
