@@ -1,10 +1,10 @@
 import React from 'react';
 import { motion } from 'framer-motion';
 import { useTranslation } from 'react-i18next';
-import { ArrowRight, Clock, CheckCircle2, AlertTriangle, FileUp, CreditCard } from 'lucide-react';
+import { ArrowRight, Clock, CheckCircle2, AlertTriangle, FileUp, FileText } from 'lucide-react';
 
 interface ApplicationStatusHeroProps {
-  status: 'pending_payment_confirm' | 'pending_documents' | 'under_review' | 'under_review_docs' | 'pending_package_fee' | 'approved' | 'action_required';
+  status: 'pending_payment_confirm' | 'pending_documents' | 'under_review' | 'under_review_docs' | 'pending_package_fee' | 'approved' | 'action_required' | 'waiting_acceptance';
   title: string;
   description: string;
   nextStepLabel: string;
@@ -43,7 +43,7 @@ export const ApplicationStatusHero: React.FC<ApplicationStatusHeroProps> = ({
         };
       case 'pending_package_fee':
         return {
-          icon: <CreditCard className="w-10 h-10 text-purple-500" />,
+          icon: <FileText className="w-10 h-10 text-purple-500" />,
           label: t('common:status.blocked'),
           colorClass: 'text-purple-500 bg-purple-50 border-purple-100'
         };
@@ -51,6 +51,12 @@ export const ApplicationStatusHero: React.FC<ApplicationStatusHeroProps> = ({
         return {
           icon: <Clock className="w-10 h-10 text-blue-500" />,
           label: t('common:status.under_review'),
+          colorClass: 'text-blue-500 bg-blue-50 border-blue-100'
+        };
+      case 'waiting_acceptance':
+        return {
+          icon: <Clock className="w-10 h-10 text-blue-500" />,
+          label: t('dashboard:studentDashboard.myApplicationStep.welcome.status.inProgress'),
           colorClass: 'text-blue-500 bg-blue-50 border-blue-100'
         };
       case 'action_required':

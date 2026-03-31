@@ -56,7 +56,10 @@ const StudentOnboarding: React.FC = () => {
   const { state, loading, goToStep } = useOnboardingProgress();
   const { t } = useTranslation(['common', 'registration', 'payment', 'dashboard']);
   const [showPaymentAnimation, setShowPaymentAnimation] = useState(false);
-  const [isVerifyingPayment, setIsVerifyingPayment] = useState(false);
+  const [isVerifyingPayment, setIsVerifyingPayment] = useState(() => {
+    const params = new URLSearchParams(window.location.search);
+    return params.get('payment') === 'success';
+  });
   const [showNotif, setShowNotif] = useState(false);
   const [showNotificationsModal, setShowNotificationsModal] = useState(false);
 
@@ -503,11 +506,11 @@ const StudentOnboarding: React.FC = () => {
   }, [user, authLoading, navigate]);
 
   useEffect(() => {
-    const stepParam = searchParams.get('step');
-    if (!loading && state.onboardingCompleted && stepParam !== 'my_applications') {
-      navigate('/student/dashboard');
+    if (!loading && state.onboardingCompleted) {
+      console.log('[Onboarding] 🏁 Onboarding concluído, redirecionando para Dashboard Applications');
+      navigate('/student/dashboard/applications', { replace: true });
     }
-  }, [loading, state.onboardingCompleted, searchParams, navigate]);
+  }, [loading, state.onboardingCompleted, navigate]);
 
   if (authLoading || loading) {
     return (

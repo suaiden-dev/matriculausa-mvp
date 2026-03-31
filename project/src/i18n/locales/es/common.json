@@ -387,7 +387,13 @@
     "continue": "Continuar",
     "loading": "Cargando...",
     "back": "Volver",
-    "download": "Descargar"
+    "download": "Descargar",
+    "view": "Ver",
+    "seeMore": "Ver más",
+    "seeLess": "Ver menos",
+    "website": "Sitio web",
+    "acceptanceLetterSoon": "Tu carta de aceptación estará disponible aquí en breve.",
+    "clickToDownload": "Haz clic a continuación para ver o descargar tu documento."
   },
   "errors": {
     "unexpected": "Ocurrió un error inesperado. Por favor, inténtalo de nuevo."

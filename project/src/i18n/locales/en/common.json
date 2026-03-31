@@ -344,7 +344,13 @@
     "continue": "Continue",
     "loading": "Loading...",
     "back": "Back",
-    "download": "Download"
+    "download": "Download",
+    "view": "View",
+    "seeMore": "See more",
+    "seeLess": "See less",
+    "website": "Website",
+    "acceptanceLetterSoon": "Your acceptance letter will be available here shortly.",
+    "clickToDownload": "Click below to view or download your document."
   },
   "errors": {
     "unexpected": "An unexpected error occurred. Please try again."
