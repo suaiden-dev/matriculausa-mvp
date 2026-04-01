@@ -9,7 +9,7 @@ const corsHeaders = {
 }
 
 const ALLOWED_TYPES = ['image/jpeg', 'image/jpg', 'image/png'];
-const MAX_FILE_SIZE = 5 * 1024 * 1024; // 5MB
+const MAX_FILE_SIZE = 20 * 1024 * 1024; // 20MB
 
 serve(async (req) => {
   // Handle CORS preflight requests
@@ -65,7 +65,7 @@ serve(async (req) => {
     // Validate file size
     if (file.size > MAX_FILE_SIZE) {
       return new Response(
-        JSON.stringify({ success: false, error: 'File size must be less than 5MB' }),
+        JSON.stringify({ success: false, error: 'File size must be less than 20MB' }),
         { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
       );
     }

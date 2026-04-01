@@ -2,6 +2,7 @@ import React, { useState, useRef, useImperativeHandle, forwardRef } from 'react'
 import { useTranslation } from 'react-i18next';
 import { Upload, X, CheckCircle, AlertCircle, Camera } from 'lucide-react';
 import { supabase } from '../lib/supabase';
+import { compressImage } from '../utils/imageCompression';
 
 export interface IdentityPhotoUploadRef {
   clear: () => void;
@@ -17,7 +18,7 @@ interface IdentityPhotoUploadProps {
 }
 
 const ALLOWED_TYPES = ['image/jpeg', 'image/jpg', 'image/png'];
-const MAX_FILE_SIZE = 5 * 1024 * 1024; // 5MB
+const MAX_FILE_SIZE = 20 * 1024 * 1024; // 20MB
 
 export const IdentityPhotoUpload = forwardRef<IdentityPhotoUploadRef, IdentityPhotoUploadProps>(({
   onUploadSuccess,
@@ -128,10 +129,11 @@ export const IdentityPhotoUpload = forwardRef<IdentityPhotoUploadRef, IdentityPh
 
     // Upload via Edge Function
     setUploading(true);
-    
+
     try {
+      const compressedFile = await compressImage(file);
       const formData = new FormData();
-      formData.append('file', file);
+      formData.append('file', compressedFile);
 
       const { data: sessionData } = await supabase.auth.getSession();
       const token = sessionData.session?.access_token;
