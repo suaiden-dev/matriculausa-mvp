@@ -96,19 +96,8 @@ const QuickRegistration: React.FC = () => {
 
   const { pendingPayment, rejectedPayment, loading: paymentBlockedLoading } = usePaymentBlocked();
 
-  // Redirect if user has already paid
-  useEffect(() => {
-    if (userProfile?.has_paid_selection_process_fee) {
-      console.log('🎯 [QuickRegistration] User already paid. Redirecting...', {
-        isSurveyPassed: userProfile?.selection_survey_passed
-      });
-      if (!userProfile?.selection_survey_passed) {
-        navigate('/student/onboarding?step=identity_verification');
-      } else {
-        navigate('/student/dashboard');
-      }
-    }
-  }, [userProfile, navigate]);
+  // Flag para verificar se já pagou
+  const hasPaid = userProfile?.has_paid_selection_process_fee;
 
   // Se já houver um pagamento pendente ou rejeitado de Zelle do tipo selection_process,
   // abrimos o checkout do Zelle automaticamente no refresh para mostrar o status.
@@ -143,6 +132,21 @@ const QuickRegistration: React.FC = () => {
     return sessionStorage.getItem('matricula_quick_registered') === 'true';
   });
 
+  // Atualiza os dados com base na sessão ativa
+  useEffect(() => {
+    if (supabaseUser) {
+      setIsRegistered(true);
+      setFormData((prev: any) => ({
+        ...prev,
+        full_name: userProfile?.full_name || prev.full_name,
+        email: supabaseUser.email || prev.email,
+        phone: userProfile?.phone || prev.phone,
+        dependents: userProfile?.dependents !== undefined && userProfile?.dependents !== null ? userProfile.dependents : prev.dependents,
+        termsAccepted: true
+      }));
+    }
+  }, [supabaseUser, userProfile]);
+
   useEffect(() => {
     if (formData.full_name || formData.email) {
       sessionStorage.setItem('matricula_quick_form', JSON.stringify(formData));
@@ -155,11 +159,24 @@ const QuickRegistration: React.FC = () => {
   const [fieldErrors, setFieldErrors] = useState<Record<string, string>>({});
   const [couponCode, setCouponCode] = useState('');
   const [isCouponValid, setIsCouponValid] = useState(false);
-  const [selectedMethod, setSelectedMethod] = useState<'stripe' | 'pix' | 'zelle' | 'parcelow'>('stripe');
-  const [showZelleCheckout, setShowZelleCheckout] = useState(false);
+  const [selectedMethod, setSelectedMethod] = useState<'stripe' | 'pix' | 'zelle' | 'parcelow'>(() => {
+    return (sessionStorage.getItem('matricula_quick_selected_method') as any) || 'stripe';
+  });
+  const [showZelleCheckout, setShowZelleCheckout] = useState(() => {
+    return sessionStorage.getItem('matricula_quick_show_zelle') === 'true';
+  });
   const [isZelleProcessing, setIsZelleProcessing] = useState(false);
   const [showPassword, setShowPassword] = useState(false);
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
+
+  // Persistir método selecionado e estado do modal Zelle
+  useEffect(() => {
+    sessionStorage.setItem('matricula_quick_selected_method', selectedMethod);
+  }, [selectedMethod]);
+
+  useEffect(() => {
+    sessionStorage.setItem('matricula_quick_show_zelle', String(showZelleCheckout));
+  }, [showZelleCheckout]);
 
   // Loading Progress State
   const [loadingStep, setLoadingStep] = useState('');
@@ -779,6 +796,11 @@ const QuickRegistration: React.FC = () => {
         clearInterval(fetchInterval);
         setLoadingProgress(100);
         setLoadingStep("Redirecionando para o pagamento...");
+        
+        // Limpar persistência antes de redirecionar para fora
+        sessionStorage.removeItem('matricula_quick_selected_method');
+        sessionStorage.removeItem('matricula_quick_show_zelle');
+        
         // Pequeno delay para o usuário ver o 100%
         await new Promise(resolve => setTimeout(resolve, 800));
         window.location.href = paymentUrl;
@@ -829,7 +851,11 @@ const QuickRegistration: React.FC = () => {
             <ZelleCheckout
               amount={currentFee}
               feeType="selection_process"
-              onSuccess={() => navigate('/student/onboarding?step=selection_fee&payment=success')}
+              onSuccess={() => {
+                sessionStorage.removeItem('matricula_quick_selected_method');
+                sessionStorage.removeItem('matricula_quick_show_zelle');
+                navigate('/student/onboarding?step=selection_fee&payment=success');
+              }}
               onProcessingChange={setIsZelleProcessing}
             />
           </div>
@@ -841,13 +867,10 @@ const QuickRegistration: React.FC = () => {
   return (
     <div className="min-h-screen bg-gray-50 pt-24 pb-32">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-        <div className="text-center mb-12">
+        <div className="text-center mb-20">
           <h1 className="text-4xl font-extrabold text-grey-900 tracking-tight sm:text-5xl">
             {t('rapidRegistration.title')}
           </h1>
-          <p className="mt-4 text-xl text-gray-500">
-            {t('rapidRegistration.subtitle')}
-          </p>
         </div>
 
 
@@ -1006,92 +1029,96 @@ const QuickRegistration: React.FC = () => {
                     </div>
 
                     {/* Password */}
-                    <div className="flex flex-col">
-                      <label className="block text-sm font-bold text-slate-700 mb-2 px-1">
-                        <span className="text-[#D0151C] font-bold mr-1">*</span>
-                        {t('rapidRegistration.form.password')}
-                      </label>
-                      <div className="relative mt-auto">
-                        <div className="absolute inset-y-0 left-0 pl-4 flex items-center pointer-events-none">
-                          <Lock className="h-5 w-5 text-slate-400" />
+                    {!isRegistered && (
+                      <div className="flex flex-col">
+                        <label className="block text-sm font-bold text-slate-700 mb-2 px-1">
+                          <span className="text-[#D0151C] font-bold mr-1">*</span>
+                          {t('rapidRegistration.form.password')}
+                        </label>
+                        <div className="relative mt-auto">
+                          <div className="absolute inset-y-0 left-0 pl-4 flex items-center pointer-events-none">
+                            <Lock className="h-5 w-5 text-slate-400" />
+                          </div>
+                          <input
+                            type={showPassword ? "text" : "password"}
+                            name="password"
+                            required={!isRegistered}
+                            minLength={6}
+                            value={formData.password}
+                            onChange={handleChange}
+                            disabled={isRegistered}
+                            placeholder={t('rapidRegistration.form.placeholders.password')}
+                            className={`block w-full pl-12 pr-12 py-3.5 border ${fieldErrors.password ? 'border-red-500 ring-2 ring-red-500/10' : 'border-slate-200'} rounded-2xl outline-none focus:outline-none focus:ring-2 ${fieldErrors.password ? 'focus:ring-red-500 focus:border-red-500' : 'focus:ring-[#05294E] focus:border-[#05294E]'} text-slate-900 bg-slate-50/50 transition-all duration-300 disabled:opacity-50 disabled:cursor-not-allowed`}
+                          />
+                          <button
+                            type="button"
+                            onClick={() => setShowPassword(!showPassword)}
+                            disabled={isRegistered}
+                            className="absolute inset-y-0 right-0 pr-4 flex items-center text-slate-400 hover:text-slate-600 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                          >
+                            {showPassword ? (
+                              <EyeOff className="h-5 w-5" />
+                            ) : (
+                              <Eye className="h-5 w-5" />
+                            )}
+                          </button>
                         </div>
-                        <input
-                          type={showPassword ? "text" : "password"}
-                          name="password"
-                          required
-                          minLength={6}
-                          value={formData.password}
-                          onChange={handleChange}
-                          disabled={isRegistered}
-                          placeholder={t('rapidRegistration.form.placeholders.password')}
-                          className={`block w-full pl-12 pr-12 py-3.5 border ${fieldErrors.password ? 'border-red-500 ring-2 ring-red-500/10' : 'border-slate-200'} rounded-2xl outline-none focus:outline-none focus:ring-2 ${fieldErrors.password ? 'focus:ring-red-500 focus:border-red-500' : 'focus:ring-[#05294E] focus:border-[#05294E]'} text-slate-900 bg-slate-50/50 transition-all duration-300 disabled:opacity-50 disabled:cursor-not-allowed`}
-                        />
-                        <button
-                          type="button"
-                          onClick={() => setShowPassword(!showPassword)}
-                          disabled={isRegistered}
-                          className="absolute inset-y-0 right-0 pr-4 flex items-center text-slate-400 hover:text-slate-600 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
-                        >
-                          {showPassword ? (
-                            <EyeOff className="h-5 w-5" />
-                          ) : (
-                            <Eye className="h-5 w-5" />
-                          )}
-                        </button>
+                        {fieldErrors.password && (
+                          <p className="text-red-500 text-xs font-bold mt-2 ml-1 animate-in fade-in slide-in-from-top-1 duration-300">
+                            {fieldErrors.password}
+                          </p>
+                        )}
                       </div>
-                      {fieldErrors.password && (
-                        <p className="text-red-500 text-xs font-bold mt-2 ml-1 animate-in fade-in slide-in-from-top-1 duration-300">
-                          {fieldErrors.password}
-                        </p>
-                      )}
-                    </div>
+                    )}
 
                     {/* Confirm Password */}
-                    <div className="flex flex-col">
-                      <label className="block text-sm font-bold text-slate-700 mb-2 px-1">
-                        <span className="text-[#D0151C] font-bold mr-1">*</span>
-                        {t('rapidRegistration.form.confirmPassword')}
-                      </label>
-                      <div className="relative mt-auto">
-                        <div className="absolute inset-y-0 left-0 pl-4 flex items-center pointer-events-none">
-                          <Lock className="h-5 w-5 text-slate-400" />
+                    {!isRegistered && (
+                      <div className="flex flex-col">
+                        <label className="block text-sm font-bold text-slate-700 mb-2 px-1">
+                          <span className="text-[#D0151C] font-bold mr-1">*</span>
+                          {t('rapidRegistration.form.confirmPassword')}
+                        </label>
+                        <div className="relative mt-auto">
+                          <div className="absolute inset-y-0 left-0 pl-4 flex items-center pointer-events-none">
+                            <Lock className="h-5 w-5 text-slate-400" />
+                          </div>
+                          <input
+                            type={showConfirmPassword ? "text" : "password"}
+                            name="confirm_password"
+                            required={!isRegistered}
+                            minLength={6}
+                            value={formData.confirm_password}
+                            onChange={handleChange}
+                            disabled={isRegistered}
+                            placeholder={t('rapidRegistration.form.placeholders.confirmPassword')}
+                            className={`block w-full pl-12 pr-12 py-3.5 border ${fieldErrors.confirm_password ? 'border-red-500 ring-2 ring-red-500/10' : 'border-slate-200'} rounded-2xl outline-none focus:outline-none focus:ring-2 ${fieldErrors.confirm_password ? 'focus:ring-red-500 focus:border-red-500' : 'focus:ring-[#05294E] focus:border-[#05294E]'} text-slate-900 bg-slate-50/50 transition-all duration-300 disabled:opacity-50 disabled:cursor-not-allowed`}
+                          />
+                          <button
+                            type="button"
+                            onClick={() => setShowConfirmPassword(!showConfirmPassword)}
+                            disabled={isRegistered}
+                            className="absolute inset-y-0 right-0 pr-4 flex items-center text-slate-400 hover:text-slate-600 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                          >
+                            {showConfirmPassword ? (
+                              <EyeOff className="h-5 w-5" />
+                            ) : (
+                              <Eye className="h-5 w-5" />
+                            )}
+                          </button>
                         </div>
-                        <input
-                          type={showConfirmPassword ? "text" : "password"}
-                          name="confirm_password"
-                          required
-                          minLength={6}
-                          value={formData.confirm_password}
-                          onChange={handleChange}
-                          disabled={isRegistered}
-                          placeholder={t('rapidRegistration.form.placeholders.confirmPassword')}
-                          className={`block w-full pl-12 pr-12 py-3.5 border ${fieldErrors.confirm_password ? 'border-red-500 ring-2 ring-red-500/10' : 'border-slate-200'} rounded-2xl outline-none focus:outline-none focus:ring-2 ${fieldErrors.confirm_password ? 'focus:ring-red-500 focus:border-red-500' : 'focus:ring-[#05294E] focus:border-[#05294E]'} text-slate-900 bg-slate-50/50 transition-all duration-300 disabled:opacity-50 disabled:cursor-not-allowed`}
-                        />
-                        <button
-                          type="button"
-                          onClick={() => setShowConfirmPassword(!showConfirmPassword)}
-                          disabled={isRegistered}
-                          className="absolute inset-y-0 right-0 pr-4 flex items-center text-slate-400 hover:text-slate-600 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
-                        >
-                          {showConfirmPassword ? (
-                            <EyeOff className="h-5 w-5" />
-                          ) : (
-                            <Eye className="h-5 w-5" />
-                          )}
-                        </button>
+                        {fieldErrors.confirm_password && (
+                          <p className="text-red-500 text-xs font-bold mt-2 ml-1 animate-in fade-in slide-in-from-top-1 duration-300">
+                            {fieldErrors.confirm_password}
+                          </p>
+                        )}
                       </div>
-                      {fieldErrors.confirm_password && (
-                        <p className="text-red-500 text-xs font-bold mt-2 ml-1 animate-in fade-in slide-in-from-top-1 duration-300">
-                          {fieldErrors.confirm_password}
-                        </p>
-                      )}
-                    </div>
+                    )}
 
                   </div>
 
                   {/* Seção Agrupada: Cupons e Termos (Coladinhos) */}
                   <div className="mt-6 pt-6 border-t border-slate-100 space-y-2">
-                    {!userProfile?.seller_referral_code && !codeApplied && (
+                    {!userProfile?.seller_referral_code && !codeApplied && !hasPaid && (
                       <div className="relative z-10">
                         {/* Checkbox para Referral Code */}
                         <div className="flex items-center space-x-3 p-4 bg-slate-50/50 border border-slate-100 rounded-2xl group transition-all duration-300 hover:bg-white shadow-sm cursor-pointer" onClick={() => {
@@ -1255,7 +1282,7 @@ const QuickRegistration: React.FC = () => {
                     )}
 
                     <div
-                      className={`flex items-start space-x-3 p-4 border rounded-2xl group/terms transition-colors duration-300 ${formData.termsAccepted
+                      className={`flex items-start space-x-3 p-4 border rounded-2xl group/terms transition-colors duration-300 ${formData.termsAccepted || isRegistered
                         ? 'border-gray-100 bg-emerald-50/20'
                         : fieldErrors.termsAccepted
                           ? 'border-red-500 bg-red-50/10 shadow-[0_0_20px_rgba(239,68,68,0.05)]'
@@ -1267,17 +1294,19 @@ const QuickRegistration: React.FC = () => {
                           id="termsAccepted"
                           name="termsAccepted"
                           type="checkbox"
-                          required
-                          disabled={isRegistered}
-                          checked={formData.termsAccepted}
+                          required={!isRegistered}
+                          disabled={isRegistered || formData.termsAccepted}
+                          checked={formData.termsAccepted || isRegistered}
                           onChange={(e) => {
-                            setFormData((prev: any) => ({ ...prev, termsAccepted: e.target.checked }));
-                            if (e.target.checked && fieldErrors.termsAccepted) {
-                              setFieldErrors(prev => {
-                                const next = { ...prev };
-                                delete next.termsAccepted;
-                                return next;
-                              });
+                            if (e.target.checked) {
+                              setFormData((prev: any) => ({ ...prev, termsAccepted: true }));
+                              if (fieldErrors.termsAccepted) {
+                                setFieldErrors(prev => {
+                                  const next = { ...prev };
+                                  delete next.termsAccepted;
+                                  return next;
+                                });
+                              }
                             }
                           }}
                           className="h-5 w-5 text-[#05294E] border-gray-300 rounded focus:ring-[#05294E] disabled:opacity-50 disabled:cursor-not-allowed cursor-pointer"
@@ -1324,7 +1353,7 @@ const QuickRegistration: React.FC = () => {
                     {t('rapidRegistration.payment.selectMethod')}
                   </h3>
 
-                  <div className="space-y-4">
+                  <div className={`space-y-4 ${hasPaid ? 'filter blur-[4px] opacity-40 pointer-events-none select-none transition-all duration-300' : ''}`}>
                     {[
                       { id: 'stripe' as const, name: t('rapidRegistration.payment.methods.stripe'), icon: StripeIcon },
                       { id: 'pix' as const, name: t('rapidRegistration.payment.methods.pix'), icon: PixIcon },
@@ -1431,6 +1460,35 @@ const QuickRegistration: React.FC = () => {
                     })}
                   </div>
 
+                  {hasPaid && (
+                    <div className="absolute inset-x-0 bottom-0 top-16 flex flex-col items-center justify-center z-20 bg-white/20 backdrop-blur-[2px] rounded-b-3xl">
+                      <div className="bg-emerald-50 border border-emerald-200 p-8 rounded-3xl text-center shadow-2xl max-w-sm w-full mx-4 transform transition-all">
+                        <div className="w-16 h-16 bg-emerald-100 rounded-full flex items-center justify-center mx-auto mb-4">
+                          <CheckCircle2 className="w-8 h-8 text-emerald-600" />
+                        </div>
+                        <h4 className="text-xl font-black text-emerald-900 uppercase tracking-tight mb-2">
+                          {t('rapidRegistration.payment.alreadyPaid.title', 'Taxa Já Paga!')}
+                        </h4>
+                        <p className="text-emerald-700 text-sm mb-8 font-medium leading-relaxed">
+                          {t('rapidRegistration.payment.alreadyPaid.description', 'Você já realizou o pagamento da taxa do processo seletivo. Pode prosseguir com sua inscrição.')}
+                        </p>
+                        <button
+                          type="button"
+                          onClick={() => {
+                            if (!userProfile?.selection_survey_passed) {
+                              navigate('/student/onboarding?step=identity_verification');
+                            } else {
+                              navigate('/student/dashboard');
+                            }
+                          }}
+                          className="w-full bg-emerald-600 text-white font-black uppercase tracking-widest text-xs py-4 rounded-xl transition-all shadow-lg hover:bg-emerald-700 hover:shadow-xl hover:scale-105 active:scale-95"
+                        >
+                          {t('rapidRegistration.payment.alreadyPaid.continue', 'Continuar no Onboarding')}
+                        </button>
+                      </div>
+                    </div>
+                  )}
+
                   {error && (
                     <div className="mt-8 p-4 bg-red-50 rounded-xl flex items-center text-red-700 text-sm">
                       <AlertCircle className="h-5 w-5 mr-2" />
@@ -1507,15 +1565,32 @@ const QuickRegistration: React.FC = () => {
               </div>
 
               {/* Submit Button */}
-              <button
-                type="submit"
-                form="registration-form"
-                disabled={loading || (!formData.termsAccepted && !isRegistered) || (selectedMethod === 'parcelow' && (!formData.cpf || formData.cpf.length < 14))}
-                className={`w-full text-white font-bold py-5 rounded-2xl transition-all flex items-center justify-center text-lg shadow-xl hover:shadow-2xl hover:scale-[1.02] active:scale-[0.98] disabled:opacity-50 disabled:cursor-not-allowed disabled:scale-100 ${(formData.termsAccepted || isRegistered) && (selectedMethod !== 'parcelow' || (formData.cpf && formData.cpf.length >= 14)) ? 'bg-[#05294E]' : 'bg-slate-400'
-                  }`}
-              >
-                {getButtonText()}
-              </button>
+              {hasPaid ? (
+                <button
+                  type="button"
+                  onClick={() => {
+                    if (!userProfile?.selection_survey_passed) {
+                      navigate('/student/onboarding?step=identity_verification');
+                    } else {
+                      navigate('/student/dashboard');
+                    }
+                  }}
+                  className="w-full bg-emerald-600 text-white font-black uppercase tracking-widest text-sm py-5 rounded-2xl transition-all flex items-center justify-center shadow-xl hover:shadow-2xl hover:bg-emerald-700 hover:scale-[1.02] active:scale-[0.98]"
+                >
+                  <CheckCircle2 className="w-5 h-5 mr-2" />
+                  {t('rapidRegistration.sidebar.alreadyPaidContinue', 'Continuar no Onboarding')}
+                </button>
+              ) : (
+                <button
+                  type="submit"
+                  form="registration-form"
+                  disabled={loading || (!formData.termsAccepted && !isRegistered) || (selectedMethod === 'parcelow' && (!formData.cpf || formData.cpf.length < 14))}
+                  className={`w-full text-white font-bold py-5 rounded-2xl transition-all flex items-center justify-center text-lg shadow-xl hover:shadow-2xl hover:scale-[1.02] active:scale-[0.98] disabled:opacity-50 disabled:cursor-not-allowed disabled:scale-100 ${(formData.termsAccepted || isRegistered) && (selectedMethod !== 'parcelow' || (formData.cpf && formData.cpf.length >= 14)) ? 'bg-[#05294E]' : 'bg-slate-400'
+                    }`}
+                >
+                  {getButtonText()}
+                </button>
+              )}
             </div>
           </div>
         </div>

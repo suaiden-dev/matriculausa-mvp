@@ -114,11 +114,11 @@ export const SelectionFeeStep: React.FC<StepProps> = ({ onNext }) => {
           {!hasZellePendingSelectionFee && (
             <div className="mb-12">
               <div className="flex items-center space-x-3 p-3 bg-gray-50 rounded-lg group/terms hover:bg-gray-100/50 transition-colors duration-300">
-                <label htmlFor="termsAccepted" className={`checkbox-container ${hasAcceptedTermsInDB ? 'cursor-not-allowed opacity-75' : 'cursor-pointer'} flex-shrink-0`}>
+                <label htmlFor="termsAccepted" className={`checkbox-container ${(hasAcceptedTermsInDB || termsAccepted) ? 'cursor-not-allowed opacity-75' : 'cursor-pointer'} flex-shrink-0`}>
                   <input
                     id="termsAccepted" name="termsAccepted" type="checkbox"
                     checked={termsAccepted} onChange={handleCheckboxChange}
-                    disabled={hasAcceptedTermsInDB} className="custom-checkbox"
+                    disabled={hasAcceptedTermsInDB || termsAccepted} className="custom-checkbox"
                   />
                   <div className="checkmark border-gray-300" />
                 </label>

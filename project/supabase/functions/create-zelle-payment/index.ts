@@ -52,6 +52,7 @@ Deno.serve(async (req: any) => {
       confirmation_code = `ZEL_${Date.now()}`,
       payment_date = new Date().toISOString(),
       scholarships_ids,
+      target_user_id, // ADDED: Parametro opcional para admin
       metadata = {}
     } = requestBody;
 
@@ -60,7 +61,8 @@ Deno.serve(async (req: any) => {
       amount,
       comprovante_url,
       recipient_email,
-      confirmation_code
+      confirmation_code,
+      target_user_id
     });
 
     // Validar parâmetros obrigatórios mínimos
@@ -71,9 +73,9 @@ Deno.serve(async (req: any) => {
     }
 
     // Validar tipo de taxa
-    const validFeeTypes = ['selection_process', 'application_fee', 'enrollment_fee', 'scholarship_fee', 'i20_control', 'i-20_control_fee', 'placement_fee', 'ds160_package', 'i539_cos_package'];
+    const validFeeTypes = ['selection_process', 'selection_process_fee', 'application_fee', 'enrollment_fee', 'scholarship_fee', 'i20_control', 'i-20_control_fee', 'placement_fee', 'ds160_package', 'i539_cos_package', 'reinstatement_package'];
     if (!validFeeTypes.includes(fee_type)) {
-      return corsResponse({ error: 'Invalid fee_type' }, 400);
+      return corsResponse({ error: 'Invalid fee_type: ' + fee_type }, 400);
     }
 
     // Validar valor
@@ -94,9 +96,43 @@ Deno.serve(async (req: any) => {
       return corsResponse({ error: 'Invalid token' }, 401);
     }
 
+    // Handle admin delegation
+    let finalUserId = user.id;
+    let finalUserEmail = user.email;
+    let finalUserName = user.user_metadata?.full_name || 'Aluno MatrículaUSA';
+
+    if (target_user_id) {
+      // Check if caller is admin
+      const { data: callerProfile } = await supabase
+        .from('user_profiles')
+        .select('role')
+        .eq('user_id', user.id)
+        .single();
+        
+      if (callerProfile?.role !== 'admin') {
+         console.warn('[create-zelle-payment] Forbidden: Non-admin tried to set target_user_id');
+         return corsResponse({ error: 'Only admins can create payments for other users' }, 403);
+      }
+      
+      finalUserId = target_user_id;
+      
+      // Fetch target user details for the webhook notification
+      const { data: targetProfile } = await supabase
+        .from('user_profiles')
+        .select('full_name, email')
+        .eq('user_id', target_user_id)
+        .single();
+        
+      if (targetProfile) {
+         finalUserEmail = targetProfile.email || finalUserEmail;
+         finalUserName = targetProfile.full_name || finalUserName;
+      }
+      console.log(`[create-zelle-payment] Admin ${user.id} acting on behalf of ${finalUserId}`);
+    }
+
     // PARÂMETROS PARA O RPC (Restaurado para garantir que o comprovante seja salvo)
     const rpcParams = {
-      p_user_id: user.id,
+      p_user_id: finalUserId,
       p_fee_type: fee_type,
       p_amount: Number(amount),
       p_currency: currency,
@@ -120,7 +156,7 @@ Deno.serve(async (req: any) => {
     const { data: existingRecentPayment, error: searchError } = await supabase
       .from('zelle_payments')
       .select('id')
-      .eq('user_id', user.id)
+      .eq('user_id', finalUserId)
       .eq('fee_type', fee_type)
       .eq('amount', Number(amount))
       .eq('status', 'pending_verification')
@@ -153,7 +189,7 @@ Deno.serve(async (req: any) => {
 
     console.log('[create-zelle-payment] Registro com comprovante criado/verificado:', paymentId);
 
-    // Enviar webhook para n8n para validação automática
+    // Enviar webhook para n8n para validação automática (em background)
     try {
       // Formatar URL do comprovante usando o proxy para o n8n
       // @ts-ignore
@@ -161,7 +197,7 @@ Deno.serve(async (req: any) => {
       const proxyImageUrl = `${supabaseUrl}/functions/v1/n8n-storage-access?url=${encodeURIComponent(comprovante_url)}&token=n8n_default_secret_2026`;
       
       const webhookPayload = {
-        user_id: user.id,
+        user_id: finalUserId,
         image_url: proxyImageUrl,
         value: amount.toString(),
         currency: currency,
@@ -174,31 +210,47 @@ Deno.serve(async (req: any) => {
         original_amount: metadata.original_amount ?? amount,
         final_amount: metadata.final_amount ?? amount,
         promotional_coupon: metadata.promotional_coupon ?? null,
-        email_aluno: user.email,
-        nome_aluno: user.user_metadata?.full_name || 'Alun MatrículaUSA',
+        email_aluno: finalUserEmail,
+        nome_aluno: finalUserName,
         callback_url: `${supabaseUrl}/functions/v1/validate-zelle-payment-result`
       };
 
-      console.log('[create-zelle-payment] Enviando webhook para n8n:', JSON.stringify(webhookPayload, null, 2));
+      console.log('[create-zelle-payment] Escalando webhook n8n para processo em background');
 
-      const n8nResponse = await fetch('https://nwh.suaiden.com/webhook/zelle-global', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
-        },
-        body: JSON.stringify(webhookPayload),
-      });
+      const sendWebhookToN8n = async () => {
+        try {
+          console.log('[create-zelle-payment-async] Enviando payload:', JSON.stringify(webhookPayload, null, 2));
+          const n8nResponse = await fetch('https://nwh.suaiden.com/webhook/zelle-global', {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/json',
+              'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
+            },
+            body: JSON.stringify(webhookPayload),
+          });
 
-      if (n8nResponse.ok) {
-        console.log('[create-zelle-payment] Webhook n8n enviado com sucesso');
+          if (n8nResponse.ok) {
+            console.log('[create-zelle-payment-async] Webhook n8n enviado com sucesso');
+          } else {
+            const errorText = await n8nResponse.text();
+            console.warn('[create-zelle-payment-async] Webhook n8n falhou com status:', n8nResponse.status, 'Erro:', errorText);
+          }
+        } catch (webhookError) {
+          console.error('[create-zelle-payment-async] Erro ao enviar webhook para n8n:', webhookError);
+        }
+      };
+
+      // @ts-ignore (EdgeRuntime exists globally in Supabase Edge Functions environment)
+      if (typeof EdgeRuntime !== 'undefined' && typeof EdgeRuntime.waitUntil === 'function') {
+        // @ts-ignore
+        EdgeRuntime.waitUntil(sendWebhookToN8n());
       } else {
-        const errorText = await n8nResponse.text();
-        console.warn('[create-zelle-payment] Webhook n8n falhou:', n8nResponse.status, errorText);
+        // Fallback safely if EdgeRuntime is not available (e.g. local Deno testing without CLI)
+        sendWebhookToN8n().catch(console.error);
       }
-    } catch (webhookError) {
-      console.error('[create-zelle-payment] Erro ao enviar webhook para n8n:', webhookError);
-      // Não falhar por causa do webhook, o pagamento já existe e o admin pode ver
+      
+    } catch (webhookPrepareError) {
+      console.error('[create-zelle-payment] Erro fatal na preparação do webhook n8n:', webhookPrepareError);
     }
 
     console.log('[create-zelle-payment] Processamento concluído com sucesso');

@@ -1394,43 +1394,43 @@ const AdminStudentDetails: React.FC = () => {
           feeTypeForZelle = 'reinstatement_package';
         }
 
-        let proofUrl = 'manual-admin-approve';
-        
-        if (zelleProofFile) {
-          const fileExt = zelleProofFile.name.split('.').pop() || 'png';
-          // ✅ FIX: The RLS policy on zelle_comprovantes requires users to upload to their own folder (auth.uid() == folder).
-          // We use the admin's ID (user.id) to bypass the RLS correctly.
-          const fileName = `zelle-payments/${user?.id}/admin_upload_${Date.now()}-${Math.random().toString(36).substring(2)}.${fileExt}`;
-          const { error: uploadError } = await supabase.storage
-            .from('zelle_comprovantes')
-            .upload(fileName, zelleProofFile);
-          
-          if (uploadError) throw uploadError;
-          
-          const { data: { publicUrl } } = supabase.storage
-            .from('zelle_comprovantes')
-            .getPublicUrl(fileName);
-            
-          proofUrl = publicUrl;
+        if (!zelleProofFile) {
+          alert('Para registrar como Zelle, é obrigatório anexar o comprovante para análise da inteligência artificial.');
+          setIsUploadingZelle(false);
+          return;
         }
 
-        const { error: zelleError } = await supabase
-          .from('zelle_payments')
-          .insert([{
-            user_id: student.user_id,
+        const fileExt = zelleProofFile.name.split('.').pop() || 'png';
+        // ✅ FIX: The RLS policy on zelle_comprovantes requires users to upload to their own folder (auth.uid() == folder).
+        // We use the admin's ID (user.id) to bypass the RLS correctly.
+        const fileName = `zelle-payments/${user?.id}/admin_upload_${Date.now()}-${Math.random().toString(36).substring(2)}.${fileExt}`;
+        const { error: uploadError } = await supabase.storage
+          .from('zelle_comprovantes')
+          .upload(fileName, zelleProofFile);
+        
+        if (uploadError) throw uploadError;
+        
+        const { data: { publicUrl } } = supabase.storage
+          .from('zelle_comprovantes')
+          .getPublicUrl(fileName);
+          
+        let proofUrl = publicUrl;
+
+        // Dispara a Edge Function para criar o gateway com a IA do n8n (mesmo fluxo do aluno)
+        const { error: functionError } = await supabase.functions.invoke('create-zelle-payment', {
+          body: {
             fee_type: feeTypeForZelle,
             amount: finalPaymentAmount,
-            screenshot_url: proofUrl,
-            status: 'pending_verification',
-            confirmation_code: 'ADMIN_MANUAL',
-            scholarships_ids: targetApplicationForAmount ? [targetApplicationForAmount] : null
-          }])
-          .select()
-          .single();
+            comprovante_url: proofUrl,
+            target_user_id: student.user_id, // Delega o pagamento ao aluno
+            scholarships_ids: targetApplicationForAmount ? [targetApplicationForAmount] : null,
+            metadata: { source: 'admin_dashboard_manual' }
+          }
+        });
 
-        if (zelleError) throw zelleError;
+        if (functionError) throw functionError;
 
-        alert('Comprovante de pagamento Zelle enviado! Agora ele está pendente de revisão na aba "Zelle Payments".');
+        alert('Comprovante Zelle submetido com sucesso! O pagamento está sendo analisado pela inteligência artificial n8n.');
         
         setShowPaymentModal(false);
         setPendingPayment(null);
@@ -3626,13 +3626,25 @@ const AdminStudentDetails: React.FC = () => {
                 return path && String(path).trim() !== '';
               });
 
-              // Fallback: se não encontrar por caminho, usar o primeiro checkout_terms disponível
+              // Fallback 1: se não encontrar por caminho, usar o primeiro checkout_terms disponível
               if (!identityPhotoAcceptance && checkoutTermsAcceptances.length > 0) {
                 console.log('ℹ️ [AdminStudentDetails] identityPhotoAcceptance não encontrada por path — usando primeiro checkout_terms como fallback');
                 identityPhotoAcceptance = checkoutTermsAcceptances[0];
               }
 
-              if (termAcceptances.length > 0 || checkoutTermsAcceptances.length > 0) {
+              // Fallback 2: usuários novos podem ter a foto salva em outros term_types (terms_of_service, privacy_policy).
+              // Isso ocorre quando o UPDATE no IdentityVerificationStep atualiza registros existentes antes de existir um checkout_terms.
+              if (!identityPhotoAcceptance) {
+                identityPhotoAcceptance = combinedTermAcceptances.find((acc: any) => {
+                  const path = acc.identity_photo_path || acc.identity_photo || acc.photo_path || null;
+                  return path && String(path).trim() !== '';
+                });
+                if (identityPhotoAcceptance) {
+                  console.log('ℹ️ [AdminStudentDetails] Foto encontrada em registro não-checkout_terms:', identityPhotoAcceptance.term_type);
+                }
+              }
+
+              if (termAcceptances.length > 0 || combinedTermAcceptances.length > 0) {
                 // Debug logs (useful during local development)
                 console.log('🔍 [AdminStudentDetails] checkoutTermsAcceptances:', checkoutTermsAcceptances);
                 console.log('🔍 [AdminStudentDetails] identityPhotoAcceptance:', identityPhotoAcceptance);

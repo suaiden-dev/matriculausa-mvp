@@ -16,11 +16,12 @@ export async function loadZellePaymentsLoader(
     window.location.hostname.includes('dev')
   );
 
-  // ✅ BUSCAR TODOS OS REGISTROS: Sem paginação, buscar todos os pagamentos Zelle
+  // ✅ BUSCAR TODOS OS REGISTROS: Sem paginação, buscar todos os pagamentos Zelle válidos (com screenshot_url)
   const query = supabase
     .from('zelle_payments')
     .select('*')
     .gt('amount', 0)
+    .not('screenshot_url', 'is', null)
     .order('created_at', { ascending: false });
   const { data: zellePaymentsData, error: zelleError } = signal
     ? await query.abortSignal(signal)

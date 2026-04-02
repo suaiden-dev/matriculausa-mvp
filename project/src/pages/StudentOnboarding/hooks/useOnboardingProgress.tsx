@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback, useRef } from 'react';
+import { useState, useEffect, useCallback, useRef, useMemo } from 'react';
 import { useAuth } from '../../../hooks/useAuth';
 import { supabase } from '../../../lib/supabase';
 import { OnboardingStep, OnboardingState } from '../types';
@@ -13,6 +13,45 @@ const VALID_STEPS: OnboardingStep[] = [
 export const useOnboardingProgress = () => {
   const { user, userProfile } = useAuth();
   const { fetchCart } = useCartStore();
+
+  // Extrair apenas os campos primitivos do userProfile para estabilizar dependências.
+  // O objeto userProfile tem nova referência a cada render do useAuth,
+  // o que causava reconstrução do checkProgress e re-fetch desnecessário ao banco.
+  const stableProfile = useMemo(() => ({
+    has_paid_selection_process_fee: userProfile?.has_paid_selection_process_fee,
+    selection_survey_passed: (userProfile as any)?.selection_survey_passed,
+    identity_verified: (userProfile as any)?.identity_verified,
+    documents_uploaded: userProfile?.documents_uploaded,
+    documents_status: userProfile?.documents_status,
+    is_application_fee_paid: userProfile?.is_application_fee_paid,
+    is_scholarship_fee_paid: (userProfile as any)?.is_scholarship_fee_paid,
+    is_placement_fee_paid: (userProfile as any)?.is_placement_fee_paid,
+    has_paid_reinstatement_package: (userProfile as any)?.has_paid_reinstatement_package,
+    onboarding_completed: userProfile?.onboarding_completed,
+    placement_fee_flow: (userProfile as any)?.placement_fee_flow,
+    student_process_type: userProfile?.student_process_type,
+    visa_transfer_active: userProfile?.visa_transfer_active,
+    selected_scholarship_id: userProfile?.selected_scholarship_id,
+    onboarding_current_step: (userProfile as any)?.onboarding_current_step,
+    id: (userProfile as any)?.id,
+  }), [
+    userProfile?.has_paid_selection_process_fee,
+    (userProfile as any)?.selection_survey_passed,
+    (userProfile as any)?.identity_verified,
+    userProfile?.documents_uploaded,
+    userProfile?.documents_status,
+    userProfile?.is_application_fee_paid,
+    (userProfile as any)?.is_scholarship_fee_paid,
+    (userProfile as any)?.is_placement_fee_paid,
+    (userProfile as any)?.has_paid_reinstatement_package,
+    userProfile?.onboarding_completed,
+    (userProfile as any)?.placement_fee_flow,
+    userProfile?.student_process_type,
+    userProfile?.visa_transfer_active,
+    userProfile?.selected_scholarship_id,
+    (userProfile as any)?.onboarding_current_step,
+    (userProfile as any)?.id,
+  ]);
 
   // Refs para controle de fluxo e depuração
   const lastCheckId = useRef<number>(0);
@@ -119,7 +158,6 @@ export const useOnboardingProgress = () => {
         if (loading) setLoading(false);
         return;
       }
-
       const freshProfile = freshData;
       const studentId = freshProfile.id;
 
@@ -134,31 +172,33 @@ export const useOnboardingProgress = () => {
       const selectionSurveyPassed = !!freshProfile.selection_survey_passed;
 
       // 1.2 Verificação de Identidade (Foto do Termo)
-      // Fazemos query manual apenas por segurança, mas preferimos os dados do perfil se disponíveis
-      const { data: photoAcceptance } = await supabase
-        .from('comprehensive_term_acceptance')
-        .select('identity_photo_path')
-        .eq('user_id', user.id)
-        .order('created_at', { ascending: false })
-        .limit(1)
-        .maybeSingle();
-      const identityVerified = !!photoAcceptance?.identity_photo_path || !!(freshProfile as any).identity_verified;
+      // Otimização: só busca no banco se o perfil ainda não tem identity_verified = true
+      let identityVerified = !!(freshProfile as any).identity_verified;
+      if (!identityVerified) {
+        const { data: photoAcceptance } = await supabase
+          .from('comprehensive_term_acceptance')
+          .select('identity_photo_path')
+          .eq('user_id', user.id)
+          .order('created_at', { ascending: false })
+          .limit(1)
+          .maybeSingle();
+        identityVerified = !!photoAcceptance?.identity_photo_path;
+      }
 
 
-      // 2. Verificar se já selecionou as bolsas
-      let scholarshipsSelected = false;
+      // 2. Verificar aplicações — query consolidada traz todos os dados necessários de uma vez
       const { data: appsData } = await supabase
         .from('scholarship_applications')
-        .select('id, scholarship_id, student_process_type')
-        .eq('student_id', studentId)
-        .limit(1);
+        .select('id, scholarship_id, student_process_type, is_application_fee_paid')
+        .eq('student_id', studentId);
 
+      let scholarshipsSelected = false;
       if (selectionFeePaid) {
         await fetchCart(user.id);
         const currentCart = useCartStore.getState().cart;
         scholarshipsSelected = !!(
-          currentCart.length > 0 || 
-          (appsData && appsData.length > 0) || 
+          currentCart.length > 0 ||
+          (appsData && appsData.length > 0) ||
           !!freshProfile.selected_scholarship_id ||
           (freshProfile.student_process_type && ['initial', 'transfer', 'change_of_status', 'resident'].includes(freshProfile.student_process_type))
         );
@@ -174,14 +214,8 @@ export const useOnboardingProgress = () => {
       const documentsUploaded = freshProfile.documents_uploaded || false;
       const documentsApproved = freshProfile.documents_status === 'approved';
 
-      // 5. Verificação da Taxa de Inscrição (Application Fee)
-      const { data: appFeeData } = await supabase
-        .from('scholarship_applications')
-        .select('id')
-        .eq('student_id', studentId)
-        .eq('is_application_fee_paid', true)
-        .limit(1);
-      const applicationFeePaid = (appFeeData && appFeeData.length > 0) || freshProfile.is_application_fee_paid || false;
+      // 5. Application Fee — derivado da query consolidada acima
+      const applicationFeePaid = (appsData && appsData.some((a: any) => a.is_application_fee_paid)) || freshProfile.is_application_fee_paid || false;
 
       // 6. Configurações de Etapa para Novos Fluxos (Placement Fee)
       const isNewFlowUser = !!freshProfile.placement_fee_flow;
@@ -271,7 +305,7 @@ export const useOnboardingProgress = () => {
         setLoading(false);
       }
     }
-  }, [user?.id, userProfile, fetchCart, loading]);
+  }, [user?.id, stableProfile, fetchCart]);
 
   useEffect(() => {
     checkProgress();

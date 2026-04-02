@@ -1,7 +1,6 @@
 {
   "rapidRegistration": {
-    "title": "Registro e Pagamento",
-    "subtitle": "Complete seu registro e inicie seu processo seletivo",
+    "title": "Início do Processo Seletivo",
     "form": {
       "title": "Informações Pessoais",
       "fullName": "Nome Completo",
@@ -46,7 +45,8 @@
       "futureFeesNote": "As taxas futuras são estimativas e variam conforme a universidade.",
       "couponApplied": "Cupom Aplicado",
       "refundAssuranceTitle": "Garantia de Reembolso",
-      "refundAssuranceText": "Se você não for aceito em nenhuma universidade parceira, a taxa do processo seletivo será totalmente reembolsada."
+      "refundAssuranceText": "Se você não for aceito em nenhuma universidade parceira, a taxa do processo seletivo será totalmente reembolsada.",
+      "alreadyPaidContinue": "Continuar no Onboarding"
     },
     "terms": {
       "contractSubtitle": "Contrato de Prestação de Serviços",
@@ -92,6 +92,11 @@
         "generationFailed": "Falha ao gerar link de pagamento. Tente novamente.",
         "userIdNotFound": "ID do usuário não encontrado",
         "saveCpfFailed": "Erro ao salvar CPF"
+      },
+      "alreadyPaid": {
+        "title": "Taxa Já Paga!",
+        "description": "Você já realizou o pagamento da taxa do processo seletivo. Pode prosseguir com sua inscrição.",
+        "continue": "Continuar no Onboarding"
       }
     }
   },

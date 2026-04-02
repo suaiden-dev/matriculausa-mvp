@@ -257,9 +257,9 @@
   },
   "selectionFeeStep": {
     "main": {
-      "title": "Taxa do Processo Seletivo",
+      "title": "Início do Processo Seletivo",
       "subtitle": "Esta taxa cobre o processamento de sua candidatura, avaliação de documentos e suporte inicial para o seu processo de estudo.",
-      "headerTitle": "Taxa do Processo Seletivo",
+      "headerTitle": "Início do Processo Seletivo",
       "headerSubtitle": "Matrícula USA - Taxa única",
       "description": "Esta taxa cobre o processamento de sua candidatura, avaliação de documentos e suporte inicial para o seu processo de estudo nos Estados Unidos.",
       "identityVerification": "Verificação de Identidade",

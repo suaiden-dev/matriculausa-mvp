@@ -1,7 +1,6 @@
 {
   "rapidRegistration": {
-    "title": "Registro y Pago",
-    "subtitle": "Complete su registro e inicie su proceso de selección",
+    "title": "Inicio del Proceso de Selección",
     "form": {
       "title": "Información Personal",
       "fullName": "Nombre Completo",
@@ -46,7 +45,8 @@
       "futureFeesNote": "Las tarifas futuras son estimaciones y varían según la universidad.",
       "couponApplied": "Cupón Aplicado",
       "refundAssuranceTitle": "Garantía de Reembolso",
-      "refundAssuranceText": "Si no eres aceptado en ninguna universidad asociada, la tarifa del proceso de selección será completamente reembolsada."
+      "refundAssuranceText": "Si no eres aceptado en ninguna universidad asociada, la tarifa del proceso de selección será completamente reembolsada.",
+      "alreadyPaidContinue": "Continuar en Onboarding"
     },
     "terms": {
       "contractSubtitle": "Contrato de Prestación de Servicios",
@@ -92,6 +92,11 @@
         "generationFailed": "Error al generar el enlace de pago. Por favor, inténtelo de novo.",
         "userIdNotFound": "ID de usuario no encontrado",
         "saveCpfFailed": "Error al guardar el CPF"
+      },
+      "alreadyPaid": {
+        "title": "¡Tarifa Ya Pagada!",
+        "description": "Ya ha realizado el pago de la tarifa del proceso de selección. Puede continuar con su inscripción.",
+        "continue": "Continuar en Onboarding"
       }
     }
   },

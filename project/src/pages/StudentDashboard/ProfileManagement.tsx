@@ -26,17 +26,26 @@ import { supabase } from '../../lib/supabase';
 import { useAuth } from '../../hooks/useAuth';
 import { validateCPF } from '../../utils/cpfValidation';
 
-interface ProfileManagementProps {
-  profile: any;
-  onUpdateProfile: (data: any) => void;
-}
+interface ProfileManagementProps {}
 
-const ProfileManagement: React.FC<ProfileManagementProps> = ({
-  profile,
-  onUpdateProfile
-}) => {
+const ProfileManagement: React.FC<ProfileManagementProps> = () => {
   const { t } = useTranslation(['dashboard', 'common']);
-  const { user } = useAuth();
+  const { user, userProfile, refetchUserProfile } = useAuth();
+
+  // Mapeia userProfile para a forma esperada pelo componente
+  const profile = userProfile ? {
+    name: userProfile.full_name || '',
+    email: (userProfile as any).email || user?.email || '',
+    phone: (userProfile as any).phone || '',
+    country: (userProfile as any).country || '',
+    field_of_interest: (userProfile as any).field_of_interest || '',
+    academic_level: (userProfile as any).academic_level || '',
+    gpa: (userProfile as any).gpa ?? null,
+    english_proficiency: (userProfile as any).english_proficiency || '',
+    cpf_document: (userProfile as any).cpf_document || '',
+    created_at: (userProfile as any).created_at,
+  } : null;
+
   const fileInputRef = useRef<HTMLInputElement>(null);
   const [isEditing, setIsEditing] = useState(false);
   const [uploading, setUploading] = useState(false);
@@ -79,12 +88,12 @@ const ProfileManagement: React.FC<ProfileManagementProps> = ({
          try {
        // Validate file type
        if (!file.type.startsWith('image/')) {
-         throw new Error(t('profileManagement.messages.invalidImageFile'));
+         throw new Error(t('studentDashboard.profileManagement.messages.invalidImageFile'));
        }
 
        // Validate file size (max 5MB)
        if (file.size > 5 * 1024 * 1024) {
-         throw new Error(t('profileManagement.messages.fileTooLarge'));
+         throw new Error(t('studentDashboard.profileManagement.messages.fileTooLarge'));
        }
 
        const fileExt = file.name.split('.').pop();
@@ -113,7 +122,7 @@ const ProfileManagement: React.FC<ProfileManagementProps> = ({
         .getPublicUrl(fileName);
 
       const publicUrl = publicUrlData?.publicUrl;
-      if (!publicUrl) throw new Error(t('profileManagement.messages.imageUrlError'));
+      if (!publicUrl) throw new Error(t('studentDashboard.profileManagement.messages.imageUrlError'));
 
       // Update user profile with new avatar URL using RPC function
       const { data: updateResult, error: updateError } = await supabase.rpc('update_user_avatar', {
@@ -124,19 +133,16 @@ const ProfileManagement: React.FC<ProfileManagementProps> = ({
       if (updateError) throw updateError;
       
       if (!updateResult?.success) {
-        throw new Error(updateResult?.message || t('profileManagement.messages.avatarUpdateError'));
+        throw new Error(updateResult?.message || t('studentDashboard.profileManagement.messages.avatarUpdateError'));
       }
 
 
       
-      // Call the parent component's update function
-      onUpdateProfile({ 
-        ...formData, 
-        avatar_url: publicUrl 
-      });
+      // Notificar atualização no contexto de auth
+      await refetchUserProfile();
 
     } catch (err: any) {
-      setUploadError(err.message || t('profileManagement.messages.uploadError'));
+      setUploadError(err.message || t('studentDashboard.profileManagement.messages.uploadError'));
     } finally {
       setUploading(false);
     }
@@ -155,7 +161,7 @@ const ProfileManagement: React.FC<ProfileManagementProps> = ({
     try {
       // Validate CPF if provided
       if (formData.cpf_document && !validateCPF(formData.cpf_document)) {
-        setCpfError(t('profileManagement.messages.invalidCPF'));
+        setCpfError(t('studentDashboard.profileManagement.messages.invalidCPF'));
         setSaving(false);
         return;
       }
@@ -166,15 +172,33 @@ const ProfileManagement: React.FC<ProfileManagementProps> = ({
           ? null
           : Math.min(4, Math.max(0, Math.round(parsedGpa * 100) / 100));
 
+      // Update no Supabase diretamente no componente
       const updatedData = {
         ...formData,
         gpa: normalizedGpa
       };
-      
-      await onUpdateProfile(updatedData);
+
+      const { error: updateError } = await supabase
+        .from('user_profiles')
+        .update({
+          full_name: updatedData.name,
+          phone: updatedData.phone,
+          country: updatedData.country,
+          field_of_interest: updatedData.field_of_interest,
+          academic_level: updatedData.academic_level,
+          gpa: updatedData.gpa,
+          english_proficiency: updatedData.english_proficiency,
+          cpf_document: updatedData.cpf_document,
+        })
+        .eq('user_id', user!.id);
+
+      if (updateError) throw updateError;
+
+      // Atualizar o contexto de auth com o novo perfil
+      await refetchUserProfile();
       
       setIsEditing(false);
-      setSuccessMessage(t('profileManagement.messages.profileUpdated'));
+      setSuccessMessage(t('studentDashboard.profileManagement.messages.profileUpdated'));
       
       // Clear success message after 5 seconds
       setTimeout(() => {
@@ -182,7 +206,7 @@ const ProfileManagement: React.FC<ProfileManagementProps> = ({
       }, 5000);
       
     } catch (err: any) {
-      setSaveError(err.message || t('profileManagement.messages.saveError'));
+      setSaveError(err.message || t('studentDashboard.profileManagement.messages.saveError'));
     } finally {
       setSaving(false);
     }
@@ -227,8 +251,8 @@ const ProfileManagement: React.FC<ProfileManagementProps> = ({
       {/* Header */}
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between space-y-4 sm:space-y-0">
         <div>
-          <h2 className="text-xl sm:text-2xl font-bold text-slate-900">{t('profileManagement.title')}</h2>
-          <p className="text-sm sm:text-base text-slate-600">{t('profileManagement.subtitle')}</p>
+          <h2 className="text-xl sm:text-2xl font-bold text-slate-900">{t('studentDashboard.profileManagement.title')}</h2>
+          <p className="text-sm sm:text-base text-slate-600">{t('studentDashboard.profileManagement.subtitle')}</p>
         </div>
         
         {!isEditing && (
@@ -241,7 +265,7 @@ const ProfileManagement: React.FC<ProfileManagementProps> = ({
             className="w-full sm:w-auto bg-blue-600 text-white px-4 sm:px-6 py-2.5 sm:py-3 rounded-xl hover:bg-blue-700 transition-colors font-medium flex items-center justify-center sm:justify-start shadow-lg hover:shadow-xl transform hover:scale-105"
           >
             <Edit className="h-4 w-4 mr-2" />
-            {t('profileManagement.editProfile')}
+            {t('studentDashboard.profileManagement.editProfile')}
           </button>
         )}
       </div>
@@ -252,12 +276,12 @@ const ProfileManagement: React.FC<ProfileManagementProps> = ({
         <div className="relative">
           <div className="flex items-center justify-between mb-6">
             <div>
-              <h3 className="text-2xl font-bold mb-2">{t('profileManagement.profileCompleteness.title')}</h3>
-              <p className="text-blue-100">{t('profileManagement.profileCompleteness.subtitle')}</p>
+              <h3 className="text-2xl font-bold mb-2">{t('studentDashboard.profileManagement.profileCompleteness.title')}</h3>
+              <p className="text-blue-100">{t('studentDashboard.profileManagement.profileCompleteness.subtitle')}</p>
             </div>
             <div className="text-right">
               <div className="text-4xl font-bold mb-2">{completeness}%</div>
-              <div className="text-blue-100 text-sm">{t('profileManagement.profileCompleteness.complete')}</div>
+              <div className="text-blue-100 text-sm">{t('studentDashboard.profileManagement.profileCompleteness.complete')}</div>
             </div>
           </div>
           
@@ -271,7 +295,7 @@ const ProfileManagement: React.FC<ProfileManagementProps> = ({
           {completeness < 100 && (
             <div className="flex items-center text-blue-100">
               <AlertCircle className="h-4 w-4 mr-2" />
-              <span className="text-sm">{t('profileManagement.profileCompleteness.improveMatching')}</span>
+              <span className="text-sm">{t('studentDashboard.profileManagement.profileCompleteness.improveMatching')}</span>
             </div>
           )}
         </div>
@@ -282,7 +306,7 @@ const ProfileManagement: React.FC<ProfileManagementProps> = ({
         {isEditing ? (
           <div className="p-4 sm:p-8">
             <div className="flex flex-col sm:flex-row sm:items-center justify-between space-y-4 sm:space-y-0 mb-6 sm:mb-8">
-              <h3 className="text-lg sm:text-xl font-bold text-slate-900">{t('profileManagement.form.editProfile')}</h3>
+              <h3 className="text-lg sm:text-xl font-bold text-slate-900">{t('studentDashboard.profileManagement.form.editProfile')}</h3>
               <div className="flex flex-col sm:flex-row space-y-3 sm:space-y-0 sm:space-x-3 w-full sm:w-auto">
                 <button
                   onClick={handleSave}
@@ -292,12 +316,12 @@ const ProfileManagement: React.FC<ProfileManagementProps> = ({
                   {saving ? (
                     <>
                       <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white mr-2"></div>
-                      {t('profileManagement.form.saving')}
+                      {t('studentDashboard.profileManagement.form.saving')}
                     </>
                   ) : (
                     <>
                       <Save className="h-4 w-4 mr-2" />
-                      {t('profileManagement.form.saveChanges')}
+                      {t('studentDashboard.profileManagement.form.saveChanges')}
                     </>
                   )}
                 </button>
@@ -307,26 +331,26 @@ const ProfileManagement: React.FC<ProfileManagementProps> = ({
                   className="w-full sm:w-auto bg-slate-100 text-slate-700 px-4 sm:px-6 py-2.5 sm:py-3 rounded-xl hover:bg-slate-200 transition-colors font-medium flex items-center justify-center disabled:opacity-50 disabled:cursor-not-allowed"
                 >
                   <X className="h-4 w-4 mr-2" />
-                  {t('profileManagement.form.cancel')}
+                  {t('studentDashboard.profileManagement.form.cancel')}
                 </button>
               </div>
             </div>
             
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 sm:gap-6">
               <div>
-                <label className="block text-sm font-medium text-slate-700 mb-2">{t('profileManagement.form.fullName')} *</label>
+                <label className="block text-sm font-medium text-slate-700 mb-2">{t('studentDashboard.profileManagement.form.fullName')} *</label>
                 <input
                   type="text"
                   value={formData.name}
                   onChange={(e) => handleInputChange('name', e.target.value)}
                   maxLength={100}
                   className="w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-600 focus:border-blue-600 transition-all duration-200"
-                  placeholder={t('profileManagement.form.placeholders.enterFullName')}
+                  placeholder={t('studentDashboard.profileManagement.form.placeholders.enterFullName')}
                 />
               </div>
 
               <div>
-                <label className="block text-sm font-medium text-slate-700 mb-2">{t('profileManagement.form.phoneNumber')} *</label>
+                <label className="block text-sm font-medium text-slate-700 mb-2">{t('studentDashboard.profileManagement.form.phoneNumber')} *</label>
                 <PhoneInput
                   international
                   defaultCountry="BR"
@@ -334,59 +358,59 @@ const ProfileManagement: React.FC<ProfileManagementProps> = ({
                   onChange={(value) => handleInputChange('phone', value || '')}
                   maxLength={25}
                   className="w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-600 focus:border-blue-600 transition-all duration-200"
-                  placeholder={t('profileManagement.form.placeholders.phoneExample')}
+                  placeholder={t('studentDashboard.profileManagement.form.placeholders.phoneExample')}
                   limitMaxLength
                 />
               </div>
 
               <div>
-                <label className="block text-sm font-medium text-slate-700 mb-2">{t('profileManagement.form.country')} *</label>
+                <label className="block text-sm font-medium text-slate-700 mb-2">{t('studentDashboard.profileManagement.form.country')} *</label>
                 <input
                   type="text"
                   value={formData.country}
                   onChange={(e) => handleInputChange('country', e.target.value)}
                   maxLength={50}
                   className="w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-600 focus:border-blue-600 transition-all duration-200"
-                  placeholder={t('profileManagement.form.placeholders.yourCountry')}
+                  placeholder={t('studentDashboard.profileManagement.form.placeholders.yourCountry')}
                 />
               </div>
 
               <div>
-                <label className="block text-sm font-medium text-slate-700 mb-2">{t('profileManagement.form.fieldOfInterest')}</label>
+                <label className="block text-sm font-medium text-slate-700 mb-2">{t('studentDashboard.profileManagement.form.fieldOfInterest')}</label>
                 <select
                   value={formData.field_of_interest}
                   onChange={(e) => handleInputChange('field_of_interest', e.target.value)}
                   className="w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-600 focus:border-blue-600 transition-all duration-200"
                 >
-                  <option value="">{t('profileManagement.form.placeholders.selectField')}</option>
-                  <option value="engineering">{t('profileManagement.form.fields.engineering')}</option>
-                  <option value="business">{t('profileManagement.form.fields.business')}</option>
-                  <option value="computer-science">{t('profileManagement.form.fields.computerScience')}</option>
-                  <option value="medicine">{t('profileManagement.form.fields.medicine')}</option>
-                  <option value="law">{t('profileManagement.form.fields.law')}</option>
-                  <option value="arts">{t('profileManagement.form.fields.arts')}</option>
-                  <option value="sciences">{t('profileManagement.form.fields.sciences')}</option>
-                  <option value="other">{t('profileManagement.form.fields.other')}</option>
+                  <option value="">{t('studentDashboard.profileManagement.form.placeholders.selectField')}</option>
+                  <option value="engineering">{t('studentDashboard.profileManagement.form.fields.engineering')}</option>
+                  <option value="business">{t('studentDashboard.profileManagement.form.fields.business')}</option>
+                  <option value="computer-science">{t('studentDashboard.profileManagement.form.fields.computerScience')}</option>
+                  <option value="medicine">{t('studentDashboard.profileManagement.form.fields.medicine')}</option>
+                  <option value="law">{t('studentDashboard.profileManagement.form.fields.law')}</option>
+                  <option value="arts">{t('studentDashboard.profileManagement.form.fields.arts')}</option>
+                  <option value="sciences">{t('studentDashboard.profileManagement.form.fields.sciences')}</option>
+                  <option value="other">{t('studentDashboard.profileManagement.form.fields.other')}</option>
                 </select>
               </div>
 
               <div>
-                <label className="block text-sm font-medium text-slate-700 mb-2">{t('profileManagement.form.academicLevel')}</label>
+                <label className="block text-sm font-medium text-slate-700 mb-2">{t('studentDashboard.profileManagement.form.academicLevel')}</label>
                 <select
                   value={formData.academic_level}
                   onChange={(e) => handleInputChange('academic_level', e.target.value)}
                   className="w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-600 focus:border-blue-600 transition-all duration-200"
                 >
-                  <option value="">{t('profileManagement.form.placeholders.selectLevel')}</option>
-                  <option value="high-school">{t('profileManagement.form.fields.highSchool')}</option>
-                  <option value="undergraduate">{t('profileManagement.form.fields.undergraduate')}</option>
-                  <option value="graduate">{t('profileManagement.form.fields.graduate')}</option>
-                  <option value="doctorate">{t('profileManagement.form.fields.doctorate')}</option>
+                  <option value="">{t('studentDashboard.profileManagement.form.placeholders.selectLevel')}</option>
+                  <option value="high-school">{t('studentDashboard.profileManagement.form.fields.highSchool')}</option>
+                  <option value="undergraduate">{t('studentDashboard.profileManagement.form.fields.undergraduate')}</option>
+                  <option value="graduate">{t('studentDashboard.profileManagement.form.fields.graduate')}</option>
+                  <option value="doctorate">{t('studentDashboard.profileManagement.form.fields.doctorate')}</option>
                 </select>
               </div>
 
               <div>
-                <label className="block text-sm font-medium text-slate-700 mb-2">{t('profileManagement.form.gpa')}</label>
+                <label className="block text-sm font-medium text-slate-700 mb-2">{t('studentDashboard.profileManagement.form.gpa')}</label>
                 <input
                   type="number"
                   step="0.1"
@@ -400,24 +424,24 @@ const ProfileManagement: React.FC<ProfileManagementProps> = ({
               </div>
 
               <div>
-                <label className="block text-sm font-medium text-slate-700 mb-2">{t('profileManagement.form.englishProficiency')}</label>
+                <label className="block text-sm font-medium text-slate-700 mb-2">{t('studentDashboard.profileManagement.form.englishProficiency')}</label>
                 <select
                   value={formData.english_proficiency}
                   onChange={(e) => handleInputChange('english_proficiency', e.target.value)}
                   className="w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-600 focus:border-blue-600 transition-all duration-200"
                 >
-                  <option value="">{t('profileManagement.form.placeholders.selectProficiency')}</option>
-                  <option value="beginner">{t('profileManagement.form.fields.beginner')}</option>
-                  <option value="intermediate">{t('profileManagement.form.fields.intermediate')}</option>
-                  <option value="advanced">{t('profileManagement.form.fields.advanced')}</option>
-                  <option value="native">{t('profileManagement.form.fields.native')}</option>
-                  <option value="toefl">{t('profileManagement.form.fields.toefl')}</option>
-                  <option value="ielts">{t('profileManagement.form.fields.ielts')}</option>
+                  <option value="">{t('studentDashboard.profileManagement.form.placeholders.selectProficiency')}</option>
+                  <option value="beginner">{t('studentDashboard.profileManagement.form.fields.beginner')}</option>
+                  <option value="intermediate">{t('studentDashboard.profileManagement.form.fields.intermediate')}</option>
+                  <option value="advanced">{t('studentDashboard.profileManagement.form.fields.advanced')}</option>
+                  <option value="native">{t('studentDashboard.profileManagement.form.fields.native')}</option>
+                  <option value="toefl">{t('studentDashboard.profileManagement.form.fields.toefl')}</option>
+                  <option value="ielts">{t('studentDashboard.profileManagement.form.fields.ielts')}</option>
                 </select>
               </div>
 
               <div>
-                <label className="block text-sm font-medium text-slate-700 mb-2">{t('profileManagement.form.cpfDocument')}</label>
+                <label className="block text-sm font-medium text-slate-700 mb-2">{t('studentDashboard.profileManagement.form.cpfDocument')}</label>
                 <InputMask
                   mask="999.999.999-99"
                   value={formData.cpf_document}
@@ -430,7 +454,7 @@ const ProfileManagement: React.FC<ProfileManagementProps> = ({
                 {cpfError && (
                   <p className="mt-1 text-sm text-red-600">{cpfError}</p>
                 )}
-                <p className="mt-1 text-xs text-slate-500">{t('profileManagement.form.cpfHelper')}</p>
+                <p className="mt-1 text-xs text-slate-500">{t('studentDashboard.profileManagement.form.cpfHelper')}</p>
               </div>
             </div>
           </div>
@@ -443,7 +467,7 @@ const ProfileManagement: React.FC<ProfileManagementProps> = ({
                   {user?.avatar_url ? (
                     <img 
                       src={user.avatar_url} 
-                      alt={profile?.name || t('profileManagement.status.studentName')} 
+                      alt={profile?.name || t('studentDashboard.profileManagement.status.studentName')} 
                       className="w-full h-full object-cover"
                     />
                   ) : (
@@ -454,7 +478,7 @@ const ProfileManagement: React.FC<ProfileManagementProps> = ({
                   onClick={handleCameraClick}
                   disabled={uploading}
                   className="absolute -bottom-2 -right-2 w-8 h-8 bg-white text-blue-600 rounded-lg flex items-center justify-center shadow-lg hover:scale-110 transition-transform duration-300 border border-slate-200 disabled:opacity-50 disabled:cursor-not-allowed"
-                  title={t('profileManagement.messages.changeProfilePicture')}
+                  title={t('studentDashboard.profileManagement.messages.changeProfilePicture')}
                 >
                   {uploading ? (
                     <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-blue-600"></div>
@@ -472,16 +496,16 @@ const ProfileManagement: React.FC<ProfileManagementProps> = ({
               </div>
               
               <div>
-                <h3 className="text-2xl font-bold text-slate-900 mb-2">{profile?.name || t('profileManagement.status.studentName')}</h3>
+                <h3 className="text-2xl font-bold text-slate-900 mb-2">{profile?.name || t('studentDashboard.profileManagement.status.studentName')}</h3>
                 <p className="text-slate-600 mb-3">{profile?.email}</p>
                 <div className="flex items-center space-x-4">
                   <span className="inline-flex items-center px-3 py-1 rounded-full text-sm font-medium bg-blue-100 text-blue-800">
                     <Star className="h-3 w-3 mr-1" />
-                    {t('profileManagement.status.activeStudent')}
+                    {t('studentDashboard.profileManagement.status.activeStudent')}
                   </span>
                   <span className="inline-flex items-center px-3 py-1 rounded-full text-sm font-medium bg-green-100 text-green-800">
                     <CheckCircle className="h-3 w-3 mr-1" />
-                    {t('profileManagement.status.verified')}
+                    {t('studentDashboard.profileManagement.status.verified')}
                   </span>
                 </div>
               </div>
@@ -520,20 +544,20 @@ const ProfileManagement: React.FC<ProfileManagementProps> = ({
             {/* Profile Information */}
             <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
               <div>
-                <h4 className="text-lg font-bold text-slate-900 mb-6">{t('profileManagement.sections.personalInformation')}</h4>
+                <h4 className="text-lg font-bold text-slate-900 mb-6">{t('studentDashboard.profileManagement.sections.personalInformation')}</h4>
                 <div className="space-y-4">
                   <div className="flex items-center">
                     <User className="h-5 w-5 text-slate-400 mr-3" />
                     <div>
-                      <label className="text-sm font-medium text-slate-500">{t('profileManagement.labels.fullName')}</label>
-                      <p className="text-slate-900">{profile?.name || t('profileManagement.status.notProvided')}</p>
+                      <label className="text-sm font-medium text-slate-500">{t('studentDashboard.profileManagement.labels.fullName')}</label>
+                      <p className="text-slate-900">{profile?.name || t('studentDashboard.profileManagement.status.notProvided')}</p>
                     </div>
                   </div>
                   
                   <div className="flex items-center">
                     <Mail className="h-5 w-5 text-slate-400 mr-3" />
                     <div>
-                      <label className="text-sm font-medium text-slate-500">{t('profileManagement.labels.email')}</label>
+                      <label className="text-sm font-medium text-slate-500">{t('studentDashboard.profileManagement.labels.email')}</label>
                       <p className="text-slate-900">{profile?.email}</p>
                     </div>
                   </div>
@@ -541,61 +565,61 @@ const ProfileManagement: React.FC<ProfileManagementProps> = ({
                   <div className="flex items-center">
                     <Phone className="h-5 w-5 text-slate-400 mr-3" />
                     <div>
-                      <label className="text-sm font-medium text-slate-500">{t('profileManagement.labels.phone')}</label>
-                      <p className="text-slate-900">{profile?.phone || t('profileManagement.status.notProvided')}</p>
+                      <label className="text-sm font-medium text-slate-500">{t('studentDashboard.profileManagement.labels.phone')}</label>
+                      <p className="text-slate-900">{profile?.phone || t('studentDashboard.profileManagement.status.notProvided')}</p>
                     </div>
                   </div>
                   
                   <div className="flex items-center">
                     <MapPin className="h-5 w-5 text-slate-400 mr-3" />
                     <div>
-                      <label className="text-sm font-medium text-slate-500">{t('profileManagement.labels.country')}</label>
-                      <p className="text-slate-900">{profile?.country || t('profileManagement.status.notProvided')}</p>
+                      <label className="text-sm font-medium text-slate-500">{t('studentDashboard.profileManagement.labels.country')}</label>
+                      <p className="text-slate-900">{profile?.country || t('studentDashboard.profileManagement.status.notProvided')}</p>
                     </div>
                   </div>
                   
                   <div className="flex items-center">
                     <User className="h-5 w-5 text-slate-400 mr-3" />
                     <div>
-                      <label className="text-sm font-medium text-slate-500">{t('profileManagement.form.cpfDocument')}</label>
-                      <p className="text-slate-900">{profile?.cpf_document || t('profileManagement.status.notProvided')}</p>
+                      <label className="text-sm font-medium text-slate-500">{t('studentDashboard.profileManagement.form.cpfDocument')}</label>
+                      <p className="text-slate-900">{profile?.cpf_document || t('studentDashboard.profileManagement.status.notProvided')}</p>
                     </div>
                   </div>
                 </div>
               </div>
 
               <div>
-                <h4 className="text-lg font-bold text-slate-900 mb-6">{t('profileManagement.sections.academicInformation')}</h4>
+                <h4 className="text-lg font-bold text-slate-900 mb-6">{t('studentDashboard.profileManagement.sections.academicInformation')}</h4>
                 <div className="space-y-4">
                   <div className="flex items-center">
                     <BookOpen className="h-5 w-5 text-slate-400 mr-3" />
                     <div>
-                      <label className="text-sm font-medium text-slate-500">{t('profileManagement.labels.fieldOfInterest')}</label>
-                      <p className="text-slate-900">{profile?.field_of_interest || t('profileManagement.status.notProvided')}</p>
+                      <label className="text-sm font-medium text-slate-500">{t('studentDashboard.profileManagement.labels.fieldOfInterest')}</label>
+                      <p className="text-slate-900">{profile?.field_of_interest || t('studentDashboard.profileManagement.status.notProvided')}</p>
                     </div>
                   </div>
                   
                   <div className="flex items-center">
                     <GraduationCap className="h-5 w-5 text-slate-400 mr-3" />
                     <div>
-                      <label className="text-sm font-medium text-slate-500">{t('profileManagement.labels.academicLevel')}</label>
-                      <p className="text-slate-900">{profile?.academic_level || t('profileManagement.status.notProvided')}</p>
+                      <label className="text-sm font-medium text-slate-500">{t('studentDashboard.profileManagement.labels.academicLevel')}</label>
+                      <p className="text-slate-900">{profile?.academic_level || t('studentDashboard.profileManagement.status.notProvided')}</p>
                     </div>
                   </div>
                   
                   <div className="flex items-center">
                     <Award className="h-5 w-5 text-slate-400 mr-3" />
                     <div>
-                      <label className="text-sm font-medium text-slate-500">{t('profileManagement.labels.gpa')}</label>
-                      <p className="text-slate-900">{profile?.gpa || t('profileManagement.status.notProvided')}</p>
+                      <label className="text-sm font-medium text-slate-500">{t('studentDashboard.profileManagement.labels.gpa')}</label>
+                      <p className="text-slate-900">{profile?.gpa || t('studentDashboard.profileManagement.status.notProvided')}</p>
                     </div>
                   </div>
                   
                   <div className="flex items-center">
                     <Globe className="h-5 w-5 text-slate-400 mr-3" />
                     <div>
-                      <label className="text-sm font-medium text-slate-500">{t('profileManagement.labels.englishProficiency')}</label>
-                      <p className="text-slate-900">{profile?.english_proficiency || t('profileManagement.status.notProvided')}</p>
+                      <label className="text-sm font-medium text-slate-500">{t('studentDashboard.profileManagement.labels.englishProficiency')}</label>
+                      <p className="text-slate-900">{profile?.english_proficiency || t('studentDashboard.profileManagement.status.notProvided')}</p>
                     </div>
                   </div>
                 </div>
@@ -604,14 +628,14 @@ const ProfileManagement: React.FC<ProfileManagementProps> = ({
 
             {/* Account Information */}
             <div className="mt-8 pt-8 border-t border-slate-200">
-              <h4 className="text-lg font-bold text-slate-900 mb-6">{t('profileManagement.sections.accountInformation')}</h4>
+              <h4 className="text-lg font-bold text-slate-900 mb-6">{t('studentDashboard.profileManagement.sections.accountInformation')}</h4>
               <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                 <div className="flex items-center">
                   <Calendar className="h-5 w-5 text-slate-400 mr-3" />
                   <div>
-                    <label className="text-sm font-medium text-slate-500">{t('profileManagement.labels.memberSince')}</label>
+                    <label className="text-sm font-medium text-slate-500">{t('studentDashboard.profileManagement.labels.memberSince')}</label>
                     <p className="text-slate-900">
-                      {profile?.created_at ? new Date(profile.created_at).toLocaleDateString() : t('profileManagement.status.unknown')}
+                      {profile?.created_at ? new Date(profile.created_at).toLocaleDateString() : t('studentDashboard.profileManagement.status.unknown')}
                     </p>
                   </div>
                 </div>
@@ -619,7 +643,7 @@ const ProfileManagement: React.FC<ProfileManagementProps> = ({
                 <div className="flex items-center">
                   <Target className="h-5 w-5 text-slate-400 mr-3" />
                   <div>
-                    <label className="text-sm font-medium text-slate-500">{t('profileManagement.labels.profileCompleteness')}</label>
+                    <label className="text-sm font-medium text-slate-500">{t('studentDashboard.profileManagement.labels.profileCompleteness')}</label>
                     <p className="text-slate-900">{completeness}%</p>
                   </div>
                 </div>
@@ -635,39 +659,39 @@ const ProfileManagement: React.FC<ProfileManagementProps> = ({
           <div className="flex flex-col sm:flex-row sm:items-start space-y-3 sm:space-y-0">
             <AlertCircle className="h-5 w-5 text-yellow-600 mx-auto sm:mx-0 sm:mr-3 sm:mt-0.5" />
             <div className="text-center sm:text-left">
-              <h4 className="font-medium text-yellow-800 mb-2">{t('profileManagement.tips.completeProfile')}</h4>
+              <h4 className="font-medium text-yellow-800 mb-2">{t('studentDashboard.profileManagement.tips.completeProfile')}</h4>
               <p className="text-sm text-yellow-700 mb-4">
-                {t('profileManagement.tips.description')}
+                {t('studentDashboard.profileManagement.tips.description')}
               </p>
               <div className="flex flex-wrap justify-center sm:justify-start gap-2">
                 {!profile?.phone && (
                   <span className="bg-yellow-100 text-yellow-800 px-2.5 py-1 rounded-lg text-xs font-medium">
-                    {t('profileManagement.tips.addPhoneNumber')}
+                    {t('studentDashboard.profileManagement.tips.addPhoneNumber')}
                   </span>
                 )}
                 {!profile?.country && (
                   <span className="bg-yellow-100 text-yellow-800 px-2.5 py-1 rounded-lg text-xs font-medium">
-                    {t('profileManagement.tips.addCountry')}
+                    {t('studentDashboard.profileManagement.tips.addCountry')}
                   </span>
                 )}
                 {!profile?.field_of_interest && (
                   <span className="bg-yellow-100 text-yellow-800 px-2 py-1 rounded-lg text-xs font-medium">
-                    {t('profileManagement.tips.addFieldOfInterest')}
+                    {t('studentDashboard.profileManagement.tips.addFieldOfInterest')}
                   </span>
                 )}
                 {!profile?.academic_level && (
                   <span className="bg-yellow-100 text-yellow-800 px-2 py-1 rounded-lg text-xs font-medium">
-                    {t('profileManagement.tips.addAcademicLevel')}
+                    {t('studentDashboard.profileManagement.tips.addAcademicLevel')}
                   </span>
                 )}
                 {!profile?.gpa && (
                   <span className="bg-yellow-100 text-yellow-800 px-2 py-1 rounded-lg text-xs font-medium">
-                    {t('profileManagement.tips.addGpa')}
+                    {t('studentDashboard.profileManagement.tips.addGpa')}
                   </span>
                 )}
                 {!profile?.english_proficiency && (
                   <span className="bg-yellow-100 text-yellow-800 px-2 py-1 rounded-lg text-xs font-medium">
-                    {t('profileManagement.tips.addEnglishProficiency')}
+                    {t('studentDashboard.profileManagement.tips.addEnglishProficiency')}
                   </span>
                 )}
               </div>
