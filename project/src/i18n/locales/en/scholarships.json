@@ -162,7 +162,7 @@
   "scholarshipSelection": {
     "header": {
       "title": "Scholarship Selection",
-      "subtitle": "Browse through the scholarships and select which ones you would like to enroll in. You must choose at least one to proceed."
+      "subtitle": "Browse through the scholarships and select which ones you would like to enroll in (maximum of 4). You must choose at least one to proceed."
     },
     "errors": {
       "loadError": "Error loading scholarships. Please try again.",

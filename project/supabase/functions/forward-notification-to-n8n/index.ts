@@ -50,7 +50,7 @@ Deno.serve(async (req: Request) => {
   // Selecionar URL de destino com base no campo `target`
   const N8N_URLS: Record<string, string> = {
     default: 'https://nwh.suaiden.com/webhook/notfmatriculausa',
-    abandoned_cart: 'https://n8n.suaiden.com/webhook-test/carrinho-perdido',
+    abandoned_cart: 'https://nwh.suaiden.com/webhook/carrinho-perdido',
   };
   const target = body?.target ?? 'default';
   const n8nUrl = N8N_URLS[target] ?? N8N_URLS.default;
