@@ -200,14 +200,14 @@ export const useOnboardingProgress = () => {
           currentCart.length > 0 ||
           (appsData && appsData.length > 0) ||
           !!freshProfile.selected_scholarship_id ||
-          (freshProfile.student_process_type && ['initial', 'transfer', 'change_of_status'].includes(freshProfile.student_process_type))
+          (freshProfile.student_process_type && ['initial', 'transfer', 'change_of_status', 'resident'].includes(freshProfile.student_process_type))
         );
       }
 
       // 3. Verificação do Tipo de Processo Escolhido (Initial, Transfer, etc)
       const processTypeSelected =
         (appsData && appsData.length > 0 && !!appsData[0].student_process_type) ||
-        (freshProfile.student_process_type && ['initial', 'transfer', 'change_of_status'].includes(freshProfile.student_process_type)) ||
+        (freshProfile.student_process_type && ['initial', 'transfer', 'change_of_status', 'resident'].includes(freshProfile.student_process_type)) ||
         (freshProfile.documents_uploaded || false);
 
       // 4. Verificação de Documentos (Envio e Status de Aprovação)
@@ -236,9 +236,8 @@ export const useOnboardingProgress = () => {
       else if (!documentsUploaded) maxAllowedStep = 'documents_upload'; // Exige apenas o envio para liberar pagamentos
       else if (!applicationFeePaid) maxAllowedStep = 'payment';
       else if (isNewFlowUser && !placementFeePaid) maxAllowedStep = 'placement_fee';
-      else if (!isNewFlowUser && !scholarshipFeePaid) maxAllowedStep = 'scholarship_fee';
+      else if (!isNewFlowUser && !scholarshipFeePaid && freshProfile.student_process_type !== 'resident') maxAllowedStep = 'scholarship_fee';
       else if (isTransferInactive && !reinstatementFeePaid) maxAllowedStep = 'reinstatement_fee';
-      else if (!documentsApproved) maxAllowedStep = 'documents_upload'; // Trava final: para ver aplicações, precisa de aprovação
       else maxAllowedStep = 'my_applications';
 
       // DECISÃO FINAL DE PASSO A REPRESENTAR NA UI

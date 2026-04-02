@@ -150,9 +150,9 @@
       "universityInternalFees": "University Internal Fees",
       "viewUniversityFeesPage": "View University Fees Page",
       "internalFeesConditionalNote": "The fee depends on the student's process or visa type and then corresponds with the fee",
-      "i539COSPackage": "I539 Package Fee",
-      "ds160Package": "DS160 Package Fee - INITIAL",
-      "reinstatementPackage": "Reinstatement Fee",
+      "i539COSPackage": "I-539 COS Package",
+      "ds160Package": "DS-160 Package",
+      "reinstatementPackage": "Reinstatement",
       "i539PackageDescription": "Fee required for students requesting Change of Status (COS)",
       "ds160PackageDescription": "Fee required for students requesting Transfer",
       "reinstatementPackageDescription": "Fee required for transfer students who have an inactive/terminated visa status.",
@@ -162,7 +162,7 @@
   "scholarshipSelection": {
     "header": {
       "title": "Scholarship Selection",
-      "subtitle": "Browse through the scholarships and select which ones you would like to enroll in. You must choose at least one to proceed."
+      "subtitle": "Browse through the scholarships and select which ones you would like to enroll in (maximum of 4). You must choose at least one to proceed."
     },
     "errors": {
       "loadError": "Error loading scholarships. Please try again.",

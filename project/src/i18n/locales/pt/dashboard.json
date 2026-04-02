@@ -851,6 +851,11 @@
           "description": "Agora, a faculdade está validando as informações. Volte em até 24 horas para baixar e preencher seus formulários de matrícula.",
           "button": "Ver Recibo"
         },
+        "pendingDocs": {
+          "title": "Ação Necessária: Documentos Pendentes",
+          "description": "Sua universidade solicitou documentos adicionais. Por favor, revise e envie-os para continuar seu processo.",
+          "button": "Enviar Documentos"
+        },
         "initialAnalysis": {
           "title": "AGUARDANDO FORMULÁRIOS DE MATRÍCULA",
           "description": "Próximo Passo: Em até 24 horas você receberá seus formulários de matrícula. Fique atento a esta página para baixar os arquivos, preenchê-los e nos enviar de volta para finalizarmos sua Carta de Aceite!",

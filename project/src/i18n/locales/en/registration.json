@@ -144,6 +144,10 @@
         "changeOfStatus": {
           "label": "Change of Status",
           "description": "You have another type of visa (B-2, H-1B, etc.) and wish to change to F-1."
+        },
+        "resident": {
+          "label": "Resident",
+          "description": "You already have U.S. citizenship or permanent residence (Green Card)."
         }
       },
       "activeStatus": {
@@ -325,8 +329,17 @@
         "options": {
           "initial": "Initial (outside the US, applying for visa/entry with F-1)",
           "cos": "COS (Change of Status: in the US, changing to F-1 status)",
+          "resident": "Resident (U.S. Citizen or Green Card holder)",
           "transfer": "Transfer (has/had I-20 and will transfer schools)",
           "nao_sei": "I don't know (I need guidance)"
+        },
+        "errorNaoSei": "Please select your actual profile (Initial, Transfer, or COS) to continue."
+      },
+      "5_1": {
+        "text": "Is your status active?",
+        "options": {
+          "sim": "Yes",
+          "nao": "No (terminated/cancelled)"
         }
       },
       "6": {

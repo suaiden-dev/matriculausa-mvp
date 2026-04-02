@@ -330,14 +330,14 @@
       "exampleAlt": "Ejemplo de foto com documento",
       "uploading": "Subiendo foto...",
       "clickToUpload": "Haz clic para subir la foto",
-      "fileTypes": "JPG o PNG (máximo 5MB)",
+      "fileTypes": "JPG o PNG (máximo 20MB)",
       "success": "Foto subida con éxito",
       "preview": "Vista previa de la foto",
       "previewAlt": "Vista previa de la foto de identidad",
       "remove": "Eliminar",
       "errors": {
         "onlyImages": "Solo se permiten archivos JPG y PNG",
-        "maxSize": "El archivo debe tener un máximo de 5MB",
+        "maxSize": "El archivo debe tener un máximo de 20MB",
         "generic": "Error al subir la foto",
         "unauthenticated": "Usuario no autenticado"
       }

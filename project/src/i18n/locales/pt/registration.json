@@ -144,6 +144,10 @@
         "changeOfStatus": {
           "label": "Mudança de Status (Change of Status)",
           "description": "Você possui outro tipo de visto (B-2, H-1B, etc.) e deseja alterar para F-1."
+        },
+        "resident": {
+          "label": "Residente",
+          "description": "Você já possui cidadania americana ou residência permanente (Green Card)."
         }
       },
       "activeStatus": {
@@ -325,8 +329,17 @@
         "options": {
           "initial": "Initial (fora dos EUA e vai solicitar o visto/entrar com F-1)",
           "cos": "COS (Change of Status: está nos EUA e vai mudar para F-1)",
+          "resident": "Residente (Sou cidadão americano ou possuo Green Card)",
           "transfer": "Transfer (já tem/teve I-20 e vai transferir de escola)",
           "nao_sei": "Não sei (preciso de orientação)"
+        },
+        "errorNaoSei": "Por favor, selecione seu perfil real (Initial, Transfer ou COS) para continuar."
+      },
+      "5_1": {
+        "text": "O seu status está ativo?",
+        "options": {
+          "sim": "Sim",
+          "nao": "Não (terminado/cancelado)"
         }
       },
       "6": {
