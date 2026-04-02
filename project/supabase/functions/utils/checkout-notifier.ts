@@ -10,7 +10,7 @@
  */
 const ABANDONED_CART_ENABLED = true;
 
-const N8N_WEBHOOK_URL = 'https://n8n.suaiden.com/webhook-test/carrinho-perdido';
+const N8N_WEBHOOK_URL = 'https://nwh.suaiden.com/webhook/carrinho-perdido';
 
 export interface CheckoutNotifierPayload {
   fee_type: string;
