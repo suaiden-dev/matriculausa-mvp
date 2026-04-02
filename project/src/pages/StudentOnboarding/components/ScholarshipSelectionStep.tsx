@@ -56,13 +56,15 @@ export const ScholarshipSelectionStep: React.FC<StepProps> = ({ onNext, onBack: 
     }
   }, [user?.id, fetchCart]);
 
-  // isLocked: o usuário já escolheu o tipo de processo (passou da seleção de bolsas)
-  // Derivado diretamente do perfil — sem query adicional
+  // isLocked: o usuário já concluiu o fluxo completo de seleção de bolsas.
+  // Critério correto: tem process_type definido E tem scholarship_applications reais no banco.
+  // NÃO usar cart.length (temporário) pois causaria auto-avanço ao clicar em qualquer bolsa.
   const isLocked = useMemo(() => {
     if (!userProfile?.has_paid_selection_process_fee) return false;
-    return !!(userProfile?.student_process_type &&
-      ['initial', 'transfer', 'change_of_status'].includes(userProfile.student_process_type));
-  }, [userProfile?.has_paid_selection_process_fee, userProfile?.student_process_type]);
+    // Documentos enviados = passou por todo o fluxo (bolsas + process_type + docs)
+    if (userProfile?.documents_uploaded) return true;
+    return false;
+  }, [userProfile?.has_paid_selection_process_fee, userProfile?.documents_uploaded]);
 
   useEffect(() => {
     // Sincronizar selectedIds com cart
