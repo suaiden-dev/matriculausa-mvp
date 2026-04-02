@@ -26,6 +26,7 @@ import { useCartStore } from '../../../stores/applicationStore';
 import { getN8nProxyUrl } from '../../../utils/storageProxy';
 import { getPlacementFee } from '../../../utils/placementFeeCalculator';
 import { formatCurrency } from '../../../utils/currency';
+import { compressImage } from '../../../utils/imageCompression';
 import TruncatedText from '../../../components/TruncatedText';
 import ScholarshipDetailModal from '../../../components/ScholarshipDetailModal';
 
@@ -139,13 +140,13 @@ export const DocumentsUploadStep: React.FC<StepProps> = ({ onNext }) => {
   };
 
   const validateFileSize = (file: File): boolean => {
-    const maxSize = 10 * 1024 * 1024; // 10MB
+    const maxSize = 20 * 1024 * 1024; // 20MB
     return file.size <= maxSize;
   };
 
   const validateTotalSize = (filesList: File[]): boolean => {
     const totalSize = filesList.reduce((sum, file) => sum + file.size, 0);
-    const maxTotalSize = 10 * 1024 * 1024; // 10MB
+    const maxTotalSize = 20 * 1024 * 1024; // 20MB
     return totalSize <= maxTotalSize;
   };
 
@@ -180,10 +181,10 @@ export const DocumentsUploadStep: React.FC<StepProps> = ({ onNext }) => {
     }
   };
 
-  const handleFileChange = (key: string, file: File | null) => {
+  const handleFileChange = async (key: string, file: File | null) => {
     if (isLocked) return;
     if (file && !validateFileSize(file)) {
-      setFieldErrors(prev => ({ ...prev, [key]: 'File size exceeds 10MB' }));
+      setFieldErrors(prev => ({ ...prev, [key]: 'File size exceeds 20MB' }));
       // Limpar erro após 4 segundos
       setTimeout(() => {
         setFieldErrors(prev => {
@@ -195,7 +196,8 @@ export const DocumentsUploadStep: React.FC<StepProps> = ({ onNext }) => {
       return;
     }
     setFieldErrors(prev => { const next = { ...prev }; delete next[key]; return next; });
-    setFiles(prev => ({ ...prev, [key]: file }));
+    const fileToStore = file ? await compressImage(file) : null;
+    setFiles(prev => ({ ...prev, [key]: fileToStore }));
   };
 
   const handleFundsFileAdd = (newFiles: File[]) => {
@@ -216,7 +218,7 @@ export const DocumentsUploadStep: React.FC<StepProps> = ({ onNext }) => {
     }
     const oversizedFiles = newFiles.filter(f => !validateFileSize(f));
     if (oversizedFiles.length > 0) {
-      setFieldErrors(prev => ({ ...prev, funds_proof: 'Each file must be under 10MB' }));
+      setFieldErrors(prev => ({ ...prev, funds_proof: 'Each file must be under 20MB' }));
       // Limpar erro após 4 segundos
       setTimeout(() => {
         setFieldErrors(prev => {
@@ -229,7 +231,7 @@ export const DocumentsUploadStep: React.FC<StepProps> = ({ onNext }) => {
     }
     const combinedFiles = [...currentFiles, ...newFiles];
     if (!validateTotalSize(combinedFiles)) {
-      setFieldErrors(prev => ({ ...prev, funds_proof: 'Total file size exceeds 10MB' }));
+      setFieldErrors(prev => ({ ...prev, funds_proof: 'Total file size exceeds 20MB' }));
       // Limpar erro após 4 segundos
       setTimeout(() => {
         setFieldErrors(prev => {
@@ -1176,7 +1178,7 @@ export const DocumentsUploadStep: React.FC<StepProps> = ({ onNext }) => {
                               <p className={`text-xs md:text-sm font-black uppercase tracking-widest ${hasError ? 'text-red-700' : 'text-blue-700'}`}>
                                 {hasError ? fieldErrors[doc.key] : t('studentDashboard.documentsAndScholarshipChoice.dragDropFiles')}
                               </p>
-                              <p className="text-[10px] text-gray-400 font-bold uppercase tracking-widest mt-2">{processType} Limit: {documentLimit} {t('studentDashboard.documentsAndScholarshipChoice.documents')} (Max 10MB Total)</p>
+                              <p className="text-[10px] text-gray-400 font-bold uppercase tracking-widest mt-2">{processType} Limit: {documentLimit} {t('studentDashboard.documentsAndScholarshipChoice.documents')} (Max 20MB Total)</p>
                             </div>
                           </div>
 
