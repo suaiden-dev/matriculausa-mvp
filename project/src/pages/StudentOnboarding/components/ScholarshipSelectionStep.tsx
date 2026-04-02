@@ -1,4 +1,5 @@
 import React, { useState, useEffect, useMemo, useCallback } from 'react';
+import ReactDOM from 'react-dom';
 import { Award, Building, DollarSign, X, CheckCircle2, Info, Search, GraduationCap, BookOpen, Monitor, Briefcase, ChevronDown, ChevronUp, Filter } from 'lucide-react';
 import { useAuth } from '../../../hooks/useAuth';
 import { useCartStore } from '../../../stores/applicationStore';
@@ -577,7 +578,7 @@ export const ScholarshipSelectionStep: React.FC<StepProps> = ({ onNext, onBack: 
   const renderReviewStep = () => {
     return (
       <div className="w-full h-full flex flex-col">
-        <div className="max-w-4xl mx-auto w-full px-4">
+        <div className="max-w-4xl mx-auto w-full px-4 pb-48 sm:pb-0">
           <h1 className="text-center md:text-left text-2xl sm:text-4xl font-black mb-4 text-slate-900 uppercase tracking-tighter">
             <span>{t('scholarshipSelection.review.title')}</span>
           </h1>
@@ -629,7 +630,7 @@ export const ScholarshipSelectionStep: React.FC<StepProps> = ({ onNext, onBack: 
                                 className="flex-shrink-0 p-2.5 rounded-xl hover:bg-red-50 text-slate-400 hover:text-red-500 transition-all border border-transparent hover:border-red-100"
                                 title={t('scholarshipSelection.review.removeButton')}
                               >
-                                <X className="h-5 h-5" />
+                                <X className="h-5 w-5" />
                               </button>
                             )}
                             {isRemoving && (
@@ -657,7 +658,7 @@ export const ScholarshipSelectionStep: React.FC<StepProps> = ({ onNext, onBack: 
                 </div>
               )}
 
-              <div className="flex flex-col sm:flex-row items-center gap-4">
+              <div className="hidden sm:flex flex-col sm:flex-row items-center gap-4">
                 <button
                   onClick={() => {
                     setIsTransitioning(true);
@@ -725,7 +726,7 @@ export const ScholarshipSelectionStep: React.FC<StepProps> = ({ onNext, onBack: 
       {isReviewing ? (
         renderReviewStep()
       ) : (
-        <div className="space-y-6 pb-24 sm:pb-6">
+        <div className="space-y-6 pb-28 sm:pb-6">
           {/* Header Section */}
           <div>
             <div className="text-center md:text-left mb-8 space-y-4">
@@ -1112,28 +1113,57 @@ export const ScholarshipSelectionStep: React.FC<StepProps> = ({ onNext, onBack: 
             </div>
           )}
 
-          {/* Fixed Continue Button - Mobile */}
-          <div className="fixed bottom-6 left-4 right-4 z-50 sm:hidden">
-            <button
-              onClick={handleContinue}
-              disabled={selectedIds.size === 0}
-              className="w-full !bg-blue-600 hover:!bg-blue-700 text-white py-4 px-6 rounded-2xl font-black uppercase tracking-widest text-sm shadow-xl shadow-blue-500/20 active:scale-95 disabled:!bg-slate-300 disabled:text-slate-500 disabled:cursor-not-allowed flex items-center justify-center space-x-2 transition-all"
-            >
-              <span>{t(selectedIds.size === 1 ? 'scholarshipSelection.continueWithCount' : 'scholarshipSelection.continueWithCount_plural', { count: selectedIds.size })}</span>
-            </button>
-          </div>
-
           {/* Continue Button - Desktop */}
           <div className="hidden sm:block pt-4">
             <button
               onClick={handleContinue}
               disabled={selectedIds.size === 0}
-              className="w-full bg-blue-600 text-white py-3.5 px-6 rounded-lg hover:bg-blue-700 transition-all font-bold text-base disabled:opacity-50 disabled:cursor-not-allowed shadow-md flex items-center justify-center space-x-2 disabled:bg-gray-400"
+              className="w-full bg-blue-600 text-white py-3.5 px-6 rounded-lg hover:bg-blue-700 transition-all font-bold text-base disabled:opacity-50 disabled:cursor-not-allowed shadow-md flex items-center justify-center space-x-2 disabled:bg-slate-400"
             >
               <span>{t(selectedIds.size === 1 ? 'scholarshipSelection.continueWithCount' : 'scholarshipSelection.continueWithCount_plural', { count: selectedIds.size })}</span>
             </button>
           </div>
         </div>
+      )}
+
+      {/* FIXED MOBILE FOOTER - via React Portal para escapar de qualquer transform pai */}
+      {!isLocked && ReactDOM.createPortal(
+        <div className="sm:hidden fixed bottom-0 left-0 right-0 z-[9999]" style={{ position: 'fixed', bottom: 0, left: 0, right: 0 }}>
+          <div className="p-3">
+            {isReviewing ? (
+              <div className="flex flex-col gap-2">
+                <button
+                  onClick={handleContinue}
+                  disabled={hasBlockedScholarships || cart.length === 0}
+                  className="w-full bg-blue-600 text-white py-4 rounded-xl font-black uppercase tracking-widest text-sm shadow-lg active:scale-95 disabled:bg-slate-300 disabled:text-slate-500 flex items-center justify-center transition-all"
+                >
+                  {t('scholarshipSelection.review.continueButton')}
+                </button>
+                <button
+                  onClick={() => {
+                    setIsTransitioning(true);
+                    setTimeout(() => {
+                      setIsReviewing(false);
+                      setTimeout(() => setIsTransitioning(false), 50);
+                    }, 500);
+                  }}
+                  className="w-full py-2 font-bold text-slate-500 text-xs uppercase tracking-widest"
+                >
+                  {t('scholarshipSelection.review.backButton')}
+                </button>
+              </div>
+            ) : (
+              <button
+                onClick={handleContinue}
+                disabled={selectedIds.size === 0}
+                className="w-full bg-blue-600 hover:bg-blue-700 text-white py-4 px-6 rounded-xl font-black uppercase tracking-widest text-sm shadow-xl active:scale-95 disabled:bg-slate-300 disabled:text-slate-500 disabled:shadow-none disabled:cursor-not-allowed flex items-center justify-center space-x-2 transition-all"
+              >
+                <span>{t(selectedIds.size === 1 ? 'scholarshipSelection.continueWithCount' : 'scholarshipSelection.continueWithCount_plural', { count: selectedIds.size })}</span>
+              </button>
+            )}
+          </div>
+        </div>,
+        document.body
       )}
 
       {/* Transition Overlay - Just Blur */}

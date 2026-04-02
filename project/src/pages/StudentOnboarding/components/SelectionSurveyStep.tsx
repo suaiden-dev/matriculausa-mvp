@@ -119,9 +119,18 @@ export const SelectionSurveyStep: React.FC<StepProps> = ({ onNext }) => {
 
     const currentQuestions = useMemo(() => {
         const section = sections[currentSection];
-        return questions.filter(
+        const sectionQuestions = questions.filter(
             (q) => q.id >= section.range[0] && q.id <= section.range[1]
         );
+        
+        // Filtrar apenas questões que NÃO são dependentes de outra questão NA MESMA SEÇÃO
+        // para que possam ser renderizadas "inline" pela questão pai.
+        return sectionQuestions.filter(q => {
+            if (!q.conditionalOn) return true;
+            const parentId = q.conditionalOn.questionId;
+            // Se o pai está nesta mesma seção, a questão deve ser renderizada "inline" dentro do pai
+            return !sectionQuestions.some(sq => sq.id === parentId);
+        });
     }, [currentSection]);
 
     const validateSection = useCallback(() => {
@@ -138,6 +147,9 @@ export const SelectionSurveyStep: React.FC<StepProps> = ({ onNext }) => {
             if (isVisible && q.required) {
                 if (!answers[q.id]) {
                     newErrors[q.id] = 'selectionSurvey.required';
+                    isValid = false;
+                } else if (q.id === 5 && answers[5] === 'nao_sei') {
+                    newErrors[5] = t('registration:selectionSurvey.questions.5.errorNaoSei');
                     isValid = false;
                 } else if (q.id === 4) {
                     const answer = answers[q.id];
@@ -264,14 +276,29 @@ export const SelectionSurveyStep: React.FC<StepProps> = ({ onNext }) => {
 
             if (submissionError) throw submissionError;
 
+            const processTypeMap: Record<string, string> = {
+                initial: 'initial',
+                cos: 'change_of_status',
+                resident: 'resident',
+                transfer: 'transfer',
+            };
+            const processType = processTypeMap[currentAnswers[5]] ?? null;
+            const visaTransferActive = currentAnswers[5] === 'transfer'
+                ? currentAnswers[5.1] === 'sim'
+                : true;
+
             const { error: profileError } = await supabase
                 .from('user_profiles')
-                .update({ 
+                .update({
                     selection_survey_passed: passed,
                     field_of_interest: currentAnswers[3.1],
                     academic_level: currentAnswers[3.2],
                     gpa: currentAnswers[3.3] ? parseFloat(String(currentAnswers[3.3]).replace(',', '.')) : null,
-                    english_proficiency: currentAnswers[8]
+                    english_proficiency: currentAnswers[8],
+                    ...(processType && {
+                        student_process_type: processType,
+                        visa_transfer_active: visaTransferActive,
+                    }),
                 })
                 .eq('user_id', user.id);
 
@@ -429,6 +456,7 @@ export const SelectionSurveyStep: React.FC<StepProps> = ({ onNext }) => {
                                         onChange={(val, customId) => handleAnswer(customId ?? q.id, val)}
                                         onExtraChange={(val) => handleExtraAnswer(q.id, val)}
                                         answers={answers}
+                                        allQuestions={questions}
                                     />
                                 ))}
                             </motion.div>
