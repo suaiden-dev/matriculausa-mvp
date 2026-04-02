@@ -67,8 +67,17 @@ export const questions: Question[] = [
     options: [
       { label: 'selectionSurvey.questions.5.options.initial', value: 'initial', correct: null },
       { label: 'selectionSurvey.questions.5.options.cos', value: 'cos', correct: null },
+      { label: 'selectionSurvey.questions.5.options.resident', value: 'resident', correct: null },
       { label: 'selectionSurvey.questions.5.options.transfer', value: 'transfer', correct: null },
       { label: 'selectionSurvey.questions.5.options.nao_sei', value: 'nao_sei', correct: null },
+    ]
+  },
+  {
+    id: 5.1, section: 'A', sectionTitle: 'selectionSurvey.sections.A', text: 'selectionSurvey.questions.5_1.text', type: 'yesno', required: true, scored: false,
+    conditionalOn: { questionId: 5, value: 'transfer' },
+    options: [
+      { label: 'selectionSurvey.questions.5_1.options.sim', value: 'sim', correct: null },
+      { label: 'selectionSurvey.questions.5_1.options.nao', value: 'nao', correct: null },
     ]
   },
   {

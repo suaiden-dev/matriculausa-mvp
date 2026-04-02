@@ -237,7 +237,7 @@
       "exampleAlt": "Exemplo de foto com documento",
       "uploading": "Enviando foto...",
       "clickToUpload": "Clique para fazer upload da foto",
-      "fileTypes": "JPG ou PNG (máximo 5MB)",
+      "fileTypes": "JPG ou PNG (máximo 20MB)",
       "success": "Foto enviada com sucesso",
       "preview": "Preview da foto",
       "previewAlt": "Preview da foto de identidade",
@@ -248,7 +248,7 @@
       "paymentProcessing": "Processamento de Pagamento...",
       "errors": {
         "onlyImages": "Por favor, selecione apenas arquivos de imagem (JPEG ou PNG).",
-        "maxSize": "O arquivo é muito grande. O limite é 5MB.",
+        "maxSize": "O arquivo é muito grande. O limite é 20MB.",
         "unauthenticated": "Usuário não autenticado.",
         "generic": "Ocorreu um erro ao enviar a foto. Tente novamente."
       }
@@ -296,7 +296,7 @@
       "analyzingMessage": "Nossa IA está validando sua confirmação de pagamento"
     },
     "errors": {
-      "fileSize": "O tamanho do arquivo deve ser inferior a 5MB",
+      "fileSize": "O tamanho do arquivo deve ser inferior a 20MB",
       "fileType": "Por favor, selecione um arquivo de imagem (JPG, PNG, etc.)",
       "uploadRequired": "Por favor, carregue uma captura de tela da sua confirmação de pagamento",
       "uploadFailed": "Falha ao carregar a confirmação do pagamento",

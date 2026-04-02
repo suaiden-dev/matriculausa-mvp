@@ -37,7 +37,7 @@ export interface OnboardingProgress {
   message?: string;
 }
 
-export type ProcessType = "initial" | "transfer" | "change_of_status";
+export type ProcessType = "initial" | "transfer" | "change_of_status" | "resident";
 
 export interface StepProps {
   onNext: () => void;

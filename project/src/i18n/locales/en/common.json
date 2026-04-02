@@ -233,7 +233,7 @@
       "exampleAlt": "Example photo with document",
       "uploading": "Uploading photo...",
       "clickToUpload": "Click to upload photo",
-      "fileTypes": "JPG or PNG (maximum 5MB)",
+      "fileTypes": "JPG or PNG (maximum 20MB)",
       "success": "Photo uploaded successfully",
       "preview": "Photo preview",
       "previewAlt": "Identity photo preview",
@@ -244,7 +244,7 @@
       "paymentProcessing": "Payment Processing...",
       "errors": {
         "onlyImages": "Please select only image files (JPEG or PNG).",
-        "maxSize": "File is too large. Limit is 5MB.",
+        "maxSize": "File is too large. Limit is 20MB.",
         "unauthenticated": "User not authenticated.",
         "generic": "An error occurred while uploading the photo. Please try again."
       }
@@ -292,7 +292,7 @@
       "analyzingMessage": "Our AI is validating your payment confirmation"
     },
     "errors": {
-      "fileSize": "File size must be less than 5MB",
+      "fileSize": "File size must be less than 20MB",
       "fileType": "Please select an image file (JPG, PNG, etc.)",
       "uploadRequired": "Please upload a screenshot of your payment confirmation",
       "uploadFailed": "Failed to upload payment confirmation",
