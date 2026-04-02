@@ -232,13 +232,12 @@ export const UniversityDocumentsStep: React.FC<StepProps> = ({ onBack }) => {
 
         // 4. Ação Necessária: Documentos Pendentes/Rejeitados
         if (hasPendingUploads) {
-            const docList = pendingDocNames.length > 0 ? ` (${pendingDocNames.join(', ')})` : '';
-            return { 
-                status: 'pending_documents' as const, 
-                title: t('dashboard:studentDashboard.myApplicationStep.status.pendingDocs.title'), 
-                description: `${t('dashboard:studentDashboard.myApplicationStep.status.pendingDocs.description')}${docList}`, 
-                nextStepLabel: t('dashboard:studentDashboard.myApplicationStep.status.pendingDocs.button'), 
-                action: () => setActiveTab('documents') 
+            return {
+                status: 'pending_documents' as const,
+                title: t('dashboard:studentDashboard.myApplicationStep.status.pendingDocs.title'),
+                description: t('dashboard:studentDashboard.myApplicationStep.status.pendingDocs.description'),
+                nextStepLabel: t('dashboard:studentDashboard.myApplicationStep.status.pendingDocs.button'),
+                action: () => setActiveTab('documents')
             };
         }
 
@@ -532,6 +531,11 @@ export const UniversityDocumentsStep: React.FC<StepProps> = ({ onBack }) => {
                                         <ScholarshipInfoCard
                                             scholarship={applicationDetails.scholarships}
                                             userProfile={userProfile}
+                                            acceptanceLetter={{
+                                                url: applicationDetails.acceptance_letter_url,
+                                                onView: handleViewDocument,
+                                                onDownload: handleDownloadDocument,
+                                            }}
                                         />
                                     )}
 

@@ -31,7 +31,9 @@
       "Bash(grep -B 5 -A 50 'CREATE TABLE.*document_request' project/supabase/migrations/20250*.sql)",
       "Bash(head -150 project/supabase/migrations/20240*.sql)",
       "Read(//c/Users/**)",
-      "Bash(grep -r \"document_requests\" project/supabase/migrations/*.sql)"
+      "Bash(grep -r \"document_requests\" project/supabase/migrations/*.sql)",
+      "Bash(dir \"C:\\\\Users\\\\victurib\\\\Matricula USA\\\\matriculausa-mvp\")",
+      "mcp__supabase__list_projects"
     ]
   }
 }

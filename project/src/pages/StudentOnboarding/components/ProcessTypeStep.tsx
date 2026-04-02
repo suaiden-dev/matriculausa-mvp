@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { CheckCircle, Loader2, Plane, ArrowRightLeft, FileSpreadsheet } from 'lucide-react';
+import { CheckCircle, Loader2, Plane, ArrowRightLeft, FileSpreadsheet, Flag } from 'lucide-react';
 import { useAuth } from '../../../hooks/useAuth';
 import { supabase } from '../../../lib/supabase';
 import { useTranslation } from 'react-i18next';
@@ -21,7 +21,7 @@ export const ProcessTypeStep: React.FC<StepProps> = ({ onNext }) => {
     const userKey = `studentProcessType_${userProfile.id}`;
     const savedType = (userProfile?.student_process_type || window.localStorage.getItem(userKey) || window.localStorage.getItem('studentProcessType')) as ProcessType | null;
     
-    if (savedType && ['initial', 'transfer', 'change_of_status'].includes(savedType)) {
+    if (savedType && ['initial', 'transfer', 'change_of_status', 'resident'].includes(savedType)) {
       setSelectedType(savedType);
     }
 
@@ -189,17 +189,23 @@ export const ProcessTypeStep: React.FC<StepProps> = ({ onNext }) => {
                 icon: Plane
               },
               {
+                value: 'change_of_status',
+                label: t('studentOnboarding.processType.options.changeOfStatus.label'),
+                description: t('studentOnboarding.processType.options.changeOfStatus.description'),
+                icon: FileSpreadsheet
+              },
+              {
+                value: 'resident',
+                label: t('studentOnboarding.processType.options.resident.label'),
+                description: t('studentOnboarding.processType.options.resident.description'),
+                icon: Flag
+              },
+              {
                 value: 'transfer',
                 label: t('studentOnboarding.processType.options.transfer.label'),
                 description: t('studentOnboarding.processType.options.transfer.description'),
                 icon: ArrowRightLeft
               },
-              {
-                value: 'change_of_status',
-                label: t('studentOnboarding.processType.options.changeOfStatus.label'),
-                description: t('studentOnboarding.processType.options.changeOfStatus.description'),
-                icon: FileSpreadsheet
-              }
             ].map((option) => {
               const isSelected = selectedType === option.value;
               const OptionIcon = option.icon;

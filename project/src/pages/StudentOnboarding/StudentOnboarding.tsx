@@ -6,7 +6,6 @@ import { useOnboardingProgress } from './hooks/useOnboardingProgress';
 import { StepIndicator } from './components/StepIndicator';
 import { SelectionFeeStep } from './components/SelectionFeeStep';
 import { ScholarshipSelectionStep } from './components/ScholarshipSelectionStep';
-import { ProcessTypeStep } from './components/ProcessTypeStep';
 import { DocumentsUploadStep } from './components/DocumentsUploadStep';
 import { PaymentStep } from './components/PaymentStep'; // Payment step component
 import { ScholarshipFeeStep } from './components/ScholarshipFeeStep';
@@ -15,6 +14,7 @@ import { UniversityDocumentsStep } from './components/UniversityDocumentsStep';
 import { SelectionSurveyStep } from './components/SelectionSurveyStep';
 import { IdentityVerificationStep } from './components/IdentityVerificationStep';
 import { ReinstatementFeeStep } from './components/ReinstatementFeeStep';
+import { ProcessTypeStep } from './components/ProcessTypeStep';
 import { OnboardingStep } from './types';
 import PaymentSuccessOverlay from '../../components/PaymentSuccessOverlay';
 
@@ -54,13 +54,15 @@ const StudentOnboarding: React.FC = () => {
   
   const getOrderedSteps = useCallback((): OnboardingStep[] => {
     const isTransferInactive = userProfile?.student_process_type === 'transfer' && userProfile?.visa_transfer_active === false;
+    const processTypeSet = userProfile?.student_process_type &&
+      ['initial', 'transfer', 'change_of_status'].includes(userProfile.student_process_type);
 
     const base: OnboardingStep[] = [
       'selection_fee',
       'identity_verification',
       'selection_survey',
       'scholarship_selection',
-      'process_type',
+      ...(!processTypeSet ? ['process_type' as OnboardingStep] : []),
       'documents_upload',
       'payment',
       isNewFlowUser ? 'placement_fee' : 'scholarship_fee',
@@ -515,7 +517,6 @@ const StudentOnboarding: React.FC = () => {
     { key: 'selection_fee', label: t('registration:studentOnboarding.stepper.steps.selectionFee') },
     { key: 'selection_survey', label: t('registration:studentOnboarding.stepper.steps.selectionSurvey') },
     { key: 'scholarship_selection', label: t('registration:studentOnboarding.stepper.steps.scholarshipSelection') },
-    { key: 'process_type', label: t('registration:studentOnboarding.stepper.steps.processType') },
     { key: 'documents_upload', label: t('registration:studentOnboarding.stepper.steps.documentsUpload') },
     { key: 'payment', label: t('registration:studentOnboarding.stepper.steps.payment') },
     { key: feeStep, label: feeStepLabel || '' },

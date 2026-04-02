@@ -22,7 +22,15 @@ export const StepIndicator: React.FC<StepIndicatorProps> = ({ currentStep, compl
     { key: 'scholarship_fee', label: t('registration:studentOnboarding.stepper.steps.scholarshipFee') },
   ];
 
-  const currentStepIndex = STEPS.findIndex(s => s.key === currentStep);
+  // Mapeamento de passos "ocultos" para o passo visual mais próximo
+  // process_type e identity_verification não aparecem no visual, então os mapeamos
+  const STEP_ALIAS: Partial<Record<OnboardingStep, OnboardingStep>> = {
+    process_type: 'scholarship_selection',
+    identity_verification: 'selection_survey',
+  };
+  const resolvedStep = STEP_ALIAS[currentStep] ?? currentStep;
+
+  const currentStepIndex = STEPS.findIndex(s => s.key === resolvedStep);
   const totalSteps = STEPS.length;
 
   return (
@@ -52,7 +60,7 @@ export const StepIndicator: React.FC<StepIndicatorProps> = ({ currentStep, compl
 
         {STEPS.map((step, index) => {
           const isCompleted = completedSteps.includes(step.key);
-          const isCurrent = step.key === currentStep;
+          const isCurrent = step.key === resolvedStep;
           const isPast = index < currentStepIndex;
 
           return (
