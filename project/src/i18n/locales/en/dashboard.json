@@ -44,7 +44,7 @@
           "selection_fee": "Pay the fee to unlock access to scholarships.",
           "identity_verification": "Verify your identity to continue the process.",
           "selection_survey": "Answer the selection questionnaire with at least 80% correct.",
-          "scholarship_selection": "Choose the scholarships you want to apply for.",
+          "scholarship_selection": "Browse the scholarships and select which ones you would like to enroll in (maximum of 4). At least one selection is required to proceed.",
           "process_type": "Inform your process type (Initial, Transfer, or COS).",
           "documents_upload": "Submit your passport, diploma, and proof of funds.",
           "payment": "Pay the application fee to secure your spot.",
@@ -187,6 +187,7 @@
     "findScholarships": {
       "title": "Find Scholarships",
       "subtitle": "Discover opportunities tailored to your academic profile",
+      "description": "Browse the scholarships and select which ones you would like to enroll in (maximum of 4). At least one selection is required to proceed.",
       "pagination": {
         "previous": "Previous",
         "next": "Next",
@@ -290,7 +291,7 @@
     "selectedScholarships": {
       "title": "Selected Scholarships",
       "welcomeMessage": "Welcome to your scholarship selection!",
-      "description": "Here you can see all the scholarships you have selected for the application process. These are the programs you are interested in applying to. Follow the steps below to complete your application and start your journey toward studying abroad.",
+      "description": "Here you can see all the scholarships you have selected for the application process (maximum of 4). These are the programs you are interested in applying to. Follow the steps below to complete your application and start your journey toward studying abroad.",
       "noScholarshipsSelected": "No scholarships selected",
       "notSelectedYet": "You haven't selected any scholarships yet. Browse our available programs and add them to your selection.",
       "browseScholarships": "Browse Scholarships"
