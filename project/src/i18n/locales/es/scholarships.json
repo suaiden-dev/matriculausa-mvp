@@ -159,7 +159,7 @@
   "scholarshipSelection": {
     "header": {
       "title": "Selección de Becas",
-      "subtitle": "Navegue por las becas y seleccione en cuáles le gustaría inscribirse. Es necesario elegir al menos una para continuar."
+      "subtitle": "Navegue por las becas y seleccione en cuáles le gustaría inscribirse (máximo de 4). Es necesario elegir al menos una para continuar."
     },
     "errors": {
       "loadError": "Error al cargar las becas. Inténtalo de nuevo.",

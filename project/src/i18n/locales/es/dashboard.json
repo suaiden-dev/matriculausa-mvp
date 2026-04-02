@@ -44,7 +44,7 @@
           "selection_fee": "Paga la tarifa para desbloquear el acceso a las becas.",
           "identity_verification": "Verifica tu identidad para continuar el proceso.",
           "selection_survey": "Responde el cuestionario de selección con al menos 80% de aciertos.",
-          "scholarship_selection": "Elige las becas a las que deseas aplicar.",
+          "scholarship_selection": "Navegue por las becas y seleccione en cuáles le gustaría inscribirse (máximo de 4). Es necesario elegir al menos una para continuar.",
           "process_type": "Indica tu tipo de proceso (Inicial, Transferencia o COS).",
           "documents_upload": "Envía tu pasaporte, diploma y comprobante de fondos.",
           "payment": "Paga la tarifa de matrícula para asegurar tu lugar.",
@@ -129,7 +129,7 @@
     "selectedScholarships": {
       "title": "Becas Seleccionadas",
       "welcomeMessage": "¡Bienvenido a tu selección de becas!",
-      "description": "Aquí puedes ver todas las becas que has seleccionado para el proceso de solicitud. Estos son los programas en los que estás interesado en aplicar. Sigue los pasos a continuación para completar tu solicitud y comenzar tu viaje hacia estudiar en el extranjero.",
+      "description": "Aquí puedes ver todas las becas que has seleccionado para el proceso de solicitud (máximo de 4). Estos son los programas en los que estás interesado en aplicar. Sigue los pasos a continuación para completar tu solicitud y comenzar tu viaje hacia estudiar en el extranjero.",
       "noScholarshipsSelected": "No hay becas seleccionadas",
       "notSelectedYet": "Aún no has seleccionado ninguna beca. Explora nuestros programas disponibles y agrégalos a tu selección.",
       "browseScholarships": "Explorar Becas"
@@ -457,6 +457,7 @@
     "findScholarships": {
       "title": "Encontrar Becas",
       "subtitle": "Descubre oportunidades adaptadas a tu perfil académico",
+      "description": "Navegue por las becas y seleccione en cuáles le gustaría inscribirse (máximo de 4). Es necesario elegir al menos una para continuar.",
       "pagination": {
         "previous": "Anterior",
         "next": "Siguiente",
