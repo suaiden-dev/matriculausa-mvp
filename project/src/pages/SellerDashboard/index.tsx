@@ -1,5 +1,6 @@
 import React, { useState, useEffect, useCallback, useMemo } from 'react';
-import { useParams, useLocation } from 'react-router-dom';
+import { useParams, useLocation, useNavigate } from 'react-router-dom';
+import { Shield } from 'lucide-react';
 import { useAuth } from '../../hooks/useAuth';
 import { supabase } from '../../lib/supabase';
 import SellerDashboardLayout from './SellerDashboardLayout';
@@ -74,6 +75,7 @@ const SellerDashboard: React.FC = () => {
   });
   const { user } = useAuth();
   const location = useLocation();
+  const navigate = useNavigate();
   const params = useParams();
 
   const [stats, setStats] = useState<SellerStats>({
@@ -87,6 +89,14 @@ const SellerDashboard: React.FC = () => {
   const loadSellerData = useCallback(async () => {
     if (!user?.email) return;
     
+    // ✅ SEGURANÇA: Não criar perfil de vendedor se o usuário for aluno ou universidade
+    if (user?.role === 'student' || user?.role === 'school') {
+      console.warn('⚠️ [SELLER_DASHBOARD] Acesso negado: Usuário tentou acessar dashboard de seller com role:', user?.role);
+      setLoading(false);
+      setError('Acesso permitido apenas para vendedores.');
+      return;
+    }
+
     try {
       setLoading(true);
       setError(null);
@@ -284,8 +294,8 @@ const SellerDashboard: React.FC = () => {
             acceptance_letter_status: hasAnyAcceptanceLetter ? mostRecentApp.acceptance_letter_status : null,
             scholarship_fee_paid_date: null,
             // Usar dados da aplicação mais recente para exibição
-            scholarship_title: mostRecentApp.scholarships?.title || baseStudent.scholarship_title,
-            university_name: mostRecentApp.scholarships?.universities?.name || baseStudent.university_name
+            scholarship_title: mostRecentApp.scholarships?.[0]?.title || baseStudent.scholarship_title,
+            university_name: mostRecentApp.scholarships?.[0]?.universities?.[0]?.name || baseStudent.university_name
           });
         }
       });
@@ -490,7 +500,6 @@ const SellerDashboard: React.FC = () => {
       case 'performance':
         return (
           <Performance 
-            stats={stats}
             sellerProfile={sellerProfile}
             students={students}
           />
@@ -611,15 +620,31 @@ const SellerDashboard: React.FC = () => {
 
   if (error) {
     return (
-      <div className="min-h-screen bg-slate-50 flex items-center justify-center">
-        <div className="text-center">
-          <p className="text-[#3B82F6] mb-4">{error}</p>
-          <button 
-            onClick={loadSellerData}
-            className="bg-[#3B82F6] text-white px-4 py-2 rounded-lg hover:bg-[#365d9b]"
-          >
-            Try Again
-          </button>
+      <div className="min-h-screen bg-slate-50 flex items-center justify-center p-4">
+        <div className="text-center max-w-md bg-white p-8 rounded-3xl shadow-xl border border-slate-200">
+          <div className="w-16 h-16 bg-red-100 text-red-600 rounded-full flex items-center justify-center mx-auto mb-6">
+            <Shield className="h-8 w-8" />
+          </div>
+          <h2 className="text-2xl font-bold text-slate-900 mb-3">Acesso Não Autorizado</h2>
+          <p className="text-slate-600 mb-8">{error}</p>
+          
+          <div className="space-y-3">
+            <button 
+              onClick={() => navigate(user?.role === 'student' ? '/student/dashboard/overview' : '/')}
+              className="w-full bg-[#D0151C] text-white px-6 py-3 rounded-2xl hover:bg-[#B01218] transition-all duration-300 font-bold shadow-lg shadow-red-100"
+            >
+              {user?.role === 'student' ? 'Ir para meu Dashboard' : 'Voltar para o Início'}
+            </button>
+            
+            {error !== 'Acesso permitido apenas para vendedores.' && (
+              <button 
+                onClick={loadSellerData}
+                className="w-full bg-slate-100 text-slate-700 px-6 py-3 rounded-2xl hover:bg-slate-200 transition-all duration-300 font-bold"
+              >
+                Tentar Recarregar
+              </button>
+            )}
+          </div>
         </div>
       </div>
     );
