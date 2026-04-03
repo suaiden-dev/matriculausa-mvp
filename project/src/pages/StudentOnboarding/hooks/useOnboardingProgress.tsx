@@ -196,11 +196,12 @@ export const useOnboardingProgress = () => {
       if (selectionFeePaid) {
         await fetchCart(user.id);
         const currentCart = useCartStore.getState().cart;
+        // ✅ scholarshipsSelected depende apenas de evidências concretas de bolsa escolhida.
+        // student_process_type NÃO é evidência de seleção de bolsa — isso causava o pulo da etapa 3.
         scholarshipsSelected = !!(
           currentCart.length > 0 ||
           (appsData && appsData.length > 0) ||
-          !!freshProfile.selected_scholarship_id ||
-          (freshProfile.student_process_type && ['initial', 'transfer', 'change_of_status', 'resident'].includes(freshProfile.student_process_type))
+          !!freshProfile.selected_scholarship_id
         );
       }
 

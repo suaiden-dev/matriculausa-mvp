@@ -1,22 +1,15 @@
 import React, { useEffect, useState, useCallback, Suspense } from 'react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
 import { ArrowLeft, Bell, Clock } from 'lucide-react';
+import { useTranslation } from 'react-i18next';
 import { useAuth } from '../../hooks/useAuth';
 import { useOnboardingProgress } from './hooks/useOnboardingProgress';
 import { StepIndicator } from './components/StepIndicator';
-import { SelectionFeeStep } from './components/SelectionFeeStep';
-import { ScholarshipSelectionStep } from './components/ScholarshipSelectionStep';
-import { DocumentsUploadStep } from './components/DocumentsUploadStep';
-import { PaymentStep } from './components/PaymentStep'; // Payment step component
-import { ScholarshipFeeStep } from './components/ScholarshipFeeStep';
-import { PlacementFeeStep } from './components/PlacementFeeStep';
-import { UniversityDocumentsStep } from './components/UniversityDocumentsStep';
-import { SelectionSurveyStep } from './components/SelectionSurveyStep';
-import { IdentityVerificationStep } from './components/IdentityVerificationStep';
-import { ReinstatementFeeStep } from './components/ReinstatementFeeStep';
-import { ProcessTypeStep } from './components/ProcessTypeStep';
 import { OnboardingStep } from './types';
 import PaymentSuccessOverlay from '../../components/PaymentSuccessOverlay';
+import LanguageSelector from '../../components/LanguageSelector';
+import { useSmartPollingNotifications } from '../../hooks/useSmartPollingNotifications';
+import NotificationsModal from '../../components/NotificationsModal';
 
 // Lazy loading de cada step — cada um vira um chunk separado no bundle
 const SelectionFeeStep = React.lazy(() =>
@@ -53,10 +46,7 @@ const UniversityDocumentsStep = React.lazy(() =>
   import('./components/UniversityDocumentsStep').then(m => ({ default: m.UniversityDocumentsStep }))
 );
 
-import { useTranslation } from 'react-i18next';
-import LanguageSelector from '../../components/LanguageSelector';
-import { useSmartPollingNotifications } from '../../hooks/useSmartPollingNotifications';
-import NotificationsModal from '../../components/NotificationsModal';
+
 
 const StudentOnboarding: React.FC = () => {
   const { user, userProfile, loading: authLoading } = useAuth();
