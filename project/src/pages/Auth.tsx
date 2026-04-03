@@ -601,7 +601,7 @@ const Auth: React.FC<AuthProps> = ({ mode }) => {
             </p>
             <p className="mt-4 text-sm text-slate-500 px-4">
               {t('authPage.login.noAccount')}{' '}
-              <Link to={`/register${location.search}`} className="font-bold text-[#D0151C] hover:text-[#B01218] transition-colors">
+              <Link to={location.search.includes('seller') ? `/seller/register${location.search}` : `/register${location.search}`} className="font-bold text-[#D0151C] hover:text-[#B01218] transition-colors">
                 {t('authPage.login.signUpHere')}
               </Link>
             </p>

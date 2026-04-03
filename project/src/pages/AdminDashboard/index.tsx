@@ -1,5 +1,6 @@
 import React, { useState, useEffect, lazy, Suspense } from 'react';
-import { Routes, Route, useLocation } from 'react-router-dom';
+import { Routes, Route, useLocation, useNavigate } from 'react-router-dom';
+import { Shield } from 'lucide-react';
 import { supabase } from '../../lib/supabase';
 import { University, Scholarship } from '../../types';
 import { useAuth } from '../../hooks/useAuth';
@@ -84,6 +85,33 @@ const AdminDashboard: React.FC = () => {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const { user } = useAuth();
+  const navigate = useNavigate();
+
+  // ✅ TRAVA DE SEGURANÇA: Bloqueio imediato para não-admins
+  if (user && user.role !== 'admin') {
+    return (
+      <div className="min-h-screen bg-slate-50 flex items-center justify-center p-4">
+        <div className="text-center max-w-md bg-white p-8 rounded-3xl shadow-xl border border-slate-200">
+          <div className="w-16 h-16 bg-red-100 text-red-600 rounded-full flex items-center justify-center mx-auto mb-6">
+            <Shield className="h-8 w-8" />
+          </div>
+          <h2 className="text-2xl font-bold text-slate-900 mb-3">Área Restrita</h2>
+          <p className="text-slate-600 mb-8">
+            Você tentou acessar uma área administrativa reservada para a equipe interna.
+          </p>
+          
+          <div className="space-y-3">
+            <button 
+              onClick={() => navigate(user?.role === 'student' ? '/student/dashboard/overview' : '/')}
+              className="w-full bg-[#05294E] text-white px-6 py-3 rounded-2xl hover:bg-[#041d38] transition-all duration-300 font-bold shadow-lg"
+            >
+              {user?.role === 'student' ? 'Ir para meu Dashboard' : 'Voltar para o Início'}
+            </button>
+          </div>
+        </div>
+      </div>
+    );
+  }
 
   // Track se já carregamos dados uma vez para cache inteligente
   const [hasLoadedData, setHasLoadedData] = useState(false);
