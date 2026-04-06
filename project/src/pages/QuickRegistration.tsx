@@ -541,11 +541,6 @@ const QuickRegistration: React.FC = () => {
         name === 'dependents' ? (value === '' ? '' : parseInt(value)) : value
     }));
 
-    // Rastreia campos de texto (não checkboxes) quando têm valor
-    if (type !== 'checkbox' && value) {
-      trackFieldFilled(name);
-    }
-
     // Limpar erro do campo ao digitar
     if (fieldErrors[name]) {
       setFieldErrors(prev => {
@@ -910,6 +905,7 @@ const QuickRegistration: React.FC = () => {
                           required
                           value={formData.full_name}
                           onChange={handleChange}
+                          onBlur={() => trackFieldFilled('full_name')}
                           disabled={isRegistered}
                           placeholder={t('rapidRegistration.form.placeholders.fullName')}
                           className={`block w-full pl-12 pr-4 py-3.5 border ${fieldErrors.full_name ? 'border-red-500 ring-2 ring-red-500/10' : 'border-slate-200'} rounded-2xl outline-none focus:outline-none focus:ring-2 ${fieldErrors.full_name ? 'focus:ring-red-500 focus:border-red-500' : 'focus:ring-[#05294E] focus:border-[#05294E]'} text-slate-900 bg-slate-50/50 transition-all duration-300 disabled:opacity-50 disabled:cursor-not-allowed`}
@@ -938,6 +934,7 @@ const QuickRegistration: React.FC = () => {
                           required
                           value={formData.email}
                           onChange={handleChange}
+                          onBlur={() => trackFieldFilled('email')}
                           disabled={isRegistered}
                           placeholder={t('rapidRegistration.form.placeholders.email')}
                           className={`block w-full pl-12 pr-4 py-3.5 border ${fieldErrors.email ? 'border-red-500 ring-2 ring-red-500/10' : 'border-slate-200'} rounded-2xl outline-none focus:outline-none focus:ring-2 ${fieldErrors.email ? 'focus:ring-red-500 focus:border-red-500' : 'focus:ring-[#05294E] focus:border-[#05294E]'} text-slate-900 bg-slate-50/50 transition-all duration-300 disabled:opacity-50 disabled:cursor-not-allowed`}
@@ -965,6 +962,7 @@ const QuickRegistration: React.FC = () => {
                           maxLength={20}
                           value={formData.phone}
                           disabled={isRegistered}
+                          onBlur={() => trackFieldFilled('phone')}
                           onChange={(value) => {
                             setFormData((prev: any) => ({ ...prev, phone: value || '' }));
                             if (fieldErrors.phone) {
@@ -1008,6 +1006,7 @@ const QuickRegistration: React.FC = () => {
                           value={formData.dependents}
                           disabled={isRegistered}
                           required
+                          onBlur={() => trackFieldFilled('dependents')}
                           onChange={(e) => {
                             const value = e.target.value === '' ? '' : parseInt(e.target.value);
                             setFormData((prev: any) => ({ ...prev, dependents: value }));
