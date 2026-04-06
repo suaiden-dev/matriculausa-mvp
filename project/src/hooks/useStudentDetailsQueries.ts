@@ -99,9 +99,11 @@ export function useStudentDetailsQuery(profileId: string | undefined) {
             has_paid_reinstatement_package,
             visa_transfer_active,
             role,
+            student_process_type,
             seller_referral_code,
             admin_notes,
             documents_status,
+            university_id,
             scholarship_applications (
               id,
               scholarship_id,
@@ -245,7 +247,7 @@ export function useStudentDetailsQuery(profileId: string | undefined) {
         application_fee_payment_method: mainApp.application_fee_payment_method || null,
         scholarship_fee_payment_method: mainApp.scholarship_fee_payment_method || null,
         acceptance_letter_status: mainApp.acceptance_letter_status || null,
-        student_process_type: mainApp.student_process_type || null,
+        student_process_type: mainApp.student_process_type || s.student_process_type || null,
         has_paid_ds160_package: !!s.has_paid_ds160_package,
         has_paid_i539_cos_package: !!s.has_paid_i539_cos_package,
         has_paid_reinstatement_package: !!s.has_paid_reinstatement_package,
@@ -265,6 +267,7 @@ export function useStudentDetailsQuery(profileId: string | undefined) {
         all_applications: applications,
         admin_notes: s.admin_notes,
         documents_status: s.documents_status || null,
+        university_id: s.university_id || null,
         scholarship_fee_amount: mainApp.scholarships?.scholarship_fee_amount || null,
         placement_fee_amount: mainApp.scholarships?.placement_fee_amount || null,
       };

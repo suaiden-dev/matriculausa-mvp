@@ -1,5 +1,5 @@
-import React from 'react';
-import { CreditCard, CheckCircle, XCircle, Edit3, Save, X } from 'lucide-react';
+import React, { useState } from 'react';
+import { CreditCard, CheckCircle, XCircle, Edit3, Save, X, Layers } from 'lucide-react';
 import { StudentRecord } from './types';
 import { supabase } from '../../../lib/supabase';
 import { getPlacementFee } from '../../../utils/placementFeeCalculator';
@@ -31,6 +31,8 @@ interface PaymentStatusCardProps {
   formatFeeAmount: (amount: number | string, forceDollars?: boolean) => string;
   getFeeAmount: (feeType: string) => number;
   overridesRefreshKey?: number; // ✅ Key para forçar recarregamento de overrides
+  onEnableInstallment?: () => Promise<void>;
+  onDisableInstallment?: () => Promise<void>;
 }
 
 /**
@@ -58,6 +60,8 @@ const PaymentStatusCard: React.FC<PaymentStatusCardProps> = React.memo((props) =
     onResetFees,
     onEditFeesChange,
     onMarkAsPaid,
+    onEnableInstallment,
+    onDisableInstallment,
     onEditPaymentMethod,
     onUpdatePaymentMethod,
     onCancelPaymentMethod,
@@ -66,6 +70,8 @@ const PaymentStatusCard: React.FC<PaymentStatusCardProps> = React.memo((props) =
     getFeeAmount,
     overridesRefreshKey = 0,
   } = props;
+
+  const [savingInstallment, setSavingInstallment] = useState(false);
 
   // ✅ Buscar affiliate admin email do aluno para verificar se é do Brant
   const [studentAffiliateAdminEmail, setStudentAffiliateAdminEmail] = React.useState<string | null>(null);
@@ -684,14 +690,57 @@ const PaymentStatusCard: React.FC<PaymentStatusCardProps> = React.memo((props) =
                         </div>
                         {isPlatformAdmin && (() => {
                           const approvedApp = student.all_applications?.find((app: any) => app.status === 'approved');
-                          return approvedApp && (
-                            <button
-                              onClick={() => onMarkAsPaid('placement')}
-                              className="px-4 py-2 bg-[#05294E] hover:bg-[#05294E]/90 text-white text-sm rounded-lg flex items-center space-x-2 w-fit"
-                            >
-                              <CheckCircle className="w-4 h-4" />
-                              <span>Mark as Paid</span>
-                            </button>
+                          const installmentEnabled = !!(student as any).placement_fee_installment_enabled;
+                          return (
+                            <div className="flex flex-col gap-2">
+                              {approvedApp && (
+                                <button
+                                  onClick={() => onMarkAsPaid('placement')}
+                                  className="px-4 py-2 bg-[#05294E] hover:bg-[#05294E]/90 text-white text-sm rounded-lg flex items-center space-x-2 w-fit"
+                                >
+                                  <CheckCircle className="w-4 h-4" />
+                                  <span>Mark as Paid</span>
+                                </button>
+                              )}
+                              {/* Botão de habilitar/desabilitar parcelamento */}
+                              {onEnableInstallment && onDisableInstallment && (
+                                <button
+                                  onClick={async () => {
+                                    setSavingInstallment(true);
+                                    try {
+                                      if (installmentEnabled) {
+                                        await onDisableInstallment();
+                                      } else {
+                                        await onEnableInstallment();
+                                      }
+                                    } finally {
+                                      setSavingInstallment(false);
+                                    }
+                                  }}
+                                  disabled={savingInstallment}
+                                  className={`px-4 py-2 text-sm rounded-lg flex items-center gap-2 w-fit transition-colors disabled:opacity-50 ${
+                                    installmentEnabled
+                                      ? 'bg-amber-100 text-amber-800 border border-amber-300 hover:bg-amber-200'
+                                      : 'bg-amber-600 hover:bg-amber-700 text-white'
+                                  }`}
+                                  title={installmentEnabled ? 'Clique para desabilitar o parcelamento' : 'Permite que o aluno pague 50% agora e 50% em 30 dias'}
+                                >
+                                  <Layers className="w-4 h-4" />
+                                  <span>
+                                    {savingInstallment
+                                      ? 'Saving...'
+                                      : installmentEnabled
+                                      ? 'Installment: ON'
+                                      : 'Enable Installment'}
+                                  </span>
+                                </button>
+                              )}
+                              {installmentEnabled && (
+                                <p className="text-xs text-amber-700">
+                                  O aluno verá a opção de pagar 50% agora no checkout.
+                                </p>
+                              )}
+                            </div>
                           );
                         })()}
                       </div>

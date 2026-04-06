@@ -179,7 +179,29 @@ export async function approveZelleFlow(params: {
 
   // ✅ NOVO: Placement Fee logic
   if (payment.fee_type === "placement_fee" || payment.fee_type_global === "placement_fee") {
-    // Mark on profile
+    // Verificar se parcelamento estava habilitado para este aluno (auto-detecção)
+    const { data: profileData } = await supabase
+      .from("user_profiles")
+      .select("placement_fee_installment_enabled, placement_fee_installment_number")
+      .eq("user_id", payment.user_id)
+      .single();
+
+    const isInstallmentEnabled = profileData?.placement_fee_installment_enabled === true;
+    const currentInstallmentNumber = profileData?.placement_fee_installment_number ?? 0;
+
+    // Se parcelamento estava habilitado e é a 1ª parcela → redirecionar para approvePartialZelleFlow
+    if (isInstallmentEnabled && currentInstallmentNumber === 0) {
+      await approvePartialZelleFlow({ supabase, adminUserId, payment });
+      return; // Sai do approveZelleFlow — tudo feito pelo approvePartialZelleFlow
+    }
+
+    // Se é a 2ª parcela → redirecionar para approveSecondInstallmentFlow
+    if (currentInstallmentNumber === 1) {
+      await approveSecondInstallmentFlow({ supabase, adminUserId, payment });
+      return;
+    }
+
+    // Mark on profile (pagamento completo normal)
     await supabase
       .from("user_profiles")
       .update({
@@ -1133,4 +1155,185 @@ export async function rejectZelleFlow(params: {
     );
     // Não falhar o processo se a notificação ou log falhar
   }
+}
+
+// ─── Placement Fee Installment Flows ────────────────────────────────────────
+
+/**
+ * Approves the first installment (50%) of a placement fee payment.
+ * - Marks `is_placement_fee_paid = true` (unlocks Kanban flow)
+ * - Records `placement_fee_pending_balance`, `placement_fee_due_date`, `placement_fee_installment_number = 1`
+ * - Does NOT record full billing (only partial)
+ * - Notifies student via webhook
+ */
+export async function approvePartialZelleFlow(params: {
+  supabase: SupabaseClient;
+  adminUserId: string;
+  payment: PaymentLike;
+}) {
+  const { supabase, adminUserId, payment } = params;
+
+  const pendingBalance = payment.amount; // valor pago = 1ª parcela; mesmo valor ainda pendente
+  const dueDate = new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString(); // +30 dias
+
+  // 1. Aprovar o Zelle payment (status → approved)
+  await supabase
+    .from("zelle_payments")
+    .update({
+      status: "approved",
+      admin_approved_by: adminUserId,
+      admin_approved_at: new Date().toISOString(),
+      admin_notes: "Approved as 1st installment (50%)",
+    })
+    .eq("id", payment.id);
+
+  // 2. Atualizar user_profiles: desbloquear fluxo + registrar dívida
+  await supabase
+    .from("user_profiles")
+    .update({
+      is_placement_fee_paid: true,
+      placement_fee_payment_method: "zelle",
+      placement_fee_pending_balance: pendingBalance,
+      placement_fee_due_date: dueDate,
+      placement_fee_installment_number: 1,
+      updated_at: new Date().toISOString(),
+    })
+    .eq("user_id", payment.user_id);
+
+  // 3. Registrar pagamento parcial em individual_fee_payments
+  await recordIndividualFeePayment(supabase, {
+    userId: payment.user_id,
+    feeType: "placement" as any,
+    amount: payment.amount,
+    paymentDate: payment.admin_approved_at || payment.created_at,
+    paymentMethod: "zelle",
+    zellePaymentId: payment.id,
+  });
+
+  // 4. Log da ação
+  await supabase.rpc("log_student_action", {
+    p_student_id: payment.student_id,
+    p_action_type: "fee_payment",
+    p_action_description: "Placement Fee 1ª Parcela aprovada manualmente",
+    p_performed_by: adminUserId,
+    p_performed_by_type: "admin",
+    p_metadata: {
+      fee_type: "placement_installment_1",
+      payment_method: "zelle",
+      amount: payment.amount,
+      pending_balance: pendingBalance,
+      payment_id: payment.id,
+    },
+  });
+
+  // 5. Notificar o aluno via webhook
+  try {
+    const dueDateFormatted = new Date(dueDate).toLocaleDateString("en-US", {
+      month: "long", day: "numeric", year: "numeric",
+    });
+    const notificationPayload = {
+      tipo_notf: "1ª Parcela do Placement Fee aprovada",
+      email_aluno: payment.student_email,
+      nome_aluno: payment.student_name,
+      email_universidade: "",
+      o_que_enviar: `Sua 1ª parcela do Placement Fee ($${payment.amount.toFixed(2)}) foi aprovada. Você já pode continuar o processo. O download dos documentos finais será liberado após o pagamento da 2ª parcela ($${pendingBalance.toFixed(2)}), com vencimento em ${dueDateFormatted}.`,
+      payment_id: payment.id,
+      fee_type: "placement_installment_1",
+      amount: payment.amount,
+    };
+    await fetch("https://nwh.suaiden.com/webhook/notfmatriculausa", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(notificationPayload),
+    });
+  } catch (_) {}
+}
+
+/**
+ * Approves the second (final) installment of a placement fee payment.
+ * - Clears `placement_fee_pending_balance = 0`, `placement_fee_installment_number = 2`
+ * - Downloads (Acceptance Letter, I-20) are unblocked automatically
+ * - Notifies student via webhook
+ */
+export async function approveSecondInstallmentFlow(params: {
+  supabase: SupabaseClient;
+  adminUserId: string;
+  payment: PaymentLike;
+}) {
+  const { supabase, adminUserId, payment } = params;
+
+  // 1. Aprovar o Zelle payment
+  await supabase
+    .from("zelle_payments")
+    .update({
+      status: "approved",
+      admin_approved_by: adminUserId,
+      admin_approved_at: new Date().toISOString(),
+      admin_notes: "Approved as 2nd installment — placement fee fully paid",
+    })
+    .eq("id", payment.id);
+
+  // 2. Quitar dívida no user_profiles
+  await supabase
+    .from("user_profiles")
+    .update({
+      placement_fee_pending_balance: 0,
+      placement_fee_due_date: null,
+      placement_fee_installment_number: 2,
+      updated_at: new Date().toISOString(),
+    })
+    .eq("user_id", payment.user_id);
+
+  // 3. Registrar 2ª parcela em individual_fee_payments
+  await recordIndividualFeePayment(supabase, {
+    userId: payment.user_id,
+    feeType: "placement" as any,
+    amount: payment.amount,
+    paymentDate: payment.admin_approved_at || payment.created_at,
+    paymentMethod: "zelle",
+    zellePaymentId: payment.id,
+  });
+
+  // 4. Billing
+  await supabase.rpc("register_payment_billing", {
+    user_id_param: payment.user_id,
+    fee_type_param: "placement_fee",
+    amount_param: payment.amount,
+    payment_session_id_param: `zelle_${payment.id}`,
+    payment_method_param: "zelle",
+  });
+
+  // 5. Log
+  await supabase.rpc("log_student_action", {
+    p_student_id: payment.student_id,
+    p_action_type: "fee_payment",
+    p_action_description: "Placement Fee 2ª Parcela aprovada — dívida quitada",
+    p_performed_by: adminUserId,
+    p_performed_by_type: "admin",
+    p_metadata: {
+      fee_type: "placement_installment_2",
+      payment_method: "zelle",
+      amount: payment.amount,
+      payment_id: payment.id,
+    },
+  });
+
+  // 6. Notificar o aluno
+  try {
+    const notificationPayload = {
+      tipo_notf: "Placement Fee totalmente quitado",
+      email_aluno: payment.student_email,
+      nome_aluno: payment.student_name,
+      email_universidade: "",
+      o_que_enviar: `Sua 2ª parcela do Placement Fee ($${payment.amount.toFixed(2)}) foi aprovada. O Placement Fee está totalmente quitado e seus documentos finais (Acceptance Letter e I-20) estão liberados para download!`,
+      payment_id: payment.id,
+      fee_type: "placement_installment_2",
+      amount: payment.amount,
+    };
+    await fetch("https://nwh.suaiden.com/webhook/notfmatriculausa", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(notificationPayload),
+    });
+  } catch (_) {}
 }

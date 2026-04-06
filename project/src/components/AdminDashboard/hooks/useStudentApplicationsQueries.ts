@@ -1,4 +1,4 @@
-import { useQuery } from '@tanstack/react-query';
+import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '../../../lib/supabase';
 import { queryKeys } from '../../../lib/queryKeys';
 
@@ -34,6 +34,13 @@ interface StudentRecord {
   most_recent_activity?: Date;
   has_paid_reinstatement_package?: boolean;
   visa_transfer_active?: boolean;
+  is_archived: boolean;
+  assigned_to_admin_id: string | null;
+  assigned_to_admin_name: string | null;
+  placement_fee_pending_balance: number;
+  placement_fee_due_date: string | null;
+  placement_fee_installment_number: number;
+  placement_fee_installment_enabled: boolean;
 }
 
 /**
@@ -61,6 +68,13 @@ export function useStudentsQuery() {
           seller_referral_code,
           has_paid_reinstatement_package,
           visa_transfer_active,
+          is_archived,
+          assigned_to_admin_id,
+          assigned_admin:user_profiles!assigned_to_admin_id(id, full_name),
+          placement_fee_pending_balance,
+          placement_fee_due_date,
+          placement_fee_installment_number,
+          placement_fee_installment_enabled,
           scholarship_applications!scholarship_applications_student_id_fkey (
               id,
               scholarship_id,
@@ -172,7 +186,14 @@ export function useStudentsQuery() {
           // Campo para ordenação por atividade recente
           most_recent_activity: mostRecentActivity,
           has_paid_reinstatement_package: student.has_paid_reinstatement_package || false,
-          visa_transfer_active: student.visa_transfer_active ?? true // Default to true if not set
+          visa_transfer_active: student.visa_transfer_active ?? true, // Default to true if not set
+          is_archived: student.is_archived || false,
+          assigned_to_admin_id: student.assigned_to_admin_id || null,
+          assigned_to_admin_name: (student.assigned_admin as any)?.full_name || null,
+          placement_fee_pending_balance: student.placement_fee_pending_balance ?? 0,
+          placement_fee_due_date: student.placement_fee_due_date || null,
+          placement_fee_installment_number: student.placement_fee_installment_number ?? 0,
+          placement_fee_installment_enabled: student.placement_fee_installment_enabled ?? false,
         };
       }) || [];
 
@@ -269,10 +290,22 @@ export function useFilterDataQuery() {
         .eq('is_approved', true)
         .order('name', { ascending: true });
 
+      // Carregar admins internos (Raíssa, Romeu, Luiz etc.)
+      const { data: internalAdminsData } = await supabase
+        .from('user_profiles')
+        .select('id, full_name, email')
+        .eq('role', 'admin')
+        .order('full_name', { ascending: true });
+
       return {
         affiliates: affiliates || [],
         scholarships: scholarshipsData || [],
         universities: universitiesData || [],
+        internalAdmins: (internalAdminsData || []).map((a: any) => ({
+          id: a.id,
+          name: a.full_name || a.email,
+          email: a.email,
+        })),
       };
     },
     staleTime: 5 * 60 * 1000, // 5 minutos - dados de filtro mudam ocasionalmente
@@ -282,3 +315,23 @@ export function useFilterDataQuery() {
   });
 }
 
+/**
+ * Mutation para atribuir (ou remover) um admin responsável de um aluno
+ */
+export function useAssignAdminMutation() {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: async ({ studentId, adminId }: { studentId: string; adminId: string | null }) => {
+      const { error } = await supabase
+        .from('user_profiles')
+        .update({ assigned_to_admin_id: adminId })
+        .eq('id', studentId);
+
+      if (error) throw error;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: queryKeys.students.list() });
+    },
+  });
+}
