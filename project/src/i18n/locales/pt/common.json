@@ -57,7 +57,8 @@
       "title": "Legal",
       "privacy": "Política de Privacidade",
       "terms": "Termos de Serviço",
-      "cookies": "Política de Cookies"
+      "cookies": "Política de Cookies",
+      "manageCookies": "Gerenciar Cookies"
     },
     "contact": {
       "email": "info@matriculausa.com",
@@ -302,6 +303,25 @@
       "uploadFailed": "Falha ao carregar a confirmação do pagamento",
       "alreadyPending": "Você já tem um pagamento em processamento. Por favor, aguarde a revisão.",
       "checkingStatus": "Verificando status do pagamento..."
+    }
+  },
+  "cookies": {
+    "title": "Preferências de Cookies",
+    "description": "Usamos cookies para melhorar sua experiência e analisar o uso do site. Consulte nossa <0>Política de Privacidade</0> e gerencie suas preferências a qualquer momento.",
+    "acceptAll": "Aceitar todos",
+    "rejectAll": "Rejeitar todos",
+    "customize": "Personalizar",
+    "save": "Salvar preferências",
+    "manage": {
+      "title": "Preferências de Cookies",
+      "necessary": {
+        "title": "Necessários",
+        "description": "Essenciais para o funcionamento do site. Sempre ativos."
+      },
+      "analytics": {
+        "title": "Analíticos",
+        "description": "Nos ajudam a entender como você usa o site para melhorarmos sua experiência."
+      }
     }
   },
   "smartChat": {

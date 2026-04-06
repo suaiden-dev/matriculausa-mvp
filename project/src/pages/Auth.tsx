@@ -8,6 +8,7 @@ import { supabase } from '../lib/supabase';
 import PhoneInput from 'react-phone-number-input';
 import 'react-phone-number-input/style.css';
 import { getStoredUtmParams, clearUtmParams } from '../utils/utmTracker';
+import { useFormTracking } from '../hooks/useFormTracking';
 
 interface AuthProps {
   mode: 'login' | 'register';
@@ -56,6 +57,7 @@ const Auth: React.FC<AuthProps> = ({ mode }) => {
 
   
   const { login, register } = useAuth();
+  const { trackFieldFilled, trackFormSubmitted } = useFormTracking({ formName: 'auth_register' });
 
   // const navigate = useNavigate(); (removido por não ser utilizado e causar warning)
 
@@ -356,6 +358,7 @@ const Auth: React.FC<AuthProps> = ({ mode }) => {
 
     try {
       if (mode === 'register') {
+        trackFormSubmitted();
         console.log('🔍 [AUTH] Iniciando processo de registro');
         console.log('🔍 [AUTH] Dados do formulário:', formData);
         console.log('🔍 [AUTH] Tab ativa:', activeTab);
@@ -775,7 +778,7 @@ const Auth: React.FC<AuthProps> = ({ mode }) => {
                       {t('authPage.register.fullName')}
                     </label>
                     <div className="relative">
-                      <User className="absolute left-4 top-4 h-5 w-5 text-slate-400" />
+                      <User className="absolute left-4 top-4 h-5 w-5 text-slate-400 z-10" />
                       <input
                         id="full_name"
                         name="full_name"
@@ -783,6 +786,7 @@ const Auth: React.FC<AuthProps> = ({ mode }) => {
                         required
                         value={formData.full_name || ''}
                         onChange={handleInputChange}
+                        onBlur={() => trackFieldFilled('full_name')}
                         className="w-full pl-12 pr-4 py-3 sm:py-4 bg-white border border-slate-300 placeholder-slate-500 text-slate-900 rounded-2xl focus:outline-none focus:ring-2 focus:ring-[#05294E] focus:border-[#05294E] transition-all duration-300 text-sm sm:text-base outline-none"
                         placeholder={t('authPage.register.enterFullName')}
                       />
@@ -794,7 +798,7 @@ const Auth: React.FC<AuthProps> = ({ mode }) => {
                       {t('authPage.register.emailAddress')}
                     </label>
                     <div className="relative">
-                      <Mail className="absolute left-4 top-4 h-5 w-5 text-slate-400" />
+                      <Mail className="absolute left-4 top-4 h-5 w-5 text-slate-400 z-10" />
                       <input
                         id="email"
                         name="email"
@@ -802,7 +806,8 @@ const Auth: React.FC<AuthProps> = ({ mode }) => {
                         required
                         value={formData.email || ''}
                         onChange={handleInputChange}
-                        className="appearance-none relative block w-full pl-12 pr-4 py-3 sm:py-4 bg-white border border-slate-300 placeholder-slate-500 text-slate-900 rounded-2xl focus:outline-none focus:ring-2 focus:ring-[#05294E] focus:border-[#05294E] transition-all duration-300 text-sm sm:text-base outline-none"
+                        onBlur={() => trackFieldFilled('email')}
+                        className="w-full pl-12 pr-4 py-3 sm:py-4 bg-white border border-slate-300 placeholder-slate-500 text-slate-900 rounded-2xl focus:outline-none focus:ring-2 focus:ring-[#05294E] focus:border-[#05294E] transition-all duration-300 text-sm sm:text-base outline-none"
                         placeholder={t('authPage.register.enterEmail')}
                         autoComplete="username"
                       />
@@ -824,6 +829,10 @@ const Auth: React.FC<AuthProps> = ({ mode }) => {
                             const newData = { ...prev, phone: value || '' };
                             return newData;
                           });
+                          // Dispara tracking quando o número tiver tamanho mínimo válido
+                          if (value && value.replace(/\D/g, '').length >= 8) {
+                            trackFieldFilled('phone');
+                          }
                         }}
                         style={{
                           '--PhoneInputCountryFlag-height': '1.2em',
@@ -860,6 +869,7 @@ const Auth: React.FC<AuthProps> = ({ mode }) => {
                         required
                         value={formData.password || ''}
                         onChange={handleInputChange}
+                        onBlur={() => trackFieldFilled('password')}
                         className={`w-full pl-12 pr-12 py-3 sm:py-4 bg-white border placeholder-slate-500 text-slate-900 rounded-2xl focus:outline-none focus:ring-2 transition-all duration-300 text-sm sm:text-base outline-none ${
                           error === t('authPage.messages.invalidPasswordChars') || error === t('authPage.messages.weakPassword')
                             ? 'border-red-500 focus:ring-red-500 focus:border-red-500'
@@ -897,6 +907,7 @@ const Auth: React.FC<AuthProps> = ({ mode }) => {
                         required
                         value={formData.confirmPassword || ''}
                         onChange={handleInputChange}
+                        onBlur={() => trackFieldFilled('confirm_password')}
                         className={`w-full pl-12 pr-12 py-3 sm:py-4 bg-white border placeholder-slate-500 text-slate-900 rounded-2xl focus:outline-none focus:ring-2 transition-all duration-300 text-sm sm:text-base outline-none ${
                           error === t('authPage.messages.passwordsNotMatch')
                             ? 'border-red-500 focus:ring-red-500 focus:border-red-500'

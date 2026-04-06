@@ -30,6 +30,7 @@ import PhoneInput from 'react-phone-number-input';
 import 'react-phone-number-input/style.css';
 import { PaymentLoadingOverlay } from '../components/PaymentLoadingOverlay';
 import { usePaymentBlocked } from '../hooks/usePaymentBlocked';
+import { useFormTracking } from '../hooks/useFormTracking';
 
 // SVG Icons (Simplified for the registration page)
 const PixIcon = ({ className }: { className?: string }) => (
@@ -82,6 +83,7 @@ const QuickRegistration: React.FC = () => {
   const { register, supabaseUser, userProfile, updateUserProfile } = useAuth();
   const { getFeeAmount, formatFeeAmount } = useFeeConfig();
   const { recordTermAcceptance } = useTermsAcceptance();
+  const { trackFieldFilled, trackStepReached, trackFormSubmitted } = useFormTracking({ formName: 'quick_registration' });
 
   interface Term {
     id: string;
@@ -539,6 +541,11 @@ const QuickRegistration: React.FC = () => {
         name === 'dependents' ? (value === '' ? '' : parseInt(value)) : value
     }));
 
+    // Rastreia campos de texto (não checkboxes) quando têm valor
+    if (type !== 'checkbox' && value) {
+      trackFieldFilled(name);
+    }
+
     // Limpar erro do campo ao digitar
     if (fieldErrors[name]) {
       setFieldErrors(prev => {
@@ -551,6 +558,8 @@ const QuickRegistration: React.FC = () => {
 
   const handleRegisterAndPay = async (e: React.FormEvent) => {
     e.preventDefault();
+    trackFormSubmitted();
+    trackStepReached(2, 'payment');
 
     if (userProfile?.has_paid_selection_process_fee) {
       if (!userProfile?.selection_survey_passed) {
@@ -1046,6 +1055,7 @@ const QuickRegistration: React.FC = () => {
                             minLength={6}
                             value={formData.password}
                             onChange={handleChange}
+                            onBlur={() => trackFieldFilled('password')}
                             disabled={isRegistered}
                             placeholder={t('rapidRegistration.form.placeholders.password')}
                             className={`block w-full pl-12 pr-12 py-3.5 border ${fieldErrors.password ? 'border-red-500 ring-2 ring-red-500/10' : 'border-slate-200'} rounded-2xl outline-none focus:outline-none focus:ring-2 ${fieldErrors.password ? 'focus:ring-red-500 focus:border-red-500' : 'focus:ring-[#05294E] focus:border-[#05294E]'} text-slate-900 bg-slate-50/50 transition-all duration-300 disabled:opacity-50 disabled:cursor-not-allowed`}
@@ -1089,6 +1099,7 @@ const QuickRegistration: React.FC = () => {
                             minLength={6}
                             value={formData.confirm_password}
                             onChange={handleChange}
+                            onBlur={() => trackFieldFilled('confirm_password')}
                             disabled={isRegistered}
                             placeholder={t('rapidRegistration.form.placeholders.confirmPassword')}
                             className={`block w-full pl-12 pr-12 py-3.5 border ${fieldErrors.confirm_password ? 'border-red-500 ring-2 ring-red-500/10' : 'border-slate-200'} rounded-2xl outline-none focus:outline-none focus:ring-2 ${fieldErrors.confirm_password ? 'focus:ring-red-500 focus:border-red-500' : 'focus:ring-[#05294E] focus:border-[#05294E]'} text-slate-900 bg-slate-50/50 transition-all duration-300 disabled:opacity-50 disabled:cursor-not-allowed`}
