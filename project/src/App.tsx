@@ -26,6 +26,7 @@ import { ZelleCheckoutPage } from './components/ZelleCheckoutPage';
 import { ZelleWaitingPage } from './components/ZelleWaitingPage';
 import SmartAssistantLayout from './components/SmartAssistantLayout';
 import { Toaster } from 'react-hot-toast';
+import CookieBanner from './components/CookieBanner';
 
 // ✅ OTIMIZAÇÃO: Lazy loading de Dashboards e páginas pesadas para reduzir bundle inicial
 const StudentDashboard = React.lazy(() => import('./pages/StudentDashboard/index'));
@@ -72,9 +73,12 @@ const AppContent = () => {
   // Hook global para capturar códigos de referência em qualquer página
   useReferralCodeCapture();
 
-  // Garantir que a página role para o topo em toda mudança de rota
+  // Garantir que a página role para o topo em toda mudança de rota (exceto quando é apenas uma âncora/hash)
   const location = useLocation();
   React.useEffect(() => {
+    // Se temos um hash, não forçamos scroll para o topo pois o navegador deve pular para a âncora
+    if (location.hash) return;
+
     // scroll imediato para o topo após navegação
     try {
       window.scrollTo({ top: 0, behavior: 'auto' });
@@ -88,6 +92,7 @@ const AppContent = () => {
     // fallback: executar novamente após um curto delay para sobrepor efeitos filhos
     const id = window.setTimeout(() => {
       try {
+        if (location.hash) return; // double check no fallback
         window.scrollTo({ top: 0, behavior: 'auto' });
         if (document.documentElement) document.documentElement.scrollTop = 0;
         if (document.body) document.body.scrollTop = 0;
@@ -95,7 +100,7 @@ const AppContent = () => {
     }, 80);
 
     return () => window.clearTimeout(id);
-  }, [location.pathname, location.hash]);
+  }, [location.pathname]); // Removido location.hash das dependências
 
   // Captura parâmetros UTM da URL (especificamente para links da Brant Immigration)
   useEffect(() => {
@@ -196,6 +201,7 @@ const App: React.FC = () => {
                 <AuthRedirect>
                   <AppContent />
                   <Toaster position="top-right" />
+                  <CookieBanner />
                 </AuthRedirect>
               </UnreadMessagesProvider>
             </PaymentBlockedProvider>

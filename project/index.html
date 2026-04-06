@@ -6,8 +6,30 @@
     <script>
       window.dataLayer = window.dataLayer || [];
       function gtag(){dataLayer.push(arguments);}
-      gtag('js', new Date());
 
+      // Consent Mode v2: DEVE ser configurado ANTES do gtag('js', new Date())
+      // conforme documentação oficial: https://developers.google.com/tag-platform/security/guides/consent
+      (function() {
+        var storageKey = 'matricula_usa_cookie_consent';
+        var savedConsent = null;
+        try {
+          var item = localStorage.getItem(storageKey);
+          if (item) savedConsent = JSON.parse(item);
+        } catch (e) {}
+
+        gtag('consent', 'default', {
+          ad_storage: 'denied',
+          analytics_storage: savedConsent ? savedConsent.analytics_storage : 'denied',
+          ad_user_data: 'denied',
+          ad_personalization: 'denied',
+          wait_for_update: 500
+        });
+
+        // Redação de dados de ads — permanente, pois não usamos Google Ads
+        gtag('set', 'ads_data_redaction', true);
+      })();
+
+      gtag('js', new Date());
       gtag('config', 'G-R0ZSKHKV8L');
     </script>
     <meta charset="UTF-8" />
