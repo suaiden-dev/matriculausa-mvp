@@ -9,6 +9,7 @@ import PhoneInput from 'react-phone-number-input';
 import 'react-phone-number-input/style.css';
 import { getStoredUtmParams, clearUtmParams } from '../utils/utmTracker';
 import { useFormTracking } from '../hooks/useFormTracking';
+import { useLeadCapture } from '../hooks/useLeadCapture';
 
 interface AuthProps {
   mode: 'login' | 'register';
@@ -58,6 +59,17 @@ const Auth: React.FC<AuthProps> = ({ mode }) => {
   
   const { login, register } = useAuth();
   const { trackFieldFilled, trackFormSubmitted } = useFormTracking({ formName: 'auth_register' });
+  const { captureLead, markAsConverted } = useLeadCapture();
+
+  const handleFieldBlur = (fieldName: string) => {
+    trackFieldFilled(fieldName);
+    captureLead({
+      full_name: formData.full_name,
+      email: formData.email,
+      phone: formData.phone,
+      source_page: 'auth_register'
+    });
+  };
 
   // const navigate = useNavigate(); (removido por não ser utilizado e causar warning)
 
@@ -522,6 +534,8 @@ const Auth: React.FC<AuthProps> = ({ mode }) => {
           console.log('📊 [AUTH] UTM parameters limpos do localStorage');
         }
 
+        markAsConverted(normalizedEmail);
+
         // Para estudantes, o email já é confirmado automaticamente e o login é feito automaticamente
         // O AuthRedirect vai redirecionar para o dashboard
         // Para universidades, também não mostra modal - o email será confirmado normalmente
@@ -786,7 +800,7 @@ const Auth: React.FC<AuthProps> = ({ mode }) => {
                         required
                         value={formData.full_name || ''}
                         onChange={handleInputChange}
-                        onBlur={() => trackFieldFilled('full_name')}
+                        onBlur={() => handleFieldBlur('full_name')}
                         className="w-full pl-12 pr-4 py-3 sm:py-4 bg-white border border-slate-300 placeholder-slate-500 text-slate-900 rounded-2xl focus:outline-none focus:ring-2 focus:ring-[#05294E] focus:border-[#05294E] transition-all duration-300 text-sm sm:text-base outline-none"
                         placeholder={t('authPage.register.enterFullName')}
                       />
@@ -806,7 +820,7 @@ const Auth: React.FC<AuthProps> = ({ mode }) => {
                         required
                         value={formData.email || ''}
                         onChange={handleInputChange}
-                        onBlur={() => trackFieldFilled('email')}
+                        onBlur={() => handleFieldBlur('email')}
                         className="w-full pl-12 pr-4 py-3 sm:py-4 bg-white border border-slate-300 placeholder-slate-500 text-slate-900 rounded-2xl focus:outline-none focus:ring-2 focus:ring-[#05294E] focus:border-[#05294E] transition-all duration-300 text-sm sm:text-base outline-none"
                         placeholder={t('authPage.register.enterEmail')}
                         autoComplete="username"
@@ -824,15 +838,12 @@ const Auth: React.FC<AuthProps> = ({ mode }) => {
                         defaultCountry="US"
                         addInternationalOption={false}
                         value={formData.phone}
+                        onBlur={() => handleFieldBlur('phone')}
                         onChange={(value) => {
                           setFormData(prev => {
                             const newData = { ...prev, phone: value || '' };
                             return newData;
                           });
-                          // Dispara tracking quando o número tiver tamanho mínimo válido
-                          if (value && value.replace(/\D/g, '').length >= 8) {
-                            trackFieldFilled('phone');
-                          }
                         }}
                         style={{
                           '--PhoneInputCountryFlag-height': '1.2em',
@@ -1091,7 +1102,7 @@ const Auth: React.FC<AuthProps> = ({ mode }) => {
                         required
                         value={formData.full_name || ''}
                         onChange={handleInputChange}
-                        onBlur={() => trackFieldFilled('full_name')}
+                        onBlur={() => handleFieldBlur('full_name')}
                         className="w-full pl-12 pr-4 py-3 sm:py-4 bg-white border border-slate-300 placeholder-slate-500 text-slate-900 rounded-2xl focus:outline-none focus:ring-2 focus:ring-[#D0151C] focus:border-[#D0151C] transition-all duration-300 text-sm sm:text-base outline-none"
                         placeholder={t('authPage.register.yourFullName')}
                       />
@@ -1111,7 +1122,7 @@ const Auth: React.FC<AuthProps> = ({ mode }) => {
                         required
                         value={formData.email || ''}
                         onChange={handleInputChange}
-                        onBlur={() => trackFieldFilled('email')}
+                        onBlur={() => handleFieldBlur('email')}
                         className="w-full pl-12 pr-4 py-3 sm:py-4 bg-white border border-slate-300 placeholder-slate-500 text-slate-900 rounded-2xl focus:outline-none focus:ring-2 focus:ring-[#D0151C] focus:border-[#D0151C] transition-all duration-300 text-sm sm:text-base outline-none"
                         placeholder={t('authPage.register.officialUniversityEmail')}
                       />
@@ -1143,7 +1154,7 @@ const Auth: React.FC<AuthProps> = ({ mode }) => {
                           '--PhoneInput-color--focus': '#D0151C'
                         }}
                         maxLength={20}
-                        onBlur={() => trackFieldFilled('phone')}
+                        onBlur={() => handleFieldBlur('phone')}
                         className={`phone-input-custom university w-full pl-4 pr-4 py-3 sm:py-4 bg-white border placeholder-slate-500 text-slate-900 rounded-2xl transition-all duration-300 text-sm sm:text-base ${
                           error === t('authPage.messages.invalidPhone') 
                             ? 'border-red-500 ring-2 ring-red-500/10' 

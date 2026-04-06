@@ -1,15 +1,16 @@
 import React, { useState, useEffect } from 'react';
 import { useSearchParams } from 'react-router-dom';
-import { GraduationCap, DollarSign, MessageSquare, CheckCircle } from 'lucide-react';
+import { GraduationCap, DollarSign, MessageSquare, CheckCircle, UserX } from 'lucide-react';
 import StudentApplicationsView from '../../components/AdminDashboard/StudentApplicationsView';
 import CompletedApplicationsView from '../../components/AdminDashboard/CompletedApplicationsView';
 import FeeManagement from '../../components/AdminDashboard/FeeManagement';
+import LostLeadsView from '../../components/AdminDashboard/LostLeadsView';
 import AdminChatPage from './AdminChatPage';
 import { useAdminNotifications } from '../../contexts/AdminNotificationsContext';
 
 const UsersHub: React.FC = () => {
   const [searchParams] = useSearchParams();
-  const [activeTab, setActiveTab] = useState<'applications' | 'completed' | 'feeManagement' | 'messages'>('applications');
+  const [activeTab, setActiveTab] = useState<'applications' | 'completed' | 'feeManagement' | 'messages' | 'lostLeads'>('applications');
   const [selectedConversationId, setSelectedConversationId] = useState<string | null>(null);
   const [selectedRecipientId, setSelectedRecipientId] = useState<string | null>(null);
   const { unreadCount } = useAdminNotifications();
@@ -26,6 +27,8 @@ const UsersHub: React.FC = () => {
       setActiveTab('feeManagement');
     } else if (tab === 'completed') {
       setActiveTab('completed');
+    } else if (tab === 'lostLeads') {
+      setActiveTab('lostLeads');
     } else {
       setActiveTab('applications');
     }
@@ -100,6 +103,20 @@ const UsersHub: React.FC = () => {
               <span>Student Messages</span>
             </div>
           </button>
+
+          <button
+            onClick={() => setActiveTab('lostLeads')}
+            className={`whitespace-nowrap py-2 px-1 border-b-2 font-medium text-sm ${
+              activeTab === 'lostLeads'
+                ? 'border-amber-500 text-amber-600'
+                : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
+            }`}
+          >
+            <div className="flex items-center space-x-2">
+              <UserX className="h-5 w-5" />
+              <span>Lost Leads</span>
+            </div>
+          </button>
         </nav>
       </div>
 
@@ -109,6 +126,8 @@ const UsersHub: React.FC = () => {
         <CompletedApplicationsView />
       ) : activeTab === 'feeManagement' ? (
         <FeeManagement />
+      ) : activeTab === 'lostLeads' ? (
+        <LostLeadsView />
       ) : (
         <AdminChatPage 
           defaultConversationId={selectedConversationId || undefined}
