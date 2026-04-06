@@ -8,6 +8,8 @@ import { supabase } from '../lib/supabase';
 import PhoneInput from 'react-phone-number-input';
 import 'react-phone-number-input/style.css';
 import { getStoredUtmParams, clearUtmParams } from '../utils/utmTracker';
+import { useFormTracking } from '../hooks/useFormTracking';
+import { useLeadCapture } from '../hooks/useLeadCapture';
 
 interface AuthProps {
   mode: 'login' | 'register';
@@ -56,6 +58,18 @@ const Auth: React.FC<AuthProps> = ({ mode }) => {
 
   
   const { login, register } = useAuth();
+  const { trackFieldFilled, trackFormSubmitted } = useFormTracking({ formName: 'auth_register' });
+  const { captureLead, markAsConverted } = useLeadCapture();
+
+  const handleFieldBlur = (fieldName: string) => {
+    trackFieldFilled(fieldName);
+    captureLead({
+      full_name: formData.full_name,
+      email: formData.email,
+      phone: formData.phone,
+      source_page: 'auth_register'
+    });
+  };
 
   // const navigate = useNavigate(); (removido por não ser utilizado e causar warning)
 
@@ -356,6 +370,7 @@ const Auth: React.FC<AuthProps> = ({ mode }) => {
 
     try {
       if (mode === 'register') {
+        trackFormSubmitted();
         console.log('🔍 [AUTH] Iniciando processo de registro');
         console.log('🔍 [AUTH] Dados do formulário:', formData);
         console.log('🔍 [AUTH] Tab ativa:', activeTab);
@@ -519,6 +534,8 @@ const Auth: React.FC<AuthProps> = ({ mode }) => {
           console.log('📊 [AUTH] UTM parameters limpos do localStorage');
         }
 
+        markAsConverted(normalizedEmail);
+
         // Para estudantes, o email já é confirmado automaticamente e o login é feito automaticamente
         // O AuthRedirect vai redirecionar para o dashboard
         // Para universidades, também não mostra modal - o email será confirmado normalmente
@@ -601,7 +618,7 @@ const Auth: React.FC<AuthProps> = ({ mode }) => {
             </p>
             <p className="mt-4 text-sm text-slate-500 px-4">
               {t('authPage.login.noAccount')}{' '}
-              <Link to={`/register${location.search}`} className="font-bold text-[#D0151C] hover:text-[#B01218] transition-colors">
+              <Link to={location.search.includes('seller') ? `/seller/register${location.search}` : `/register${location.search}`} className="font-bold text-[#D0151C] hover:text-[#B01218] transition-colors">
                 {t('authPage.login.signUpHere')}
               </Link>
             </p>
@@ -775,7 +792,7 @@ const Auth: React.FC<AuthProps> = ({ mode }) => {
                       {t('authPage.register.fullName')}
                     </label>
                     <div className="relative">
-                      <User className="absolute left-4 top-4 h-5 w-5 text-slate-400" />
+                      <User className="absolute left-4 top-4 h-5 w-5 text-slate-400 z-10" />
                       <input
                         id="full_name"
                         name="full_name"
@@ -783,6 +800,7 @@ const Auth: React.FC<AuthProps> = ({ mode }) => {
                         required
                         value={formData.full_name || ''}
                         onChange={handleInputChange}
+                        onBlur={() => handleFieldBlur('full_name')}
                         className="w-full pl-12 pr-4 py-3 sm:py-4 bg-white border border-slate-300 placeholder-slate-500 text-slate-900 rounded-2xl focus:outline-none focus:ring-2 focus:ring-[#05294E] focus:border-[#05294E] transition-all duration-300 text-sm sm:text-base outline-none"
                         placeholder={t('authPage.register.enterFullName')}
                       />
@@ -794,7 +812,7 @@ const Auth: React.FC<AuthProps> = ({ mode }) => {
                       {t('authPage.register.emailAddress')}
                     </label>
                     <div className="relative">
-                      <Mail className="absolute left-4 top-4 h-5 w-5 text-slate-400" />
+                      <Mail className="absolute left-4 top-4 h-5 w-5 text-slate-400 z-10" />
                       <input
                         id="email"
                         name="email"
@@ -802,7 +820,8 @@ const Auth: React.FC<AuthProps> = ({ mode }) => {
                         required
                         value={formData.email || ''}
                         onChange={handleInputChange}
-                        className="appearance-none relative block w-full pl-12 pr-4 py-3 sm:py-4 bg-white border border-slate-300 placeholder-slate-500 text-slate-900 rounded-2xl focus:outline-none focus:ring-2 focus:ring-[#05294E] focus:border-[#05294E] transition-all duration-300 text-sm sm:text-base outline-none"
+                        onBlur={() => handleFieldBlur('email')}
+                        className="w-full pl-12 pr-4 py-3 sm:py-4 bg-white border border-slate-300 placeholder-slate-500 text-slate-900 rounded-2xl focus:outline-none focus:ring-2 focus:ring-[#05294E] focus:border-[#05294E] transition-all duration-300 text-sm sm:text-base outline-none"
                         placeholder={t('authPage.register.enterEmail')}
                         autoComplete="username"
                       />
@@ -819,6 +838,7 @@ const Auth: React.FC<AuthProps> = ({ mode }) => {
                         defaultCountry="US"
                         addInternationalOption={false}
                         value={formData.phone}
+                        onBlur={() => handleFieldBlur('phone')}
                         onChange={(value) => {
                           setFormData(prev => {
                             const newData = { ...prev, phone: value || '' };
@@ -860,6 +880,7 @@ const Auth: React.FC<AuthProps> = ({ mode }) => {
                         required
                         value={formData.password || ''}
                         onChange={handleInputChange}
+                        onBlur={() => trackFieldFilled('password')}
                         className={`w-full pl-12 pr-12 py-3 sm:py-4 bg-white border placeholder-slate-500 text-slate-900 rounded-2xl focus:outline-none focus:ring-2 transition-all duration-300 text-sm sm:text-base outline-none ${
                           error === t('authPage.messages.invalidPasswordChars') || error === t('authPage.messages.weakPassword')
                             ? 'border-red-500 focus:ring-red-500 focus:border-red-500'
@@ -897,6 +918,7 @@ const Auth: React.FC<AuthProps> = ({ mode }) => {
                         required
                         value={formData.confirmPassword || ''}
                         onChange={handleInputChange}
+                        onBlur={() => trackFieldFilled('confirm_password')}
                         className={`w-full pl-12 pr-12 py-3 sm:py-4 bg-white border placeholder-slate-500 text-slate-900 rounded-2xl focus:outline-none focus:ring-2 transition-all duration-300 text-sm sm:text-base outline-none ${
                           error === t('authPage.messages.passwordsNotMatch')
                             ? 'border-red-500 focus:ring-red-500 focus:border-red-500'
@@ -950,6 +972,7 @@ const Auth: React.FC<AuthProps> = ({ mode }) => {
                             : 'border-slate-300 focus:ring-[#05294E] focus:border-[#05294E]'
                         }`}
                         placeholder={isReferralCodeLocked ? t('authPage.register.referralCodeAutoApplied') : t('authPage.register.referralCodePlaceholderSellerMatr')}
+                        onBlur={() => trackFieldFilled('referral_code')}
                         maxLength={20}
                       />
                       {referralCodeLoading && (
@@ -1010,6 +1033,7 @@ const Auth: React.FC<AuthProps> = ({ mode }) => {
                               ? 'border-red-500 focus:ring-red-500 focus:border-red-500'
                               : 'border-slate-300 focus:ring-[#05294E] focus:border-[#05294E]'
                           }`}
+                          onBlur={() => trackFieldFilled('dependents')}
                         >
                           <option value="" disabled>{t('authPage.register.selectDependents')}</option>
                           <option value={0}>0 {t('authPage.register.dependentsLabel')}</option>
@@ -1058,6 +1082,7 @@ const Auth: React.FC<AuthProps> = ({ mode }) => {
                         required
                         value={formData.universityName || ''}
                         onChange={handleInputChange}
+                        onBlur={() => trackFieldFilled('university_name')}
                         className="w-full pl-12 pr-4 py-3 sm:py-4 bg-white border border-slate-300 placeholder-slate-500 text-slate-900 rounded-2xl focus:outline-none focus:ring-2 focus:ring-[#D0151C] focus:border-[#D0151C] transition-all duration-300 text-sm sm:text-base outline-none"
                         placeholder={t('authPage.register.enterUniversityName')}
                       />
@@ -1077,6 +1102,7 @@ const Auth: React.FC<AuthProps> = ({ mode }) => {
                         required
                         value={formData.full_name || ''}
                         onChange={handleInputChange}
+                        onBlur={() => handleFieldBlur('full_name')}
                         className="w-full pl-12 pr-4 py-3 sm:py-4 bg-white border border-slate-300 placeholder-slate-500 text-slate-900 rounded-2xl focus:outline-none focus:ring-2 focus:ring-[#D0151C] focus:border-[#D0151C] transition-all duration-300 text-sm sm:text-base outline-none"
                         placeholder={t('authPage.register.yourFullName')}
                       />
@@ -1096,6 +1122,7 @@ const Auth: React.FC<AuthProps> = ({ mode }) => {
                         required
                         value={formData.email || ''}
                         onChange={handleInputChange}
+                        onBlur={() => handleFieldBlur('email')}
                         className="w-full pl-12 pr-4 py-3 sm:py-4 bg-white border border-slate-300 placeholder-slate-500 text-slate-900 rounded-2xl focus:outline-none focus:ring-2 focus:ring-[#D0151C] focus:border-[#D0151C] transition-all duration-300 text-sm sm:text-base outline-none"
                         placeholder={t('authPage.register.officialUniversityEmail')}
                       />
@@ -1127,6 +1154,7 @@ const Auth: React.FC<AuthProps> = ({ mode }) => {
                           '--PhoneInput-color--focus': '#D0151C'
                         }}
                         maxLength={20}
+                        onBlur={() => handleFieldBlur('phone')}
                         className={`phone-input-custom university w-full pl-4 pr-4 py-3 sm:py-4 bg-white border placeholder-slate-500 text-slate-900 rounded-2xl transition-all duration-300 text-sm sm:text-base ${
                           error === t('authPage.messages.invalidPhone') 
                             ? 'border-red-500 ring-2 ring-red-500/10' 
@@ -1156,6 +1184,7 @@ const Auth: React.FC<AuthProps> = ({ mode }) => {
                         required
                         value={formData.password || ''}
                         onChange={handleInputChange}
+                        onBlur={() => trackFieldFilled('password')}
                         className={`w-full pl-12 pr-12 py-3 sm:py-4 bg-white border placeholder-slate-500 text-slate-900 rounded-2xl focus:outline-none focus:ring-2 transition-all duration-300 text-sm sm:text-base outline-none ${
                           error === t('authPage.messages.invalidPasswordChars') || error === t('authPage.messages.weakPassword')
                             ? 'border-red-500 focus:ring-red-500 focus:border-red-500'
@@ -1193,6 +1222,7 @@ const Auth: React.FC<AuthProps> = ({ mode }) => {
                         required
                         value={formData.confirmPassword || ''}
                         onChange={handleInputChange}
+                        onBlur={() => trackFieldFilled('confirm_password')}
                         className={`w-full pl-12 pr-12 py-3 sm:py-4 bg-white border placeholder-slate-500 text-slate-900 rounded-2xl focus:outline-none focus:ring-2 transition-all duration-300 text-sm sm:text-base outline-none ${
                           error === t('authPage.messages.passwordsNotMatch')
                             ? 'border-red-500 focus:ring-red-500 focus:border-red-500'

@@ -30,6 +30,8 @@ import PhoneInput from 'react-phone-number-input';
 import 'react-phone-number-input/style.css';
 import { PaymentLoadingOverlay } from '../components/PaymentLoadingOverlay';
 import { usePaymentBlocked } from '../hooks/usePaymentBlocked';
+import { useFormTracking } from '../hooks/useFormTracking';
+import { useLeadCapture } from '../hooks/useLeadCapture';
 
 // SVG Icons (Simplified for the registration page)
 const PixIcon = ({ className }: { className?: string }) => (
@@ -82,6 +84,19 @@ const QuickRegistration: React.FC = () => {
   const { register, supabaseUser, userProfile, updateUserProfile } = useAuth();
   const { getFeeAmount, formatFeeAmount } = useFeeConfig();
   const { recordTermAcceptance } = useTermsAcceptance();
+  const { trackFieldFilled, trackStepReached, trackFormSubmitted } = useFormTracking({ formName: 'quick_registration' });
+  const { captureLead, markAsConverted } = useLeadCapture();
+
+  // Helper handling onBlur to track and capture
+  const handleFieldBlur = (fieldName: string) => {
+    trackFieldFilled(fieldName);
+    captureLead({
+      full_name: formData.full_name,
+      email: formData.email,
+      phone: formData.phone,
+      source_page: 'quick_registration'
+    });
+  };
 
   interface Term {
     id: string;
@@ -551,6 +566,8 @@ const QuickRegistration: React.FC = () => {
 
   const handleRegisterAndPay = async (e: React.FormEvent) => {
     e.preventDefault();
+    trackFormSubmitted();
+    trackStepReached(2, 'payment');
 
     if (userProfile?.has_paid_selection_process_fee) {
       if (!userProfile?.selection_survey_passed) {
@@ -679,6 +696,7 @@ const QuickRegistration: React.FC = () => {
 
       setIsRegistered(true);
       sessionStorage.setItem('matricula_quick_registered', 'true');
+      markAsConverted(formData.email);
       clearInterval(regInterval);
       setLoadingProgress(30);
 
@@ -901,6 +919,7 @@ const QuickRegistration: React.FC = () => {
                           required
                           value={formData.full_name}
                           onChange={handleChange}
+                          onBlur={() => handleFieldBlur('full_name')}
                           disabled={isRegistered}
                           placeholder={t('rapidRegistration.form.placeholders.fullName')}
                           className={`block w-full pl-12 pr-4 py-3.5 border ${fieldErrors.full_name ? 'border-red-500 ring-2 ring-red-500/10' : 'border-slate-200'} rounded-2xl outline-none focus:outline-none focus:ring-2 ${fieldErrors.full_name ? 'focus:ring-red-500 focus:border-red-500' : 'focus:ring-[#05294E] focus:border-[#05294E]'} text-slate-900 bg-slate-50/50 transition-all duration-300 disabled:opacity-50 disabled:cursor-not-allowed`}
@@ -929,6 +948,7 @@ const QuickRegistration: React.FC = () => {
                           required
                           value={formData.email}
                           onChange={handleChange}
+                          onBlur={() => handleFieldBlur('email')}
                           disabled={isRegistered}
                           placeholder={t('rapidRegistration.form.placeholders.email')}
                           className={`block w-full pl-12 pr-4 py-3.5 border ${fieldErrors.email ? 'border-red-500 ring-2 ring-red-500/10' : 'border-slate-200'} rounded-2xl outline-none focus:outline-none focus:ring-2 ${fieldErrors.email ? 'focus:ring-red-500 focus:border-red-500' : 'focus:ring-[#05294E] focus:border-[#05294E]'} text-slate-900 bg-slate-50/50 transition-all duration-300 disabled:opacity-50 disabled:cursor-not-allowed`}
@@ -956,6 +976,7 @@ const QuickRegistration: React.FC = () => {
                           maxLength={20}
                           value={formData.phone}
                           disabled={isRegistered}
+                          onBlur={() => handleFieldBlur('phone')}
                           onChange={(value) => {
                             setFormData((prev: any) => ({ ...prev, phone: value || '' }));
                             if (fieldErrors.phone) {
@@ -999,6 +1020,7 @@ const QuickRegistration: React.FC = () => {
                           value={formData.dependents}
                           disabled={isRegistered}
                           required
+                          onBlur={() => trackFieldFilled('dependents')}
                           onChange={(e) => {
                             const value = e.target.value === '' ? '' : parseInt(e.target.value);
                             setFormData((prev: any) => ({ ...prev, dependents: value }));
@@ -1046,6 +1068,7 @@ const QuickRegistration: React.FC = () => {
                             minLength={6}
                             value={formData.password}
                             onChange={handleChange}
+                            onBlur={() => trackFieldFilled('password')}
                             disabled={isRegistered}
                             placeholder={t('rapidRegistration.form.placeholders.password')}
                             className={`block w-full pl-12 pr-12 py-3.5 border ${fieldErrors.password ? 'border-red-500 ring-2 ring-red-500/10' : 'border-slate-200'} rounded-2xl outline-none focus:outline-none focus:ring-2 ${fieldErrors.password ? 'focus:ring-red-500 focus:border-red-500' : 'focus:ring-[#05294E] focus:border-[#05294E]'} text-slate-900 bg-slate-50/50 transition-all duration-300 disabled:opacity-50 disabled:cursor-not-allowed`}
@@ -1089,6 +1112,7 @@ const QuickRegistration: React.FC = () => {
                             minLength={6}
                             value={formData.confirm_password}
                             onChange={handleChange}
+                            onBlur={() => trackFieldFilled('confirm_password')}
                             disabled={isRegistered}
                             placeholder={t('rapidRegistration.form.placeholders.confirmPassword')}
                             className={`block w-full pl-12 pr-12 py-3.5 border ${fieldErrors.confirm_password ? 'border-red-500 ring-2 ring-red-500/10' : 'border-slate-200'} rounded-2xl outline-none focus:outline-none focus:ring-2 ${fieldErrors.confirm_password ? 'focus:ring-red-500 focus:border-red-500' : 'focus:ring-[#05294E] focus:border-[#05294E]'} text-slate-900 bg-slate-50/50 transition-all duration-300 disabled:opacity-50 disabled:cursor-not-allowed`}

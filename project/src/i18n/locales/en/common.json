@@ -57,7 +57,8 @@
       "title": "Legal",
       "privacy": "Privacy Policy",
       "terms": "Terms of Service",
-      "cookies": "Cookie Policy"
+      "cookies": "Cookie Policy",
+      "manageCookies": "Manage Cookies"
     },
     "contact": {
       "email": "info@matriculausa.com",
@@ -298,6 +299,25 @@
       "uploadFailed": "Failed to upload payment confirmation",
       "alreadyPending": "You already have a payment in process. Please wait for review.",
       "checkingStatus": "Checking payment status..."
+    }
+  },
+  "cookies": {
+    "title": "Cookie Preferences",
+    "description": "We use cookies to improve your experience. By continuing to browse, you agree to our <0>Privacy Policy</0>.",
+    "acceptAll": "Accept all",
+    "rejectAll": "Reject all",
+    "customize": "Customize",
+    "save": "Save preferences",
+    "manage": {
+      "title": "Cookie Preferences",
+      "necessary": {
+        "title": "Necessary",
+        "description": "Essential for the website to function. Always active."
+      },
+      "analytics": {
+        "title": "Analytics",
+        "description": "Help us understand how you use the site so we can improve your experience."
+      }
     }
   },
   "smartChat": {
