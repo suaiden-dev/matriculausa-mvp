@@ -31,6 +31,7 @@ import 'react-phone-number-input/style.css';
 import { PaymentLoadingOverlay } from '../components/PaymentLoadingOverlay';
 import { usePaymentBlocked } from '../hooks/usePaymentBlocked';
 import { useFormTracking } from '../hooks/useFormTracking';
+import { useLeadCapture } from '../hooks/useLeadCapture';
 
 // SVG Icons (Simplified for the registration page)
 const PixIcon = ({ className }: { className?: string }) => (
@@ -84,6 +85,18 @@ const QuickRegistration: React.FC = () => {
   const { getFeeAmount, formatFeeAmount } = useFeeConfig();
   const { recordTermAcceptance } = useTermsAcceptance();
   const { trackFieldFilled, trackStepReached, trackFormSubmitted } = useFormTracking({ formName: 'quick_registration' });
+  const { captureLead, markAsConverted } = useLeadCapture();
+
+  // Helper handling onBlur to track and capture
+  const handleFieldBlur = (fieldName: string) => {
+    trackFieldFilled(fieldName);
+    captureLead({
+      full_name: formData.full_name,
+      email: formData.email,
+      phone: formData.phone,
+      source_page: 'quick_registration'
+    });
+  };
 
   interface Term {
     id: string;
@@ -683,6 +696,7 @@ const QuickRegistration: React.FC = () => {
 
       setIsRegistered(true);
       sessionStorage.setItem('matricula_quick_registered', 'true');
+      markAsConverted(formData.email);
       clearInterval(regInterval);
       setLoadingProgress(30);
 
@@ -905,7 +919,7 @@ const QuickRegistration: React.FC = () => {
                           required
                           value={formData.full_name}
                           onChange={handleChange}
-                          onBlur={() => trackFieldFilled('full_name')}
+                          onBlur={() => handleFieldBlur('full_name')}
                           disabled={isRegistered}
                           placeholder={t('rapidRegistration.form.placeholders.fullName')}
                           className={`block w-full pl-12 pr-4 py-3.5 border ${fieldErrors.full_name ? 'border-red-500 ring-2 ring-red-500/10' : 'border-slate-200'} rounded-2xl outline-none focus:outline-none focus:ring-2 ${fieldErrors.full_name ? 'focus:ring-red-500 focus:border-red-500' : 'focus:ring-[#05294E] focus:border-[#05294E]'} text-slate-900 bg-slate-50/50 transition-all duration-300 disabled:opacity-50 disabled:cursor-not-allowed`}
@@ -934,7 +948,7 @@ const QuickRegistration: React.FC = () => {
                           required
                           value={formData.email}
                           onChange={handleChange}
-                          onBlur={() => trackFieldFilled('email')}
+                          onBlur={() => handleFieldBlur('email')}
                           disabled={isRegistered}
                           placeholder={t('rapidRegistration.form.placeholders.email')}
                           className={`block w-full pl-12 pr-4 py-3.5 border ${fieldErrors.email ? 'border-red-500 ring-2 ring-red-500/10' : 'border-slate-200'} rounded-2xl outline-none focus:outline-none focus:ring-2 ${fieldErrors.email ? 'focus:ring-red-500 focus:border-red-500' : 'focus:ring-[#05294E] focus:border-[#05294E]'} text-slate-900 bg-slate-50/50 transition-all duration-300 disabled:opacity-50 disabled:cursor-not-allowed`}
@@ -962,7 +976,7 @@ const QuickRegistration: React.FC = () => {
                           maxLength={20}
                           value={formData.phone}
                           disabled={isRegistered}
-                          onBlur={() => trackFieldFilled('phone')}
+                          onBlur={() => handleFieldBlur('phone')}
                           onChange={(value) => {
                             setFormData((prev: any) => ({ ...prev, phone: value || '' }));
                             if (fieldErrors.phone) {

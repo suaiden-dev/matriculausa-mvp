@@ -303,7 +303,7 @@
   },
   "cookies": {
     "title": "Cookie Preferences",
-    "description": "We use cookies to improve your experience and analyze site usage. See our <0>Privacy Policy</0> and manage your preferences at any time.",
+    "description": "We use cookies to improve your experience. By continuing to browse, you agree to our <0>Privacy Policy</0>.",
     "acceptAll": "Accept all",
     "rejectAll": "Reject all",
     "customize": "Customize",
