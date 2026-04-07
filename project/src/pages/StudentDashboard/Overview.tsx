@@ -29,7 +29,7 @@ import {
 import './Overview.css';
 
 const Overview: React.FC = () => {
-  const { t } = useTranslation(['dashboard', 'common']);
+  const { t, i18n } = useTranslation(['dashboard', 'common']);
   const navigate = useNavigate();
   const [searchParams, setSearchParams] = useSearchParams();
 
@@ -304,8 +304,22 @@ const Overview: React.FC = () => {
 
   const currentStepKey = (savedOnboardingStep || 'selection_fee') as OnboardingStepKey;
   const currentStepNumber = STEP_NUMBER_MAP[currentStepKey] ?? 1;
-  const currentStepLabel = t(`studentDashboard.progressBar.onboardingBanner.stepLabels.${currentStepKey}`);
-  const currentStepDescription = t(`studentDashboard.progressBar.onboardingBanner.stepDescriptions.${currentStepKey}`);
+  let currentStepLabel = t(`studentDashboard.progressBar.onboardingBanner.stepLabels.${currentStepKey}`);
+  let currentStepDescription = t(`studentDashboard.progressBar.onboardingBanner.stepDescriptions.${currentStepKey}`);
+
+  if (currentStepKey === 'selection_fee' && !userProfile?.has_paid_selection_process_fee) {
+    const lang = i18n.language || 'pt';
+    if (lang.startsWith('pt')) {
+      currentStepLabel = 'Processo Seletivo';
+      currentStepDescription = 'Dê início ao processo seletivo, descubra bolsas de estudos nos Estados Unidos esperando por você.';
+    } else if (lang.startsWith('es')) {
+      currentStepLabel = 'Proceso de Selección';
+      currentStepDescription = 'Inicia el proceso de selección y descubre becas de estudio en Estados Unidos esperándote.';
+    } else {
+      currentStepLabel = 'Selection Process';
+      currentStepDescription = 'Start the selection process and discover study scholarships in the United States waiting for you.';
+    }
+  }
 
   return (
     <div className="overview-dashboard-container pt-2">
@@ -364,11 +378,9 @@ const Overview: React.FC = () => {
               <div className="absolute bottom-0 left-0 -ml-16 -mb-16 w-32 h-32 bg-indigo-500/15 rounded-full blur-[60px] group-hover:bg-indigo-400/25 transition-colors duration-700" />
 
               <h3 className="relative text-lg md:text-xl font-black text-white uppercase tracking-widest leading-tight">
-                {userProfile?.onboarding_completed
-                  ? t('studentDashboard.progressBar.onboardingBanner.documentsPortal')
-                  : (isOnboardingStarted
-                    ? t('studentDashboard.progressBar.onboardingBanner.continueProcess')
-                    : t('studentDashboard.progressBar.onboardingBanner.startProcess'))}
+                {(!userProfile?.onboarding_completed && !isOnboardingStarted)
+                  ? t('studentDashboard.progressBar.onboardingBanner.startProcess')
+                  : t('studentDashboard.progressBar.onboardingBanner.continueProcess')}
               </h3>
             </button>
           )}

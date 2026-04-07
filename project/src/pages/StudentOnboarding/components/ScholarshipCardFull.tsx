@@ -21,12 +21,14 @@ import { is3800ScholarshipBlocked } from '../../../utils/scholarshipDeadlineVali
 
 interface ScholarshipCardFullProps {
   scholarship: any;
-  isSelected: boolean;
-  onToggle: () => void;
+  isSelected?: boolean;
+  onToggle?: () => void;
   userProfile?: any;
   isLocked?: boolean;
   onViewDetails?: () => void;
   isLimitReached?: boolean;
+  hideSelectButton?: boolean;
+  topRightActionNode?: React.ReactNode;
 }
 
 const ScholarshipCardFullComponent: React.FC<ScholarshipCardFullProps> = ({
@@ -36,7 +38,9 @@ const ScholarshipCardFullComponent: React.FC<ScholarshipCardFullProps> = ({
   userProfile,
   isLocked = false,
   onViewDetails,
-  isLimitReached = false
+  isLimitReached = false,
+  hideSelectButton = false,
+  topRightActionNode
 }) => {
   const { t } = useTranslation(['registration', 'scholarships', 'common']);
   const [brokenImage, setBrokenImage] = useState<boolean>(false);
@@ -59,7 +63,7 @@ const ScholarshipCardFullComponent: React.FC<ScholarshipCardFullProps> = ({
         }`}
       onClick={() => {
         // Fix: Make entire card clickable
-        if (!scholarship.is_active || isBlocked || isLocked || (isLimitReached && !isSelected)) return;
+        if (!scholarship.is_active || isBlocked || isLocked || (isLimitReached && !isSelected) || !onToggle || hideSelectButton) return;
         onToggle();
       }}
       style={{
@@ -86,8 +90,8 @@ const ScholarshipCardFullComponent: React.FC<ScholarshipCardFullProps> = ({
         )}
 
         {/* Top Badges */}
-        <div className="absolute top-4 left-4 right-4 flex justify-end items-start z-20">
-          <div className="flex flex-col items-end gap-2">
+        <div className="absolute top-4 left-4 right-4 flex justify-between items-start z-20">
+          <div className="flex flex-col items-start gap-2">
             {!scholarship.is_active || isBlocked ? (
               <div className="bg-red-500 text-white px-3 py-1.5 rounded-full text-[10px] font-bold flex items-center gap-1.5 shadow-lg">
                 <AlertTriangle className="h-3 w-3" />
@@ -100,6 +104,11 @@ const ScholarshipCardFullComponent: React.FC<ScholarshipCardFullProps> = ({
               </div>
             )}
           </div>
+          {topRightActionNode && (
+            <div className="flex flex-col items-end gap-2">
+              {topRightActionNode}
+            </div>
+          )}
         </div>
       </div>
 
@@ -262,7 +271,8 @@ const ScholarshipCardFullComponent: React.FC<ScholarshipCardFullProps> = ({
             {t('scholarshipsPage.scholarshipCard.details') || 'View Full Details'}
           </button>
 
-          {!scholarship.is_active || isBlocked ? (
+          {!hideSelectButton && (
+            !scholarship.is_active || isBlocked ? (
             <button
               disabled
               className="w-full h-10 px-3 rounded-xl font-semibold cursor-not-allowed flex items-center justify-center bg-slate-300 text-slate-500 opacity-60 text-sm"
@@ -275,7 +285,7 @@ const ScholarshipCardFullComponent: React.FC<ScholarshipCardFullProps> = ({
               type="button"
               onClick={(e) => {
                 e.stopPropagation();
-                onToggle();
+                onToggle?.();
               }}
               disabled={isLocked || (isLimitReached && !isSelected)}
               className={`group/btn w-full h-10 px-4 rounded-xl font-bold text-sm flex items-center justify-center transition-all duration-300 relative overflow-hidden backdrop-blur-md border border-white/20 shadow-lg hover:shadow-xl ${isLocked || (isLimitReached && !isSelected)
@@ -294,7 +304,7 @@ const ScholarshipCardFullComponent: React.FC<ScholarshipCardFullProps> = ({
                     : t('studentDashboard.findScholarships.scholarshipCard.selectScholarship')}
               </span>
             </button>
-          )}
+          ))}
         </div>
       </div>
     </div>

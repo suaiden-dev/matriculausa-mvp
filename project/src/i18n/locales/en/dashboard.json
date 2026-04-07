@@ -21,9 +21,9 @@
         "actionRequired": "ACTION REQUIRED",
         "stoppedAt": "Stopped at: {{step}}",
         "startNow": "Start Now",
-        "documentsPortal": "Documents Portal",
-        "continueProcess": "Continue Process",
-        "startProcess": "Start Process",
+        "documentsPortal": "Continue",
+        "continueProcess": "Continue",
+        "startProcess": "Start",
         "stepLabels": {
           "welcome": "Welcome",
           "selection_fee": "Selection Fee",

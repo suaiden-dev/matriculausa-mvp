@@ -1,43 +1,25 @@
-import React, { useState, useEffect, useMemo, useRef } from 'react';
-import { motion } from 'framer-motion';
+import React, { useState, useEffect, useMemo } from 'react';
 import {
   Search,
   Filter,
   ChevronDown,
-  Star,
   Award,
-  Building,
-  MapPin,
-  Clock,
-  DollarSign,
-  GraduationCap,
   CheckCircle,
-  Users,
-  Monitor,
-  Globe,
-  Briefcase
 } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 import { useAuth } from '../../hooks/useAuth';
 import { useNavigate } from 'react-router-dom';
-import { useFavorites } from '../../hooks/useFavorites';
 import { useDynamicFees } from '../../hooks/useDynamicFees';
 import { supabase } from '../../lib/supabase';
-import { getPlacementFee } from '../../utils/placementFeeCalculator';
-import { formatCurrency } from '../../utils/currency';
 import { STRIPE_PRODUCTS } from '../../stripe-config';
 import ScholarshipDetailModal from '../../components/ScholarshipDetailModal';
 import { PreCheckoutModal } from '../../components/PreCheckoutModal';
 import { PaymentMethodSelectorDrawer } from '../../components/PaymentMethodSelectorDrawer';
-import FavoriteButton from '../../components/FavoriteButton';
-import FavoritesFilter from '../../components/FavoritesFilter';
 import { ApplicationFeeBlockedMessage } from '../../components/ApplicationFeeBlockedMessage';
 import { useApplicationFeeStatus } from '../../hooks/useApplicationFeeStatus';
-import { is3800Scholarship } from '../../utils/scholarshipDeadlineValidation';
-import { ScholarshipExpiryWarning } from '../../components/ScholarshipExpiryWarning';
 import { useScholarshipsQuery } from '../../hooks/useStudentDashboardQueries';
 
-import { ScholarshipCountdownTimer } from '../../components/ScholarshipCountdownTimer';
+import { ScholarshipCardFull } from '../StudentOnboarding/components/ScholarshipCardFull';
 
 const ScholarshipBrowser: React.FC = () => {
   const { t } = useTranslation(['dashboard', 'scholarships', 'common']);
@@ -68,14 +50,20 @@ const ScholarshipBrowser: React.FC = () => {
   // Obter dados do usuário primeiro
   const { userProfile, user, refetchUserProfile } = useAuth();
 
-  // Helper: calcular Application Fee exibida considerando dependentes (legacy e simplified)
-  const getApplicationFeeWithDependents = (sch: any): string => {
-    const base = sch?.application_fee_amount ? Number(sch.application_fee_amount) : 350;
-    const deps = Number(userProfile?.dependents) || 0;
-    // ✅ CORREÇÃO: Adicionar $100 por dependente para ambos os sistemas (legacy e simplified)
-    const finalAmount = deps > 0 ? base + deps * 100 : base;
-    return finalAmount.toFixed(2);
+  const getDeliveryModeLabel = (mode: string) => {
+    switch (mode?.toLowerCase()) {
+      case 'online':
+        return t('studentDashboard.findScholarships.filters.online');
+      case 'in_person':
+        return t('studentDashboard.findScholarships.scholarshipCard.inPerson');
+      case 'hybrid':
+        return t('studentDashboard.findScholarships.filters.hybrid');
+      default:
+        return t('studentDashboard.findScholarships.scholarshipCard.mixed');
+    }
   };
+
+
 
   // Obter faixa de bolsa desejada do perfil do usuário
   // ✅ Se for null/undefined, aluno verá TODAS as bolsas (sem filtro de valor)
@@ -164,9 +152,7 @@ const ScholarshipBrowser: React.FC = () => {
     };
   }, [scholarships]);
 
-  // Estados para favoritos
-  const [showOnlyFavorites, setShowOnlyFavorites] = useState(false);
-  const { favorites, toggleFavorite, isFavorite } = useFavorites();
+
 
   // Função para aplicar filtros manualmente
   const applyFilters = (e?: React.MouseEvent) => {
@@ -365,18 +351,7 @@ const ScholarshipBrowser: React.FC = () => {
   const [selectedScholarshipForModal, setSelectedScholarshipForModal] = useState<any>(null);
   const [isModalOpen, setIsModalOpen] = useState(false);
 
-  // Refs para os cards de bolsas (não podem estar dentro do loop)
-  const scholarshipRefs = useRef<Map<string, HTMLDivElement>>(new Map());
 
-  // Controle de imagens quebradas para exibir placeholder
-  const [brokenImageIds, setBrokenImageIds] = useState<Set<string | number>>(new Set());
-  const markImageAsBroken = (id: string | number) => {
-    setBrokenImageIds(prev => {
-      const next = new Set(prev);
-      next.add(id);
-      return next;
-    });
-  };
 
   // Remover reload automático após pagamento
   // useEffect(() => {
@@ -410,82 +385,7 @@ const ScholarshipBrowser: React.FC = () => {
   //   return <PaymentRequiredBlocker pageType="scholarships" showHeader={false} />;
   // }
 
-  const formatAmount = (amount: any) => {
-    if (typeof amount === 'string') return amount;
-    if (typeof amount === 'number') return amount.toLocaleString('en-US');
-    return amount;
-  };
 
-  const getFieldBadgeColor = (field: string | undefined) => {
-    switch (field?.toLowerCase()) {
-      case 'stem':
-        return 'bg-gradient-to-r from-blue-600 to-indigo-600';
-      case 'business':
-        return 'bg-gradient-to-r from-green-600 to-emerald-600';
-      case 'engineering':
-        return 'bg-gradient-to-r from-purple-600 to-violet-600';
-      case 'arts':
-        return 'bg-gradient-to-r from-pink-600 to-rose-600';
-      case 'medicine':
-        return 'bg-gradient-to-r from-red-600 to-pink-600';
-      case 'law':
-        return 'bg-gradient-to-r from-amber-600 to-orange-600';
-      default:
-        return 'bg-gradient-to-r from-slate-600 to-slate-700';
-    }
-  };
-
-  const getLevelIcon = (level: string) => {
-    switch (level) {
-      case 'undergraduate':
-        return <GraduationCap className="h-4 w-4" />;
-      case 'graduate':
-        return <Users className="h-4 w-4" />;
-      case 'doctorate':
-        return <Award className="h-4 w-4" />;
-      default:
-        return <GraduationCap className="h-4 w-4" />;
-    }
-  };
-
-  const getDeliveryModeIcon = (mode: string) => {
-    switch (mode?.toLowerCase()) {
-      case 'online':
-        return <Monitor className="h-3 w-3" />;
-      case 'in_person':
-        return <Building className="h-3 w-3" />;
-      case 'hybrid':
-        return <Globe className="h-3 w-3" />;
-      default:
-        return <MapPin className="h-3 w-3" />;
-    }
-  };
-
-  const getDeliveryModeColor = (mode: string) => {
-    switch (mode?.toLowerCase()) {
-      case 'online':
-        return 'bg-blue-100 text-blue-700';
-      case 'in_person':
-        return 'bg-green-100 text-green-700';
-      case 'hybrid':
-        return 'bg-purple-100 text-purple-700';
-      default:
-        return 'bg-gray-100 text-gray-700';
-    }
-  };
-
-  const getDeliveryModeLabel = (mode: string) => {
-    switch (mode?.toLowerCase()) {
-      case 'online':
-        return t('studentDashboard.findScholarships.filters.online');
-      case 'in_person':
-        return t('studentDashboard.findScholarships.scholarshipCard.inPerson');
-      case 'hybrid':
-        return t('studentDashboard.findScholarships.filters.hybrid');
-      default:
-        return t('studentDashboard.findScholarships.scholarshipCard.mixed');
-    }
-  };
 
   // Função para calcular dias até o deadline
   const getDaysUntilDeadline = (deadline: string) => {
@@ -504,20 +404,7 @@ const ScholarshipBrowser: React.FC = () => {
     return diffDays;
   };
 
-  // Versão para EXIBIÇÃO: nunca mostra valores negativos nos cards
-  const getDaysUntilDeadlineDisplay = (deadline: string) => {
-    const days = getDaysUntilDeadline(deadline);
-    return Math.max(days, 0);
-  };
 
-  // Função para obter status e cor do deadline
-  const getDeadlineStatus = (deadline: string) => {
-    const days = getDaysUntilDeadline(deadline);
-    if (days < 0) return { status: 'expired', color: 'text-red-600', bg: 'bg-red-50' };
-    if (days <= 7) return { status: 'urgent', color: 'text-orange-600', bg: 'bg-orange-50' };
-    if (days <= 30) return { status: 'warning', color: 'text-yellow-600', bg: 'bg-yellow-50' };
-    return { status: 'normal', color: 'text-green-600', bg: 'bg-green-50' };
-  };
 
   // Memoização dos filtros e ordenação com debounce
   const filteredScholarships = useMemo(() => {
@@ -542,10 +429,7 @@ const ScholarshipBrowser: React.FC = () => {
         return false;
       }
 
-      // Filtro de favoritos
-      if (showOnlyFavorites && !isFavorite(scholarship.id)) {
-        return false;
-      }
+
 
       // Busca por palavras-chave
       const text = `${scholarship.title} ${scholarship.description || ''} ${(scholarship.universities?.name || '')}`.toLowerCase();
@@ -639,9 +523,7 @@ const ScholarshipBrowser: React.FC = () => {
     sortBy,
     desiredScholarshipRange,
     userProfile?.has_paid_selection_process_fee,
-    approvedUniversityIds.size,
-    showOnlyFavorites,
-    isFavorite
+    approvedUniversityIds.size
   ]);
 
   // Memoização dos IDs aplicados e no carrinho
@@ -676,10 +558,7 @@ const ScholarshipBrowser: React.FC = () => {
     const searchWords = (appliedSearch || '').trim().toLowerCase().split(/\s+/).filter(Boolean);
 
     return featuredScholarships.filter(scholarship => {
-      // Filtro de favoritos - aplicar primeiro
-      if (showOnlyFavorites && !isFavorite(scholarship.id)) {
-        return false;
-      }
+
 
       const text = `${scholarship.title} ${scholarship.description || ''} ${(scholarship.universities?.name || '')}`.toLowerCase();
       const matchesSearch = searchWords.length === 0 || searchWords.every(word => text.includes(word));
@@ -718,7 +597,7 @@ const ScholarshipBrowser: React.FC = () => {
 
       return matchesSearch && matchesLevel && matchesField && matchesDeliveryMode && matchesWorkPermission && matchesMin && matchesMax && matchesDeadline && matchesDesiredRange && fromApprovedUniversity && matchesUniversity && notExcludedUniversity;
     });
-  }, [featuredScholarships, appliedSearch, appliedLevel, appliedField, appliedDeliveryMode, appliedWorkPermission, appliedMinValue, appliedMaxValue, appliedDeadlineDays, showOnlyFavorites, isFavorite, desiredScholarshipRange, appliedUniversity, userProfile?.has_paid_selection_process_fee, approvedUniversityIds.size]);
+  }, [featuredScholarships, appliedSearch, appliedLevel, appliedField, appliedDeliveryMode, appliedWorkPermission, appliedMinValue, appliedMaxValue, appliedDeadlineDays, desiredScholarshipRange, appliedUniversity, userProfile?.has_paid_selection_process_fee, approvedUniversityIds.size]);
 
 
 
@@ -1214,16 +1093,6 @@ const ScholarshipBrowser: React.FC = () => {
             )}
           </button>
 
-          {/* Favorites Filter */}
-          <div className="flex justify-center">
-            <FavoritesFilter
-              showOnlyFavorites={showOnlyFavorites}
-              onToggle={() => setShowOnlyFavorites(!showOnlyFavorites)}
-              favoritesCount={favorites.size}
-              className="w-full max-w-md"
-            />
-          </div>
-
           {(appliedSearch || appliedLevel !== 'all' || appliedField !== 'all' || appliedDeliveryMode !== 'all' || appliedWorkPermission !== 'all' || (userProfile?.has_paid_selection_process_fee && appliedUniversity !== 'all') || appliedMinValue || appliedMaxValue || appliedDeadlineDays) && (
             <button
               type="button"
@@ -1311,216 +1180,17 @@ const ScholarshipBrowser: React.FC = () => {
 
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 sm:gap-6">
               {filteredFeaturedScholarships.map((scholarship) => {
-                const layoutId = `featured-scholarship-${scholarship.id}`;
-
                 return (
-                  <motion.div
+                  <ScholarshipCardFull
                     key={scholarship.id}
-                    ref={(el) => {
-                      if (el) scholarshipRefs.current.set(scholarship.id, el);
-                    }}
-                    layoutId={layoutId}
-                    className="group relative bg-white rounded-2xl sm:rounded-3xl shadow-lg hover:shadow-2xl transition-all duration-500 overflow-hidden border border-slate-200 hover:-translate-y-1 sm:hover:-translate-y-2 flex flex-col h-full"
-                  >
-                    {/* Featured Badge */}
-                    <div className="absolute top-3 sm:top-4 left-3 sm:left-4 z-10">
-                      <div className="bg-gradient-to-r from-yellow-400 to-orange-500 text-white px-2 sm:px-3 py-1 rounded-full text-xs font-bold flex items-center shadow-lg">
-                        <Star className="h-3 w-3 mr-1 fill-current" />
-                        {t('studentDashboard.findScholarships.scholarshipCard.featured')}
-                      </div>
-                    </div>
+                    scholarship={scholarship}
+                    isSelected={false}
+                    userProfile={userProfile}
+                    hideSelectButton={true}
+                    onViewDetails={() => openScholarshipModal(scholarship)}
+                    // Favorito removido
 
-                    {/* Scholarship Image */}
-                    <div className="relative h-40 sm:h-48 overflow-hidden flex-shrink-0">
-                      {scholarship.image_url && userProfile?.has_paid_selection_process_fee && !brokenImageIds.has(scholarship.id) ? (
-                        <img
-                          src={scholarship.image_url}
-                          alt={scholarship.title}
-                          onError={() => markImageAsBroken(scholarship.id)}
-                          className="w-full h-full object-contain group-hover:scale-110 transition-transform duration-500"
-                        />
-                      ) : (
-                        <div className="flex items-center justify-center w-full h-full text-slate-400 bg-gradient-to-br from-[#05294E]/5 to-slate-100">
-                          <Building className="h-16 w-16 text-[#05294E]/30" />
-                        </div>
-                      )}
-                      {scholarship.is_exclusive && (
-                        <div className="absolute top-3 sm:top-4 right-3 sm:right-4">
-                          <span className="bg-[#D0151C] text-white px-2 sm:px-3 py-1 rounded-lg sm:rounded-xl text-xs font-bold shadow-lg">
-                            {t('studentDashboard.findScholarships.scholarshipCard.exclusive')}
-                          </span>
-                        </div>
-                      )}
-
-                      {/* Favorite Button */}
-                      <div className={`absolute  z-20 ${scholarship.is_exclusive ? 'right-4 sm:right-4 top-12 ' : 'right-3 sm:right-4 top-3'
-                        }`}>
-                        <FavoriteButton
-                          isFavorite={isFavorite(scholarship.id)}
-                          onToggle={() => toggleFavorite(scholarship.id)}
-                          size="sm"
-                        />
-                      </div>
-                      {/* Featured Order Badge */}
-                      <div className="absolute bottom-3 sm:bottom-4 left-3 sm:left-4">
-                        <span className="bg-white/90 text-blue-600 px-2 py-1 rounded-full text-xs font-bold shadow-lg">
-                          #{scholarship.featured_order || 1}
-                        </span>
-                      </div>
-                    </div>
-
-                    {/* Card Content */}
-                    <div className="p-4 sm:p-6 flex-1 flex flex-col">
-                      {/* Warning for $3800 scholarships */}
-                      <ScholarshipExpiryWarning scholarship={scholarship} variant="badge" className="mb-3" />
-
-                      {/* Title and University */}
-                      <div className="mb-4">
-                        <h3 className="text-xl font-bold text-slate-900 mb-3 leading-tight line-clamp-2 group-hover:text-[#05294E] transition-colors">
-                          {scholarship.title}
-                        </h3>
-                        <div className="flex items-center mb-2">
-                          <span className={`px-2 py-1 rounded-lg text-xs font-medium text-white ${getFieldBadgeColor(scholarship.field_of_study)}`}>
-                            {scholarship.field_of_study || 'Any Field'}
-                          </span>
-                        </div>
-                        <div className="flex items-center text-slate-600 mb-3">
-                          <Building className="h-4 w-4 mr-2 text-[#05294E]" />
-                          <span className="text-xs font-semibold mr-1">{t('studentDashboard.findScholarships.scholarshipCard.university')}</span>
-                          <span className={`text-sm select-none ${!user || !userProfile?.has_paid_selection_process_fee ? 'blur-sm' : ''}`}>
-                            {user && userProfile?.has_paid_selection_process_fee
-                              ? (scholarship.universities?.name || 'Unknown University')
-                              : '********'}
-                          </span>
-                        </div>
-                      </div>
-
-                      {/* Financial Impact Section */}
-                      <div className="mb-6">
-                        <div className="bg-gradient-to-br from-blue-50 to-blue-100 rounded-2xl p-4 border border-blue-200 shadow-sm group-hover:shadow-md transition-shadow duration-300">
-                          <h4 className="text-sm font-bold text-slate-700 mb-3 flex items-center gap-2">
-                            <DollarSign className="h-4 w-4 text-green-600" />
-                            {t('studentDashboard.findScholarships.scholarshipCard.financialOverview')}
-                          </h4>
-
-                          <div className="space-y-2">
-                            <div className="flex justify-between items-center">
-                              <span className="text-xs text-slate-600">{t('studentDashboard.findScholarships.scholarshipCard.originalPrice')}</span>
-                              <span className="text-sm font-bold text-slate-700">
-                                ${formatAmount(scholarship.original_annual_value || scholarship.amount || scholarship.annual_value || 'N/A')}
-                              </span>
-                            </div>
-                            <div className="flex justify-between items-center">
-                              <span className="text-xs text-slate-600">{t('studentDashboard.findScholarships.scholarshipCard.withScholarship')}</span>
-                              <span className="text-sm font-bold text-green-600">
-                                ${formatAmount(scholarship.annual_value_with_scholarship || scholarship.amount || 'N/A')}
-                              </span>
-                            </div>
-                            <div className="flex justify-between items-center">
-                              <span className="text-xs text-slate-600">{t('studentDashboard.findScholarships.scholarshipCard.perCredit')}</span>
-                              <span className="text-sm font-bold text-slate-700">
-                                ${formatAmount(scholarship.original_value_per_credit || scholarship.per_credit_cost || 'N/A')}
-                              </span>
-                            </div>
-
-                            {/* Application Fee Information */}
-                            <div className="pt-2 border-t border-slate-200">
-                              <div className="flex justify-between items-center">
-                                <span className="text-xs text-slate-600">{t('scholarshipsPage.scholarshipCard.applicationFee')}</span>
-                                <span className="text-sm font-bold text-purple-600">
-                                  ${getApplicationFeeWithDependents(scholarship)}
-                                </span>
-                              </div>
-                               <div className="text-xs text-slate-400 text-center mt-1">
-                                {scholarship.application_fee_amount && Number(scholarship.application_fee_amount) !== 350 ?
-                                  t('scholarshipsPage.scholarshipCard.customFee') :
-                                  t('scholarshipsPage.scholarshipCard.standardFee')
-                                }
-                              </div>
-                              {/* Placement Fee - exibir apenas para novos usuários */}
-                              {userProfile?.placement_fee_flow && (() => {
-                                const annualValue = scholarship.annual_value_with_scholarship ? Number(scholarship.annual_value_with_scholarship) : Number(scholarship.amount) || 0;
-                                const placementFeeAmount = scholarship.placement_fee_amount ? Number(scholarship.placement_fee_amount) : null;
-                                const placementFee = getPlacementFee(annualValue, placementFeeAmount);
-                                return (
-                                  <div className="flex items-center justify-between pt-1.5 border-t border-slate-200 mt-2">
-                                    <span className="text-xs text-slate-600 font-medium">{t('studentDashboard.myApplications.paymentStatus.placementFee')}</span>
-                                    <span className="text-sm font-bold text-blue-600">{formatCurrency(placementFee)}</span>
-                                  </div>
-                                );
-                              })()}
-                            </div>
-                          </div>
-                        </div>
-                      </div>
-
-                      {/* Additional Details for Featured Scholarships */}
-                      <div className="mb-6 space-y-3">
-                        {/* Study Mode */}
-                        {scholarship.delivery_mode && (
-                          <div className="flex items-center justify-between p-3 bg-white rounded-lg border border-slate-200">
-                            <div className="flex items-center">
-                              {getDeliveryModeIcon(scholarship.delivery_mode)}
-                              <span className="text-xs font-medium text-slate-600 ml-2">{t('studentDashboard.findScholarships.scholarshipCard.studyMode')}</span>
-                            </div>
-                            <span className={`px-2 py-1 rounded-md text-xs font-semibold ${getDeliveryModeColor(scholarship.delivery_mode)}`}>
-                              {getDeliveryModeLabel(scholarship.delivery_mode)}
-                            </span>
-                          </div>
-                        )}
-
-                        {/* Work Permissions */}
-                        {scholarship.work_permissions && scholarship.work_permissions.length > 0 && (
-                          <div className="p-3 bg-white rounded-lg border border-slate-200">
-                            <div className="flex items-center mb-2">
-                              <Briefcase className="h-3 w-3 text-emerald-600" />
-                              <span className="text-xs font-medium text-slate-600 ml-2">{t('studentDashboard.findScholarships.scholarshipCard.workAuthorization')}</span>
-                            </div>
-                            <div className="flex flex-wrap gap-1">
-                              {scholarship.work_permissions.filter((p: any) => String(p).toUpperCase() !== 'F1').map((permission: string, index: number) => (
-                                <span
-                                  key={index}
-                                  className="px-2 py-1 bg-emerald-100 text-emerald-700 rounded-md text-xs font-semibold"
-                                >
-                                  {permission}
-                                </span>
-                              ))}
-                            </div>
-                          </div>
-                        )}
-
-                        {/* Deadline */}
-                        <div className="flex items-center justify-between p-3 bg-white rounded-lg border border-slate-200">
-                          <div className="flex items-center">
-                            <Clock className="h-3 w-3 text-red-500" />
-                            <span className="text-xs font-medium text-slate-600 ml-2">{t('studentDashboard.findScholarships.scholarshipCard.deadline')}</span>
-                          </div>
-                          {is3800Scholarship(scholarship) ? (
-                            <ScholarshipCountdownTimer scholarship={scholarship} />
-                          ) : (
-                            <span className="text-xs font-semibold text-slate-700">
-                              {getDaysUntilDeadlineDisplay(scholarship.deadline)} {t('studentDashboard.findScholarships.scholarshipCard.daysLeft')}
-                            </span>
-                          )}
-                        </div>
-                      </div>
-
-                      {/* Action Buttons */}
-                      <div className="mt-auto">
-                        <button
-                          type="button"
-                          onClick={() => openScholarshipModal(scholarship)}
-                          className="w-full h-12 px-3 sm:px-4 rounded-2xl font-bold text-xs sm:text-sm flex items-center justify-center bg-gradient-to-r from-blue-500 to-blue-600 text-white hover:from-blue-600 hover:to-blue-700 transition-all duration-300 shadow-lg hover:shadow-xl transform hover:scale-105 hover:-translate-y-1 focus:outline-none focus:ring-2 focus:ring-blue-500/50 focus:ring-offset-2"
-                          title="View scholarship details"
-                          aria-label="View scholarship details"
-                        >
-                          <span className="hidden sm:inline">{t('studentDashboard.findScholarships.scholarshipCard.show')}</span>
-                          <span className="sm:hidden">{t('studentDashboard.findScholarships.scholarshipCard.view')}</span>
-                          <span className="hidden sm:inline ml-1">{t('studentDashboard.findScholarships.scholarshipCard.details')}</span>
-                        </button>
-                      </div>
-                    </div>
-                  </motion.div>
+                  />
                 );
               })}
             </div>
@@ -1531,220 +1201,17 @@ const ScholarshipBrowser: React.FC = () => {
       {/* Scholarships Grid */}
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 sm:gap-6 lg:gap-8">
         {paginatedScholarships.map((scholarship) => {
-          const layoutId = `scholarship-card-${scholarship.id}`;
-
           return (
-            <motion.div
+            <ScholarshipCardFull
               key={scholarship.id}
-              ref={(el) => {
-                if (el) scholarshipRefs.current.set(scholarship.id, el);
-              }}
-              layoutId={layoutId}
-              className="group relative bg-white rounded-2xl sm:rounded-3xl shadow-lg hover:shadow-2xl transition-all duration-500 overflow-hidden border border-slate-200 hover:-translate-y-1 sm:hover:-translate-y-2 flex flex-col h-full"
-            >
-              {/* Scholarship Image */}
-              <div className="relative h-40 sm:h-48 overflow-hidden flex-shrink-0">
-                {scholarship.image_url && userProfile?.has_paid_selection_process_fee && !brokenImageIds.has(scholarship.id) ? (
-                  <img
-                    src={scholarship.image_url}
-                    alt={scholarship.title}
-                    onError={() => markImageAsBroken(scholarship.id)}
-                    className="w-full h-full object-contain group-hover:scale-110 transition-transform duration-500"
-                  />
-                ) : (
-                  <div className="flex items-center justify-center w-full h-full text-slate-400 bg-gradient-to-br from-[#05294E]/5 to-slate-100">
-                    <Building className="h-16 w-16 text-[#05294E]/30" />
-                  </div>
-                )}
-                {scholarship.is_exclusive && (
-                  <div className="absolute top-3 sm:top-4 right-3 sm:right-4">
-                    <span className="bg-[#D0151C] text-white px-2 sm:px-3 py-1 rounded-lg sm:rounded-xl text-xs font-bold shadow-lg">
-                      {t('studentDashboard.findScholarships.scholarshipCard.exclusive')}
-                    </span>
-                  </div>
-                )}
+              scholarship={scholarship}
+              isSelected={false}
+              userProfile={userProfile}
+              hideSelectButton={true}
+              onViewDetails={() => openScholarshipModal(scholarship)}
+              // Favorito removido
 
-                {/* Favorite Button */}
-                <div className={`absolute z-20 ${scholarship.is_exclusive ? 'right-4 top-12 sm:right-4 sm:top-12' : 'right-3 sm:right-4 top-3'
-                  }`}>
-                  <FavoriteButton
-                    isFavorite={isFavorite(scholarship.id)}
-                    onToggle={() => toggleFavorite(scholarship.id)}
-                    size="sm"
-                    className=""
-                  />
-                </div>
-              </div>
-
-              {/* Card Content */}
-              <div className="p-4 sm:p-6 flex-1 flex flex-col">
-                {/* Warning for $3800 scholarships */}
-                <ScholarshipExpiryWarning scholarship={scholarship} variant="badge" className="mb-3" />
-
-                {/* Title and University */}
-                <div className="mb-3 sm:mb-4">
-                  <h3 className="text-lg sm:text-xl font-bold text-slate-900 mb-2 sm:mb-3 leading-tight line-clamp-2 group-hover:text-[#05294E] transition-colors">
-                    {scholarship.title}
-                  </h3>
-                  <div className="flex items-center mb-2">
-                    <span className={`px-2 py-1 rounded-lg text-xs font-medium text-white ${getFieldBadgeColor(scholarship.field_of_study)}`}>
-                      {scholarship.field_of_study || 'Any Field'}
-                    </span>
-                  </div>
-                  <div className="flex items-center text-slate-600 mb-2 sm:mb-3">
-                    <Building className="h-3 w-3 sm:h-4 sm:w-4 mr-1 sm:mr-2 text-[#05294E]" />
-                    <span className="text-xs font-semibold mr-1">{t('studentDashboard.findScholarships.scholarshipCard.university')}</span>
-                    <span className={`text-xs sm:text-sm select-none ${!user || !userProfile?.has_paid_selection_process_fee ? 'blur-sm' : ''}`}>
-                      {user && userProfile?.has_paid_selection_process_fee
-                        ? (scholarship.universities?.name || 'Unknown University')
-                        : '********'}
-                    </span>
-                  </div>
-
-                  {/* Program Details */}
-                  <div className="grid grid-cols-1 gap-2 sm:gap-3 mb-3 sm:mb-4">
-                    {/* Course Modality */}
-                    {scholarship.delivery_mode && (
-                      <div className="flex items-center justify-between p-2 sm:p-3 bg-slate-50 rounded-lg border border-slate-200">
-                        <div className="flex items-center">
-                          {getDeliveryModeIcon(scholarship.delivery_mode)}
-                          <span className="text-xs font-medium text-slate-600 ml-1 sm:ml-2">{t('studentDashboard.findScholarships.scholarshipCard.studyMode')}</span>
-                        </div>
-                        <span className={`px-2 py-1 rounded-md text-xs font-semibold ${getDeliveryModeColor(scholarship.delivery_mode)}`}>
-                          {getDeliveryModeLabel(scholarship.delivery_mode)}
-                        </span>
-                      </div>
-                    )}
-
-                    {/* Work Permissions */}
-                    {scholarship.work_permissions && scholarship.work_permissions.length > 0 && (
-                      <div className="p-2 sm:p-3 bg-slate-50 rounded-lg border border-slate-200">
-                        <div className="flex items-center mb-1 sm:mb-2">
-                          <Briefcase className="h-3 w-3 text-emerald-600" />
-                          <span className="text-xs font-medium text-slate-600 ml-1 sm:ml-2">{t('studentDashboard.findScholarships.scholarshipCard.workAuthorization')}</span>
-                        </div>
-                        <div className="flex flex-wrap gap-1">
-                          {scholarship.work_permissions.filter((p: any) => String(p).toUpperCase() !== 'F1').slice(0, 3).map((permission: string, index: number) => (
-                            <span
-                              key={index}
-                              className="px-2 py-1 bg-emerald-100 text-emerald-700 rounded-md text-xs font-semibold"
-                            >
-                              {permission}
-                            </span>
-                          ))}
-                          {scholarship.work_permissions.length > 3 && (
-                            <span className="text-xs text-slate-500">+{scholarship.work_permissions.length - 3} {t('studentDashboard.findScholarships.scholarshipCard.more')}</span>
-                          )}
-                        </div>
-                      </div>
-                    )}
-                  </div>
-                </div>
-                {/* Financial Impact Section */}
-                <div className="mb-4 sm:mb-6">
-                  <div className="bg-gradient-to-br from-slate-50 to-slate-100 rounded-xl sm:rounded-2xl p-3 sm:p-4 border border-slate-200 shadow-sm group-hover:shadow-md transition-shadow duration-300">
-                    <h4 className="text-xs sm:text-sm font-bold text-slate-700 mb-2 sm:mb-3 flex items-center gap-1 sm:gap-2">
-                      <DollarSign className="h-3 w-3 sm:h-4 sm:w-4 text-green-600" />
-                      {t('studentDashboard.findScholarships.scholarshipCard.financialOverview')}
-                    </h4>
-
-                    <div className="space-y-1 sm:space-y-2">
-                      <div className="flex items-center justify-between text-xs sm:text-sm">
-                        <span className="text-slate-600">{t('studentDashboard.findScholarships.scholarshipCard.originalPrice')}</span>
-                        <span className="font-bold text-blue-700">
-                          ${formatAmount(scholarship.original_annual_value)}
-                        </span>
-                      </div>
-                      <div className="flex items-center justify-between text-xs sm:text-sm">
-                        <span className="text-slate-600">{t('studentDashboard.findScholarships.scholarshipCard.withScholarship')}</span>
-                        <span className="font-bold text-green-700">
-                          ${formatAmount(scholarship.annual_value_with_scholarship)}
-                        </span>
-                      </div>
-                      <div className="flex items-center justify-between text-xs text-slate-500 pt-1 sm:pt-2 border-t border-slate-200">
-                        <span>{t('studentDashboard.findScholarships.scholarshipCard.perCredit')}</span>
-                        <span>${formatAmount(scholarship.original_value_per_credit)}</span>
-                      </div>
-
-                      {/* Application Fee Information */}
-                      <div className="pt-2 border-t border-slate-200">
-                        <div className="flex items-center justify-between text-xs text-slate-500">
-                          <span>{t('scholarshipsPage.scholarshipCard.applicationFee')}</span>
-                          <span className="font-semibold text-purple-600">
-                            ${getApplicationFeeWithDependents(scholarship)}
-                          </span>
-                        </div>
-                        <div className="text-xs text-slate-400 text-center mt-1">
-                          {scholarship.application_fee_amount && Number(scholarship.application_fee_amount) !== 350 ?
-                            t('scholarshipsPage.scholarshipCard.customFee') :
-                            t('scholarshipsPage.scholarshipCard.standardFee')
-                          }
-                        </div>
-                        {/* Placement Fee - exibir apenas para novos usuários */}
-                        {userProfile?.placement_fee_flow && (() => {
-                          const annualValue = scholarship.annual_value_with_scholarship ? Number(scholarship.annual_value_with_scholarship) : Number(scholarship.amount) || 0;
-                          const placementFeeAmount = scholarship.placement_fee_amount ? Number(scholarship.placement_fee_amount) : null;
-                          const placementFee = getPlacementFee(annualValue, placementFeeAmount);
-                          return (
-                            <div className="flex items-center justify-between pt-1.5 border-t border-slate-200 mt-1">
-                              <span className="text-xs text-slate-500">{t('studentDashboard.myApplications.paymentStatus.placementFee')}</span>
-                              <span className="text-xs font-bold text-blue-600">{formatCurrency(placementFee)}</span>
-                            </div>
-                          );
-                        })()}
-                      </div>
-                    </div>
-                  </div>
-                </div>
-
-                {/* Quick Details */}
-                <div className="space-y-2 sm:space-y-3 flex-1 mb-4">
-                  <div className="flex items-center justify-between text-xs sm:text-sm">
-                    <span className="text-slate-500">{t('studentDashboard.findScholarships.scholarshipCard.level')}</span>
-                    <div className="flex items-center">
-                      {getLevelIcon(scholarship.level || 'undergraduate')}
-                      <span className="ml-1 capitalize text-slate-700 text-xs sm:text-sm">{scholarship.level}</span>
-                    </div>
-                  </div>
-                  <div className="flex items-center justify-between text-xs sm:text-sm">
-                    <span className="text-slate-500">{t('studentDashboard.findScholarships.scholarshipCard.deadline')}</span>
-                    <div className="flex items-center">
-                      {is3800Scholarship(scholarship) ? (
-                        <ScholarshipCountdownTimer scholarship={scholarship} />
-                      ) : (
-                        <>
-                          <Clock className={`h-3 w-3 mr-1 ${getDeadlineStatus(scholarship.deadline).color}`} />
-                          <span className="text-slate-700 text-xs sm:text-sm">{getDaysUntilDeadlineDisplay(scholarship.deadline)} {t('studentDashboard.findScholarships.scholarshipCard.daysLeft')}</span>
-                        </>
-                      )}
-                    </div>
-                  </div>
-                  {scholarship.delivery_mode && (
-                    <div className="flex items-center justify-between text-sm">
-                      <span className="text-slate-500">{t('studentDashboard.findScholarships.scholarshipCard.studyMode')}</span>
-                      <div className="flex items-center">
-                        {getDeliveryModeIcon(scholarship.delivery_mode)}
-                        <span className="ml-1 text-slate-700">{getDeliveryModeLabel(scholarship.delivery_mode)}</span>
-                      </div>
-                    </div>
-                  )}
-                </div>
-                {/* Action Buttons */}
-                <div className="mt-6 pt-4 border-t border-slate-100">
-                  <button
-                    type="button"
-                    onClick={() => openScholarshipModal(scholarship)}
-                    className="w-full h-12 px-3 sm:px-4 rounded-2xl font-bold text-xs lg:text-sm flex items-center justify-center bg-gradient-to-r from-blue-500 to-blue-600 text-white hover:from-blue-600 hover:to-blue-700 transition-all duration-300 shadow-lg hover:shadow-xl transform hover:scale-105 hover:-translate-y-1 focus:outline-none focus:ring-2 focus:ring-blue-500/50 focus:ring-offset-2"
-                    title="View scholarship details"
-                    aria-label="View scholarship details"
-                  >
-                    <span className="hidden sm:inline">{t('studentDashboard.findScholarships.scholarshipCard.show')}</span>
-                    <span className="sm:hidden">{t('studentDashboard.findScholarships.scholarshipCard.view')}</span>
-                    <span className="hidden sm:inline ml-1">{t('studentDashboard.findScholarships.scholarshipCard.details')}</span>
-                  </button>
-                </div>
-              </div>
-            </motion.div>
+            />
           );
         })}
       </div>

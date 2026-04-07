@@ -21,9 +21,9 @@
         "actionRequired": "AÇÃO NECESSÁRIA",
         "stoppedAt": "Parou em: {{step}}",
         "startNow": "Começar Agora",
-        "documentsPortal": "Portal de Documentos",
-        "continueProcess": "Continuar Processo",
-        "startProcess": "Iniciar Processo",
+        "documentsPortal": "Continuar",
+        "continueProcess": "Continuar",
+        "startProcess": "Iniciar",
         "stepLabels": {
           "selection_fee": "Taxa do Processo Seletivo",
           "identity_verification": "Verificação de Identidade",

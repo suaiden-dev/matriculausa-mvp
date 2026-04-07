@@ -194,8 +194,8 @@
         ]
       },
       "selectionFee": {
-        "title": "Pagar Cuota del Proceso de Selección ($400)",
-        "description": "Desbloquea todas las becas. Esta tarifa es final y no reembolsable. (+$150 por dependiente)",
+        "title": "Proceso de Selección",
+        "description": "Desbloquea todas las becas. Esta tarifa es final y no reembolsable.",
         "items": [
           "Acceso para navegar becas",
           "Iniciar proceso de solicitud",
@@ -212,8 +212,8 @@
         ]
       },
       "applicationFee": {
-        "title": "Pagar Cuota de Solicitud (Según universidad)",
-        "description": "Confirma tu universidad. Esta tarifa es final y no reembolsable. (+$100 por dependiente)",
+        "title": "Cuota de Solicitud (Según universidad)",
+        "description": "Confirma tu universidad. Esta tarifa es final y no reembolsable.",
         "items": [
           "Ver becas aprobadas",
           "Confirmar elección de universidad",
@@ -287,8 +287,8 @@
         "answer": "MatriculaUSA es gratuito para crear tu perfil y explorar universidades. Sin embargo, una vez que inicias el proceso de solicitud y eres aprobado para una beca, todas las tarifas asociadas con el flujo de admisión y matrícula se vuelven obligatorias. Se presentan claramente antes de cualquier pago. Todas las tarifas son finales y no reembolsables."
       },
       "q2": {
-        "question": "¿Qué es la Cuota del Proceso de Selección?",
-        "answer": "La Cuota del Proceso de Selección $400 es el primer pago obligatorio en la plataforma MatriculaUSA. Desbloquea tu acceso completo para ver todas las becas e iniciar tu proceso de solicitud. Esta tarifa es final y no reembolsable."
+        "question": "¿Qué es el Proceso de Selección?",
+        "answer": "El Proceso de Selección es el primer pago obligatorio en la plataforma MatriculaUSA. Desbloquea tu acceso completo para ver todas las becas e iniciar tu proceso de solicitud. Esta tarifa es final y no reembolsable."
       },
       "q3": {
         "question": "¿Qué es la Cuota de Colocación (Placement Fee)?",
@@ -300,7 +300,7 @@
       },
       "q5": {
         "question": "¿Cómo elijo mi beca?",
-        "answer": "Tras el pago de la Cuota del Proceso de Selección y el envío de los documentos, nuestra IA y el equipo de soporte apresentarán las mejores opciones de beca para su perfil. Podrá entonces elegir la que mejor se adapte a su presupuesto y objetivos."
+        "answer": "Tras el pago del Proceso de Selección y el envío de los documentos, nuestra IA y el equipo de soporte apresentarán las mejores opciones de beca para su perfil. Podrá entonces elegir la que mejor se adapta a su presupuesto y objetivos."
       },
       "q6": {
         "question": "¿Hay otras tarifas que deba conocer?",
@@ -320,7 +320,7 @@
       },
       "q10": {
         "question": "¿Tengo que pagar todas las tarifas a la vez?",
-        "answer": "No. Las tarifas son separadas y se pagan por etapas. Usted paga primero la Cuota del Proceso de Selección, luego la Cuota de Solicitud (si corresponde) y, finalmente, la Cuota de Colocación asociada a la beca elegida. Todas son obligatorias, pero se pagan en diferentes momentos."
+        "answer": "No. Las tarifas son separadas y se pagan por etapas. Usted paga primero el Proceso de Selección, luego la Cuota de Solicitud (si corresponde) y, finalmente, la Cuota de Colocación asociada a la beca elegida. Todas son obligatorias, pero se pagan en diferentes momentos."
       },
       "q11": {
         "question": "¿A quién puedo contactar si tengo preguntas sobre tarifas o pagos?",
