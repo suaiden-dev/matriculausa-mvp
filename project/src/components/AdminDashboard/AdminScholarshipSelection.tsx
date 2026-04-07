@@ -2,6 +2,7 @@ import React, { useEffect, useMemo, useState, useCallback } from 'react';
 import { supabase } from '../../lib/supabase';
 import { useAuth } from '../../hooks/useAuth';
 import ScholarshipDetailModal from '../ScholarshipDetailModal';
+import { is3800ScholarshipBlocked } from '../../utils/scholarshipDeadlineValidation';
 
 interface AdminScholarshipSelectionProps {
   studentProfileId: string; // user_profiles.id
@@ -46,6 +47,7 @@ const AdminScholarshipSelection: React.FC<AdminScholarshipSelectionProps> = ({ s
   const [pageSize, setPageSize] = useState(10);
   const [total, setTotal] = useState(0);
   const [cart, setCart] = useState<string[]>([]);
+  const [cartDetails, setCartDetails] = useState<Record<string, { title?: string; universityName?: string }>>({});
   const [applications, setApplications] = useState<any[]>([]);
   const [processType, setProcessType] = useState<'initial' | 'transfer' | 'change_of_status' | ''>('');
   const [selectedScholarship, setSelectedScholarship] = useState<ScholarshipItem | null>(null);
@@ -58,6 +60,15 @@ const AdminScholarshipSelection: React.FC<AdminScholarshipSelectionProps> = ({ s
   const [filterScholarshipMax, setFilterScholarshipMax] = useState('');
   const [filterAppFeeMin, setFilterAppFeeMin] = useState('');
   const [filterAppFeeMax, setFilterAppFeeMax] = useState('');
+  const [filterLevel, setFilterLevel] = useState('');
+  const [filterFieldOfStudy, setFilterFieldOfStudy] = useState('');
+  const [filterDeliveryMode, setFilterDeliveryMode] = useState('');
+  const [filterWorkPermission, setFilterWorkPermission] = useState('');
+  const [distinctLevels, setDistinctLevels] = useState<string[]>([]);
+  const [distinctFields, setDistinctFields] = useState<string[]>([]);
+  const [distinctDeliveryModes, setDistinctDeliveryModes] = useState<string[]>([]);
+  const [distinctWorkPermissions, setDistinctWorkPermissions] = useState<string[]>([]);
+  const [hideBlocked, setHideBlocked] = useState(false);
 
   const canMutate = !!(user && (user.role === 'admin' || user.role === 'school'));
 
@@ -69,6 +80,35 @@ const AdminScholarshipSelection: React.FC<AdminScholarshipSelectionProps> = ({ s
       .order('name')
       .then(({ data }) => {
         if (data) setUniversities(data);
+      });
+
+    // Load distinct filter options
+    supabase
+      .from('scholarships')
+      .select('level, field_of_study, delivery_mode, work_permissions')
+      .then(({ data }) => {
+        if (data) {
+          const levelSet = new Set<string>();
+          const fieldSet = new Set<string>();
+          const deliverySet = new Set<string>();
+          const workPermSet = new Set<string>();
+          data.forEach((row: any) => {
+            if (row.level) levelSet.add(row.level);
+            if (row.field_of_study) fieldSet.add(row.field_of_study);
+            if (row.delivery_mode) deliverySet.add(row.delivery_mode);
+            if (Array.isArray(row.work_permissions)) {
+              row.work_permissions.forEach((wp: any) => {
+                if (typeof wp === 'string' && wp.trim() && wp.trim().toUpperCase() !== 'F1') {
+                  workPermSet.add(wp.trim());
+                }
+              });
+            }
+          });
+          setDistinctLevels(Array.from(levelSet).sort());
+          setDistinctFields(Array.from(fieldSet).sort());
+          setDistinctDeliveryModes(Array.from(deliverySet).sort());
+          setDistinctWorkPermissions(Array.from(workPermSet).sort());
+        }
       });
   }, []);
 
@@ -102,6 +142,18 @@ const AdminScholarshipSelection: React.FC<AdminScholarshipSelectionProps> = ({ s
       if (filterAppFeeMax !== '') {
         baseSelect = baseSelect.lte('placement_fee_amount', Number(filterAppFeeMax));
       }
+      if (filterLevel) {
+        baseSelect = baseSelect.eq('level', filterLevel);
+      }
+      if (filterFieldOfStudy) {
+        baseSelect = baseSelect.ilike('field_of_study', `%${filterFieldOfStudy}%`);
+      }
+      if (filterDeliveryMode) {
+        baseSelect = baseSelect.eq('delivery_mode', filterDeliveryMode);
+      }
+      if (filterWorkPermission) {
+        baseSelect = baseSelect.contains('work_permissions', [filterWorkPermission]);
+      }
 
       const { data: scholarshipsData, error: scholarshipsError, count } = await baseSelect.range(from, to);
       
@@ -112,13 +164,22 @@ const AdminScholarshipSelection: React.FC<AdminScholarshipSelectionProps> = ({ s
       setScholarships((scholarshipsData as any) || []);
       setTotal(count || 0);
 
-      // Carrinho do aluno
+      // Carrinho do aluno com detalhes (titulo e universidade)
       const { data: cartRows, error: cartError } = await supabase
         .from('user_cart')
-        .select('scholarship_id')
+        .select('scholarship_id, scholarships(title, universities(name))')
         .eq('user_id', studentUserId);
       if (cartError) throw cartError;
-      setCart((cartRows || []).map((r: any) => r.scholarship_id));
+      const newCartDetails: Record<string, { title?: string; universityName?: string }> = {};
+      const newCartIds = (cartRows || []).map((r: any) => {
+        newCartDetails[r.scholarship_id] = {
+           title: r.scholarships?.title,
+           universityName: r.scholarships?.universities?.name
+        };
+        return r.scholarship_id;
+      });
+      setCartDetails(newCartDetails);
+      setCart(newCartIds);
 
       // Aplicações existentes
       const { data: apps, error: appsErr } = await supabase
@@ -142,7 +203,7 @@ const AdminScholarshipSelection: React.FC<AdminScholarshipSelectionProps> = ({ s
     } finally {
       setLoading(false);
     }
-  }, [query, page, pageSize, studentProfileId, studentUserId, filterUniversityId, filterScholarshipMin, filterScholarshipMax, filterAppFeeMin, filterAppFeeMax]);
+  }, [query, page, pageSize, studentProfileId, studentUserId, filterUniversityId, filterScholarshipMin, filterScholarshipMax, filterAppFeeMin, filterAppFeeMax, filterLevel, filterFieldOfStudy, filterDeliveryMode, filterWorkPermission]);
 
   useEffect(() => {
     loadData();
@@ -166,6 +227,16 @@ const AdminScholarshipSelection: React.FC<AdminScholarshipSelectionProps> = ({ s
           .from('user_cart')
           .insert({ user_id: studentUserId, scholarship_id: scholarshipId });
         if (error) throw error;
+        
+        // Save the details to avoid ID flashing
+        const s = scholarships.find(x => x.id === scholarshipId);
+        if (s) {
+          setCartDetails(prev => ({
+            ...prev,
+            [scholarshipId]: { title: s.title, universityName: s.universities?.name || undefined }
+          }));
+        }
+        
         setCart(prev => prev.concat(scholarshipId));
       }
     } catch {
@@ -349,7 +420,7 @@ const AdminScholarshipSelection: React.FC<AdminScholarshipSelectionProps> = ({ s
             >
               {loading ? 'Searching...' : 'Search'}
             </button>
-            {(!!query || !!filterUniversityId || !!filterScholarshipMin || !!filterScholarshipMax || !!filterAppFeeMin || !!filterAppFeeMax) && (
+            {(!!query || !!filterUniversityId || !!filterScholarshipMin || !!filterScholarshipMax || !!filterAppFeeMin || !!filterAppFeeMax || !!filterLevel || !!filterFieldOfStudy || !!filterDeliveryMode || !!filterWorkPermission) && (
               <button
                 onClick={() => {
                   setQuery('');
@@ -358,6 +429,10 @@ const AdminScholarshipSelection: React.FC<AdminScholarshipSelectionProps> = ({ s
                   setFilterScholarshipMax('');
                   setFilterAppFeeMin('');
                   setFilterAppFeeMax('');
+                  setFilterLevel('');
+                  setFilterFieldOfStudy('');
+                  setFilterDeliveryMode('');
+                  setFilterWorkPermission('');
                   setPage(1);
                 }}
                 disabled={loading}
@@ -366,6 +441,18 @@ const AdminScholarshipSelection: React.FC<AdminScholarshipSelectionProps> = ({ s
                 Clear
               </button>
             )}
+          </div>
+
+          <div className="mb-4">
+            <label className="flex items-center gap-2 text-sm text-slate-700 cursor-pointer w-max hover:text-[#05294E] transition-colors">
+              <input 
+                type="checkbox" 
+                checked={hideBlocked} 
+                onChange={(e) => setHideBlocked(e.target.checked)} 
+                className="w-4 h-4 rounded border-slate-300 text-[#05294E] focus:ring-[#05294E]" 
+              />
+              <span className="font-medium">Ocultar bolsas esgotadas da lista</span>
+            </label>
           </div>
 
           {/* Filters */}
@@ -427,6 +514,64 @@ const AdminScholarshipSelection: React.FC<AdminScholarshipSelectionProps> = ({ s
                 />
               </div>
             </div>
+            <div className="grid grid-cols-2 gap-3">
+              <div>
+                <label className="block text-xs font-medium text-slate-600 mb-1">Academic level</label>
+                <select
+                  value={filterLevel}
+                  onChange={(e) => { setFilterLevel(e.target.value); setPage(1); }}
+                  className="w-full px-3 py-2 border border-slate-300 rounded-lg text-sm bg-white"
+                >
+                  <option value="">All levels</option>
+                  {distinctLevels.map((l) => (
+                    <option key={l} value={l}>{l.charAt(0).toUpperCase() + l.slice(1)}</option>
+                  ))}
+                </select>
+              </div>
+              <div>
+                <label className="block text-xs font-medium text-slate-600 mb-1">Field of study</label>
+                <select
+                  value={filterFieldOfStudy}
+                  onChange={(e) => { setFilterFieldOfStudy(e.target.value); setPage(1); }}
+                  className="w-full px-3 py-2 border border-slate-300 rounded-lg text-sm bg-white"
+                >
+                  <option value="">All fields</option>
+                  {distinctFields.map((f) => (
+                    <option key={f} value={f}>{f}</option>
+                  ))}
+                </select>
+              </div>
+            </div>
+            <div className="grid grid-cols-2 gap-3">
+              <div>
+                <label className="block text-xs font-medium text-slate-600 mb-1">Delivery mode</label>
+                <select
+                  value={filterDeliveryMode}
+                  onChange={(e) => { setFilterDeliveryMode(e.target.value); setPage(1); }}
+                  className="w-full px-3 py-2 border border-slate-300 rounded-lg text-sm bg-white"
+                >
+                  <option value="">All modes</option>
+                  {distinctDeliveryModes.map((m) => (
+                    <option key={m} value={m}>
+                      {m === 'in_person' ? 'In-person' : m.charAt(0).toUpperCase() + m.slice(1)}
+                    </option>
+                  ))}
+                </select>
+              </div>
+              <div>
+                <label className="block text-xs font-medium text-slate-600 mb-1">Work permission</label>
+                <select
+                  value={filterWorkPermission}
+                  onChange={(e) => { setFilterWorkPermission(e.target.value); setPage(1); }}
+                  className="w-full px-3 py-2 border border-slate-300 rounded-lg text-sm bg-white"
+                >
+                  <option value="">All permissions</option>
+                  {distinctWorkPermissions.map((wp) => (
+                    <option key={wp} value={wp}>{wp}</option>
+                  ))}
+                </select>
+              </div>
+            </div>
           </div>
 
           <div className="mb-4">
@@ -458,21 +603,48 @@ const AdminScholarshipSelection: React.FC<AdminScholarshipSelectionProps> = ({ s
                 <div className="p-4 text-sm text-slate-500">No scholarships found.</div>
               )}
               {scholarships.map((s) => {
+                const isBlocked = !(s as any).is_active || is3800ScholarshipBlocked(s as any);
+                if (hideBlocked && isBlocked) return null;
+
                 const inCart = isInCart(s.id);
                 const existing = existingApplicationMap[s.id];
                 return (
-                  <div key={s.id} className={`p-4 flex items-center justify-between ${existing ? 'bg-green-50' : ''}`}>
+                  <div key={s.id} className={`p-4 flex items-center justify-between ${existing ? 'bg-green-50' : ''} ${isBlocked ? 'opacity-80 bg-red-50/30' : ''}`}>
                     <div className="min-w-0 flex-1 cursor-pointer" onClick={() => handleViewScholarship(s)}>
-                      <div className="font-semibold text-slate-900 truncate hover:text-[#05294E] transition-colors">{s.title}</div>
+                      <div className="flex items-center gap-2">
+                        <div className={`font-semibold ${isBlocked ? 'text-red-800 line-through' : 'text-slate-900'} truncate hover:text-[#05294E] transition-colors`}>{s.title}</div>
+                        {isBlocked && (
+                          <span className="inline-flex items-center px-2 py-0.5 rounded-full text-[10px] font-bold bg-red-100 text-red-700 uppercase">
+                            ⚠️ Esgotada
+                          </span>
+                        )}
+                      </div>
                       <div className="text-xs text-slate-600">{s.universities?.name || 'University'}</div>
-                      <div className="flex items-center gap-3 mt-1">
+                      <div className="flex flex-wrap items-center gap-2 mt-1">
+                        {s.level && (
+                          <span className={`${isBlocked ? 'opacity-60' : ''} inline-flex items-center px-2 py-0.5 rounded-full text-[11px] font-semibold bg-purple-100 text-purple-700 capitalize`}>
+                            {s.level}
+                          </span>
+                        )}
+                        {(s as any).field_of_study && (
+                          <span className={`${isBlocked ? 'opacity-60' : ''} inline-flex items-center px-2 py-0.5 rounded-full text-[11px] font-semibold bg-amber-100 text-amber-700`}>
+                            {(s as any).field_of_study}
+                          </span>
+                        )}
+                        {(s as any).delivery_mode && (
+                          <span className={`${isBlocked ? 'opacity-60' : ''} inline-flex items-center px-2 py-0.5 rounded-full text-[11px] font-semibold bg-sky-100 text-sky-700 capitalize`}>
+                            {(s as any).delivery_mode === 'in_person' ? 'In-person' : (s as any).delivery_mode}
+                          </span>
+                        )}
+                      </div>
+                      <div className={`flex items-center gap-3 mt-1 ${isBlocked ? 'opacity-60' : ''}`}>
                         {s.annual_value_with_scholarship != null && (
-                          <span className="text-xs text-emerald-700 font-medium">
+                          <span className={`text-xs ${isBlocked ? 'text-red-700' : 'text-emerald-700'} font-medium`}>
                             Scholarship: ${Number(s.annual_value_with_scholarship).toLocaleString('en-US')}/yr
                           </span>
                         )}
                         {s.placement_fee_amount != null && (
-                          <span className="text-xs text-blue-700 font-medium">
+                          <span className={`text-xs ${isBlocked ? 'text-red-700' : 'text-blue-700'} font-medium`}>
                             Placement fee: ${Number(s.placement_fee_amount).toLocaleString('en-US')}
                           </span>
                         )}
@@ -483,7 +655,7 @@ const AdminScholarshipSelection: React.FC<AdminScholarshipSelectionProps> = ({ s
                         </div>
                       )}
                     </div>
-                    <div className="flex items-center gap-2">
+                    <div className="flex items-center gap-2 ml-4">
                       <button
                         onClick={() => handleViewScholarship(s)}
                         className="px-3 py-1 rounded-md text-xs border border-slate-300 hover:bg-slate-50 text-slate-600"
@@ -492,9 +664,16 @@ const AdminScholarshipSelection: React.FC<AdminScholarshipSelectionProps> = ({ s
                       </button>
                       {!existing && (
                         <button
-                          onClick={() => toggleCart(s.id)}
-                          className={`px-3 py-1 rounded-md text-xs border ${inCart ? 'text-red-700 border-red-300 hover:bg-red-50' : 'text-[#05294E] border-slate-300 hover:bg-slate-50'}`}
-                          disabled={!canMutate}
+                          onClick={() => {
+                            if (isBlocked && !inCart) {
+                              alert('Não é possível adicionar uma bolsa bloqueada/esgotada para o aluno.');
+                              return;
+                            }
+                            toggleCart(s.id);
+                          }}
+                          className={`px-3 py-1 rounded-md text-xs border ${inCart ? 'text-red-700 border-red-300 hover:bg-red-50' : (isBlocked ? 'text-slate-400 border-slate-200 cursor-not-allowed bg-slate-50' : 'text-[#05294E] border-slate-300 hover:bg-slate-50')}`}
+                          disabled={!canMutate || (isBlocked && !inCart)}
+                          title={isBlocked && !inCart ? "Bolsa Esgotada" : ""}
                         >
                           {inCart ? 'Remove' : 'Add'}
                         </button>
@@ -547,11 +726,15 @@ const AdminScholarshipSelection: React.FC<AdminScholarshipSelectionProps> = ({ s
               )}
               {cart.map((id) => {
                 const s = scholarships.find(x => x.id === id);
+                const detailInfo = cartDetails[id] || {};
+                const displayTitle = s?.title || detailInfo.title || id;
+                const displayUni = s?.universities?.name || detailInfo.universityName || 'University';
+                
                 return (
                   <div key={id} className="p-3 flex items-center justify-between">
                     <div className="min-w-0">
-                      <div className="text-sm font-medium text-slate-800 truncate">{s?.title || id}</div>
-                      <div className="text-xs text-slate-500">{s?.universities?.name || 'University'}</div>
+                      <div className="text-sm font-medium text-slate-800 truncate">{displayTitle}</div>
+                      <div className="text-xs text-slate-500">{displayUni}</div>
                     </div>
                     <button
                       onClick={() => toggleCart(id)}

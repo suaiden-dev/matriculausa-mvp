@@ -253,9 +253,6 @@ export const useOnboardingProgress = () => {
       if (onboardingCompleted) {
         chosenStep = 'completed';
       } else {
-        // Lógica Robusta: 
-        // 1. A UI tem prioridade se estiver dentro do limite permitido e for >= ao que já salvamos.
-        // 2. Se a UI tentar pular etapas, forçamos o limite (maxAllowedStep).
         // 3. Se a UI estiver atrás do banco (ex: refresh), tentamos usar o banco MAS limitado pelo progresso real.
         
         if (uiIdx !== -1 && uiIdx <= maxIdx && uiIdx >= savedIdx) {

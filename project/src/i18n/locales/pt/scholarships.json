@@ -152,10 +152,13 @@
       "viewUniversityFeesPage": "Ver Página de Taxas da Universidade",
       "internalFeesConditionalNote": "A taxa depende do tipo de processo ou visto do aluno e daí corresponde com a taxa",
       "i539COSPackage": "I-539 COS Package",
+      "i539Package": "I-539 Package",
       "ds160Package": "DS-160 Package",
       "reinstatementPackage": "Reinstatement",
-      "i539PackageDescription": "Taxa necessária para estudantes que solicitam Mudança de Status (Change of Status)",
-      "ds160PackageDescription": "Taxa necessária para estudantes que solicitam Transferência",
+      "i539PackageDescription": "Taxa necessária para estudantes que solicitam {{reason}}",
+      "i539ReasonCOS": "Mudança de Status (COS)",
+      "i539ReasonTransfer": "transfer e possuem o visto inativo/terminado",
+      "ds160PackageDescription": "Taxa necessária para estudantes do tipo {{type}}",
       "reinstatementPackageDescription": "Taxa necessária para estudantes transfer que possuem o status do visto inativo/terminado.",
       "days": "dias"
     }

@@ -3,7 +3,7 @@ import ReactDOM from 'react-dom';
 import { Award, Building, DollarSign, X, CheckCircle2, Info, Search, GraduationCap, BookOpen, Monitor, Briefcase, ChevronDown, ChevronUp, Filter } from 'lucide-react';
 import { useAuth } from '../../../hooks/useAuth';
 import { useCartStore } from '../../../stores/applicationStore';
-import { useAllScholarshipsQuery } from '../../../hooks/useStudentDashboardQueries';
+import { useAllScholarshipsQuery, useStudentApplicationsQuery } from '../../../hooks/useStudentDashboardQueries';
 import { usePackageScholarshipFilter } from '../../../hooks/usePackageScholarshipFilter';
 import { StepProps } from '../types';
 import { ScholarshipCardFull } from './ScholarshipCardFull';
@@ -18,8 +18,26 @@ import { Fragment } from 'react';
 export const ScholarshipSelectionStep: React.FC<StepProps> = ({ onNext, onBack: _onBack }) => {
   const { t } = useTranslation(['registration', 'scholarships', 'common']);
   const { user, userProfile } = useAuth();
-  const { cart, addToCart, removeFromCart, fetchCart } = useCartStore();
+  const { cart: originalCart, addToCart, removeFromCart, fetchCart } = useCartStore();
   const { data: allScholarships = [], isLoading: scholarshipsLoading, isError: scholarshipsIsError } = useAllScholarshipsQuery();
+  const { data: appsData = [] } = useStudentApplicationsQuery(userProfile?.id);
+
+  const [removedLocalIds, setRemovedLocalIds] = useState<Set<string>>(new Set());
+
+  // Se já houver aplicações no banco criadas por um Admin, usamos elas no lugar do originalCart.
+  const cart: any[] = useMemo(() => {
+    let baseCart = originalCart;
+    if (appsData && appsData.length > 0) {
+      baseCart = appsData.map((app: any) => ({
+        id: app.id,
+        cart_id: app.id,
+        scholarship_id: app.scholarship_id,
+        student_id: app.student_id,
+        scholarships: app.scholarships,
+      }));
+    }
+    return baseCart.filter(item => !removedLocalIds.has(item.scholarships.id));
+  }, [appsData, originalCart, removedLocalIds]);
   const { minScholarshipValue, loading: packageFilterLoading } = usePackageScholarshipFilter();
   const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
   const [currentPage, setCurrentPage] = useState(1);
@@ -55,6 +73,13 @@ export const ScholarshipSelectionStep: React.FC<StepProps> = ({ onNext, onBack: 
       fetchCart(user.id);
     }
   }, [user?.id, fetchCart]);
+
+  // Se tem aplicações, força a interface para a visualização de revisão
+  useEffect(() => {
+    if (appsData && appsData.length > 0 && !isReviewing) {
+      setIsReviewing(true);
+    }
+  }, [appsData, isReviewing]);
 
   // isLocked: o usuário já concluiu o fluxo completo de seleção de bolsas.
   // Critério correto: tem process_type definido E tem scholarship_applications reais no banco.
@@ -433,7 +458,22 @@ export const ScholarshipSelectionStep: React.FC<StepProps> = ({ onNext, onBack: 
         next.delete(scholarshipId);
         return next;
       });
+      setRemovedLocalIds(prev => {
+        const next = new Set(prev);
+        next.add(scholarshipId);
+        return next;
+      });
       await removeFromCart(scholarshipId, user.id);
+      
+      if (userProfile?.id && appsData && appsData.length > 0) {
+        import('../../../lib/supabase').then(({ supabase }) => {
+          supabase.from('scholarship_applications')
+            .delete()
+            .eq('student_id', userProfile.id)
+            .eq('scholarship_id', scholarshipId)
+            .then(() => {});
+        });
+      }
     } catch (error) {
       console.error('Error removing scholarship from cart:', error);
       // Reverter sincronizando com o cart
@@ -528,7 +568,7 @@ export const ScholarshipSelectionStep: React.FC<StepProps> = ({ onNext, onBack: 
     // Se já estiver na revisão, chamar onNext para ir para a próxima etapa (process_type)
     if (isReviewing) {
       // Validar se há bolsas bloqueadas antes de prosseguir
-      const blockedScholarship = cart.find(item => {
+      const blockedScholarship = (cart as any[]).find(item => {
         const scholarship = item.scholarships;
         return !scholarship.is_active || is3800ScholarshipBlocked(scholarship);
       });
@@ -617,16 +657,29 @@ export const ScholarshipSelectionStep: React.FC<StepProps> = ({ onNext, onBack: 
                         <div className="flex-1 min-w-0">
                           <div className="flex items-center gap-4">
                             <div className="flex-1">
-                              <div className="font-black text-slate-900 text-lg uppercase tracking-tight mb-1">{scholarship.title}</div>
-                              <div className="text-slate-500 text-sm mb-2 flex items-center">
+                              <div className={`font-black uppercase tracking-tight mb-1 ${isBlocked ? 'text-red-600 text-base line-through opacity-80' : 'text-slate-900 text-lg'}`}>
+                                {scholarship.title}
+                              </div>
+                              <div className={`text-sm mb-2 flex items-center ${isBlocked ? 'text-red-400' : 'text-slate-500'}`}>
                                 <Building className="w-4 h-4 mr-1.5" />
                                 {scholarship.universities?.name || scholarship.university_name || t('scholarshipSelection.review.unknownUniversity')}
                               </div>
-                              <div className="text-lg font-black text-green-600">
-                                ${formatAmount(scholarship.annual_value_with_scholarship || scholarship.amount || 'N/A')}
+                              <div className="flex items-center gap-3">
+                                <div className={`text-lg font-black ${isBlocked ? 'text-red-500' : 'text-green-600'}`}>
+                                  ${formatAmount(scholarship.annual_value_with_scholarship || scholarship.amount || 'N/A')}
+                                </div>
+                                {isBlocked && (
+                                  <span className="px-2.5 py-1 bg-red-100/80 border border-red-200 text-red-700 text-[10px] font-black rounded-lg uppercase tracking-wider flex items-center gap-1.5">
+                                    <AlertTriangle className="w-3.5 h-3.5" />
+                                    {(() => {
+                                      const text = t('scholarshipSelection.review.blockedBadge');
+                                      return text === 'scholarshipSelection.review.blockedBadge' ? 'Esgotada' : text;
+                                    })()}
+                                  </span>
+                                )}
                               </div>
                             </div>
-                            {!isRemoving && !isBlocked && !isLocked && (
+                            {!isRemoving && !isLocked && (
                               <button
                                 onClick={() => handleRemoveScholarship(scholarship.id)}
                                 className="flex-shrink-0 p-2.5 rounded-xl hover:bg-red-50 text-slate-400 hover:text-red-500 transition-all border border-transparent hover:border-red-100"
