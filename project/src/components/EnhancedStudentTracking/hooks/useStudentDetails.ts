@@ -157,6 +157,7 @@ export const useStudentDetails = () => {
               annual_value_with_scholarship,
               application_fee_amount,
               scholarship_fee_amount,
+              placement_fee_amount,
               universities (
                 id,
                 name
@@ -311,6 +312,7 @@ export const useStudentDetails = () => {
               annual_value_with_scholarship,
               application_fee_amount,
               scholarship_fee_amount,
+              placement_fee_amount,
               universities (
                 id,
                 name

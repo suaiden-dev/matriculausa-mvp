@@ -19,6 +19,7 @@ import { getDisplayAmounts } from '../../utils/paymentConverter';
 import SelectedScholarshipCard from '../../components/AdminDashboard/StudentDetails/SelectedScholarshipCard';
 import StudentScholarshipsList from '../../components/EnhancedStudentTracking/StudentScholarshipsList';
 import ApplicationProgressCard from '../../components/AdminDashboard/StudentDetails/ApplicationProgressCard';
+import PaymentStatusCard from '../../components/AdminDashboard/StudentDetails/PaymentStatusCard';
 import { handleDownloadDocument as centralizedHandleDownloadDocument } from '../../components/EnhancedStudentTracking/utils/documentUtils';
 
 interface StudentInfo {
@@ -56,6 +57,12 @@ interface StudentInfo {
     scholarship_fee_amount?: number;
   };
   system_type?: string;
+  is_placement_fee_paid?: boolean;
+  placement_fee_flow?: boolean;
+  placement_fee_amount?: number;
+  has_paid_reinstatement_package?: boolean;
+  visa_transfer_active?: boolean;
+  user_id?: string;
 }
 
 
@@ -105,39 +112,63 @@ const StudentDetails: React.FC<StudentDetailsProps> = ({ studentId, profileId, o
   // Hook para configurações dinâmicas de taxas (usando student_id para ver overrides do estudante)
   const { getFeeAmount, formatFeeAmount, hasOverride, userSystemType } = useFeeConfig(studentInfo?.student_id);
 
+  // Efeito para carregar valores REAIS pagos e exibição baseada na nova lógica unificada do matriculausa-mvp
+  useEffect(() => {
+    if (!studentId) return;
+
+    const loadRealAmounts = async () => {
+      try {
+        const feeTypes: any[] = [
+          'selection_process', 'scholarship', 'i20_control', 
+          'application', 'placement', 'ds160_package', 
+          'i539_cos_package', 'reinstatement_package'
+        ];
+        // getDisplayAmounts já traz a lógica correta de overrides, cupons, real paid e fallbacks
+        const amounts = await getDisplayAmounts(studentId, feeTypes);
+        setRealPaidAmounts(amounts);
+        
+        console.log('[SellerStudentDetails] 💰 Display Amounts loaded:', amounts);
+      } catch (err) {
+        console.error('[SellerStudentDetails] Erro ao carregar realPaidAmounts:', err);
+      }
+    };
+
+    loadRealAmounts();
+  }, [studentId, studentInfo?.student_process_type, userSystemType]);
+
+
+  // Extra profile fields not available via the RPC
+  const [profilePaymentFields, setProfilePaymentFields] = useState<{
+    placement_fee_flow: boolean;
+    placement_fee_pending_balance: number;
+    placement_fee_installment_enabled: boolean;
+    is_placement_fee_paid: boolean;
+  }>({
+    placement_fee_flow: false,
+    placement_fee_pending_balance: 0,
+    placement_fee_installment_enabled: false,
+    is_placement_fee_paid: false,
+  });
 
   // Estados para taxas dinâmicas do estudante
   const [studentPackageFees, setStudentPackageFees] = useState<any>(null);
   const [dependents, setDependents] = useState<number>(0);
   // Estado para valores reais pagos
-  const [realPaidAmounts, setRealPaidAmounts] = useState<{ selection_process?: number; scholarship?: number; i20_control?: number; application?: number } | null>(null);
+  const [realPaidAmounts, setRealPaidAmounts] = useState<{ 
+    selection_process?: number; 
+    scholarship?: number; 
+    i20_control?: number; 
+    application?: number;
+    placement?: number;
+    ds160_package?: number;
+    i539_cos_package?: number;
+    reinstatement_package?: number;
+  } | null>(null);
   // Estado para dados de cupons promocionais usados
   const [couponUsageData, setCouponUsageData] = useState<Record<string, { final_amount: number; original_amount: number; discount_amount: number; coupon_code: string }>>({});
 
 
-  // Função para obter valores corretos baseados no sistema do estudante
-  const getStudentFees = () => {
-    // Usar userSystemType do hook useFeeConfig (mesmo durante loading)
-    if (userSystemType === 'simplified') {
-      console.log('🔍 [StudentDetails] Using simplified values for student (from useFeeConfig)');
-      return {
-        selectionProcessFee: 350,
-        scholarshipFee: 900,
-        i20ControlFee: 900,
-        isSimplified: true
-      };
-    }
-
-    console.log('🔍 [StudentDetails] Using legacy values for student (from useFeeConfig)');
-    return {
-      selectionProcessFee: Number(getFeeAmount('selection_process')) || 400,
-      scholarshipFee: Number(getFeeAmount('scholarship_fee')) || 900,
-      i20ControlFee: Number(getFeeAmount('i20_control_fee')) || 900,
-      isSimplified: false
-    };
-  };
-
-  const studentFees = getStudentFees();
+// studentFees removido - agora usa lógica centralizada no PaymentStatusCard
 
   // Estados para edição de Scholarship Range
   const [isEditingPackage, setIsEditingPackage] = useState(false);
@@ -186,6 +217,26 @@ const StudentDetails: React.FC<StudentDetailsProps> = ({ studentId, profileId, o
       setDependents(0);
     }
   }, []);
+
+  // Fetch profile payment fields not returned by the get_student_detailed_info RPC
+  useEffect(() => {
+    if (!studentId) return;
+    supabase
+      .from('user_profiles')
+      .select('placement_fee_flow, placement_fee_pending_balance, placement_fee_installment_enabled, is_placement_fee_paid')
+      .eq('user_id', studentId)
+      .maybeSingle()
+      .then(({ data }) => {
+        if (data) {
+          setProfilePaymentFields({
+            placement_fee_flow: !!(data as any).placement_fee_flow,
+            placement_fee_pending_balance: Number((data as any).placement_fee_pending_balance ?? 0),
+            placement_fee_installment_enabled: !!(data as any).placement_fee_installment_enabled,
+            is_placement_fee_paid: !!(data as any).is_placement_fee_paid,
+          });
+        }
+      });
+  }, [studentId]);
 
   // Debug: verificar estado inicial
   console.log('🔍 [STUDENT_DETAILS] Estado inicial - documentsLoaded:', documentsLoaded);
@@ -350,7 +401,14 @@ const StudentDetails: React.FC<StudentDetailsProps> = ({ studentId, profileId, o
             application_fee_amount: (hookScholarshipApplication as any).scholarships?.application_fee_amount,
             scholarship_fee_amount: (hookScholarshipApplication as any).scholarships?.scholarship_fee_amount
           },
-          student_process_type: (hookScholarshipApplication as any).student_process_type || prev.student_process_type
+          student_process_type: (hookScholarshipApplication as any).student_process_type || prev.student_process_type,
+          is_placement_fee_paid: (hookScholarshipApplication as any).is_placement_fee_paid,
+          has_paid_ds160_package: (hookScholarshipApplication as any).has_paid_ds160_package,
+          has_paid_i539_cos_package: (hookScholarshipApplication as any).has_paid_i539_cos_package,
+          has_paid_reinstatement_package: (hookScholarshipApplication as any).has_paid_reinstatement_package,
+          placement_fee_flow: !!(hookScholarshipApplication as any).placement_fee_flow,
+          placement_fee_amount: (hookScholarshipApplication as any).placement_fee_amount,
+          visa_transfer_active: (hookScholarshipApplication as any).visa_transfer_active
         } : null);
       }
 
@@ -515,7 +573,16 @@ const StudentDetails: React.FC<StudentDetailsProps> = ({ studentId, profileId, o
 
       try {
         // ✅ CORREÇÃO: Usar getDisplayAmounts para exibição (valores "Zelle" sem taxas)
-        const amounts = await getDisplayAmounts(studentId, ['selection_process', 'scholarship', 'i20_control', 'application']);
+        const amounts = await getDisplayAmounts(studentId, [
+          'selection_process', 
+          'scholarship', 
+          'i20_control', 
+          'application',
+          'placement',
+          'ds160_package',
+          'i539_cos_package',
+          'reinstatement_package'
+        ]);
         setRealPaidAmounts(amounts);
       } catch (error) {
         console.error(`Erro ao buscar valores pagos para user_id ${studentId}:`, error);
@@ -966,12 +1033,11 @@ const StudentDetails: React.FC<StudentDetailsProps> = ({ studentId, profileId, o
     { key: 'selection_fee', label: 'Selection Fee' },
     { key: 'apply', label: 'Application' },
     { key: 'review', label: 'Review' },
-    { key: 'application_fee', label: 'App Fee' },
+    { key: 'application_fee', label: 'Application Fee' },
     { key: 'placement_fee', label: 'Placement Fee' },
     { key: 'ds160_package', label: 'DS-160 Package' },
     { key: 'i539_cos_package', label: 'I-539 Package' },
-    { key: 'scholarship_fee', label: 'Scholarship Fee' },
-    { key: 'i20_fee', label: 'I-20 Fee' },
+    { key: 'process_package', label: 'Process Fee' },
     { key: 'acceptance_letter', label: 'Acceptance' },
     { key: 'transfer_form', label: 'Transfer Form' },
     { key: 'enrollment', label: 'Enrollment' }
@@ -987,11 +1053,8 @@ const StudentDetails: React.FC<StudentDetailsProps> = ({ studentId, profileId, o
     if (step.key === 'i539_cos_package') {
       return studentInfo?.student_process_type === 'change_of_status';
     }
-    if ((studentInfo as any)?.placement_fee_flow) {
-      return !['scholarship_fee', 'i20_fee'].includes(step.key);
-    } else {
-      return step.key !== 'placement_fee';
-    }
+    // ✅ REGRA: Sempre mostrar Placement e ocultar Scholarship/I-20 antigos (já removidos do allSteps)
+    return true;
   });
 
   const getStepStatus = useCallback((step: { key: string; label: string }) => {
@@ -1010,15 +1073,20 @@ const StudentDetails: React.FC<StudentDetailsProps> = ({ studentId, profileId, o
       case 'application_fee':
         return studentInfo.is_application_fee_paid ? 'completed' : 'pending';
       case 'placement_fee':
-        return (studentInfo as any).is_placement_fee_paid ? 'completed' : 'pending';
+        // No fluxo legado, Placement Fee é considerado pago se Scholarship + I-20 estiverem pagos
+        // No fluxo novo, é o campo placement_fee_paid
+        const isPlacementPaid = (studentInfo as any).is_placement_fee_paid || 
+          (studentInfo.is_scholarship_fee_paid && studentInfo.has_paid_i20_control_fee);
+        return isPlacementPaid ? 'completed' : 'pending';
+      case 'process_package':
+        if (studentInfo.student_process_type === 'initial') return studentInfo.has_paid_ds160_package ? 'completed' : 'pending';
+        if (studentInfo.student_process_type === 'change_of_status') return studentInfo.has_paid_i539_cos_package ? 'completed' : 'pending';
+        if (studentInfo.student_process_type === 'transfer') return studentInfo.has_paid_reinstatement_package ? 'completed' : 'pending';
+        return 'pending';
       case 'ds160_package':
         return studentInfo.has_paid_ds160_package ? 'completed' : 'pending';
       case 'i539_cos_package':
         return studentInfo.has_paid_i539_cos_package ? 'completed' : 'pending';
-      case 'scholarship_fee':
-        return studentInfo.is_scholarship_fee_paid ? 'completed' : 'pending';
-      case 'i20_fee':
-        return studentInfo.has_paid_i20_control_fee ? 'completed' : 'pending';
       case 'acceptance_letter':
         const currentApp = realScholarshipApplication || scholarshipApplication;
         if (currentApp?.acceptance_letter_status === 'approved' || currentApp?.acceptance_letter_status === 'sent') return 'completed';
@@ -1766,231 +1834,74 @@ const StudentDetails: React.FC<StudentDetailsProps> = ({ studentId, profileId, o
                   </div>
                 )}
 
-              {/* Fee Status Card */}
-              <div className="bg-white rounded-2xl shadow-sm border border-slate-200">
-                <div className="bg-gradient-to-r rounded-t-2xl from-slate-500 to-slate-600 px-6 py-4">
-                  <h3 className="text-lg font-semibold text-white">Fee Status</h3>
-                </div>
-                <div className="p-6">
-                  <div className="space-y-3">
-                    {/* Selection Process Fee Status */}
-                    <div className="w-full flex items-center justify-between p-3 rounded-lg border border-slate-200">
-                      <div className="flex items-center justify-between w-full">
-                        <div className="flex items-center space-x-3">
-                          <div className={`w-3 h-3 rounded-full ${studentInfo?.has_paid_selection_process_fee ? 'bg-green-500' : 'bg-red-500'}`}></div>
-                          <span className="text-sm font-medium text-slate-900">Selection Process Fee</span>
-                        </div>
-                        <div className="flex flex-col items-end">
-                          <span className={`text-sm font-medium ${studentInfo?.has_paid_selection_process_fee ? 'text-green-700' : 'text-red-700'}`}>
-                            {studentInfo?.has_paid_selection_process_fee ? 'Paid' : 'Pending'}
-                          </span>
-                          <span className="text-xs text-slate-500">
-                            {(() => {
-                              // ✅ PRIORIDADE 1: Se houver uso de cupom promocional, usar final_amount (valor com desconto)
-                              if (studentInfo?.has_paid_selection_process_fee && couponUsageData['selection_process']) {
-                                const couponData = couponUsageData['selection_process'];
-                                return (
-                                  <span>
-                                    <span className="line-through text-slate-400 mr-1">
-                                      {formatFeeAmount(couponData.original_amount)}
-                                    </span>
-                                    <span className="text-green-600 font-semibold">
-                                      {formatFeeAmount(couponData.final_amount)}
-                                    </span>
-                                    <span className="text-slate-400 ml-1">({couponData.coupon_code})</span>
-                                  </span>
-                                );
-                              }
-
-                              // ✅ PRIORIDADE 2: Valor real pago (líquido, sem taxas do Stripe)
-                              if (studentInfo?.has_paid_selection_process_fee && realPaidAmounts?.selection_process !== undefined && realPaidAmounts.selection_process > 0) {
-                                return formatFeeAmount(realPaidAmounts.selection_process);
-                              }
-
-                              // Fallback para valores calculados (apenas se não houver valor real pago)
-                              if (studentFees.isSimplified) {
-                                return `$${studentFees.selectionProcessFee.toFixed(2)}`;
-                              }
-
-                              const hasCustomOverride = hasOverride('selection_process');
-                              if (hasCustomOverride) {
-                                return formatFeeAmount(getFeeAmount('selection_process'));
-                              } else {
-                                const baseFee = Number(getFeeAmount('selection_process'));
-                                // ✅ CORREÇÃO: Para simplified, Selection Process Fee é fixo ($350), sem dependentes
-                                // Dependentes só afetam Application Fee ($100 por dependente)
-                                const systemType = studentInfo?.system_type || 'legacy';
-                                const total = systemType === 'simplified'
-                                  ? baseFee
-                                  : baseFee + (dependents * 150);
-                                return formatFeeAmount(total);
-                              }
-                            })()}
-                          </span>
-                        </div>
-                      </div>
-                    </div>
-
-                    {/* Application Fee Status */}
-                    <div className="w-full flex items-center justify-between p-3 rounded-lg border border-slate-200">
-                      <div className="flex items-center space-x-3">
-                        <div className={`w-3 h-3 rounded-full ${studentInfo?.is_application_fee_paid ? 'bg-green-500' : 'bg-red-500'}`}></div>
-                        <span className="text-sm font-medium text-slate-900">Application Fee</span>
-                      </div>
-                      <div className="flex flex-col items-end">
-                        <span className={`text-sm font-medium ${studentInfo?.is_application_fee_paid ? 'text-green-700' : 'text-red-700'}`}>
-                          {studentInfo?.is_application_fee_paid ? 'Paid' : 'Pending'}
-                        </span>
-                        {studentInfo?.is_application_fee_paid ? (
-                          <span className="text-xs text-slate-500">
-                            {(() => {
-                              // ✅ PRIORIDADE 1: Se houver uso de cupom promocional, usar final_amount (valor com desconto)
-                              if (couponUsageData['application']) {
-                                const couponData = couponUsageData['application'];
-                                return (
-                                  <span>
-                                    <span className="line-through text-slate-400 mr-1">
-                                      {formatFeeAmount(couponData.original_amount)}
-                                    </span>
-                                    <span className="text-green-600 font-semibold">
-                                      {formatFeeAmount(couponData.final_amount)}
-                                    </span>
-                                    <span className="text-slate-400 ml-1">({couponData.coupon_code})</span>
-                                  </span>
-                                );
-                              }
-
-                              // ✅ PRIORIDADE 2: Valor real pago (líquido, sem taxas do Stripe)
-                              if (realPaidAmounts?.application !== undefined && realPaidAmounts.application > 0) {
-                                return formatFeeAmount(realPaidAmounts.application);
-                              }
-
-                              // Fallback: Base da scholarship se disponível; fallback para configuração padrão
-                              let baseAmount = 0;
-                              if (studentInfo?.scholarship?.application_fee_amount) {
-                                baseAmount = Number(studentInfo.scholarship.application_fee_amount);
-                              } else if ((studentInfo as any)?.application_fee_amount) {
-                                baseAmount = Number((studentInfo as any).application_fee_amount);
-                              } else {
-                                baseAmount = getFeeAmount('application_fee');
-                              }
-                              const systemType = studentInfo?.system_type || 'legacy';
-                              const deps = Number(dependents || 0);
-                              if (systemType === 'legacy' && deps > 0) {
-                                return formatFeeAmount(baseAmount + deps * 100);
-                              }
-                              return formatFeeAmount(baseAmount);
-                            })()}
-                          </span>
-                        ) : (
-                          <div className="text-right">
-                            <div className="text-xs text-slate-700 font-medium">Varies by scholarship</div>
-                            <div className="text-[11px] text-slate-500">+ $100 per dependent (applied at checkout)</div>
-                          </div>
-                        )}
-                      </div>
-                    </div>
-
-                    {/* Scholarship Fee Status */}
-                    <div className="w-full flex items-center justify-between p-3 rounded-lg border border-slate-200">
-                      <div className="flex items-center space-x-3">
-                        <div className={`w-3 h-3 rounded-full ${studentInfo?.is_scholarship_fee_paid ? 'bg-green-500' : 'bg-red-500'}`}></div>
-                        <span className="text-sm font-medium text-slate-900">Scholarship Fee</span>
-                      </div>
-                      <div className="flex flex-col items-end">
-                        <span className={`text-sm font-medium ${studentInfo?.is_scholarship_fee_paid ? 'text-green-700' : 'text-red-700'}`}>
-                          {studentInfo?.is_scholarship_fee_paid ? 'Paid' : 'Pending'}
-                        </span>
-                        <span className="text-xs text-slate-500">
-                          {(() => {
-                            // ✅ PRIORIDADE 1: Se houver uso de cupom promocional, usar final_amount (valor com desconto)
-                            if (studentInfo?.is_scholarship_fee_paid && couponUsageData['scholarship']) {
-                              const couponData = couponUsageData['scholarship'];
-                              return (
-                                <span>
-                                  <span className="line-through text-slate-400 mr-1">
-                                    {formatFeeAmount(couponData.original_amount)}
-                                  </span>
-                                  <span className="text-green-600 font-semibold">
-                                    {formatFeeAmount(couponData.final_amount)}
-                                  </span>
-                                  <span className="text-slate-400 ml-1">({couponData.coupon_code})</span>
-                                </span>
-                              );
-                            }
-
-                            // ✅ PRIORIDADE 2: Valor real pago (líquido, sem taxas do Stripe)
-                            if (studentInfo?.is_scholarship_fee_paid && realPaidAmounts?.scholarship !== undefined && realPaidAmounts.scholarship > 0) {
-                              return formatFeeAmount(realPaidAmounts.scholarship);
-                            }
-
-                            // Fallback para valores calculados (apenas se não houver valor real pago)
-                            if (studentFees.isSimplified) {
-                              return `$${studentFees.scholarshipFee.toFixed(2)}`;
-                            }
-
-                            if (hasOverride('scholarship_fee')) {
-                              return formatFeeAmount(getFeeAmount('scholarship_fee'));
-                            }
-                            if (studentInfo?.scholarship?.scholarship_fee_amount) {
-                              const amount = Number(studentInfo.scholarship.scholarship_fee_amount);
-                              return formatFeeAmount(amount);
-                            }
-                            return formatFeeAmount(getFeeAmount('scholarship_fee'));
-                          })()}
-                        </span>
-                      </div>
-                    </div>
-
-                    {/* I-20 Control Fee Status */}
-                    <div className="w-full flex items-center justify-between p-3 rounded-lg border border-slate-200">
-                      <div className="flex items-center justify-between w-full">
-                        <div className="flex items-center space-x-3">
-                          <div className={`w-3 h-3 rounded-full ${studentInfo?.has_paid_i20_control_fee ? 'bg-green-500' : 'bg-red-500'}`}></div>
-                          <span className="text-sm font-medium text-slate-900">I-20 Control Fee</span>
-                        </div>
-                        <div className="flex flex-col items-end">
-                          <span className={`text-sm font-medium ${studentInfo?.has_paid_i20_control_fee ? 'text-green-700' : 'text-red-700'}`}>
-                            {studentInfo?.has_paid_i20_control_fee ? 'Paid' : 'Pending'}
-                          </span>
-                          <span className="text-xs text-slate-500">
-                            {(() => {
-                              // ✅ PRIORIDADE 1: Se houver uso de cupom promocional, usar final_amount (valor com desconto)
-                              if (studentInfo?.has_paid_i20_control_fee && couponUsageData['i20_control']) {
-                                const couponData = couponUsageData['i20_control'];
-                                return (
-                                  <span>
-                                    <span className="line-through text-slate-400 mr-1">
-                                      {formatFeeAmount(couponData.original_amount)}
-                                    </span>
-                                    <span className="text-green-600 font-semibold">
-                                      {formatFeeAmount(couponData.final_amount)}
-                                    </span>
-                                    <span className="text-slate-400 ml-1">({couponData.coupon_code})</span>
-                                  </span>
-                                );
-                              }
-
-                              // ✅ PRIORIDADE 2: Valor real pago (líquido, sem taxas do Stripe)
-                              if (studentInfo?.has_paid_i20_control_fee && realPaidAmounts?.i20_control !== undefined && realPaidAmounts.i20_control > 0) {
-                                return formatFeeAmount(realPaidAmounts.i20_control);
-                              }
-
-                              // Fallback para valores calculados (apenas se não houver valor real pago)
-                              if (studentFees.isSimplified) {
-                                return `$${studentFees.i20ControlFee.toFixed(2)}`;
-                              }
-
-                              // I-20 Control Fee sempre usa override se disponível, senão valor padrão
-                              // I-20 nunca soma dependentes
-                              return formatFeeAmount(getFeeAmount('i20_control_fee'));
-                            })()}
-                          </span>
-                        </div>
-                      </div>
-                    </div>
-                  </div>
-                </div>
+              {/* ✅ Payment Status Card herdado do Admin para consistência absoluta */}
+              <div className="mb-8">
+                {studentInfo && (
+                  <PaymentStatusCard
+                    student={{
+                      student_id: studentInfo.student_id,
+                      user_id: studentId,
+                      student_name: studentInfo.full_name,
+                      student_email: studentInfo.email,
+                      phone: studentInfo.phone,
+                      country: studentInfo.country,
+                      field_of_interest: studentInfo.field_of_interest,
+                      academic_level: studentInfo.academic_level,
+                      gpa: studentInfo.gpa,
+                      english_proficiency: studentInfo.english_proficiency,
+                      status: studentInfo.current_status,
+                      dependents: dependents,
+                      has_paid_selection_process_fee: studentInfo.has_paid_selection_process_fee || false,
+                      has_paid_i20_control_fee: studentInfo.has_paid_i20_control_fee || false,
+                      is_application_fee_paid: studentInfo.is_application_fee_paid || false,
+                      is_scholarship_fee_paid: studentInfo.is_scholarship_fee_paid || false,
+                      student_process_type: studentInfo.student_process_type || null,
+                      is_placement_fee_paid: profilePaymentFields.is_placement_fee_paid,
+                      placement_fee_flow: profilePaymentFields.placement_fee_flow,
+                      placement_fee_amount: 0, // calculated from all_applications inside PaymentStatusCard
+                      placement_fee_pending_balance: profilePaymentFields.placement_fee_pending_balance,
+                      placement_fee_installment_enabled: profilePaymentFields.placement_fee_installment_enabled,
+                      has_paid_ds160_package: studentInfo.has_paid_ds160_package || false,
+                      has_paid_i539_cos_package: studentInfo.has_paid_i539_cos_package || false,
+                      has_paid_reinstatement_package: studentInfo.has_paid_reinstatement_package || false,
+                      visa_transfer_active: studentInfo.visa_transfer_active || false,
+                      seller_referral_code: studentInfo.seller_referral_code || null,
+                      application_id: scholarshipApplication?.id || null,
+                      scholarship_id: scholarshipApplication?.scholarship_id || null,
+                      application_status: scholarshipApplication?.status || null,
+                      applied_at: scholarshipApplication?.applied_at || null,
+                      total_applications: 0,
+                      student_created_at: studentInfo.registration_date,
+                      is_locked: false,
+                      all_applications: hookAllApplications || [],
+                    } as any}
+                    realPaidAmounts={realPaidAmounts || {}}
+                    loadingPaidAmounts={{}} 
+                    editingFees={null}
+                    editingPaymentMethod={null}
+                    newPaymentMethod=""
+                    savingPaymentMethod={false}
+                    savingFees={false}
+                    isPlatformAdmin={false} // ✅ Garante que o Seller não veja botões de edição
+                    dependents={dependents}
+                    hasOverride={hasOverride}
+                    userSystemType={userSystemType as any}
+                    hasMatriculaRewardsDiscount={false}
+                    onStartEditFees={() => {}}
+                    onSaveEditFees={async () => {}}
+                    onCancelEditFees={() => {}}
+                    onResetFees={async () => {}}
+                    onEditFeesChange={() => {}}
+                    onMarkAsPaid={() => {}}
+                    onEditPaymentMethod={() => {}}
+                    onUpdatePaymentMethod={async () => {}}
+                    onCancelPaymentMethod={() => {}}
+                    onPaymentMethodChange={() => {}}
+                    formatFeeAmount={formatFeeAmount}
+                    getFeeAmount={getFeeAmount as any}
+                    couponUsageData={couponUsageData}
+                  />
+                )}
               </div>
             </div>
           </div>

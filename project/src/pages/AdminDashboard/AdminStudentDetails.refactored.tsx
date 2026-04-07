@@ -1339,9 +1339,45 @@ const AdminStudentDetails: React.FC = () => {
 
   const handleMarkAsPaid = useCallback((feeType: 'selection_process' | 'application' | 'scholarship' | 'i20_control' | 'placement' | 'ds160_package' | 'i539_cos_package' | 'reinstatement_fee') => {
     setPendingPayment({ fee_type: feeType, payment_method: 'manual' });
-    setPaymentAmount(getFeeAmount(feeType));
+    
+    let amount = getFeeAmount(feeType);
+    
+    // ✅ Lógica especial para Placement Fee
+    if (feeType === 'placement') {
+      // Se o parcelamento estiver ativo e houver saldo pendente, 
+      // o valor a ser pago deve ser a metade do saldo atual (ou o saldo total se for a última parcela)
+      const currentBalance = student?.placement_fee_pending_balance ?? 0;
+      if (student?.placement_fee_installment_enabled && currentBalance > 0) {
+        // Second installment: suggest the full remaining balance
+        amount = currentBalance;
+      } else {
+        // Fallback para cálculo total se não houver saldo registrado ou parcelamento desativado
+        const applications = student?.all_applications || [];
+        const activeApp = applications.find((app: any) => app.status === 'enrolled') || 
+                         applications.find((app: any) => app.status === 'approved') || 
+                         applications[0];
+        
+        const scholarship = activeApp?.scholarships ? (Array.isArray(activeApp.scholarships) ? activeApp.scholarships[0] : activeApp.scholarships) : null;
+        
+        if (userFeeOverrides?.placement_fee) {
+          amount = userFeeOverrides.placement_fee;
+        } else if (student?.placement_fee_amount) {
+          amount = Number(student.placement_fee_amount);
+        } else if (scholarship?.annual_value_with_scholarship) {
+          const pAmount = scholarship.placement_fee_amount ? Number(scholarship.placement_fee_amount) : null;
+          amount = getPlacementFee(Number(scholarship.annual_value_with_scholarship), pAmount);
+        }
+
+        // Se o parcelamento for ligado agora mas o saldo ainda for 0 (primeira vez), sugerir 50%
+        if (student?.placement_fee_installment_enabled) {
+          amount = amount / 2;
+        }
+      }
+    }
+    
+    setPaymentAmount(amount);
     setShowPaymentModal(true);
-  }, [getFeeAmount]);
+  }, [getFeeAmount, student, userFeeOverrides]);
 
   const handleEnableInstallment = useCallback(async () => {
     if (!student?.user_id) return;
@@ -1550,13 +1586,26 @@ const AdminStudentDetails: React.FC = () => {
       alert(`Warning: Payment was marked as paid, but an exception occurred while recording in individual_fee_payments table. Error: ${recordError.message}`);
     }
 
+    // Calculate remaining placement fee balance to pass to markFeeAsPaid
+    let placementFeePendingBalance: number | undefined = undefined;
+    if (feeType === 'placement' && student?.placement_fee_installment_enabled) {
+      const currentBalance = student?.placement_fee_pending_balance ?? 0;
+      if (currentBalance > 0) {
+        // Paying second (final) installment: clear the balance
+        placementFeePendingBalance = 0;
+      } else {
+        // Paying first installment: remaining = same amount just paid
+        placementFeePendingBalance = finalPaymentAmount;
+      }
+    }
+
     // Marcar como pago usando o hook
     const result = await markFeeAsPaid(
       student.user_id,
       feeType,
-      finalPaymentAmount,
       paymentMethodValue,
-      applicationId
+      applicationId,
+      placementFeePendingBalance
     );
 
     if (result.success) {

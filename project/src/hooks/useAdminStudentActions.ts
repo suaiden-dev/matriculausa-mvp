@@ -31,9 +31,9 @@ export const useAdminStudentActions = () => {
   const markFeeAsPaid = useCallback(async (
     userId: string,
     feeType: 'selection_process' | 'application' | 'scholarship' | 'i20_control' | 'placement' | 'ds160_package' | 'i539_cos_package' | 'reinstatement_fee',
-    amount: number,
     paymentMethod: string,
-    applicationId?: string
+    applicationId?: string,
+    placementFeePendingBalance?: number // When provided, explicitly sets placement_fee_pending_balance
   ) => {
     try {
       setSaving(true);
@@ -42,7 +42,7 @@ export const useAdminStudentActions = () => {
       // to have access to all necessary data (paymentDate, etc.)
 
       // Update the appropriate fee status
-      if (feeType === 'selection_process' || feeType === 'i20_control' || feeType === 'ds160_package' || feeType === 'i539_cos_package' || feeType === 'reinstatement_fee') {
+      if (feeType === 'selection_process' || feeType === 'i20_control' || feeType === 'ds160_package' || feeType === 'i539_cos_package' || feeType === 'reinstatement_fee' || feeType === 'placement') {
         let fieldName: string;
         let methodField: string;
 
@@ -58,22 +58,47 @@ export const useAdminStudentActions = () => {
         } else if (feeType === 'reinstatement_fee') {
           fieldName = 'has_paid_reinstatement_package';
           methodField = 'reinstatement_package_payment_method';
+        } else if (feeType === 'placement') {
+          fieldName = 'is_placement_fee_paid';
+          methodField = 'placement_fee_payment_method';
         } else {
           fieldName = 'has_paid_i539_cos_package';
           methodField = 'i539_cos_package_payment_method';
         }
 
+        const { data: profile } = await supabase
+          .from('user_profiles')
+          .select('placement_fee_installment_enabled, placement_fee_pending_balance, is_placement_fee_paid')
+          .eq('user_id', userId)
+          .single();
+
+        const updateData: any = {
+          [methodField]: paymentMethod
+        };
+
+        if (feeType === 'placement' && profile?.placement_fee_installment_enabled) {
+          // Installment flow: always mark is_placement_fee_paid = true (shows "1ª parcela paga" state),
+          // and explicitly set the remaining balance passed by the caller.
+          updateData['is_placement_fee_paid'] = true;
+          if (placementFeePendingBalance !== undefined) {
+            updateData['placement_fee_pending_balance'] = placementFeePendingBalance;
+          }
+        } else {
+          // Non-installment or non-placement: mark as fully paid
+          updateData[fieldName] = true;
+          if (feeType === 'placement') {
+            updateData['placement_fee_pending_balance'] = 0;
+          }
+        }
+
         const { error } = await supabase
           .from('user_profiles')
-          .update({
-            [fieldName]: true,
-            [methodField]: paymentMethod
-          })
+          .update(updateData)
           .eq('user_id', userId);
 
         if (error) throw error;
       } else if (applicationId) {
-        // Application, scholarship or placement fee
+        // Application or scholarship fee
         let fieldName: string | undefined;
         let methodField: string | undefined;
         
@@ -83,9 +108,6 @@ export const useAdminStudentActions = () => {
         } else if (feeType === 'scholarship') {
           fieldName = 'is_scholarship_fee_paid';
           methodField = 'scholarship_fee_payment_method';
-        } else if (feeType === 'placement') {
-          fieldName = 'is_placement_fee_paid';
-          methodField = 'placement_fee_payment_method';
         } else {
           throw new Error('Invalid feeType for application context');
         }
@@ -100,16 +122,6 @@ export const useAdminStudentActions = () => {
 
         if (error) throw error;
 
-        // Extra: Update placement flow payment tracking globally (if needed) but usually UI queries via applications table
-        if (feeType === 'placement') {
-          // Também marcar no user_profile como fallback se o projeto usar
-          const { error: profileError } = await supabase
-            .from('user_profiles')
-            .update({ 
-               is_placement_fee_paid: true 
-            })
-            .eq('user_id', userId);
-        }
 
       } else {
         // Se é application, scholarship, ou placement fee mas não tem applicationId, retornar erro

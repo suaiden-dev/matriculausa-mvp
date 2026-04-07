@@ -188,9 +188,10 @@ const Auth: React.FC<AuthProps> = ({ mode }) => {
     // Detectar tipo se não fornecido
     let detectedType = type;
     if (!detectedType) {
-      // ✅ NOVO: Priorizar tipo seller se vier do localStorage de landing page
+      // Verificar se veio de landing page — tanto com desconto quanto sem (sref)
       const fromLandingPage = localStorage.getItem('pending_seller_referral_code');
-      if (fromLandingPage === code.toUpperCase()) {
+      const fromLandingPageNoDiscount = localStorage.getItem('pending_seller_referral_code_nodiscount');
+      if (fromLandingPage === code.toUpperCase() || fromLandingPageNoDiscount === code.toUpperCase()) {
         console.log('[AUTH] Código detectado do localStorage de landing page, definindo como seller');
         detectedType = 'seller';
       } else {
@@ -251,7 +252,8 @@ const Auth: React.FC<AuthProps> = ({ mode }) => {
         if (emailInfo === 'email_already_confirmed' && infoMessage) {
           setError(decodeURIComponent(infoMessage));
         }
-        const refCodeFromUrl = urlParams.get('ref');
+        // Capturar tanto ?ref= (com desconto) quanto ?sref= (sem desconto)
+        const refCodeFromUrl = urlParams.get('ref') || urlParams.get('sref');
         
         if (refCodeFromUrl && !referralCodeProcessedRef.current) {
           console.log('[AUTH] ✅ Código encontrado na URL:', refCodeFromUrl);
@@ -527,6 +529,7 @@ const Auth: React.FC<AuthProps> = ({ mode }) => {
         // Limpar códigos de referência do localStorage após registro bem-sucedido
         localStorage.removeItem('pending_affiliate_code');
         localStorage.removeItem('pending_seller_referral_code');
+        localStorage.removeItem('pending_seller_referral_code_nodiscount');
         
         // 📊 Limpar parâmetros UTM do localStorage após registro bem-sucedido
         if (utmParams) {

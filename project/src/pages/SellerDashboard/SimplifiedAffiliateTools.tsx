@@ -1,60 +1,14 @@
 import React, { useState, useEffect } from 'react';
-import { Copy, Check, Link2, ExternalLink } from 'lucide-react';
+import { Copy, Check } from 'lucide-react';
 import { useAuth } from '../../hooks/useAuth';
 import { supabase } from '../../lib/supabase';
 
-// Componente auxiliar para links de landing page (apenas sellers simplified)
-const LandingPageLinkItem: React.FC<{ title: string; url: string; description?: string }> = ({ title, url, description }) => {
-  const [copied, setCopied] = useState(false);
-
-  const copyUrl = async (urlToCopy: string) => {
-    try {
-      await navigator.clipboard.writeText(urlToCopy);
-      setCopied(true);
-      setTimeout(() => setCopied(false), 2000);
-    } catch (error) {
-      alert('Error copying link');
-    }
-  };
-
-  return (
-    <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between p-3 bg-slate-50 rounded-lg hover:bg-slate-100 transition-colors gap-3">
-      <div className="flex-1 min-w-0">
-        <div className="flex items-center gap-2 mb-1">
-          <p className="text-sm font-medium text-slate-900">{title}</p>
-          <ExternalLink className="w-3 h-3 text-slate-400 flex-shrink-0" />
-        </div>
-        {description && (
-          <p className="text-xs text-slate-500 mb-1">{description}</p>
-        )}
-        <p className="text-xs text-slate-500 truncate font-mono">{url}</p>
-      </div>
-      <button
-        onClick={() => copyUrl(url)}
-        className="bg-slate-200 hover:bg-slate-300 text-slate-700 px-3 py-2 rounded transition-colors flex items-center gap-2 text-sm flex-shrink-0"
-        title="Copy link"
-      >
-        {copied ? (
-          <>
-            <Check className="h-4 w-4 text-green-600" />
-            <span className="text-green-600">Copied!</span>
-          </>
-        ) : (
-          <>
-            <Copy className="h-4 w-4" />
-            <span>Copy</span>
-          </>
-        )}
-      </button>
-    </div>
-  );
-};
+// LandingPageLinkItem removido pois não está sendo utilizado no momento
 
 const SimplifiedAffiliateTools: React.FC = () => {
   const { user } = useAuth();
   const [sellerCode, setSellerCode] = useState<string>('');
   const [copiedText, setCopiedText] = useState<string | null>(null);
-  const origin = typeof window !== 'undefined' ? window.location.origin : '';
 
   useEffect(() => {
     // Get seller code from database
@@ -63,7 +17,7 @@ const SimplifiedAffiliateTools: React.FC = () => {
         try {
           // Buscar todos os sellers deste usuário e priorizar o correto
           // Prioridade: 1) is_active = true e tem affiliate_admin_id, 2) mais recente
-          const { data, error } = await supabase
+          const { data } = await supabase
             .from('sellers')
             .select('referral_code, is_active, affiliate_admin_id, created_at')
             .eq('user_id', user.id)
@@ -117,7 +71,8 @@ const SimplifiedAffiliateTools: React.FC = () => {
     fetchSellerCode();
   }, [user]);
 
-  const referralUrl = `${window.location.origin}?ref=${sellerCode}`;
+  const referralUrl = `${window.location.origin}/selection-fee-registration?ref=${sellerCode}`;
+  const trackingUrl = `${window.location.origin}/selection-fee-registration?sref=${sellerCode}`;
 
   const copyToClipboard = async (text: string, type: string) => {
     try {
@@ -153,8 +108,8 @@ const SimplifiedAffiliateTools: React.FC = () => {
       {/* Main Content */}
       <div className="px-4 sm:px-6 lg:px-8">
         <div className="space-y-8">
-          {/* Referral Code and Link */}
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+          {/* Referral Code and Links */}
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
             <div className="bg-white rounded-xl shadow-sm border border-slate-200 p-6">
               <h3 className="text-lg font-semibold text-slate-900 mb-4">Your Referral Code</h3>
               <div className="bg-slate-50 rounded-lg p-4">
@@ -181,7 +136,7 @@ const SimplifiedAffiliateTools: React.FC = () => {
             </div>
 
             <div className="bg-white rounded-xl shadow-sm border border-slate-200 p-6">
-              <h3 className="text-lg font-semibold text-slate-900 mb-4">Your Referral Link</h3>
+              <h3 className="text-lg font-semibold text-slate-900 mb-4">Referral Link ($50 Off)</h3>
               <div className="bg-slate-50 rounded-lg p-4">
                 <div className="flex items-center space-x-2">
                   <input
@@ -202,11 +157,41 @@ const SimplifiedAffiliateTools: React.FC = () => {
                     )}
                   </button>
                 </div>
+              </div>
+            </div>
+
+            <div className="bg-white rounded-xl shadow-sm border border-slate-200 p-6">
+              <h3 className="text-lg font-semibold text-slate-900 mb-4">Tracking Link (No Discount)</h3>
+              <div className="bg-slate-50 rounded-lg p-4">
+                <div className="flex items-center space-x-2">
+                  <input
+                    type="text"
+                    value={trackingUrl}
+                    readOnly
+                    className="flex-1 bg-white border border-slate-200 rounded px-3 py-2 text-sm font-mono"
+                  />
+                  <button
+                    onClick={() => copyToClipboard(trackingUrl, 'tracking-url')}
+                    className="bg-slate-100 hover:bg-slate-200 text-slate-700 px-3 py-2 rounded transition-colors"
+                    title="Copy tracking link"
+                  >
+                    {copiedText === 'tracking-url' ? (
+                      <Check className="h-4 w-4 text-green-600" />
+                    ) : (
+                      <Copy className="h-4 w-4" />
+                    )}
+                  </button>
+                </div>
+              </div>
             </div>
           </div>
-          </div>
 
-          {/* Landing Page Links - apenas para sellers simplified */}
+          {/* 
+          {/**
+           * Bloco: Landing Page Links - COMENTADO A PEDIDO DO USUÁRIO
+           * Estes links usam o parâmetro `?ref=` que aplica automaticamente um desconto de $50
+           * durante o processo de registro do estudante.
+           *
           <div className="bg-white rounded-xl shadow-sm border border-slate-200 p-6">
             <div className="flex items-center gap-2 mb-2">
               <Link2 className="w-5 h-5 text-blue-600" />
@@ -233,8 +218,43 @@ const SimplifiedAffiliateTools: React.FC = () => {
                 url={`${origin}/transfer?ref=${sellerCode}`}
               />
             </div>
-
           </div>
+          */}
+
+          {/*
+          {/**
+           * Bloco: Tracking Links - COMENTADO A PEDIDO DO USUÁRIO
+           * Estes links usam o parâmetro `?sref=` que vincula o aluno ao vendedor para rastreamento
+           * e comissão, mas SEM aplicar qualquer desconto promocional. O aluno paga o valor integral.
+           *
+          <div className="bg-white rounded-xl shadow-sm border border-slate-200 p-6">
+            <div className="flex items-center gap-2 mb-2">
+              <Link2 className="w-5 h-5 text-slate-500" />
+              <h3 className="text-lg font-semibold text-slate-900">Tracking Links</h3>
+            </div>
+            <p className="text-sm text-slate-600 mb-4">
+              Share these links to track students without applying a promotional discount. Use these when the student will pay the full price.
+            </p>
+            
+            <div className="space-y-3">
+              <LandingPageLinkItem 
+                title="Initial Process (F1 Visa) — Tracking"
+                description="For students starting from scratch"
+                url={`${origin}/initial?sref=${sellerCode}`}
+              />
+              <LandingPageLinkItem 
+                title="Change of Status (COS) — Tracking"
+                description="For students already in the USA"
+                url={`${origin}/cos?sref=${sellerCode}`}
+              />
+              <LandingPageLinkItem 
+                title="Transfer — Tracking"
+                description="For students transferring schools"
+                url={`${origin}/transfer?sref=${sellerCode}`}
+              />
+            </div>
+          </div>
+          */}
 
           {/* Simple Instructions */}
           <div className="bg-gradient-to-r from-blue-50 to-indigo-50 rounded-xl border border-blue-200 p-6">
