@@ -130,8 +130,15 @@ function ZellePaymentsBase(props: ZellePaymentsProps) {
 										</div>
 
 										<div className="mb-4">
-											<div className="text-2xl font-bold text-gray-900 mb-2">{formatCurrency(convertCentsToDollars(payment.amount), true, 'pt-BR')}</div>
-											<p className="text-sm text-gray-600 capitalize">{payment.fee_type.replace('_', ' ')}</p>
+											<div className="text-2xl font-bold text-gray-900 mb-1">{formatCurrency(convertCentsToDollars(payment.amount), true, 'pt-BR')}</div>
+											<div className="flex items-center gap-2">
+												<p className="text-sm text-gray-600 capitalize">{payment.fee_type.replace('_', ' ')}</p>
+												{payment.metadata?.is_installment && (
+													<span className="inline-flex items-center px-2 py-0.5 rounded text-[10px] font-bold bg-blue-100 text-blue-800 border border-blue-200 uppercase">
+														Part {payment.metadata.installment_number}/2
+													</span>
+												)}
+											</div>
 										</div>
 
 										<div className="text-sm text-gray-500 mb-4">{new Date(payment.created_at).toLocaleDateString()}</div>
@@ -195,7 +202,16 @@ function ZellePaymentsBase(props: ZellePaymentsProps) {
 															</div>
 														</div>
 													</td>
-													<td className="px-6 py-4 whitespace-nowrap"><div className="text-sm text-gray-900 capitalize">{payment.fee_type.replace('_', ' ')}</div></td>
+													<td className="px-6 py-4 whitespace-nowrap">
+														<div className="text-sm text-gray-900 capitalize">
+															{payment.fee_type.replace('_', ' ')}
+															{payment.metadata?.is_installment && (
+																<span className="ml-2 inline-flex items-center px-2 py-0.5 rounded text-xs font-bold bg-blue-100 text-blue-800 border border-blue-200">
+																	PART {payment.metadata.installment_number}/2
+																</span>
+															)}
+														</div>
+													</td>
 													<td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900 font-medium">{formatCurrency(convertCentsToDollars(payment.amount), true, 'pt-BR')}</td>
 													<td className="px-6 py-4 whitespace-nowrap">
 														<span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${payment.zelle_status === 'pending_verification' ? 'bg-yellow-100 text-yellow-800' :

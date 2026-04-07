@@ -166,8 +166,8 @@ export const PlacementFeeStep: React.FC<StepProps> = ({ onNext, onBack, currentS
             const annualValue = application.scholarships?.annual_value_with_scholarship || 0;
             const placementFeeAmountCustom = application.scholarships?.placement_fee_amount as number | undefined | null;
             const fullAmount = getPlacementFee(annualValue, placementFeeAmountCustom ? Number(placementFeeAmountCustom) : null);
-            // Se parcelamento habilitado, cobrar 50% agora
-            const placementFeeAmount = installmentEnabled ? Math.ceil(fullAmount / 2 * 100) / 100 : fullAmount;
+            // Parcelamento só se aplica ao Zelle (fluxo manual com revisão do admin)
+            const placementFeeAmount = fullAmount;
 
             let apiUrl = `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/stripe-checkout-placement-fee`;
             if (method === 'parcelow') {
@@ -324,8 +324,9 @@ export const PlacementFeeStep: React.FC<StepProps> = ({ onNext, onBack, currentS
                             const baseAmount = getPlacementFee(annualValue, placementFeeAmount ? Number(placementFeeAmount) : null);
                             // Se o admin habilitou parcelamento, o aluno paga 50% agora
                             const effectiveAmount = installmentEnabled ? Math.ceil(baseAmount / 2 * 100) / 100 : baseAmount;
-                            const cardAmount = calculateCardAmountWithFees(effectiveAmount);
-                            const pixInfo = calculatePIXTotalWithIOF(effectiveAmount, exchangeRate);
+                            // Stripe/PIX/Parcelow sempre cobram valor cheio; só Zelle usa effectiveAmount (parcela)
+                            const cardAmount = calculateCardAmountWithFees(baseAmount);
+                            const pixInfo = calculatePIXTotalWithIOF(baseAmount, exchangeRate);
 
                             return (
                                 <div
@@ -606,7 +607,7 @@ export const PlacementFeeStep: React.FC<StepProps> = ({ onNext, onBack, currentS
                                                                         </div>
                                                                     </div>
                                                                     <div className="text-right shrink-0">
-                                                                        <div className="text-slate-900 text-xl font-black uppercase tracking-tight">{formatPlacementFee(baseAmount)}</div>
+                                                                        <div className="text-slate-900 text-xl font-black uppercase tracking-tight">{formatPlacementFee(effectiveAmount)}</div>
                                                                         <span className="text-[10px] font-bold text-slate-900 mt-1 block uppercase tracking-widest leading-tight">{t('paymentStep.zelleNoFees')}</span>
                                                                     </div>
                                                                 </div>

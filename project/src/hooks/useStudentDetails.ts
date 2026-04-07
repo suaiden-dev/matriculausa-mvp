@@ -58,6 +58,10 @@ export interface StudentRecord {
   visa_transfer_active?: boolean;
   reinstatement_package_payment_method?: string | null;
   university_id?: string | null;
+  placement_fee_installment_enabled?: boolean;
+  placement_fee_pending_balance?: number;
+  placement_fee_due_date?: string | null;
+  placement_fee_installment_number?: number;
 }
 
 /**

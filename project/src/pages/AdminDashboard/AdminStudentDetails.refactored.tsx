@@ -1351,7 +1351,7 @@ const AdminStudentDetails: React.FC = () => {
       .eq('user_id', student.user_id);
     if (error) throw error;
     toast.success('Parcelamento habilitado. O aluno verá a opção de pagar 50% agora.');
-    queryClient.invalidateQueries({ queryKey: ['student', profileId] });
+    queryClient.invalidateQueries({ queryKey: queryKeys.students.details(profileId) });
   }, [student?.user_id, profileId, queryClient]);
 
   const handleDisableInstallment = useCallback(async () => {
@@ -1362,7 +1362,7 @@ const AdminStudentDetails: React.FC = () => {
       .eq('user_id', student.user_id);
     if (error) throw error;
     toast.success('Parcelamento desabilitado.');
-    queryClient.invalidateQueries({ queryKey: ['student', profileId] });
+    queryClient.invalidateQueries({ queryKey: queryKeys.students.details(profileId) });
   }, [student?.user_id, profileId, queryClient]);
 
   const handleConfirmPayment = useCallback(async () => {

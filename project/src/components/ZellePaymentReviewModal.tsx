@@ -23,6 +23,7 @@ interface ZellePaymentReviewModalProps {
   onReject?: (paymentId: string, reason: string) => Promise<void>;
   onApprovePartial?: (paymentId: string) => Promise<void>;
   studentPlacementFeeInstallmentNumber?: number;
+  studentPlacementFeeInstallmentEnabled?: boolean;
 }
 
 export const ZellePaymentReviewModal: React.FC<ZellePaymentReviewModalProps> = ({
@@ -34,6 +35,7 @@ export const ZellePaymentReviewModal: React.FC<ZellePaymentReviewModalProps> = (
   onReject,
   onApprovePartial,
   studentPlacementFeeInstallmentNumber = 0,
+  studentPlacementFeeInstallmentEnabled = false,
 }) => {
   const [action, setAction] = useState<'approve' | 'reject' | 'approve_partial' | null>(null);
   const [zelleCode, setZelleCode] = useState('');
@@ -41,6 +43,12 @@ export const ZellePaymentReviewModal: React.FC<ZellePaymentReviewModalProps> = (
   const [selectedRejectionReason, setSelectedRejectionReason] = useState('');
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+
+  // Se é placement_fee com installment habilitado e ainda na 1ª parcela → só mostrar "Approve as 1st Installment"
+  const isFirstInstallmentScenario =
+    (payment.fee_type === 'placement_fee' || payment.fee_type === 'placement') &&
+    studentPlacementFeeInstallmentEnabled &&
+    studentPlacementFeeInstallmentNumber === 0;
 
   // Opções pré-definidas de motivos de rejeição
   const rejectionReasons = [
@@ -226,22 +234,42 @@ export const ZellePaymentReviewModal: React.FC<ZellePaymentReviewModalProps> = (
           <h3 className="text-lg font-medium text-gray-900 mb-4">Review Action</h3>
           
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-            <button
-              onClick={() => setAction('approve')}
-              className={`p-4 border-2 rounded-lg transition-colors ${
-                action === 'approve'
-                  ? 'border-green-500 bg-green-50'
-                  : 'border-gray-200 hover:border-green-300'
-              }`}
-            >
-              <div className="flex items-center gap-3">
-                <CheckCircle className={`w-6 h-6 ${action === 'approve' ? 'text-green-600' : 'text-gray-400'}`} />
-                <div className="text-left">
-                  <p className="font-medium text-gray-900">Approve Payment</p>
-                  <p className="text-sm text-gray-600">Mark payment as verified and approved</p>
+            {/* Approve — padrão ou 1ª parcela dependendo do cenário */}
+            {isFirstInstallmentScenario ? (
+              <button
+                onClick={() => setAction('approve_partial')}
+                className={`p-4 border-2 rounded-lg transition-colors ${
+                  action === 'approve_partial'
+                    ? 'border-amber-500 bg-amber-50'
+                    : 'border-gray-200 hover:border-amber-300'
+                }`}
+              >
+                <div className="flex items-center gap-3">
+                  <Layers className={`w-6 h-6 ${action === 'approve_partial' ? 'text-amber-600' : 'text-gray-400'}`} />
+                  <div className="text-left">
+                    <p className="font-medium text-gray-900">Approve as 1st Installment</p>
+                    <p className="text-sm text-gray-600">Student unlocked — 2nd installment required to release documents.</p>
+                  </div>
                 </div>
-              </div>
-            </button>
+              </button>
+            ) : (
+              <button
+                onClick={() => setAction('approve')}
+                className={`p-4 border-2 rounded-lg transition-colors ${
+                  action === 'approve'
+                    ? 'border-green-500 bg-green-50'
+                    : 'border-gray-200 hover:border-green-300'
+                }`}
+              >
+                <div className="flex items-center gap-3">
+                  <CheckCircle className={`w-6 h-6 ${action === 'approve' ? 'text-green-600' : 'text-gray-400'}`} />
+                  <div className="text-left">
+                    <p className="font-medium text-gray-900">Approve Payment</p>
+                    <p className="text-sm text-gray-600">Mark payment as verified and approved</p>
+                  </div>
+                </div>
+              </button>
+            )}
 
             <button
               onClick={() => setAction('reject')}
@@ -259,30 +287,6 @@ export const ZellePaymentReviewModal: React.FC<ZellePaymentReviewModalProps> = (
                 </div>
               </div>
             </button>
-
-            {/* Partial approval — only for placement_fee when it's the 1st installment */}
-            {(payment.fee_type === 'placement_fee' || payment.fee_type === 'placement') && studentPlacementFeeInstallmentNumber === 0 && onApprovePartial && (
-              <button
-                onClick={() => setAction('approve_partial')}
-                className={`p-4 border-2 rounded-lg transition-colors md:col-span-2 ${
-                  action === 'approve_partial'
-                    ? 'border-amber-500 bg-amber-50'
-                    : 'border-gray-200 hover:border-amber-300'
-                }`}
-              >
-                <div className="flex items-center gap-3">
-                  <Layers className={`w-6 h-6 ${action === 'approve_partial' ? 'text-amber-600' : 'text-gray-400'}`} />
-                  <div className="text-left">
-                    <p className="font-medium text-gray-900">
-                      Approve as 1st Installment (50%)
-                    </p>
-                    <p className="text-sm text-gray-600">
-                      Approves ${payment.amount.toFixed(2)} as 1st installment. Student is unlocked, but document downloads remain blocked until the 2nd installment (${payment.amount.toFixed(2)}) is paid within 30 days.
-                    </p>
-                  </div>
-                </div>
-              </button>
-            )}
           </div>
         </div>
 

@@ -446,6 +446,7 @@ const StudentApplicationsView: React.FC<StudentApplicationsViewProps> = ({ isArc
       case 'application_fee':
         return student.is_application_fee_paid ? 'completed' : 'pending';
       case 'placement_fee':
+        if (student.is_placement_fee_paid && (student.placement_fee_pending_balance ?? 0) > 0) return 'partial';
         return student.is_placement_fee_paid ? 'completed' : 'pending';
       case 'scholarship_fee':
         return student.is_scholarship_fee_paid ? 'completed' : 'pending';
@@ -764,6 +765,7 @@ const StudentApplicationsView: React.FC<StudentApplicationsViewProps> = ({ isArc
                 <div
                   key={step.key}
                   className={`w-2 h-2 rounded-full ${status === 'completed' ? 'bg-green-500' :
+                    status === 'partial' ? 'bg-amber-400' :
                     status === 'in_progress' ? 'bg-blue-500' :
                       status === 'rejected' ? 'bg-red-500' :
                         'bg-gray-300'

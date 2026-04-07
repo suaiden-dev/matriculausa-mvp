@@ -33,7 +33,7 @@ export function useStudentDetailsQuery(profileId: string | undefined) {
             try {
               const { data: extraProfile, error: extraError } = await supabase
                 .from('user_profiles')
-                .select('placement_fee_flow, is_placement_fee_paid, selection_survey_passed, has_paid_i20_control_fee, system_type')
+                .select('placement_fee_flow, is_placement_fee_paid, selection_survey_passed, has_paid_i20_control_fee, system_type, placement_fee_installment_enabled, placement_fee_pending_balance, placement_fee_due_date, placement_fee_installment_number')
                 .eq('id', profileId)
                 .single();
 
@@ -45,6 +45,10 @@ export function useStudentDetailsQuery(profileId: string | undefined) {
                   selection_survey_passed: s.selection_survey_passed ?? extraProfile.selection_survey_passed,
                   has_paid_i20_control_fee: s.has_paid_i20_control_fee ?? extraProfile.has_paid_i20_control_fee,
                   system_type: s.system_type ?? (extraProfile as any).system_type,
+                  placement_fee_installment_enabled: (extraProfile as any).placement_fee_installment_enabled ?? false,
+                  placement_fee_pending_balance: (extraProfile as any).placement_fee_pending_balance ?? 0,
+                  placement_fee_due_date: (extraProfile as any).placement_fee_due_date ?? null,
+                  placement_fee_installment_number: (extraProfile as any).placement_fee_installment_number ?? 0,
                 };
               }
             } catch (extraErr) {
@@ -104,6 +108,10 @@ export function useStudentDetailsQuery(profileId: string | undefined) {
             admin_notes,
             documents_status,
             university_id,
+            placement_fee_installment_enabled,
+            placement_fee_pending_balance,
+            placement_fee_due_date,
+            placement_fee_installment_number,
             scholarship_applications (
               id,
               scholarship_id,
@@ -270,6 +278,10 @@ export function useStudentDetailsQuery(profileId: string | undefined) {
         university_id: s.university_id || null,
         scholarship_fee_amount: mainApp.scholarships?.scholarship_fee_amount || null,
         placement_fee_amount: mainApp.scholarships?.placement_fee_amount || null,
+        placement_fee_installment_enabled: !!(s as any).placement_fee_installment_enabled,
+        placement_fee_pending_balance: (s as any).placement_fee_pending_balance ?? 0,
+        placement_fee_due_date: (s as any).placement_fee_due_date ?? null,
+        placement_fee_installment_number: (s as any).placement_fee_installment_number ?? 0,
       };
 
       return formatted;
