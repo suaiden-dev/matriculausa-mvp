@@ -6,26 +6,32 @@ interface ReferralCaptureResult {
   referralCode: string | null;
   isValid: boolean | null;
   isLoading: boolean;
+  isNoDiscount: boolean; // true quando veio via ?sref= (sem desconto)
   clearReferralCode: () => void;
 }
 
 const STORAGE_KEY = 'pending_seller_referral_code';
+const STORAGE_KEY_NO_DISCOUNT = 'pending_seller_referral_code_nodiscount';
 
 /**
- * Hook para capturar e validar códigos de referral de vendedores vindos da URL
- * Salva o código no localStorage para uso posterior no registro
+ * Hook para capturar e validar códigos de referral de vendedores vindos da URL.
+ * Salva o código no localStorage para uso posterior no registro.
+ *
+ * - ?ref=CODE  → vincula ao vendedor E aplica $50 de desconto
+ * - ?sref=CODE → vincula ao vendedor SEM aplicar desconto (tracking only)
  */
 export const useReferralCapture = (): ReferralCaptureResult => {
   const location = useLocation();
   const [referralCode, setReferralCode] = useState<string | null>(null);
   const [isValid, setIsValid] = useState<boolean | null>(null);
   const [isLoading, setIsLoading] = useState(false);
+  const [isNoDiscount, setIsNoDiscount] = useState(false);
 
   // Função para validar o código contra a tabela sellers
   const validateCode = async (code: string): Promise<boolean> => {
     try {
       console.log('[useReferralCapture] Validando código:', code);
-      
+
       const { data, error } = await supabase
         .from('sellers')
         .select('id, referral_code, is_active')
@@ -41,8 +47,8 @@ export const useReferralCapture = (): ReferralCaptureResult => {
       const valid = !!data;
       console.log('[useReferralCapture] Código válido:', valid, data);
       return valid;
-    } catch (error) {
-      console.error('[useReferralCapture] Exceção ao validar código:', error);
+    } catch (err) {
+      console.error('[useReferralCapture] Exceção ao validar código:', err);
       return false;
     }
   };
@@ -50,62 +56,67 @@ export const useReferralCapture = (): ReferralCaptureResult => {
   // Função para limpar o código do localStorage
   const clearReferralCode = () => {
     localStorage.removeItem(STORAGE_KEY);
+    localStorage.removeItem(STORAGE_KEY_NO_DISCOUNT);
     setReferralCode(null);
     setIsValid(null);
+    setIsNoDiscount(false);
     console.log('[useReferralCapture] Código removido do localStorage');
   };
 
   // Efeito para capturar código da URL ao montar o componente
   useEffect(() => {
     const captureReferralCode = async () => {
-      // Ler query params da URL
       const searchParams = new URLSearchParams(location.search);
       const refParam = searchParams.get('ref');
+      const srefParam = searchParams.get('sref');
 
-      if (!refParam) {
-        // Sem código na URL - verificar se existe algum salvo
-        const savedCode = localStorage.getItem(STORAGE_KEY);
+      // sref tem prioridade — é explicitamente sem desconto
+      const paramCode = srefParam || refParam;
+      const noDiscount = !!srefParam && !refParam;
+
+      if (!paramCode) {
+        // Sem código na URL — verificar se existe algum salvo
+        const savedRegular = localStorage.getItem(STORAGE_KEY);
+        const savedNoDiscount = localStorage.getItem(STORAGE_KEY_NO_DISCOUNT);
+        const savedCode = savedRegular || savedNoDiscount;
+        const savedIsNoDiscount = !savedRegular && !!savedNoDiscount;
+
         if (savedCode) {
-          console.log('[useReferralCapture] Código encontrado no localStorage:', savedCode);
+          console.log('[useReferralCapture] Código encontrado no localStorage:', savedCode, savedIsNoDiscount ? '(sem desconto)' : '');
           setReferralCode(savedCode);
-          // Validar código salvo para garantir que ainda é válido
+          setIsNoDiscount(savedIsNoDiscount);
           setIsLoading(true);
           const valid = await validateCode(savedCode);
           setIsValid(valid);
-          if (!valid) {
-            // Se código salvo não é mais válido, remover
-            clearReferralCode();
-          }
+          if (!valid) clearReferralCode();
           setIsLoading(false);
         }
         return;
       }
 
-      console.log('[useReferralCapture] Código detectado na URL:', refParam);
-      
-      // Verificar se já existe um código diferente salvo
-      const savedCode = localStorage.getItem(STORAGE_KEY);
-      if (savedCode && savedCode !== refParam.toUpperCase()) {
-        console.log('[useReferralCapture] Substituindo código anterior:', savedCode);
-      }
+      console.log('[useReferralCapture] Código detectado na URL:', paramCode, noDiscount ? '(sem desconto)' : '(com desconto)');
 
-      // Validar código da URL
       setIsLoading(true);
-      const valid = await validateCode(refParam);
-      
+      const valid = await validateCode(paramCode);
+
       if (valid) {
-        // Salvar código no localStorage
-        const codeToSave = refParam.toUpperCase();
-        localStorage.setItem(STORAGE_KEY, codeToSave);
+        const codeToSave = paramCode.toUpperCase();
+        // Salvar na chave correta e limpar a outra para evitar conflito
+        const targetKey = noDiscount ? STORAGE_KEY_NO_DISCOUNT : STORAGE_KEY;
+        const otherKey = noDiscount ? STORAGE_KEY : STORAGE_KEY_NO_DISCOUNT;
+        localStorage.removeItem(otherKey);
+        localStorage.setItem(targetKey, codeToSave);
         setReferralCode(codeToSave);
+        setIsNoDiscount(noDiscount);
         setIsValid(true);
-        console.log('[useReferralCapture] Código válido salvo no localStorage:', codeToSave);
+        console.log('[useReferralCapture] Código salvo como', noDiscount ? 'NO_DISCOUNT' : 'COM_DESCONTO', ':', codeToSave);
       } else {
         setReferralCode(null);
         setIsValid(false);
+        setIsNoDiscount(false);
         console.log('[useReferralCapture] Código inválido, não foi salvo');
       }
-      
+
       setIsLoading(false);
     };
 
@@ -116,6 +127,7 @@ export const useReferralCapture = (): ReferralCaptureResult => {
     referralCode,
     isValid,
     isLoading,
-    clearReferralCode
+    isNoDiscount,
+    clearReferralCode,
   };
 };

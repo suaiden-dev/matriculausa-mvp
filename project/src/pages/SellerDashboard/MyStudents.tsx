@@ -19,6 +19,7 @@ import { supabase } from '../../lib/supabase';
 import SellerI20DeadlineTimer from '../../components/SellerI20DeadlineTimer';
 import { getDisplayAmounts } from '../../utils/paymentConverter';
 import { formatCurrency } from '../../utils/currency';
+import { useFeeConfig } from '../../hooks/useFeeConfig';
 
 interface Student {
   id: string;
@@ -42,6 +43,13 @@ interface Student {
   has_paid_i20_control_fee: boolean;
   is_scholarship_fee_paid: boolean;
   is_application_fee_paid: boolean;
+
+  // Process Context (Modernizado)
+  student_process_type?: string;
+  has_paid_ds160_package?: boolean;
+  has_paid_i539_cos_package?: boolean;
+  has_paid_reinstatement_package?: boolean;
+  has_paid_transfer_fee?: boolean;
 
   // Para o deadline do I-20 (agora com tipos mais precisos)
   scholarship_fee_paid_date: string | null;
@@ -94,11 +102,18 @@ const MyStudents: React.FC<MyStudentsProps> = ({ students, onRefresh, onViewStud
   // Estado para armazenar overrides de taxas por estudante
   const [studentFeeOverrides, setStudentFeeOverrides] = useStateReact<{ [key: string]: any }>({});
   // Estado para armazenar system_type por estudante
-  const [studentSystemTypes, setStudentSystemTypes] = useStateReact<{ [key: string]: string }>({});
+  const [studentSystemTypes, setStudentSystemTypes] = useState<{ [key: string]: string }>({});
   // Estado para armazenar valores reais pagos por estudante
-  const [studentRealPaidAmounts, setStudentRealPaidAmounts] = useStateReact<Record<string, { selection_process?: number; scholarship?: number; i20_control?: number }>>({});
+  const [studentRealPaidAmounts, setStudentRealPaidAmounts] = useState<{ [key: string]: { 
+    selection_process?: number; 
+    scholarship?: number; 
+    i20_control?: number;
+    ds160_package?: number;
+    i539_cos_package?: number;
+    reinstatement_package?: number;
+  } }>({});
   // Estado para controlar loading dos valores reais pagos
-  const [loadingRealPaidAmounts, setLoadingRealPaidAmounts] = useStateReact<boolean>(true);
+  const [loadingRealPaidAmounts, setLoadingRealPaidAmounts] = useState<boolean>(true);
   // Estado para controlar requisições em andamento
   const [loadingRequests, setLoadingRequests] = useStateReact<Set<string>>(new Set());
   // Métodos de pagamento por estudante (para calcular valor pago manualmente)
@@ -624,6 +639,7 @@ const MyStudents: React.FC<MyStudentsProps> = ({ students, onRefresh, onViewStud
 
   // Função para determinar quais taxas estão faltando para um aluno
   const getMissingFees = (student: Student) => {
+    const { getFeeAmount } = useFeeConfig();
     const missingFees = [];
     const deps = studentDependents[student.id] || 0;
     const overrides = studentFeeOverrides[student.id];
@@ -635,15 +651,15 @@ const MyStudents: React.FC<MyStudentsProps> = ({ students, onRefresh, onViewStud
         selectionProcessFee = Number(overrides.selection_process_fee);
       } else {
         const systemType = studentSystemTypes[student.id] || 'legacy';
-        const baseSelectionFee = systemType === 'simplified' ? 350 : 400;
-        selectionProcessFee = systemType === 'simplified' ? baseSelectionFee : baseSelectionFee + (deps * 150);
+        const baseSelectionFee = Number(getFeeAmount('selection_process')) || (systemType === 'simplified' ? 350 : 400);
+        // ✅ CORREÇÃO: Taxa de dependentes é fixa em $100 por dependente para todos agora
+        selectionProcessFee = baseSelectionFee + (deps * 100);
       }
       missingFees.push({ name: 'Selection Process', amount: selectionProcessFee, color: 'red' });
     }
 
     // Application Fee
     if (!student.is_application_fee_paid) {
-      // ✅ CORREÇÃO: Usar lógica consistente para application fee
       let applicationFee;
       if (overrides && overrides.application_fee !== undefined && overrides.application_fee !== null) {
         applicationFee = Number(overrides.application_fee);
@@ -654,31 +670,26 @@ const MyStudents: React.FC<MyStudentsProps> = ({ students, onRefresh, onViewStud
       }
       missingFees.push({ name: 'Application', amount: applicationFee, color: 'gray' });
     }
-
     if (!student.is_scholarship_fee_paid) {
-      // ✅ CORREÇÃO: Usar lógica consistente para scholarship fee
       let scholarshipFee;
       if (overrides && overrides.scholarship_fee !== undefined && overrides.scholarship_fee !== null) {
         scholarshipFee = Number(overrides.scholarship_fee);
       } else {
         // Sem override: usar taxa baseada no system_type
-        const systemType = studentSystemTypes[student.id] || 'legacy';
-        scholarshipFee = systemType === 'simplified' ? 900 : 900;
+        scholarshipFee = Number(getFeeAmount('scholarship_fee')) || 900;
       }
-      missingFees.push({ name: 'Scholarship', amount: scholarshipFee, color: 'blue' });
+      missingFees.push({ name: 'Placement Fee', amount: scholarshipFee, color: 'blue' });
     }
 
-    // I-20 Control Fee
+    // I-20 Control Fee (Still checking field but label as Placement/Process if unified)
     if (!student.has_paid_i20_control_fee) {
-      // ✅ CORREÇÃO: Usar lógica consistente para I-20 control fee
       let i20ControlFee;
       if (overrides && overrides.i20_control_fee !== undefined && overrides.i20_control_fee !== null) {
         i20ControlFee = Number(overrides.i20_control_fee);
       } else {
-        // I-20 Control Fee é sempre $900 para ambos os sistemas
-        i20ControlFee = 900;
+        i20ControlFee = Number(getFeeAmount('i20_control_fee')) || 900;
       }
-      missingFees.push({ name: 'I20 Control', amount: i20ControlFee, color: 'orange' });
+      missingFees.push({ name: 'Process Fee', amount: i20ControlFee, color: 'orange' });
     }
 
     return missingFees;
@@ -705,12 +716,11 @@ const MyStudents: React.FC<MyStudentsProps> = ({ students, onRefresh, onViewStud
 
     return null;
   };
-
-
-
+  
   // Estatísticas calculadas dinamicamente
   // Função para calcular o total pago por um aluno
   const calculateStudentTotalPaid = (student: Student): number => {
+    const { getFeeAmount } = useFeeConfig();
     let total = 0;
     // ✅ CORREÇÃO: Usar valores reais pagos quando disponíveis, senão calcular com fallback
     const realPaid = studentRealPaidAmounts[student.id] || {};
@@ -726,13 +736,19 @@ const MyStudents: React.FC<MyStudentsProps> = ({ students, onRefresh, onViewStud
         total += realPaid.selection_process;
       } else {
         // Fallback: calcular baseado no system_type e dependents
-        const baseSelDefault = systemType === 'simplified' ? 350 : 400;
+        const isNewProcess = student.student_process_type === 'initial' || 
+                            student.student_process_type === 'change_of_status' || 
+                            student.student_process_type === 'transfer' || 
+                            student.student_process_type === 'resident';
+
+        const baseSelDefault = Number(getFeeAmount('selection_process')) || 
+                               (isNewProcess ? 400 : (systemType === 'simplified' ? 350 : 400));
+        
         const baseSel = overrides.selection_process_fee != null ? Number(overrides.selection_process_fee) : baseSelDefault;
-        // ✅ CORREÇÃO: Para simplified, Selection Process Fee é fixo ($350), sem dependentes
-        // Dependentes só afetam Application Fee ($100 por dependente)
+        // ✅ CORREÇÃO: Todos os sistemas somam $100 por dependente na Selection Fee agora
         const selPaid = overrides.selection_process_fee != null
           ? baseSel
-          : (systemType === 'simplified' ? baseSel : baseSel + (deps * 150));
+          : baseSel + (deps * 100);
         total += selPaid;
       }
     }
@@ -744,21 +760,30 @@ const MyStudents: React.FC<MyStudentsProps> = ({ students, onRefresh, onViewStud
         total += realPaid.scholarship;
       } else {
         // Fallback: calcular baseado no system_type
-        const schBaseDefault = systemType === 'simplified' ? 900 : 900;
+        const schBaseDefault = Number(getFeeAmount('scholarship_fee')) || 900;
         const schBase = overrides.scholarship_fee != null ? Number(overrides.scholarship_fee) : schBaseDefault;
         total += schBase;
       }
     }
-
-    // I-20 Control Fee
-    if (student.has_paid_i20_control_fee) {
-      if (realPaid.i20_control !== undefined && realPaid.i20_control > 0) {
-        // Usar valor real pago quando disponível
-        total += realPaid.i20_control;
+    
+    // Process Packages (Initial / COS / Transfer)
+    if (student.student_process_type === 'initial' && student.has_paid_ds160_package) {
+      if (realPaid.ds160_package !== undefined && realPaid.ds160_package > 0) {
+        total += realPaid.ds160_package;
       } else {
-        // Fallback: usar override ou valor padrão
-        const i20Base = overrides.i20_control_fee != null ? Number(overrides.i20_control_fee) : 900;
-        total += i20Base;
+        total += 1800;
+      }
+    } else if (student.student_process_type === 'change_of_status' && student.has_paid_i539_cos_package) {
+      if (realPaid.i539_cos_package !== undefined && realPaid.i539_cos_package > 0) {
+        total += realPaid.i539_cos_package;
+      } else {
+        total += 1800;
+      }
+    } else if (student.student_process_type === 'transfer' && (student.has_paid_reinstatement_package || (student as any).has_paid_transfer_fee)) {
+      if (realPaid.reinstatement_package !== undefined && realPaid.reinstatement_package > 0) {
+        total += realPaid.reinstatement_package;
+      } else {
+        total += 500;
       }
     }
 
@@ -769,6 +794,7 @@ const MyStudents: React.FC<MyStudentsProps> = ({ students, onRefresh, onViewStud
 
   // Calcular total pago manualmente por um aluno (considera apenas taxas do seller: selection, scholarship, i20)
   const calculateStudentManualPaid = (student: Student): number => {
+    const { getFeeAmount } = useFeeConfig();
     let total = 0;
     const deps = studentDependents[student.id] || 0;
     const overrides = studentFeeOverrides[student.id];
@@ -780,10 +806,8 @@ const MyStudents: React.FC<MyStudentsProps> = ({ students, onRefresh, onViewStud
         total += Number(overrides.selection_process_fee);
       } else {
         const systemType = studentSystemTypes[student.id] || 'legacy';
-        const baseSelectionFee = systemType === 'simplified' ? 350 : 400;
-        // ✅ CORREÇÃO: Para simplified, Selection Process Fee é fixo ($350), sem dependentes
-        // Dependentes só afetam Application Fee ($100 por dependente)
-        total += systemType === 'simplified' ? baseSelectionFee : baseSelectionFee + (deps * 150);
+        const basePrice = Number(getFeeAmount('selection_process')) || (systemType === 'simplified' ? 350 : 400);
+        total += basePrice + (deps * 100);
       }
     }
 
@@ -792,8 +816,7 @@ const MyStudents: React.FC<MyStudentsProps> = ({ students, onRefresh, onViewStud
       if (overrides && overrides.scholarship_fee !== undefined && overrides.scholarship_fee !== null) {
         total += Number(overrides.scholarship_fee);
       } else {
-        const systemType = studentSystemTypes[student.id] || 'legacy';
-        const scholarshipFee = systemType === 'simplified' ? 900 : 900;
+        const scholarshipFee = Number(getFeeAmount('scholarship_fee')) || 900;
         total += scholarshipFee;
       }
     }
@@ -803,8 +826,8 @@ const MyStudents: React.FC<MyStudentsProps> = ({ students, onRefresh, onViewStud
       if (overrides && overrides.i20_control_fee !== undefined && overrides.i20_control_fee !== null) {
         total += Number(overrides.i20_control_fee);
       } else {
-        // I-20 Control Fee é sempre $900 para ambos os sistemas
-        const baseI20Fee = 900;
+        // I-20 Control Fee é baseado no config
+        const baseI20Fee = Number(getFeeAmount('i20_control_fee')) || 900;
         total += baseI20Fee;
       }
     }
@@ -1339,10 +1362,10 @@ const MyStudents: React.FC<MyStudentsProps> = ({ students, onRefresh, onViewStud
                       </div>
                     </div>
 
-                    {/* I-20 Control Fee Deadline Status */}
+                    {/* Process Fee Deadline Status (Anteriormente I-20) */}
                     <div className="mt-3 pt-3 border-t border-slate-100">
                       <div className="flex items-center justify-between">
-                        <span className="text-xs font-medium text-slate-600">I-20 Control Fee:</span>
+                        <span className="text-xs font-medium text-slate-600">Process Fee:</span>
                         <SellerI20DeadlineTimer
                           deadline={calculateI20Deadline(student)}
                           hasPaid={student.has_paid_i20_control_fee || false}
@@ -1380,7 +1403,7 @@ const MyStudents: React.FC<MyStudentsProps> = ({ students, onRefresh, onViewStud
                                   )}
                                   {app.is_scholarship_fee_paid && (
                                     <span className="inline-flex items-center px-2 py-1 text-xs font-medium text-blue-700 bg-blue-100 rounded-full">
-                                      Scholarship Fee Paid
+                                      Placement Fee Paid
                                     </span>
                                   )}
                                   {!app.is_application_fee_paid && !app.is_scholarship_fee_paid && (

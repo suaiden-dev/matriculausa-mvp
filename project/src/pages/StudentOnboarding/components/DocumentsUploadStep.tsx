@@ -348,6 +348,30 @@ export const DocumentsUploadStep: React.FC<StepProps> = ({ onNext }) => {
             await supabase.from('scholarship_applications').update({ documents: appDocs }).eq('id', applicationId);
           }
         }
+      } else if (userProfile?.id && scholarshipIds.length === 0) {
+        // Fallback: This student has no scholarships in cart, meaning applications 
+        // might have been created manually by admin or exist already. Let's fetch 
+        // all active applications for this student and update their documents.
+        const { data: existingApps } = await supabase
+          .from('scholarship_applications')
+          .select('id')
+          .eq('student_id', userProfile.id)
+          .neq('status', 'rejected');
+          
+        if (existingApps && existingApps.length > 0) {
+          const appDocs = [
+            { type: 'passport', url: passportUrl, status: 'under_review', uploaded_at: new Date().toISOString() },
+            { type: 'diploma', url: diplomaUrl, status: 'under_review', uploaded_at: new Date().toISOString() },
+            { type: 'funds_proof', url: fundsUrl, status: 'under_review', uploaded_at: new Date().toISOString() }
+          ];
+          
+          for (const app of existingApps) {
+            await supabase
+              .from('scholarship_applications')
+              .update({ documents: appDocs })
+              .eq('id', app.id);
+          }
+        }
       }
 
       // 3. Atualizar Perfil do Usuário

@@ -115,22 +115,22 @@ const ScholarshipDetailModal: React.FC<ScholarshipDetailModalProps> = ({
     // Fallback para usuários antigos sem process type: manter comportamento atual (exibir todas)
     if (!processType) {
       return [
-        { name: t('scholarshipsPage.modal.i539COSPackage'), amount: 1800, details: t('scholarshipsPage.modal.i539PackageDescription') },
-        { name: t('scholarshipsPage.modal.ds160Package'), amount: 1800, details: t('scholarshipsPage.modal.ds160PackageDescription') },
+        { name: t('scholarshipsPage.modal.i539COSPackage'), amount: 1800, details: t('scholarshipsPage.modal.i539PackageDescription', { reason: t('scholarshipsPage.modal.i539ReasonCOS') }) },
+        { name: t('scholarshipsPage.modal.ds160Package'), amount: 1800, details: t('scholarshipsPage.modal.ds160PackageDescription', { type: 'Initial/Transfer' }) },
         { name: t('scholarshipsPage.modal.reinstatementPackage'), amount: 500, details: t('scholarshipsPage.modal.reinstatementPackageDescription') },
       ];
     }
     if (processType === 'initial') {
-      return [{ name: t('scholarshipsPage.modal.ds160Package'), amount: 1800, details: t('scholarshipsPage.modal.ds160PackageDescription') }];
+      return [{ name: t('scholarshipsPage.modal.ds160Package'), amount: 1800, details: t('scholarshipsPage.modal.ds160PackageDescription', { type: 'Initial' }) }];
     }
     if (processType === 'change_of_status') {
-      return [{ name: t('scholarshipsPage.modal.i539COSPackage'), amount: 1800, details: t('scholarshipsPage.modal.i539PackageDescription') }];
+      return [{ name: t('scholarshipsPage.modal.i539COSPackage'), amount: 1800, details: t('scholarshipsPage.modal.i539PackageDescription', { reason: t('scholarshipsPage.modal.i539ReasonCOS') }) }];
     }
     if (processType === 'transfer') {
       if (visaTransferActive === false) {
         return [
           { name: t('scholarshipsPage.modal.reinstatementPackage'), amount: 500, details: t('scholarshipsPage.modal.reinstatementPackageDescription') },
-          { name: t('scholarshipsPage.modal.i539COSPackage'), amount: 1800, details: t('scholarshipsPage.modal.i539PackageDescription') },
+          { name: t('scholarshipsPage.modal.i539Package'), amount: 1800, details: t('scholarshipsPage.modal.i539PackageDescription', { reason: t('scholarshipsPage.modal.i539ReasonTransfer') }) },
         ];
       }
       return []; // Transfer com visto ativo: sem taxas fixas

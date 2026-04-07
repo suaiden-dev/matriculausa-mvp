@@ -9,7 +9,11 @@ import { useSystemType } from '../hooks/useSystemType';
 
 const SellerStudentRegistration: React.FC = () => {
   const [searchParams] = useSearchParams();
-  const sellerCode = searchParams.get('ref') || '';
+  // ?ref= aplica desconto de $50 | ?sref= vincula ao vendedor sem desconto
+  const sellerCodeFromRef = searchParams.get('ref') || '';
+  const sellerCodeFromSref = searchParams.get('sref') || '';
+  const sellerCode = sellerCodeFromRef || sellerCodeFromSref;
+  const isNoDiscountLink = !!sellerCodeFromSref && !sellerCodeFromRef;
   
   const [formData, setFormData] = useState<{
     full_name: string;
@@ -226,7 +230,9 @@ const SellerStudentRegistration: React.FC = () => {
         scholarship_package_number: finalPackageNumber,
         desired_scholarship_range: finalDesiredRange,
         // Como esta página é exclusiva do fluxo legacy, persistimos o system_type
-        system_type: 'legacy'
+        system_type: 'legacy',
+        // Quando vindo de link ?sref=, não deve receber desconto na selection fee
+        ...(isNoDiscountLink && { no_referral_discount: true }),
       };
 
       console.log('🔍 [SellerStudentRegistration] Final registerData:', registerData);
@@ -690,65 +696,8 @@ const SellerStudentRegistration: React.FC = () => {
         </div>
       </div>
 
-      {/* Verification Modal */}
-      {showVerificationModal && (
-        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50">
-          <div className="bg-white rounded-lg p-6 max-w-md w-full">
-            <div className="text-center">
-              <CheckCircle className="w-16 h-16 text-green-500 mx-auto mb-4" />
-              <h3 className="text-xl font-semibold text-gray-900 mb-2">Student Account Created Successfully!</h3>
-              <p className="text-gray-600 mb-4">
-                The student account has been created and the email has been automatically confirmed. 
-                The student can now log in with their credentials at any time.
-              </p>
-              <div className="space-y-2">
-                <button
-                  onClick={() => {
-                    setShowVerificationModal(false);
-                    // Reset form to allow registering another student
-                    setFormData({
-                      full_name: '',
-                      email: '',
-                      password: '',
-                      confirmPassword: '',
-                      phone: '',
-                      sellerReferralCode: sellerCode,
-                      selectedPackage: '1',
-                      desiredScholarshipRange: 3800,
-                      dependents: 0
-                    });
-                    setCurrentStep(1);
-                    setTermsAccepted(false);
-                  }}
-                  className="w-full bg-blue-600 text-white py-2 px-4 rounded-lg hover:bg-blue-700 transition-colors"
-                >
-                  Register Another Student
-                </button>
-                <button
-                  onClick={() => {
-                    setShowVerificationModal(false);
-                    // Navigate to seller dashboard if seller is logged in
-                    if (user && (user.role === 'seller' || user.role === 'admin' || user.role === 'affiliate_admin')) {
-                      if (user.role === 'seller') {
-                        navigate('/seller/dashboard');
-                      } else if (user.role === 'admin') {
-                        navigate('/admin/dashboard');
-                      } else if (user.role === 'affiliate_admin') {
-                        navigate('/affiliate-admin/dashboard');
-                      }
-                    } else {
-                      navigate('/');
-                    }
-                  }}
-                  className="w-full bg-gray-200 text-gray-800 py-2 px-4 rounded-lg hover:bg-gray-300 transition-colors"
-                >
-                  Go to Dashboard
-                </button>
-              </div>
-            </div>
-          </div>
-        </div>
-      )}
+
+
     </div>
   );
 };

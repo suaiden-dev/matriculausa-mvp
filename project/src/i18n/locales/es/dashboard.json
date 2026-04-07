@@ -120,8 +120,8 @@
     "cartPage": {
       "removeFromCart": "Eliminar del carrito",
       "removeToProceed": "Elimina esta beca para proceder",
-      "cannotProceed": "No se puede proceder con becas bloqueadas",
-      "removeBlockedScholarships": "Elimina las becas bloqueadas de arriba para continuar",
+      "cannotProceed": "No se puede proceder con becas agotadas",
+      "removeBlockedScholarships": "Elimina las becas agotadas de arriba para continuar",
       "processing": "Procesando...",
       "nextStep": "Siguiente Paso",
       "clearCart": "Limpiar Carrito"
