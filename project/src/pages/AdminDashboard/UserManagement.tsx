@@ -47,6 +47,7 @@ const UserManagement: React.FC<UserManagementProps> = ({
   const [searchTerm, setSearchTerm] = useState('');
   const [roleFilter, setRoleFilter] = useState('all');
   const [statusFilter, setStatusFilter] = useState('all');
+  const [sourceFilter, setSourceFilter] = useState('all');
   const [selectedUser, setSelectedUser] = useState<any>(null);
   const [viewMode, setViewMode] = useState<'grid' | 'list'>('grid');
 
@@ -89,14 +90,15 @@ const UserManagement: React.FC<UserManagementProps> = ({
     
     const matchesRole = roleFilter === 'all' || user.role === roleFilter;
     const matchesStatus = statusFilter === 'all' || user.status === statusFilter;
-    
-    return matchesSearch && matchesRole && matchesStatus;
+    const matchesSource = sourceFilter === 'all' || (user.source ?? 'matriculausa') === sourceFilter;
+
+    return matchesSearch && matchesRole && matchesStatus && matchesSource;
   });
 
   // Resetar para primeira página quando filtros mudarem
   useEffect(() => {
     setCurrentPage(1);
-  }, [searchTerm, roleFilter, statusFilter]);
+  }, [searchTerm, roleFilter, statusFilter, sourceFilter]);
 
   // Calcular paginação
   const totalPages = Math.ceil(filteredUsers.length / itemsPerPage);
@@ -335,6 +337,18 @@ const UserManagement: React.FC<UserManagementProps> = ({
                   <option value="suspended">Suspended</option>
                 </select>
 
+                <select
+                  value={sourceFilter}
+                  onChange={(e) => setSourceFilter(e.target.value)}
+                  className="px-4 py-3 bg-slate-50 border border-slate-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-[#05294E] focus:border-[#05294E] transition-all duration-200"
+                  aria-label="Filter by source"
+                  title="Filter by source"
+                >
+                  <option value="all">All Sources</option>
+                  <option value="matriculausa">Matricula USA</option>
+                  <option value="migma">Migma</option>
+                </select>
+
                 <div className="flex bg-slate-50 border border-slate-200 rounded-xl p-1">
                   <button
                     onClick={() => handleViewModeChange('grid')}
@@ -403,6 +417,11 @@ const UserManagement: React.FC<UserManagementProps> = ({
                           <span className={`inline-block mt-1 px-2 py-1 rounded-full text-xs font-medium ${getRoleColor(user.role)}`}>
                             {user.role}
                           </span>
+                          {user.source === 'migma' && (
+                            <span className="inline-block mt-1 ml-1 px-2 py-1 rounded-full text-xs font-medium bg-purple-100 text-purple-700">
+                              Migma
+                            </span>
+                          )}
                         </div>
                       </div>
                       <span className={`px-2 py-1 rounded-full text-xs font-medium ${getStatusColor(user.status)}`}>
@@ -513,6 +532,7 @@ const UserManagement: React.FC<UserManagementProps> = ({
                   <tr className="bg-slate-50">
                     <th className="px-4 py-2 text-left">Name</th>
                     <th className="px-4 py-2 text-left">Email</th>
+                    <th className="px-4 py-2 text-left">Source</th>
                     <th className="px-4 py-2 text-left">Status</th>
                     <th className="px-4 py-2 text-left">Joined</th>
                     <th className="px-4 py-2 text-left">Actions</th>
@@ -523,6 +543,13 @@ const UserManagement: React.FC<UserManagementProps> = ({
                     <tr key={user.id} className="border-b">
                       <td className="px-4 py-2 font-medium text-slate-900">{user.full_name}</td>
                       <td className="px-4 py-2 text-slate-600">{user.email}</td>
+                      <td className="px-4 py-2">
+                        {user.source === 'migma' ? (
+                          <span className="px-2 py-1 rounded-full text-xs font-medium bg-purple-100 text-purple-700">Migma</span>
+                        ) : (
+                          <span className="px-2 py-1 rounded-full text-xs font-medium bg-blue-50 text-blue-600">Matricula USA</span>
+                        )}
+                      </td>
                       <td className="px-4 py-2">
                         <span className={`px-2 py-1 rounded-full text-xs font-medium ${getStatusColor(user.status)}`}>{user.status}</span>
                       </td>

@@ -321,7 +321,10 @@ const AdminDashboard: React.FC = () => {
           status: u.status || 'active',
           applications_count: 0,
           created_at: u.created_at,
-          last_active: u.last_active || u.created_at
+          last_active: u.last_active || u.created_at,
+          source: u.source ?? 'matriculausa',
+          migma_seller_id: u.migma_seller_id ?? null,
+          migma_agent_id: u.migma_agent_id ?? null,
         }));
 
       const processedApplications = applicationsData

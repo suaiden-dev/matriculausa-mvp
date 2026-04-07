@@ -177,6 +177,9 @@ export interface UserProfile {
   system_type?: "legacy" | "simplified"; // System type inherited from seller
   selection_survey_passed?: boolean;
   student_process_type?: string | null;
+  source?: 'matriculausa' | 'migma';
+  migma_seller_id?: string | null;
+  migma_agent_id?: string | null;
 }
 
 export interface EmailAttachment {
