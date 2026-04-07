@@ -55,6 +55,10 @@ export interface StudentRecord {
   has_paid_reinstatement_package?: boolean;
   visa_transfer_active?: boolean;
   reinstatement_package_payment_method?: string | null;
+  placement_fee_pending_balance?: number;
+  placement_fee_due_date?: string | null;
+  placement_fee_installment_number?: number;
+  placement_fee_installment_enabled?: boolean;
 }
 
 export interface ReferralInfo {

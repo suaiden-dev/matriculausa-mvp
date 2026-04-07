@@ -1,7 +1,7 @@
 import { useMutation, useQueryClient } from '@tanstack/react-query';
 import { queryKeys, invalidateZelleQueries, invalidateUniversityRequestsQueries, invalidateAffiliateRequestsQueries, invalidatePaymentQueries } from '../../../../lib/queryKeys';
 import { approveZelleStatusService, rejectZelleStatusService, addZelleAdminNotesService } from '../data/services/zellePaymentsService';
-import { approveZelleFlow, rejectZelleFlow } from '../data/services/zelleOrchestrator';
+import { approveZelleFlow, rejectZelleFlow, approvePartialZelleFlow, approveSecondInstallmentFlow } from '../data/services/zelleOrchestrator';
 import { supabase } from '../../../../lib/supabase';
 import { UniversityPaymentRequestService } from '../../../../services/UniversityPaymentRequestService';
 import { AffiliatePaymentRequestService } from '../../../../services/AffiliatePaymentRequestService';
@@ -241,6 +241,72 @@ export function useMarkAffiliatePaidMutation() {
     onSuccess: () => {
       invalidateAffiliateRequestsQueries(queryClient);
       invalidatePaymentQueries(queryClient);
+    },
+  });
+}
+
+/**
+ * Mutation para aprovar 1ª parcela de placement fee via Zelle
+ */
+export function useApprovePartialZellePaymentMutation() {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: async ({ adminUserId, payment }: { adminUserId: string; payment: PaymentRecord }) => {
+      await approvePartialZelleFlow({
+        supabase,
+        adminUserId,
+        payment: {
+          id: payment.id,
+          user_id: payment.user_id || '',
+          student_id: payment.student_id,
+          student_email: payment.student_email,
+          student_name: payment.student_name,
+          fee_type: payment.fee_type,
+          fee_type_global: payment.fee_type_global,
+          amount: payment.amount,
+          admin_approved_at: payment.admin_approved_at,
+          created_at: payment.created_at,
+        },
+      });
+    },
+    onSuccess: () => {
+      invalidateZelleQueries(queryClient);
+      invalidatePaymentQueries(queryClient);
+      queryClient.invalidateQueries({ queryKey: ['students'] });
+    },
+  });
+}
+
+/**
+ * Mutation para aprovar 2ª parcela (quitação) de placement fee via Zelle
+ */
+export function useApproveSecondInstallmentMutation() {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: async ({ adminUserId, payment }: { adminUserId: string; payment: PaymentRecord }) => {
+      await approveSecondInstallmentFlow({
+        supabase,
+        adminUserId,
+        payment: {
+          id: payment.id,
+          user_id: payment.user_id || '',
+          student_id: payment.student_id,
+          student_email: payment.student_email,
+          student_name: payment.student_name,
+          fee_type: payment.fee_type,
+          fee_type_global: payment.fee_type_global,
+          amount: payment.amount,
+          admin_approved_at: payment.admin_approved_at,
+          created_at: payment.created_at,
+        },
+      });
+    },
+    onSuccess: () => {
+      invalidateZelleQueries(queryClient);
+      invalidatePaymentQueries(queryClient);
+      queryClient.invalidateQueries({ queryKey: ['students'] });
     },
   });
 }

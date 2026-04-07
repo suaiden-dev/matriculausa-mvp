@@ -9,16 +9,26 @@ import {
 } from '../../utils/applicationFlowStages';
 import { StudentRecord } from './StudentApplicationsView';
 
+interface InternalAdmin {
+  id: string;
+  name: string;
+  email: string;
+}
+
 interface StudentApplicationsKanbanViewProps {
   students: StudentRecord[];
   getUnreadCount: (studentId: string) => number;
   getGlobalUnreadCount: (studentId: string) => number;
+  onRefresh: () => void;
+  internalAdmins?: InternalAdmin[];
 }
 
 const StudentApplicationsKanbanView: React.FC<StudentApplicationsKanbanViewProps> = ({
   students,
   getUnreadCount,
-  getGlobalUnreadCount
+  getGlobalUnreadCount,
+  onRefresh,
+  internalAdmins = [],
 }) => {
   const navigate = useNavigate();
 
@@ -32,18 +42,32 @@ const StudentApplicationsKanbanView: React.FC<StudentApplicationsKanbanViewProps
     return students.filter(s => s.has_paid_selection_process_fee || s.status === 'enrolled');
   }, [students]);
 
+  // Filter out stages that should be hidden
+  const visibleStages = useMemo(() => {
+    return APPLICATION_FLOW_STAGES.filter(stage => 
+      stage.key !== 'scholarship_fee' && 
+      stage.key !== 'i20_fee'
+    );
+  }, []);
+
   // Organize students by their last completed stage (milestone)
   const studentsByStage = useMemo(() => {
     const stageMap = new Map<ApplicationFlowStageKey, StudentRecord[]>();
 
-    // Initialize all stages with empty arrays
-    APPLICATION_FLOW_STAGES.forEach(stage => {
+    // Initialize only visible stages
+    visibleStages.forEach(stage => {
       stageMap.set(stage.key, []);
     });
 
-    // Distribute students to their last completed stages
+    // Distribute students to their last completed stage that is ALSO VISIBLE
     displayStudents.forEach(student => {
-      let lastCompletedStage: ApplicationFlowStageKey | null = null;
+      // Prioridade máxima: se o status principal é 'enrolled', vai direto para a coluna final
+      if ((student.status === 'enrolled' || student.application_status === 'enrolled') && stageMap.has('enrollment')) {
+        stageMap.get('enrollment')!.push(student);
+        return;
+      }
+
+      let lastVisibleCompletedStage: ApplicationFlowStageKey | null = null;
       const { stage: currentStage } = getCurrentStage(student as any);
 
       for (const stageDef of APPLICATION_FLOW_STAGES) {
@@ -58,32 +82,31 @@ const StudentApplicationsKanbanView: React.FC<StudentApplicationsKanbanViewProps
           continue;
         }
 
-        // Se este é o estágio atual (pendente), então o anterior foi o último completado
-        if (currentStage === stageDef.key) {
-          break;
+        // Se o estágio foi completado e ele é visível, marcamos como o último visível completado
+        if (stepStatus === 'completed' && visibleStages.some(vs => vs.key === stageDef.key)) {
+          lastVisibleCompletedStage = stageDef.key;
         }
 
-        lastCompletedStage = stageDef.key;
+        // Se este é o estágio atual e NÃO está completado (ou seja, é o que falta fazer), paramos
+        if (currentStage === stageDef.key && stepStatus !== 'completed') {
+          break;
+        }
       }
 
-      if (lastCompletedStage && stageMap.has(lastCompletedStage)) {
-        stageMap.get(lastCompletedStage)!.push(student);
+      if (lastVisibleCompletedStage && stageMap.has(lastVisibleCompletedStage)) {
+        stageMap.get(lastVisibleCompletedStage)!.push(student);
       } else if (student.has_paid_selection_process_fee && stageMap.has('selection_fee')) {
-        // Fallback: se pagou a taxa, pelo menos está no primeiro estágio
         stageMap.get('selection_fee')!.push(student);
       }
     });
 
     return stageMap;
-  }, [displayStudents]);
+  }, [displayStudents, visibleStages]);
 
   const handleStudentClick = (student: StudentRecord) => {
     // Navigate to student detail page
     navigate(`/admin/dashboard/students/${student.student_id}`);
   };
-
-  // Filter out stages that should be hidden
-  const visibleStages = APPLICATION_FLOW_STAGES.filter(stage => stage.key !== 'enrollment');
 
   return (
     <div className="h-full flex flex-col">
@@ -111,6 +134,8 @@ const StudentApplicationsKanbanView: React.FC<StudentApplicationsKanbanViewProps
                   students={studentsInStage}
                   onStudentClick={handleStudentClick}
                   getUnreadCount={getStudentTotalUnread}
+                  onRefresh={onRefresh}
+                  internalAdmins={internalAdmins}
                 />
               </div>
             );

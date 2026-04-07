@@ -13,6 +13,7 @@ import DocumentViewerModal from '../../components/DocumentViewerModal';
 import { STRIPE_PRODUCTS } from '../../stripe-config';
 import { FileText, UserCircle, GraduationCap, CheckCircle, Building, Award, Home, Info, FileCheck, FolderOpen, MapPin, Phone, Globe, Mail, BookOpen, DollarSign } from 'lucide-react';
 import { I20ControlFeeModal } from '../../components/I20ControlFeeModal';
+import { ZelleCheckout } from '../../components/ZelleCheckout';
 import { ProfileRequiredModal } from '../../components/ProfileRequiredModal';
 import TruncatedText from '../../components/TruncatedText';
 import { ExpandableTabs } from '../../components/ui/expandable-tabs';
@@ -89,6 +90,12 @@ const ApplicationChatPage: React.FC = () => {
             data.acceptance_letter_url = null;
             // Manter acceptance_letter_status e acceptance_letter_sent_at visíveis
             // para que o aluno saiba que a carta foi enviada
+          }
+
+          // ✅ SEGURANÇA: Ocultar acceptance_letter_url se há saldo devedor de Placement Fee
+          // (1ª parcela aprovada mas 2ª ainda não paga)
+          if (data && ((userProfile as any)?.placement_fee_pending_balance ?? 0) > 0) {
+            data.acceptance_letter_url = null;
           }
           
           setApplicationDetails(data);
@@ -1570,6 +1577,53 @@ const ApplicationChatPage: React.FC = () => {
               <p className="text-slate-200 text-xs sm:text-sm mt-1">{t('studentDashboard.applicationChatPage.documents.subtitle')}</p>
             </div>
             <div className="p-3 sm:p-6 space-y-6">
+              {/* Extrato de Parcelamento do Placement Fee */}
+              {((userProfile as any)?.placement_fee_pending_balance ?? 0) > 0 && (
+                <div className="bg-amber-50 border border-amber-200 rounded-xl p-4 sm:p-6">
+                  <h3 className="text-base font-bold text-amber-900 mb-3 flex items-center gap-2">
+                    <svg className="w-5 h-5 text-amber-600" fill="none" stroke="currentColor" strokeWidth={2} viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                    </svg>
+                    Placement Fee — Installment Plan
+                  </h3>
+                  <div className="space-y-2 mb-4">
+                    <div className="flex items-center justify-between text-sm">
+                      <span className="flex items-center gap-2 text-green-700 font-medium">
+                        <svg className="w-4 h-4" fill="none" stroke="currentColor" strokeWidth={2} viewBox="0 0 24 24">
+                          <path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" />
+                        </svg>
+                        1st Installment
+                      </span>
+                      <span className="text-green-700 font-semibold">Paid</span>
+                    </div>
+                    <div className="flex items-center justify-between text-sm">
+                      <span className="flex items-center gap-2 text-amber-800 font-medium">
+                        <svg className="w-4 h-4" fill="none" stroke="currentColor" strokeWidth={2} viewBox="0 0 24 24">
+                          <path strokeLinecap="round" strokeLinejoin="round" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
+                        </svg>
+                        2nd Installment
+                      </span>
+                      <span className="text-amber-800 font-bold">
+                        ${((userProfile as any)?.placement_fee_pending_balance ?? 0).toFixed(2)} pending
+                      </span>
+                    </div>
+                    {(userProfile as any)?.placement_fee_due_date && (
+                      <p className="text-xs text-amber-700 mt-1">
+                        Due: {new Date((userProfile as any).placement_fee_due_date).toLocaleDateString('en-US', { month: 'long', day: 'numeric', year: 'numeric' })}
+                      </p>
+                    )}
+                  </div>
+                  <p className="text-xs text-amber-700 mb-4">
+                    Document downloads (Acceptance Letter &amp; I-20) will be released after the 2nd installment is approved.
+                  </p>
+                  <ZelleCheckout
+                    feeType="placement_fee"
+                    amount={(userProfile as any)?.placement_fee_pending_balance ?? 0}
+                    onSuccess={() => window.location.reload()}
+                  />
+                </div>
+              )}
+
               {/* Aviso sobre Acceptance Letter - Mostrar quando carta foi enviada mas I-20 ainda não foi pago */}
               {/* ✅ UX: Verificar status em vez de URL para mostrar aviso mesmo quando URL está oculta */}
               {applicationDetails.is_scholarship_fee_paid && 
@@ -1600,10 +1654,38 @@ const ApplicationChatPage: React.FC = () => {
                 </div>
               )}
               
+              {/* Aviso: download bloqueado por saldo devedor de Placement Fee */}
+              {applicationDetails.is_scholarship_fee_paid &&
+               (userProfile as any)?.has_paid_i20_control_fee &&
+               ((userProfile as any)?.placement_fee_pending_balance ?? 0) > 0 &&
+               (applicationDetails.acceptance_letter_status === 'sent' || applicationDetails.acceptance_letter_status === 'approved') && (
+                <div className="bg-amber-50 outline outline-1 outline-amber-300 rounded-xl p-4 sm:p-6 mb-6">
+                  <div className="flex items-start gap-3">
+                    <div className="w-10 h-10 bg-amber-100 rounded-lg flex items-center justify-center flex-shrink-0">
+                      <svg className="w-5 h-5 text-amber-600" fill="none" stroke="currentColor" strokeWidth={2} viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" d="M12 9v2m0 4h.01M10.29 3.86L1.82 18a2 2 0 001.71 3h16.94a2 2 0 001.71-3L13.71 3.86a2 2 0 00-3.42 0z" />
+                      </svg>
+                    </div>
+                    <div className="flex-1">
+                      <h3 className="text-lg font-bold text-amber-900 mb-2">
+                        Document Download Pending — 2nd Installment Required
+                      </h3>
+                      <p className="text-amber-800 text-sm">
+                        Your document is ready, but the download will be released after the 2nd installment of the Placement Fee (${((userProfile as any)?.placement_fee_pending_balance ?? 0).toFixed(2)}) is paid and approved.
+                        {(userProfile as any)?.placement_fee_due_date && (
+                          <> Due date: <strong>{new Date((userProfile as any).placement_fee_due_date).toLocaleDateString('en-US', { month: 'long', day: 'numeric', year: 'numeric' })}</strong>.</>
+                        )}
+                      </p>
+                    </div>
+                  </div>
+                </div>
+              )}
+
               {/* Aviso sobre Acceptance Letter - Mostrar quando I-20 foi pago mas carta ainda não enviada */}
-              {applicationDetails.is_scholarship_fee_paid && 
-               (userProfile as any)?.has_paid_i20_control_fee && 
-               !applicationDetails.acceptance_letter_url && (
+              {applicationDetails.is_scholarship_fee_paid &&
+               (userProfile as any)?.has_paid_i20_control_fee &&
+               !applicationDetails.acceptance_letter_url &&
+               ((userProfile as any)?.placement_fee_pending_balance ?? 0) === 0 && (
                 <div className="bg-yellow-50 outline outline-1 outline-slate-300 rounded-xl p-4 sm:p-6 mb-6">
                   <div className="flex items-start gap-3">
                     <div className="w-10 h-10 bg-yellow-100 rounded-lg flex items-center justify-center flex-shrink-0">

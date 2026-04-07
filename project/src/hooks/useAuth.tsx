@@ -76,6 +76,9 @@ export interface UserProfile {
   // Placement Fee Flow (adicionado condicionalmente no registro)
   placement_fee_flow?: boolean;
 
+  // New field for admin restrictions
+  is_restricted_admin?: boolean;
+
   // ... outras colunas se existirem
 }
 
