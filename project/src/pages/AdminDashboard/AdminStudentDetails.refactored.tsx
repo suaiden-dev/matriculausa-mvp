@@ -18,6 +18,7 @@ import { recordIndividualFeePayment } from '../../lib/paymentRecorder';
 import { useStudentLogs } from '../../hooks/useStudentLogs';
 import { getRealPaidAmounts } from '../../utils/paymentConverter';
 import { getPlacementFee } from '../../utils/placementFeeCalculator';
+import { toast } from 'react-hot-toast';
 
 // Componentes de UI Base
 import {
@@ -51,6 +52,7 @@ import { NewRequestModal } from '../../components/AdminDashboard/StudentDetails/
 
 // Tabs já existentes
 const DocumentsView = lazy(() => import('../../components/EnhancedStudentTracking/DocumentsView'));
+import GlobalDocumentRequestsSection from '../../components/AdminDashboard/StudentDetails/GlobalDocumentRequestsSection';
 const AdminScholarshipSelection = lazy(() => import('../../components/AdminDashboard/AdminScholarshipSelection'));
 const StudentLogsView = lazy(() => import('../../components/AdminDashboard/StudentLogsView'));
 
@@ -1019,7 +1021,7 @@ const AdminStudentDetails: React.FC = () => {
   // ✅ OTIMIZAÇÃO: Carregar document requests apenas quando necessário
   // Usa cache e debounce para evitar múltiplas queries
   React.useEffect(() => {
-    if (activeTab !== 'documents' || !student?.all_applications || (student.all_applications && student.all_applications.length === 0)) {
+    if (activeTab !== 'documents' || !student) {
       if (activeTab !== 'documents') {
         setDocumentRequests([]);
       }
@@ -1029,19 +1031,20 @@ const AdminStudentDetails: React.FC = () => {
     let cancelled = false;
     const loadDocumentRequests = async () => {
       try {
-        if (!student?.all_applications) {
+        if (!student) {
           if (!cancelled) setDocumentRequests([]);
           return;
         }
-        const applicationIds = student.all_applications.map((app: any) => app.id).filter(Boolean);
+        const applicationIds = (student.all_applications || []).map((app: any) => app.id).filter(Boolean);
 
-        if (applicationIds.length === 0) {
+        // ✅ CORREÇÃO: Não retornar direto se não tiver aplicações, pois pode haver solicitações GLOBAIS vinculadas à universidade do perfil
+        if (applicationIds.length === 0 && !student.university_id) {
           if (!cancelled) setDocumentRequests([]);
           return;
         }
 
         // ✅ CORREÇÃO: Incluir uploads na query para garantir que apareçam no DocumentsView
-        const fields = 'id,title,description,due_date,is_global,university_id,scholarship_application_id,created_at,updated_at,template_url,attachment_url';
+        const fields = 'id,title,description,due_date,is_global,university_id,scholarship_application_id,applicable_student_types,created_at,updated_at,attachment_url';
         const fieldsWithUploads = `${fields},document_request_uploads(*)`;
 
         // ✅ OTIMIZAÇÃO: Executar queries em paralelo
@@ -1053,9 +1056,15 @@ const AdminStudentDetails: React.FC = () => {
             .order('created_at', { ascending: false }),
 
           (() => {
-            const universityIds = (student.all_applications || [])
+            // ✅ MELHORIA: Incluir university_id do perfil do estudante além dos das aplicações
+            const universityIds = (student?.all_applications || [])
               .map((app: any) => app.scholarships?.university_id || app.university_id)
               .filter(Boolean);
+            
+            if (student.university_id) {
+              universityIds.push(student.university_id);
+            }
+            
             const uniqueUniversityIds = [...new Set(universityIds)];
 
             if (uniqueUniversityIds.length === 0) {
@@ -1073,9 +1082,17 @@ const AdminStudentDetails: React.FC = () => {
 
         if (cancelled) return;
 
+        // Filtrar uploads dos global requests para mostrar apenas os deste aluno
+        const globalWithFilteredUploads = (globalResult.data || []).map((req: any) => ({
+          ...req,
+          document_request_uploads: (req.document_request_uploads || []).filter(
+            (u: any) => u.uploaded_by === student?.user_id
+          )
+        }));
+
         const allRequests = [
           ...(specificResult.data || []),
-          ...(globalResult.data || [])
+          ...globalWithFilteredUploads
         ];
 
         // Remover duplicatas
@@ -1083,7 +1100,19 @@ const AdminStudentDetails: React.FC = () => {
           new Map(allRequests.map(req => [req.id, req])).values()
         );
 
-        setDocumentRequests(uniqueRequests);
+        // ✅ FILTRAGEM: Filtrar solicitações globais baseadas no tipo de processo do estudante
+        // Se a solicitação tem applicable_student_types, o tipo do estudante deve estar na lista
+        const filteredRequests = uniqueRequests.filter((req: any) => {
+          if (!req.is_global) return true; // específicos sempre aparecem
+          
+          const applicableTypes = req.applicable_student_types || [];
+          if (applicableTypes.length === 0 || applicableTypes.includes('all')) return true;
+          
+          return applicableTypes.includes(student?.student_process_type);
+        });
+
+        console.log('🔍 [AdminStudentDetails] Final filtered requests:', filteredRequests.map(r => ({ id: r.id, title: r.title, is_global: r.is_global, types: r.applicable_student_types })));
+        setDocumentRequests(filteredRequests);
       } catch (error) {
         if (!cancelled) {
           console.error('Error loading document requests:', error);
@@ -1313,6 +1342,28 @@ const AdminStudentDetails: React.FC = () => {
     setPaymentAmount(getFeeAmount(feeType));
     setShowPaymentModal(true);
   }, [getFeeAmount]);
+
+  const handleEnableInstallment = useCallback(async () => {
+    if (!student?.user_id) return;
+    const { error } = await supabase
+      .from('user_profiles')
+      .update({ placement_fee_installment_enabled: true })
+      .eq('user_id', student.user_id);
+    if (error) throw error;
+    toast.success('Parcelamento habilitado. O aluno verá a opção de pagar 50% agora.');
+    queryClient.invalidateQueries({ queryKey: queryKeys.students.details(profileId) });
+  }, [student?.user_id, profileId, queryClient]);
+
+  const handleDisableInstallment = useCallback(async () => {
+    if (!student?.user_id) return;
+    const { error } = await supabase
+      .from('user_profiles')
+      .update({ placement_fee_installment_enabled: false })
+      .eq('user_id', student.user_id);
+    if (error) throw error;
+    toast.success('Parcelamento desabilitado.');
+    queryClient.invalidateQueries({ queryKey: queryKeys.students.details(profileId) });
+  }, [student?.user_id, profileId, queryClient]);
 
   const handleConfirmPayment = useCallback(async () => {
     if (!student || !pendingPayment) return;
@@ -3590,6 +3641,8 @@ const AdminStudentDetails: React.FC = () => {
                 formatFeeAmount={formatFeeAmount}
                 getFeeAmount={getFeeAmount}
                 overridesRefreshKey={overridesRefreshKey}
+                onEnableInstallment={handleEnableInstallment}
+                onDisableInstallment={handleDisableInstallment}
               />
             </Suspense>
 
@@ -3705,16 +3758,31 @@ const AdminStudentDetails: React.FC = () => {
 
           {/* Versão antiga removida - Transfer Form agora usa o componente TransferFormSection */}
 
+          {/* Global Document Requests — seção dedicada */}
+          <GlobalDocumentRequestsSection
+            globalRequests={documentRequests.filter((r: any) => r.is_global)}
+            studentUserId={student?.user_id || ''}
+            isAdmin={isPlatformAdmin}
+            onApproveDocument={handleApproveDocumentRequest}
+            onRejectDocument={handleRejectDocumentRequest}
+            onDeleteDocumentRequest={handleDeleteDocumentRequest}
+            onViewDocument={handleOnViewDocument}
+            approvingStates={approvingDocumentRequest}
+            rejectingStates={rejectingDocumentRequest}
+            deletingStates={deletingDocumentRequest}
+          />
+
           <Suspense fallback={<TabLoadingSkeleton />}>
             <DocumentsView
               studentDocuments={[]}
-              documentRequests={documentRequests}
+              documentRequests={documentRequests.filter((r: any) => !r.is_global)}
               scholarshipApplication={(() => {
                 const apps = student?.all_applications || [];
                 const paidApp = apps.find((app: any) => app.is_application_fee_paid);
                 return paidApp || apps[0];
               })()}
               studentId={student?.user_id || ''}
+              universityId={student?.university_id || ''}
               onViewDocument={handleOnViewDocument}
               onDownloadDocument={handleDownloadDocument}
               onUploadDocument={handleUploadDocumentRequest}
@@ -3727,6 +3795,7 @@ const AdminStudentDetails: React.FC = () => {
               approvingStates={approvingDocumentRequest}
               rejectingStates={rejectingDocumentRequest}
               deletingStates={deletingDocumentRequest}
+              showGlobalRequests={false}
             />
           </Suspense>
         </div>

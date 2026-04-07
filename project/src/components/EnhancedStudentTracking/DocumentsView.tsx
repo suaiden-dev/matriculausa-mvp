@@ -18,6 +18,9 @@ interface DocumentsViewProps {
   approvingStates?: {[key: string]: boolean};
   rejectingStates?: {[key: string]: boolean};
   deletingStates?: {[key: string]: boolean};
+  /** When false, skips fetching global requests (use when a dedicated GlobalDocumentRequestsSection is already shown) */
+  showGlobalRequests?: boolean;
+  universityId?: string;
 }
 
 const DocumentsView: React.FC<DocumentsViewProps> = ({
@@ -25,6 +28,7 @@ const DocumentsView: React.FC<DocumentsViewProps> = ({
   documentRequests,
   scholarshipApplication,
   studentId,
+  universityId,
   onViewDocument,
   onDownloadDocument,
   onUploadDocument,
@@ -36,7 +40,8 @@ const DocumentsView: React.FC<DocumentsViewProps> = ({
   uploadingStates = {},
   approvingStates = {},
   rejectingStates = {},
-  deletingStates = {}
+  deletingStates = {},
+  showGlobalRequests = true,
 }) => {
   // ✅ OTIMIZAÇÃO: Removidos console.logs desnecessários
   const [realScholarshipApplication, setRealScholarshipApplication] = useState<any>(null);
@@ -155,16 +160,9 @@ const DocumentsView: React.FC<DocumentsViewProps> = ({
 
   // Função para buscar document requests internamente
   const fetchDocumentRequests = async (applicationId: string, universityId?: string) => {
-    if (!applicationId) {
-      console.log('❌ [DOCUMENTS VIEW] fetchDocumentRequests: No applicationId provided');
-      return;
-    }
+    if (!applicationId) return;
     
     try {
-      console.log('🔍 [DOCUMENTS VIEW] fetchDocumentRequests: Starting fetch for applicationId:', applicationId, 'universityId:', universityId, 'studentId:', studentId);
-      
-      let allRequests: any[] = [];
-      
       // Buscar requests específicos para a aplicação
       const { data: specificRequests, error: specificError } = await supabase
         .from('document_requests')
@@ -179,17 +177,12 @@ const DocumentsView: React.FC<DocumentsViewProps> = ({
         .eq('scholarship_application_id', applicationId)
         .order('created_at', { ascending: false });
 
-      if (specificError) {
-        console.error('❌ [DOCUMENTS VIEW] Error fetching specific requests:', specificError);
-        throw specificError;
-      }
+      if (specificError) throw specificError;
       
-      console.log('✅ [DOCUMENTS VIEW] Found specific requests:', specificRequests?.length || 0, specificRequests);
-      allRequests = [...allRequests, ...(specificRequests || [])];
+      let filteredGlobalRequests: any[] = [];
       
-      // Buscar requests globais se tivermos university_id
-      if (universityId) {
-        // Fetching global requests for university
+      // Buscar requests globais se tivermos university_id e showGlobalRequests estiver ativo
+      if (universityId && showGlobalRequests) {
         const { data: globalRequests, error: globalError } = await supabase
           .from('document_requests')
           .select(`
@@ -204,39 +197,18 @@ const DocumentsView: React.FC<DocumentsViewProps> = ({
           .eq('university_id', universityId)
           .order('created_at', { ascending: false });
 
-        if (globalError) {
-          console.error('❌ [DOCUMENTS VIEW] Error fetching global requests:', globalError);
-          throw globalError;
-        }
+        if (globalError) throw globalError;
         
         // Filtrar uploads apenas do aluno específico para cada global request
-        const filteredGlobalRequests = (globalRequests || []).map(request => ({
+        filteredGlobalRequests = (globalRequests || []).map(request => ({
           ...request,
           document_request_uploads: (request.document_request_uploads || []).filter(
             (upload: any) => upload.uploaded_by === studentId
           )
         }));
-        
-        console.log('✅ [DOCUMENTS VIEW] Found global requests:', filteredGlobalRequests?.length || 0, filteredGlobalRequests);
-        allRequests = [...allRequests, ...filteredGlobalRequests];
-      } else {
-        console.log('⚠️ [DOCUMENTS VIEW] No university_id provided, skipping global requests');
       }
       
-      // Remover busca de TODOS os requests globais - apenas mostrar os específicos do aluno
-
-      // Found document requests
-      console.log('✅ [DOCUMENTS VIEW] Total requests found:', allRequests.length);
-      console.log('✅ [DOCUMENTS VIEW] Requests with uploads:', allRequests.filter(r => r.document_request_uploads && r.document_request_uploads.length > 0).length);
-      allRequests.forEach((req, idx) => {
-        console.log(`📄 [DOCUMENTS VIEW] Request ${idx + 1}:`, {
-          id: req.id,
-          title: req.title,
-          uploads_count: req.document_request_uploads?.length || 0,
-          uploads: req.document_request_uploads
-        });
-      });
-      setInternalDocumentRequests(allRequests);
+      setInternalDocumentRequests([...(specificRequests || []), ...filteredGlobalRequests]);
     } catch (error) {
       console.error('❌ [DOCUMENTS VIEW] Error fetching document requests:', error);
     }
@@ -248,10 +220,8 @@ const DocumentsView: React.FC<DocumentsViewProps> = ({
       // Se já temos uma aplicação com acceptance letter, usar ela mas ainda buscar document requests
       if (scholarshipApplication?.acceptance_letter_url && scholarshipApplication?.id) {
         setRealScholarshipApplication(scholarshipApplication);
-        // ✅ CORREÇÃO: Sempre buscar document requests mesmo quando há acceptance letter
-        const universityId = scholarshipApplication.scholarships?.universities?.id || 
-                            scholarshipApplication.university_id;
-        await fetchDocumentRequests(scholarshipApplication.id, universityId);
+        const uId = universityId || scholarshipApplication.scholarships?.universities?.id || scholarshipApplication.university_id;
+        await fetchDocumentRequests(scholarshipApplication.id, uId);
         return;
       }
 

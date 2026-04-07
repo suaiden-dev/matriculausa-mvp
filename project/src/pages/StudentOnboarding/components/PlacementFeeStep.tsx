@@ -99,6 +99,9 @@ export const PlacementFeeStep: React.FC<StepProps> = ({ onNext, onBack, currentS
     // Se is_placement_fee_paid já está true no perfil, avançar automaticamente
     const isAlreadyPaid = !!(userProfile as any)?.is_placement_fee_paid;
 
+    // Parcelamento habilitado pelo admin
+    const installmentEnabled = !!(userProfile as any)?.placement_fee_installment_enabled;
+
     const fetchApplications = useCallback(async () => {
         if (!userProfile?.id) return;
 
@@ -162,7 +165,9 @@ export const PlacementFeeStep: React.FC<StepProps> = ({ onNext, onBack, currentS
 
             const annualValue = application.scholarships?.annual_value_with_scholarship || 0;
             const placementFeeAmountCustom = application.scholarships?.placement_fee_amount as number | undefined | null;
-            const placementFeeAmount = getPlacementFee(annualValue, placementFeeAmountCustom ? Number(placementFeeAmountCustom) : null);
+            const fullAmount = getPlacementFee(annualValue, placementFeeAmountCustom ? Number(placementFeeAmountCustom) : null);
+            // Parcelamento só se aplica ao Zelle (fluxo manual com revisão do admin)
+            const placementFeeAmount = fullAmount;
 
             let apiUrl = `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/stripe-checkout-placement-fee`;
             if (method === 'parcelow') {
@@ -317,6 +322,9 @@ export const PlacementFeeStep: React.FC<StepProps> = ({ onNext, onBack, currentS
                             const annualValue = app.scholarships?.annual_value_with_scholarship || 0;
                             const placementFeeAmount = app.scholarships?.placement_fee_amount as number | undefined | null;
                             const baseAmount = getPlacementFee(annualValue, placementFeeAmount ? Number(placementFeeAmount) : null);
+                            // Se o admin habilitou parcelamento, o aluno paga 50% agora
+                            const effectiveAmount = installmentEnabled ? Math.ceil(baseAmount / 2 * 100) / 100 : baseAmount;
+                            // Stripe/PIX/Parcelow sempre cobram valor cheio; só Zelle usa effectiveAmount (parcela)
                             const cardAmount = calculateCardAmountWithFees(baseAmount);
                             const pixInfo = calculatePIXTotalWithIOF(baseAmount, exchangeRate);
 
@@ -368,12 +376,34 @@ export const PlacementFeeStep: React.FC<StepProps> = ({ onNext, onBack, currentS
                                             </div>
 
                                             <div className="flex flex-col items-center md:items-end">
-                                                <span className="text-[10px] font-black text-gray-500 uppercase tracking-[0.2em] mb-1">{t('placementFeeStep.title')}</span>
+                                                <span className="text-[10px] font-black text-gray-500 uppercase tracking-[0.2em] mb-1">
+                                                    {installmentEnabled ? '1st Installment (50%)' : t('placementFeeStep.title')}
+                                                </span>
                                                 <div className="text-4xl font-black text-slate-900 tracking-tighter">
-                                                    {formatPlacementFee(baseAmount)}
+                                                    {formatPlacementFee(effectiveAmount)}
                                                 </div>
+                                                {installmentEnabled && (
+                                                    <span className="text-xs text-slate-500 font-medium mt-0.5">
+                                                        of {formatPlacementFee(baseAmount)} total
+                                                    </span>
+                                                )}
                                             </div>
                                         </div>
+
+                                        {/* Banner de parcelamento habilitado pelo admin */}
+                                        {!app.is_placement_fee_paid && installmentEnabled && (
+                                            <div className="bg-amber-50 border border-amber-200 rounded-2xl px-5 py-4 flex items-start gap-3">
+                                                <div className="w-8 h-8 bg-amber-100 rounded-xl flex items-center justify-center flex-shrink-0">
+                                                    <Shield className="w-4 h-4 text-amber-600" />
+                                                </div>
+                                                <div>
+                                                    <p className="text-sm font-black text-amber-800 uppercase tracking-tight">Installment Plan Available</p>
+                                                    <p className="text-xs text-amber-700 mt-0.5 leading-relaxed">
+                                                        Pay <strong>{formatPlacementFee(effectiveAmount)}</strong> now (1st installment) and the remaining <strong>{formatPlacementFee(baseAmount - effectiveAmount)}</strong> within 30 days. Your documents will be released after full payment.
+                                                    </p>
+                                                </div>
+                                            </div>
+                                        )}
 
                                         {!app.is_placement_fee_paid && (
                                             <div className="flex flex-col gap-4 mt-4">
@@ -393,12 +423,14 @@ export const PlacementFeeStep: React.FC<StepProps> = ({ onNext, onBack, currentS
                                                         <div className="border border-amber-200 border-t-0 rounded-b-[2rem] overflow-hidden bg-white shadow-sm">
                                                             <ZelleCheckout
                                                                 feeType="placement_fee"
-                                                                amount={baseAmount}
+                                                                amount={effectiveAmount}
                                                                 scholarshipsIds={[app.scholarship_id]}
                                                                 metadata={{
                                                                     application_id: app.id,
                                                                     selected_scholarship_id: app.scholarship_id,
-                                                                    annual_tuition: annualValue
+                                                                    annual_tuition: annualValue,
+                                                                    is_installment: installmentEnabled,
+                                                                    installment_number: installmentEnabled ? 1 : undefined,
                                                                 }}
                                                                 isPendingVerification={hasZellePendingPlacementFee}
                                                                 onProcessingChange={(isProcessing) => { if (isProcessing) refetchPaymentStatus(); }}
@@ -575,7 +607,7 @@ export const PlacementFeeStep: React.FC<StepProps> = ({ onNext, onBack, currentS
                                                                         </div>
                                                                     </div>
                                                                     <div className="text-right shrink-0">
-                                                                        <div className="text-slate-900 text-xl font-black uppercase tracking-tight">{formatPlacementFee(baseAmount)}</div>
+                                                                        <div className="text-slate-900 text-xl font-black uppercase tracking-tight">{formatPlacementFee(effectiveAmount)}</div>
                                                                         <span className="text-[10px] font-bold text-slate-900 mt-1 block uppercase tracking-widest leading-tight">{t('paymentStep.zelleNoFees')}</span>
                                                                     </div>
                                                                 </div>
@@ -589,12 +621,14 @@ export const PlacementFeeStep: React.FC<StepProps> = ({ onNext, onBack, currentS
                                                                 <div className="border border-slate-200 border-t-0 rounded-b-[2rem] overflow-hidden bg-white shadow-sm">
                                                                     <ZelleCheckout
                                                                         feeType="placement_fee"
-                                                                        amount={baseAmount}
+                                                                        amount={effectiveAmount}
                                                                         scholarshipsIds={[app.scholarship_id]}
                                                                         metadata={{
                                                                             application_id: app.id,
                                                                             selected_scholarship_id: app.scholarship_id,
-                                                                            annual_tuition: annualValue
+                                                                            annual_tuition: annualValue,
+                                                                            is_installment: installmentEnabled,
+                                                                            installment_number: installmentEnabled ? 1 : undefined,
                                                                         }}
                                                                         isPendingVerification={hasZellePendingPlacementFee}
                                                                         onProcessingChange={(isProcessing) => { if (isProcessing) refetchPaymentStatus(); }}

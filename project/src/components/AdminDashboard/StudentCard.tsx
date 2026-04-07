@@ -1,14 +1,70 @@
-import React from 'react';
-import { Building, GraduationCap, Calendar } from 'lucide-react';
+import React, { useState, useRef, useEffect } from 'react';
+import { Building, GraduationCap, Calendar, Archive, RefreshCw, UserCheck, ChevronDown, AlertCircle } from 'lucide-react';
 import { StudentRecord } from './StudentApplicationsView';
+import { supabase } from '../../lib/supabase';
+import { toast } from 'react-hot-toast';
+import { useAssignAdminMutation } from './hooks/useStudentApplicationsQueries';
+import { useAuth } from '../../hooks/useAuth';
+
+interface InternalAdmin {
+  id: string;
+  name: string;
+  email: string;
+}
 
 interface StudentCardProps {
   student: StudentRecord;
   onClick: () => void;
   unreadMessages?: number;
+  onRefresh?: () => void;
+  internalAdmins?: InternalAdmin[];
 }
 
-const StudentCard: React.FC<StudentCardProps> = ({ student, onClick, unreadMessages = 0 }) => {
+const StudentCard: React.FC<StudentCardProps> = ({ student, onClick, unreadMessages = 0, onRefresh, internalAdmins = [] }) => {
+  const [showAdminDropdown, setShowAdminDropdown] = useState(false);
+  const dropdownRef = useRef<HTMLDivElement>(null);
+  const assignAdminMutation = useAssignAdminMutation();
+  const { userProfile } = useAuth();
+  const currentAdminProfileId = userProfile?.role === 'admin' ? userProfile.id : null;
+
+  // Atribuído a outro admin: restringe se o atual for restrito
+  const assignedToOther = student.assigned_to_admin_id &&
+    student.assigned_to_admin_id !== currentAdminProfileId;
+  
+  // Pode editar se: não for admin (super), se o admin não for restrito, se não houver atribuição, ou se for pra ele mesmo
+  const canEdit = !currentAdminProfileId ||
+    userProfile?.is_restricted_admin === false ||
+    !student.assigned_to_admin_id ||
+    student.assigned_to_admin_id === currentAdminProfileId;
+
+  // Fechar dropdown ao clicar fora
+  useEffect(() => {
+    const handleClickOutside = (e: MouseEvent) => {
+      if (dropdownRef.current && !dropdownRef.current.contains(e.target as Node)) {
+        setShowAdminDropdown(false);
+      }
+    };
+    if (showAdminDropdown) {
+      document.addEventListener('mousedown', handleClickOutside);
+    }
+    return () => document.removeEventListener('mousedown', handleClickOutside);
+  }, [showAdminDropdown]);
+
+  const handleAssignAdmin = async (adminId: string | null) => {
+    setShowAdminDropdown(false);
+    try {
+      await assignAdminMutation.mutateAsync({ studentId: student.student_id, adminId });
+      toast.success(adminId ? 'Aluno atribuído' : 'Atribuição removida');
+    } catch {
+      toast.error('Erro ao atribuir responsável');
+    }
+  };
+
+  const getAdminInitials = (name: string) => {
+    const parts = name.trim().split(' ');
+    if (parts.length >= 2) return `${parts[0][0]}${parts[parts.length - 1][0]}`.toUpperCase();
+    return name.substring(0, 2).toUpperCase();
+  };
   // Get initials from name
   const getInitials = (name: string) => {
     const parts = name.split(' ');
@@ -51,7 +107,7 @@ const StudentCard: React.FC<StudentCardProps> = ({ student, onClick, unreadMessa
   return (
     <div
       onClick={onClick}
-      className="bg-white rounded-lg shadow-sm border border-gray-200 p-3 cursor-pointer hover:shadow-md transition-shadow duration-200 hover:border-blue-300 relative"
+      className="bg-white rounded-lg shadow-sm border border-gray-200 p-3 cursor-pointer hover:shadow-md transition-shadow duration-200 hover:border-blue-300 relative group"
     >
       {/* Unread messages indicator */}
       {unreadMessages > 0 && (
@@ -59,6 +115,37 @@ const StudentCard: React.FC<StudentCardProps> = ({ student, onClick, unreadMessa
           {unreadMessages > 9 ? '9+' : unreadMessages}
         </div>
       )}
+
+      {/* Archive Button */}
+      <button
+        onClick={async (e) => {
+          e.stopPropagation();
+          try {
+            const { error } = await supabase
+              .from('user_profiles')
+              .update({ is_archived: !student.is_archived })
+              .eq('user_id', student.user_id);
+            
+            if (error) throw error;
+            toast.success(student.is_archived ? 'Student unarchived' : 'Student archived');
+            if (onRefresh) {
+              onRefresh();
+            } else {
+              window.location.reload(); 
+            }
+          } catch (error: any) {
+            toast.error('Error updating archive status');
+          }
+        }}
+        className={`absolute top-2 right-2 p-1 rounded-md transition-colors z-10 ${
+          student.is_archived 
+            ? 'text-green-600 hover:bg-green-50' 
+            : 'text-gray-400 hover:text-amber-600 hover:bg-amber-50 opacity-0 group-hover:opacity-100'
+        }`}
+        title={student.is_archived ? 'Unarchive Student' : 'Archive Student'}
+      >
+        {student.is_archived ? <RefreshCw className="h-3 w-3" /> : <Archive className="h-3 w-3" />}
+      </button>
 
       {/* Header with avatar and name */}
       <div className="flex items-start gap-3 mb-2">
@@ -103,15 +190,87 @@ const StudentCard: React.FC<StudentCardProps> = ({ student, onClick, unreadMessa
           <Calendar className="w-3 h-3" />
           <span>{getRelativeTime(student.student_created_at)}</span>
         </div>
-        
-        {student.total_applications > 0 && (
-          <div className="flex items-center gap-1">
+
+        <div className="flex items-center gap-1 flex-wrap">
+          {student.total_applications > 0 && (
             <span className="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-blue-100 text-blue-800">
               {student.total_applications} app{student.total_applications > 1 ? 's' : ''}
             </span>
-          </div>
-        )}
+          )}
+          {(student.placement_fee_pending_balance ?? 0) > 0 && (
+            <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded text-xs font-bold bg-red-100 text-red-700 border border-red-200">
+              <AlertCircle className="w-3 h-3" />
+              Debt: ${(student.placement_fee_pending_balance ?? 0).toFixed(0)}
+            </span>
+          )}
+        </div>
       </div>
+
+      {/* Assigned admin row */}
+      {internalAdmins.length > 0 && (
+        <div className="pt-2 border-t border-gray-100 mt-1" ref={dropdownRef}>
+          <button
+            onClick={(e) => {
+              e.stopPropagation();
+              if (canEdit) setShowAdminDropdown((v) => !v);
+            }}
+            disabled={!canEdit}
+            className={`flex items-center justify-between gap-1.5 w-full text-left rounded-md border px-2 py-1 transition-colors text-xs
+              ${assignedToOther && userProfile?.is_restricted_admin
+                ? 'border-gray-100 bg-gray-50 cursor-default text-gray-600'
+                : student.assigned_to_admin_name
+                  ? 'border-indigo-200 bg-indigo-50 text-indigo-700 hover:bg-indigo-100 cursor-pointer'
+                  : 'border-dashed border-gray-300 bg-white text-gray-500 hover:border-indigo-300 hover:text-indigo-600 cursor-pointer'
+              }`}
+            title={assignedToOther && userProfile?.is_restricted_admin ? 'Atribuído a outro admin' : 'Clique para atribuir'}
+          >
+            <span className="flex items-center gap-1.5 truncate">
+              <UserCheck className="w-3 h-3 flex-shrink-0" />
+              <span className="truncate">
+                {student.assigned_to_admin_name || 
+                 internalAdmins.find(a => a.id === student.assigned_to_admin_id)?.name || 
+                 'Atribuir responsável'}
+              </span>
+            </span>
+            {canEdit && <ChevronDown className="w-3 h-3 flex-shrink-0 opacity-60" />}
+          </button>
+
+          {showAdminDropdown && canEdit && (
+            <div className="absolute z-20 mt-1 w-44 bg-white border border-gray-200 rounded-lg shadow-lg py-1">
+              {(student.assigned_to_admin_id === currentAdminProfileId || userProfile?.is_restricted_admin === false) && (
+                <>
+                  <button
+                    onClick={(e) => { e.stopPropagation(); handleAssignAdmin(null); }}
+                    className="block w-full text-left px-3 py-1.5 text-xs text-gray-500 hover:bg-gray-50"
+                  >
+                    Remover atribuição
+                  </button>
+                  <div className="border-t border-gray-100 my-1" />
+                </>
+              )}
+              {/* Admin restrito só vê a si mesmo; sem restrição vê todos */}
+              {(userProfile?.is_restricted_admin === true
+                ? internalAdmins.filter(a => a.id === currentAdminProfileId)
+                : internalAdmins
+              ).map((admin) => (
+                <button
+                  key={admin.id}
+                  onClick={(e) => { e.stopPropagation(); handleAssignAdmin(admin.id); }}
+                  className={`flex items-center gap-2 w-full text-left px-3 py-1.5 text-xs hover:bg-indigo-50 ${
+                    student.assigned_to_admin_id === admin.id ? 'text-indigo-700 font-semibold' : 'text-gray-700'
+                  }`}
+                >
+                  <span className="w-5 h-5 rounded-full bg-indigo-100 text-indigo-700 flex items-center justify-center font-bold flex-shrink-0 text-[10px]">
+                    {getAdminInitials(admin.name)}
+                  </span>
+                  <span className="truncate">{admin.name}</span>
+                </button>
+              ))}
+            </div>
+          )}
+        </div>
+      )}
+
     </div>
   );
 };

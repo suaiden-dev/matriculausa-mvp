@@ -3,14 +3,22 @@ import { ApplicationFlowStage } from '../../utils/applicationFlowStages';
 import StudentCard from './StudentCard';
 import { StudentRecord } from './StudentApplicationsView';
 
+interface InternalAdmin {
+  id: string;
+  name: string;
+  email: string;
+}
+
 interface KanbanColumnProps {
   stage: ApplicationFlowStage;
   students: StudentRecord[];
   onStudentClick: (student: StudentRecord) => void;
   getUnreadCount: (studentId: string) => number;
+  onRefresh: () => void;
+  internalAdmins?: InternalAdmin[];
 }
 
-const KanbanColumn: React.FC<KanbanColumnProps> = ({ stage, students, onStudentClick, getUnreadCount }) => {
+const KanbanColumn: React.FC<KanbanColumnProps> = ({ stage, students, onStudentClick, getUnreadCount, onRefresh, internalAdmins = [] }) => {
   const Icon = stage.icon;
 
   return (
@@ -47,6 +55,8 @@ const KanbanColumn: React.FC<KanbanColumnProps> = ({ stage, students, onStudentC
               student={student}
               onClick={() => onStudentClick(student)}
               unreadMessages={getUnreadCount(student.student_id)}
+              onRefresh={onRefresh}
+              internalAdmins={internalAdmins}
             />
           ))
         )}
