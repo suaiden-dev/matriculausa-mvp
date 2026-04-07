@@ -24,6 +24,8 @@ interface ZelleCheckoutProps {
   onProcessingChange?: (isProcessing: boolean) => void;
   hideHeader?: boolean;
   onClose?: () => void;
+  /** Ignora pagamentos anteriores já aprovados (usar para 2ª parcela do placement fee) */
+  ignoreApprovedState?: boolean;
 }
 
 export const ZelleCheckout: React.FC<ZelleCheckoutProps> = ({
@@ -37,7 +39,8 @@ export const ZelleCheckout: React.FC<ZelleCheckoutProps> = ({
   metadata = {},
   onProcessingChange,
   hideHeader = false,
-  onClose
+  onClose,
+  ignoreApprovedState = false,
 }) => {
   const { t } = useTranslation();
   const [copied, setCopied] = useState(false);
@@ -49,14 +52,18 @@ export const ZelleCheckout: React.FC<ZelleCheckoutProps> = ({
 
   const [loading, setLoading] = useState(false);
   const [step, setStep] = useState<'instructions' | 'analyzing' | 'success' | 'under_review' | 'rejected'>(() => {
-    const savedStep = sessionStorage.getItem(`zelle_checkout_step_${feeType}`);
-    if (savedStep && ['analyzing', 'under_review', 'success', 'rejected'].includes(savedStep)) {
-      return savedStep as any;
+    // ignoreApprovedState: não restaurar 'success' do sessionStorage (2ª parcela não deve herdar estado da 1ª)
+    if (!ignoreApprovedState) {
+      const savedStep = sessionStorage.getItem(`zelle_checkout_step_${feeType}`);
+      if (savedStep && ['analyzing', 'under_review', 'success', 'rejected'].includes(savedStep)) {
+        return savedStep as any;
+      }
     }
     return (isPendingVerification || (isBlocked && blockedPendingPayment?.fee_type === feeType)) ? 'under_review' : 'instructions';
   });
 
   const [zellePaymentId, setZellePaymentId] = useState<string | null>(() => {
+    if (ignoreApprovedState) return null;
     return sessionStorage.getItem(`zelle_checkout_payment_id_${feeType}`);
   });
   const [comprovanteFile, setComprovanteFile] = useState<File | null>(null);
@@ -283,7 +290,8 @@ export const ZelleCheckout: React.FC<ZelleCheckoutProps> = ({
     currentRejectionReason: string | null
   ): any => {
     // Ser tolerante com fee_type nulo para garantir recuperação se o n8n falhar ao salvar a taxa
-    if (approvedPayment && (approvedPayment.fee_type === feeType || !approvedPayment.fee_type || approvedPayment.fee_type === '')) {
+    // ignoreApprovedState: usado para 2ª parcela — não mostrar "aprovado" baseado em pagamento anterior
+    if (!ignoreApprovedState && approvedPayment && (approvedPayment.fee_type === feeType || !approvedPayment.fee_type || approvedPayment.fee_type === '')) {
       if (!pendingPayment || approvedPayment.id === pendingPayment.id) {
         return {
           step: 'success',
@@ -418,7 +426,7 @@ export const ZelleCheckout: React.FC<ZelleCheckoutProps> = ({
         paymentStatusRef.current = newState.paymentStatus;
         zellePaymentIdRef.current = newState.zellePaymentId;
         isProcessingRef.current = newState.isProcessing;
-      } else if (blockedApprovedPayment && blockedApprovedPayment.fee_type === feeType) {
+      } else if (!ignoreApprovedState && blockedApprovedPayment && blockedApprovedPayment.fee_type === feeType) {
         console.log('[ZelleCheckout] Found APPROVED payment for this fee, triggering onSuccess');
         setStep('success');
         setPaymentStatus('approved');

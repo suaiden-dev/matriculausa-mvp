@@ -1,5 +1,5 @@
-import React from 'react';
-import { CreditCard, CheckCircle, XCircle, Edit3, Save, X } from 'lucide-react';
+import React, { useState } from 'react';
+import { CreditCard, CheckCircle, XCircle, Edit3, Save, X, Layers, AlertCircle } from 'lucide-react';
 import { StudentRecord } from './types';
 import { supabase } from '../../../lib/supabase';
 import { getPlacementFee } from '../../../utils/placementFeeCalculator';
@@ -31,6 +31,8 @@ interface PaymentStatusCardProps {
   formatFeeAmount: (amount: number | string, forceDollars?: boolean) => string;
   getFeeAmount: (feeType: string) => number;
   overridesRefreshKey?: number; // ✅ Key para forçar recarregamento de overrides
+  onEnableInstallment?: () => Promise<void>;
+  onDisableInstallment?: () => Promise<void>;
 }
 
 /**
@@ -58,6 +60,8 @@ const PaymentStatusCard: React.FC<PaymentStatusCardProps> = React.memo((props) =
     onResetFees,
     onEditFeesChange,
     onMarkAsPaid,
+    onEnableInstallment,
+    onDisableInstallment,
     onEditPaymentMethod,
     onUpdatePaymentMethod,
     onCancelPaymentMethod,
@@ -66,6 +70,8 @@ const PaymentStatusCard: React.FC<PaymentStatusCardProps> = React.memo((props) =
     getFeeAmount,
     overridesRefreshKey = 0,
   } = props;
+
+  const [savingInstallment, setSavingInstallment] = useState(false);
 
   // ✅ Buscar affiliate admin email do aluno para verificar se é do Brant
   const [studentAffiliateAdminEmail, setStudentAffiliateAdminEmail] = React.useState<string | null>(null);
@@ -516,6 +522,8 @@ const PaymentStatusCard: React.FC<PaymentStatusCardProps> = React.memo((props) =
           if (isPlacementFeeFlow) {
             // Novo fluxo: mostrar Placement Fee
             const isPaid = !!(student as any).is_placement_fee_paid;
+            const pendingBalance = (student as any).placement_fee_pending_balance ?? 0;
+            const isInstallmentPartial = isPaid && pendingBalance > 0;
             return (
               <div className="bg-slate-50 rounded-xl p-4">
                 <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-4">
@@ -625,8 +633,20 @@ const PaymentStatusCard: React.FC<PaymentStatusCardProps> = React.memo((props) =
                     {isPaid ? (
                       <div className="flex flex-col gap-3">
                         <div className="flex items-center space-x-2">
-                          <CheckCircle className="h-5 w-5 text-green-600" />
-                          <span className="text-sm font-medium text-green-600">Paid</span>
+                          {isInstallmentPartial ? (
+                            <>
+                              <AlertCircle className="h-5 w-5 text-amber-500" />
+                              <span className="text-sm font-medium text-amber-600">1ª Parcela Paga</span>
+                              <span className="text-xs bg-amber-100 text-amber-700 px-2 py-0.5 rounded-full font-semibold">
+                                2ª parcela pendente: ${pendingBalance.toFixed(0)}
+                              </span>
+                            </>
+                          ) : (
+                            <>
+                              <CheckCircle className="h-5 w-5 text-green-600" />
+                              <span className="text-sm font-medium text-green-600">Paid</span>
+                            </>
+                          )}
                         </div>
                         {isPlatformAdmin && !editingFees && (
                           <div className="flex flex-col gap-3">
@@ -684,14 +704,53 @@ const PaymentStatusCard: React.FC<PaymentStatusCardProps> = React.memo((props) =
                         </div>
                         {isPlatformAdmin && (() => {
                           const approvedApp = student.all_applications?.find((app: any) => app.status === 'approved');
-                          return approvedApp && (
-                            <button
-                              onClick={() => onMarkAsPaid('placement')}
-                              className="px-4 py-2 bg-[#05294E] hover:bg-[#05294E]/90 text-white text-sm rounded-lg flex items-center space-x-2 w-fit"
-                            >
-                              <CheckCircle className="w-4 h-4" />
-                              <span>Mark as Paid</span>
-                            </button>
+                          const installmentEnabled = !!(student as any).placement_fee_installment_enabled;
+                          return (
+                            <div className="flex flex-col gap-2">
+                              {approvedApp && (
+                                <button
+                                  onClick={() => onMarkAsPaid('placement')}
+                                  className="px-4 py-2 bg-[#05294E] hover:bg-[#05294E]/90 text-white text-sm rounded-lg flex items-center space-x-2 w-fit"
+                                >
+                                  <CheckCircle className="w-4 h-4" />
+                                  <span>Mark as Paid</span>
+                                </button>
+                              )}
+                              {/* Toggle de parcelamento */}
+                              {onEnableInstallment && onDisableInstallment && (
+                                <div className="flex items-center gap-3">
+                                  <span className="text-xs font-semibold text-slate-600">Installment (50%)</span>
+                                  <button
+                                    onClick={async () => {
+                                      setSavingInstallment(true);
+                                      try {
+                                        if (installmentEnabled) {
+                                          await onDisableInstallment();
+                                        } else {
+                                          await onEnableInstallment();
+                                        }
+                                      } finally {
+                                        setSavingInstallment(false);
+                                      }
+                                    }}
+                                    disabled={savingInstallment}
+                                    title={installmentEnabled ? 'Desabilitar parcelamento' : 'Habilitar parcelamento — aluno paga 50% agora e 50% em 30 dias'}
+                                    className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors duration-200 focus:outline-none disabled:opacity-50 ${
+                                      installmentEnabled ? 'bg-amber-500' : 'bg-slate-300'
+                                    }`}
+                                  >
+                                    <span
+                                      className={`inline-block h-4 w-4 transform rounded-full bg-white shadow transition-transform duration-200 ${
+                                        installmentEnabled ? 'translate-x-6' : 'translate-x-1'
+                                      }`}
+                                    />
+                                  </button>
+                                  <span className={`text-xs font-bold ${installmentEnabled ? 'text-amber-600' : 'text-slate-400'}`}>
+                                    {savingInstallment ? '...' : installmentEnabled ? 'ON' : 'OFF'}
+                                  </span>
+                                </div>
+                              )}
+                            </div>
                           );
                         })()}
                       </div>

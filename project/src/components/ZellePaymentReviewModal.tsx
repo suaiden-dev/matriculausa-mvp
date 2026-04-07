@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { X, CheckCircle, XCircle, AlertCircle, CreditCard, User, Calendar, DollarSign } from 'lucide-react';
+import { X, CheckCircle, XCircle, AlertCircle, CreditCard, User, Calendar, DollarSign, Layers } from 'lucide-react';
 import { insertZelleCode } from '../services/ZellePaymentService';
 
 interface ZellePaymentReviewModalProps {
@@ -21,6 +21,9 @@ interface ZellePaymentReviewModalProps {
   adminId: string;
   onApprove?: (paymentId: string) => Promise<void>;
   onReject?: (paymentId: string, reason: string) => Promise<void>;
+  onApprovePartial?: (paymentId: string) => Promise<void>;
+  studentPlacementFeeInstallmentNumber?: number;
+  studentPlacementFeeInstallmentEnabled?: boolean;
 }
 
 export const ZellePaymentReviewModal: React.FC<ZellePaymentReviewModalProps> = ({
@@ -29,14 +32,23 @@ export const ZellePaymentReviewModal: React.FC<ZellePaymentReviewModalProps> = (
   payment,
   onSuccess,
   onApprove,
-  onReject
+  onReject,
+  onApprovePartial,
+  studentPlacementFeeInstallmentNumber = 0,
+  studentPlacementFeeInstallmentEnabled = false,
 }) => {
-  const [action, setAction] = useState<'approve' | 'reject' | null>(null);
+  const [action, setAction] = useState<'approve' | 'reject' | 'approve_partial' | null>(null);
   const [zelleCode, setZelleCode] = useState('');
   const [adminNotes, setAdminNotes] = useState('');
   const [selectedRejectionReason, setSelectedRejectionReason] = useState('');
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+
+  // Se é placement_fee com installment habilitado e ainda na 1ª parcela → só mostrar "Approve as 1st Installment"
+  const isFirstInstallmentScenario =
+    (payment.fee_type === 'placement_fee' || payment.fee_type === 'placement') &&
+    studentPlacementFeeInstallmentEnabled &&
+    studentPlacementFeeInstallmentNumber === 0;
 
   // Opções pré-definidas de motivos de rejeição
   const rejectionReasons = [
@@ -76,6 +88,9 @@ export const ZellePaymentReviewModal: React.FC<ZellePaymentReviewModalProps> = (
       if (action === 'approve' && onApprove) {
         console.log('✅ [ZellePaymentReviewModal] Chamando função de aprovação...');
         await onApprove(payment.id);
+      } else if (action === 'approve_partial' && onApprovePartial) {
+        console.log('🔶 [ZellePaymentReviewModal] Chamando função de aprovação parcial (1ª parcela)...');
+        await onApprovePartial(payment.id);
       } else if (action === 'reject' && onReject) {
         console.log('❌ [ZellePaymentReviewModal] Chamando função de rejeição...');
         const rejectionReason = selectedRejectionReason || adminNotes;
@@ -219,22 +234,42 @@ export const ZellePaymentReviewModal: React.FC<ZellePaymentReviewModalProps> = (
           <h3 className="text-lg font-medium text-gray-900 mb-4">Review Action</h3>
           
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-            <button
-              onClick={() => setAction('approve')}
-              className={`p-4 border-2 rounded-lg transition-colors ${
-                action === 'approve'
-                  ? 'border-green-500 bg-green-50'
-                  : 'border-gray-200 hover:border-green-300'
-              }`}
-            >
-              <div className="flex items-center gap-3">
-                <CheckCircle className={`w-6 h-6 ${action === 'approve' ? 'text-green-600' : 'text-gray-400'}`} />
-                <div className="text-left">
-                  <p className="font-medium text-gray-900">Approve Payment</p>
-                  <p className="text-sm text-gray-600">Mark payment as verified and approved</p>
+            {/* Approve — padrão ou 1ª parcela dependendo do cenário */}
+            {isFirstInstallmentScenario ? (
+              <button
+                onClick={() => setAction('approve_partial')}
+                className={`p-4 border-2 rounded-lg transition-colors ${
+                  action === 'approve_partial'
+                    ? 'border-amber-500 bg-amber-50'
+                    : 'border-gray-200 hover:border-amber-300'
+                }`}
+              >
+                <div className="flex items-center gap-3">
+                  <Layers className={`w-6 h-6 ${action === 'approve_partial' ? 'text-amber-600' : 'text-gray-400'}`} />
+                  <div className="text-left">
+                    <p className="font-medium text-gray-900">Approve as 1st Installment</p>
+                    <p className="text-sm text-gray-600">Student unlocked — 2nd installment required to release documents.</p>
+                  </div>
                 </div>
-              </div>
-            </button>
+              </button>
+            ) : (
+              <button
+                onClick={() => setAction('approve')}
+                className={`p-4 border-2 rounded-lg transition-colors ${
+                  action === 'approve'
+                    ? 'border-green-500 bg-green-50'
+                    : 'border-gray-200 hover:border-green-300'
+                }`}
+              >
+                <div className="flex items-center gap-3">
+                  <CheckCircle className={`w-6 h-6 ${action === 'approve' ? 'text-green-600' : 'text-gray-400'}`} />
+                  <div className="text-left">
+                    <p className="font-medium text-gray-900">Approve Payment</p>
+                    <p className="text-sm text-gray-600">Mark payment as verified and approved</p>
+                  </div>
+                </div>
+              </button>
+            )}
 
             <button
               onClick={() => setAction('reject')}
@@ -379,17 +414,21 @@ export const ZellePaymentReviewModal: React.FC<ZellePaymentReviewModalProps> = (
           <button
             onClick={handleSubmit}
             disabled={!action || loading || (action === 'reject' && (selectedRejectionReason === 'Other (specify in notes)' && !adminNotes.trim()))}
-            className={`px-4 py-2 text-white rounded-lg transition-colors ${
+            className={`px-4 py-2 text-white rounded-lg transition-colors disabled:cursor-not-allowed ${
               action === 'approve'
                 ? 'bg-green-600 hover:bg-green-700 disabled:bg-green-300'
+                : action === 'approve_partial'
+                ? 'bg-amber-600 hover:bg-amber-700 disabled:bg-amber-300'
                 : 'bg-red-600 hover:bg-red-700 disabled:bg-red-300'
-            } disabled:cursor-not-allowed`}
+            }`}
           >
             {loading ? (
               <div className="flex items-center gap-2">
                 <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin"></div>
                 Processing...
               </div>
+            ) : action === 'approve_partial' ? (
+              'Approve as 1st Installment'
             ) : (
               `${action === 'approve' ? 'Approve' : 'Reject'} Payment`
             )}

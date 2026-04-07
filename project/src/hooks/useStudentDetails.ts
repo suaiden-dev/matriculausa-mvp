@@ -57,6 +57,11 @@ export interface StudentRecord {
   has_paid_reinstatement_package?: boolean;
   visa_transfer_active?: boolean;
   reinstatement_package_payment_method?: string | null;
+  university_id?: string | null;
+  placement_fee_installment_enabled?: boolean;
+  placement_fee_pending_balance?: number;
+  placement_fee_due_date?: string | null;
+  placement_fee_installment_number?: number;
 }
 
 /**
@@ -132,6 +137,7 @@ export const useStudentDetails = (profileId: string | undefined) => {
             selection_process_fee_payment_method,
             i20_control_fee_payment_method,
             role,
+            student_process_type,
             seller_referral_code,
             admin_notes,
             documents_status,
@@ -140,6 +146,7 @@ export const useStudentDetails = (profileId: string | undefined) => {
             system_type,
             has_paid_reinstatement_package,
             visa_transfer_active,
+            university_id,
             scholarship_applications (
               id,
               scholarship_id,
@@ -233,7 +240,7 @@ export const useStudentDetails = (profileId: string | undefined) => {
         application_fee_payment_method: mainApp.application_fee_payment_method || null,
         scholarship_fee_payment_method: mainApp.scholarship_fee_payment_method || null,
         acceptance_letter_status: mainApp.acceptance_letter_status || null,
-        student_process_type: mainApp.student_process_type || null,
+        student_process_type: mainApp.student_process_type || s.student_process_type || null,
         payment_status: mainApp.payment_status || null,
         reviewed_at: mainApp.reviewed_at || null,
         reviewed_by: mainApp.reviewed_by || null,
@@ -253,6 +260,7 @@ export const useStudentDetails = (profileId: string | undefined) => {
         ds160_package_payment_method: s.ds160_package_payment_method || null,
         i539_cos_package_payment_method: s.i539_cos_package_payment_method || null,
         system_type: s.system_type || null,
+        university_id: s.university_id || null,
       };
 
       setStudent(formatted);

@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { useSearchParams } from 'react-router-dom';
-import { GraduationCap, DollarSign, MessageSquare, CheckCircle, UserX } from 'lucide-react';
+import { GraduationCap, DollarSign, MessageSquare, CheckCircle, UserX, Archive } from 'lucide-react';
 import StudentApplicationsView from '../../components/AdminDashboard/StudentApplicationsView';
 import CompletedApplicationsView from '../../components/AdminDashboard/CompletedApplicationsView';
 import FeeManagement from '../../components/AdminDashboard/FeeManagement';
@@ -10,7 +10,7 @@ import { useAdminNotifications } from '../../contexts/AdminNotificationsContext'
 
 const UsersHub: React.FC = () => {
   const [searchParams] = useSearchParams();
-  const [activeTab, setActiveTab] = useState<'applications' | 'completed' | 'feeManagement' | 'messages' | 'lostLeads'>('applications');
+  const [activeTab, setActiveTab] = useState<'applications' | 'completed' | 'archived' | 'feeManagement' | 'messages' | 'lostLeads'>('applications');
   const [selectedConversationId, setSelectedConversationId] = useState<string | null>(null);
   const [selectedRecipientId, setSelectedRecipientId] = useState<string | null>(null);
   const { unreadCount } = useAdminNotifications();
@@ -20,7 +20,7 @@ const UsersHub: React.FC = () => {
     const tab = searchParams.get('tab');
     const conversation = searchParams.get('conversation');
     const recipientId = searchParams.get('recipient_id');
-    
+
     if (tab === 'messages') {
       setActiveTab('messages');
     } else if (tab === 'feeManagement') {
@@ -29,14 +29,16 @@ const UsersHub: React.FC = () => {
       setActiveTab('completed');
     } else if (tab === 'lostLeads') {
       setActiveTab('lostLeads');
+    } else if (tab === 'archived') {
+      setActiveTab('archived');
     } else {
       setActiveTab('applications');
     }
-    
+
     if (conversation) {
       setSelectedConversationId(conversation);
     }
-    
+
     if (recipientId) {
       setSelectedRecipientId(recipientId);
     }
@@ -48,11 +50,10 @@ const UsersHub: React.FC = () => {
         <nav className="-mb-px flex space-x-8">
           <button
             onClick={() => setActiveTab('applications')}
-            className={`whitespace-nowrap py-2 px-1 border-b-2 font-medium text-sm ${
-              activeTab === 'applications'
+            className={`whitespace-nowrap py-2 px-1 border-b-2 font-medium text-sm ${activeTab === 'applications'
                 ? 'border-[#05294E] text-[#05294E]'
                 : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
-            }`}
+              }`}
           >
             <div className="flex items-center space-x-2">
               <GraduationCap className="h-5 w-5" />
@@ -61,11 +62,10 @@ const UsersHub: React.FC = () => {
           </button>
           <button
             onClick={() => setActiveTab('completed')}
-            className={`whitespace-nowrap py-2 px-1 border-b-2 font-medium text-sm ${
-              activeTab === 'completed'
+            className={`whitespace-nowrap py-2 px-1 border-b-2 font-medium text-sm ${activeTab === 'completed'
                 ? 'border-green-600 text-green-600'
                 : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
-            }`}
+              }`}
           >
             <div className="flex items-center space-x-2">
               <CheckCircle className="h-5 w-5" />
@@ -73,12 +73,23 @@ const UsersHub: React.FC = () => {
             </div>
           </button>
           <button
+            onClick={() => setActiveTab('archived')}
+            className={`whitespace-nowrap py-2 px-1 border-b-2 font-medium text-sm ${activeTab === 'archived'
+                ? 'border-gray-600 text-gray-600'
+                : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
+              }`}
+          >
+            <div className="flex items-center space-x-2">
+              <Archive className="h-5 w-5" />
+              <span>Archived</span>
+            </div>
+          </button>
+          <button
             onClick={() => setActiveTab('feeManagement')}
-            className={`whitespace-nowrap py-2 px-1 border-b-2 font-medium text-sm ${
-              activeTab === 'feeManagement'
+            className={`whitespace-nowrap py-2 px-1 border-b-2 font-medium text-sm ${activeTab === 'feeManagement'
                 ? 'border-[#05294E] text-[#05294E]'
                 : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
-            }`}
+              }`}
           >
             <div className="flex items-center space-x-2">
               <DollarSign className="h-5 w-5" />
@@ -87,11 +98,10 @@ const UsersHub: React.FC = () => {
           </button>
           <button
             onClick={() => setActiveTab('messages')}
-            className={`whitespace-nowrap py-2 px-1 border-b-2 font-medium text-sm ${
-              activeTab === 'messages'
+            className={`whitespace-nowrap py-2 px-1 border-b-2 font-medium text-sm ${activeTab === 'messages'
                 ? 'border-[#05294E] text-[#05294E]'
                 : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
-            }`}
+              }`}
           >
             <div className="flex items-center space-x-2">
               <div className="relative">
@@ -106,11 +116,10 @@ const UsersHub: React.FC = () => {
 
           <button
             onClick={() => setActiveTab('lostLeads')}
-            className={`whitespace-nowrap py-2 px-1 border-b-2 font-medium text-sm ${
-              activeTab === 'lostLeads'
+            className={`whitespace-nowrap py-2 px-1 border-b-2 font-medium text-sm ${activeTab === 'lostLeads'
                 ? 'border-amber-500 text-amber-600'
                 : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
-            }`}
+              }`}
           >
             <div className="flex items-center space-x-2">
               <UserX className="h-5 w-5" />
@@ -124,12 +133,14 @@ const UsersHub: React.FC = () => {
         <StudentApplicationsView />
       ) : activeTab === 'completed' ? (
         <CompletedApplicationsView />
+      ) : activeTab === 'archived' ? (
+        <StudentApplicationsView isArchivedView={true} />
       ) : activeTab === 'feeManagement' ? (
         <FeeManagement />
       ) : activeTab === 'lostLeads' ? (
         <LostLeadsView />
       ) : (
-        <AdminChatPage 
+        <AdminChatPage
           defaultConversationId={selectedConversationId || undefined}
           defaultRecipientId={selectedRecipientId || undefined}
         />

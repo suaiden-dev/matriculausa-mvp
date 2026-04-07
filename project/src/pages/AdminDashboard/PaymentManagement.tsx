@@ -31,6 +31,8 @@ import {
 import {
   useApproveZellePaymentMutation,
   useRejectZellePaymentMutation,
+  useApprovePartialZellePaymentMutation,
+  useApproveSecondInstallmentMutation,
   useAddZelleNotesMutation,
   useApproveUniversityRequestMutation,
   useRejectUniversityRequestMutation,
@@ -186,6 +188,8 @@ const PaymentManagement = (): React.JSX.Element => {
   const [zelleAdminNotes, setZelleAdminNotes] = useState('');
   const [zelleActionLoading, setZelleActionLoading] = useState(false);
   const [zelleRejectReason, setZelleRejectReason] = useState('');
+  const [selectedStudentInstallmentNumber, setSelectedStudentInstallmentNumber] = useState(0);
+  const [selectedStudentInstallmentEnabled, setSelectedStudentInstallmentEnabled] = useState(false);
 
   // Estados de paginação
   const itemsPerPage = pageSize;
@@ -221,6 +225,8 @@ const PaymentManagement = (): React.JSX.Element => {
   // Mutations
   const approveZelleMutation = useApproveZellePaymentMutation();
   const rejectZelleMutation = useRejectZellePaymentMutation();
+  const approvePartialZelleMutation = useApprovePartialZellePaymentMutation();
+  const approveSecondInstallmentMutation = useApproveSecondInstallmentMutation();
   const addZelleNotesMutation = useAddZelleNotesMutation();
   const approveUniversityMutation = useApproveUniversityRequestMutation();
   const rejectUniversityMutation = useRejectUniversityRequestMutation();
@@ -637,6 +643,36 @@ const PaymentManagement = (): React.JSX.Element => {
     }
   };
 
+  const approvePartialZellePayment = async (paymentId: string) => {
+    if (!user?.id) return;
+    try {
+      setZelleActionLoading(true);
+      const payment = zellePayments.find(p => p.id === paymentId);
+      if (!payment) throw new Error('Payment not found');
+      await approvePartialZelleMutation.mutateAsync({ adminUserId: user.id, payment });
+      setShowZelleReviewModal(false);
+    } catch (error: any) {
+      console.error('❌ [approvePartialZellePayment] Error:', error);
+    } finally {
+      setZelleActionLoading(false);
+    }
+  };
+
+  const approveSecondInstallmentPayment = async (paymentId: string) => {
+    if (!user?.id) return;
+    try {
+      setZelleActionLoading(true);
+      const payment = zellePayments.find(p => p.id === paymentId);
+      if (!payment) throw new Error('Payment not found');
+      await approveSecondInstallmentMutation.mutateAsync({ adminUserId: user.id, payment });
+      setShowZelleReviewModal(false);
+    } catch (error: any) {
+      console.error('❌ [approveSecondInstallmentPayment] Error:', error);
+    } finally {
+      setZelleActionLoading(false);
+    }
+  };
+
   const rejectZellePayment = async (paymentId: string, reason?: string) => {
     if (!user?.id) {
       console.error('User not available for rejectZellePayment');
@@ -665,6 +701,28 @@ const PaymentManagement = (): React.JSX.Element => {
     setShowMarkPaidModal,
     setShowAddNotesModal,
   });
+
+  // Fetch installment number when a placement_fee Zelle review modal opens
+  useEffect(() => {
+    if (showZelleReviewModal && selectedZellePayment &&
+        (selectedZellePayment.fee_type === 'placement_fee' || selectedZellePayment.fee_type === 'placement')) {
+      const userId = selectedZellePayment.user_id;
+      if (userId) {
+        supabase
+          .from('user_profiles')
+          .select('placement_fee_installment_number, placement_fee_installment_enabled')
+          .eq('user_id', userId)
+          .single()
+          .then(({ data }) => {
+            setSelectedStudentInstallmentNumber(data?.placement_fee_installment_number ?? 0);
+            setSelectedStudentInstallmentEnabled(data?.placement_fee_installment_enabled ?? false);
+          });
+      }
+    } else if (!showZelleReviewModal) {
+      setSelectedStudentInstallmentNumber(0);
+      setSelectedStudentInstallmentEnabled(false);
+    }
+  }, [showZelleReviewModal, selectedZellePayment]);
 
   // Funções auxiliares para abrir modais de Zelle
 
@@ -1007,8 +1065,17 @@ const PaymentManagement = (): React.JSX.Element => {
           }}
           onSuccess={handleZelleReviewSuccess}
           adminId={user.id}
-          onApprove={approveZellePayment}
+          onApprove={
+            selectedZellePayment &&
+            (selectedZellePayment.fee_type === 'placement_fee' || selectedZellePayment.fee_type === 'placement') &&
+            selectedStudentInstallmentNumber === 1
+              ? approveSecondInstallmentPayment
+              : approveZellePayment
+          }
           onReject={rejectZellePayment}
+          onApprovePartial={approvePartialZellePayment}
+          studentPlacementFeeInstallmentNumber={selectedStudentInstallmentNumber}
+          studentPlacementFeeInstallmentEnabled={selectedStudentInstallmentEnabled}
         />
       )}
 

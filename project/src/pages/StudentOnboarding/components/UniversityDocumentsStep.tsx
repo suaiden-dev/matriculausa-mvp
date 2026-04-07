@@ -20,6 +20,7 @@ import { PackageFeeTab } from './PackageFeeTab';
 import { ApplicationSidebar } from './ApplicationSidebar';
 import { ApplicationStatusHero } from './ApplicationStatusHero';
 import ScholarshipInfoCard from './ScholarshipInfoCard';
+import { ZelleCheckout } from '../../../components/ZelleCheckout';
 
 export const UniversityDocumentsStep: React.FC<StepProps> = ({ onBack }) => {
     console.log('[UniversityDocumentsStep] Renderizando...');
@@ -31,7 +32,7 @@ export const UniversityDocumentsStep: React.FC<StepProps> = ({ onBack }) => {
     // 1. ESTADOS
     const [loading, setLoading] = useState(true);
     const [applicationDetails, setApplicationDetails] = useState<any>(null);
-    const [activeTab, setActiveTab] = useState<'welcome' | 'details' | 'documents' | 'i20' | 'ds160' | 'i539' | 'cos' | 'acceptance'>('welcome');
+    const [activeTab, setActiveTab] = useState<'welcome' | 'details' | 'documents' | 'i20' | 'ds160' | 'i539' | 'cos' | 'acceptance' | 'placement_installment'>('welcome');
     const [previewUrl, setPreviewUrl] = useState<string | null>(null);
     const [documentRequests, setDocumentRequests] = useState<any[]>([]);
     const [ds160PackagePaid, setDs160PackagePaid] = useState<boolean>(false);
@@ -54,6 +55,8 @@ export const UniversityDocumentsStep: React.FC<StepProps> = ({ onBack }) => {
 
     // 2. HOOKS DE CÁLCULO (Sempre No Topo)
     const isPlacementFlow = !!(userProfile as any)?.placement_fee_flow;
+    const placementFeePendingBalance = (userProfile as any)?.placement_fee_pending_balance ?? 0;
+    const hasPlacementInstallmentPending = placementFeePendingBalance > 0;
 
 
     const getRelativePath = (fullUrl: string, bucketName = 'document-attachments') => {
@@ -334,7 +337,14 @@ export const UniversityDocumentsStep: React.FC<StepProps> = ({ onBack }) => {
             variant: (i539PackagePaid ? 'success' : 'info') as any,
             disabled: !isAcceptanceReady && !i539PackagePaid
         }] : []),
-    ], [t, allDocsApproved, documentRequests.length, showDs160Tab, ds160PackagePaid, showI539Tab, i539PackagePaid, applicationDetails?.acceptance_letter_url, applicationDetails?.status, studentProcessType, userProfile?.visa_transfer_active, packageFeeRequired, isAcceptanceReady]);
+        ...(hasPlacementInstallmentPending ? [{
+            id: 'placement_installment',
+            title: `2ª Parcela do Placement Fee — $${placementFeePendingBalance.toFixed(0)}`,
+            status: 'AÇÃO NECESSÁRIA',
+            variant: 'warning' as any,
+            completed: false,
+        }] : []),
+    ], [t, allDocsApproved, documentRequests.length, showDs160Tab, ds160PackagePaid, showI539Tab, i539PackagePaid, applicationDetails?.acceptance_letter_url, applicationDetails?.status, studentProcessType, userProfile?.visa_transfer_active, packageFeeRequired, isAcceptanceReady, hasPlacementInstallmentPending, placementFeePendingBalance]);
 
     const fetchApplicationDetails = useCallback(async (isRefresh = false) => {
         if (!userProfile?.id) {
@@ -552,10 +562,11 @@ export const UniversityDocumentsStep: React.FC<StepProps> = ({ onBack }) => {
                                                 </div>
                                                 <div className="flex flex-col gap-3 md:gap-4">
                                                     {sidebarSteps.map((step, idx) => {
-                                                        const isCurrent = (step.id === 'documents' && !allDocsApproved) || 
+                                                        const isCurrent = (step.id === 'documents' && !allDocsApproved) ||
                                                                         (step.id === 'acceptance' && allDocsApproved && !applicationDetails?.acceptance_letter_url) ||
                                                                         (step.id === 'ds160' && allDocsApproved && !!applicationDetails?.acceptance_letter_url && !ds160PackagePaid && !i539PackagePaid) ||
-                                                                        (step.id === 'i539' && allDocsApproved && !!applicationDetails?.acceptance_letter_url && !i539PackagePaid && !ds160PackagePaid);
+                                                                        (step.id === 'i539' && allDocsApproved && !!applicationDetails?.acceptance_letter_url && !i539PackagePaid && !ds160PackagePaid) ||
+                                                                        (step.id === 'placement_installment' && hasPlacementInstallmentPending);
 
                                                         return (
                                                             <motion.button 
@@ -756,6 +767,26 @@ export const UniversityDocumentsStep: React.FC<StepProps> = ({ onBack }) => {
                                             }}
                                         />
                                     )}
+                                </div>
+                            )}
+
+                            {activeTab === 'placement_installment' && hasPlacementInstallmentPending && (
+                                <div className="pb-12 space-y-6">
+                                    <div className="bg-amber-50 border border-amber-200 rounded-[2rem] p-6 md:p-8">
+                                        <h3 className="text-xl font-black text-amber-900 uppercase tracking-tight mb-2">
+                                            2ª Parcela do Placement Fee
+                                        </h3>
+                                        <p className="text-sm text-amber-700 mb-6">
+                                            Sua 1ª parcela foi aprovada. Pague a 2ª parcela para liberar o download da sua Carta de Aceite e demais documentos finais.
+                                        </p>
+                                        <ZelleCheckout
+                                            feeType="placement_fee"
+                                            amount={placementFeePendingBalance}
+                                            metadata={{ installment_number: 2, is_installment: true }}
+                                            ignoreApprovedState={true}
+                                            onSuccess={() => window.location.reload()}
+                                        />
+                                    </div>
                                 </div>
                             )}
                         </motion.div>
