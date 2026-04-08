@@ -10,7 +10,7 @@ SET standard_conforming_strings = on;
 
 -- TIPOS CUSTOMIZADOS
 DO $$ BEGIN
-  CREATE TYPE term_type AS ENUM ('application', 'affiliate', 'general');
+  CREATE TYPE term_type AS ENUM ('application', 'affiliate', 'general', 'terms_of_service', 'privacy_policy', 'checkout_terms');
 EXCEPTION WHEN duplicate_object THEN NULL;
 END $$;
 
