@@ -3,8 +3,8 @@
     "hero": {
       "title": "Tu Puerta de Entrada a las Universidades Americanas",
       "subtitle": "Descubre becas exclusivas y desbloquea tu potencial en los Estados Unidos",
-      "description": "Conéctate con las mejores universidades, accede a becas exclusivas y recibe apoyo personalizado durante todo tu proceso para estudiar en los EE. UU.",
-      "cta": "Inicia Tu Proceso",
+      "description": "Cada año, los estudiantes descubren becas que cambian sus vidas — y siempre comienza en el mismo lugar. Da el primer paso con tu Proceso de Selección y descubre lo que te está esperando.",
+      "cta": "Comenzar Ahora",
       "watchVideo": "Ver Video",
       "stats": {
         "successRate": {
@@ -24,25 +24,37 @@
       "loginToView": "Iniciar Sesión para Ver",
       "featured": "Destacadas"
     },
+    "featuredScholarships": {
+      "title": "Becas Disponibles",
+      "subtitle": "Estas son solo algunas de las becas que pueden ser tuyas. ¿Quieres ver cuáles combinan contigo? Realiza tu proceso de selección y descubre nuestro catálogo completo esperándote."
+    },
+    "trustedUniversities": {
+      "badge": "Red de Instituciones Asociadas",
+      "titleMain": "Las Mejores",
+      "titleHighlight": "Universidades Americanas",
+      "description": "Nuestros estudiantes son aceptados en algunas de las universidades más prestigiosas y reconocidas de los Estados Unidos. Comienza tu Proceso de Selección y asegura tu lugar."
+    },
     "features": {
       "whyChoose": "¿Por qué elegir MatriculaUSA?",
-      "title": "¿Por Qué Elegir MatriculaUSA?",
+      "title": "Somos la plataforma completa para su jornada americana",
+      "titleMain": "Somos la plataforma completa para su",
+      "titleHighlight": "jornada americana",
       "subtitle": "Todo lo que necesitas para tener éxito en tu camino educativo americano",
-      "smartMatching": {
-        "title": "Emparejamiento Inteligente",
-        "description": "Sistema impulsado por IA que encuentra las mejores universidades y becas para tu perfil"
+      "successRate": {
+        "title": "95% de Tasa de Éxito",
+        "description": "Nuestra metodología y soporte especializado garantizan una de las tasas de aprobación más altas del mercado para estudiantes internacionales."
       },
       "exclusiveScholarships": {
         "title": "Becas Exclusivas",
-        "description": "Accede a becas no disponibles en ningún otro lugar, específicamente para estudiantes internacionales"
+        "description": "Acceda a becas no disponibles en ningún otro lugar, con valores exclusivos para estudiantes internacionales."
       },
       "personalSupport": {
         "title": "Soporte Personal",
-        "description": "Equipo dedicado para guiarte en cada paso del proceso de solicitud"
+        "description": "Cada duda, cada etapa, cada decisión — nuestro equipo está disponible para apoyarte en todo lo que necesites a lo largo del proceso."
       },
       "fastProcess": {
-        "title": "Proceso Rápido",
-        "description": "Proceso de solicitud simplificado con respuestas rápidas y gestión eficiente de documentos"
+        "title": "Proceso Sencillo",
+        "description": "Proceso de solicitud sencillo, pensado para que lo gestiones todo con transparencia y tranquilidad — de principio a fin, sin complicaciones."
       }
     },
     "stats": {
@@ -117,7 +129,7 @@
       }
     },
     "threeSteps": {
-      "title": "Tres Pasos para Tu Educación Americana",
+      "title": "Cómo Funciona tu Viaje a los EE. UU.",
       "subtitle": "Proceso Simple",
       "step1": {
         "title": "Crea Tu Perfil",

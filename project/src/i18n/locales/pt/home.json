@@ -3,8 +3,8 @@
     "hero": {
       "title": "Sua Porta de Entrada para Universidades Americanas",
       "subtitle": "Descubra bolsas de estudo exclusivas e desbloqueie seu potencial nos Estados Unidos",
-      "description": "Conecte-se com universidades de ponta, acesse bolsas exclusivas e receba suporte personalizado durante todo seu processo para estudar nos EUA.",
-      "cta": "Inicie Seu Processo",
+      "description": "Todos os anos, alunos descobrem bolsas que mudam suas vidas — e começa sempre pelo mesmo lugar. Dê o primeiro passo com seu Processo Seletivo e veja o que está esperando por você.",
+      "cta": "Começar Agora",
       "watchVideo": "Assistir Vídeo",
       "stats": {
         "successRate": {
@@ -24,25 +24,37 @@
       "loginToView": "Fazer Login para Ver",
       "featured": "Destaque"
     },
+    "featuredScholarships": {
+      "title": "Bolsas",
+      "subtitle": "Essas são só algumas das bolsas que podem ser suas. Quer ver quais combinam com você? Faça seu processo seletivo e descubra nosso catálogo completo esperando por você."
+    },
+    "trustedUniversities": {
+      "badge": "Rede de Instituições Parceiras",
+      "titleMain": "As Melhores",
+      "titleHighlight": "Universidades Americanas",
+      "description": "Nossos alunos são aceitos em algumas das mais prestigiadas e reconhecidas universidades dos Estados Unidos. Inicie seu Processo Seletivo e garanta seu lugar."
+    },
     "features": {
       "whyChoose": "Por Que Escolher MatriculaUSA?",
-      "title": "Por Que Escolher MatriculaUSA?",
+      "title": "Somos a plataforma completa para sua jornada americana",
+      "titleMain": "Somos a plataforma completa para sua",
+      "titleHighlight": "jornada americana",
       "subtitle": "Tudo que você precisa para ter sucesso no seu processo educacional americano",
-      "smartMatching": {
-        "title": "Correspondência Inteligente",
-        "description": "Sistema alimentado por IA encontra as melhores universidades e bolsas para seu perfil"
+      "successRate": {
+        "title": "95% de Taxa de Sucesso",
+        "description": "Nossa metodologia e suporte especializado garantem uma das maiores taxas de aprovação do mercado para estudantes internacionais."
       },
       "exclusiveScholarships": {
         "title": "Bolsas Exclusivas",
-        "description": "Acesse bolsas não disponíveis em nenhum outro lugar, especificamente para estudantes internacionais"
+        "description": "Acesse bolsas não disponíveis em nenhum outro lugar, com valores exclusivos para estudantes internacionais."
       },
       "personalSupport": {
         "title": "Suporte Pessoal",
-        "description": "Equipe dedicada para te guiar em cada etapa do processo de candidatura"
+        "description": "Cada dúvida, cada etapa, cada decisão — nossa equipe está disponível para te apoiar em tudo que você precisar ao longo do processo."
       },
       "fastProcess": {
-        "title": "Processo Rápido",
-        "description": "Processo de candidatura simplificado com respostas rápidas e manuseio eficiente de documentos"
+        "title": "Processo Simples",
+        "description": "Processo de candidatura simples, pensado para você conduzir tudo com transparência e tranquilidade — do início ao fim, sem complicações."
       }
     },
     "stats": {
@@ -117,7 +129,7 @@
       }
     },
     "threeSteps": {
-      "title": "Três Passos para Sua Educação Americana",
+      "title": "Como Funciona sua Jornada até os EUA",
       "subtitle": "Processo Simples",
       "step1": {
         "title": "Crie Seu Perfil",

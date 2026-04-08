@@ -88,9 +88,9 @@ const CookieBanner: React.FC = () => {
         animate={{ y: 0, opacity: 1 }}
         exit={{ y: 100, opacity: 0 }}
         transition={{ type: 'spring', damping: 25, stiffness: 200 }}
-        className="fixed bottom-0 left-0 right-0 z-[9999] p-4 sm:p-6"
+        className="fixed bottom-0 left-0 right-0 z-[9999] p-4 sm:p-6 pointer-events-none"
       >
-        <div className="max-w-sm mx-auto sm:mx-0 sm:mr-auto">
+        <div className="max-w-sm mx-auto sm:mx-0 sm:mr-auto pointer-events-auto">
           <div className="bg-white rounded-xl shadow-[0_8px_32px_rgba(0,0,0,0.12)] border border-slate-200 p-4 backdrop-blur-xl relative">
             
             <div className="relative z-10 flex flex-col gap-3">

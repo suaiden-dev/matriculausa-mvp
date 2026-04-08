@@ -1600,11 +1600,24 @@ const AdminStudentDetails: React.FC = () => {
         }
       }
 
+      // Helper para obter o nome amigável da taxa no log
+      const feeLabels: Record<string, string> = {
+        selection_process: 'Selection Process Fee',
+        application: 'Application Fee',
+        scholarship: 'Scholarship Fee',
+        i20_control: 'I-20 Control Fee',
+        placement: 'Placement Fee',
+        ds160_package: 'DS-160 Package',
+        i539_cos_package: 'I-539 COS Package',
+        reinstatement_fee: 'Reinstatement Fee'
+      };
+      const feeLabel = feeLabels[feeType] || feeType;
+
       // Log the action
       try {
         await logAction(
           'fee_payment',
-          `${feeType === 'selection_process' ? 'Selection Process Fee' : feeType === 'application' ? 'Application Fee' : feeType === 'scholarship' ? 'Scholarship Fee' : 'I-20 Control Fee'} marked as paid via ${paymentMethodValue} payment`,
+          `${feeLabel} marked as paid via ${paymentMethodValue} payment`,
           user?.id || '',
           'admin',
           {

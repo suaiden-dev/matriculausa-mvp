@@ -111,58 +111,89 @@ const HeroSection: React.FC<{ onCTAClick: () => void, t: any }> = ({ onCTAClick,
   }, [controls, inView]);
 
   return (
-    <section ref={ref} className="relative bg-gradient-to-br from-[#05294E] via-slate-800 to-[#0a3a62] text-white py-24 lg:py-32 overflow-hidden">
+    <section ref={ref} className="relative bg-gradient-to-br from-[#05294E] via-slate-800 to-[#0a3a62] text-white py-20 lg:py-32 overflow-hidden">
       <div className="absolute inset-0 overflow-hidden pointer-events-none">
         <div className="absolute -top-24 -left-24 w-96 h-96 bg-[#D0151C]/10 rounded-full blur-[100px] animate-pulse"></div>
         <div className="absolute bottom-0 right-0 w-[500px] h-[500px] bg-blue-400/5 rounded-full blur-[120px]"></div>
       </div>
       
-      <div className="relative max-w-5xl mx-auto px-4 sm:px-6 lg:px-8 text-center">
-        <motion.div
-           initial="hidden"
-           animate={controls}
-           variants={{
-             hidden: { opacity: 0, y: 30 },
-             visible: { opacity: 1, y: 0, transition: { duration: 0.7, ease: "easeOut" } }
-           }}
-        >
-          <div className="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-white/10 backdrop-blur-md border border-white/20 mb-8">
-            <Sparkles className="w-4 h-4 text-blue-300" />
-            <span className="text-sm font-semibold tracking-wide text-blue-100 uppercase">
-              {t("howItWorks.stats.success") || 'O Seu Passaporte'}
-            </span>
-          </div>
-
-          <h1 className="text-5xl md:text-6xl lg:text-7xl font-black mb-6 leading-[1.1] tracking-tight">
-            {t('howItWorks.title')}
-          </h1>
-          
-          <h2 className="text-xl md:text-2xl text-slate-300 max-w-3xl mx-auto mb-10 leading-relaxed font-medium">
-            {t('howItWorks.subtitle')}
-          </h2>
-
-          <div className="flex flex-col sm:flex-row items-center justify-center gap-4 mb-14">
-            <button
-              onClick={onCTAClick}
-              className="w-full sm:w-auto px-8 py-4 bg-[#D0151C] hover:bg-red-600 text-white font-bold text-lg rounded-2xl shadow-xl hover:shadow-2xl transition-all duration-300 hover:-translate-y-1 flex items-center justify-center gap-2 group"
-            >
-              Começar Processo Agora
-              <ArrowRight className="w-5 h-5 group-hover:translate-x-1 transition-transform" />
-            </button>
-          </div>
-
-          <div className="flex flex-wrap items-center justify-center gap-4 sm:gap-8 text-slate-300">
-            <div className="flex items-center">
-              <CheckCircle className="w-5 h-5 text-green-400 mr-2 shrink-0" />
-              <span className="text-sm sm:text-base font-medium">{t('howItWorks.stats.setup')}</span>
+      <div className="relative max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+        <div className="grid grid-cols-1 lg:grid-cols-12 gap-12 items-center">
+          <motion.div
+             className="lg:col-span-7 text-center lg:text-left"
+             initial="hidden"
+             animate={controls}
+             variants={{
+               hidden: { opacity: 0, y: 30 },
+               visible: { opacity: 1, y: 0, transition: { duration: 0.7, ease: "easeOut" } }
+             }}
+          >
+            <div className="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-white/10 backdrop-blur-md border border-white/20 mb-8 mx-auto lg:mx-0">
+              <Sparkles className="w-4 h-4 text-blue-300" />
+              <span className="text-sm font-semibold tracking-wide text-blue-100 uppercase">
+                {t("howItWorks.stats.success") || 'O Seu Passaporte'}
+              </span>
             </div>
-            <div className="hidden sm:block w-1.5 h-1.5 rounded-full bg-white/20"></div>
-            <div className="flex items-center">
-              <Shield className="w-5 h-5 text-blue-400 mr-2 shrink-0" />
-              <span className="text-sm sm:text-base font-medium">{t('howItWorks.stats.secure')}</span>
+
+            <h1 className="text-4xl md:text-5xl lg:text-7xl font-black mb-6 leading-[1.1] tracking-tight">
+              {t('howItWorks.title')}
+            </h1>
+            
+            <h2 className="text-xl md:text-2xl text-slate-300 max-w-3xl mx-auto lg:mx-0 mb-10 leading-relaxed font-medium">
+              {t('howItWorks.subtitle')}
+            </h2>
+
+            <div className="flex flex-col sm:flex-row items-center justify-center lg:justify-start gap-4 mb-14">
+              <button
+                onClick={onCTAClick}
+                className="w-full sm:w-auto px-8 py-4 bg-[#D0151C] hover:bg-red-600 text-white font-bold text-lg rounded-2xl shadow-xl hover:shadow-2xl transition-all duration-300 hover:-translate-y-1 flex items-center justify-center gap-2 group"
+              >
+                {t('howItWorks.cta.start') || 'Começar Processo Agora'}
+                <ArrowRight className="w-5 h-5 group-hover:translate-x-1 transition-transform" />
+              </button>
             </div>
-          </div>
-        </motion.div>
+
+            <div className="flex flex-wrap items-center justify-center lg:justify-start gap-4 sm:gap-8 text-slate-300">
+              <div className="flex items-center">
+                <CheckCircle className="w-5 h-5 text-green-400 mr-2 shrink-0" />
+                <span className="text-sm sm:text-base font-medium">{t('howItWorks.stats.setup')}</span>
+              </div>
+              <div className="hidden sm:block w-1.5 h-1.5 rounded-full bg-white/20"></div>
+              <div className="flex items-center">
+                <Shield className="w-5 h-5 text-blue-400 mr-2 shrink-0" />
+                <span className="text-sm sm:text-base font-medium">{t('howItWorks.stats.secure')}</span>
+              </div>
+            </div>
+          </motion.div>
+
+          <motion.div 
+            className="lg:col-span-5 relative"
+            initial="hidden"
+            animate={controls}
+            variants={{
+              hidden: { opacity: 0, x: 50, scale: 0.9 },
+              visible: { opacity: 1, x: 0, scale: 1, transition: { duration: 0.8, delay: 0.2 } }
+            }}
+          >
+            <div className="relative group">
+              <div className="absolute -inset-4 bg-gradient-to-tr from-blue-500/20 to-red-500/20 rounded-[2.5rem] blur-2xl opacity-50 group-hover:opacity-80 transition-opacity duration-500"></div>
+              <div className="relative rounded-[2.5rem] overflow-hidden shadow-2xl border-4 border-white/10 aspect-[4/5] sm:aspect-[3/2] lg:aspect-[4/5]">
+                <img 
+                  src="https://fitpynguasqqutuhzifx.supabase.co/storage/v1/object/public/images/aerial-view-university-campus-quad-stadium.webp" 
+                  alt="University Campus" 
+                  className="w-full h-full object-cover transform scale-105 group-hover:scale-110 transition-transform duration-1000"
+                />
+                <div className="absolute inset-0 bg-gradient-to-t from-[#05294E]/80 via-[#05294E]/20 to-transparent"></div>
+                <div className="absolute bottom-6 left-6 right-6">
+                  <div className="bg-white/10 backdrop-blur-lg rounded-2xl p-4 border border-white/20 text-center lg:text-left">
+                    <p className="text-xs font-bold text-blue-200 uppercase tracking-widest mb-1">Rede Global</p>
+                    <p className="text-sm font-medium">Conectando você às melhores universidades dos EUA</p>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </motion.div>
+        </div>
       </div>
     </section>
   );
@@ -334,148 +365,166 @@ const JourneySection: React.FC<{
   }, [controls, inView]);
 
   return (
-    <section ref={ref} className="py-24 max-w-5xl mx-auto px-4 sm:px-6 lg:px-8">
+    <section ref={ref} className="py-24 max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
       <div className="text-center mb-20">
-        <h2 className="text-4xl font-black text-[#05294E] mb-6">{t('howItWorks.journey')}</h2>
+        <h2 className="text-4xl md:text-5xl font-black text-[#05294E] mb-6">{t('howItWorks.journey')}</h2>
+        <div className="w-24 h-1.5 bg-[#D0151C] mx-auto rounded-full mb-4"></div>
       </div>
 
-      <div className="space-y-12 relative before:absolute before:inset-0 before:left-8 md:before:left-1/2 before:-translate-x-px before:w-0.5 before:bg-gradient-to-b before:from-blue-200 before:via-blue-200 before:to-transparent">
-        
-        {/* Step 1 */}
-        <motion.div 
-           initial={{ opacity: 0, y: 20 }}
-           animate={controls}
-           variants={{ visible: { opacity: 1, y: 0, transition: { duration: 0.5, delay: 0.1 } } }}
-           className="relative flex items-center justify-between md:justify-normal md:odd:flex-row-reverse group is-active"
-        >
-          <div className="flex items-center justify-center w-16 h-16 rounded-full border-4 border-white bg-blue-600 text-white shadow-xl md:absolute md:left-1/2 md:-translate-x-1/2 shrink-0 z-10 transition-transform duration-300 group-hover:scale-110">
-            <span className="font-bold text-xl">1</span>
-          </div>
-          <div className="w-[calc(100%-5rem)] md:w-[calc(50%-3rem)] bg-white p-6 sm:p-8 rounded-3xl shadow-lg border border-blue-100 hover:shadow-xl transition-all duration-300">
-            <h3 className="text-2xl font-bold mb-3 text-[#05294E]">{t('howItWorks.steps.profile.title')}</h3>
-            <p className="text-slate-600 mb-4">{t('howItWorks.steps.profile.description')}</p>
-            <ul className="space-y-2">
-              {(t('howItWorks.steps.profile.items', { returnObjects: true }) as string[]).map((item, index) => (
-                <li key={index} className="flex items-start gap-2 text-sm text-slate-500">
-                  <CheckCircle className="w-4 h-4 text-blue-500 mt-0.5 shrink-0" />
-                  {item}
-                </li>
-              ))}
-            </ul>
-          </div>
-        </motion.div>
+      <div className="grid grid-cols-1 lg:grid-cols-12 gap-12 items-start">
+        <div className="lg:col-span-8 space-y-12 relative before:absolute before:inset-0 before:left-8 md:before:left-1/2 before:-translate-x-px before:w-0.5 before:bg-gradient-to-b before:from-blue-200 before:via-blue-200 before:to-transparent">
+          
+          {/* Step 1 */}
+          <motion.div 
+             initial={{ opacity: 0, y: 20 }}
+             animate={controls}
+             variants={{ visible: { opacity: 1, y: 0, transition: { duration: 0.5, delay: 0.1 } } }}
+             className="relative flex items-center justify-between md:justify-normal md:odd:flex-row-reverse group is-active"
+          >
+            <div className="flex items-center justify-center w-16 h-16 rounded-full border-4 border-white bg-blue-600 text-white shadow-xl md:absolute md:left-1/2 md:-translate-x-1/2 shrink-0 z-10 transition-transform duration-300 group-hover:scale-110">
+              <span className="font-bold text-xl">1</span>
+            </div>
+            <div className="w-[calc(100%-5rem)] md:w-[calc(50%-3rem)] bg-white p-6 sm:p-8 rounded-3xl shadow-lg border border-blue-100 hover:shadow-xl transition-all duration-300">
+              <h3 className="text-2xl font-bold mb-3 text-[#05294E]">{t('howItWorks.steps.profile.title')}</h3>
+              <p className="text-slate-600 mb-4">{t('howItWorks.steps.profile.description')}</p>
+              <ul className="space-y-2">
+                {(t('howItWorks.steps.profile.items', { returnObjects: true }) as string[]).map((item, index) => (
+                  <li key={index} className="flex items-start gap-2 text-sm text-slate-500">
+                    <CheckCircle className="w-4 h-4 text-blue-500 mt-0.5 shrink-0" />
+                    {item}
+                  </li>
+                ))}
+              </ul>
+            </div>
+          </motion.div>
 
-        {/* Step 2 (Fee) */}
-        <motion.div 
-           initial={{ opacity: 0, y: 20 }}
-           animate={controls}
-           variants={{ visible: { opacity: 1, y: 0, transition: { duration: 0.5, delay: 0.2 } } }}
-           className="relative flex items-center justify-between md:justify-normal md:odd:flex-row-reverse group is-active"
-        >
-          <div className="flex items-center justify-center w-16 h-16 rounded-full border-4 border-white bg-[#05294E] text-white shadow-xl md:absolute md:left-1/2 md:-translate-x-1/2 shrink-0 z-10 transition-transform duration-300 group-hover:scale-110">
-            <span className="font-bold text-xl">2</span>
-          </div>
-          <div className="w-[calc(100%-5rem)] md:w-[calc(50%-3rem)] bg-gradient-to-br from-[#05294E]/5 to-transparent p-6 sm:p-8 rounded-3xl shadow-lg border border-blue-100 hover:shadow-xl transition-all duration-300">
-            <h3 className="text-2xl font-bold mb-3 text-[#05294E] flex flex-wrap items-center gap-2">
-              {isLoadingFee ? (
-                <span className="inline-block h-6 w-32 bg-slate-200 rounded animate-pulse"></span>
-              ) : (
-                <>
-                  {t('howItWorks.steps.selectionFee.title', { selectionProcessFee: baseSelectionFee || selectionProcessFee }).replace(/\(\$[\d.]+\)/g, '').replace(/\$[\d.]+/g, '').trim()}
-                </>
-              )}
-              {hasSellerPackage && (
-                <span className="text-xs bg-blue-100 text-blue-800 px-2 py-1 rounded-full uppercase tracking-widest font-bold">
-                  {packageName}
-                </span>
-              )}
-            </h3>
-            <p className="text-slate-600 mb-4">
-              {t('howItWorks.steps.selectionFee.description')}
-            </p>
-            <ul className="space-y-2">
-              {(t('howItWorks.steps.selectionFee.items', { returnObjects: true }) as string[]).map((item, index) => (
-                <li key={index} className="flex items-start gap-2 text-sm text-slate-500">
-                  <CheckCircle className="w-4 h-4 text-blue-500 mt-0.5 shrink-0" />
-                  {item}
-                </li>
-              ))}
-            </ul>
-          </div>
-        </motion.div>
+          {/* Step 2 (Fee) */}
+          <motion.div 
+             initial={{ opacity: 0, y: 20 }}
+             animate={controls}
+             variants={{ visible: { opacity: 1, y: 0, transition: { duration: 0.5, delay: 0.2 } } }}
+             className="relative flex items-center justify-between md:justify-normal md:odd:flex-row-reverse group is-active"
+          >
+            <div className="flex items-center justify-center w-16 h-16 rounded-full border-4 border-white bg-[#05294E] text-white shadow-xl md:absolute md:left-1/2 md:-translate-x-1/2 shrink-0 z-10 transition-transform duration-300 group-hover:scale-110">
+              <span className="font-bold text-xl">2</span>
+            </div>
+            <div className="w-[calc(100%-5rem)] md:w-[calc(50%-3rem)] bg-gradient-to-br from-[#05294E]/5 to-transparent p-6 sm:p-8 rounded-3xl shadow-lg border border-blue-100 hover:shadow-xl transition-all duration-300">
+              <h3 className="text-2xl font-bold mb-3 text-[#05294E] flex flex-wrap items-center gap-2">
+                {isLoadingFee ? (
+                  <span className="inline-block h-6 w-32 bg-slate-200 rounded animate-pulse"></span>
+                ) : (
+                  <>
+                    {t('howItWorks.steps.selectionFee.title', { selectionProcessFee: baseSelectionFee || selectionProcessFee }).replace(/\(\$[\d.]+\)/g, '').replace(/\$[\d.]+/g, '').trim()}
+                  </>
+                )}
+                {hasSellerPackage && (
+                  <span className="text-xs bg-blue-100 text-blue-800 px-2 py-1 rounded-full uppercase tracking-widest font-bold">
+                    {packageName}
+                  </span>
+                )}
+              </h3>
+              <p className="text-slate-600 mb-4">
+                {t('howItWorks.steps.selectionFee.description')}
+              </p>
+              <ul className="space-y-2">
+                {(t('howItWorks.steps.selectionFee.items', { returnObjects: true }) as string[]).map((item, index) => (
+                  <li key={index} className="flex items-start gap-2 text-sm text-slate-500">
+                    <CheckCircle className="w-4 h-4 text-blue-500 mt-0.5 shrink-0" />
+                    {item}
+                  </li>
+                ))}
+              </ul>
+            </div>
+          </motion.div>
 
-        {/* Step 3 */}
-        <motion.div 
-           initial={{ opacity: 0, y: 20 }}
-           animate={controls}
-           variants={{ visible: { opacity: 1, y: 0, transition: { duration: 0.5, delay: 0.3 } } }}
-           className="relative flex items-center justify-between md:justify-normal md:odd:flex-row-reverse group is-active"
-        >
-          <div className="flex items-center justify-center w-16 h-16 rounded-full border-4 border-white bg-blue-600 text-white shadow-xl md:absolute md:left-1/2 md:-translate-x-1/2 shrink-0 z-10 transition-transform duration-300 group-hover:scale-110">
-            <span className="font-bold text-xl">3</span>
-          </div>
-          <div className="w-[calc(100%-5rem)] md:w-[calc(50%-3rem)] bg-white p-6 sm:p-8 rounded-3xl shadow-lg border border-blue-100 hover:shadow-xl transition-all duration-300">
-            <h3 className="text-2xl font-bold mb-3 text-[#05294E]">{t('howItWorks.steps.documents.title')}</h3>
-            <p className="text-slate-600 mb-4">{t('howItWorks.steps.documents.description')}</p>
-            <ul className="space-y-2">
-              {(t('howItWorks.steps.documents.items', { returnObjects: true }) as string[]).map((item, index) => (
-                <li key={index} className="flex items-start gap-2 text-sm text-slate-500">
-                  <CheckCircle className="w-4 h-4 text-blue-500 mt-0.5 shrink-0" />
-                  {item}
-                </li>
-              ))}
-            </ul>
-          </div>
-        </motion.div>
+          {/* Step 3 */}
+          <motion.div 
+             initial={{ opacity: 0, y: 20 }}
+             animate={controls}
+             variants={{ visible: { opacity: 1, y: 0, transition: { duration: 0.5, delay: 0.3 } } }}
+             className="relative flex items-center justify-between md:justify-normal md:odd:flex-row-reverse group is-active"
+          >
+            <div className="flex items-center justify-center w-16 h-16 rounded-full border-4 border-white bg-blue-600 text-white shadow-xl md:absolute md:left-1/2 md:-translate-x-1/2 shrink-0 z-10 transition-transform duration-300 group-hover:scale-110">
+              <span className="font-bold text-xl">3</span>
+            </div>
+            <div className="w-[calc(100%-5rem)] md:w-[calc(50%-3rem)] bg-white p-6 sm:p-8 rounded-3xl shadow-lg border border-blue-100 hover:shadow-xl transition-all duration-300">
+              <h3 className="text-2xl font-bold mb-3 text-[#05294E]">{t('howItWorks.steps.documents.title')}</h3>
+              <p className="text-slate-600 mb-4">{t('howItWorks.steps.documents.description')}</p>
+              <ul className="space-y-2">
+                {(t('howItWorks.steps.documents.items', { returnObjects: true }) as string[]).map((item, index) => (
+                  <li key={index} className="flex items-start gap-2 text-sm text-slate-500">
+                    <CheckCircle className="w-4 h-4 text-blue-500 mt-0.5 shrink-0" />
+                    {item}
+                  </li>
+                ))}
+              </ul>
+            </div>
+          </motion.div>
 
-        {/* Step 4 */}
-        <motion.div 
-           initial={{ opacity: 0, y: 20 }}
-           animate={controls}
-           variants={{ visible: { opacity: 1, y: 0, transition: { duration: 0.5, delay: 0.4 } } }}
-           className="relative flex items-center justify-between md:justify-normal md:odd:flex-row-reverse group is-active"
-        >
-          <div className="flex items-center justify-center w-16 h-16 rounded-full border-4 border-white bg-blue-600 text-white shadow-xl md:absolute md:left-1/2 md:-translate-x-1/2 shrink-0 z-10 transition-transform duration-300 group-hover:scale-110">
-            <span className="font-bold text-xl">4</span>
-          </div>
-          <div className="w-[calc(100%-5rem)] md:w-[calc(50%-3rem)] bg-white p-6 sm:p-8 rounded-3xl shadow-lg border border-blue-100 hover:shadow-xl transition-all duration-300">
-            <h3 className="text-2xl font-bold mb-3 text-[#05294E]">{t('howItWorks.steps.applicationFee.title')}</h3>
-            <p className="text-slate-600 mb-4">{t('howItWorks.steps.applicationFee.description')}</p>
-            <ul className="space-y-2">
-              {(t('howItWorks.steps.applicationFee.items', { returnObjects: true }) as string[]).map((item, index) => (
-                <li key={index} className="flex items-start gap-2 text-sm text-slate-500">
-                  <CheckCircle className="w-4 h-4 text-blue-500 mt-0.5 shrink-0" />
-                  {item}
-                </li>
-              ))}
-            </ul>
-          </div>
-        </motion.div>
+          {/* Step 4 */}
+          <motion.div 
+             initial={{ opacity: 0, y: 20 }}
+             animate={controls}
+             variants={{ visible: { opacity: 1, y: 0, transition: { duration: 0.5, delay: 0.4 } } }}
+             className="relative flex items-center justify-between md:justify-normal md:odd:flex-row-reverse group is-active"
+          >
+            <div className="flex items-center justify-center w-16 h-16 rounded-full border-4 border-white bg-blue-600 text-white shadow-xl md:absolute md:left-1/2 md:-translate-x-1/2 shrink-0 z-10 transition-transform duration-300 group-hover:scale-110">
+              <span className="font-bold text-xl">4</span>
+            </div>
+            <div className="w-[calc(100%-5rem)] md:w-[calc(50%-3rem)] bg-white p-6 sm:p-8 rounded-3xl shadow-lg border border-blue-100 hover:shadow-xl transition-all duration-300">
+              <h3 className="text-2xl font-bold mb-3 text-[#05294E]">{t('howItWorks.steps.applicationFee.title')}</h3>
+              <p className="text-slate-600 mb-4">{t('howItWorks.steps.applicationFee.description')}</p>
+              <ul className="space-y-2">
+                {(t('howItWorks.steps.applicationFee.items', { returnObjects: true }) as string[]).map((item, index) => (
+                  <li key={index} className="flex items-start gap-2 text-sm text-slate-500">
+                    <CheckCircle className="w-4 h-4 text-blue-500 mt-0.5 shrink-0" />
+                    {item}
+                  </li>
+                ))}
+              </ul>
+            </div>
+          </motion.div>
 
-        {/* Step 5 */}
-        <motion.div 
-           initial={{ opacity: 0, y: 20 }}
-           animate={controls}
-           variants={{ visible: { opacity: 1, y: 0, transition: { duration: 0.5, delay: 0.5 } } }}
-           className="relative flex items-center justify-between md:justify-normal md:odd:flex-row-reverse group is-active"
-        >
-          <div className="flex items-center justify-center w-16 h-16 rounded-full border-4 border-white bg-blue-600 text-white shadow-xl md:absolute md:left-1/2 md:-translate-x-1/2 shrink-0 z-10 transition-transform duration-300 group-hover:scale-110">
-            <span className="font-bold text-xl">5</span>
-          </div>
-          <div className="w-[calc(100%-5rem)] md:w-[calc(50%-3rem)] bg-white p-6 sm:p-8 rounded-3xl shadow-lg border border-blue-100 hover:shadow-xl transition-all duration-300">
-            <h3 className="text-2xl font-bold mb-3 text-[#05294E]">{t('howItWorks.steps.placementFee.title')}</h3>
-            <p className="text-slate-600 mb-4">{t('howItWorks.steps.placementFee.description')}</p>
-            <ul className="space-y-2">
-              {(t('howItWorks.steps.placementFee.items', { returnObjects: true }) as string[]).map((item, index) => (
-                <li key={index} className="flex items-start gap-2 text-sm text-slate-500">
-                  <CheckCircle className="w-4 h-4 text-blue-500 mt-0.5 shrink-0" />
-                  {item}
-                </li>
-              ))}
-            </ul>
-          </div>
-        </motion.div>
+          {/* Step 5 */}
+          <motion.div 
+             initial={{ opacity: 0, y: 20 }}
+             animate={controls}
+             variants={{ visible: { opacity: 1, y: 0, transition: { duration: 0.5, delay: 0.5 } } }}
+             className="relative flex items-center justify-between md:justify-normal md:odd:flex-row-reverse group is-active"
+          >
+            <div className="flex items-center justify-center w-16 h-16 rounded-full border-4 border-white bg-blue-600 text-white shadow-xl md:absolute md:left-1/2 md:-translate-x-1/2 shrink-0 z-10 transition-transform duration-300 group-hover:scale-110">
+              <span className="font-bold text-xl">5</span>
+            </div>
+            <div className="w-[calc(100%-5rem)] md:w-[calc(50%-3rem)] bg-white p-6 sm:p-8 rounded-3xl shadow-lg border border-blue-100 hover:shadow-xl transition-all duration-300">
+              <h3 className="text-2xl font-bold mb-3 text-[#05294E]">{t('howItWorks.steps.placementFee.title')}</h3>
+              <p className="text-slate-600 mb-4">{t('howItWorks.steps.placementFee.description')}</p>
+              <ul className="space-y-2">
+                {(t('howItWorks.steps.placementFee.items', { returnObjects: true }) as string[]).map((item, index) => (
+                  <li key={index} className="flex items-start gap-2 text-sm text-slate-500">
+                    <CheckCircle className="w-4 h-4 text-blue-500 mt-0.5 shrink-0" />
+                    {item}
+                  </li>
+                ))}
+              </ul>
+            </div>
+          </motion.div>
 
+        </div>
+
+        <div className="lg:col-span-4 hidden lg:block sticky top-24">
+          <div className="relative rounded-[2.5rem] overflow-hidden shadow-2xl border border-slate-200 aspect-[3/4]">
+             <img 
+               src="https://fitpynguasqqutuhzifx.supabase.co/storage/v1/object/public/images/group-students-talking-campus-stairs.webp" 
+               alt="Students journey" 
+               className="w-full h-full object-cover transform hover:scale-110 transition-transform duration-1000"
+             />
+             <div className="absolute inset-0 bg-gradient-to-t from-[#05294E]/80 via-transparent to-transparent"></div>
+             <div className="absolute bottom-8 left-8 right-8 text-white">
+                <p className="text-2xl font-bold mb-2">Sua Jornada</p>
+                <p className="text-blue-100 italic">Cada passo planejado para o seu sucesso acadêmico nos Estados Unidos.</p>
+             </div>
+          </div>
+        </div>
       </div>
     </section>
   );
@@ -633,12 +682,12 @@ const SuccessStoriesSection: React.FC<{ t: any }> = ({ t }) => {
               <div className="flex items-center mt-auto">
                 <img
                   src={[
-                    "https://images.pexels.com/photos/1239291/pexels-photo-1239291.jpeg?auto=compress&cs=tinysrgb&w=400&h=400&dpr=2&fit=crop",
-                    "https://images.pexels.com/photos/614810/pexels-photo-614810.jpeg?auto=compress&cs=tinysrgb&w=400&h=400&dpr=2&fit=crop",
-                    "https://images.pexels.com/photos/1130626/pexels-photo-1130626.jpeg?auto=compress&cs=tinysrgb&w=400&h=400&dpr=2&fit=crop",
+                    "https://fitpynguasqqutuhzifx.supabase.co/storage/v1/object/public/images/diverse-students-group-laptop-outdoors.webp",
+                    "https://fitpynguasqqutuhzifx.supabase.co/storage/v1/object/public/images/group-students-studying-campus-lawn.webp",
+                    "https://fitpynguasqqutuhzifx.supabase.co/storage/v1/object/public/images/group-four-students-graduation-blue-gown.webp",
                     "https://images.pexels.com/photos/733872/pexels-photo-733872.jpeg?auto=compress&cs=tinysrgb&w=400&h=400&dpr=2&fit=crop",
                     "https://images.pexels.com/photos/1181696/pexels-photo-1181696.jpeg?auto=compress&cs=tinysrgb&w=400&h=400&dpr=2&fit=crop"
-                  ][index] || "https://images.pexels.com/photos/1239291/pexels-photo-1239291.jpeg?auto=compress&cs=tinysrgb&w=400&h=400&dpr=2&fit=crop"}
+                  ][index] || "https://fitpynguasqqutuhzifx.supabase.co/storage/v1/object/public/images/diverse-students-group-laptop-outdoors.webp"}
                   alt={story.name}
                   className="w-14 h-14 rounded-full mr-4 shadow-md object-cover"
                 />
@@ -663,30 +712,41 @@ const BottomCTASection: React.FC<{ onCTAClick: () => void, i18n: any }> = ({ onC
   
   return (
     <section className="py-24 bg-white relative overflow-hidden">
-      <div className="max-w-5xl mx-auto px-4 sm:px-6 lg:px-8 relative z-10">
-        <div className="bg-gradient-to-br from-[#05294E] to-[#0a3a62] rounded-[3rem] p-10 md:p-16 text-center shadow-2xl relative overflow-hidden">
-          {/* Decorative backgrounds */}
-          <div className="absolute top-0 right-0 w-64 h-64 bg-blue-500/20 rounded-full blur-[60px] animate-pulse"></div>
-          <div className="absolute bottom-0 left-0 w-64 h-64 bg-[#D0151C]/20 rounded-full blur-[60px]"></div>
-
-          <GraduationCap className="w-16 h-16 text-white/90 mx-auto mb-6" />
+      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 relative z-10">
+        <div className="bg-gradient-to-br from-[#05294E] to-[#0a3a62] rounded-[3rem] text-center shadow-2xl relative overflow-hidden flex flex-col lg:flex-row items-center">
           
-          <h2 className="text-3xl md:text-5xl font-black text-white mb-6 leading-tight">
-            {isPortuguese ? "Pronto para estudar nos EUA?" : "Ready to study in the US?"}
-          </h2>
-          <p className="text-lg md:text-xl text-blue-100 max-w-2xl mx-auto mb-10 leading-relaxed">
-            {isPortuguese 
-              ? "Junte-se a centenas de estudantes e inicie seu processo agora mesmo. A sua aprovação está mais próxima do que nunca." 
-              : "Join hundreds of students and start your process right now. Your approval is closer than ever."}
-          </p>
+          <div className="flex-1 p-10 md:p-16 text-center lg:text-left relative z-10">
+            {/* Decorative backgrounds */}
+            <div className="absolute top-0 left-0 w-64 h-64 bg-blue-500/10 rounded-full blur-[60px]"></div>
+            
+            <GraduationCap className="w-16 h-16 text-white/90 mb-8 mx-auto lg:mx-0" />
+            
+            <h2 className="text-3xl md:text-5xl font-black text-white mb-6 leading-tight">
+              {isPortuguese ? "Pronto para estudar nos EUA?" : "Ready to study in the US?"}
+            </h2>
+            <p className="text-lg md:text-xl text-blue-100 max-w-2xl mb-10 leading-relaxed mx-auto lg:mx-0">
+              {isPortuguese 
+                ? "Junte-se a centenas de estudantes e inicie seu processo agora mesmo. A sua aprovação está mais próxima do que nunca." 
+                : "Join hundreds of students and start your process right now. Your approval is closer than ever."}
+            </p>
 
-          <button
-            onClick={onCTAClick}
-            className="inline-flex items-center px-10 py-5 bg-[#D0151C] hover:bg-red-600 text-white font-bold text-xl rounded-2xl shadow-xl hover:shadow-2xl transition-all duration-300 hover:-translate-y-1 group"
-          >
-            {isPortuguese ? "Iniciar Minha Jornada" : "Start My Journey"}
-            <ArrowRight className="w-6 h-6 ml-3 group-hover:translate-x-1 transition-transform" />
-          </button>
+            <button
+              onClick={onCTAClick}
+              className="inline-flex items-center px-10 py-5 bg-[#D0151C] hover:bg-red-600 text-white font-bold text-xl rounded-2xl shadow-xl hover:shadow-2xl transition-all duration-300 hover:-translate-y-1 group"
+            >
+              {isPortuguese ? "Iniciar Minha Jornada" : "Start My Journey"}
+              <ArrowRight className="w-6 h-6 ml-3 group-hover:translate-x-1 transition-transform" />
+            </button>
+          </div>
+
+          <div className="w-full lg:w-[40%] h-64 lg:h-[600px] relative">
+            <img 
+              src="https://fitpynguasqqutuhzifx.supabase.co/storage/v1/object/public/images/graduates-throwing-caps-blue-sky-graduation.webp" 
+              alt="Graduation success" 
+              className="w-full h-full object-cover opacity-80"
+            />
+            <div className="absolute inset-0 bg-gradient-to-t lg:bg-gradient-to-r from-[#05294E] via-[#05294E]/20 to-transparent"></div>
+          </div>
         </div>
       </div>
     </section>

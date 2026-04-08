@@ -3,8 +3,8 @@
     "hero": {
       "title": "Your Gateway to American Universities",
       "subtitle": "Discover exclusive scholarships and unlock your potential in the United States",
-      "description": "Connect with top universities, access exclusive scholarships, and get personalized support throughout your journey to studying in the USA.",
-      "cta": "Start Your Journey",
+      "description": "Every year, students discover life-changing scholarships — and it always starts in the same place. Take the first step with your Selection Process and see what is waiting for you.",
+      "cta": "Start Now",
       "watchVideo": "Watch Video",
       "stats": {
         "successRate": {
@@ -24,25 +24,37 @@
       "loginToView": "Login to View",
       "featured": "Featured"
     },
+    "featuredScholarships": {
+      "title": "Available Scholarships",
+      "subtitle": "These are just some of the scholarships that could be yours. Want to see which ones match you? Complete your selection process and discover our full catalog waiting for you."
+    },
+    "trustedUniversities": {
+      "badge": "Partner Institution Network",
+      "titleMain": "Top",
+      "titleHighlight": "American Universities",
+      "description": "Our students are accepted into some of the most prestigious and recognized universities in the United States. Start your Selection Process and secure your spot."
+    },
     "features": {
       "whyChoose": "Why Choose MatriculaUSA?",
-      "title": "Why Choose MatriculaUSA?",
+      "title": "We are the complete platform for your American journey",
+      "titleMain": "We are the complete platform for your",
+      "titleHighlight": "American journey",
       "subtitle": "Everything you need to succeed in your American education journey",
-      "smartMatching": {
-        "title": "Smart Matching",
-        "description": "AI-powered system finds the best universities and scholarships for your profile"
+      "successRate": {
+        "title": "95% Success Rate",
+        "description": "Our methodology and specialized support ensure one of the highest approval rates in the market for international students."
       },
       "exclusiveScholarships": {
         "title": "Exclusive Scholarships",
-        "description": "Access scholarships not available anywhere else, specifically for international students"
+        "description": "Access scholarships not available anywhere else, with exclusive values for international students."
       },
       "personalSupport": {
         "title": "Personal Support",
-        "description": "Dedicated team to guide you through every step of the application process"
+        "description": "Every question, every step, every decision — our team is available to support you in everything you need throughout the process."
       },
       "fastProcess": {
-        "title": "Fast Process",
-        "description": "Streamlined application process with quick responses and efficient document handling"
+        "title": "Simple Process",
+        "description": "Simple application process, designed for you to handle everything with transparency and peace of mind — from start to finish, without complications."
       }
     },
     "stats": {
@@ -117,7 +129,7 @@
       }
     },
     "threeSteps": {
-      "title": "Three Steps to Your American Education",
+      "title": "How Your Journey to the USA Works",
       "subtitle": "Simple Process",
       "step1": {
         "title": "Create Your Profile",
