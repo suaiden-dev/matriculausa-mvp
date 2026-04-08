@@ -118,6 +118,7 @@ Deno.serve(async (req: Request) => {
         migma_agent_id: body.migma_agent_id || null,
         role: 'student',
         status: 'active',
+        placement_fee_flow: true,
       })
       .select('id, user_id, email, full_name, source, migma_seller_id')
       .single();

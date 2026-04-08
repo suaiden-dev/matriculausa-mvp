@@ -235,6 +235,10 @@ const QuickRegistration: React.FC = () => {
   } | null>(null);
   const [codeApplied, setCodeApplied] = useState(false);
 
+  // Detectar se o aluno chegou via link de rastreamento sem desconto (?sref=)
+  // Nesse caso, ocultamos toda a seção de cupons — ele já está vinculado ao vendedor
+  const isNoDiscountLink = new URLSearchParams(location.search).get('sref') !== null;
+
   // Promotional coupon states (admin coupons)
   const [isValidatingPromotionalCoupon, setIsValidatingPromotionalCoupon] = useState(false);
   const [promotionalCouponValidation, setPromotionalCouponValidation] = useState<{
@@ -298,8 +302,8 @@ const QuickRegistration: React.FC = () => {
       return promotionalCouponValidation.finalAmount;
     }
 
-    // 2. Código validado e aplicado
-    if ((isCouponValid || codeApplied) && validationResult?.isValid) {
+    // 2. Código validado e aplicado — só aplica desconto se discount > 0 (exclui links sref)
+    if ((isCouponValid || codeApplied) && validationResult?.isValid && (validationResult.discountAmount ?? 50) > 0) {
       const discount = validationResult.discountAmount || 50;
       return Math.max(baseFee - discount, 0);
     }
@@ -311,10 +315,24 @@ const QuickRegistration: React.FC = () => {
 
 
   // URL Parameter for Coupon
+  // ?ref= e ?coupon= → aplicam desconto | ?sref= → apenas rastreamento sem desconto
   useEffect(() => {
     const params = new URLSearchParams(location.search);
+    const srefCode = params.get('sref');
     const code = params.get('coupon') || params.get('ref');
-    if (code) {
+
+    if (srefCode) {
+      // Link de vendedor sem desconto: salvar apenas para rastreamento via userData
+      // Não chamamos handleValidateCoupon para não aplicar $50 de desconto
+      setCouponCode(srefCode.toUpperCase());
+      setCodeApplied(true);
+      setValidationResult({
+        isValid: true,
+        message: '',
+        discountAmount: 0,
+        codeType: 'seller',
+      });
+    } else if (code) {
       setCouponCode(code);
       handleValidateCoupon(code);
     }
@@ -669,6 +687,10 @@ const QuickRegistration: React.FC = () => {
       if (codeApplied && couponCode && validationResult?.codeType) {
         if (validationResult.codeType === 'seller') {
           userData.seller_referral_code = couponCode;
+          // Link ?sref= = rastreamento sem desconto → marcar no perfil para o dashboard mostrar $400
+          if (isNoDiscountLink) {
+            userData.no_referral_discount = true;
+          }
         } else {
           userData.affiliate_code = couponCode;
         }
@@ -1142,7 +1164,7 @@ const QuickRegistration: React.FC = () => {
 
                   {/* Seção Agrupada: Cupons e Termos (Coladinhos) */}
                   <div className="mt-6 pt-6 border-t border-slate-100 space-y-2">
-                    {!userProfile?.seller_referral_code && !codeApplied && !hasPaid && (
+                    {!isNoDiscountLink && !userProfile?.seller_referral_code && !codeApplied && !hasPaid && (
                       <div className="relative z-10">
                         {/* Checkbox para Referral Code */}
                         <div className="flex items-center space-x-3 p-4 bg-slate-50/50 border border-slate-100 rounded-2xl group transition-all duration-300 hover:bg-white shadow-sm cursor-pointer" onClick={() => {
@@ -1184,7 +1206,7 @@ const QuickRegistration: React.FC = () => {
                         </div>
 
                         {/* Área de Input de Cupons */}
-                        {(hasReferralCode || promotionalCouponValidation?.isValid || codeApplied) && (
+                        {!isNoDiscountLink && (hasReferralCode || promotionalCouponValidation?.isValid || codeApplied) && (
                           <div className="grid grid-cols-1 md:grid-cols-2 gap-8 pt-4 pb-2">
                             {/* ... (Referral e Promo Columns mantidos) */}
                             {/* Referral Code Column */}

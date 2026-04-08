@@ -299,9 +299,15 @@ const PaymentStatusCard: React.FC<PaymentStatusCardProps> = React.memo((props) =
 
                     let base: number;
                     const systemType = userSystemType || 'legacy';
+                    const isNewProcess = student?.student_process_type === 'initial' || 
+                                        student?.student_process_type === 'change_of_status' || 
+                                        student?.student_process_type === 'transfer' || 
+                                        student?.student_process_type === 'resident';
 
                     if (hasMatrDiscount) {
                       base = 350; // $400 - $50 desconto
+                    } else if (isNewProcess) {
+                      base = 400; // Novos processos sempre 400
                     } else {
                       base = systemType === 'simplified' ? 350 : 400;
                     }
@@ -554,72 +560,47 @@ const PaymentStatusCard: React.FC<PaymentStatusCardProps> = React.memo((props) =
                             );
                           }
  
-                          // 1. Mostrar sempre o valor customizado pago, mas sem deixar a conversão quebrar o valor
+                          // Helper: calculate the expected TOTAL placement fee from scholarship data
+                          const calcTotalFee = (): number | null => {
+                            if (currentOverrides?.placement_fee != null) {
+                              return Number(currentOverrides.placement_fee);
+                            }
+                            const apps = student.all_applications || [];
+                            const app = apps.find((a: any) => a.status === 'enrolled') ||
+                                        apps.find((a: any) => a.status === 'approved') ||
+                                        apps[0];
+                            const sch = app?.scholarships
+                              ? (Array.isArray(app.scholarships) ? app.scholarships[0] : app.scholarships)
+                              : null;
+                            if (sch?.annual_value_with_scholarship) {
+                              const customAmt = sch.placement_fee_amount ? Number(sch.placement_fee_amount) : null;
+                              return getPlacementFee(Number(sch.annual_value_with_scholarship), customAmt);
+                            }
+                            return null;
+                          };
+
                           if (student?.is_placement_fee_paid) {
-                            if (realPaidAmounts?.placement !== undefined && realPaidAmounts?.placement !== null && realPaidAmounts.placement > 0) {
+                            // When installment partial: show total = paid so far + pending balance
+                            if (isInstallmentPartial) {
+                              const paid = (realPaidAmounts?.placement && realPaidAmounts.placement > 0)
+                                ? realPaidAmounts.placement
+                                : (calcTotalFee() ?? 0) / 2;
+                              const total = paid + pendingBalance;
+                              return formatFeeAmount(total, true);
+                            }
+                            // Fully paid: show what was paid
+                            if (realPaidAmounts?.placement != null && realPaidAmounts.placement > 0) {
                               return formatFeeAmount(realPaidAmounts.placement, true);
                             }
-                            
-                            // ✅ FALLBACK: Se está pago mas não temos o registro realPaidAmounts (pagamento manual antigo)
-                            // Tenta buscar de outras fontes em vez de mostrar skeleton infinito
-                            if (currentOverrides?.placement_fee !== undefined && currentOverrides?.placement_fee !== null) {
-                              return formatFeeAmount(currentOverrides.placement_fee, true);
-                            }
-                            if (student?.placement_fee_amount) {
-                              return formatFeeAmount(Number(student.placement_fee_amount), true);
-                            }
-                            
-                            // Buscar da aplicação
-                            const applications = student.all_applications || [];
-                            const paidApp = applications.find((app: any) => app.is_placement_fee_paid);
-                            if (paidApp?.placement_fee_amount) {
-                              return formatFeeAmount(Number(paidApp.placement_fee_amount), true);
-                            }
+                            // Fallback for old manual payments with no individual_fee_payments record
+                            const total = calcTotalFee();
+                            if (total != null) return formatFeeAmount(total, true);
+                            return formatFeeAmount(0, true);
+                          }
 
-                            // Buscar valor esperado como fallback final se estiver pago mas não achamos o registro
-                            const fallbackApp = applications.find((app: any) => app.status === 'enrolled') || 
-                                               applications.find((app: any) => app.status === 'approved') || 
-                                               applications[0];
-                            
-                            const fallbackScholarship = fallbackApp?.scholarships ? (Array.isArray(fallbackApp.scholarships) ? fallbackApp.scholarships[0] : fallbackApp.scholarships) : null;
-                            
-                            if (fallbackScholarship?.placement_fee_amount) {
-                              return formatFeeAmount(Number(fallbackScholarship.placement_fee_amount), true);
-                            }
-
-                            if (fallbackScholarship?.annual_value_with_scholarship) {
-                              const expectedFallback = getPlacementFee(Number(fallbackScholarship.annual_value_with_scholarship), null);
-                              return formatFeeAmount(expectedFallback, true);
-                            }
-
-                            // Se nada funcionar mas estiver pago, não mostrar skeleton
-                            return formatFeeAmount(1000, true); // Fallback final $1000 (último caso)
-                          }
- 
-                          // 2. Verificar override primeiro
-                          if (currentOverrides?.placement_fee !== undefined && currentOverrides?.placement_fee !== null) {
-                            return formatFeeAmount(currentOverrides.placement_fee, true);
-                          }
- 
-                          // 3. Tentar o valor configurado
-                          if (student?.placement_fee_amount) {
-                            return formatFeeAmount(Number(student.placement_fee_amount), true);
-                          }
- 
-                          // 4. Pegar da aplicação principal
-                          const applications = student.all_applications || [];
-                          const activeApp = applications.find((app: any) => app.status === 'enrolled') || 
-                                           applications.find((app: any) => app.status === 'approved') || 
-                                           applications[0];
-                                           
-                          const scholarship = activeApp?.scholarships ? (Array.isArray(activeApp.scholarships) ? activeApp.scholarships[0] : activeApp.scholarships) : null;
- 
-                          if (scholarship?.annual_value_with_scholarship) {
-                            const pAmount = scholarship.placement_fee_amount ? Number(scholarship.placement_fee_amount) : null;
-                            const expectedFee = getPlacementFee(Number(scholarship.annual_value_with_scholarship), pAmount);
-                            return formatFeeAmount(expectedFee, true);
-                          }
- 
+                          // Not paid: always show the expected total fee
+                          const total = calcTotalFee();
+                          if (total != null) return formatFeeAmount(total, true);
                           return 'N/A';
                         })()}
                         {currentOverrides?.placement_fee !== undefined && (
@@ -636,9 +617,9 @@ const PaymentStatusCard: React.FC<PaymentStatusCardProps> = React.memo((props) =
                           {isInstallmentPartial ? (
                             <>
                               <AlertCircle className="h-5 w-5 text-amber-500" />
-                              <span className="text-sm font-medium text-amber-600">1ª Parcela Paga</span>
+                              <span className="text-sm font-medium text-amber-600">1/2 Paid</span>
                               <span className="text-xs bg-amber-100 text-amber-700 px-2 py-0.5 rounded-full font-semibold">
-                                2ª parcela pendente: ${pendingBalance.toFixed(0)}
+                                2nd installment pending: ${pendingBalance.toFixed(0)}
                               </span>
                             </>
                           ) : (

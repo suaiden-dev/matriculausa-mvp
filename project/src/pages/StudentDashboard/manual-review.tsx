@@ -394,54 +394,51 @@ const ManualReview: React.FC = () => {
                 }
               }
             } else {
-              // Fallback: se não houver carrinho/seleção, usa a aplicação mais recente
-              console.log('🔍 [manual-review] Fallback: buscando aplicação mais recente para profile.id:', profile.id);
-              const { data: latestApp, error: latestAppError } = await supabase
+              // Fallback: se não houver carrinho/seleção, busca todas as aplicações ativas
+              console.log('🔍 [manual-review] Fallback: buscando aplicações ativas para profile.id:', profile.id);
+              const { data: existingApps, error: existingAppsError } = await supabase
                 .from('scholarship_applications')
                 .select('id, documents')
                 .eq('student_id', profile.id)
-                .order('created_at', { ascending: false })
-                .limit(1)
-                .maybeSingle();
+                .neq('status', 'rejected');
               
-              if (latestAppError) {
-                console.error('❌ [manual-review] Erro ao buscar aplicação mais recente:', latestAppError);
-              } else if (latestApp) {
-                console.log('✅ [manual-review] Aplicação mais recente encontrada:', latestApp);
-              } else {
-                console.log('⚠️ [manual-review] Nenhuma aplicação encontrada para o usuário');
-              }
-              
-              const applicationId = (latestApp as any)?.id || null;
-              const currentDocs: any[] = (latestApp as any)?.documents || [];
-              if (applicationId) {
-                console.log('🔍 [manual-review] Fallback: atualizando aplicação com documentos:', applicationId);
-                const finalDocs = ['passport','diploma','funds_proof']
-                  .map((k) => {
-                    const fromPrev = docByType(k)?.url || (appDocs.find((d:any)=>d.type===k)?.url);
-                    const fromNew = newFileUrls[k];
-                    const url = usePrev[k] ? fromPrev : (fromNew || fromPrev);
-                    if (!url) return null;
-                    const existing = currentDocs.find((d:any)=>d.type===k) || appDocs.find((d:any)=>d.type===k);
-                    const status = usePrev[k] ? (existing?.status || 'under_review') : 'under_review';
-                    return { type: k, url, uploaded_at: new Date().toISOString(), status };
-                  })
-                  .filter(Boolean);
+              if (existingAppsError) {
+                console.error('❌ [manual-review] Erro ao buscar aplicações:', existingAppsError);
+              } else if (existingApps && existingApps.length > 0) {
+                console.log('✅ [manual-review] Aplicações ativas encontradas:', existingApps.length);
                 
-                console.log('🔍 [manual-review] Fallback: documentos finais a serem salvos:', finalDocs);
-                
-                if (finalDocs.length > 0) {
-                  const { error: updateError } = await supabase
-                    .from('scholarship_applications')
-                    .update({ documents: finalDocs })
-                    .eq('id', applicationId);
+                for (const app of existingApps) {
+                  const applicationId = app.id;
+                  const currentDocs: any[] = app.documents || [];
                   
-                  if (updateError) {
-                    console.error('❌ [manual-review] Fallback: erro ao atualizar documentos da aplicação:', updateError);
-                  } else {
-                    console.log('✅ [manual-review] Fallback: documentos da aplicação atualizados com sucesso');
+                  console.log('🔍 [manual-review] Fallback: atualizando aplicação com documentos:', applicationId);
+                  const finalDocs = ['passport','diploma','funds_proof']
+                    .map((k) => {
+                      const fromPrev = docByType(k)?.url || (appDocs.find((d:any)=>d.type===k)?.url);
+                      const fromNew = newFileUrls[k];
+                      const url = usePrev[k] ? fromPrev : (fromNew || fromPrev);
+                      if (!url) return null;
+                      const existing = currentDocs.find((d:any)=>d.type===k) || appDocs.find((d:any)=>d.type===k);
+                      const status = usePrev[k] ? (existing?.status || 'under_review') : 'under_review';
+                      return { type: k, url, uploaded_at: new Date().toISOString(), status };
+                    })
+                    .filter(Boolean);
+                  
+                  if (finalDocs.length > 0) {
+                    const { error: updateError } = await supabase
+                      .from('scholarship_applications')
+                      .update({ documents: finalDocs })
+                      .eq('id', applicationId);
+                    
+                    if (updateError) {
+                      console.error(`❌ [manual-review] Fallback: erro ao atualizar documentos da aplicação ${applicationId}:`, updateError);
+                    } else {
+                      console.log(`✅ [manual-review] Fallback: documentos atualizados com sucesso (App: ${applicationId})`);
+                    }
                   }
                 }
+              } else {
+                console.log('⚠️ [manual-review] Nenhuma aplicação encontrada para o usuário');
               }
             }
           }

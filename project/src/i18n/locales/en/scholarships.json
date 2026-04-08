@@ -151,10 +151,13 @@
       "viewUniversityFeesPage": "View University Fees Page",
       "internalFeesConditionalNote": "The fee depends on the student's process or visa type and then corresponds with the fee",
       "i539COSPackage": "I-539 COS Package",
+      "i539Package": "I-539 Package",
       "ds160Package": "DS-160 Package",
       "reinstatementPackage": "Reinstatement",
-      "i539PackageDescription": "Fee required for students requesting Change of Status (COS)",
-      "ds160PackageDescription": "Fee required for students requesting Transfer",
+      "i539PackageDescription": "Fee required for students requesting {{reason}}",
+      "i539ReasonCOS": "Change of Status (COS)",
+      "i539ReasonTransfer": "transfer and have an inactive/terminated visa",
+      "ds160PackageDescription": "Fee required for students of type {{type}}",
       "reinstatementPackageDescription": "Fee required for transfer students who have an inactive/terminated visa status.",
       "days": "days"
     }

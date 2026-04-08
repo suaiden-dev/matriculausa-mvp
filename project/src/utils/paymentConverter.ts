@@ -185,10 +185,10 @@ export async function getDisplayAmounts(
     ("selection_process" | "scholarship" | "i20_control" | "application" | "placement" | "ds160_package" | "i539_cos_package" | "reinstatement_package")[],
 ): Promise<Record<string, number>> {
   try {
-    // 1. Buscar system_type, dependents e scholarship_package_id do usuário
+    // 1. Buscar system_type, dependents, no_referral_discount e student_process_type do usuário
     const { data: userProfile, error: profileError } = await supabase
       .from("user_profiles")
-      .select("system_type, dependents, scholarship_package_id")
+      .select("system_type, dependents, scholarship_package_id, no_referral_discount, student_process_type")
       .eq("user_id", userId)
       .single();
 
@@ -202,6 +202,15 @@ export async function getDisplayAmounts(
 
     const systemType = userProfile.system_type || "legacy";
     const dependents = Number(userProfile.dependents) || 0;
+    const processType = userProfile.student_process_type;
+    // Alunos via ?sref= pagam preço cheio ($400) mesmo em sistema simplified
+    const noReferralDiscount = userProfile.no_referral_discount === true;
+
+    // ✅ NOVO: Identificar se é um dos novos processos que SEMPRE custam $400
+    const isNewProcess = processType === 'initial' || 
+                        processType === 'change_of_status' || 
+                        processType === 'transfer' || 
+                        processType === 'resident';
 
     // 2. Buscar overrides do usuário
     // ⚠️ IMPORTANTE: Packages NÃO alteram os valores que o aluno vai pagar
@@ -265,7 +274,7 @@ export async function getDisplayAmounts(
     // Parcelow: só considerar parcelow_status = 'paid' (ignorar failed, processing, etc.)
     const { data: payments, error: paymentsError } = await supabase
       .from("individual_fee_payments")
-      .select("fee_type, amount, gross_amount_usd, payment_method, parcelow_status")
+      .select("fee_type, amount, gross_amount_usd, fee_amount_usd, payment_method, parcelow_status")
       .eq("user_id", userId)
       .in("fee_type", feeTypes)
       .order("payment_date", { ascending: false, nullsFirst: false })
@@ -288,6 +297,8 @@ export async function getDisplayAmounts(
           ? "i20_control"
           : payment.fee_type === "application"
           ? "application"
+          : payment.fee_type === "placement"
+          ? "placement"
           : payment.fee_type === "ds160_package"
           ? "ds160_package"
           : payment.fee_type === "i539_cos_package"
@@ -297,25 +308,31 @@ export async function getDisplayAmounts(
         if (feeTypeKey && !realPaidMap[feeTypeKey]) {
           const amountLiquid = Number(payment.amount);
 
-          // Para Zelle: usar o amount diretamente (sem taxas)
-          if (payment.payment_method === "zelle" && payment.gross_amount_usd) {
-            realPaidMap[feeTypeKey] = Number(payment.gross_amount_usd);
+          // Para Zelle: usar o amount diretamente (já é o valor líquido, sem taxas)
+          if (payment.payment_method === "zelle") {
+            realPaidMap[feeTypeKey] = amountLiquid;
           }
-          // Para Parcelow com status paid: usar gross_amount_usd para exibição
+          // Para Parcelow com status paid: usar amount diretamente
           else if (
             payment.payment_method === "parcelow" &&
-            payment.parcelow_status === "paid" && payment.gross_amount_usd
+            payment.parcelow_status === "paid"
           ) {
-            realPaidMap[feeTypeKey] = Number(payment.gross_amount_usd);
+            realPaidMap[feeTypeKey] = amountLiquid;
           }
-          // ✅ NOVO - Para Stripe/PIX: usar o campo `amount` (líquido, sem taxas Stripe)
-          // mas somente se o valor for razoável (entre $50 e $2000) para evitar dados legados BRL
-          else if (
-            payment.payment_method === "stripe" &&
-            amountLiquid > 50 && amountLiquid < 2000 &&
-            payment.gross_amount_usd
-          ) {
-            // Usar o amount líquido (que agora é corretamente salvo pela Edge Function)
+          // Para Stripe/PIX: net = gross_amount_usd - fee_amount_usd
+          // Isso mostra o valor que o aluno pagou sem a taxa do processador
+          else if (payment.payment_method === "stripe" || payment.payment_method === "pix") {
+            if (payment.gross_amount_usd && payment.fee_amount_usd) {
+              // Temos ambos: net = gross - fee (ex: $416.55 - $16.55 = $400)
+              realPaidMap[feeTypeKey] = Number(payment.gross_amount_usd) - Number(payment.fee_amount_usd);
+            } else {
+              // fee_amount_usd não disponível: usar amount diretamente
+              // O webhook do Stripe salva amount como o valor cobrado ao aluno (ex: $400)
+              realPaidMap[feeTypeKey] = amountLiquid;
+            }
+          }
+          // Pagamento manual ou outros métodos: usar amount diretamente
+          else {
             realPaidMap[feeTypeKey] = amountLiquid;
           }
         }
@@ -325,19 +342,25 @@ export async function getDisplayAmounts(
     // 4. Calcular valores esperados "Zelle" baseados no system_type
     const amounts: Record<string, number> = {};
 
-    // Valores base por system_type
-    const baseSelectionFee = systemType === "simplified" ? 350 : 400;
-    const baseScholarshipFee = systemType === "simplified" ? 900 : 900; // Agora ambos são 900
+    // Valores base por system_type e tipo de processo
+    // Se o aluno veio via ?sref= (no_referral_discount) OU é um dos novos processos (Initial, COS, Transfer, Resident), usa $400.
+    // Se student_process_type for null (não preenchido), usa $400 como padrão seguro.
+    // Apenas alunos com sistema simplified E process_type explicitamente não definido como novo processo pagam $350.
+    const hasExplicitSimplifiedDiscount = systemType === "simplified" && !isNewProcess && !noReferralDiscount && processType !== null;
+    const baseSelectionFee = (isNewProcess || noReferralDiscount || processType === null)
+                            ? 400
+                            : (hasExplicitSimplifiedDiscount ? 350 : 400);
+    const baseScholarshipFee = 900; // Sempre 900 para ambos os sistemas
     const baseI20Fee = 900; // Sempre 900 para ambos os sistemas
 
-    // Selection Process Fee - Prioridade: override > cupom promocional > valor real pago (Zelle) > cálculo fixo
+    // Selection Process Fee - Prioridade: override > cupom promocional > cálculo fixo
+    // Não usar realPaidMap aqui: o valor bruto Stripe (ex: $416.55) não deve sobrescrever
+    // o valor esperado ($400). Overrides e cupons já cobrem casos especiais.
     if (feeTypes.includes("selection_process")) {
       if (overrides.selection_process_fee != null) {
         amounts.selection_process = Number(overrides.selection_process_fee);
       } else if (couponAmounts.selection_process) {
         amounts.selection_process = couponAmounts.selection_process;
-      } else if (realPaidMap.selection_process) {
-        amounts.selection_process = realPaidMap.selection_process;
       } else {
         // Para simplified, Selection Process Fee é fixo ($350), sem dependentes
         // Dependentes só afetam Application Fee ($100 por dependente)
@@ -398,23 +421,30 @@ export async function getDisplayAmounts(
       }
     }
     
-    // Placement Fee
+    // Placement Fee - Prioridade: override > valor real pago
+    // O valor esperado (não pago) é calculado diretamente no PaymentStatusCard
+    // a partir do annual_value_with_scholarship da bolsa via getPlacementFee()
     if (feeTypes.includes("placement")) {
       if (overrides.placement_fee != null) {
         amounts.placement = Number(overrides.placement_fee);
       } else if (realPaidMap.placement) {
         amounts.placement = realPaidMap.placement;
       }
+      // Sem fallback hardcoded: quando não pago, PaymentStatusCard calcula via getPlacementFee()
     }
 
-    // Application Fee - Prioridade: override > cupom promocional > cálculo fixo
+    // Application Fee - Prioridade: override > cupom promocional > valor real pago > cálculo fixo
+    // O valor real pago (de individual_fee_payments) reflete o application_fee_amount da bolsa
     if (feeTypes.includes("application")) {
       if (overrides.application_fee != null) {
         amounts.application = Number(overrides.application_fee);
       } else if (couponAmounts.application) {
         amounts.application = couponAmounts.application;
+      } else if (realPaidMap.application) {
+        amounts.application = realPaidMap.application;
       } else {
-        // Application Fee padrão: $100 + ($100 por dependente)
+        // Fallback: padrão mínimo ($100). O valor correto vem do application_fee_amount da bolsa,
+        // que é exibido diretamente pelo PaymentStatusCard quando o fee não foi pago ainda.
         amounts.application = 100 + (dependents * 100);
       }
     }

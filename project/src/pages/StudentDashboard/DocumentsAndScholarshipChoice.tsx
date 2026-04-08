@@ -909,6 +909,32 @@ const DocumentsAndScholarshipChoice: React.FC = () => {
               .eq('id', applicationId);
           }
         }
+      } else if (profile?.id && scholarshipIds.length === 0) {
+        console.log('🔍 [Fallback] Carrinho vazio. Buscando aplicações ativas do aluno para vinculação em lote...');
+        const { data: existingApps } = await supabase
+          .from('scholarship_applications')
+          .select('id')
+          .eq('student_id', profile.id)
+          .neq('status', 'rejected');
+          
+        if (existingApps && existingApps.length > 0) {
+          const finalDocs = [
+            { type: 'passport', url: docUrls['passport'] },
+            { type: 'diploma', url: docUrls['diploma'] },
+            { type: 'funds_proof', url: docUrls['funds_proof'] },
+          ].filter(d => d.url).map(d => ({ 
+            ...d, 
+            uploaded_at: new Date().toISOString(), 
+            status: 'under_review' 
+          }));
+          
+          for (const app of existingApps) {
+            await supabase
+              .from('scholarship_applications')
+              .update({ documents: finalDocs })
+              .eq('id', app.id);
+          }
+        }
       }
 
       // Limpar carrinho
