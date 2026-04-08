@@ -21,6 +21,7 @@ ON public.worker_locks(created_at);
 ALTER TABLE public.worker_locks ENABLE ROW LEVEL SECURITY;
 
 -- Política para permitir acesso total para service role
+DROP POLICY IF EXISTS "Service role can manage worker locks" ON public.worker_locks;
 CREATE POLICY "Service role can manage worker locks" ON public.worker_locks
 FOR ALL USING (true);
 

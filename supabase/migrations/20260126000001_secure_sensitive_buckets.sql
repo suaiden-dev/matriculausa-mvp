@@ -16,6 +16,7 @@ DROP POLICY IF EXISTS "Users can view own zelle comprovantes" ON storage.objects
 -- 3. Criar políticas robustas e unificadas
 
 -- Política para ADIMNS (Acesso total de leitura em todos os buckets sensíveis)
+DROP POLICY IF EXISTS "Admins can view sensitive documents" ON storage.objects;
 CREATE POLICY "Admins can view sensitive documents"
 ON storage.objects FOR SELECT
 TO authenticated
@@ -31,6 +32,7 @@ USING (
 );
 
 -- Política para DONOS (Acesso aos seus próprios arquivos baseados no path {user_id}/...)
+DROP POLICY IF EXISTS "Users can view own sensitive documents" ON storage.objects;
 CREATE POLICY "Users can view own sensitive documents"
 ON storage.objects FOR SELECT
 TO authenticated
@@ -40,6 +42,7 @@ USING (
 );
 
 -- Service Role (bypass RLS - já é padrão, mas garantindo acesso total)
+DROP POLICY IF EXISTS "Service role full access" ON storage.objects;
 CREATE POLICY "Service role full access"
 ON storage.objects FOR ALL
 TO service_role

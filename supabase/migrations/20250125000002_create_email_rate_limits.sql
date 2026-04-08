@@ -21,5 +21,6 @@ CREATE INDEX IF NOT EXISTS idx_email_rate_limits_daily_reset ON email_rate_limit
 ALTER TABLE email_rate_limits ENABLE ROW LEVEL SECURITY;
 
 -- Create policy for service role access
+DROP POLICY IF EXISTS "Service role can manage email rate limits" ON email_rate_limits;
 CREATE POLICY "Service role can manage email rate limits" ON email_rate_limits
   FOR ALL USING (auth.role() = 'service_role');

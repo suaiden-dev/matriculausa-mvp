@@ -18,6 +18,7 @@ CREATE TABLE IF NOT EXISTS user_fee_overrides (
 ALTER TABLE user_fee_overrides ENABLE ROW LEVEL SECURITY;
 
 -- Allow admins to read and write all fee overrides
+DROP POLICY IF EXISTS "Admins can manage all fee overrides" ON user_fee_overrides;
 CREATE POLICY "Admins can manage all fee overrides" ON user_fee_overrides
   FOR ALL USING (
     EXISTS (
@@ -28,6 +29,7 @@ CREATE POLICY "Admins can manage all fee overrides" ON user_fee_overrides
   );
 
 -- Allow users to read their own fee overrides
+DROP POLICY IF EXISTS "Users can read their own fee overrides" ON user_fee_overrides;
 CREATE POLICY "Users can read their own fee overrides" ON user_fee_overrides
   FOR SELECT USING (user_id = auth.uid());
 
@@ -57,7 +59,7 @@ BEGIN
 END;
 $$ LANGUAGE plpgsql;
 
-CREATE TRIGGER update_user_fee_overrides_updated_at
+CREATE OR REPLACE TRIGGER update_user_fee_overrides_updated_at
   BEFORE UPDATE ON user_fee_overrides
   FOR EACH ROW
   EXECUTE FUNCTION update_updated_at_column();

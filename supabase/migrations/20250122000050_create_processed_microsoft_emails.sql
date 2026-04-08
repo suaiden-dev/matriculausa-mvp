@@ -38,10 +38,12 @@ CREATE UNIQUE INDEX IF NOT EXISTS idx_processed_microsoft_emails_unique
 ALTER TABLE processed_microsoft_emails ENABLE ROW LEVEL SECURITY;
 
 -- Política para usuários poderem ver apenas seus próprios emails processados
+DROP POLICY IF EXISTS "Users can view their own processed emails" ON processed_microsoft_emails;
 CREATE POLICY "Users can view their own processed emails" ON processed_microsoft_emails
   FOR SELECT USING (auth.uid() = user_id);
 
 -- Política para service role poder inserir/atualizar (usado pela Edge Function)
+DROP POLICY IF EXISTS "Service role can manage processed emails" ON processed_microsoft_emails;
 CREATE POLICY "Service role can manage processed emails" ON processed_microsoft_emails
   FOR ALL USING (true);
 

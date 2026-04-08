@@ -24,6 +24,7 @@ DROP POLICY IF EXISTS "Admins can view all legal documents" ON storage.objects;
 DROP POLICY IF EXISTS "Users can view own legal documents" ON storage.objects;
 
 -- Service role pode fazer tudo (inserir, atualizar, deletar, visualizar)
+DROP POLICY IF EXISTS "Service role can manage all legal documents" ON storage.objects;
 CREATE POLICY "Service role can manage all legal documents"
   ON storage.objects
   FOR ALL
@@ -32,6 +33,7 @@ CREATE POLICY "Service role can manage all legal documents"
   WITH CHECK (bucket_id = 'legal-documents');
 
 -- Admins podem visualizar todos os documentos
+DROP POLICY IF EXISTS "Admins can view all legal documents" ON storage.objects;
 CREATE POLICY "Admins can view all legal documents"
   ON storage.objects
   FOR SELECT
@@ -47,6 +49,7 @@ CREATE POLICY "Admins can view all legal documents"
 
 -- Usuários podem visualizar seus próprios documentos
 -- Estrutura: {user_id}/{document_type}/{filename}
+DROP POLICY IF EXISTS "Users can view own legal documents" ON storage.objects;
 CREATE POLICY "Users can view own legal documents"
   ON storage.objects
   FOR SELECT

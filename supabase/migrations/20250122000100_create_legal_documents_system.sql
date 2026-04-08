@@ -43,6 +43,7 @@ DROP POLICY IF EXISTS "Service role can update legal documents" ON public.legal_
 DROP POLICY IF EXISTS "Users can view own legal documents" ON public.legal_documents;
 
 -- Admins podem ver todos os documentos
+DROP POLICY IF EXISTS "Admins can view all legal documents" ON public.legal_documents;
 CREATE POLICY "Admins can view all legal documents"
   ON public.legal_documents
   FOR SELECT
@@ -56,6 +57,7 @@ CREATE POLICY "Admins can view all legal documents"
   );
 
 -- Sistema pode inserir documentos
+DROP POLICY IF EXISTS "Service role can insert legal documents" ON public.legal_documents;
 CREATE POLICY "Service role can insert legal documents"
   ON public.legal_documents
   FOR INSERT
@@ -63,6 +65,7 @@ CREATE POLICY "Service role can insert legal documents"
   WITH CHECK (true);
 
 -- Sistema pode atualizar documentos (para status de email)
+DROP POLICY IF EXISTS "Service role can update legal documents" ON public.legal_documents;
 CREATE POLICY "Service role can update legal documents"
   ON public.legal_documents
   FOR UPDATE
@@ -276,7 +279,7 @@ COMMENT ON FUNCTION public.handle_legal_document_generation() IS
 
 DROP TRIGGER IF EXISTS trigger_term_acceptance_pdf ON public.comprehensive_term_acceptance;
 
-CREATE TRIGGER trigger_term_acceptance_pdf
+CREATE OR REPLACE TRIGGER trigger_term_acceptance_pdf
   AFTER INSERT ON public.comprehensive_term_acceptance
   FOR EACH ROW
   EXECUTE FUNCTION public.handle_legal_document_generation();
@@ -290,7 +293,7 @@ COMMENT ON TRIGGER trigger_term_acceptance_pdf ON public.comprehensive_term_acce
 
 DROP TRIGGER IF EXISTS trigger_selection_process_payment_pdf ON public.user_profiles;
 
-CREATE TRIGGER trigger_selection_process_payment_pdf
+CREATE OR REPLACE TRIGGER trigger_selection_process_payment_pdf
   AFTER UPDATE ON public.user_profiles
   FOR EACH ROW
   EXECUTE FUNCTION public.handle_legal_document_generation();
@@ -304,7 +307,7 @@ COMMENT ON TRIGGER trigger_selection_process_payment_pdf ON public.user_profiles
 
 DROP TRIGGER IF EXISTS trigger_zelle_payment_pdf ON public.zelle_payments;
 
-CREATE TRIGGER trigger_zelle_payment_pdf
+CREATE OR REPLACE TRIGGER trigger_zelle_payment_pdf
   AFTER UPDATE ON public.zelle_payments
   FOR EACH ROW
   EXECUTE FUNCTION public.handle_legal_document_generation();
@@ -318,7 +321,7 @@ COMMENT ON TRIGGER trigger_zelle_payment_pdf ON public.zelle_payments IS
 
 DROP TRIGGER IF EXISTS trigger_stripe_payment_pdf ON public.individual_fee_payments;
 
-CREATE TRIGGER trigger_stripe_payment_pdf
+CREATE OR REPLACE TRIGGER trigger_stripe_payment_pdf
   AFTER INSERT ON public.individual_fee_payments
   FOR EACH ROW
   EXECUTE FUNCTION public.handle_legal_document_generation();

@@ -1,7 +1,7 @@
 -- Migration: Create email management tables
 
 -- Table for storing email configurations (SMTP/IMAP)
-CREATE TABLE email_configurations (
+CREATE TABLE IF NOT EXISTS email_configurations (
     id UUID DEFAULT gen_random_uuid() PRIMARY KEY,
     user_id UUID NOT NULL REFERENCES auth.users(id) ON DELETE CASCADE,
     name VARCHAR(255) NOT NULL, -- Nome da configuração (ex: "Gmail Pessoal", "Outlook Trabalho")
@@ -32,7 +32,7 @@ CREATE TABLE email_configurations (
 );
 
 -- Table for storing received emails
-CREATE TABLE received_emails (
+CREATE TABLE IF NOT EXISTS received_emails (
     id UUID DEFAULT gen_random_uuid() PRIMARY KEY,
     email_config_id UUID NOT NULL REFERENCES email_configurations(id) ON DELETE CASCADE,
     message_id VARCHAR(500) NOT NULL, -- Unique message ID from email
@@ -65,7 +65,7 @@ CREATE TABLE received_emails (
 );
 
 -- Table for storing sent emails
-CREATE TABLE sent_emails (
+CREATE TABLE IF NOT EXISTS sent_emails (
     id UUID DEFAULT gen_random_uuid() PRIMARY KEY,
     email_config_id UUID NOT NULL REFERENCES email_configurations(id) ON DELETE CASCADE,
     
@@ -91,7 +91,7 @@ CREATE TABLE sent_emails (
 );
 
 -- Table for email attachments
-CREATE TABLE email_attachments (
+CREATE TABLE IF NOT EXISTS email_attachments (
     id UUID DEFAULT gen_random_uuid() PRIMARY KEY,
     email_id UUID, -- Can reference either received_emails or sent_emails
     email_type VARCHAR(20) NOT NULL CHECK (email_type IN ('received', 'sent')),
@@ -105,18 +105,18 @@ CREATE TABLE email_attachments (
 );
 
 -- Create indexes for better performance
-CREATE INDEX idx_email_configurations_user_id ON email_configurations(user_id);
-CREATE INDEX idx_email_configurations_active ON email_configurations(user_id, is_active);
+CREATE INDEX IF NOT EXISTS idx_email_configurations_user_id ON email_configurations(user_id);
+CREATE INDEX IF NOT EXISTS idx_email_configurations_active ON email_configurations(user_id, is_active);
 
-CREATE INDEX idx_received_emails_config_id ON received_emails(email_config_id);
-CREATE INDEX idx_received_emails_received_date ON received_emails(email_config_id, received_date DESC);
-CREATE INDEX idx_received_emails_unread ON received_emails(email_config_id, is_read, received_date DESC);
+CREATE INDEX IF NOT EXISTS idx_received_emails_config_id ON received_emails(email_config_id);
+CREATE INDEX IF NOT EXISTS idx_received_emails_received_date ON received_emails(email_config_id, received_date DESC);
+CREATE INDEX IF NOT EXISTS idx_received_emails_unread ON received_emails(email_config_id, is_read, received_date DESC);
 
-CREATE INDEX idx_sent_emails_config_id ON sent_emails(email_config_id);
-CREATE INDEX idx_sent_emails_created_at ON sent_emails(email_config_id, created_at DESC);
-CREATE INDEX idx_sent_emails_status ON sent_emails(email_config_id, status);
+CREATE INDEX IF NOT EXISTS idx_sent_emails_config_id ON sent_emails(email_config_id);
+CREATE INDEX IF NOT EXISTS idx_sent_emails_created_at ON sent_emails(email_config_id, created_at DESC);
+CREATE INDEX IF NOT EXISTS idx_sent_emails_status ON sent_emails(email_config_id, status);
 
-CREATE INDEX idx_email_attachments_email ON email_attachments(email_id, email_type);
+CREATE INDEX IF NOT EXISTS idx_email_attachments_email ON email_attachments(email_id, email_type);
 
 -- Create updated_at triggers
 CREATE OR REPLACE FUNCTION update_updated_at_column()
@@ -127,15 +127,15 @@ BEGIN
 END;
 $$ language 'plpgsql';
 
-CREATE TRIGGER update_email_configurations_updated_at 
+CREATE OR REPLACE TRIGGER update_email_configurations_updated_at 
     BEFORE UPDATE ON email_configurations 
     FOR EACH ROW EXECUTE PROCEDURE update_updated_at_column();
 
-CREATE TRIGGER update_received_emails_updated_at 
+CREATE OR REPLACE TRIGGER update_received_emails_updated_at 
     BEFORE UPDATE ON received_emails 
     FOR EACH ROW EXECUTE PROCEDURE update_updated_at_column();
 
-CREATE TRIGGER update_sent_emails_updated_at 
+CREATE OR REPLACE TRIGGER update_sent_emails_updated_at 
     BEFORE UPDATE ON sent_emails 
     FOR EACH ROW EXECUTE PROCEDURE update_updated_at_column();
 
@@ -146,23 +146,28 @@ ALTER TABLE sent_emails ENABLE ROW LEVEL SECURITY;
 ALTER TABLE email_attachments ENABLE ROW LEVEL SECURITY;
 
 -- RLS Policies
+DROP POLICY IF EXISTS "Users can view their own email configurations" ON email_configurations;
 CREATE POLICY "Users can view their own email configurations" 
     ON email_configurations FOR SELECT 
     USING (auth.uid() = user_id);
 
+DROP POLICY IF EXISTS "Users can insert their own email configurations" ON email_configurations;
 CREATE POLICY "Users can insert their own email configurations" 
     ON email_configurations FOR INSERT 
     WITH CHECK (auth.uid() = user_id);
 
+DROP POLICY IF EXISTS "Users can update their own email configurations" ON email_configurations;
 CREATE POLICY "Users can update their own email configurations" 
     ON email_configurations FOR UPDATE 
     USING (auth.uid() = user_id);
 
+DROP POLICY IF EXISTS "Users can delete their own email configurations" ON email_configurations;
 CREATE POLICY "Users can delete their own email configurations" 
     ON email_configurations FOR DELETE 
     USING (auth.uid() = user_id);
 
 -- Received emails policies
+DROP POLICY IF EXISTS "Users can view emails from their configurations" ON received_emails;
 CREATE POLICY "Users can view emails from their configurations" 
     ON received_emails FOR SELECT 
     USING (
@@ -171,10 +176,12 @@ CREATE POLICY "Users can view emails from their configurations"
         )
     );
 
+DROP POLICY IF EXISTS "System can insert received emails" ON received_emails;
 CREATE POLICY "System can insert received emails" 
     ON received_emails FOR INSERT 
     WITH CHECK (true); -- Emails are inserted by the system
 
+DROP POLICY IF EXISTS "Users can update their received emails" ON received_emails;
 CREATE POLICY "Users can update their received emails" 
     ON received_emails FOR UPDATE 
     USING (
@@ -184,6 +191,7 @@ CREATE POLICY "Users can update their received emails"
     );
 
 -- Sent emails policies
+DROP POLICY IF EXISTS "Users can view their sent emails" ON sent_emails;
 CREATE POLICY "Users can view their sent emails" 
     ON sent_emails FOR SELECT 
     USING (
@@ -192,6 +200,7 @@ CREATE POLICY "Users can view their sent emails"
         )
     );
 
+DROP POLICY IF EXISTS "Users can insert sent emails" ON sent_emails;
 CREATE POLICY "Users can insert sent emails" 
     ON sent_emails FOR INSERT 
     WITH CHECK (
@@ -200,11 +209,13 @@ CREATE POLICY "Users can insert sent emails"
         )
     );
 
+DROP POLICY IF EXISTS "System can update sent emails status" ON sent_emails;
 CREATE POLICY "System can update sent emails status" 
     ON sent_emails FOR UPDATE 
     USING (true); -- System needs to update status
 
 -- Email attachments policies
+DROP POLICY IF EXISTS "Users can view attachments from their emails" ON email_attachments;
 CREATE POLICY "Users can view attachments from their emails" 
     ON email_attachments FOR SELECT 
     USING (
@@ -220,6 +231,7 @@ CREATE POLICY "Users can view attachments from their emails"
         ))
     );
 
+DROP POLICY IF EXISTS "System can insert email attachments" ON email_attachments;
 CREATE POLICY "System can insert email attachments" 
     ON email_attachments FOR INSERT 
     WITH CHECK (true); -- Attachments are managed by the system

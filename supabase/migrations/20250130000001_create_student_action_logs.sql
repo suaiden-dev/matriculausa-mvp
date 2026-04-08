@@ -22,6 +22,7 @@ CREATE INDEX IF NOT EXISTS idx_student_action_logs_performed_by ON public.studen
 ALTER TABLE public.student_action_logs ENABLE ROW LEVEL SECURITY;
 
 -- Students can view their own logs
+DROP POLICY IF EXISTS "Students can view their own logs" ON public.student_action_logs;
 CREATE POLICY "Students can view their own logs"
 ON public.student_action_logs
 FOR SELECT
@@ -34,6 +35,7 @@ USING (
 );
 
 -- Admins can view all logs
+DROP POLICY IF EXISTS "Admins can view all logs" ON public.student_action_logs;
 CREATE POLICY "Admins can view all logs"
 ON public.student_action_logs
 FOR SELECT
@@ -47,6 +49,7 @@ USING (
 );
 
 -- Universities can view logs for their students
+DROP POLICY IF EXISTS "Universities can view their students' logs" ON public.student_action_logs;
 CREATE POLICY "Universities can view their students' logs"
 ON public.student_action_logs
 FOR SELECT
@@ -65,6 +68,7 @@ USING (
 );
 
 -- Only admins can insert logs
+DROP POLICY IF EXISTS "Admins can insert logs" ON public.student_action_logs;
 CREATE POLICY "Admins can insert logs"
 ON public.student_action_logs
 FOR INSERT

@@ -18,6 +18,7 @@ CREATE TABLE IF NOT EXISTS public.university_knowledge_documents (
 ALTER TABLE public.university_knowledge_documents ENABLE ROW LEVEL SECURITY;
 
 -- Criar políticas RLS
+DROP POLICY IF EXISTS "Users can view their university knowledge documents" ON public.university_knowledge_documents;
 CREATE POLICY "Users can view their university knowledge documents" ON public.university_knowledge_documents
   FOR SELECT USING (
     university_id IN (
@@ -25,6 +26,7 @@ CREATE POLICY "Users can view their university knowledge documents" ON public.un
     )
   );
 
+DROP POLICY IF EXISTS "Users can insert their university knowledge documents" ON public.university_knowledge_documents;
 CREATE POLICY "Users can insert their university knowledge documents" ON public.university_knowledge_documents
   FOR INSERT WITH CHECK (
     university_id IN (
@@ -32,6 +34,7 @@ CREATE POLICY "Users can insert their university knowledge documents" ON public.
     )
   );
 
+DROP POLICY IF EXISTS "Users can update their university knowledge documents" ON public.university_knowledge_documents;
 CREATE POLICY "Users can update their university knowledge documents" ON public.university_knowledge_documents
   FOR UPDATE USING (
     university_id IN (
@@ -39,6 +42,7 @@ CREATE POLICY "Users can update their university knowledge documents" ON public.
     )
   );
 
+DROP POLICY IF EXISTS "Users can delete their university knowledge documents" ON public.university_knowledge_documents;
 CREATE POLICY "Users can delete their university knowledge documents" ON public.university_knowledge_documents
   FOR DELETE USING (
     university_id IN (
@@ -47,10 +51,10 @@ CREATE POLICY "Users can delete their university knowledge documents" ON public.
   );
 
 -- Criar índices para performance
-CREATE INDEX idx_university_knowledge_documents_university_id ON public.university_knowledge_documents(university_id);
-CREATE INDEX idx_university_knowledge_documents_transcription_status ON public.university_knowledge_documents(transcription_status);
-CREATE INDEX idx_university_knowledge_documents_uploaded_by ON public.university_knowledge_documents(uploaded_by_user_id);
-CREATE INDEX idx_university_knowledge_documents_created_at ON public.university_knowledge_documents(created_at);
+CREATE INDEX IF NOT EXISTS idx_university_knowledge_documents_university_id ON public.university_knowledge_documents(university_id);
+CREATE INDEX IF NOT EXISTS idx_university_knowledge_documents_transcription_status ON public.university_knowledge_documents(transcription_status);
+CREATE INDEX IF NOT EXISTS idx_university_knowledge_documents_uploaded_by ON public.university_knowledge_documents(uploaded_by_user_id);
+CREATE INDEX IF NOT EXISTS idx_university_knowledge_documents_created_at ON public.university_knowledge_documents(created_at);
 
 -- Trigger para atualizar updated_at
 CREATE OR REPLACE FUNCTION update_university_knowledge_documents_updated_at()
@@ -61,7 +65,7 @@ BEGIN
 END;
 $$ LANGUAGE plpgsql;
 
-CREATE TRIGGER trigger_update_university_knowledge_documents_updated_at
+CREATE OR REPLACE TRIGGER trigger_update_university_knowledge_documents_updated_at
   BEFORE UPDATE ON public.university_knowledge_documents
   FOR EACH ROW
   EXECUTE FUNCTION update_university_knowledge_documents_updated_at();

@@ -23,10 +23,10 @@ ADD CONSTRAINT email_configurations_provider_type_check
 CHECK (provider_type IN ('gmail', 'microsoft'));
 
 -- Add index for provider type queries
-CREATE INDEX idx_email_configurations_provider_type ON email_configurations(provider_type);
+CREATE INDEX IF NOT EXISTS idx_email_configurations_provider_type ON email_configurations(provider_type);
 
 -- Add index for Microsoft account ID
-CREATE INDEX idx_email_configurations_microsoft_account_id ON email_configurations(microsoft_account_id);
+CREATE INDEX IF NOT EXISTS idx_email_configurations_microsoft_account_id ON email_configurations(microsoft_account_id);
 
 -- Update comments
 COMMENT ON COLUMN email_configurations.provider_type IS 'Email provider type: gmail or microsoft';

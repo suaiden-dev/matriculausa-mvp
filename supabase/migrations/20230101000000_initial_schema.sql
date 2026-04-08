@@ -14,6 +14,14 @@ DO $$ BEGIN
 EXCEPTION WHEN duplicate_object THEN NULL;
 END $$;
 
+-- Garante que todos os valores existem mesmo se o enum foi criado anteriormente com valores incompletos
+ALTER TYPE term_type ADD VALUE IF NOT EXISTS 'terms_of_service';
+ALTER TYPE term_type ADD VALUE IF NOT EXISTS 'privacy_policy';
+ALTER TYPE term_type ADD VALUE IF NOT EXISTS 'checkout_terms';
+ALTER TYPE term_type ADD VALUE IF NOT EXISTS 'application';
+ALTER TYPE term_type ADD VALUE IF NOT EXISTS 'affiliate';
+ALTER TYPE term_type ADD VALUE IF NOT EXISTS 'general';
+
 DO $$ BEGIN
   CREATE TYPE identity_photo_status AS ENUM ('pending', 'approved', 'rejected');
 EXCEPTION WHEN duplicate_object THEN NULL;

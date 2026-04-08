@@ -3,10 +3,10 @@ ALTER TABLE scholarships
 ADD COLUMN IF NOT EXISTS featured_order INTEGER;
 
 -- Cria índice para melhorar performance das consultas de ordenação
-CREATE INDEX idx_scholarships_featured_order ON scholarships(featured_order);
+CREATE INDEX IF NOT EXISTS idx_scholarships_featured_order ON scholarships(featured_order);
 
 -- Cria índice composto para otimizar consultas de bolsas em destaque ordenadas
-CREATE INDEX idx_scholarships_highlighted_ordered ON scholarships(is_highlighted, featured_order) 
+CREATE INDEX IF NOT EXISTS idx_scholarships_highlighted_ordered ON scholarships(is_highlighted, featured_order) 
 WHERE is_highlighted = TRUE;
 
 -- Comentário explicativo
