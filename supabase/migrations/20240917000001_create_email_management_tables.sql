@@ -209,13 +209,13 @@ CREATE POLICY "Users can view attachments from their emails"
     ON email_attachments FOR SELECT 
     USING (
         (email_type = 'received' AND email_id IN (
-            SELECT id FROM received_emails re 
-            JOIN email_configurations ec ON re.email_config_id = ec.id 
+            SELECT re.id FROM received_emails re
+            JOIN email_configurations ec ON re.email_config_id = ec.id
             WHERE ec.user_id = auth.uid()
         )) OR
         (email_type = 'sent' AND email_id IN (
-            SELECT id FROM sent_emails se 
-            JOIN email_configurations ec ON se.email_config_id = ec.id 
+            SELECT se.id FROM sent_emails se
+            JOIN email_configurations ec ON se.email_config_id = ec.id
             WHERE ec.user_id = auth.uid()
         ))
     );
