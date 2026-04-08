@@ -2,11 +2,11 @@
 
 -- Add provider type and OAuth fields to email_configurations
 ALTER TABLE email_configurations 
-ADD COLUMN provider_type VARCHAR(20) DEFAULT 'gmail' NOT NULL,
-ADD COLUMN oauth_access_token TEXT,
-ADD COLUMN oauth_refresh_token TEXT,
-ADD COLUMN oauth_token_expires_at TIMESTAMP WITH TIME ZONE,
-ADD COLUMN microsoft_account_id VARCHAR(255);
+ADD COLUMN IF NOT EXISTS provider_type VARCHAR(20) DEFAULT 'gmail' NOT NULL,
+ADD COLUMN IF NOT EXISTS oauth_access_token TEXT,
+ADD COLUMN IF NOT EXISTS oauth_refresh_token TEXT,
+ADD COLUMN IF NOT EXISTS oauth_token_expires_at TIMESTAMP WITH TIME ZONE,
+ADD COLUMN IF NOT EXISTS microsoft_account_id VARCHAR(255);
 
 -- Make SMTP/IMAP fields nullable for OAuth providers
 ALTER TABLE email_configurations 

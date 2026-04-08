@@ -2,7 +2,7 @@
 -- This migration adds an is_archived field to received_emails table
 
 ALTER TABLE received_emails 
-ADD COLUMN is_archived BOOLEAN DEFAULT false;
+ADD COLUMN IF NOT EXISTS is_archived BOOLEAN DEFAULT false;
 
 -- Create index for performance on archive queries
 CREATE INDEX idx_received_emails_archived ON received_emails(email_config_id, is_archived, is_deleted, received_date DESC);

@@ -1,6 +1,6 @@
 -- Adiciona coluna featured_order na tabela scholarships para controlar a ordem dos destaques
 ALTER TABLE scholarships 
-ADD COLUMN featured_order INTEGER;
+ADD COLUMN IF NOT EXISTS featured_order INTEGER;
 
 -- Cria índice para melhorar performance das consultas de ordenação
 CREATE INDEX idx_scholarships_featured_order ON scholarships(featured_order);
