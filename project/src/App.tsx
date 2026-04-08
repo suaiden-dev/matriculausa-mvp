@@ -42,6 +42,7 @@ const SellerRegistration = React.lazy(() => import('./pages/SellerRegistration')
 const SellerStudentRegistration = React.lazy(() => import('./pages/SellerStudentRegistration'));
 const StudentOnboarding = React.lazy(() => import('./pages/StudentOnboarding/StudentOnboarding'));
 const QuickRegistration = React.lazy(() => import('./pages/QuickRegistration'));
+const QuizLanding = React.lazy(() => import('./pages/QuizLanding'));
 const SuccessPage = React.lazy(() => import('./pages/SuccessPage'));
 const CheckoutSuccess = React.lazy(() => import('./pages/CheckoutSuccess'));
 const ZellePaymentSuccess = React.lazy(() => import('./pages/ZellePaymentSuccess'));
@@ -122,6 +123,7 @@ const AppContent = () => {
           <Route path="/student/register" element={<SellerStudentRegistration />} />
           <Route path="/scholarships" element={<Scholarships />} />
           <Route path="/selection-fee-registration" element={<QuickRegistration />} />
+          <Route path="/quiz" element={<QuizLanding />} />
           <Route path="/schools" element={<Universities />} />
           <Route path="/schools/:slug" element={<UniversityDetail />} />
           <Route path="/how-it-works" element={<HowItWorks />} />

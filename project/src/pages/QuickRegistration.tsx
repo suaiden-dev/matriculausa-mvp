@@ -128,19 +128,45 @@ const QuickRegistration: React.FC = () => {
   // Form State
   const [formData, setFormData] = useState(() => {
     try {
+      // 1. Check URL params first (from Quiz or exact linking)
+      const searchParams = new URLSearchParams(window.location.search);
+      const urlName = searchParams.get('name');
+      const urlEmail = searchParams.get('email');
+      const urlPhone = searchParams.get('phone');
+      
       const saved = sessionStorage.getItem('matricula_quick_form');
-      if (saved) return JSON.parse(saved);
-    } catch { }
-    return {
-      full_name: '',
-      email: '',
-      phone: '',
-      dependents: '',
-      password: '',
-      confirm_password: '',
-      termsAccepted: false,
-      cpf: ''
-    };
+      const parsed = saved ? JSON.parse(saved) : null;
+
+      return {
+        full_name: urlName || (parsed?.full_name || ''),
+        email: urlEmail || (parsed?.email || ''),
+        phone: urlPhone || (parsed?.phone || ''),
+        dependents: parsed?.dependents || '',
+        password: '',
+        confirm_password: '',
+        termsAccepted: false,
+        cpf: parsed?.cpf || '',
+        country: parsed?.country || '',
+        field_of_interest: parsed?.field_of_interest || '',
+        academic_level: parsed?.academic_level || '',
+        english_proficiency: parsed?.english_proficiency || ''
+      };
+    } catch {
+      return {
+        full_name: '',
+        email: '',
+        phone: '',
+        dependents: '',
+        password: '',
+        confirm_password: '',
+        termsAccepted: false,
+        cpf: '',
+        country: '',
+        field_of_interest: '',
+        academic_level: '',
+        english_proficiency: ''
+      };
+    }
   });
 
   const [isRegistered, setIsRegistered] = useState(() => {

@@ -6,6 +6,7 @@ interface LeadData {
   email: string;
   phone?: string;
   source_page: string;
+  quiz_answers?: any;
 }
 
 export const useLeadCapture = () => {
@@ -28,7 +29,8 @@ export const useLeadCapture = () => {
         p_full_name: data.full_name || null,
         p_email: data.email,
         p_phone: data.phone || null,
-        p_source_page: data.source_page
+        p_source_page: data.source_page,
+        p_quiz_answers: data.quiz_answers || null
       });
 
       if (error) {
