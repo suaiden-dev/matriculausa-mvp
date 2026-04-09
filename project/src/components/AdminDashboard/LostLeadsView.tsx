@@ -17,17 +17,19 @@ import {
 interface Lead {
   lead_id: string;
   full_name: string | null;
-  email: string;
+  email: string | null;
   phone: string | null;
   source_page: string;
   status: 'pending' | 'converted';
   created_at: string;
   updated_at: string;
+  pre_qualification_answers: Record<string, any> | null;
 }
 
 const SOURCE_LABELS: Record<string, string> = {
   quick_registration: 'Quick Registration',
   auth_register: 'Standard Registration',
+  pre_qualification_landing: 'Pre-Qualification',
 };
 
 const LostLeadsView: React.FC = () => {
@@ -37,6 +39,7 @@ const LostLeadsView: React.FC = () => {
   const [search, setSearch] = useState('');
   const [sourceFilter, setSourceFilter] = useState<string>('all');
   const [statusFilter, setStatusFilter] = useState<'pending' | 'converted' | 'all'>('pending');
+  const [selectedLead, setSelectedLead] = useState<Lead | null>(null);
 
   const fetchLeads = useCallback(async () => {
     setLoading(true);
@@ -66,7 +69,7 @@ const LostLeadsView: React.FC = () => {
   const filteredLeads = leads.filter(lead => {
     const matchesSearch =
       !search ||
-      lead.email.toLowerCase().includes(search.toLowerCase()) ||
+      (lead.email || '').toLowerCase().includes(search.toLowerCase()) ||
       (lead.full_name || '').toLowerCase().includes(search.toLowerCase()) ||
       (lead.phone || '').includes(search);
 
@@ -115,7 +118,7 @@ const LostLeadsView: React.FC = () => {
             <UserX className="h-6 w-6 text-amber-600" />
           </div>
           <div>
-            <p className="text-xs text-amber-600 font-bold uppercase tracking-widest">Lost Leads</p>
+            <p className="text-xs text-amber-600 font-bold uppercase tracking-widest">Leads</p>
             <p className="text-3xl font-black text-amber-700">{pendingLeads}</p>
           </div>
         </div>
@@ -174,6 +177,7 @@ const LostLeadsView: React.FC = () => {
             <option value="all">All Sources</option>
             <option value="quick_registration">Quick Registration</option>
             <option value="auth_register">Standard Registration</option>
+            <option value="pre_qualification_landing">Pre-Qualification</option>
           </select>
         </div>
 
@@ -214,6 +218,7 @@ const LostLeadsView: React.FC = () => {
                   <th className="text-left px-4 py-3 text-xs font-bold text-gray-500 uppercase tracking-widest">Source</th>
                   <th className="text-left px-4 py-3 text-xs font-bold text-gray-500 uppercase tracking-widest">Status</th>
                   <th className="text-left px-4 py-3 text-xs font-bold text-gray-500 uppercase tracking-widest">Captured</th>
+                  <th className="text-left px-4 py-3 text-xs font-bold text-gray-500 uppercase tracking-widest text-center">Details</th>
                   <th className="text-left px-4 py-3 text-xs font-bold text-gray-500 uppercase tracking-widest">Actions</th>
                 </tr>
               </thead>
@@ -226,7 +231,9 @@ const LostLeadsView: React.FC = () => {
                       </span>
                     </td>
                     <td className="px-4 py-3">
-                      <span className="text-sm text-gray-700">{lead.email}</span>
+                      <span className="text-sm text-gray-700">
+                        {lead.email || <span className="text-gray-400 italic">No email</span>}
+                      </span>
                     </td>
                     <td className="px-4 py-3">
                       <span className="text-sm text-gray-700">
@@ -237,6 +244,8 @@ const LostLeadsView: React.FC = () => {
                       <span className={`inline-flex items-center px-2 py-1 rounded-lg text-xs font-bold ${
                         lead.source_page === 'quick_registration'
                           ? 'bg-purple-100 text-purple-700'
+                          : lead.source_page === 'pre_qualification_landing'
+                          ? 'bg-amber-100 text-amber-700'
                           : 'bg-blue-100 text-blue-700'
                       }`}>
                         {SOURCE_LABELS[lead.source_page] || lead.source_page}
@@ -254,6 +263,18 @@ const LostLeadsView: React.FC = () => {
                     <td className="px-4 py-3">
                       <span className="text-sm text-gray-500">{formatDate(lead.created_at)}</span>
                     </td>
+                    <td className="px-4 py-3 text-center">
+                      {lead.pre_qualification_answers ? (
+                        <button
+                          onClick={() => setSelectedLead(lead)}
+                          className="px-3 py-1 bg-amber-100 text-amber-700 rounded-lg text-xs font-bold hover:bg-amber-200 transition-colors"
+                        >
+                          View Answers
+                        </button>
+                      ) : (
+                        <span className="text-xs text-gray-400 italic">No Answers</span>
+                      )}
+                    </td>
                     <td className="px-4 py-3">
                       <div className="flex items-center space-x-2">
                         {lead.phone && (
@@ -265,13 +286,15 @@ const LostLeadsView: React.FC = () => {
                             <Phone className="h-4 w-4" />
                           </button>
                         )}
-                        <button
-                          onClick={() => openEmail(lead.email, lead.full_name)}
-                          title="Send Email"
-                          className="p-1.5 rounded-lg bg-blue-100 text-blue-700 hover:bg-blue-200 transition-colors"
-                        >
-                          <Mail className="h-4 w-4" />
-                        </button>
+                        {lead.email && (
+                          <button
+                            onClick={() => openEmail(lead.email!, lead.full_name)}
+                            title="Send Email"
+                            className="p-1.5 rounded-lg bg-blue-100 text-blue-700 hover:bg-blue-200 transition-colors"
+                          >
+                            <Mail className="h-4 w-4" />
+                          </button>
+                        )}
                       </div>
                     </td>
                   </tr>
@@ -284,6 +307,53 @@ const LostLeadsView: React.FC = () => {
           </div>
         )}
       </div>
+
+      {/* Pre-Qualification Details Modal */}
+      {selectedLead && (
+        <div className="fixed inset-0 z-[60] flex items-center justify-center p-4 bg-black/50 backdrop-blur-sm">
+          <div className="bg-white rounded-3xl shadow-2xl max-w-2xl w-full max-h-[90vh] overflow-hidden flex flex-col">
+            <div className="px-6 py-4 border-b border-gray-100 flex justify-between items-center bg-slate-50">
+              <div>
+                <h3 className="text-lg font-bold text-slate-900">Pre-Qualification Answers</h3>
+                <p className="text-sm text-slate-500">{selectedLead.full_name || selectedLead.email}</p>
+              </div>
+              <button 
+                onClick={() => setSelectedLead(null)}
+                className="p-2 hover:bg-gray-200 rounded-xl transition-colors"
+              >
+                <RefreshCw className="h-5 w-5 transform rotate-45" />
+              </button>
+            </div>
+            
+            <div className="flex-1 overflow-y-auto p-6 space-y-4">
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                {Object.entries(selectedLead.pre_qualification_answers || {}).map(([key, value]) => (
+                  <div key={key} className="bg-slate-50 p-4 rounded-2xl border border-slate-100">
+                    <p className="text-xs font-bold text-slate-400 uppercase tracking-widest mb-1">{key.replace(/_/g, ' ')}</p>
+                    <p className="font-semibold text-slate-800 capitalize">{String(value).replace(/_/g, ' ')}</p>
+                  </div>
+                ))}
+              </div>
+              
+              {(!selectedLead.pre_qualification_answers || Object.keys(selectedLead.pre_qualification_answers).length === 0) && (
+                <div className="text-center py-12 text-gray-400">
+                  <AlertCircle className="h-12 w-12 mx-auto mb-3 opacity-20" />
+                  <p>No answers found for this lead.</p>
+                </div>
+              )}
+            </div>
+
+            <div className="p-6 border-t border-gray-100 bg-slate-50 flex justify-end">
+              <button 
+                onClick={() => setSelectedLead(null)}
+                className="px-6 py-2 bg-slate-900 text-white font-bold rounded-xl hover:bg-slate-800 transition-colors"
+              >
+                Close
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 };
