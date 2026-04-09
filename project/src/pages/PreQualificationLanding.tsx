@@ -887,7 +887,22 @@ const PreQualificationLanding: React.FC = () => {
                       Iniciar Processo Seletivo <ArrowRight className="w-6 h-6" />
                     </button>
                     <button 
-                      onClick={() => window.open(`https://wa.me/17862035316`, '_blank')}
+                      onClick={() => {
+                        const parts: string[] = [];
+                        parts.push(`Olá! Acabei de fazer a pré-qualificação e quero saber mais sobre o processo seletivo.`);
+                        if (lead.name) parts.push(`\n\n*Meu perfil:*`);
+                        if (lead.name) parts.push(`• Nome: ${lead.name}`);
+                        if (answers.usa === 'sim') parts.push(`• Já estou nos EUA`);
+                        if (answers.visa_type) parts.push(`• Visto: ${answers.visa_type === 'ja_tenho' ? 'Já tenho visto de estudante' : 'Quero trocar meu status'}`);
+                        if (answers.english) parts.push(`• Inglês: ${answers.english.charAt(0).toUpperCase() + answers.english.slice(1)}`);
+                        if (answers.priority === 'preco' && answers.investment) parts.push(`• Investimento: ${investVal}/mês`);
+                        if (answers.flexibility) parts.push(`• Flexibilidade: Aulas ${flexVal}`);
+                        if (answers.work_start_grad || answers.work_start_no_grad) parts.push(`• Autorização de trabalho: ${workTimeText}`);
+                        parts.push(`\n\n*Oferta vista:* Processo Seletivo por US$ 350 (com desconto de US$ 50)`);
+
+                        const message = encodeURIComponent(parts.join('\n'));
+                        window.open(`https://api.whatsapp.com/send/?phone=15202553813&text=${message}`, '_blank');
+                      }}
                       className="flex-1 bg-white border-2 border-blue-600 text-blue-600 hover:bg-blue-50 font-bold py-5 rounded-[2.5rem] text-lg md:text-xl flex items-center justify-center gap-3 transition-all active:scale-[0.98]"
                     >
                       <MessageCircle className="w-6 h-6" /> Falar com alguém
