@@ -81,6 +81,14 @@ export const questions: Question[] = [
     ]
   },
   {
+    id: 5.2, section: 'A', sectionTitle: 'selectionSurvey.sections.A', text: 'selectionSurvey.questions.5_2.text', type: 'text', required: true, scored: false,
+    conditionalOn: { questionId: 5, value: 'cos' },
+  },
+  {
+    id: 5.3, section: 'A', sectionTitle: 'selectionSurvey.sections.A', text: 'selectionSurvey.questions.5_3.text', type: 'text', required: true, scored: false,
+    conditionalOn: { questionId: 5, value: 'cos' },
+  },
+  {
     id: 6, section: 'A', sectionTitle: 'selectionSurvey.sections.A', text: 'selectionSurvey.questions.6.text', type: 'radio', required: true, scored: true,
     options: [
       { label: 'selectionSurvey.questions.6.options.a', value: 'a', correct: true },

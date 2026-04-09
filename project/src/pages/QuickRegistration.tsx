@@ -33,6 +33,61 @@ import { usePaymentBlocked } from '../hooks/usePaymentBlocked';
 import { useFormTracking } from '../hooks/useFormTracking';
 import { useLeadCapture } from '../hooks/useLeadCapture';
 
+// Cupons que disparam o contador de urgência de 24h
+const URGENCY_COUPONS = ['TFOE'];
+
+const UrgencyBanner: React.FC = () => {
+  const [timeLeft, setTimeLeft] = useState(24 * 60 * 60); // 24h em segundos
+
+  useEffect(() => {
+    const timer = setInterval(() => {
+      setTimeLeft((prev) => (prev > 0 ? prev - 1 : 0));
+    }, 1000);
+    return () => clearInterval(timer);
+  }, []);
+
+  if (timeLeft <= 0) return null;
+
+  const hours = Math.floor(timeLeft / 3600);
+  const minutes = Math.floor((timeLeft % 3600) / 60);
+  const seconds = timeLeft % 60;
+
+  const format = (num: number) => num.toString().padStart(2, '0');
+
+  return (
+    <div className="max-w-4xl mx-auto mb-10 animate-in fade-in slide-in-from-top-4 duration-700">
+      <div className="bg-[#05294E] rounded-3xl p-4 sm:p-5 flex flex-col sm:flex-row items-center justify-center shadow-2xl border border-white/10 gap-6 sm:gap-10">
+        {/* Text */}
+        <div className="flex items-center">
+          <span className="text-white font-black text-sm sm:text-base uppercase tracking-tight text-center sm:text-left">
+            ÚLTIMAS VAGAS COM DESCONTO: SÓ HOJE!
+          </span>
+        </div>
+
+        {/* Timer */}
+        <div className="flex items-center space-x-3">
+          <div className="flex items-center space-x-1.5">
+            <div className="bg-[#D0151C] border border-white/20 rounded-xl px-3 py-1.5 text-white font-black text-xl tabular-nums shadow-lg">
+              {format(hours)}
+            </div>
+            <span className="text-white/40 font-bold">:</span>
+            <div className="bg-[#D0151C] border border-white/20 rounded-xl px-3 py-1.5 text-white font-black text-xl tabular-nums shadow-lg">
+              {format(minutes)}
+            </div>
+            <span className="text-white/40 font-bold">:</span>
+            <div className="bg-[#D0151C] border border-white/20 rounded-xl px-3 py-1.5 text-white font-black text-xl tabular-nums shadow-lg">
+              {format(seconds)}
+            </div>
+          </div>
+          <span className="text-white/60 font-bold text-[10px] uppercase tracking-widest">
+            RESTANTES
+          </span>
+        </div>
+      </div>
+    </div>
+  );
+};
+
 // SVG Icons (Simplified for the registration page)
 const PixIcon = ({ className }: { className?: string }) => (
   <svg className={className} xmlns="http://www.w3.org/2000/svg" viewBox="0 0 48 48">
@@ -128,7 +183,7 @@ const QuickRegistration: React.FC = () => {
   // Form State
   const [formData, setFormData] = useState(() => {
     try {
-      // 1. Check URL params first (from Quiz or exact linking)
+      // 1. Check URL params first (from Pre-Qualification or exact linking)
       const searchParams = new URLSearchParams(window.location.search);
       const urlName = searchParams.get('name');
       const urlEmail = searchParams.get('email');
@@ -933,7 +988,11 @@ const QuickRegistration: React.FC = () => {
   return (
     <div className="min-h-screen bg-gray-50 pt-24 pb-32">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-        <div className="text-center mb-20">
+        <div className="text-center mb-12">
+          {((couponCode && URGENCY_COUPONS.includes(couponCode.toUpperCase())) || 
+            (promotionalCoupon && URGENCY_COUPONS.includes(promotionalCoupon.toUpperCase()))) && (
+            <UrgencyBanner />
+          )}
           <h1 className="text-4xl font-extrabold text-grey-900 tracking-tight sm:text-5xl">
             {t('rapidRegistration.title')}
           </h1>
@@ -1593,10 +1652,18 @@ const QuickRegistration: React.FC = () => {
                         {t('rapidRegistration.sidebar.total')}
                       </span>
                       <div className="text-right">
+                        <div className="flex flex-col items-end">
+                          {/* Preço Original Riscado (Apenas se houver desconto) */}
+                          {currentFee < baseFee && (
+                            <span className="text-xl font-bold text-slate-400 line-through mb-1 decoration-red-500/50">
+                              {formatFeeAmount(baseFee)}
+                            </span>
+                          )}
+                          <span className="text-4xl font-black text-grey-900 tracking-tighter">
+                            {formattedAmount}
+                          </span>
+                        </div>
 
-                        <span className="text-4xl font-black text-grey-900 tracking-tighter">
-                          {formattedAmount}
-                        </span>
                         {isCouponValid && (
                           <div className="flex items-center justify-end mt-1">
                             <span className="bg-emerald-50 text-emerald-600 px-2 py-0.5 rounded-full text-[10px] font-black uppercase tracking-widest border border-emerald-100 flex items-center">

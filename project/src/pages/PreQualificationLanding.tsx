@@ -1,18 +1,19 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
-import { ArrowRight, ArrowLeft, Loader2, CheckCircle2, FileText, GraduationCap, Send, Star, Shield, Clock, MessageCircle } from 'lucide-react';
+import { ArrowRight, ArrowLeft, Loader2, CheckCircle2, FileText, GraduationCap, Send, Star, Shield, MessageCircle, Rocket } from 'lucide-react';
 import { useLeadCapture } from '../hooks/useLeadCapture';
+import NotificationService from '../services/NotificationService';
 import PhoneInput from 'react-phone-number-input';
 import 'react-phone-number-input/style.css';
 
-interface QuizLead {
+interface PreQualificationLead {
   name: string;
   email: string;
   phone: string;
 }
 
-type QuestionId = 'lead' | 'usa' | 'english' | 'priority' | 'flexibility' | 'flexibility_interest' | 'investment' | 'investment_interest' | 'graduation' | 'work_start' | 'work_interest' | 'visa_type' | 'family' | 'time_in_usa' | 'offer' | 'how_it_works_final';
+type QuestionId = 'lead' | 'usa' | 'english' | 'priority' | 'flexibility' | 'flexibility_interest' | 'investment' | 'investment_interest' | 'graduation' | 'work_start_grad' | 'work_start_no_grad' | 'work_interest' | 'visa_type' | 'family' | 'time_in_usa' | 'offer' | 'how_it_works_final';
 
 interface Question {
   id: QuestionId;
@@ -21,10 +22,10 @@ interface Question {
   type?: 'lead_capture' | 'options' | 'loading' | 'offer' | 'how_it_works';
 }
 
-const quizQuestions: Record<QuestionId, Question> = {
+const preQualificationQuestions: Record<QuestionId, Question> = {
   lead: {
     id: 'lead',
-    title: 'Preencha seus dados para começar',
+    title: 'Comece sua Pré-Qualificação',
     type: 'lead_capture'
   },
   usa: {
@@ -127,16 +128,25 @@ const quizQuestions: Record<QuestionId, Question> = {
   },
   graduation: {
     id: 'graduation',
-    title: 'Sobre a autorização de trabalho — você já possui diploma de graduação? 🎓',
+    title: 'Sobre a autorização de trabalho, você já é formado(a)? 🎓',
     type: 'options',
     options: [
       { value: 'sim', label: 'Sim, já sou formado(a)', icon: '✅' },
       { value: 'nao', label: 'Não, ainda não', icon: '📚' }
     ]
   },
-  work_start: {
-    id: 'work_start',
-    title: 'Você gostaria de começar a trabalhar em 9 meses ou em 1 ano? 👍',
+  work_start_grad: {
+    id: 'work_start_grad',
+    title: 'Perfeito 👀 você gostaria de começar a trabalhar a partir do primeiro dia de aula ou depois de 9 meses?',
+    type: 'options',
+    options: [
+      { value: 'dia_1', label: 'A partir do primeiro dia', icon: '🚀' },
+      { value: '9_meses', label: 'Depois de 9 meses', icon: '📆' }
+    ]
+  },
+  work_start_no_grad: {
+    id: 'work_start_no_grad',
+    title: 'Boa 👍 você gostaria de começar a trabalhar em 9 meses ou em 1 ano?',
     type: 'options',
     options: [
       { value: '9_meses', label: 'Em 9 meses', icon: '📆' },
@@ -164,19 +174,55 @@ const quizQuestions: Record<QuestionId, Question> = {
   }
 };
 
-const QuizLanding: React.FC = () => {
+const PreQualificationLanding: React.FC = () => {
   const navigate = useNavigate();
   const { captureLead } = useLeadCapture();
   
   const [currentStep, setCurrentStep] = useState<QuestionId>('lead');
   const [history, setHistory] = useState<QuestionId[]>([]);
-  const [answers, setAnswers] = useState<Record<string, string>>({});
-  const [lead, setLead] = useState<QuizLead>({ name: '', email: '', phone: '' });
+  const [answers, setAnswers] = useState<Record<string, string>>({
+    usa: '',
+    english: '',
+    priority: '',
+    flexibility: '',
+    flexibility_interest: '',
+    investment: '',
+    investment_interest: '',
+    graduation: '',
+    work_start_grad: '',
+    work_start_no_grad: '',
+    work_interest: '',
+    visa_type: '',
+    family: '',
+    time_in_usa: ''
+  });
+  const [lead, setLead] = useState<PreQualificationLead>({ name: '', email: '', phone: '' });
   
   const [isAnalyzing, setIsAnalyzing] = useState(false);
   const [loadingStep, setLoadingStep] = useState(0);
   const [offerReady, setOfferReady] = useState(false);
   const [formErrors, setFormErrors] = useState<{name?: string, email?: string, phone?: string}>({});
+  const [timeLeft, setTimeLeft] = useState(24 * 60 * 60);
+
+  useEffect(() => {
+    if (currentStep === 'how_it_works_final') {
+      const timer = setInterval(() => {
+        setTimeLeft(prev => (prev > 0 ? prev - 1 : 0));
+      }, 1000);
+      return () => clearInterval(timer);
+    }
+  }, [currentStep]);
+
+  const formatTimeParts = (seconds: number) => {
+    const h = Math.floor(seconds / 3600);
+    const m = Math.floor((seconds % 3600) / 60);
+    const s = Math.floor((seconds % 60));
+    return {
+      h: h.toString().padStart(2, '0'),
+      m: m.toString().padStart(2, '0'),
+      s: s.toString().padStart(2, '0')
+    };
+  };
   const [ipCountry, setIpCountry] = useState<string>('US');
 
   // Detecção de país por IP
@@ -193,29 +239,30 @@ const QuizLanding: React.FC = () => {
 
   // Sync lead and answers with database seamlessly
   useEffect(() => {
-    if (lead.email && lead.name && lead.phone) {
+    if (lead.name && (lead.email || lead.phone)) {
       captureLead({
         full_name: lead.name,
         email: lead.email,
         phone: lead.phone,
-        source_page: 'quiz_landing',
-        quiz_answers: answers
+        source_page: 'pre_qualification_landing',
+        pre_qualification_answers: answers,
+        status: currentStep === 'how_it_works_final' ? 'completed' : 'pending'
       });
     }
-  }, [lead, answers, captureLead]);
+  }, [lead, answers, captureLead, currentStep]);
 
   // Effect to simulate analysis progress
   useEffect(() => {
     if (currentStep === 'offer' && !offerReady) {
-      setLoadingStep(0);
       setIsAnalyzing(true);
-      const timer1 = setTimeout(() => setLoadingStep(1), 1200);
-      const timer2 = setTimeout(() => setLoadingStep(2), 2400);
-      const timer3 = setTimeout(() => setLoadingStep(3), 3600);
+      setLoadingStep(0);
+      const timer1 = setTimeout(() => setLoadingStep(1), 2500);
+      const timer2 = setTimeout(() => setLoadingStep(2), 5500);
+      const timer3 = setTimeout(() => setLoadingStep(3), 8500);
       const timer4 = setTimeout(() => {
         setIsAnalyzing(false);
         setOfferReady(true);
-      }, 5000);
+      }, 12000);
       
       return () => {
         clearTimeout(timer1);
@@ -229,18 +276,14 @@ const QuizLanding: React.FC = () => {
   const validateLeadForm = () => {
     const errors: {name?: string, email?: string, phone?: string} = {};
     
-    // Nome: Apenas não vazio e coerente (mínimo 2 caracteres)
     if (!lead.name.trim() || lead.name.trim().length < 2) {
       errors.name = 'Por favor, insira seu nome.';
     }
 
-    // Email: Regex rigoroso
-    const emailRegex = /^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$/;
-    if (!emailRegex.test(lead.email)) {
-      errors.email = 'Insira um e-mail válido.';
+    if (!lead.email.trim() || !lead.email.includes('@') || !lead.email.includes('.')) {
+      errors.email = 'Por favor, insira um e-mail válido.';
     }
 
-    // Telefone: Mínimo 10 dígitos (considerando DDD + número ou internacional)
     const phoneDigits = lead.phone.replace(/\D/g, '');
     if (phoneDigits.length < 10) {
       errors.phone = 'Insira um telefone válido com DDD (mínimo 10 dígitos).';
@@ -260,10 +303,20 @@ const QuizLanding: React.FC = () => {
       setCurrentStep(step);
     };
 
-    // Routing Logic
     switch (currentStep) {
       case 'lead':
         if (validateLeadForm()) {
+          // Envia evento inicial para o n8n
+          NotificationService.sendLeadEvent({
+            event_type: 'pre_qualification',
+            source: 'quiz_landing',
+            email: lead.email,
+            full_name: lead.name,
+            phone: lead.phone,
+            status: 'pending',
+            answers: {} // Inicia vazio
+          });
+
           next('usa');
         }
         break;
@@ -315,41 +368,45 @@ const QuizLanding: React.FC = () => {
         break;
 
       case 'graduation':
-        next('work_start');
+        if (answer === 'sim') {
+          next('work_start_grad');
+        } else {
+          next('work_start_no_grad');
+        }
         break;
 
-      case 'work_start':
+      case 'work_start_grad':
+      case 'work_start_no_grad':
         next('work_interest');
         break;
 
-      // Convergence logic to visit all sections
       case 'investment_interest':
         if (answers.priority === 'preco') {
-          next('graduation'); // Preco -> Trabalho -> Flexibilidade
+          next('graduation');
         } else if (answers.priority === 'flexibilidade') {
-          startAnalysis(); // Flex -> Trabalho -> Preço (Fim)
+          startAnalysis();
         } else if (answers.priority === 'trabalho') {
-          next('flexibility'); // Trabalho -> Preço -> Flexibilidade
+          next('flexibility');
         }
         break;
 
       case 'flexibility_interest':
         if (answers.priority === 'flexibilidade') {
-          next('graduation'); // Flex -> Trabalho -> Preco
+          next('graduation');
         } else if (answers.priority === 'preco') {
-          startAnalysis(); // Preco -> Trabalho -> Flex (Fim)
+          startAnalysis();
         } else if (answers.priority === 'trabalho') {
-          startAnalysis(); // Trabalho -> Preço -> Flex (Fim)
+          startAnalysis();
         }
         break;
 
       case 'work_interest':
         if (answers.priority === 'trabalho') {
-          next('investment'); // Trabalho -> Preço -> Flex
+          next('investment');
         } else if (answers.priority === 'preco') {
-          next('flexibility'); // Preco -> Trabalho -> Flex
+          next('flexibility');
         } else if (answers.priority === 'flexibilidade') {
-          next('investment'); // Flex -> Trabalho -> Preço
+          next('investment');
         }
         break;
 
@@ -365,7 +422,6 @@ const QuizLanding: React.FC = () => {
     if (prevStep) {
       setHistory(prevHistory);
       setCurrentStep(prevStep);
-      // Opcional: remover a resposta da pergunta que está sendo voltada
       const newAnswers = { ...answers };
       delete newAnswers[prevStep];
       setAnswers(newAnswers);
@@ -378,30 +434,22 @@ const QuizLanding: React.FC = () => {
     setOfferReady(false);
   };
 
-  const handleLeadSubmit = (e: React.FormEvent) => {
-    e.preventDefault();
-    handleNextStep();
-  };
-
   const calculateProgress = () => {
     if (currentStep === 'offer') return 99.5;
     if (currentStep === 'how_it_works_final') return 100;
     
     const stepsTaken = history.length;
-    
-    // Efeito de "Fast start, slow finish" baseado na quantidade de telas passadas.
-    // O quiz tem em média de 8 a 12 passos dependendo da ramificação escolhida.
     const progressMap: Record<number, number> = {
       0: 5,   // lead
-      1: 25,  // 1ª pergunta
-      2: 40,  // 2ª pergunta
-      3: 55,  // 3ª pergunta
-      4: 68,  // 4ª pergunta
-      5: 78,  // 5ª pergunta 
-      6: 85,  // 6ª pergunta
-      7: 90,  // 7ª pergunta
-      8: 94,  // 8ª pergunta
-      9: 96,  // 9ª pergunta
+      1: 25,  
+      2: 40,  
+      3: 55,  
+      4: 68,  
+      5: 78,  
+      6: 85,  
+      7: 90,  
+      8: 94,  
+      9: 96,  
       10: 97.5,
       11: 98.5,
       12: 99
@@ -410,10 +458,12 @@ const QuizLanding: React.FC = () => {
     return progressMap[stepsTaken] || 99;
   };
 
-  const currentQ = quizQuestions[currentStep];
+  const currentQ = preQualificationQuestions[currentStep];
 
-  // Variables for dynamic offer
-  const workTime = answers.work_start === '9_meses' ? '9 meses' : '1 ano';
+  const workTimeText = 
+    answers.work_start_grad === 'dia_1' ? 'a partir do primeiro dia de aula' :
+    (answers.work_start_grad === '9_meses' || answers.work_start_no_grad === '9_meses') ? 'em 9 meses' :
+    answers.work_start_no_grad === '1_ano' ? 'em 1 ano' : 'no prazo escolhido';
   const flexVal = answers.flexibility === '1_semana' ? '1x na semana' : 
                   answers.flexibility === '1_mes' ? '1x no mês' : 'minimamente presenciais';
   const investVal = answers.investment === '500_800' ? '$500 a $800' :
@@ -429,7 +479,6 @@ const QuizLanding: React.FC = () => {
       <main className="flex-1 flex flex-col items-center justify-start md:justify-center px-4 pb-12 pt-4">
         <div className="w-full max-w-2xl relative">
           
-          {/* Progress Bar Premium */}
           {currentStep !== 'how_it_works_final' && (
             <div className="w-full h-1.5 bg-slate-100 rounded-full mb-10 overflow-hidden">
               <motion.div 
@@ -441,7 +490,6 @@ const QuizLanding: React.FC = () => {
             </div>
           )}
 
-          {/* Botão Voltar */}
           <AnimatePresence>
             {history.length > 0 && currentStep !== 'offer' && !isAnalyzing && (
               <motion.button
@@ -463,14 +511,14 @@ const QuizLanding: React.FC = () => {
               animate={{ opacity: 1, x: 0 }}
               exit={{ opacity: 0, x: -20 }}
               transition={{ duration: 0.4, ease: [0.22, 1, 0.36, 1] }}
-              className="bg-white p-8 md:p-10 rounded-[2rem] shadow-[0_8px_40px_rgba(0,0,0,0.06)] border border-slate-100"
+              className="bg-white p-8 md:p-10 rounded-[2rem]"
             >
               
               {currentQ.type === 'lead_capture' && (
-                <form onSubmit={handleLeadSubmit} className="space-y-6">
+                <form onSubmit={(e) => { e.preventDefault(); handleNextStep(); }} className="space-y-6">
                   <div className="text-center mb-8">
                     <h1 className="text-3xl md:text-4xl font-extrabold text-[#1a1a1a] mb-3 tracking-tight">{currentQ.title}</h1>
-                    <p className="text-slate-500 text-base md:text-lg">Só precisamos disso para salvar seu progresso e continuarmos o quiz.</p>
+                    <p className="text-slate-500 text-base md:text-lg">Veja quais bolsas de estudo são compatíveis com o seu perfil</p>
                   </div>
                   
                   <div className="space-y-4">
@@ -491,11 +539,10 @@ const QuizLanding: React.FC = () => {
                       {formErrors.name && <p className="text-red-500 text-sm mt-1.5 ml-1 font-medium">{formErrors.name}</p>}
                     </div>
                     <div>
-                      <label className="text-sm font-semibold text-slate-700 ml-1 mb-1.5 block">Seu melhor E-mail *</label>
+                      <label className="text-sm font-semibold text-slate-700 ml-1 mb-1.5 block">Seu Melhor E-mail *</label>
                       <input 
                         required
                         type="email" 
-                        maxLength={100}
                         value={lead.email}
                         onChange={e => {
                           setLead(l => ({...l, email: e.target.value}));
@@ -530,7 +577,7 @@ const QuizLanding: React.FC = () => {
                     type="submit"
                     className="w-full bg-blue-600 hover:bg-blue-700 text-white font-bold py-5 rounded-[2.5rem] text-lg md:text-xl flex items-center justify-center gap-3 transition-all shadow-xl shadow-blue-500/30 active:scale-[0.98] mt-8"
                   >
-                    Começar Quiz <ArrowRight className="w-6 h-6" />
+                    Começar <ArrowRight className="w-6 h-6" />
                   </button>
                 </form>
               )}
@@ -545,8 +592,6 @@ const QuizLanding: React.FC = () => {
                   
                   <div className="flex flex-col gap-3">
                     {currentQ.options?.map((opt, idx) => {
-                      // Some values contain visual prefixes like icons inside `icon` property.
-                      // Sometimes we want to show icon block, sometimes simple text.
                       const isEmoji = opt.icon && opt.icon.length <= 12 && !opt.icon.includes(' '); 
                       const hasBigIcon = ['💰 Preço', '📅 Flexibilidade', '💼 Autorização de trabalho'].includes(opt.icon || '');
                       const bigIcon = hasBigIcon ? opt.icon?.split(' ')[0] : null;
@@ -590,10 +635,9 @@ const QuizLanding: React.FC = () => {
                       initial={{ opacity: 0 }}
                       animate={{ opacity: 1 }}
                     >
-                      {/* Circular Loader with Icon */}
                       <div className="relative flex items-center justify-center w-32 h-32 mb-4">
                         <svg className="w-full h-full transform -rotate-90">
-                          <circle
+                           <circle
                             cx="64"
                             cy="64"
                             r="58"
@@ -627,13 +671,12 @@ const QuizLanding: React.FC = () => {
                         <p className="text-slate-500 font-medium">Estamos buscando as melhores bolsas para o seu perfil</p>
                       </div>
 
-                      {/* Loading Ticks List */}
                       <div className="w-full space-y-3 pt-6">
                         {[
-                          { text: 'Analisando seu perfil...', icon: <Shield className="w-5 h-5" /> },
-                          { text: 'Buscando universidades compatíveis...', icon: <GraduationCap className="w-5 h-5" /> },
-                          { text: 'Verificando bolsas disponíveis...', icon: <Star className="w-5 h-5" /> },
-                          { text: 'Montando sua oferta personalizada...', icon: <FileText className="w-5 h-5" /> }
+                          { text: 'Analisando seu perfil', icon: <Shield className="w-5 h-5" /> },
+                          { text: 'Analisando +154 bolsas no sistema', icon: <GraduationCap className="w-5 h-5" /> },
+                          { text: 'Encontrando bolsas compatíveis com seu perfil', icon: <Star className="w-5 h-5" /> },
+                          { text: 'Sua seleção personalizada está a caminho!', icon: <Rocket className="w-5 h-5" /> }
                         ].map((item, idx) => {
                           const isDone = loadingStep > idx;
                           const isCurrent = loadingStep === idx;
@@ -678,25 +721,21 @@ const QuizLanding: React.FC = () => {
                       </div>
                       
                       <h2 className="text-3xl md:text-4xl font-extrabold text-[#1a1a1a] tracking-tight leading-tight">
-                        Temos bolsas exclusivas para o seu perfil
+                        Parabéns! Você tem bolsas esperando por você.
                       </h2>
                       
                       <p className="text-slate-500 text-lg leading-relaxed">
-                        Com base nas suas respostas, identificamos que você se qualifica para bolsas de estudo em universidades parceiras nos Estados Unidos.
+                        Com base nas suas respostas, identificamos que você se qualifica para bolsas de estudo exclusivas em universidades parceiras nos Estados Unidos.
                       </p>
 
                       <ul className="space-y-4 bg-slate-50/50 p-6 md:p-8 rounded-[1.5rem] border border-slate-100">
-                        {/* Seção de Trabalho */}
-                        {answers.work_start && (
                           <li className="flex items-start gap-4">
                             <div className="bg-green-100 text-green-600 rounded-full p-1 mt-0.5">
                               <CheckCircle2 className="w-4 h-4" />
                             </div>
-                            <span className="text-slate-700 md:text-lg">Você poderá começar a trabalhar em <strong className="text-blue-700 font-extrabold">{workTime}</strong></span>
+                            <span className="text-slate-700 md:text-lg">Você poderá começar a trabalhar <strong className="text-blue-700 font-extrabold">{workTimeText}</strong></span>
                           </li>
-                        )}
                         
-                        {/* Seção de Flexibilidade */}
                         {answers.flexibility && (
                           <li className="flex items-start gap-4">
                             <div className="bg-green-100 text-green-600 rounded-full p-1 mt-0.5">
@@ -706,7 +745,6 @@ const QuizLanding: React.FC = () => {
                           </li>
                         )}
                         
-                        {/* Seção de Preço */}
                         {answers.investment && (
                           <li className="flex items-start gap-4">
                             <div className="bg-green-100 text-green-600 rounded-full p-1 mt-0.5">
@@ -716,7 +754,6 @@ const QuizLanding: React.FC = () => {
                           </li>
                         )}
                         
-                        {/* Suporte Padrão */}
                         <li className="flex items-start gap-4">
                           <div className="bg-green-100 text-green-600 rounded-full p-1 mt-0.5">
                             <CheckCircle2 className="w-4 h-4" />
@@ -726,11 +763,20 @@ const QuizLanding: React.FC = () => {
                       </ul>
 
                       <div className="pt-6 border-t border-slate-200">
-                        <p className="font-medium text-center text-slate-600 mb-6">
+                        <p className="text-xl md:text-2xl font-black text-center text-slate-900 mb-6 leading-tight">
                           Deseja realizar o processo seletivo e garantir sua bolsa?
                         </p>
                         <button 
                           onClick={() => {
+                            // Marca como completado no banco
+                            captureLead({
+                                full_name: lead.name,
+                                email: lead.email,
+                                phone: lead.phone,
+                                source_page: 'pre_qualification_landing',
+                                pre_qualification_answers: answers,
+                                status: 'completed'
+                            });
                             setHistory(prev => [...prev, currentStep]);
                             setCurrentStep('how_it_works_final');
                           }}
@@ -753,16 +799,14 @@ const QuizLanding: React.FC = () => {
                     </p>
                   </div>
 
-                  {/* Timeline Vertical */}
                   <div className="relative pl-12 md:pl-16 space-y-16 py-2">
                     {[
                       { t: 'Inscrição rápida', d: 'Preencha um formulário simples com seus dados acadêmicos. Leva menos de 5 minutos.', i: <FileText className="w-5 h-5 text-blue-600" /> },
-                      { t: 'Seleção de universidades', d: 'Nossa equipe analisa seu perfil e seleciona até 4 universidades com bolsas compatíveis.', i: <GraduationCap className="w-5 h-5 text-blue-600" /> },
+                      { t: 'Seleção de universidades', d: 'Selecione até 4 universidades com bolsas compatíveis com seu perfil', i: <GraduationCap className="w-5 h-5 text-blue-600" /> },
                       { t: 'Candidatura enviada', d: 'Enviamos sua candidatura diretamente para as universidades parceiras.', i: <Send className="w-5 h-5 text-blue-600" /> },
-                      { t: 'Ofertas de bolsa', d: 'As universidades avaliam seu perfil e enviam as ofertas de bolsa aprovadas.', i: <Star className="w-5 h-5 text-blue-600" /> }
+                      { t: 'Escolha bolsas aprovadas', d: 'Escolha a bolsa aprovada para você e dê o passo final para garantir sua vaga.', i: <Star className="w-5 h-5 text-blue-600" /> }
                     ].map((step, idx, array) => (
                       <div key={idx} className="relative flex items-start group">
-                        {/* Linha Conectora - Segmento por Item */}
                         {idx !== array.length - 1 && (
                           <div 
                             className="absolute left-[-28px] md:left-[-42px] border-l-2 border-dashed border-slate-200 -z-0"
@@ -772,9 +816,6 @@ const QuizLanding: React.FC = () => {
                             }}
                           ></div>
                         )}
-                        {/* Ajuste fino para desktop via left no style acima se necessário, ou usar classes variadas */}
-                        
-                        {/* Círculo do Ícone - Forçado no eixo da linha */}
                         <div className="absolute -left-12 md:-left-16 flex items-center justify-center w-10 h-10 md:w-11 md:h-11 rounded-full border-2 border-blue-600 bg-white shadow-sm z-10 transition-all group-hover:bg-blue-50">
                            {step.i}
                         </div>
@@ -786,46 +827,63 @@ const QuizLanding: React.FC = () => {
                     ))}
                   </div>
 
-                  {/* Cards de Destaque Horizontais */}
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                    <div className="bg-slate-50/50 hover:bg-slate-50 p-6 rounded-3xl border border-slate-100 flex gap-4 items-start transition-all duration-300 hover:shadow-md">
-                      <div className="bg-white p-2.5 rounded-xl shadow-sm border border-slate-100 mt-1">
-                        <Shield className="w-6 h-6 text-blue-600" />
-                      </div>
-                      <div>
-                        <h4 className="font-bold text-[#1a1a1a] text-base mb-1">Garantia de reembolso</h4>
-                        <p className="text-slate-500 text-xs md:text-sm leading-relaxed">Se nenhuma bolsa for aprovada, devolvemos 100% do valor.</p>
-                      </div>
-                    </div>
-                    <div className="bg-slate-50/50 hover:bg-slate-50 p-6 rounded-3xl border border-slate-100 flex gap-4 items-start transition-all duration-300 hover:shadow-md">
-                      <div className="bg-white p-2.5 rounded-xl shadow-sm border border-slate-100 mt-1">
-                        <Clock className="w-6 h-6 text-blue-600" />
-                      </div>
-                      <div>
-                        <h4 className="font-bold text-[#1a1a1a] text-base mb-1">Resposta em até 15 dias</h4>
-                        <p className="text-slate-500 text-xs md:text-sm leading-relaxed">Você recebe as ofertas de bolsa em até 15 dias úteis.</p>
-                      </div>
+                  <div className="bg-blue-50/50 border-2 border-blue-100 p-8 md:p-10 rounded-[2.5rem] flex flex-col md:flex-row gap-6 md:gap-8 items-center text-center transition-all hover:bg-blue-50 shadow-sm">
+                    <div>
+                      <h4 className="font-black text-[#1a1a1a] text-xl md:text-2xl mb-2 tracking-tight">Garantia de Reembolso</h4>
+                      <p className="text-slate-600 text-base md:text-lg leading-relaxed">
+                        Se nenhuma bolsa de estudos for aprovada para o seu perfil, <span className="text-blue-700 font-extrabold underline decoration-blue-200">devolvemos o Processo Seletivo</span>.
+                      </p>
                     </div>
                   </div>
 
-                  {/* Box de Preço Estilizada */}
-                  <div className="bg-gradient-to-b from-blue-50/80 to-white p-8 md:p-10 rounded-[2.5rem] text-center shadow-[0_8px_30px_rgb(59,130,246,0.08)] border border-blue-100/50 relative overflow-hidden">
-                    <div className="absolute top-0 inset-x-0 h-1 bg-gradient-to-r from-blue-400 via-blue-500 to-indigo-500"></div>
-                    <p className="text-blue-600 font-bold text-sm md:text-base mb-3 uppercase tracking-widest">Investimento único</p>
-                    <div className="text-6xl md:text-7xl font-black text-[#1a1a1a] mb-4 tracking-tighter">US$ 400</div>
-                    <p className="text-slate-500 text-sm md:text-base font-medium">
-                      Taxa do processo seletivo · <span className="text-blue-600">reembolsável se não aprovado</span>
-                    </p>
+                  <div className="bg-gradient-to-b from-slate-50 to-white p-8 md:p-10 rounded-[2.5rem] text-center shadow-[0_8px_30px_rgb(0,0,0,0.04)] border border-slate-100 relative overflow-hidden">
+                    <div className="bg-amber-400 p-4 rounded-2xl mb-8 flex flex-col md:flex-row items-center justify-center gap-4 md:gap-8 shadow-md border border-amber-300">
+                        <span className="text-amber-900 font-bold text-sm md:text-base uppercase tracking-tight">Oferta expira em:</span>
+                      <div className="flex items-center gap-1.5 font-mono font-black text-2xl md:text-3xl">
+                        {(() => {
+                          const time = formatTimeParts(timeLeft);
+                          return (
+                            <>
+                              <div className="bg-white/30 backdrop-blur-sm px-2 rounded-lg text-amber-900 shadow-inner flex items-center justify-center min-w-[3rem] h-12">
+                                {time.h}
+                              </div>
+                              <span className="text-amber-900 drop-shadow-sm">:</span>
+                              <div className="bg-white/30 backdrop-blur-sm px-2 rounded-lg text-amber-900 shadow-inner flex items-center justify-center min-w-[3rem] h-12">
+                                {time.m}
+                              </div>
+                              <span className="text-amber-900 drop-shadow-sm">:</span>
+                              <div className="bg-white/30 backdrop-blur-sm px-2 rounded-lg text-amber-900 shadow-inner flex items-center justify-center min-w-[3rem] h-12">
+                                {time.s}
+                              </div>
+                            </>
+                          );
+                        })()}
+                      </div>
+                    </div>
+
+                    <p className="text-blue-700 font-bold text-sm md:text-base mb-6 uppercase tracking-widest">Processo seletivo</p>
+                    
+                    <div className="space-y-2">
+                      <div className="flex items-center justify-center gap-3">
+                        <span className="text-2xl md:text-3xl text-slate-500 line-through decoration-red-500/30 font-bold italic opacity-80">DE US$ 400</span>
+                      </div>
+                      <div className="text-6xl md:text-7xl font-black text-[#1a1a1a] tracking-tight leading-none">
+                        POR <span className="text-blue-600">US$ 350</span>
+                      </div>
+                      <p className="text-green-600 font-bold text-sm mt-4 inline-block bg-green-50 px-4 py-1 rounded-full">
+                        Você economiza US$ 50 hoje
+                      </p>
+                    </div>
                   </div>
 
-                  {/* Botões Finais */}
                   <div className="flex flex-col md:flex-row gap-4 pt-4">
                     <button 
                       onClick={() => {
                         const params = new URLSearchParams();
-                        if (lead.email) params.append('email', lead.email);
                         if (lead.name) params.append('name', lead.name);
+                        if (lead.email) params.append('email', lead.email);
                         if (lead.phone) params.append('phone', lead.phone);
+                        params.append('coupon', 'TFOE');
                         navigate(`/selection-fee-registration?${params.toString()}`);
                       }}
                       className="flex-[1.5] bg-blue-600 hover:bg-blue-700 text-white font-bold py-5 rounded-[2.5rem] text-lg md:text-xl flex items-center justify-center gap-3 transition-all shadow-xl shadow-blue-500/30 active:scale-[0.98]"
@@ -852,4 +910,4 @@ const QuizLanding: React.FC = () => {
   );
 };
 
-export default QuizLanding;
+export default PreQualificationLanding;

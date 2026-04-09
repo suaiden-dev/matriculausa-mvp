@@ -19,7 +19,7 @@ const LayoutContent: React.FC<LayoutProps> = ({ children }) => {
                      location.pathname.startsWith('/affiliate-admin') ||
                      location.pathname.startsWith('/seller') ||
                      location.pathname === '/smart-assistant' ||
-                     location.pathname.startsWith('/quiz');
+                     location.pathname.startsWith('/pre-qualification');
   const hideFooter = hideHeader || location.pathname.startsWith('/checkout/zelle');
   const isDashboard = hideHeader;
   const isAdmin = location.pathname.startsWith('/admin');
