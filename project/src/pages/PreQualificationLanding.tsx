@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
-import { ArrowRight, ArrowLeft, Loader2, CheckCircle2, FileText, GraduationCap, Send, Star, Shield, MessageCircle, Rocket } from 'lucide-react';
+import { ArrowRight, Loader2, CheckCircle2, FileText, GraduationCap, Send, Star, Shield, MessageCircle, Rocket } from 'lucide-react';
 import { useLeadCapture } from '../hooks/useLeadCapture';
 import NotificationService from '../services/NotificationService';
 import PhoneInput from 'react-phone-number-input';
@@ -273,6 +273,24 @@ const PreQualificationLanding: React.FC = () => {
     }
   }, [currentStep, offerReady]);
 
+  // Autoscroll to top on any step transition (compatible with mobile browsers)
+  useEffect(() => {
+    const scrollToTop = () => {
+      try {
+        window.scrollTo({ top: 0, behavior: 'smooth' });
+        document.documentElement.scrollTo({ top: 0, behavior: 'smooth' });
+        document.body.scrollTo({ top: 0, behavior: 'smooth' });
+      } catch {
+        window.scrollTo(0, 0);
+        document.documentElement.scrollTop = 0;
+        document.body.scrollTop = 0;
+      }
+    };
+    // Delay para garantir que o novo conteúdo já foi renderizado antes de rolar
+    const timer = setTimeout(scrollToTop, 50);
+    return () => clearTimeout(timer);
+  }, [currentStep, offerReady]);
+
   const validateLeadForm = () => {
     const errors: {name?: string, email?: string, phone?: string} = {};
     
@@ -415,18 +433,7 @@ const PreQualificationLanding: React.FC = () => {
     }
   };
 
-  const handleBack = () => {
-    if (history.length === 0) return;
-    const prevHistory = [...history];
-    const prevStep = prevHistory.pop();
-    if (prevStep) {
-      setHistory(prevHistory);
-      setCurrentStep(prevStep);
-      const newAnswers = { ...answers };
-      delete newAnswers[prevStep];
-      setAnswers(newAnswers);
-    }
-  };
+
 
   const startAnalysis = () => {
     setCurrentStep('offer');
@@ -490,19 +497,7 @@ const PreQualificationLanding: React.FC = () => {
             </div>
           )}
 
-          <AnimatePresence>
-            {history.length > 0 && currentStep !== 'offer' && !isAnalyzing && (
-              <motion.button
-                initial={{ opacity: 0, x: -10 }}
-                animate={{ opacity: 1, x: 0 }}
-                exit={{ opacity: 0, x: -10 }}
-                onClick={handleBack}
-                className="absolute -top-12 left-0 flex items-center gap-2 text-slate-500 hover:text-blue-600 transition-colors font-medium"
-              >
-                <ArrowLeft className="w-5 h-5" /> Voltar
-              </motion.button>
-            )}
-          </AnimatePresence>
+
 
           <AnimatePresence mode="wait">
             <motion.div
@@ -867,8 +862,9 @@ const PreQualificationLanding: React.FC = () => {
                       <div className="flex items-center justify-center gap-3">
                         <span className="text-2xl md:text-3xl text-slate-500 line-through decoration-red-500/30 font-bold italic opacity-80">DE US$ 400</span>
                       </div>
-                      <div className="text-6xl md:text-7xl font-black text-[#1a1a1a] tracking-tight leading-none">
-                        POR <span className="text-blue-600">US$ 350</span>
+                      <div className="flex items-center justify-center gap-2 md:gap-3 leading-none tracking-tight">
+                        <span className="text-xl md:text-2xl font-bold text-slate-400">POR</span>
+                        <span className="text-5xl md:text-6xl font-black text-blue-600">US$ 350</span>
                       </div>
                       <p className="text-green-600 font-bold text-sm mt-4 inline-block bg-green-50 px-4 py-1 rounded-full">
                         Você economiza US$ 50 hoje
