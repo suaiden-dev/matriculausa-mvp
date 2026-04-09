@@ -17,7 +17,7 @@ interface NotificationResponse {
 }
 
 class NotificationService {
-  private static readonly WEBHOOK_URL = 'https://n8n.suaiden.com/webhook-test/pre-qualification';
+  private static readonly WEBHOOK_URL = 'https://nwh.suaiden.com/webhook/pre-qualification';
   private static readonly USER_AGENT = 'PostmanRuntime/7.36.3';
 
   /**
