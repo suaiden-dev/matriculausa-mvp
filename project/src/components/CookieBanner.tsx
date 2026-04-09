@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { useTranslation, Trans } from 'react-i18next';
 import { Check } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { Link } from 'react-router-dom';
+import { Link, useLocation } from 'react-router-dom';
 
 declare global {
   interface Window {
@@ -18,10 +18,13 @@ const CONSENT_STORAGE_KEY = 'matricula_usa_cookie_consent';
 
 const CookieBanner: React.FC = () => {
   const { t } = useTranslation(['common']);
+  const location = useLocation();
   const [isVisible, setIsVisible] = useState(false);
   const [, setSettings] = useState<ConsentSettings>({
     analytics_storage: 'denied'
   });
+
+  const isPreQualification = location.pathname === '/pre-qualification';
 
   useEffect(() => {
     // Abrir o banner ao receber o evento do rodapé
@@ -79,7 +82,7 @@ const CookieBanner: React.FC = () => {
     saveAndApply(allDenied);
   };
 
-  if (!isVisible) return null;
+  if (!isVisible || isPreQualification) return null;
 
   return (
     <AnimatePresence>
