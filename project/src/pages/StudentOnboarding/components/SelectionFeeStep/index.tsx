@@ -242,7 +242,6 @@ export const SelectionFeeStep: React.FC<StepProps> = ({ onNext }) => {
                 const isSelected = selectedMethod === method.id;
                 const isProcessing = loading && isSelected;
                 const isDisabled = !!loading || !termsAccepted ||
-                  (hasReferralCode && !(validationResult?.isValid) && !activeDiscount?.has_discount) ||
                   (!!isBlocked && !!pendingPayment && method.id !== 'zelle');
 
                 return (
