@@ -1,6 +1,7 @@
+// @ts-nocheck
 import "jsr:@supabase/functions-js/edge-runtime.d.ts";
-import Stripe from "npm:stripe@17.7.0";
-import { createClient } from "npm:@supabase/supabase-js@2.49.1";
+import Stripe from "stripe";
+import { createClient } from "@supabase/supabase-js";
 import { getStripeConfig } from "../stripe-config.ts";
 import {
   calculateCardAmountWithFees,
@@ -31,7 +32,7 @@ function corsResponse(body: string | object | null, status = 200) {
   });
 }
 
-Deno.serve(async (req) => {
+Deno.serve(async (req: Request) => {
   try {
     if (req.method === "OPTIONS") {
       return corsResponse(null, 204);
@@ -694,7 +695,7 @@ Deno.serve(async (req) => {
     // ==========================================
 
     return corsResponse({ session_url: session.url }, 200);
-  } catch (error) {
+  } catch (error: any) {
     console.error("Checkout error:", error);
     console.error("[stripe-checkout-application-fee] Erro detalhado:", {
       error: error.message,

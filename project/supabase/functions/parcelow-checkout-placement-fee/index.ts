@@ -1,9 +1,13 @@
 import "jsr:@supabase/functions-js/edge-runtime.d.ts";
+// @ts-ignore
 import { createClient } from "npm:@supabase/supabase-js@2.49.1";
 import { getParcelowConfig } from "../shared/parcelow/config.ts";
 import { getRedirectOrigin } from "../shared/environment-detector.ts";
 import { getParcelowAccessToken } from "../shared/parcelow/auth.ts";
 import { notifyCheckoutInitiated } from "../utils/checkout-notifier.ts";
+
+// @ts-ignore: Deno is provided by the Supabase runtime
+declare const Deno: any;
 
 const supabase = createClient(
   Deno.env.get("SUPABASE_URL") ?? "",
@@ -28,7 +32,7 @@ function corsResponse(body: any, status = 200) {
   });
 }
 
-Deno.serve(async (req) => {
+Deno.serve(async (req: Request) => {
   try {
     console.log("[parcelow-checkout-placement-fee] 🚀 Iniciando função");
 
@@ -85,11 +89,23 @@ Deno.serve(async (req) => {
       originalAmountForCouponValidation,
     );
 
-    // Verificar se há cupom promocional
+    // Verificar se há valor com desconto no metadata (prioridade)
+    const hasFinalAmountFromMetadata = metadata?.final_amount &&
+      !isNaN(parseFloat(metadata.final_amount));
+    const finalAmountFromMetadata = hasFinalAmountFromMetadata
+      ? parseFloat(metadata.final_amount)
+      : null;
+
     let promotionalCouponData: any = null;
     let finalAmount = amount;
 
-    if (promotional_coupon && promotional_coupon.trim()) {
+    if (finalAmountFromMetadata) {
+      finalAmount = finalAmountFromMetadata;
+      console.log(
+        "[parcelow-checkout-placement-fee] ✅ Usando valor com desconto do metadata:",
+        finalAmount,
+      );
+    } else if (promotional_coupon && promotional_coupon.trim()) {
       try {
         const normalizedCoupon = promotional_coupon.trim().toUpperCase();
         console.log(
@@ -141,7 +157,7 @@ Deno.serve(async (req) => {
     // Buscar perfil do usuário para obter CPF
     const { data: profile, error: profileError } = await supabase
       .from("user_profiles")
-      .select("id, full_name, email, cpf_document, phone")
+      .select("id, full_name, email, cpf_document, phone, placement_fee_flow")
       .eq("user_id", user.id)
       .single();
 
@@ -153,9 +169,28 @@ Deno.serve(async (req) => {
       return corsResponse({ error: "User profile not found" }, 404);
     }
 
+    console.log("[parcelow-checkout-placement-fee] 👤 Perfil carregado:", {
+      id: profile.id,
+      hasCpf: !!profile.cpf_document,
+      hasPhone: !!profile.phone,
+      isNewFlow: profile.placement_fee_flow
+    });
+
     // Definir CPF final (Body > Profile)
     const rawCpf = bodyCpf || profile.cpf_document;
     const finalCpf = rawCpf ? String(rawCpf).replace(/\D/g, "") : null;
+    
+    console.log("[parcelow-checkout-placement-fee] 📄 Verificação de documento:", {
+      finalCpfLength: finalCpf?.length || 0,
+    });
+
+    if (!finalCpf || finalCpf.length < 11) {
+      console.error("[parcelow-checkout-placement-fee] ❌ CPF insuficiente:", finalCpf);
+      return corsResponse({ 
+        error: "document_number_required",
+        message: "CPF is required for Parcelow payment" 
+      }, 400);
+    }
 
     console.log("[parcelow-checkout-placement-fee] 📄 Verificação de documento:", {
       profileCpf: !!profile.cpf_document,

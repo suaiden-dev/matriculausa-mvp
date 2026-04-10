@@ -1,4 +1,4 @@
-import React, { useEffect, useState, useCallback } from 'react';
+import React, { useEffect, useState, useCallback, useRef } from 'react';
 import { useAuth } from '../../../hooks/useAuth';
 import { supabase } from '../../../lib/supabase';
 import { StepProps } from '../types';
@@ -15,6 +15,14 @@ import { useTranslation } from 'react-i18next';
 
 import { useFeeConfig } from '../../../hooks/useFeeConfig';
 import { calculateCardAmountWithFees, getExchangeRate, calculatePIXTotalWithIOF } from '../../../utils/stripeFeeCalculator';
+
+interface CouponValidation {
+  isValid: boolean;
+  message: string;
+  discountAmount?: number;
+  finalAmount?: number;
+  couponId?: string;
+}
 
 interface ApplicationWithScholarship {
   id: string;
@@ -86,7 +94,7 @@ const ParcelowIcon = ({ className }: { className?: string }) => (
 import { usePaymentBlocked } from '../../../hooks/usePaymentBlocked';
 
 export const PaymentStep: React.FC<StepProps> = ({ onNext, onBack }) => {
-  const { userProfile } = useAuth();
+  const { user, userProfile } = useAuth();
   const { getFeeAmount, formatFeeAmount, userDependents } = useFeeConfig(userProfile?.user_id);
   const { isBlocked, pendingPayment, refetch: refetchPaymentStatus } = usePaymentBlocked();
   const { t } = useTranslation(['payment', 'common']);
@@ -104,6 +112,13 @@ export const PaymentStep: React.FC<StepProps> = ({ onNext, onBack }) => {
   const [savingCpf, setSavingCpf] = useState(false);
   const [cpfError, setCpfError] = useState<string | null>(null);
   const [pendingParcelowApp, setPendingParcelowApp] = useState<ApplicationWithScholarship | null>(null);
+
+  // Promotional coupon states
+  const [hasCoupon, setHasCoupon] = useState(false);
+  const [promotionalCoupon, setPromotionalCoupon] = useState('');
+  const [isValidatingCoupon, setIsValidatingCoupon] = useState(false);
+  const [couponValidation, setCouponValidation] = useState<CouponValidation | null>(null);
+  const couponInputRef = useRef<HTMLInputElement>(null);
 
   const fetchApplications = useCallback(async () => {
     if (!userProfile?.id) return;
@@ -148,6 +163,128 @@ export const PaymentStep: React.FC<StepProps> = ({ onNext, onBack }) => {
     fetchApplications();
     getExchangeRate().then(rate => setExchangeRate(rate));
   }, [fetchApplications]);
+
+  // Restaurar cupom salvo ao montar o componente
+  useEffect(() => {
+    const restoreCoupon = async () => {
+      if (!user?.id) return;
+      try {
+        const { data: couponRecords, error } = await supabase
+          .from('promotional_coupon_usage')
+          .select('*')
+          .eq('user_id', user.id)
+          .eq('fee_type', 'application_fee')
+          .order('created_at', { ascending: false });
+
+        if (error) return;
+        const validationRecords = (couponRecords || []).filter((r: any) =>
+          r.payment_id?.startsWith('validation_') || r.metadata?.is_validation === true
+        );
+        if (validationRecords.length > 0) {
+          const latest = validationRecords[0];
+          setHasCoupon(true);
+          setPromotionalCoupon(latest.coupon_code);
+          setCouponValidation({
+            isValid: true,
+            message: `Coupon ${latest.coupon_code} applied!`,
+            discountAmount: latest.discount_amount,
+            finalAmount: latest.final_amount,
+            couponId: latest.coupon_id,
+          });
+          (window as any).__checkout_app_fee_coupon = latest.coupon_code;
+          (window as any).__checkout_app_fee_final_amount = latest.final_amount;
+        }
+      } catch (e) {
+        console.error('[PaymentStep] Erro ao restaurar cupom:', e);
+      }
+    };
+    restoreCoupon();
+  }, [user?.id]);
+
+  const validateCoupon = async (baseAmount: number) => {
+    if (!promotionalCoupon.trim()) {
+      setCouponValidation({ isValid: false, message: 'Por favor insira um código de cupom' });
+      return;
+    }
+    const normalizedCode = promotionalCoupon.trim().toUpperCase();
+    setIsValidatingCoupon(true);
+    setCouponValidation(null);
+    try {
+      const { data: result, error } = await supabase.rpc('validate_and_apply_admin_promotional_coupon', {
+        p_code: normalizedCode,
+        p_fee_type: 'application_fee',
+        p_user_id: user?.id,
+      });
+      if (error) throw error;
+      if (!result || !result.valid) {
+        setCouponValidation({ isValid: false, message: result?.message || 'Código de cupom inválido' });
+        return;
+      }
+
+      let discountAmount = result.discount_type === 'percentage'
+        ? (baseAmount * result.discount_value) / 100
+        : result.discount_value;
+      discountAmount = Math.min(discountAmount, baseAmount);
+      const finalAmount = Math.max(0, baseAmount - discountAmount);
+
+      setCouponValidation({
+        isValid: true,
+        message: `Cupom ${normalizedCode} aplicado! Você economizou $${discountAmount.toFixed(2)}`,
+        discountAmount,
+        finalAmount,
+        couponId: result.id,
+      });
+      (window as any).__checkout_app_fee_coupon = normalizedCode;
+      (window as any).__checkout_app_fee_final_amount = finalAmount;
+
+      try {
+        const { data: sessionData } = await supabase.auth.getSession();
+        const token = sessionData.session?.access_token;
+        if (token) {
+          await fetch(`${import.meta.env.VITE_SUPABASE_URL}/functions/v1/record-promotional-coupon-validation`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` },
+            body: JSON.stringify({
+              coupon_code: normalizedCode,
+              coupon_id: result.id,
+              fee_type: 'application_fee',
+              original_amount: baseAmount,
+              discount_amount: discountAmount,
+              final_amount: finalAmount,
+            }),
+          });
+        }
+      } catch (recordError) {
+        console.warn('[PaymentStep] Não foi possível registrar uso do cupom:', recordError);
+      }
+    } catch (e: any) {
+      setCouponValidation({ isValid: false, message: 'Falha ao validar cupom. Tente novamente.' });
+    } finally {
+      setIsValidatingCoupon(false);
+    }
+  };
+
+  const removeCoupon = async () => {
+    if (!promotionalCoupon.trim() || !user?.id) return;
+    try {
+      const { data: sessionData } = await supabase.auth.getSession();
+      const token = sessionData.session?.access_token;
+      if (token) {
+        await fetch(`${import.meta.env.VITE_SUPABASE_URL}/functions/v1/remove-promotional-coupon`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` },
+          body: JSON.stringify({ coupon_code: promotionalCoupon.trim().toUpperCase(), fee_type: 'application_fee' }),
+        });
+      }
+    } catch (e) {
+      console.warn('[PaymentStep] Erro ao remover cupom:', e);
+    }
+    setHasCoupon(false);
+    setPromotionalCoupon('');
+    setCouponValidation(null);
+    delete (window as any).__checkout_app_fee_coupon;
+    delete (window as any).__checkout_app_fee_final_amount;
+  };
 
   const unpaidApplications = applications.filter(app => !app.is_application_fee_paid);
   const allPaid = applications.length > 0 && unpaidApplications.length === 0;
@@ -223,6 +360,13 @@ export const PaymentStep: React.FC<StepProps> = ({ onNext, onBack }) => {
       }
 
       const baseAmount = getFeeAmount('application_fee', application.scholarships?.application_fee_amount || undefined);
+      // Usar valor com desconto do cupom se aplicado
+      const finalAmount = (couponValidation?.isValid && couponValidation.finalAmount !== undefined)
+        ? couponValidation.finalAmount
+        : baseAmount;
+      const appliedCoupon = (couponValidation?.isValid && promotionalCoupon.trim())
+        ? promotionalCoupon.trim().toUpperCase()
+        : null;
 
       const response = await fetch(apiUrl, {
         method: 'POST',
@@ -233,15 +377,20 @@ export const PaymentStep: React.FC<StepProps> = ({ onNext, onBack }) => {
         body: JSON.stringify({
           application_id: application.id,
           scholarships_ids: [application.scholarship_id],
+          // Sempre envia o valor original — a Edge Function usa metadata.final_amount para o desconto
           amount: baseAmount,
           payment_method: method,
           success_url: `${window.location.origin}/student/onboarding?step=payment&payment=success&session_id={CHECKOUT_SESSION_ID}`,
           cancel_url: `${window.location.origin}/student/onboarding?step=payment&payment=cancelled`,
+          ...(appliedCoupon && { promotional_coupon: appliedCoupon }),
           metadata: {
             application_id: application.id,
             selected_scholarship_id: application.scholarship_id,
             fee_type: 'application_fee',
-            exchange_rate: exchangeRate.toString()
+            exchange_rate: exchangeRate.toString(),
+            // final_amount = valor com desconto do cupom (ou valor cheio se sem cupom)
+            final_amount: finalAmount.toString(),
+            promotional_coupon: appliedCoupon
           }
         })
       });
@@ -338,8 +487,12 @@ export const PaymentStep: React.FC<StepProps> = ({ onNext, onBack }) => {
           <div className="lg:col-span-12 space-y-6">
             {applications.map((app) => {
               const baseAmount = getFeeAmount('application_fee', app.scholarships?.application_fee_amount || undefined);
-              const cardAmount = calculateCardAmountWithFees(baseAmount);
-              const pixInfo = calculatePIXTotalWithIOF(baseAmount, exchangeRate);
+              // Calcular valor final com desconto do cupom se aplicado
+              const effectiveAmount = (couponValidation?.isValid && couponValidation.finalAmount !== undefined)
+                ? couponValidation.finalAmount
+                : baseAmount;
+              const cardAmount = calculateCardAmountWithFees(effectiveAmount);
+              const pixInfo = calculatePIXTotalWithIOF(effectiveAmount, exchangeRate);
 
               return (
                 <div
@@ -404,15 +557,155 @@ export const PaymentStep: React.FC<StepProps> = ({ onNext, onBack }) => {
                             </p>
                           </div>
                         )}
-                        <div className="text-4xl font-black text-slate-900 tracking-tighter">
-                          {formatFeeAmount(baseAmount)}
-                        </div>
+                        {couponValidation?.isValid ? (
+                          <div className="flex flex-col items-end">
+                            <div className="text-sm line-through text-gray-300 font-bold mb-0.5">{formatFeeAmount(baseAmount)}</div>
+                            <div className="text-4xl font-black text-emerald-500 tracking-tighter">{formatFeeAmount(effectiveAmount)}</div>
+                            <div className="inline-flex items-center mt-1.5">
+                              <CheckCircle className="w-3 h-3 text-emerald-500 mr-1.5" />
+                              <span className="text-[10px] text-emerald-500 font-black uppercase tracking-widest">Cupom aplicado</span>
+                            </div>
+                          </div>
+                        ) : (
+                          <div className="text-4xl font-black text-slate-900 tracking-tighter">
+                            {formatFeeAmount(baseAmount)}
+                          </div>
+                        )}
                       </div>
                     </div>
 
                     {/* Payment Options List */}
                     {!app.is_application_fee_paid && (
                       <div className="flex flex-col gap-4 mt-4">
+
+                        {/* ── Seção de Cupom Promocional ─────────────────────── */}
+                        {!hasZellePendingApplicationFee && (
+                          <div className="mb-2 space-y-3">
+                            {/* Bloco Unificado: Checkbox e Input na mesma linha */}
+                            {!couponValidation?.isValid && (
+                              <div className="flex md:flex-row items-center justify-between gap-6 p-4 rounded-2xl transition-all hover:bg-gray-50/50 cursor-pointer min-h-[88px]">
+                                {/* Lado Esquerdo: Checkbox e Texto */}
+                                <div className="flex items-center space-x-6 shrink-0 cursor-pointer">
+                                  <label htmlFor="hasCouponApp" className="checkbox-container cursor-pointer flex-shrink-0 transform scale-[1.35] origin-left ml-2">
+                                    <input
+                                      id="hasCouponApp"
+                                      name="hasCouponApp"
+                                      type="checkbox"
+                                      checked={hasCoupon}
+                                      onChange={(e) => {
+                                        setHasCoupon(e.target.checked);
+                                        if (!e.target.checked) {
+                                          setPromotionalCoupon('');
+                                          setCouponValidation(null);
+                                          delete (window as any).__checkout_app_fee_coupon;
+                                          delete (window as any).__checkout_app_fee_final_amount;
+                                        }
+                                      }}
+                                      className="custom-checkbox cursor-pointer"
+                                    />
+                                    <div className="checkmark cursor-pointer" />
+                                  </label>
+                                  <label htmlFor="hasCouponApp" className="text-lg md:text-xl font-black text-slate-800 leading-none cursor-pointer flex-1 whitespace-nowrap">
+                                    {t('selectionFeeStep.main.promotionalCoupon.title')}
+                                  </label>
+                                </div>
+
+                                {/* Lado Direito: Input do cupom (se ativado) */}
+                                {hasCoupon && (
+                                  <div className="flex-1 w-full lg:max-w-xl cursor-default">
+                                    <div className="flex flex-col sm:flex-row gap-2">
+                                      <div className="relative flex-1 group/input">
+                                        <input
+                                          ref={couponInputRef}
+                                          type="text"
+                                          value={promotionalCoupon}
+                                          onChange={(e) => {
+                                            const newValue = e.target.value.toUpperCase();
+                                            const cursor = e.target.selectionStart;
+                                            setPromotionalCoupon(newValue);
+                                            setCouponValidation(null);
+                                            requestAnimationFrame(() => {
+                                              if (couponInputRef.current) {
+                                                couponInputRef.current.setSelectionRange(cursor, cursor);
+                                                couponInputRef.current.focus();
+                                              }
+                                            });
+                                          }}
+                                          placeholder={t('preCheckoutModal.placeholder') || 'Cupom'}
+                                          className="w-full px-5 py-3.5 bg-white border-2 border-blue-100 rounded-xl focus:ring-4 focus:ring-blue-500/10 focus:border-blue-500 transition-all text-center font-black text-gray-900 text-lg tracking-[0.2em] placeholder:text-gray-300 shadow-sm"
+                                          maxLength={20}
+                                          autoComplete="off"
+                                        />
+                                        <div className="absolute inset-x-0 bottom-0 h-[2px] bg-gradient-to-r from-transparent via-blue-500/50 to-transparent scale-x-0 group-focus-within/input:scale-x-100 transition-transform duration-500" />
+                                      </div>
+                                      <button
+                                        onClick={() => validateCoupon(baseAmount)}
+                                        disabled={isValidatingCoupon || !promotionalCoupon.trim()}
+                                        className={`px-6 py-3.5 rounded-xl font-black uppercase tracking-widest text-sm transition-all shadow-xl active:scale-95 whitespace-nowrap sm:w-auto w-full ${
+                                          isValidatingCoupon || !promotionalCoupon.trim()
+                                            ? 'bg-gray-100 text-gray-400 border border-gray-200 cursor-not-allowed'
+                                            : 'bg-blue-600 text-white hover:bg-blue-700 border border-blue-500/50 shadow-[0_0_20px_rgba(37,99,235,0.2)]'
+                                        }`}
+                                      >
+                                        {isValidatingCoupon ? (
+                                          <Loader2 className="w-5 h-5 animate-spin mx-auto" />
+                                        ) : t('selectionFeeStep.main.referralCode.validate')}
+                                      </button>
+                                    </div>
+                                    {couponValidation && !couponValidation.isValid && (
+                                      <div className="mt-2 text-xs text-red-600 font-bold flex items-center gap-1 animate-pulse">
+                                        <AlertCircle className="w-3 h-3" />
+                                        {couponValidation.message}
+                                      </div>
+                                    )}
+                                  </div>
+                                )}
+                              </div>
+                            )}
+
+                            {/* Resultado do cupom validado */}
+                            {couponValidation?.isValid && (
+                              <div className="mt-2 animate-fadeIn">
+                                <div className="bg-emerald-500/10 border border-emerald-500/20 rounded-2xl p-5 space-y-3 relative overflow-hidden">
+                                  <div className="absolute top-0 right-0 w-24 h-24 bg-emerald-500/5 rounded-full blur-[40px] -mr-12 -mt-12 pointer-events-none" />
+                                  <div className="flex items-center justify-between relative z-10">
+                                    <div className="flex items-center space-x-3">
+                                      <div className="w-9 h-9 bg-emerald-50 rounded-xl flex items-center justify-center border border-emerald-100">
+                                        <CheckCircle className="w-5 h-5 text-emerald-500" />
+                                      </div>
+                                      <div>
+                                        <span className="text-xs font-bold text-gray-400 uppercase tracking-widest block">{t('selectionFeeStep.main.promotionalCoupon.applied')}</span>
+                                        <span className="text-base font-black text-gray-800 uppercase tracking-tight">{promotionalCoupon.trim().toUpperCase()}</span>
+                                      </div>
+                                    </div>
+                                    <button
+                                      onClick={removeCoupon}
+                                      className="px-3 py-1.5 bg-gray-50 hover:bg-red-50 text-gray-400 hover:text-red-500 rounded-lg text-xs font-black uppercase tracking-widest transition-all border border-gray-100 hover:border-red-100"
+                                    >
+                                      {t('selectionFeeStep.main.promotionalCoupon.remove')}
+                                    </button>
+                                  </div>
+                                  <div className="space-y-2 pt-3 border-t border-gray-100 relative z-10">
+                                    <div className="flex justify-between text-xs font-bold uppercase tracking-widest text-gray-400">
+                                      <span>{t('selectionFeeStep.main.promotionalCoupon.originalPrice')}</span>
+                                      <span className="line-through text-gray-300">{formatFeeAmount(baseAmount)}</span>
+                                    </div>
+                                    <div className="flex justify-between text-xs font-bold uppercase tracking-widest text-gray-400">
+                                      <span>{t('selectionFeeStep.main.promotionalCoupon.discount')}</span>
+                                      <span className="text-emerald-500">-{formatFeeAmount(couponValidation.discountAmount || 0)}</span>
+                                    </div>
+                                    <div className="flex justify-between text-lg font-black uppercase tracking-tight pt-2 text-gray-900">
+                                      <span>{t('selectionFeeStep.main.promotionalCoupon.totalFinal')}</span>
+                                      <span className="text-emerald-500">{formatFeeAmount(couponValidation.finalAmount || 0)}</span>
+                                    </div>
+                                  </div>
+                                </div>
+                              </div>
+                            )}
+                          </div>
+                        )}
+                        {/* ── Fim Seção de Cupom ────────────────────────────── */}
+
                         {/* Zelle Pendente — bloqueia outros métodos */}
                         {hasZellePendingApplicationFee ? (
                           <div className="flex flex-col gap-0">
@@ -433,7 +726,7 @@ export const PaymentStep: React.FC<StepProps> = ({ onNext, onBack }) => {
                             <div className="border border-amber-200 border-t-0 rounded-b-[2rem] overflow-hidden bg-white shadow-sm">
                               <ZelleCheckout
                                 feeType="application_fee"
-                                amount={getFeeAmount('application_fee', app.scholarships?.application_fee_amount || undefined)}
+                                amount={effectiveAmount}
                                 scholarshipsIds={[app.scholarship_id]}
                                 metadata={{
                                   application_id: app.id,
@@ -471,6 +764,9 @@ export const PaymentStep: React.FC<StepProps> = ({ onNext, onBack }) => {
                                   <div className="text-slate-900 text-xl font-black uppercase tracking-tight">
                                     {formatFeeAmount(cardAmount)}
                                   </div>
+                                  {couponValidation?.isValid && (
+                                    <div className="text-[10px] text-emerald-500 font-black uppercase tracking-widest mt-0.5">com desconto</div>
+                                  )}
                                 </div>
                               </div>
                               <div className="md:hidden mt-1.5 text-[10px] font-bold text-slate-400 uppercase tracking-wide leading-tight">
@@ -536,7 +832,7 @@ export const PaymentStep: React.FC<StepProps> = ({ onNext, onBack }) => {
                                   </div>
                                   <div className="text-right flex flex-col items-end shrink-0">
                                     <div className="text-slate-900 text-xl font-black uppercase tracking-tight">
-                                      {formatFeeAmount(baseAmount)}
+                                      {formatFeeAmount(effectiveAmount)}
                                     </div>
                                     <span className="text-[10px] font-bold text-slate-900 mt-1 block uppercase tracking-widest leading-tight">{t('paymentStep.parcelowInstallments')}</span>
                                   </div>
@@ -619,7 +915,7 @@ export const PaymentStep: React.FC<StepProps> = ({ onNext, onBack }) => {
                                   <div className="flex items-center gap-5 shrink-0">
                                     <div className="text-right">
                                       <div className="text-slate-900 text-xl font-black uppercase tracking-tight">
-                                        {formatFeeAmount(baseAmount)}
+                                        {formatFeeAmount(effectiveAmount)}
                                       </div>
                                       <span className="text-[10px] font-bold text-slate-900 mt-1 block uppercase tracking-widest">{t('paymentStep.zelleNoFees')}</span>
                                     </div>
@@ -635,12 +931,14 @@ export const PaymentStep: React.FC<StepProps> = ({ onNext, onBack }) => {
                                 <div className="border border-slate-200 border-t-0 rounded-b-[2rem] overflow-hidden bg-white shadow-sm">
                                   <ZelleCheckout
                                     feeType="application_fee"
-                                    amount={getFeeAmount('application_fee', app.scholarships?.application_fee_amount || undefined)}
+                                    amount={effectiveAmount}
                                     scholarshipsIds={[app.scholarship_id]}
                                     metadata={{
                                       application_id: app.id,
                                       selected_scholarship_id: app.scholarship_id,
-                                      annual_tuition: app.scholarships?.annual_value_with_scholarship
+                                      annual_tuition: app.scholarships?.annual_value_with_scholarship,
+                                      promotional_coupon: couponValidation?.isValid ? promotionalCoupon.trim().toUpperCase() : null,
+                                      final_amount: effectiveAmount
                                     }}
                                     isPendingVerification={hasZellePendingApplicationFee}
                                     onProcessingChange={(isProcessing) => {
