@@ -60,9 +60,10 @@ Deno.serve(async (req: Request) => {
       payment_method,
     } = await req.json();
     
-    // fee_type must be either 'ds160_package' or 'i539_cos_package'
-    if (fee_type !== 'ds160_package' && fee_type !== 'i539_cos_package') {
-      return corsResponse({ error: "fee_type inválido para esta função. Use ds160_package ou i539_cos_package." }, 400);
+    // fee_type must be either 'ds160_package', 'i539_cos_package' or 'reinstatement_package'
+    const validFeeTypes = ['ds160_package', 'i539_cos_package', 'reinstatement_package'];
+    if (!validFeeTypes.includes(fee_type)) {
+      return corsResponse({ error: `fee_type inválido para esta função. Use um de: ${validFeeTypes.join(', ')}.` }, 400);
     }
 
     const mode = "payment";
@@ -149,9 +150,22 @@ Deno.serve(async (req: Request) => {
       metadata: sessionMetadata,
     };
 
-    // Garantir valor mínimo
+    // Garantir valor mínimo e considerar cupom promocional via metadata.final_amount
     const minAmount = 0.50;
-    let finalAmount = originalAmount;
+    
+    // Priorizar metadata.final_amount (valor com desconto de cupom calculado no frontend)
+    // Isso evita o bug de duplo desconto onde o cupom seria aplicado duas vezes
+    const hasFinalAmountFromMetadata = metadata?.final_amount && !isNaN(parseFloat(metadata.final_amount));
+    let finalAmount = hasFinalAmountFromMetadata
+      ? parseFloat(metadata.final_amount)
+      : originalAmount;
+
+    console.log("[stripe-checkout-package-fee] 💰 Valor base para cálculo:", {
+      fromMetadata: hasFinalAmountFromMetadata,
+      finalAmount,
+      originalAmount,
+    });
+
     if (finalAmount < minAmount) {
       finalAmount = minAmount;
     }
@@ -178,8 +192,8 @@ Deno.serve(async (req: Request) => {
         price_data: {
           currency: payment_method === "pix" ? "brl" : "usd",
           product_data: {
-            name: fee_type === 'ds160_package' ? "DS160 Package" : "I539 COS Package",
-            description: fee_type === 'ds160_package' ? "Application and handling for DS160 form" : "Handling and guidance for I539 Change of Status form",
+            name: fee_type === 'ds160_package' ? "DS160 Package" : fee_type === 'reinstatement_package' ? "Visa Reinstatement Package" : "I539 COS Package",
+            description: fee_type === 'ds160_package' ? "Application and handling for DS160 form" : fee_type === 'reinstatement_package' ? "Special handling for Visa Reinstatement process" : "Handling and guidance for I539 Change of Status form",
           },
           unit_amount: grossAmountInCents,
         },

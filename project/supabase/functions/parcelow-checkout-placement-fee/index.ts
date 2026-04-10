@@ -89,11 +89,23 @@ Deno.serve(async (req: Request) => {
       originalAmountForCouponValidation,
     );
 
-    // Verificar se há cupom promocional
+    // Verificar se há valor com desconto no metadata (prioridade)
+    const hasFinalAmountFromMetadata = metadata?.final_amount &&
+      !isNaN(parseFloat(metadata.final_amount));
+    const finalAmountFromMetadata = hasFinalAmountFromMetadata
+      ? parseFloat(metadata.final_amount)
+      : null;
+
     let promotionalCouponData: any = null;
     let finalAmount = amount;
 
-    if (promotional_coupon && promotional_coupon.trim()) {
+    if (finalAmountFromMetadata) {
+      finalAmount = finalAmountFromMetadata;
+      console.log(
+        "[parcelow-checkout-placement-fee] ✅ Usando valor com desconto do metadata:",
+        finalAmount,
+      );
+    } else if (promotional_coupon && promotional_coupon.trim()) {
       try {
         const normalizedCoupon = promotional_coupon.trim().toUpperCase();
         console.log(
