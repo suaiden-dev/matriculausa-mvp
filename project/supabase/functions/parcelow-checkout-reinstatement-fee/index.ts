@@ -1,6 +1,6 @@
 // @ts-nocheck
 import "jsr:@supabase/functions-js/edge-runtime.d.ts";
-import { createClient } from "npm:@supabase/supabase-js@2.49.1";
+import { createClient } from "@supabase/supabase-js";
 import { getParcelowConfig } from "../shared/parcelow/config.ts";
 import { getRedirectOrigin } from "../shared/environment-detector.ts";
 import { getParcelowAccessToken } from "../shared/parcelow/auth.ts";

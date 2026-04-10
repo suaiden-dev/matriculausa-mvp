@@ -1,7 +1,7 @@
 // @ts-nocheck
 import "jsr:@supabase/functions-js/edge-runtime.d.ts";
-import Stripe from "npm:stripe@17.7.0";
-import { createClient } from "npm:@supabase/supabase-js@2.49.1";
+import Stripe from "stripe";
+import { createClient } from "@supabase/supabase-js";
 import { notifyCheckoutInitiated } from "../utils/checkout-notifier.ts";
 
 const supabase = createClient(
@@ -48,7 +48,7 @@ function corsResponse(body: string | object | null, status = 200) {
   return new Response(JSON.stringify(body), { status, headers });
 }
 
-Deno.serve(async (req) => {
+Deno.serve(async (req: Request) => {
   try {
     console.log("[stripe-checkout-placement-fee] 🚀 Function invoked");
 
@@ -186,7 +186,7 @@ Deno.serve(async (req) => {
     }
 
     return corsResponse({ session_url: session.url }, 200);
-  } catch (error) {
+  } catch (error: any) {
     console.error("[stripe-checkout-placement-fee] ❌ Checkout error:", error);
     return corsResponse({ error: "Internal server error", details: error.message, timestamp: new Date().toISOString() }, 500);
   }

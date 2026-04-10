@@ -1,7 +1,7 @@
 // @ts-nocheck
 import "jsr:@supabase/functions-js/edge-runtime.d.ts";
-import Stripe from "npm:stripe@17.7.0";
-import { createClient } from "npm:@supabase/supabase-js@2.49.1";
+import Stripe from "stripe";
+import { createClient } from "@supabase/supabase-js";
 import { getStripeConfig } from "../stripe-config.ts";
 import {
   calculateCardAmountWithFees,
@@ -118,7 +118,7 @@ Deno.serve(async (req: Request) => {
           } else {
             exchangeRate = 5.6; // Taxa de fallback
           }
-        } catch (apiError) {
+        } catch (apiError: unknown) {
           console.error("[stripe-checkout-package-fee] ❌ Erro na API de câmbio:", apiError);
           exchangeRate = 5.6; 
         }
@@ -238,20 +238,20 @@ Deno.serve(async (req: Request) => {
           student_email: userProfile.email ?? user.email ?? null,
           student_phone: userProfile.phone ?? null,
           checkout_url: session.url,
-        }).catch((err) => console.warn("[stripe-checkout-package-fee] Notifier error (ignorado):", err));
+        }).catch((err: unknown) => console.warn("[stripe-checkout-package-fee] Notifier error (ignorado):", err));
         // ==========================================
       }
-    } catch (logErr) {
+    } catch (logErr: unknown) {
       console.error("Failed to log checkout session creation:", logErr);
     }
 
     return corsResponse({ session_url: session.url }, 200);
-  } catch (error: any) {
+  } catch (error: unknown) {
     console.error("Checkout error:", error);
     return corsResponse({ 
       error: "Internal server error",
-      details: error.message,
-      stack: error.stack
+      details: error instanceof Error ? error.message : String(error),
+      stack: error instanceof Error ? error.stack : undefined
     }, 500);
   }
 });
