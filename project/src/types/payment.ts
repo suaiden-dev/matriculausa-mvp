@@ -15,7 +15,7 @@ export interface PaymentRecord {
   payment_date?: string;
   stripe_session_id?: string;
   created_at: string;
-  payment_method?: 'stripe' | 'zelle' | 'manual';
+  payment_method?: 'stripe' | 'zelle' | 'manual' | 'parcelow';
   payment_proof_url?: string;
   admin_notes?: string;
   zelle_status?: 'pending_verification' | 'approved' | 'rejected';

@@ -338,6 +338,7 @@ const PaymentStatusCard: React.FC<PaymentStatusCardProps> = React.memo((props) =
                             <option value="manual">Outside</option>
                             <option value="stripe">Stripe</option>
                             <option value="zelle">Zelle</option>
+                            <option value="parcelow">Parcelow</option>
                           </select>
                           <div className="flex items-center gap-2">
                             <button
@@ -462,6 +463,7 @@ const PaymentStatusCard: React.FC<PaymentStatusCardProps> = React.memo((props) =
                             <option value="manual">Outside</option>
                             <option value="stripe">Stripe</option>
                             <option value="zelle">Zelle</option>
+                            <option value="parcelow">Parcelow</option>
                           </select>
                           <div className="flex items-center gap-2">
                             <button
@@ -642,6 +644,7 @@ const PaymentStatusCard: React.FC<PaymentStatusCardProps> = React.memo((props) =
                                   <option value="manual">Outside</option>
                                   <option value="stripe">Stripe</option>
                                   <option value="zelle">Zelle</option>
+                                  <option value="parcelow">Parcelow</option>
                                 </select>
                                 <div className="flex items-center gap-2">
                                   <button
@@ -833,6 +836,7 @@ const PaymentStatusCard: React.FC<PaymentStatusCardProps> = React.memo((props) =
                                   <option value="manual">Outside</option>
                                   <option value="stripe">Stripe</option>
                                   <option value="zelle">Zelle</option>
+                                  <option value="parcelow">Parcelow</option>
                                 </select>
                                 <div className="flex items-center gap-2">
                                   <button
@@ -971,6 +975,7 @@ const PaymentStatusCard: React.FC<PaymentStatusCardProps> = React.memo((props) =
                                   <option value="manual">Outside</option>
                                   <option value="stripe">Stripe</option>
                                   <option value="zelle">Zelle</option>
+                                  <option value="parcelow">Parcelow</option>
                                 </select>
                                 <div className="flex items-center gap-2">
                                   <button
@@ -1064,6 +1069,7 @@ const PaymentStatusCard: React.FC<PaymentStatusCardProps> = React.memo((props) =
                                 <option value="manual">Outside</option>
                                 <option value="stripe">Stripe</option>
                                 <option value="zelle">Zelle</option>
+                                <option value="parcelow">Parcelow</option>
                               </select>
                               <div className="flex items-center gap-2">
                                 <button
@@ -1189,6 +1195,7 @@ const PaymentStatusCard: React.FC<PaymentStatusCardProps> = React.memo((props) =
                                 <option value="manual">Outside</option>
                                 <option value="stripe">Stripe</option>
                                 <option value="zelle">Zelle</option>
+                                <option value="parcelow">Parcelow</option>
                               </select>
                               <div className="flex items-center gap-2">
                                 <button
@@ -1314,6 +1321,7 @@ const PaymentStatusCard: React.FC<PaymentStatusCardProps> = React.memo((props) =
                                 <option value="manual">Outside</option>
                                 <option value="stripe">Stripe</option>
                                 <option value="zelle">Zelle</option>
+                                <option value="parcelow">Parcelow</option>
                               </select>
                               <div className="flex items-center gap-2">
                                 <button
