@@ -1,7 +1,8 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
-import { ArrowRight, Loader2, CheckCircle2, FileText, GraduationCap, Send, Star, Shield, MessageCircle, Rocket } from 'lucide-react';
+import { ArrowRight, Loader2, CheckCircle2, FileText, GraduationCap, Send, Star, Shield, Rocket, X, ChevronLeft, ChevronRight } from 'lucide-react';
+import WhatsAppIcon from '../components/icons/WhatsApp';
 import { useLeadCapture } from '../hooks/useLeadCapture';
 import NotificationService from '../services/NotificationService';
 import PhoneInput from 'react-phone-number-input';
@@ -13,19 +14,25 @@ interface PreQualificationLead {
   phone: string;
 }
 
-type QuestionId = 'lead' | 'usa' | 'english' | 'priority' | 'flexibility' | 'flexibility_interest' | 'investment' | 'investment_interest' | 'graduation' | 'work_start_grad' | 'work_start_no_grad' | 'work_interest' | 'visa_type' | 'family' | 'time_in_usa' | 'offer' | 'how_it_works_final';
+type QuestionId = 'lead_name' | 'lead_contact' | 'usa' | 'english' | 'priority' | 'flexibility' | 'flexibility_interest' | 'investment' | 'investment_interest' | 'graduation' | 'work_start_grad' | 'work_start_no_grad' | 'work_interest' | 'visa_type' | 'family' | 'time_in_usa' | 'offer' | 'how_it_works_final';
 
 interface Question {
   id: QuestionId;
   title: string;
+  disclaimer?: string;
   options?: { value: string; label: string; icon?: string }[];
   type?: 'lead_capture' | 'options' | 'loading' | 'offer' | 'how_it_works';
 }
 
 const preQualificationQuestions: Record<QuestionId, Question> = {
-  lead: {
-    id: 'lead',
-    title: 'Comece sua Pré-Qualificação',
+  lead_name: {
+    id: 'lead_name',
+    title: 'Descubra as bolsas feitas para você',
+    type: 'lead_capture'
+  },
+  lead_contact: {
+    id: 'lead_contact',
+    title: 'Quase lá!',
     type: 'lead_capture'
   },
   usa: {
@@ -60,6 +67,7 @@ const preQualificationQuestions: Record<QuestionId, Question> = {
   family: {
     id: 'family',
     title: 'Você veio com a família ou está sozinho por aqui?',
+    disclaimer: 'Esta informação nos ajuda a identificar se você possui dependentes, garantindo que você tenha acesso às opções mais adequadas para o seu perfil.',
     type: 'options',
     options: [
       { value: 'sozinho', label: 'Estou sozinho(a)', icon: '🙋' },
@@ -178,7 +186,7 @@ const PreQualificationLanding: React.FC = () => {
   const navigate = useNavigate();
   const { captureLead } = useLeadCapture();
   
-  const [currentStep, setCurrentStep] = useState<QuestionId>('lead');
+  const [currentStep, setCurrentStep] = useState<QuestionId>('lead_name');
   const [history, setHistory] = useState<QuestionId[]>([]);
   const [answers, setAnswers] = useState<Record<string, string>>({
     usa: '',
@@ -203,6 +211,18 @@ const PreQualificationLanding: React.FC = () => {
   const [offerReady, setOfferReady] = useState(false);
   const [formErrors, setFormErrors] = useState<{name?: string, email?: string, phone?: string}>({});
   const [timeLeft, setTimeLeft] = useState(24 * 60 * 60);
+  const [selectedIndex, setSelectedIndex] = useState<number | null>(null);
+
+  const clientImages = [
+    'client-1-0Kw7_YSH.webp', 
+    'client-2-DXGa9qiE.webp', 
+    'client-3-0wq5843V.webp', 
+    'client-4-Bltg_zll.webp', 
+    'client-5-D6LOqwtN.webp', 
+    'client-6-D0rN3mOO.webp', 
+    'client-8-hGb1iLV7.webp', 
+    'client-9-DEMASALH.webp'
+  ];
 
   useEffect(() => {
     if (currentStep === 'how_it_works_final') {
@@ -237,7 +257,9 @@ const PreQualificationLanding: React.FC = () => {
       .catch(() => setIpCountry('US'));
   }, []);
 
-  // Sync lead and answers with database seamlessly
+  // Sync lead and answers with database whenever step changes or answers are updated
+  // We keep this sync but removed 'lead' and 'answers' from dependencies to avoid 
+  // capturing half-typed emails/names. It will capture on every step transition.
   useEffect(() => {
     if (lead.name && (lead.email || lead.phone)) {
       captureLead({
@@ -249,7 +271,7 @@ const PreQualificationLanding: React.FC = () => {
         status: currentStep === 'how_it_works_final' ? 'completed' : 'pending'
       });
     }
-  }, [lead, answers, captureLead, currentStep]);
+  }, [currentStep, captureLead]); // Removed lead and answers to be less aggressive
 
   // Effect to simulate analysis progress
   useEffect(() => {
@@ -294,17 +316,21 @@ const PreQualificationLanding: React.FC = () => {
   const validateLeadForm = () => {
     const errors: {name?: string, email?: string, phone?: string} = {};
     
-    if (!lead.name.trim() || lead.name.trim().length < 2) {
-      errors.name = 'Por favor, insira seu nome.';
+    if (currentStep === 'lead_name') {
+      if (!lead.name.trim() || lead.name.trim().length < 2) {
+        errors.name = 'Por favor, insira seu nome.';
+      }
     }
 
-    if (!lead.email.trim() || !lead.email.includes('@') || !lead.email.includes('.')) {
-      errors.email = 'Por favor, insira um e-mail válido.';
-    }
+    if (currentStep === 'lead_contact') {
+      if (!lead.email.trim() || !lead.email.includes('@') || !lead.email.includes('.')) {
+        errors.email = 'Por favor, insira um e-mail válido.';
+      }
 
-    const phoneDigits = lead.phone.replace(/\D/g, '');
-    if (phoneDigits.length < 10) {
-      errors.phone = 'Insira um telefone válido com DDD (mínimo 10 dígitos).';
+      const phoneDigits = lead.phone.replace(/\D/g, '');
+      if (phoneDigits.length < 10) {
+        errors.phone = 'Insira um telefone válido com DDD (mínimo 10 dígitos).';
+      }
     }
 
     setFormErrors(errors);
@@ -312,17 +338,37 @@ const PreQualificationLanding: React.FC = () => {
   };
 
   const handleNextStep = (answer?: string) => {
-    if (answer && currentStep !== 'lead') {
-      setAnswers(prev => ({ ...prev, [currentStep]: answer }));
+    let currentAnswers = answers;
+    if (answer && currentStep !== 'lead_name' && currentStep !== 'lead_contact') {
+      currentAnswers = { ...answers, [currentStep]: answer };
+      setAnswers(currentAnswers);
     }
 
     const next = (step: QuestionId) => {
       setHistory(prev => [...prev, currentStep]);
       setCurrentStep(step);
+      
+      // Capture lead data quietly on step transition
+      if (lead.name && (lead.email || lead.phone)) {
+        captureLead({
+          full_name: lead.name,
+          email: lead.email,
+          phone: lead.phone,
+          source_page: 'pre_qualification_landing',
+          pre_qualification_answers: currentAnswers,
+          status: step === 'how_it_works_final' ? 'completed' : 'pending'
+        });
+      }
     };
 
     switch (currentStep) {
-      case 'lead':
+      case 'lead_name':
+        if (validateLeadForm()) {
+          next('lead_contact');
+        }
+        break;
+
+      case 'lead_contact':
         if (validateLeadForm()) {
           // Envia evento inicial para o n8n
           NotificationService.sendLeadEvent({
@@ -447,19 +493,20 @@ const PreQualificationLanding: React.FC = () => {
     
     const stepsTaken = history.length;
     const progressMap: Record<number, number> = {
-      0: 5,   // lead
-      1: 25,  
-      2: 40,  
-      3: 55,  
-      4: 68,  
-      5: 78,  
-      6: 85,  
-      7: 90,  
-      8: 94,  
-      9: 96,  
-      10: 97.5,
-      11: 98.5,
-      12: 99
+      0: 3,   // lead_name
+      1: 8,   // lead_contact
+      2: 25,  
+      3: 40,  
+      4: 55,  
+      5: 68,  
+      6: 78,  
+      7: 85,  
+      8: 90,  
+      9: 94,  
+      10: 96,  
+      11: 97.5,
+      12: 98.5,
+      13: 99
     };
     
     return progressMap[stepsTaken] || 99;
@@ -512,77 +559,103 @@ const PreQualificationLanding: React.FC = () => {
               {currentQ.type === 'lead_capture' && (
                 <form onSubmit={(e) => { e.preventDefault(); handleNextStep(); }} className="space-y-6">
                   <div className="text-center mb-8">
-                    <h1 className="text-3xl md:text-4xl font-extrabold text-[#1a1a1a] mb-3 tracking-tight">{currentQ.title}</h1>
-                    <p className="text-slate-500 text-base md:text-lg">Veja quais bolsas de estudo são compatíveis com o seu perfil</p>
+                    <h1 className="text-3xl md:text-4xl font-extrabold text-[#1a1a1a] mb-3 tracking-tight">
+                      {currentStep === 'lead_contact' && lead.name ? `Olá, ${lead.name.split(' ')[0]}!` : currentQ.title}
+                    </h1>
+                    <p className="text-slate-500 text-base md:text-lg leading-relaxed">
+                      {currentStep === 'lead_name' 
+                        ? 'Responda algumas perguntas e veja quais oportunidades combinam com o seu perfil, de forma rápida e segura.' 
+                        : 'Para facilitar nossa comunicação e garantir que você receba todos os detalhes dos seus resultados, precisamos apenas do seu contato.'}
+                    </p>
                   </div>
                   
                   <div className="space-y-4">
-                    <div>
-                      <label className="text-sm font-semibold text-slate-700 ml-1 mb-1.5 block">Seu Nome Completo *</label>
-                      <input 
-                        required
-                        type="text" 
-                        maxLength={80}
-                        value={lead.name}
-                        onChange={e => {
-                          setLead(l => ({...l, name: e.target.value}));
-                          if (formErrors.name) setFormErrors(prev => ({...prev, name: undefined}));
-                        }}
-                        className={`w-full bg-slate-50/50 hover:bg-slate-50 border ${formErrors.name ? 'border-red-500 focus:ring-red-500/20' : 'border-slate-200 focus:border-blue-600 focus:ring-blue-600/20'} rounded-2xl px-5 py-4 text-slate-900 placeholder-slate-400 focus:outline-none focus:ring-4 transition-all duration-300 font-medium`}
-                        placeholder="Nome e Sobrenome"
-                      />
-                      {formErrors.name && <p className="text-red-500 text-sm mt-1.5 ml-1 font-medium">{formErrors.name}</p>}
-                    </div>
-                    <div>
-                      <label className="text-sm font-semibold text-slate-700 ml-1 mb-1.5 block">Seu Melhor E-mail *</label>
-                      <input 
-                        required
-                        type="email" 
-                        value={lead.email}
-                        onChange={e => {
-                          setLead(l => ({...l, email: e.target.value}));
-                          if (formErrors.email) setFormErrors(prev => ({...prev, email: undefined}));
-                        }}
-                        className={`w-full bg-slate-50/50 hover:bg-slate-50 border ${formErrors.email ? 'border-red-500 focus:ring-red-500/20' : 'border-slate-200 focus:border-blue-600 focus:ring-blue-600/20'} rounded-2xl px-5 py-4 text-slate-900 placeholder-slate-400 focus:outline-none focus:ring-4 transition-all duration-300 font-medium`}
-                        placeholder="exemplo@email.com"
-                      />
-                      {formErrors.email && <p className="text-red-500 text-sm mt-1.5 ml-1 font-medium">{formErrors.email}</p>}
-                    </div>
-                    <div>
-                      <label className="text-sm font-semibold text-slate-700 ml-1 mb-1.5 block">WhatsApp com DDD *</label>
-                      <PhoneInput
-                        international
-                        defaultCountry={ipCountry as any}
-                        addInternationalOption={false}
-                        limitMaxLength={true}
-                        maxLength={20}
-                        value={lead.phone}
-                        onChange={(value) => {
-                          setLead(l => ({ ...l, phone: value || '' }));
-                          if (formErrors.phone) setFormErrors(prev => ({ ...prev, phone: undefined }));
-                        }}
-                        className={`quick-registration-phone w-full bg-slate-50/50 hover:bg-slate-50 border ${formErrors.phone ? 'border-red-500 ring-4 ring-red-500/20' : 'border-slate-200 focus-within:border-blue-600 focus-within:ring-4 focus-within:ring-blue-600/20'} rounded-2xl px-5 py-4 text-slate-900 transition-all duration-300 font-medium`}
-                        placeholder="Ex: 11 99999-9999"
-                      />
-                      {formErrors.phone && <p className="text-red-500 text-xs mt-1 ml-1 font-medium">{formErrors.phone}</p>}
-                    </div>
+                    {currentStep === 'lead_name' ? (
+                      <div>
+                        <label className="text-sm font-semibold text-slate-700 ml-1 mb-1.5 block">Seu Nome Completo *</label>
+                        <input 
+                          required
+                          autoFocus
+                          type="text" 
+                          maxLength={80}
+                          value={lead.name}
+                          onChange={e => {
+                            setLead(l => ({...l, name: e.target.value}));
+                            if (formErrors.name) setFormErrors(prev => ({...prev, name: undefined}));
+                          }}
+                          className={`w-full bg-slate-50/50 hover:bg-slate-50 border ${formErrors.name ? 'border-red-500 focus:ring-red-500/20' : 'border-slate-200 focus:border-blue-600 focus:ring-blue-600/20'} rounded-2xl px-5 py-4 text-slate-900 placeholder-slate-400 focus:outline-none focus:ring-4 transition-all duration-300 font-medium`}
+                          placeholder="Nome e Sobrenome"
+                        />
+                        {formErrors.name && <p className="text-red-500 text-sm mt-1.5 ml-1 font-medium">{formErrors.name}</p>}
+                      </div>
+                    ) : (
+                      <>
+                        <motion.div
+                          initial={{ opacity: 0, y: 10 }}
+                          animate={{ opacity: 1, y: 0 }}
+                          transition={{ delay: 0.1 }}
+                        >
+                          <label className="text-sm font-semibold text-slate-700 ml-1 mb-1.5 block">Seu Melhor E-mail *</label>
+                          <input 
+                            required
+                            autoFocus
+                            type="email" 
+                            value={lead.email}
+                            onChange={e => {
+                              setLead(l => ({...l, email: e.target.value}));
+                              if (formErrors.email) setFormErrors(prev => ({...prev, email: undefined}));
+                            }}
+                            className={`w-full bg-slate-50/50 hover:bg-slate-50 border ${formErrors.email ? 'border-red-500 focus:ring-red-500/20' : 'border-slate-200 focus:border-blue-600 focus:ring-blue-600/20'} rounded-2xl px-5 py-4 text-slate-900 placeholder-slate-400 focus:outline-none focus:ring-4 transition-all duration-300 font-medium`}
+                            placeholder="exemplo@email.com"
+                          />
+                          {formErrors.email && <p className="text-red-500 text-sm mt-1.5 ml-1 font-medium">{formErrors.email}</p>}
+                        </motion.div>
+                        <motion.div
+                          initial={{ opacity: 0, y: 10 }}
+                          animate={{ opacity: 1, y: 0 }}
+                          transition={{ delay: 0.2 }}
+                        >
+                          <label className="text-sm font-semibold text-slate-700 ml-1 mb-1.5 block">WhatsApp com DDD *</label>
+                          <PhoneInput
+                            international
+                            defaultCountry={ipCountry as any}
+                            addInternationalOption={false}
+                            limitMaxLength={true}
+                            maxLength={20}
+                            value={lead.phone}
+                            onChange={(value) => {
+                              setLead(l => ({ ...l, phone: value || '' }));
+                              if (formErrors.phone) setFormErrors(prev => ({ ...prev, phone: undefined }));
+                            }}
+                            className={`quick-registration-phone w-full bg-slate-50/50 hover:bg-slate-50 border ${formErrors.phone ? 'border-red-500 ring-4 ring-red-500/20' : 'border-slate-200 focus-within:border-blue-600 focus-within:ring-4 focus-within:ring-blue-600/20'} rounded-2xl px-5 py-4 text-slate-900 transition-all duration-300 font-medium`}
+                            placeholder="Ex: 11 99999-9999"
+                          />
+                          {formErrors.phone && <p className="text-red-500 text-xs mt-1 ml-1 font-medium">{formErrors.phone}</p>}
+                        </motion.div>
+                      </>
+                    )}
                   </div>
 
                   <button 
                     type="submit"
                     className="w-full bg-blue-600 hover:bg-blue-700 text-white font-bold py-5 rounded-[2.5rem] text-lg md:text-xl flex items-center justify-center gap-3 transition-all shadow-xl shadow-blue-500/30 active:scale-[0.98] mt-8"
                   >
-                    Começar <ArrowRight className="w-6 h-6" />
+                    {currentStep === 'lead_name' ? 'Próximo' : 'Começar'} <ArrowRight className="w-6 h-6" />
                   </button>
                 </form>
               )}
 
               {currentQ.type === 'options' && (
                 <div className="space-y-8 min-h-[450px] md:min-h-[500px] flex flex-col justify-start">
-                  <div className="min-h-[80px] md:min-h-[96px] flex items-center justify-center">
+                  <div className="min-h-[80px] md:min-h-[96px] flex flex-col items-center justify-center gap-4">
                     <h2 className="text-2xl md:text-3xl font-extrabold text-center text-[#1a1a1a] leading-tight tracking-tight">
                       {currentQ.title}
                     </h2>
+                    {currentQ.disclaimer && (
+                      <p className="text-slate-500 text-center text-sm md:text-base max-w-lg mx-auto leading-relaxed">
+                        {currentQ.disclaimer}
+                      </p>
+                    )}
                   </div>
                   
                   <div className="flex flex-col gap-3">
@@ -710,18 +783,21 @@ const PreQualificationLanding: React.FC = () => {
                       animate={{ opacity: 1, scale: 1 }}
                     >
 
-                      <div className="inline-flex items-center gap-2 bg-green-50/80 text-green-600 px-4 py-2 rounded-full font-bold text-sm mb-2 border border-green-200">
-                        <CheckCircle2 className="w-5 h-5" />
-                        Perfil analisado com sucesso
+                      <div className="flex flex-col items-center text-center space-y-6">
+                        <div className="inline-flex items-center gap-2 bg-green-50/80 text-green-600 px-4 py-2 rounded-full font-bold text-sm border border-green-200">
+                          <CheckCircle2 className="w-5 h-5" />
+                          Perfil analisado com sucesso
+                        </div>
+                        
+                        <h2 className="text-3xl md:text-4xl font-extrabold text-[#1a1a1a] tracking-tight leading-tight">
+                          Parabéns! Você tem bolsas esperando por você.
+                        </h2>
+                        
+                        <p className="text-slate-500 text-lg leading-relaxed max-w-2xl">
+                          Com base nas suas respostas, identificamos que você se qualifica para bolsas de estudo exclusivas em universidades parceiras nos Estados Unidos.
+                        </p>
+
                       </div>
-                      
-                      <h2 className="text-3xl md:text-4xl font-extrabold text-[#1a1a1a] tracking-tight leading-tight">
-                        Parabéns! Você tem bolsas esperando por você.
-                      </h2>
-                      
-                      <p className="text-slate-500 text-lg leading-relaxed">
-                        Com base nas suas respostas, identificamos que você se qualifica para bolsas de estudo exclusivas em universidades parceiras nos Estados Unidos.
-                      </p>
 
                       <ul className="space-y-4 bg-slate-50/50 p-6 md:p-8 rounded-[1.5rem] border border-slate-100">
                           <li className="flex items-start gap-4">
@@ -756,6 +832,35 @@ const PreQualificationLanding: React.FC = () => {
                           <span className="text-slate-700 md:text-lg">Suporte completo com imigração e visto F-1</span>
                         </li>
                       </ul>
+
+                      <div className="w-full py-6">
+                        <div className="text-center mb-8">
+                          <h3 className="text-2xl md:text-3xl font-black text-slate-900 tracking-tight">
+                            Conheça quem já realizou o sonho americano com nossa ajuda
+                          </h3>
+                        </div>
+                        <div className="grid grid-cols-3 gap-3 md:gap-6">
+                          {clientImages.map((img, i) => (
+                            <motion.button
+                              key={i}
+                              onClick={() => setSelectedIndex(i)}
+                              initial={{ opacity: 0, scale: 0.8 }}
+                              whileInView={{ opacity: 1, scale: 1 }}
+                              viewport={{ once: true }}
+                              whileHover={{ y: -5 }}
+                              transition={{ delay: 0.05 * i, duration: 0.4 }}
+                              className="aspect-square rounded-[2.5rem] overflow-hidden shadow-xl border border-slate-100 bg-slate-50 relative group"
+                            >
+                              <img 
+                                src={`https://fitpynguasqqutuhzifx.supabase.co/storage/v1/object/public/instagramsuaiden/${img}`} 
+                                alt="Cliente satisfeito" 
+                                className="w-full h-full object-cover transition-transform duration-1000 group-hover:scale-110"
+                              />
+                              <div className="absolute inset-0 bg-black/0 group-hover:bg-black/5 transition-colors duration-300" />
+                            </motion.button>
+                          ))}
+                        </div>
+                      </div>
 
                       <div className="pt-6 border-t border-slate-200">
                         <p className="text-xl md:text-2xl font-black text-center text-slate-900 mb-6 leading-tight">
@@ -799,7 +904,8 @@ const PreQualificationLanding: React.FC = () => {
                       { t: 'Inscrição rápida', d: 'Preencha um formulário simples com seus dados acadêmicos. Leva menos de 5 minutos.', i: <FileText className="w-5 h-5 text-blue-600" /> },
                       { t: 'Seleção de universidades', d: 'Selecione até 4 universidades com bolsas compatíveis com seu perfil', i: <GraduationCap className="w-5 h-5 text-blue-600" /> },
                       { t: 'Candidatura enviada', d: 'Enviamos sua candidatura diretamente para as universidades parceiras.', i: <Send className="w-5 h-5 text-blue-600" /> },
-                      { t: 'Escolha bolsas aprovadas', d: 'Escolha a bolsa aprovada para você e dê o passo final para garantir sua vaga.', i: <Star className="w-5 h-5 text-blue-600" /> }
+                      { t: 'Escolha bolsas aprovadas', d: 'Escolha a bolsa aprovada para você e dê o passo final para garantir sua vaga.', i: <Star className="w-5 h-5 text-blue-600" /> },
+                      { t: 'Acompanhe sua jornada', d: 'Continue todo o processo dentro da nossa plataforma até receber sua carta de aceite.', i: <Rocket className="w-5 h-5 text-blue-600" /> }
                     ].map((step, idx, array) => (
                       <div key={idx} className="relative flex items-start group">
                         {idx !== array.length - 1 && (
@@ -832,22 +938,22 @@ const PreQualificationLanding: React.FC = () => {
                   </div>
 
                   <div className="bg-gradient-to-b from-slate-50 to-white p-8 md:p-10 rounded-[2.5rem] text-center shadow-[0_8px_30px_rgb(0,0,0,0.04)] border border-slate-100 relative overflow-hidden">
-                    <div className="bg-amber-400 p-4 rounded-2xl mb-8 flex flex-col md:flex-row items-center justify-center gap-4 md:gap-8 shadow-md border border-amber-300">
-                        <span className="text-amber-900 font-bold text-sm md:text-base uppercase tracking-tight">Oferta expira em:</span>
+                    <div className="bg-red-50 p-4 rounded-2xl mb-8 flex flex-col md:flex-row items-center justify-center gap-4 md:gap-8 shadow-md border border-red-100">
+                        <span className="text-red-800 font-bold text-sm md:text-base uppercase tracking-tight">Oferta expira em:</span>
                       <div className="flex items-center gap-1.5 font-mono font-black text-2xl md:text-3xl">
                         {(() => {
                           const time = formatTimeParts(timeLeft);
                           return (
                             <>
-                              <div className="bg-white/30 backdrop-blur-sm px-2 rounded-lg text-amber-900 shadow-inner flex items-center justify-center min-w-[3rem] h-12">
+                              <div className="bg-white px-2 rounded-lg text-red-600 shadow-sm border border-red-100 flex items-center justify-center min-w-[3rem] h-12">
                                 {time.h}
                               </div>
-                              <span className="text-amber-900 drop-shadow-sm">:</span>
-                              <div className="bg-white/30 backdrop-blur-sm px-2 rounded-lg text-amber-900 shadow-inner flex items-center justify-center min-w-[3rem] h-12">
+                              <span className="text-red-400">:</span>
+                              <div className="bg-white px-2 rounded-lg text-red-600 shadow-sm border border-red-100 flex items-center justify-center min-w-[3rem] h-12">
                                 {time.m}
                               </div>
-                              <span className="text-amber-900 drop-shadow-sm">:</span>
-                              <div className="bg-white/30 backdrop-blur-sm px-2 rounded-lg text-amber-900 shadow-inner flex items-center justify-center min-w-[3rem] h-12">
+                              <span className="text-red-400">:</span>
+                              <div className="bg-white px-2 rounded-lg text-red-600 shadow-sm border border-red-100 flex items-center justify-center min-w-[3rem] h-12">
                                 {time.s}
                               </div>
                             </>
@@ -890,22 +996,50 @@ const PreQualificationLanding: React.FC = () => {
                       onClick={() => {
                         const parts: string[] = [];
                         parts.push(`Olá! Acabei de fazer a pré-qualificação e quero saber mais sobre o processo seletivo.`);
-                        if (lead.name) parts.push(`\n\n*Meu perfil:*`);
-                        if (lead.name) parts.push(`• Nome: ${lead.name}`);
-                        if (answers.usa === 'sim') parts.push(`• Já estou nos EUA`);
-                        if (answers.visa_type) parts.push(`• Visto: ${answers.visa_type === 'ja_tenho' ? 'Já tenho visto de estudante' : 'Quero trocar meu status'}`);
-                        if (answers.english) parts.push(`• Inglês: ${answers.english.charAt(0).toUpperCase() + answers.english.slice(1)}`);
-                        if (answers.priority === 'preco' && answers.investment) parts.push(`• Investimento: ${investVal}/mês`);
-                        if (answers.flexibility) parts.push(`• Flexibilidade: Aulas ${flexVal}`);
-                        if (answers.work_start_grad || answers.work_start_no_grad) parts.push(`• Autorização de trabalho: ${workTimeText}`);
-                        parts.push(`\n\n*Oferta vista:* Processo Seletivo por US$ 350 (com desconto de US$ 50)`);
+                        parts.push(`\n*MEU PERFIL:*`);
+                        parts.push(`• Nome: ${lead.name}`);
+                        parts.push(`• E-mail: ${lead.email}`);
+                        parts.push(`• WhatsApp: ${lead.phone}`);
+
+                        parts.push(`\n*RESPOSTAS DO QUESTIONÁRIO:*`);
+                        
+                        // Mapeamento de perguntas e respostas para o WhatsApp
+                        const questionLabels: Record<string, string> = {
+                          usa: 'Está nos EUA?',
+                          visa_type: 'Tipo de visto',
+                          time_in_usa: 'Tempo nos EUA',
+                          family: 'Família/Sozinho',
+                          english: 'Nível de Inglês',
+                          priority: 'Prioridade',
+                          flexibility: 'Flexibilidade',
+                          investment: 'Faixa de Investimento',
+                          graduation: 'Já é formado?',
+                          work_start_grad: 'Início do trabalho (Graduado)',
+                          work_start_no_grad: 'Início do trabalho (Não graduado)',
+                          work_interest: 'Interesse em trabalho',
+                          flexibility_interest: 'Interesse se houver flexibilidade',
+                          investment_interest: 'Interesse se houver bolsa'
+                        };
+
+                        Object.entries(answers).forEach(([key, value]) => {
+                          if (value && questionLabels[key]) {
+                            // Tenta pegar o label legível da opção
+                            const question = preQualificationQuestions[key as QuestionId];
+                            const option = question?.options?.find(o => o.value === value);
+                            const label = option?.label || value;
+                            parts.push(`• ${questionLabels[key]}: ${label}`);
+                          }
+                        });
+
+                        parts.push(`\n*OFERTA VISUALIZADA:*`);
+                        parts.push(`• Processo Seletivo por US$ 350 (com desconto exclusivo de US$ 50)`);
 
                         const message = encodeURIComponent(parts.join('\n'));
                         window.open(`https://api.whatsapp.com/send/?phone=15202553813&text=${message}`, '_blank');
                       }}
                       className="flex-1 bg-white border-2 border-blue-600 text-blue-600 hover:bg-blue-50 font-bold py-5 rounded-[2.5rem] text-lg md:text-xl flex items-center justify-center gap-3 transition-all active:scale-[0.98]"
                     >
-                      <MessageCircle className="w-6 h-6" /> Falar com alguém
+                      <WhatsAppIcon className="w-6 h-6 text-[#25D366]" /> Falar com alguém
                     </button>
                   </div>
                 </div>
@@ -916,6 +1050,69 @@ const PreQualificationLanding: React.FC = () => {
           
         </div>
       </main>
+
+      <AnimatePresence>
+        {selectedIndex !== null && (
+          <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            onClick={() => setSelectedIndex(null)}
+            className="fixed inset-0 z-[100] bg-black/90 flex items-center justify-center p-4 md:p-8 backdrop-blur-md cursor-zoom-out"
+          >
+            <motion.div
+              initial={{ scale: 0.9, opacity: 0 }}
+              animate={{ scale: 1, opacity: 1 }}
+              exit={{ scale: 0.9, opacity: 0 }}
+              className="relative max-w-5xl w-full flex items-center justify-center group"
+              onClick={e => e.stopPropagation()}
+            >
+              {/* Navegação */}
+              <button 
+                onClick={(e) => {
+                  e.stopPropagation();
+                  setSelectedIndex(prev => (prev !== null && prev > 0 ? prev - 1 : clientImages.length - 1));
+                }}
+                className="absolute left-0 md:-left-20 top-1/2 -translate-y-1/2 text-white/50 hover:text-white transition-all p-4 z-10"
+              >
+                <ChevronLeft className="w-12 h-12" />
+              </button>
+
+              <button 
+                onClick={(e) => {
+                  e.stopPropagation();
+                  setSelectedIndex(prev => (prev !== null && prev < clientImages.length - 1 ? prev + 1 : 0));
+                }}
+                className="absolute right-0 md:-right-20 top-1/2 -translate-y-1/2 text-white/50 hover:text-white transition-all p-4 z-10"
+              >
+                <ChevronRight className="w-12 h-12" />
+              </button>
+
+              <button
+                onClick={() => setSelectedIndex(null)}
+                className="absolute -top-16 right-0 text-white/70 hover:text-white transition-colors p-2 bg-white/10 rounded-full"
+              >
+                <X className="w-10 h-10" />
+              </button>
+
+              <motion.img
+                key={selectedIndex}
+                initial={{ opacity: 0, x: 100 }}
+                animate={{ opacity: 1, x: 0 }}
+                exit={{ opacity: 0, x: -100 }}
+                transition={{ type: "spring", stiffness: 300, damping: 30 }}
+                src={`https://fitpynguasqqutuhzifx.supabase.co/storage/v1/object/public/instagramsuaiden/${clientImages[selectedIndex]}`}
+                alt="Cliente Ampliado"
+                className="max-w-full max-h-[85vh] object-contain rounded-[2.5rem] shadow-2xl cursor-default"
+              />
+
+              <div className="absolute -bottom-12 left-1/2 -translate-x-1/2 text-white/60 font-medium bg-white/10 px-4 py-1 rounded-full text-sm">
+                {selectedIndex + 1} / {clientImages.length}
+              </div>
+            </motion.div>
+          </motion.div>
+        )}
+      </AnimatePresence>
 
     </div>
   );

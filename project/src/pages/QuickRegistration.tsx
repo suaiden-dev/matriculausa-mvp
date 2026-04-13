@@ -33,10 +33,10 @@ import { usePaymentBlocked } from '../hooks/usePaymentBlocked';
 import { useFormTracking } from '../hooks/useFormTracking';
 import { useLeadCapture } from '../hooks/useLeadCapture';
 
-// Cupons que disparam o contador de urgência de 24h
-const URGENCY_COUPONS = ['TFOE'];
+// Mostrar o contador de urgência sempre que um cupom for aplicado
 
 const UrgencyBanner: React.FC = () => {
+  const { t } = useTranslation(['registration']);
   const [timeLeft, setTimeLeft] = useState(24 * 60 * 60); // 24h em segundos
 
   useEffect(() => {
@@ -59,8 +59,8 @@ const UrgencyBanner: React.FC = () => {
       <div className="bg-[#05294E] rounded-3xl p-4 sm:p-5 flex flex-col sm:flex-row items-center justify-center shadow-2xl border border-white/10 gap-6 sm:gap-10">
         {/* Text */}
         <div className="flex items-center">
-          <span className="text-white font-black text-sm sm:text-base uppercase tracking-tight text-center sm:text-left">
-            ÚLTIMAS VAGAS COM DESCONTO: SÓ HOJE!
+          <span className="text-white font-black text-lg sm:text-xl tracking-tight text-center sm:text-left">
+            {t('rapidRegistration.urgencyBanner.title')}
           </span>
         </div>
 
@@ -80,7 +80,7 @@ const UrgencyBanner: React.FC = () => {
             </div>
           </div>
           <span className="text-white/60 font-bold text-[10px] uppercase tracking-widest">
-            RESTANTES
+            {t('rapidRegistration.urgencyBanner.timeLeft')}
           </span>
         </div>
       </div>
@@ -989,8 +989,7 @@ const QuickRegistration: React.FC = () => {
     <div className="min-h-screen bg-gray-50 pt-24 pb-32">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
         <div className="text-center mb-12">
-          {((couponCode && URGENCY_COUPONS.includes(couponCode.toUpperCase())) || 
-            (promotionalCoupon && URGENCY_COUPONS.includes(promotionalCoupon.toUpperCase()))) && (
+          {(codeApplied || promotionalCouponValidation?.isValid) && (
             <UrgencyBanner />
           )}
           <h1 className="text-4xl font-extrabold text-grey-900 tracking-tight sm:text-5xl">
