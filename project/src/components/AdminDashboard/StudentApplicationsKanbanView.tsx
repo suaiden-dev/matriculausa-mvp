@@ -19,7 +19,6 @@ interface StudentApplicationsKanbanViewProps {
   students: StudentRecord[];
   getUnreadCount: (studentId: string) => number;
   getGlobalUnreadCount: (studentId: string) => number;
-  onRefresh: () => void;
   internalAdmins?: InternalAdmin[];
 }
 
@@ -27,7 +26,6 @@ const StudentApplicationsKanbanView: React.FC<StudentApplicationsKanbanViewProps
   students,
   getUnreadCount,
   getGlobalUnreadCount,
-  onRefresh,
   internalAdmins = [],
 }) => {
   const navigate = useNavigate();
@@ -134,7 +132,6 @@ const StudentApplicationsKanbanView: React.FC<StudentApplicationsKanbanViewProps
                   students={studentsInStage}
                   onStudentClick={handleStudentClick}
                   getUnreadCount={getStudentTotalUnread}
-                  onRefresh={onRefresh}
                   internalAdmins={internalAdmins}
                 />
               </div>
