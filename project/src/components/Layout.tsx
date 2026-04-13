@@ -25,7 +25,7 @@ const LayoutContent: React.FC<LayoutProps> = ({ children }) => {
   const isAdmin = location.pathname.startsWith('/admin');
   const isStudentChatPage = location.pathname.startsWith('/student/dashboard/chat');
   
-  // Esconder SmartChat apenas na página do inbox OU quando modal está aberto OU na página de onboarding
+  // Esconder SmartChat apenas na página do inbox OU quando modal está aberto OU na página de onboarding OU pré-qualificação
   const hideSmartChat = location.pathname.includes('/microsoft-inbox') || 
                        location.pathname.includes('/microsoft') ||
                        location.pathname.includes('/email/inbox') ||
@@ -33,6 +33,7 @@ const LayoutContent: React.FC<LayoutProps> = ({ children }) => {
                        location.pathname === '/smart-assistant' ||
                        location.pathname.includes('/applications') ||
                        location.pathname.includes('/onboarding') ||
+                       location.pathname.startsWith('/pre-qualification') ||
                        isModalOpen; // 🎯 NOVA CONDIÇÃO: esconder quando modal está aberto
 
   useEffect(() => {

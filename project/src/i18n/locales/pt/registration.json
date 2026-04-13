@@ -1,5 +1,9 @@
 {
   "rapidRegistration": {
+    "urgencyBanner": {
+      "title": "Cupom aplicado! Oferta válida até:",
+      "timeLeft": "RESTANTES"
+    },
     "title": "Início do Processo Seletivo",
     "form": {
       "title": "Informações Pessoais",

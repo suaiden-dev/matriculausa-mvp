@@ -1,7 +1,7 @@
 // @ts-nocheck
 import "jsr:@supabase/functions-js/edge-runtime.d.ts";
-import Stripe from "npm:stripe@17.7.0";
-import { createClient } from "npm:@supabase/supabase-js@2.49.1";
+import Stripe from "stripe";
+import { createClient } from "@supabase/supabase-js";
 import { getStripeConfig } from "../stripe-config.ts";
 import {
   calculateCardAmountWithFees,
@@ -60,9 +60,10 @@ Deno.serve(async (req: Request) => {
       payment_method,
     } = await req.json();
     
-    // fee_type must be either 'ds160_package' or 'i539_cos_package'
-    if (fee_type !== 'ds160_package' && fee_type !== 'i539_cos_package') {
-      return corsResponse({ error: "fee_type inválido para esta função. Use ds160_package ou i539_cos_package." }, 400);
+    // fee_type must be either 'ds160_package', 'i539_cos_package' or 'reinstatement_package'
+    const validFeeTypes = ['ds160_package', 'i539_cos_package', 'reinstatement_package'];
+    if (!validFeeTypes.includes(fee_type)) {
+      return corsResponse({ error: `fee_type inválido para esta função. Use um de: ${validFeeTypes.join(', ')}.` }, 400);
     }
 
     const mode = "payment";
@@ -117,7 +118,7 @@ Deno.serve(async (req: Request) => {
           } else {
             exchangeRate = 5.6; // Taxa de fallback
           }
-        } catch (apiError) {
+        } catch (apiError: unknown) {
           console.error("[stripe-checkout-package-fee] ❌ Erro na API de câmbio:", apiError);
           exchangeRate = 5.6; 
         }
@@ -149,9 +150,22 @@ Deno.serve(async (req: Request) => {
       metadata: sessionMetadata,
     };
 
-    // Garantir valor mínimo
+    // Garantir valor mínimo e considerar cupom promocional via metadata.final_amount
     const minAmount = 0.50;
-    let finalAmount = originalAmount;
+    
+    // Priorizar metadata.final_amount (valor com desconto de cupom calculado no frontend)
+    // Isso evita o bug de duplo desconto onde o cupom seria aplicado duas vezes
+    const hasFinalAmountFromMetadata = metadata?.final_amount && !isNaN(parseFloat(metadata.final_amount));
+    let finalAmount = hasFinalAmountFromMetadata
+      ? parseFloat(metadata.final_amount)
+      : originalAmount;
+
+    console.log("[stripe-checkout-package-fee] 💰 Valor base para cálculo:", {
+      fromMetadata: hasFinalAmountFromMetadata,
+      finalAmount,
+      originalAmount,
+    });
+
     if (finalAmount < minAmount) {
       finalAmount = minAmount;
     }
@@ -178,8 +192,8 @@ Deno.serve(async (req: Request) => {
         price_data: {
           currency: payment_method === "pix" ? "brl" : "usd",
           product_data: {
-            name: fee_type === 'ds160_package' ? "DS160 Package" : "I539 COS Package",
-            description: fee_type === 'ds160_package' ? "Application and handling for DS160 form" : "Handling and guidance for I539 Change of Status form",
+            name: fee_type === 'ds160_package' ? "DS160 Package" : fee_type === 'reinstatement_package' ? "Visa Reinstatement Package" : "I539 COS Package",
+            description: fee_type === 'ds160_package' ? "Application and handling for DS160 form" : fee_type === 'reinstatement_package' ? "Special handling for Visa Reinstatement process" : "Handling and guidance for I539 Change of Status form",
           },
           unit_amount: grossAmountInCents,
         },
@@ -224,20 +238,20 @@ Deno.serve(async (req: Request) => {
           student_email: userProfile.email ?? user.email ?? null,
           student_phone: userProfile.phone ?? null,
           checkout_url: session.url,
-        }).catch((err) => console.warn("[stripe-checkout-package-fee] Notifier error (ignorado):", err));
+        }).catch((err: unknown) => console.warn("[stripe-checkout-package-fee] Notifier error (ignorado):", err));
         // ==========================================
       }
-    } catch (logErr) {
+    } catch (logErr: unknown) {
       console.error("Failed to log checkout session creation:", logErr);
     }
 
     return corsResponse({ session_url: session.url }, 200);
-  } catch (error: any) {
+  } catch (error: unknown) {
     console.error("Checkout error:", error);
     return corsResponse({ 
       error: "Internal server error",
-      details: error.message,
-      stack: error.stack
+      details: error instanceof Error ? error.message : String(error),
+      stack: error instanceof Error ? error.stack : undefined
     }, 500);
   }
 });

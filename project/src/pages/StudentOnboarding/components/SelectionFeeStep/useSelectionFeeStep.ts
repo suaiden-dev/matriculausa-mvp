@@ -542,9 +542,6 @@ export const useSelectionFeeStep = (onNext: () => void) => {
     setLoading(true);
     if (!user?.id) { setError('User not authenticated'); return; }
     if (!termsAccepted) { alert(t('payment:preCheckoutModal.mustAcceptTerms') || 'You must accept the terms and conditions.'); setLoading(false); return; }
-    if (hasReferralCode && !(validationResult?.isValid) && !activeDiscount?.has_discount) {
-      alert(t('payment:preCheckoutModal.mustEnterValidCode') || 'Please validate your referral code.'); setLoading(false); return;
-    }
 
     setError(null);
     setSelectedMethod(paymentMethod);

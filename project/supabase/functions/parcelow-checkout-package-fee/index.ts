@@ -46,17 +46,19 @@ Deno.serve(async (req: Request) => {
       return corsResponse({ error: "Parcelow configuration error" }, 500);
     }
 
-    const { amount, fee_type, metadata, cpf: bodyCpf } = await req.json();
+    const { amount, fee_type, metadata, cpf: bodyCpf, promotional_coupon } = await req.json();
 
     console.log("[parcelow-checkout-package-fee] 📥 Payload recebido:", {
       amount,
       fee_type,
       metadata,
       hasBodyCpf: !!bodyCpf,
+      hasPromotionalCoupon: !!promotional_coupon,
     });
     
-    if (fee_type !== 'ds160_package' && fee_type !== 'i539_cos_package') {
-       return corsResponse({ error: "fee_type inválido" }, 400);
+    const validFeeTypes = ['ds160_package', 'i539_cos_package', 'reinstatement_package'];
+    if (!validFeeTypes.includes(fee_type)) {
+       return corsResponse({ error: `fee_type inválido para esta função. Use um de: ${validFeeTypes.join(', ')}.` }, 400);
     }
 
     const authHeader = req.headers.get("Authorization");
@@ -73,8 +75,18 @@ Deno.serve(async (req: Request) => {
       return corsResponse({ error: "Invalid token" }, 401);
     }
 
-    // Valor original fixo ($1800)
-    const finalAmount = amount || 1800;
+    // Priorizar metadata.final_amount (valor com desconto de cupom calculado no frontend)
+    // Isso evita o bug de duplo desconto onde o cupom seria aplicado duas vezes
+    const hasFinalAmountFromMetadata = metadata?.final_amount && !isNaN(parseFloat(metadata.final_amount));
+    const finalAmount = hasFinalAmountFromMetadata
+      ? parseFloat(metadata.final_amount)
+      : (amount || 1800);
+
+    console.log("[parcelow-checkout-package-fee] 💰 Valor final:", {
+      fromMetadata: hasFinalAmountFromMetadata,
+      finalAmount,
+      originalAmount: amount,
+    });
 
     // Buscar perfil do usuário para obter CPF
     const { data: profile, error: profileError } = await supabase
@@ -134,7 +146,7 @@ Deno.serve(async (req: Request) => {
       reference: reference,
       items: [{
         reference: reference,
-        description: fee_type === 'ds160_package' ? "Payment for DS160 Package" : "Payment for I539 COS Package",
+        description: fee_type === 'ds160_package' ? "Payment for DS160 Package" : fee_type === 'reinstatement_package' ? "Payment for Visa Reinstatement Package" : "Payment for I539 COS Package",
         quantity: 1,
         amount: amountInCents,
       }],

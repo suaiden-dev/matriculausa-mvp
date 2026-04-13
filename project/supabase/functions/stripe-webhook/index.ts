@@ -1007,13 +1007,44 @@ async function handleCheckoutSessionCompleted(session: any, stripe: any) {
         );
       }
 
-      // --- REGISTRO DE INDIVIDUAL_FEE_PAYMENTS REMOVIDO ---
-      // O registro de individual_fee_payments para application_fee é feito via verify-stripe-session-application-fee
-      // (chamado quando o usuário é redirecionado para a página de sucesso)
-      // para evitar duplicação e garantir que valores brutos (gross_amount_usd) e taxas (fee_amount_usd) sejam registrados corretamente
+      // --- REGISTRO DE INDIVIDUAL_FEE_PAYMENTS (RE-ADICIONADO FALLBACK) ---
       console.log(
-        "[Individual Fee Payment] Registro de individual_fee_payments será feito via verify-stripe-session-application-fee",
+        "[Individual Fee Payment] Registrando individual_fee_payments para application_fee via webhook",
       );
+      try {
+        const paymentDate = new Date().toISOString();
+        const paymentAmountRaw = session.amount_total ? session.amount_total / 100 : 0;
+        const currency = session.currency?.toUpperCase() || "USD";
+        const paymentIntentId = session.payment_intent as string || "";
+
+        const stripeInfo = await getUSDAmountFromStripe(
+          stripe,
+          paymentIntentId,
+          paymentAmountRaw,
+          currency
+        );
+
+        const { error: insertError } = await supabase.rpc("insert_individual_fee_payment", {
+          p_user_id: finalUserId,
+          p_fee_type: "application",
+          p_amount: stripeInfo.amount,
+          p_payment_date: paymentDate,
+          p_payment_method: metadata?.payment_method || "stripe",
+          p_payment_intent_id: paymentIntentId,
+          p_stripe_charge_id: null,
+          p_zelle_payment_id: null,
+          p_gross_amount_usd: stripeInfo.gross_amount_usd,
+          p_fee_amount_usd: stripeInfo.fee_amount_usd,
+        });
+        
+        if (insertError) {
+          console.error("[stripe-webhook] Error inserting application payment record:", insertError);
+        } else {
+          console.log("[stripe-webhook] application payment record inserted successfully.");
+        }
+      } catch (recordError) {
+        console.error("[stripe-webhook] Exception recording application payment:", recordError);
+      }
 
       // Limpar carrinho
       const { error: cartError } = await supabase.from("user_cart").delete().eq(
@@ -1620,7 +1651,7 @@ async function handleCheckoutSessionCompleted(session: any, stripe: any) {
     }
   }
 
-  if (paymentType === "ds160_package" || paymentType === "i539_cos_package") {
+  if (paymentType === "ds160_package" || paymentType === "i539_cos_package" || paymentType === "reinstatement_package") {
     const finalUserId = metadata?.user_id || metadata?.student_id || metadata?.client_reference_id || session.client_reference_id;
     
     if (finalUserId) {
@@ -1636,6 +1667,9 @@ async function handleCheckoutSessionCompleted(session: any, stripe: any) {
       } else if (paymentType === "i539_cos_package") {
         updateData.has_paid_i539_cos_package = true;
         updateData.i539_cos_package_payment_method = paymentMethod;
+      } else if (paymentType === "reinstatement_package") {
+        updateData.has_paid_reinstatement_package = true;
+        updateData.reinstatement_package_payment_method = paymentMethod;
       }
 
       const { error: profileError } = await supabase
