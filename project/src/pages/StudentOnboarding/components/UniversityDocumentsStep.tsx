@@ -120,7 +120,7 @@ export const UniversityDocumentsStep: React.FC<StepProps> = ({ onBack }) => {
         }
     };
 
-    const studentProcessType = applicationDetails?.student_process_type;
+    const studentProcessType = userProfile?.student_process_type || applicationDetails?.student_process_type || 'initial';
     const showDs160Tab = isPlacementFlow && studentProcessType === 'initial';
     const showI539Tab = isPlacementFlow && (studentProcessType === 'change_of_status' || (studentProcessType === 'transfer' && userProfile?.visa_transfer_active === false));
     const packageFeeRequired = (showDs160Tab && !ds160PackagePaid) || (showI539Tab && !i539PackagePaid);
