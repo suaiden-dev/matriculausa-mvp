@@ -1,7 +1,7 @@
 // @ts-nocheck
 import "jsr:@supabase/functions-js/edge-runtime.d.ts";
-import Stripe from "npm:stripe@17.7.0";
-import { createClient } from "npm:@supabase/supabase-js@2.49.1";
+import Stripe from "stripe";
+import { createClient } from "@supabase/supabase-js";
 import { getStripeConfig } from "../stripe-config.ts";
 import {
   calculateCardAmountWithFees,
@@ -54,12 +54,26 @@ Deno.serve(async (req: Request) => {
     const {
       success_url,
       cancel_url,
+      amount: bodyAmount,
       metadata,
       payment_method,
     } = await req.json();
     
     const fee_type = 'reinstatement_package';
-    const amount = 500; // Valor fixo Reinstatement
+    const BASE_AMOUNT = 500; // Valor base da Reinstatement Fee
+
+    // Priorizar metadata.final_amount (valor com desconto do cupom calculado no frontend)
+    // Caso contrário, uses o amount do body, ou o valor base como fallback
+    const hasFinalAmountFromMetadata = metadata?.final_amount && !isNaN(parseFloat(metadata.final_amount));
+    const amount = hasFinalAmountFromMetadata
+      ? parseFloat(metadata.final_amount)
+      : (bodyAmount || BASE_AMOUNT);
+
+    console.log("[stripe-checkout-reinstatement-fee] 💰 Valor para cobrança:", {
+      fromMetadata: hasFinalAmountFromMetadata,
+      amount,
+      bodyAmount,
+    });
 
     const mode = "payment";
 
@@ -139,7 +153,7 @@ Deno.serve(async (req: Request) => {
       grossAmountInCents = calculateCardAmountWithFees(amount);
     }
 
-    sessionMetadata.base_amount = amount.toString();
+    sessionMetadata.base_amount = BASE_AMOUNT.toString();
     sessionMetadata.gross_amount = (grossAmountInCents / 100).toString();
     sessionMetadata.fee_amount = ((grossAmountInCents / 100) - amount).toString();
     sessionMetadata.markup_enabled = "true";
