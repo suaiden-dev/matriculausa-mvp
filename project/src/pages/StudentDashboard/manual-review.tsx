@@ -14,8 +14,8 @@ const ManualReview: React.FC = () => {
   const [fieldErrors, setFieldErrors] = useState<Record<string, string>>({});
   const [prevDocs, setPrevDocs] = useState<UploadedDoc[]>([]);
   const [appDocs, setAppDocs] = useState<any[]>([]);
-  const [files, setFiles] = useState<Record<string, File | null>>({ passport: null, diploma: null, funds_proof: null });
-  const [usePrev, setUsePrev] = useState<Record<string, boolean>>({ passport: true, diploma: true, funds_proof: true });
+  const [files, setFiles] = useState<Record<string, File | null>>({});
+  const [usePrev, setUsePrev] = useState<Record<string, boolean>>({});
   const [confirmAllTrue, setConfirmAllTrue] = useState(false);
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -125,19 +125,33 @@ const ManualReview: React.FC = () => {
       setFieldErrors(translatedErrors);
       setPrevDocs(Array.isArray(d) ? d : []);
       
-      // Se há erros, forçar checkboxes como desmarcados para exigir escolha explícita
-      const usePrevState = {
-        passport: false, // Sempre false por padrão quando há erros
-        diploma: false,  // Sempre false por padrão quando há erros
-        funds_proof: false, // Sempre false por padrão quando há erros
-      };
+      // Determinar quais documentos são necessários para inicializar o estado
+      const processType = userProfile?.student_process_type;
+      const visaTransferActive = userProfile?.visa_transfer_active;
       
-      console.log('usePrev state:', usePrevState);
+      const docKeys = ['passport', 'diploma', 'funds_proof'];
+      if (processType === 'initial') {
+        docKeys.push('ds160');
+      } else if (processType === 'change_of_status' || (processType === 'transfer' && visaTransferActive === false)) {
+        docKeys.push('i539');
+      }
+
+      // Se há erros, forçar checkboxes como desmarcados para exigir escolha explícita
+      const usePrevState: Record<string, boolean> = {};
+      const filesState: Record<string, File | null> = {};
+      
+      docKeys.forEach(key => {
+        usePrevState[key] = false; // Sempre false por padrão quando há erros ou no início
+        filesState[key] = null;
+      });
+      
+      console.log('usePrev state initialized:', usePrevState);
       setUsePrev(usePrevState);
+      setFiles(filesState);
     } catch (error) {
       console.error('Error loading from localStorage:', error);
     }
-  }, []);
+  }, [userProfile?.student_process_type, userProfile?.visa_transfer_active]);
 
   // Busca a aplicação mais recente e usa seus documentos/status para pré-preencher reenvio
   useEffect(() => {
@@ -153,8 +167,19 @@ const ManualReview: React.FC = () => {
       const docs = (data as any)?.documents || [];
       if (Array.isArray(docs) && docs.length) {
         setAppDocs(docs);
+        
+        const processType = userProfile?.student_process_type;
+        const visaTransferActive = userProfile?.visa_transfer_active;
+        
+        const docKeys = ['passport', 'diploma', 'funds_proof'];
+        if (processType === 'initial') {
+          docKeys.push('ds160');
+        } else if (processType === 'change_of_status' || (processType === 'transfer' && visaTransferActive === false)) {
+          docKeys.push('i539');
+        }
+
         // Mescla com prevDocs do localStorage, priorizando application
-        const toUploaded: UploadedDoc[] = ['passport','diploma','funds_proof']
+        const toUploaded: UploadedDoc[] = docKeys
           .map((t) => {
             const fromApp = docs.find((d: any) => d.type === t);
             const url = fromApp?.url || (prevDocs.find(p => p.type === t)?.url);
@@ -163,12 +188,18 @@ const ManualReview: React.FC = () => {
           })
           .filter(Boolean) as UploadedDoc[];
         if (toUploaded.length) setPrevDocs(toUploaded);
+
         // Se algum estiver com changes_requested, forçar reenvio desse tipo
-        setUsePrev(prev => ({
-          passport: docs.find((d: any) => d.type==='passport')?.status === 'changes_requested' ? false : (prev.passport ?? true),
-          diploma: docs.find((d: any) => d.type==='diploma')?.status === 'changes_requested' ? false : (prev.diploma ?? true),
-          funds_proof: docs.find((d: any) => d.type==='funds_proof')?.status === 'changes_requested' ? false : (prev.funds_proof ?? true),
-        }));
+        const newUsePrev = { ...usePrev };
+        docKeys.forEach(key => {
+          const doc = docs.find((d: any) => d.type === key);
+          if (doc?.status === 'changes_requested') {
+            newUsePrev[key] = false;
+          } else if (newUsePrev[key] === undefined) {
+            newUsePrev[key] = true;
+          }
+        });
+        setUsePrev(newUsePrev);
       }
     };
     fetchLatestApp();
@@ -204,10 +235,20 @@ const ManualReview: React.FC = () => {
         newFileUrls[key] = fileUrl;
       }
 
-      // Verificar se TODOS os 3 documentos foram selecionados (checkbox marcado OU novo arquivo)
-      const allDocumentsSelected = Object.keys(usePrev).every(key => usePrev[key] || newFileUrls[key]);
+      // Verificar se TODOS os documentos necessários foram selecionados (checkbox marcado OU novo arquivo)
+      const processType = userProfile?.student_process_type;
+      const visaTransferActive = userProfile?.visa_transfer_active;
+      
+      const docKeys = ['passport', 'diploma', 'funds_proof'];
+      if (processType === 'initial') {
+        docKeys.push('ds160');
+      } else if (processType === 'change_of_status' || (processType === 'transfer' && visaTransferActive === false)) {
+        docKeys.push('i539');
+      }
+
+      const allDocumentsSelected = docKeys.every(key => usePrev[key] || newFileUrls[key]);
       if (!allDocumentsSelected) {
-        throw new Error('Please select ALL 3 documents to submit. Either check "Use current file" for existing documents or upload new replacement files.');
+        throw new Error(t('studentDashboard.manualReview.selectAllDocumentsError', { defaultValue: 'Please select ALL required documents to submit. Either check "Use current file" for existing documents or upload new replacement files.' }));
       }
 
       if (confirmAllTrue) {
@@ -233,9 +274,9 @@ const ManualReview: React.FC = () => {
               p_performed_by: user.id,
               p_performed_by_type: 'student',
               p_metadata: {
-                document_types: ['passport', 'diploma', 'funds_proof'],
+                document_types: docKeys,
                 submission_method: 'manual_review',
-                process_type: localStorage.getItem('studentProcessType') || null,
+                process_type: processType || localStorage.getItem('studentProcessType') || null,
                 files_uploaded: Object.keys(files).filter(key => files[key] !== null),
                 files_reused: Object.keys(usePrev).filter(key => usePrev[key])
               }
@@ -365,7 +406,7 @@ const ManualReview: React.FC = () => {
                 }
                 if (applicationId) {
                   console.log('🔍 [manual-review] Atualizando aplicação com documentos:', applicationId);
-                  const finalDocs = ['passport','diploma','funds_proof']
+                  const finalDocs = docKeys
                     .map((k) => {
                       const fromPrev = docByType(k)?.url || (appDocs.find((d:any)=>d.type===k)?.url);
                       const fromNew = newFileUrls[k];
@@ -412,7 +453,7 @@ const ManualReview: React.FC = () => {
                   const currentDocs: any[] = app.documents || [];
                   
                   console.log('🔍 [manual-review] Fallback: atualizando aplicação com documentos:', applicationId);
-                  const finalDocs = ['passport','diploma','funds_proof']
+                  const finalDocs = docKeys
                     .map((k) => {
                       const fromPrev = docByType(k)?.url || (appDocs.find((d:any)=>d.type===k)?.url);
                       const fromNew = newFileUrls[k];
@@ -530,6 +571,17 @@ const ManualReview: React.FC = () => {
     { key: 'diploma', label: t('studentDashboard.manualReview.diploma') },
     { key: 'funds_proof', label: t('studentDashboard.manualReview.fundsProof') }
   ];
+
+  if (userProfile?.student_process_type === 'initial') {
+    entries.push({ key: 'ds160', label: t('scholarships:scholarshipsPage.modal.ds160Package') });
+  } else if (
+    userProfile?.student_process_type === 'change_of_status' || 
+    (userProfile?.student_process_type === 'transfer' && userProfile?.visa_transfer_active === false)
+  ) {
+    entries.push({ key: 'i539', label: t('scholarships:scholarshipsPage.modal.i539Package') });
+  }
+
+  const docKeys = entries.map(e => e.key);
 
   return (
     <div className="min-h-screen bg-slate-50">
@@ -685,8 +737,8 @@ const ManualReview: React.FC = () => {
             title={
               !confirmAllTrue 
                 ? "Please check the Declaration of Accuracy" 
-                : !Object.keys(usePrev).every(key => usePrev[key] || files[key])
-                ? "Please select ALL 3 documents to submit (either check 'Use current file' or upload new files)"
+                : !docKeys.every(key => usePrev[key] || files[key])
+                ? "Please select ALL required documents to submit (either check 'Use current file' or upload new files)"
                 : ""
             }
           >

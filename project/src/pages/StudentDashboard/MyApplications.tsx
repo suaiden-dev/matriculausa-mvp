@@ -1192,11 +1192,22 @@ const MyApplications: React.FC = () => {
                                   const reqUploads = requestUploadsByApp[application.id] || [];
 
                                   // Create a complete document list with status
-                                  const allDocuments = [
+                                  const processType = userProfile?.student_process_type;
+                                  const visaTransferActive = userProfile?.visa_transfer_active;
+
+                                  const allDocumentsBase = [
                                     { type: 'passport', label: t('studentDashboard.myApplications.documents.passport') },
                                     { type: 'diploma', label: t('studentDashboard.myApplications.documents.highSchoolDiploma') },
                                     { type: 'funds_proof', label: t('studentDashboard.myApplications.documents.proofOfFunds') }
-                                  ].map(docTemplate => {
+                                  ];
+
+                                  if (processType === 'initial') {
+                                    allDocumentsBase.push({ type: 'ds160', label: t('scholarships:scholarshipsPage.modal.ds160Package') });
+                                  } else if (processType === 'change_of_status' || (processType === 'transfer' && visaTransferActive === false)) {
+                                    allDocumentsBase.push({ type: 'i539', label: t('scholarships:scholarshipsPage.modal.i539Package') });
+                                  }
+
+                                  const allDocuments = allDocumentsBase.map(docTemplate => {
                                     const docData = docs.find(d => d.type === docTemplate.type);
                                     return {
                                       ...docTemplate,
