@@ -60,6 +60,7 @@ const PaymentConfirmationModal: React.FC<PaymentConfirmationModalProps> = ({
               <option value="manual">Outside Platform</option>
               <option value="stripe">Stripe</option>
               <option value="zelle">Zelle</option>
+              <option value="parcelow">Parcelow</option>
             </select>
           </div>
           <div>

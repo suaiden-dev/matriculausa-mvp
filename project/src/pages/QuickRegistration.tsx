@@ -33,6 +33,61 @@ import { usePaymentBlocked } from '../hooks/usePaymentBlocked';
 import { useFormTracking } from '../hooks/useFormTracking';
 import { useLeadCapture } from '../hooks/useLeadCapture';
 
+// Cupons que disparam o contador de urgência de 24h
+const URGENCY_COUPONS = ['TFOE'];
+
+const UrgencyBanner: React.FC = () => {
+  const [timeLeft, setTimeLeft] = useState(24 * 60 * 60); // 24h em segundos
+
+  useEffect(() => {
+    const timer = setInterval(() => {
+      setTimeLeft((prev) => (prev > 0 ? prev - 1 : 0));
+    }, 1000);
+    return () => clearInterval(timer);
+  }, []);
+
+  if (timeLeft <= 0) return null;
+
+  const hours = Math.floor(timeLeft / 3600);
+  const minutes = Math.floor((timeLeft % 3600) / 60);
+  const seconds = timeLeft % 60;
+
+  const format = (num: number) => num.toString().padStart(2, '0');
+
+  return (
+    <div className="max-w-4xl mx-auto mb-10 animate-in fade-in slide-in-from-top-4 duration-700">
+      <div className="bg-[#05294E] rounded-3xl p-4 sm:p-5 flex flex-col sm:flex-row items-center justify-center shadow-2xl border border-white/10 gap-6 sm:gap-10">
+        {/* Text */}
+        <div className="flex items-center">
+          <span className="text-white font-black text-sm sm:text-base uppercase tracking-tight text-center sm:text-left">
+            ÚLTIMAS VAGAS COM DESCONTO: SÓ HOJE!
+          </span>
+        </div>
+
+        {/* Timer */}
+        <div className="flex items-center space-x-3">
+          <div className="flex items-center space-x-1.5">
+            <div className="bg-[#D0151C] border border-white/20 rounded-xl px-3 py-1.5 text-white font-black text-xl tabular-nums shadow-lg">
+              {format(hours)}
+            </div>
+            <span className="text-white/40 font-bold">:</span>
+            <div className="bg-[#D0151C] border border-white/20 rounded-xl px-3 py-1.5 text-white font-black text-xl tabular-nums shadow-lg">
+              {format(minutes)}
+            </div>
+            <span className="text-white/40 font-bold">:</span>
+            <div className="bg-[#D0151C] border border-white/20 rounded-xl px-3 py-1.5 text-white font-black text-xl tabular-nums shadow-lg">
+              {format(seconds)}
+            </div>
+          </div>
+          <span className="text-white/60 font-bold text-[10px] uppercase tracking-widest">
+            RESTANTES
+          </span>
+        </div>
+      </div>
+    </div>
+  );
+};
+
 // SVG Icons (Simplified for the registration page)
 const PixIcon = ({ className }: { className?: string }) => (
   <svg className={className} xmlns="http://www.w3.org/2000/svg" viewBox="0 0 48 48">
@@ -128,19 +183,45 @@ const QuickRegistration: React.FC = () => {
   // Form State
   const [formData, setFormData] = useState(() => {
     try {
+      // 1. Check URL params first (from Pre-Qualification or exact linking)
+      const searchParams = new URLSearchParams(window.location.search);
+      const urlName = searchParams.get('name');
+      const urlEmail = searchParams.get('email');
+      const urlPhone = searchParams.get('phone');
+      
       const saved = sessionStorage.getItem('matricula_quick_form');
-      if (saved) return JSON.parse(saved);
-    } catch { }
-    return {
-      full_name: '',
-      email: '',
-      phone: '',
-      dependents: '',
-      password: '',
-      confirm_password: '',
-      termsAccepted: false,
-      cpf: ''
-    };
+      const parsed = saved ? JSON.parse(saved) : null;
+
+      return {
+        full_name: urlName || (parsed?.full_name || ''),
+        email: urlEmail || (parsed?.email || ''),
+        phone: urlPhone || (parsed?.phone || ''),
+        dependents: parsed?.dependents || '',
+        password: '',
+        confirm_password: '',
+        termsAccepted: false,
+        cpf: parsed?.cpf || '',
+        country: parsed?.country || '',
+        field_of_interest: parsed?.field_of_interest || '',
+        academic_level: parsed?.academic_level || '',
+        english_proficiency: parsed?.english_proficiency || ''
+      };
+    } catch {
+      return {
+        full_name: '',
+        email: '',
+        phone: '',
+        dependents: '',
+        password: '',
+        confirm_password: '',
+        termsAccepted: false,
+        cpf: '',
+        country: '',
+        field_of_interest: '',
+        academic_level: '',
+        english_proficiency: ''
+      };
+    }
   });
 
   const [isRegistered, setIsRegistered] = useState(() => {
@@ -235,6 +316,10 @@ const QuickRegistration: React.FC = () => {
   } | null>(null);
   const [codeApplied, setCodeApplied] = useState(false);
 
+  // Detectar se o aluno chegou via link de rastreamento sem desconto (?sref=)
+  // Nesse caso, ocultamos toda a seção de cupons — ele já está vinculado ao vendedor
+  const isNoDiscountLink = new URLSearchParams(location.search).get('sref') !== null;
+
   // Promotional coupon states (admin coupons)
   const [isValidatingPromotionalCoupon, setIsValidatingPromotionalCoupon] = useState(false);
   const [promotionalCouponValidation, setPromotionalCouponValidation] = useState<{
@@ -298,8 +383,8 @@ const QuickRegistration: React.FC = () => {
       return promotionalCouponValidation.finalAmount;
     }
 
-    // 2. Código validado e aplicado
-    if ((isCouponValid || codeApplied) && validationResult?.isValid) {
+    // 2. Código validado e aplicado — só aplica desconto se discount > 0 (exclui links sref)
+    if ((isCouponValid || codeApplied) && validationResult?.isValid && (validationResult.discountAmount ?? 50) > 0) {
       const discount = validationResult.discountAmount || 50;
       return Math.max(baseFee - discount, 0);
     }
@@ -311,10 +396,24 @@ const QuickRegistration: React.FC = () => {
 
 
   // URL Parameter for Coupon
+  // ?ref= e ?coupon= → aplicam desconto | ?sref= → apenas rastreamento sem desconto
   useEffect(() => {
     const params = new URLSearchParams(location.search);
+    const srefCode = params.get('sref');
     const code = params.get('coupon') || params.get('ref');
-    if (code) {
+
+    if (srefCode) {
+      // Link de vendedor sem desconto: salvar apenas para rastreamento via userData
+      // Não chamamos handleValidateCoupon para não aplicar $50 de desconto
+      setCouponCode(srefCode.toUpperCase());
+      setCodeApplied(true);
+      setValidationResult({
+        isValid: true,
+        message: '',
+        discountAmount: 0,
+        codeType: 'seller',
+      });
+    } else if (code) {
       setCouponCode(code);
       handleValidateCoupon(code);
     }
@@ -669,6 +768,10 @@ const QuickRegistration: React.FC = () => {
       if (codeApplied && couponCode && validationResult?.codeType) {
         if (validationResult.codeType === 'seller') {
           userData.seller_referral_code = couponCode;
+          // Link ?sref= = rastreamento sem desconto → marcar no perfil para o dashboard mostrar $400
+          if (isNoDiscountLink) {
+            userData.no_referral_discount = true;
+          }
         } else {
           userData.affiliate_code = couponCode;
         }
@@ -885,7 +988,11 @@ const QuickRegistration: React.FC = () => {
   return (
     <div className="min-h-screen bg-gray-50 pt-24 pb-32">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-        <div className="text-center mb-20">
+        <div className="text-center mb-12">
+          {((couponCode && URGENCY_COUPONS.includes(couponCode.toUpperCase())) || 
+            (promotionalCoupon && URGENCY_COUPONS.includes(promotionalCoupon.toUpperCase()))) && (
+            <UrgencyBanner />
+          )}
           <h1 className="text-4xl font-extrabold text-grey-900 tracking-tight sm:text-5xl">
             {t('rapidRegistration.title')}
           </h1>
@@ -1142,7 +1249,7 @@ const QuickRegistration: React.FC = () => {
 
                   {/* Seção Agrupada: Cupons e Termos (Coladinhos) */}
                   <div className="mt-6 pt-6 border-t border-slate-100 space-y-2">
-                    {!userProfile?.seller_referral_code && !codeApplied && !hasPaid && (
+                    {!isNoDiscountLink && !userProfile?.seller_referral_code && !codeApplied && !hasPaid && (
                       <div className="relative z-10">
                         {/* Checkbox para Referral Code */}
                         <div className="flex items-center space-x-3 p-4 bg-slate-50/50 border border-slate-100 rounded-2xl group transition-all duration-300 hover:bg-white shadow-sm cursor-pointer" onClick={() => {
@@ -1184,7 +1291,7 @@ const QuickRegistration: React.FC = () => {
                         </div>
 
                         {/* Área de Input de Cupons */}
-                        {(hasReferralCode || promotionalCouponValidation?.isValid || codeApplied) && (
+                        {!isNoDiscountLink && (hasReferralCode || promotionalCouponValidation?.isValid || codeApplied) && (
                           <div className="grid grid-cols-1 md:grid-cols-2 gap-8 pt-4 pb-2">
                             {/* ... (Referral e Promo Columns mantidos) */}
                             {/* Referral Code Column */}
@@ -1545,10 +1652,18 @@ const QuickRegistration: React.FC = () => {
                         {t('rapidRegistration.sidebar.total')}
                       </span>
                       <div className="text-right">
+                        <div className="flex flex-col items-end">
+                          {/* Preço Original Riscado (Apenas se houver desconto) */}
+                          {currentFee < baseFee && (
+                            <span className="text-xl font-bold text-slate-400 line-through mb-1 decoration-red-500/50">
+                              {formatFeeAmount(baseFee)}
+                            </span>
+                          )}
+                          <span className="text-4xl font-black text-grey-900 tracking-tighter">
+                            {formattedAmount}
+                          </span>
+                        </div>
 
-                        <span className="text-4xl font-black text-grey-900 tracking-tighter">
-                          {formattedAmount}
-                        </span>
                         {isCouponValid && (
                           <div className="flex items-center justify-end mt-1">
                             <span className="bg-emerald-50 text-emerald-600 px-2 py-0.5 rounded-full text-[10px] font-black uppercase tracking-widest border border-emerald-100 flex items-center">

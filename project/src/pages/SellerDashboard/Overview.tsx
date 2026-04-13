@@ -32,7 +32,14 @@ const Overview: React.FC<OverviewProps> = ({ stats, sellerProfile, students = []
   const [studentDependents, setStudentDependents] = useStateReact<{ [key: string]: number }>({});
   const [studentFeeOverrides, setStudentFeeOverrides] = useStateReact<{ [key: string]: any }>({});
   const [studentSystemTypes, setStudentSystemTypes] = useStateReact<{ [key: string]: string }>({});
-  const [studentRealPaidAmounts, setStudentRealPaidAmounts] = useStateReact<{ [key: string]: { selection_process?: number; scholarship?: number; i20_control?: number } }>({});
+  const [studentRealPaidAmounts, setStudentRealPaidAmounts] = useStateReact<{ [key: string]: { 
+    selection_process?: number; 
+    scholarship?: number; 
+    i20_control?: number;
+    ds160_package?: number;
+    i539_cos_package?: number;
+    reinstatement_package?: number;
+  } }>({});
   const [loadingRealPaidAmounts, setLoadingRealPaidAmounts] = useStateReact<boolean>(true);
   const [loadingCalc, setLoadingCalc] = useStateReact<boolean>(false);
 
@@ -186,7 +193,7 @@ const Overview: React.FC<OverviewProps> = ({ stats, sellerProfile, students = []
           const results = await Promise.allSettled(idsToLoadRealPaid.map(async (id: string) => {
             try {
               // ✅ CORREÇÃO: Usar getDisplayAmounts para exibição (valores "Zelle" sem taxas)
-              const amounts = await getDisplayAmounts(id, ['selection_process', 'scholarship', 'i20_control']);
+              const amounts = await getDisplayAmounts(id, ['selection_process', 'scholarship', 'i20_control', 'ds160_package', 'i539_cos_package', 'reinstatement_package']);
               return { id, amounts };
             } catch (error) {
               console.warn('⚠️ [OVERVIEW] Erro ao carregar valores pagos para', id, ':', error);
@@ -194,7 +201,7 @@ const Overview: React.FC<OverviewProps> = ({ stats, sellerProfile, students = []
             }
           }));
 
-          const newRealPaid: { [key: string]: { selection_process?: number; scholarship?: number; i20_control?: number } } = {};
+          const newRealPaid: { [key: string]: { selection_process?: number; scholarship?: number; i20_control?: number; ds160_package?: number; i539_cos_package?: number; reinstatement_package?: number } } = {};
           results.forEach((res: any, idx: number) => {
             const id = idsToLoadRealPaid[idx];
             if (res.status === 'fulfilled' && res.value) {
@@ -229,33 +236,47 @@ const Overview: React.FC<OverviewProps> = ({ stats, sellerProfile, students = []
 
     // Selection Process Fee
     if (student.has_paid_selection_process_fee) {
-      // � CORREÇÃO: Usar mesma lógica do MyStudents.tsx - verificar override primeiro
+      // ✅ CORREÇÃO: Usar mesma lógica do MyStudents.tsx - verificar override primeiro
       if (realPaid.selection_process !== undefined && realPaid.selection_process > 0) {
         // Usar valor real pago quando disponível
         total += realPaid.selection_process;
       } else {
         // Fallback: calcular baseado no system_type e dependents
-        const baseSelDefault = systemType === 'simplified' ? 350 : 400;
+        const isNewProcess = student.student_process_type === 'initial' || 
+                            student.student_process_type === 'change_of_status' || 
+                            student.student_process_type === 'transfer' || 
+                            student.student_process_type === 'resident';
+
+        const baseSelDefault = Number(getFeeAmount('selection_process')) || 
+                               (isNewProcess ? 400 : (systemType === 'simplified' ? 350 : 400));
+        
         const baseSel = overrides.selection_process_fee != null ? Number(overrides.selection_process_fee) : baseSelDefault;
-        // ✅ CORREÇÃO: Para simplified, Selection Process Fee é fixo ($350), sem dependentes
-        // Dependentes só afetam Application Fee ($100 por dependente)
+        // ✅ CORREÇÃO: Todos os sistemas somam $100 por dependente na Selection Fee agora
         const selPaid = overrides.selection_process_fee != null
           ? baseSel
-          : (systemType === 'simplified' ? baseSel : baseSel + (deps * 150));
+          : baseSel + (deps * 100);
         total += selPaid;
       }
     }
-
-    // Scholarship Fee
-    if (student.is_scholarship_fee_paid) {
-      if (realPaid.scholarship !== undefined && realPaid.scholarship > 0) {
-        // Usar valor real pago quando disponível
-        total += realPaid.scholarship;
+    
+    // Process Packages (Initial / COS / Transfer)
+    if (student.student_process_type === 'initial' && student.has_paid_ds160_package) {
+      if (realPaid.ds160_package !== undefined && realPaid.ds160_package > 0) {
+        total += realPaid.ds160_package;
       } else {
-        // Fallback: calcular baseado no system_type
-        const schBaseDefault = systemType === 'simplified' ? 900 : 900;
-        const schBase = overrides.scholarship_fee != null ? Number(overrides.scholarship_fee) : schBaseDefault;
-        total += schBase;
+        total += 1800;
+      }
+    } else if (student.student_process_type === 'change_of_status' && student.has_paid_i539_cos_package) {
+      if (realPaid.i539_cos_package !== undefined && realPaid.i539_cos_package > 0) {
+        total += realPaid.i539_cos_package;
+      } else {
+        total += 1800;
+      }
+    } else if (student.student_process_type === 'transfer' && (student.has_paid_reinstatement_package || student.has_paid_transfer_fee)) {
+      if (realPaid.reinstatement_package !== undefined && realPaid.reinstatement_package > 0) {
+        total += realPaid.reinstatement_package;
+      } else {
+        total += 500;
       }
     }
 
@@ -266,13 +287,13 @@ const Overview: React.FC<OverviewProps> = ({ stats, sellerProfile, students = []
         total += realPaid.i20_control;
       } else {
         // Fallback: usar override ou valor padrão
-        const i20Base = overrides.i20_control_fee != null ? Number(overrides.i20_control_fee) : 900;
+        const i20BaseDefault = Number(getFeeAmount('i20_control_fee')) || 900;
+        const i20Base = overrides.i20_control_fee != null ? Number(overrides.i20_control_fee) : i20BaseDefault;
         total += i20Base;
       }
     }
 
     // Application fee não entra na receita do seller
-
     return total;
   };
 

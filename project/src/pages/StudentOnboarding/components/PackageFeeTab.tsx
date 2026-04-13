@@ -1,5 +1,5 @@
-import React, { useState } from 'react';
-import { CreditCard, Check, Loader2, AlertCircle, X, Shield } from 'lucide-react';
+import React, { useState, useRef } from 'react';
+import { CreditCard, Check, Loader2, AlertCircle, X, Shield, CheckCircle2, XCircle } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 import { supabase } from '../../../lib/supabase';
 import { ZelleCheckout } from '../../../components/ZelleCheckout';
@@ -39,6 +39,14 @@ const StripeIcon = ({ className }: { className?: string }) => (
 );
 
 type PaymentMethod = 'stripe' | 'pix' | 'parcelow' | 'zelle';
+
+interface CouponValidation {
+  isValid: boolean;
+  message?: string;
+  discountAmount?: number;
+  finalAmount?: number;
+  couponId?: string;
+}
 
 interface PackageFeeTabProps {
   feeType: 'ds160_package' | 'i539_cos_package' | 'reinstatement_package';
@@ -106,6 +114,17 @@ export const PackageFeeTab: React.FC<PackageFeeTabProps> = ({
   const { isBlocked, pendingPayment, refetch: refetchPaymentStatus } = usePaymentBlocked();
   const hasZellePendingPackageFee = isBlocked && pendingPayment?.fee_type === feeType;
 
+  // ── Estados de cupom ─────────────────────────────────────────────────────
+  const [hasCoupon, setHasCoupon] = useState(false);
+  const [promotionalCoupon, setPromotionalCoupon] = useState('');
+  const [couponValidation, setCouponValidation] = useState<CouponValidation | null>(null);
+  const [isValidatingCoupon, setIsValidatingCoupon] = useState(false);
+  const couponInputRef = useRef<HTMLInputElement>(null);
+
+  // Chave de window para persistência entre re-renders
+  const windowCouponKey = `__checkout_${feeType}_coupon`;
+  const windowAmountKey = `__checkout_${feeType}_final_amount`;
+
   React.useEffect(() => {
     getExchangeRate().then(rate => setExchangeRate(rate));
   }, []);
@@ -117,63 +136,152 @@ export const PackageFeeTab: React.FC<PackageFeeTabProps> = ({
     } catch { return null; }
   };
 
+  // ── Validação de cupom ───────────────────────────────────────────────────
+  const validateCoupon = async () => {
+    if (!promotionalCoupon.trim()) return;
+    const normalizedCode = promotionalCoupon.trim().toUpperCase();
+    setIsValidatingCoupon(true);
+    setCouponValidation(null);
+
+    try {
+      const { data: { user } } = await supabase.auth.getUser();
+      const { data: result, error: rpcError } = await supabase.rpc(
+        'validate_and_apply_admin_promotional_coupon',
+        {
+          p_code: normalizedCode,
+          p_fee_type: feeType,
+          p_user_id: user?.id,
+        }
+      );
+
+      if (rpcError) throw rpcError;
+
+      if (!result || !result.valid) {
+        setCouponValidation({ isValid: false, message: result?.message || 'Código de cupom inválido' });
+        return;
+      }
+
+      let discountAmount = result.discount_type === 'percentage'
+        ? (amount * result.discount_value) / 100
+        : result.discount_value;
+      discountAmount = Math.min(discountAmount, amount);
+      const finalAmount = Math.max(0, amount - discountAmount);
+
+      setCouponValidation({ isValid: true, discountAmount, finalAmount, couponId: result.id });
+
+      // Persistir valores no window para o momento do redirect
+      (window as any)[windowCouponKey] = normalizedCode;
+      (window as any)[windowAmountKey] = finalAmount;
+
+      // Registrar validação no log
+      try {
+        const token = await getAccessToken();
+        if (token) {
+          await fetch(`${SUPABASE_URL}/functions/v1/record-promotional-coupon-validation`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` },
+            body: JSON.stringify({
+              coupon_code: normalizedCode,
+              coupon_id: result.id,
+              fee_type: feeType,
+              original_amount: amount,
+              discount_amount: discountAmount,
+              final_amount: finalAmount,
+            }),
+          });
+        }
+      } catch (recordError) {
+        console.warn('[PackageFeeTab] Não foi possível registrar uso do cupom:', recordError);
+      }
+    } catch (e: any) {
+      setCouponValidation({ isValid: false, message: 'Falha ao validar cupom. Tente novamente.' });
+    } finally {
+      setIsValidatingCoupon(false);
+    }
+  };
+
+  const removeCoupon = async () => {
+    if (!promotionalCoupon.trim()) return;
+    try {
+      const token = await getAccessToken();
+      if (token) {
+        await fetch(`${SUPABASE_URL}/functions/v1/remove-promotional-coupon`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` },
+          body: JSON.stringify({ coupon_code: promotionalCoupon.trim().toUpperCase(), fee_type: feeType }),
+        });
+      }
+    } catch (e) {
+      console.warn('[PackageFeeTab] Erro ao remover cupom:', e);
+    }
+    setHasCoupon(false);
+    setPromotionalCoupon('');
+    setCouponValidation(null);
+    delete (window as any)[windowCouponKey];
+    delete (window as any)[windowAmountKey];
+  };
+
+  // Valor efetivo (com ou sem cupom)
+  const effectiveAmount = couponValidation?.isValid && couponValidation.finalAmount !== undefined
+    ? couponValidation.finalAmount
+    : amount;
+
+  const appliedCoupon = couponValidation?.isValid && promotionalCoupon.trim()
+    ? promotionalCoupon.trim().toUpperCase()
+    : null;
+
+  // ── Checkout Stripe/PIX ──────────────────────────────────────────────────
   const handleStripeCheckout = async (paymentMethod: 'stripe' | 'pix') => {
     setLoading(true);
     setError(null);
     try {
-      console.log('[PackageFeeTab] Starting Stripe Checkout...', { paymentMethod, feeType, finalAmount: amount });
       const token = await getAccessToken();
-      console.log('[PackageFeeTab] Access Token obtained:', !!token);
       if (!token) throw new Error(t('rapidRegistration.payment.error.notAuthenticated'));
 
       const currentUrl = window.location.origin + window.location.pathname;
       const successUrl = `${currentUrl}?step=${currentStep}&payment=success&session_id={CHECKOUT_SESSION_ID}&fee_type=${feeType}`;
       const cancelUrl = `${currentUrl}?step=${currentStep}&payment=cancelled`;
 
-      let finalAmount = amount;
-
       const payload: any = {
         success_url: successUrl,
         cancel_url: cancelUrl,
-        amount: finalAmount,
+        amount: effectiveAmount,
         fee_type: feeType,
         payment_method: paymentMethod,
-        metadata: { fee_type: feeType },
+        ...(appliedCoupon && { promotional_coupon: appliedCoupon }),
+        metadata: {
+          fee_type: feeType,
+          final_amount: effectiveAmount.toString(),
+          promotional_coupon: appliedCoupon,
+        },
       };
 
       if (paymentMethod === 'pix' && exchangeRate) {
         payload.metadata.exchange_rate = exchangeRate.toString();
       }
 
-      const functionName = 'stripe-checkout-package-fee';
-
-      console.log('[PackageFeeTab] Calling Edge Function:', `${SUPABASE_URL}/functions/v1/${functionName}`);
-      const response = await fetch(`${SUPABASE_URL}/functions/v1/${functionName}`, {
+      const response = await fetch(`${SUPABASE_URL}/functions/v1/stripe-checkout-package-fee`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
         body: JSON.stringify(payload),
       });
 
-      console.log('[PackageFeeTab] Edge Function Response status:', response.status);
       const data = await response.json();
-      console.log('[PackageFeeTab] Edge Function Response data:', data);
-
       if (!response.ok || !data.session_url) {
         throw new Error(data.error || t('rapidRegistration.payment.error.generationFailed'));
       }
 
-      console.log('[PackageFeeTab] Redirecting to Stripe:', data.session_url);
       window.location.href = data.session_url;
     } catch (err: any) {
-      console.error('[PackageFeeTab] Stripe error DETAIL:', err);
+      console.error('[PackageFeeTab] Stripe error:', err);
       setError(err.message || t('rapidRegistration.payment.error.generationFailed'));
     } finally {
       setLoading(false);
     }
   };
 
+  // ── Checkout Parcelow ────────────────────────────────────────────────────
   const handleParcelowCheckout = async () => {
-    // Check CPF first
     if (!userProfile?.cpf_document) {
       setShowInlineCpf(true);
       return;
@@ -185,42 +293,42 @@ export const PackageFeeTab: React.FC<PackageFeeTabProps> = ({
     setLoading(true);
     setError(null);
     try {
-      console.log('[PackageFeeTab] Launching Parcelow Checkout...', { feeType });
       const token = await getAccessToken();
-      console.log('[PackageFeeTab] Access Token obtained for Parcelow:', !!token);
       if (!token) throw new Error(t('rapidRegistration.payment.error.notAuthenticated'));
 
-      const functionName = 'parcelow-checkout-package-fee';
-
-      console.log('[PackageFeeTab] Calling Parcelow Edge Function:', `${SUPABASE_URL}/functions/v1/${functionName}`);
-      const response = await fetch(`${SUPABASE_URL}/functions/v1/${functionName}`, {
+      const response = await fetch(`${SUPABASE_URL}/functions/v1/parcelow-checkout-package-fee`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
-        body: JSON.stringify({ amount: amount, fee_type: feeType }),
+        body: JSON.stringify({
+          amount: effectiveAmount,
+          fee_type: feeType,
+          ...(appliedCoupon && { promotional_coupon: appliedCoupon }),
+          metadata: {
+            fee_type: feeType,
+            // final_amount = valor com desconto (ou cheio se sem cupom)
+            final_amount: effectiveAmount.toString(),
+            promotional_coupon: appliedCoupon,
+          },
+        }),
       });
 
-      console.log('[PackageFeeTab] Parcelow Response status:', response.status);
       const data = await response.json();
-      console.log('[PackageFeeTab] Parcelow Response data:', data);
 
       if (!response.ok) {
-        if (data.error === 'document_number_required') { 
-          console.warn('[PackageFeeTab] CPF document number required by backend');
-          setShowInlineCpf(true); 
-          setLoading(false); 
-          return; 
+        if (data.error === 'document_number_required') {
+          setShowInlineCpf(true);
+          setLoading(false);
+          return;
         }
         throw new Error(data.error || t('rapidRegistration.payment.error.generationFailed'));
       }
       if (data.checkout_url) {
-        // Redireciona na mesma aba para que o payment=success seja processado pelo onboarding
-        console.log('[PackageFeeTab] Redirecting to Parcelow URL (same tab):', data.checkout_url);
         window.location.href = data.checkout_url;
       } else {
         console.error('[PackageFeeTab] No checkout_url returned from Parcelow');
       }
     } catch (err: any) {
-      console.error('[PackageFeeTab] Parcelow error DETAIL:', err);
+      console.error('[PackageFeeTab] Parcelow error:', err);
       setError(err.message || t('rapidRegistration.payment.error.generationFailed'));
     } finally {
       setLoading(false);
@@ -234,36 +342,27 @@ export const PackageFeeTab: React.FC<PackageFeeTabProps> = ({
     setSavingCpf(true);
     setCpfError(null);
     try {
-      console.log('[PackageFeeTab] Saving CPF...', { digits, userId: userProfile?.user_id || userProfile?.id });
-      // Usando user_id que é mais garantido estar presente e correto para o vínculo com o auth.user
       const targetUserId = userProfile?.user_id || userProfile?.id;
       if (!targetUserId) throw new Error(t('rapidRegistration.payment.error.userIdNotFound'));
 
-      const { data, error: updateErr } = await supabase
+      const { error: updateErr } = await supabase
         .from('user_profiles')
         .update({ cpf_document: digits })
-        .eq('user_id', targetUserId)
-        .select();
-      
-      console.log('[PackageFeeTab] Supabase update result:', { data, error: updateErr });
+        .eq('user_id', targetUserId);
+
       if (updateErr) throw updateErr;
-      
-      console.log('[PackageFeeTab] CPF saved successfully, proceeding to checkout');
+
       setShowInlineCpf(false);
       await launchParcelowCheckout();
     } catch (err: any) {
-      console.error('[PackageFeeTab] Save CPF error DETAIL:', err);
       setCpfError(err.message || t('rapidRegistration.payment.error.saveCpfFailed'));
     } finally {
-      console.log('[PackageFeeTab] Resetting savingCpf state');
       setSavingCpf(false);
     }
   };
 
-  const pixAmount = exchangeRate ? calculatePIXTotalWithIOF(amount, exchangeRate).totalWithIOF : null;
-  const cardAmount = calculateCardAmountWithFees(amount);
-
-
+  const pixAmount = exchangeRate ? calculatePIXTotalWithIOF(effectiveAmount, exchangeRate).totalWithIOF : null;
+  const cardAmount = calculateCardAmountWithFees(effectiveAmount);
 
   if (isPaid) {
     return (
@@ -288,7 +387,7 @@ export const PackageFeeTab: React.FC<PackageFeeTabProps> = ({
             <div className="group relative bg-white border border-slate-200 rounded-[2.5rem] transition-all shadow-sm hover:shadow-xl overflow-hidden">
               <div className="absolute top-0 right-0 w-64 h-64 bg-blue-500/5 rounded-full blur-[80px] -mr-32 -mt-32 pointer-events-none" />
 
-              {/* Branding Header inspired by Step 6 */}
+              {/* Branding Header */}
               <div className="p-8 md:p-12 border-b border-slate-100 bg-slate-50/50">
                 <div className="flex flex-col items-center text-center space-y-6">
                   {universityLogo ? (
@@ -316,16 +415,114 @@ export const PackageFeeTab: React.FC<PackageFeeTabProps> = ({
                     </p>
                   </div>
 
+                  {/* Exibição de preço */}
                   <div className="pt-4">
                     <div className="text-5xl md:text-7xl font-black text-slate-900 tracking-tighter flex flex-col items-center">
                       <span className="text-sm text-slate-400 font-black uppercase tracking-[0.3em] mb-1">Total Amount</span>
-                      <div className="flex items-start">
-                        <span className="text-2xl mt-2 mr-1 text-slate-400">$</span>
-                        {amount.toLocaleString('en-US')}
-                        <span className="text-sm mt-auto mb-3 ml-2 text-slate-400 uppercase tracking-widest">USD</span>
-                      </div>
+                      {couponValidation?.isValid && couponValidation.finalAmount !== undefined ? (
+                        <div className="flex flex-col items-center gap-1">
+                          {/* Preço original riscado */}
+                          <div className="flex items-start opacity-40">
+                            <span className="text-xl mt-1 mr-1 text-slate-400">$</span>
+                            <span className="line-through text-slate-500">{amount.toLocaleString('en-US')}</span>
+                            <span className="text-sm mt-auto mb-2 ml-2 text-slate-400 uppercase tracking-widest">USD</span>
+                          </div>
+                          {/* Preço com desconto */}
+                          <div className="flex items-start text-emerald-600">
+                            <span className="text-2xl mt-2 mr-1">$</span>
+                            {couponValidation.finalAmount.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                            <span className="text-sm mt-auto mb-3 ml-2 uppercase tracking-widest">USD</span>
+                          </div>
+                          {/* Badge de desconto */}
+                          <span className="text-xs font-black text-emerald-700 bg-emerald-50 border border-emerald-200 px-3 py-1 rounded-full">
+                            -{couponValidation.discountAmount?.toLocaleString('en-US', { minimumFractionDigits: 2 })} USD de desconto
+                          </span>
+                        </div>
+                      ) : (
+                        <div className="flex items-start">
+                          <span className="text-2xl mt-2 mr-1 text-slate-400">$</span>
+                          {amount.toLocaleString('en-US')}
+                          <span className="text-sm mt-auto mb-3 ml-2 text-slate-400 uppercase tracking-widest">USD</span>
+                        </div>
+                      )}
                     </div>
                   </div>
+                </div>
+
+                {/* ── UI de Cupom ──────────────────────────────────────────── */}
+                <div className="mt-6 p-4">
+                  <div className="flex flex-row items-center justify-between gap-4 min-h-[52px]">
+                    {/* Checkbox + Label */}
+                    <label className="flex items-center gap-3 cursor-pointer select-none shrink-0">
+                      <div
+                        className={`w-5 h-5 rounded-md border-2 flex items-center justify-center transition-all cursor-pointer ${hasCoupon ? 'bg-blue-600 border-blue-600' : 'border-slate-300 bg-white hover:border-blue-400'}`}
+                        onClick={() => {
+                          const next = !hasCoupon;
+                          setHasCoupon(next);
+                          if (!next) removeCoupon();
+                          else setTimeout(() => couponInputRef.current?.focus(), 150);
+                        }}
+                      >
+                        {hasCoupon && <Check className="w-3 h-3 text-white" strokeWidth={3} />}
+                      </div>
+                      <span className="text-sm font-bold text-slate-700 flex items-center gap-2">
+                        {t('selectionFeeStep.main.promotionalCoupon.title', { ns: 'payment', defaultValue: 'Tenho um cupom promocional' })}
+                      </span>
+                    </label>
+
+                    {/* Input + Botão (aparece quando hasCoupon) */}
+                    {hasCoupon && (
+                      <div className="flex-1 flex gap-2 items-center max-w-sm animate-in fade-in slide-in-from-right-2 duration-200">
+                        <input
+                          ref={couponInputRef}
+                          type="text"
+                          value={promotionalCoupon}
+                          onChange={(e) => {
+                            setPromotionalCoupon(e.target.value.toUpperCase());
+                            if (couponValidation) setCouponValidation(null);
+                          }}
+                          onKeyDown={(e) => e.key === 'Enter' && validateCoupon()}
+                          placeholder={t('payment:preCheckoutModal.placeholder', { defaultValue: 'Cupom' })}
+                          className="flex-1 min-w-0 px-4 py-2.5 rounded-xl border border-slate-200 text-sm font-bold text-slate-900 focus:outline-none focus:ring-2 focus:ring-blue-500 bg-white transition-all"
+                          disabled={couponValidation?.isValid}
+                        />
+                        {couponValidation?.isValid ? (
+                          <button
+                            onClick={removeCoupon}
+                            className="px-4 py-2.5 rounded-xl bg-red-50 border border-red-200 text-red-600 text-xs font-black hover:bg-red-100 transition-all whitespace-nowrap flex items-center gap-1.5"
+                          >
+                            <XCircle className="w-3.5 h-3.5" />
+                            {t('common:remove', { defaultValue: 'Remover' })}
+                          </button>
+                        ) : (
+                          <button
+                            onClick={validateCoupon}
+                            disabled={isValidatingCoupon || !promotionalCoupon.trim()}
+                            className="px-4 py-2.5 rounded-xl bg-blue-600 text-white text-xs font-black hover:bg-blue-700 transition-all disabled:opacity-50 disabled:cursor-not-allowed whitespace-nowrap flex items-center gap-1.5 shadow-sm"
+                          >
+                            {isValidatingCoupon
+                              ? <Loader2 className="w-3.5 h-3.5 animate-spin" />
+                              : t('common:apply', { defaultValue: 'Aplicar' })
+                            }
+                          </button>
+                        )}
+                      </div>
+                    )}
+                  </div>
+
+                  {/* Feedback de validação */}
+                  {hasCoupon && couponValidation && (
+                    <div className={`mt-3 flex items-center gap-2 text-xs font-bold ${couponValidation.isValid ? 'text-emerald-700' : 'text-red-600'}`}>
+                      {couponValidation.isValid
+                        ? <CheckCircle2 className="w-4 h-4 text-emerald-600 shrink-0" />
+                        : <AlertCircle className="w-4 h-4 text-red-500 shrink-0" />
+                      }
+                      {couponValidation.isValid
+                        ? `Cupom aplicado! Desconto de $${couponValidation.discountAmount?.toFixed(2)} USD`
+                        : couponValidation.message
+                      }
+                    </div>
+                  )}
                 </div>
               </div>
 
@@ -362,7 +559,7 @@ export const PackageFeeTab: React.FC<PackageFeeTabProps> = ({
                       <div className="bg-white p-2">
                         <ZelleCheckout
                           feeType={feeType as any}
-                          amount={amount}
+                          amount={effectiveAmount}
                           isPendingVerification={hasZellePendingPackageFee}
                           onProcessingChange={(isProcessing) => isProcessing && refetchPaymentStatus()}
                           hideHeader={true}
@@ -430,6 +627,11 @@ export const PackageFeeTab: React.FC<PackageFeeTabProps> = ({
                               <span className="text-[9px] font-black text-slate-400 uppercase tracking-widest">CONVERTED</span>
                             </div>
                           </div>
+                          {loading && selectedPaymentMethod === 'pix' && (
+                            <div className="absolute inset-0 bg-white/80 backdrop-blur-sm rounded-[2rem] flex items-center justify-center z-10">
+                              <Loader2 className="w-8 h-8 text-[#4db6ac] animate-spin" />
+                            </div>
+                          )}
                         </button>
                       )}
 
@@ -454,53 +656,58 @@ export const PackageFeeTab: React.FC<PackageFeeTabProps> = ({
                             </div>
                             <div className="text-right">
                               <div className="text-slate-900 text-2xl font-black tracking-tighter">
-                                ${amount.toLocaleString('en-US', { minimumFractionDigits: 2 })}
+                                ${effectiveAmount.toLocaleString('en-US', { minimumFractionDigits: 2 })}
                               </div>
                               <span className="text-[9px] font-black text-blue-600 uppercase tracking-widest bg-blue-50 px-2 py-0.5 rounded-full border border-blue-100">
                                 {t('studentOnboarding.documentsUpload.packageFees.installments12x')}
                               </span>
                             </div>
                           </div>
+                          {loading && selectedPaymentMethod === 'parcelow' && (
+                            <div className="absolute inset-0 bg-white/80 backdrop-blur-sm rounded-[2rem] flex items-center justify-center z-10">
+                              <Loader2 className="w-8 h-8 text-orange-500 animate-spin" />
+                            </div>
+                          )}
                         </button>
 
                         {showInlineCpf && (
                           <div className="p-6 bg-blue-50 border border-slate-200 border-t-0 rounded-b-[2rem] space-y-4 animate-in fade-in slide-in-from-top-2">
-                             <div className="flex items-center justify-between">
-                                <h4 className="text-[10px] font-black text-blue-700 uppercase tracking-[0.2em] flex items-center gap-2">
-                                  <Shield className="w-3.5 h-3.5" />
-                                  {t('studentOnboarding.documentsUpload.packageFees.cpfRequiredTitle')}
-                                </h4>
-                                <button onClick={() => setShowInlineCpf(false)} className="text-slate-400 hover:text-slate-600 transition-colors">
-                                  <X className="w-4 h-4" />
-                                </button>
-                             </div>
-                             <div className="relative">
-                               <input
-                                 type="text"
-                                 placeholder="000.000.000-00"
-                                 value={inlineCpf}
-                                 onChange={(e) => {
+                            <div className="flex items-center justify-between">
+                              <h4 className="text-[10px] font-black text-blue-700 uppercase tracking-[0.2em] flex items-center gap-2">
+                                <Shield className="w-3.5 h-3.5" />
+                                {t('studentOnboarding.documentsUpload.packageFees.cpfRequiredTitle')}
+                              </h4>
+                              <button onClick={() => setShowInlineCpf(false)} className="text-slate-400 hover:text-slate-600 transition-colors">
+                                <X className="w-4 h-4" />
+                              </button>
+                            </div>
+                            <div className="relative">
+                              <input
+                                type="text"
+                                placeholder="000.000.000-00"
+                                value={inlineCpf}
+                                onChange={(e) => {
                                   const val = e.target.value.replace(/\D/g, '').substring(0, 11);
                                   let masked = val.replace(/(\d{3})(\d)/, '$1.$2').replace(/(\d{3})(\d)/, '$1.$2').replace(/(\d{3})(\d{1,2})$/, '$1-$2');
                                   setInlineCpf(masked);
                                   setCpfError(null);
-                                 }}
-                                 className="w-full bg-white border border-blue-200 rounded-2xl px-5 py-4 text-xl font-black text-slate-900 tracking-tighter focus:ring-4 focus:ring-blue-500/10 outline-none transition-all"
-                               />
-                               {cpfError && (
-                                 <p className="text-[10px] font-black text-red-500 uppercase tracking-widest mt-2 flex items-center gap-2">
-                                   <AlertCircle className="w-3 h-3" />
-                                   {cpfError}
-                                 </p>
-                               )}
-                               <button 
-                                 onClick={handleSaveCpf}
-                                 disabled={savingCpf || inlineCpf.replace(/\D/g, '').length !== 11}
-                                 className="w-full mt-4 bg-slate-900 text-white py-4 rounded-2xl font-black uppercase tracking-widest text-xs hover:bg-slate-800 transition-all shadow-lg active:scale-95 disabled:opacity-50"
-                               >
-                                 {savingCpf ? <Loader2 className="w-5 h-5 animate-spin mx-auto" /> : t('studentOnboarding.documentsUpload.packageFees.saveCpfContinue')}
-                               </button>
-                             </div>
+                                }}
+                                className="w-full bg-white border border-blue-200 rounded-2xl px-5 py-4 text-xl font-black text-slate-900 tracking-tighter focus:ring-4 focus:ring-blue-500/10 outline-none transition-all"
+                              />
+                              {cpfError && (
+                                <p className="text-[10px] font-black text-red-500 uppercase tracking-widest mt-2 flex items-center gap-2">
+                                  <AlertCircle className="w-3 h-3" />
+                                  {cpfError}
+                                </p>
+                              )}
+                              <button
+                                onClick={handleSaveCpf}
+                                disabled={savingCpf || inlineCpf.replace(/\D/g, '').length !== 11}
+                                className="w-full mt-4 bg-slate-900 text-white py-4 rounded-2xl font-black uppercase tracking-widest text-xs hover:bg-slate-800 transition-all shadow-lg active:scale-95 disabled:opacity-50"
+                              >
+                                {savingCpf ? <Loader2 className="w-5 h-5 animate-spin mx-auto" /> : t('studentOnboarding.documentsUpload.packageFees.saveCpfContinue')}
+                              </button>
+                            </div>
                           </div>
                         )}
                       </div>
@@ -529,7 +736,7 @@ export const PackageFeeTab: React.FC<PackageFeeTabProps> = ({
                             </div>
                             <div className="text-right">
                               <div className="text-slate-900 text-2xl font-black tracking-tighter">
-                                ${amount.toLocaleString('en-US', { minimumFractionDigits: 2 })}
+                                ${effectiveAmount.toLocaleString('en-US', { minimumFractionDigits: 2 })}
                               </div>
                               <span className="text-[9px] font-black text-emerald-600 uppercase tracking-widest bg-emerald-50 px-2 py-0.5 rounded-full border border-emerald-100">
                                 {t('studentOnboarding.documentsUpload.packageFees.noFees')}
@@ -542,7 +749,7 @@ export const PackageFeeTab: React.FC<PackageFeeTabProps> = ({
                           <div className="border border-slate-200 border-t-0 rounded-b-[2rem] overflow-hidden bg-white shadow-xl animate-in fade-in slide-in-from-top-2">
                             <ZelleCheckout
                               feeType={feeType as any}
-                              amount={amount}
+                              amount={effectiveAmount}
                               onSuccess={() => { setShowZelle(false); onPaymentSuccess(); }}
                             />
                           </div>

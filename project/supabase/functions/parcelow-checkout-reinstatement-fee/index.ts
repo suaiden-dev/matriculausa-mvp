@@ -1,6 +1,6 @@
 // @ts-nocheck
 import "jsr:@supabase/functions-js/edge-runtime.d.ts";
-import { createClient } from "npm:@supabase/supabase-js@2.49.1";
+import { createClient } from "@supabase/supabase-js";
 import { getParcelowConfig } from "../shared/parcelow/config.ts";
 import { getRedirectOrigin } from "../shared/environment-detector.ts";
 import { getParcelowAccessToken } from "../shared/parcelow/auth.ts";
@@ -46,10 +46,24 @@ Deno.serve(async (req: Request) => {
       return corsResponse({ error: "Parcelow configuration error" }, 500);
     }
 
-    const { metadata, cpf: bodyCpf } = await req.json();
+    const { amount: bodyAmount, metadata, cpf: bodyCpf, promotional_coupon } = await req.json();
     
     const fee_type = 'reinstatement_package';
-    const amount = 500; // Valor fixo Reinstatement
+    const BASE_AMOUNT = 500; // Valor base da Reinstatement Fee
+
+    // Priorizar metadata.final_amount (valor com desconto do cupom calculado no frontend)
+    // Isso evita o bug de duplo desconto onde o cupom seria aplicado duas vezes
+    const hasFinalAmountFromMetadata = metadata?.final_amount && !isNaN(parseFloat(metadata.final_amount));
+    const finalAmount = hasFinalAmountFromMetadata
+      ? parseFloat(metadata.final_amount)
+      : (bodyAmount || BASE_AMOUNT);
+
+    console.log("[parcelow-checkout-reinstatement-fee] 💰 Valor para cobrança:", {
+      fromMetadata: hasFinalAmountFromMetadata,
+      finalAmount,
+      bodyAmount,
+      hasPromotionalCoupon: !!promotional_coupon,
+    });
 
     const authHeader = req.headers.get("Authorization");
     if (!authHeader) {
@@ -107,7 +121,7 @@ Deno.serve(async (req: Request) => {
       Deno.env.get("SUPABASE_URL")
     }/functions/v1/parcelow-webhook`;
 
-    const amountInCents = Math.round(amount * 100);
+    const amountInCents = Math.round(finalAmount * 100);
 
     const orderPayload = {
       reference: reference,
@@ -166,7 +180,7 @@ Deno.serve(async (req: Request) => {
       {
         p_user_id: user.id,
         p_fee_type: fee_type,
-        p_amount: amount,
+        p_amount: finalAmount,
         p_payment_date: new Date().toISOString(),
         p_payment_method: "parcelow",
         p_parcelow_order_id: String(orderId),
@@ -207,7 +221,7 @@ Deno.serve(async (req: Request) => {
           fee_type: fee_type,
           payment_method: "parcelow",
           order_id: orderId,
-          amount: amount,
+          amount: finalAmount,
         },
       });
     } catch (logError) {

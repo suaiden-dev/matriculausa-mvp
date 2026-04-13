@@ -17,7 +17,7 @@ interface NotificationResponse {
 }
 
 class NotificationService {
-  private static readonly WEBHOOK_URL = 'https://nwh.suaiden.com/webhook/notfmatriculausa';
+  private static readonly WEBHOOK_URL = 'https://nwh.suaiden.com/webhook/pre-qualification';
   private static readonly USER_AGENT = 'PostmanRuntime/7.36.3';
 
   /**
@@ -243,6 +243,41 @@ class NotificationService {
       website: website,
       notification_target: 'admin'
     };
+  }
+
+  /**
+   * Envia evento de lead (Quiz/Pré-Qualificação) para o n8n
+   */
+  static async sendLeadEvent(payload: any): Promise<NotificationResponse> {
+    try {
+      console.log('[NotificationService] Enviando evento de lead:', payload);
+
+      const response = await fetch(this.WEBHOOK_URL, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'User-Agent': this.USER_AGENT,
+        },
+        body: JSON.stringify({
+          ...payload,
+          timestamp: new Date().toISOString()
+        }),
+      });
+
+      const responseText = await response.text();
+      
+      return {
+        success: response.ok,
+        status: response.status,
+        response: responseText
+      };
+    } catch (error: any) {
+      console.error('[NotificationService] Erro ao enviar evento de lead:', error);
+      return {
+        success: false,
+        error: error.message || 'Erro desconhecido'
+      };
+    }
   }
 }
 

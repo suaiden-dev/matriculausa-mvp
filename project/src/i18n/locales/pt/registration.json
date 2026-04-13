@@ -342,6 +342,12 @@
           "nao": "Não (terminado/cancelado)"
         }
       },
+      "5_2": {
+        "text": "Qual o limite do seu status (prazo)?"
+      },
+      "5_3": {
+        "text": "Já realizou extensão? Se sim, qual o número do seu processo?"
+      },
       "6": {
         "text": "Qual é o seu objetivo principal com o programa?",
         "options": {

@@ -342,6 +342,12 @@
           "nao": "No (terminated/cancelled)"
         }
       },
+      "5_2": {
+        "text": "What is your status limit (deadline)?"
+      },
+      "5_3": {
+        "text": "Have you already applied for an extension? If yes, what is your case number?"
+      },
       "6": {
         "text": "What is your main goal with the program?",
         "options": {

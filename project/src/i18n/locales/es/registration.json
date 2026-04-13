@@ -341,6 +341,12 @@
           "nao": "No (terminado/cancelado)"
         }
       },
+      "5_2": {
+        "text": "¿Cuál es el límite de su estatus (plazo)?"
+      },
+      "5_3": {
+        "text": "¿Ya ha realizado una extensión? Si es así, ¿cuál es su número de proceso?"
+      },
       "6": {
         "text": "¿Cuál es su objetivo principal con el programa?",
         "options": {
