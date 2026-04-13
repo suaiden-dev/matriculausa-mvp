@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { useSearchParams } from 'react-router-dom';
-import { GraduationCap, DollarSign, MessageSquare, CheckCircle, UserX, Archive } from 'lucide-react';
+import { GraduationCap, DollarSign, MessageSquare, CheckCircle, UserX } from 'lucide-react';
 import StudentApplicationsView from '../../components/AdminDashboard/StudentApplicationsView';
 import CompletedApplicationsView from '../../components/AdminDashboard/CompletedApplicationsView';
 import FeeManagement from '../../components/AdminDashboard/FeeManagement';
@@ -10,7 +10,7 @@ import { useAdminNotifications } from '../../contexts/AdminNotificationsContext'
 
 const UsersHub: React.FC = () => {
   const [searchParams] = useSearchParams();
-  const [activeTab, setActiveTab] = useState<'applications' | 'completed' | 'archived' | 'feeManagement' | 'messages' | 'lostLeads'>('applications');
+  const [activeTab, setActiveTab] = useState<'applications' | 'completed' | 'feeManagement' | 'messages' | 'lostLeads'>('applications');
   const [selectedConversationId, setSelectedConversationId] = useState<string | null>(null);
   const [selectedRecipientId, setSelectedRecipientId] = useState<string | null>(null);
   const { unreadCount } = useAdminNotifications();
@@ -29,8 +29,6 @@ const UsersHub: React.FC = () => {
       setActiveTab('completed');
     } else if (tab === 'lostLeads') {
       setActiveTab('lostLeads');
-    } else if (tab === 'archived') {
-      setActiveTab('archived');
     } else {
       setActiveTab('applications');
     }
@@ -72,18 +70,7 @@ const UsersHub: React.FC = () => {
               <span>Completed</span>
             </div>
           </button>
-          <button
-            onClick={() => setActiveTab('archived')}
-            className={`whitespace-nowrap py-2 px-1 border-b-2 font-medium text-sm ${activeTab === 'archived'
-                ? 'border-gray-600 text-gray-600'
-                : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
-              }`}
-          >
-            <div className="flex items-center space-x-2">
-              <Archive className="h-5 w-5" />
-              <span>Archived</span>
-            </div>
-          </button>
+
           <button
             onClick={() => setActiveTab('feeManagement')}
             className={`whitespace-nowrap py-2 px-1 border-b-2 font-medium text-sm ${activeTab === 'feeManagement'
@@ -133,8 +120,6 @@ const UsersHub: React.FC = () => {
         <StudentApplicationsView />
       ) : activeTab === 'completed' ? (
         <CompletedApplicationsView />
-      ) : activeTab === 'archived' ? (
-        <StudentApplicationsView isArchivedView={true} />
       ) : activeTab === 'feeManagement' ? (
         <FeeManagement />
       ) : activeTab === 'lostLeads' ? (

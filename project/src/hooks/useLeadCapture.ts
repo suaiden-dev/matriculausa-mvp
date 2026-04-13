@@ -19,16 +19,20 @@ export const useLeadCapture = () => {
    * Triggers if a name and either email or phone is provided.
    */
   const captureLead = useCallback(async (data: LeadData) => {
-    // Only capture if we have at least a name and some contact
-    if (!data.full_name || (!data.email && !data.phone)) {
+    // Improved validation: email must have at least one character before @ and at least two after .
+    const isValidEmail = data.email && /^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/.test(data.email);
+    const phoneDigits = data.phone ? data.phone.replace(/\D/g, '') : '';
+    const isValidPhone = phoneDigits.length >= 10;
+
+    // Only capture if we have a name and at least one VALID contact method
+    if (!data.full_name || (!isValidEmail && !isValidPhone)) {
       return;
     }
 
-    // Basic email validation if provided
-    if (data.email && (!data.email.includes('@') || !data.email.includes('.'))) {
-      // If email is invalid but we have phone, we might still want to capture
-      // For now, let's just proceed if phone exists, otherwise return
-      if (!data.phone) return;
+    // Skip if the current data is the same as the last one captured (basic avoidance of duplicates)
+    const captureKey = `${data.full_name}|${data.email || ''}|${data.phone || ''}`;
+    if (lastCapturedKey.current === captureKey) {
+      return;
     }
 
     try {
@@ -54,7 +58,7 @@ export const useLeadCapture = () => {
         return;
       }
 
-      lastCapturedKey.current = data.email || data.phone || data.full_name || null;
+      lastCapturedKey.current = captureKey;
     } catch (err) {
       console.error('Failed to capture lead:', err);
     }

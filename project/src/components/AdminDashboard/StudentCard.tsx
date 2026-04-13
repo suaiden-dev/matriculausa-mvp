@@ -1,7 +1,7 @@
 import React, { useState, useRef, useEffect } from 'react';
-import { Building, GraduationCap, Calendar, Archive, RefreshCw, UserCheck, ChevronDown, AlertCircle } from 'lucide-react';
+import { Building, GraduationCap, Calendar, UserCheck, ChevronDown, AlertCircle } from 'lucide-react';
 import { StudentRecord } from './StudentApplicationsView';
-import { supabase } from '../../lib/supabase';
+
 import { toast } from 'react-hot-toast';
 import { useAssignAdminMutation } from './hooks/useStudentApplicationsQueries';
 import { useAuth } from '../../hooks/useAuth';
@@ -16,11 +16,10 @@ interface StudentCardProps {
   student: StudentRecord;
   onClick: () => void;
   unreadMessages?: number;
-  onRefresh?: () => void;
   internalAdmins?: InternalAdmin[];
 }
 
-const StudentCard: React.FC<StudentCardProps> = ({ student, onClick, unreadMessages = 0, onRefresh, internalAdmins = [] }) => {
+const StudentCard: React.FC<StudentCardProps> = ({ student, onClick, unreadMessages = 0, internalAdmins = [] }) => {
   const [showAdminDropdown, setShowAdminDropdown] = useState(false);
   const dropdownRef = useRef<HTMLDivElement>(null);
   const assignAdminMutation = useAssignAdminMutation();
@@ -117,35 +116,7 @@ const StudentCard: React.FC<StudentCardProps> = ({ student, onClick, unreadMessa
       )}
 
       {/* Archive Button */}
-      <button
-        onClick={async (e) => {
-          e.stopPropagation();
-          try {
-            const { error } = await supabase
-              .from('user_profiles')
-              .update({ is_archived: !student.is_archived })
-              .eq('user_id', student.user_id);
-            
-            if (error) throw error;
-            toast.success(student.is_archived ? 'Student unarchived' : 'Student archived');
-            if (onRefresh) {
-              onRefresh();
-            } else {
-              window.location.reload(); 
-            }
-          } catch (error: any) {
-            toast.error('Error updating archive status');
-          }
-        }}
-        className={`absolute top-2 right-2 p-1 rounded-md transition-colors z-10 ${
-          student.is_archived 
-            ? 'text-green-600 hover:bg-green-50' 
-            : 'text-gray-400 hover:text-amber-600 hover:bg-amber-50 opacity-0 group-hover:opacity-100'
-        }`}
-        title={student.is_archived ? 'Unarchive Student' : 'Archive Student'}
-      >
-        {student.is_archived ? <RefreshCw className="h-3 w-3" /> : <Archive className="h-3 w-3" />}
-      </button>
+
 
       {/* Header with avatar and name */}
       <div className="flex items-start gap-3 mb-2">
