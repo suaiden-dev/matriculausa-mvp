@@ -20,7 +20,9 @@ const LayoutContent: React.FC<LayoutProps> = ({ children }) => {
                      location.pathname.startsWith('/seller') ||
                      location.pathname === '/smart-assistant' ||
                      location.pathname.startsWith('/pre-qualification') ||
-                     location.pathname === '/webnar';
+                     location.pathname === '/webnar' ||
+                     location.pathname === '/vsl-transfer' ||
+                     location.pathname === '/vsl-cos';
   const hideFooter = hideHeader || location.pathname.startsWith('/checkout/zelle');
   const isDashboard = hideHeader;
   const isAdmin = location.pathname.startsWith('/admin');
@@ -36,6 +38,8 @@ const LayoutContent: React.FC<LayoutProps> = ({ children }) => {
                        location.pathname.includes('/onboarding') ||
                        location.pathname.startsWith('/pre-qualification') ||
                        location.pathname === '/webnar' ||
+                       location.pathname === '/vsl-transfer' ||
+                       location.pathname === '/vsl-cos' ||
                        isModalOpen; // 🎯 NOVA CONDIÇÃO: esconder quando modal está aberto
 
   useEffect(() => {
