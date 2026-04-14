@@ -2,7 +2,6 @@ import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
 import { ArrowRight, Loader2, CheckCircle2, FileText, GraduationCap, Send, Star, Shield, Rocket, X, ChevronLeft, ChevronRight } from 'lucide-react';
-import WhatsAppIcon from '../components/icons/WhatsApp';
 import { useLeadCapture } from '../hooks/useLeadCapture';
 import NotificationService from '../services/NotificationService';
 import PhoneInput from 'react-phone-number-input';
@@ -1002,8 +1001,7 @@ const PreQualificationLanding: React.FC = () => {
                       </motion.div>
                     )}
                   </AnimatePresence>
-
-                  <div className="flex flex-col md:flex-row gap-4 pt-4">
+                  <div className="flex justify-center pt-4">
                     <button 
                       onClick={() => {
                         const params = new URLSearchParams();
@@ -1015,58 +1013,9 @@ const PreQualificationLanding: React.FC = () => {
                         }
                         navigate(`/selection-fee-registration?${params.toString()}`);
                       }}
-                      className="flex-[1.5] bg-blue-600 hover:bg-blue-700 text-white font-bold py-5 rounded-[2.5rem] text-lg md:text-xl flex items-center justify-center gap-3 transition-all shadow-xl shadow-blue-500/30 active:scale-[0.98]"
+                      className="w-full max-w-[32rem] bg-blue-600 hover:bg-blue-700 text-white font-bold py-5 rounded-[2.5rem] text-lg md:text-xl flex items-center justify-center gap-3 transition-all shadow-xl shadow-blue-500/30 active:scale-[0.98]"
                     >
                       Garantir minha bolsa <ArrowRight className="w-6 h-6" />
-                    </button>
-                    <button 
-                      onClick={() => {
-                        const parts: string[] = [];
-                        parts.push(`Olá! Acabei de fazer a pré-qualificação e quero saber mais sobre o processo seletivo.`);
-                        parts.push(`\n*MEU PERFIL:*`);
-                        parts.push(`• Nome: ${lead.name}`);
-                        parts.push(`• E-mail: ${lead.email}`);
-                        parts.push(`• WhatsApp: ${lead.phone}`);
-
-                        parts.push(`\n*RESPOSTAS DO QUESTIONÁRIO:*`);
-                        
-                        // Mapeamento de perguntas e respostas para o WhatsApp
-                        const questionLabels: Record<string, string> = {
-                          usa: 'Está nos EUA?',
-                          visa_type: 'Tipo de visto',
-                          time_in_usa: 'Tempo nos EUA',
-                          family: 'Família/Sozinho',
-                          english: 'Nível de Inglês',
-                          priority: 'Prioridade',
-                          flexibility: 'Flexibilidade',
-                          investment: 'Faixa de Investimento',
-                          graduation: 'Já é formado?',
-                          work_start_grad: 'Início do trabalho (Graduado)',
-                          work_start_no_grad: 'Início do trabalho (Não graduado)',
-                          work_interest: 'Interesse em trabalho',
-                          flexibility_interest: 'Interesse se houver flexibilidade',
-                          investment_interest: 'Interesse se houver bolsa'
-                        };
-
-                        Object.entries(answers).forEach(([key, value]) => {
-                          if (value && questionLabels[key]) {
-                            // Tenta pegar o label legível da opção
-                            const question = preQualificationQuestions[key as QuestionId];
-                            const option = question?.options?.find(o => o.value === value);
-                            const label = option?.label || value;
-                            parts.push(`• ${questionLabels[key]}: ${label}`);
-                          }
-                        });
-
-                        parts.push(`\n*OFERTA VISUALIZADA:*`);
-                        parts.push(`• Processo Seletivo por US$ 350 (com desconto exclusivo de US$ 50)`);
-
-                        const message = encodeURIComponent(parts.join('\n'));
-                        window.open(`https://api.whatsapp.com/send/?phone=15202553813&text=${message}`, '_blank');
-                      }}
-                      className="flex-1 bg-white border-2 border-blue-600 text-blue-600 hover:bg-blue-50 font-bold py-5 rounded-[2.5rem] text-lg md:text-xl flex items-center justify-center gap-3 transition-all active:scale-[0.98]"
-                    >
-                      <WhatsAppIcon className="w-6 h-6 text-[#25D366]" /> Falar com alguém
                     </button>
                   </div>
                 </div>
