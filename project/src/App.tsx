@@ -62,7 +62,7 @@ const MicrosoftCallback = React.lazy(() => import('./pages/MicrosoftCallback'));
 const Auth323NetworkCallback = React.lazy(() => import('./pages/Auth323NetworkCallback'));
 const UnsubscribeNewsletter = React.lazy(() => import('./pages/UnsubscribeNewsletter'));
 const NotFound = React.lazy(() => import('./pages/NotFound'));
-const WorkshopRegistrationLanding = React.lazy(() => import('./pages/WorkshopRegistrationLanding'));
+const WebinárioRegistrationLanding = React.lazy(() => import('./pages/WebinarioRegistrationLanding'));
 
 // Fallback de Loading
 import PageSkeleton from './components/PageSkeleton';
@@ -124,7 +124,7 @@ const AppContent = () => {
           <Route path="/student/register" element={<SellerStudentRegistration />} />
           <Route path="/scholarships" element={<Scholarships />} />
           <Route path="/selection-fee-registration" element={<QuickRegistration />} />
-          <Route path="/workshop" element={<WorkshopRegistrationLanding />} />
+          <Route path="/webnar" element={<WebinárioRegistrationLanding />} />
           <Route path="/pre-qualification" element={<PreQualificationLanding />} />
           <Route path="/schools" element={<Universities />} />
           <Route path="/schools/:slug" element={<UniversityDetail />} />
