@@ -78,6 +78,8 @@ export const DocumentsUploadStep: React.FC<StepProps> = ({ onNext }) => {
     passport: t('studentDashboard.documentsAndScholarshipChoice.passport') || 'Passport',
     diploma: t('studentDashboard.documentsAndScholarshipChoice.diploma') || 'High School Diploma',
     funds_proof: t('studentDashboard.documentsAndScholarshipChoice.fundsProof') || 'Proof of Funds',
+    ds160: t('scholarships:scholarshipsPage.modal.ds160Package') || 'DS-160 Package',
+    i539: t('scholarships:scholarshipsPage.modal.i539Package') || 'I-539 Package',
   };
 
   const DOCUMENT_DESCRIPTIONS: Record<string, string> = {
@@ -873,8 +875,21 @@ export const DocumentsUploadStep: React.FC<StepProps> = ({ onNext }) => {
                                     const pType = app.student_process_type || processType;
                                     if (!pType) return null;
                                     
+                                    const visaTransferActive = userProfile?.visa_transfer_active;
+                                    const isInitial = pType === 'initial';
                                     const isCOS = pType === 'change_of_status';
-                                    const feeKey = isCOS ? 'scholarshipsPage.modal.i539COSPackage' : 'scholarshipsPage.modal.ds160Package';
+                                    const isTransfer = pType === 'transfer';
+                                    
+                                    let feeKey = '';
+                                    if (isInitial) {
+                                      feeKey = 'scholarshipsPage.modal.ds160Package';
+                                    } else if (isCOS) {
+                                      feeKey = 'scholarshipsPage.modal.i539COSPackage';
+                                    } else if (isTransfer && visaTransferActive === false) {
+                                      feeKey = 'scholarshipsPage.modal.i539Package';
+                                    }
+
+                                    if (!feeKey) return null;
                                     
                                     return (
                                       <div className="flex items-center justify-between pt-1.5 mt-1.5 border-t border-slate-200">
@@ -932,11 +947,24 @@ export const DocumentsUploadStep: React.FC<StepProps> = ({ onNext }) => {
 
                                   {app.id && openChecklists[app.id] && (
                                     <div className="mt-3 space-y-3 animate-in fade-in slide-in-from-top-2 duration-300">
-                                      {[
-                                        { type: 'passport', label: DOCUMENT_LABELS.passport },
-                                        { type: 'diploma', label: DOCUMENT_LABELS.diploma },
-                                        { type: 'funds_proof', label: DOCUMENT_LABELS.funds_proof }
-                                      ].map(docInfo => {
+                                      {(() => {
+                                        const baseDocs = [
+                                          { type: 'passport', label: DOCUMENT_LABELS.passport },
+                                          { type: 'diploma', label: DOCUMENT_LABELS.diploma },
+                                          { type: 'funds_proof', label: DOCUMENT_LABELS.funds_proof }
+                                        ];
+
+                                        const pType = app.student_process_type || processType;
+                                        const visaTransferActive = userProfile?.visa_transfer_active;
+
+                                        if (pType === 'initial') {
+                                          baseDocs.push({ type: 'ds160', label: DOCUMENT_LABELS.ds160 });
+                                        } else if (pType === 'change_of_status' || (pType === 'transfer' && visaTransferActive === false)) {
+                                          baseDocs.push({ type: 'i539', label: DOCUMENT_LABELS.i539 });
+                                        }
+
+                                        return baseDocs;
+                                      })().map(docInfo => {
                                         const docData = appDocs.find(d => d.type === docInfo.type);
                                         const status = (docData?.status || 'pending').toLowerCase();
                                         const isRejectedStatus = status === 'changes_requested' || status === 'rejected';

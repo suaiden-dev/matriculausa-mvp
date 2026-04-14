@@ -19,13 +19,16 @@ const LayoutContent: React.FC<LayoutProps> = ({ children }) => {
                      location.pathname.startsWith('/affiliate-admin') ||
                      location.pathname.startsWith('/seller') ||
                      location.pathname === '/smart-assistant' ||
-                     location.pathname.startsWith('/pre-qualification');
+                     location.pathname.startsWith('/pre-qualification') ||
+                     location.pathname === '/webnar' ||
+                     location.pathname === '/vsl-transfer' ||
+                     location.pathname === '/vsl-cos';
   const hideFooter = hideHeader || location.pathname.startsWith('/checkout/zelle');
   const isDashboard = hideHeader;
   const isAdmin = location.pathname.startsWith('/admin');
   const isStudentChatPage = location.pathname.startsWith('/student/dashboard/chat');
   
-  // Esconder SmartChat apenas na página do inbox OU quando modal está aberto OU na página de onboarding
+  // Esconder SmartChat apenas na página do inbox OU quando modal está aberto OU na página de onboarding OU pré-qualificação
   const hideSmartChat = location.pathname.includes('/microsoft-inbox') || 
                        location.pathname.includes('/microsoft') ||
                        location.pathname.includes('/email/inbox') ||
@@ -33,6 +36,10 @@ const LayoutContent: React.FC<LayoutProps> = ({ children }) => {
                        location.pathname === '/smart-assistant' ||
                        location.pathname.includes('/applications') ||
                        location.pathname.includes('/onboarding') ||
+                       location.pathname.startsWith('/pre-qualification') ||
+                       location.pathname === '/webnar' ||
+                       location.pathname === '/vsl-transfer' ||
+                       location.pathname === '/vsl-cos' ||
                        isModalOpen; // 🎯 NOVA CONDIÇÃO: esconder quando modal está aberto
 
   useEffect(() => {

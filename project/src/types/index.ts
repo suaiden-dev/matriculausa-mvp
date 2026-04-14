@@ -14,6 +14,7 @@ export interface University {
   location: string;
   description: string;
   website?: string;
+  logo_url?: string;
   image_url?: string;
   banner_url?: string;
   type?: string;

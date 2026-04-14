@@ -15,8 +15,6 @@ import {
   Sparkles,
   LayoutGrid,
   Table,
-  RefreshCw,
-  Archive,
   UserCheck
 } from 'lucide-react';
 import { supabase } from '../../lib/supabase';
@@ -80,10 +78,9 @@ export interface StudentRecord {
 }
 
 interface StudentApplicationsViewProps {
-  isArchivedView?: boolean;
 }
 
-const StudentApplicationsView: React.FC<StudentApplicationsViewProps> = ({ isArchivedView = false }) => {
+const StudentApplicationsView: React.FC<StudentApplicationsViewProps> = () => {
   const [searchTerm, setSearchTerm] = useState('');
   const [statusFilter, setStatusFilter] = useState('all');
   const [currentPage, setCurrentPage] = useState(1);
@@ -475,12 +472,7 @@ const StudentApplicationsView: React.FC<StudentApplicationsViewProps> = ({ isArc
   };
 
   const filteredStudents = students.filter((student: StudentRecord) => {
-    // Filtragem por Arquivamento
-    if (isArchivedView) {
-      if (!student.is_archived) return false;
-    } else {
-      if (student.is_archived) return false;
-    }
+
 
     // Ocultar estudantes de Current Students Scholarship por padrão (a menos que o toggle esteja ativo)
     if (!showCurrentStudents && student.scholarship_title && HIDDEN_SCHOLARSHIPS.includes(student.scholarship_title)) {
@@ -1167,7 +1159,6 @@ const StudentApplicationsView: React.FC<StudentApplicationsViewProps> = ({ isArc
           students={filteredStudents}
           getUnreadCount={getUnreadCount}
           getGlobalUnreadCount={getGlobalUnreadCount}
-          onRefresh={handleRefresh}
           internalAdmins={internalAdmins}
         />
       ) : (
@@ -1205,9 +1196,7 @@ const StudentApplicationsView: React.FC<StudentApplicationsViewProps> = ({ isArc
                       Atribuído
                     </th>
                   )}
-                  <th className="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">
-                    Actions
-                  </th>
+
                 </tr>
               </thead>
               <tbody className="bg-white divide-y divide-gray-200">
@@ -1379,42 +1368,7 @@ const StudentApplicationsView: React.FC<StudentApplicationsViewProps> = ({ isArc
                         </td>
                       );
                     })()}
-                    <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
-                      <button
-                        onClick={async (e) => {
-                          e.stopPropagation();
-                          try {
-                            const { error } = await supabase
-                              .from('user_profiles')
-                              .update({ is_archived: !student.is_archived })
-                              .eq('user_id', student.user_id);
-                            
-                            if (error) throw error;
-                            toast.success(student.is_archived ? 'Student unarchived' : 'Student archived');
-                            handleRefresh(); 
-                          } catch (error: any) {
-                            toast.error('Error updating archive status');
-                          }
-                        }}
-                        className={`inline-flex items-center px-3 py-1 rounded-md text-xs font-medium transition-colors ${
-                          student.is_archived 
-                            ? 'text-green-700 bg-green-100 hover:bg-green-200' 
-                            : 'text-amber-700 bg-amber-100 hover:bg-amber-200 border border-amber-200'
-                        }`}
-                      >
-                        {student.is_archived ? (
-                          <>
-                            <RefreshCw className="h-3 w-3 mr-1" />
-                            Unarchive
-                          </>
-                        ) : (
-                          <>
-                            <Archive className="h-3 w-3 mr-1" />
-                            Archive
-                          </>
-                        )}
-                      </button>
-                    </td>
+
                   </tr>
                 ))}
               </tbody>
