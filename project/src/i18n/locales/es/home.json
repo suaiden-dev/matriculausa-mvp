@@ -129,7 +129,7 @@
       }
     },
     "threeSteps": {
-      "title": "Cómo Funciona tu Viaje a los EE. UU.",
+      "title": "Tu Nueva Etapa en USA Empieza Aquí",
       "subtitle": "Proceso Simple",
       "step1": {
         "title": "Inicie su Proceso de Selección",
@@ -189,6 +189,9 @@
     "title": "Cómo Funciona",
     "subtitle": "Tu camino a una universidad de EE. UU., paso a paso",
     "journey": "Tu Jornada",
+    "cta": {
+      "start": "Comenzar Proceso Ahora"
+    },
     "stats": {
       "setup": "Configuración en 5 Minutos",
       "success": "95% Tasa de Éxito",
@@ -248,20 +251,20 @@
     "whyUs": {
       "title": "¿Por Qué MatriculaUSA?",
       "smartDiscovery": {
-        "title": "Descubrimiento Inteligente",
-        "description": "IA encuentra las mejores becas para ti"
+        "title": "Especialistas en Transfer & COS",
+        "description": "Enfoque total en quienes ya están en EE. UU. y necesitan cambiar de estatus o transferirse de escuela."
       },
       "documentManagement": {
-        "title": "Gestión de Documentos",
-        "description": "Sube y rastrea todos tus documentos fácilmente"
+        "title": "Becas de Hasta 50%",
+        "description": "Acceso a mensualidades exclusivas en universidades americanas acreditadas."
       },
       "personalSupport": {
-        "title": "Soporte Personal",
-        "description": "Nuestro equipo te ayuda en cada paso"
+        "title": "Plataforma All-In-One",
+        "description": "Gestiona todo tu proceso, desde el envío de documentos hasta la matrícula final, de forma sencilla y 100% digital."
       },
       "successTracking": {
-        "title": "Seguimiento de Éxito",
-        "description": "Ve tu progreso y siguientes pasos en tiempo real"
+        "title": "Soporte Local Continuo",
+        "description": "Seguimiento dedicado para garantizar tu mantenimiento de estatus legal en EE. UU."
       }
     },
     "successStories": {

@@ -129,7 +129,7 @@
       }
     },
     "threeSteps": {
-      "title": "How Your Journey to the USA Works",
+      "title": "A New Chapter in Your U.S. Journey Starts Now",
       "subtitle": "Simple Process",
       "step1": {
         "title": "Start Your Selection Process",
@@ -189,6 +189,9 @@
     "title": "How It Works",
     "subtitle": "Your path to a US university, step by step",
     "journey": "Your Journey",
+    "cta": {
+      "start": "Start Process Now"
+    },
     "stats": {
       "setup": "5 Minutes Setup",
       "success": "95% Success Rate",
@@ -248,20 +251,20 @@
     "whyUs": {
       "title": "Why MatriculaUSA?",
       "smartDiscovery": {
-        "title": "Smart Discovery",
-        "description": "AI finds the best scholarships for you"
+        "title": "Transfer & COS Specialists",
+        "description": "Full focus on those already in the US needing to change status or transfer schools."
       },
       "documentManagement": {
-        "title": "Document Management",
-        "description": "Upload and track all your documents easily"
+        "title": "Up to 50% Scholarships",
+        "description": "Access exclusive tuition rates at accredited American universities."
       },
       "personalSupport": {
-        "title": "Personal Support",
-        "description": "Our team helps you at every step"
+        "title": "All-In-One Platform",
+        "description": "Manage your entire process, from document upload to final enrollment, simply and 100% digitally."
       },
       "successTracking": {
-        "title": "Success Tracking",
-        "description": "See your progress and next steps in real time"
+        "title": "Continuous Local Support",
+        "description": "Dedicated monitoring to ensure your legal status maintenance in the US."
       }
     },
     "successStories": {
