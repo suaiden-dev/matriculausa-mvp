@@ -210,7 +210,7 @@ const PreQualificationLanding: React.FC = () => {
   const [loadingStep, setLoadingStep] = useState(0);
   const [offerReady, setOfferReady] = useState(false);
   const [formErrors, setFormErrors] = useState<{name?: string, email?: string, phone?: string}>({});
-  const [timeLeft, setTimeLeft] = useState(24 * 60 * 60);
+  const [timeLeft, setTimeLeft] = useState(10 * 60);
   const [selectedIndex, setSelectedIndex] = useState<number | null>(null);
 
   const clientImages = [
@@ -640,7 +640,7 @@ const PreQualificationLanding: React.FC = () => {
                     type="submit"
                     className="w-full bg-blue-600 hover:bg-blue-700 text-white font-bold py-5 rounded-[2.5rem] text-lg md:text-xl flex items-center justify-center gap-3 transition-all shadow-xl shadow-blue-500/30 active:scale-[0.98] mt-8"
                   >
-                    {currentStep === 'lead_name' ? 'Próximo' : 'Começar'} <ArrowRight className="w-6 h-6" />
+                    {currentStep === 'lead_name' ? 'Começar' : 'Continuar'} <ArrowRight className="w-6 h-6" />
                   </button>
                 </form>
               )}
@@ -882,7 +882,7 @@ const PreQualificationLanding: React.FC = () => {
                           }}
                           className="w-full bg-blue-600 hover:bg-blue-700 text-white font-bold py-5 rounded-[2.5rem] text-lg md:text-xl flex items-center justify-center gap-3 transition-all shadow-xl shadow-blue-500/30 active:scale-[0.98]"
                         >
-                          Quero realizar o processo seletivo <ArrowRight className="w-6 h-6" />
+                          Garantir minha bolsa <ArrowRight className="w-6 h-6" />
                         </button>
                       </div>
                     </motion.div>
@@ -932,51 +932,76 @@ const PreQualificationLanding: React.FC = () => {
                     <div>
                       <h4 className="font-black text-[#1a1a1a] text-xl md:text-2xl mb-2 tracking-tight">Garantia de Reembolso</h4>
                       <p className="text-slate-600 text-base md:text-lg leading-relaxed">
-                        Se nenhuma bolsa de estudos for aprovada para o seu perfil, <span className="text-blue-700 font-extrabold underline decoration-blue-200">devolvemos o Processo Seletivo</span>.
+                        Se as universidades que você escolheu não te aceitarem, <span className="text-blue-700 font-extrabold underline decoration-blue-200">devolvemos o seu processo seletivo</span>.
                       </p>
                     </div>
                   </div>
 
-                  <div className="bg-gradient-to-b from-slate-50 to-white p-8 md:p-10 rounded-[2.5rem] text-center shadow-[0_8px_30px_rgb(0,0,0,0.04)] border border-slate-100 relative overflow-hidden">
-                    <div className="bg-red-50 p-4 rounded-2xl mb-8 flex flex-col md:flex-row items-center justify-center gap-4 md:gap-8 shadow-md border border-red-100">
-                        <span className="text-red-800 font-bold text-sm md:text-base uppercase tracking-tight">Oferta expira em:</span>
-                      <div className="flex items-center gap-1.5 font-mono font-black text-2xl md:text-3xl">
-                        {(() => {
-                          const time = formatTimeParts(timeLeft);
-                          return (
-                            <>
-                              <div className="bg-white px-2 rounded-lg text-red-600 shadow-sm border border-red-100 flex items-center justify-center min-w-[3rem] h-12">
-                                {time.h}
-                              </div>
-                              <span className="text-red-400">:</span>
-                              <div className="bg-white px-2 rounded-lg text-red-600 shadow-sm border border-red-100 flex items-center justify-center min-w-[3rem] h-12">
-                                {time.m}
-                              </div>
-                              <span className="text-red-400">:</span>
-                              <div className="bg-white px-2 rounded-lg text-red-600 shadow-sm border border-red-100 flex items-center justify-center min-w-[3rem] h-12">
-                                {time.s}
-                              </div>
-                            </>
-                          );
-                        })()}
-                      </div>
-                    </div>
+                  <AnimatePresence mode="wait">
+                    {timeLeft > 0 ? (
+                      <motion.div 
+                        key="promo-active"
+                        initial={{ opacity: 0, y: -20 }}
+                        animate={{ opacity: 1, y: 0 }}
+                        exit={{ opacity: 0, y: 20 }}
+                        className="bg-gradient-to-b from-slate-50 to-white p-8 md:p-10 rounded-[2.5rem] text-center shadow-[0_8px_30px_rgb(0,0,0,0.04)] border border-slate-100 relative overflow-hidden"
+                      >
+                        <div className="bg-red-50 p-4 rounded-2xl mb-8 flex flex-col md:flex-row items-center justify-center gap-4 md:gap-8 shadow-md border border-red-100">
+                          <span className="text-red-800 font-bold text-sm md:text-base uppercase tracking-tight">Oferta expira em:</span>
+                          <div className="flex items-center gap-1.5 font-mono font-black text-2xl md:text-3xl">
+                            {(() => {
+                              const time = formatTimeParts(timeLeft);
+                              return (
+                                <>
+                                  <div className="bg-white px-2 rounded-lg text-red-600 shadow-sm border border-red-100 flex items-center justify-center min-w-[3rem] h-12">
+                                    {time.h}
+                                  </div>
+                                  <span className="text-red-400">:</span>
+                                  <div className="bg-white px-2 rounded-lg text-red-600 shadow-sm border border-red-100 flex items-center justify-center min-w-[3rem] h-12">
+                                    {time.m}
+                                  </div>
+                                  <span className="text-red-400">:</span>
+                                  <div className="bg-white px-2 rounded-lg text-red-600 shadow-sm border border-red-100 flex items-center justify-center min-w-[3rem] h-12">
+                                    {time.s}
+                                  </div>
+                                </>
+                              );
+                            })()}
+                          </div>
+                        </div>
 
-                    <p className="text-blue-700 font-bold text-sm md:text-base mb-6 uppercase tracking-widest">Processo seletivo</p>
-                    
-                    <div className="space-y-2">
-                      <div className="flex items-center justify-center gap-3">
-                        <span className="text-2xl md:text-3xl text-slate-500 line-through decoration-red-500/30 font-bold italic opacity-80">DE US$ 400</span>
-                      </div>
-                      <div className="flex items-center justify-center gap-2 md:gap-3 leading-none tracking-tight">
-                        <span className="text-xl md:text-2xl font-bold text-slate-400">POR</span>
-                        <span className="text-5xl md:text-6xl font-black text-blue-600">US$ 350</span>
-                      </div>
-                      <p className="text-green-600 font-bold text-sm mt-4 inline-block bg-green-50 px-4 py-1 rounded-full">
-                        Você economiza US$ 50 hoje
-                      </p>
-                    </div>
-                  </div>
+                        <p className="text-blue-700 font-bold text-sm md:text-base mb-6 uppercase tracking-widest">Processo seletivo</p>
+                        
+                        <div className="space-y-2">
+                          <div className="flex items-center justify-center gap-3">
+                            <span className="text-2xl md:text-3xl text-slate-500 line-through decoration-red-500/30 font-bold italic opacity-80">DE US$ 400</span>
+                          </div>
+                          <div className="flex items-center justify-center gap-2 md:gap-3 leading-none tracking-tight">
+                            <span className="text-xl md:text-2xl font-bold text-slate-400">POR</span>
+                            <span className="text-5xl md:text-6xl font-black text-blue-600">US$ 350</span>
+                          </div>
+                          <p className="text-green-600 font-bold text-sm mt-4 inline-block bg-green-50 px-4 py-1 rounded-full">
+                            Você economiza US$ 50 hoje
+                          </p>
+                        </div>
+                      </motion.div>
+                    ) : (
+                      <motion.div 
+                        key="promo-expired"
+                        initial={{ opacity: 0, scale: 0.95 }}
+                        animate={{ opacity: 1, scale: 1 }}
+                        className="bg-slate-50 p-8 md:p-10 rounded-[2.5rem] text-center border border-slate-200"
+                      >
+                        <p className="text-slate-500 font-bold text-sm md:text-base mb-4 uppercase tracking-widest">Processo seletivo</p>
+                        <div className="flex items-center justify-center gap-2 md:gap-3 leading-none tracking-tight">
+                          <span className="text-4xl md:text-5xl font-black text-slate-800">US$ 400</span>
+                        </div>
+                        <p className="text-red-500 font-semibold text-sm mt-4 italic">
+                          A oferta especial de US$ 50 OFF expirou.
+                        </p>
+                      </motion.div>
+                    )}
+                  </AnimatePresence>
 
                   <div className="flex flex-col md:flex-row gap-4 pt-4">
                     <button 
@@ -985,12 +1010,14 @@ const PreQualificationLanding: React.FC = () => {
                         if (lead.name) params.append('name', lead.name);
                         if (lead.email) params.append('email', lead.email);
                         if (lead.phone) params.append('phone', lead.phone);
-                        params.append('coupon', 'TFOE');
+                        if (timeLeft > 0) {
+                          params.append('coupon', 'TFOE');
+                        }
                         navigate(`/selection-fee-registration?${params.toString()}`);
                       }}
                       className="flex-[1.5] bg-blue-600 hover:bg-blue-700 text-white font-bold py-5 rounded-[2.5rem] text-lg md:text-xl flex items-center justify-center gap-3 transition-all shadow-xl shadow-blue-500/30 active:scale-[0.98]"
                     >
-                      Iniciar Processo Seletivo <ArrowRight className="w-6 h-6" />
+                      Garantir minha bolsa <ArrowRight className="w-6 h-6" />
                     </button>
                     <button 
                       onClick={() => {
