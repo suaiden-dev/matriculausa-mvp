@@ -35,16 +35,12 @@ import { useLeadCapture } from '../hooks/useLeadCapture';
 
 // Mostrar o contador de urgência sempre que um cupom for aplicado
 
-const UrgencyBanner: React.FC = () => {
-  const { t } = useTranslation(['registration']);
-  const [timeLeft, setTimeLeft] = useState(24 * 60 * 60); // 24h em segundos
+interface UrgencyBannerProps {
+  timeLeft: number;
+}
 
-  useEffect(() => {
-    const timer = setInterval(() => {
-      setTimeLeft((prev) => (prev > 0 ? prev - 1 : 0));
-    }, 1000);
-    return () => clearInterval(timer);
-  }, []);
+const UrgencyBanner: React.FC<UrgencyBannerProps> = ({ timeLeft }) => {
+  const { t } = useTranslation(['registration']);
 
   if (timeLeft <= 0) return null;
 
@@ -249,6 +245,15 @@ const QuickRegistration: React.FC = () => {
     }
   }, [formData]);
 
+  const [timeLeft, setTimeLeft] = useState(10 * 60); // 10 minutes
+
+  useEffect(() => {
+    const timer = setInterval(() => {
+      setTimeLeft((prev) => (prev > 0 ? prev - 1 : 0));
+    }, 1000);
+    return () => clearInterval(timer);
+  }, []);
+
   // UI State
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -378,6 +383,9 @@ const QuickRegistration: React.FC = () => {
 
   // Calcular preço final com desconto (Lógica da SelectionFeeStep)
   const currentFee = (() => {
+    // Se o tempo acabou, preço cheio sem choro
+    if (timeLeft <= 0) return baseFee;
+
     // 1. Cupom promocional tem prioridade
     if (promotionalCouponValidation?.isValid && promotionalCouponValidation.finalAmount !== undefined) {
       return promotionalCouponValidation.finalAmount;
@@ -879,8 +887,8 @@ const QuickRegistration: React.FC = () => {
         field_of_interest: formData.field_of_interest,
         academic_level: formData.academic_level,
         english_proficiency: formData.english_proficiency,
-        affiliate_code: codeApplied ? couponCode : undefined,
-        promotional_coupon: promotionalCouponValidation?.isValid ? promotionalCoupon : undefined,
+        affiliate_code: (codeApplied && timeLeft > 0) ? couponCode : undefined,
+        promotional_coupon: (promotionalCouponValidation?.isValid && timeLeft > 0) ? promotionalCoupon : undefined,
         registration_source: 'quick_registration',
         fee_type: 'selection_process',
         payment_method: method
@@ -990,7 +998,7 @@ const QuickRegistration: React.FC = () => {
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
         <div className="text-center mb-12">
           {(codeApplied || promotionalCouponValidation?.isValid) && (
-            <UrgencyBanner />
+            <UrgencyBanner timeLeft={timeLeft} />
           )}
           <h1 className="text-4xl font-extrabold text-grey-900 tracking-tight sm:text-5xl">
             {t('rapidRegistration.title')}
@@ -1663,7 +1671,7 @@ const QuickRegistration: React.FC = () => {
                           </span>
                         </div>
 
-                        {isCouponValid && (
+                        {isCouponValid && timeLeft > 0 && (
                           <div className="flex items-center justify-end mt-1">
                             <span className="bg-emerald-50 text-emerald-600 px-2 py-0.5 rounded-full text-[10px] font-black uppercase tracking-widest border border-emerald-100 flex items-center">
                               <Ticket className="w-2.5 h-2.5 mr-1" />
