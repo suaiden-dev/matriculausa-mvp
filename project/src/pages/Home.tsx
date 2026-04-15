@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { Link, useNavigate, useLocation } from 'react-router-dom';
-import { ArrowRight, Star, BookOpen, ChevronRight, GraduationCap, Clock, Gift } from 'lucide-react';
+import { ArrowRight, Star, BookOpen, ChevronRight, Clock, Gift } from 'lucide-react';
 import { useTranslationWithFees } from '../hooks/useTranslationWithFees';
 import { usePaymentBlocked } from '../hooks/usePaymentBlocked';
 import { useAuth } from '../hooks/useAuth';
@@ -249,28 +249,13 @@ const Home: React.FC = () => {
             
             <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 relative z-10">
               <div className="flex flex-col md:flex-row md:items-end justify-between mb-12">
-                <div className="max-w-2xl text-center md:text-left">
+                <div className="max-w-2xl text-center md:text-left mx-auto md:mx-0">
                   <h2 className="text-4xl md:text-5xl font-black text-[#05294E] mb-6 leading-tight">
                     {t('home.featuredScholarships.title')}
                   </h2>
                   <p className="text-lg text-slate-600 leading-relaxed font-medium">
                     {t('home.featuredScholarships.subtitle')}
                   </p>
-                </div>
-                
-                <div className="flex items-center gap-4">
-                  <button 
-                    onClick={() => setCurrentScholarshipIndex((prev) => (prev - 1 + STATIC_SCHOLARSHIPS.length) % STATIC_SCHOLARSHIPS.length)}
-                    className="p-4 rounded-2xl bg-white border border-slate-200 text-slate-600 hover:bg-[#05294E] hover:text-white transition-all duration-300 shadow-sm"
-                  >
-                    <ChevronRight className="h-6 w-6 rotate-180" />
-                  </button>
-                  <button 
-                    onClick={() => setCurrentScholarshipIndex((prev) => (prev + 1) % STATIC_SCHOLARSHIPS.length)}
-                    className="p-4 rounded-2xl bg-white border border-slate-200 text-slate-600 hover:bg-[#05294E] hover:text-white transition-all duration-300 shadow-sm"
-                  >
-                    <ChevronRight className="h-6 w-6" />
-                  </button>
                 </div>
               </div>
 
@@ -295,20 +280,13 @@ const Home: React.FC = () => {
                         style={{ width: slideItemWidth > 0 ? `${slideItemWidth}px` : '100%' }}
                       >
                         <motion.div
-                          className="bg-white rounded-[2rem] overflow-hidden shadow-lg border border-slate-100 flex flex-col h-[580px] group relative"
+                          className="bg-white rounded-[2rem] overflow-hidden shadow-lg border border-slate-100 flex flex-col h-[400px] group relative"
                           whileHover={{ y: -10 }}
                           transition={{ duration: 0.3 }}
                         >
-                          {/* Top Part: Placeholder instead of Image */}
-                          <div className="h-32 relative overflow-hidden bg-gradient-to-br from-[#05294E] to-slate-900 flex items-center justify-center">
-                            <div className="absolute inset-0 opacity-10 bg-[url('https://www.transparenttextures.com/patterns/cubes.png')] group-hover:scale-110 transition-transform duration-700"></div>
-                            <div className="relative z-10">
-                              <div className="w-12 h-12 bg-white/10 backdrop-blur-md rounded-full border border-white/20 flex items-center justify-center shadow-xl group-hover:scale-110 transition-transform duration-500">
-                                <GraduationCap className="h-6 w-6 text-white" />
-                              </div>
-                            </div>
-                            
-                          </div>
+                          {/* Top accent line */}
+                          <div className="h-2 bg-gradient-to-r from-[#05294E] to-[#D0151C] opacity-80"></div>
+
 
                           {/* Content Part */}
                           <div className="p-8 flex flex-col flex-grow">
@@ -330,12 +308,6 @@ const Home: React.FC = () => {
                             </div>
 
                             <div className="mt-auto flex flex-col gap-3">
-                              <Link
-                                to={isAuthenticated ? "/student/dashboard" : "/register"}
-                                className="w-full bg-[#D0151C] hover:bg-[#B01218] text-white py-3.5 rounded-xl font-black text-center transition-all duration-300 shadow-lg hover:shadow-red-500/20"
-                              >
-                                Fazer Inscrição
-                              </Link>
                               <button
                                 onClick={() => navigate('/scholarships')}
                                 className="w-full bg-[#05294E]/5 hover:bg-[#05294E]/10 text-[#05294E] py-3.5 rounded-xl font-bold text-center transition-all duration-300 border border-[#05294E]/10"
@@ -348,6 +320,22 @@ const Home: React.FC = () => {
                       </div>
                     ))}
                   </motion.div>
+                </div>
+
+                {/* Navigation Buttons - Sides */}
+                <div className="hidden md:block">
+                  <button 
+                    onClick={() => setCurrentScholarshipIndex((prev) => (prev - 1 + STATIC_SCHOLARSHIPS.length) % STATIC_SCHOLARSHIPS.length)}
+                    className="absolute -left-8 lg:-left-12 top-1/2 -translate-y-1/2 z-20 p-4 rounded-full bg-white border border-slate-200 text-slate-600 hover:bg-[#05294E] hover:text-white transition-all duration-300 shadow-xl"
+                  >
+                    <ChevronRight className="h-6 w-6 rotate-180" />
+                  </button>
+                  <button 
+                    onClick={() => setCurrentScholarshipIndex((prev) => (prev + 1) % STATIC_SCHOLARSHIPS.length)}
+                    className="absolute -right-8 lg:-right-12 top-1/2 -translate-y-1/2 z-20 p-4 rounded-full bg-white border border-slate-200 text-slate-600 hover:bg-[#05294E] hover:text-white transition-all duration-300 shadow-xl"
+                  >
+                    <ChevronRight className="h-6 w-6" />
+                  </button>
                 </div>
               </div>
 
@@ -364,9 +352,6 @@ const Home: React.FC = () => {
             </div>
           </section>
         )}
-
-        {/* Stats Section */}
-        {/* Removed as per instructions */}
 
         {/* Trusted Universities Section */}
         <section className="py-24 bg-white relative overflow-hidden">
@@ -418,10 +403,10 @@ const Home: React.FC = () => {
               {partnersLoading && (
                 <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-6">
                   {Array.from({ length: 15 }).map((_, index) => (
-                    <div key={index} className="bg-white rounded-3xl p-8 border border-slate-200 shadow-sm">
+                    <div key={index} className="bg-white rounded-3xl p-8 border border-slate-100 shadow-sm">
                       <div className="animate-pulse">
-                        <div className="bg-slate-200 h-20 w-full rounded-xl mb-6"></div>
-                        <div className="bg-slate-200 h-4 w-3/4 rounded mx-auto"></div>
+                        <div className="bg-slate-100 h-20 w-full rounded-xl mb-6"></div>
+                        <div className="bg-slate-100 h-4 w-3/4 rounded mx-auto"></div>
                       </div>
                     </div>
                   ))}
@@ -430,62 +415,83 @@ const Home: React.FC = () => {
 
               {/* University Cards */}
               {!partnersLoading && (
-                <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-6">
-                  {partnerUniversities.map((university, index) => (
-                    <div 
-                      key={index} 
-                      className="group bg-white rounded-3xl p-8 border border-slate-200 shadow-sm hover:shadow-xl hover:border-[#05294E]/20 transition-all duration-500 transform hover:scale-105 hover:-translate-y-2"
-                    >
-                      <div className="relative h-16 flex items-center justify-center overflow-hidden rounded-xl transition-colors duration-300">
-                        {university.isLoading ? (
-                          <div className="animate-pulse bg-slate-200 h-full w-full rounded-xl"></div>
-                        ) : university.logoUrl ? (
-                          <img
-                            src={university.logoUrl}
-                            alt={`${university.name} logo`}
-                            className="max-h-full max-w-36 bg-inherit object-contain filter group-hover:scale-110 transition-transform duration-500"
-                            onError={(e) => {
-                              const target = e.target as HTMLImageElement;
-                              target.style.display = 'none';
-                              const fallback = target.nextElementSibling as HTMLElement;
-                              if (fallback) fallback.style.display = 'flex';
-                            }}
-                          />
-                        ) : null}
-                        
-                        {/* Fallback Icon */}
-                        <div 
-                          className={`${university.logoUrl ? 'hidden' : 'flex'} items-center justify-center w-full h-full bg-gradient-to-br from-[#05294E] to-slate-700 rounded-xl`}
-                          style={{ display: university.logoUrl ? 'none' : 'flex' }}
-                        >
-                          <span className="text-white font-bold text-lg">U</span>
-                        </div>
-                      </div>
-
-                      {/* Hover Effect Overlay */}
-                      <div className="absolute inset-0 bg-gradient-to-br from-[#05294E]/5 to-[#D0151C]/5 rounded-3xl opacity-0 group-hover:opacity-100 transition-opacity duration-500"></div>
-                    </div>
-                  ))}
-                </div>
-              )}
-
-              {/* 75+ Universities Indicator */}
-              <div className="flex justify-center mt-12">
-                <div className="inline-flex items-center px-6 py-2 rounded-full bg-slate-50 border border-slate-200 text-slate-600 font-bold text-sm shadow-sm">
-                  75+ Universidades Parceiras
-                </div>
-              </div>
-
-              {/* Call to Action Button - Moved below grid */}
-              <div className="text-center pt-16">
-                <Link
-                  to="/schools"
-                  className="group inline-flex items-center bg-[#05294E] text-white px-12 py-5 rounded-2xl text-xl font-bold hover:bg-[#02172B] transition-all duration-300 shadow-xl hover:shadow-2xl hover:-translate-y-1"
+                <motion.div 
+                  variants={{
+                    hidden: { opacity: 0 },
+                    show: {
+                      opacity: 1,
+                      transition: {
+                        staggerChildren: 0.05
+                      }
+                    }
+                  }}
+                  initial="hidden"
+                  whileInView="show"
+                  viewport={{ once: true, amount: 0.2 }}
+                  className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-8"
                 >
-                  Ver Todas as Universidades
-                  <ArrowRight className="ml-3 h-6 w-6 group-hover:translate-x-2 transition-transform" />
-                </Link>
+                  {partnerUniversities.map((university, index) => (
+                    <motion.div 
+                      key={index}
+                      variants={{
+                        hidden: { opacity: 0, y: 20 },
+                        show: { opacity: 1, y: 0 }
+                      }}
+                      className="group relative bg-white rounded-[2rem] p-8 border border-slate-100 shadow-sm hover:shadow-2xl hover:border-[#05294E]/10 transition-all duration-500 overflow-hidden"
+                    >
+                      {/* Elegant background highlight on hover */}
+                      <div className="absolute inset-0 bg-gradient-to-br from-[#05294E]/[0.02] to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-500"></div>
+                      
+                      <div className="relative z-10 flex flex-col items-center justify-center">
+                        <div className="h-20 w-full flex items-center justify-center transition-all duration-500 transform group-hover:scale-110">
+                          {university.isLoading ? (
+                            <div className="animate-pulse bg-slate-100 h-full w-full rounded-2xl"></div>
+                          ) : university.logoUrl ? (
+                            <img
+                              src={university.logoUrl}
+                              alt={`${university.name} logo`}
+                              className="max-h-full max-w-full object-contain filter grayscale group-hover:grayscale-0 transition-all duration-700 opacity-70 group-hover:opacity-100"
+                              onError={(e) => {
+                                const target = e.target as HTMLImageElement;
+                                target.style.display = 'none';
+                                const fallback = target.nextElementSibling as HTMLElement;
+                                if (fallback) fallback.style.display = 'flex';
+                              }}
+                            />
+                          ) : null}
+                          
+                          {/* Fallback Icon */}
+                          <div 
+                            className={`${university.logoUrl ? 'hidden' : 'flex'} items-center justify-center w-16 h-16 bg-gradient-to-br from-[#05294E] to-slate-700 rounded-2xl shadow-inner`}
+                            style={{ display: university.logoUrl ? 'none' : 'flex' }}
+                          >
+                            <span className="text-white font-black text-2xl uppercase">{university.name.charAt(0)}</span>
+                          </div>
+                        </div>
+                        
+                      </div>
+                    </motion.div>
+                  ))}
+                </motion.div>
+              )}
+            </div>
+
+            {/* 75+ Universities Indicator */}
+            <div className="flex justify-center mt-12">
+              <div className="inline-flex items-center px-6 py-2 rounded-full bg-slate-50 border border-slate-200 text-slate-600 font-bold text-sm shadow-sm">
+                75+ Universidades Parceiras
               </div>
+            </div>
+
+            {/* Call to Action Button - Moved below grid */}
+            <div className="text-center pt-16">
+              <Link
+                to="/schools"
+                className="group inline-flex items-center bg-[#05294E] text-white px-12 py-5 rounded-2xl text-xl font-bold hover:bg-[#02172B] transition-all duration-300 shadow-xl hover:shadow-2xl hover:-translate-y-1"
+              >
+                Ver Todas as Universidades
+                <ArrowRight className="ml-3 h-6 w-6 group-hover:translate-x-2 transition-transform" />
+              </Link>
             </div>
           </div>
         </section>
@@ -800,8 +806,8 @@ const Home: React.FC = () => {
             </div>
           </div>
         </section>
-        
-        
+
+
       </div>
     </>
   );
