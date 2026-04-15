@@ -881,7 +881,7 @@ const PreQualificationLanding: React.FC = () => {
                           }}
                           className="w-full bg-blue-600 hover:bg-blue-700 text-white font-bold py-5 rounded-[2.5rem] text-lg md:text-xl flex items-center justify-center gap-3 transition-all shadow-xl shadow-blue-500/30 active:scale-[0.98]"
                         >
-                          Garantir minha bolsa <ArrowRight className="w-6 h-6" />
+                          Tenho interesse <ArrowRight className="w-6 h-6" />
                         </button>
                       </div>
                     </motion.div>
