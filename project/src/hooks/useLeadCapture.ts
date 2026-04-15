@@ -30,7 +30,10 @@ export const useLeadCapture = () => {
     }
 
     // Skip if the current data is the same as the last one captured (basic avoidance of duplicates)
-    const captureKey = `${data.full_name}|${data.email || ''}|${data.phone || ''}`;
+    // We include a stringified version of answers and status to detect changes
+    const answersKey = data.pre_qualification_answers ? JSON.stringify(data.pre_qualification_answers) : '';
+    const captureKey = `${data.full_name}|${data.email || ''}|${data.phone || ''}|${data.status || ''}|${answersKey}`;
+    
     if (lastCapturedKey.current === captureKey) {
       return;
     }
