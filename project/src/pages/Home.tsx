@@ -687,85 +687,138 @@ const Home: React.FC = () => {
           </div>
         </section>
 
-        {/* Testimonials */}
+        {/* Success Wall */}
         <section className="py-24 bg-gradient-to-br from-slate-50 to-blue-50">
           <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-            <div className="text-center mb-20">
-              <h2 className="text-4xl md:text-5xl font-black text-slate-900 mb-6">
-                {t('home.successStories.title')}
+
+            {/* Header */}
+            <div className="text-center mb-12">
+
+              <h2 className="text-4xl md:text-5xl font-black text-slate-900 mb-4">
+                {t('home.successWall.title.part1')}{' '}
+                <em className="text-[#D0151C] not-italic font-black">
+                  {t('home.successWall.title.highlight')}
+                </em>
               </h2>
-              <p className="text-xl text-slate-600 max-w-3xl mx-auto">
-                {t('home.successStories.subtitle')}
+              <p className="text-lg text-slate-500 max-w-xl mx-auto leading-relaxed">
+                {t('home.successWall.subtitle')}
               </p>
             </div>
 
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
-              <div className="bg-white p-8 rounded-3xl shadow-xl hover:shadow-2xl transition-all duration-300 border border-slate-200">
-                <div className="flex items-center mb-6">
-                  {[1, 2, 3, 4, 5].map((star) => (
-                    <Star key={star} className="h-5 w-5 text-yellow-400 fill-current" />
-                  ))}
+            {/* Stats */}
+            <div className="flex flex-wrap justify-center gap-3 mb-10">
+              {[
+                { num: '+1.200', label: t('home.successWall.stats.enrolled') },
+                { num: '98%',    label: t('home.successWall.stats.approval') },
+                { num: '47',     label: t('home.successWall.stats.universities') },
+              ].map((s) => (
+                <div key={s.num} className="bg-white border border-slate-200 rounded-full px-5 py-2 text-center shadow-sm">
+                  <span className="block text-lg font-bold text-[#05294E]">{s.num}</span>
+                  <span className="text-xs text-slate-400">{s.label}</span>
                 </div>
-                <p className="text-slate-700 mb-6 text-lg leading-relaxed">
-                  "{t('home.successStories.testimonial1.text')}"
-                </p>
-                <div className="flex items-center">
-                  <img
-                    src="https://images.pexels.com/photos/2379004/pexels-photo-2379004.jpeg?auto=compress&cs=tinysrgb&w=400&h=400&dpr=2&fit=crop"
-                    alt={t('home.successStories.testimonial1.author')}
-                    className="w-14 h-14 rounded-2xl mr-4 shadow-lg object-cover"
-                  />
-                  <div>
-                    <div className="font-bold text-slate-900">{t('home.successStories.testimonial1.author')}</div>
-                    <div className="text-sm text-[#05294E] font-medium">{t('home.successStories.testimonial1.field')}</div>
-                  </div>
-                </div>
-              </div>
-
-              <div className="bg-white p-8 rounded-3xl shadow-xl hover:shadow-2xl transition-all duration-300 border border-slate-200">
-                <div className="flex items-center mb-6">
-                  {[1, 2, 3, 4, 5].map((star) => (
-                    <Star key={star} className="h-5 w-5 text-yellow-400 fill-current" />
-                  ))}
-                </div>
-                <p className="text-slate-700 mb-6 text-lg leading-relaxed">
-                  "{t('home.successStories.testimonial2.text')}"
-                </p>
-                <div className="flex items-center">
-                  <img
-                    src="https://images.pexels.com/photos/2182970/pexels-photo-2182970.jpeg?auto=compress&cs=tinysrgb&w=400&h=400&dpr=2&fit=crop"
-                    alt={t('home.successStories.testimonial2.author')}
-                    className="w-14 h-14 rounded-2xl mr-4 shadow-lg object-cover"
-                  />
-                  <div>
-                    <div className="font-bold text-slate-900">{t('home.successStories.testimonial2.author')}</div>
-                    <div className="text-sm text-[#D0151C] font-medium">{t('home.successStories.testimonial2.field')}</div>
-                  </div>
-                </div>
-              </div>
-
-              <div className="bg-white p-8 rounded-3xl shadow-xl hover:shadow-2xl transition-all duration-300 border border-slate-200">
-                <div className="flex items-center mb-6">
-                  {[1, 2, 3, 4, 5].map((star) => (
-                    <Star key={star} className="h-5 w-5 text-yellow-400 fill-current" />
-                  ))}
-                </div>
-                <p className="text-slate-700 mb-6 text-lg leading-relaxed">
-                  "{t('home.successStories.testimonial3.text')}"
-                </p>
-                <div className="flex items-center">
-                  <img
-                    src="https://images.pexels.com/photos/1239291/pexels-photo-1239291.jpeg?auto=compress&cs=tinysrgb&w=400&h=400&dpr=2&fit=crop"
-                    alt={t('home.successStories.testimonial3.author')}
-                    className="w-14 h-14 rounded-2xl mr-4 shadow-lg object-cover"
-                  />
-                  <div>
-                    <div className="font-bold text-slate-900">{t('home.successStories.testimonial3.author')}</div>
-                    <div className="text-sm text-green-600 font-medium">{t('home.successStories.testimonial3.field')}</div>
-                  </div>
-                </div>
-              </div>
+              ))}
             </div>
+
+            {/* Masonry Grid */}
+            <div className="columns-1 md:columns-2 lg:columns-3 gap-5">
+
+              {/* Card — Foto com imagem real */}
+              <div className="break-inside-avoid bg-white border border-slate-200 rounded-3xl overflow-hidden mb-5 hover:shadow-xl transition-all duration-300 group">
+                <div className="h-48 bg-blue-50 flex items-center justify-center relative">
+                  <img
+                    src="https://images.pexels.com/photos/2379004/pexels-photo-2379004.jpeg?auto=compress&cs=tinysrgb&w=400&h=400&fit=crop"
+                    alt={t('home.successWall.card1.author')}
+                    className="w-20 h-20 rounded-2xl object-cover shadow-lg border-4 border-white"
+                  />
+                  <span className="absolute bottom-2 text-xs font-bold text-slate-400 bg-white/90 px-3 py-1 rounded-full uppercase tracking-wider">
+                    {t('home.successWall.photoLabel')}
+                  </span>
+                </div>
+                <div className="p-5">
+                  <span className="inline-block text-xs font-bold uppercase tracking-wider bg-blue-100 text-blue-800 px-3 py-1 rounded-full mb-3">
+                    {t('home.successWall.tagPhoto')}
+                  </span>
+                  <p className="text-slate-600 text-sm leading-relaxed italic mb-4">
+                    "{t('home.successWall.card1.text')}"
+                  </p>
+                  <div className="flex items-center gap-3">
+                    <img
+                      src="https://images.pexels.com/photos/2379004/pexels-photo-2379004.jpeg?auto=compress&cs=tinysrgb&w=80&h=80&fit=crop"
+                      alt=""
+                      className="w-9 h-9 rounded-xl object-cover"
+                    />
+                    <div>
+                      <p className="text-sm font-bold text-slate-900">{t('home.successWall.card1.author')}</p>
+                      <p className="text-xs font-semibold text-[#05294E]">{t('home.successWall.card1.field')}</p>
+                    </div>
+                    <div className="ml-auto flex gap-0.5">
+                      {[1,2,3,4,5].map(s => <Star key={s} className="w-3 h-3 text-yellow-400 fill-current" />)}
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+              {/* Card — Vídeo */}
+              <div className="break-inside-avoid bg-white border border-slate-200 rounded-3xl overflow-hidden mb-5 hover:shadow-xl transition-all duration-300">
+                <div className="h-40 bg-rose-50 flex flex-col items-center justify-center gap-2 relative cursor-pointer">
+                  <div className="w-14 h-14 bg-white rounded-full flex items-center justify-center shadow-md">
+                    <svg className="w-5 h-5 text-[#D0151C] ml-1" fill="currentColor" viewBox="0 0 24 24">
+                      <path d="M8 5v14l11-7z"/>
+                    </svg>
+                  </div>
+                  <span className="text-xs font-bold text-slate-400 uppercase tracking-wider">
+                    {t('home.successWall.videoLabel')}
+                  </span>
+                </div>
+                <div className="p-5">
+                  <span className="inline-block text-xs font-bold uppercase tracking-wider bg-red-100 text-red-800 px-3 py-1 rounded-full mb-3">
+                    {t('home.successWall.tagVideo')}
+                  </span>
+                  <p className="text-slate-600 text-sm leading-relaxed italic mb-4">
+                    "{t('home.successWall.card2.text')}"
+                  </p>
+                  <div className="flex items-center gap-3">
+                    <img
+                      src="https://images.pexels.com/photos/2182970/pexels-photo-2182970.jpeg?auto=compress&cs=tinysrgb&w=80&h=80&fit=crop"
+                      alt=""
+                      className="w-9 h-9 rounded-xl object-cover"
+                    />
+                    <div>
+                      <p className="text-sm font-bold text-slate-900">{t('home.successWall.card2.author')}</p>
+                      <p className="text-xs font-semibold text-[#D0151C]">{t('home.successWall.card2.field')}</p>
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+              {/* Card — Depoimento puro */}
+              <div className="break-inside-avoid bg-white border border-slate-200 rounded-3xl overflow-hidden mb-5 hover:shadow-xl transition-all duration-300">
+                <div className="p-6">
+                  <span className="inline-block text-xs font-bold uppercase tracking-wider bg-yellow-100 text-yellow-800 px-3 py-1 rounded-full mb-4">
+                    {t('home.successWall.tagTestimonial')}
+                  </span>
+                  <p className="text-slate-700 text-base leading-relaxed italic mb-5">
+                    "{t('home.successWall.card3.text')}"
+                  </p>
+                  <div className="flex items-center gap-3">
+                    <img
+                      src="https://images.pexels.com/photos/1239291/pexels-photo-1239291.jpeg?auto=compress&cs=tinysrgb&w=80&h=80&fit=crop"
+                      alt=""
+                      className="w-9 h-9 rounded-xl object-cover"
+                    />
+                    <div>
+                      <p className="text-sm font-bold text-slate-900">{t('home.successWall.card3.author')}</p>
+                      <p className="text-xs font-semibold text-green-600">{t('home.successWall.card3.field')}</p>
+                    </div>
+                    <div className="ml-auto flex gap-0.5">
+                      {[1,2,3,4,5].map(s => <Star key={s} className="w-3 h-3 text-yellow-400 fill-current" />)}
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+            </div>
+
           </div>
         </section>
 

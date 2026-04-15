@@ -144,20 +144,33 @@
         "description": "Complete su admisión y asegure su cupo oficial en la universidad elegida. Con la carta de aceptación confirmada, usted finaliza el processo para iniciar su trayectoria académica internacional."
       }
     },
-    "successStories": {
-      "title": "Historias de Éxito",
-      "subtitle": "Estudiantes reales, resultados reales. Mira cómo MatriculaUSA transformó su viaje educativo a los Estados Unidos.",
-      "testimonial1": {
+    "successWall": {
+      "title": {
+        "part1": "Nuestro",
+        "highlight": "Muro de Éxito"
+      },
+      "subtitle": "Conoce a los estudiantes que cumplieron el sueño de estudiar en EE. UU. con MatriculaUSA.",
+      "stats": {
+        "enrolled": "Estudiantes matriculados",
+        "approval": "Tasa de aprobación",
+        "universities": "Universidades asociadas"
+      },
+      "photoLabel": "Foto del estudiante",
+      "videoLabel": "Testimonio en video",
+      "tagPhoto": "Foto",
+      "tagVideo": "Video",
+      "tagTestimonial": "Testimonio",
+      "card1": {
         "text": "MatriculaUSA hizo realidad mi sueño de estudiar en América. ¡Las oportunidades de becas y el apoyo fueron increíbles!",
         "author": "Gustavo Santos",
         "field": "Ciencias de la Computación"
       },
-      "testimonial2": {
+      "card2": {
         "text": "El proceso de inscripción fue perfecto. Desde la solicitud hasta el apoyo para la visa, MatriculaUSA me guió en cada paso del camino.",
         "author": "Carlos Rodriguez",
         "field": "Escuela de Negocios"
       },
-      "testimonial3": {
+      "card3": {
         "text": "Encontré becas exclusivas que no estaban disponibles en ningún otro lugar. MatriculaUSA realmente abre puertas a oportunidades.",
         "author": "Ana Chen",
         "field": "Ingeniería"

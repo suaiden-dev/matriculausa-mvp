@@ -144,22 +144,35 @@
         "description": "Conclua sua admissão e garanta sua vaga oficial na universidade escolhida. Com a carta de aceitação confirmada, você finaliza o processo para iniciar sua trajetória acadêmica internacional."
       }
     },
-    "successStories": {
-      "title": "Histórias de Sucesso",
-      "subtitle": "Estudantes reais, resultados reais. Veja como o MatriculaUSA transformou sua jornada educacional para os Estados Unidos.",
-      "testimonial1": {
+    "successWall": {
+      "title": {
+        "part1": "Nosso",
+        "highlight": "Mural de Sucesso"
+      },
+      "subtitle": "Conheça os alunos que realizaram o sonho de estudar nos EUA com a MatriculaUSA.",
+      "stats": {
+        "enrolled": "Alunos matriculados",
+        "approval": "Taxa de aprovação",
+        "universities": "Universidades parceiras"
+      },
+      "photoLabel": "Foto do aluno",
+      "videoLabel": "Depoimento em vídeo",
+      "tagPhoto": "Foto",
+      "tagVideo": "Vídeo",
+      "tagTestimonial": "Depoimento",
+      "card1": {
         "text": "O MatriculaUSA tornou meu sonho de estudar na América uma realidade. As oportunidades de bolsa e o suporte foram incríveis!",
         "author": "Gustavo Santos",
         "field": "Ciência da Computação"
       },
-      "testimonial2": {
+      "card2": {
         "text": "O processo de matrícula foi perfeito. Da candidatura ao suporte para visto, o MatriculaUSA me orientou em cada passo do caminho.",
         "author": "Carlos Rodriguez",
         "field": "Escola de Negócios"
       },
-      "testimonial3": {
+      "card3": {
         "text": "Encontrei bolsas exclusivas que não estavam disponíveis em nenhum outro lugar. O MatriculaUSA realmente abre portas para oportunidades.",
-        "actionRequired": "AÇÃO NECESSÁRIA",
+        "author": "Ana Chen",
         "field": "Engenharia"
       }
     },

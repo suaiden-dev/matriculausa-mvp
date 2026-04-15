@@ -144,20 +144,33 @@
         "description": "Complete your admission and secure your official spot at the chosen university. With the confirmation letter in hand, you finalize the process to start your international academic journey."
       }
     },
-    "successStories": {
-      "title": "Success Stories",
-      "subtitle": "Real students, real results. See how MatriculaUSA transformed their educational journey to the United States.",
-      "testimonial1": {
+    "successWall": {
+      "title": {
+        "part1": "Our",
+        "highlight": "Success Wall"
+      },
+      "subtitle": "Meet the students who achieved the dream of studying in the US with MatriculaUSA.",
+      "stats": {
+        "enrolled": "Students enrolled",
+        "approval": "Approval rate",
+        "universities": "Partner universities"
+      },
+      "photoLabel": "Student photo",
+      "videoLabel": "Video testimonial",
+      "tagPhoto": "Photo",
+      "tagVideo": "Video",
+      "tagTestimonial": "Testimonial",
+      "card1": {
         "text": "MatriculaUSA made my dream of studying in America a reality. The scholarship opportunities and support were incredible!",
         "author": "Gustavo Santos",
         "field": "Computer Science"
       },
-      "testimonial2": {
+      "card2": {
         "text": "The enrollment process was seamless. From application to visa support, MatriculaUSA guided me every step of the way.",
         "author": "Carlos Rodriguez",
         "field": "Business School"
       },
-      "testimonial3": {
+      "card3": {
         "text": "I found exclusive scholarships that weren't available anywhere else. MatriculaUSA truly opens doors to opportunities.",
         "author": "Ana Chen",
         "field": "Engineering"

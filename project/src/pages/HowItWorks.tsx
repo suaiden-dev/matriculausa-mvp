@@ -111,83 +111,88 @@ const HeroSection: React.FC<{ onCTAClick: () => void, t: any }> = ({ onCTAClick,
   }, [controls, inView]);
 
   return (
-    <section ref={ref} className="relative bg-[#05294E] text-white py-20 lg:py-40 overflow-hidden">
-      <div className="absolute inset-0 opacity-20">
-        <div className="absolute top-0 right-0 w-full h-full bg-gradient-to-l from-blue-900/50 to-transparent"></div>
+    <section ref={ref} className="relative bg-[#05294E] text-white pt-24 pb-20 lg:pt-48 lg:pb-32 overflow-hidden">
+      {/* Premium Background Elements */}
+      <div className="absolute inset-0 z-0 pointer-events-none">
+        <div className="absolute top-0 left-0 w-full h-full bg-[radial-gradient(circle_at_top_right,rgba(59,130,246,0.15),transparent_50%)]"></div>
+        <div className="absolute bottom-0 right-0 w-full h-full bg-[radial-gradient(circle_at_bottom_left,rgba(208,21,28,0.05),transparent_50%)]"></div>
+        <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[800px] h-[800px] bg-blue-600/10 rounded-full blur-[120px] opacity-50"></div>
+        {/* Subtle grid pattern */}
+        <div className="absolute inset-0 opacity-[0.03]" style={{ backgroundImage: 'radial-gradient(circle, white 1px, transparent 1px)', backgroundSize: '40px 40px' }}></div>
       </div>
       
-      <div className="relative max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-        <div className="grid grid-cols-1 lg:grid-cols-12 gap-12 items-center">
+      <div className="relative z-10 max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+        <div className="grid grid-cols-1 lg:grid-cols-12 gap-16 lg:gap-8 items-center">
           <motion.div
              className="lg:col-span-7 text-center lg:text-left"
              initial="hidden"
              animate={controls}
              variants={{
                hidden: { opacity: 0, y: 30 },
-               visible: { opacity: 1, y: 0, transition: { duration: 0.7, ease: "easeOut" } }
+               visible: { opacity: 1, y: 0, transition: { duration: 0.8, ease: [0.16, 1, 0.3, 1] } }
              }}
           >
-            <div className="inline-flex items-center px-4 py-2 rounded-lg bg-white/5 border border-white/10 mb-8 mx-auto lg:mx-0">
-              <span className="text-sm font-bold tracking-widest text-[#D0151C] uppercase">
-                {t("howItWorks.stats.success") || 'O Seu Passaporte'}
-              </span>
-            </div>
 
-            <h1 className="text-4xl md:text-5xl lg:text-7xl font-black mb-6 leading-[1.1] tracking-tight">
-              {t('howItWorks.title')}
+
+            <h1 className="text-5xl md:text-6xl lg:text-8xl font-black mb-8 leading-[1] tracking-tighter">
+              <span className="block text-white mb-2">{t('howItWorks.title').split(' ')[0]}</span>
+              <span className="bg-clip-text text-transparent bg-gradient-to-r from-blue-400 via-white to-blue-400">
+                {t('howItWorks.title').split(' ').slice(1).join(' ')}
+              </span>
             </h1>
             
-            <h2 className="text-xl md:text-2xl text-slate-300 max-w-3xl mx-auto lg:mx-0 mb-10 leading-relaxed font-medium">
+            <p className="text-lg md:text-2xl text-blue-100/70 max-w-2xl mx-auto lg:mx-0 mb-12 leading-relaxed font-light italic">
               {t('howItWorks.subtitle')}
-            </h2>
+            </p>
 
-            <div className="flex flex-col sm:flex-row items-center justify-center lg:justify-start gap-4 mb-14">
+            <div className="flex flex-col sm:flex-row items-center justify-center lg:justify-start gap-6 mb-16">
               <button
                 onClick={onCTAClick}
-                className="w-full sm:w-auto px-8 py-4 bg-[#D0151C] hover:bg-red-600 text-white font-bold text-lg rounded-2xl shadow-xl hover:shadow-2xl transition-all duration-300 hover:-translate-y-1 flex items-center justify-center gap-2 group"
+                className="group relative w-full sm:w-auto px-10 py-5 bg-[#D0151C] hover:bg-[#E01B22] text-white font-black text-xl rounded-2xl transition-all duration-300 hover:scale-105 hover:shadow-[0_20px_50px_rgba(208,21,28,0.3)] flex items-center justify-center gap-3 overflow-hidden"
               >
-                {t('howItWorks.cta.start') || 'Começar Processo Agora'}
+                <span className="relative z-10 flex items-center gap-3">
+                  {t('howItWorks.cta.start') || 'Começar Processo Agora'}
+                  <ArrowRight className="w-6 h-6 group-hover:translate-x-1 transition-transform" />
+                </span>
+                <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/10 to-transparent -translate-x-full group-hover:translate-x-full transition-transform duration-1000"></div>
               </button>
             </div>
 
-            <div className="flex flex-wrap items-center justify-center lg:justify-start gap-8 text-slate-400">
-              <div className="flex flex-col">
-                <span className="text-2xl font-black text-white">{t('howItWorks.stats.setup') || '5 Minutos'}</span>
-                <span className="text-sm uppercase tracking-widest font-bold">Setup Rápido</span>
+            <div className="grid grid-cols-2 sm:flex sm:items-center justify-center lg:justify-start gap-8 lg:gap-12">
+              <div className="flex flex-col items-center lg:items-start group">
+                <span className="text-3xl lg:text-4xl font-black text-white mb-1 group-hover:text-blue-400 transition-colors">{t('howItWorks.stats.setup') || '5 Min'}</span>
+                <span className="text-[10px] uppercase tracking-[0.2em] font-bold text-blue-300/60">Setup Inteligente</span>
               </div>
-              <div className="w-px h-10 bg-white/10 hidden sm:block"></div>
-              <div className="flex flex-col">
-                <span className="text-2xl font-black text-white">{t('howItWorks.stats.secure') || '100%'}</span>
-                <span className="text-sm uppercase tracking-widest font-bold">Seguro</span>
+              <div className="hidden sm:block w-px h-12 bg-white/10"></div>
+              <div className="flex flex-col items-center lg:items-start group">
+                <span className="text-3xl lg:text-4xl font-black text-white mb-1 group-hover:text-red-400 transition-colors">{t('howItWorks.stats.secure') || '100%'}</span>
+                <span className="text-[10px] uppercase tracking-[0.2em] font-bold text-blue-300/60">Seguro & Criptografado</span>
               </div>
             </div>
           </motion.div>
 
+          {/* Right Column with Enhanced Visuals */}
           <motion.div 
-            className="lg:col-span-5 relative"
+            className="lg:col-span-5 relative lg:ml-8"
             initial="hidden"
             animate={controls}
             variants={{
-              hidden: { opacity: 0, x: 50, scale: 0.9 },
-              visible: { opacity: 1, x: 0, scale: 1, transition: { duration: 0.8, delay: 0.2 } }
+              hidden: { opacity: 0, scale: 0.9, x: 50 },
+              visible: { opacity: 1, scale: 1, x: 0, transition: { duration: 1, delay: 0.3, ease: "easeOut" } }
             }}
           >
-            <div className="relative">
-              <div className="relative rounded-3xl overflow-hidden shadow-2xl border border-white/5 aspect-[4/5]">
+            <div className="relative group">
+              {/* Background Glow */}
+              <div className="absolute -inset-4 bg-gradient-to-br from-blue-600/20 to-red-600/10 blur-3xl opacity-50 group-hover:opacity-75 transition duration-1000"></div>
+              
+              {/* Main Image Container */}
+              <div className="relative rounded-[3rem] overflow-hidden shadow-[0_40px_100px_rgba(0,0,0,0.5)] border border-white/10 aspect-[4/5]">
                 <img 
                   src="https://fitpynguasqqutuhzifx.supabase.co/storage/v1/object/public/university-profile-pictures/fb5651f1-66ed-4a9f-ba61-96c50d348442/CAMPUS_5.jpg" 
                   alt="Elite University Campus" 
-                  className="w-full h-full object-cover transform scale-100 transition-transform duration-1000"
+                  className="w-full h-full object-cover transform scale-100 group-hover:scale-110 transition-transform duration-[3s] ease-out"
                 />
-                <div className="absolute inset-0 bg-gradient-to-t from-[#05294E]/60 via-transparent to-transparent"></div>
-              </div>
-              
-              {/* Floating label - simplified */}
-              <div className="absolute -bottom-6 -left-6 lg:bottom-10 lg:-left-10">
-                <div className="bg-white p-6 rounded-2xl shadow-2xl border border-slate-100">
-                  <p className="text-[#05294E] font-black text-xl mb-1">USA Community</p>
-                  <p className="text-slate-500 text-sm font-medium">Conectando você ao futuro</p>
-                </div>
+                <div className="absolute inset-0 bg-gradient-to-t from-[#05294E] via-transparent to-transparent opacity-80"></div>
               </div>
             </div>
           </motion.div>
@@ -375,46 +380,51 @@ const JourneySection: React.FC<{
         </div>
 
         <div className="grid grid-cols-1 lg:grid-cols-12 gap-12 items-start">
-          <div className="lg:col-span-12 space-y-20 relative before:absolute before:inset-0 before:left-8 md:before:left-1/2 before:-translate-x-px before:w-1 before:bg-gradient-to-b before:from-blue-500/50 before:via-blue-500/10 before:to-transparent">
+          <div className="lg:col-span-12 space-y-20 relative">
             
             {/* Step 1 */}
-            <motion.div 
-               initial={{ opacity: 0, y: 30 }}
-               animate={controls}
-               variants={{ visible: { opacity: 1, y: 0, transition: { duration: 0.6, delay: 0.1 } } }}
-               className="relative flex items-center justify-between md:justify-normal md:odd:flex-row-reverse group"
-            >
-              <div className="flex items-center justify-center w-16 h-16 rounded-2xl bg-gradient-to-br from-blue-500 to-blue-700 text-white shadow-[0_0_30px_rgba(59,130,246,0.3)] md:absolute md:left-1/2 md:-translate-x-1/2 shrink-0 z-10 transition-all duration-500 border border-white/20">
-                <span className="font-black text-2xl">01</span>
-              </div>
-              <div className="w-[calc(100%-5rem)] md:w-[calc(50%-4rem)] bg-white/5 backdrop-blur-xl p-8 sm:p-10 rounded-[2.5rem] border border-white/10 shadow-2xl transition-all duration-500">
-                <h3 className="text-3xl font-bold mb-4 text-white">{t('howItWorks.steps.profile.title')}</h3>
+            <div className="relative group w-full">
+              <div className="absolute left-8 md:left-1/2 -translate-x-px w-1 top-1/2 h-[calc(50%+5rem)] bg-gradient-to-b from-blue-500/50 to-red-500/50"></div>
+              <motion.div 
+                 initial={{ opacity: 0, y: 30 }}
+                 whileInView={{ opacity: 1, y: 0 }}
+                 viewport={{ once: true }}
+                 transition={{ duration: 0.6, delay: 0.1 }}
+                 className="relative flex items-center justify-between md:justify-normal md:flex-row-reverse w-full"
+              >
+                <div className="flex items-center justify-center w-16 h-16 rounded-2xl bg-gradient-to-br from-blue-500 to-blue-700 text-white shadow-[0_0_30px_rgba(59,130,246,0.5)] md:absolute md:left-1/2 md:-translate-x-1/2 shrink-0 z-10 transition-all duration-500 border border-white/20 group-hover:scale-110">
+                  <span className="font-black text-2xl">01</span>
+                </div>
+              <div className="w-[calc(100%-5rem)] md:w-[calc(50%-4rem)] bg-white/5 backdrop-blur-xl p-8 sm:p-12 rounded-[3rem] border border-white/10 shadow-2xl transition-all duration-500 group-hover:bg-white/[0.08] group-hover:border-white/20">
+                <h3 className="text-3xl font-black mb-5 text-white tracking-tight">{t('howItWorks.steps.profile.title')}</h3>
                 <p className="text-blue-100/70 text-lg mb-8 leading-relaxed font-medium">{t('howItWorks.steps.profile.description')}</p>
                 <ul className="space-y-4">
                   {(t('howItWorks.steps.profile.items', { returnObjects: true }) as string[]).map((item, index) => (
-                    <li key={index} className="flex items-start gap-3 text-blue-100/60 font-medium">
-                      <div className="p-1 rounded-full bg-blue-500/20 mt-1 shrink-0">
-                        <CheckCircle className="w-4 h-4 text-blue-400" />
-                      </div>
-                      {item}
+                    <li key={index} className="flex items-start gap-3 text-blue-100/70 font-medium group/li">
+                      <div className="w-1.5 h-1.5 rounded-full bg-blue-400 mt-2.5 shrink-0 shadow-[0_0_8px_rgba(59,130,246,0.5)]" />
+                      <span className="text-sm sm:text-base leading-relaxed">{item}</span>
                     </li>
                   ))}
                 </ul>
               </div>
             </motion.div>
+            </div>
 
             {/* Step 2 (Fee) */}
-            <motion.div 
-               initial={{ opacity: 0, y: 30 }}
-               animate={controls}
-               variants={{ visible: { opacity: 1, y: 0, transition: { duration: 0.6, delay: 0.2 } } }}
-               className="relative flex items-center justify-between md:justify-normal md:odd:flex-row-reverse group"
-            >
-              <div className="flex items-center justify-center w-16 h-16 rounded-2xl bg-gradient-to-br from-blue-500 to-blue-700 text-white shadow-[0_0_30px_rgba(59,130,246,0.3)] md:absolute md:left-1/2 md:-translate-x-1/2 shrink-0 z-10 transition-all duration-500 border border-white/20">
-                <span className="font-black text-2xl">02</span>
-              </div>
-              <div className="w-[calc(100%-5rem)] md:w-[calc(50%-4rem)] bg-white/5 backdrop-blur-xl p-8 sm:p-10 rounded-[2.5rem] border border-white/10 shadow-2xl transition-all duration-500">
-                <h3 className="text-3xl font-bold mb-4 text-white flex flex-wrap items-center gap-3">
+            <div className="relative group w-full">
+              <div className="absolute left-8 md:left-1/2 -translate-x-px w-1 top-0 h-[calc(100%+5rem)] bg-gradient-to-b from-red-500/50 to-blue-500/50"></div>
+              <motion.div 
+                 initial={{ opacity: 0, y: 30 }}
+                 whileInView={{ opacity: 1, y: 0 }}
+                 viewport={{ once: true }}
+                 transition={{ duration: 0.6, delay: 0.2 }}
+                 className="relative flex items-center justify-between md:justify-normal w-full"
+              >
+                <div className="flex items-center justify-center w-16 h-16 rounded-2xl bg-gradient-to-br from-red-500 to-red-700 text-white shadow-[0_0_30px_rgba(208,21,28,0.5)] md:absolute md:left-1/2 md:-translate-x-1/2 shrink-0 z-10 transition-all duration-500 border border-white/20 group-hover:scale-110">
+                  <span className="font-black text-2xl">02</span>
+                </div>
+              <div className="w-[calc(100%-5rem)] md:w-[calc(50%-4rem)] bg-white/5 backdrop-blur-xl p-8 sm:p-12 rounded-[3rem] border border-white/10 shadow-2xl transition-all duration-500 group-hover:bg-white/[0.08] group-hover:border-white/20">
+                <h3 className="text-3xl font-black mb-5 text-white tracking-tight flex flex-wrap items-center gap-3">
                   {isLoadingFee ? (
                     <span className="inline-block h-8 w-40 bg-white/10 rounded-lg animate-pulse"></span>
                   ) : (
@@ -423,7 +433,7 @@ const JourneySection: React.FC<{
                     </>
                   )}
                   {hasSellerPackage && (
-                    <span className="text-[10px] bg-blue-500/20 text-blue-300 border border-blue-500/30 px-3 py-1 rounded-full uppercase tracking-[0.2em] font-black">
+                    <span className="text-[10px] bg-red-500/20 text-red-300 border border-red-500/30 px-3 py-1 rounded-full uppercase tracking-[0.2em] font-black">
                       {packageName}
                     </span>
                   )}
@@ -433,94 +443,99 @@ const JourneySection: React.FC<{
                 </p>
                 <ul className="space-y-4">
                   {(t('howItWorks.steps.selectionFee.items', { returnObjects: true }) as string[]).map((item, index) => (
-                    <li key={index} className="flex items-start gap-3 text-blue-100/60 font-medium">
-                      <div className="p-1 rounded-full bg-blue-500/20 mt-1 shrink-0">
-                        <CheckCircle className="w-4 h-4 text-blue-400" />
-                      </div>
-                      {item}
+                    <li key={index} className="flex items-start gap-3 text-blue-100/70 font-medium group/li">
+                      <div className="w-1.5 h-1.5 rounded-full bg-red-400 mt-2.5 shrink-0 shadow-[0_0_8px_rgba(208,21,28,0.5)]" />
+                      <span className="text-sm sm:text-base leading-relaxed">{item}</span>
                     </li>
                   ))}
                 </ul>
               </div>
             </motion.div>
+            </div>
 
             {/* Step 3 */}
-            <motion.div 
-               initial={{ opacity: 0, y: 30 }}
-               animate={controls}
-               variants={{ visible: { opacity: 1, y: 0, transition: { duration: 0.6, delay: 0.3 } } }}
-               className="relative flex items-center justify-between md:justify-normal md:odd:flex-row-reverse group"
-            >
-              <div className="flex items-center justify-center w-16 h-16 rounded-2xl bg-gradient-to-br from-blue-500 to-blue-700 text-white shadow-[0_0_30px_rgba(59,130,246,0.3)] md:absolute md:left-1/2 md:-translate-x-1/2 shrink-0 z-10 transition-all duration-500 border border-white/20">
-                <span className="font-black text-2xl">03</span>
-              </div>
-              <div className="w-[calc(100%-5rem)] md:w-[calc(50%-4rem)] bg-white/5 backdrop-blur-xl p-8 sm:p-10 rounded-[2.5rem] border border-white/10 shadow-2xl transition-all duration-500">
-                <h3 className="text-3xl font-bold mb-4 text-white">{t('howItWorks.steps.documents.title')}</h3>
+            <div className="relative group w-full">
+              <div className="absolute left-8 md:left-1/2 -translate-x-px w-1 top-0 h-[calc(100%+5rem)] bg-gradient-to-b from-blue-500/50 to-red-500/50"></div>
+              <motion.div 
+                 initial={{ opacity: 0, y: 30 }}
+                 whileInView={{ opacity: 1, y: 0 }}
+                 viewport={{ once: true }}
+                 transition={{ duration: 0.6, delay: 0.3 }}
+                 className="relative flex items-center justify-between md:justify-normal md:flex-row-reverse w-full"
+              >
+                <div className="flex items-center justify-center w-16 h-16 rounded-2xl bg-gradient-to-br from-blue-500 to-blue-700 text-white shadow-[0_0_30_rgba(59,130,246,0.5)] md:absolute md:left-1/2 md:-translate-x-1/2 shrink-0 z-10 transition-all duration-500 border border-white/20 group-hover:scale-110">
+                  <span className="font-black text-2xl">03</span>
+                </div>
+              <div className="w-[calc(100%-5rem)] md:w-[calc(50%-4rem)] bg-white/5 backdrop-blur-xl p-8 sm:p-12 rounded-[3rem] border border-white/10 shadow-2xl transition-all duration-500 group-hover:bg-white/[0.08] group-hover:border-white/20">
+                <h3 className="text-3xl font-black mb-5 text-white tracking-tight">{t('howItWorks.steps.documents.title')}</h3>
                 <p className="text-blue-100/70 text-lg mb-8 leading-relaxed font-medium">{t('howItWorks.steps.documents.description')}</p>
                 <ul className="space-y-4">
                   {(t('howItWorks.steps.documents.items', { returnObjects: true }) as string[]).map((item, index) => (
-                    <li key={index} className="flex items-start gap-3 text-blue-100/60 font-medium">
-                      <div className="p-1 rounded-full bg-blue-500/20 mt-1 shrink-0">
-                        <CheckCircle className="w-4 h-4 text-blue-400" />
-                      </div>
-                      {item}
+                    <li key={index} className="flex items-start gap-3 text-blue-100/70 font-medium group/li">
+                      <div className="w-1.5 h-1.5 rounded-full bg-blue-400 mt-2.5 shrink-0 shadow-[0_0_8px_rgba(59,130,246,0.5)]" />
+                      <span className="text-sm sm:text-base leading-relaxed">{item}</span>
                     </li>
                   ))}
                 </ul>
               </div>
             </motion.div>
+            </div>
 
             {/* Step 4 */}
-            <motion.div 
-               initial={{ opacity: 0, y: 30 }}
-               animate={controls}
-               variants={{ visible: { opacity: 1, y: 0, transition: { duration: 0.6, delay: 0.4 } } }}
-               className="relative flex items-center justify-between md:justify-normal md:odd:flex-row-reverse group"
-            >
-              <div className="flex items-center justify-center w-16 h-16 rounded-2xl bg-gradient-to-br from-blue-500 to-blue-700 text-white shadow-[0_0_30px_rgba(59,130,246,0.3)] md:absolute md:left-1/2 md:-translate-x-1/2 shrink-0 z-10 transition-all duration-500 border border-white/20">
-                <span className="font-black text-2xl">04</span>
-              </div>
-              <div className="w-[calc(100%-5rem)] md:w-[calc(50%-4rem)] bg-white/5 backdrop-blur-xl p-8 sm:p-10 rounded-[2.5rem] border border-white/10 shadow-2xl transition-all duration-500">
-                <h3 className="text-3xl font-bold mb-4 text-white">{t('howItWorks.steps.applicationFee.title')}</h3>
+            <div className="relative group w-full">
+              <div className="absolute left-8 md:left-1/2 -translate-x-px w-1 top-0 h-[calc(100%+5rem)] bg-gradient-to-b from-red-500/50 to-blue-500/50"></div>
+              <motion.div 
+                 initial={{ opacity: 0, y: 30 }}
+                 whileInView={{ opacity: 1, y: 0 }}
+                 viewport={{ once: true }}
+                 transition={{ duration: 0.6, delay: 0.4 }}
+                 className="relative flex items-center justify-between md:justify-normal w-full"
+              >
+                <div className="flex items-center justify-center w-16 h-16 rounded-2xl bg-gradient-to-br from-red-500 to-red-700 text-white shadow-[0_0_30px_rgba(208,21,28,0.5)] md:absolute md:left-1/2 md:-translate-x-1/2 shrink-0 z-10 transition-all duration-500 border border-white/20 group-hover:scale-110">
+                  <span className="font-black text-2xl">04</span>
+                </div>
+              <div className="w-[calc(100%-5rem)] md:w-[calc(50%-4rem)] bg-white/5 backdrop-blur-xl p-8 sm:p-12 rounded-[3rem] border border-white/10 shadow-2xl transition-all duration-500 group-hover:bg-white/[0.08] group-hover:border-white/20">
+                <h3 className="text-3xl font-black mb-5 text-white tracking-tight">{t('howItWorks.steps.applicationFee.title')}</h3>
                 <p className="text-blue-100/70 text-lg mb-8 leading-relaxed font-medium">{t('howItWorks.steps.applicationFee.description')}</p>
                 <ul className="space-y-4">
                   {(t('howItWorks.steps.applicationFee.items', { returnObjects: true }) as string[]).map((item, index) => (
-                    <li key={index} className="flex items-start gap-3 text-blue-100/60 font-medium">
-                      <div className="p-1 rounded-full bg-blue-500/20 mt-1 shrink-0">
-                        <CheckCircle className="w-4 h-4 text-blue-400" />
-                      </div>
-                      {item}
+                    <li key={index} className="flex items-start gap-3 text-blue-100/70 font-medium group/li">
+                      <div className="w-1.5 h-1.5 rounded-full bg-red-400 mt-2.5 shrink-0 shadow-[0_0_8px_rgba(208,21,28,0.5)]" />
+                      <span className="text-sm sm:text-base leading-relaxed">{item}</span>
                     </li>
                   ))}
                 </ul>
               </div>
             </motion.div>
+            </div>
 
             {/* Step 5 */}
-            <motion.div 
-               initial={{ opacity: 0, y: 30 }}
-               animate={controls}
-               variants={{ visible: { opacity: 1, y: 0, transition: { duration: 0.6, delay: 0.5 } } }}
-               className="relative flex items-center justify-between md:justify-normal md:odd:flex-row-reverse group"
-            >
-              <div className="flex items-center justify-center w-16 h-16 rounded-2xl bg-gradient-to-br from-blue-500 to-blue-700 text-white shadow-[0_0_30px_rgba(59,130,246,0.3)] md:absolute md:left-1/2 md:-translate-x-1/2 shrink-0 z-10 transition-all duration-500 border border-white/20">
-                <span className="font-black text-2xl">05</span>
-              </div>
-              <div className="w-[calc(100%-5rem)] md:w-[calc(50%-4rem)] bg-white/5 backdrop-blur-xl p-8 sm:p-10 rounded-[2.5rem] border border-white/10 shadow-2xl transition-all duration-500">
-                <h3 className="text-3xl font-bold mb-4 text-white">{t('howItWorks.steps.placementFee.title')}</h3>
+            <div className="relative group w-full">
+              <div className="absolute left-8 md:left-1/2 -translate-x-px w-1 top-0 h-1/2 bg-gradient-to-b from-blue-500/50 to-blue-500/50"></div>
+              <motion.div 
+                 initial={{ opacity: 0, y: 30 }}
+                 whileInView={{ opacity: 1, y: 0 }}
+                 viewport={{ once: true }}
+                 transition={{ duration: 0.6, delay: 0.5 }}
+                 className="relative flex items-center justify-between md:justify-normal md:flex-row-reverse w-full"
+              >
+                <div className="flex items-center justify-center w-16 h-16 rounded-2xl bg-gradient-to-br from-blue-500 to-blue-700 text-white shadow-[0_0_30px_rgba(59,130,246,0.5)] md:absolute md:left-1/2 md:-translate-x-1/2 shrink-0 z-10 transition-all duration-500 border border-white/20 group-hover:scale-110">
+                  <span className="font-black text-2xl">05</span>
+                </div>
+              <div className="w-[calc(100%-5rem)] md:w-[calc(50%-4rem)] bg-white/5 backdrop-blur-xl p-8 sm:p-12 rounded-[3rem] border border-white/10 shadow-2xl transition-all duration-500 group-hover:bg-white/[0.08] group-hover:border-white/20">
+                <h3 className="text-3xl font-black mb-5 text-white tracking-tight">{t('howItWorks.steps.placementFee.title')}</h3>
                 <p className="text-blue-100/70 text-lg mb-8 leading-relaxed font-medium">{t('howItWorks.steps.placementFee.description')}</p>
                 <ul className="space-y-4">
                   {(t('howItWorks.steps.placementFee.items', { returnObjects: true }) as string[]).map((item, index) => (
-                    <li key={index} className="flex items-start gap-3 text-blue-100/60 font-medium">
-                      <div className="p-1 rounded-full bg-blue-500/20 mt-1 shrink-0">
-                        <CheckCircle className="w-4 h-4 text-blue-400" />
-                      </div>
-                      {item}
+                    <li key={index} className="flex items-start gap-3 text-blue-100/70 font-medium group/li">
+                      <div className="w-1.5 h-1.5 rounded-full bg-blue-400 mt-2.5 shrink-0 shadow-[0_0_8px_rgba(59,130,246,0.5)]" />
+                      <span className="text-sm sm:text-base leading-relaxed">{item}</span>
                     </li>
                   ))}
                 </ul>
               </div>
-            </motion.div>
+              </motion.div>
+            </div>
 
           </div>
         </div>
