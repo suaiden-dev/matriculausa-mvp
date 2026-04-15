@@ -11,7 +11,8 @@ import {
   Filter,
   RefreshCw,
   Loader2,
-  AlertCircle
+  AlertCircle,
+  X
 } from 'lucide-react';
 
 interface Lead {
@@ -319,9 +320,9 @@ const LostLeadsView: React.FC = () => {
               </div>
               <button 
                 onClick={() => setSelectedLead(null)}
-                className="p-2 hover:bg-gray-200 rounded-xl transition-colors"
+                className="p-2 hover:bg-gray-200 rounded-xl transition-colors text-slate-400 hover:text-slate-600"
               >
-                <RefreshCw className="h-5 w-5 transform rotate-45" />
+                <X className="h-5 w-5" />
               </button>
             </div>
             
