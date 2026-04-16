@@ -6,19 +6,16 @@ import { MetricsGrid } from './FinancialAnalytics/components/MetricsGrid';
 import { RevenueTrendChart } from './FinancialAnalytics/components/RevenueTrendChart';
 import { PaymentMethodsChart } from './FinancialAnalytics/components/PaymentMethodsChart';
 import { FeeTypesChart } from './FinancialAnalytics/components/FeeTypesChart';
-import { StripeAnalytics } from './FinancialAnalytics/components/StripeAnalytics';
 import { FinancialTransactionsTable } from './FinancialAnalytics/components/FinancialTransactionsTable';
 import FinancialAnalyticsSkeleton from '../../components/FinancialAnalyticsSkeleton';
 
 const FinancialAnalytics: React.FC = () => {
-  console.log('🚀 [FinancialAnalytics] Componente renderizado');
   const [activeTab, setActiveTab] = useState<'overview' | 'transactions'>('overview');
   
   const {
     loading,
     refreshing,
     metrics,
-    stripeMetrics,
     revenueData,
     paymentMethodData,
     feeTypeData,
@@ -36,7 +33,6 @@ const FinancialAnalytics: React.FC = () => {
     affiliates
   } = useFinancialAnalytics();
   
-  console.log('🚀 [FinancialAnalytics] Estado do hook:', { loading, refreshing });
 
   if (loading) {
     return <FinancialAnalyticsSkeleton />;

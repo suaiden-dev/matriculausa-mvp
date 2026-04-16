@@ -18,14 +18,12 @@ import type {
 } from '../data/types';
 
 export function useFinancialAnalytics() {
-  console.log('🚀 [useFinancialAnalytics] Hook iniciado');
   
   const { user } = useAuth();
   const { getFeeAmount } = useFeeConfig();
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
   
-  console.log('🚀 [useFinancialAnalytics] User:', user?.email, 'Role:', user?.role);
   
   // Refs para rastrear se já foi carregado e valores anteriores dos filtros
   const hasLoadedRef = useRef(false);
@@ -76,11 +74,9 @@ export function useFinancialAnalytics() {
 
   const loadData = useCallback(async () => {
     try {
-      console.log('🚀 [useFinancialAnalytics] loadData iniciado');
       setLoading(true);
 
       const currentRange = getDateRange(timeFilter, customDateFrom, customDateTo, showCustomDate);
-      console.log('🚀 [useFinancialAnalytics] DateRange:', currentRange);
       
       // Load affiliates in parallel
       const [loadedData, affiliatesData] = await Promise.all([
@@ -304,6 +300,13 @@ export function useFinancialAnalytics() {
             // Se não temos fee_amount_usd mas temos gross_amount_usd, calcular a diferença
             const gross = Number(individualPayment.gross_amount_usd);
             feeAmount = Math.max(0, gross - netAmount);
+          } else {
+            // Quando não há dados de taxa/bruto salvos, mas é um pagamento processado 
+            // e sabemos que há taxa (ex. Maria Dos Santos Carvalho registrou com taxa Stripe mas sem as colonas antigas)
+            const isPlatformPayment = record.payment_method === 'stripe' || record.payment_method === 'parcelow';
+            if (isPlatformPayment && netAmount > standardAmount) {
+              feeAmount = Math.max(0, netAmount - standardAmount);
+            }
           }
         } else if (record.payment_method === 'stripe' && loadedData.realPaymentAmounts) {
           // Para Stripe, usar realPaymentAmounts (mesma lógica do PaymentManagement)
@@ -312,7 +315,7 @@ export function useFinancialAnalytics() {
             const realPaidAmount = realPaid[feeTypeKey as keyof typeof realPaid];
             if (realPaidAmount && realPaidAmount > 0) {
               grossAmount = realPaidAmount;
-              feeAmount = Math.max(0, realPaidAmount - netAmount);
+              feeAmount = Math.max(0, realPaidAmount - standardAmount); // Usar standardAmount em vez de netAmount para a taxa
             }
           }
         }
@@ -390,16 +393,7 @@ export function useFinancialAnalytics() {
   }, [timeFilter, customDateFrom, customDateTo, showCustomDate, getFeeAmount]);
 
   useEffect(() => {
-    console.log('🚀 [useFinancialAnalytics] useEffect executado', {
-      hasUser: !!user,
-      userRole: user?.role,
-      isAdmin: user?.role === 'admin'
-    });
-    
-    if (!user || user.role !== 'admin') {
-      console.log('🚀 [useFinancialAnalytics] Retornando - usuário não é admin');
-      return;
-    }
+    if (!user || user.role !== 'admin') return;
 
     // Verificar se o usuário mudou
     const currentUserId = user.id || user.email || null;

@@ -11,7 +11,6 @@ function shouldFilter(): boolean {
   const hostname = window.location.hostname;
   const href = window.location.href;
   
-  // Verificações mais robustas
   const isProduction = hostname === 'matriculausa.com' || 
                        hostname.includes('matriculausa.com') ||
                        href.includes('matriculausa.com');
@@ -22,19 +21,7 @@ function shouldFilter(): boolean {
                     href.includes('staging-matriculausa.netlify.app') ||
                     href.includes('staging-matriculausa');
   
-  const result = isProduction || isStaging;
-  
-  // Debug temporário
-  console.log('🔍 [FinancialAnalytics] shouldFilter debug:', {
-    hostname,
-    href,
-    isProduction,
-    isStaging,
-    result,
-    windowLocation: window.location
-  });
-  
-  return result;
+  return isProduction || isStaging;
 }
 
 /**
@@ -224,30 +211,29 @@ async function loadStripeUsers(applications: any[]): Promise<any[]> {
 
 /**
  * Busca overrides de taxas para todos os usuários
+ * ✅ OTIMIZADO: 1 query .in() ao invés de N chamadas RPC individuais
  */
 async function loadFeeOverrides(userIds: string[]): Promise<{ [key: string]: any }> {
   if (userIds.length === 0) return {};
 
-  const overrideEntries = await Promise.allSettled(
-    userIds.map(async (userId) => {
-      const { data, error } = await supabase.rpc('get_user_fee_overrides', { target_user_id: userId });
-      return { userId, data: error ? null : data };
-    })
-  );
-  
-  return overrideEntries.reduce((acc: { [key: string]: any }, res) => {
-    if (res.status === 'fulfilled') {
-      const { userId, data } = res.value;
-      if (data) {
-        acc[userId] = {
-          selection_process_fee: data.selection_process_fee != null ? Number(data.selection_process_fee) : undefined,
-          application_fee: data.application_fee != null ? Number(data.application_fee) : undefined,
-          scholarship_fee: data.scholarship_fee != null ? Number(data.scholarship_fee) : undefined,
-          i20_control_fee: data.i20_control_fee != null ? Number(data.i20_control_fee) : undefined,
-          placement_fee: data.placement_fee != null ? Number(data.placement_fee) : undefined,
-        };
-      }
-    }
+  const { data, error } = await supabase
+    .from('user_fee_overrides')
+    .select('user_id, selection_process_fee, application_fee, scholarship_fee, i20_control_fee, placement_fee')
+    .in('user_id', userIds);
+
+  if (error) {
+    console.error('❌ [FinancialAnalytics] Erro ao carregar fee overrides:', error);
+    return {};
+  }
+
+  return (data || []).reduce((acc: { [key: string]: any }, row) => {
+    acc[row.user_id] = {
+      selection_process_fee: row.selection_process_fee != null ? Number(row.selection_process_fee) : undefined,
+      application_fee: row.application_fee != null ? Number(row.application_fee) : undefined,
+      scholarship_fee: row.scholarship_fee != null ? Number(row.scholarship_fee) : undefined,
+      i20_control_fee: row.i20_control_fee != null ? Number(row.i20_control_fee) : undefined,
+      placement_fee: row.placement_fee != null ? Number(row.placement_fee) : undefined,
+    };
     return acc;
   }, {});
 }
@@ -378,7 +364,7 @@ async function loadAffiliateRequests(currentRange: DateRange): Promise<any[]> {
  * Busca pagamentos da tabela individual_fee_payments (Stripe e outros)
  */
 async function loadIndividualFeePayments(): Promise<any[]> {
-  // First, get the payments - REMOVIDO filtro de data para garantir match com histórico dos alunos
+  // REMOVIDO filtro de data para garantir match com histórico dos alunos
   const { data: payments, error: paymentsError } = await supabase
     .from('individual_fee_payments')
     .select('id, user_id, fee_type, amount, gross_amount_usd, fee_amount_usd, payment_date, payment_method, payment_intent_id, parcelow_status')
@@ -396,20 +382,15 @@ async function loadIndividualFeePayments(): Promise<any[]> {
   // Get unique user IDs from payments
   const userIds = [...new Set(payments.map(p => p.user_id))];
 
-  // Fetch user profiles for payment methods (selection_process and i20_control)
+  // ✅ OTIMIZADO: 1 query com todos os campos necessários (era 2 queries separadas)
   const { data: userProfiles } = await supabase
     .from('user_profiles')
-    .select('user_id, selection_process_fee_payment_method, i20_control_fee_payment_method, placement_fee_payment_method, reinstatement_package_payment_method')
+    .select('id, user_id, selection_process_fee_payment_method, i20_control_fee_payment_method, placement_fee_payment_method, reinstatement_package_payment_method')
     .in('user_id', userIds);
 
-  // Fetch scholarship applications for payment methods (application_fee and scholarship_fee)
-  // First, get student profile IDs from user IDs
-  const { data: studentProfiles } = await supabase
-    .from('user_profiles')
-    .select('id, user_id')
-    .in('user_id', userIds);
-  
-  const studentProfileIds = studentProfiles?.map(sp => sp.id) || [];
+  // Derivar studentProfiles a partir da mesma query (sem round-trip extra)
+  const studentProfiles = userProfiles?.map(up => ({ id: up.id, user_id: up.user_id })) || [];
+  const studentProfileIds = studentProfiles.map(sp => sp.id);
   
   // Fetch scholarship applications with payment methods
   // For application_fee: get the one where is_application_fee_paid = true
@@ -587,27 +568,28 @@ async function loadIndividualFeePayments(): Promise<any[]> {
 export async function loadFinancialData(
   currentRange: DateRange
 ): Promise<LoadedFinancialData> {
-  console.log('🚀 [FinancialAnalytics] loadFinancialData iniciado');
-  
   // Calcular período anterior
   const prevRange = getPreviousPeriodRange(currentRange);
 
-  // Carregar dados em paralelo quando possível
-  const [applicationsRaw, zellePaymentsRaw, allStudentsRaw, individualFeePayments] = await Promise.all([
+  // ✅ OTIMIZADO: carregar dados atuais E do período anterior em paralelo
+  const [
+    applicationsRaw,
+    zellePaymentsRaw,
+    allStudentsRaw,
+    individualFeePayments,
+    applicationsPrevRaw,
+    zellePaymentsPrevRaw
+  ] = await Promise.all([
     loadApplications(),
     loadZellePayments(currentRange),
     loadAllStudents(),
-    loadIndividualFeePayments()
+    loadIndividualFeePayments(),
+    loadApplicationsPrev(prevRange),
+    loadZellePaymentsPrev(prevRange)
   ]);
 
   // Filtrar dados em produção/staging: excluir usuários com email @uorak.com
   const filterActive = shouldFilter();
-  console.log('🔍 [FinancialAnalytics] Filtro ativo:', filterActive);
-  console.log('🔍 [FinancialAnalytics] Dados antes do filtro:', {
-    applications: applicationsRaw.length,
-    zellePayments: zellePaymentsRaw.length,
-    allStudents: allStudentsRaw.length
-  });
   
   const applications = filterActive
     ? applicationsRaw.filter((app: any) => !shouldExcludeStudent(app.user_profiles?.email))
@@ -620,31 +602,19 @@ export async function loadFinancialData(
   const allStudents = filterActive
     ? allStudentsRaw.filter((student: any) => !shouldExcludeStudent(student.email))
     : allStudentsRaw;
-    
-  console.log('🔍 [FinancialAnalytics] Dados depois do filtro:', {
-    applications: applications.length,
-    zellePayments: zellePayments.length,
-    allStudents: allStudents.length
-  });
-
-  // Carregar dados do período anterior
-  const [applicationsPrevRaw, zellePaymentsPrevRaw] = await Promise.all([
-    loadApplicationsPrev(prevRange),
-    loadZellePaymentsPrev(prevRange)
-  ]);
 
   // Filtrar dados do período anterior também
-  const applicationsPrev = shouldFilter()
+  const applicationsPrev = filterActive
     ? applicationsPrevRaw.filter((app: any) => !shouldExcludeStudent(app.user_profiles?.email))
     : applicationsPrevRaw;
 
-  const zellePaymentsPrev = zellePaymentsPrevRaw; // Zelle payments do período anterior não têm user_profiles carregado
+  const zellePaymentsPrev = zellePaymentsPrevRaw;
 
   // Carregar usuários Stripe (depende de applications já filtradas)
   const stripeUsersRaw = await loadStripeUsers(applications);
   
   // Filtrar stripeUsers também
-  const stripeUsers = shouldFilter()
+  const stripeUsers = filterActive
     ? stripeUsersRaw.filter((user: any) => !shouldExcludeStudent(user.email))
     : stripeUsersRaw;
 
