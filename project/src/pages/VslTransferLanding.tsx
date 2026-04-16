@@ -565,7 +565,7 @@ const VslTransferLanding: React.FC = () => {
                               <label className="text-xs font-bold text-slate-400 uppercase tracking-widest ml-1">Senha</label>
                               <div className="relative">
                                 <Lock className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-slate-500" />
-                                <input type={showPassword ? "text" : "password"} name="password" value={formData.password} onChange={handleChange} className="w-full pl-12 pr-12 py-4 bg-slate-950/50 border border-white/10 rounded-2xl focus:ring-2 focus:ring-blue-500/50 outline-none transition-all text-white" />
+                                <input type={showPassword ? "text" : "password"} name="password" value={formData.password} onChange={handleChange} className="w-full pl-12 pr-12 py-4 bg-slate-950/50 border border-white/10 rounded-2xl focus:ring-2 focus:ring-blue-500/50 outline-none transition-all text-white placeholder:text-slate-600" placeholder="Digite sua senha" />
                                 <button type="button" onClick={() => setShowPassword(!showPassword)} className="absolute right-4 top-1/2 -translate-y-1/2 text-slate-500 hover:text-white"><Eye className="w-5 h-5"/></button>
                               </div>
                             </div>
@@ -573,7 +573,7 @@ const VslTransferLanding: React.FC = () => {
                               <label className="text-xs font-bold text-slate-400 uppercase tracking-widest ml-1">Confirmar Senha</label>
                               <div className="relative">
                                 <Lock className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-slate-500" />
-                                <input type={showConfirmPassword ? "text" : "password"} name="confirm_password" value={formData.confirm_password} onChange={handleChange} className="w-full pl-12 pr-12 py-4 bg-slate-950/50 border border-white/10 rounded-2xl focus:ring-2 focus:ring-blue-500/50 outline-none transition-all text-white" />
+                                <input type={showConfirmPassword ? "text" : "password"} name="confirm_password" value={formData.confirm_password} onChange={handleChange} className="w-full pl-12 pr-12 py-4 bg-slate-950/50 border border-white/10 rounded-2xl focus:ring-2 focus:ring-blue-500/50 outline-none transition-all text-white placeholder:text-slate-600" placeholder="Confirme sua senha" />
                                 <button type="button" onClick={() => setShowConfirmPassword(!showConfirmPassword)} className="absolute right-4 top-1/2 -translate-y-1/2 text-slate-500 hover:text-white"><Eye className="w-5 h-5"/></button>
                               </div>
                             </div>
@@ -583,7 +583,7 @@ const VslTransferLanding: React.FC = () => {
 
                       {/* Coupon Trigger & Area */}
                       {!isNoDiscountLink && (
-                        <div className="mt-8 pt-8 border-t border-white/5">
+                        <div className="mt-8">
                           <div 
                             className="flex items-center gap-4 cursor-pointer group" 
                             onClick={() => {
@@ -598,7 +598,7 @@ const VslTransferLanding: React.FC = () => {
                             }}
                           >
                             <div className={`w-5 h-5 rounded-md border-2 flex items-center justify-center transition-all ${hasReferralCode ? 'bg-blue-600 border-blue-600 shadow-[0_0_10px_rgba(37,99,235,0.5)]' : 'bg-slate-950/50 border-white/10 group-hover:border-blue-500/50'}`}>
-                              {hasReferralCode && <X className="w-3 h-3 text-white" />}
+                              {hasReferralCode && <Check className="w-3 h-3 text-white" strokeWidth={4} />}
                             </div>
                             <span className="text-[11px] font-black text-slate-400 uppercase tracking-widest group-hover:text-white transition-colors">Eu tenho um código de indicação ou cupom</span>
                           </div>
@@ -662,12 +662,12 @@ const VslTransferLanding: React.FC = () => {
 
                       {/* Terms */}
                       <div className="mt-8">
-                        <div className="flex items-start gap-4 cursor-pointer group" onClick={() => !isRegistered && setFormData(p => ({...p, termsAccepted: !p.termsAccepted}))}>
+                        <div className="flex items-center gap-4 cursor-pointer group" onClick={() => !isRegistered && setFormData(p => ({...p, termsAccepted: !p.termsAccepted}))}>
                            <div className={`mt-0.5 w-5 h-5 rounded-md border-2 flex items-center justify-center transition-all duration-300 flex-shrink-0 ${formData.termsAccepted ? 'bg-blue-600 border-blue-600 shadow-[0_0_10px_rgba(37,99,235,0.5)]' : 'bg-slate-950/50 border-white/10 group-hover:border-blue-500/50'}`}>
                               {formData.termsAccepted && <Check className="w-3 h-3 text-white" strokeWidth={4} />}
                            </div>
-                           <label htmlFor="terms" className="text-sm text-slate-300 font-medium leading-relaxed cursor-pointer select-none">
-                              Eu aceito e concordo integralmente com os <button type="button" onClick={(e) => { e.stopPropagation(); handleTermsClick(e); }} className="text-blue-400 hover:text-blue-300 underline font-bold transition-colors">termos e condições</button> do contrato de prestação de serviços.
+                           <label htmlFor="terms" className="text-[11px] font-black text-slate-400 uppercase tracking-widest group-hover:text-white transition-colors cursor-pointer select-none">
+                              Eu aceito e concordo com os <button type="button" onClick={(e) => { e.stopPropagation(); handleTermsClick(e); }} className="text-blue-400 hover:text-blue-300 underline font-black uppercase tracking-widest transition-colors">Termos e Condições</button> do contrato de prestação de serviços.
                            </label>
                         </div>
                       </div>
@@ -715,7 +715,7 @@ const VslTransferLanding: React.FC = () => {
                     <div className="bg-slate-900/40 backdrop-blur-xl rounded-[2.5rem] border border-white/10 p-8 shadow-2xl relative overflow-hidden">
                       <div className="absolute top-0 right-0 w-32 h-32 bg-blue-500/5 rounded-full blur-[40px] -mr-16 -mt-16 pointer-events-none" />
                       
-                      <h3 className="text-sm font-black text-slate-400 uppercase tracking-[0.2em] mb-8 border-b border-white/5 pb-4">Resumo do Pedido</h3>
+                      <h3 className="text-sm font-black text-slate-400 uppercase tracking-[0.2em] mb-8 border-b border-white/5 pb-4">Resumo do Pagamento</h3>
                       
                       <div className="space-y-6 mb-8 relative z-10">
                         <div className="flex flex-col">
