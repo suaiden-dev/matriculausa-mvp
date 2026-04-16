@@ -451,7 +451,7 @@ export const ReinstatementFeeStep: React.FC<StepProps> = ({ onNext, currentStep 
                                                 </>
                                             ) : (
                                                 <h3 className="text-2xl font-black text-gray-900 truncate uppercase tracking-tight">
-                                                    {t('reinstatementFeeStep.feeLabel')}
+                                                    Control Fee
                                                 </h3>
                                             )}
 
@@ -465,7 +465,7 @@ export const ReinstatementFeeStep: React.FC<StepProps> = ({ onNext, currentStep 
 
                                     {/* ── Exibição de preço (com ou sem desconto) ── */}
                                     <div className="flex flex-col items-center md:items-end">
-                                        <span className="text-[10px] font-black text-gray-500 uppercase tracking-[0.2em] mb-1">{t('reinstatementFeeStep.feeLabel')}</span>
+                                        <span className="text-[10px] font-black text-gray-500 uppercase tracking-[0.2em] mb-1">Control Fee</span>
                                         {couponValidation?.isValid ? (
                                             <div className="flex flex-col items-end">
                                                 <div className="text-sm line-through text-gray-300 font-bold mb-0.5">
