@@ -111,26 +111,28 @@ const ScholarshipDetailModal: React.FC<ScholarshipDetailModalProps> = ({
   const processType = userProfile?.student_process_type;
   const visaTransferActive = userProfile?.visa_transfer_active;
 
+  // 16/04/2026: Alterado visualmente para aparecer apenas 'Control Fee' independentemente do tipo de pacote 
+  // para simplificar a visualização do usuário no modal de detalhes.
   const fixedFees = (() => {
     // Fallback para usuários antigos sem process type: manter comportamento atual (exibir todas)
     if (!processType) {
       return [
-        { name: t('scholarshipsPage.modal.i539COSPackage'), amount: 1800, details: t('scholarshipsPage.modal.i539PackageDescription', { reason: t('scholarshipsPage.modal.i539ReasonCOS') }) },
-        { name: t('scholarshipsPage.modal.ds160Package'), amount: 1800, details: t('scholarshipsPage.modal.ds160PackageDescription', { type: 'Initial/Transfer' }) },
-        { name: t('scholarshipsPage.modal.reinstatementPackage'), amount: 500, details: t('scholarshipsPage.modal.reinstatementPackageDescription') },
+        { name: 'Control Fee', amount: 1800, details: t('scholarshipsPage.modal.i539PackageDescription', { reason: t('scholarshipsPage.modal.i539ReasonCOS') }) },
+        { name: 'Control Fee', amount: 1800, details: t('scholarshipsPage.modal.ds160PackageDescription', { type: 'Initial/Transfer' }) },
+        { name: 'Control Fee', amount: 500, details: t('scholarshipsPage.modal.reinstatementPackageDescription') },
       ];
     }
     if (processType === 'initial') {
-      return [{ name: t('scholarshipsPage.modal.ds160Package'), amount: 1800, details: t('scholarshipsPage.modal.ds160PackageDescription', { type: 'Initial' }) }];
+      return [{ name: 'Control Fee', amount: 1800, details: t('scholarshipsPage.modal.ds160PackageDescription', { type: 'Initial' }) }];
     }
     if (processType === 'change_of_status') {
-      return [{ name: t('scholarshipsPage.modal.i539COSPackage'), amount: 1800, details: t('scholarshipsPage.modal.i539PackageDescription', { reason: t('scholarshipsPage.modal.i539ReasonCOS') }) }];
+      return [{ name: 'Control Fee', amount: 1800, details: t('scholarshipsPage.modal.i539PackageDescription', { reason: t('scholarshipsPage.modal.i539ReasonCOS') }) }];
     }
     if (processType === 'transfer') {
       if (visaTransferActive === false) {
         return [
-          { name: t('scholarshipsPage.modal.reinstatementPackage'), amount: 500, details: t('scholarshipsPage.modal.reinstatementPackageDescription') },
-          { name: t('scholarshipsPage.modal.i539Package'), amount: 1800, details: t('scholarshipsPage.modal.i539PackageDescription', { reason: t('scholarshipsPage.modal.i539ReasonTransfer') }) },
+          { name: 'Control Fee', amount: 500, details: t('scholarshipsPage.modal.reinstatementPackageDescription') },
+          { name: 'Control Fee', amount: 1800, details: t('scholarshipsPage.modal.i539PackageDescription', { reason: t('scholarshipsPage.modal.i539ReasonTransfer') }) },
         ];
       }
       return []; // Transfer com visto ativo: sem taxas fixas

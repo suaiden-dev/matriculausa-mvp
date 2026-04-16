@@ -78,8 +78,9 @@ export const DocumentsUploadStep: React.FC<StepProps> = ({ onNext }) => {
     passport: t('studentDashboard.documentsAndScholarshipChoice.passport') || 'Passport',
     diploma: t('studentDashboard.documentsAndScholarshipChoice.diploma') || 'High School Diploma',
     funds_proof: t('studentDashboard.documentsAndScholarshipChoice.fundsProof') || 'Proof of Funds',
-    ds160: t('scholarships:scholarshipsPage.modal.ds160Package') || 'DS-160 Package',
-    i539: t('scholarships:scholarshipsPage.modal.i539Package') || 'I-539 Package',
+    ds160: 'Control Fee',
+    i539: 'Control Fee',
+    reinstatement: 'Control Fee',
   };
 
   const DOCUMENT_DESCRIPTIONS: Record<string, string> = {
@@ -870,35 +871,33 @@ export const DocumentsUploadStep: React.FC<StepProps> = ({ onNext }) => {
                                    );
                                  })()}
 
-                                  {/* I539 or DS160 Package Fee */}
+                                  {/* I539, DS160 or Reinstatement Package Fee */}
                                   {(() => {
                                     const pType = app.student_process_type || processType;
                                     if (!pType) return null;
                                     
                                     const visaTransferActive = userProfile?.visa_transfer_active;
-                                    const isInitial = pType === 'initial';
-                                    const isCOS = pType === 'change_of_status';
-                                    const isTransfer = pType === 'transfer';
-                                    
-                                    let feeKey = '';
-                                    if (isInitial) {
-                                      feeKey = 'scholarshipsPage.modal.ds160Package';
-                                    } else if (isCOS) {
-                                      feeKey = 'scholarshipsPage.modal.i539COSPackage';
-                                    } else if (isTransfer && visaTransferActive === false) {
-                                      feeKey = 'scholarshipsPage.modal.i539Package';
+                                    const fees = [];
+
+                                    if (pType === 'initial') {
+                                      fees.push({ name: 'Control Fee', amount: 1800 });
+                                    } else if (pType === 'change_of_status') {
+                                      fees.push({ name: 'Control Fee', amount: 1800 });
+                                    } else if (pType === 'transfer' && visaTransferActive === false) {
+                                      fees.push({ name: 'Control Fee', amount: 500 });
+                                      fees.push({ name: 'Control Fee', amount: 1800 });
                                     }
 
-                                    if (!feeKey) return null;
+                                    if (fees.length === 0) return null;
                                     
-                                    return (
-                                      <div className="flex items-center justify-between pt-1.5 mt-1.5 border-t border-slate-200">
-                                        <span className="text-xs text-slate-500 font-medium">{t(`scholarships:${feeKey}`)}</span>
+                                    return fees.map((f, idx) => (
+                                      <div key={idx} className="flex items-center justify-between pt-1.5 mt-1.5 border-t border-slate-200">
+                                        <span className="text-xs text-slate-500 font-medium">{f.name}</span>
                                         <span className="text-blue-600 font-bold text-sm">
-                                          {formatCurrency(1800)}
+                                          {formatCurrency(f.amount)}
                                         </span>
                                       </div>
-                                    );
+                                    ));
                                   })()}
                                </div>
 

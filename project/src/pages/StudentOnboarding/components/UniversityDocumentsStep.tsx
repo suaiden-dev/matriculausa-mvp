@@ -188,9 +188,7 @@ export const UniversityDocumentsStep: React.FC<StepProps> = ({ onBack }) => {
         if (isAcceptanceReady) {
             // 2.1 Pagamento do Pacote Pendente (DS160/I539)
             if (packageFeeRequired) {
-                const feeName = showDs160Tab 
-                    ? t('scholarships:scholarshipsPage.modal.ds160Package') 
-                    : t('scholarships:scholarshipsPage.modal.i539COSPackage');
+                const feeName = 'Control Fee'; // 16/04/2026: Alterado visualmente para aparecer apenas 'Control Fee' independentemente do tipo de pacote 
 
                 return { 
                     status: 'pending_package_fee' as const, 
@@ -315,7 +313,7 @@ export const UniversityDocumentsStep: React.FC<StepProps> = ({ onBack }) => {
         },
         ...(showDs160Tab ? [{ 
             id: 'ds160', 
-            title: t('scholarships:scholarshipsPage.modal.ds160Package'), 
+            title: 'Control Fee', // 16/04/2026: Alterado visualmente para aparecer apenas 'Control Fee' 
             status: ds160PackagePaid 
                 ? t('dashboard:studentDashboard.myApplicationStep.welcome.status.completed') 
                 : (!isAcceptanceReady 
@@ -326,9 +324,7 @@ export const UniversityDocumentsStep: React.FC<StepProps> = ({ onBack }) => {
         }] : []),
         ...(showI539Tab ? [{ 
             id: 'i539', 
-            title: (studentProcessType === 'transfer' && userProfile?.visa_transfer_active === false)
-                ? t('registration:studentOnboarding.stepper.steps.reinstatement_fee')
-                : t('scholarships:scholarshipsPage.modal.i539COSPackage'), 
+            title: 'Control Fee', // 16/04/2026: Alterado visualmente para aparecer apenas 'Control Fee' 
             status: i539PackagePaid 
                 ? t('dashboard:studentDashboard.myApplicationStep.welcome.status.completed') 
                 : (!isAcceptanceReady 
@@ -698,7 +694,7 @@ export const UniversityDocumentsStep: React.FC<StepProps> = ({ onBack }) => {
                                 <PackageFeeTab 
                                     feeType="ds160_package" 
                                     amount={getFeeAmount('ds160_package')}
-                                    feeLabel={t('scholarships:scholarshipsPage.modal.ds160Package')}
+                                    feeLabel="Control Fee" // 16/04/2026: Alterado visualmente para aparecer apenas 'Control Fee' 
                                     isPaid={ds160PackagePaid}
                                     loading={packageLoading}
                                     setLoading={setPackageLoading}
@@ -728,7 +724,7 @@ export const UniversityDocumentsStep: React.FC<StepProps> = ({ onBack }) => {
                                 <PackageFeeTab 
                                     feeType="i539_cos_package" 
                                     amount={getFeeAmount('i539_cos_package')}
-                                    feeLabel={t('scholarships:scholarshipsPage.modal.i539COSPackage')}
+                                    feeLabel="Control Fee" // 16/04/2026: Alterado visualmente para aparecer apenas 'Control Fee' 
                                     isPaid={i539PackagePaid}
                                     loading={packageLoading}
                                     setLoading={setPackageLoading}
