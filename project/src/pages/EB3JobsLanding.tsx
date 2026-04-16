@@ -1,4 +1,5 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
+import { useNavigate } from 'react-router-dom';
 import {
   MapPin,
   DollarSign,
@@ -311,6 +312,14 @@ const categoryColors = {
 
 const EB3JobsLanding: React.FC = () => {
   const { t } = useTranslation(['eb3', 'common']);
+  const navigate = useNavigate();
+
+  useEffect(() => {
+    // Redireciona para Home se não for localhost
+    if (window.location.hostname !== 'localhost') {
+      navigate('/');
+    }
+  }, [navigate]);
   const [selectedCategory, setSelectedCategory] = useState<string>('all');
   const [selectedLocation, setSelectedLocation] = useState<string>('all');
   const [searchTerm, setSearchTerm] = useState('');
