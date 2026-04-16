@@ -107,6 +107,13 @@ const ParcelowIcon = ({ className }: { className?: string }) => (
   </div>
 );
 
+const methodNames: Record<string, string> = {
+  stripe: 'Cartão',
+  pix: 'PIX',
+  zelle: 'Zelle',
+  parcelow: 'Boleto/PIX'
+};
+
 const VslCosLanding: React.FC = () => {
   const { t } = useTranslation(['registration', 'payment', 'common']);
   const navigate = useNavigate();
@@ -133,7 +140,7 @@ const VslCosLanding: React.FC = () => {
         full_name: urlName || (parsed?.full_name || ''),
         email: urlEmail || (parsed?.email || ''),
         phone: urlPhone || (parsed?.phone || ''),
-        dependents: parsed?.dependents !== undefined ? parsed.dependents : '',
+        dependents: parsed?.dependents !== undefined ? parsed.dependents : 0,
         password: '', confirm_password: '',
         termsAccepted: false,
         cpf: parsed?.cpf || '', country: parsed?.country || '',
@@ -142,7 +149,7 @@ const VslCosLanding: React.FC = () => {
         english_proficiency: parsed?.english_proficiency || ''
       };
     } catch {
-      return { full_name: '', email: '', phone: '', dependents: '', password: '', confirm_password: '', termsAccepted: false, cpf: '', country: '', field_of_interest: '', academic_level: '', english_proficiency: '' };
+      return { full_name: '', email: '', phone: '', dependents: 0, password: '', confirm_password: '', termsAccepted: false, cpf: '', country: '', field_of_interest: '', academic_level: '', english_proficiency: '' };
     }
   });
 
@@ -191,6 +198,13 @@ const VslCosLanding: React.FC = () => {
   const formattedAmount = formatFeeAmount(currentFee);
 
   // --- Effects ---
+  useEffect(() => {
+    // Bloqueio temporário: Redireciona para Home se não for localhost
+    if (window.location.hostname !== 'localhost' && window.location.hostname !== '127.0.0.1') {
+      navigate('/', { replace: true });
+    }
+  }, [navigate]);
+
   useEffect(() => {
     const timer = setInterval(() => setTimeLeft((prev) => (prev > 0 ? prev - 1 : 0)), 1000);
     return () => clearInterval(timer);
@@ -370,15 +384,40 @@ const VslCosLanding: React.FC = () => {
 
     // Validação de Campos
     const errors: Record<string, string> = {};
-    if (!formData.full_name.trim()) errors.full_name = 'Campo obrigatório';
-    if (!formData.email.trim()) errors.email = 'Campo obrigatório';
-    if (!formData.phone.trim()) errors.phone = 'Campo obrigatório';
-    if (formData.password !== formData.confirm_password) errors.confirm_password = 'Senhas não coincidem';
+    if (!formData.full_name.trim()) {
+      errors.full_name = 'Campo obrigatório';
+    }
+
+    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+    if (!formData.email.trim()) {
+      errors.email = 'Campo obrigatório';
+    } else if (!emailRegex.test(formData.email)) {
+      errors.email = 'E-mail inválido';
+    }
+
+    if (!formData.phone.trim() || formData.phone.length < 8) {
+      errors.phone = 'Telefone inválido';
+    }
+
+    if (!isRegistered) {
+      if (!formData.password) errors.password = 'Senha é obrigatória';
+      else if (formData.password.length < 6) errors.password = 'Mínimo 6 caracteres';
+      
+      if (formData.password !== formData.confirm_password) {
+        errors.confirm_password = 'Senhas não coincidem';
+      }
+    }
+
     if (formData.dependents === '') errors.dependents = 'Selecione os dependentes';
     if (!formData.termsAccepted) errors.termsAccepted = 'Aceite os termos';
     if (selectedMethod === 'parcelow' && (!formData.cpf || formData.cpf.length < 14)) errors.cpf = 'CPF obrigatório';
 
-    if (Object.keys(errors).length > 0) { setFieldErrors(errors); return; }
+    if (Object.keys(errors).length > 0) {
+      setFieldErrors(errors);
+      const firstError = document.querySelector('[name="' + Object.keys(errors)[0] + '"]');
+      if (firstError) firstError.scrollIntoView({ behavior: 'smooth', block: 'center' });
+      return;
+    }
 
     setLoading(true); setError(null);
     setLoadingStep("Criando sua conta...");
@@ -451,31 +490,31 @@ const VslCosLanding: React.FC = () => {
   const formatCPF = (val: string) => val.replace(/\D/g, '').replace(/(\d{3})(\d)/, '$1.$2').replace(/(\d{3})(\d)/, '$1.$2').replace(/(\d{3})(\d{1,2})/, '$1-$2').substring(0, 14);
 
   return (
-    <div className="relative min-h-screen bg-slate-950 font-sans text-slate-100 selection:bg-rose-500/30 overflow-x-hidden">
+    <div className="relative min-h-screen bg-slate-950 font-sans text-slate-100 selection:bg-blue-500/30 overflow-x-hidden">
       {/* Background Glows */}
       <div className="absolute inset-0 -z-10 pointer-events-none overflow-hidden bg-slate-950">
-        <div className="absolute top-[-10%] right-[-5%] w-[600px] h-[600px] bg-rose-600/10 rounded-full blur-[120px]"></div>
+        <div className="absolute top-[-10%] right-[-5%] w-[600px] h-[600px] bg-blue-600/10 rounded-full blur-[120px]"></div>
         <div className="absolute bottom-[-10%] left-[-5%] w-[600px] h-[600px] bg-indigo-600/10 rounded-full blur-[120px]"></div>
       </div>
 
       <header className="py-8 flex justify-center w-full relative z-10">
-        <img src="/logo.png.png" alt="Matrícula USA" className="h-16 md:h-20 w-auto opacity-90 transition-opacity" />
+        <img src="/logo.png.png" alt="Matrícula USA" className="h-12 md:h-16 w-auto opacity-90 transition-opacity" />
       </header>
 
       <section className="relative pt-6 pb-16 px-4 z-10">
         <div className="max-w-5xl mx-auto text-center">
           <motion.div initial={{ opacity: 0, y: 30 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.8 }}>
-            <h1 className="text-4xl md:text-6xl font-extrabold tracking-tight mb-8 leading-[1.1] text-transparent bg-clip-text bg-gradient-to-r from-white via-rose-50 to-indigo-100">
-              Transforme seu visto de Turista <br className="hidden md:block" /> em um Futuro Legal nos EUA.
+            <h1 className="text-4xl md:text-6xl font-extrabold tracking-tight mb-8 leading-[1.1] text-transparent bg-clip-text bg-gradient-to-r from-white via-blue-50 to-indigo-100">
+              Estude e Trabalhe nos EUA
             </h1>
-            <p className="text-lg md:text-xl text-rose-100/60 mb-12 max-w-3xl mx-auto font-light leading-relaxed">
-              Assista a masterclass abaixo e descubra o passo a passo exato para realizar sua Troca de Status, ingressando em uma faculdade americana com bolsas exclusivas de até 90%.
+            <p className="text-lg md:text-xl text-blue-100/60 mb-12 max-w-3xl mx-auto font-light leading-relaxed">
+              Entenda como estudar em uma faculdade americana com bolsa, permissão de trabalho com aulas presenciais 1 vez por semestre.
             </p>
           </motion.div>
 
-          <motion.div initial={{ opacity: 0, scale: 0.95 }} animate={{ opacity: 1, scale: 1 }} transition={{ duration: 0.8, delay: 0.2 }} className="mt-12 relative w-full aspect-video mx-auto max-w-4xl rounded-3xl overflow-hidden shadow-[0_0_50px_rgba(225,29,72,0.1)] border border-white/5 bg-slate-900/50 backdrop-blur-sm group">
+          <motion.div initial={{ opacity: 0, scale: 0.95 }} animate={{ opacity: 1, scale: 1 }} transition={{ duration: 0.8, delay: 0.2 }} className="mt-12 relative w-full aspect-[9/16] mx-auto max-w-sm rounded-[3rem] overflow-hidden shadow-[0_0_50px_rgba(37,99,235,0.1)] border border-white/5 bg-slate-900/50 backdrop-blur-sm group">
             <div className="absolute inset-0 flex flex-col items-center justify-center">
-              <div className="w-20 h-20 bg-rose-600/20 group-hover:bg-rose-600/40 transition-all rounded-full flex items-center justify-center cursor-pointer shadow-[0_0_30px_rgba(225,29,72,0.2)] mb-4">
+              <div className="w-20 h-20 bg-blue-600/20 group-hover:bg-blue-600/40 transition-all rounded-full flex items-center justify-center cursor-pointer shadow-[0_0_30px_rgba(37,99,235,0.2)] mb-4">
                 <div className="w-0 h-0 border-t-[12px] border-t-transparent border-l-[20px] border-l-white border-b-[12px] border-b-transparent translate-x-1" />
               </div>
               <span className="text-slate-500 font-medium">Seu VSL aparecerá aqui</span>
@@ -489,7 +528,7 @@ const VslCosLanding: React.FC = () => {
         <div className="max-w-7xl mx-auto">
           <div className="text-center mb-16">
             <h2 className="text-3xl md:text-5xl font-black text-white mb-4 uppercase tracking-tighter italic">Garanta sua Vaga Agora</h2>
-            <div className="w-24 h-1.5 bg-gradient-to-r from-rose-500 to-indigo-500 rounded-full mx-auto shadow-[0_0_15px_rgba(225,29,72,0.5)]"></div>
+            <div className="w-24 h-1.5 bg-gradient-to-r from-blue-500 to-indigo-500 rounded-full mx-auto shadow-[0_0_15px_rgba(59,130,246,0.5)]"></div>
           </div>
 
           <AnimatePresence mode="wait">
@@ -507,12 +546,12 @@ const VslCosLanding: React.FC = () => {
                 <div className="lg:col-span-2 space-y-8">
                    {(codeApplied || promotionalCouponValidation?.isValid) && <UrgencyBanner timeLeft={timeLeft} />}
                    
-                   <form onSubmit={handleRegisterAndPay} className="space-y-8">
+                   <form id="registration-form" onSubmit={handleRegisterAndPay} className="space-y-8">
                     {/* Step 1: Info */}
                     <div className="bg-slate-900/40 backdrop-blur-xl rounded-[2rem] border border-white/10 p-8 shadow-2xl relative overflow-hidden">
-                      <div className="absolute top-0 right-0 w-32 h-32 bg-rose-500/5 rounded-full -mr-16 -mt-16 blur-2xl"></div>
-                      <h3 className="text-xl font-black text-rose-400 mb-8 uppercase tracking-widest flex items-center gap-3">
-                        <div className="w-8 h-8 rounded-lg bg-rose-500/10 flex items-center justify-center text-rose-400 border border-rose-500/20">1</div>
+                      <div className="absolute top-0 right-0 w-32 h-32 bg-blue-500/5 rounded-full -mr-16 -mt-16 blur-2xl"></div>
+                      <h3 className="text-xl font-black text-blue-400 mb-8 uppercase tracking-widest flex items-center gap-3">
+                        <div className="w-8 h-8 rounded-lg bg-blue-500/10 flex items-center justify-center text-blue-400 border border-blue-500/20">1</div>
                         Dados do seu Perfil
                       </h3>
                       
@@ -522,7 +561,7 @@ const VslCosLanding: React.FC = () => {
                           <label className="text-xs font-bold text-slate-400 uppercase tracking-widest ml-1">Nome Completo</label>
                           <div className="relative">
                             <User className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-slate-500" />
-                            <input type="text" name="full_name" value={formData.full_name} onChange={handleChange} disabled={isRegistered} className="w-full pl-12 pr-4 py-4 bg-slate-950/50 border border-white/10 rounded-2xl focus:ring-2 focus:ring-rose-500/50 outline-none transition-all text-white placeholder:text-slate-600" placeholder="Seu nome" />
+                            <input type="text" name="full_name" value={formData.full_name} onChange={handleChange} disabled={isRegistered} className="w-full pl-12 pr-4 py-4 bg-slate-950/50 border border-white/10 rounded-2xl focus:ring-2 focus:ring-blue-500/50 outline-none transition-all text-white placeholder:text-slate-600" placeholder="Seu nome" />
                           </div>
                           {fieldErrors.full_name && <p className="text-red-500 text-[10px] font-bold uppercase ml-1 mt-1">{fieldErrors.full_name}</p>}
                         </div>
@@ -532,7 +571,7 @@ const VslCosLanding: React.FC = () => {
                           <label className="text-xs font-bold text-slate-400 uppercase tracking-widest ml-1">E-mail</label>
                           <div className="relative">
                             <Mail className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-slate-500" />
-                            <input type="email" name="email" value={formData.email} onChange={handleChange} disabled={isRegistered} className="w-full pl-12 pr-4 py-4 bg-slate-950/50 border border-white/10 rounded-2xl focus:ring-2 focus:ring-rose-500/50 outline-none transition-all text-white placeholder:text-slate-600" placeholder="exemplo@email.com" />
+                            <input type="email" name="email" value={formData.email} onChange={handleChange} disabled={isRegistered} className="w-full pl-12 pr-4 py-4 bg-slate-950/50 border border-white/10 rounded-2xl focus:ring-2 focus:ring-blue-500/50 outline-none transition-all text-white placeholder:text-slate-600" placeholder="exemplo@email.com" />
                           </div>
                           {fieldErrors.email && <p className="text-red-500 text-[10px] font-bold uppercase ml-1 mt-1">{fieldErrors.email}</p>}
                         </div>
@@ -540,8 +579,9 @@ const VslCosLanding: React.FC = () => {
                         {/* Phone */}
                         <div className="space-y-2">
                           <label className="text-xs font-bold text-slate-400 uppercase tracking-widest ml-1">Telefone</label>
-                          <div className="h-[14px] mb-1"></div> {/* Espaçador técnico para alinhamento */}
-                          <PhoneInput international defaultCountry="US" value={formData.phone} onChange={v => setFormData(p => ({...p, phone: v || ''}))} className="vsl-phone-input w-full px-4 py-4 bg-slate-950/50 border border-white/10 rounded-2xl focus-within:ring-2 focus-within:ring-rose-500/50 transition-all text-white" />
+                          <div className="h-[14px] mb-1"></div>
+                          <PhoneInput international defaultCountry="US" value={formData.phone} onChange={v => setFormData(p => ({...p, phone: v || ''}))} className="vsl-phone-input w-full px-4 py-4 bg-slate-950/50 border border-white/10 rounded-2xl focus-within:ring-2 focus-within:ring-blue-500/50 transition-all text-white" />
+                          {fieldErrors.phone && <p className="text-red-500 text-[10px] font-bold uppercase ml-1 mt-1">{fieldErrors.phone}</p>}
                         </div>
 
                         {/* Dependents */}
@@ -550,12 +590,12 @@ const VslCosLanding: React.FC = () => {
                           <p className="text-[9px] text-slate-500 font-bold uppercase tracking-wider ml-1 -mt-1 mb-1">Membros da família (cônjuge e/ou filhos)</p>
                           <div className="relative">
                              <Users className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-slate-500 z-10" />
-                             <select name="dependents" value={formData.dependents} onChange={handleChange} disabled={isRegistered} className="w-full pl-12 pr-10 py-4 bg-slate-950/50 border border-white/10 rounded-2xl appearance-none focus:ring-2 focus:ring-rose-500/50 outline-none transition-all text-white cursor-pointer relative z-0">
-                                <option value="">Selecione</option>
-                                {[0,1,2,3,4,5].map(n => <option key={n} value={n}>{n === 0 ? 'Somente eu' : `${n} dependente${n > 1 ? 's' : ''}`}</option>)}
+                             <select name="dependents" value={formData.dependents} onChange={handleChange} disabled={isRegistered} className="w-full pl-12 pr-10 py-4 bg-slate-950/50 border border-white/10 rounded-2xl appearance-none focus:ring-2 focus:ring-blue-500/50 outline-none transition-all text-white cursor-pointer relative z-0">
+                                {[0,1,2,3,4,5].map(n => <option key={n} value={n}>{n} dependente{n === 1 ? '' : 's'}</option>)}
                              </select>
                              <ChevronDown className="absolute right-4 top-1/2 -translate-y-1/2 w-5 h-5 text-slate-500 pointer-events-none" />
                           </div>
+                          {fieldErrors.dependents && <p className="text-red-500 text-[10px] font-bold uppercase ml-1 mt-1">{fieldErrors.dependents}</p>}
                         </div>
 
                         {/* Password Fields */}
@@ -565,17 +605,19 @@ const VslCosLanding: React.FC = () => {
                               <label className="text-xs font-bold text-slate-400 uppercase tracking-widest ml-1">Senha</label>
                               <div className="relative">
                                 <Lock className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-slate-500" />
-                                <input type={showPassword ? "text" : "password"} name="password" value={formData.password} onChange={handleChange} className="w-full pl-12 pr-12 py-4 bg-slate-950/50 border border-white/10 rounded-2xl focus:ring-2 focus:ring-rose-500/50 outline-none transition-all text-white placeholder:text-slate-600" placeholder="Digite sua senha" />
+                                <input type={showPassword ? "text" : "password"} name="password" value={formData.password} onChange={handleChange} className="w-full pl-12 pr-12 py-4 bg-slate-950/50 border border-white/10 rounded-2xl focus:ring-2 focus:ring-blue-500/50 outline-none transition-all text-white placeholder:text-slate-600" placeholder="Digite sua senha" />
                                 <button type="button" onClick={() => setShowPassword(!showPassword)} className="absolute right-4 top-1/2 -translate-y-1/2 text-slate-500 hover:text-white"><Eye className="w-5 h-5"/></button>
                               </div>
+                              {fieldErrors.password && <p className="text-red-500 text-[10px] font-bold uppercase ml-1 mt-1">{fieldErrors.password}</p>}
                             </div>
                             <div className="space-y-2">
                               <label className="text-xs font-bold text-slate-400 uppercase tracking-widest ml-1">Confirmar Senha</label>
                               <div className="relative">
                                 <Lock className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-slate-500" />
-                                <input type={showConfirmPassword ? "text" : "password"} name="confirm_password" value={formData.confirm_password} onChange={handleChange} className="w-full pl-12 pr-12 py-4 bg-slate-950/50 border border-white/10 rounded-2xl focus:ring-2 focus:ring-rose-500/50 outline-none transition-all text-white placeholder:text-slate-600" placeholder="Confirme sua senha" />
+                                <input type={showConfirmPassword ? "text" : "password"} name="confirm_password" value={formData.confirm_password} onChange={handleChange} className="w-full pl-12 pr-12 py-4 bg-slate-950/50 border border-white/10 rounded-2xl focus:ring-2 focus:ring-blue-500/50 outline-none transition-all text-white placeholder:text-slate-600" placeholder="Confirme sua senha" />
                                 <button type="button" onClick={() => setShowConfirmPassword(!showConfirmPassword)} className="absolute right-4 top-1/2 -translate-y-1/2 text-slate-500 hover:text-white"><Eye className="w-5 h-5"/></button>
                               </div>
+                              {fieldErrors.confirm_password && <p className="text-red-500 text-[10px] font-bold uppercase ml-1 mt-1">{fieldErrors.confirm_password}</p>}
                             </div>
                           </>
                         )}
@@ -597,10 +639,10 @@ const VslCosLanding: React.FC = () => {
                               }
                             }}
                           >
-                            <div className={`w-5 h-5 rounded-md border-2 flex items-center justify-center transition-all ${hasReferralCode ? 'bg-rose-600 border-rose-600 shadow-[0_0_10px_rgba(225,29,72,0.5)]' : 'bg-slate-950/50 border-white/10 group-hover:border-rose-500/50'}`}>
+                            <div className={`w-5 h-5 rounded-md border-2 flex items-center justify-center transition-all ${hasReferralCode ? 'bg-blue-600 border-blue-600 shadow-[0_0_10px_rgba(37,99,235,0.5)]' : 'bg-slate-950/50 border-white/10 group-hover:border-blue-500/50'}`}>
                               {hasReferralCode && <Check className="w-3 h-3 text-white" strokeWidth={4} />}
                             </div>
-                            <span className="text-[11px] font-black text-slate-400 uppercase tracking-widest group-hover:text-white transition-colors">Eu tenho um código de indicação ou cupom</span>
+                            <span className="text-[11px] font-black text-slate-400 uppercase tracking-widest group-hover:text-white transition-colors">Tenho um código de indicação ou cupom</span>
                           </div>
 
                           <AnimatePresence>
@@ -616,17 +658,17 @@ const VslCosLanding: React.FC = () => {
                                 <div className="grid grid-cols-1 md:grid-cols-2 gap-6 pt-6 pb-2">
                                   {/* Referral Column */}
                                   <div className="space-y-3">
-                                    <h4 className="text-[9px] font-black text-slate-500 uppercase tracking-[0.2em] flex items-center gap-2">
-                                      <Ticket className="w-3 h-3" /> Indicação
+                                    <h4 className="text-xs font-black text-slate-500 uppercase tracking-[0.2em] flex items-center gap-2">
+                                      <Ticket className="w-3 h-3" /> Código de Indicação
                                     </h4>
                                     <div className="flex gap-2">
                                       <div className="relative flex-1">
-                                        <input type="text" value={couponCode} onChange={e => !codeApplied && setCouponCode(e.target.value.toUpperCase())} readOnly={codeApplied} placeholder="CÓDIGO" className="w-full px-4 py-3 bg-slate-950/30 border border-white/10 rounded-xl text-center font-black text-white text-base tracking-[0.2em] focus:border-rose-500/50 outline-none transition-all placeholder:text-slate-700" />
+                                        <input type="text" value={couponCode} onChange={e => !codeApplied && setCouponCode(e.target.value.toUpperCase())} readOnly={codeApplied} placeholder="CÓDIGO" className="w-full px-4 py-3 bg-slate-950/30 border border-white/10 rounded-xl text-center font-black text-white text-base tracking-[0.2em] focus:border-blue-500/50 outline-none transition-all placeholder:text-slate-700" />
                                         {codeApplied && <Shield className="absolute right-3 top-1/2 -translate-y-1/2 w-4 h-4 text-emerald-500" />}
                                       </div>
                                       {!codeApplied && (
-                                        <button type="button" onClick={() => validateDiscountCode()} disabled={isValidating || !couponCode.trim()} className="px-5 py-3 bg-white/5 hover:bg-white/10 text-white rounded-xl font-black uppercase tracking-widest text-[9px] border border-white/10 transition-all disabled:opacity-50">
-                                          {isValidating ? <Loader2 className="w-3 h-3 animate-spin"/> : 'Aplicar'}
+                                        <button type="button" onClick={() => validateDiscountCode()} disabled={isValidating || !couponCode.trim()} className="px-5 py-3 bg-white/5 hover:bg-white/10 text-white rounded-xl font-black uppercase tracking-widest text-xs border border-white/10 transition-all disabled:opacity-50">
+                                          {isValidating ? <Loader2 className="w-3 h-3 animate-spin"/> : 'Validar'}
                                         </button>
                                       )}
                                     </div>
@@ -635,18 +677,18 @@ const VslCosLanding: React.FC = () => {
 
                                   {/* Promo Column */}
                                   <div className="space-y-3">
-                                    <h4 className="text-[9px] font-black text-slate-500 uppercase tracking-[0.2em] flex items-center gap-2">
-                                      <Ticket className="w-3 h-3" /> Promocional
+                                    <h4 className="text-xs font-black text-slate-500 uppercase tracking-[0.2em] flex items-center gap-2">
+                                      <Ticket className="w-3 h-3" /> Cupom Promocional
                                     </h4>
                                     {promotionalCouponValidation?.isValid ? (
-                                      <div className="flex items-center justify-between p-2.5 bg-rose-500/10 border border-rose-500/20 rounded-xl">
+                                      <div className="flex items-center justify-between p-2.5 bg-blue-500/10 border border-blue-500/20 rounded-xl">
                                         <span className="font-black text-white text-[10px] tracking-widest">{promotionalCoupon}</span>
                                         <button type="button" onClick={removePromotionalCoupon} className="text-slate-400 hover:text-white transition-colors"><X className="w-3 h-3"/></button>
                                       </div>
                                     ) : (
                                       <div className="flex gap-2">
-                                        <input type="text" value={promotionalCoupon} onChange={e => setPromotionalCoupon(e.target.value.toUpperCase())} placeholder="CUPOM" className="flex-1 px-4 py-3 bg-slate-950/30 border border-white/10 rounded-xl text-center font-black text-white text-base tracking-[0.2em] focus:border-rose-500/50 outline-none transition-all placeholder:text-slate-700" />
-                                        <button type="button" onClick={validatePromotionalCoupon} disabled={isValidatingPromotionalCoupon || !promotionalCoupon.trim()} className="px-5 py-3 bg-rose-600 hover:bg-rose-700 text-white rounded-xl font-black uppercase tracking-widest text-[9px] shadow-lg active:scale-95 transition-all disabled:opacity-50">
+                                        <input type="text" value={promotionalCoupon} onChange={e => setPromotionalCoupon(e.target.value.toUpperCase())} placeholder="CUPOM" className="flex-1 px-4 py-3 bg-slate-950/30 border border-white/10 rounded-xl text-center font-black text-white text-base tracking-[0.2em] focus:border-blue-500/50 outline-none transition-all placeholder:text-slate-700" />
+                                        <button type="button" onClick={validatePromotionalCoupon} disabled={isValidatingPromotionalCoupon || !promotionalCoupon.trim()} className="px-5 py-3 bg-blue-600 hover:bg-blue-700 text-white rounded-xl font-black uppercase tracking-widest text-xs shadow-lg active:scale-95 transition-all disabled:opacity-50">
                                           {isValidatingPromotionalCoupon ? <Loader2 className="w-3 h-3 animate-spin"/> : 'Validar'}
                                         </button>
                                       </div>
@@ -663,21 +705,22 @@ const VslCosLanding: React.FC = () => {
                       {/* Terms */}
                       <div className="mt-8">
                         <div className="flex items-center gap-4 cursor-pointer group" onClick={() => !isRegistered && setFormData(p => ({...p, termsAccepted: !p.termsAccepted}))}>
-                           <div className={`mt-0.5 w-5 h-5 rounded-md border-2 flex items-center justify-center transition-all duration-300 flex-shrink-0 ${formData.termsAccepted ? 'bg-rose-600 border-rose-600 shadow-[0_0_10px_rgba(225,29,72,0.5)]' : 'bg-slate-950/50 border-white/10 group-hover:border-rose-500/50'}`}>
+                           <div className={`mt-0.5 w-5 h-5 rounded-md border-2 flex items-center justify-center transition-all duration-300 flex-shrink-0 ${formData.termsAccepted ? 'bg-blue-600 border-blue-600 shadow-[0_0_10px_rgba(37,99,235,0.5)]' : 'bg-slate-950/50 border-white/10 group-hover:border-blue-500/50'}`}>
                               {formData.termsAccepted && <Check className="w-3 h-3 text-white" strokeWidth={4} />}
                            </div>
                            <label htmlFor="terms" className="text-[11px] font-black text-slate-400 uppercase tracking-widest group-hover:text-white transition-colors cursor-pointer select-none">
-                              Eu aceito e concordo com os <button type="button" onClick={(e) => { e.stopPropagation(); handleTermsClick(e); }} className="text-rose-400 hover:text-rose-300 underline font-black uppercase tracking-widest transition-colors">Termos e Condições</button> do contrato de prestação de serviços.
+                              Eu aceito e concordo com os <button type="button" onClick={(e) => { e.stopPropagation(); handleTermsClick(e); }} className="text-blue-400 hover:text-blue-300 underline font-black uppercase tracking-widest transition-colors">Termos e Condições</button> do contrato de prestação de serviços.
                            </label>
                         </div>
+                        {fieldErrors.termsAccepted && <p className="text-red-500 text-[10px] font-bold uppercase ml-1 mt-2">{fieldErrors.termsAccepted}</p>}
                       </div>
                     </div>
 
                     {/* Step 2: Payment */}
                     <div className="space-y-8">
                       <div className="bg-slate-900/40 backdrop-blur-xl rounded-[2rem] border border-white/10 p-8 shadow-2xl relative overflow-hidden">
-                        <h3 className="text-xl font-black text-rose-400 mb-8 uppercase tracking-widest flex items-center gap-3">
-                          <div className="w-8 h-8 rounded-lg bg-rose-500/10 flex items-center justify-center text-rose-400 border border-rose-500/20">2</div>
+                        <h3 className="text-xl font-black text-blue-400 mb-8 uppercase tracking-widest flex items-center gap-3">
+                          <div className="w-8 h-8 rounded-lg bg-blue-500/10 flex items-center justify-center text-blue-400 border border-blue-500/20">2</div>
                           Forma de Pagamento
                         </h3>
 
@@ -688,9 +731,9 @@ const VslCosLanding: React.FC = () => {
                           { id: 'zelle', name: 'Zelle (EUA)', icon: ZelleIcon, price: `$${currentFee.toFixed(2)}` },
                           { id: 'parcelow', name: 'Boleto/PIX Parcelado', icon: ParcelowIcon, price: `$${currentFee.toFixed(2)}` }
                         ].map((m) => (
-                          <button key={m.id} type="button" onClick={() => setSelectedMethod(m.id as any)} className={`p-6 rounded-2xl border-2 transition-all flex flex-col gap-4 text-left group ${selectedMethod === m.id ? 'border-rose-500 bg-rose-500/10 shadow-[0_0_20px_rgba(225,29,72,0.2)]' : 'border-white/5 bg-slate-950/30 hover:bg-slate-950/50'}`}>
+                          <button key={m.id} type="button" onClick={() => setSelectedMethod(m.id as any)} className={`p-6 rounded-2xl border-2 transition-all flex flex-col gap-4 text-left group ${selectedMethod === m.id ? 'border-blue-500 bg-blue-500/10 shadow-[0_0_20px_rgba(59,130,246,0.2)]' : 'border-white/5 bg-slate-950/30 hover:bg-slate-950/50'}`}>
                             <div className="flex items-center justify-between">
-                              <div className="w-12 h-12 bg-white/5 rounded-xl flex items-center justify-center p-2"><m.icon className="w-full h-full" /></div>
+                              <m.icon className="w-12 h-12" />
                               <span className="text-lg font-black text-white leading-none tracking-tight">{m.price}</span>
                             </div>
                             <span className="font-bold text-slate-100 uppercase tracking-widest text-xs">{m.name}</span>
@@ -699,8 +742,8 @@ const VslCosLanding: React.FC = () => {
                       </div>
 
                       {selectedMethod === 'parcelow' && (
-                        <div className="mt-6 p-4 bg-rose-500/5 border border-rose-500/20 rounded-2xl">
-                          <label className="text-[10px] font-black text-rose-400 uppercase tracking-widest mb-2 block">Seu CPF (Para Parcelamento)</label>
+                        <div className="mt-6 p-4 bg-blue-500/5 border border-blue-500/20 rounded-2xl">
+                          <label className="text-[10px] font-black text-blue-400 uppercase tracking-widest mb-2 block">Seu CPF (Para Parcelamento)</label>
                           <input type="text" value={formData.cpf} onChange={e => setFormData(p => ({...p, cpf: formatCPF(e.target.value)}))} placeholder="000.000.000-00" className="w-full p-4 bg-slate-950 border border-white/10 rounded-xl text-white font-black tracking-widest text-center" />
                         </div>
                       )}
@@ -713,7 +756,7 @@ const VslCosLanding: React.FC = () => {
                 <div className="lg:col-span-1">
                   <div className="sticky top-24 space-y-6">
                     <div className="bg-slate-900/40 backdrop-blur-xl rounded-[2.5rem] border border-white/10 p-8 shadow-2xl relative overflow-hidden">
-                      <div className="absolute top-0 right-0 w-32 h-32 bg-rose-500/5 rounded-full blur-[40px] -mr-16 -mt-16 pointer-events-none" />
+                      <div className="absolute top-0 right-0 w-32 h-32 bg-blue-500/5 rounded-full blur-[40px] -mr-16 -mt-16 pointer-events-none" />
                       
                       <h3 className="text-sm font-black text-slate-400 uppercase tracking-[0.2em] mb-8 border-b border-white/5 pb-4">Resumo do Pagamento</h3>
                       
@@ -726,7 +769,7 @@ const VslCosLanding: React.FC = () => {
                             <span className="text-slate-500 font-bold uppercase tracking-widest text-[10px]">Total</span>
                             <div className="text-right flex flex-col items-end">
                               {currentFee < baseFee && (
-                                <span className="text-xl font-bold text-slate-500 line-through mb-1 decoration-rose-500/50">
+                                <span className="text-xl font-bold text-slate-500 line-through mb-1 decoration-blue-500/50">
                                   {formatFeeAmount(baseFee)}
                                 </span>
                               )}
@@ -736,7 +779,7 @@ const VslCosLanding: React.FC = () => {
                               
                               {codeApplied && (
                                 <div className="flex items-center justify-end mt-2">
-                                  <span className="bg-rose-500/10 text-rose-400 px-2 py-1 rounded-full text-[10px] font-black uppercase tracking-widest border border-rose-500/20 flex items-center">
+                                  <span className="bg-blue-500/10 text-blue-400 px-2 py-1 rounded-full text-[10px] font-black uppercase tracking-widest border border-blue-500/20 flex items-center">
                                     <Ticket className="w-2.5 h-2.5 mr-1" />
                                     Cupom Aplicado
                                   </span>
@@ -746,24 +789,16 @@ const VslCosLanding: React.FC = () => {
                           </div>
                         </div>
 
-                        <div className="bg-white/5 rounded-2xl p-5 border border-white/5">
-                          <p className="text-xs text-slate-400 leading-relaxed font-medium italic">
-                            Taxa única para processamento de admissão e auditoria de bolsa de estudos.
-                          </p>
-                        </div>
+                        <p className="text-xs text-slate-500 leading-relaxed font-bold uppercase tracking-widest text-left px-4">
+                          A Taxa do Processo Seletivo é o primeiro pagamento obrigatório na plataforma MatriculaUSA. Ela desbloqueia seu acesso completo para visualizar todas as bolsas e iniciar seu processo de candidatura.
+                        </p>
                       </div>
                     </div>
 
-                    {/* Refund Assurance Note */}
-                    <div className="bg-slate-900/40 backdrop-blur-xl border border-white/10 rounded-[2rem] p-6 shadow-xl relative overflow-hidden">
-                      <div className="flex items-center space-x-4 mb-3">
-                        <div className="w-10 h-10 rounded-xl bg-rose-500/10 text-rose-400 flex items-center justify-center shrink-0 border border-rose-500/20">
-                          <Shield className="w-5 h-5" />
-                        </div>
-                        <h5 className="font-black text-white text-xs uppercase tracking-widest">Aprovação Garantida</h5>
-                      </div>
-                      <p className="text-[10px] font-bold text-slate-400 leading-relaxed pl-14 uppercase tracking-wide">
-                        Reembolso integral da taxa em caso de não aceitação pela instituição.
+                    <div className="bg-slate-900/40 backdrop-blur-xl border border-white/10 rounded-[2rem] p-6 shadow-xl relative overflow-hidden text-left">
+                      <h5 className="font-black text-white text-center uppercase tracking-widest mb-4">Garantia de Reembolso</h5>
+                      <p className="text-xs font-bold text-slate-500 leading-relaxed uppercase tracking-widest text-center">
+                        Se você não for aceito em nenhuma universidade parceira, a taxa do processo seletivo será totalmente reembolsada.
                       </p>
                     </div>
 
@@ -771,9 +806,9 @@ const VslCosLanding: React.FC = () => {
                       type="submit"
                       form="registration-form"
                       disabled={loading || (!formData.termsAccepted && !isRegistered)}
-                      className={`w-full py-5 rounded-2xl flex items-center justify-center text-lg font-black uppercase tracking-widest transition-all shadow-2xl hover:scale-[1.02] active:scale-95 disabled:opacity-50 disabled:grayscale ${formData.termsAccepted || isRegistered ? 'bg-rose-600 text-white shadow-rose-600/20' : 'bg-slate-800 text-slate-500'}`}
+                      className={`w-full py-5 rounded-2xl flex items-center justify-center text-lg font-black uppercase tracking-widest transition-all shadow-2xl hover:scale-[1.02] active:scale-95 disabled:opacity-50 disabled:grayscale ${formData.termsAccepted || isRegistered ? 'bg-blue-600 text-white shadow-blue-600/20' : 'bg-slate-800 text-slate-500'}`}
                     >
-                      {loading ? <Loader2 className="w-6 h-6 animate-spin" /> : 'Confirmar e Pagar Agora'}
+                      {loading ? <Loader2 className="w-6 h-6 animate-spin" /> : `Continuar com ${methodNames[selectedMethod]}`}
                     </button>
                   </div>
                 </div>
@@ -823,7 +858,7 @@ const VslCosLanding: React.FC = () => {
         .prose h1, .prose h2, .prose h3 { color: white !important; text-transform: uppercase; letter-spacing: 0.1em; font-weight: 900; margin-top: 2rem; }
         .custom-scrollbar::-webkit-scrollbar { width: 8px; }
         .custom-scrollbar::-webkit-scrollbar-track { background: rgba(255,255,255,0.05); }
-        .custom-scrollbar::-webkit-scrollbar-thumb { background: rgba(225, 29, 72, 0.5); border-radius: 4px; }
+        .custom-scrollbar::-webkit-scrollbar-thumb { background: rgba(37, 99, 235, 0.5); border-radius: 4px; }
       `}</style>
     </div>
   );
