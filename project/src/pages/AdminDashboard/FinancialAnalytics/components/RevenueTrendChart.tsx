@@ -11,12 +11,16 @@ import {
 } from 'recharts';
 import type { RevenueData } from '../data/types';
 import { formatCentsToUSD, formatUSD } from '../utils/formatters';
+import { FilterBadges } from './FilterBadges';
+import type { FilterBadge } from './FilterBadges';
+import { InfoTooltip } from './InfoTooltip';
 
 export interface RevenueTrendChartProps {
   revenueData: RevenueData[];
+  activeFilters?: FilterBadge[];
 }
 
-export function RevenueTrendChart({ revenueData }: RevenueTrendChartProps) {
+export function RevenueTrendChart({ revenueData, activeFilters }: RevenueTrendChartProps) {
   if (!revenueData || revenueData.length === 0) {
     return (
       <div className="h-64 bg-gray-50 rounded-lg flex items-center justify-center">
@@ -30,10 +34,11 @@ export function RevenueTrendChart({ revenueData }: RevenueTrendChartProps) {
 
   return (
     <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-6">
-      <div className="flex items-center justify-between mb-6">
+      <div className="flex items-center justify-between mb-2">
         <h2 className="text-lg font-semibold text-gray-900 flex items-center gap-2">
           <LineChartIcon className="h-5 w-5" />
           Revenue Trend
+          <InfoTooltip text="Evolução diária da receita (pagamentos 'paid'), número de pagamentos realizados e novos alunos registrados. O eixo esquerdo é em dólares (receita), o eixo direito é em quantidade." />
         </h2>
         <div className="flex items-center gap-4 text-sm">
           <div className="flex items-center gap-2">
@@ -50,8 +55,9 @@ export function RevenueTrendChart({ revenueData }: RevenueTrendChartProps) {
           </div>
         </div>
       </div>
+      <FilterBadges badges={activeFilters || []} />
       
-      <div className="h-64">
+      <div className="h-64 mt-3">
         <ResponsiveContainer width="100%" height={256}>
           <ReLineChart data={revenueData} margin={{ top: 12, right: 24, left: 0, bottom: 0 }}>
             <CartesianGrid stroke="#eee" strokeDasharray="3 3" />

@@ -46,6 +46,33 @@ export interface FeeTypeData {
   percentage: number;
 }
 
+export interface UniversityRevenueData {
+  universityName: string;
+  revenue: number;
+  count: number;
+}
+
+export interface FunnelStepData {
+  stage: string;
+  count: number;
+  percentage: number;
+}
+
+export interface CouponImpactData {
+  withCoupon: number;
+  withoutCoupon: number;
+  totalDiscountCents: number;
+  couponCount: number;
+  nonCouponCount: number;
+}
+
+export interface PaidVsPendingData {
+  feeType: string;
+  paid: number;
+  pending: number;
+  paidRevenue: number;
+}
+
 export interface DateRange {
   start: Date;
   end: Date;

@@ -2,22 +2,27 @@ import { BarChart3 as BarChartIcon } from 'lucide-react';
 import { ResponsiveContainer, BarChart as ReBarChart, Bar, XAxis, YAxis, Tooltip as ReTooltip, Cell } from 'recharts';
 import type { FeeTypeData } from '../data/types';
 import { formatCentsToUSD } from '../utils/formatters';
+import { FilterBadges } from './FilterBadges';
+import type { FilterBadge } from './FilterBadges';
+import { InfoTooltip } from './InfoTooltip';
 
 export interface FeeTypesChartProps {
   feeTypeData: FeeTypeData[];
+  activeFilters?: FilterBadge[];
 }
 
 const COLORS = ['#6366F1', '#10B981', '#F43F5E', '#F59E0B', '#8B5CF6'];
 const BG_CLASSES = ['bg-indigo-500', 'bg-emerald-500', 'bg-rose-500', 'bg-amber-500', 'bg-purple-500'];
 
-export function FeeTypesChart({ feeTypeData }: FeeTypesChartProps) {
+export function FeeTypesChart({ feeTypeData, activeFilters }: FeeTypesChartProps) {
   return (
     <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-6 h-full">
       <h2 className="text-lg font-semibold text-gray-900 mb-2 flex items-center gap-2">
         <BarChartIcon className="h-5 w-5" />
         Revenue by Fee Type
+        <InfoTooltip text="Receita total (pagamentos 'paid') agrupada por categoria de taxa. A porcentagem indica a fatia de cada tipo sobre o total arrecadado no período. Barras ordenadas por receita decrescente." />
       </h2>
-
+      <FilterBadges badges={activeFilters || []} />
       {/* Bar Chart Section */}
       <div className="h-64 w-full">
         <ResponsiveContainer width="100%" height="100%">

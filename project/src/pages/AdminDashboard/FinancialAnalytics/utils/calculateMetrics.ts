@@ -1,4 +1,4 @@
-import type { DateRange, FinancialMetrics, RevenueData, ProcessedFinancialData } from '../data/types';
+import type { DateRange, FinancialMetrics, RevenueData, ProcessedFinancialData, PaymentMethodData, FeeTypeData, UniversityRevenueData, FunnelStepData, CouponImpactData, PaidVsPendingData } from '../data/types';
 
 /**
  * Calcula revenueData (buckets por dia) baseado nos payment records
@@ -67,17 +67,39 @@ export function calculateFinalMetrics(
   allStudents: any[],
   currentRange: DateRange
 ): FinancialMetrics {
-  const paidRecords = processedData.paymentRecords.filter(p => p.status === 'paid');
-  const totalPayments = processedData.paymentRecords.length;
-  const paidPayments = paidRecords.length;
+  const allRecords = processedData.paymentRecords;
+  const { start, end } = currentRange;
+
+  // Filtrar registros do período atual
+  const currentPeriodRecords = allRecords.filter(r => {
+    const d = new Date(r.payment_date || r.created_at || Date.now());
+    return d >= start && d <= end;
+  });
+
+  const paidRecords = allRecords.filter(p => p.status === 'paid'); 
+  const currentPeriodPaidRecords = currentPeriodRecords.filter(p => p.status === 'paid');
+
+  const totalPayments = currentPeriodRecords.length;
+  const paidPayments = currentPeriodPaidRecords.length;
   const pendingPayments = totalPayments - paidPayments;
-  const totalRevenue = processedData.metrics.totalRevenue;
+  
+  const totalRevenue = currentPeriodPaidRecords.reduce((sum, p) => sum + (p.amount || 0), 0);
   
   const conversionRate = totalPayments > 0 ? (paidPayments / totalPayments) * 100 : 0;
   const averageTransactionValue = paidPayments > 0 ? totalRevenue / paidPayments : 0;
   
-  // Calcular crescimento comparando com período anterior (simplificado)
-  const revenueGrowth = 0; // Simplificado por agora
+  // Calcular crescimento comparando com período anterior
+  const prevDuration = end.getTime() - start.getTime();
+  const prevStart = new Date(start.getTime() - prevDuration);
+  const prevEnd = new Date(end.getTime() - prevDuration);
+
+  const prevPaidRecords = paidRecords.filter(p => {
+    const paymentDate = new Date(p.payment_date || p.created_at || Date.now());
+    return paymentDate >= prevStart && paymentDate <= prevEnd;
+  });
+  
+  const prevTotalRevenue = prevPaidRecords.reduce((sum, p) => sum + (p.amount || 0), 0);
+  const revenueGrowth = prevTotalRevenue > 0 ? ((totalRevenue - prevTotalRevenue) / prevTotalRevenue) * 100 : 0;
 
   // Contar payouts
   const pendingPayouts = universityRequests.filter(req => req.status === 'pending' || req.status === 'approved').length +
@@ -123,28 +145,24 @@ export function calculateFinalMetrics(
   });
 
   // Calcular novos estudantes no período
-  const { start, end } = currentRange;
   const newUsers = allStudents.filter(student => {
     const createdAt = new Date(student.created_at);
     return createdAt >= start && createdAt <= end;
   }).length;
 
-  // Calcular crescimento de novos usuários (período anterior)
-  // Nota: Precisamos do range anterior. Podemos derivar aqui ou passar.
-  const prevDuration = end.getTime() - start.getTime();
-  const prevStart = new Date(start.getTime() - prevDuration);
-  const prevEnd = new Date(end.getTime() - prevDuration);
-  
   const prevNewUsers = allStudents.filter(student => {
     const createdAt = new Date(student.created_at);
     return createdAt >= prevStart && createdAt <= prevEnd;
   }).length;
 
   const newUsersGrowth = prevNewUsers > 0 ? ((newUsers - prevNewUsers) / prevNewUsers) * 100 : 0;
+  
+  // ✅ CORREÇÃO: Já calculado no início da função
+  const calculatedTotalRevenue = totalRevenue;
 
   return {
-    totalRevenue,
-    monthlyRevenue: totalRevenue, // Para o período selecionado
+    totalRevenue: calculatedTotalRevenue,
+    monthlyRevenue: calculatedTotalRevenue, // Para o período selecionado
     revenueGrowth,
     totalPayments,
     paidPayments,
@@ -163,3 +181,193 @@ export function calculateFinalMetrics(
   };
 }
 
+/**
+ * Calcula distribuição por método de pagamento (para gráficos de pizza)
+ */
+export function calculatePaymentMethodData(paymentRecords: any[]): PaymentMethodData[] {
+  const paidRecords = paymentRecords.filter(p => p.status === 'paid');
+  const totalRevenue = paidRecords.reduce((sum, p) => sum + (p.amount || 0), 0);
+  
+  const methods: Record<string, { count: number; revenue: number }> = {};
+  
+  paidRecords.forEach(record => {
+    const rawMethod = record.payment_method || 'manual';
+    const method = rawMethod === 'manual' ? 'Outside Payments' : rawMethod.charAt(0).toUpperCase() + rawMethod.slice(1);
+    
+    if (!methods[method]) {
+      methods[method] = { count: 0, revenue: 0 };
+    }
+    methods[method].count += 1;
+    methods[method].revenue += (record.amount || 0);
+  });
+  
+  return Object.entries(methods).map(([method, data]) => ({
+    method,
+    count: data.count,
+    revenue: data.revenue,
+    percentage: totalRevenue > 0 ? (data.revenue / totalRevenue) * 100 : 0
+  })).sort((a, b) => b.revenue - a.revenue);
+}
+
+/**
+ * Calcula distribuição por tipo de taxa (para gráficos de pizza)
+ */
+export function calculateFeeTypeData(paymentRecords: any[]): FeeTypeData[] {
+  const paidRecords = paymentRecords.filter(p => p.status === 'paid');
+  const totalRevenue = paidRecords.reduce((sum, p) => sum + (p.amount || 0), 0);
+  
+  const types: Record<string, { count: number; revenue: number }> = {};
+  
+  paidRecords.forEach(record => {
+    const type = record.fee_type;
+    if (!types[type]) {
+      types[type] = { count: 0, revenue: 0 };
+    }
+    types[type].count += 1;
+    types[type].revenue += (record.amount || 0);
+  });
+  
+  return Object.entries(types).map(([feeType, data]) => ({
+    feeType,
+    count: data.count,
+    revenue: data.revenue,
+    percentage: totalRevenue > 0 ? (data.revenue / totalRevenue) * 100 : 0
+  })).sort((a, b) => b.revenue - a.revenue);
+}
+
+/**
+ * Calcula o ARPU (receita media por aluno no periodo)
+ */
+export function calculateARPU(paymentRecords: any[], allStudents: any[], currentRange: DateRange): number {
+  const { start, end } = currentRange;
+  const paidRecords = paymentRecords.filter(p => p.status === 'paid');
+  const totalRevenue = paidRecords.reduce((sum, p) => sum + (p.amount || 0), 0);
+  const newUsersInPeriod = allStudents.filter(s => {
+    const d = new Date(s.created_at);
+    return d >= start && d <= end;
+  }).length;
+  return newUsersInPeriod > 0 ? totalRevenue / newUsersInPeriod : 0;
+}
+
+/**
+ * Calcula o funil de conversao por etapa de taxa
+ */
+export function calculateFunnelData(allStudents: any[], paymentRecords: any[]): FunnelStepData[] {
+  const total = allStudents.length;
+  if (total === 0) return [];
+
+  const paidFeeTypes = new Map<string, Set<string>>();
+  paymentRecords.filter(p => p.status === 'paid').forEach(p => {
+    const userId = p.student_id || p.user_id;
+    // Normalizar variantes de fee_type para chaves canônicas
+    const raw = p.fee_type || '';
+    let canonical = raw;
+    if (raw === 'selection_process_fee') canonical = 'selection_process';
+    if (raw === 'application_fee') canonical = 'application';
+    if (raw === 'scholarship_fee') canonical = 'scholarship';
+    if (raw === 'i20_control') canonical = 'i20_control_fee';
+    // ds160_package e i539_package permanecem separados (não normalizar)
+    if (raw === 'placement_fee') canonical = 'placement';
+    if (raw === 'reinstatement' || raw === 'reinstatement_package') canonical = 'reinstatement_fee';
+
+    if (!paidFeeTypes.has(canonical)) paidFeeTypes.set(canonical, new Set());
+    paidFeeTypes.get(canonical)!.add(userId);
+  });
+
+  const stages = [
+    { key: 'selection_process', label: 'Selection Process' },
+    { key: 'application', label: 'Application Fee' },
+    { key: 'i20_control_fee', label: 'I-20 Control Fee' },
+    { key: 'ds160_package', label: 'DS-160 Package' },
+    { key: 'i539_package', label: 'I-539 Package' },
+    { key: 'scholarship', label: 'Scholarship Fee' },
+    { key: 'placement', label: 'Placement Fee' },
+    { key: 'reinstatement_fee', label: 'Reinstatement Fee' },
+  ];
+
+  return stages.map(stage => {
+    const count = paidFeeTypes.get(stage.key)?.size || 0;
+    return { stage: stage.label, count, percentage: (count / total) * 100 };
+  });
+}
+
+/**
+ * Calcula receita agrupada por universidade
+ */
+export function calculateUniversityRevenue(paymentRecords: any[]): UniversityRevenueData[] {
+  const paidRecords = paymentRecords.filter(p => p.status === 'paid');
+  const uniMap = new Map<string, { revenue: number; count: number }>();
+
+  paidRecords.forEach(record => {
+    const name = record.university_name || 'Unknown';
+    if (!uniMap.has(name)) uniMap.set(name, { revenue: 0, count: 0 });
+    const entry = uniMap.get(name)!;
+    entry.revenue += record.amount || 0;
+    entry.count += 1;
+  });
+
+  return Array.from(uniMap.entries())
+    .map(([universityName, data]) => ({ universityName, ...data }))
+    .sort((a, b) => b.revenue - a.revenue)
+    .slice(0, 10);
+}
+
+/**
+ * Calcula o impacto de cupons: transacoes com e sem desconto
+ */
+export function calculateCouponImpact(paymentRecords: any[]): CouponImpactData {
+  const paidRecords = paymentRecords.filter(p => p.status === 'paid');
+  const withCoupon = paidRecords.filter(p => p.coupon_code);
+  const withoutCoupon = paidRecords.filter(p => !p.coupon_code);
+  const totalDiscountCents = withCoupon.reduce((sum, p) => sum + ((p.discount_amount || 0) * 100), 0);
+
+  return {
+    withCoupon: withCoupon.reduce((sum, p) => sum + (p.amount || 0), 0),
+    withoutCoupon: withoutCoupon.reduce((sum, p) => sum + (p.amount || 0), 0),
+    totalDiscountCents: Math.round(totalDiscountCents),
+    couponCount: withCoupon.length,
+    nonCouponCount: withoutCoupon.length,
+  };
+}
+
+/**
+ * Calcula pagamentos pagos vs pendentes por categoria de taxa
+ */
+export function calculatePaidVsPending(paymentRecords: any[]): PaidVsPendingData[] {
+  const feeLabels: Record<string, string> = {
+    selection_process: 'Selection Process',
+    selection_process_fee: 'Selection Process',
+    application: 'Application',
+    application_fee: 'Application',
+    scholarship: 'Scholarship',
+    scholarship_fee: 'Scholarship',
+    i20_control: 'I-20 Control',
+    i20_control_fee: 'I-20 Control',
+    ds160_package: 'DS-160 Package',
+    i539_package: 'I-539 Package',
+    placement: 'Placement',
+    placement_fee: 'Placement',
+    reinstatement: 'Reinstatement',
+    reinstatement_fee: 'Reinstatement',
+    reinstatement_package: 'Reinstatement',
+  };
+
+  const map = new Map<string, { paid: number; pending: number; paidRevenue: number }>();
+
+  paymentRecords.forEach(record => {
+    const raw = record.fee_type || 'other';
+    const label = feeLabels[raw] || raw;
+    if (!map.has(label)) map.set(label, { paid: 0, pending: 0, paidRevenue: 0 });
+    const entry = map.get(label)!;
+    if (record.status === 'paid') {
+      entry.paid += 1;
+      entry.paidRevenue += record.amount || 0;
+    } else {
+      entry.pending += 1;
+    }
+  });
+
+  return Array.from(map.entries())
+    .map(([feeType, data]) => ({ feeType, ...data }))
+    .sort((a, b) => b.paid - a.paid);
+}

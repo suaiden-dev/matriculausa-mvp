@@ -2,22 +2,27 @@ import { PieChart as PieChartIcon } from 'lucide-react';
 import { ResponsiveContainer, PieChart as RePieChart, Pie, Cell, Tooltip as ReTooltip } from 'recharts';
 import type { PaymentMethodData } from '../data/types';
 import { formatCentsToUSD } from '../utils/formatters';
+import { FilterBadges } from './FilterBadges';
+import type { FilterBadge } from './FilterBadges';
+import { InfoTooltip } from './InfoTooltip';
 
 export interface PaymentMethodsChartProps {
   paymentMethodData: PaymentMethodData[];
+  activeFilters?: FilterBadge[];
 }
 
 const COLORS = ['#3B82F6', '#10B981', '#8B5CF6', '#14B8A6', '#F59E0B'];
 const BG_CLASSES = ['bg-blue-500', 'bg-green-500', 'bg-purple-500', 'bg-teal-500', 'bg-orange-500'];
 
-export function PaymentMethodsChart({ paymentMethodData }: PaymentMethodsChartProps) {
+export function PaymentMethodsChart({ paymentMethodData, activeFilters }: PaymentMethodsChartProps) {
   return (
     <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-6 h-full">
       <h2 className="text-lg font-semibold text-gray-900 mb-2 flex items-center gap-2">
         <PieChartIcon className="h-5 w-5" />
         Payment Methods
+        <InfoTooltip text="Distribuição da receita e quantidade de pagamentos 'paid' por método de pagamento (Stripe, Zelle, Parcelow, etc.). A porcentagem é calculada sobre o total de receita do período filtrado." />
       </h2>
-      
+      <FilterBadges badges={activeFilters || []} />
       {/* Chart Section */}
       <div className="h-64 w-full">
         <ResponsiveContainer width="100%" height="100%">
