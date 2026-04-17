@@ -1,4 +1,3 @@
-import React from 'react';
 import { LineChart as LineChartIcon } from 'lucide-react';
 import {
   ResponsiveContainer,
@@ -45,6 +44,10 @@ export function RevenueTrendChart({ revenueData }: RevenueTrendChartProps) {
             <div className="w-3 h-3 bg-green-500 rounded-full"></div>
             <span className="text-gray-600">Payments</span>
           </div>
+          <div className="flex items-center gap-2">
+            <div className="w-3 h-3 bg-purple-500 rounded-full"></div>
+            <span className="text-gray-600">Students</span>
+          </div>
         </div>
       </div>
       
@@ -62,13 +65,17 @@ export function RevenueTrendChart({ revenueData }: RevenueTrendChartProps) {
                 return `$${formatCentsToUSD(num)}`;
               }
               if (key === 'payments') {
-                return `${Math.round(num)}`;
+                return `${Math.round(num)} Payments`;
+              }
+              if (key === 'students') {
+                return `${Math.round(num)} Students`;
               }
               return formatUSD(num);
             }} />
             <Legend />
             <Line yAxisId="left" type="monotone" dataKey="revenue" name="Revenue" stroke="#3B82F6" strokeWidth={2} dot={false} />
             <Line yAxisId="right" type="monotone" dataKey="payments" name="Payments" stroke="#22C55E" strokeWidth={2} dot={false} strokeDasharray="4 4" />
+            <Line yAxisId="right" type="monotone" dataKey="students" name="Students" stroke="#A855F7" strokeWidth={2} dot={false} strokeDasharray="2 2" />
           </ReLineChart>
         </ResponsiveContainer>
       </div>

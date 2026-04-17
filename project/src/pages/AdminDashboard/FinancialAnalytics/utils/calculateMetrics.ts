@@ -5,7 +5,8 @@ import type { DateRange, FinancialMetrics, RevenueData, ProcessedFinancialData }
  */
 export function calculateRevenueData(
   paymentRecords: any[],
-  currentRange: DateRange
+  currentRange: DateRange,
+  allStudents: any[] = []
 ): RevenueData[] {
   const revenueData: RevenueData[] = [];
   const { start, end } = currentRange;
@@ -34,6 +35,16 @@ export function calculateRevenueData(
     }
   });
 
+  // Processar novos estudantes para buckets por data
+  allStudents.forEach(student => {
+    const createdAt = new Date(student.created_at);
+    const key = createdAt.toISOString().split('T')[0];
+    
+    if (dayBuckets[key]) {
+      dayBuckets[key].students += 1;
+    }
+  });
+
   Object.entries(dayBuckets).forEach(([date, vals]) => {
     revenueData.push({ date, revenue: vals.revenue, payments: vals.payments, students: vals.students });
   });
@@ -51,10 +62,10 @@ export function calculateRevenueData(
  */
 export function calculateFinalMetrics(
   processedData: ProcessedFinancialData,
-  revenueData: RevenueData[],
   universityRequests: any[],
   affiliateRequests: any[],
-  allStudents: any[]
+  allStudents: any[],
+  currentRange: DateRange
 ): FinancialMetrics {
   const paidRecords = processedData.paymentRecords.filter(p => p.status === 'paid');
   const totalPayments = processedData.paymentRecords.length;
@@ -111,6 +122,26 @@ export function calculateFinalMetrics(
     total_dollars: (affiliatePayouts / 100).toFixed(2)
   });
 
+  // Calcular novos estudantes no período
+  const { start, end } = currentRange;
+  const newUsers = allStudents.filter(student => {
+    const createdAt = new Date(student.created_at);
+    return createdAt >= start && createdAt <= end;
+  }).length;
+
+  // Calcular crescimento de novos usuários (período anterior)
+  // Nota: Precisamos do range anterior. Podemos derivar aqui ou passar.
+  const prevDuration = end.getTime() - start.getTime();
+  const prevStart = new Date(start.getTime() - prevDuration);
+  const prevEnd = new Date(end.getTime() - prevDuration);
+  
+  const prevNewUsers = allStudents.filter(student => {
+    const createdAt = new Date(student.created_at);
+    return createdAt >= prevStart && createdAt <= prevEnd;
+  }).length;
+
+  const newUsersGrowth = prevNewUsers > 0 ? ((newUsers - prevNewUsers) / prevNewUsers) * 100 : 0;
+
   return {
     totalRevenue,
     monthlyRevenue: totalRevenue, // Para o período selecionado
@@ -126,7 +157,9 @@ export function calculateFinalMetrics(
     completedAffiliatePayouts,
     completedUniversityPayouts,
     universityPayouts,
-    affiliatePayouts
+    affiliatePayouts,
+    newUsers,
+    newUsersGrowth
   };
 }
 

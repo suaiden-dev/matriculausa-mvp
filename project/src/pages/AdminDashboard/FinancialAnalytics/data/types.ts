@@ -14,6 +14,8 @@ export interface FinancialMetrics {
   completedUniversityPayouts: number;
   universityPayouts: number;
   affiliatePayouts: number;
+  newUsers: number;
+  newUsersGrowth: number;
 }
 
 export interface StripeMetrics {

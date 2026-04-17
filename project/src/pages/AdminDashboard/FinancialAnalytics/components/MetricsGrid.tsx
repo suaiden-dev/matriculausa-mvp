@@ -1,5 +1,4 @@
-import React from 'react';
-import { DollarSign, Target, CreditCard, Users, TrendingUp, ArrowUpRight, ArrowDownRight } from 'lucide-react';
+import { DollarSign, Users, TrendingUp, ArrowUpRight, ArrowDownRight } from 'lucide-react';
 import { MetricCard } from './MetricCard';
 import type { FinancialMetrics } from '../data/types';
 import { formatCentsToUSD } from '../utils/formatters';
@@ -10,7 +9,7 @@ export interface MetricsGridProps {
 
 export function MetricsGrid({ metrics }: MetricsGridProps) {
   return (
-    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
       <MetricCard
         label="Student Revenue"
         value={`$${formatCentsToUSD(metrics.totalRevenue)}`}
@@ -60,6 +59,28 @@ export function MetricsGrid({ metrics }: MetricsGridProps) {
           <span className="text-sm text-teal-100">
             {metrics.completedAffiliatePayouts || 0} completed
           </span>
+        }
+      />
+
+      <MetricCard
+        label="New Students"
+        value={metrics.newUsers.toString()}
+        icon={Users}
+        gradientFrom="from-purple-500"
+        gradientTo="to-purple-600"
+        iconColor="text-purple-200"
+        textColor="text-purple-100"
+        sublabel={
+          <>
+            {metrics.newUsersGrowth >= 0 ? (
+              <ArrowUpRight className="h-4 w-4 text-green-300 mr-1" />
+            ) : (
+              <ArrowDownRight className="h-4 w-4 text-red-300 mr-1" />
+            )}
+            <span className="text-sm text-purple-100">
+              {metrics.newUsersGrowth >= 0 ? '+' : ''}{metrics.newUsersGrowth.toFixed(1)}% vs previous
+            </span>
+          </>
         }
       />
 

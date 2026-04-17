@@ -50,7 +50,9 @@ export function useFinancialAnalytics() {
     completedAffiliatePayouts: 0,
     completedUniversityPayouts: 0,
     universityPayouts: 0,
-    affiliatePayouts: 0
+    affiliatePayouts: 0,
+    newUsers: 0,
+    newUsersGrowth: 0
   });
 
   const [stripeMetrics, setStripeMetrics] = useState<StripeMetrics>({
@@ -97,16 +99,17 @@ export function useFinancialAnalytics() {
       // Calcular revenueData
       const calculatedRevenueData = calculateRevenueData(
         processedData.paymentRecords,
-        currentRange
+        currentRange,
+        loadedData.allStudents
       );
 
       // Calcular métricas finais
       const finalMetrics = calculateFinalMetrics(
         processedData,
-        calculatedRevenueData,
         loadedData.universityRequests,
         loadedData.affiliateRequests,
-        loadedData.allStudents
+        loadedData.allStudents,
+        currentRange
       );
 
       // ✅ CORREÇÃO: Usar paymentRecords de transformFinancialData (mesma lógica do PaymentManagement)
