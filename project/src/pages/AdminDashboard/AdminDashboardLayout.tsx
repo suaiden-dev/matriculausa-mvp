@@ -18,12 +18,12 @@ import {
   CheckCircle,
   CreditCard,
   Tag,
-  Mail
+  Mail,
+  Home
 } from 'lucide-react';
 import { useAuth } from '../../hooks/useAuth';
 import AdminStudentChatNotifications from '../../components/AdminStudentChatNotifications';
 import { useAdminNotifications } from '../../contexts/AdminNotificationsContext';
-import { useUnreadMessages } from '../../contexts/UnreadMessagesContext';
 
 interface AdminDashboardLayoutProps {
   user: any;
@@ -42,7 +42,6 @@ const AdminDashboardLayout: React.FC<AdminDashboardLayoutProps> = ({
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const [userMenuOpen, setUserMenuOpen] = useState(false);
   const { unreadCount: adminUnreadCount } = useAdminNotifications();
-  const { updateUnreadCount } = useUnreadMessages();
 
   // No admin, o contador global já é sincronizado pelo AdminNotificationsContext
   // Mas usamos o valor do contexto de notificações por segurança
@@ -98,7 +97,7 @@ const AdminDashboardLayout: React.FC<AdminDashboardLayoutProps> = ({
   }
 
   const sidebarItems = [
-    { id: 'overview', label: 'Overview', icon: BarChart3, path: '/admin/dashboard', badge: null },
+    { id: 'overview', label: 'Overview', icon: Home, path: '/admin/dashboard', badge: null },
     { id: 'users', label: 'Users', icon: Users, path: '/admin/dashboard/users', badge: null },
     { id: 'scholarships', label: 'Scholarships', icon: Award, path: '/admin/dashboard/scholarships', badge: null },
     { id: 'universities', label: 'Universities', icon: Building, path: '/admin/dashboard/universities', badge: null },
@@ -274,7 +273,6 @@ const AdminDashboardLayout: React.FC<AdminDashboardLayoutProps> = ({
                     navigate(notification.link);
                   }
                 }}
-                updateUnreadCountLocally={updateUnreadCount}
               />
 
               {/* User Menu */}

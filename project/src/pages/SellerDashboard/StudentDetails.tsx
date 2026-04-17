@@ -124,7 +124,7 @@ const StudentDetails: React.FC<StudentDetailsProps> = ({ studentId, profileId, o
           'i539_cos_package', 'reinstatement_package'
         ];
         // getDisplayAmounts já traz a lógica correta de overrides, cupons, real paid e fallbacks
-        const amounts = await getDisplayAmounts(studentId, feeTypes);
+        const amounts = await getDisplayAmounts(studentId, feeTypes, true);
         setRealPaidAmounts(amounts);
         
         console.log('[SellerStudentDetails] 💰 Display Amounts loaded:', amounts);
@@ -165,7 +165,7 @@ const StudentDetails: React.FC<StudentDetailsProps> = ({ studentId, profileId, o
     reinstatement_package?: number;
   } | null>(null);
   // Estado para dados de cupons promocionais usados
-  const [couponUsageData, setCouponUsageData] = useState<Record<string, { final_amount: number; original_amount: number; discount_amount: number; coupon_code: string }>>({});
+
 
 
 // studentFees removido - agora usa lógica centralizada no PaymentStatusCard
@@ -592,105 +592,7 @@ const StudentDetails: React.FC<StudentDetailsProps> = ({ studentId, profileId, o
     loadRealPaidAmounts();
   }, [studentId]);
 
-  // Carregar dados de uso de cupons promocionais
-  useEffect(() => {
-    const loadCouponUsage = async () => {
-      if (!studentId) {
-        setCouponUsageData({});
-        return;
-      }
 
-      try {
-        // Buscar todos os usos de cupons promocionais para este estudante
-        // Incluir registros que foram realmente usados em pagamentos (com payment_id ou individual_fee_payment_id)
-        // Fazer duas queries separadas e combinar para evitar problemas com sintaxe do .or()
-        const { data: couponUsageWithPayment, error: error1 } = await supabase
-          .from('promotional_coupon_usage')
-          .select('fee_type, final_amount, original_amount, discount_amount, coupon_code, used_at, individual_fee_payment_id, payment_id')
-          .eq('user_id', studentId)
-          .not('payment_id', 'is', null)
-          .order('used_at', { ascending: false });
-
-        const { data: couponUsageWithIndividualFee, error: error2 } = await supabase
-          .from('promotional_coupon_usage')
-          .select('fee_type, final_amount, original_amount, discount_amount, coupon_code, used_at, individual_fee_payment_id, payment_id')
-          .eq('user_id', studentId)
-          .not('individual_fee_payment_id', 'is', null)
-          .is('payment_id', null) // Apenas os que não têm payment_id mas têm individual_fee_payment_id
-          .order('used_at', { ascending: false });
-
-        const error = error1 || error2;
-        // Combinar resultados e remover duplicados baseado no id (se houver) ou nos campos únicos
-        const allCouponUsage = [
-          ...(couponUsageWithPayment || []),
-          ...(couponUsageWithIndividualFee || [])
-        ];
-
-        // Remover duplicados baseado em fee_type + used_at (manter o mais recente)
-        const uniqueCouponUsage = allCouponUsage.reduce((acc: any[], current: any) => {
-          const existing = acc.find((item: any) => item.fee_type === current.fee_type);
-          if (!existing) {
-            acc.push(current);
-          } else {
-            // Se já existe, manter o mais recente
-            const existingDate = new Date(existing.used_at);
-            const currentDate = new Date(current.used_at);
-            if (currentDate > existingDate) {
-              const index = acc.indexOf(existing);
-              acc[index] = current;
-            }
-          }
-          return acc;
-        }, []);
-
-        const couponUsage = uniqueCouponUsage.sort((a: any, b: any) =>
-          new Date(b.used_at).getTime() - new Date(a.used_at).getTime()
-        );
-
-        if (error) {
-          console.error('Erro ao buscar uso de cupons promocionais:', error);
-          setCouponUsageData({});
-          return;
-        }
-
-        // Criar um mapa de fee_type -> dados do cupom (usar o mais recente para cada fee_type)
-        const couponMap: Record<string, { final_amount: number; original_amount: number; discount_amount: number; coupon_code: string }> = {};
-
-        if (couponUsage && couponUsage.length > 0) {
-          couponUsage.forEach((usage: any) => {
-            // Normalizar fee_type (i20_control_fee -> i20_control, application_fee -> application)
-            let normalizedFeeType = usage.fee_type;
-            if (normalizedFeeType === 'i20_control_fee') {
-              normalizedFeeType = 'i20_control';
-            } else if (normalizedFeeType === 'application_fee') {
-              normalizedFeeType = 'application';
-            } else if (normalizedFeeType === 'scholarship_fee') {
-              normalizedFeeType = 'scholarship';
-            } else if (normalizedFeeType === 'selection_process') {
-              normalizedFeeType = 'selection_process';
-            }
-
-            // Usar o registro mais recente para cada fee_type (já está ordenado por used_at DESC)
-            if (!couponMap[normalizedFeeType]) {
-              couponMap[normalizedFeeType] = {
-                final_amount: Number(usage.final_amount),
-                original_amount: Number(usage.original_amount),
-                discount_amount: Number(usage.discount_amount),
-                coupon_code: usage.coupon_code
-              };
-            }
-          });
-        }
-
-        setCouponUsageData(couponMap);
-      } catch (error) {
-        console.error('❌ [StudentDetails] Erro ao carregar uso de cupons promocionais:', error);
-        setCouponUsageData({});
-      }
-    };
-
-    loadCouponUsage();
-  }, [studentId]);
 
   // ✅ REMOVIDO: loadDocumentRequests - agora usa o hook useStudentDetails
   // ✅ REMOVIDO: loadStudentDocuments - agora usa o hook useStudentDetails
@@ -1867,7 +1769,7 @@ const StudentDetails: React.FC<StudentDetailsProps> = ({ studentId, profileId, o
                       visa_transfer_active: studentInfo.visa_transfer_active || false,
                       seller_referral_code: studentInfo.seller_referral_code || null,
                       application_id: scholarshipApplication?.id || null,
-                      scholarship_id: scholarshipApplication?.scholarship_id || null,
+                      scholarship_id: (scholarshipApplication as any)?.scholarship_id || null,
                       application_status: scholarshipApplication?.status || null,
                       applied_at: scholarshipApplication?.applied_at || null,
                       total_applications: 0,
@@ -1899,7 +1801,6 @@ const StudentDetails: React.FC<StudentDetailsProps> = ({ studentId, profileId, o
                     onPaymentMethodChange={() => {}}
                     formatFeeAmount={formatFeeAmount}
                     getFeeAmount={getFeeAmount as any}
-                    couponUsageData={couponUsageData}
                   />
                 )}
               </div>

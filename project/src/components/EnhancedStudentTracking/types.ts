@@ -67,6 +67,7 @@ export interface ScholarshipApplication {
   is_scholarship_fee_paid: boolean;
   paid_at: string;
   payment_status: string;
+  scholarship_id?: string | null;
   has_paid_selection_process_fee?: boolean;
   has_paid_i20_control_fee?: boolean;
 }

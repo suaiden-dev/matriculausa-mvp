@@ -705,7 +705,7 @@ const PaymentManagement = (): React.JSX.Element => {
   // Fetch installment number when a placement_fee Zelle review modal opens
   useEffect(() => {
     if (showZelleReviewModal && selectedZellePayment &&
-        (selectedZellePayment.fee_type === 'placement_fee' || selectedZellePayment.fee_type === 'placement')) {
+        ((selectedZellePayment.fee_type as any) === 'placement')) {
       const userId = selectedZellePayment.user_id;
       if (userId) {
         supabase
@@ -1053,7 +1053,8 @@ const PaymentManagement = (): React.JSX.Element => {
           }}
           payment={{
             id: selectedZellePayment.id,
-            user_id: selectedZellePayment.student_id,
+            user_id: selectedZellePayment.user_id || '',
+            student_id: selectedZellePayment.student_id,
             student_name: selectedZellePayment.student_name,
             student_email: selectedZellePayment.student_email,
             fee_type: selectedZellePayment.fee_type,
@@ -1067,7 +1068,7 @@ const PaymentManagement = (): React.JSX.Element => {
           adminId={user.id}
           onApprove={
             selectedZellePayment &&
-            (selectedZellePayment.fee_type === 'placement_fee' || selectedZellePayment.fee_type === 'placement') &&
+            ((selectedZellePayment.fee_type as any) === 'placement') &&
             selectedStudentInstallmentNumber === 1
               ? approveSecondInstallmentPayment
               : approveZellePayment
