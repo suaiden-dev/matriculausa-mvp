@@ -1,4 +1,3 @@
-import React from 'react';
 import { Filter } from 'lucide-react';
 import type { TimeFilter } from '../data/types';
 import { formatPeriodLabel } from '../utils/dateRange';
