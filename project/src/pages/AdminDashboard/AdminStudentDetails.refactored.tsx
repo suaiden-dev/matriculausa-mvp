@@ -251,223 +251,107 @@ const AdminStudentDetails: React.FC = () => {
    * ✅ NOVO: Se não há valores em realPaidAmounts MAS a flag de pagamento está marcada,
    * calcula o valor esperado baseado na configuração de taxas (para pagamentos legados)
    */
-  const validateAndNormalizePaidAmounts = React.useCallback((
-    realPaidAmounts: Record<string, number>,
-    systemType: 'legacy' | 'simplified' | null,
-    feeOverrides: any,
-    feeAmountFn: (feeType: string) => number,
-    dependents: number = 0,
-    hasMatriculaRewardsDiscount: boolean = false,
-    studentHasSellerCode: boolean = false,
-    // ✅ NOVO: Receber as flags de pagamento para fallback
-    paymentFlags?: {
-      has_paid_selection: boolean;
-      has_paid_application: boolean;
-      has_paid_scholarship: boolean;
-      has_paid_i20: boolean;
-      has_paid_placement: boolean;
-      has_paid_reinstatement?: boolean;
-    },
-    applications?: any[]
-  ): Record<string, number> => {
-    const normalized: Record<string, number> = {};
+  const validateAndNormalizePaidAmounts = React.useCallback(
+    (
+      realPaidAmounts: Record<string, number>,
+      systemType: 'legacy' | 'simplified' | null,
+      feeOverrides: any,
+      feeAmountFn: (feeType: string) => number,
+      dependents: number = 0,
+      hasMatriculaRewardsDiscount: boolean = false,
+      studentHasSellerCode: boolean = false,
+      paymentFlags?: {
+        has_paid_selection: boolean;
+        has_paid_application: boolean;
+        has_paid_scholarship: boolean;
+        has_paid_i20: boolean;
+        has_paid_placement: boolean;
+        has_paid_reinstatement?: boolean;
+      },
+      applications?: any[]
+    ): Record<string, number> => {
+      const normalized: Record<string, number> = {};
+      const sysType = systemType || 'legacy';
+      const dependentCost = sysType === 'simplified' ? 0 : dependents * 150;
 
-    // Helper: Verifica se o valor está dentro de uma faixa razoável (50% de tolerância)
-    const isValueReasonable = (realValue: number, expectedValue: number): boolean => {
-      const tolerance = 0.5; // 50% de tolerância
-      const min = expectedValue * (1 - tolerance);
-      const max = expectedValue * (1 + tolerance);
-      return realValue >= min && realValue <= max;
-    };
-
-    const sysType = systemType || 'legacy';
-    const dependentCost = sysType === 'simplified' ? 0 : (dependents * 150);
-
-    // Selection Process Fee
-    if (realPaidAmounts.selection_process !== undefined && realPaidAmounts.selection_process > 0) {
-      // ✅ CORREÇÃO: Valores que vêm de getGrossPaidAmounts já foram processados corretamente
-      // e podem ter pequenas variações devido a taxas do Stripe, conversão de moeda, etc.
-      // Para valores razoáveis (entre $50 e $2000), sempre aceitar o valor real pago
-      // ✅ VALIDAÇÃO RIGOROSA: Evitar que valores em BRL (geralmente > 1000) sejam exibidos como USD
-      // Para o Selection Process, o máximo esperado com dependentes é em torno de $800-900 (legacy) ou $350 (simplified)
-      const isReasonableRange = realPaidAmounts.selection_process >= 50 && realPaidAmounts.selection_process <= 1000;
-
-      if (isReasonableRange) {
-        // Valor está em range razoável, aceitar diretamente (já foi processado pelo paymentConverter)
+      // Selection Process Fee
+      if (realPaidAmounts.selection_process !== undefined && realPaidAmounts.selection_process > 0) {
         normalized.selection_process = realPaidAmounts.selection_process;
-        console.log(`[AdminStudentDetails] ✅ Aceitando valor real pago para selection_process: ${realPaidAmounts.selection_process}`);
-      } else {
-        // Valor fora do range razoável, pode ser BRL não convertido ou erro
-        console.log(`[AdminStudentDetails] ⚠️ Valor de selection_process fora do range razoável: ${realPaidAmounts.selection_process}, usando cálculo fixo`);
-        // Considerar desconto Matricula ao calcular valor esperado
+        console.log(`[AdminStudentDetails] ✅ Usando valor real pago para selection_process: ${realPaidAmounts.selection_process}`);
+      } else if (paymentFlags?.has_paid_selection) {
+        console.log(`[AdminStudentDetails] 💡 Pagamento legado detectado para selection_process - calculando valor esperado`);
         const hasMatrDiscount = hasMatriculaRewardsDiscount || studentHasSellerCode;
-        let expectedSelectionProcess: number;
-        if (hasMatrDiscount) {
-          expectedSelectionProcess = 350; // $400 - $50 desconto
-        } else {
-          expectedSelectionProcess = sysType === 'simplified' ? 350 : 400;
-        }
-
+        let expectedSelectionProcess = hasMatrDiscount ? 350 : (sysType === 'simplified' ? 350 : 400);
+        
         if (feeOverrides?.selection_process_fee !== undefined) {
           normalized.selection_process = feeOverrides.selection_process_fee;
         } else {
           normalized.selection_process = expectedSelectionProcess + dependentCost;
         }
       }
-    } else if (paymentFlags?.has_paid_selection) {
-      // ✅ NOVO: Fallback para pagamentos legados sem registro em individual_fee_payments
-      console.log(`[AdminStudentDetails] 💡 Pagamento legado detectado para selection_process - calculando valor esperado`);
-      const hasMatrDiscount = hasMatriculaRewardsDiscount || studentHasSellerCode;
-      let expectedSelectionProcess: number;
-      if (hasMatrDiscount) {
-        expectedSelectionProcess = 350; // $400 - $50 desconto
-      } else {
-        expectedSelectionProcess = sysType === 'simplified' ? 350 : 400;
-      }
 
-      if (feeOverrides?.selection_process_fee !== undefined) {
-        normalized.selection_process = feeOverrides.selection_process_fee;
-      } else {
-        normalized.selection_process = expectedSelectionProcess + dependentCost;
-      }
-    }
-
-    // Scholarship Fee
-    if (realPaidAmounts.scholarship !== undefined && realPaidAmounts.scholarship > 0) {
-      const expectedScholarship = sysType === 'simplified' ? 900 : 900;
-
-      if (isValueReasonable(realPaidAmounts.scholarship, expectedScholarship)) {
+      // Scholarship Fee
+      if (realPaidAmounts.scholarship !== undefined && realPaidAmounts.scholarship > 0) {
         normalized.scholarship = realPaidAmounts.scholarship;
-      } else {
-        // Valor muito discrepante, usar cálculo fixo
-        console.log(`[AdminStudentDetails] Valor de scholarship muito discrepante: ${realPaidAmounts.scholarship} (esperado ~${expectedScholarship}), usando cálculo fixo`);
-        if (feeOverrides?.scholarship_fee !== undefined) {
-          normalized.scholarship = feeOverrides.scholarship_fee;
+        console.log(`[AdminStudentDetails] ✅ Usando valor real pago para scholarship: ${realPaidAmounts.scholarship}`);
+      } else if (paymentFlags?.has_paid_scholarship) {
+        console.log(`[AdminStudentDetails] 💡 Pagamento legado detectado para scholarship - calculando valor esperado`);
+        const enrolledApp: any = applications?.find((app: any) => app.status === 'enrolled' && app.is_scholarship_fee_paid);
+        const paidApp: any = enrolledApp || applications?.find((app: any) => app.is_scholarship_fee_paid);
+        const scholarship: any = paidApp?.scholarships ? (Array.isArray(paidApp.scholarships) ? paidApp.scholarships[0] : paidApp.scholarships) : null;
+
+        if (scholarship?.scholarship_fee_amount) {
+          normalized.scholarship = Number(scholarship.scholarship_fee_amount);
         } else {
-          normalized.scholarship = expectedScholarship;
+          const expectedScholarship = sysType === 'simplified' ? 550 : 900;
+          normalized.scholarship = feeOverrides?.scholarship_fee !== undefined ? feeOverrides.scholarship_fee : expectedScholarship;
         }
       }
-    } else if (paymentFlags?.has_paid_scholarship) {
-      // ✅ NOVO: Fallback para pagamentos legados
-      console.log(`[AdminStudentDetails] 💡 Pagamento legado detectado para scholarship - calculando valor esperado`);
 
-      // Tentar buscar valor específico da bolsa
-      const enrolledApp: any = applications?.find((app: any) => app.status === 'enrolled' && app.is_scholarship_fee_paid);
-      const paidApp: any = enrolledApp || applications?.find((app: any) => app.is_scholarship_fee_paid);
-      const scholarship: any = paidApp?.scholarships ? (Array.isArray(paidApp.scholarships) ? paidApp.scholarships[0] : paidApp.scholarships) : null;
-
-      if (scholarship?.scholarship_fee_amount) {
-        normalized.scholarship = Number(scholarship.scholarship_fee_amount);
-      } else {
-        const expectedScholarship = sysType === 'simplified' ? 550 : 900;
-        if (feeOverrides?.scholarship_fee !== undefined) {
-          normalized.scholarship = feeOverrides.scholarship_fee;
-        } else {
-          normalized.scholarship = expectedScholarship;
-        }
-      }
-    }
-
-    // I-20 Control Fee
-    if (realPaidAmounts.i20_control !== undefined && realPaidAmounts.i20_control > 0) {
-      const expectedI20Control = feeAmountFn('i20_control_fee');
-
-      if (isValueReasonable(realPaidAmounts.i20_control, expectedI20Control)) {
+      // I-20 Control Fee
+      if (realPaidAmounts.i20_control !== undefined && realPaidAmounts.i20_control > 0) {
         normalized.i20_control = realPaidAmounts.i20_control;
-      } else {
-        // Valor muito discrepante, usar cálculo fixo
-        console.log(`[AdminStudentDetails] Valor de i20_control muito discrepante: ${realPaidAmounts.i20_control} (esperado ~${expectedI20Control}), usando cálculo fixo`);
-        if (feeOverrides?.i20_control_fee !== undefined) {
-          normalized.i20_control = feeOverrides.i20_control_fee;
-        } else {
-          normalized.i20_control = expectedI20Control;
-        }
+        console.log(`[AdminStudentDetails] ✅ Usando valor real pago para i20_control: ${realPaidAmounts.i20_control}`);
+      } else if (paymentFlags?.has_paid_i20) {
+        console.log(`[AdminStudentDetails] 💡 Pagamento legado detectado para i20_control - calculando valor esperado`);
+        const expectedI20Control = feeAmountFn('i20_control_fee');
+        normalized.i20_control = feeOverrides?.i20_control_fee !== undefined ? feeOverrides.i20_control_fee : expectedI20Control;
       }
-    } else if (paymentFlags?.has_paid_i20) {
-      // ✅ NOVO: Fallback para pagamentos legados
-      console.log(`[AdminStudentDetails] 💡 Pagamento legado detectado para i20_control - calculando valor esperado`);
-      const expectedI20Control = feeAmountFn('i20_control_fee');
-      if (feeOverrides?.i20_control_fee !== undefined) {
-        normalized.i20_control = feeOverrides.i20_control_fee;
-      } else {
-        normalized.i20_control = expectedI20Control;
-      }
-    }
 
-    // Application Fee
-    if (realPaidAmounts.application !== undefined && realPaidAmounts.application > 0) {
-      const expectedApplicationFee = feeAmountFn('application_fee');
-      const expectedApplicationFeeWithDeps = dependents > 0
-        ? expectedApplicationFee + (dependents * 100)
-        : expectedApplicationFee;
-
-      if (isValueReasonable(realPaidAmounts.application, expectedApplicationFeeWithDeps)) {
+      // Application Fee
+      if (realPaidAmounts.application !== undefined && realPaidAmounts.application > 0) {
         normalized.application = realPaidAmounts.application;
-      } else {
-        // Valor muito discrepante, usar cálculo fixo
-        console.log(`[AdminStudentDetails] Valor de application muito discrepante: ${realPaidAmounts.application} (esperado ~${expectedApplicationFeeWithDeps}), usando cálculo fixo`);
-        normalized.application = expectedApplicationFee;
-        if (dependents > 0) {
-          normalized.application += dependents * 100;
-        }
-      }
-    } else if (paymentFlags?.has_paid_application) {
-      // ✅ NOVO: Fallback para pagamentos legados
-      console.log(`[AdminStudentDetails] 💡 Pagamento legado detectado para application - calculando valor esperado`);
+        console.log(`[AdminStudentDetails] ✅ Usando valor real pago para application: ${realPaidAmounts.application}`);
+      } else if (paymentFlags?.has_paid_application) {
+        console.log(`[AdminStudentDetails] 💡 Pagamento legado detectado para application - calculando valor esperado`);
+        const enrolledApp: any = applications?.find((app: any) => app.status === 'enrolled' && app.is_application_fee_paid);
+        const paidApp: any = enrolledApp || applications?.find((app: any) => app.is_application_fee_paid);
+        const scholarship: any = paidApp?.scholarships ? (Array.isArray(paidApp.scholarships) ? paidApp.scholarships[0] : paidApp.scholarships) : null;
 
-      // Tentar buscar valor específico da bolsa
-      const enrolledApp: any = applications?.find((app: any) => app.status === 'enrolled' && app.is_application_fee_paid);
-      const paidApp: any = enrolledApp || applications?.find((app: any) => app.is_application_fee_paid);
-      const scholarship: any = paidApp?.scholarships ? (Array.isArray(paidApp.scholarships) ? paidApp.scholarships[0] : paidApp.scholarships) : null;
-
-      let expectedApplicationFee: number;
-      if (scholarship?.application_fee_amount) {
-        expectedApplicationFee = Number(scholarship.application_fee_amount);
-      } else {
-        expectedApplicationFee = feeAmountFn('application_fee');
+        let expectedApplicationFee = scholarship?.application_fee_amount ? Number(scholarship.application_fee_amount) : feeAmountFn('application_fee');
+        normalized.application = expectedApplicationFee + (dependents * 100);
       }
 
-      normalized.application = expectedApplicationFee;
-      if (dependents > 0) {
-        normalized.application += dependents * 100;
-      }
-    }
-
-    // Placement Fee
-    if (realPaidAmounts.placement !== undefined && realPaidAmounts.placement > 0) {
-      // Para Placement Fee, aceitar o valor real pago se for razoável (entre $100 e $35000)
-      const isReasonableRange = realPaidAmounts.placement >= 100 && realPaidAmounts.placement <= 35000;
-      if (isReasonableRange) {
+      // Placement Fee
+      if (realPaidAmounts.placement !== undefined && realPaidAmounts.placement > 0) {
         normalized.placement = realPaidAmounts.placement;
-        console.log(`[AdminStudentDetails] ✅ Aceitando valor real pago para placement: ${realPaidAmounts.placement}`);
-      } else {
-        console.log(`[AdminStudentDetails] ⚠️ Valor de placement fora do range razoável: ${realPaidAmounts.placement}`);
-        if (feeOverrides?.placement_fee !== undefined) {
-          normalized.placement = feeOverrides.placement_fee;
-        } else {
-          normalized.placement = Number(applications?.find((app: any) => app.is_placement_fee_paid)?.placement_fee_amount || 0);
-        }
+        console.log(`[AdminStudentDetails] ✅ Usando valor real pago para placement: ${realPaidAmounts.placement}`);
+      } else if (paymentFlags?.has_paid_placement) {
+        normalized.placement = Number(applications?.find((app: any) => app.is_placement_fee_paid)?.placement_fee_amount || 0);
       }
-    }
 
-    // REINSTATEMENT FEE
-    if (realPaidAmounts.reinstatement_fee !== undefined && realPaidAmounts.reinstatement_fee > 0) {
-      const expectedReinstatement = 500;
-      // Verificação simples de range como no placement
-      const isReasonableReinstatement = realPaidAmounts.reinstatement_fee >= 100 && realPaidAmounts.reinstatement_fee <= 2500;
-      
-      if (isReasonableReinstatement) {
+      // Reinstatement Fee
+      if (realPaidAmounts.reinstatement_fee !== undefined && realPaidAmounts.reinstatement_fee > 0) {
         normalized.reinstatement_fee = realPaidAmounts.reinstatement_fee;
-      } else {
-        console.log(`[AdminStudentDetails] ⚠️ Valor de reinstatement_fee fora do range razoável: ${realPaidAmounts.reinstatement_fee}, usando $500`);
-        normalized.reinstatement_fee = expectedReinstatement;
+        console.log(`[AdminStudentDetails] ✅ Usando valor real pago para reinstatement_fee: ${realPaidAmounts.reinstatement_fee}`);
+      } else if (paymentFlags?.has_paid_reinstatement) {
+        normalized.reinstatement_fee = 500;
       }
-    } else if (paymentFlags?.has_paid_reinstatement) {
-      normalized.reinstatement_fee = 500;
-    }
 
-    return normalized;
-  }, []);
+      return normalized;
+    },
+    []
+  );
 
   // Estados locais - Definir antes dos hooks personalizados que dependem deles
   const [documentRequests, setDocumentRequests] = useState<any[]>([]);

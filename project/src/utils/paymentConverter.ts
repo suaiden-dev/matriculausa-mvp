@@ -183,6 +183,7 @@ export async function getDisplayAmounts(
   userId: string,
   feeTypes:
     ("selection_process" | "scholarship" | "i20_control" | "application" | "placement" | "ds160_package" | "i539_cos_package" | "reinstatement_package")[],
+  trustRealPaidAmounts: boolean = false
 ): Promise<Record<string, number>> {
   try {
     // 1. Buscar system_type, dependents, no_referral_discount e student_process_type do usuário
@@ -353,11 +354,12 @@ export async function getDisplayAmounts(
     const baseScholarshipFee = 900; // Sempre 900 para ambos os sistemas
     const baseI20Fee = 900; // Sempre 900 para ambos os sistemas
 
-    // Selection Process Fee - Prioridade: override > cupom promocional > cálculo fixo
-    // Não usar realPaidMap aqui: o valor bruto Stripe (ex: $416.55) não deve sobrescrever
-    // o valor esperado ($400). Overrides e cupons já cobrem casos especiais.
+    // Selection Process Fee - Prioridade: Valor Real Pago (se trustRealPaidAmounts) > override > cupom promocional > cálculo fixo
+    // ✅ NOVO: Se trustRealPaidAmounts for true, aceitamos o valor real do banco (ex: Zelle manual)
     if (feeTypes.includes("selection_process")) {
-      if (overrides.selection_process_fee != null) {
+      if (trustRealPaidAmounts && realPaidMap.selection_process) {
+        amounts.selection_process = realPaidMap.selection_process;
+      } else if (overrides.selection_process_fee != null) {
         amounts.selection_process = Number(overrides.selection_process_fee);
       } else if (couponAmounts.selection_process) {
         amounts.selection_process = couponAmounts.selection_process;

@@ -8,6 +8,7 @@ interface ZellePaymentReviewModalProps {
   payment: {
     id: string;
     user_id: string;
+    student_id?: string;
     student_name: string;
     student_email: string;
     fee_type: string;
