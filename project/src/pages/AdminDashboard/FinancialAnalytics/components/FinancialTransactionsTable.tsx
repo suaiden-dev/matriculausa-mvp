@@ -517,7 +517,7 @@ export const FinancialTransactionsTable: React.FC<FinancialTransactionsTableProp
         <table className="w-full">
           <thead>
             <tr className="bg-gray-50/50 border-b border-gray-100">
-              <th className="px-6 py-4 text-left text-xs font-medium text-gray-500 uppercase tracking-wider w-12">
+              <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider w-12">
                 <input
                   type="checkbox"
                   checked={selectAll}
@@ -526,7 +526,7 @@ export const FinancialTransactionsTable: React.FC<FinancialTransactionsTableProp
                 />
               </th>
               <th
-                className="px-6 py-4 text-left text-xs font-medium text-gray-500 uppercase tracking-wider cursor-pointer hover:bg-gray-100 transition-colors"
+                className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider cursor-pointer hover:bg-gray-100 transition-colors"
                 onClick={() => handleSort('payment_date')}
               >
                 <div className="flex items-center gap-1">
@@ -535,7 +535,7 @@ export const FinancialTransactionsTable: React.FC<FinancialTransactionsTableProp
                 </div>
               </th>
               <th
-                className="px-6 py-4 text-left text-xs font-medium text-gray-500 uppercase tracking-wider cursor-pointer hover:bg-gray-100 transition-colors"
+                className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider cursor-pointer hover:bg-gray-100 transition-colors"
                 onClick={() => handleSort('student_name')}
               >
                 <div className="flex items-center gap-1">
@@ -544,7 +544,7 @@ export const FinancialTransactionsTable: React.FC<FinancialTransactionsTableProp
                 </div>
               </th>
               <th
-                className="px-6 py-4 text-left text-xs font-medium text-gray-500 uppercase tracking-wider cursor-pointer hover:bg-gray-100 transition-colors"
+                className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider cursor-pointer hover:bg-gray-100 transition-colors"
                 onClick={() => handleSort('fee_type')}
               >
                 <div className="flex items-center gap-1">
@@ -553,7 +553,7 @@ export const FinancialTransactionsTable: React.FC<FinancialTransactionsTableProp
                 </div>
               </th>
               <th
-                className="px-6 py-4 text-left text-xs font-medium text-gray-500 uppercase tracking-wider cursor-pointer hover:bg-gray-100 transition-colors"
+                className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider cursor-pointer hover:bg-gray-100 transition-colors"
                 onClick={() => handleSort('standard_amount')}
               >
                 <div className="flex items-center gap-1">
@@ -562,7 +562,7 @@ export const FinancialTransactionsTable: React.FC<FinancialTransactionsTableProp
                 </div>
               </th>
               <th
-                className="px-6 py-4 text-left text-xs font-medium text-gray-500 uppercase tracking-wider cursor-pointer hover:bg-gray-100 transition-colors"
+                className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider cursor-pointer hover:bg-gray-100 transition-colors"
                 onClick={() => handleSort('payment_method')}
               >
                 <div className="flex items-center gap-1">
@@ -571,7 +571,7 @@ export const FinancialTransactionsTable: React.FC<FinancialTransactionsTableProp
                 </div>
               </th>
               <th
-                className="px-6 py-4 text-left text-xs font-medium text-gray-500 uppercase tracking-wider cursor-pointer hover:bg-gray-100 transition-colors"
+                className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider cursor-pointer hover:bg-gray-100 transition-colors"
                 onClick={() => handleSort('amount')}
               >
                 <div className="flex items-center gap-1">
@@ -579,10 +579,10 @@ export const FinancialTransactionsTable: React.FC<FinancialTransactionsTableProp
                   <span className="text-blue-600">{renderSortIcon('amount')}</span>
                 </div>
               </th>
-              <th className="px-6 py-4 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+              <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                 Fees
               </th>
-              <th className="px-6 py-4 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+              <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                 Net Amount
               </th>
             </tr>
@@ -596,8 +596,8 @@ export const FinancialTransactionsTable: React.FC<FinancialTransactionsTableProp
                   const net = gross - fees;
 
                   return (
-                    <tr key={transaction.id} className="hover:bg-gray-50/50 transition-colors group h-[72px]">
-                      <td className="px-6 py-4">
+                    <tr key={transaction.id} className="hover:bg-gray-50/50 transition-colors group h-[68px]">
+                      <td className="px-6 py-2">
                         <input
                           type="checkbox"
                           checked={selectedTransactions.has(transaction.id)}
@@ -605,16 +605,16 @@ export const FinancialTransactionsTable: React.FC<FinancialTransactionsTableProp
                           className="h-4 w-4 text-blue-600 focus:ring-blue-500 border-gray-300 rounded cursor-pointer"
                         />
                       </td>
-                      <td className="px-6 py-4">
+                      <td className="px-6 py-2">
                         <div className="flex items-center gap-1 text-sm text-gray-700">
                           <Calendar className="w-4 h-4 text-gray-400" />
                           {formatDate(transaction.payment_date)}
                         </div>
                       </td>
-                      <td className="px-6 py-4">
+                      <td className="px-6 py-2">
                         <span className="text-sm font-medium text-gray-900">{transaction.student_name}</span>
                       </td>
-                      <td className="px-6 py-4">
+                      <td className="px-6 py-2">
                         <div className="flex flex-col gap-1">
                           <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-blue-50 text-blue-700 border border-blue-100 w-fit">
                             {formatFeeType(transaction.fee_type)}
@@ -636,21 +636,21 @@ export const FinancialTransactionsTable: React.FC<FinancialTransactionsTableProp
                           )}
                         </div>
                       </td>
-                      <td className="px-6 py-4">
-                        <div className="flex flex-col gap-1">
+                      <td className="px-6 py-2">
+                        <div className="flex flex-col gap-0.5">
                           <span className="text-sm text-gray-600">
                             {formatCurrency(transaction.standard_amount)}
                           </span>
                           {hasDiscount(transaction) && transaction.discount_amount && (
-                            <span className="text-xs text-green-600 font-medium">
-                              Discount: -{formatCurrency(transaction.discount_amount)}
+                            <span className="text-[10px] text-green-600 font-medium leading-none">
+                              -{formatCurrency(transaction.discount_amount)}
                             </span>
                           )}
                         </div>
                       </td>
-                      <td className="px-6 py-4">
+                      <td className="px-6 py-2">
                         <div className="flex items-center gap-2">
-                          <div className={`p-1.5 rounded-full ${transaction.payment_method === "stripe" ? "bg-indigo-50 text-indigo-600" :
+                          <div className={`p-1 rounded-full ${transaction.payment_method === "stripe" ? "bg-indigo-50 text-indigo-600" :
                             transaction.payment_method === "zelle" ? "bg-purple-50 text-purple-600" :
                               transaction.payment_method === "parcelow" ? "bg-teal-50 text-teal-600" :
                                 "bg-gray-100 text-gray-600"
@@ -665,13 +665,13 @@ export const FinancialTransactionsTable: React.FC<FinancialTransactionsTableProp
                           </span>
                         </div>
                       </td>
-                      <td className="px-6 py-4 text-sm font-medium text-gray-900">
+                      <td className="px-6 py-2 text-sm font-medium text-gray-900">
                         {formatCurrency(gross)}
                       </td>
-                      <td className="px-6 py-4 text-sm text-red-600">
+                      <td className="px-6 py-2 text-sm text-red-600">
                         - {formatCurrency(fees)}
                       </td>
-                      <td className="px-6 py-4">
+                      <td className="px-6 py-2">
                         <span className="text-sm font-bold text-emerald-600">
                           {formatCurrency(net)}
                         </span>
@@ -680,13 +680,13 @@ export const FinancialTransactionsTable: React.FC<FinancialTransactionsTableProp
                   );
                 })}
                 {/* 
-                  Fill empty rows to maintain stable height (cap at 10 items for pagination stability)
+                  Fill empty rows to maintain stable height based on current itemsPerPage.
                   This prevents the pagination footer from jumping up and down.
                 */}
-                {currentTransactions.length < Math.min(itemsPerPage, 10) && 
-                 Array.from({ length: Math.min(itemsPerPage, 10) - currentTransactions.length }).map((_, i) => (
-                  <tr key={`empty-${i}`} className="border-none h-[72px]">
-                    <td colSpan={9} className="px-6 py-4"></td>
+                {currentTransactions.length < itemsPerPage && 
+                 Array.from({ length: itemsPerPage - currentTransactions.length }).map((_, i) => (
+                  <tr key={`empty-${i}`} className="border-none h-[68px]">
+                    <td colSpan={9} className="px-6 py-2"></td>
                   </tr>
                 ))}
               </>
