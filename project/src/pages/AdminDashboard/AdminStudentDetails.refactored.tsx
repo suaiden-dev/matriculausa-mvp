@@ -609,6 +609,8 @@ const AdminStudentDetails: React.FC = () => {
   const [savingFees, setSavingFees] = useState(false);
   const [editingPaymentMethod, setEditingPaymentMethod] = useState<string | null>(null);
   const [savingPaymentMethod, setSavingPaymentMethod] = useState(false);
+  const [isEditingDependents, setIsEditingDependents] = useState(false);
+  const [savingDependents, setSavingDependents] = useState(false);
   // ✅ Estado para forçar recarregamento de overrides no PaymentStatusCard
   const [overridesRefreshKey, setOverridesRefreshKey] = useState(0);
 
@@ -1334,6 +1336,64 @@ const AdminStudentDetails: React.FC = () => {
       alert('Profile saved successfully!');
     } else {
       alert('Error saving profile: ' + result.error);
+    }
+  }, [student, dependents, saveProfile, profileId, queryClient, user, logAction]);
+
+  const handleEditDependents = useCallback(() => {
+    setIsEditingDependents(true);
+  }, []);
+
+  const handleCancelEditDependents = useCallback(() => {
+    setIsEditingDependents(false);
+    // Restaurar valor original
+    if (student?.dependents !== undefined) {
+      setDependents(Number(student.dependents));
+    }
+  }, [student?.dependents]);
+
+  const handleSaveDependents = useCallback(async () => {
+    if (!student) return;
+
+    if (Number(student.dependents) === dependents) {
+      setIsEditingDependents(false);
+      return;
+    }
+
+    const confirmChange = window.confirm(`Confirm change of dependents from ${student.dependents} to ${dependents}?`);
+    if (!confirmChange) return;
+
+    setSavingDependents(true);
+    try {
+      const result = await saveProfile(student.student_id, {
+        dependents: dependents
+      });
+
+      if (result.success) {
+        // Log da ação detalhado
+        await logAction(
+          'dependents_update',
+          `Dependents updated from ${student.dependents} to ${dependents} by admin ${user?.email}`,
+          user?.id || '',
+          'admin',
+          {
+            old_value: student.dependents,
+            new_value: dependents,
+            admin_email: user?.email,
+            admin_id: user?.id,
+            timestamp: new Date().toISOString()
+          }
+        );
+
+        queryClient.invalidateQueries({ queryKey: queryKeys.students.details(profileId) });
+        setIsEditingDependents(false);
+        toast.success('Dependents updated successfully');
+      } else {
+        toast.error('Error saving dependents: ' + result.error);
+      }
+    } catch (err: any) {
+      toast.error('Exception saving dependents: ' + err.message);
+    } finally {
+      setSavingDependents(false);
     }
   }, [student, dependents, saveProfile, profileId, queryClient, user, logAction]);
 
@@ -3581,7 +3641,13 @@ const AdminStudentDetails: React.FC = () => {
                   console.log('🔍 [AdminStudentDetails] Process Type mudou para:', value);
                   setEditingProcessType(value);
                 }}
+                isEditingDependents={isEditingDependents}
+                onEditDependents={handleEditDependents}
+                onSaveDependents={handleSaveDependents}
+                onCancelEditDependents={handleCancelEditDependents}
+                savingDependents={savingDependents}
               />
+
 
               {/* Referral Info Card - mostra seller referral OU Matricula Rewards */}
               {(student.seller_referral_code || matriculaRewardsInfo?.code) && student.all_applications && (
