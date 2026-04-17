@@ -24,9 +24,38 @@ export async function approveZelleFlow(params: {
   payment: PaymentLike;
 }) {
   const { supabase, adminUserId, payment } = params;
+  
+  // Garantir que temos o student_id (profile id) correto
+  let finalStudentId = payment.student_id;
+  if (!finalStudentId || finalStudentId === "") {
+    console.log("🔍 [approveZelleFlow] student_id ausente, buscando via user_id:", payment.user_id);
+    const { data: profile } = await supabase
+      .from("user_profiles")
+      .select("id")
+      .eq("user_id", payment.user_id)
+      .single();
+    if (profile) {
+      finalStudentId = profile.id;
+      console.log("✅ [approveZelleFlow] student_id recuperado:", finalStudentId);
+    }
+  }
+
+  console.log("🚀 [approveZelleFlow] Iniciando processamento de aprovação:", {
+
+    payment_id: payment.id,
+    fee_type: payment.fee_type,
+    fee_type_global: payment.fee_type_global,
+    student_id: payment.student_id,
+    user_id: payment.user_id
+  });
 
   // Selection Process logic
-  if (payment.fee_type_global === "selection_process") {
+  const isSelectionProcess = String(payment.fee_type_global).toLowerCase() === "selection_process" || 
+                           String(payment.fee_type).toLowerCase() === "selection_process" || 
+                           String(payment.fee_type).toLowerCase() === "selection_process_fee";
+                           
+  if (isSelectionProcess) {
+    console.log("📝 [approveZelleFlow] Entrou no bloco de Selection Process");
     // Mark on profile
     await supabase
       .from("user_profiles")
@@ -73,8 +102,13 @@ export async function approveZelleFlow(params: {
     } catch (_) {}
 
     // Log action
-    await supabase.rpc("log_student_action", {
-      p_student_id: payment.student_id,
+    console.log("📤 [approveZelleFlow] Chamando log_student_action para Selection Process:", {
+      p_student_id: finalStudentId,
+      p_performed_by: adminUserId
+    });
+    
+    const { data: logData, error: logError } = await supabase.rpc("log_student_action", {
+      p_student_id: finalStudentId,
       p_action_type: "fee_payment",
       p_action_description:
         `Selection Process Fee paid via Zelle (approved by admin)`,
@@ -90,6 +124,12 @@ export async function approveZelleFlow(params: {
       },
     });
 
+    if (logError) {
+      console.error("❌ [approveZelleFlow] Erro ao gravar log de atividade:", logError);
+    } else {
+      console.log("✅ [approveZelleFlow] Log de atividade gravado com sucesso:", logData);
+    }
+
     // Billing
     await supabase.rpc("register_payment_billing", {
       user_id_param: payment.user_id,
@@ -104,13 +144,14 @@ export async function approveZelleFlow(params: {
   }
 
   // I-20 Control logic
-  const feeTypeSafe = String(payment.fee_type || "");
-  const feeTypeGlobalSafe = String(payment.fee_type_global || "");
+  const feeTypeSafe = String(payment.fee_type || "").toLowerCase();
+  const feeTypeGlobalSafe = String(payment.fee_type_global || "").toLowerCase();
   const isI20 = feeTypeGlobalSafe === "i20_control_fee" ||
     feeTypeGlobalSafe === "i-20_control_fee" ||
     feeTypeSafe === "i20_control" ||
     feeTypeSafe === "i20_control_fee" ||
-    feeTypeSafe === "i-20_control_fee";
+    feeTypeSafe === "i-20_control_fee" ||
+    feeTypeSafe === "control_fee";
 
   if (isI20) {
     await supabase
@@ -151,8 +192,13 @@ export async function approveZelleFlow(params: {
       }
     } catch (_) {}
 
+    console.log("📤 [approveZelleFlow] Chamando log_student_action para I-20 Control:", {
+      p_student_id_original: payment.student_id,
+      p_performed_by: adminUserId
+    });
+    
     await supabase.rpc("log_student_action", {
-      p_student_id: payment.student_id,
+      p_student_id: finalStudentId,
       p_action_type: "fee_payment",
       p_action_description:
         `I-20 Control Fee paid via Zelle (approved by admin)`,
@@ -178,7 +224,11 @@ export async function approveZelleFlow(params: {
   }
 
   // ✅ NOVO: Placement Fee logic
-  if (payment.fee_type === "placement_fee" || payment.fee_type_global === "placement_fee") {
+  const isPlacement = feeTypeSafe === "placement_fee" || 
+                      feeTypeSafe === "placement" || 
+                      feeTypeGlobalSafe === "placement_fee";
+
+  if (isPlacement) {
     // Verificar se parcelamento estava habilitado para este aluno (auto-detecção)
     const { data: profileData } = await supabase
       .from("user_profiles")
@@ -227,8 +277,13 @@ export async function approveZelleFlow(params: {
     );
 
     // Log action
+    console.log("📤 [approveZelleFlow] Chamando log_student_action para Placement Fee:", {
+      p_student_id: finalStudentId,
+      p_performed_by: adminUserId
+    });
+    
     await supabase.rpc("log_student_action", {
-      p_student_id: payment.student_id,
+      p_student_id: finalStudentId,
       p_action_type: "fee_payment",
       p_action_description: `Placement Fee paid via Zelle (approved by admin)`,
       p_performed_by: adminUserId,
@@ -254,7 +309,11 @@ export async function approveZelleFlow(params: {
   }
 
   // ✅ NOVO: DS-160 Package logic
-  if (payment.fee_type === "ds160_package" || payment.fee_type_global === "ds160_package") {
+  const isDs160 = feeTypeSafe === "ds160_package" || 
+                  feeTypeGlobalSafe === "ds160_package" ||
+                  feeTypeSafe === "control_fee";
+  
+  if (isDs160) {
     // Mark on profile
     await supabase
       .from("user_profiles")
@@ -282,7 +341,7 @@ export async function approveZelleFlow(params: {
 
     // Log action
     await supabase.rpc("log_student_action", {
-      p_student_id: payment.student_id,
+      p_student_id: finalStudentId,
       p_action_type: "fee_payment",
       p_action_description: `DS-160 Package Fee paid via Zelle (approved by admin)`,
       p_performed_by: adminUserId,
@@ -307,7 +366,11 @@ export async function approveZelleFlow(params: {
   }
 
   // ✅ NOVO: I-539 COS Package logic
-  if (payment.fee_type === "i539_cos_package" || payment.fee_type_global === "i539_cos_package") {
+  const isI539 = feeTypeSafe === "i539_cos_package" || 
+                 feeTypeGlobalSafe === "i539_cos_package" ||
+                 feeTypeSafe === "control_fee";
+  
+  if (isI539) {
     // Mark on profile
     await supabase
       .from("user_profiles")
@@ -335,7 +398,7 @@ export async function approveZelleFlow(params: {
 
     // Log action
     await supabase.rpc("log_student_action", {
-      p_student_id: payment.student_id,
+      p_student_id: finalStudentId,
       p_action_type: "fee_payment",
       p_action_description: `I-539 COS Package Fee paid via Zelle (approved by admin)`,
       p_performed_by: adminUserId,
@@ -360,7 +423,13 @@ export async function approveZelleFlow(params: {
   }
 
   // ✅ NOVO: Reinstatement Fee logic
-  if (payment.fee_type === "reinstatement_package" || payment.fee_type_global === "reinstatement_fee") {
+  const isReinstatement = feeTypeSafe === "reinstatement_fee" || 
+                          feeTypeSafe === "reinstatement_package" ||
+                          feeTypeGlobalSafe === "reinstatement_fee" ||
+                          feeTypeGlobalSafe === "reinstatement_package" ||
+                          feeTypeSafe === "control_fee";
+  
+  if (isReinstatement) {
     // Mark on profile
     await supabase
       .from("user_profiles")
@@ -388,7 +457,7 @@ export async function approveZelleFlow(params: {
 
     // Log action
     await supabase.rpc("log_student_action", {
-      p_student_id: payment.student_id,
+      p_student_id: finalStudentId,
       p_action_type: "fee_payment",
       p_action_description: `Reinstatement Fee paid via Zelle (approved by admin)`,
       p_performed_by: adminUserId,
@@ -460,7 +529,7 @@ export async function approveZelleFlow(params: {
         .select();
       for (const app of updateData || []) {
         await supabase.rpc("log_student_action", {
-          p_student_id: payment.student_id,
+          p_student_id: finalStudentId,
           p_action_type: "fee_payment",
           p_action_description: `${
             payment.fee_type === "application_fee"
@@ -521,7 +590,7 @@ export async function approveZelleFlow(params: {
       // ✅ REMOVIDO: Registro de uso do cupom promocional - agora é feito apenas na validação (record-promotional-coupon-validation)
 
       await supabase.rpc("log_student_action", {
-        p_student_id: payment.student_id,
+        p_student_id: finalStudentId,
         p_action_type: "fee_payment",
         p_action_description: `${
           payment.fee_type === "application_fee"
@@ -1041,6 +1110,17 @@ export async function rejectZelleFlow(params: {
   reason: string;
 }) {
   const { supabase, adminUserId, payment, reason } = params;
+
+  // Garantir que temos o student_id (profile id) correto
+  let finalStudentId = payment.student_id;
+  if (!finalStudentId || finalStudentId === "") {
+    const { data: profile } = await supabase
+      .from("user_profiles")
+      .select("id")
+      .eq("user_id", payment.user_id)
+      .single();
+    if (profile) finalStudentId = profile.id;
+  }
   try {
     const { data: adminProfile } = await supabase
       .from("user_profiles")
@@ -1135,7 +1215,7 @@ export async function rejectZelleFlow(params: {
     }
     // Log rejection action
     await supabase.rpc("log_student_action", {
-      p_student_id: payment.student_id,
+      p_student_id: finalStudentId,
       p_action_type: "fee_payment_rejection",
       p_action_description:
         `Zelle payment for ${feeTypeLabel} rejected. Reason: ${reason}`,
@@ -1172,6 +1252,18 @@ export async function approvePartialZelleFlow(params: {
   payment: PaymentLike;
 }) {
   const { supabase, adminUserId, payment } = params;
+
+  // Garantir que temos o student_id (profile id) correto
+  let finalStudentId = payment.student_id;
+  if (!finalStudentId || finalStudentId === "") {
+    const { data: profile } = await supabase
+      .from("user_profiles")
+      .select("id")
+      .eq("user_id", payment.user_id)
+      .single();
+    if (profile) finalStudentId = profile.id;
+  }
+
 
   const pendingBalance = payment.amount; // valor pago = 1ª parcela; mesmo valor ainda pendente
   const dueDate = new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString(); // +30 dias
@@ -1212,7 +1304,7 @@ export async function approvePartialZelleFlow(params: {
 
   // 4. Log da ação
   await supabase.rpc("log_student_action", {
-    p_student_id: payment.student_id,
+    p_student_id: finalStudentId,
     p_action_type: "fee_payment",
     p_action_description: "Placement Fee 1ª Parcela aprovada manualmente",
     p_performed_by: adminUserId,
@@ -1262,6 +1354,18 @@ export async function approveSecondInstallmentFlow(params: {
 }) {
   const { supabase, adminUserId, payment } = params;
 
+  // Garantir que temos o student_id (profile id) correto
+  let finalStudentId = payment.student_id;
+  if (!finalStudentId || finalStudentId === "") {
+    const { data: profile } = await supabase
+      .from("user_profiles")
+      .select("id")
+      .eq("user_id", payment.user_id)
+      .single();
+    if (profile) finalStudentId = profile.id;
+  }
+
+
   // 1. Aprovar o Zelle payment
   await supabase
     .from("zelle_payments")
@@ -1305,7 +1409,7 @@ export async function approveSecondInstallmentFlow(params: {
 
   // 5. Log
   await supabase.rpc("log_student_action", {
-    p_student_id: payment.student_id,
+    p_student_id: finalStudentId,
     p_action_type: "fee_payment",
     p_action_description: "Placement Fee 2ª Parcela aprovada — dívida quitada",
     p_performed_by: adminUserId,

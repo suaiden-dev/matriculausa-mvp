@@ -348,7 +348,7 @@ function FiltersBarBase(props: FiltersBarProps) {
 										const isSelected = getFilterArray(filters.paymentMethod).includes(method);
 										const methodLabel = method === 'pix' ? 'PIX' : 
 										                   method === 'zelle' ? 'Zelle' : 
-										                   method === 'outside' ? 'Outside' : 
+										                   method === 'outside' ? 'Outside Payments' : 
 										                   method === 'stripe' ? 'Stripe' : 
 										                   method;
 										return (

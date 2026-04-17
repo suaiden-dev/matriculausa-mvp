@@ -204,7 +204,7 @@ function PaymentsTableBase(props: PaymentsTableProps) {
 												? 'bg-cyan-100 text-cyan-800'
 												: 'bg-gray-100 text-gray-800';
 											const label = paymentMethod === 'manual'
-												? 'Outside'
+												? 'Outside Payments'
 												: paymentMethod
 													? paymentMethod.charAt(0).toUpperCase() + paymentMethod.slice(1)
 													: 'N/A';

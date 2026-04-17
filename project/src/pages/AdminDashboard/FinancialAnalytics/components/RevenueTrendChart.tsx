@@ -1,4 +1,3 @@
-import React from 'react';
 import { LineChart as LineChartIcon } from 'lucide-react';
 import {
   ResponsiveContainer,
@@ -12,12 +11,16 @@ import {
 } from 'recharts';
 import type { RevenueData } from '../data/types';
 import { formatCentsToUSD, formatUSD } from '../utils/formatters';
+import { FilterBadges } from './FilterBadges';
+import type { FilterBadge } from './FilterBadges';
+import { InfoTooltip } from './InfoTooltip';
 
 export interface RevenueTrendChartProps {
   revenueData: RevenueData[];
+  activeFilters?: FilterBadge[];
 }
 
-export function RevenueTrendChart({ revenueData }: RevenueTrendChartProps) {
+export function RevenueTrendChart({ revenueData, activeFilters }: RevenueTrendChartProps) {
   if (!revenueData || revenueData.length === 0) {
     return (
       <div className="h-64 bg-gray-50 rounded-lg flex items-center justify-center">
@@ -31,10 +34,11 @@ export function RevenueTrendChart({ revenueData }: RevenueTrendChartProps) {
 
   return (
     <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-6">
-      <div className="flex items-center justify-between mb-6">
+      <div className="flex items-center justify-between mb-2">
         <h2 className="text-lg font-semibold text-gray-900 flex items-center gap-2">
           <LineChartIcon className="h-5 w-5" />
           Revenue Trend
+          <InfoTooltip text="Evolução diária da receita (pagamentos 'paid'), número de pagamentos realizados e novos alunos registrados. O eixo esquerdo é em dólares (receita), o eixo direito é em quantidade." />
         </h2>
         <div className="flex items-center gap-4 text-sm">
           <div className="flex items-center gap-2">
@@ -45,10 +49,15 @@ export function RevenueTrendChart({ revenueData }: RevenueTrendChartProps) {
             <div className="w-3 h-3 bg-green-500 rounded-full"></div>
             <span className="text-gray-600">Payments</span>
           </div>
+          <div className="flex items-center gap-2">
+            <div className="w-3 h-3 bg-purple-500 rounded-full"></div>
+            <span className="text-gray-600">Students</span>
+          </div>
         </div>
       </div>
+      <FilterBadges badges={activeFilters || []} />
       
-      <div className="h-64">
+      <div className="h-64 mt-3">
         <ResponsiveContainer width="100%" height={256}>
           <ReLineChart data={revenueData} margin={{ top: 12, right: 24, left: 0, bottom: 0 }}>
             <CartesianGrid stroke="#eee" strokeDasharray="3 3" />
@@ -62,13 +71,17 @@ export function RevenueTrendChart({ revenueData }: RevenueTrendChartProps) {
                 return `$${formatCentsToUSD(num)}`;
               }
               if (key === 'payments') {
-                return `${Math.round(num)}`;
+                return `${Math.round(num)} Payments`;
+              }
+              if (key === 'students') {
+                return `${Math.round(num)} Students`;
               }
               return formatUSD(num);
             }} />
             <Legend />
             <Line yAxisId="left" type="monotone" dataKey="revenue" name="Revenue" stroke="#3B82F6" strokeWidth={2} dot={false} />
             <Line yAxisId="right" type="monotone" dataKey="payments" name="Payments" stroke="#22C55E" strokeWidth={2} dot={false} strokeDasharray="4 4" />
+            <Line yAxisId="right" type="monotone" dataKey="students" name="Students" stroke="#A855F7" strokeWidth={2} dot={false} strokeDasharray="2 2" />
           </ReLineChart>
         </ResponsiveContainer>
       </div>

@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React from 'react';
 import { User, Award, CreditCard, Clock, Edit3, Save, X } from 'lucide-react';
 import { StudentRecord } from './types';
 
@@ -11,7 +11,6 @@ interface StudentInformationCardProps {
   isEditingProcessType: boolean;
   editingProcessType: string;
   savingProcessType: boolean;
-  onStudentChange: (updater: (prev: StudentRecord | null) => StudentRecord | null) => void;
   onDependentsChange: (value: number) => void;
   onEditToggle: () => void;
   onSaveProfile: () => void;
@@ -20,6 +19,12 @@ interface StudentInformationCardProps {
   onSaveProcessType: () => void;
   onCancelProcessType: () => void;
   onProcessTypeChange: (value: string) => void;
+  onStudentChange: (updater: (prev: StudentRecord | null) => StudentRecord | null) => void;
+  isEditingDependents: boolean;
+  onEditDependents: () => void;
+  onSaveDependents: () => void;
+  onCancelEditDependents: () => void;
+  savingDependents: boolean;
 }
 
 /**
@@ -44,6 +49,11 @@ const StudentInformationCard: React.FC<StudentInformationCardProps> = React.memo
   onSaveProcessType,
   onCancelProcessType,
   onProcessTypeChange,
+  isEditingDependents,
+  onEditDependents,
+  onSaveDependents,
+  onCancelEditDependents,
+  savingDependents,
 }) => {
   return (
     <div className="bg-white rounded-2xl shadow-sm border border-slate-200">
@@ -301,8 +311,53 @@ const StudentInformationCard: React.FC<StudentInformationCardProps> = React.memo
                   onChange={(e) => onDependentsChange(Math.max(0, Number(e.target.value || 0)))}
                   className="mt-1 w-full px-3 py-2 border border-slate-300 rounded-lg text-sm"
                 />
+              ) : isEditingDependents ? (
+                <div className="flex items-center gap-2 mt-1">
+                  <input
+                    type="number"
+                    min="0"
+                    value={dependents}
+                    onChange={(e) => onDependentsChange(Math.max(0, Number(e.target.value || 0)))}
+                    className="w-20 px-2 py-1 border border-slate-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+                    autoFocus
+                  />
+                  <div className="flex gap-1">
+                    <button
+                      onClick={onSaveDependents}
+                      disabled={savingDependents}
+                      className="p-1 text-green-600 hover:bg-green-50 rounded transition-colors disabled:opacity-50"
+                      title="Confirm change"
+                    >
+                      {savingDependents ? (
+                        <svg className="w-4 h-4 animate-spin" fill="none" viewBox="0 0 24 24">
+                          <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+                          <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                        </svg>
+                      ) : (
+                        <Save className="w-4 h-4" />
+                      )}
+                    </button>
+                    <button
+                      onClick={onCancelEditDependents}
+                      disabled={savingDependents}
+                      className="p-1 text-red-600 hover:bg-red-50 rounded transition-colors disabled:opacity-50"
+                      title="Cancel"
+                    >
+                      <X className="w-4 h-4" />
+                    </button>
+                  </div>
+                </div>
               ) : (
-                <dd className="text-base text-slate-900 mt-1">{dependents}</dd>
+                <div className="flex items-center gap-2 mt-1">
+                  <dd className="text-base text-slate-900">{dependents}</dd>
+                  <button
+                    onClick={onEditDependents}
+                    className="p-1 text-blue-600 hover:bg-blue-50 rounded transition-colors"
+                    title="Quick Edit Dependents"
+                  >
+                    <Edit3 className="w-4 h-4" />
+                  </button>
+                </div>
               )}
             </div>
             <div>
@@ -380,7 +435,9 @@ const StudentInformationCard: React.FC<StudentInformationCardProps> = React.memo
     prevProps.dependents !== nextProps.dependents ||
     prevProps.isEditingProcessType !== nextProps.isEditingProcessType ||
     prevProps.editingProcessType !== nextProps.editingProcessType ||
-    prevProps.savingProcessType !== nextProps.savingProcessType
+    prevProps.savingProcessType !== nextProps.savingProcessType ||
+    prevProps.isEditingDependents !== nextProps.isEditingDependents ||
+    prevProps.savingDependents !== nextProps.savingDependents
   );
   
   // Retornar false para permitir re-render quando há mudanças

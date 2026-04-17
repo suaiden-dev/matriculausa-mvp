@@ -1,15 +1,13 @@
 import React, { useState, useMemo, useEffect } from 'react';
 import {
   Search,
-  Filter,
   Download,
   ChevronLeft,
   ChevronRight,
   CreditCard,
   Calendar,
   Tag,
-  Percent,
-  X
+  Percent
 } from 'lucide-react';
 
 interface Transaction {
@@ -44,26 +42,17 @@ interface Transaction {
 interface FinancialTransactionsTableProps {
   transactions: Transaction[];
   loading: boolean;
-  affiliates?: any[];
 }
 
 export const FinancialTransactionsTable: React.FC<FinancialTransactionsTableProps> = ({
   transactions,
-  loading,
-  affiliates = []
+  loading
 }) => {
   const [searchTerm, setSearchTerm] = useState('');
   const [currentPage, setCurrentPage] = useState(1);
   const [sortField, setSortField] = useState<keyof Transaction>('payment_date');
   const [sortOrder, setSortOrder] = useState<'asc' | 'desc'>('desc');
-  const [showFilters, setShowFilters] = useState(false);
-  const [filterFeeType, setFilterFeeType] = useState<string[]>([]);
-  const [filterPaymentMethod, setFilterPaymentMethod] = useState<string[]>([]);
-  const [filterAffiliate, setFilterAffiliate] = useState<string[]>([]);
-  const [filterValueMin, setFilterValueMin] = useState<string>('');
-  const [filterValueMax, setFilterValueMax] = useState<string>('');
-  const [filterDateFrom, setFilterDateFrom] = useState<string>('');
-  const [filterDateTo, setFilterDateTo] = useState<string>('');
+
   const [selectedTransactions, setSelectedTransactions] = useState<Set<string>>(new Set());
   const [selectAll, setSelectAll] = useState(false);
   const [itemsPerPage, setItemsPerPage] = useState(10);
@@ -93,97 +82,15 @@ export const FinancialTransactionsTable: React.FC<FinancialTransactionsTableProp
     return email.toLowerCase().includes('@uorak.com');
   };
 
-  // Get unique fee types and payment methods
-  const uniqueFeeTypes = useMemo(() => {
-    const types = new Set(transactions.map(t => t.fee_type));
-    return Array.from(types).sort();
-  }, [transactions]);
 
-  const uniquePaymentMethods = useMemo(() => {
-    const methods = new Set(transactions.map(t => t.payment_method).filter(Boolean));
-    // Keep all methods to allow explicit filtering, including zelle
-    return Array.from(methods).sort();
-  }, [transactions]);
 
-  // Get unique affiliates from transactions (matching by referral code)
-  const uniqueAffiliates = useMemo(() => {
-    const affiliateMap = new Map<string, any>();
 
-    transactions.forEach(t => {
-      if (!t.seller_referral_code) return;
 
-      // Find affiliate by referral code (same logic as StudentApplicationsView)
-      let affiliate = affiliates.find((aff: any) =>
-        aff.referral_code === t.seller_referral_code
-      );
 
-      if (!affiliate) {
-        // If not found, search in sellers
-        affiliate = affiliates.find((aff: any) =>
-          aff.sellers?.some((s: any) => s.referral_code === t.seller_referral_code)
-        );
-      }
 
-      if (affiliate && !affiliateMap.has(affiliate.id)) {
-        affiliateMap.set(affiliate.id, affiliate);
-      }
-    });
 
-    return Array.from(affiliateMap.values()).sort((a, b) =>
-      (a.name || a.email || '').localeCompare(b.name || b.email || '')
-    );
-  }, [transactions, affiliates]);
 
-  // Get affiliate ID from transaction's seller_referral_code
-  const getAffiliateIdFromTransaction = (transaction: Transaction): string | null => {
-    if (!transaction.seller_referral_code) return null;
 
-    // Find affiliate by referral code (same logic as StudentApplicationsView)
-    let affiliate = affiliates.find((aff: any) =>
-      aff.referral_code === transaction.seller_referral_code
-    );
-
-    if (!affiliate) {
-      // If not found, search in sellers
-      affiliate = affiliates.find((aff: any) =>
-        aff.sellers?.some((s: any) => s.referral_code === transaction.seller_referral_code)
-      );
-    }
-
-    return affiliate?.id || null;
-  };
-
-  // Reset filters
-  const resetFilters = () => {
-    setFilterFeeType([]);
-    setFilterPaymentMethod([]);
-    setFilterAffiliate([]);
-    setFilterValueMin('');
-    setFilterValueMax('');
-    setFilterDateFrom('');
-    setFilterDateTo('');
-    setCurrentPage(1);
-    setSelectedTransactions(new Set());
-    setSelectAll(false);
-  };
-
-  // Toggle payment method in filter
-  const togglePaymentMethod = (method: string) => {
-    setFilterPaymentMethod(prev =>
-      prev.includes(method)
-        ? prev.filter(m => m !== method)
-        : [...prev, method]
-    );
-  };
-
-  // Toggle affiliate in filter
-  const toggleAffiliate = (code: string) => {
-    setFilterAffiliate(prev =>
-      prev.includes(code)
-        ? prev.filter(c => c !== code)
-        : [...prev, code]
-    );
-  };
 
   // Handle transaction selection
   const handleSelectTransaction = (transactionId: string) => {
@@ -210,17 +117,9 @@ export const FinancialTransactionsTable: React.FC<FinancialTransactionsTableProp
   };
 
 
-  // Check if any filter is active
-  const hasActiveFilters = filterFeeType.length > 0 || filterPaymentMethod.length > 0 || filterAffiliate.length > 0 || filterValueMin || filterValueMax || filterDateFrom || filterDateTo;
 
-  // Toggle fee type in filter
-  const toggleFeeType = (feeType: string) => {
-    setFilterFeeType(prev =>
-      prev.includes(feeType)
-        ? prev.filter(t => t !== feeType)
-        : [...prev, feeType]
-    );
-  };
+
+
 
   // Format currency
   const formatCurrency = (value: number | null) => {
@@ -330,42 +229,6 @@ export const FinancialTransactionsTable: React.FC<FinancialTransactionsTableProp
 
       if (!matchesSearch) return false;
 
-      // Fee type filter (multiple selection)
-      if (filterFeeType.length > 0 && !filterFeeType.includes(t.fee_type)) return false;
-
-      // Payment method filter (multiple selection)
-      if (filterPaymentMethod.length > 0 && !filterPaymentMethod.includes(t.payment_method)) return false;
-
-      // Affiliate filter (multiple selection) - same logic as StudentApplicationsView
-      if (filterAffiliate.length > 0) {
-        const affiliateId = getAffiliateIdFromTransaction(t);
-        if (!affiliateId || !filterAffiliate.includes(affiliateId)) return false;
-      }
-
-      // Date range filter
-      const paymentDate = new Date(t.payment_date);
-      if (filterDateFrom) {
-        const fromDate = new Date(filterDateFrom);
-        if (paymentDate < fromDate) return false;
-      }
-      if (filterDateTo) {
-        const toDate = new Date(filterDateTo);
-        // include the entire end day by setting time to end-of-day
-        toDate.setHours(23, 59, 59, 999);
-        if (paymentDate > toDate) return false;
-      }
-
-      // Value filters (using standard_amount)
-      const value = t.standard_amount;
-      if (filterValueMin) {
-        const minValue = parseFloat(filterValueMin);
-        if (!isNaN(minValue) && value < minValue) return false;
-      }
-      if (filterValueMax) {
-        const maxValue = parseFloat(filterValueMax);
-        if (!isNaN(maxValue) && value > maxValue) return false;
-      }
-
       return true;
     })
     .sort((a, b) => {
@@ -445,7 +308,7 @@ export const FinancialTransactionsTable: React.FC<FinancialTransactionsTableProp
     setCurrentPage(1);
     setSelectedTransactions(new Set());
     setSelectAll(false);
-  }, [filterFeeType, filterPaymentMethod, filterAffiliate, filterValueMin, filterValueMax, filterDateFrom, filterDateTo, searchTerm]);
+  }, [searchTerm]);
 
   // Update selectAll when currentTransactions change
   useEffect(() => {
@@ -484,7 +347,7 @@ export const FinancialTransactionsTable: React.FC<FinancialTransactionsTableProp
         transaction.student_name || '',
         formatFeeType(transaction.fee_type),
         transaction.standard_amount?.toFixed(2) || '0.00',
-        transaction.payment_method || '',
+        transaction.payment_method === 'manual' ? 'Outside Payments' : (transaction.payment_method || ''),
         gross.toFixed(2),
         fees.toFixed(2),
         net.toFixed(2),
@@ -558,15 +421,7 @@ export const FinancialTransactionsTable: React.FC<FinancialTransactionsTableProp
               className="pl-9 pr-4 py-2 border border-gray-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 w-full sm:w-64"
             />
           </div>
-          <button
-            onClick={() => setShowFilters(!showFilters)}
-            className={`p-2 rounded-lg border transition-colors ${hasActiveFilters
-              ? 'bg-blue-50 text-blue-600 border-blue-200'
-              : 'text-gray-600 hover:bg-gray-50 border-gray-200'
-              }`}
-          >
-            <Filter className="w-4 h-4" />
-          </button>
+
           <button
             onClick={exportToCSV}
             disabled={filteredTransactions.length === 0}
@@ -578,194 +433,7 @@ export const FinancialTransactionsTable: React.FC<FinancialTransactionsTableProp
         </div>
       </div>
 
-      {/* Filters Panel */}
-      {showFilters && (
-        <div className="px-6 py-4 border-b border-gray-100 bg-gray-50/50">
-          <div className="flex items-center justify-between mb-4">
-            <h3 className="text-sm font-medium text-gray-900">Filters</h3>
-            <div className="flex items-center gap-2">
-              {hasActiveFilters && (
-                <button
-                  onClick={resetFilters}
-                  className="text-xs text-gray-600 hover:text-gray-900 transition-colors"
-                >
-                  Clear filters
-                </button>
-              )}
-              <button
-                onClick={() => setShowFilters(false)}
-                className="p-1 text-gray-400 hover:text-gray-600 transition-colors"
-              >
-                <X className="w-4 h-4" />
-              </button>
-            </div>
-          </div>
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-5 gap-4">
-            {/* Fee Type Filter - Multiple Selection */}
-            <div>
-              <label className="block text-xs font-medium text-gray-700 mb-1.5">
-                Fee Type {filterFeeType.length > 0 && `(${filterFeeType.length} selected)`}
-              </label>
-              <div className="max-h-48 overflow-y-auto border border-gray-200 rounded-lg bg-white p-2 space-y-2">
-                {uniqueFeeTypes.length === 0 ? (
-                  <p className="text-xs text-gray-500 py-2">No types available</p>
-                ) : (
-                  uniqueFeeTypes.map(type => (
-                    <label
-                      key={type}
-                      className="flex items-center gap-2 p-2 hover:bg-gray-50 rounded cursor-pointer"
-                    >
-                      <input
-                        type="checkbox"
-                        checked={filterFeeType.includes(type)}
-                        onChange={() => toggleFeeType(type)}
-                        className="w-4 h-4 text-blue-600 border-gray-300 rounded focus:ring-blue-500"
-                      />
-                      <span className="text-sm text-gray-700">{formatFeeType(type)}</span>
-                    </label>
-                  ))
-                )}
-              </div>
-              {filterFeeType.length > 0 && (
-                <button
-                  onClick={() => setFilterFeeType([])}
-                  className="mt-2 text-xs text-blue-600 hover:text-blue-800 transition-colors"
-                >
-                  Clear selection
-                </button>
-              )}
-            </div>
 
-            {/* Payment Method Filter - Multiple Selection */}
-            <div>
-              <label className="block text-xs font-medium text-gray-700 mb-1.5">
-                Payment Method {filterPaymentMethod.length > 0 && `(${filterPaymentMethod.length} selected)`}
-              </label>
-              <div className="max-h-48 overflow-y-auto border border-gray-200 rounded-lg bg-white p-2 space-y-2">
-                {uniquePaymentMethods.length === 0 ? (
-                  <p className="text-xs text-gray-500 py-2">No methods available</p>
-                ) : (
-                  uniquePaymentMethods.map(method => (
-                    <label
-                      key={method}
-                      className="flex items-center gap-2 p-2 hover:bg-gray-50 rounded cursor-pointer"
-                    >
-                      <input
-                        type="checkbox"
-                        checked={filterPaymentMethod.includes(method)}
-                        onChange={() => togglePaymentMethod(method)}
-                        className="w-4 h-4 text-blue-600 border-gray-300 rounded focus:ring-blue-500"
-                      />
-                      <span className="text-sm text-gray-700 capitalize">{method}</span>
-                    </label>
-                  ))
-                )}
-              </div>
-              {filterPaymentMethod.length > 0 && (
-                <button
-                  onClick={() => setFilterPaymentMethod([])}
-                  className="mt-2 text-xs text-blue-600 hover:text-blue-800 transition-colors"
-                >
-                  Clear selection
-                </button>
-              )}
-            </div>
-
-            {/* Affiliate Filter - Multiple Selection */}
-            <div>
-              <label className="block text-xs font-medium text-gray-700 mb-1.5">
-                Admin Affiliate {filterAffiliate.length > 0 && `(${filterAffiliate.length} selected)`}
-              </label>
-              <div className="max-h-48 overflow-y-auto border border-gray-200 rounded-lg bg-white p-2 space-y-2">
-                {uniqueAffiliates.length === 0 ? (
-                  <p className="text-xs text-gray-500 py-2">No affiliates available</p>
-                ) : (
-                  uniqueAffiliates.map(affiliate => (
-                    <label
-                      key={affiliate.id}
-                      className="flex items-center gap-2 p-2 hover:bg-gray-50 rounded cursor-pointer"
-                    >
-                      <input
-                        type="checkbox"
-                        checked={filterAffiliate.includes(affiliate.id)}
-                        onChange={() => toggleAffiliate(affiliate.id)}
-                        className="w-4 h-4 text-blue-600 border-gray-300 rounded focus:ring-blue-500"
-                      />
-                      <span className="text-sm text-gray-700">{affiliate.name || affiliate.email || 'Unknown'}</span>
-                    </label>
-                  ))
-                )}
-              </div>
-              {filterAffiliate.length > 0 && (
-                <button
-                  onClick={() => setFilterAffiliate([])}
-                  className="mt-2 text-xs text-blue-600 hover:text-blue-800 transition-colors"
-                >
-                  Clear selection
-                </button>
-              )}
-            </div>
-
-            {/* Min Value Filter */}
-            <div>
-              <label className="block text-xs font-medium text-gray-700 mb-1.5">
-                Min Value (USD)
-              </label>
-              <input
-                type="number"
-                value={filterValueMin}
-                onChange={(e) => setFilterValueMin(e.target.value)}
-                placeholder="0.00"
-                step="0.01"
-                min="0"
-                className="w-full px-3 py-2 text-sm border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
-              />
-            </div>
-
-            {/* Max Value Filter */}
-            <div>
-              <label className="block text-xs font-medium text-gray-700 mb-1.5">
-                Max Value (USD)
-              </label>
-              <input
-                type="number"
-                value={filterValueMax}
-                onChange={(e) => setFilterValueMax(e.target.value)}
-                placeholder="999999.99"
-                step="0.01"
-                min="0"
-                className="w-full px-3 py-2 text-sm border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
-              />
-            </div>
-
-            {/* Date From Filter */}
-            <div>
-              <label className="block text-xs font-medium text-gray-700 mb-1.5">
-                Date From
-              </label>
-              <input
-                type="date"
-                value={filterDateFrom}
-                onChange={(e) => setFilterDateFrom(e.target.value)}
-                className="w-full px-3 py-2 text-sm border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
-              />
-            </div>
-
-            {/* Date To Filter */}
-            <div>
-              <label className="block text-xs font-medium text-gray-700 mb-1.5">
-                Date To
-              </label>
-              <input
-                type="date"
-                value={filterDateTo}
-                onChange={(e) => setFilterDateTo(e.target.value)}
-                className="w-full px-3 py-2 text-sm border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
-              />
-            </div>
-          </div>
-        </div>
-      )}
 
       {/* Status Cards */}
       <div className="px-6 py-4 border-b border-gray-100">
@@ -849,7 +517,7 @@ export const FinancialTransactionsTable: React.FC<FinancialTransactionsTableProp
         <table className="w-full">
           <thead>
             <tr className="bg-gray-50/50 border-b border-gray-100">
-              <th className="px-6 py-4 text-left text-xs font-medium text-gray-500 uppercase tracking-wider w-12">
+              <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider w-12">
                 <input
                   type="checkbox"
                   checked={selectAll}
@@ -858,7 +526,7 @@ export const FinancialTransactionsTable: React.FC<FinancialTransactionsTableProp
                 />
               </th>
               <th
-                className="px-6 py-4 text-left text-xs font-medium text-gray-500 uppercase tracking-wider cursor-pointer hover:bg-gray-100 transition-colors"
+                className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider cursor-pointer hover:bg-gray-100 transition-colors"
                 onClick={() => handleSort('payment_date')}
               >
                 <div className="flex items-center gap-1">
@@ -867,7 +535,7 @@ export const FinancialTransactionsTable: React.FC<FinancialTransactionsTableProp
                 </div>
               </th>
               <th
-                className="px-6 py-4 text-left text-xs font-medium text-gray-500 uppercase tracking-wider cursor-pointer hover:bg-gray-100 transition-colors"
+                className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider cursor-pointer hover:bg-gray-100 transition-colors"
                 onClick={() => handleSort('student_name')}
               >
                 <div className="flex items-center gap-1">
@@ -876,7 +544,7 @@ export const FinancialTransactionsTable: React.FC<FinancialTransactionsTableProp
                 </div>
               </th>
               <th
-                className="px-6 py-4 text-left text-xs font-medium text-gray-500 uppercase tracking-wider cursor-pointer hover:bg-gray-100 transition-colors"
+                className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider cursor-pointer hover:bg-gray-100 transition-colors"
                 onClick={() => handleSort('fee_type')}
               >
                 <div className="flex items-center gap-1">
@@ -885,7 +553,7 @@ export const FinancialTransactionsTable: React.FC<FinancialTransactionsTableProp
                 </div>
               </th>
               <th
-                className="px-6 py-4 text-left text-xs font-medium text-gray-500 uppercase tracking-wider cursor-pointer hover:bg-gray-100 transition-colors"
+                className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider cursor-pointer hover:bg-gray-100 transition-colors"
                 onClick={() => handleSort('standard_amount')}
               >
                 <div className="flex items-center gap-1">
@@ -894,7 +562,7 @@ export const FinancialTransactionsTable: React.FC<FinancialTransactionsTableProp
                 </div>
               </th>
               <th
-                className="px-6 py-4 text-left text-xs font-medium text-gray-500 uppercase tracking-wider cursor-pointer hover:bg-gray-100 transition-colors"
+                className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider cursor-pointer hover:bg-gray-100 transition-colors"
                 onClick={() => handleSort('payment_method')}
               >
                 <div className="flex items-center gap-1">
@@ -903,7 +571,7 @@ export const FinancialTransactionsTable: React.FC<FinancialTransactionsTableProp
                 </div>
               </th>
               <th
-                className="px-6 py-4 text-left text-xs font-medium text-gray-500 uppercase tracking-wider cursor-pointer hover:bg-gray-100 transition-colors"
+                className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider cursor-pointer hover:bg-gray-100 transition-colors"
                 onClick={() => handleSort('amount')}
               >
                 <div className="flex items-center gap-1">
@@ -911,104 +579,125 @@ export const FinancialTransactionsTable: React.FC<FinancialTransactionsTableProp
                   <span className="text-blue-600">{renderSortIcon('amount')}</span>
                 </div>
               </th>
-              <th className="px-6 py-4 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+              <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                 Fees
               </th>
-              <th className="px-6 py-4 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+              <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                 Net Amount
               </th>
             </tr>
           </thead>
           <tbody className="divide-y divide-gray-100">
             {currentTransactions.length > 0 ? (
-              currentTransactions.map((transaction) => {
-                const gross = transaction.gross_amount_usd || transaction.amount;
-                const fees = transaction.fee_amount_usd || 0;
-                const net = gross - fees;
+              <>
+                {currentTransactions.map((transaction) => {
+                  const gross = transaction.gross_amount_usd || transaction.amount;
+                  const fees = transaction.fee_amount_usd || 0;
+                  const net = gross - fees;
 
-                return (
-                  <tr key={transaction.id} className="hover:bg-gray-50/50 transition-colors group">
-                    <td className="px-6 py-4">
-                      <input
-                        type="checkbox"
-                        checked={selectedTransactions.has(transaction.id)}
-                        onChange={() => handleSelectTransaction(transaction.id)}
-                        className="h-4 w-4 text-blue-600 focus:ring-blue-500 border-gray-300 rounded cursor-pointer"
-                      />
-                    </td>
-                    <td className="px-6 py-4">
-                      <div className="flex items-center gap-1 text-sm text-gray-700">
-                        <Calendar className="w-4 h-4 text-gray-400" />
-                        {formatDate(transaction.payment_date)}
-                      </div>
-                    </td>
-                    <td className="px-6 py-4">
-                      <span className="text-sm font-medium text-gray-900">{transaction.student_name}</span>
-                    </td>
-                    <td className="px-6 py-4">
-                      <div className="flex flex-col gap-1">
-                        <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-blue-50 text-blue-700 border border-blue-100 w-fit">
-                          {formatFeeType(transaction.fee_type)}
-                        </span>
-                        {hasDiscount(transaction) && (
-                          <div className="flex items-center gap-1">
-                            {transaction.coupon_code ? (
-                              <span className="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-green-50 text-green-700 border border-green-200">
-                                <Tag className="w-3 h-3 mr-1" />
-                                {getDiscountLabel(transaction)}
-                              </span>
-                            ) : (
-                              <span className="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-orange-50 text-orange-700 border border-orange-200">
-                                <Percent className="w-3 h-3 mr-1" />
-                                {getDiscountLabel(transaction)}
-                              </span>
-                            )}
-                          </div>
-                        )}
-                      </div>
-                    </td>
-                    <td className="px-6 py-4">
-                      <div className="flex flex-col gap-1">
-                        <span className="text-sm text-gray-600">
-                          {formatCurrency(transaction.standard_amount)}
-                        </span>
-                        {hasDiscount(transaction) && transaction.discount_amount && (
-                          <span className="text-xs text-green-600 font-medium">
-                            Discount: -{formatCurrency(transaction.discount_amount)}
-                          </span>
-                        )}
-                      </div>
-                    </td>
-                    <td className="px-6 py-4">
-                      <div className="flex items-center gap-2">
-                        <div className={`p-1.5 rounded-full ${transaction.payment_method === 'stripe' ? 'bg-indigo-50 text-indigo-600' :
-                          transaction.payment_method === 'zelle' ? 'bg-purple-50 text-purple-600' :
-                            transaction.payment_method === 'parcelow' ? 'bg-teal-50 text-teal-600' :
-                              'bg-gray-100 text-gray-600'
-                          }`}>
-                          <CreditCard className="w-3 h-3" />
+                  return (
+                    <tr key={transaction.id} className="hover:bg-gray-50/50 transition-colors group h-[68px]">
+                      <td className="px-6 py-2">
+                        <input
+                          type="checkbox"
+                          checked={selectedTransactions.has(transaction.id)}
+                          onChange={() => handleSelectTransaction(transaction.id)}
+                          className="h-4 w-4 text-blue-600 focus:ring-blue-500 border-gray-300 rounded cursor-pointer"
+                        />
+                      </td>
+                      <td className="px-6 py-2">
+                        <div className="flex items-center gap-1 text-sm text-gray-700">
+                          <Calendar className="w-4 h-4 text-gray-400" />
+                          {formatDate(transaction.payment_date)}
                         </div>
-                        <span className="text-sm text-gray-700 capitalize">{transaction.payment_method}</span>
-                      </div>
-                    </td>
-                    <td className="px-6 py-4 text-sm font-medium text-gray-900">
-                      {formatCurrency(gross)}
-                    </td>
-                    <td className="px-6 py-4 text-sm text-red-600">
-                      - {formatCurrency(fees)}
-                    </td>
-                    <td className="px-6 py-4">
-                      <span className="text-sm font-bold text-emerald-600">
-                        {formatCurrency(net)}
-                      </span>
-                    </td>
+                      </td>
+                      <td className="px-6 py-2">
+                        <span className="text-sm font-medium text-gray-900">{transaction.student_name}</span>
+                      </td>
+                      <td className="px-6 py-2">
+                        <div className="flex flex-col gap-1">
+                          <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-blue-50 text-blue-700 border border-blue-100 w-fit">
+                            {formatFeeType(transaction.fee_type)}
+                          </span>
+                          {hasDiscount(transaction) && (
+                            <div className="flex items-center gap-1">
+                              {transaction.coupon_code ? (
+                                <span className="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-green-50 text-green-700 border border-green-200">
+                                  <Tag className="w-3 h-3 mr-1" />
+                                  {getDiscountLabel(transaction)}
+                                </span>
+                              ) : (
+                                <span className="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-orange-50 text-orange-700 border border-orange-200">
+                                  <Percent className="w-3 h-3 mr-1" />
+                                  {getDiscountLabel(transaction)}
+                                </span>
+                              )}
+                            </div>
+                          )}
+                        </div>
+                      </td>
+                      <td className="px-6 py-2">
+                        <div className="flex flex-col gap-0.5">
+                          <span className="text-sm text-gray-600">
+                            {formatCurrency(transaction.standard_amount)}
+                          </span>
+                          {hasDiscount(transaction) && transaction.discount_amount && (
+                            <span className="text-[10px] text-green-600 font-medium leading-none">
+                              -{formatCurrency(transaction.discount_amount)}
+                            </span>
+                          )}
+                        </div>
+                      </td>
+                      <td className="px-6 py-2">
+                        <div className="flex items-center gap-2">
+                          <div className={`p-1 rounded-full ${transaction.payment_method === "stripe" ? "bg-indigo-50 text-indigo-600" :
+                            transaction.payment_method === "zelle" ? "bg-purple-50 text-purple-600" :
+                              transaction.payment_method === "parcelow" ? "bg-teal-50 text-teal-600" :
+                                "bg-gray-100 text-gray-600"
+                            }`}>
+                            <CreditCard className="w-3 h-3" />
+                          </div>
+                          <span className="text-sm text-gray-700">
+                            {transaction.payment_method === "manual"
+                              ? "Outside Payments"
+                              : transaction.payment_method.charAt(0).toUpperCase() +
+                              transaction.payment_method.slice(1)}
+                          </span>
+                        </div>
+                      </td>
+                      <td className="px-6 py-2 text-sm font-medium text-gray-900">
+                        {formatCurrency(gross)}
+                      </td>
+                      <td className="px-6 py-2 text-sm text-red-600">
+                        - {formatCurrency(fees)}
+                      </td>
+                      <td className="px-6 py-2">
+                        <span className="text-sm font-bold text-emerald-600">
+                          {formatCurrency(net)}
+                        </span>
+                      </td>
+                    </tr>
+                  );
+                })}
+                {/* 
+                  Fill empty rows to maintain stable height based on current itemsPerPage.
+                  This prevents the pagination footer from jumping up and down.
+                */}
+                {currentTransactions.length < itemsPerPage && 
+                 Array.from({ length: itemsPerPage - currentTransactions.length }).map((_, i) => (
+                  <tr key={`empty-${i}`} className="border-none h-[68px]">
+                    <td colSpan={9} className="px-6 py-2"></td>
                   </tr>
-                );
-              })
+                ))}
+              </>
             ) : (
               <tr>
-                <td colSpan={9} className="px-6 py-8 text-center text-gray-500">
-                  No transactions found.
+                <td colSpan={9} className="px-6 py-20 text-center text-gray-500">
+                  <div className="flex flex-col items-center justify-center py-10">
+                    <Search className="h-10 w-10 text-gray-300 mb-3" />
+                    <p className="text-sm font-medium">No transactions found.</p>
+                    <p className="text-xs text-gray-400 mt-1">Try adjusting your filters or search term.</p>
+                  </div>
                 </td>
               </tr>
             )}
