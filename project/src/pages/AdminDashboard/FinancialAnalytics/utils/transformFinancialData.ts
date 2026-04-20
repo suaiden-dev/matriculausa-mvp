@@ -202,15 +202,7 @@ function processApplications(
     const expectedPlacement = 10000;
 
     if (realPaid?.placement !== undefined && realPaid.placement > 0) {
-      if (isValueReasonable(realPaid.placement, expectedPlacement)) {
-        placementFee = Math.round(realPaid.placement * 100);
-      } else {
-        if (userOverrides.placement_fee !== undefined) {
-          placementFee = Math.round(userOverrides.placement_fee * 100);
-        } else {
-          placementFee = Math.round(expectedPlacement * 100);
-        }
-      }
+      placementFee = Math.round(realPaid.placement * 100);
     } else if (userOverrides.placement_fee !== undefined) {
       placementFee = Math.round(userOverrides.placement_fee * 100);
     } else {
@@ -890,6 +882,8 @@ export async function transformFinancialData(
       completedUniversityPayouts: 0,
       universityPayouts: 0,
       affiliatePayouts: 0,
+      newUsers: 0,
+      newUsersGrowth: 0,
     },
     paymentMethodData: Object.entries(paymentsByMethod).map(
       ([method, data]) => {

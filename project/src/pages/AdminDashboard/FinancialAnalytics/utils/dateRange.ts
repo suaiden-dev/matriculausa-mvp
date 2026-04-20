@@ -26,16 +26,25 @@ export function getDateRange(
       startDate = new Date(now.getTime() - 365 * 24 * 60 * 60 * 1000);
       break;
     case 'all':
-      startDate = new Date('2020-01-01');
+      startDate = new Date('2025-06-01');
       break;
     default:
       startDate = new Date(now.getTime() - 30 * 24 * 60 * 60 * 1000);
   }
 
+  // A plataforma só possui dados reais de usuários a partir de Junho de 2025.
+  // Buscas anteriores a essa data são desnecessárias e pesam no banco de dados.
+  const platformStart = new Date('2025-06-01');
+  if (startDate < platformStart) {
+    startDate = platformStart;
+  }
+
   if (showCustomDate && customDateFrom && customDateTo) {
+    const start = new Date(customDateFrom);
+    const end = new Date(customDateTo);
     return {
-      start: new Date(customDateFrom),
-      end: new Date(customDateTo)
+      start: start < platformStart ? platformStart : start,
+      end: end
     };
   }
 

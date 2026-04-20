@@ -1,4 +1,3 @@
-import React from 'react';
 import { XCircle } from 'lucide-react';
 import { formatCentsToDollars } from '../../../../utils/currency';
 import type { PaymentRecord } from '../data/types';
@@ -80,7 +79,7 @@ export function PaymentDetailsModal(props: PaymentDetailsModalProps) {
 								<p className="mt-1 text-sm text-gray-900">
 									{
 										payment.payment_method === 'manual' 
-											? 'Outside'
+											? 'Outside Payments'
 											: payment.payment_method === 'zelle'
 											? 'Zelle'
 											: payment.payment_method === 'stripe'

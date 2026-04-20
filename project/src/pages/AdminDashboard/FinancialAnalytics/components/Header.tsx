@@ -1,5 +1,4 @@
-import React from 'react';
-import { BarChart3, RefreshCw, Download } from 'lucide-react';
+import { RefreshCw, Download } from 'lucide-react';
 
 export interface HeaderProps {
   onRefresh: () => void;
@@ -9,16 +8,7 @@ export interface HeaderProps {
 
 export function Header({ onRefresh, onExport, refreshing }: HeaderProps) {
   return (
-    <div className="flex items-center justify-between">
-      <div>
-        <h1 className="text-3xl font-bold text-gray-900 flex items-center gap-3">
-          <BarChart3 className="text-blue-600" size={32} />
-          Financial Analytics
-        </h1>
-        <p className="text-gray-600 mt-1">Comprehensive financial insights and performance metrics</p>
-      </div>
-      
-      <div className="flex items-center gap-3">
+    <div className="flex items-center justify-end gap-3">
         <button
           onClick={onRefresh}
           disabled={refreshing}
@@ -35,7 +25,6 @@ export function Header({ onRefresh, onExport, refreshing }: HeaderProps) {
           <Download className="h-4 w-4" />
           Export Data
         </button>
-      </div>
     </div>
   );
 }
