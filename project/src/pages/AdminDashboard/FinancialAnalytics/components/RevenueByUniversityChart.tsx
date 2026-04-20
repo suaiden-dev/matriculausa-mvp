@@ -19,8 +19,8 @@ const CustomTooltip = ({ active, payload }: any) => {
     return (
       <div className="bg-white border border-gray-200 rounded-xl shadow-xl p-3 text-sm">
         <p className="font-semibold text-gray-900 mb-1 max-w-[200px] break-words">{d.universityName}</p>
-        <p className="text-blue-600 font-bold">${formatCentsToUSD(d.revenue)}</p>
-        <p className="text-gray-500">{d.count} payment{d.count !== 1 ? 's' : ''}</p>
+        <p className="text-blue-600 font-bold">{d.count} student{d.count !== 1 ? 's' : ''}</p>
+        <p className="text-gray-500">Revenue: ${formatCentsToUSD(d.revenue)}</p>
       </div>
     );
   }
@@ -41,8 +41,8 @@ export function RevenueByUniversityChart({ data, activeFilters }: RevenueByUnive
       <div className="flex items-center justify-between mb-5">
         <h2 className="text-lg font-semibold text-gray-900 flex items-center gap-2">
           <Building2 className="h-5 w-5 text-blue-500" />
-          Revenue by University
-          <InfoTooltip text="Top 10 universidades por receita total de pagamentos 'paid'. Agrupamento feito pelo campo university_name vinculado a cada transação. Exibe receita total e número de pagamentos por instituição." />
+          Students by University
+          <InfoTooltip text="Top 10 universidades por número de estudantes. Agrupamento feito pelo campo university_name vinculado a cada transação. Exibe o total de estudantes e a receita gerada." />
         </h2>
         <span className="text-xs text-gray-400 bg-gray-100 px-2 py-1 rounded-lg">
           Top {data.length}
@@ -55,7 +55,7 @@ export function RevenueByUniversityChart({ data, activeFilters }: RevenueByUnive
           <BarChart data={data} layout="vertical" margin={{ left: 0, right: 16, top: 0, bottom: 0 }}>
             <XAxis
               type="number"
-              tickFormatter={(v) => `$${formatCentsToUSD(v)}`}
+              tickFormatter={(v) => v.toString()}
               tick={{ fontSize: 11, fill: '#9CA3AF' }}
               axisLine={false}
               tickLine={false}
@@ -70,7 +70,7 @@ export function RevenueByUniversityChart({ data, activeFilters }: RevenueByUnive
               tickFormatter={(v: string) => v.length > 18 ? v.slice(0, 18) + '…' : v}
             />
             <Tooltip content={<CustomTooltip />} cursor={{ fill: 'rgba(59,130,246,0.05)' }} />
-            <Bar dataKey="revenue" radius={[0, 6, 6, 0]} maxBarSize={22}>
+            <Bar dataKey="count" radius={[0, 6, 6, 0]} maxBarSize={22}>
               {data.map((_, index) => (
                 <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
               ))}
