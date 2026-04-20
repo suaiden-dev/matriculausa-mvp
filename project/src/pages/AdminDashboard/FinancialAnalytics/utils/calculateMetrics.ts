@@ -308,7 +308,7 @@ export function calculateUniversityRevenue(paymentRecords: any[]): UniversityRev
 
   return Array.from(uniMap.entries())
     .map(([universityName, data]) => ({ universityName, ...data }))
-    .sort((a, b) => b.revenue - a.revenue)
+    .sort((a, b) => b.count - a.count)
     .slice(0, 10);
 }
 
