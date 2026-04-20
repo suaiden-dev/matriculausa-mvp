@@ -3,7 +3,7 @@ import { useAuth } from '../../../../hooks/useAuth';
 import { useFeeConfig } from '../../../../hooks/useFeeConfig';
 import { loadFinancialData } from '../data/loaders/financialDataLoader';
 import { transformFinancialData } from '../utils/transformFinancialData';
-import { calculateRevenueData, calculateFinalMetrics, calculatePaymentMethodData, calculateFeeTypeData, calculateARPU, calculateFunnelData, calculateUniversityRevenue, calculateCouponImpact, calculatePaidVsPending } from '../utils/calculateMetrics';
+import { calculateRevenueData, calculateFinalMetrics, calculatePaymentMethodData, calculateFeeTypeData, calculateARPU, calculateFunnelData, calculateUniversityRevenue } from '../utils/calculateMetrics';
 import { getDateRange } from '../utils/dateRange';
 import { exportFinancialDataToCSV } from '../data/services/exportService';
 import { loadAffiliatesLoader } from '../../PaymentManagement/data/loaders/referencesLoader';
@@ -16,9 +16,7 @@ import type {
   TimeFilter,
   StripeMetrics,
   UniversityRevenueData,
-  FunnelStepData,
-  CouponImpactData,
-  PaidVsPendingData
+  FunnelStepData
 } from '../data/types';
 
 export function useFinancialAnalytics() {
@@ -85,8 +83,6 @@ export function useFinancialAnalytics() {
   const [arpu, setArpu] = useState<number>(0);
   const [funnelData, setFunnelData] = useState<FunnelStepData[]>([]);
   const [universityRevenueData, setUniversityRevenueData] = useState<UniversityRevenueData[]>([]);
-  const [couponImpactData, setCouponImpactData] = useState<CouponImpactData>({ withCoupon: 0, withoutCoupon: 0, totalDiscountCents: 0, couponCount: 0, nonCouponCount: 0 });
-  const [paidVsPendingData, setPaidVsPendingData] = useState<PaidVsPendingData[]>([]);
 
   // Filtros de período
   const [timeFilter, setTimeFilter] = useState<TimeFilter>('30d');
@@ -305,8 +301,6 @@ export function useFinancialAnalytics() {
     setArpu(calculateARPU(locallyFilteredRecords, loadedData.allStudents, currentRange));
     setFunnelData(calculateFunnelData(loadedData.allStudents, locallyFilteredRecords));
     setUniversityRevenueData(calculateUniversityRevenue(transactionsWithNames));
-    setCouponImpactData(calculateCouponImpact(transactionsWithNames));
-    setPaidVsPendingData(calculatePaidVsPending(locallyFilteredRecords));
 
     setTransactions(transactionsWithNames);
     console.log('✅ Filters applied locally (Instant)');
@@ -486,9 +480,7 @@ export function useFinancialAnalytics() {
     availablePaymentMethods,
     arpu,
     funnelData,
-    universityRevenueData,
-    couponImpactData,
-    paidVsPendingData
+    universityRevenueData
   };
 }
 
