@@ -3,7 +3,7 @@ import { useAuth } from '../../../../hooks/useAuth';
 import { useFeeConfig } from '../../../../hooks/useFeeConfig';
 import { loadFinancialData } from '../data/loaders/financialDataLoader';
 import { transformFinancialData } from '../utils/transformFinancialData';
-import { calculateRevenueData, calculateFinalMetrics, calculatePaymentMethodData, calculateFeeTypeData, calculateARPU, calculateFunnelData, calculateUniversityRevenue } from '../utils/calculateMetrics';
+import { calculateRevenueData, calculateFinalMetrics, calculatePaymentMethodData, calculateFeeTypeData, calculateARPU, calculateFunnelData, calculateUniversityRevenue, calculateAffiliateSalesData } from '../utils/calculateMetrics';
 import { getDateRange } from '../utils/dateRange';
 import { exportFinancialDataToCSV } from '../data/services/exportService';
 import { loadAffiliatesLoader } from '../../PaymentManagement/data/loaders/referencesLoader';
@@ -16,7 +16,8 @@ import type {
   TimeFilter,
   StripeMetrics,
   UniversityRevenueData,
-  FunnelStepData
+  FunnelStepData,
+  AffiliateSalesData
 } from '../data/types';
 
 export function useFinancialAnalytics() {
@@ -83,6 +84,7 @@ export function useFinancialAnalytics() {
   const [arpu, setArpu] = useState<number>(0);
   const [funnelData, setFunnelData] = useState<FunnelStepData[]>([]);
   const [universityRevenueData, setUniversityRevenueData] = useState<UniversityRevenueData[]>([]);
+  const [affiliateSalesData, setAffiliateSalesData] = useState<AffiliateSalesData[]>([]);
 
   // Filtros de período
   const [timeFilter, setTimeFilter] = useState<TimeFilter>('30d');
@@ -301,6 +303,7 @@ export function useFinancialAnalytics() {
     setArpu(calculateARPU(locallyFilteredRecords, loadedData.allStudents, currentRange));
     setFunnelData(calculateFunnelData(loadedData.allStudents, locallyFilteredRecords));
     setUniversityRevenueData(calculateUniversityRevenue(transactionsWithNames));
+    setAffiliateSalesData(calculateAffiliateSalesData(locallyFilteredRecords, affiliates));
 
     setTransactions(transactionsWithNames);
     console.log('✅ Filters applied locally (Instant)');
@@ -480,7 +483,8 @@ export function useFinancialAnalytics() {
     availablePaymentMethods,
     arpu,
     funnelData,
-    universityRevenueData
+    universityRevenueData,
+    affiliateSalesData
   };
 }
 

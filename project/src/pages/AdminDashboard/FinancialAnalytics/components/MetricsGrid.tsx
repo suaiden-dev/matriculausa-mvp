@@ -1,4 +1,4 @@
-import { DollarSign, Users, TrendingUp, ArrowUpRight, ArrowDownRight, Target } from 'lucide-react';
+import { DollarSign, Users, ArrowUpRight, ArrowDownRight, Target } from 'lucide-react';
 import { MetricCard } from './MetricCard';
 import type { FinancialMetrics } from '../data/types';
 import { formatCentsToUSD } from '../utils/formatters';
@@ -10,7 +10,7 @@ export interface MetricsGridProps {
 
 export function MetricsGrid({ metrics, arpu }: MetricsGridProps) {
   return (
-    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-6">
+    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
       <MetricCard
         label="Student Revenue"
         value={`$${formatCentsToUSD(metrics.totalRevenue)}`}
@@ -31,38 +31,6 @@ export function MetricsGrid({ metrics, arpu }: MetricsGridProps) {
               {metrics.revenueGrowth >= 0 ? '+' : ''}{metrics.revenueGrowth.toFixed(1)}% vs previous period
             </span>
           </>
-        }
-      />
-
-      <MetricCard
-        label="University Payouts"
-        value={`$${formatCentsToUSD(metrics.universityPayouts || 0)}`}
-        icon={Users}
-        gradientFrom="from-orange-500"
-        gradientTo="to-orange-600"
-        iconColor="text-orange-200"
-        textColor="text-orange-100"
-        info="Total pago às universidades parceiras com status 'paid'. Representa repasses já aprovados e transferidos. Não inclui solicitações pendentes ou aprovadas aguardando pagamento."
-        sublabel={
-          <span className="text-sm text-orange-100">
-            {metrics.pendingPayouts} pending
-          </span>
-        }
-      />
-
-      <MetricCard
-        label="Affiliate Payouts"
-        value={`$${formatCentsToUSD(metrics.affiliatePayouts || 0)}`}
-        icon={TrendingUp}
-        gradientFrom="from-teal-500"
-        gradientTo="to-teal-600"
-        iconColor="text-teal-200"
-        textColor="text-teal-100"
-        info="Total pago a afiliados/parceiros de indicação com status 'paid'. Calculado a partir do campo amount_usd das solicitações de pagamento de afiliados aprovadas."
-        sublabel={
-          <span className="text-sm text-teal-100">
-            {metrics.completedAffiliatePayouts || 0} completed
-          </span>
         }
       />
 

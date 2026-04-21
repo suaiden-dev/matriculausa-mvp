@@ -1,4 +1,4 @@
-import type { DateRange, FinancialMetrics, RevenueData, ProcessedFinancialData, PaymentMethodData, FeeTypeData, UniversityRevenueData, FunnelStepData, CouponImpactData, PaidVsPendingData } from '../data/types';
+import type { DateRange, FinancialMetrics, RevenueData, ProcessedFinancialData, PaymentMethodData, FeeTypeData, UniversityRevenueData, FunnelStepData, CouponImpactData, PaidVsPendingData, AffiliateSalesData } from '../data/types';
 
 /**
  * Calcula revenueData (buckets por dia) baseado nos payment records
@@ -370,4 +370,28 @@ export function calculatePaidVsPending(paymentRecords: any[]): PaidVsPendingData
   return Array.from(map.entries())
     .map(([feeType, data]) => ({ feeType, ...data }))
     .sort((a, b) => b.paid - a.paid);
+}
+
+/**
+ * Calcula a quantidade de vendas por afiliado
+ */
+export function calculateAffiliateSalesData(paymentRecords: any[], affiliates: any[]): AffiliateSalesData[] {
+  const paidRecords = paymentRecords.filter(p => p.status === 'paid');
+  const affiliateSalesMap = new Map<string, number>();
+
+  paidRecords.forEach(record => {
+    const sellerCode = record.seller_referral_code;
+    if (sellerCode) {
+      const affiliate = affiliates.find(a => a.referral_code === sellerCode);
+      const name = affiliate ? affiliate.full_name : `Código: ${sellerCode}`;
+      
+      const currentCount = affiliateSalesMap.get(name) || 0;
+      affiliateSalesMap.set(name, currentCount + 1);
+    }
+  });
+
+  return Array.from(affiliateSalesMap.entries())
+    .map(([affiliateName, salesCount]) => ({ affiliateName, salesCount }))
+    .sort((a, b) => b.salesCount - a.salesCount)
+    .slice(0, 10); // Retorna os Top 10
 }

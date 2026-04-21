@@ -10,6 +10,7 @@ import { UserGrowthChart } from './FinancialAnalytics/components/UserGrowthChart
 import { FinancialTransactionsTable } from './FinancialAnalytics/components/FinancialTransactionsTable';
 import { ConversionFunnelChart } from './FinancialAnalytics/components/ConversionFunnelChart';
 import { RevenueByUniversityChart } from './FinancialAnalytics/components/RevenueByUniversityChart';
+import { AffiliateSalesChart } from './FinancialAnalytics/components/AffiliateSalesChart';
 import { buildFilterBadges } from './FinancialAnalytics/utils/buildFilterBadges';
 import FinancialAnalyticsSkeleton from '../../components/FinancialAnalyticsSkeleton';
 
@@ -52,7 +53,8 @@ const FinancialAnalytics: React.FC = () => {
     availablePaymentMethods,
     arpu,
     funnelData,
-    universityRevenueData
+    universityRevenueData,
+    affiliateSalesData
   } = useFinancialAnalytics();
 
   // Badges dos filtros ativos — recomputados apenas quando os filtros mudam
@@ -144,6 +146,11 @@ const FinancialAnalytics: React.FC = () => {
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
             <ConversionFunnelChart funnelData={funnelData} totalStudents={metrics.totalStudents} activeFilters={activeFilters} />
             <RevenueByUniversityChart data={universityRevenueData} activeFilters={activeFilters} />
+          </div>
+
+          {/* Row 6: Affiliate Sales */}
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+            <AffiliateSalesChart affiliateSalesData={affiliateSalesData} activeFilters={activeFilters} />
           </div>
 
         </div>
