@@ -758,7 +758,7 @@ Deno.serve(async (req)=>{
           notification_target: 'student'
         };
         console.log('[NOTIFICAÇÃO ALUNO] Enviando notificação para aluno:', alunoNotificationPayload);
-        const alunoNotificationResponse = await fetch('https://nwh.suaiden.com/webhook/notfmatriculausa', {
+        const alunoNotifPromise = fetch('https://nwh.suaiden.com/webhook/notfmatriculausa', {
           method: 'POST',
           headers: {
             'Content-Type': 'application/json',
@@ -816,7 +816,7 @@ Deno.serve(async (req)=>{
           notification_target: 'university'
         };
         console.log('[NOTIFICAÇÃO UNIVERSIDADE] Enviando notificação para universidade:', universidadeNotificationPayload);
-        const universidadeNotificationResponse = await fetch('https://nwh.suaiden.com/webhook/notfmatriculausa', {
+        const univNotifPromise = fetch('https://nwh.suaiden.com/webhook/notfmatriculausa', {
           method: 'POST',
           headers: {
             'Content-Type': 'application/json',
@@ -899,7 +899,7 @@ Deno.serve(async (req)=>{
               notification_target: 'seller'
             };
             console.log('📧 [verify-stripe-session-application-fee] Enviando notificação para seller:', sellerNotificationPayload);
-            const sellerNotificationResponse = await fetch('https://nwh.suaiden.com/webhook/notfmatriculausa', {
+            const sellerNotifPromise = fetch('https://nwh.suaiden.com/webhook/notfmatriculausa', {
               method: 'POST',
               headers: {
                 'Content-Type': 'application/json',
@@ -907,13 +907,7 @@ Deno.serve(async (req)=>{
               },
               body: JSON.stringify(sellerNotificationPayload)
             });
-            if (sellerNotificationResponse.ok) {
-              const sellerResult = await sellerNotificationResponse.text();
-              console.log('📧 [verify-stripe-session-application-fee] Notificação para seller enviada com sucesso:', sellerResult);
-            } else {
-              const sellerError = await sellerNotificationResponse.text();
-              console.error('📧 [verify-stripe-session-application-fee] Erro ao enviar notificação para seller:', sellerError);
-            }
+            sellerNotifPromise.then(async r => { if(r.ok) { console.log('[NOTIFICAÇÃO SELLER] Sucesso:', await r.text()); } else { console.error('[NOTIFICAÇÃO SELLER] Erro:', await r.text()); } }).catch(e => console.error(e));
 
             // ✅ IN-APP NOTIFICATION FOR SELLER
             if (sellerData.user_id) {
@@ -965,7 +959,7 @@ Deno.serve(async (req)=>{
                 notification_target: 'affiliate_admin'
               };
               console.log('📧 [verify-stripe-session-application-fee] Enviando notificação para affiliate admin:', affiliateNotificationPayload);
-              const affiliateNotificationResponse = await fetch('https://nwh.suaiden.com/webhook/notfmatriculausa', {
+              const affiliateNotifPromise = fetch('https://nwh.suaiden.com/webhook/notfmatriculausa', {
                 method: 'POST',
                 headers: {
                   'Content-Type': 'application/json',
@@ -973,13 +967,7 @@ Deno.serve(async (req)=>{
                 },
                 body: JSON.stringify(affiliateNotificationPayload)
               });
-              if (affiliateNotificationResponse.ok) {
-                const affiliateResult = await affiliateNotificationResponse.text();
-                console.log('📧 [verify-stripe-session-application-fee] Notificação para affiliate admin enviada com sucesso:', affiliateResult);
-              } else {
-                const affiliateError = await affiliateNotificationResponse.text();
-                console.error('📧 [verify-stripe-session-application-fee] Erro ao enviar notificação para affiliate admin:', affiliateError);
-              }
+              affiliateNotifPromise.then(async r => { if(r.ok) { console.log('[NOTIFICAÇÃO AFFILIATE] Sucesso:', await r.text()); } else { console.error('[NOTIFICAÇÃO AFFILIATE] Erro:', await r.text()); } }).catch(e => console.error(e));
 
               // ✅ IN-APP NOTIFICATION FOR AFFILIATE ADMIN
               if (affiliateAdminData.user_id) {
@@ -1081,7 +1069,15 @@ Deno.serve(async (req)=>{
                  console.warn(`[NOTIFICAÇÃO ADMIN] ⚠️ Admin ${admin.email} não possui user_id, pulando in-app notification.`);
               }
             });
-            await Promise.allSettled(adminNotificationPromises);
+            
+            // Espera as notificações de fetch pendentes acabarem para evitar que Deno mate a isolate
+            const allPromises = [];
+            if (typeof alunoNotifPromise !== 'undefined') allPromises.push(alunoNotifPromise);
+            if (typeof univNotifPromise !== 'undefined') allPromises.push(univNotifPromise);
+            if (typeof sellerNotifPromise !== 'undefined') allPromises.push(sellerNotifPromise);
+            if (typeof affiliateNotifPromise !== 'undefined') allPromises.push(affiliateNotifPromise);
+            await Promise.allSettled([ ...allPromises, ...adminNotificationPromises ]);
+
           } else {
             console.log(`📤 [verify-stripe-session-application-fee] Seller não encontrado para seller_referral_code: ${alunoData.seller_referral_code}`);
             
@@ -1155,7 +1151,15 @@ Deno.serve(async (req)=>{
                  console.warn(`[NOTIFICAÇÃO ADMIN] ⚠️ Admin ${admin.email} não possui user_id, pulando in-app notification.`);
               }
             });
-            await Promise.allSettled(adminNotificationPromises);
+            
+            // Espera as notificações de fetch pendentes acabarem para evitar que Deno mate a isolate
+            const allPromises = [];
+            if (typeof alunoNotifPromise !== 'undefined') allPromises.push(alunoNotifPromise);
+            if (typeof univNotifPromise !== 'undefined') allPromises.push(univNotifPromise);
+            if (typeof sellerNotifPromise !== 'undefined') allPromises.push(sellerNotifPromise);
+            if (typeof affiliateNotifPromise !== 'undefined') allPromises.push(affiliateNotifPromise);
+            await Promise.allSettled([ ...allPromises, ...adminNotificationPromises ]);
+
           }
         } else {
           console.log(`📤 [verify-stripe-session-application-fee] Nenhum seller_referral_code encontrado, não há seller para notificar`);
@@ -1230,7 +1234,15 @@ Deno.serve(async (req)=>{
                  console.warn(`[NOTIFICAÇÃO ADMIN] ⚠️ Admin ${admin.email} não possui user_id, pulando in-app notification.`);
             }
           });
-          await Promise.allSettled(adminNotificationPromises);
+          
+            // Espera as notificações de fetch pendentes acabarem para evitar que Deno mate a isolate
+            const allPromises = [];
+            if (typeof alunoNotifPromise !== 'undefined') allPromises.push(alunoNotifPromise);
+            if (typeof univNotifPromise !== 'undefined') allPromises.push(univNotifPromise);
+            if (typeof sellerNotifPromise !== 'undefined') allPromises.push(sellerNotifPromise);
+            if (typeof affiliateNotifPromise !== 'undefined') allPromises.push(affiliateNotifPromise);
+            await Promise.allSettled([ ...allPromises, ...adminNotificationPromises ]);
+
         }
       } catch (notifErr) {
         console.error('[NOTIFICAÇÃO] Erro ao notificar application fee via n8n:', notifErr);

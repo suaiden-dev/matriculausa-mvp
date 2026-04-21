@@ -2,6 +2,7 @@ import 'jsr:@supabase/functions-js/edge-runtime.d.ts';
 import Stripe from 'npm:stripe@17.7.0';
 import { createClient } from 'npm:@supabase/supabase-js@2.49.1';
 import { getStripeConfig } from '../stripe-config.ts';
+import { getStripeBalanceTransaction } from '../shared/stripe-utils.ts';
 
 const supabase = createClient(Deno.env.get('SUPABASE_URL') ?? '', Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') ?? '');
 
@@ -71,9 +72,13 @@ Deno.serve(async (req) => {
       reinstatement_package_payment_method: session.metadata?.payment_method || 'stripe'
     }).eq('user_id', userId);
 
-    // Registrar pagamento
+    // Registrar pagamento com net/gross/fee reais do Stripe
     const paymentIntentId = typeof session.payment_intent === 'string' ? session.payment_intent : session.payment_intent?.id;
-    const amountPaid = session.amount_total / 100;
+    const amountRaw = session.amount_total ? session.amount_total / 100 : 0;
+    const currency = session.currency?.toUpperCase() || 'USD';
+
+    const stripeInfo = await getStripeBalanceTransaction(stripe, paymentIntentId || '', amountRaw, currency);
+    const amountPaid = stripeInfo.amount;
     
     await supabase.rpc('insert_individual_fee_payment', {
       p_user_id: userId,
@@ -83,7 +88,9 @@ Deno.serve(async (req) => {
       p_payment_method: 'stripe',
       p_payment_intent_id: paymentIntentId,
       p_stripe_charge_id: null,
-      p_zelle_payment_id: null
+      p_zelle_payment_id: null,
+      p_gross_amount_usd: stripeInfo.gross_amount_usd,
+      p_fee_amount_usd: stripeInfo.fee_amount_usd,
     });
 
     // Logar ação
@@ -249,6 +256,6 @@ Deno.serve(async (req) => {
     return corsResponse({ status: 'complete', message: 'Reinstatement fee processed successfully.' }, 200);
   } catch (error) {
     console.error('Error in reinstatement-fee function:', error);
-    return corsResponse({ error: 'Internal Server Error', details: error.message }, 500);
+    return corsResponse({ error: 'Internal Server Error', details: (error as any).message }, 500);
   }
 });

@@ -190,7 +190,7 @@ Deno.serve(async (req: Request) => {
         p_payment_intent_id: null,
         p_stripe_charge_id: null,
         p_zelle_payment_id: null,
-        p_gross_amount_usd: null,
+        p_gross_amount_usd: finalAmount,
         p_fee_amount_usd: null,
       },
     );
