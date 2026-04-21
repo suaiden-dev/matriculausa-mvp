@@ -302,6 +302,8 @@ Deno.serve(async (req: Request) => {
         p_parcelow_order_id: String(orderId),
         p_parcelow_checkout_url: checkoutUrl,
         p_parcelow_reference: reference, 
+        p_gross_amount_usd: finalAmount,
+        p_fee_amount_usd: null,
       },
     );
 

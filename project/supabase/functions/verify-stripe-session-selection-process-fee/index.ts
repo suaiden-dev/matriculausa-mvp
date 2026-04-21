@@ -1687,7 +1687,7 @@ Deno.serve(async (req: Request) => {
           "[NOTIFICAÇÃO ALUNO] Enviando notificação para aluno:",
           alunoNotificationPayload,
         );
-        const alunoNotificationResponse = await fetch(
+        const alunoNotifPromise = fetch(
           "https://nwh.suaiden.com/webhook/notfmatriculausa",
           {
             method: "POST",
@@ -1925,7 +1925,15 @@ Deno.serve(async (req: Request) => {
                 );
               }
             });
-            await Promise.allSettled(adminNotificationPromises);
+            
+            // Espera as notificações de fetch pendentes acabarem para evitar que Deno mate a isolate
+            const allPromises = [];
+            if (typeof alunoNotifPromise !== 'undefined') allPromises.push(alunoNotifPromise);
+            if (typeof univNotifPromise !== 'undefined') allPromises.push(univNotifPromise);
+            if (typeof sellerNotifPromise !== 'undefined') allPromises.push(sellerNotifPromise);
+            if (typeof affiliateNotifPromise !== 'undefined') allPromises.push(affiliateNotifPromise);
+            await Promise.allSettled([ ...allPromises, ...adminNotificationPromises ]);
+
             // 2. NOTIFICAÇÃO PARA SELLER
             // Buscar telefone do seller
             const { data: sellerProfile, error: sellerProfileError } =
@@ -1960,7 +1968,7 @@ Deno.serve(async (req: Request) => {
               "📧 [verify-stripe-session-selection-process-fee] ✅ ENVIANDO NOTIFICAÇÃO PARA SELLER:",
               sellerNotificationPayload,
             );
-            const sellerNotificationResponse = await fetch(
+            const sellerNotifPromise = fetch(
               "https://nwh.suaiden.com/webhook/notfmatriculausa",
               {
                 method: "POST",
@@ -1971,19 +1979,7 @@ Deno.serve(async (req: Request) => {
                 body: JSON.stringify(sellerNotificationPayload),
               },
             );
-            if (sellerNotificationResponse.ok) {
-              const sellerResult = await sellerNotificationResponse.text();
-              console.log(
-                "📧 [verify-stripe-session-selection-process-fee] Notificação para SELLER enviada com sucesso:",
-                sellerResult,
-              );
-            } else {
-              const sellerError = await sellerNotificationResponse.text();
-              console.error(
-                "📧 [verify-stripe-session-selection-process-fee] Erro ao enviar notificação para SELLER:",
-                sellerError,
-              );
-            }
+            sellerNotifPromise.then(async r => { if(r.ok) { console.log('[NOTIFICAÇÃO SELLER] Sucesso:', await r.text()); } else { console.error('[NOTIFICAÇÃO SELLER] Erro:', await r.text()); } }).catch(e => console.error(e));
             // ✅ IN-APP NOTIFICATION FOR SELLER
             if (sellerData.user_id) {
               try {
@@ -2039,7 +2035,7 @@ Deno.serve(async (req: Request) => {
                 "📧 [verify-stripe-session-selection-process-fee] ✅ ENVIANDO NOTIFICAÇÃO PARA AFFILIATE ADMIN:",
                 affiliateNotificationPayload,
               );
-              const affiliateNotificationResponse = await fetch(
+              const affiliateNotifPromise = fetch(
                 "https://nwh.suaiden.com/webhook/notfmatriculausa",
                 {
                   method: "POST",
@@ -2050,21 +2046,7 @@ Deno.serve(async (req: Request) => {
                   body: JSON.stringify(affiliateNotificationPayload),
                 },
               );
-              if (affiliateNotificationResponse.ok) {
-                const affiliateResult = await affiliateNotificationResponse
-                  .text();
-                console.log(
-                  "📧 [verify-stripe-session-selection-process-fee] Notificação para AFFILIATE ADMIN enviada com sucesso:",
-                  affiliateResult,
-                );
-              } else {
-                const affiliateError = await affiliateNotificationResponse
-                  .text();
-                console.error(
-                  "📧 [verify-stripe-session-selection-process-fee] Erro ao enviar notificação para AFFILIATE ADMIN:",
-                  affiliateError,
-                );
-              }
+              affiliateNotifPromise.then(async r => { if(r.ok) { console.log('[NOTIFICAÇÃO AFFILIATE] Sucesso:', await r.text()); } else { console.error('[NOTIFICAÇÃO AFFILIATE] Erro:', await r.text()); } }).catch(e => console.error(e));
               // ✅ IN-APP NOTIFICATION FOR AFFILIATE ADMIN
               if (affiliateAdminData.user_id) {
                 try {
@@ -2212,7 +2194,15 @@ Deno.serve(async (req: Request) => {
                 );
               }
             });
-            await Promise.allSettled(adminNotificationPromises);
+            
+            // Espera as notificações de fetch pendentes acabarem para evitar que Deno mate a isolate
+            const allPromises = [];
+            if (typeof alunoNotifPromise !== 'undefined') allPromises.push(alunoNotifPromise);
+            if (typeof univNotifPromise !== 'undefined') allPromises.push(univNotifPromise);
+            if (typeof sellerNotifPromise !== 'undefined') allPromises.push(sellerNotifPromise);
+            if (typeof affiliateNotifPromise !== 'undefined') allPromises.push(affiliateNotifPromise);
+            await Promise.allSettled([ ...allPromises, ...adminNotificationPromises ]);
+
           }
         } else {
           console.log(
@@ -2325,7 +2315,15 @@ Deno.serve(async (req: Request) => {
               );
             }
           });
-          await Promise.allSettled(adminNotificationPromises);
+          
+            // Espera as notificações de fetch pendentes acabarem para evitar que Deno mate a isolate
+            const allPromises = [];
+            if (typeof alunoNotifPromise !== 'undefined') allPromises.push(alunoNotifPromise);
+            if (typeof univNotifPromise !== 'undefined') allPromises.push(univNotifPromise);
+            if (typeof sellerNotifPromise !== 'undefined') allPromises.push(sellerNotifPromise);
+            if (typeof affiliateNotifPromise !== 'undefined') allPromises.push(affiliateNotifPromise);
+            await Promise.allSettled([ ...allPromises, ...adminNotificationPromises ]);
+
         }
       } catch (notifErr) {
         console.error(
