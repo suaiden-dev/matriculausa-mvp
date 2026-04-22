@@ -1,6 +1,5 @@
 import { supabase } from '../../../../../lib/supabase';
-import type { DateRange, LoadedFinancialData } from '../types';
-import { getPreviousPeriodRange } from '../../utils/dateRange';
+import type { LoadedFinancialData } from '../types';
 import { getPaymentDatesForUsersLoaderOptimized } from '@/pages/AdminDashboard/PaymentManagement/data/loaders/paymentDatesLoaderOptimized';
 
 /**
@@ -79,41 +78,9 @@ async function loadApplications(): Promise<any[]> {
 }
 
 /**
- * Busca aplicações de bolsas (período anterior)
+ * Busca pagamentos Zelle com user_profiles
  */
-async function loadApplicationsPrev(prevRange: DateRange): Promise<any[]> {
-  const { data, error } = await supabase
-    .from('scholarship_applications')
-    .select(`
-      *,
-      user_profiles!student_id (
-        id,
-        user_id,
-        has_paid_selection_process_fee,
-        is_application_fee_paid,
-        is_scholarship_fee_paid,
-        has_paid_i20_control_fee,
-        has_paid_reinstatement_package,
-        scholarship_package_id,
-        dependents,
-        created_at
-      ),
-      scholarships (
-        id,
-        universities (id)
-      )
-    `)
-    .gte('created_at', prevRange.start.toISOString())
-    .lte('created_at', prevRange.end.toISOString());
-
-  if (error) throw error;
-  return data || [];
-}
-
-/**
- * Busca pagamentos Zelle (período atual) com user_profiles
- */
-async function loadZellePayments(_currentRange: DateRange): Promise<any[]> {
+async function loadZellePayments(): Promise<any[]> {
   const { data: zellePaymentsRaw, error } = await supabase
     .from('zelle_payments')
     .select('*')
@@ -143,20 +110,6 @@ async function loadZellePayments(_currentRange: DateRange): Promise<any[]> {
   }
   
   return zellePayments;
-}
-
-/**
- * Busca pagamentos Zelle (período anterior) - apenas dados básicos para comparação
- */
-async function loadZellePaymentsPrev(prevRange: DateRange): Promise<any[]> {
-  const { data, error } = await supabase
-    .from('zelle_payments')
-    .select('*')
-    .gte('created_at', prevRange.start.toISOString())
-    .lte('created_at', prevRange.end.toISOString());
-
-  if (error) throw error;
-  return data || [];
 }
 
 /**
@@ -267,13 +220,11 @@ async function loadUserSystemTypes(userIds: string[]): Promise<Map<string, strin
 /**
  * Busca requisições de pagamento universitário
  */
-async function loadUniversityRequests(currentRange: DateRange): Promise<any[]> {
+async function loadUniversityRequests(): Promise<any[]> {
   // Primeiro tenta payout, depois payment
   const tryPayout = await supabase
     .from('university_payout_requests')
-    .select('*')
-    .gte('created_at', currentRange.start.toISOString())
-    .lte('created_at', currentRange.end.toISOString());
+    .select('*');
     
   if (!tryPayout.error) {
     return tryPayout.data || [];
@@ -281,9 +232,7 @@ async function loadUniversityRequests(currentRange: DateRange): Promise<any[]> {
   
   const tryPayment = await supabase
     .from('university_payment_requests')
-    .select('*')
-    .gte('created_at', currentRange.start.toISOString())
-    .lte('created_at', currentRange.end.toISOString());
+    .select('*');
     
   return tryPayment.data || [];
 }
@@ -291,7 +240,7 @@ async function loadUniversityRequests(currentRange: DateRange): Promise<any[]> {
 /**
  * Busca requisições de afiliados
  */
-async function loadAffiliateRequests(currentRange: DateRange): Promise<any[]> {
+async function loadAffiliateRequests(): Promise<any[]> {
   // ✅ USAR A MESMA RPC DO PAYMENT MANAGEMENT
   // O Payment Management usa RPC get_all_affiliate_payment_requests que retorna todos os requests
   let data: any[] = [];
@@ -317,47 +266,7 @@ async function loadAffiliateRequests(currentRange: DateRange): Promise<any[]> {
     throw error;
   }
   
-  console.log('🔍 [FinancialAnalytics] Affiliate Requests carregados (antes do filtro):', {
-    total: data?.length || 0,
-    date_range: {
-      start: currentRange.start.toISOString(),
-      end: currentRange.end.toISOString()
-    },
-    requests: (data || []).map(req => ({
-      id: req.id,
-      status: req.status,
-      amount_usd: req.amount_usd,
-      paid_at: req.paid_at,
-      created_at: req.created_at
-    }))
-  });
-  
-  // Filtrar por data de pagamento (paid_at) quando status é 'paid', senão usar created_at
-  const filtered = (data || []).filter(req => {
-    if (req.status === 'paid' && req.paid_at) {
-      const paidAt = new Date(req.paid_at);
-      const inRange = paidAt >= currentRange.start && paidAt <= currentRange.end;
-      if (!inRange) {
-        console.log(`⚠️ [FinancialAnalytics] Affiliate request ${req.id} (paid) fora do período: paid_at=${req.paid_at}, range=${currentRange.start.toISOString()} a ${currentRange.end.toISOString()}`);
-      }
-      return inRange;
-    } else {
-      // Para outros status, usar created_at
-      const createdAt = new Date(req.created_at);
-      const inRange = createdAt >= currentRange.start && createdAt <= currentRange.end;
-      if (!inRange && req.status === 'paid') {
-        console.log(`⚠️ [FinancialAnalytics] Affiliate request ${req.id} (paid sem paid_at) fora do período: created_at=${req.created_at}, range=${currentRange.start.toISOString()} a ${currentRange.end.toISOString()}`);
-      }
-      return inRange;
-    }
-  });
-  
-  console.log('✅ [FinancialAnalytics] Affiliate Requests após filtro:', {
-    total: filtered.length,
-    paid_count: filtered.filter(req => req.status === 'paid').length
-  });
-  
-  return filtered;
+  return data;
 }
 
 /**
@@ -565,27 +474,18 @@ async function loadIndividualFeePayments(): Promise<any[]> {
 /**
  * Carrega todos os dados financeiros necessários
  */
-export async function loadFinancialData(
-  currentRange: DateRange
-): Promise<LoadedFinancialData> {
-  // Calcular período anterior
-  const prevRange = getPreviousPeriodRange(currentRange);
-
-  // ✅ OTIMIZADO: carregar dados atuais E do período anterior em paralelo
+export async function loadFinancialData(): Promise<LoadedFinancialData> {
+  // ✅ OTIMIZADO: carregar dados atuais em paralelo (removemos prevRange pois growth é calculado localmente em calculateMetrics)
   const [
     applicationsRaw,
     zellePaymentsRaw,
     allStudentsRaw,
-    individualFeePayments,
-    applicationsPrevRaw,
-    zellePaymentsPrevRaw
+    individualFeePayments
   ] = await Promise.all([
     loadApplications(),
-    loadZellePayments(currentRange),
+    loadZellePayments(),
     loadAllStudents(),
-    loadIndividualFeePayments(),
-    loadApplicationsPrev(prevRange),
-    loadZellePaymentsPrev(prevRange)
+    loadIndividualFeePayments()
   ]);
 
   // Filtrar dados em produção/staging: excluir usuários com email @uorak.com
@@ -602,13 +502,6 @@ export async function loadFinancialData(
   const allStudents = filterActive
     ? allStudentsRaw.filter((student: any) => !shouldExcludeStudent(student.email))
     : allStudentsRaw;
-
-  // Filtrar dados do período anterior também
-  const applicationsPrev = filterActive
-    ? applicationsPrevRaw.filter((app: any) => !shouldExcludeStudent(app.user_profiles?.email))
-    : applicationsPrevRaw;
-
-  const zellePaymentsPrev = zellePaymentsPrevRaw;
 
   // Carregar usuários Stripe (depende de applications já filtradas)
   const stripeUsersRaw = await loadStripeUsers(applications);
@@ -672,8 +565,8 @@ export async function loadFinancialData(
 
   // Carregar requisições de pagamento
   const [universityRequests, affiliateRequests] = await Promise.all([
-    loadUniversityRequests(currentRange),
-    loadAffiliateRequests(currentRange)
+    loadUniversityRequests(),
+    loadAffiliateRequests()
   ]);
 
   // ✅ CORREÇÃO: Carregar datas reais de pagamento (mesma lógica do PaymentManagement)
@@ -684,8 +577,6 @@ export async function loadFinancialData(
     zellePayments,
     universityRequests,
     affiliateRequests,
-    applicationsPrev,
-    zellePaymentsPrev,
     allStudents,
     stripeUsers,
     overridesMap,
