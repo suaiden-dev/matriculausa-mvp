@@ -112,6 +112,8 @@ export function useStudentDetailsQuery(profileId: string | undefined) {
             placement_fee_pending_balance,
             placement_fee_due_date,
             placement_fee_installment_number,
+            assigned_to_admin_id,
+            assigned_admin:user_profiles!assigned_to_admin_id(id, full_name),
             scholarship_applications (
               id,
               scholarship_id,
@@ -278,10 +280,12 @@ export function useStudentDetailsQuery(profileId: string | undefined) {
         university_id: s.university_id || null,
         scholarship_fee_amount: mainApp.scholarships?.scholarship_fee_amount || null,
         placement_fee_amount: mainApp.scholarships?.placement_fee_amount || null,
-        placement_fee_installment_enabled: !!(s as any).placement_fee_installment_enabled,
+        placement_fee_installment_enabled: s.placement_fee_installment_enabled ?? false,
         placement_fee_pending_balance: (s as any).placement_fee_pending_balance ?? 0,
         placement_fee_due_date: (s as any).placement_fee_due_date ?? null,
-        placement_fee_installment_number: (s as any).placement_fee_installment_number ?? 0,
+        placement_fee_installment_number: s.placement_fee_installment_number ?? 0,
+        assigned_to_admin_id: s.assigned_to_admin_id || null,
+        assigned_to_admin_name: s.assigned_to_admin_name || (s.assigned_admin as any)?.full_name || null,
       };
 
       return formatted;

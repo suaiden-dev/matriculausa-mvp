@@ -331,7 +331,7 @@ export function useAssignAdminMutation() {
       if (error) throw error;
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: queryKeys.students.list() });
+      queryClient.invalidateQueries({ queryKey: queryKeys.students.all });
     },
   });
 }

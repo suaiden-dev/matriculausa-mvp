@@ -73,8 +73,10 @@ const IdentityVerification: React.FC = () => {
               content
             )
           `)
+          // Remover o filtro de checkout_terms para permitir fallback
+          // O order by accepted_at DESC garante que pegaremos a foto mais recente, independente do termo
           .eq('user_id', user.id)
-          .eq('term_type', 'checkout_terms')
+          .not('identity_photo_path', 'is', null)
           .order('accepted_at', { ascending: false })
           .limit(1)
           .maybeSingle();

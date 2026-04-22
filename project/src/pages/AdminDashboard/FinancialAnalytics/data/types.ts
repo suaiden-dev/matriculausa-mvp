@@ -73,6 +73,11 @@ export interface PaidVsPendingData {
   paidRevenue: number;
 }
 
+export interface AffiliateSalesData {
+  affiliateName: string;
+  salesCount: number;
+}
+
 export interface DateRange {
   start: Date;
   end: Date;

@@ -10,8 +10,7 @@ import { UserGrowthChart } from './FinancialAnalytics/components/UserGrowthChart
 import { FinancialTransactionsTable } from './FinancialAnalytics/components/FinancialTransactionsTable';
 import { ConversionFunnelChart } from './FinancialAnalytics/components/ConversionFunnelChart';
 import { RevenueByUniversityChart } from './FinancialAnalytics/components/RevenueByUniversityChart';
-import { CouponImpactChart } from './FinancialAnalytics/components/CouponImpactChart';
-import { PaidVsPendingChart } from './FinancialAnalytics/components/PaidVsPendingChart';
+import { AffiliateSalesChart } from './FinancialAnalytics/components/AffiliateSalesChart';
 import { buildFilterBadges } from './FinancialAnalytics/utils/buildFilterBadges';
 import FinancialAnalyticsSkeleton from '../../components/FinancialAnalyticsSkeleton';
 
@@ -55,8 +54,7 @@ const FinancialAnalytics: React.FC = () => {
     arpu,
     funnelData,
     universityRevenueData,
-    couponImpactData,
-    paidVsPendingData
+    affiliateSalesData
   } = useFinancialAnalytics();
 
   // Badges dos filtros ativos — recomputados apenas quando os filtros mudam
@@ -150,11 +148,11 @@ const FinancialAnalytics: React.FC = () => {
             <RevenueByUniversityChart data={universityRevenueData} activeFilters={activeFilters} />
           </div>
 
-          {/* Row 6: Coupon Impact + Paid vs Pending */}
+          {/* Row 6: Affiliate Sales */}
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-            <CouponImpactChart data={couponImpactData} activeFilters={activeFilters} />
-            <PaidVsPendingChart data={paidVsPendingData} activeFilters={activeFilters} />
+            <AffiliateSalesChart affiliateSalesData={affiliateSalesData} activeFilters={activeFilters} />
           </div>
+
         </div>
       ) : (
         <div className="animate-in fade-in duration-300">

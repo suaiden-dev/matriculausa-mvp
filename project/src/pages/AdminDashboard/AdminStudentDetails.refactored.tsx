@@ -23,8 +23,11 @@ import { toast } from 'react-hot-toast';
 // Componentes de UI Base
 import {
   Clock,
-  ExternalLink
+  ExternalLink,
+  UserCheck,
+  Loader2
 } from 'lucide-react';
+import { useFilterDataQuery, useAssignAdminMutation } from '../../components/AdminDashboard/hooks/useStudentApplicationsQueries';
 import SkeletonLoader from '../../components/AdminDashboard/StudentDetails/SkeletonLoader';
 import StudentDetailsTabNavigation, { TabId } from '../../components/AdminDashboard/StudentDetails/StudentDetailsTabNavigation';
 
@@ -87,6 +90,25 @@ const AdminStudentDetails: React.FC = () => {
   const studentDetailsQuery = useStudentDetailsQuery(profileId);
   const student = studentDetailsQuery.data || null;
   const loading = studentDetailsQuery.isLoading;
+
+  // Hooks para Atribuição de Admin
+  const filterDataQuery = useFilterDataQuery();
+  const internalAdmins = filterDataQuery.data?.internalAdmins || [];
+  const assignAdminMutation = useAssignAdminMutation();
+
+  const handleAssignAdmin = async (adminId: string | null) => {
+    if (!student?.student_id) return;
+    try {
+      await assignAdminMutation.mutateAsync({
+        studentId: student.student_id,
+        adminId
+      });
+      toast.success('Responsável atualizado com sucesso!');
+    } catch (error) {
+      console.error('Error assigning admin:', error);
+      toast.error('Erro ao atualizar responsável');
+    }
+  };
 
   // Dados secundários
   const secondaryDataQuery = useStudentSecondaryDataQuery(student?.user_id);
@@ -3350,7 +3372,34 @@ const AdminStudentDetails: React.FC = () => {
           <h1 className="text-2xl font-bold text-slate-900">Student Details</h1>
           <p className="text-slate-600 mt-1">Detailed view for {student.student_name}</p>
         </div>
-        <div className="flex items-center gap-2 w-full sm:w-auto">
+        <div className="flex items-center gap-3 w-full sm:w-auto">
+          {/* Admin Assignment Selector */}
+          {internalAdmins.length > 0 && (
+            <div className="relative hidden md:flex items-center">
+              <div className={`flex items-center px-3 py-2 bg-white border ${assignAdminMutation.isPending ? 'border-indigo-300 ring-2 ring-indigo-50' : 'border-slate-200'} rounded-lg transition-all duration-200 hover:border-slate-300 focus-within:ring-2 focus-within:ring-slate-200 shadow-sm`}>
+                {assignAdminMutation.isPending ? (
+                  <Loader2 className="w-4 h-4 text-indigo-500 animate-spin mr-2" />
+                ) : (
+                  <UserCheck className="w-4 h-4 text-slate-400 mr-2" />
+                )}
+                <select
+                  value={student?.assigned_to_admin_id || ''}
+                  disabled={assignAdminMutation.isPending}
+                  onChange={(e) => handleAssignAdmin(e.target.value || null)}
+                  className="bg-transparent border-none p-0 pr-8 text-sm font-medium text-slate-700 focus:ring-0 cursor-pointer disabled:cursor-not-allowed"
+                  title="Atribuir responsável"
+                >
+                  <option value="">Sem responsável</option>
+                  {internalAdmins.map((admin) => (
+                    <option key={admin.id} value={admin.id}>
+                      {admin.name}
+                    </option>
+                  ))}
+                </select>
+              </div>
+            </div>
+          )}
+
           <div className="flex items-center bg-white border border-slate-200 rounded-lg overflow-hidden shadow-sm">
             <button
               onClick={handleOpenChat}

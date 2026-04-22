@@ -2,6 +2,7 @@ import React, { useEffect, useMemo, useState, useCallback } from 'react';
 import { supabase } from '../../lib/supabase';
 import { useAuth } from '../../hooks/useAuth';
 import ScholarshipDetailModal from '../ScholarshipDetailModal';
+import { ScholarshipBulkUploadModal } from './ScholarshipBulkUploadModal';
 import { is3800ScholarshipBlocked } from '../../utils/scholarshipDeadlineValidation';
 
 interface AdminScholarshipSelectionProps {
@@ -41,7 +42,6 @@ const AdminScholarshipSelection: React.FC<AdminScholarshipSelectionProps> = ({ s
 
   const [query, setQuery] = useState('');
   const [loading, setLoading] = useState(false);
-  const [creating, setCreating] = useState(false);
   const [scholarships, setScholarships] = useState<ScholarshipItem[]>([]);
   const [page, setPage] = useState(1);
   const [pageSize, setPageSize] = useState(10);
@@ -52,6 +52,7 @@ const AdminScholarshipSelection: React.FC<AdminScholarshipSelectionProps> = ({ s
   const [processType, setProcessType] = useState<'initial' | 'transfer' | 'change_of_status' | ''>('');
   const [selectedScholarship, setSelectedScholarship] = useState<ScholarshipItem | null>(null);
   const [isModalOpen, setIsModalOpen] = useState(false);
+  const [isBulkModalOpen, setIsBulkModalOpen] = useState(false);
 
   // Filters
   const [universities, setUniversities] = useState<{ id: string; name: string }[]>([]);
@@ -254,67 +255,7 @@ const AdminScholarshipSelection: React.FC<AdminScholarshipSelectionProps> = ({ s
 
   const createApplicationsFromCart = async () => {
     if (!canMutate || cart.length === 0) return;
-    setCreating(true);
-    try {
-      const toCreate = cart.filter(id => !existingApplicationMap[id]);
-      for (const scholarshipId of toCreate) {
-        const { data: inserted, error: insertErr } = await supabase
-          .from('scholarship_applications')
-          .insert({
-            student_id: studentProfileId,
-            scholarship_id: scholarshipId,
-            status: 'pending',
-            ...(processType ? { student_process_type: processType } : {})
-          })
-          .select('id')
-          .single();
-        if (insertErr) continue;
-
-        // Log de criação (com IP best-effort)
-        try {
-          let clientIp: string | undefined = undefined;
-          try {
-            const controller = new AbortController();
-            const timeout = setTimeout(() => controller.abort(), 2000);
-            const res = await fetch('https://api.ipify.org?format=json', { signal: controller.signal });
-            clearTimeout(timeout);
-            if (res.ok) {
-              const j = await res.json();
-              clientIp = j?.ip;
-            }
-          } catch {}
-
-          await supabase.rpc('log_student_action', {
-            p_student_id: studentProfileId,
-            p_action_type: 'scholarship_application_created',
-            p_action_description: `Application created by admin for scholarship ID: ${scholarshipId}`,
-            p_performed_by: user?.id || null,
-            p_performed_by_type: 'admin',
-            p_metadata: {
-              application_id: inserted?.id,
-              scholarship_id: scholarshipId,
-              process_type: processType || null,
-              application_method: 'admin_selection',
-              ip: clientIp
-            }
-          });
-        } catch { /* noop */ }
-      }
-
-      // Limpar carrinho após criar
-      if (toCreate.length > 0) {
-        await supabase
-          .from('user_cart')
-          .delete()
-          .eq('user_id', studentUserId);
-      }
-
-      await loadData();
-    } catch {
-      // noop
-    } finally {
-      setCreating(false);
-    }
+    setIsBulkModalOpen(true);
   };
 
   const sanitizeFileName = (fileName: string): string => {
@@ -750,10 +691,10 @@ const AdminScholarshipSelection: React.FC<AdminScholarshipSelectionProps> = ({ s
             <div className="p-4">
               <button
                 onClick={createApplicationsFromCart}
-                disabled={creating || cart.length === 0 || !canMutate}
+                disabled={cart.length === 0 || !canMutate}
                 className="w-full px-4 py-2 rounded-lg bg-[#05294E] text-white text-sm hover:bg-[#041f38] disabled:opacity-50"
               >
-                {creating ? 'Creating...' : 'Create applications'}
+                Create applications
               </button>
             </div>
           </div>
@@ -829,6 +770,30 @@ const AdminScholarshipSelection: React.FC<AdminScholarshipSelectionProps> = ({ s
             name: user.name || 'Admin'
           } : null}
           userRole="admin" // Forçar role admin para ver tudo
+        />
+      )}
+
+      {isBulkModalOpen && (
+        <ScholarshipBulkUploadModal
+          isOpen={isBulkModalOpen}
+          onClose={() => setIsBulkModalOpen(false)}
+          onSuccess={(successfulIds) => {
+            setCart(prev => prev.filter(id => !successfulIds.includes(id)));
+            setCartDetails(prev => {
+              const newDetails = { ...prev };
+              successfulIds.forEach(id => delete newDetails[id]);
+              return newDetails;
+            });
+            loadData();
+          }}
+          scholarships={cart.filter(id => !existingApplicationMap[id]).map(id => ({
+            id,
+            title: cartDetails[id]?.title || id,
+            universities: { name: cartDetails[id]?.universityName || null }
+          }))}
+          studentProfileId={studentProfileId}
+          processType={processType}
+          user={user}
         />
       )}
     </div>
