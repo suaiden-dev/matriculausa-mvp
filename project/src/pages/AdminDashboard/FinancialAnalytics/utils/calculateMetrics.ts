@@ -101,19 +101,30 @@ export function calculateFinalMetrics(
   const prevTotalRevenue = prevPaidRecords.reduce((sum, p) => sum + (p.amount || 0), 0);
   const revenueGrowth = prevTotalRevenue > 0 ? ((totalRevenue - prevTotalRevenue) / prevTotalRevenue) * 100 : 0;
 
+  // Filtrar requisições pelo range atual
+  const filteredUniRequests = universityRequests.filter(req => {
+    const d = new Date(req.status === 'paid' && req.paid_at ? req.paid_at : req.created_at);
+    return d >= start && d <= end;
+  });
+
+  const filteredAffRequests = affiliateRequests.filter(req => {
+    const d = new Date(req.status === 'paid' && req.paid_at ? req.paid_at : req.created_at);
+    return d >= start && d <= end;
+  });
+
   // Contar payouts
-  const pendingPayouts = universityRequests.filter(req => req.status === 'pending' || req.status === 'approved').length +
-                        affiliateRequests.filter(req => req.status === 'pending' || req.status === 'approved').length;
-  const completedPayouts = universityRequests.filter(req => req.status === 'paid').length +
-                           affiliateRequests.filter(req => req.status === 'paid').length;
-  const completedAffiliatePayouts = affiliateRequests.filter(req => req.status === 'paid').length;
-  const completedUniversityPayouts = universityRequests.filter(req => req.status === 'paid').length;
+  const pendingPayouts = filteredUniRequests.filter(req => req.status === 'pending' || req.status === 'approved').length +
+                        filteredAffRequests.filter(req => req.status === 'pending' || req.status === 'approved').length;
+  const completedPayouts = filteredUniRequests.filter(req => req.status === 'paid').length +
+                           filteredAffRequests.filter(req => req.status === 'paid').length;
+  const completedAffiliatePayouts = filteredAffRequests.filter(req => req.status === 'paid').length;
+  const completedUniversityPayouts = filteredUniRequests.filter(req => req.status === 'paid').length;
 
   // 🔍 DEBUG: Verificar affiliate requests
   console.log('🔍 [FinancialAnalytics] Affiliate Requests Debug:', {
-    total_requests: affiliateRequests.length,
-    requests_with_status_paid: affiliateRequests.filter(req => req.status === 'paid').length,
-    all_requests: affiliateRequests.map(req => ({
+    total_requests: filteredAffRequests.length,
+    requests_with_status_paid: filteredAffRequests.filter(req => req.status === 'paid').length,
+    all_requests: filteredAffRequests.map(req => ({
       id: req.id,
       status: req.status,
       amount_usd: req.amount_usd,
@@ -124,12 +135,12 @@ export function calculateFinalMetrics(
   });
 
   // Payouts aprovados/completados (status 'paid') - apenas os que o admin aprovou
-  const universityPayouts = universityRequests
+  const universityPayouts = filteredUniRequests
     .filter(req => req.status === 'paid')
     .reduce((sum, req) => sum + (req.amount || 0), 0);
   
   // ✅ CORREÇÃO: Usar amount_usd (campo correto da tabela affiliate_payment_requests)
-  const paidAffiliateRequests = affiliateRequests.filter(req => req.status === 'paid');
+  const paidAffiliateRequests = filteredAffRequests.filter(req => req.status === 'paid');
   const affiliatePayouts = paidAffiliateRequests.reduce((sum, req) => {
     // amount_usd está em dólares, converter para centavos
     const amountUsd = req.amount_usd || 0;
@@ -377,21 +388,41 @@ export function calculatePaidVsPending(paymentRecords: any[]): PaidVsPendingData
  */
 export function calculateAffiliateSalesData(paymentRecords: any[], affiliates: any[]): AffiliateSalesData[] {
   const paidRecords = paymentRecords.filter(p => p.status === 'paid');
-  const affiliateSalesMap = new Map<string, number>();
+  const affiliateSalesMap = new Map<string, { count: number; code: string }>();
 
   paidRecords.forEach(record => {
     const sellerCode = record.seller_referral_code;
     if (sellerCode) {
-      const affiliate = affiliates.find(a => a.referral_code === sellerCode);
-      const name = affiliate ? affiliate.full_name : `Código: ${sellerCode}`;
+      let sellerName = `Código: ${sellerCode}`;
       
-      const currentCount = affiliateSalesMap.get(name) || 0;
-      affiliateSalesMap.set(name, currentCount + 1);
+      // Procurar o nome correto no array de afiliados e seus vendedores internos
+      for (const affiliate of affiliates) {
+        if (affiliate.referral_code === sellerCode) {
+          sellerName = affiliate.name;
+          break;
+        }
+        
+        if (affiliate.sellers && Array.isArray(affiliate.sellers)) {
+          const matchingSeller = affiliate.sellers.find((s: any) => s.referral_code === sellerCode);
+          if (matchingSeller && matchingSeller.name) {
+            sellerName = matchingSeller.name;
+            break;
+          }
+        }
+      }
+      
+      const currentData = affiliateSalesMap.get(sellerName) || { count: 0, code: sellerCode };
+      currentData.count += 1;
+      affiliateSalesMap.set(sellerName, currentData);
     }
   });
 
   return Array.from(affiliateSalesMap.entries())
-    .map(([affiliateName, salesCount]) => ({ affiliateName, salesCount }))
+    .map(([affiliateName, data]) => ({ 
+      affiliateName, 
+      sellerCode: data.code,
+      salesCount: data.count 
+    }))
     .sort((a, b) => b.salesCount - a.salesCount)
     .slice(0, 10); // Retorna os Top 10
 }

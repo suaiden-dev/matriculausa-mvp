@@ -1,4 +1,4 @@
-import { PieChart as PieChartIcon, Users } from 'lucide-react';
+import { Users } from 'lucide-react';
 import { ResponsiveContainer, PieChart as RePieChart, Pie, Cell, Tooltip as ReTooltip } from 'recharts';
 import type { AffiliateSalesData } from '../data/types';
 import { FilterBadges } from './FilterBadges';
@@ -65,8 +65,11 @@ export function AffiliateSalesChart({ affiliateSalesData, activeFilters }: Affil
           return (
             <div key={affiliate.affiliateName} className="flex items-center justify-between">
               <div className="flex items-center gap-3">
-                <div className={`w-3 h-3 rounded-full ${colorClass}`}></div>
-                <span className="text-sm font-medium text-gray-700">{affiliate.affiliateName}</span>
+                <div className={`w-3 h-3 rounded-full flex-shrink-0 ${colorClass}`}></div>
+                <div className="flex flex-col">
+                  <span className="text-sm font-medium text-gray-700 leading-tight">{affiliate.affiliateName}</span>
+                  <span className="text-xs text-gray-400 font-mono mt-0.5">{affiliate.sellerCode}</span>
+                </div>
               </div>
               <div className="text-right">
                 <div className="text-sm font-semibold text-gray-900">

@@ -31,7 +31,7 @@ export function getParcelowConfig(req: Request): ParcelowConfig {
     
   const apiBaseUrl = isStaging 
     ? 'https://sandbox-2.parcelow.com.br' 
-    : 'https://app.parcelow.com';
+    : 'https://app.parcelow.com.br';
 
   console.log(`✅ Parcelow config loaded for ${envInfo.environment} environment (Staging: ${isStaging})`);
 

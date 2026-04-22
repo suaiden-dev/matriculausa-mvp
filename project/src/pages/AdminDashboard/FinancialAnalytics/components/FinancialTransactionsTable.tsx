@@ -403,13 +403,38 @@ export const FinancialTransactionsTable: React.FC<FinancialTransactionsTableProp
 
   return (
     <div className="bg-white rounded-xl shadow-sm border border-gray-100 overflow-hidden">
-      {/* Header */}
-      <div className="p-6 border-b border-gray-100 flex flex-col sm:flex-row sm:items-center justify-between gap-4">
-        <div>
-          <h2 className="text-lg font-semibold text-gray-900">Transaction Details</h2>
-          <p className="text-sm text-gray-500">View all fees and detailed payments</p>
-        </div>
 
+
+
+
+      {/* Status Cards */}
+      <div className="px-6 py-4 border-b border-gray-100">
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+          {/* Gross Amount Card */}
+          <div className="bg-gradient-to-br from-blue-500 to-blue-600 rounded-xl p-6 text-white flex flex-col items-center text-center shadow-sm transition-transform hover:scale-[1.02]">
+            <h3 className="text-xs font-semibold text-blue-100 uppercase tracking-wider mb-2">Gross Amount</h3>
+            <p className="text-3xl font-bold mb-2">{formatCurrency(totals.gross)}</p>
+            <p className="text-xs text-blue-100/80">{filteredTransactions.length} transaction{filteredTransactions.length !== 1 ? 's' : ''}</p>
+          </div>
+
+          {/* Fees Card */}
+          <div className="bg-gradient-to-br from-red-500 to-red-600 rounded-xl p-6 text-white flex flex-col items-center text-center shadow-sm transition-transform hover:scale-[1.02]">
+            <h3 className="text-xs font-semibold text-red-100 uppercase tracking-wider mb-2">Total Fees</h3>
+            <p className="text-3xl font-bold mb-2">- {formatCurrency(totals.fees)}</p>
+            <p className="text-xs text-red-100/80">Platform fees</p>
+          </div>
+
+          {/* Net Amount Card */}
+          <div className="bg-gradient-to-br from-emerald-500 to-emerald-600 rounded-xl p-6 text-white flex flex-col items-center text-center shadow-sm transition-transform hover:scale-[1.02]">
+            <h3 className="text-xs font-semibold text-emerald-100 uppercase tracking-wider mb-2">Net Amount</h3>
+            <p className="text-3xl font-bold mb-2">{formatCurrency(totals.net)}</p>
+            <p className="text-xs text-emerald-100/80">After fees</p>
+          </div>
+        </div>
+      </div>
+
+      {/* Search and Export Bar (Moved here) */}
+      <div className="px-6 py-4 border-b border-gray-100 flex flex-col sm:flex-row sm:items-center justify-end gap-4">
         <div className="flex items-center gap-3">
           <div className="relative">
             <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
@@ -430,49 +455,6 @@ export const FinancialTransactionsTable: React.FC<FinancialTransactionsTableProp
           >
             <Download className="w-4 h-4" />
           </button>
-        </div>
-      </div>
-
-
-
-      {/* Status Cards */}
-      <div className="px-6 py-4 border-b border-gray-100">
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-          {/* Gross Amount Card */}
-          <div className="bg-gradient-to-br from-blue-50 to-blue-100 rounded-xl p-4 border border-blue-200">
-            <div className="flex items-center justify-between mb-2">
-              <h3 className="text-xs font-medium text-blue-700 uppercase tracking-wide">Gross Amount</h3>
-              <div className="w-8 h-8 bg-blue-200 rounded-lg flex items-center justify-center">
-                <span className="text-blue-700 text-xs font-bold">$</span>
-              </div>
-            </div>
-            <p className="text-2xl font-bold text-blue-900">{formatCurrency(totals.gross)}</p>
-            <p className="text-xs text-blue-600 mt-1">{filteredTransactions.length} transaction{filteredTransactions.length !== 1 ? 's' : ''}</p>
-          </div>
-
-          {/* Fees Card */}
-          <div className="bg-gradient-to-br from-red-50 to-red-100 rounded-xl p-4 border border-red-200">
-            <div className="flex items-center justify-between mb-2">
-              <h3 className="text-xs font-medium text-red-700 uppercase tracking-wide">Total Fees</h3>
-              <div className="w-8 h-8 bg-red-200 rounded-lg flex items-center justify-center">
-                <span className="text-red-700 text-xs font-bold">-</span>
-              </div>
-            </div>
-            <p className="text-2xl font-bold text-red-900">- {formatCurrency(totals.fees)}</p>
-            <p className="text-xs text-red-600 mt-1">Platform fees</p>
-          </div>
-
-          {/* Net Amount Card */}
-          <div className="bg-gradient-to-br from-emerald-50 to-emerald-100 rounded-xl p-4 border border-emerald-200">
-            <div className="flex items-center justify-between mb-2">
-              <h3 className="text-xs font-medium text-emerald-700 uppercase tracking-wide">Net Amount</h3>
-              <div className="w-8 h-8 bg-emerald-200 rounded-lg flex items-center justify-center">
-                <span className="text-emerald-700 text-xs font-bold">✓</span>
-              </div>
-            </div>
-            <p className="text-2xl font-bold text-emerald-900">{formatCurrency(totals.net)}</p>
-            <p className="text-xs text-emerald-600 mt-1">After fees</p>
-          </div>
         </div>
       </div>
 

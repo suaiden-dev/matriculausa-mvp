@@ -1,4 +1,4 @@
-import { DollarSign, Users, ArrowUpRight, ArrowDownRight, Target } from 'lucide-react';
+import { ArrowUpRight, ArrowDownRight } from 'lucide-react';
 import { MetricCard } from './MetricCard';
 import type { FinancialMetrics } from '../data/types';
 import { formatCentsToUSD } from '../utils/formatters';
@@ -14,10 +14,8 @@ export function MetricsGrid({ metrics, arpu }: MetricsGridProps) {
       <MetricCard
         label="Student Revenue"
         value={`$${formatCentsToUSD(metrics.totalRevenue)}`}
-        icon={DollarSign}
         gradientFrom="from-blue-500"
         gradientTo="to-blue-600"
-        iconColor="text-blue-200"
         textColor="text-blue-100"
         info="Soma de todos os pagamentos com status 'paid' realizados por alunos no período selecionado. Inclui todas as categorias de taxa (Selection Process, Application, Scholarship, etc.)."
         sublabel={
@@ -37,10 +35,8 @@ export function MetricsGrid({ metrics, arpu }: MetricsGridProps) {
       <MetricCard
         label="New Students"
         value={metrics.newUsers.toString()}
-        icon={Users}
         gradientFrom="from-purple-500"
         gradientTo="to-purple-600"
-        iconColor="text-purple-200"
         textColor="text-purple-100"
         info="Número de novos usuários cadastrados no sistema (user_profiles) dentro do período selecionado. O crescimento % compara com o período imediatamente anterior de mesma duração."
         sublabel={
@@ -60,10 +56,8 @@ export function MetricsGrid({ metrics, arpu }: MetricsGridProps) {
       <MetricCard
         label="ARPU"
         value={`$${formatCentsToUSD(arpu)}`}
-        icon={Target}
         gradientFrom="from-rose-500"
         gradientTo="to-rose-600"
-        iconColor="text-rose-200"
         textColor="text-rose-100"
         info="Average Revenue Per User: receita total do período ÷ número de novos alunos cadastrados no mesmo período. Indica o valor médio gerado por cada aluno adquirido."
         sublabel={
