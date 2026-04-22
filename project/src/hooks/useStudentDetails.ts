@@ -62,6 +62,8 @@ export interface StudentRecord {
   placement_fee_pending_balance?: number;
   placement_fee_due_date?: string | null;
   placement_fee_installment_number?: number;
+  assigned_to_admin_id?: string | null;
+  assigned_to_admin_name?: string | null;
 }
 
 /**
@@ -147,6 +149,8 @@ export const useStudentDetails = (profileId: string | undefined) => {
             has_paid_reinstatement_package,
             visa_transfer_active,
             university_id,
+            assigned_to_admin_id,
+            assigned_admin:user_profiles!assigned_to_admin_id(id, full_name),
             scholarship_applications (
               id,
               scholarship_id,
