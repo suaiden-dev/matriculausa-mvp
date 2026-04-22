@@ -48,7 +48,7 @@ export function getParcelowConfig(req: Request): ParcelowConfig {
     // Se o clientId for 214, provavelmente estamos em sandbox mesmo em "produção"
     apiBaseUrl = (clientId === '214') 
       ? 'https://sandbox-2.parcelow.com.br' 
-      : 'https://app.parcelow.com';
+      : 'https://app.parcelow.com.br';
   }
 
   console.log(`✅ Parcelow config loaded for ${envInfo.environment} environment`);

@@ -75,6 +75,7 @@ export interface PaidVsPendingData {
 
 export interface AffiliateSalesData {
   affiliateName: string;
+  sellerCode: string;
   salesCount: number;
 }
 
@@ -89,8 +90,6 @@ export interface FinancialDataInputs {
   universityRequests: any[];
   affiliateRequests: any[];
   currentRange: DateRange;
-  applicationsPrev: any[];
-  zellePaymentsPrev: any[];
   allStudents: any[];
   stripeUsers: any[];
   overridesMap: { [key: string]: any };
@@ -115,8 +114,6 @@ export interface LoadedFinancialData {
   zellePayments: any[];
   universityRequests: any[];
   affiliateRequests: any[];
-  applicationsPrev: any[];
-  zellePaymentsPrev: any[];
   allStudents: any[];
   stripeUsers: any[];
   overridesMap: { [key: string]: any };
