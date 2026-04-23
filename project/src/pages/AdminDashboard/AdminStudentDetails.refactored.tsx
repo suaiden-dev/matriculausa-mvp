@@ -3369,7 +3369,14 @@ const AdminStudentDetails: React.FC = () => {
       {/* Header */}
       <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 pb-6 border-b border-gray-200">
         <div>
-          <h1 className="text-2xl font-bold text-slate-900">Student Details</h1>
+          <div className="flex items-center gap-3">
+            <h1 className="text-2xl font-bold text-slate-900">Student Details</h1>
+            {student.source === 'migma' && (
+              <span className="inline-flex items-center px-2 py-0.5 rounded-md text-xs font-bold uppercase tracking-wider bg-black text-[#FFD700] border border-[#FFD700]/20 shadow-sm">
+                Migma
+              </span>
+            )}
+          </div>
           <p className="text-slate-600 mt-1">Detailed view for {student.student_name}</p>
         </div>
         <div className="flex items-center gap-3 w-full sm:w-auto">
@@ -3727,51 +3734,24 @@ const AdminStudentDetails: React.FC = () => {
               </Suspense>
             )}
 
-            {/* Identity Photo Verification Card */}
+            {/* Identity Photo Verification Card — dados vêm de user_profiles */}
             {(() => {
-              const combinedTermAcceptances = (termAcceptances && termAcceptances.length > 0)
-                ? termAcceptances
-                : (directTermAcceptances || []);
+              // Fonte de verdade: student já contém identity_photo_* de user_profiles
+              const identityData = (student as any).identity_photo_path
+                ? {
+                    // acceptanceId: primeiro termo aceito do usuário (usado apenas para chamar a RPC)
+                    acceptanceId: termAcceptances[0]?.id || directTermAcceptances?.[0]?.id || null,
+                    identity_photo_path: (student as any).identity_photo_path,
+                    identity_photo_name: (student as any).identity_photo_name ?? null,
+                    identity_photo_status: (student as any).identity_photo_status ?? 'pending',
+                    identity_photo_rejection_reason: (student as any).identity_photo_rejection_reason ?? null,
+                  }
+                : null;
 
-              const checkoutTermsAcceptances = combinedTermAcceptances.filter((acc: any) => acc.term_type === 'checkout_terms');
-              let identityPhotoAcceptance = checkoutTermsAcceptances.find((acc: any) => {
-                // aceitar caminhos em diferentes chaves ou formatos
-                const path = acc.identity_photo_path || acc.identity_photo || acc.photo_path || null;
-                return path && String(path).trim() !== '';
-              });
-
-              // Fallback 1: se não encontrar por caminho, usar o primeiro checkout_terms disponível
-              if (!identityPhotoAcceptance && checkoutTermsAcceptances.length > 0) {
-                console.log('ℹ️ [AdminStudentDetails] identityPhotoAcceptance não encontrada por path — usando primeiro checkout_terms como fallback');
-                identityPhotoAcceptance = checkoutTermsAcceptances[0];
-              }
-
-              // Fallback 2: usuários novos podem ter a foto salva em outros term_types (terms_of_service, privacy_policy).
-              // Isso ocorre quando o UPDATE no IdentityVerificationStep atualiza registros existentes antes de existir um checkout_terms.
-              if (!identityPhotoAcceptance) {
-                identityPhotoAcceptance = combinedTermAcceptances.find((acc: any) => {
-                  const path = acc.identity_photo_path || acc.identity_photo || acc.photo_path || null;
-                  return path && String(path).trim() !== '';
-                });
-                if (identityPhotoAcceptance) {
-                  console.log('ℹ️ [AdminStudentDetails] Foto encontrada em registro não-checkout_terms:', identityPhotoAcceptance.term_type);
-                }
-              }
-
-              if (termAcceptances.length > 0 || combinedTermAcceptances.length > 0) {
-                // Debug logs (useful during local development)
-                console.log('🔍 [AdminStudentDetails] checkoutTermsAcceptances:', checkoutTermsAcceptances);
-                console.log('🔍 [AdminStudentDetails] identityPhotoAcceptance:', identityPhotoAcceptance);
-                if (identityPhotoAcceptance) {
-                  console.log('🔍 [AdminStudentDetails] identityPhotoAcceptance.status:', identityPhotoAcceptance.identity_photo_status);
-                  console.log('🔍 [AdminStudentDetails] identityPhotoAcceptance.rejection_reason:', identityPhotoAcceptance.identity_photo_rejection_reason);
-                }
-              }
-
-              return identityPhotoAcceptance ? (
-                <Suspense fallback={<div className="animate-pulse bg-slate-100 h-64 rounded-2xl"></div>}>
+              return identityData ? (
+                <Suspense fallback={<div className="animate-pulse bg-slate-100 h-64 rounded-2xl" />}>
                   <IdentityPhotoVerificationCard
-                    termAcceptance={identityPhotoAcceptance}
+                    identityData={identityData}
                     onApprove={handleApproveIdentityPhoto}
                     onReject={handleRejectIdentityPhoto}
                     onUpdateRejectionReason={handleUpdateRejectionReason}

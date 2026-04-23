@@ -30,14 +30,28 @@ export const UniversityDocumentsStep: React.FC<StepProps> = ({ onBack }) => {
     const { getFeeAmount } = useFeeConfig(user?.id);
 
     // 1. ESTADOS
-    const [loading, setLoading] = useState(true);
-    const [applicationDetails, setApplicationDetails] = useState<any>(null);
+    // 1. ESTADOS
+    const [dataState, setDataState] = useState({
+        loading: true,
+        applicationDetails: null as any,
+        documentRequests: [] as any[],
+        ds160PackagePaid: false,
+        i539PackagePaid: false,
+        hasPendingZelle: false,
+    });
+
+    // Destructuring para manter compatibilidade com o resto do código
+    const { 
+        loading, 
+        applicationDetails, 
+        documentRequests, 
+        ds160PackagePaid, 
+        i539PackagePaid, 
+        hasPendingZelle 
+    } = dataState;
+
     const [activeTab, setActiveTab] = useState<'welcome' | 'details' | 'documents' | 'i20' | 'ds160' | 'i539' | 'cos' | 'acceptance' | 'placement_installment'>('welcome');
     const [previewUrl, setPreviewUrl] = useState<string | null>(null);
-    const [documentRequests, setDocumentRequests] = useState<any[]>([]);
-    const [ds160PackagePaid, setDs160PackagePaid] = useState<boolean>(false);
-    const [i539PackagePaid, setI539PackagePaid] = useState<boolean>(false);
-    const [hasPendingZelle, setHasPendingZelle] = useState<boolean>(false);
 
     const [i20Loading, setI20Loading] = useState(false);
     const [selectedPaymentMethod, setSelectedPaymentMethod] = useState<'stripe' | 'zelle' | 'pix' | 'parcelow' | null>(null);
@@ -344,12 +358,12 @@ export const UniversityDocumentsStep: React.FC<StepProps> = ({ onBack }) => {
 
     const fetchApplicationDetails = useCallback(async (isRefresh = false) => {
         if (!userProfile?.id) {
-            if (!isRefresh) setLoading(false);
+            if (!isRefresh) setDataState(prev => ({ ...prev, loading: false }));
             return;
         }
 
         try {
-            if (!isRefresh) setLoading(true);
+            if (!isRefresh) setDataState(prev => ({ ...prev, loading: true }));
 
             const selectedId = userProfile.selected_application_id;
 
@@ -370,8 +384,6 @@ export const UniversityDocumentsStep: React.FC<StepProps> = ({ onBack }) => {
             if (error) throw error;
 
             if (data) {
-                setApplicationDetails(data);
-
                 const universityId = (data.scholarships as any)?.university_id
                     || (data.scholarships as any)?.universities?.id;
 
@@ -389,9 +401,9 @@ export const UniversityDocumentsStep: React.FC<StepProps> = ({ onBack }) => {
 
                 const { data: reqs } = await reqQuery;
 
-                if (reqs) {
-                    setDocumentRequests(reqs);
-                }
+                let ds160PaidFinal = !!(userProfile as any)?.has_paid_ds160_package;
+                let i539PaidFinal = !!(userProfile as any)?.has_paid_i539_cos_package;
+                let hasPendingZelleFinal = false;
 
                 if (userProfile?.user_id) {
                     const { data: packagePayments } = await supabase
@@ -416,23 +428,32 @@ export const UniversityDocumentsStep: React.FC<StepProps> = ({ onBack }) => {
                                 !ds160Paid && !i539Paid
                         );
 
-                        setDs160PackagePaid(ds160Paid || !!(userProfile as any)?.has_paid_ds160_package);
-                        setI539PackagePaid(i539Paid || !!(userProfile as any)?.has_paid_i539_cos_package);
-                        setHasPendingZelle(hasPending);
-                    } else {
-                        setDs160PackagePaid(!!(userProfile as any)?.has_paid_ds160_package);
-                        setI539PackagePaid(!!(userProfile as any)?.has_paid_i539_cos_package);
-                        setHasPendingZelle(false);
+                        ds160PaidFinal = ds160Paid || !!(userProfile as any)?.has_paid_ds160_package;
+                        i539PaidFinal = i539Paid || !!(userProfile as any)?.has_paid_i539_cos_package;
+                        hasPendingZelleFinal = hasPending;
                     }
                 }
+
+                // ✅ ATUALIZAÇÃO ÚNICA: Consolidando todos os dados em um único render
+                setDataState(prev => ({
+                    ...prev,
+                    applicationDetails: data,
+                    documentRequests: reqs || [],
+                    ds160PackagePaid: ds160PaidFinal,
+                    i539PackagePaid: i539PaidFinal,
+                    hasPendingZelle: hasPendingZelleFinal,
+                    loading: false
+                }));
+            } else {
+                setDataState(prev => ({ ...prev, loading: false }));
             }
 
         } catch (err: any) {
             console.error('Error fetching university documents details:', err);
-        } finally {
-            if (!isRefresh) setLoading(false);
+            setDataState(prev => ({ ...prev, loading: false }));
         }
     }, [userProfile?.id, userProfile?.selected_application_id, userProfile?.user_id, (userProfile as any)?.has_paid_ds160_package, (userProfile as any)?.has_paid_i539_cos_package]);
+
 
     // 3. EFEITOS
     useEffect(() => {

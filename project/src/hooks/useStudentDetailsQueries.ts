@@ -1,7 +1,7 @@
-import { useQuery } from '@tanstack/react-query';
-import { supabase } from '../lib/supabase';
-import { queryKeys } from '../lib/queryKeys';
-import type { StudentRecord } from './useStudentDetails';
+import { useQuery } from "@tanstack/react-query";
+import { supabase } from "../lib/supabase";
+import { queryKeys } from "../lib/queryKeys";
+import type { StudentRecord } from "./useStudentDetails";
 
 /**
  * Hook para buscar dados principais do estudante
@@ -12,7 +12,7 @@ export function useStudentDetailsQuery(profileId: string | undefined) {
     queryKey: queryKeys.students.details(profileId),
     enabled: !!profileId,
     queryFn: async (): Promise<StudentRecord> => {
-      if (!profileId) throw new Error('Profile ID is required');
+      if (!profileId) throw new Error("Profile ID is required");
 
       // Try RPC first for better performance
       let s: any = null;
@@ -20,58 +20,91 @@ export function useStudentDetailsQuery(profileId: string | undefined) {
 
       try {
         const { data: rpcData, error: rpcError } = await supabase.rpc(
-          'get_admin_student_full_details',
-          { target_profile_id: profileId }
+          "get_admin_student_full_details",
+          { target_profile_id: profileId },
         );
 
         if (!rpcError && rpcData) {
-          s = typeof rpcData === 'string' ? JSON.parse(rpcData) : rpcData;
+          s = typeof rpcData === "string" ? JSON.parse(rpcData) : rpcData;
           if (s && s.id) {
-            console.log('✅ [PERFORMANCE] Using consolidated RPC for student data');
+            console.log(
+              "✅ [PERFORMANCE] Using consolidated RPC for student data",
+            );
 
             // 🔄 Complementar dados que ainda não estão na RPC (compatibilidade)
             try {
               const { data: extraProfile, error: extraError } = await supabase
-                .from('user_profiles')
-                .select('placement_fee_flow, is_placement_fee_paid, selection_survey_passed, has_paid_i20_control_fee, system_type, placement_fee_installment_enabled, placement_fee_pending_balance, placement_fee_due_date, placement_fee_installment_number')
-                .eq('id', profileId)
+                .from("user_profiles")
+                .select(
+                  "placement_fee_flow, is_placement_fee_paid, selection_survey_passed, has_paid_i20_control_fee, system_type, placement_fee_installment_enabled, placement_fee_pending_balance, placement_fee_due_date, placement_fee_installment_number, source, identity_photo_path, identity_photo_status, identity_photo_rejection_reason",
+                )
+                .eq("id", profileId)
                 .single();
 
               if (!extraError && extraProfile) {
                 s = {
                   ...s,
-                  placement_fee_flow: s.placement_fee_flow ?? extraProfile.placement_fee_flow,
-                  is_placement_fee_paid: s.is_placement_fee_paid ?? extraProfile.is_placement_fee_paid,
-                  selection_survey_passed: s.selection_survey_passed ?? extraProfile.selection_survey_passed,
-                  has_paid_i20_control_fee: s.has_paid_i20_control_fee ?? extraProfile.has_paid_i20_control_fee,
-                  system_type: s.system_type ?? (extraProfile as any).system_type,
-                  placement_fee_installment_enabled: (extraProfile as any).placement_fee_installment_enabled ?? false,
-                  placement_fee_pending_balance: (extraProfile as any).placement_fee_pending_balance ?? 0,
-                  placement_fee_due_date: (extraProfile as any).placement_fee_due_date ?? null,
-                  placement_fee_installment_number: (extraProfile as any).placement_fee_installment_number ?? 0,
+                  placement_fee_flow: s.placement_fee_flow ??
+                    extraProfile.placement_fee_flow,
+                  is_placement_fee_paid: s.is_placement_fee_paid ??
+                    extraProfile.is_placement_fee_paid,
+                  selection_survey_passed: s.selection_survey_passed ??
+                    extraProfile.selection_survey_passed,
+                  has_paid_i20_control_fee: s.has_paid_i20_control_fee ??
+                    extraProfile.has_paid_i20_control_fee,
+                  system_type: s.system_type ??
+                    (extraProfile as any).system_type,
+                  placement_fee_installment_enabled:
+                    (extraProfile as any).placement_fee_installment_enabled ??
+                      false,
+                  placement_fee_pending_balance:
+                    (extraProfile as any).placement_fee_pending_balance ?? 0,
+                  placement_fee_due_date:
+                    (extraProfile as any).placement_fee_due_date ?? null,
+                  placement_fee_installment_number:
+                    (extraProfile as any).placement_fee_installment_number ?? 0,
+                  source: s.source ?? extraProfile.source,
+                  identity_photo_path:
+                    (extraProfile as any).identity_photo_path ?? null,
+                  identity_photo_status:
+                    (extraProfile as any).identity_photo_status ?? null,
+                  identity_photo_rejection_reason:
+                    (extraProfile as any).identity_photo_rejection_reason ??
+                      null,
                 };
               }
             } catch (extraErr) {
-              console.warn('⚠️ [PERFORMANCE] Failed to complement RPC data with placement/I-20 flags:', extraErr);
+              console.warn(
+                "⚠️ [PERFORMANCE] Failed to complement RPC data with placement/I-20 flags:",
+                extraErr,
+              );
             }
           } else {
-            console.warn('⚠️ [PERFORMANCE] RPC returned invalid data, using fallback');
+            console.warn(
+              "⚠️ [PERFORMANCE] RPC returned invalid data, using fallback",
+            );
             useRpc = false;
             s = null;
           }
         } else {
-          console.warn('⚠️ [PERFORMANCE] RPC failed, using fallback:', rpcError);
+          console.warn(
+            "⚠️ [PERFORMANCE] RPC failed, using fallback:",
+            rpcError,
+          );
           useRpc = false;
         }
       } catch (rpcError) {
-        console.warn('⚠️ [PERFORMANCE] RPC not available, using fallback:', rpcError);
+        console.warn(
+          "⚠️ [PERFORMANCE] RPC not available, using fallback:",
+          rpcError,
+        );
         useRpc = false;
       }
 
       // Fallback to original query if RPC fails
       if (!useRpc || !s) {
         const { data, error: queryError } = await supabase
-          .from('user_profiles')
+          .from("user_profiles")
           .select(`
             id,
             user_id,
@@ -112,7 +145,11 @@ export function useStudentDetailsQuery(profileId: string | undefined) {
             placement_fee_pending_balance,
             placement_fee_due_date,
             placement_fee_installment_number,
+            identity_photo_path,
+            identity_photo_status,
+            identity_photo_rejection_reason,
             assigned_to_admin_id,
+            source,
             assigned_admin:user_profiles!assigned_to_admin_id(id, full_name),
             scholarship_applications (
               id,
@@ -150,7 +187,7 @@ export function useStudentDetailsQuery(profileId: string | undefined) {
               )
             )
           `)
-          .eq('id', profileId)
+          .eq("id", profileId)
           .single();
 
         if (queryError) throw queryError;
@@ -158,69 +195,100 @@ export function useStudentDetailsQuery(profileId: string | undefined) {
       }
 
       if (!s) {
-        throw new Error('Failed to load student data');
+        throw new Error("Failed to load student data");
       }
 
       // Format the student record
       const applications = s.scholarship_applications || [];
-      
+
       // ✅ CORREÇÃO: Priorizar aplicação enrolled, depois approved com application fee pago, depois approved
-      const enrolledApp = applications.find((app: any) => app.status === 'enrolled');
-      const approvedWithFeeApp = applications.find((app: any) => app.status === 'approved' && app.is_application_fee_paid);
-      const approvedApp = applications.find((app: any) => app.status === 'approved');
-      const mainApp = enrolledApp || approvedWithFeeApp || approvedApp || applications[0] || {};
-      
+      const enrolledApp = applications.find((app: any) =>
+        app.status === "enrolled"
+      );
+      const approvedWithFeeApp = applications.find((app: any) =>
+        app.status === "approved" && app.is_application_fee_paid
+      );
+      const approvedApp = applications.find((app: any) =>
+        app.status === "approved"
+      );
+      const mainApp = enrolledApp || approvedWithFeeApp || approvedApp ||
+        applications[0] || {};
+
       // 🔍 LOG: Verificar se é a Stephanie
-      const isStephanie = s.email === 'stephaniecriistine25@gmail.com';
+      const isStephanie = s.email === "stephaniecriistine25@gmail.com";
       if (isStephanie) {
-        console.log('🔍 [STEPHANIE DEBUG] ==========================================');
-        console.log('🔍 [STEPHANIE DEBUG] 🚀 useStudentDetailsQueries');
-        console.log('🔍 [STEPHANIE DEBUG] Email:', s.email);
-        console.log('🔍 [STEPHANIE DEBUG] Total applications:', applications.length);
-        console.log('🔍 [STEPHANIE DEBUG] Applications:', applications.map((app: any) => ({
-          id: app.id,
-          status: app.status,
-          is_application_fee_paid: app.is_application_fee_paid,
-          is_scholarship_fee_paid: app.is_scholarship_fee_paid,
-          payment_status: app.payment_status
-        })));
-        console.log('🔍 [STEPHANIE DEBUG] enrolledApp:', enrolledApp ? {
-          id: enrolledApp.id,
-          status: enrolledApp.status,
-          is_application_fee_paid: enrolledApp.is_application_fee_paid,
-          is_scholarship_fee_paid: enrolledApp.is_scholarship_fee_paid
-        } : null);
-        console.log('🔍 [STEPHANIE DEBUG] approvedWithFeeApp:', approvedWithFeeApp ? {
-          id: approvedWithFeeApp.id,
-          status: approvedWithFeeApp.status,
-          is_application_fee_paid: approvedWithFeeApp.is_application_fee_paid
-        } : null);
-        console.log('🔍 [STEPHANIE DEBUG] approvedApp:', approvedApp ? {
-          id: approvedApp.id,
-          status: approvedApp.status
-        } : null);
-        console.log('🔍 [STEPHANIE DEBUG] mainApp selecionado:', {
+        console.log(
+          "🔍 [STEPHANIE DEBUG] ==========================================",
+        );
+        console.log("🔍 [STEPHANIE DEBUG] 🚀 useStudentDetailsQueries");
+        console.log("🔍 [STEPHANIE DEBUG] Email:", s.email);
+        console.log(
+          "🔍 [STEPHANIE DEBUG] Total applications:",
+          applications.length,
+        );
+        console.log(
+          "🔍 [STEPHANIE DEBUG] Applications:",
+          applications.map((app: any) => ({
+            id: app.id,
+            status: app.status,
+            is_application_fee_paid: app.is_application_fee_paid,
+            is_scholarship_fee_paid: app.is_scholarship_fee_paid,
+            payment_status: app.payment_status,
+          })),
+        );
+        console.log(
+          "🔍 [STEPHANIE DEBUG] enrolledApp:",
+          enrolledApp
+            ? {
+              id: enrolledApp.id,
+              status: enrolledApp.status,
+              is_application_fee_paid: enrolledApp.is_application_fee_paid,
+              is_scholarship_fee_paid: enrolledApp.is_scholarship_fee_paid,
+            }
+            : null,
+        );
+        console.log(
+          "🔍 [STEPHANIE DEBUG] approvedWithFeeApp:",
+          approvedWithFeeApp
+            ? {
+              id: approvedWithFeeApp.id,
+              status: approvedWithFeeApp.status,
+              is_application_fee_paid:
+                approvedWithFeeApp.is_application_fee_paid,
+            }
+            : null,
+        );
+        console.log(
+          "🔍 [STEPHANIE DEBUG] approvedApp:",
+          approvedApp
+            ? {
+              id: approvedApp.id,
+              status: approvedApp.status,
+            }
+            : null,
+        );
+        console.log("🔍 [STEPHANIE DEBUG] mainApp selecionado:", {
           id: mainApp.id,
           status: mainApp.status,
           is_application_fee_paid: mainApp.is_application_fee_paid,
-          is_scholarship_fee_paid: mainApp.is_scholarship_fee_paid
+          is_scholarship_fee_paid: mainApp.is_scholarship_fee_paid,
         });
       }
 
       // ✅ CORREÇÃO: Verificar se ALGUMA aplicação tem os fees pagos (priorizando enrolled)
-      const is_application_fee_paid = enrolledApp?.is_application_fee_paid || 
-                                      applications.some((app: any) => app.is_application_fee_paid) || 
-                                      false;
-      const is_scholarship_fee_paid = enrolledApp?.is_scholarship_fee_paid || 
-                                      mainApp?.is_scholarship_fee_paid || 
-                                      false;
-      
+      const is_application_fee_paid = enrolledApp?.is_application_fee_paid ||
+        applications.some((app: any) => app.is_application_fee_paid) ||
+        false;
+      const is_scholarship_fee_paid = enrolledApp?.is_scholarship_fee_paid ||
+        mainApp?.is_scholarship_fee_paid ||
+        false;
+
       if (isStephanie) {
-        console.log('🔍 [STEPHANIE DEBUG] Flags finais:', {
+        console.log("🔍 [STEPHANIE DEBUG] Flags finais:", {
           is_application_fee_paid,
           is_scholarship_fee_paid,
           enrolledApp_has_application_fee: enrolledApp?.is_application_fee_paid,
-          enrolledApp_has_scholarship_fee: enrolledApp?.is_scholarship_fee_paid
+          enrolledApp_has_scholarship_fee: enrolledApp?.is_scholarship_fee_paid,
         });
       }
 
@@ -245,7 +313,8 @@ export function useStudentDetailsQuery(profileId: string | undefined) {
         selection_survey_passed: s.selection_survey_passed,
         placement_fee_flow: s.placement_fee_flow,
         is_placement_fee_paid: s.is_placement_fee_paid,
-        selection_process_fee_payment_method: s.selection_process_fee_payment_method,
+        selection_process_fee_payment_method:
+          s.selection_process_fee_payment_method,
         i20_control_fee_payment_method: s.i20_control_fee_payment_method,
         seller_referral_code: s.seller_referral_code,
         application_id: mainApp.id || null,
@@ -254,17 +323,22 @@ export function useStudentDetailsQuery(profileId: string | undefined) {
         applied_at: mainApp.applied_at || null,
         is_application_fee_paid,
         is_scholarship_fee_paid,
-        application_fee_payment_method: mainApp.application_fee_payment_method || null,
-        scholarship_fee_payment_method: mainApp.scholarship_fee_payment_method || null,
+        application_fee_payment_method:
+          mainApp.application_fee_payment_method || null,
+        scholarship_fee_payment_method:
+          mainApp.scholarship_fee_payment_method || null,
         acceptance_letter_status: mainApp.acceptance_letter_status || null,
-        student_process_type: mainApp.student_process_type || s.student_process_type || null,
+        student_process_type: mainApp.student_process_type ||
+          s.student_process_type || null,
         has_paid_ds160_package: !!s.has_paid_ds160_package,
         has_paid_i539_cos_package: !!s.has_paid_i539_cos_package,
         has_paid_reinstatement_package: !!s.has_paid_reinstatement_package,
         visa_transfer_active: s.visa_transfer_active, // Removido o ?? true para permitir valor false do banco
-        reinstatement_package_payment_method: s.reinstatement_package_payment_method || null,
+        reinstatement_package_payment_method:
+          s.reinstatement_package_payment_method || null,
         ds160_package_payment_method: s.ds160_package_payment_method || null,
-        i539_cos_package_payment_method: s.i539_cos_package_payment_method || null,
+        i539_cos_package_payment_method: s.i539_cos_package_payment_method ||
+          null,
         system_type: s.system_type || null,
         payment_status: mainApp.payment_status || null,
         reviewed_at: mainApp.reviewed_at || null,
@@ -273,19 +347,30 @@ export function useStudentDetailsQuery(profileId: string | undefined) {
         scholarship_title: mainApp.scholarships?.title || null,
         university_name: mainApp.scholarships?.universities?.name || null,
         total_applications: applications.length,
-        is_locked: applications.some((app: any) => app.status === 'approved'),
+        is_locked: applications.some((app: any) => app.status === "approved"),
         all_applications: applications,
         admin_notes: s.admin_notes,
         documents_status: s.documents_status || null,
         university_id: s.university_id || null,
-        scholarship_fee_amount: mainApp.scholarships?.scholarship_fee_amount || null,
-        placement_fee_amount: mainApp.scholarships?.placement_fee_amount || null,
-        placement_fee_installment_enabled: s.placement_fee_installment_enabled ?? false,
-        placement_fee_pending_balance: (s as any).placement_fee_pending_balance ?? 0,
+        scholarship_fee_amount: mainApp.scholarships?.scholarship_fee_amount ||
+          null,
+        placement_fee_amount: mainApp.scholarships?.placement_fee_amount ||
+          null,
+        placement_fee_installment_enabled:
+          s.placement_fee_installment_enabled ?? false,
+        placement_fee_pending_balance:
+          (s as any).placement_fee_pending_balance ?? 0,
         placement_fee_due_date: (s as any).placement_fee_due_date ?? null,
-        placement_fee_installment_number: s.placement_fee_installment_number ?? 0,
+        placement_fee_installment_number: s.placement_fee_installment_number ??
+          0,
+        identity_photo_path: (s as any).identity_photo_path ?? null,
+        identity_photo_status: (s as any).identity_photo_status ?? null,
+        identity_photo_rejection_reason:
+          (s as any).identity_photo_rejection_reason ?? null,
         assigned_to_admin_id: s.assigned_to_admin_id || null,
-        assigned_to_admin_name: s.assigned_to_admin_name || (s.assigned_admin as any)?.full_name || null,
+        assigned_to_admin_name: s.assigned_to_admin_name ||
+          (s.assigned_admin as any)?.full_name || null,
+        source: s.source || null,
       };
 
       return formatted;
@@ -306,24 +391,30 @@ export function useStudentSecondaryDataQuery(userId: string | undefined) {
     queryKey: queryKeys.students.secondaryData(userId),
     enabled: !!userId,
     queryFn: async () => {
-      if (!userId) throw new Error('User ID is required');
+      if (!userId) throw new Error("User ID is required");
 
       // Tentar usar RPC consolidado
       const { data: rpcData, error: rpcError } = await supabase.rpc(
-        'get_admin_student_secondary_data',
-        { target_user_id: userId }
+        "get_admin_student_secondary_data",
+        { target_user_id: userId },
       );
 
       if (!rpcError && rpcData) {
-        const parsed = typeof rpcData === 'string' ? JSON.parse(rpcData) : rpcData;
+        const parsed = typeof rpcData === "string"
+          ? JSON.parse(rpcData)
+          : rpcData;
         // A RPC retorna real_paid_amounts já mapeado como objeto JSON
         // Converter para formato de array para compatibilidade com o fallback
         const realPaidAmounts = parsed.real_paid_amounts || {};
-        const individualFeePayments = Object.entries(realPaidAmounts).map(([fee_type, amount]) => ({
+        const individualFeePayments = Object.entries(realPaidAmounts).map((
+          [fee_type, amount],
+        ) => ({
           fee_type,
-          amount: typeof amount === 'number' ? amount : parseFloat(String(amount)) || 0
+          amount: typeof amount === "number"
+            ? amount
+            : parseFloat(String(amount)) || 0,
         }));
-        
+
         return {
           termAcceptances: parsed.term_acceptances || [],
           referralInfo: parsed.referral_info || null,
@@ -335,7 +426,7 @@ export function useStudentSecondaryDataQuery(userId: string | undefined) {
       // Fallback: carregar manualmente
       const [termAcceptancesResult, paymentsResult] = await Promise.all([
         supabase
-          .from('comprehensive_term_acceptance')
+          .from("comprehensive_term_acceptance")
           .select(`
             *,
             user_profiles!comprehensive_term_acceptance_user_id_fkey (
@@ -347,26 +438,29 @@ export function useStudentSecondaryDataQuery(userId: string | undefined) {
               content
             )
           `)
-          .eq('user_id', userId)
-          .order('accepted_at', { ascending: false }),
+          .eq("user_id", userId)
+          .order("accepted_at", { ascending: false }),
         supabase
-          .from('individual_fee_payments')
-          .select('fee_type, amount')
-          .eq('user_id', userId),
+          .from("individual_fee_payments")
+          .select("fee_type, amount")
+          .eq("user_id", userId),
       ]);
 
-      const termAcceptances = (termAcceptancesResult.data || []).map((acc: any) => ({
+      const termAcceptances = (termAcceptancesResult.data || []).map((
+        acc: any,
+      ) => ({
         ...acc,
         user_email: acc.user_profiles?.email || null,
         user_full_name: acc.user_profiles?.full_name || null,
-        term_title: acc.application_terms?.title || 'Term',
-        term_content: acc.application_terms?.content || '',
+        term_title: acc.application_terms?.title || "Term",
+        term_content: acc.application_terms?.content || "",
         // ✅ identity_photo_path e identity_photo_name já vêm do select * (ou da RPC)
         identity_photo_path: acc.identity_photo_path || null,
         identity_photo_name: acc.identity_photo_name || null,
         // ✅ Novos campos de status da verificação
         identity_photo_status: acc.identity_photo_status || null,
-        identity_photo_rejection_reason: acc.identity_photo_rejection_reason || null,
+        identity_photo_rejection_reason: acc.identity_photo_rejection_reason ||
+          null,
         identity_photo_reviewed_at: acc.identity_photo_reviewed_at || null,
         identity_photo_reviewed_by: acc.identity_photo_reviewed_by || null,
       }));
@@ -398,11 +492,11 @@ export function usePendingZellePaymentsQuery(userId: string | undefined) {
       if (!userId) return [];
 
       const { data, error } = await supabase
-        .from('zelle_payments')
-        .select('*')
-        .eq('user_id', userId)
-        .eq('status', 'pending_verification')
-        .order('created_at', { ascending: false });
+        .from("zelle_payments")
+        .select("*")
+        .eq("user_id", userId)
+        .eq("status", "pending_verification")
+        .order("created_at", { ascending: false });
 
       if (error) throw error;
       return data || [];
@@ -413,4 +507,3 @@ export function usePendingZellePaymentsQuery(userId: string | undefined) {
     refetchOnMount: false,
   });
 }
-

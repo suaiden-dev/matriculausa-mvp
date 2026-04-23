@@ -37,7 +37,7 @@ const StudentApplicationsKanbanView: React.FC<StudentApplicationsKanbanViewProps
 
   // Filtramos apenas os que pagaram a selection fee ou estão inscritos
   const displayStudents = useMemo(() => {
-    return students.filter(s => s.has_paid_selection_process_fee || s.status === 'enrolled');
+    return students.filter(s => s.has_paid_selection_process_fee || s.status === 'enrolled' || s.source === 'migma');
   }, [students]);
 
   // Filter out stages that should be hidden

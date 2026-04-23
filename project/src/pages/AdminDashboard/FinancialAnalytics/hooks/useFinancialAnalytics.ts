@@ -3,7 +3,7 @@ import { useAuth } from '../../../../hooks/useAuth';
 import { useFeeConfig } from '../../../../hooks/useFeeConfig';
 import { loadFinancialData } from '../data/loaders/financialDataLoader';
 import { transformFinancialData } from '../utils/transformFinancialData';
-import { calculateRevenueData, calculateFinalMetrics, calculatePaymentMethodData, calculateFeeTypeData, calculateARPU, calculateFunnelData, calculateUniversityRevenue, calculateAffiliateSalesData } from '../utils/calculateMetrics';
+import { calculateRevenueData, calculateFinalMetrics, calculatePaymentMethodData, calculateFeeTypeData, calculateARPU, calculateFunnelData, calculateUniversityRevenue, calculateAffiliateSalesData, calculateCohortRetention } from '../utils/calculateMetrics';
 import { getDateRange } from '../utils/dateRange';
 import { exportFinancialDataToCSV } from '../data/services/exportService';
 import { loadAffiliatesLoader } from '../../PaymentManagement/data/loaders/referencesLoader';
@@ -17,7 +17,8 @@ import type {
   StripeMetrics,
   UniversityRevenueData,
   FunnelStepData,
-  AffiliateSalesData
+  AffiliateSalesData,
+  CohortRetentionData
 } from '../data/types';
 
 export function useFinancialAnalytics() {
@@ -46,7 +47,8 @@ export function useFinancialAnalytics() {
   // Cache para dados brutos do backend (evita refetch ao mudar filtros locais)
   const rawLoadedDataRef = useRef<any>(null);
   const rawProcessedDataRef = useRef<any>(null);
-  
+  const rawAffiliatesRef = useRef<any[]>([]);
+
   const [metrics, setMetrics] = useState<FinancialMetrics>({
     totalRevenue: 0,
     monthlyRevenue: 0,
@@ -64,7 +66,10 @@ export function useFinancialAnalytics() {
     universityPayouts: 0,
     affiliatePayouts: 0,
     newUsers: 0,
-    newUsersGrowth: 0
+    newUsersGrowth: 0,
+    selectionProcessPaidCount: 0,
+    selectionProcessGrowth: 0,
+    selectionConversionRate: 0
   });
 
   const [stripeMetrics, setStripeMetrics] = useState<StripeMetrics>({
@@ -85,6 +90,7 @@ export function useFinancialAnalytics() {
   const [funnelData, setFunnelData] = useState<FunnelStepData[]>([]);
   const [universityRevenueData, setUniversityRevenueData] = useState<UniversityRevenueData[]>([]);
   const [affiliateSalesData, setAffiliateSalesData] = useState<AffiliateSalesData[]>([]);
+  const [cohortRetentionData, setCohortRetentionData] = useState<CohortRetentionData[]>([]);
 
   // Filtros de período
   const [timeFilter, setTimeFilter] = useState<TimeFilter>('30d');
@@ -103,6 +109,7 @@ export function useFinancialAnalytics() {
 
     const loadedData = rawLoadedDataRef.current;
     const processedData = rawProcessedDataRef.current;
+    const currentAffiliates = rawAffiliatesRef.current;
     const currentRange = getDateRange(timeFilter, customDateFrom, customDateTo, showCustomDate);
 
     // 1. Definir os registros de pagamento base e mapas
@@ -120,60 +127,57 @@ export function useFinancialAnalytics() {
       if (payment.payment_intent_id) individualFeePaymentsByIntentId.set(payment.payment_intent_id, payment);
     });
 
-    // 2. Aplicar Filtro de Data Primeiro (Base para opções de filtro e alguns charts)
-    const { start, end } = currentRange;
-    const filteredRecordsByDate = paymentRecords.filter((record: any) => {
-      const paymentDate = new Date(record.payment_date || record.created_at || Date.now());
-      return paymentDate >= start && paymentDate <= end;
-    });
-
-    // 3. Aplicar Filtros de Categoria, Método, Valor, etc. sobre os registros já filtrados por DATA
-    let locallyFilteredRecords = filteredRecordsByDate;
+    // 3. Aplicar Filtros de Categoria, Método, Valor, etc. sobre TODOS os registros
+    let categoryFilteredAllDatesRecords = paymentRecords;
     if (filterFeeType.length > 0) {
-      // Normalizar o fee_type do registro para comparar com o canonical selecionado
       const FEE_CANONICAL_FILTER: Record<string, string> = {
         selection_process_fee: 'selection_process',
         application_fee: 'application',
         scholarship_fee: 'scholarship',
         i20_control: 'i20_control_fee',
-        // ds160_package e i539_package são categorias separadas — não normalizar
         placement_fee: 'placement',
         reinstatement: 'reinstatement_fee',
         reinstatement_package: 'reinstatement_fee',
       };
-      locallyFilteredRecords = locallyFilteredRecords.filter((record: any) => {
+      categoryFilteredAllDatesRecords = categoryFilteredAllDatesRecords.filter((record: any) => {
         const canonical = FEE_CANONICAL_FILTER[record.fee_type] ?? record.fee_type;
         return filterFeeType.includes(canonical);
       });
-
     }
     if (filterPaymentMethod.length > 0) {
-      locallyFilteredRecords = locallyFilteredRecords.filter((record: any) => filterPaymentMethod.includes(record.payment_method));
+      categoryFilteredAllDatesRecords = categoryFilteredAllDatesRecords.filter((record: any) => filterPaymentMethod.includes(record.payment_method));
     }
     if (filterValueMin) {
       const min = parseFloat(filterValueMin);
-      if (!isNaN(min)) locallyFilteredRecords = locallyFilteredRecords.filter((record: any) => (record.amount / 100) >= min);
+      if (!isNaN(min)) categoryFilteredAllDatesRecords = categoryFilteredAllDatesRecords.filter((record: any) => (record.amount / 100) >= min);
     }
     if (filterValueMax) {
       const max = parseFloat(filterValueMax);
-      if (!isNaN(max)) locallyFilteredRecords = locallyFilteredRecords.filter((record: any) => (record.amount / 100) <= max);
+      if (!isNaN(max)) categoryFilteredAllDatesRecords = categoryFilteredAllDatesRecords.filter((record: any) => (record.amount / 100) <= max);
     }
     if (filterAffiliate.length > 0) {
-      locallyFilteredRecords = locallyFilteredRecords.filter((record: any) => {
+      categoryFilteredAllDatesRecords = categoryFilteredAllDatesRecords.filter((record: any) => {
         const sellerCode = record.seller_referral_code;
         if (!sellerCode) return false;
-        const affiliate = affiliates.find(a => a.referral_code === sellerCode);
+        const affiliate = currentAffiliates.find(a => a.referral_code === sellerCode);
         return affiliate && filterAffiliate.includes(affiliate.id);
       });
     }
 
+    // 2. Aplicar Filtro de Data para os gráficos
+    const { start, end } = currentRange;
+    const locallyFilteredRecords = categoryFilteredAllDatesRecords.filter((record: any) => {
+      const paymentDate = new Date(record.payment_date || record.created_at || Date.now());
+      return paymentDate >= start && paymentDate <= end;
+    });
+
     const filteredRecordsForMetrics = locallyFilteredRecords; // Usado para tabela e charts específicos
 
     // 4. Recalcular métricas e dados de gráfico
-    // finalMetrics recebe locallyFilteredRecords para poder calcular crescimento comparando períodos
+    // finalMetrics recebe categoryFilteredAllDatesRecords para poder calcular crescimento comparando períodos
     const finalMetrics = calculateFinalMetrics(
-      { ...processedData, paymentRecords: locallyFilteredRecords },
-      processedData.universityRequests || loadedData.universityRequests || [], // Priorizar Requests filtrados do range pelo loader
+      { ...processedData, paymentRecords: categoryFilteredAllDatesRecords },
+      processedData.universityRequests || loadedData.universityRequests || [],
       processedData.affiliateRequests || loadedData.affiliateRequests || [],
       loadedData.allStudents,
       currentRange
@@ -300,26 +304,31 @@ export function useFinancialAnalytics() {
 
 
     // 6. Novos visuais (reagem aos filtros como Power BI)
-    setArpu(calculateARPU(locallyFilteredRecords, loadedData.allStudents, currentRange));
+    setArpu(calculateARPU(finalMetrics.totalRevenue, finalMetrics.selectionProcessPaidCount));
     setFunnelData(calculateFunnelData(loadedData.allStudents, locallyFilteredRecords));
     setUniversityRevenueData(calculateUniversityRevenue(transactionsWithNames));
-    setAffiliateSalesData(calculateAffiliateSalesData(locallyFilteredRecords, affiliates));
+    setAffiliateSalesData(calculateAffiliateSalesData(locallyFilteredRecords, currentAffiliates));
+    // Cohort usa TODOS os registros históricos (independente do filtro de período)
+    // para não esconder cohorts antigos ao selecionar períodos curtos
+    setCohortRetentionData(calculateCohortRetention(processedData.paymentRecords || []));
 
     setTransactions(transactionsWithNames);
-    console.log('✅ Filters applied locally (Instant)');
-  }, [timeFilter, customDateFrom, customDateTo, showCustomDate, filterFeeType, filterPaymentMethod, filterValueMin, filterValueMax, filterAffiliate, affiliates]);
+  }, [timeFilter, customDateFrom, customDateTo, showCustomDate, filterFeeType, filterPaymentMethod, filterValueMin, filterValueMax, filterAffiliate]);
 
   const loadData = useCallback(async () => {
     try {
       setLoading(true);
-      const currentRange = getDateRange(timeFilter, customDateFrom, customDateTo, showCustomDate);
       
       const [loadedData, affiliatesData] = await Promise.all([
-        loadFinancialData(currentRange),
+        loadFinancialData(),
         loadAffiliatesLoader(supabase)
       ]);
       
-      setAffiliates(affiliatesData || []);
+      const affiliatesList = affiliatesData || [];
+      rawAffiliatesRef.current = affiliatesList;
+      setAffiliates(affiliatesList);
+
+      const currentRange = getDateRange(timeFilter, customDateFrom, customDateTo, showCustomDate);
 
       const processedData = await transformFinancialData({
         ...loadedData,
@@ -380,12 +389,12 @@ export function useFinancialAnalytics() {
       JSON.stringify(previousFilters.filterAffiliate) !== JSON.stringify(currentFilters.filterAffiliate)
     );
 
-    if (!hasLoadedRef.current || userChanged || timeFiltersChanged) {
+    if (!hasLoadedRef.current || userChanged) {
       hasLoadedRef.current = true;
       previousUserRef.current = currentUserId;
       previousFiltersRef.current = currentFilters;
       loadData();
-    } else if (localFiltersChanged) {
+    } else if (localFiltersChanged || timeFiltersChanged) {
       previousFiltersRef.current = currentFilters;
       applyFilters();
     }
@@ -484,7 +493,8 @@ export function useFinancialAnalytics() {
     arpu,
     funnelData,
     universityRevenueData,
-    affiliateSalesData
+    affiliateSalesData,
+    cohortRetentionData
   };
 }
 

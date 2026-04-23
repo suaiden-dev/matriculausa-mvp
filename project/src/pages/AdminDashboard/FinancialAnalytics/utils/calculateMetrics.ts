@@ -1,4 +1,4 @@
-import type { DateRange, FinancialMetrics, RevenueData, ProcessedFinancialData, PaymentMethodData, FeeTypeData, UniversityRevenueData, FunnelStepData, CouponImpactData, PaidVsPendingData, AffiliateSalesData } from '../data/types';
+import type { DateRange, FinancialMetrics, RevenueData, ProcessedFinancialData, PaymentMethodData, FeeTypeData, UniversityRevenueData, FunnelStepData, CouponImpactData, PaidVsPendingData, AffiliateSalesData, CohortRetentionData } from '../data/types';
 
 /**
  * Calcula revenueData (buckets por dia) baseado nos payment records
@@ -50,10 +50,6 @@ export function calculateRevenueData(
   });
   revenueData.sort((a, b) => a.date.localeCompare(b.date));
 
-  console.log('📅 Revenue Data:', revenueData);
-  console.log('💵 Total Revenue from Records:', paidRecords.reduce((sum, p) => sum + p.amount, 0));
-  console.log('🔢 Total Payments from Records:', paidRecords.length);
-
   return revenueData;
 }
 
@@ -101,48 +97,36 @@ export function calculateFinalMetrics(
   const prevTotalRevenue = prevPaidRecords.reduce((sum, p) => sum + (p.amount || 0), 0);
   const revenueGrowth = prevTotalRevenue > 0 ? ((totalRevenue - prevTotalRevenue) / prevTotalRevenue) * 100 : 0;
 
-  // Contar payouts
-  const pendingPayouts = universityRequests.filter(req => req.status === 'pending' || req.status === 'approved').length +
-                        affiliateRequests.filter(req => req.status === 'pending' || req.status === 'approved').length;
-  const completedPayouts = universityRequests.filter(req => req.status === 'paid').length +
-                           affiliateRequests.filter(req => req.status === 'paid').length;
-  const completedAffiliatePayouts = affiliateRequests.filter(req => req.status === 'paid').length;
-  const completedUniversityPayouts = universityRequests.filter(req => req.status === 'paid').length;
-
-  // 🔍 DEBUG: Verificar affiliate requests
-  console.log('🔍 [FinancialAnalytics] Affiliate Requests Debug:', {
-    total_requests: affiliateRequests.length,
-    requests_with_status_paid: affiliateRequests.filter(req => req.status === 'paid').length,
-    all_requests: affiliateRequests.map(req => ({
-      id: req.id,
-      status: req.status,
-      amount_usd: req.amount_usd,
-      amount: req.amount,
-      paid_at: req.paid_at,
-      created_at: req.created_at
-    }))
+  // Filtrar requisições pelo range atual
+  const filteredUniRequests = universityRequests.filter(req => {
+    const d = new Date(req.status === 'paid' && req.paid_at ? req.paid_at : req.created_at);
+    return d >= start && d <= end;
   });
 
-  // Payouts aprovados/completados (status 'paid') - apenas os que o admin aprovou
-  const universityPayouts = universityRequests
+  const filteredAffRequests = affiliateRequests.filter(req => {
+    const d = new Date(req.status === 'paid' && req.paid_at ? req.paid_at : req.created_at);
+    return d >= start && d <= end;
+  });
+
+  // Contar payouts
+  const pendingPayouts = filteredUniRequests.filter(req => req.status === 'pending' || req.status === 'approved').length +
+                        filteredAffRequests.filter(req => req.status === 'pending' || req.status === 'approved').length;
+  const completedPayouts = filteredUniRequests.filter(req => req.status === 'paid').length +
+                           filteredAffRequests.filter(req => req.status === 'paid').length;
+  const completedAffiliatePayouts = filteredAffRequests.filter(req => req.status === 'paid').length;
+  const completedUniversityPayouts = filteredUniRequests.filter(req => req.status === 'paid').length;
+
+  // Payouts aprovados/completados (status 'paid')
+  const universityPayouts = filteredUniRequests
     .filter(req => req.status === 'paid')
     .reduce((sum, req) => sum + (req.amount || 0), 0);
-  
+
   // ✅ CORREÇÃO: Usar amount_usd (campo correto da tabela affiliate_payment_requests)
-  const paidAffiliateRequests = affiliateRequests.filter(req => req.status === 'paid');
+  const paidAffiliateRequests = filteredAffRequests.filter(req => req.status === 'paid');
   const affiliatePayouts = paidAffiliateRequests.reduce((sum, req) => {
-    // amount_usd está em dólares, converter para centavos
     const amountUsd = req.amount_usd || 0;
-    const amountInCents = Math.round(amountUsd * 100);
-    console.log(`💰 [FinancialAnalytics] Affiliate Request ${req.id}: amount_usd=${amountUsd}, amount_in_cents=${amountInCents}`);
-    return sum + amountInCents;
+    return sum + Math.round(amountUsd * 100);
   }, 0);
-  
-  console.log('💰 [FinancialAnalytics] Affiliate Payouts Calculated:', {
-    paid_requests_count: paidAffiliateRequests.length,
-    total_cents: affiliatePayouts,
-    total_dollars: (affiliatePayouts / 100).toFixed(2)
-  });
 
   // Calcular novos estudantes no período
   const newUsers = allStudents.filter(student => {
@@ -157,6 +141,25 @@ export function calculateFinalMetrics(
 
   const newUsersGrowth = prevNewUsers > 0 ? ((newUsers - prevNewUsers) / prevNewUsers) * 100 : 0;
   
+  // Calcular quantos pagaram o processo seletivo (Selection Process)
+  const selectionProcessTypes = ['selection_process', 'selection_process_fee'];
+  
+  const currentSelectionPaidCount = new Set(
+    currentPeriodPaidRecords
+      .filter(r => selectionProcessTypes.includes(r.fee_type))
+      .map(r => r.student_id || r.user_id)
+  ).size;
+
+  const prevSelectionPaidCount = new Set(
+    prevPaidRecords
+      .filter(r => selectionProcessTypes.includes(r.fee_type))
+      .map(r => r.student_id || r.user_id)
+  ).size;
+
+  const selectionProcessGrowth = prevSelectionPaidCount > 0 
+    ? ((currentSelectionPaidCount - prevSelectionPaidCount) / prevSelectionPaidCount) * 100 
+    : 0;
+
   // ✅ CORREÇÃO: Já calculado no início da função
   const calculatedTotalRevenue = totalRevenue;
 
@@ -177,7 +180,10 @@ export function calculateFinalMetrics(
     universityPayouts,
     affiliatePayouts,
     newUsers,
-    newUsersGrowth
+    newUsersGrowth,
+    selectionProcessPaidCount: currentSelectionPaidCount,
+    selectionProcessGrowth,
+    selectionConversionRate: newUsers > 0 ? (currentSelectionPaidCount / newUsers) * 100 : 0
   };
 }
 
@@ -236,17 +242,10 @@ export function calculateFeeTypeData(paymentRecords: any[]): FeeTypeData[] {
 }
 
 /**
- * Calcula o ARPU (receita media por aluno no periodo)
+ * Calcula o ARPU (receita media por aluno QUE PAGOU o processo seletivo no periodo)
  */
-export function calculateARPU(paymentRecords: any[], allStudents: any[], currentRange: DateRange): number {
-  const { start, end } = currentRange;
-  const paidRecords = paymentRecords.filter(p => p.status === 'paid');
-  const totalRevenue = paidRecords.reduce((sum, p) => sum + (p.amount || 0), 0);
-  const newUsersInPeriod = allStudents.filter(s => {
-    const d = new Date(s.created_at);
-    return d >= start && d <= end;
-  }).length;
-  return newUsersInPeriod > 0 ? totalRevenue / newUsersInPeriod : 0;
+export function calculateARPU(totalRevenue: number, selectionProcessPaidCount: number): number {
+  return selectionProcessPaidCount > 0 ? totalRevenue / selectionProcessPaidCount : 0;
 }
 
 /**
@@ -377,21 +376,134 @@ export function calculatePaidVsPending(paymentRecords: any[]): PaidVsPendingData
  */
 export function calculateAffiliateSalesData(paymentRecords: any[], affiliates: any[]): AffiliateSalesData[] {
   const paidRecords = paymentRecords.filter(p => p.status === 'paid');
-  const affiliateSalesMap = new Map<string, number>();
+  const affiliateSalesMap = new Map<string, { count: number; code: string; revenue: number }>();
 
   paidRecords.forEach(record => {
     const sellerCode = record.seller_referral_code;
     if (sellerCode) {
-      const affiliate = affiliates.find(a => a.referral_code === sellerCode);
-      const name = affiliate ? affiliate.full_name : `Código: ${sellerCode}`;
+      let sellerName = `Código: ${sellerCode}`;
       
-      const currentCount = affiliateSalesMap.get(name) || 0;
-      affiliateSalesMap.set(name, currentCount + 1);
+      // Procurar o nome correto no array de afiliados e seus vendedores internos
+      for (const affiliate of affiliates) {
+        if (affiliate.referral_code === sellerCode) {
+          sellerName = affiliate.name;
+          break;
+        }
+        
+        if (affiliate.sellers && Array.isArray(affiliate.sellers)) {
+          const matchingSeller = affiliate.sellers.find((s: any) => s.referral_code === sellerCode);
+          if (matchingSeller && matchingSeller.name) {
+            sellerName = matchingSeller.name;
+            break;
+          }
+        }
+      }
+      
+      const currentData = affiliateSalesMap.get(sellerName) || { count: 0, code: sellerCode, revenue: 0 };
+      currentData.count += 1;
+      currentData.revenue += record.amount || 0;
+      affiliateSalesMap.set(sellerName, currentData);
     }
   });
 
   return Array.from(affiliateSalesMap.entries())
-    .map(([affiliateName, salesCount]) => ({ affiliateName, salesCount }))
-    .sort((a, b) => b.salesCount - a.salesCount)
-    .slice(0, 10); // Retorna os Top 10
+    .map(([affiliateName, data]) => ({ 
+      affiliateName, 
+      sellerCode: data.code,
+      salesCount: data.count,
+      totalRevenueCents: data.revenue
+    }))
+    .sort((a, b) => b.totalRevenueCents - a.totalRevenueCents)
+    .slice(0, 10);
+}
+/**
+ * Calcula a retenção por cohort mensal.
+ * Cohort = mês em que o aluno pagou o processo seletivo.
+ * Fluxo atual: selection_process → application → ds160_package | i539_package → placement
+ * Legado: i20_control_fee, scholarship, reinstatement_fee (mantidos para cohorts históricos)
+ */
+export function calculateCohortRetention(paymentRecords: any[]): CohortRetentionData[] {
+  const paidRecords = paymentRecords.filter(p => p.status === 'paid');
+
+  // Normalização de fee_type para chaves canônicas
+  const normalize = (raw: string): string => {
+    if (raw === 'selection_process_fee') return 'selection_process';
+    if (raw === 'application_fee')       return 'application';
+    if (raw === 'scholarship_fee')       return 'scholarship';
+    if (raw === 'i20_control')           return 'i20_control_fee';
+    if (raw === 'placement_fee')         return 'placement';
+    if (raw === 'reinstatement' || raw === 'reinstatement_package') return 'reinstatement_fee';
+    return raw; // ds160_package, i539_package passam sem alteração
+  };
+
+  // Mapa: userId → { feeTypes pagos, mês do selection_process }
+  const userPayments = new Map<string, { feeTypes: Set<string>; selectionMonth: string | null }>();
+
+  paidRecords.forEach(record => {
+    const userId = record.student_id || record.user_id;
+    if (!userId) return;
+    const feeType = normalize(record.fee_type || '');
+
+    if (!userPayments.has(userId)) {
+      userPayments.set(userId, { feeTypes: new Set(), selectionMonth: null });
+    }
+    const entry = userPayments.get(userId)!;
+    entry.feeTypes.add(feeType);
+
+    if (feeType === 'selection_process') {
+      const paymentDate = new Date(record.payment_date || record.created_at || Date.now());
+      const month = paymentDate.toLocaleString('en-US', { month: 'short', year: 'numeric' });
+      entry.selectionMonth = month;
+    }
+  });
+
+  type CohortEntry = {
+    size: number;
+    application: number;
+    ds160_package: number;
+    i539_package: number;
+    placement: number;
+    i20_control: number;
+    scholarship: number;
+    reinstatement: number;
+    date: Date;
+  };
+
+  const cohortMap = new Map<string, CohortEntry>();
+
+  userPayments.forEach(({ feeTypes, selectionMonth }) => {
+    if (!selectionMonth) return;
+
+    if (!cohortMap.has(selectionMonth)) {
+      const parts = selectionMonth.split(' ');
+      const monthIdx: Record<string, number> = { Jan:0, Feb:1, Mar:2, Apr:3, May:4, Jun:5, Jul:6, Aug:7, Sep:8, Oct:9, Nov:10, Dec:11 };
+      const date = new Date(parseInt(parts[1]), monthIdx[parts[0]] ?? 0, 1);
+      cohortMap.set(selectionMonth, { size: 0, application: 0, ds160_package: 0, i539_package: 0, placement: 0, i20_control: 0, scholarship: 0, reinstatement: 0, date });
+    }
+
+    const cohort = cohortMap.get(selectionMonth)!;
+    cohort.size += 1;
+    if (feeTypes.has('application'))      cohort.application += 1;
+    if (feeTypes.has('ds160_package'))    cohort.ds160_package += 1;
+    if (feeTypes.has('i539_package'))     cohort.i539_package += 1;
+    if (feeTypes.has('placement'))        cohort.placement += 1;
+    if (feeTypes.has('i20_control_fee'))  cohort.i20_control += 1;
+    if (feeTypes.has('scholarship'))      cohort.scholarship += 1;
+    if (feeTypes.has('reinstatement_fee')) cohort.reinstatement += 1;
+  });
+
+  return Array.from(cohortMap.entries())
+    .sort((a, b) => a[1].date.getTime() - b[1].date.getTime())
+    .slice(-12)
+    .map(([cohortMonth, data]) => ({
+      cohortMonth,
+      cohortSize: data.size,
+      application: data.application,
+      ds160_package: data.ds160_package,
+      i539_package: data.i539_package,
+      placement: data.placement,
+      i20_control: data.i20_control,
+      scholarship: data.scholarship,
+      reinstatement: data.reinstatement,
+    }));
 }

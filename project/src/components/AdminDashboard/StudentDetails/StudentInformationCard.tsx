@@ -115,7 +115,14 @@ const StudentInformationCard: React.FC<StudentInformationCardProps> = React.memo
                   className="mt-1 w-full px-3 py-2 border border-slate-300 rounded-lg text-sm"
                 />
               ) : (
-                <dd className="text-base font-semibold text-slate-900 mt-1">{student.student_name}</dd>
+                <div className="flex items-center gap-2 mt-1">
+                  <dd className="text-base font-semibold text-slate-900">{student.student_name}</dd>
+                  {student.source === 'migma' && (
+                    <span className="inline-flex items-center px-1.5 py-0.5 rounded-md text-[10px] font-bold uppercase tracking-wider bg-black text-[#FFD700] border border-[#FFD700]/20 shadow-sm">
+                      Migma
+                    </span>
+                  )}
+                </div>
               )}
             </div>
             <div>

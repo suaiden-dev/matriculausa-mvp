@@ -16,6 +16,9 @@ export interface FinancialMetrics {
   affiliatePayouts: number;
   newUsers: number;
   newUsersGrowth: number;
+  selectionProcessPaidCount: number;
+  selectionProcessGrowth: number;
+  selectionConversionRate: number;
 }
 
 export interface StripeMetrics {
@@ -75,7 +78,23 @@ export interface PaidVsPendingData {
 
 export interface AffiliateSalesData {
   affiliateName: string;
+  sellerCode: string;
   salesCount: number;
+  totalRevenueCents: number;
+}
+
+export interface CohortRetentionData {
+  cohortMonth: string;       // "Jan 2025"
+  cohortSize: number;        // alunos que pagaram selection_process neste mês
+  // Fluxo atual
+  application: number;
+  ds160_package: number;
+  i539_package: number;
+  placement: number;
+  // Legado (pode ser 0 para cohorts novos)
+  i20_control: number;
+  scholarship: number;
+  reinstatement: number;
 }
 
 export interface DateRange {
@@ -89,8 +108,6 @@ export interface FinancialDataInputs {
   universityRequests: any[];
   affiliateRequests: any[];
   currentRange: DateRange;
-  applicationsPrev: any[];
-  zellePaymentsPrev: any[];
   allStudents: any[];
   stripeUsers: any[];
   overridesMap: { [key: string]: any };
@@ -115,8 +132,6 @@ export interface LoadedFinancialData {
   zellePayments: any[];
   universityRequests: any[];
   affiliateRequests: any[];
-  applicationsPrev: any[];
-  zellePaymentsPrev: any[];
   allStudents: any[];
   stripeUsers: any[];
   overridesMap: { [key: string]: any };
