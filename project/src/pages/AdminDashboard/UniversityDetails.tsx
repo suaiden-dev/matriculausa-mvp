@@ -22,8 +22,6 @@ import {
   Users,
   BookOpen,
   Shield,
-  Settings,
-  Star,
   Info,
   ExternalLink
 } from 'lucide-react';
@@ -98,7 +96,7 @@ const UniversityDetails: React.FC = () => {
     title: '',
     description: '',
     attachment: null as File | null,
-    applicable_student_types: ['all']
+    applicable_student_types: [] as string[]
   });
 
   // Estado para edição de document request
@@ -106,7 +104,7 @@ const UniversityDetails: React.FC = () => {
     title: '',
     description: '',
     attachment: null as File | null,
-    applicable_student_types: ['all']
+    applicable_student_types: [] as string[]
   });
 
   const STUDENT_TYPE_OPTIONS = [
@@ -299,7 +297,12 @@ const UniversityDetails: React.FC = () => {
       }
 
       setShowNewRequestModal(false);
-      setNewRequest({ title: '', description: '', attachment: null, applicable_student_types: ['all'] });
+      setNewRequest({
+        title: '',
+        description: '',
+        attachment: null,
+        applicable_student_types: []
+      });
       fetchDocumentRequests(); // Recarregar lista
 
     } catch (e: any) {
@@ -405,12 +408,18 @@ const UniversityDetails: React.FC = () => {
   };
 
   const openEditModal = (request: DocumentRequest) => {
+    // Sanitizar tipos legados: se houver tipos específicos, remover 'all'
+    let sanitizedTypes = request.applicable_student_types || [];
+    if (sanitizedTypes.includes('all') && sanitizedTypes.length > 1) {
+      sanitizedTypes = sanitizedTypes.filter(t => t !== 'all');
+    }
+    
     setEditingRequest(request);
     setEditRequest({
       title: request.title || '',
       description: request.description || '',
       attachment: null,
-      applicable_student_types: request.applicable_student_types || ['all']
+      applicable_student_types: sanitizedTypes
     });
     setShowEditRequestModal(true);
   };
@@ -1036,9 +1045,10 @@ const UniversityDetails: React.FC = () => {
                             }
                           } else {
                             setNewRequest(r => {
-                              let updated = r.applicable_student_types.includes(opt.value)
-                                ? r.applicable_student_types.filter(v => v !== opt.value)
-                                : [...r.applicable_student_types, opt.value];
+                              const withoutAll = r.applicable_student_types.filter(v => v !== 'all');
+                              let updated = withoutAll.includes(opt.value)
+                                ? withoutAll.filter(v => v !== opt.value)
+                                : [...withoutAll, opt.value];
                               return { ...r, applicable_student_types: updated };
                             });
                           }
@@ -1053,11 +1063,11 @@ const UniversityDetails: React.FC = () => {
               </div>
             </div>
             
-            <div className="flex gap-3 mt-6 justify-center">
+            <div className="flex gap-3 mt-8 justify-center">
               <button 
                 className="bg-blue-600 hover:bg-blue-700 text-white px-6 py-2 rounded-lg font-semibold shadow transition disabled:opacity-60 disabled:cursor-not-allowed flex items-center gap-2" 
                 onClick={handleNewRequest} 
-                disabled={creating || !newRequest.title}
+                disabled={creating || !newRequest.title || newRequest.applicable_student_types.length === 0}
               >
                 {creating ? (
                   <svg className="animate-spin h-4 w-4" viewBox="0 0 24 24">
@@ -1167,9 +1177,10 @@ const UniversityDetails: React.FC = () => {
                             }
                           } else {
                             setEditRequest(r => {
-                              let updated = r.applicable_student_types.includes(opt.value)
-                                ? r.applicable_student_types.filter(v => v !== opt.value)
-                                : [...r.applicable_student_types, opt.value];
+                              const withoutAll = r.applicable_student_types.filter(v => v !== 'all');
+                              let updated = withoutAll.includes(opt.value)
+                                ? withoutAll.filter(v => v !== opt.value)
+                                : [...withoutAll, opt.value];
                               return { ...r, applicable_student_types: updated };
                             });
                           }
@@ -1184,11 +1195,11 @@ const UniversityDetails: React.FC = () => {
               </div>
             </div>
             
-            <div className="flex gap-3 mt-6 justify-center">
+            <div className="flex gap-3 mt-8 justify-center">
               <button 
                 className="bg-blue-600 hover:bg-blue-700 text-white px-6 py-2 rounded-lg font-semibold shadow transition disabled:opacity-60 disabled:cursor-not-allowed flex items-center gap-2" 
                 onClick={handleEditRequest} 
-                disabled={editing || !editRequest.title}
+                disabled={editing || !editRequest.title || editRequest.applicable_student_types.length === 0}
               >
                 {editing ? (
                   <svg className="animate-spin h-4 w-4" viewBox="0 0 24 24">

@@ -953,15 +953,6 @@ export const DocumentsUploadStep: React.FC<StepProps> = ({ onNext }) => {
                                           { type: 'funds_proof', label: DOCUMENT_LABELS.funds_proof }
                                         ];
 
-                                        const pType = app.student_process_type || processType;
-                                        const visaTransferActive = userProfile?.visa_transfer_active;
-
-                                        if (pType === 'initial') {
-                                          baseDocs.push({ type: 'ds160', label: DOCUMENT_LABELS.ds160 });
-                                        } else if (pType === 'change_of_status' || (pType === 'transfer' && visaTransferActive === false)) {
-                                          baseDocs.push({ type: 'i539', label: DOCUMENT_LABELS.i539 });
-                                        }
-
                                         return baseDocs;
                                       })().map(docInfo => {
                                         const docData = appDocs.find(d => d.type === docInfo.type);
