@@ -41,6 +41,7 @@ interface StudentRecord {
   placement_fee_due_date: string | null;
   placement_fee_installment_number: number;
   placement_fee_installment_enabled: boolean;
+  source?: string;
 }
 
 /**
@@ -75,6 +76,7 @@ export function useStudentsQuery() {
           placement_fee_due_date,
           placement_fee_installment_number,
           placement_fee_installment_enabled,
+          source,
           scholarship_applications!scholarship_applications_student_id_fkey (
               id,
               scholarship_id,
@@ -194,6 +196,7 @@ export function useStudentsQuery() {
           placement_fee_due_date: student.placement_fee_due_date || null,
           placement_fee_installment_number: student.placement_fee_installment_number ?? 0,
           placement_fee_installment_enabled: student.placement_fee_installment_enabled ?? false,
+          source: student.source,
         };
       }) || [];
 

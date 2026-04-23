@@ -59,13 +59,14 @@ export interface StudentRecord {
   placement_fee_due_date?: string | null;
   placement_fee_installment_number?: number;
   placement_fee_installment_enabled?: boolean;
+  source?: string | null;
   identity_photo_path?: string | null;
-  identity_photo_status?: 'pending' | 'approved' | 'rejected' | null;
+  identity_photo_status?: "pending" | "approved" | "rejected" | null;
   identity_photo_rejection_reason?: string | null;
 }
 
 export interface ReferralInfo {
-  type: 'seller' | 'student' | 'affiliate';
+  type: "seller" | "student" | "affiliate";
   name: string;
   email: string;
   affiliateName?: string;
@@ -92,7 +93,7 @@ export interface TermAcceptance {
   created_at: string;
   identity_photo_path?: string; // ✅ Caminho da foto de identidade no bucket
   identity_photo_name?: string; // ✅ Nome do arquivo da foto
-  identity_photo_status?: 'pending' | 'approved' | 'rejected'; // ✅ Status da verificação da foto
+  identity_photo_status?: "pending" | "approved" | "rejected"; // ✅ Status da verificação da foto
   identity_photo_rejection_reason?: string | null; // ✅ Motivo da rejeição
   identity_photo_reviewed_at?: string | null; // ✅ Data da revisão
   identity_photo_reviewed_by?: string | null; // ✅ ID do admin que revisou
@@ -103,9 +104,16 @@ export interface TermAcceptance {
 }
 
 export interface PendingPayment {
-  fee_type: 'selection_process' | 'application' | 'scholarship' | 'i20_control' | 'placement' | 'ds160_package' | 'i539_cos_package' | 'reinstatement_fee';
-  payment_method: 'stripe' | 'zelle' | 'manual';
+  fee_type:
+    | "selection_process"
+    | "application"
+    | "scholarship"
+    | "i20_control"
+    | "placement"
+    | "ds160_package"
+    | "i539_cos_package"
+    | "reinstatement_fee";
+  payment_method: "stripe" | "zelle" | "manual";
   amount?: number;
   scholarship_id?: string | null;
 }
-

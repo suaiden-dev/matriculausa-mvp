@@ -67,6 +67,7 @@ export interface StudentRecord {
   identity_photo_rejection_reason?: string | null;
   assigned_to_admin_id?: string | null;
   assigned_to_admin_name?: string | null;
+  source?: string | null;
 }
 
 /**
@@ -153,6 +154,7 @@ export const useStudentDetails = (profileId: string | undefined) => {
             visa_transfer_active,
             university_id,
             assigned_to_admin_id,
+            source,
             assigned_admin:user_profiles!assigned_to_admin_id(id, full_name),
             scholarship_applications (
               id,
@@ -268,6 +270,7 @@ export const useStudentDetails = (profileId: string | undefined) => {
         i539_cos_package_payment_method: s.i539_cos_package_payment_method || null,
         system_type: s.system_type || null,
         university_id: s.university_id || null,
+        source: s.source || null,
       };
 
       setStudent(formatted);

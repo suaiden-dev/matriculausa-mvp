@@ -3356,7 +3356,14 @@ const AdminStudentDetails: React.FC = () => {
       {/* Header */}
       <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 pb-6 border-b border-gray-200">
         <div>
-          <h1 className="text-2xl font-bold text-slate-900">Student Details</h1>
+          <div className="flex items-center gap-3">
+            <h1 className="text-2xl font-bold text-slate-900">Student Details</h1>
+            {student.source === 'migma' && (
+              <span className="inline-flex items-center px-2 py-0.5 rounded-md text-xs font-bold uppercase tracking-wider bg-black text-[#FFD700] border border-[#FFD700]/20 shadow-sm">
+                Migma
+              </span>
+            )}
+          </div>
           <p className="text-slate-600 mt-1">Detailed view for {student.student_name}</p>
         </div>
         <div className="flex items-center gap-3 w-full sm:w-auto">
