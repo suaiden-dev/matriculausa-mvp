@@ -237,16 +237,35 @@ export async function approveZelleFlow(params: {
       .single();
 
     const isInstallmentEnabled = profileData?.placement_fee_installment_enabled === true;
+    
+    // 🔍 Prioridade 1: Verificar metadata do pagamento (Fonte da verdade do checkout)
+    const metadataInstallment = payment.metadata?.installment_number;
+    
+    if (isInstallmentEnabled) {
+      if (metadataInstallment === 1) {
+        console.log("📝 [approveZelleFlow] Detectada 1ª Parcela via Metadata");
+        await approvePartialZelleFlow({ supabase, adminUserId, payment });
+        return;
+      } else if (metadataInstallment === 2) {
+        console.log("📝 [approveZelleFlow] Detectada 2ª Parcela via Metadata");
+        await approveSecondInstallmentFlow({ supabase, adminUserId, payment });
+        return;
+      }
+    }
+
+    // 🔍 Prioridade 2: Fallback para detecção via perfil (se metadata estiver ausente)
     const currentInstallmentNumber = profileData?.placement_fee_installment_number ?? 0;
 
     // Se parcelamento estava habilitado e é a 1ª parcela → redirecionar para approvePartialZelleFlow
     if (isInstallmentEnabled && currentInstallmentNumber === 0) {
+      console.log("📝 [approveZelleFlow] Detectada 1ª Parcela via Profile Fallback");
       await approvePartialZelleFlow({ supabase, adminUserId, payment });
-      return; // Sai do approveZelleFlow — tudo feito pelo approvePartialZelleFlow
+      return;
     }
 
     // Se é a 2ª parcela → redirecionar para approveSecondInstallmentFlow
     if (currentInstallmentNumber === 1) {
+      console.log("📝 [approveZelleFlow] Detectada 2ª Parcela via Profile Fallback");
       await approveSecondInstallmentFlow({ supabase, adminUserId, payment });
       return;
     }
@@ -1279,15 +1298,14 @@ export async function approvePartialZelleFlow(params: {
     })
     .eq("id", payment.id);
 
-  // 2. Atualizar user_profiles: desbloquear fluxo + registrar dívida
+  // 2. Atualizar user_profiles: desbloquear fluxo
+  // NOTA: O saldo pendente e o número da parcela são gerenciados automaticamente 
+  // pelo trigger 'trg_after_insert_placement_payment' no banco ao registrar o pagamento individual.
   await supabase
     .from("user_profiles")
     .update({
-      is_placement_fee_paid: true,
+      is_placement_fee_paid: true, // Necessário para desbloquear o Kanban/Flow do aluno
       placement_fee_payment_method: "zelle",
-      placement_fee_pending_balance: pendingBalance,
-      placement_fee_due_date: dueDate,
-      placement_fee_installment_number: 1,
       updated_at: new Date().toISOString(),
     })
     .eq("user_id", payment.user_id);
@@ -1377,13 +1395,12 @@ export async function approveSecondInstallmentFlow(params: {
     })
     .eq("id", payment.id);
 
-  // 2. Quitar dívida no user_profiles
+  // 2. Atualizar perfil
+  // NOTA: O saldo pendente é zerado e o número da parcela é incrementado para 2
+  // automaticamente pelo trigger no banco ao registrar o pagamento individual.
   await supabase
     .from("user_profiles")
     .update({
-      placement_fee_pending_balance: 0,
-      placement_fee_due_date: null,
-      placement_fee_installment_number: 2,
       updated_at: new Date().toISOString(),
     })
     .eq("user_id", payment.user_id);

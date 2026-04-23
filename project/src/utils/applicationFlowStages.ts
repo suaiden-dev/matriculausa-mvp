@@ -151,9 +151,11 @@ export function getStepStatus(
   student: StudentRecord,
   step: ApplicationFlowStageKey
 ): StageStatus {
+  const isMigma = (student as any).source === 'migma';
+
   switch (step) {
     case 'selection_fee':
-      return student.has_paid_selection_process_fee ? 'completed' : 'pending';
+      return (student.has_paid_selection_process_fee || isMigma) ? 'completed' : 'pending';
     
     case 'apply':
       return student.total_applications > 0 ? 'completed' : 'pending';
@@ -175,7 +177,7 @@ export function getStepStatus(
     
     case 'placement_fee':
       if (!student.placement_fee_flow) return 'skipped';
-      return student.is_placement_fee_paid ? 'completed' : 'pending';
+      return (student.is_placement_fee_paid || isMigma) ? 'completed' : 'pending';
     
     case 'scholarship_fee':
       if (student.placement_fee_flow) return 'skipped';

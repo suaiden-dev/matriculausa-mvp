@@ -1,5 +1,5 @@
 import React from 'react';
-import { FileText, Download, Camera, Clock, CheckCircle, XCircle } from 'lucide-react';
+import { FileText, Download } from 'lucide-react';
 import { TermAcceptance } from './types';
 
 interface TermAcceptancesCardProps {
@@ -9,7 +9,8 @@ interface TermAcceptancesCardProps {
 }
 
 /**
- * TermAcceptancesCard - Displays accepted terms
+ * TermAcceptancesCard - Exibe termos aceitos pelo aluno.
+ * Status de foto de identidade foi movido para o IdentityPhotoVerificationCard (lê de user_profiles).
  */
 const TermAcceptancesCard: React.FC<TermAcceptancesCardProps> = React.memo(({
   termAcceptances,
@@ -19,10 +20,10 @@ const TermAcceptancesCard: React.FC<TermAcceptancesCardProps> = React.memo(({
   if (loading) {
     return (
       <div className="bg-white rounded-2xl shadow-sm border border-slate-200 p-6 animate-pulse">
-        <div className="h-6 w-32 bg-slate-200 rounded mb-4"></div>
+        <div className="h-6 w-32 bg-slate-200 rounded mb-4" />
         <div className="space-y-3">
           {[1, 2].map((i) => (
-            <div key={i} className="h-16 bg-slate-100 rounded"></div>
+            <div key={i} className="h-16 bg-slate-100 rounded" />
           ))}
         </div>
       </div>
@@ -38,79 +39,36 @@ const TermAcceptancesCard: React.FC<TermAcceptancesCardProps> = React.memo(({
         Accepted Terms
       </h3>
       <div className="space-y-3">
-        {termAcceptances.map((acceptance) => {
-          const hasIdentityPhoto = acceptance.identity_photo_path && acceptance.identity_photo_path.trim() !== '';
-          const photoStatus = acceptance.identity_photo_status;
-          
-          const getPhotoStatusBadge = () => {
-            if (!hasIdentityPhoto) return null;
-            
-            switch (photoStatus) {
-              case 'pending':
-                return (
-                  <span className="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium bg-yellow-100 text-yellow-800 ml-2">
-                    <Clock className="w-3 h-3 mr-1" />
-                    Photo Pending
-                  </span>
-                );
-              case 'approved':
-                return (
-                  <span className="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium bg-green-100 text-green-800 ml-2">
-                    <CheckCircle className="w-3 h-3 mr-1" />
-                    Photo Approved
-                  </span>
-                );
-              case 'rejected':
-                return (
-                  <span className="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium bg-red-100 text-red-800 ml-2">
-                    <XCircle className="w-3 h-3 mr-1" />
-                    Photo Rejected
-                  </span>
-                );
-              default:
-                return null;
-            }
-          };
-
-          return (
-            <div key={acceptance.id} className="border border-slate-200 rounded-lg p-3">
-              <div className="flex items-center justify-between">
-                <div className="flex-1 min-w-0">
-                  <div className="flex items-center flex-wrap">
-                    <p className="text-sm font-medium text-slate-900 truncate">
-                      {acceptance.term_title || 'Term'}
-                    </p>
-                    {hasIdentityPhoto && (
-                      <span className="inline-flex items-center ml-2 text-slate-500" title="Has identity photo">
-                        <Camera className="w-3 h-3" />
-                      </span>
-                    )}
-                    {getPhotoStatusBadge()}
-                  </div>
-                  <p className="text-xs text-slate-500">
-                    Accepted {new Date(acceptance.accepted_at).toLocaleDateString()}
-                  </p>
-                </div>
-                <button
-                  onClick={async (e) => {
-                    e.preventDefault();
-                    e.stopPropagation();
-                    try {
-                      await onDownloadPDF(acceptance);
-                    } catch (error) {
-                      console.error('Error downloading PDF:', error);
-                    }
-                  }}
-                  className="ml-3 p-2 text-slate-600 hover:text-[#05294E] hover:bg-slate-50 rounded-lg transition-colors cursor-pointer"
-                  title="Download PDF"
-                  type="button"
-                >
-                  <Download className="w-4 h-4" />
-                </button>
+        {termAcceptances.map((acceptance) => (
+          <div key={acceptance.id} className="border border-slate-200 rounded-lg p-3">
+            <div className="flex items-center justify-between">
+              <div className="flex-1 min-w-0">
+                <p className="text-sm font-medium text-slate-900 truncate">
+                  {acceptance.term_title || 'Term'}
+                </p>
+                <p className="text-xs text-slate-500">
+                  Accepted {new Date(acceptance.accepted_at).toLocaleDateString()}
+                </p>
               </div>
+              <button
+                onClick={async (e) => {
+                  e.preventDefault();
+                  e.stopPropagation();
+                  try {
+                    await onDownloadPDF(acceptance);
+                  } catch (error) {
+                    console.error('Error downloading PDF:', error);
+                  }
+                }}
+                className="ml-3 p-2 text-slate-600 hover:text-[#05294E] hover:bg-slate-50 rounded-lg transition-colors cursor-pointer"
+                title="Download PDF"
+                type="button"
+              >
+                <Download className="w-4 h-4" />
+              </button>
             </div>
-          );
-        })}
+          </div>
+        ))}
       </div>
     </div>
   );
@@ -119,4 +77,3 @@ const TermAcceptancesCard: React.FC<TermAcceptancesCardProps> = React.memo(({
 TermAcceptancesCard.displayName = 'TermAcceptancesCard';
 
 export default TermAcceptancesCard;
-

@@ -400,9 +400,16 @@ const UserManagement: React.FC<UserManagementProps> = ({
                         <div>
                           <h3 className="font-semibold text-slate-900">{user.full_name}</h3>
                           <p className="text-sm text-slate-500">{user.email}</p>
-                          <span className={`inline-block mt-1 px-2 py-1 rounded-full text-xs font-medium ${getRoleColor(user.role)}`}>
-                            {user.role}
-                          </span>
+                          <div className="flex items-center gap-2 mt-1">
+                            <span className={`px-2 py-0.5 rounded-full text-[10px] font-bold uppercase tracking-wider ${getRoleColor(user.role)}`}>
+                              {user.role}
+                            </span>
+                            {user.source === 'migma' && (
+                              <span className="px-2 py-0.5 rounded-full text-[10px] font-bold uppercase tracking-wider bg-black text-[#FFD700] border border-[#FFD700]/20 shadow-sm">
+                                Migma
+                              </span>
+                            )}
+                          </div>
                         </div>
                       </div>
                       <span className={`px-2 py-1 rounded-full text-xs font-medium ${getStatusColor(user.status)}`}>
@@ -521,7 +528,16 @@ const UserManagement: React.FC<UserManagementProps> = ({
                 <tbody>
                   {currentUsers.map((user) => (
                     <tr key={user.id} className="border-b">
-                      <td className="px-4 py-2 font-medium text-slate-900">{user.full_name}</td>
+                      <td className="px-4 py-2">
+                        <div className="flex items-center gap-2">
+                          <span className="font-medium text-slate-900">{user.full_name}</span>
+                          {user.source === 'migma' && (
+                            <span className="px-1.5 py-0.5 rounded-md text-[10px] font-bold uppercase tracking-wider bg-black text-[#FFD700] border border-[#FFD700]/20">
+                              Migma
+                            </span>
+                          )}
+                        </div>
+                      </td>
                       <td className="px-4 py-2 text-slate-600">{user.email}</td>
                       <td className="px-4 py-2">
                         <span className={`px-2 py-1 rounded-full text-xs font-medium ${getStatusColor(user.status)}`}>{user.status}</span>

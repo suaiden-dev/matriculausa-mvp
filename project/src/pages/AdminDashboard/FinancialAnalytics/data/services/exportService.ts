@@ -14,6 +14,8 @@ export function exportFinancialDataToCSV(metrics: FinancialMetrics): void {
     ['Conversion Rate', `${metrics.conversionRate.toFixed(2)}%`],
     ['Average Transaction Value', `$${formatCentsToUSD(metrics.averageTransactionValue)}`],
     ['Total Students', metrics.totalStudents.toString()],
+    ['Selection Process Paid', metrics.selectionProcessPaidCount.toString()],
+    ['Selection Conversion Rate', `${metrics.selectionConversionRate.toFixed(2)}%`],
     ['Revenue Growth', `${metrics.revenueGrowth.toFixed(2)}%`]
   ].map(row => row.join(',')).join('\n');
 

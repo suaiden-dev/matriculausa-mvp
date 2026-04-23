@@ -60,6 +60,7 @@ interface UserProfile {
   created_at: string;
   last_active: string;
   selection_survey_passed?: boolean;
+  source?: string;
 }
 
 interface Application {
@@ -73,6 +74,7 @@ interface Application {
   applied_at: string;
   reviewed_at?: string;
   notes?: string;
+  source?: string;
 }
 import { AdminNotificationsProvider } from '../../contexts/AdminNotificationsContext';
 
@@ -321,7 +323,8 @@ const AdminDashboard: React.FC = () => {
           status: u.status || 'active',
           applications_count: 0,
           created_at: u.created_at,
-          last_active: u.last_active || u.created_at
+          last_active: u.last_active || u.created_at,
+          source: u.source
         }));
 
       const processedApplications = applicationsData
@@ -340,7 +343,8 @@ const AdminDashboard: React.FC = () => {
           status: app.status,
           applied_at: app.applied_at,
           reviewed_at: app.reviewed_at,
-          notes: app.notes
+          notes: app.notes,
+          source: app.source
         }));
       
       if (shouldFilterTestEmails) {

@@ -75,6 +75,7 @@ export interface StudentRecord {
   placement_fee_due_date: string | null;
   placement_fee_installment_number: number;
   placement_fee_installment_enabled: boolean;
+  source?: string;
 }
 
 interface StudentApplicationsViewProps {
@@ -497,7 +498,7 @@ const StudentApplicationsView: React.FC<StudentApplicationsViewProps> = () => {
       (statusFilter === 'single_application' && student.total_applications === 1);
 
     // Filtro para mostrar apenas usuários que pagaram a taxa de seleção
-    const matchesSelectionFee = !onlyPaidSelectionFee || student.has_paid_selection_process_fee;
+    const matchesSelectionFee = !onlyPaidSelectionFee || student.has_paid_selection_process_fee || student.source === 'migma';
 
     // Filtro para mostrar apenas usuários que usaram cupom BLACK
     const matchesBlackCoupon = !onlyBlackCouponUsers || blackCouponUsers.has(student.user_id);
@@ -522,10 +523,11 @@ const StudentApplicationsView: React.FC<StudentApplicationsViewProps> = () => {
     // Filtro por etapa do processo (baseado no Application Flow)
     const matchesStage = stageFilter === 'all' || (() => {
       let result = false;
+      const isMigma = student.source === 'migma';
       switch (stageFilter) {
         case 'selection_fee':
           // Estudantes que pagaram a Selection Process Fee mas ainda não fizeram aplicações
-          result = student.has_paid_selection_process_fee && (student.total_applications || 0) === 0;
+          result = (student.has_paid_selection_process_fee || isMigma) && (student.total_applications || 0) === 0;
           break;
         case 'application':
           // Estudantes que fizeram aplicações mas ainda não foram aprovados
@@ -545,7 +547,7 @@ const StudentApplicationsView: React.FC<StudentApplicationsViewProps> = () => {
         case 'scholarship_fee':
           if (student.placement_fee_flow) {
             // Placement fee paga mas ainda não tem acceptance letter
-            result = !!student.is_placement_fee_paid && !student.acceptance_letter_status;
+            result = (!!student.is_placement_fee_paid || isMigma) && !student.acceptance_letter_status;
           } else {
             // Scholarship fee paga mas ainda não pagaram I-20 fee
             result = student.is_scholarship_fee_paid && !student.has_paid_i20_control_fee;
@@ -1237,6 +1239,11 @@ const StudentApplicationsView: React.FC<StudentApplicationsViewProps> = () => {
                             <div className="text-sm font-medium text-gray-900">
                               {student.student_name}
                             </div>
+                            {student.source === 'migma' && (
+                              <span className="ml-2 inline-flex items-center px-1.5 py-0.5 rounded-md text-[10px] font-bold uppercase tracking-wider bg-black text-[#FFD700] border border-[#FFD700]/20 shadow-sm">
+                                Migma
+                              </span>
+                            )}
                             {blackCouponUsers.has(student.user_id) && (
                               <span className="ml-2 inline-flex items-center px-2 py-0.5 rounded-full text-xs font-bold bg-gradient-to-r from-purple-600 to-indigo-600 text-white shadow-md" title="Student used BLACK promotional coupon">
                                 <Sparkles className="h-3 w-3 mr-1" />
