@@ -59,6 +59,7 @@ export interface StudentRecord {
   placement_fee_due_date?: string | null;
   placement_fee_installment_number?: number;
   placement_fee_installment_enabled?: boolean;
+  source?: string | null;
 }
 
 export interface ReferralInfo {

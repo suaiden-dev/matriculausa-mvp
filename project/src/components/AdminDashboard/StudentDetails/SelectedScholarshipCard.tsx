@@ -36,7 +36,14 @@ const SelectedScholarshipCard: React.FC<SelectedScholarshipCardProps> = React.me
       <div className="p-6 space-y-3">
         <div>
           <dt className="text-sm font-medium text-slate-600">Scholarship Program</dt>
-          <dd className="text-lg font-semibold text-slate-900">{student.scholarship_title}</dd>
+          <div className="flex items-center gap-2 mt-1">
+            <dd className="text-lg font-semibold text-slate-900">{student.scholarship_title}</dd>
+            {student.source === 'migma' && (
+              <span className="inline-flex items-center px-1.5 py-0.5 rounded-md text-[10px] font-bold uppercase tracking-wider bg-black text-[#FFD700] border border-[#FFD700]/20 shadow-sm">
+                Migma
+              </span>
+            )}
+          </div>
         </div>
         <div>
           <dt className="text-sm font-medium text-slate-600">University</dt>
