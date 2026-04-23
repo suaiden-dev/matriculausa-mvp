@@ -6,12 +6,8 @@ import {
   CheckCircle2, 
   Loader2, 
   AlertCircle,
-  Copy,
-  User,
   Files,
-  FileText,
-  ChevronDown,
-  ChevronUp
+  FileText
 } from 'lucide-react';
 import { toast } from 'react-hot-toast';
 
@@ -31,7 +27,7 @@ interface ScholarshipBulkUploadModalProps {
   user: any;
 }
 
-type UploadMode = 'none' | 'bulk' | 'individual';
+
 
 export const ScholarshipBulkUploadModal: React.FC<ScholarshipBulkUploadModalProps> = ({
   isOpen,
@@ -42,7 +38,7 @@ export const ScholarshipBulkUploadModal: React.FC<ScholarshipBulkUploadModalProp
   processType,
   user
 }) => {
-  const [uploadMode, setUploadMode] = useState<UploadMode>('none');
+
   const [isProcessing, setIsProcessing] = useState(false);
   
   // Bulk Files
@@ -52,12 +48,7 @@ export const ScholarshipBulkUploadModal: React.FC<ScholarshipBulkUploadModalProp
     funds_proof: File | null;
   }>({ passport: null, diploma: null, funds_proof: null });
 
-  // Individual Files
-  const [individualFiles, setIndividualFiles] = useState<Record<string, {
-    passport: File | null;
-    diploma: File | null;
-    funds_proof: File | null;
-  }>>({});
+
 
   // Progress tracking
   const [progress, setProgress] = useState<Record<string, {
@@ -66,22 +57,12 @@ export const ScholarshipBulkUploadModal: React.FC<ScholarshipBulkUploadModalProp
     error?: string;
   }>>({});
 
-  const [expandedItems, setExpandedItems] = useState<Record<string, boolean>>({});
+
 
   if (!isOpen) return null;
 
-  const handleFileChange = (scholarshipId: string | 'bulk', type: 'passport' | 'diploma' | 'funds_proof', file: File | null) => {
-    if (scholarshipId === 'bulk') {
-      setBulkFiles(prev => ({ ...prev, [type]: file }));
-    } else {
-      setIndividualFiles(prev => ({
-        ...prev,
-        [scholarshipId]: {
-          ...(prev[scholarshipId] || { passport: null, diploma: null, funds_proof: null }),
-          [type]: file
-        }
-      }));
-    }
+  const handleFileChange = (type: 'passport' | 'diploma' | 'funds_proof', file: File | null) => {
+    setBulkFiles(prev => ({ ...prev, [type]: file }));
   };
 
   const sanitizeFileName = (fileName: string): string => {
@@ -108,26 +89,13 @@ export const ScholarshipBulkUploadModal: React.FC<ScholarshipBulkUploadModalProp
     return storagePath;
   };
 
-  const toggleExpand = (id: string) => {
-    setExpandedItems(prev => ({
-      ...prev,
-      [id]: !prev[id]
-    }));
-  };
 
-  const handleModeChange = (mode: UploadMode) => {
-    setUploadMode(mode);
-    if (mode === 'individual') {
-      const initial: Record<string, boolean> = {};
-      scholarships.forEach(s => {
-        initial[s.id] = true;
-      });
-      setExpandedItems(initial);
-    }
-  };
+
+
 
   const handleConfirm = async () => {
     setIsProcessing(true);
+    const successfulIds: string[] = [];
     const newProgress: typeof progress = {};
     scholarships.forEach(s => {
       newProgress[s.id] = { status: 'creating', percentage: 0 };
@@ -141,32 +109,53 @@ export const ScholarshipBulkUploadModal: React.FC<ScholarshipBulkUploadModalProp
           [scholarship.id]: { ...prev[scholarship.id], status: 'creating', percentage: 10 } 
         }));
 
-        // 1. Criar Aplicação
-        const { data: inserted, error: insertErr } = await supabase
+        // 1. Criar ou Obter Aplicação (Check para evitar 409 Conflict)
+        let applicationId: string | null = null;
+        
+        const { data: existingApp, error: fetchErr } = await supabase
           .from('scholarship_applications')
-          .insert({
-            student_id: studentProfileId,
-            scholarship_id: scholarship.id,
-            status: 'pending',
-            student_process_type: processType || 'initial'
-          })
           .select('id')
-          .single();
+          .eq('student_id', studentProfileId)
+          .eq('scholarship_id', scholarship.id)
+          .maybeSingle();
 
-        if (insertErr) {
+        if (fetchErr) {
           setProgress(prev => ({ 
             ...prev, 
-            [scholarship.id]: { status: 'error', percentage: 0, error: insertErr.message } 
+            [scholarship.id]: { status: 'error', percentage: 0, error: fetchErr.message } 
           }));
           continue;
         }
 
-        const applicationId = inserted.id;
+        if (existingApp) {
+          applicationId = existingApp.id;
+        } else {
+          const { data: inserted, error: insertErr } = await supabase
+            .from('scholarship_applications')
+            .insert({
+              student_id: studentProfileId,
+              scholarship_id: scholarship.id,
+              status: 'pending',
+              student_process_type: processType || 'initial'
+            })
+            .select('id')
+            .single();
 
-        // 2. Determinar arquivos para esta bolsa
-        const filesToUpload = uploadMode === 'bulk' 
-          ? bulkFiles 
-          : (uploadMode === 'individual' ? individualFiles[scholarship.id] : null);
+          if (insertErr) {
+            setProgress(prev => ({ 
+              ...prev, 
+              [scholarship.id]: { status: 'error', percentage: 0, error: insertErr.message } 
+            }));
+            continue;
+          }
+          applicationId = inserted.id;
+        }
+
+        if (!applicationId) continue;
+
+        // 2. Determinar arquivos para esta bolsa (se houver algum selecionado)
+        const hasFiles = bulkFiles.passport || bulkFiles.diploma || bulkFiles.funds_proof;
+        const filesToUpload = hasFiles ? bulkFiles : null;
 
         const documents: any[] = [];
 
@@ -223,7 +212,7 @@ export const ScholarshipBulkUploadModal: React.FC<ScholarshipBulkUploadModalProp
               application_id: applicationId,
               scholarship_id: scholarship.id,
               documents_uploaded: documents.length,
-              upload_mode: uploadMode
+              upload_mode: documents.length > 0 ? 'bulk' : 'none'
             }
           });
         } catch {}
@@ -232,11 +221,10 @@ export const ScholarshipBulkUploadModal: React.FC<ScholarshipBulkUploadModalProp
           ...prev, 
           [scholarship.id]: { status: 'completed', percentage: 100 } 
         }));
-      }
 
-      const successfulIds = scholarships
-        .filter(s => progress[s.id]?.status === 'completed')
-        .map(s => s.id);
+        // Adicionar à lista de sucessos
+        successfulIds.push(scholarship.id);
+      }
 
       if (successfulIds.length > 0) {
         onSuccess(successfulIds);
@@ -286,123 +274,6 @@ export const ScholarshipBulkUploadModal: React.FC<ScholarshipBulkUploadModalProp
 
         {/* Content */}
         <div className="flex-1 overflow-y-auto p-8 space-y-8">
-          {/* Mode Selection */}
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-            <button
-              onClick={() => !isProcessing && handleModeChange('none')}
-              disabled={isProcessing}
-              className={`p-6 rounded-2xl border-2 transition-all duration-300 flex flex-col items-center gap-3 text-center ${
-                uploadMode === 'none' 
-                  ? 'border-indigo-600 bg-indigo-50 shadow-md ring-2 ring-indigo-200' 
-                  : 'border-slate-100 bg-slate-50 hover:border-slate-200 hover:bg-white'
-              }`}
-            >
-              <div className={`p-3 rounded-xl ${uploadMode === 'none' ? 'bg-indigo-600 text-white' : 'bg-slate-200 text-slate-500'}`}>
-                <CheckCircle2 className="w-6 h-6" />
-              </div>
-              <div>
-                <div className="font-bold text-slate-900">Apenas Cadastrar</div>
-                <div className="text-xs text-slate-500 mt-1">Sem envio de documentos agora</div>
-              </div>
-            </button>
-
-            <button
-              onClick={() => !isProcessing && handleModeChange('bulk')}
-              disabled={isProcessing}
-              className={`p-6 rounded-2xl border-2 transition-all duration-300 flex flex-col items-center gap-3 text-center ${
-                uploadMode === 'bulk' 
-                  ? 'border-indigo-600 bg-indigo-50 shadow-md ring-2 ring-indigo-200' 
-                  : 'border-slate-100 bg-slate-50 hover:border-slate-200 hover:bg-white'
-              }`}
-            >
-              <div className={`p-3 rounded-xl ${uploadMode === 'bulk' ? 'bg-indigo-600 text-white' : 'bg-slate-200 text-slate-500'}`}>
-                <Copy className="w-6 h-6" />
-              </div>
-              <div>
-                <div className="font-bold text-slate-900">Upload em Massa</div>
-                <div className="text-xs text-slate-500 mt-1">Mesmos arquivos para todas</div>
-              </div>
-            </button>
-
-            <button
-              onClick={() => !isProcessing && handleModeChange('individual')}
-              disabled={isProcessing}
-              className={`p-6 rounded-2xl border-2 transition-all duration-300 flex flex-col items-center gap-3 text-center ${
-                uploadMode === 'individual' 
-                  ? 'border-indigo-600 bg-indigo-50 shadow-md ring-2 ring-indigo-200' 
-                  : 'border-slate-100 bg-slate-50 hover:border-slate-200 hover:bg-white'
-              }`}
-            >
-              <div className={`p-3 rounded-xl ${uploadMode === 'individual' ? 'bg-indigo-600 text-white' : 'bg-slate-200 text-slate-500'}`}>
-                <User className="w-6 h-6" />
-              </div>
-              <div>
-                <div className="font-bold text-slate-900">Upload Individual</div>
-                <div className="text-xs text-slate-500 mt-1">Arquivos específicos por bolsa</div>
-              </div>
-            </button>
-          </div>
-
-          {/* Bulk Upload Inputs */}
-          {uploadMode === 'bulk' && !isProcessing && (
-            <div className="space-y-6">
-              <div>
-                <h3 className="font-bold text-[#05294E] flex items-center gap-2">
-                  <Upload className="w-5 h-5 text-indigo-600" />
-                  Documentos Gerais
-                </h3>
-                <p className="text-slate-500 text-xs mt-1">Estes arquivos serão aplicados a todas as bolsas selecionadas.</p>
-              </div>
-              
-              <div className="space-y-3 w-full">
-                {(['passport', 'diploma', 'funds_proof'] as const).map(type => (
-                  <div key={type}>
-                    <label className={`flex items-center gap-4 px-5 py-4 border-2 rounded-2xl cursor-pointer transition-all duration-200 ${
-                      bulkFiles[type] 
-                        ? 'border-indigo-400 bg-indigo-50/50 shadow-sm' 
-                        : 'border-slate-100 bg-slate-50/50 hover:border-indigo-200 hover:bg-white'
-                    }`}>
-                      <div className={`p-2.5 rounded-xl ${bulkFiles[type] ? 'bg-indigo-600 text-white' : 'bg-white text-slate-400 border border-slate-200'}`}>
-                        {type === 'passport' ? <Files className="w-4 h-4" /> : type === 'diploma' ? <FileText className="w-4 h-4" /> : <CheckCircle2 className="w-4 h-4" />}
-                      </div>
-                      
-                      <div className="flex-1 min-w-0 overflow-hidden">
-                        <span className="text-[10px] font-bold uppercase tracking-widest text-indigo-500 block mb-0.5 truncate">
-                          {type === 'passport' ? 'Passaporte' : type === 'diploma' ? 'Diploma' : 'Comprovante Financeiro'}
-                        </span>
-                        <span className="text-sm font-bold text-slate-700 block truncate" title={bulkFiles[type]?.name}>
-                          {bulkFiles[type] ? bulkFiles[type]?.name : 'Clique para enviar'}
-                        </span>
-                      </div>
-
-                      {bulkFiles[type] ? (
-                        <button
-                          onClick={(e) => {
-                            e.preventDefault();
-                            e.stopPropagation();
-                            handleFileChange('bulk', type, null);
-                          }}
-                          className="p-2 hover:bg-red-50 text-red-500 rounded-lg transition-colors"
-                        >
-                          <X className="w-5 h-5" />
-                        </button>
-                      ) : (
-                        <Upload className="w-5 h-5 text-slate-300" />
-                      )}
-
-                      <input 
-                        type="file" 
-                        className="hidden" 
-                        accept="application/pdf,image/*"
-                        onChange={(e) => handleFileChange('bulk', type, e.target.files?.[0] || null)}
-                      />
-                    </label>
-                  </div>
-                ))}
-              </div>
-            </div>
-          )}
-
           {/* Progress / Scholarship List */}
           <div className="space-y-4">
             <h3 className="font-bold text-[#05294E] flex items-center gap-2">
@@ -413,15 +284,9 @@ export const ScholarshipBulkUploadModal: React.FC<ScholarshipBulkUploadModalProp
               {scholarships.map((s) => (
                 <div key={s.id} className="p-5 bg-white hover:bg-slate-50 transition-colors">
                   <div 
-                    className="flex items-center justify-between cursor-pointer group"
-                    onClick={() => uploadMode === 'individual' && toggleExpand(s.id)}
+                    className="flex items-center justify-between"
                   >
                     <div className="min-w-0 flex-1 flex items-center gap-3">
-                      {uploadMode === 'individual' && (
-                        <div className="p-1 rounded-md bg-slate-50 text-slate-400 group-hover:text-indigo-600 transition-colors">
-                          {expandedItems[s.id] ? <ChevronUp className="w-4 h-4" /> : <ChevronDown className="w-4 h-4" />}
-                        </div>
-                      )}
                       <div className="min-w-0 flex-1">
                         <div className="font-bold text-slate-900 truncate">{s.title}</div>
                         <div className="text-xs text-slate-500">{s.universities?.name || 'Universidade'}</div>
@@ -459,55 +324,65 @@ export const ScholarshipBulkUploadModal: React.FC<ScholarshipBulkUploadModalProp
                     </div>
                   )}
 
-                  {/* Individual File Inputs */}
-                  {uploadMode === 'individual' && !isProcessing && expandedItems[s.id] && (
-                    <div className="space-y-3 mt-4 animate-in fade-in slide-in-from-top-2 duration-200">
-                      {(['passport', 'diploma', 'funds_proof'] as const).map(type => (
-                        <div key={`${s.id}-${type}`}>
-                          <label className={`flex items-center gap-4 px-5 py-4 border-2 rounded-2xl cursor-pointer transition-all duration-200 ${
-                            individualFiles[s.id]?.[type] 
-                              ? 'border-indigo-400 bg-indigo-50/50 shadow-sm' 
-                              : 'border-slate-100 bg-slate-50/50 hover:border-indigo-200 hover:bg-white'
-                          }`}>
-                            <div className={`p-2.5 rounded-xl ${individualFiles[s.id]?.[type] ? 'bg-indigo-600 text-white' : 'bg-white text-slate-400 border border-slate-200'}`}>
-                              {type === 'passport' ? <Files className="w-4 h-4" /> : type === 'diploma' ? <FileText className="w-4 h-4" /> : <CheckCircle2 className="w-4 h-4" />}
-                            </div>
-                            
-                            <div className="flex-1 min-w-0 overflow-hidden">
-                              <span className="text-[10px] font-bold uppercase tracking-widest text-indigo-500 block mb-0.5 truncate">
-                                {type === 'passport' ? 'Passaporte' : type === 'diploma' ? 'Diploma' : 'Comprovante Financeiro'}
-                              </span>
-                              <span className="text-sm font-bold text-slate-700 block truncate" title={individualFiles[s.id]?.[type]?.name}>
-                                {individualFiles[s.id]?.[type] ? individualFiles[s.id][type]?.name : 'Clique para enviar'}
-                              </span>
-                            </div>
 
-                            {individualFiles[s.id]?.[type] ? (
-                              <button
-                                onClick={(e) => {
-                                  e.preventDefault();
-                                  e.stopPropagation();
-                                  handleFileChange(s.id, type, null);
-                                }}
-                                className="p-2 hover:bg-red-50 text-red-500 rounded-lg transition-colors"
-                              >
-                                <X className="w-5 h-5" />
-                              </button>
-                            ) : (
-                              <Upload className="w-5 h-5 text-slate-300" />
-                            )}
+                </div>
+              ))}
+            </div>
+          </div>
 
-                            <input 
-                              type="file" 
-                              className="hidden" 
-                              accept="application/pdf,image/*"
-                              onChange={(e) => handleFileChange(s.id, type, e.target.files?.[0] || null)}
-                            />
-                          </label>
-                        </div>
-                      ))}
+          {/* Document Upload Section (Optional) */}
+          <div className="space-y-6">
+            <div>
+              <h3 className="font-bold text-[#05294E] flex items-center gap-2">
+                <Upload className="w-5 h-5 text-indigo-600" />
+                Documentos (Opcional)
+              </h3>
+              <p className="text-slate-500 text-xs mt-1">Selecione os documentos se desejar anexá-los a todas as bolsas agora.</p>
+            </div>
+            
+            <div className="grid grid-cols-1 gap-3 w-full">
+              {(['passport', 'diploma', 'funds_proof'] as const).map(type => (
+                <div key={type}>
+                  <label className={`flex items-center gap-4 px-5 py-4 border-2 rounded-2xl cursor-pointer transition-all duration-200 ${
+                    bulkFiles[type] 
+                      ? 'border-indigo-400 bg-indigo-50/50 shadow-sm' 
+                      : 'border-slate-100 bg-slate-50/50 hover:border-indigo-200 hover:bg-white'
+                  }`}>
+                    <div className={`p-2.5 rounded-xl ${bulkFiles[type] ? 'bg-indigo-600 text-white' : 'bg-white text-slate-400 border border-slate-200'}`}>
+                      {type === 'passport' ? <Files className="w-4 h-4" /> : type === 'diploma' ? <FileText className="w-4 h-4" /> : <CheckCircle2 className="w-4 h-4" />}
                     </div>
-                  )}
+                    
+                    <div className="flex-1 min-w-0 overflow-hidden">
+                      <span className="text-[10px] font-bold uppercase tracking-widest text-indigo-500 block mb-0.5 truncate">
+                        {type === 'passport' ? 'Passaporte' : type === 'diploma' ? 'Diploma' : 'Financeiro'}
+                      </span>
+                      <span className="text-xs font-bold text-slate-700 block truncate" title={bulkFiles[type]?.name}>
+                        {bulkFiles[type] ? bulkFiles[type]?.name : 'Clique p/ enviar'}
+                      </span>
+                    </div>
+
+                    {bulkFiles[type] ? (
+                      <button
+                        onClick={(e) => {
+                          e.preventDefault();
+                          e.stopPropagation();
+                          handleFileChange(type, null);
+                        }}
+                        className="p-1 hover:bg-red-50 text-red-500 rounded-lg transition-colors"
+                      >
+                        <X className="w-4 h-4" />
+                      </button>
+                    ) : (
+                      <Upload className="w-4 h-4 text-slate-300" />
+                    )}
+
+                    <input 
+                      type="file" 
+                      className="hidden" 
+                      accept="application/pdf,image/*"
+                      onChange={(e) => handleFileChange(type, e.target.files?.[0] || null)}
+                    />
+                  </label>
                 </div>
               ))}
             </div>
@@ -525,7 +400,7 @@ export const ScholarshipBulkUploadModal: React.FC<ScholarshipBulkUploadModalProp
           </button>
           <button
             onClick={handleConfirm}
-            disabled={isProcessing || (uploadMode === 'bulk' && !bulkFiles.passport && !bulkFiles.diploma && !bulkFiles.funds_proof)}
+            disabled={isProcessing}
             className="px-10 py-3 bg-[#05294E] text-white rounded-xl font-bold hover:bg-[#041f38] transition-all shadow-lg shadow-indigo-200 disabled:opacity-50 flex items-center gap-2"
           >
             {isProcessing ? (

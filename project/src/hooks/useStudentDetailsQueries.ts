@@ -33,7 +33,7 @@ export function useStudentDetailsQuery(profileId: string | undefined) {
             try {
               const { data: extraProfile, error: extraError } = await supabase
                 .from('user_profiles')
-                .select('placement_fee_flow, is_placement_fee_paid, selection_survey_passed, has_paid_i20_control_fee, system_type, placement_fee_installment_enabled, placement_fee_pending_balance, placement_fee_due_date, placement_fee_installment_number')
+                .select('placement_fee_flow, is_placement_fee_paid, selection_survey_passed, has_paid_i20_control_fee, system_type, placement_fee_installment_enabled, placement_fee_pending_balance, placement_fee_due_date, placement_fee_installment_number, identity_photo_path, identity_photo_status, identity_photo_rejection_reason')
                 .eq('id', profileId)
                 .single();
 
@@ -49,6 +49,9 @@ export function useStudentDetailsQuery(profileId: string | undefined) {
                   placement_fee_pending_balance: (extraProfile as any).placement_fee_pending_balance ?? 0,
                   placement_fee_due_date: (extraProfile as any).placement_fee_due_date ?? null,
                   placement_fee_installment_number: (extraProfile as any).placement_fee_installment_number ?? 0,
+                  identity_photo_path: (extraProfile as any).identity_photo_path ?? null,
+                  identity_photo_status: (extraProfile as any).identity_photo_status ?? null,
+                  identity_photo_rejection_reason: (extraProfile as any).identity_photo_rejection_reason ?? null,
                 };
               }
             } catch (extraErr) {
@@ -112,6 +115,9 @@ export function useStudentDetailsQuery(profileId: string | undefined) {
             placement_fee_pending_balance,
             placement_fee_due_date,
             placement_fee_installment_number,
+            identity_photo_path,
+            identity_photo_status,
+            identity_photo_rejection_reason,
             assigned_to_admin_id,
             assigned_admin:user_profiles!assigned_to_admin_id(id, full_name),
             scholarship_applications (
@@ -284,6 +290,9 @@ export function useStudentDetailsQuery(profileId: string | undefined) {
         placement_fee_pending_balance: (s as any).placement_fee_pending_balance ?? 0,
         placement_fee_due_date: (s as any).placement_fee_due_date ?? null,
         placement_fee_installment_number: s.placement_fee_installment_number ?? 0,
+        identity_photo_path: (s as any).identity_photo_path ?? null,
+        identity_photo_status: (s as any).identity_photo_status ?? null,
+        identity_photo_rejection_reason: (s as any).identity_photo_rejection_reason ?? null,
         assigned_to_admin_id: s.assigned_to_admin_id || null,
         assigned_to_admin_name: s.assigned_to_admin_name || (s.assigned_admin as any)?.full_name || null,
       };

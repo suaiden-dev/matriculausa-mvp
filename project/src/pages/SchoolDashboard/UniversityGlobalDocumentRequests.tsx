@@ -49,7 +49,7 @@ const UniversityGlobalDocumentRequests: React.FC = () => {
     { value: 'transfer', label: 'Transfer (Current F-1 Student)' },
     { value: 'all', label: 'All Student Types' },
   ];
-  const [newRequest, setNewRequest] = useState({ title: '', description: '', attachment: null as File | null, applicable_student_types: ['all'] });
+  const [newRequest, setNewRequest] = useState({ title: '', description: '', attachment: null as File | null, applicable_student_types: [] as string[] });
   const [creating, setCreating] = useState(false);
   // Edição
   const [editingRequest, setEditingRequest] = useState<DocumentRequest | null>(null);
@@ -57,7 +57,7 @@ const UniversityGlobalDocumentRequests: React.FC = () => {
     title: '',
     description: '',
     attachment: null,
-    applicable_student_types: ['all'],
+    applicable_student_types: [],
     status: 'open',
   });
 
@@ -78,6 +78,23 @@ const UniversityGlobalDocumentRequests: React.FC = () => {
       // Usuário está expandindo - não remover a preferência, apenas expandir agora
       // O tutorial continuará minimizado por padrão nas próximas visitas
     }
+  };
+
+  const openEditModal = (request: DocumentRequest) => {
+    // Sanitizar tipos legados: se houver tipos específicos, remover 'all'
+    let sanitizedTypes = request.applicable_student_types || [];
+    if (sanitizedTypes.includes('all') && sanitizedTypes.length > 1) {
+      sanitizedTypes = sanitizedTypes.filter(t => t !== 'all');
+    }
+
+    setEditingRequest(request);
+    setEditForm({
+      title: request.title || '',
+      description: request.description || '',
+      attachment: null,
+      applicable_student_types: sanitizedTypes,
+      status: (request.status as 'open' | 'closed') || 'open',
+    });
   };
 
   // Carrega os requests globais da universidade logada
@@ -164,7 +181,7 @@ const UniversityGlobalDocumentRequests: React.FC = () => {
         return;
       }
       setShowNewModal(false);
-      setNewRequest({ title: '', description: '', attachment: null, applicable_student_types: ['all'] });
+      setNewRequest({ title: '', description: '', attachment: null, applicable_student_types: [] });
       // Recarregar lista
       const { data: updated, error: fetchError } = await supabase
         .from('document_requests')
@@ -424,13 +441,22 @@ const UniversityGlobalDocumentRequests: React.FC = () => {
                       </div>
                     </div>
 
-                    <div className="flex flex-row sm:flex-col items-center sm:items-end space-x-3 sm:space-x-0 sm:space-y-2">
+                    <div className="flex items-center gap-2">
+                      <button
+                        onClick={() => openEditModal(req)}
+                        className="p-2 text-blue-600 hover:bg-blue-50 rounded-lg transition-colors"
+                        title="Edit Request"
+                      >
+                        <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
+                        </svg>
+                      </button>
                       <span className={`inline-flex items-center px-2.5 sm:px-3 py-1 sm:py-1.5 rounded-full text-xs sm:text-sm font-medium ${req.status === 'open' ? 'bg-green-100 text-green-800' : 'bg-red-100 text-red-800'}`}>
                         {req.status === 'open' ? 'Open' : 'Closed'}
                       </span>
-                      <div className="text-xs sm:text-sm text-slate-500 text-right">
-                        Created: {new Date(req.created_at).toLocaleDateString()}
-                      </div>
+                    </div>
+                    <div className="text-xs sm:text-sm text-slate-500 text-right">
+                      Created: {new Date(req.created_at).toLocaleDateString()}
                     </div>
                   </div>
                 </div>
@@ -504,20 +530,17 @@ const UniversityGlobalDocumentRequests: React.FC = () => {
                         }
                         onChange={e => {
                           if (opt.value === 'all') {
-                          if (e.target.checked) {
+                            if (e.target.checked) {
                               setNewRequest(r => ({ ...r, applicable_student_types: STUDENT_TYPE_OPTIONS.filter(o => o.value !== 'all').map(o => o.value) }));
                             } else {
                               setNewRequest(r => ({ ...r, applicable_student_types: [] }));
                             }
                           } else {
                             setNewRequest(r => {
-                              let updated = r.applicable_student_types.includes(opt.value)
-                                ? r.applicable_student_types.filter(v => v !== opt.value)
-                                : [...r.applicable_student_types, opt.value];
-                              // Se todos os tipos (exceto 'all') estiverem selecionados, marque 'all' também
-                              if (updated.length === STUDENT_TYPE_OPTIONS.length - 1) {
-                                // nada a fazer, já está tudo selecionado
-                              }
+                              const withoutAll = r.applicable_student_types.filter(v => v !== 'all');
+                              let updated = withoutAll.includes(opt.value)
+                                ? withoutAll.filter(v => v !== opt.value)
+                                : [...withoutAll, opt.value];
                               return { ...r, applicable_student_types: updated };
                             });
                           }
@@ -538,7 +561,7 @@ const UniversityGlobalDocumentRequests: React.FC = () => {
               </div>
             </div>
             <div className="flex gap-3 mt-6 sm:mt-8 flex-col sm:flex-row justify-center">
-              <button className="w-full sm:w-auto bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-lg font-semibold shadow transition disabled:opacity-60 disabled:cursor-not-allowed flex items-center gap-2 justify-center" onClick={handleNewRequest} disabled={creating || !newRequest.title}>
+              <button className="w-full sm:w-auto bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-lg font-semibold shadow transition disabled:opacity-60 disabled:cursor-not-allowed flex items-center gap-2 justify-center" onClick={handleNewRequest} disabled={creating || !newRequest.title || newRequest.applicable_student_types.length === 0}>
                 {creating ? (
                   <svg className="animate-spin h-5 w-5 mr-1 text-white" viewBox="0 0 24 24"></svg>
                 ) : null}
@@ -602,9 +625,10 @@ const UniversityGlobalDocumentRequests: React.FC = () => {
                             }
                           } else {
                             setEditForm(r => {
-                              const next = r.applicable_student_types.includes(opt.value)
-                                ? r.applicable_student_types.filter(v => v !== opt.value)
-                                : [...r.applicable_student_types, opt.value];
+                              const withoutAll = r.applicable_student_types.filter(v => v !== 'all');
+                              const next = withoutAll.includes(opt.value)
+                                ? withoutAll.filter(v => v !== opt.value)
+                                : [...withoutAll, opt.value];
                               return { ...r, applicable_student_types: next };
                             });
                           }
@@ -654,7 +678,7 @@ const UniversityGlobalDocumentRequests: React.FC = () => {
               </div>
             </div>
             <div className="flex gap-3 mt-8 justify-center">
-              <button className="bg-gray-200 hover:bg-gray-300 text-gray-800 px-6 py-2 rounded-lg font-semibold transition" onClick={() => { setEditingRequest(null); setEditForm({ title: '', description: '', attachment: null, applicable_student_types: ['all'], status: 'open' }); }} disabled={creating}>
+              <button className="bg-gray-200 hover:bg-gray-300 text-gray-800 px-6 py-2 rounded-lg font-semibold transition" onClick={() => { setEditingRequest(null); setEditForm({ title: '', description: '', attachment: null, applicable_student_types: [], status: 'open' }); }} disabled={creating}>
                 Cancel
               </button>
               <button
@@ -703,16 +727,16 @@ const UniversityGlobalDocumentRequests: React.FC = () => {
                       .order('created_at', { ascending: false });
                     setRequests(updated || []);
                     setEditingRequest(null);
-                    setEditForm({ title: '', description: '', attachment: null, applicable_student_types: ['all'], status: 'open' });
+                    setEditForm({ title: '', description: '', attachment: null, applicable_student_types: [], status: 'open' });
                   } catch (e: any) {
                     setError('Unexpected error: ' + (e.message || e));
                   } finally {
                     setCreating(false);
                   }
                 }}
-                disabled={creating}
+                disabled={creating || !editForm.title || editForm.applicable_student_types.length === 0}
               >
-                Save Changes
+                {creating ? 'Saving...' : 'Save Changes'}
               </button>
             </div>
           </div>

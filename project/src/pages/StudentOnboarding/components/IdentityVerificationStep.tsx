@@ -22,7 +22,7 @@ export const IdentityVerificationStep: React.FC<IdentityVerificationStepProps> =
   const [checkingExisting, setCheckingExisting] = useState(true);
   const photoUploadRef = useRef<IdentityPhotoUploadRef>(null);
 
-  // Verificar se já existe foto enviada anteriormente
+  // Verificar se já existe foto enviada anteriormente (lê de user_profiles)
   useEffect(() => {
     const checkExisting = async () => {
       if (!user?.id) {
@@ -31,11 +31,9 @@ export const IdentityVerificationStep: React.FC<IdentityVerificationStepProps> =
       }
       try {
         const { data } = await supabase
-          .from('comprehensive_term_acceptance')
+          .from('user_profiles')
           .select('identity_photo_path')
           .eq('user_id', user.id)
-          .order('created_at', { ascending: false })
-          .limit(1)
           .maybeSingle();
 
         if (data?.identity_photo_path) {
@@ -60,42 +58,16 @@ export const IdentityVerificationStep: React.FC<IdentityVerificationStepProps> =
     setSaving(true);
 
     try {
-      const { data: latestTerm } = await supabase
-        .from('application_terms')
-        .select('id')
-        .eq('term_type', 'checkout_terms')
-        .eq('is_active', true)
-        .order('version', { ascending: false })
-        .limit(1)
-        .maybeSingle();
-
-      // Estratégia: tentar UPDATE primeiro (caso registro já exista pelo PreCheckoutModal).
-      // O .select() no final retorna as linhas afetadas — se não houver nenhuma, fazemos INSERT.
-      const { data: updated, error: updateError } = await supabase
-        .from('comprehensive_term_acceptance')
+      // Gravar foto diretamente em user_profiles (fonte de verdade única)
+      const { error } = await supabase
+        .from('user_profiles')
         .update({
           identity_photo_path: uploadedPath,
           identity_photo_status: 'pending',
         })
-        .eq('user_id', user.id)
-        .select('id');
+        .eq('user_id', user.id);
 
-      if (updateError) throw updateError;
-
-      // Se nenhuma linha foi atualizada, o registro não existe ainda — criar
-      if (!updated || updated.length === 0) {
-        const { error: insertError } = await supabase
-          .from('comprehensive_term_acceptance')
-          .insert({
-            user_id: user.id,
-            term_id: latestTerm?.id,
-            term_type: 'checkout_terms',
-            identity_photo_path: uploadedPath,
-            identity_photo_status: 'pending',
-            accepted_at: new Date().toISOString(),
-          });
-        if (insertError) throw insertError;
-      }
+      if (error) throw error;
 
       setAlreadyVerified(true);
       toast.success(t('selectionSurvey.toastPhotoSuccess') || 'Sucesso!');

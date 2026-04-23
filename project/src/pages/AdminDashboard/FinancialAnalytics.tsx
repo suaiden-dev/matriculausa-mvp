@@ -11,6 +11,7 @@ import { FinancialTransactionsTable } from './FinancialAnalytics/components/Fina
 import { ConversionFunnelChart } from './FinancialAnalytics/components/ConversionFunnelChart';
 import { RevenueByUniversityChart } from './FinancialAnalytics/components/RevenueByUniversityChart';
 import { AffiliateSalesChart } from './FinancialAnalytics/components/AffiliateSalesChart';
+import { CohortRetentionChart } from './FinancialAnalytics/components/CohortRetentionChart';
 import { buildFilterBadges } from './FinancialAnalytics/utils/buildFilterBadges';
 import FinancialAnalyticsSkeleton from '../../components/FinancialAnalyticsSkeleton';
 
@@ -54,7 +55,8 @@ const FinancialAnalytics: React.FC = () => {
     arpu,
     funnelData,
     universityRevenueData,
-    affiliateSalesData
+    affiliateSalesData,
+    cohortRetentionData
   } = useFinancialAnalytics();
 
   // Badges dos filtros ativos — recomputados apenas quando os filtros mudam
@@ -152,6 +154,9 @@ const FinancialAnalytics: React.FC = () => {
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
             <AffiliateSalesChart affiliateSalesData={affiliateSalesData} activeFilters={activeFilters} />
           </div>
+
+          {/* Row 7: Cohort Retention */}
+          <CohortRetentionChart data={cohortRetentionData} />
 
         </div>
       ) : (

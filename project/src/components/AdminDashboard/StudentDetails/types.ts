@@ -59,6 +59,9 @@ export interface StudentRecord {
   placement_fee_due_date?: string | null;
   placement_fee_installment_number?: number;
   placement_fee_installment_enabled?: boolean;
+  identity_photo_path?: string | null;
+  identity_photo_status?: 'pending' | 'approved' | 'rejected' | null;
+  identity_photo_rejection_reason?: string | null;
 }
 
 export interface ReferralInfo {

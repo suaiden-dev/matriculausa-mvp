@@ -11,7 +11,7 @@ const corsHeaders = {
 const supabase = createClient(Deno.env.get('SUPABASE_URL')!, Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!);
 const n8nUrl = 'https://nwh.suaiden.com/webhook/notfmatriculausa';
 
-Deno.serve(async (req) => {
+Deno.serve(async (req: Request) => {
   try {
     console.log('[Edge] Requisição recebida');
     if (req.method === 'OPTIONS') {
@@ -254,14 +254,20 @@ Deno.serve(async (req) => {
             
              // Garantir que applicable_student_types é um array válido
             const typesFilter = Array.isArray(applicable_student_types) ? applicable_student_types : [];
-            const hasFilter = typesFilter.length > 0 && !typesFilter.includes('all');
+            const isAll = typesFilter.includes('all');
 
-            if (hasFilter) {
+            if (isAll) {
+               console.log('[Edge] Notificando todos os alunos (filtro legado "all")');
+               // targetedApps já é globalApps por padrão
+            } else if (typesFilter.length > 0) {
                console.log('[Edge] Filtrando alunos por tipo:', typesFilter);
                targetedApps = globalApps.filter((app: any) => {
                  // student_process_type deve bater com um dos tipos no filtro
                  return app.student_process_type && typesFilter.includes(app.student_process_type);
                });
+            } else {
+               console.log('[Edge] Filtro vazio. Nenhuma notificação será enviada.');
+               targetedApps = [];
             }
 
             console.log(`[Edge] Encontrados ${targetedApps.length} alunos para notificação global.`);

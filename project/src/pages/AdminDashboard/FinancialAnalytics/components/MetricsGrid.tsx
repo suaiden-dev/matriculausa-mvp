@@ -10,7 +10,7 @@ export interface MetricsGridProps {
 
 export function MetricsGrid({ metrics, arpu }: MetricsGridProps) {
   return (
-    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+    <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-4">
       <MetricCard
         label="Student Revenue"
         value={`$${formatCentsToUSD(metrics.totalRevenue)}`}
@@ -54,14 +54,49 @@ export function MetricsGrid({ metrics, arpu }: MetricsGridProps) {
       />
 
       <MetricCard
+        label="Selection Process Paid"
+        value={metrics.selectionProcessPaidCount.toString()}
+        gradientFrom="from-amber-500"
+        gradientTo="to-amber-600"
+        textColor="text-amber-100"
+        info="Número de alunos únicos que realizaram o pagamento da taxa de processo seletivo (Selection Process) no período selecionado."
+        sublabel={
+          <>
+            {metrics.selectionProcessGrowth >= 0 ? (
+              <ArrowUpRight className="h-4 w-4 text-green-300 mr-1" />
+            ) : (
+              <ArrowDownRight className="h-4 w-4 text-red-300 mr-1" />
+            )}
+            <span className="text-sm text-amber-100">
+              {metrics.selectionProcessGrowth >= 0 ? '+' : ''}{metrics.selectionProcessGrowth.toFixed(1)}% vs previous
+            </span>
+          </>
+        }
+      />
+
+      <MetricCard
+        label="Reg. to Selection Ratio"
+        value={metrics.selectionProcessPaidCount > 0 ? (metrics.newUsers / metrics.selectionProcessPaidCount).toFixed(1) : '0'}
+        gradientFrom="from-emerald-500"
+        gradientTo="to-emerald-600"
+        textColor="text-emerald-100"
+        info="Ratio de conversão: Total de novos usuários ÷ Alunos que pagaram o processo seletivo. Ex: se for 4.0, significa que 1 a cada 4 novos alunos paga o processo seletivo."
+        sublabel={
+          <span className="text-sm text-emerald-100">
+            {metrics.selectionConversionRate.toFixed(1)}% conversion rate
+          </span>
+        }
+      />
+
+      <MetricCard
         label="ARPU"
         value={`$${formatCentsToUSD(arpu)}`}
         gradientFrom="from-rose-500"
         gradientTo="to-rose-600"
         textColor="text-rose-100"
-        info="Average Revenue Per User: receita total do período ÷ número de novos alunos cadastrados no mesmo período. Indica o valor médio gerado por cada aluno adquirido."
+        info="Average Revenue Per User: receita total do período ÷ número de alunos que pagaram o processo seletivo no mesmo período. Indica o valor médio gerado por cada aluno convertido."
         sublabel={
-          <span className="text-sm text-rose-100">Avg. revenue per new student</span>
+          <span className="text-sm text-rose-100">Avg. revenue per paid student</span>
         }
       />
 

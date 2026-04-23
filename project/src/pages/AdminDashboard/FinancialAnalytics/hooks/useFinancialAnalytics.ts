@@ -3,7 +3,7 @@ import { useAuth } from '../../../../hooks/useAuth';
 import { useFeeConfig } from '../../../../hooks/useFeeConfig';
 import { loadFinancialData } from '../data/loaders/financialDataLoader';
 import { transformFinancialData } from '../utils/transformFinancialData';
-import { calculateRevenueData, calculateFinalMetrics, calculatePaymentMethodData, calculateFeeTypeData, calculateARPU, calculateFunnelData, calculateUniversityRevenue, calculateAffiliateSalesData } from '../utils/calculateMetrics';
+import { calculateRevenueData, calculateFinalMetrics, calculatePaymentMethodData, calculateFeeTypeData, calculateARPU, calculateFunnelData, calculateUniversityRevenue, calculateAffiliateSalesData, calculateCohortRetention } from '../utils/calculateMetrics';
 import { getDateRange } from '../utils/dateRange';
 import { exportFinancialDataToCSV } from '../data/services/exportService';
 import { loadAffiliatesLoader } from '../../PaymentManagement/data/loaders/referencesLoader';
@@ -17,7 +17,8 @@ import type {
   StripeMetrics,
   UniversityRevenueData,
   FunnelStepData,
-  AffiliateSalesData
+  AffiliateSalesData,
+  CohortRetentionData
 } from '../data/types';
 
 export function useFinancialAnalytics() {
@@ -65,7 +66,10 @@ export function useFinancialAnalytics() {
     universityPayouts: 0,
     affiliatePayouts: 0,
     newUsers: 0,
-    newUsersGrowth: 0
+    newUsersGrowth: 0,
+    selectionProcessPaidCount: 0,
+    selectionProcessGrowth: 0,
+    selectionConversionRate: 0
   });
 
   const [stripeMetrics, setStripeMetrics] = useState<StripeMetrics>({
@@ -86,6 +90,7 @@ export function useFinancialAnalytics() {
   const [funnelData, setFunnelData] = useState<FunnelStepData[]>([]);
   const [universityRevenueData, setUniversityRevenueData] = useState<UniversityRevenueData[]>([]);
   const [affiliateSalesData, setAffiliateSalesData] = useState<AffiliateSalesData[]>([]);
+  const [cohortRetentionData, setCohortRetentionData] = useState<CohortRetentionData[]>([]);
 
   // Filtros de período
   const [timeFilter, setTimeFilter] = useState<TimeFilter>('30d');
@@ -299,13 +304,15 @@ export function useFinancialAnalytics() {
 
 
     // 6. Novos visuais (reagem aos filtros como Power BI)
-    setArpu(calculateARPU(locallyFilteredRecords, loadedData.allStudents, currentRange));
+    setArpu(calculateARPU(finalMetrics.totalRevenue, finalMetrics.selectionProcessPaidCount));
     setFunnelData(calculateFunnelData(loadedData.allStudents, locallyFilteredRecords));
     setUniversityRevenueData(calculateUniversityRevenue(transactionsWithNames));
     setAffiliateSalesData(calculateAffiliateSalesData(locallyFilteredRecords, currentAffiliates));
+    // Cohort usa TODOS os registros históricos (independente do filtro de período)
+    // para não esconder cohorts antigos ao selecionar períodos curtos
+    setCohortRetentionData(calculateCohortRetention(processedData.paymentRecords || []));
 
     setTransactions(transactionsWithNames);
-    console.log('✅ Filters applied locally (Instant)');
   }, [timeFilter, customDateFrom, customDateTo, showCustomDate, filterFeeType, filterPaymentMethod, filterValueMin, filterValueMax, filterAffiliate]);
 
   const loadData = useCallback(async () => {
@@ -486,7 +493,8 @@ export function useFinancialAnalytics() {
     arpu,
     funnelData,
     universityRevenueData,
-    affiliateSalesData
+    affiliateSalesData,
+    cohortRetentionData
   };
 }
 

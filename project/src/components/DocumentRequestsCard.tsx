@@ -42,7 +42,7 @@ interface DocumentRequestsCardProps {
   studentType: 'initial' | 'transfer' | 'change_of_status';
   studentUserId?: string; // Novo: id do usuário do aluno
   onDocumentUploaded?: (requestId: string, fileName: string, isResubmission: boolean) => void; // Callback para logging
-  showAcceptanceLetter?: boolean; // Controla se deve mostrar a seção de acceptance letter
+
 }
 
 const DocumentRequestsCard: React.FC<DocumentRequestsCardProps> = ({
@@ -51,8 +51,7 @@ const DocumentRequestsCard: React.FC<DocumentRequestsCardProps> = ({
   currentUserId,
   studentType,
   studentUserId,
-  onDocumentUploaded,
-  showAcceptanceLetter = true  // Por padrão mostra a acceptance letter
+  onDocumentUploaded
 }) => {
   const { t } = useTranslation('dashboard');
 
@@ -236,11 +235,11 @@ const DocumentRequestsCard: React.FC<DocumentRequestsCardProps> = ({
         globalRequests = (globalData || []).filter((req: any) => {
           // Ocultar para estudantes quando status estiver fechado
           if (!isSchool && (req.status || '').toLowerCase() === 'closed') return false;
-          // Se não houver applicable_student_types ou não for array, mostra para todos
-          if (!req.applicable_student_types || !Array.isArray(req.applicable_student_types) || req.applicable_student_types.length === 0) return true;
+          // Se não houver applicable_student_types ou não for array, não mostra para ninguém (segurança)
+          if (!req.applicable_student_types || !Array.isArray(req.applicable_student_types) || req.applicable_student_types.length === 0) return false;
           // Se o tipo do estudante estiver incluso, mostra
           if (req.applicable_student_types.includes(studentType)) return true;
-          // Se o array inclui 'all', mostra para todos
+          // Suporte legado: se o array inclui 'all', mostra para todos
           if (req.applicable_student_types.includes('all')) return true;
           // Caso contrário, não mostra
           return false;
