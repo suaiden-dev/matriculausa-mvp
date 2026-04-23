@@ -4,12 +4,7 @@ import {
   ChevronDown,
   ArrowRight,
   CheckCircle,
-  GraduationCap,
-  Globe,
-  Users,
-  Award,
-  Headphones,
-  Monitor
+  Globe
 } from 'lucide-react';
 import { motion, AnimatePresence, useAnimation } from 'framer-motion';
 import { useInView } from 'react-intersection-observer';
@@ -24,7 +19,7 @@ import { useSimplifiedFees } from '../hooks/useSimplifiedFees';
 import SmartChat from '../components/SmartChat';
 
 const HowItWorks: React.FC = () => {
-  const { t, i18n } = useTranslation(['home', 'common']);
+  const { t } = useTranslation(['home', 'common']);
   const navigate = useNavigate();
   const { selectionProcessFee, scholarshipFee, i20ControlFee, hasSellerPackage, packageName } = useDynamicFees();
   const { affiliateAdminEmail, loading: affiliateCheckLoading, isTheFutureOfEnglishAffiliate } = useAffiliateAdminCheck();
@@ -70,7 +65,7 @@ const HowItWorks: React.FC = () => {
       <HeroSection onCTAClick={handleCTAClick} t={t} />
       
       <SelectionFeeShowcase 
-        i18n={i18n}
+        t={t}
         onCTAClick={handleCTAClick}
       />
       
@@ -92,7 +87,7 @@ const HowItWorks: React.FC = () => {
         i20ControlFee={i20ControlFee}
       />
       
-      <BottomCTASection onCTAClick={handleCTAClick} i18n={i18n} />
+      <BottomCTASection onCTAClick={handleCTAClick} t={t} />
       
       <SmartChat />
     </div>
@@ -111,89 +106,67 @@ const HeroSection: React.FC<{ onCTAClick: () => void, t: any }> = ({ onCTAClick,
   }, [controls, inView]);
 
   return (
-    <section ref={ref} className="relative bg-[#05294E] text-white pt-24 pb-20 lg:pt-48 lg:pb-32 overflow-hidden">
-      {/* Premium Background Elements */}
-      <div className="absolute inset-0 z-0 pointer-events-none">
-        <div className="absolute top-0 left-0 w-full h-full bg-[radial-gradient(circle_at_top_right,rgba(59,130,246,0.15),transparent_50%)]"></div>
-        <div className="absolute bottom-0 right-0 w-full h-full bg-[radial-gradient(circle_at_bottom_left,rgba(208,21,28,0.05),transparent_50%)]"></div>
-        <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[800px] h-[800px] bg-blue-600/10 rounded-full blur-[120px] opacity-50"></div>
-        {/* Subtle grid pattern */}
-        <div className="absolute inset-0 opacity-[0.03]" style={{ backgroundImage: 'radial-gradient(circle, white 1px, transparent 1px)', backgroundSize: '40px 40px' }}></div>
+    <section ref={ref} className="relative pt-32 pb-32 lg:pt-56 lg:pb-56 overflow-hidden bg-[#05294E] min-h-[700px] lg:min-h-[850px] flex items-center">
+      {/* Background Image Layer with Responsive Design */}
+      <div className="absolute inset-0 z-0">
+        <div className="absolute inset-0 lg:left-auto lg:right-0 lg:w-[65%]">
+          <img 
+            src="https://fitpynguasqqutuhzifx.supabase.co/storage/v1/object/public/images/library-facade-white-columns-students.webp" 
+            alt="Elite University Campus" 
+            className="w-full h-full object-cover object-[55.6%_center] lg:object-center"
+          />
+          {/* Overlay for Mobile: Simple dark overlay for text readability */}
+          <div className="absolute inset-0 bg-[#05294E]/70 lg:hidden"></div>
+          
+          {/* Desktop Transition Gradient: Solid blue on left to transparent on right */}
+          <div className="absolute inset-0 hidden lg:block bg-gradient-to-r from-[#05294E] via-[#05294E]/30 to-transparent"></div>
+          
+          {/* Bottom vignette for smoother transition to next section */}
+          <div className="absolute inset-x-0 bottom-0 h-32 bg-gradient-to-t from-[#05294E] to-transparent"></div>
+        </div>
       </div>
-      
-      <div className="relative z-10 max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-        <div className="grid grid-cols-1 lg:grid-cols-12 gap-16 lg:gap-8 items-center">
+
+      {/* Decorative Glows */}
+      <div className="absolute inset-0 overflow-hidden pointer-events-none">
+        <div className="absolute top-1/4 -right-24 w-[600px] h-[600px] bg-blue-500/10 rounded-full blur-[120px]"></div>
+        <div className="absolute bottom-1/4 -left-24 w-[600px] h-[600px] bg-[#D0151C]/5 rounded-full blur-[120px]"></div>
+      </div>
+
+      <div className="relative z-10 max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 w-full">
+        <div className="max-w-4xl">
           <motion.div
-             className="lg:col-span-7 text-center lg:text-left"
              initial="hidden"
              animate={controls}
              variants={{
-               hidden: { opacity: 0, y: 30 },
-               visible: { opacity: 1, y: 0, transition: { duration: 0.8, ease: [0.16, 1, 0.3, 1] } }
+               hidden: { opacity: 0, x: -50 },
+               visible: { opacity: 1, x: 0, transition: { duration: 0.8, ease: "easeOut" } }
              }}
+             className="text-center lg:text-left"
           >
 
 
-            <h1 className="text-5xl md:text-6xl lg:text-8xl font-black mb-8 leading-[1] tracking-tighter">
-              <span className="block text-white mb-2">{t('howItWorks.title').split(' ')[0]}</span>
-              <span className="bg-clip-text text-transparent bg-gradient-to-r from-blue-400 via-white to-blue-400">
+            <h1 className="text-5xl md:text-7xl lg:text-[100px] font-black text-white mb-8 tracking-tighter leading-[0.85] pr-6">
+              <span className="block mb-2">{t('howItWorks.title').split(' ')[0]}</span>
+              <span className="text-transparent bg-clip-text bg-gradient-to-r from-blue-400 via-white to-blue-200 block pb-2">
                 {t('howItWorks.title').split(' ').slice(1).join(' ')}
               </span>
             </h1>
             
-            <p className="text-lg md:text-2xl text-blue-100/70 max-w-2xl mx-auto lg:mx-0 mb-12 leading-relaxed font-light italic">
+            <p className="text-xl lg:text-2xl text-blue-100/80 mb-12 max-w-2xl mx-auto lg:mx-0 leading-relaxed font-medium">
               {t('howItWorks.subtitle')}
             </p>
 
-            <div className="flex flex-col sm:flex-row items-center justify-center lg:justify-start gap-6 mb-16">
+            <div className="flex flex-col sm:flex-row gap-6 justify-center lg:justify-start">
               <button
                 onClick={onCTAClick}
-                className="group relative w-full sm:w-auto px-10 py-5 bg-[#D0151C] hover:bg-[#E01B22] text-white font-black text-xl rounded-2xl transition-all duration-300 hover:scale-105 hover:shadow-[0_20px_50px_rgba(208,21,28,0.3)] flex items-center justify-center gap-3 overflow-hidden"
+                className="group relative w-full sm:w-auto px-10 py-5 bg-[#D0151C] hover:bg-[#b01218] text-white rounded-2xl font-black text-xl transition-all duration-300 shadow-[0_20px_40px_rgba(208,21,28,0.3)] hover:shadow-[0_25px_50px_rgba(208,21,28,0.4)] hover:-translate-y-1 flex items-center justify-center gap-3 overflow-hidden"
               >
-                <span className="relative z-10 flex items-center gap-3">
-                  {t('howItWorks.cta.start') || 'Começar Processo Agora'}
+                <span className="relative z-10">{t('howItWorks.cta.start')}</span>
+                <span className="relative z-10 bg-white/20 p-1 rounded-lg">
                   <ArrowRight className="w-6 h-6 group-hover:translate-x-1 transition-transform" />
                 </span>
                 <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/10 to-transparent -translate-x-full group-hover:translate-x-full transition-transform duration-1000"></div>
               </button>
-            </div>
-
-            <div className="grid grid-cols-2 sm:flex sm:items-center justify-center lg:justify-start gap-8 lg:gap-12">
-              <div className="flex flex-col items-center lg:items-start group">
-                <span className="text-3xl lg:text-4xl font-black text-white mb-1 group-hover:text-blue-400 transition-colors">{t('howItWorks.stats.setup') || '5 Min'}</span>
-                <span className="text-[10px] uppercase tracking-[0.2em] font-bold text-blue-300/60">Setup Inteligente</span>
-              </div>
-              <div className="hidden sm:block w-px h-12 bg-white/10"></div>
-              <div className="flex flex-col items-center lg:items-start group">
-                <span className="text-3xl lg:text-4xl font-black text-white mb-1 group-hover:text-red-400 transition-colors">{t('howItWorks.stats.secure') || '100%'}</span>
-                <span className="text-[10px] uppercase tracking-[0.2em] font-bold text-blue-300/60">Seguro & Criptografado</span>
-              </div>
-            </div>
-          </motion.div>
-
-          {/* Right Column with Enhanced Visuals */}
-          <motion.div 
-            className="lg:col-span-5 relative lg:ml-8"
-            initial="hidden"
-            animate={controls}
-            variants={{
-              hidden: { opacity: 0, scale: 0.9, x: 50 },
-              visible: { opacity: 1, scale: 1, x: 0, transition: { duration: 1, delay: 0.3, ease: "easeOut" } }
-            }}
-          >
-            <div className="relative group">
-              {/* Background Glow */}
-              <div className="absolute -inset-4 bg-gradient-to-br from-blue-600/20 to-red-600/10 blur-3xl opacity-50 group-hover:opacity-75 transition duration-1000"></div>
-              
-              {/* Main Image Container */}
-              <div className="relative rounded-[3rem] overflow-hidden shadow-[0_40px_100px_rgba(0,0,0,0.5)] border border-white/10 aspect-[4/5]">
-                <img 
-                  src="https://fitpynguasqqutuhzifx.supabase.co/storage/v1/object/public/university-profile-pictures/fb5651f1-66ed-4a9f-ba61-96c50d348442/CAMPUS_5.jpg" 
-                  alt="Elite University Campus" 
-                  className="w-full h-full object-cover transform scale-100 group-hover:scale-110 transition-transform duration-[3s] ease-out"
-                />
-                <div className="absolute inset-0 bg-gradient-to-t from-[#05294E] via-transparent to-transparent opacity-80"></div>
-              </div>
             </div>
           </motion.div>
         </div>
@@ -205,48 +178,24 @@ const HeroSection: React.FC<{ onCTAClick: () => void, t: any }> = ({ onCTAClick,
 /* -------------------------------------------------------------------------- */
 /*                        SELECTION FEE SHOWCASE                              */
 /* -------------------------------------------------------------------------- */
-const SelectionFeeShowcase: React.FC<{ i18n: any, onCTAClick: () => void }> = ({ i18n, onCTAClick }) => {
+const SelectionFeeShowcase: React.FC<{ t: any, onCTAClick: () => void }> = ({ t, onCTAClick }) => {
   const controls = useAnimation();
   const { ref, inView } = useInView({ triggerOnce: true, threshold: 0.1 });
-  const isPortuguese = i18n.language.startsWith('pt');
-  const isSpanish = i18n.language.startsWith('es');
 
   useEffect(() => {
     if (inView) controls.start('visible');
   }, [controls, inView]);
 
   const texts = {
-    title: isPortuguese ? "Por que o Processo Seletivo é o melhor caminho?" : (isSpanish ? "¿Por qué el Proceso de Selección es el mejor camino?" : "Why is the Selection Process the best path?"),
-    subtitle: isPortuguese ? "Sua Chave de Ouro para as Universidades Americanas. Diferente de agências tradicionais, nossa taxa consolida tudo em um único investimento inicial." : (isSpanish ? "Su Llave de Oro para las Universidades Americanas. A diferencia de las agencias tradicionales, nuestra tarifa consolida todo en una sola inversión inicial." : "Your Golden Key to American Universities. Unlike traditional agencies, our fee consolidates everything into a single initial investment."),
-    traditionalTitle: isPortuguese ? "Meio Tradicional (Agências)" : (isSpanish ? "Forma Tradicional (Agencias)" : "Traditional Way (Agencies)"),
-    ourTitle: isPortuguese ? "Com Matrícula USA" : (isSpanish ? "Con Matrícula USA" : "With Matrícula USA"),
-    savings: isPortuguese ? "Economia Significativa" : (isSpanish ? "Ahorro Significativo" : "Significant Savings"),
-    startNow: isPortuguese ? "Iniciar Processo Seletivo" : (isSpanish ? "Iniciar Proceso de Selección" : "Start Selection Process"),
-    tradItems: isPortuguese ? [
-      "Taxa de consultoria de agência elevada",
-      "Taxas avulsas de universidades",
-      "Nenhuma garantia realista de bolsa de estudos",
-      "Intermediários lentos e dependência de terceiros"
-    ] : [
-      "High agency consulting fees",
-      "Separate university application fees",
-      "No realistic scholarship guarantee",
-      "Slow intermediaries and third-party dependency"
-    ],
-    ourItems: isPortuguese ? [
-      "Plataforma completa de organização e análise de perfil",
-      "Aplicação direta em até 3 universidades sem taxas avulsas",
-      "Acesso à nossa rede parceira com bolsas exclusivas",
-      "Suporte humano dedicado por WhatsApp e plataforma"
-    ] : [
-      "Full platform for organization and profile analysis",
-      "Direct application to up to 3 universities without separate fees",
-      "Access to our partner network with exclusive scholarships",
-      "Dedicated human support via WhatsApp and platform"
-    ]
+    title: t('howItWorks.selectionFeeShowcase.title'),
+    subtitle: t('howItWorks.selectionFeeShowcase.subtitle'),
+    traditionalTitle: t('howItWorks.selectionFeeShowcase.traditionalWay'),
+    ourTitle: t('howItWorks.selectionFeeShowcase.ourWay'),
+    savings: t('howItWorks.selectionFeeShowcase.savings'),
+    startNow: t('howItWorks.selectionFeeShowcase.startProcess'),
+    tradItems: t('howItWorks.selectionFeeShowcase.traditionalItems', { returnObjects: true }) as string[],
+    ourItems: t('howItWorks.selectionFeeShowcase.ourItems', { returnObjects: true }) as string[]
   };
-
-
 
   return (
     <section ref={ref} className="py-24 bg-gradient-to-br from-slate-50 to-white relative overflow-hidden">
@@ -306,7 +255,7 @@ const SelectionFeeShowcase: React.FC<{ i18n: any, onCTAClick: () => void }> = ({
             <div className="absolute top-0 right-0 w-[400px] h-[400px] bg-blue-500/20 rounded-full blur-[80px] -translate-y-1/2 translate-x-1/3 group-hover:bg-blue-400/30 transition-all duration-700"></div>
             
             <div className="relative z-10">
-              <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-8 pb-6 border-b border-blue-800/50">
+              <div className="flex flex-col sm:flex-row sm:items-center justify-start gap-4 mb-8 pb-6 border-b border-blue-800/50">
                 <div className="flex items-center gap-4">
                   <div className="w-12 h-12 rounded-xl bg-blue-600 flex items-center justify-center text-white shadow-lg shadow-blue-900">
                     <Shield className="w-6 h-6" />
@@ -315,10 +264,6 @@ const SelectionFeeShowcase: React.FC<{ i18n: any, onCTAClick: () => void }> = ({
                     <h3 className="text-2xl font-bold text-white">{texts.ourTitle}</h3>
                     <div className="text-blue-300 font-medium">{texts.savings}</div>
                   </div>
-                </div>
-                <div className="text-left sm:text-right">
-                  <div className="text-2xl font-bold text-white uppercase tracking-wider">Investimento Único</div>
-                  <div className="text-blue-200 text-sm">transparência total</div>
                 </div>
               </div>
 
@@ -364,7 +309,7 @@ const JourneySection: React.FC<{
   }, [controls, inView]);
 
   return (
-    <section ref={ref} className="relative py-32 overflow-hidden bg-[#05294E]">
+    <section ref={ref} className="relative py-16 md:py-24 overflow-hidden bg-[#05294E]">
       {/* Decorative Background Elements */}
       <div className="absolute inset-0 overflow-hidden pointer-events-none">
         <div className="absolute top-1/4 -right-24 w-[500px] h-[500px] bg-blue-500/10 rounded-full blur-[120px]"></div>
@@ -372,7 +317,7 @@ const JourneySection: React.FC<{
       </div>
 
       <div className="relative max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-        <div className="text-center mb-24">
+        <div className="text-center mb-16">
           <h2 className="text-4xl md:text-6xl font-black text-white mb-6 tracking-tight">
             {t('howItWorks.journey')}
           </h2>
@@ -380,11 +325,11 @@ const JourneySection: React.FC<{
         </div>
 
         <div className="grid grid-cols-1 lg:grid-cols-12 gap-12 items-start">
-          <div className="lg:col-span-12 space-y-20 relative">
+          <div className="lg:col-span-12 space-y-10 lg:space-y-12 relative">
             
             {/* Step 1 */}
             <div className="relative group w-full">
-              <div className="absolute left-8 md:left-1/2 -translate-x-px w-1 top-1/2 h-[calc(50%+5rem)] bg-gradient-to-b from-blue-500/50 to-red-500/50"></div>
+              <div className="absolute left-8 md:left-1/2 -translate-x-px w-1 top-1/2 h-[calc(50%+2.5rem)] lg:h-[calc(50%+3rem)] bg-gradient-to-b from-blue-500/50 to-red-500/50"></div>
               <motion.div 
                  initial={{ opacity: 0, y: 30 }}
                  whileInView={{ opacity: 1, y: 0 }}
@@ -395,10 +340,10 @@ const JourneySection: React.FC<{
                 <div className="flex items-center justify-center w-16 h-16 rounded-2xl bg-gradient-to-br from-blue-500 to-blue-700 text-white shadow-[0_0_30px_rgba(59,130,246,0.5)] md:absolute md:left-1/2 md:-translate-x-1/2 shrink-0 z-10 transition-all duration-500 border border-white/20 group-hover:scale-110">
                   <span className="font-black text-2xl">01</span>
                 </div>
-              <div className="w-[calc(100%-5rem)] md:w-[calc(50%-4rem)] bg-white/5 backdrop-blur-xl p-8 sm:p-12 rounded-[3rem] border border-white/10 shadow-2xl transition-all duration-500 group-hover:bg-white/[0.08] group-hover:border-white/20">
-                <h3 className="text-3xl font-black mb-5 text-white tracking-tight">{t('howItWorks.steps.profile.title')}</h3>
-                <p className="text-blue-100/70 text-lg mb-8 leading-relaxed font-medium">{t('howItWorks.steps.profile.description')}</p>
-                <ul className="space-y-4">
+              <div className="w-[calc(100%-5rem)] md:w-[calc(50%-4rem)] bg-white/5 backdrop-blur-xl p-6 sm:p-8 rounded-[3rem] border border-white/10 shadow-2xl transition-all duration-500 group-hover:bg-white/[0.08] group-hover:border-white/20">
+                <h3 className="text-2xl sm:text-3xl font-black mb-3 sm:mb-4 text-white tracking-tight">{t('howItWorks.steps.profile.title')}</h3>
+                <p className="text-blue-100/70 text-base sm:text-lg mb-6 leading-relaxed font-medium">{t('howItWorks.steps.profile.description')}</p>
+                <ul className="space-y-3">
                   {(t('howItWorks.steps.profile.items', { returnObjects: true }) as string[]).map((item, index) => (
                     <li key={index} className="flex items-start gap-3 text-blue-100/70 font-medium group/li">
                       <div className="w-1.5 h-1.5 rounded-full bg-blue-400 mt-2.5 shrink-0 shadow-[0_0_8px_rgba(59,130,246,0.5)]" />
@@ -412,7 +357,7 @@ const JourneySection: React.FC<{
 
             {/* Step 2 (Fee) */}
             <div className="relative group w-full">
-              <div className="absolute left-8 md:left-1/2 -translate-x-px w-1 top-0 h-[calc(100%+5rem)] bg-gradient-to-b from-red-500/50 to-blue-500/50"></div>
+              <div className="absolute left-8 md:left-1/2 -translate-x-px w-1 top-0 h-[calc(100%+2.5rem)] lg:h-[calc(100%+3rem)] bg-gradient-to-b from-red-500/50 to-blue-500/50"></div>
               <motion.div 
                  initial={{ opacity: 0, y: 30 }}
                  whileInView={{ opacity: 1, y: 0 }}
@@ -423,8 +368,8 @@ const JourneySection: React.FC<{
                 <div className="flex items-center justify-center w-16 h-16 rounded-2xl bg-gradient-to-br from-red-500 to-red-700 text-white shadow-[0_0_30px_rgba(208,21,28,0.5)] md:absolute md:left-1/2 md:-translate-x-1/2 shrink-0 z-10 transition-all duration-500 border border-white/20 group-hover:scale-110">
                   <span className="font-black text-2xl">02</span>
                 </div>
-              <div className="w-[calc(100%-5rem)] md:w-[calc(50%-4rem)] bg-white/5 backdrop-blur-xl p-8 sm:p-12 rounded-[3rem] border border-white/10 shadow-2xl transition-all duration-500 group-hover:bg-white/[0.08] group-hover:border-white/20">
-                <h3 className="text-3xl font-black mb-5 text-white tracking-tight flex flex-wrap items-center gap-3">
+              <div className="w-[calc(100%-5rem)] md:w-[calc(50%-4rem)] bg-white/5 backdrop-blur-xl p-6 sm:p-8 rounded-[3rem] border border-white/10 shadow-2xl transition-all duration-500 group-hover:bg-white/[0.08] group-hover:border-white/20">
+                <h3 className="text-2xl sm:text-3xl font-black mb-3 sm:mb-4 text-white tracking-tight flex flex-wrap items-center gap-3">
                   {isLoadingFee ? (
                     <span className="inline-block h-8 w-40 bg-white/10 rounded-lg animate-pulse"></span>
                   ) : (
@@ -438,10 +383,10 @@ const JourneySection: React.FC<{
                     </span>
                   )}
                 </h3>
-                <p className="text-blue-100/70 text-lg mb-8 leading-relaxed font-medium">
+                <p className="text-blue-100/70 text-base sm:text-lg mb-6 leading-relaxed font-medium">
                   {t('howItWorks.steps.selectionFee.description')}
                 </p>
-                <ul className="space-y-4">
+                <ul className="space-y-3">
                   {(t('howItWorks.steps.selectionFee.items', { returnObjects: true }) as string[]).map((item, index) => (
                     <li key={index} className="flex items-start gap-3 text-blue-100/70 font-medium group/li">
                       <div className="w-1.5 h-1.5 rounded-full bg-red-400 mt-2.5 shrink-0 shadow-[0_0_8px_rgba(208,21,28,0.5)]" />
@@ -455,7 +400,7 @@ const JourneySection: React.FC<{
 
             {/* Step 3 */}
             <div className="relative group w-full">
-              <div className="absolute left-8 md:left-1/2 -translate-x-px w-1 top-0 h-[calc(100%+5rem)] bg-gradient-to-b from-blue-500/50 to-red-500/50"></div>
+              <div className="absolute left-8 md:left-1/2 -translate-x-px w-1 top-0 h-[calc(100%+2.5rem)] lg:h-[calc(100%+3rem)] bg-gradient-to-b from-blue-500/50 to-red-500/50"></div>
               <motion.div 
                  initial={{ opacity: 0, y: 30 }}
                  whileInView={{ opacity: 1, y: 0 }}
@@ -466,10 +411,10 @@ const JourneySection: React.FC<{
                 <div className="flex items-center justify-center w-16 h-16 rounded-2xl bg-gradient-to-br from-blue-500 to-blue-700 text-white shadow-[0_0_30_rgba(59,130,246,0.5)] md:absolute md:left-1/2 md:-translate-x-1/2 shrink-0 z-10 transition-all duration-500 border border-white/20 group-hover:scale-110">
                   <span className="font-black text-2xl">03</span>
                 </div>
-              <div className="w-[calc(100%-5rem)] md:w-[calc(50%-4rem)] bg-white/5 backdrop-blur-xl p-8 sm:p-12 rounded-[3rem] border border-white/10 shadow-2xl transition-all duration-500 group-hover:bg-white/[0.08] group-hover:border-white/20">
-                <h3 className="text-3xl font-black mb-5 text-white tracking-tight">{t('howItWorks.steps.documents.title')}</h3>
-                <p className="text-blue-100/70 text-lg mb-8 leading-relaxed font-medium">{t('howItWorks.steps.documents.description')}</p>
-                <ul className="space-y-4">
+              <div className="w-[calc(100%-5rem)] md:w-[calc(50%-4rem)] bg-white/5 backdrop-blur-xl p-6 sm:p-8 rounded-[3rem] border border-white/10 shadow-2xl transition-all duration-500 group-hover:bg-white/[0.08] group-hover:border-white/20">
+                <h3 className="text-2xl sm:text-3xl font-black mb-3 sm:mb-4 text-white tracking-tight">{t('howItWorks.steps.documents.title')}</h3>
+                <p className="text-blue-100/70 text-base sm:text-lg mb-6 leading-relaxed font-medium">{t('howItWorks.steps.documents.description')}</p>
+                <ul className="space-y-3">
                   {(t('howItWorks.steps.documents.items', { returnObjects: true }) as string[]).map((item, index) => (
                     <li key={index} className="flex items-start gap-3 text-blue-100/70 font-medium group/li">
                       <div className="w-1.5 h-1.5 rounded-full bg-blue-400 mt-2.5 shrink-0 shadow-[0_0_8px_rgba(59,130,246,0.5)]" />
@@ -483,7 +428,7 @@ const JourneySection: React.FC<{
 
             {/* Step 4 */}
             <div className="relative group w-full">
-              <div className="absolute left-8 md:left-1/2 -translate-x-px w-1 top-0 h-[calc(100%+5rem)] bg-gradient-to-b from-red-500/50 to-blue-500/50"></div>
+              <div className="absolute left-8 md:left-1/2 -translate-x-px w-1 top-0 h-[calc(100%+2.5rem)] lg:h-[calc(100%+3rem)] bg-gradient-to-b from-red-500/50 to-blue-500/50"></div>
               <motion.div 
                  initial={{ opacity: 0, y: 30 }}
                  whileInView={{ opacity: 1, y: 0 }}
@@ -494,10 +439,10 @@ const JourneySection: React.FC<{
                 <div className="flex items-center justify-center w-16 h-16 rounded-2xl bg-gradient-to-br from-red-500 to-red-700 text-white shadow-[0_0_30px_rgba(208,21,28,0.5)] md:absolute md:left-1/2 md:-translate-x-1/2 shrink-0 z-10 transition-all duration-500 border border-white/20 group-hover:scale-110">
                   <span className="font-black text-2xl">04</span>
                 </div>
-              <div className="w-[calc(100%-5rem)] md:w-[calc(50%-4rem)] bg-white/5 backdrop-blur-xl p-8 sm:p-12 rounded-[3rem] border border-white/10 shadow-2xl transition-all duration-500 group-hover:bg-white/[0.08] group-hover:border-white/20">
-                <h3 className="text-3xl font-black mb-5 text-white tracking-tight">{t('howItWorks.steps.applicationFee.title')}</h3>
-                <p className="text-blue-100/70 text-lg mb-8 leading-relaxed font-medium">{t('howItWorks.steps.applicationFee.description')}</p>
-                <ul className="space-y-4">
+              <div className="w-[calc(100%-5rem)] md:w-[calc(50%-4rem)] bg-white/5 backdrop-blur-xl p-6 sm:p-8 rounded-[3rem] border border-white/10 shadow-2xl transition-all duration-500 group-hover:bg-white/[0.08] group-hover:border-white/20">
+                <h3 className="text-2xl sm:text-3xl font-black mb-3 sm:mb-4 text-white tracking-tight">{t('howItWorks.steps.applicationFee.title')}</h3>
+                <p className="text-blue-100/70 text-base sm:text-lg mb-6 leading-relaxed font-medium">{t('howItWorks.steps.applicationFee.description')}</p>
+                <ul className="space-y-3">
                   {(t('howItWorks.steps.applicationFee.items', { returnObjects: true }) as string[]).map((item, index) => (
                     <li key={index} className="flex items-start gap-3 text-blue-100/70 font-medium group/li">
                       <div className="w-1.5 h-1.5 rounded-full bg-red-400 mt-2.5 shrink-0 shadow-[0_0_8px_rgba(208,21,28,0.5)]" />
@@ -522,10 +467,10 @@ const JourneySection: React.FC<{
                 <div className="flex items-center justify-center w-16 h-16 rounded-2xl bg-gradient-to-br from-blue-500 to-blue-700 text-white shadow-[0_0_30px_rgba(59,130,246,0.5)] md:absolute md:left-1/2 md:-translate-x-1/2 shrink-0 z-10 transition-all duration-500 border border-white/20 group-hover:scale-110">
                   <span className="font-black text-2xl">05</span>
                 </div>
-              <div className="w-[calc(100%-5rem)] md:w-[calc(50%-4rem)] bg-white/5 backdrop-blur-xl p-8 sm:p-12 rounded-[3rem] border border-white/10 shadow-2xl transition-all duration-500 group-hover:bg-white/[0.08] group-hover:border-white/20">
-                <h3 className="text-3xl font-black mb-5 text-white tracking-tight">{t('howItWorks.steps.placementFee.title')}</h3>
-                <p className="text-blue-100/70 text-lg mb-8 leading-relaxed font-medium">{t('howItWorks.steps.placementFee.description')}</p>
-                <ul className="space-y-4">
+              <div className="w-[calc(100%-5rem)] md:w-[calc(50%-4rem)] bg-white/5 backdrop-blur-xl p-6 sm:p-8 rounded-[3rem] border border-white/10 shadow-2xl transition-all duration-500 group-hover:bg-white/[0.08] group-hover:border-white/20">
+                <h3 className="text-2xl sm:text-3xl font-black mb-3 sm:mb-4 text-white tracking-tight">{t('howItWorks.steps.placementFee.title')}</h3>
+                <p className="text-blue-100/70 text-base sm:text-lg mb-6 leading-relaxed font-medium">{t('howItWorks.steps.placementFee.description')}</p>
+                <ul className="space-y-3">
                   {(t('howItWorks.steps.placementFee.items', { returnObjects: true }) as string[]).map((item, index) => (
                     <li key={index} className="flex items-start gap-3 text-blue-100/70 font-medium group/li">
                       <div className="w-1.5 h-1.5 rounded-full bg-blue-400 mt-2.5 shrink-0 shadow-[0_0_8px_rgba(59,130,246,0.5)]" />
@@ -556,60 +501,111 @@ const WhyUsSection: React.FC<{ t: any }> = ({ t }) => {
   }, [controls, inView]);
 
   return (
-    <section ref={ref} className="relative py-32 overflow-hidden bg-white">
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-        <div className="text-center mb-20">
-          <h2 className="text-4xl md:text-5xl font-black text-[#05294E] mb-6 tracking-tight">
-            {t('howItWorks.whyUs.title')}
-          </h2>
-          <div className="w-20 h-1.5 bg-[#D0151C] mx-auto rounded-full"></div>
+    <section ref={ref} className="relative py-32 md:py-48 overflow-hidden bg-[#fcfdfe]">
+      {/* High-end Decorative Background */}
+      <div className="absolute inset-0 pointer-events-none">
+        <div className="absolute top-[-10%] right-[-5%] w-[800px] h-[800px] bg-blue-100/30 rounded-full blur-[140px] opacity-60"></div>
+        <div className="absolute bottom-[-10%] left-[-5%] w-[600px] h-[600px] bg-red-100/20 rounded-full blur-[120px] opacity-40"></div>
+        
+        {/* Premium texture overlay */}
+        <div className="absolute inset-0 opacity-[0.02] bg-[url('https://www.transparenttextures.com/patterns/cubes.png')]"></div>
+        
+        {/* Large Watermark Text */}
+        <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-full text-center opacity-[0.02] select-none">
+          <span className="text-[20vw] font-black text-slate-900 tracking-tighter leading-none">MATRICULAUSA</span>
+        </div>
+      </div>
+
+      <div className="relative z-10 max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+        <div className="text-center mb-28">
+          <motion.div
+            initial={{ opacity: 0, y: 20 }}
+            animate={controls}
+            variants={{ visible: { opacity: 1, y: 0, transition: { duration: 0.8 } } }}
+          >
+            <h2 className="text-5xl md:text-7xl font-black text-[#05294E] mb-8 tracking-tighter leading-[0.9] pr-6">
+              {t('howItWorks.whyUs.mainTitle').split(' ').slice(0, -1).join(' ')} <br className="md:hidden" />
+              <span className="text-transparent bg-clip-text bg-gradient-to-r from-[#05294E] via-[#D0151C] to-[#05294E]">
+                {t('howItWorks.whyUs.mainTitle').split(' ').slice(-1)}
+              </span>
+            </h2>
+            <div className="w-24 h-2.5 bg-gradient-to-r from-[#D0151C] to-red-400 mx-auto rounded-full shadow-lg shadow-red-500/20"></div>
+          </motion.div>
         </div>
 
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-8">
-          {[
-            { 
-              title: t('howItWorks.whyUs.smartDiscovery.title'), 
-              desc: t('howItWorks.whyUs.smartDiscovery.description'),
-              icon: Users,
-              color: "blue"
-            },
-            { 
-              title: t('howItWorks.whyUs.documentManagement.title'), 
-              desc: t('howItWorks.whyUs.documentManagement.description'),
-              icon: Award,
-              color: "red"
-            },
-            { 
-              title: t('howItWorks.whyUs.personalSupport.title'), 
-              desc: t('howItWorks.whyUs.personalSupport.description'),
-              icon: Monitor,
-              color: "yellow"
-            },
-            { 
-              title: t('howItWorks.whyUs.successTracking.title'), 
-              desc: t('howItWorks.whyUs.successTracking.description'),
-              icon: Headphones,
-              color: "blue"
-            }
-          ].map((item, idx) => (
-            <motion.div 
-              key={idx}
-              initial={{ opacity: 0, y: 20 }}
-              animate={controls}
-              variants={{ visible: { opacity: 1, y: 0, transition: { duration: 0.5, delay: idx * 0.1 } } }}
-              className="group relative bg-slate-50 p-10 rounded-[2.5rem] border border-slate-100 hover:border-blue-200 transition-all duration-300 flex flex-col h-full"
-            >
-              <div className={`w-16 h-16 rounded-2xl mb-8 flex items-center justify-center transition-transform duration-500 group-hover:scale-110 group-hover:rotate-3 ${
-                item.color === 'red' ? 'bg-red-50 text-[#D0151C]' : 
-                item.color === 'yellow' ? 'bg-yellow-50 text-yellow-600' : 
-                'bg-blue-50 text-blue-600'
-              }`}>
-                <item.icon className="w-8 h-8" />
-              </div>
-              <h3 className="text-2xl font-bold text-[#05294E] mb-4 leading-tight">{item.title}</h3>
-              <p className="text-slate-600 text-lg leading-relaxed flex-grow">{item.desc}</p>
-            </motion.div>
-          ))}
+        <div className="flex flex-col lg:flex-row items-center gap-16 lg:gap-24">
+          {/* Featured Image with Premium Frame */}
+          <motion.div 
+            initial={{ opacity: 0, x: -30 }}
+            animate={controls}
+            variants={{ visible: { opacity: 1, x: 0, transition: { duration: 0.8, delay: 0.2 } } }}
+            className="w-full lg:w-[45%] relative"
+          >
+            <div className="relative z-10 rounded-[4rem] overflow-hidden shadow-[0_50px_100px_-20px_rgba(0,0,0,0.15)] border-[12px] border-white bg-slate-100 flex items-center justify-center h-[500px] lg:h-[650px]">
+                <span className="text-2xl font-black text-slate-400 uppercase tracking-tighter text-center px-10">
+                  {t('howItWorks.whyUs.placeholderPhoto')}
+                </span>
+            </div>
+            
+            {/* Decorative Geometric Accents */}
+            <div className="absolute -bottom-8 -right-8 w-48 h-48 bg-[#D0151C] rounded-[3.5rem] -z-0 opacity-10 animate-pulse"></div>
+            <div className="absolute -top-10 -left-10 w-40 h-40 bg-blue-100 rounded-full blur-3xl -z-10"></div>
+          </motion.div>
+
+          {/* Advantages Grid */}
+          <div className="w-full lg:w-[55%] grid grid-cols-1 md:grid-cols-2 gap-6 lg:gap-8">
+            {[
+              { 
+                title: t('howItWorks.whyUs.smartDiscovery.title'), 
+                desc: t('howItWorks.whyUs.smartDiscovery.description'),
+                gradient: "from-blue-600 to-indigo-700"
+              },
+              { 
+                title: t('howItWorks.whyUs.documentManagement.title'), 
+                desc: t('howItWorks.whyUs.documentManagement.description'),
+                gradient: "from-red-600 to-rose-700"
+              },
+              { 
+                title: t('howItWorks.whyUs.personalSupport.title'), 
+                desc: t('howItWorks.whyUs.personalSupport.description'),
+                gradient: "from-amber-500 to-orange-700"
+              },
+              { 
+                title: t('howItWorks.whyUs.successTracking.title'), 
+                desc: t('howItWorks.whyUs.successTracking.description'),
+                gradient: "from-emerald-600 to-teal-700"
+              }
+            ].map((item, idx) => (
+              <motion.div 
+                key={idx}
+                initial={{ opacity: 0, y: 30 }}
+                animate={controls}
+                variants={{ visible: { opacity: 1, y: 0, transition: { duration: 0.6, delay: 0.4 + (idx * 0.1) } } }}
+                className="relative group"
+              >
+                {/* Floating index number */}
+                <span className="absolute -top-6 -right-2 text-7xl font-black text-slate-100/60 select-none z-0 transition-colors duration-500 group-hover:text-blue-50/50 leading-none">
+                  0{idx + 1}
+                </span>
+
+                <div className="relative z-10 bg-white/90 backdrop-blur-md p-8 lg:p-10 rounded-[2.5rem] border border-white shadow-[0_20px_40px_-12px_rgba(0,0,0,0.05)] hover:shadow-[0_30px_60px_-15px_rgba(0,0,0,0.1)] transition-all duration-500 h-full flex flex-col overflow-hidden">
+                  <div className={`absolute top-0 left-0 w-full h-2 bg-gradient-to-r ${item.gradient} transform origin-left scale-x-0 group-hover:scale-x-100 transition-transform duration-700`}></div>
+                  
+                  <h3 className="text-xl lg:text-2xl font-black text-[#05294E] mb-4 leading-tight group-hover:text-blue-900 transition-colors duration-300">
+                    {item.title}
+                  </h3>
+                  <p className="text-slate-500 text-base lg:text-lg leading-relaxed font-medium flex-grow">
+                    {item.desc}
+                  </p>
+                  
+                  <div className="mt-8 flex items-center gap-2">
+                     <div className={`w-6 h-1 rounded-full bg-gradient-to-r ${item.gradient}`}></div>
+                     <div className="w-1.5 h-1 rounded-full bg-slate-200"></div>
+                  </div>
+                </div>
+              </motion.div>
+            ))}
+          </div>
         </div>
       </div>
     </section>
@@ -695,45 +691,61 @@ const FAQSection: React.FC<{ t: any, selectionProcessFee: any, scholarshipFee: a
 /* -------------------------------------------------------------------------- */
 /*                                BOTTOM CTA                                  */
 /* -------------------------------------------------------------------------- */
-const BottomCTASection: React.FC<{ onCTAClick: () => void, i18n: any }> = ({ onCTAClick, i18n }) => {
-  const isPortuguese = i18n.language.startsWith('pt');
+const BottomCTASection: React.FC<{ onCTAClick: () => void, t: any }> = ({ onCTAClick, t }) => {
   
   return (
     <section className="py-24 bg-white relative overflow-hidden">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 relative z-10">
-        <div className="bg-gradient-to-br from-[#05294E] to-[#0a3a62] rounded-[3rem] text-center shadow-2xl relative overflow-hidden flex flex-col lg:flex-row items-center">
+        <div className="bg-[#05294E] rounded-[3.5rem] shadow-2xl relative overflow-hidden flex flex-col lg:flex-row items-stretch min-h-[500px]">
           
-          <div className="flex-1 p-10 md:p-16 text-center lg:text-left relative z-10">
-            {/* Decorative backgrounds */}
-            <div className="absolute top-0 left-0 w-64 h-64 bg-blue-500/10 rounded-full blur-[60px]"></div>
+          {/* Content side */}
+          <div className="flex-1 p-10 md:p-16 lg:p-20 flex flex-col justify-center relative z-20 bg-[#05294E] rounded-t-[3.5rem] lg:rounded-tr-none lg:rounded-l-[3.5rem]">
+            {/* Abstract Background Element */}
+            <div className="absolute top-0 left-0 w-full h-full bg-[radial-gradient(circle_at_0%_0%,rgba(59,130,246,0.15),transparent_50%)] pointer-events-none rounded-t-[3.5rem] lg:rounded-tr-none lg:rounded-l-[3.5rem]"></div>
             
-            <GraduationCap className="w-16 h-16 text-white/90 mb-8 mx-auto lg:mx-0" />
-            
-            <h2 className="text-3xl md:text-5xl font-black text-white mb-6 leading-tight">
-              {isPortuguese ? "Pronto para estudar nos EUA?" : "Ready to study in the US?"}
-            </h2>
-            <p className="text-lg md:text-xl text-blue-100 max-w-2xl mb-10 leading-relaxed mx-auto lg:mx-0">
-              {isPortuguese 
-                ? "Junte-se a centenas de estudantes e inicie seu processo agora mesmo. A sua aprovação está mais próxima do que nunca." 
-                : "Join hundreds of students and start your process right now. Your approval is closer than ever."}
-            </p>
+            <div className="relative">
+              <motion.div
+                initial={{ opacity: 0, x: -20 }}
+                whileInView={{ opacity: 1, x: 0 }}
+                viewport={{ once: true }}
+                transition={{ duration: 0.8 }}
+              >
+                <h2 className="text-4xl md:text-5xl lg:text-6xl font-black text-white mb-6 leading-[1.1] tracking-tight">
+                  {t('howItWorks.bottomCTA.title')}
+                </h2>
+                
+                <p className="text-lg md:text-xl text-blue-100/80 max-w-xl mb-10 leading-relaxed font-medium">
+                  {t('howItWorks.bottomCTA.description')}
+                </p>
 
-            <button
-              onClick={onCTAClick}
-              className="inline-flex items-center px-10 py-5 bg-[#D0151C] hover:bg-red-600 text-white font-bold text-xl rounded-2xl shadow-xl hover:shadow-2xl transition-all duration-300 hover:-translate-y-1 group"
-            >
-              {isPortuguese ? "Iniciar Minha Jornada" : "Start My Journey"}
-              <ArrowRight className="w-6 h-6 ml-3 group-hover:translate-x-1 transition-transform" />
-            </button>
+                <button
+                  onClick={onCTAClick}
+                  className="group inline-flex items-center px-10 py-5 bg-[#D0151C] hover:bg-[#E01B22] text-white font-black text-xl rounded-2xl shadow-[0_20px_40px_rgba(208,21,28,0.3)] hover:shadow-[0_25px_50px_rgba(208,21,28,0.4)] transition-all duration-300 hover:-translate-y-1"
+                >
+                  {t('howItWorks.bottomCTA.button')}
+                  <ArrowRight className="w-6 h-6 ml-3 group-hover:translate-x-1 transition-transform duration-300" />
+                </button>
+              </motion.div>
+            </div>
           </div>
 
-          <div className="w-full lg:w-[40%] h-64 lg:h-[600px] relative">
+          {/* Image side with much better transition */}
+          <div className="w-full lg:w-[45%] relative min-h-[350px] lg:min-h-full overflow-hidden -mt-4 lg:mt-0 z-10">
             <img 
               src="https://fitpynguasqqutuhzifx.supabase.co/storage/v1/object/public/images/graduates-throwing-caps-blue-sky-graduation.webp" 
               alt="Graduation success" 
-              className="w-full h-full object-cover opacity-80"
+              className="absolute inset-0 w-full h-full object-cover object-center"
             />
-            <div className="absolute inset-0 bg-gradient-to-t lg:bg-gradient-to-r from-[#05294E] via-[#05294E]/20 to-transparent"></div>
+            {/* The Smooth Transition Overlays */}
+            {/* 1. Mobile transition: Stronger fade and solid top blend */}
+            <div className="absolute top-0 left-0 right-0 h-32 bg-gradient-to-b from-[#05294E] via-[#05294E] to-transparent lg:hidden z-10"></div>
+            <div className="absolute inset-0 bg-[#05294E]/20 lg:hidden z-10"></div>
+            
+            {/* 2. Desktop fade (left to right) */}
+            <div className="absolute inset-0 bg-gradient-to-r from-[#05294E] via-[#05294E]/20 to-transparent hidden lg:block z-10"></div>
+            
+            {/* 3. Extra deep blend for desktop to hide the edge perfectly */}
+            <div className="absolute inset-y-0 left-0 w-32 bg-gradient-to-r from-[#05294E] to-transparent hidden lg:block z-20"></div>
           </div>
         </div>
       </div>

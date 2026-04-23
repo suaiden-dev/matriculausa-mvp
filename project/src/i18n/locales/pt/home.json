@@ -262,23 +262,52 @@
       }
     },
     "whyUs": {
+      "mainTitle": "Por Que Escolher MatriculaUSA?",
+      "placeholderPhoto": "Foto do Ceme aqui",
       "title": "Por Que MatriculaUSA?",
       "smartDiscovery": {
-        "title": "Especialistas em Transfer & COS",
-        "description": "Foco total em quem já está nos EUA e precisa mudar de status ou transferir de escola."
+        "title": "Bolsas Exclusivas (+154 opções)",
+        "description": "Acesse oportunidades diretas com anuidades reduzidas que você não encontra em agências tradicionais."
       },
       "documentManagement": {
-        "title": "Bolsas de Até 50%",
-        "description": "Acesso a anuidades exclusivas em universidades americanas credenciadas."
+        "title": "Mentoria com Especialistas",
+        "description": "Suporte humano dedicado. Especialistas prontos para te guiar em cada decisão, sem robôs ou processos automáticos."
       },
       "personalSupport": {
-        "title": "Plataforma All-In-One",
-        "description": "Gerencie todo o seu processo, do envio de documentos à matrícula final, de forma simples e 100% digital."
+        "title": "Economia Real",
+        "description": "Um investimento único na plataforma que substitui as altas taxas e custos ocultos de agências de intercâmbio."
       },
       "successTracking": {
-        "title": "Suporte Local Contínuo",
-        "description": "Acompanhamento dedicado para garantir sua manutenção de status nos EUA."
+        "title": "Gestão Simplificada",
+        "description": "Gerencie todo o seu processo em um só lugar, do envio de documentos à aprovação final, de forma 100% digital."
       }
+    },
+    "selectionFeeShowcase": {
+      "title": "Por que o Processo Seletivo é o melhor caminho?",
+      "subtitle": "Sua Chave de Ouro para as Universidades Americanas. Diferente de agências tradicionais, nossa taxa consolida tudo em um único investimento inicial.",
+      "traditionalWay": "Meio Tradicional (Agências)",
+      "ourWay": "Com Matrícula USA",
+      "savings": "Economia Significativa",
+      "startProcess": "Iniciar Processo Seletivo",
+      "traditionalItems": [
+        "Incerteza no valor final",
+        "Taxas ocultas por cada serviço",
+        "Processo manual e lento",
+        "Múltiplos pagamentos picados",
+        "Sem garantia de bolsa real"
+      ],
+      "ourItems": [
+        "Valor total transparente",
+        "Bolsas de estudo exclusivas",
+        "Mentoria humana dedicada",
+        "Tudo em uma só plataforma",
+        "Garantia de aprovação Suaide"
+      ]
+    },
+    "bottomCTA": {
+      "title": "Pronto para estudar nos EUA?",
+      "description": "Junte-se a centenas de estudantes e inicie seu processo agora mesmo. A sua aprovação está mais próxima do que nunca.",
+      "button": "Iniciar Minha Jornada"
     },
     "successStories": {
       "title": "Histórias de Sucesso",

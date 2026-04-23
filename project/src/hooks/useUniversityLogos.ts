@@ -14,9 +14,9 @@ const UNIVERSITIES = [
   'Cumberland University',
   'Faulkner University',
   'Golden Gate University',
-  'Marshall University',
+  'Oikos University Los Angeles',
   'Baptist University of Florida',
-  'Murray State University',
+  'Caroline University',
   'Purdue University Northwest',
   'University of Louisville',
   'University of the Cumberlands',
@@ -44,7 +44,20 @@ export const useUniversityLogos = () => {
           'wittenberg-university'
         ];
 
+        const SPECIAL_LOGOS: Record<string, string> = {
+          'Oikos University Los Angeles': 'https://fitpynguasqqutuhzifx.supabase.co/storage/v1/object/public/user-avatars/oikos%20logo.svg',
+          'Caroline University': 'https://fitpynguasqqutuhzifx.supabase.co/storage/v1/object/public/user-avatars/caroline%20loho.png'
+        };
+
         const universitiesWithLogos: University[] = UNIVERSITIES.map(name => {
+          if (SPECIAL_LOGOS[name]) {
+            return {
+              name,
+              logoUrl: SPECIAL_LOGOS[name],
+              isLoading: false
+            };
+          }
+
           const normalizedName = name.toLowerCase().replace(/\s+/g, '-');
           const ext = JPG_UNIVERSITIES.includes(normalizedName) ? 'jpg' : 'png';
           const filePath = `${normalizedName}.${ext}`;

@@ -22,59 +22,103 @@ const Home: React.FC = () => {
   // Dados Estáticos das Bolsas em Destaque
   const STATIC_SCHOLARSHIPS = [
     {
-      id: 'static-1',
-      title: 'Business Administration & Leadership',
+      id: 'b1069ada-917d-4f08-a5d0-3d6592e0a875',
+      title: 'Master of Computer Information Systems',
       university: {
-        name: 'Golden Gate University',
-        logo_url: 'https://fitpynguasqqutuhzifx.supabase.co/storage/v1/object/public/university-profile-pictures/golden-gate-university.png',
+        name: 'Caroline University',
+        logo_url: 'https://fitpynguasqqutuhzifx.supabase.co/storage/v1/object/public/user-avatars/caroline%20loho.png',
       },
-      level: 'Graduação / Mestrado',
-      field_of_study: 'Negócios',
-      description: 'Prepare-se para cargos de liderança global com um currículo focado em estratégia, finanças e gestão inovadora no coração de San Francisco.'
+      level: 'Mestrado / Pós-Graduação',
+      field_of_study: 'STEM Scholarship',
+      description: 'STEM Degree Scholarship covers 53% tuition of MCIS program for qualified students. During the enrollment students may apply for full-time or part-time CPT and 3 years OPT upon graduation.'
     },
     {
-      id: 'static-2',
-      title: 'Contemporary Music Performance',
+      id: '8e44fc08-3363-4c5e-a236-572206ecad65',
+      title: 'Master of Business Administration',
       university: {
-        name: 'California College of Music',
-        logo_url: 'https://fitpynguasqqutuhzifx.supabase.co/storage/v1/object/public/university-profile-pictures/logo%20ccm.jpg',
+        name: 'Oikos University Los Angeles',
+        logo_url: 'https://fitpynguasqqutuhzifx.supabase.co/storage/v1/object/public/user-avatars/oikos%20logo.svg',
       },
-      level: 'Certificado / Graduação',
-      field_of_study: 'Artes e Música',
-      description: 'Desenvolva seu talento musical com professores que são profissionais da indústria em Los Angeles, em um ambiente focado em performance e produção.'
+      level: 'Mestrado / Pós-Graduação',
+      field_of_study: 'Leadership Scholarship',
+      description: 'Established for students who demonstrate leadership. Award: Up to $4,000 tuition per semester. Eligibility: Must have completed two semesters with a 3.5/4.0 GPA.'
     },
     {
-      id: 'static-3',
-      title: 'Ciência da Computação & Engenharia',
+      id: 'aad50945-c9c4-4284-84e7-ca2779dcab1b',
+      title: 'Master of Philosophy',
       university: {
-        name: 'University of South Florida',
-        logo_url: 'https://fitpynguasqqutuhzifx.supabase.co/storage/v1/object/public/university-profile-pictures/fb5651f1-66ed-4a9f-ba61-96c50d348442/university-default-2024.jpg.jpg',
+        name: 'Caroline University',
+        logo_url: 'https://fitpynguasqqutuhzifx.supabase.co/storage/v1/object/public/user-avatars/caroline%20loho.png',
       },
-      level: 'Graduação / Mestrado',
-      field_of_study: 'Tecnologia',
-      description: 'Participe de pesquisas de ponta e projetos práticos em tecnologias emergentes, IA e cibersegurança em uma das universidades que mais cresce nos EUA.'
+      level: 'Mestrado / Pós-Graduação',
+      field_of_study: "Dean's Scholarship",
+      description: "The Dean's Scholarship covers 15% or more of tuition ONLY. Other fees such as registration, technology fees, etc. are not included in the tuition."
     },
     {
-      id: 'static-4',
-      title: 'Global MBA Executive',
+      id: '83f80002-f56f-45d9-90bd-3f7931d78e4e',
+      title: 'Bachelor of Arts in Biblical Studies',
       university: {
-        name: 'Westcliff University',
-        logo_url: 'https://fitpynguasqqutuhzifx.supabase.co/storage/v1/object/public/images/westcliff-logo.png',
+        name: 'Oikos University Los Angeles',
+        logo_url: 'https://fitpynguasqqutuhzifx.supabase.co/storage/v1/object/public/user-avatars/oikos%20logo.svg',
       },
-      level: 'Mestrado Profissional',
-      field_of_study: 'Administração',
-      description: 'Um programa flexível desenhado para profissionais que buscam expandir sua rede de contatos internacional e dominar as práticas modernas de mercado.'
+      level: 'Graduação / Bacharelado',
+      field_of_study: 'Faculty and Staff Scholarship',
+      description: 'Established by the faculty and staff of Oikos University for deserving students chosen by the scholarship committee. Award: Up to 10% of tuition per semester.'
     },
     {
-      id: 'static-5',
-      title: 'Professional Pilot & Aviation',
+      id: '9a010b5e-df72-4a03-ab2e-9f032646ba40',
+      title: 'Master of Divinity',
       university: {
-        name: 'Accelerated Flight Training',
-        logo_url: 'https://fitpynguasqqutuhzifx.supabase.co/storage/v1/object/public/university-profile-pictures/fb5651f1-66ed-4a9f-ba61-96c50d348442/university-default-2024.jpg.jpg',
+        name: 'Oikos University Los Angeles',
+        logo_url: 'https://fitpynguasqqutuhzifx.supabase.co/storage/v1/object/public/user-avatars/oikos%20logo.svg',
       },
-      level: 'Treinamento Profissional',
-      field_of_study: 'Aviação',
-      description: 'Conquiste suas licenças de voo em tempo recorde com treinamento intensivo e simuladores de última geração na ensolarada Flórida.'
+      level: 'Mestrado / Pós-Graduação',
+      field_of_study: 'Chaplain Scholarship',
+      description: 'Chaplain’s Scholarship has been established to honor students who have vowed and being trained as a professional pastor. Award: Up to 50% of tuition.'
+    },
+    {
+      id: '59daad29-68be-43e3-851c-44ce3c014948',
+      title: 'Doctor of Philosophy',
+      university: {
+        name: 'Oikos University Los Angeles',
+        logo_url: 'https://fitpynguasqqutuhzifx.supabase.co/storage/v1/object/public/user-avatars/oikos%20logo.svg',
+      },
+      level: 'Doutorado',
+      field_of_study: "President's Sacrificial Scholarship",
+      description: "The President's Sacrificial Leadership Scholarship has been established to honor students who have exhibited extraordinary leadership qualities."
+    },
+    {
+      id: 'b7bbfb1c-8e65-4624-84be-b6cae1e5ca18',
+      title: 'Master of Business In Business Analytics',
+      university: {
+        name: 'Adelphi University',
+        logo_url: 'https://fitpynguasqqutuhzifx.supabase.co/storage/v1/object/public/universities-logo/adelphi-university.png',
+      },
+      level: 'Mestrado / Pós-Graduação',
+      field_of_study: 'STEM',
+      description: 'Prepare-se para o mercado com o programa STEM de Business Analytics. Carga horária de 30 Credit hours para formação completa.'
+    },
+    {
+      id: 'fb5e4a34-ba94-41b9-b14f-cd126f8119e7',
+      title: 'Master Of Science In Computer Science',
+      university: {
+        name: 'Anderson University',
+        logo_url: 'https://fitpynguasqqutuhzifx.supabase.co/storage/v1/object/public/universities-logo/anderson-university.png',
+      },
+      level: 'Mestrado / Pós-Graduação',
+      field_of_study: 'STEM',
+      description: 'Aprofunde seus conhecimentos em tecnologia e desenvolvimento de software. Carga horária total de 31 Credit hours.'
+    },
+    {
+      id: 'cfbcc249-da4f-4892-9ecf-a3f9d2e694f7',
+      title: 'MBA With Data Analytics Concentration',
+      university: {
+        name: 'Baptist University of Florida',
+        logo_url: 'https://fitpynguasqqutuhzifx.supabase.co/storage/v1/object/public/universities-logo/baptist-university-of-florida.png',
+      },
+      level: 'Mestrado / Pós-Graduação',
+      field_of_study: 'STEM',
+      description: 'Combine administração de negócios com análise de dados avançada. Carga horária de 36 Credit hours.'
     }
   ];
 
@@ -92,9 +136,10 @@ const Home: React.FC = () => {
       if (sliderRef.current) {
         const visibleCols = width < 640 ? 1 : width < 1024 ? 2 : 3;
         const gap = 24; // 24px = gap-6
+        const padding = 32; // px-4 = 16px * 2 (horizontal padding)
         const totalGapWidth = gap * (visibleCols - 1);
         const containerW = sliderRef.current.clientWidth;
-        setSlideItemWidth((containerW - totalGapWidth) / visibleCols);
+        setSlideItemWidth((containerW - totalGapWidth - padding) / visibleCols);
       }
     };
     
@@ -153,8 +198,8 @@ const Home: React.FC = () => {
             <div className="absolute inset-0 bg-slate-950/40"></div>
             {/* Main Gradient: From Dark Blue-ish top to Transparent */}
             <div className="absolute inset-0 bg-gradient-to-b from-[#05294E]/60 via-transparent to-transparent"></div>
-            {/* Bottom Gradient to White for Section Transition */}
-            <div className="absolute inset-0 bg-gradient-to-t from-white via-transparent to-transparent opacity-100"></div>
+            {/* Bottom Transition to Slate-50: Stronger fade to eliminate hard edges */}
+            <div className="absolute bottom-0 left-0 right-0 h-32 bg-gradient-to-t from-slate-50 via-slate-50/80 to-transparent"></div>
           </div>
           
           <div className="relative z-10 max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-20">
@@ -243,7 +288,7 @@ const Home: React.FC = () => {
 
         {/* Highlighted Scholarships Slider Section (Triple View) */}
         {STATIC_SCHOLARSHIPS.length > 0 && (
-          <section className="py-24 bg-slate-50 relative overflow-hidden">
+          <section className="py-24 bg-slate-50 relative overflow-hidden -mt-2 z-10 pt-26">
             {/* Background elements */}
             <div className="absolute top-0 right-0 w-1/3 h-full bg-gradient-to-l from-blue-50/50 to-transparent"></div>
             
@@ -267,11 +312,39 @@ const Home: React.FC = () => {
               >
                 <div className="overflow-hidden px-4 -mx-4 py-4" ref={sliderRef}>
                   <motion.div 
-                    className="flex gap-6"
+                    className="flex gap-6 cursor-grab active:cursor-grabbing"
                     animate={{ 
                       x: -(currentScholarshipIndex * (slideItemWidth + 24)) // 24px is gap-6
                     }}
                     transition={{ type: "spring", stiffness: 300, damping: 30 }}
+                    onTouchStart={(e) => {
+                      setIsCarouselHovered(true);
+                      sliderRef.current?.setAttribute('data-touch-start', e.targetTouches[0].clientX.toString());
+                    }}
+                    onTouchMove={(e) => {
+                      sliderRef.current?.setAttribute('data-touch-end', e.targetTouches[0].clientX.toString());
+                    }}
+                    onTouchEnd={() => {
+                      setIsCarouselHovered(false);
+                      const touchStart = parseFloat(sliderRef.current?.getAttribute('data-touch-start') || '0');
+                      const touchEnd = parseFloat(sliderRef.current?.getAttribute('data-touch-end') || '0');
+                      
+                      if (!touchStart || !touchEnd) return;
+                      
+                      const distance = touchStart - touchEnd;
+                      const swipeThreshold = 50;
+                      
+                      if (distance > swipeThreshold) {
+                        // Swiped left (Next slide)
+                        setCurrentScholarshipIndex((prev) => (prev + 1) % (infiniteScholarships.length - 3));
+                      } else if (distance < -swipeThreshold) {
+                        // Swiped right (Prev slide)
+                        setCurrentScholarshipIndex((prev) => Math.max(0, prev - 1));
+                      }
+                      
+                      sliderRef.current?.removeAttribute('data-touch-start');
+                      sliderRef.current?.removeAttribute('data-touch-end');
+                    }}
                   >
                     {infiniteScholarships.map((scholarship, index) => (
                       <div 
@@ -325,13 +398,13 @@ const Home: React.FC = () => {
                 {/* Navigation Buttons - Sides */}
                 <div className="hidden md:block">
                   <button 
-                    onClick={() => setCurrentScholarshipIndex((prev) => (prev - 1 + STATIC_SCHOLARSHIPS.length) % STATIC_SCHOLARSHIPS.length)}
+                    onClick={() => setCurrentScholarshipIndex((prev) => Math.max(0, prev - 1))}
                     className="absolute -left-8 lg:-left-12 top-1/2 -translate-y-1/2 z-20 p-4 rounded-full bg-white border border-slate-200 text-slate-600 hover:bg-[#05294E] hover:text-white transition-all duration-300 shadow-xl"
                   >
                     <ChevronRight className="h-6 w-6 rotate-180" />
                   </button>
                   <button 
-                    onClick={() => setCurrentScholarshipIndex((prev) => (prev + 1) % STATIC_SCHOLARSHIPS.length)}
+                    onClick={() => setCurrentScholarshipIndex((prev) => (prev + 1) % (infiniteScholarships.length - 3))}
                     className="absolute -right-8 lg:-right-12 top-1/2 -translate-y-1/2 z-20 p-4 rounded-full bg-white border border-slate-200 text-slate-600 hover:bg-[#05294E] hover:text-white transition-all duration-300 shadow-xl"
                   >
                     <ChevronRight className="h-6 w-6" />

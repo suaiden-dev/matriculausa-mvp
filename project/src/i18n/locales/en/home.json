@@ -262,23 +262,52 @@
       }
     },
     "whyUs": {
+      "mainTitle": "Why Choose MatriculaUSA?",
+      "placeholderPhoto": "Campus Photo Here",
       "title": "Why MatriculaUSA?",
       "smartDiscovery": {
-        "title": "Transfer & COS Specialists",
-        "description": "Full focus on those already in the US needing to change status or transfer schools."
+        "title": "Exclusive Scholarships (+154 options)",
+        "description": "Access direct opportunities with reduced tuition rates that you won't find in traditional agencies."
       },
       "documentManagement": {
-        "title": "Up to 50% Scholarships",
-        "description": "Access exclusive tuition rates at accredited American universities."
+        "title": "Expert Mentorship",
+        "description": "Dedicated human support. Experts ready to guide you through every decision, from start to finish."
       },
       "personalSupport": {
-        "title": "All-In-One Platform",
-        "description": "Manage your entire process, from document upload to final enrollment, simply and 100% digitally."
+        "title": "Real Savings",
+        "description": "A one-time investment that replaces the high fees and hidden costs of traditional exchange agencies."
       },
       "successTracking": {
-        "title": "Continuous Local Support",
-        "description": "Dedicated monitoring to ensure your legal status maintenance in the US."
+        "title": "Simplified Management",
+        "description": "Manage your entire process in one place, from document submission to final approval, 100% digitally."
       }
+    },
+    "selectionFeeShowcase": {
+      "title": "Why is the Selection Process the best path?",
+      "subtitle": "Your Golden Key to American Universities. Unlike traditional agencies, our fee consolidates everything into a single initial investment.",
+      "traditionalWay": "Traditional Way (Agencies)",
+      "ourWay": "With Matrícula USA",
+      "savings": "Significant Savings",
+      "startProcess": "Start Selection Process",
+      "traditionalItems": [
+        "Uncertainty in final value",
+        "Hidden fees for each service",
+        "Manual and slow process",
+        "Multiple fragmented payments",
+        "No real scholarship guarantee"
+      ],
+      "ourItems": [
+        "Transparent total value",
+        "Exclusive scholarships",
+        "Dedicated human mentorship",
+        "Everything in one platform",
+        "Suaide approval guarantee"
+      ]
+    },
+    "bottomCTA": {
+      "title": "Ready to study in the US?",
+      "description": "Join hundreds of students and start your process right now. Your approval is closer than ever.",
+      "button": "Start My Journey"
     },
     "successStories": {
       "title": "Success Stories",

@@ -262,6 +262,8 @@
       }
     },
     "whyUs": {
+      "mainTitle": "¿Por qué elegir MatriculaUSA?",
+      "placeholderPhoto": "Foto del Campus Aquí",
       "title": "¿Por Qué MatriculaUSA?",
       "smartDiscovery": {
         "title": "Especialistas en Transfer & COS",
@@ -279,6 +281,33 @@
         "title": "Soporte Local Continuo",
         "description": "Seguimiento dedicado para garantizar tu mantenimiento de estatus legal en EE. UU."
       }
+    },
+    "selectionFeeShowcase": {
+      "title": "¿Por qué el Proceso de Selección es el mejor camino?",
+      "subtitle": "Su Llave de Oro para las Universidades Americanas. A diferencia de las agencias tradicionales, nuestra tarifa consolida todo en una sola inversión inicial.",
+      "traditionalWay": "Forma Tradicional (Agencias)",
+      "ourWay": "Con Matrícula USA",
+      "savings": "Ahorro Significativo",
+      "startProcess": "Iniciar Proceso de Selección",
+      "traditionalItems": [
+        "Incertidumbre en el valor final",
+        "Tarifas ocultas por cada servicio",
+        "Proceso manual y lento",
+        "Múltiples pagos fragmentados",
+        "Sin garantía de beca real"
+      ],
+      "ourItems": [
+        "Valor total transparente",
+        "Becas de estudio exclusivas",
+        "Mentoría humana dedicada",
+        "Todo en una sola plataforma",
+        "Garantía de aprobación Suaide"
+      ]
+    },
+    "bottomCTA": {
+      "title": "¿Listo para estudiar en los EE. UU.?",
+      "description": "Únase a cientos de estudiantes e inicie su proceso ahora mismo. Su aprobación está más cerca que nunca.",
+      "button": "Iniciar Mi Jornada"
     },
     "successStories": {
       "title": "Historias de Éxito",
