@@ -1,4 +1,6 @@
 import { GraphService } from './services/GraphService';
+import { GraphEmail } from './types/graphTypes';
+import { supabase } from '../lib/supabase';
 
 interface ProcessedEmail {
   id: string;
@@ -14,7 +16,7 @@ export class EmailProcessor {
   private graphService: GraphService;
   private processedEmails: Map<string, ProcessedEmail> = new Map();
 
-  constructor(accessToken: string, aiApiKey?: string) {
+  constructor(accessToken: string) {
     this.graphService = new GraphService(accessToken);
   }
 
@@ -24,7 +26,7 @@ export class EmailProcessor {
     
     try {
       // Buscar emails não lidos com filtro de timestamp se fornecido
-      const emails = await this.graphService.getEmails(20, sinceTimestamp);
+      const emails = await this.graphService.getEmailsFromFolder('inbox', 20);
       const newEmails = emails.value || [];
       
       console.log(`EmailProcessor - Encontrados ${newEmails.length} emails para processar`);
@@ -41,7 +43,7 @@ export class EmailProcessor {
       console.log(`EmailProcessor - Emails já processados no banco: ${processedMessageIds.size}`);
       
       // Filtrar apenas emails não processados
-      const unprocessedEmails = newEmails.filter(email => !processedMessageIds.has(email.id));
+      const unprocessedEmails = newEmails.filter((email: GraphEmail) => !processedMessageIds.has(email.id));
       console.log(`EmailProcessor - Emails novos para processar: ${unprocessedEmails.length}`);
       
       const processedEmails: ProcessedEmail[] = [];
@@ -130,7 +132,7 @@ export class EmailProcessor {
         }
       };
 
-      await this.graphService.sendReply(originalEmail.id, replyMessage);
+      await this.graphService.replyToEmail(originalEmail.id, replyMessage);
       
       // Marcar email original como lido
       await this.graphService.markEmailAsRead(originalEmail.id);
@@ -167,16 +169,20 @@ export class EmailProcessor {
 
   async getProcessedEmailsFromDB(): Promise<{microsoft_message_id: string, status: string, processed_at: string}[]> {
     try {
-      // Fazer requisição para a Edge Function para buscar emails processados
-      const response = await fetch('https://fitpynguasqqutuhzifx.supabase.co/functions/v1/microsoft-email-polling', {
+      const { data: { session } } = await supabase.auth.getSession();
+      const token = session?.access_token;
+      if (!token) return [];
+
+      const SUPABASE_FUNCTIONS_URL = import.meta.env.VITE_SUPABASE_FUNCTIONS_URL || `${import.meta.env.VITE_SUPABASE_URL}/functions/v1`;
+      const response = await fetch(`${SUPABASE_FUNCTIONS_URL}/microsoft-email-polling`, {
         method: 'POST',
         headers: {
-          'Authorization': 'Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImZpdHB5bmd1YXNxcXV0dWh6aWZ4Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NDk0ODM4NTcsImV4cCI6MjA2NTA1OTg1N30.bSm1LTOZ-GUuglbc14X2mcg0Z7cx93ubZq40hRDERQg',
+          'Authorization': `Bearer ${token}`,
           'Content-Type': 'application/json'
         },
         body: JSON.stringify({
           action: 'get_processed_emails',
-          user_id: 'current_user' // Será substituído pelo userId real quando disponível
+          user_id: session.user.id
         })
       });
 
@@ -197,13 +203,15 @@ export class EmailProcessor {
     try {
       console.log('EmailProcessor - Chamando Edge Function para processar email com IA');
       
-      // Obter usuário atual para enviar user_id
-      const { data: { user } } = await supabase.auth.getUser();
-      
-      const response = await fetch('https://fitpynguasqqutuhzifx.supabase.co/functions/v1/microsoft-email-polling', {
+      const { data: { session } } = await supabase.auth.getSession();
+      const token = session?.access_token;
+      if (!token) throw new Error('Sessão inválida');
+
+      const SUPABASE_FUNCTIONS_URL = import.meta.env.VITE_SUPABASE_FUNCTIONS_URL || `${import.meta.env.VITE_SUPABASE_URL}/functions/v1`;
+      const response = await fetch(`${SUPABASE_FUNCTIONS_URL}/microsoft-email-polling`, {
         method: 'POST',
         headers: {
-          'Authorization': 'Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImZpdHB5bmd1YXNxcXV0dWh6aWZ4Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NDk0ODM4NTcsImV4cCI6MjA2NTA1OTg1N30.bSm1LTOZ-GUuglbc14X2mcg0Z7cx93ubZq40hRDERQg',
+          'Authorization': `Bearer ${token}`,
           'Content-Type': 'application/json'
         },
         body: JSON.stringify({
@@ -214,7 +222,7 @@ export class EmailProcessor {
             bodyPreview: email.bodyPreview,
             body: email.body?.content || email.bodyPreview
           },
-          user_id: user?.id // Incluir user_id para buscar prompt da universidade
+          user_id: session.user.id
         })
       });
 
@@ -259,7 +267,7 @@ export class EmailProcessor {
         },
         response: shouldReply ? 
           `Olá!\n\nObrigado pelo seu email. Recebemos sua pergunta e nossa equipe está analisando para fornecer uma resposta detalhada em breve.\n\nSe precisar de informações sobre documentos, pagamentos ou bolsas de estudo, posso ajudar!\n\nAtenciosamente,\nEquipe Matrícula USA` : 
-          null
+          undefined
       };
     }
   }

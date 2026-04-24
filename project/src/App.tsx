@@ -56,9 +56,10 @@ const PrivacyPolicy = React.lazy(() => import('./pages/PrivacyPolicy'));
 const TermsOfService = React.lazy(() => import('./pages/TermsOfService'));
 const ForUniversities = React.lazy(() => import('./pages/ForUniversities'));
 const ForStudents = React.lazy(() => import('./pages/ForStudents'));
-const EmailOAuthCallback = React.lazy(() => import('./pages/EmailOAuthCallback'));
+// FASE 1 DESATIVAÇÃO: imports de email IA comentados
+// const EmailOAuthCallback = React.lazy(() => import('./pages/EmailOAuthCallback'));
+// const MicrosoftCallback = React.lazy(() => import('./pages/MicrosoftCallback'));
 const AuthCallback = React.lazy(() => import('./pages/AuthCallback'));
-const MicrosoftCallback = React.lazy(() => import('./pages/MicrosoftCallback'));
 const Auth323NetworkCallback = React.lazy(() => import('./pages/Auth323NetworkCallback'));
 const UnsubscribeNewsletter = React.lazy(() => import('./pages/UnsubscribeNewsletter'));
 const NotFound = React.lazy(() => import('./pages/NotFound'));
@@ -173,9 +174,10 @@ const AppContent = () => {
           <Route path="/application-fee-cancel" element={<ApplicationFeeCancel />} />
           <Route path="/payment-error" element={<PaymentErrorPage />} />
           <Route path="/scholarship-fee-success" element={<ScholarshipFeeSuccess />} />
-          <Route path="/email-oauth-callback" element={<EmailOAuthCallback />} />
+          {/* FASE 1 DESATIVAÇÃO: rotas de email IA comentadas */}
+          {/* <Route path="/email-oauth-callback" element={<EmailOAuthCallback />} /> */}
+          {/* <Route path="/microsoft-email" element={<MicrosoftCallback />} /> */}
           <Route path="/auth-callback" element={<AuthCallback />} />
-          <Route path="/microsoft-email" element={<MicrosoftCallback />} />
           {/* SSO 323 Network - Suporta ambas as rotas para compatibilidade */}
           <Route path="/auth/callback" element={<Auth323NetworkCallback />} />
           <Route path="/auth/323-network/callback" element={<Auth323NetworkCallback />} />
