@@ -18,12 +18,12 @@ import {
   ChevronDown,
   Shield,
   Brain,
-  Mail,
+  // Mail, // FASE 1 - Inbox removido do menu
   MessageSquare,
   Gift,
   Bell,
   UserCheck,
-  CreditCard,
+  // CreditCard, // Stripe Connect comentado
   DollarSign
 } from 'lucide-react';
 import { useAuth } from '../../hooks/useAuth';
@@ -139,12 +139,13 @@ const SchoolDashboardLayout: React.FC<SchoolDashboardLayoutProps> = ({ user, chi
 
     if (path.includes('/payment-dashboard')) return 'payment-dashboard';
 
-    if (path.includes('/inbox')) return 'inbox';
+    // FASE 1 DESATIVAÇÃO: rotas de email/inbox removidas do menu
+    // if (path.includes('/inbox')) return 'inbox';
+    // if (path.includes('/email')) return 'inbox';
+    // if (path.includes('/microsoft-email')) return 'inbox';
     if (path.includes('/whatsapp')) return 'whatsapp';
     if (path.includes('/global-document-requests')) return 'global-docs';
     if (path.includes('/matricula-rewards')) return 'matricula-rewards';
-    if (path.includes('/email')) return 'inbox';
-    if (path.includes('/microsoft-email')) return 'inbox';
     if (path.includes('/student')) return 'students';
     return 'overview';
   };
@@ -221,7 +222,8 @@ const SchoolDashboardLayout: React.FC<SchoolDashboardLayoutProps> = ({ user, chi
       path: '/school/dashboard/ai-solutions',
       badge: null,
       dropdown: [
-        { id: 'inbox', label: 'Inbox', icon: Mail, path: '/school/dashboard/email', badge: null },
+        // FASE 1 DESATIVAÇÃO: Inbox de email (IA Microsoft/Gmail) removido do menu
+        // { id: 'inbox', label: 'Inbox', icon: Mail, path: '/school/dashboard/email', badge: null },
         { id: 'whatsapp', label: 'WhatsApp AI', icon: MessageSquare, path: '/school/dashboard/whatsapp', badge: null }
       ]
     }
@@ -578,8 +580,8 @@ const SchoolDashboardLayout: React.FC<SchoolDashboardLayoutProps> = ({ user, chi
         </header>
 
         {/* Main Content Area */}
-        <main className={`pt-10 ${location.pathname.includes('/inbox') ? 'px-0 pb-0' : 'px-4 sm:px-6 lg:px-8 pb-6'} max-w-full overflow-y-hidden ${location.pathname.includes('/inbox') ? 'bg-white' : ''}`}>
-          <div className={`${location.pathname.includes('/inbox') ? 'max-w-none mx-1 pt-4 px-0' : 'max-w-7xl mx-auto'}`}>
+        <main className="pt-10 px-4 sm:px-6 lg:px-8 pb-6 max-w-full overflow-y-hidden">
+          <div className="max-w-7xl mx-auto">
             {/* Welcome Message for Incomplete Profiles */}
             {(!university || !university.profile_completed) && !location.pathname.includes('/profile') && (
               <div className="bg-gradient-to-r from-[#05294E] to-blue-700 rounded-2xl p-8 mb-8 text-white relative overflow-hidden">
