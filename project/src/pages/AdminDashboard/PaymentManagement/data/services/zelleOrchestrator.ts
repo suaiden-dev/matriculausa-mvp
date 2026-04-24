@@ -572,7 +572,7 @@ export async function approveZelleFlow(params: {
         });
       }
     } else {
-      await supabase
+      const { data: updateData } = await supabase
         .from("scholarship_applications")
         .update({
           [
@@ -588,7 +588,36 @@ export async function approveZelleFlow(params: {
           updated_at: new Date().toISOString(),
         })
         .eq("student_id", payment.student_id)
+        .neq("status", "rejected") // ✅ CORREÇÃO: Não marcar como paga candidaturas que já foram rejeitadas
         .select();
+
+      // Log para cada candidatura atualizada no modo fallback
+      for (const app of updateData || []) {
+        await supabase.rpc("log_student_action", {
+          p_student_id: finalStudentId,
+          p_action_type: "fee_payment",
+          p_action_description: `${
+            payment.fee_type === "application_fee"
+              ? "Application Fee"
+              : "Scholarship Fee"
+          } paid via Zelle (approved by admin) - fallback mode`,
+          p_performed_by: adminUserId,
+          p_performed_by_type: "admin",
+          p_metadata: {
+            fee_type: payment.fee_type === "application_fee"
+              ? "application"
+              : "scholarship",
+            payment_method: "zelle",
+            amount: payment.amount,
+            payment_id: payment.id,
+            zelle_payment_id: payment.id,
+            mode: "fallback_all_applications",
+            application_id: app.id,
+            scholarship_id: app.scholarship_id,
+            ip: undefined,
+          },
+        });
+      }
 
       const approvedAt = payment.admin_approved_at || payment.created_at;
       const feeType = payment.fee_type === "application_fee"
@@ -606,30 +635,6 @@ export async function approveZelleFlow(params: {
         },
       );
 
-      // ✅ REMOVIDO: Registro de uso do cupom promocional - agora é feito apenas na validação (record-promotional-coupon-validation)
-
-      await supabase.rpc("log_student_action", {
-        p_student_id: finalStudentId,
-        p_action_type: "fee_payment",
-        p_action_description: `${
-          payment.fee_type === "application_fee"
-            ? "Application Fee"
-            : "Scholarship Fee"
-        } paid via Zelle (approved by admin) - fallback mode`,
-        p_performed_by: adminUserId,
-        p_performed_by_type: "admin",
-        p_metadata: {
-          fee_type: payment.fee_type === "application_fee"
-            ? "application"
-            : "scholarship",
-          payment_method: "zelle",
-          amount: payment.amount,
-          payment_id: payment.id,
-          zelle_payment_id: payment.id,
-          mode: "fallback_all_applications",
-          ip: undefined,
-        },
-      });
     }
 
     if (payment.fee_type === "scholarship_fee") {
