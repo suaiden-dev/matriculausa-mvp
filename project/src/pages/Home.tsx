@@ -900,7 +900,7 @@ const Home: React.FC = () => {
           <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 relative z-10">
             <div className="bg-[#05294E] rounded-[3rem] overflow-hidden shadow-2xl flex flex-col lg:flex-row items-stretch">
               {/* Content Side */}
-              <div className="flex-1 p-12 lg:p-20 flex flex-col justify-center text-left">
+              <div className="flex-1 p-12 lg:p-20 flex flex-col justify-center text-left relative z-20 bg-[#05294E] rounded-t-[3rem] lg:rounded-tr-none lg:rounded-l-[3rem]">
                 
                 <h2 className="text-4xl md:text-5xl lg:text-6xl font-black text-white mb-8 leading-tight">
                   Ainda tem <span className="text-blue-400">dúvidas</span> sobre o processo?
@@ -919,7 +919,7 @@ const Home: React.FC = () => {
               </div>
 
               {/* Image Side */}
-              <div className="lg:w-2/5 relative min-h-[400px]">
+              <div className="lg:w-2/5 relative min-h-[400px] -mt-12 lg:mt-0 z-10">
                 <img 
                   src="https://fitpynguasqqutuhzifx.supabase.co/storage/v1/object/public/images/reading-room-library-green-lamps.webp" 
                   alt="Reading Room Library"
@@ -927,7 +927,8 @@ const Home: React.FC = () => {
                 />
                 {/* Overlay gradient to blend with context */}
                 <div className="absolute inset-0 bg-gradient-to-r from-[#05294E] via-transparent to-transparent lg:block hidden"></div>
-                <div className="absolute inset-0 bg-gradient-to-t from-[#05294E] via-transparent to-transparent lg:hidden block"></div>
+                <div className="absolute top-0 left-0 right-0 h-32 bg-gradient-to-b from-[#05294E] via-[#05294E] to-transparent lg:hidden block"></div>
+                <div className="absolute inset-0 bg-[#05294E]/10 lg:hidden block"></div>
               </div>
             </div>
           </div>

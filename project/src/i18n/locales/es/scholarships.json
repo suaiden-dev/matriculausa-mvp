@@ -249,7 +249,6 @@
   },
   "universitiesPage": {
     "header": {
-      "partnerUniversities": "Universidades Asociadas",
       "title": "Universidades Americanas",
       "subtitle": "Descubra instituciones de clase mundial que ofrecen educación excepcional y oportunidades de becas."
     },
@@ -270,9 +269,7 @@
     },
     "loading": "Cargando universidades...",
     "featured": {
-      "title": "Universidades Destacadas",
       "subtitle": "Lo Más Destacado de la Semana",
-      "description": "Descubra las universidades seleccionadas por nuestros expertos para usted",
       "featured": "Destacada",
       "more": "más"
     },
@@ -292,7 +289,7 @@
     "callToAction": {
       "title": "¿Listo para Aplicar a tu",
       "titleHighlight": "Universidad de Ensueño?",
-      "description": "Comience su viaje con nuestra plataforma impulsada por IA y desbloquee oportunidades exclusivas de becas.",
+      "description": "A través de nuestras alianzas directas con universidades estadounidenses, ofrecemos becas exclusivas con valores significativamente más bajos que la competencia.",
       "findScholarships": "Encontrar Becas",
       "learnMore": "Más Información"
     }

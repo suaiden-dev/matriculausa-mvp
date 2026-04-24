@@ -253,7 +253,6 @@
   },
   "universitiesPage": {
     "header": {
-      "partnerUniversities": "Universidades Parceiras",
       "title": "Universidades Americanas",
       "subtitle": "Descubra instituições de classe mundial oferecendo educação excepcional e oportunidades de bolsa."
     },
@@ -274,9 +273,7 @@
     },
     "loading": "Carregando universidades...",
     "featured": {
-      "title": "Universidades em Destaque",
       "subtitle": "Destaques Semanais",
-      "description": "Descubra as universidades selecionadas por nossos especialistas para você",
       "featured": "Destaque",
       "more": "mais"
     },
@@ -296,7 +293,7 @@
     "callToAction": {
       "title": "Pronto para Se Candidatar à Sua",
       "titleHighlight": "Universidade dos Sonhos?",
-      "description": "Comece sua jornada com nossa plataforma com IA e desbloqueie oportunidades exclusivas de bolsa.",
+      "description": "Através de nossas parcerias diretas com universidades americanas, oferecemos bolsas de estudo exclusivas com valores significativamente mais baixos que a concorrência.",
       "findScholarships": "Encontrar Bolsas",
       "learnMore": "Saiba Mais"
     }

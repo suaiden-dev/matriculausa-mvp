@@ -1,7 +1,8 @@
 import React, { useState, useEffect } from 'react';
 import { Link, useNavigate, useLocation } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
-import { Search, MapPin, Sparkles, Building, GraduationCap, ArrowRight, Star, Lock } from 'lucide-react';
+import { Search, MapPin, Building, GraduationCap, ArrowRight, Star, Lock, ArrowDown } from 'lucide-react';
+import { motion } from 'framer-motion';
 import { supabase } from '../lib/supabase';
 import Header from '../components/Header';
 import Footer from '../components/Footer';
@@ -180,29 +181,70 @@ const Universities: React.FC = () => {
     <>
       <Header />
       <div className="bg-white min-h-screen">
-        {/* Header */}
-        <section className="bg-[#05294E] text-white py-16">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="text-center">
-            <div className="inline-flex items-center bg-white/10 backdrop-blur-sm border border-white/20 rounded-full px-4 py-1 mb-6">
-              <Sparkles className="h-3 w-3 mr-2 text-white" />
-              <span className="text-xs font-medium text-white">{t('universitiesPage.header.partnerUniversities')}</span>
-            </div>
-            
-            <h1 className="text-4xl md:text-5xl font-black mb-4 leading-tight">
-              <span className="text-white">{t('universitiesPage.header.title')}</span>
-            </h1>
-            
-            <p className="text-lg text-slate-200 max-w-2xl mx-auto">
-              {t('universitiesPage.header.subtitle')}
-            </p>
+        {/* Hero Section */}
+        <section className="relative bg-[#05294E] min-h-[600px] flex items-center overflow-hidden">
+          {/* Background Elements */}
+          <div className="absolute inset-0 z-0">
+            <div className="absolute top-0 right-0 w-1/2 h-full bg-gradient-to-l from-blue-900/20 to-transparent"></div>
+            <div className="absolute -top-24 -right-24 w-96 h-96 bg-blue-600/10 rounded-full blur-3xl"></div>
           </div>
-        </div>
-      </section>
 
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
-        {/* Search and Filters */}
-        <div className="bg-slate-50 p-6 rounded-2xl mb-8 border border-slate-200">
+          <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 w-full relative z-10 py-20 lg:py-32">
+            <div className="flex flex-col lg:flex-row-reverse items-center gap-12 lg:gap-20">
+              {/* Content Side (Right on Desktop) */}
+              <div className="w-full lg:w-1/2 text-center lg:text-left">
+                <motion.div
+                  initial={{ opacity: 0, x: 50 }}
+                  animate={{ opacity: 1, x: 0 }}
+                  transition={{ duration: 0.8 }}
+                >
+                  <h1 className="text-4xl md:text-5xl lg:text-7xl font-black text-white mb-6 leading-[1.1] tracking-tight">
+                    {t('universitiesPage.header.title')}
+                  </h1>
+                  <p className="text-lg md:text-xl text-blue-100/80 mb-10 leading-relaxed max-w-2xl mx-auto lg:mx-0">
+                    {t('universitiesPage.header.subtitle')}
+                  </p>
+                  <div className="flex flex-col sm:flex-row gap-4 justify-center lg:justify-start">
+                    <button 
+                      onClick={() => document.getElementById('university-search')?.scrollIntoView({ behavior: 'smooth' })}
+                      className="bg-[#D0151C] text-white px-8 py-4 rounded-2xl hover:bg-[#B01218] transition-all duration-300 text-lg font-black shadow-xl hover:scale-105 transform inline-flex items-center justify-center gap-2"
+                    >
+                      Explorar Agora
+                      <ArrowDown className="w-5 h-5 animate-bounce" />
+                    </button>
+                  </div>
+                </motion.div>
+              </div>
+
+              {/* Image Side (Left on Desktop) */}
+              <div className="w-full lg:w-1/2 relative">
+                <motion.div
+                  initial={{ opacity: 0, x: -50, scale: 0.95 }}
+                  animate={{ opacity: 1, x: 0, scale: 1 }}
+                  transition={{ duration: 1 }}
+                  className="relative z-10 rounded-[3rem] overflow-hidden shadow-2xl border border-white/10 group"
+                >
+                  <img 
+                    src="https://fitpynguasqqutuhzifx.supabase.co/storage/v1/object/public/images/university-library-white-columns.webp" 
+                    alt="Biblioteca Universitária" 
+                    className="w-full h-full object-cover aspect-[4/3] lg:aspect-square group-hover:scale-110 transition-transform duration-1000"
+                  />
+                  <div className="absolute inset-0 bg-gradient-to-tr from-[#05294E]/40 via-transparent to-transparent"></div>
+                </motion.div>
+
+                {/* Decorative elements */}
+                <div className="absolute -bottom-10 -left-10 w-40 h-40 bg-blue-500/20 rounded-full blur-3xl"></div>
+                <div className="absolute -top-10 -right-10 w-32 h-32 bg-[#D0151C]/10 rounded-full blur-3xl animate-pulse"></div>
+                
+
+              </div>
+            </div>
+          </div>
+        </section>
+
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+          {/* Search and Filters */}
+          <div id="university-search" className="bg-slate-50 p-6 rounded-2xl mb-8 border border-slate-200">
           <div className="grid grid-cols-1 md:grid-cols-4 gap-4 mb-4">
             {/* Search */}
             <div className="relative">
@@ -262,16 +304,9 @@ const Universities: React.FC = () => {
         {filteredFeaturedUniversities.length > 0 && (
           <div className="mb-12">
             <div className="text-center mb-8">
-              <div className="inline-flex items-center bg-[#05294E]/10 rounded-full px-6 py-2 mb-4">
-                <Star className="h-4 w-4 mr-2 text-[#05294E]" />
-                <span className="text-sm font-bold text-[#05294E]">{t('universitiesPage.featured.title')}</span>
-              </div>
               <h2 className="text-3xl md:text-4xl font-bold text-slate-900 mb-4">
                 <span className="text-[#05294E]">{t('universitiesPage.featured.subtitle')}</span>
               </h2>
-              <p className="text-lg text-slate-600 max-w-2xl mx-auto">
-                {t('universitiesPage.featured.description')}
-              </p>
             </div>
             
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3  gap-6 mb-8">
@@ -543,26 +578,42 @@ const Universities: React.FC = () => {
         )}
 
         {/* Call to Action */}
-        <div className="mt-12 bg-[#05294E] rounded-2xl p-8 text-white text-center">
-          <h2 className="text-2xl font-bold mb-3">
-            {t('universitiesPage.callToAction.title')} <span className="text-[#D0151C]">{t('universitiesPage.callToAction.titleHighlight')}</span>
-          </h2>
-          <p className="text-sm text-slate-200 mb-6 max-w-2xl mx-auto">
-            {t('universitiesPage.callToAction.description')}
-          </p>
-          <div className="flex flex-col sm:flex-row gap-3 justify-center">
-            <Link 
-              to="/scholarships"
-              className="bg-[#D0151C] text-white px-6 py-2 rounded-lg hover:bg-[#B01218] transition-all duration-300 text-sm font-medium"
-            >
-              {t('universitiesPage.callToAction.findScholarships')}
-            </Link>
-            <Link 
-              to="/how-it-works"
-              className="bg-white/10 backdrop-blur-sm border border-white/20 text-white px-6 py-2 rounded-lg hover:bg-white/20 transition-all duration-300 text-sm font-medium"
-            >
-              {t('universitiesPage.callToAction.learnMore')}
-            </Link>
+        <div className="mt-20 bg-[#05294E] rounded-[3.5rem] overflow-hidden shadow-2xl flex flex-col lg:flex-row items-stretch relative group">
+          {/* Content Side */}
+          <div className="flex-1 p-12 lg:p-16 flex flex-col justify-center text-left relative z-20 bg-[#05294E] rounded-t-[3.5rem] lg:rounded-tr-none lg:rounded-l-[3.5rem]">
+            <h2 className="text-3xl md:text-4xl lg:text-5xl font-black text-white mb-6 leading-tight">
+              {t('universitiesPage.callToAction.title')} <span className="text-blue-400">{t('universitiesPage.callToAction.titleHighlight')}</span>
+            </h2>
+            <p className="text-lg text-blue-100 mb-10 max-w-xl leading-relaxed">
+              {t('universitiesPage.callToAction.description')}
+            </p>
+            <div className="flex flex-col sm:flex-row gap-4">
+              <Link 
+                to="/scholarships"
+                className="bg-[#D0151C] text-white px-8 py-4 rounded-2xl hover:bg-[#B01218] transition-all duration-300 text-lg font-black shadow-xl hover:scale-105 transform text-center"
+              >
+                {t('universitiesPage.callToAction.findScholarships')}
+              </Link>
+              <Link 
+                to="/how-it-works"
+                className="bg-white/10 backdrop-blur-sm border border-white/20 text-white px-8 py-4 rounded-2xl hover:bg-white/20 transition-all duration-300 text-lg font-bold text-center"
+              >
+                {t('universitiesPage.callToAction.learnMore')}
+              </Link>
+            </div>
+          </div>
+
+          {/* Image Side */}
+          <div className="w-full lg:w-[40%] relative min-h-[350px] lg:min-h-full overflow-hidden -mt-12 lg:mt-0 z-10">
+            <img 
+              src="https://fitpynguasqqutuhzifx.supabase.co/storage/v1/object/public/images/students-walking-university-campus-autumn.webp" 
+              alt="Estudantes no campus"
+              className="absolute inset-0 w-full h-full object-cover transition-transform duration-1000 group-hover:scale-105"
+            />
+            {/* Overlay gradient to blend with context */}
+            <div className="absolute inset-0 bg-gradient-to-r from-[#05294E] via-[#05294E]/40 to-transparent lg:block hidden z-10"></div>
+            <div className="absolute top-0 left-0 right-0 h-32 bg-gradient-to-b from-[#05294E] via-[#05294E] to-transparent lg:hidden z-10"></div>
+            <div className="absolute inset-0 bg-[#05294E]/10 lg:hidden z-10"></div>
           </div>
         </div>
       </div>

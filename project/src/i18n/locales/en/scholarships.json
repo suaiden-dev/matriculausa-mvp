@@ -252,7 +252,6 @@
   },
   "universitiesPage": {
     "header": {
-      "partnerUniversities": "Partner Universities",
       "title": "American Universities",
       "subtitle": "Discover world-class institutions offering exceptional education and scholarship opportunities."
     },
@@ -273,9 +272,7 @@
     },
     "loading": "Loading universities...",
     "featured": {
-      "title": "Featured Universities",
       "subtitle": "Weekly Highlights",
-      "description": "Discover the universities selected by our experts for you",
       "featured": "Featured",
       "more": "more"
     },
@@ -295,7 +292,7 @@
     "callToAction": {
       "title": "Ready to Apply to Your",
       "titleHighlight": "Dream University?",
-      "description": "Start your journey with our AI-powered platform and unlock exclusive scholarship opportunities.",
+      "description": "Through our direct partnerships with American universities, we offer exclusive scholarships with values significantly lower than the competition.",
       "findScholarships": "Find Scholarships",
       "learnMore": "Learn More"
     }
