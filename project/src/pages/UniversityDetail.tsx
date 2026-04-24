@@ -2,10 +2,9 @@ import React, { useEffect, useState, useRef } from 'react';
 import { useParams, Link } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import { useAuth } from '../hooks/useAuth';
-import { MapPin, ExternalLink, Sparkles, Phone, Mail, Fan as Fax, Edit, Settings } from 'lucide-react';
+import { MapPin, ExternalLink, Phone, Mail, Fan as Fax, Edit, ArrowLeft, GraduationCap } from 'lucide-react';
 import { mockSchools } from '../data/mockData';
 import { supabase } from '../lib/supabase';
-
 import Header from '../components/Header';
 import { slugify } from '../utils/slugify';
 
@@ -14,103 +13,46 @@ const UniversityDetail: React.FC = () => {
   const { slug } = useParams<{ slug: string }>();
   const [university, setUniversity] = useState<any | null>(null);
   const [loading, setLoading] = useState(true);
-  const { user, isAuthenticated } = useAuth();
-
+  const { user } = useAuth();
+  const [showStickyBar, setShowStickyBar] = useState(false);
   const [isEditing, setIsEditing] = useState(false);
   const [saving, setSaving] = useState(false);
   const [uploading, setUploading] = useState(false);
   const [uploadError, setUploadError] = useState<string | null>(null);
   const [successMessage, setSuccessMessage] = useState<string | null>(null);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
-  const [imageUrl, setImageUrl] = useState<string | undefined>(university?.image_url || university?.image || university?.logo_url);
+  const [imageUrl, setImageUrl] = useState<string | undefined>(undefined);
   const [formData, setFormData] = useState({
-    name: university?.name || '',
-    description: university?.description || '',
-    website: university?.website || '',
-    location: university?.location || '',
-    address: university?.address || { street: '', city: '', state: '', zipCode: '', country: '' },
-    contact: university?.contact || { phone: '', email: '', admissionsEmail: '', fax: '' },
-    programs: university?.programs || []
+    name: '',
+    description: '',
+    website: '',
+    location: '',
+    address: { street: '', city: '', state: '', zipCode: '', country: '' },
+    contact: { phone: '', email: '', admissionsEmail: '', fax: '' },
+    programs: [] as string[]
   });
   const [newProgram, setNewProgram] = useState('');
   const fileInputRef = useRef<HTMLInputElement>(null);
-
-  // Verificar se o usuário logado é dono desta universidade
   const isOwner = user?.role === 'school' && university?.user_id === user?.id;
 
   useEffect(() => {
+    const onScroll = () => setShowStickyBar(window.scrollY > 400);
+    window.addEventListener('scroll', onScroll, { passive: true });
+    return () => window.removeEventListener('scroll', onScroll);
+  }, []);
+
+  useEffect(() => {
     const fetchUniversity = async () => {
-      console.log('Fetching university with slug:', slug);
-      console.log('Testing slugify function:', slugify('Adelphi University'));
-      
-      if (!slug) {
-        setUniversity(null);
-        setLoading(false);
-        return;
-      }
-      
-      // Try Supabase first - search by name using the slug
-      const { data, error } = await supabase
-        .from('universities')
-        .select('*')
-        .eq('is_approved', true);
-      
-      console.log('Supabase search result:', { data, error });
-      
+      if (!slug) { setUniversity(null); setLoading(false); return; }
+      const { data } = await supabase.from('universities').select('*').eq('is_approved', true);
       if (data && data.length > 0) {
-        console.log('Available universities:', data.map(u => ({ name: u.name, slug: slugify(u.name) })));
-        
-        // Find the best match by comparing slugified names
-        const bestMatch = data.find(uni => slugify(uni.name) === slug);
-        console.log('Best match found:', bestMatch);
-        
-        if (bestMatch) {
-          setUniversity(bestMatch);
-          setLoading(false);
-          return;
-        }
-        
-        // If no exact match, try partial matching
-        const partialMatch = data.find(uni => {
-          const uniSlug = slugify(uni.name);
-          return uniSlug.includes(slug) || slug.includes(uniSlug);
-        });
-        
-        if (partialMatch) {
-          console.log('Partial match found:', partialMatch);
-          setUniversity(partialMatch);
-          setLoading(false);
-          return;
-        }
-        
-        // If no match at all, try fuzzy matching
-        const fuzzyMatch = data.find(uni => {
-          const uniName = uni.name.toLowerCase();
-          const searchName = slug.replace(/-/g, ' ').toLowerCase();
-          return uniName.includes(searchName) || searchName.includes(uniName);
-        });
-        
-        if (fuzzyMatch) {
-          console.log('Fuzzy match found:', fuzzyMatch);
-          setUniversity(fuzzyMatch);
-          setLoading(false);
-          return;
-        }
-        
-        // If no match at all, use the first result as fallback
-        console.log('No match found, using first result:', data[0]);
-        setUniversity(data[0]);
+        const best = data.find(u => slugify(u.name) === slug)
+          || data.find(u => { const s = slugify(u.name); return s.includes(slug) || slug.includes(s); })
+          || data.find(u => { const n = u.name.toLowerCase(); const q = slug.replace(/-/g, ' ').toLowerCase(); return n.includes(q) || q.includes(n); })
+          || data[0];
+        setUniversity(best);
       } else {
-        // Try mock as fallback
-        console.log('No Supabase results, trying mock data');
-        const uni = mockSchools.find(school => slugify(school.name) === slug);
-        if (uni) {
-          console.log('Found in mock data:', uni);
-          setUniversity(uni);
-        } else {
-          console.log('University not found in mock data either');
-          setUniversity(null);
-        }
+        setUniversity(mockSchools.find(s => slugify(s.name) === slug) || null);
       }
       setLoading(false);
     };
@@ -118,133 +60,89 @@ const UniversityDetail: React.FC = () => {
   }, [slug]);
 
   useEffect(() => {
+    if (!university) return;
     setFormData({
-      name: university?.name || '',
-      description: university?.description || '',
-      website: university?.website || '',
-      location: university?.location || '',
+      name: university.name || '',
+      description: university.description || '',
+      website: university.website || '',
+      location: university.location || '',
+      address: university.address || { street: '', city: '', state: '', zipCode: '', country: '' },
+      contact: university.contact || { phone: '', email: '', admissionsEmail: '', fax: '' },
+      programs: university.programs || []
+    });
+    setImageUrl(university.banner_url || university.image_url || university.image || university.logo_url);
+  }, [university]);
+
+  const handleCancel = () => {
+    setIsEditing(false);
+    setFormData({
+      name: university?.name || '', description: university?.description || '',
+      website: university?.website || '', location: university?.location || '',
       address: university?.address || { street: '', city: '', state: '', zipCode: '', country: '' },
       contact: university?.contact || { phone: '', email: '', admissionsEmail: '', fax: '' },
       programs: university?.programs || []
     });
     setImageUrl(university?.banner_url || university?.image_url || university?.image || university?.logo_url);
-  }, [university]);
+    setUploadError(null); setErrorMessage(null); setSuccessMessage(null);
+  };
 
-  const handleEditClick = () => setIsEditing(true);
-  const handleCancel = () => {
-    setIsEditing(false);
-    setFormData({
-      name: university?.name || '',
-      description: university?.description || '',
-      website: university?.website || '',
-      location: university?.location || '',
-      address: university?.address || { street: '', city: '', state: '', zipCode: '', country: '' },
-      contact: university?.contact || { phone: '', email: '', admissionsEmail: '', fax: '' },
-      programs: university?.programs || []
-    });
-    setImageUrl(university?.image_url || university?.image || university?.logo_url);
-    setUploadError(null);
-    setErrorMessage(null);
-    setSuccessMessage(null);
-  };
-  const handleInputChange = (field: string, value: any) => {
-    setFormData((prev: any) => ({ ...prev, [field]: value }));
-  };
-  const handleAddressChange = (field: string, value: string) => {
-    setFormData((prev: any) => ({ ...prev, address: { ...prev.address, [field]: value } }));
-  };
-  const handleContactChange = (field: string, value: string) => {
-    setFormData((prev: any) => ({ ...prev, contact: { ...prev.contact, [field]: value } }));
-  };
+  const handleInputChange = (field: string, value: any) =>
+    setFormData((p: any) => ({ ...p, [field]: value }));
+  const handleAddressChange = (field: string, value: string) =>
+    setFormData((p: any) => ({ ...p, address: { ...p.address, [field]: value } }));
+  const handleContactChange = (field: string, value: string) =>
+    setFormData((p: any) => ({ ...p, contact: { ...p.contact, [field]: value } }));
   const handleAddProgram = () => {
     if (newProgram.trim()) {
-      setFormData((prev: any) => ({ ...prev, programs: [...prev.programs, newProgram.trim()] }));
+      setFormData((p: any) => ({ ...p, programs: [...p.programs, newProgram.trim()] }));
       setNewProgram('');
     }
   };
-  const handleRemoveProgram = (index: number) => {
-    setFormData((prev: any) => ({ ...prev, programs: prev.programs.filter((_: any, i: number) => i !== index) }));
-  };
+  const handleRemoveProgram = (i: number) =>
+    setFormData((p: any) => ({ ...p, programs: p.programs.filter((_: any, idx: number) => idx !== i) }));
+
   const handleBannerChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file || !university) return;
-    setUploading(true);
-    setUploadError(null);
+    setUploading(true); setUploadError(null);
     try {
-      const fileExt = file.name.split('.').pop();
-      const fileName = `university_${university.id}_${Date.now()}.${fileExt}`;
-      const { error: uploadError } = await supabase.storage
-        .from('university-profile-pictures')
-        .upload(fileName, file, { upsert: true });
-      if (uploadError) throw uploadError;
-      const { data: publicUrlData } = supabase.storage
-        .from('university-profile-pictures')
-        .getPublicUrl(fileName);
-      const publicUrl = publicUrlData?.publicUrl;
-      if (!publicUrl) throw new Error('Could not get image URL');
-      setImageUrl(publicUrl);
-    } catch (err: any) {
-      setUploadError(t('universityDetailPage.messages.uploadError'));
-    } finally {
-      setUploading(false);
-    }
+      const ext = file.name.split('.').pop();
+      const name = `university_${university.id}_${Date.now()}.${ext}`;
+      const { error: upErr } = await supabase.storage.from('university-profile-pictures').upload(name, file, { upsert: true });
+      if (upErr) throw upErr;
+      const { data: urlData } = supabase.storage.from('university-profile-pictures').getPublicUrl(name);
+      if (!urlData?.publicUrl) throw new Error('No URL');
+      setImageUrl(urlData.publicUrl);
+    } catch { setUploadError(t('universityDetailPage.messages.uploadError')); }
+    finally { setUploading(false); }
   };
+
   const handleSave = async () => {
     if (!university) return;
-    setSaving(true);
-    setErrorMessage(null);
-    setSuccessMessage(null);
+    setSaving(true); setErrorMessage(null); setSuccessMessage(null);
     try {
-      // Montar updateData apenas com campos válidos, igual ao ProfileManagement
-      const updateData = {
-        name: formData.name.trim(),
-        description: formData.description.trim() || null,
-        website: formData.website.trim() || null,
-        location: formData.location.trim() || null,
-        address: formData.address,
-        contact: formData.contact,
-        programs: formData.programs,
-        image_url: imageUrl,
-        updated_at: new Date().toISOString()
-      };
-      // LOGS PARA DEBUG
-      console.log('USER:', user);
-      console.log('isAuthenticated:', isAuthenticated);
-      console.log('updateData enviado para o Supabase:', updateData);
-      // Não enviar id, user_id, type, created_at, is_approved, terms_accepted, profile_completed
-      const { error } = await supabase
-        .from('universities')
-        .update(updateData)
-        .eq('id', university.id);
-      if (error) {
-        console.error('Erro do Supabase:', error);
-        throw error;
-      }
+      const { error } = await supabase.from('universities').update({
+        name: formData.name.trim(), description: formData.description.trim() || null,
+        website: formData.website.trim() || null, location: formData.location.trim() || null,
+        address: formData.address, contact: formData.contact, programs: formData.programs,
+        image_url: imageUrl, updated_at: new Date().toISOString()
+      }).eq('id', university.id);
+      if (error) throw error;
       setIsEditing(false);
       setSuccessMessage(t('universityDetailPage.editProfile.successMessage'));
       setTimeout(() => setSuccessMessage(null), 3000);
-      // Recarregar dados
-      const { data } = await supabase
-        .from('universities')
-        .select('*')
-        .eq('id', university.id);
-      if (data && data.length > 0) setUniversity(data[0]);
-    } catch (error: any) {
-      setErrorMessage(t('universityDetailPage.editProfile.errorMessage'));
-      console.error('Erro no catch do update:', error);
-    } finally {
-      setSaving(false);
-    }
+      const { data } = await supabase.from('universities').select('*').eq('id', university.id);
+      if (data?.[0]) setUniversity(data[0]);
+    } catch { setErrorMessage(t('universityDetailPage.editProfile.errorMessage')); }
+    finally { setSaving(false); }
   };
-
-
 
   if (loading) {
     return (
-      <div className="min-h-screen bg-gray-50 flex items-center justify-center">
+      <div className="min-h-screen bg-stone-50 flex items-center justify-center">
         <div className="text-center">
-          <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-[#05294E] mx-auto mb-4"></div>
-          <p className="text-gray-600">{t('universityDetailPage.loading')}</p>
+          <div className="w-10 h-10 border-2 border-stone-800 border-t-transparent rounded-full animate-spin mx-auto mb-6"></div>
+          <p className="text-stone-400 text-xs tracking-[0.3em] uppercase">{t('universityDetailPage.loading')}</p>
         </div>
       </div>
     );
@@ -252,10 +150,11 @@ const UniversityDetail: React.FC = () => {
 
   if (!university) {
     return (
-      <div className="min-h-screen bg-gray-50 flex items-center justify-center">
+      <div className="min-h-screen bg-stone-50 flex items-center justify-center">
         <div className="text-center">
-          <h1 className="text-2xl font-bold text-gray-900 mb-4">{t('universityDetailPage.notFound.title')}</h1>
-          <Link to="/schools" className="text-[#05294E] hover:underline">
+          <p className="text-stone-300 text-xs tracking-[0.3em] uppercase mb-4">404</p>
+          <h1 className="text-3xl font-black text-stone-900 mb-6">{t('universityDetailPage.notFound.title')}</h1>
+          <Link to="/schools" className="text-sm text-stone-500 hover:text-stone-900 underline underline-offset-4 transition-colors">
             {t('universityDetailPage.notFound.backLink')}
           </Link>
         </div>
@@ -263,359 +162,296 @@ const UniversityDetail: React.FC = () => {
     );
   }
 
-  // Fallbacks for missing fields in real data
-  const programs = university.programs || [];
-  const address = typeof university.address === 'string'
-    ? { street: university.address }
-    : university.address || {};
+  const programs: string[] = university.programs || [];
+  const address = typeof university.address === 'string' ? { street: university.address } : university.address || {};
   const contact = university.contact || {};
 
   return (
     <>
       <Header />
-    <div className="min-h-screen bg-white">
-      {/* Success/Error Messages */}
-      {(successMessage || errorMessage) && (
-        <div className="bg-white border-b border-gray-200">
-          <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-4">
-            {successMessage && <div className="text-green-600">{successMessage}</div>}
-            {errorMessage && <div className="text-red-600">{errorMessage}</div>}
-          </div>
-        </div>
-      )}
+      <div className="min-h-screen bg-stone-50">
 
-      {/* Hero Section */}
-      <section className="relative h-80 overflow-hidden">
-        <img
-          src={university.banner_url || university.image_url || '/university-placeholder.png'}
-          alt={`${formData.name} campus`}
-          className="w-full h-full object-cover"
-        />
-        <div className="absolute inset-0 bg-black/40"></div>
-        
-        {/* Edit Controls - Top Right */}
-        {isOwner && (
-          <div className="absolute top-4 right-4 z-10 flex flex-col gap-2">
-            {isEditing ? (
-              <>
-                <div className="flex gap-2">
-                  <button
-                    onClick={handleSave}
-                    disabled={saving}
-                    className="inline-flex items-center px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors text-sm font-medium shadow-lg"
-                  >
-                    {t('universityDetailPage.editProfile.saveButton')}
-                  </button>
-                  <button
-                    onClick={handleCancel}
-                    disabled={saving}
-                    className="inline-flex items-center px-4 py-2 bg-gray-200 text-gray-700 rounded-lg hover:bg-gray-300 transition-colors text-sm font-medium shadow-lg"
-                  >
-                    {t('universityDetailPage.editProfile.cancelButton')}
-                  </button>
-                </div>
-                <input
-                  type="file"
-                  accept="image/*"
-                  ref={fileInputRef}
-                  onChange={handleBannerChange}
-                  className="hidden"
-                  id="banner-upload"
-                  disabled={uploading}
-                />
-                <label
-                  htmlFor="banner-upload"
-                  className="bg-white/90 text-[#05294E] px-4 py-2 rounded-lg shadow-lg hover:bg-white transition-colors text-sm font-medium cursor-pointer flex items-center justify-center"
-                  title={t('universityDetailPage.placeholders.uploadBanner', 'Upload university banner image')}
-                >
-                  {uploading ? t('universityDetailPage.editProfile.uploadingBanner') : t('universityDetailPage.editProfile.changeBanner')}
-                </label>
-                {uploadError && <div className="text-red-600 text-xs mt-1 bg-white/90 px-2 py-1 rounded">{uploadError}</div>}
-              </>
-            ) : (
-              <button
-                onClick={handleEditClick}
-                className="inline-flex items-center px-4 py-2 bg-[#05294E] text-white rounded-lg hover:bg-[#05294E]/90 transition-colors text-sm font-medium shadow-lg"
-              >
-                <Edit className="h-4 w-4 mr-2" />
-                {t('universityDetailPage.editProfile.editButton')}
-              </button>
-            )}
+        {/* Feedback toast */}
+        {(successMessage || errorMessage) && (
+          <div className={`fixed top-20 right-6 z-50 px-5 py-3 rounded-xl shadow-xl text-sm font-medium transition-all ${successMessage ? 'bg-emerald-600 text-white' : 'bg-red-600 text-white'}`}>
+            {successMessage || errorMessage}
           </div>
         )}
-        <div className="absolute inset-0 flex items-end">
-          <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 pb-8 w-full">
-            
-            <div className="text-white">
-              {/* Badges com Backdrop Blur */}
-              <div className="flex items-center space-x-3 mb-4">
-                {isOwner && (
-                  <span className="bg-blue-500/90 backdrop-blur-md border border-white/20 text-white px-3 py-2 rounded-full text-sm font-medium flex items-center shadow-lg">
-                    <Settings className="h-3 w-3 mr-1" />
-                    {t('universityDetailPage.editProfile.yourUniversity')}
-                  </span>
+
+        {/* ── HERO — Magazine Cover ── */}
+        <section className="relative min-h-[90vh] flex flex-col overflow-hidden bg-stone-950">
+          {/* Subtle texture/glow */}
+          <div className="absolute inset-0 bg-gradient-to-br from-stone-900 via-stone-950 to-stone-950" />
+          <div className="absolute top-0 right-0 w-[600px] h-[600px] bg-blue-900/10 rounded-full blur-[120px] pointer-events-none" />
+          <div className="absolute bottom-0 left-0 w-[400px] h-[400px] bg-stone-800/30 rounded-full blur-[100px] pointer-events-none" />
+
+          {/* Top bar */}
+          <div className="relative z-10 flex items-center justify-between px-6 lg:px-14 pt-24 lg:pt-28">
+            <Link to="/schools" className="flex items-center gap-2 text-white/40 hover:text-white/80 text-sm tracking-wide transition-colors">
+              <ArrowLeft className="w-4 h-4" />
+              {t('universityDetailPage.notFound.backLink')}
+            </Link>
+
+            {isOwner && (
+              <div className="flex items-center gap-2">
+                {isEditing ? (
+                  <>
+                    <button onClick={handleSave} disabled={saving}
+                      className="px-5 py-2 bg-white text-stone-900 rounded-xl text-sm font-semibold hover:bg-stone-100 transition-colors shadow-lg disabled:opacity-50">
+                      {saving ? 'Salvando...' : t('universityDetailPage.editProfile.saveButton')}
+                    </button>
+                    <button onClick={handleCancel} disabled={saving}
+                      className="px-5 py-2 bg-white/10 text-white rounded-xl text-sm font-semibold hover:bg-white/20 transition-colors border border-white/20 backdrop-blur-sm">
+                      {t('universityDetailPage.editProfile.cancelButton')}
+                    </button>
+                    <input type="file" accept="image/*" ref={fileInputRef} onChange={handleBannerChange} className="hidden" id="banner-upload" disabled={uploading} />
+                    <label htmlFor="banner-upload"
+                      className="px-5 py-2 bg-white/10 text-white rounded-xl text-sm font-semibold hover:bg-white/20 transition-colors border border-white/20 backdrop-blur-sm cursor-pointer">
+                      {uploading ? t('universityDetailPage.editProfile.uploadingBanner') : t('universityDetailPage.editProfile.changeBanner')}
+                    </label>
+                    {uploadError && <p className="text-red-300 text-xs">{uploadError}</p>}
+                  </>
+                ) : (
+                  <button onClick={() => setIsEditing(true)}
+                    className="flex items-center gap-2 px-5 py-2 bg-white/10 text-white rounded-xl text-sm font-semibold hover:bg-white/20 transition-colors border border-white/20 backdrop-blur-sm">
+                    <Edit className="w-4 h-4" />
+                    {t('universityDetailPage.editProfile.editButton')}
+                  </button>
                 )}
               </div>
-              
-              {/* Nome da Universidade com Backdrop Blur */}
-              <div className="mb-3">
+            )}
+          </div>
+
+          {/* Hero content — magazine layout */}
+          <div className="relative z-10 mt-auto px-6 lg:px-14 pb-16 lg:pb-24">
+            <div className="flex flex-col lg:flex-row items-end gap-10 lg:gap-16">
+              {/* Left: Text */}
+              <div className="flex-1">
+                <p className="text-[10px] text-white/30 tracking-[0.5em] uppercase mb-6">
+                  {university.type || 'University'}
+                </p>
+
                 {isEditing ? (
-                  <input
-                    type="text"
-                    value={formData.name}
+                  <input type="text" value={formData.name}
                     onChange={e => handleInputChange('name', e.target.value)}
-                    className="text-4xl md:text-5xl font-black w-full bg-white/95 backdrop-blur-sm text-[#05294E] rounded-xl px-6 py-4 shadow-2xl border-2 border-white/30 focus:outline-none focus:ring-4 focus:ring-white/50 focus:border-white transition-all duration-300"
+                    className="text-4xl md:text-5xl font-black w-full bg-white/10 backdrop-blur-sm text-white rounded-2xl px-6 py-4 border border-white/20 focus:outline-none focus:border-white/50 transition-all mb-6 block"
                     placeholder={t('universityDetailPage.placeholders.universityName')}
                   />
                 ) : (
-                  <div className="relative group">
-                    {/* Card com backdrop blur atrás do texto */}
-                    <div className="bg-black/40 backdrop-blur-md rounded-xl px-6 py-4 inline-block">
-                      <h1 className="text-4xl md:text-5xl font-black text-white">
-                        {university.name}
-                      </h1>
-                    </div>
-                  </div>
+                  <h1 className="text-5xl md:text-6xl lg:text-7xl font-black text-white leading-none tracking-tighter mb-6">
+                    {university.name}
+                  </h1>
                 )}
+
+                <div className="flex items-center gap-2 text-white/40">
+                  <MapPin className="w-4 h-4 shrink-0" />
+                  {isEditing ? (
+                    <input type="text" value={formData.location}
+                      onChange={e => handleInputChange('location', e.target.value)}
+                      className="bg-white/10 text-white rounded-lg px-4 py-2 border border-white/20 focus:outline-none focus:border-white/50 text-sm w-72 backdrop-blur-sm"
+                      placeholder={t('universityDetailPage.placeholders.location')}
+                    />
+                  ) : (
+                    <span className="text-sm tracking-wide">{university.location}</span>
+                  )}
+                </div>
               </div>
-              
-              {/* Localização com Backdrop Blur */}
-              <div className="flex items-center text-lg">
-                <MapPin className="h-5 w-5 mr-2 drop-shadow-[0_2px_4px_rgba(0,0,0,0.8)]" />
-                {isEditing ? (
-                  <input
-                    type="text"
-                    value={formData.location}
-                    onChange={e => handleInputChange('location', e.target.value)}
-                    className="bg-white/95 backdrop-blur-sm text-[#05294E] rounded-lg px-4 py-2 w-1/2 shadow-lg border-2 border-white/30 focus:outline-none focus:ring-2 focus:ring-white/50 focus:border-white transition-all duration-300"
-                    placeholder={t('universityDetailPage.placeholders.location')}
+
+              {/* Right: Logo/Image in controlled frame */}
+              {imageUrl && !isEditing && (
+                <div className="shrink-0 w-40 h-40 lg:w-52 lg:h-52 rounded-3xl overflow-hidden bg-white/5 border border-white/10 flex items-center justify-center p-4">
+                  <img
+                    src={imageUrl}
+                    alt={university.name}
+                    className="w-full h-full object-contain"
                   />
-                ) : (
-                  <div className="bg-black/40 backdrop-blur-md rounded-lg px-4 py-2 inline-block">
-                    <span className="text-white font-medium">
-                      {university.location}
-                    </span>
-                  </div>
-                )}
-              </div>
+                </div>
+              )}
             </div>
           </div>
-        </div>
-      </section>
+        </section>
 
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-12">
-        <div className="grid grid-cols-1 lg:grid-cols-3 gap-12">
-          {/* Main Content */}
-          <div className="lg:col-span-2 space-y-8">
-            {/* About */}
-            <section>
-              <div className="flex items-center justify-between mb-4">
-                <h2 className="text-2xl font-bold text-gray-900">{t('universityDetailPage.sections.about')}</h2>
-              </div>
+        {/* ── CONTENT — Stacked Sections ── */}
+        <div className="max-w-3xl mx-auto px-6 lg:px-8 pb-40">
+
+          {/* About */}
+          {(university.description || isEditing) && (
+            <section className="py-16 lg:py-20 border-b border-stone-200">
+              <p className="text-[10px] text-stone-400 tracking-[0.4em] uppercase mb-10">
+                {t('universityDetailPage.sections.about')}
+              </p>
               {isEditing ? (
-                <textarea
-                  value={formData.description}
+                <textarea value={formData.description}
                   onChange={e => handleInputChange('description', e.target.value)}
-                  className="w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-[#05294E] focus:border-[#05294E] transition-all duration-200"
-                  rows={4}
-                  placeholder={t('universityDetailPage.placeholders.description')}
+                  className="w-full px-5 py-4 bg-white border border-stone-200 rounded-2xl focus:outline-none focus:ring-2 focus:ring-stone-900 transition-all text-stone-700 leading-relaxed text-lg resize-none"
+                  rows={6} placeholder={t('universityDetailPage.placeholders.description')}
                 />
               ) : (
-                <p className="text-gray-600 leading-relaxed">
+                <p className="text-xl lg:text-2xl text-stone-500 leading-relaxed font-light">
                   {university.description}
                 </p>
               )}
             </section>
+          )}
 
-            {/* Programs */}
-            <section>
-              <div className="flex items-center justify-between mb-4">
-                <h2 className="text-2xl font-bold text-gray-900">{t('universityDetailPage.sections.academicPrograms')}</h2>
-              </div>
+          {/* Programs */}
+          {(programs.length > 0 || isEditing) && (
+            <section className="py-16 lg:py-20 border-b border-stone-200">
+              <p className="text-[10px] text-stone-400 tracking-[0.4em] uppercase mb-10">
+                {t('universityDetailPage.sections.academicPrograms')}
+              </p>
               {isEditing ? (
                 <div>
-                  <div className="flex gap-2 mb-2">
-                    <input
-                      type="text"
-                      value={newProgram}
+                  <div className="flex gap-3 mb-6">
+                    <input type="text" value={newProgram}
                       onChange={e => setNewProgram(e.target.value)}
-                      className="px-2 py-1 border border-slate-200 rounded-lg"
+                      onKeyDown={e => e.key === 'Enter' && handleAddProgram()}
+                      className="flex-1 px-4 py-3 bg-white border border-stone-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-stone-900 text-sm"
                       placeholder={t('universityDetailPage.placeholders.addNewProgram')}
                     />
-                    <button
-                      type="button"
-                      onClick={handleAddProgram}
-                      className="bg-[#05294E] text-white px-3 py-1 rounded-lg"
-                    >
+                    <button type="button" onClick={handleAddProgram}
+                      className="px-5 py-3 bg-stone-900 text-white rounded-xl text-sm font-semibold hover:bg-stone-700 transition-colors">
                       {t('universityDetailPage.buttons.add')}
                     </button>
                   </div>
-                  <div className="grid grid-cols-2 md:grid-cols-3 gap-3">
-                    {formData.programs.length > 0 ? formData.programs.map((program: string, index: number) => (
-                      <div key={index} className="bg-gray-50 px-4 py-2 rounded-lg text-sm font-medium text-gray-700 text-center flex items-center justify-between">
-                        <span>{program}</span>
-                        <button
-                          type="button"
-                          onClick={() => handleRemoveProgram(index)}
-                          className="ml-2 text-red-500 hover:text-red-700"
-                        >
+                  <div className="space-y-1">
+                    {formData.programs.map((p: string, i: number) => (
+                      <div key={i} className="flex items-center justify-between py-3 px-4 rounded-xl bg-stone-100 group">
+                        <span className="text-stone-700 text-sm">{p}</span>
+                        <button onClick={() => handleRemoveProgram(i)} className="text-stone-300 hover:text-red-500 text-xs transition-colors">
                           {t('universityDetailPage.buttons.remove')}
                         </button>
                       </div>
-                    )) : <div className="text-gray-400 col-span-2 md:col-span-3">{t('universityDetailPage.messages.noProgramsListed')}</div>}
+                    ))}
                   </div>
                 </div>
               ) : (
-                <div className="grid grid-cols-2 md:grid-cols-3 gap-3">
-                  {programs.length > 0 ? programs.map((program: string, index: number) => (
-                    <div 
-                      key={index}
-                      className="bg-gray-50 px-4 py-2 rounded-lg text-sm font-medium text-gray-700 text-center"
-                    >
-                      {program}
+                <div className="divide-y divide-stone-100">
+                  {programs.map((program, i) => (
+                    <div key={i} className="flex items-center gap-6 py-5 group hover:bg-stone-100/60 -mx-4 px-4 rounded-xl transition-colors cursor-default">
+                      <span className="text-xs text-stone-300 font-mono w-5 shrink-0">{String(i + 1).padStart(2, '0')}</span>
+                      <span className="text-stone-600 font-medium group-hover:text-stone-900 transition-colors">{program}</span>
+                      <GraduationCap className="w-4 h-4 text-stone-200 group-hover:text-stone-400 transition-colors ml-auto shrink-0" />
                     </div>
-                  )) : <div className="text-gray-400 col-span-2 md:col-span-3">{t('universityDetailPage.messages.noProgramsListed')}</div>}
+                  ))}
                 </div>
               )}
             </section>
-          </div>
+          )}
 
-          {/* Sidebar */}
-          <div className="space-y-6">
-            {/* Contact Information */}
-            <div className="bg-gray-50 rounded-xl p-6">
-              <div className="flex items-center justify-between mb-4">
-                <h3 className="text-lg font-bold text-gray-900">{t('universityDetailPage.sections.contactInformation')}</h3>
-              </div>
-              {/* Address */}
-              <div className="mb-4">
-                <h4 className="text-sm font-semibold text-gray-700 mb-2">{t('universityDetailPage.sections.address')}</h4>
-                {isEditing ? (
-                  <div className="grid grid-cols-1 gap-2">
-                    <input
-                      type="text"
-                      value={formData.address.street}
-                      onChange={e => handleAddressChange('street', e.target.value)}
-                      className="px-2 py-1 border border-slate-200 rounded-lg"
-                      placeholder={t('universityDetailPage.placeholders.street')}
+          {/* Contact */}
+          {(Object.values(contact).some(Boolean) || Object.values(address).some(Boolean) || isEditing) && (
+            <section className="py-16 lg:py-20">
+              <p className="text-[10px] text-stone-400 tracking-[0.4em] uppercase mb-10">
+                {t('universityDetailPage.sections.contactInformation')}
+              </p>
+              {isEditing ? (
+                <div className="space-y-4">
+                  <p className="text-xs text-stone-500 font-semibold uppercase tracking-widest">{t('universityDetailPage.sections.address')}</p>
+                  {['street', 'city', 'state', 'zipCode', 'country'].map(f => (
+                    <input key={f} type="text" value={(formData.address as any)[f]}
+                      onChange={e => handleAddressChange(f, e.target.value)}
+                      className="w-full px-4 py-3 bg-white border border-stone-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-stone-900 text-sm"
+                      placeholder={t(`universityDetailPage.placeholders.${f}`, f)}
                     />
-                    <div className="flex gap-2">
-                      <input
-                        type="text"
-                        value={formData.address.city}
-                        onChange={e => handleAddressChange('city', e.target.value)}
-                        className="px-2 py-1 border border-slate-200 rounded-lg w-1/2"
-                        placeholder={t('universityDetailPage.placeholders.city')}
-                      />
-                      <input
-                        type="text"
-                        value={formData.address.state}
-                        onChange={e => handleAddressChange('state', e.target.value)}
-                        className="px-2 py-1 border border-slate-200 rounded-lg w-1/4"
-                        placeholder={t('universityDetailPage.placeholders.state')}
-                      />
-                      <input
-                        type="text"
-                        value={formData.address.zipCode}
-                        onChange={e => handleAddressChange('zipCode', e.target.value)}
-                        className="px-2 py-1 border border-slate-200 rounded-lg w-1/4"
-                        placeholder={t('universityDetailPage.placeholders.zipCode')}
-                      />
-                    </div>
-                    <input
-                      type="text"
-                      value={formData.address.country}
-                      onChange={e => handleAddressChange('country', e.target.value)}
-                      className="px-2 py-1 border border-slate-200 rounded-lg"
-                      placeholder={t('universityDetailPage.placeholders.country')}
+                  ))}
+                  <p className="text-xs text-stone-500 font-semibold uppercase tracking-widest pt-4">{t('universityDetailPage.sections.contactInformation')}</p>
+                  {['phone', 'email', 'admissionsEmail', 'fax'].map(f => (
+                    <input key={f} type="text" value={(formData.contact as any)[f]}
+                      onChange={e => handleContactChange(f, e.target.value)}
+                      className="w-full px-4 py-3 bg-white border border-stone-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-stone-900 text-sm"
+                      placeholder={t(`universityDetailPage.contact.${f}`, f)}
                     />
-                  </div>
-                ) : (
-                  <div className="text-sm text-gray-600 space-y-1">
-                    <p>{address.street}</p>
-                    <p>{address.city}{address.city && address.state ? ',' : ''} {address.state} {address.zipCode}</p>
-                    <p>{address.country}</p>
-                  </div>
-                )}
-              </div>
-              {/* Contact Details */}
-              <div className="space-y-3">
-                {['phone', 'email', 'admissionsEmail', 'fax'].map((field) => (
-                  <div className="flex items-center" key={field}>
-                    {field === 'phone' && <Phone className="h-4 w-4 mr-3 text-[#05294E]" />}
-                    {field === 'email' && <Mail className="h-4 w-4 mr-3 text-[#05294E]" />}
-                    {field === 'admissionsEmail' && <Mail className="h-4 w-4 mr-3 text-[#D0151C]" />}
-                    {field === 'fax' && <Fax className="h-4 w-4 mr-3 text-gray-500" />}
+                  ))}
+                </div>
+              ) : (
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-10">
+                  {/* Address block */}
+                  {Object.values(address).some(Boolean) && (
                     <div>
-                      <div className="text-sm font-medium text-gray-700 capitalize">{t(`universityDetailPage.contact.${field}`)}</div>
-                      {isEditing ? (
-                        <input
-                          type="text"
-                          value={formData.contact[field]}
-                          onChange={e => handleContactChange(field, e.target.value)}
-                          className="px-2 py-1 border border-slate-200 rounded-lg"
-                          placeholder={t(`universityDetailPage.contact.${field}`)}
-                        />
-                      ) : (
-                        <div className="text-sm text-gray-600">{contact[field]}</div>
+                      <p className="text-xs text-stone-400 tracking-[0.3em] uppercase mb-4">{t('universityDetailPage.sections.address')}</p>
+                      <div className="space-y-1 text-stone-600">
+                        {address.street && <p>{address.street}</p>}
+                        {(address.city || address.state) && (
+                          <p>{[address.city, address.state, address.zipCode].filter(Boolean).join(', ')}</p>
+                        )}
+                        {address.country && <p>{address.country}</p>}
+                      </div>
+                    </div>
+                  )}
+                  {/* Contact block */}
+                  {Object.values(contact).some(Boolean) && (
+                    <div className="space-y-4">
+                      {contact.phone && (
+                        <div className="flex items-start gap-3">
+                          <Phone className="w-4 h-4 text-stone-400 mt-0.5 shrink-0" />
+                          <div>
+                            <p className="text-[10px] text-stone-400 tracking-widest uppercase mb-0.5">{t('universityDetailPage.contact.phone')}</p>
+                            <p className="text-stone-700 text-sm">{contact.phone}</p>
+                          </div>
+                        </div>
+                      )}
+                      {contact.email && (
+                        <div className="flex items-start gap-3">
+                          <Mail className="w-4 h-4 text-stone-400 mt-0.5 shrink-0" />
+                          <div>
+                            <p className="text-[10px] text-stone-400 tracking-widest uppercase mb-0.5">{t('universityDetailPage.contact.email')}</p>
+                            <a href={`mailto:${contact.email}`} className="text-stone-700 text-sm hover:text-stone-900 transition-colors">{contact.email}</a>
+                          </div>
+                        </div>
+                      )}
+                      {contact.admissionsEmail && (
+                        <div className="flex items-start gap-3">
+                          <Mail className="w-4 h-4 text-stone-400 mt-0.5 shrink-0" />
+                          <div>
+                            <p className="text-[10px] text-stone-400 tracking-widest uppercase mb-0.5">{t('universityDetailPage.contact.admissionsEmail')}</p>
+                            <a href={`mailto:${contact.admissionsEmail}`} className="text-stone-700 text-sm hover:text-stone-900 transition-colors">{contact.admissionsEmail}</a>
+                          </div>
+                        </div>
+                      )}
+                      {contact.fax && (
+                        <div className="flex items-start gap-3">
+                          <Fax className="w-4 h-4 text-stone-400 mt-0.5 shrink-0" />
+                          <div>
+                            <p className="text-[10px] text-stone-400 tracking-widest uppercase mb-0.5">{t('universityDetailPage.contact.fax')}</p>
+                            <p className="text-stone-700 text-sm">{contact.fax}</p>
+                          </div>
+                        </div>
                       )}
                     </div>
-                  </div>
-                ))}
-              </div>
-            </div>
-            {/* Website Link */}
-            <div className="bg-gray-50 rounded-xl p-6">
-              <h3 className="text-lg font-bold text-gray-900 mb-2">{t('universityDetailPage.sections.website')}</h3>
-              {isEditing ? (
-                <input
-                  type="url"
-                  value={formData.website}
-                  onChange={e => handleInputChange('website', e.target.value)}
-                  className="w-full px-2 py-1 border border-slate-200 rounded-lg"
-                  placeholder={t('universityDetailPage.placeholders.website')}
-                  aria-label="University website"
-                />
-              ) : university.website ? (
-                <a
-                  href={university.website}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="block w-full bg-[#05294E] text-white py-3 px-4 rounded-lg hover:bg-[#05294E]/90 transition-colors text-center font-medium"
-                >
-                  <div className="flex items-center justify-center">
-                    <ExternalLink className="h-4 w-4 mr-2" />
-                    {t('universityDetailPage.buttons.visitWebsite')}
-                  </div>
-                </a>
-              ) : (
-                <div className="text-gray-400">{t('universityDetailPage.messages.noWebsiteProvided')}</div>
-              )}
-            </div>
-            {/* Scholarships CTA */}
-            <div className="bg-[#D0151C]/10 border border-[#D0151C]/20 rounded-xl p-6">
-              <div className="text-center">
-                <div className="bg-[#D0151C] w-12 h-12 rounded-full flex items-center justify-center mx-auto mb-4">
-                  <Sparkles className="h-6 w-6 text-white" />
+                  )}
                 </div>
-                <h3 className="text-lg font-bold text-gray-900 mb-2">
-                  {t('universityDetailPage.sections.scholarshipOpportunities')}
-                </h3>
-                <p className="text-sm text-gray-600 mb-4">
-                  {t('universityDetailPage.messages.scholarshipDescription')} {formData.name}
-                </p>
-                <Link
-                  to="/scholarships"
-                  className="block bg-[#D0151C] text-white py-2 px-4 rounded-lg hover:bg-[#D0151C]/90 transition-colors text-sm font-medium"
-                >
+              )}
+            </section>
+          )}
+        </div>
+
+        {/* ── STICKY ACTION BAR ── */}
+        <div className={`fixed bottom-0 left-0 right-0 z-50 transition-all duration-500 ease-in-out ${showStickyBar ? 'translate-y-0 opacity-100' : 'translate-y-full opacity-0 pointer-events-none'}`}>
+          <div className="bg-white/90 backdrop-blur-xl border-t border-stone-200/80 shadow-[0_-8px_30px_rgba(0,0,0,0.08)]">
+            <div className="max-w-3xl mx-auto px-6 lg:px-8 py-4 flex items-center justify-between gap-4">
+              <div className="min-w-0">
+                <p className="text-[10px] text-stone-400 tracking-[0.3em] uppercase mb-0.5">Universidade</p>
+                <p className="font-bold text-stone-900 text-sm truncate">{university.name}</p>
+              </div>
+              <div className="flex items-center gap-3 shrink-0">
+                {university.website && (
+                  <a href={university.website} target="_blank" rel="noopener noreferrer"
+                    className="flex items-center gap-2 px-5 py-2.5 border border-stone-300 text-stone-700 rounded-xl text-sm font-medium hover:border-stone-900 hover:text-stone-900 transition-colors">
+                    {t('universityDetailPage.buttons.visitWebsite')}
+                    <ExternalLink className="w-3.5 h-3.5" />
+                  </a>
+                )}
+                <Link to="/scholarships"
+                  className="px-5 py-2.5 bg-stone-900 text-white rounded-xl text-sm font-semibold hover:bg-stone-700 transition-colors">
                   {t('universityDetailPage.buttons.viewScholarships')}
                 </Link>
               </div>
             </div>
           </div>
         </div>
+
       </div>
-    </div>
     </>
   );
 };

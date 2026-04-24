@@ -182,62 +182,64 @@ const Universities: React.FC = () => {
       <Header />
       <div className="bg-white min-h-screen">
         {/* Hero Section */}
-        <section className="relative bg-[#05294E] min-h-[600px] flex items-center overflow-hidden">
-          {/* Background Elements */}
+        <section className="relative pt-32 pb-32 lg:pt-56 lg:pb-56 overflow-hidden bg-[#05294E] min-h-[700px] lg:min-h-[850px] flex items-center">
+          {/* Background Image Layer */}
           <div className="absolute inset-0 z-0">
-            <div className="absolute top-0 right-0 w-1/2 h-full bg-gradient-to-l from-blue-900/20 to-transparent"></div>
-            <div className="absolute -top-24 -right-24 w-96 h-96 bg-blue-600/10 rounded-full blur-3xl"></div>
+            <div className="absolute inset-0 lg:left-0 lg:w-[65%]">
+              <img 
+                src="https://fitpynguasqqutuhzifx.supabase.co/storage/v1/object/public/images/university-library-white-columns.webp" 
+                alt="University Library" 
+                className="w-full h-full object-cover lg:object-center"
+              />
+              {/* Mobile Overlay */}
+              <div className="absolute inset-0 bg-[#05294E]/70 lg:hidden"></div>
+              
+              {/* Desktop Transition: Solid blue on right to transparent on left */}
+              <div className="absolute inset-0 hidden lg:block bg-gradient-to-l from-[#05294E] via-[#05294E]/30 to-transparent"></div>
+              
+              {/* Bottom vignette */}
+              <div className="absolute inset-x-0 bottom-0 h-32 bg-gradient-to-t from-[#05294E] to-transparent"></div>
+            </div>
           </div>
 
-          <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 w-full relative z-10 py-20 lg:py-32">
-            <div className="flex flex-col lg:flex-row-reverse items-center gap-12 lg:gap-20">
-              {/* Content Side (Right on Desktop) */}
-              <div className="w-full lg:w-1/2 text-center lg:text-left">
-                <motion.div
-                  initial={{ opacity: 0, x: 50 }}
-                  animate={{ opacity: 1, x: 0 }}
-                  transition={{ duration: 0.8 }}
-                >
-                  <h1 className="text-4xl md:text-5xl lg:text-7xl font-black text-white mb-6 leading-[1.1] tracking-tight">
-                    {t('universitiesPage.header.title')}
-                  </h1>
-                  <p className="text-lg md:text-xl text-blue-100/80 mb-10 leading-relaxed max-w-2xl mx-auto lg:mx-0">
-                    {t('universitiesPage.header.subtitle')}
-                  </p>
-                  <div className="flex flex-col sm:flex-row gap-4 justify-center lg:justify-start">
-                    <button 
-                      onClick={() => document.getElementById('university-search')?.scrollIntoView({ behavior: 'smooth' })}
-                      className="bg-[#D0151C] text-white px-8 py-4 rounded-2xl hover:bg-[#B01218] transition-all duration-300 text-lg font-black shadow-xl hover:scale-105 transform inline-flex items-center justify-center gap-2"
-                    >
-                      Explorar Agora
-                      <ArrowDown className="w-5 h-5 animate-bounce" />
-                    </button>
-                  </div>
-                </motion.div>
-              </div>
+          {/* Decorative Glows */}
+          <div className="absolute inset-0 overflow-hidden pointer-events-none">
+            <div className="absolute top-1/4 -right-24 w-[600px] h-[600px] bg-blue-500/10 rounded-full blur-[120px]"></div>
+            <div className="absolute bottom-1/4 -left-24 w-[600px] h-[600px] bg-[#D0151C]/5 rounded-full blur-[120px]"></div>
+          </div>
 
-              {/* Image Side (Left on Desktop) */}
-              <div className="w-full lg:w-1/2 relative">
-                <motion.div
-                  initial={{ opacity: 0, x: -50, scale: 0.95 }}
-                  animate={{ opacity: 1, x: 0, scale: 1 }}
-                  transition={{ duration: 1 }}
-                  className="relative z-10 rounded-[3rem] overflow-hidden shadow-2xl border border-white/10 group"
-                >
-                  <img 
-                    src="https://fitpynguasqqutuhzifx.supabase.co/storage/v1/object/public/images/university-library-white-columns.webp" 
-                    alt="Biblioteca Universitária" 
-                    className="w-full h-full object-cover aspect-[4/3] lg:aspect-square group-hover:scale-110 transition-transform duration-1000"
-                  />
-                  <div className="absolute inset-0 bg-gradient-to-tr from-[#05294E]/40 via-transparent to-transparent"></div>
-                </motion.div>
-
-                {/* Decorative elements */}
-                <div className="absolute -bottom-10 -left-10 w-40 h-40 bg-blue-500/20 rounded-full blur-3xl"></div>
-                <div className="absolute -top-10 -right-10 w-32 h-32 bg-[#D0151C]/10 rounded-full blur-3xl animate-pulse"></div>
+          <div className="relative z-10 max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 w-full">
+            <div className="max-w-4xl lg:ml-auto">
+              <motion.div
+                initial={{ opacity: 0, x: 50 }}
+                animate={{ opacity: 1, x: 0 }}
+                transition={{ duration: 0.8 }}
+                className="text-center lg:text-right"
+              >
+                <h1 className="text-5xl md:text-7xl lg:text-[100px] font-black text-white mb-8 tracking-tighter leading-[0.85] lg:pl-6">
+                  <span className="block mb-2">{t('universitiesPage.header.title').split(' ')[0]}</span>
+                  <span className="text-transparent bg-clip-text bg-gradient-to-r from-blue-400 via-white to-blue-200 block pb-2">
+                    {t('universitiesPage.header.title').split(' ').slice(1).join(' ')}
+                  </span>
+                </h1>
                 
+                <p className="text-xl lg:text-2xl text-blue-100/80 mb-12 max-w-2xl mx-auto lg:ml-auto lg:mr-0 leading-relaxed font-medium">
+                  {t('universitiesPage.header.subtitle')}
+                </p>
 
-              </div>
+                <div className="flex flex-col sm:flex-row gap-6 justify-center lg:justify-end">
+                  <button 
+                    onClick={() => document.getElementById('university-search')?.scrollIntoView({ behavior: 'smooth' })}
+                    className="group relative w-full sm:w-auto px-10 py-5 bg-[#D0151C] hover:bg-[#b01218] text-white rounded-2xl font-black text-xl transition-all duration-300 shadow-[0_20px_40px_rgba(208,21,28,0.3)] hover:shadow-[0_25px_50px_rgba(208,21,28,0.4)] hover:-translate-y-1 flex items-center justify-center gap-3 overflow-hidden"
+                  >
+                    <span className="relative z-10">Explorar Agora</span>
+                    <span className="relative z-10 bg-white/20 p-1 rounded-lg">
+                      <ArrowDown className="w-6 h-6 group-hover:translate-y-1 transition-transform" />
+                    </span>
+                    <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/10 to-transparent -translate-x-full group-hover:translate-x-full transition-transform duration-1000"></div>
+                  </button>
+                </div>
+              </motion.div>
             </div>
           </div>
         </section>
