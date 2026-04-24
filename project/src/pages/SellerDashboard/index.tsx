@@ -393,11 +393,13 @@ const SellerDashboard: React.FC = () => {
   }, []);
 
   // Only load data once when component mounts or user changes
+  // IMPORTANTE: sellerProfile NÃO deve estar nas dependências pois é setado dentro de loadSellerData
+  // e causaria um loop infinito: load → seta sellerProfile → dispara effect → load novamente
   useEffect(() => {
-    if (user && user.email && !sellerProfile) {
+    if (user && user.email) {
       loadSellerData();
     }
-  }, [user, loadSellerData, sellerProfile]);
+  }, [user?.id, user?.email]);
 
   // Detect URL changes and set view automatically
   useEffect(() => {
