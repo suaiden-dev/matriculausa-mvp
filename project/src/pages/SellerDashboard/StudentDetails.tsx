@@ -21,6 +21,7 @@ import StudentScholarshipsList from '../../components/EnhancedStudentTracking/St
 import ApplicationProgressCard from '../../components/AdminDashboard/StudentDetails/ApplicationProgressCard';
 import PaymentStatusCard from '../../components/AdminDashboard/StudentDetails/PaymentStatusCard';
 import { handleDownloadDocument as centralizedHandleDownloadDocument } from '../../components/EnhancedStudentTracking/utils/documentUtils';
+import StudentPaymentsList from './components/StudentPaymentsList';
 
 interface StudentInfo {
   student_id: string;
@@ -1517,6 +1518,14 @@ const StudentDetails: React.FC<StudentDetailsProps> = ({ studentId, profileId, o
                     </div>
                   </div>
                 </div>
+              </div>
+
+              {/* Payment History List */}
+              <div className="mt-8">
+                <StudentPaymentsList 
+                  studentId={studentId} 
+                  profileId={profileId} 
+                />
               </div>
 
               {/* Selected Scholarship Card */}
