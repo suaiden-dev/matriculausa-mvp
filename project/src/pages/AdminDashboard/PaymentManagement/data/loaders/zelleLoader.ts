@@ -48,18 +48,23 @@ export async function loadZellePaymentsLoader(
         continue; // Pular este pagamento em produção
       }
       
+      // Fallback para dados da Migma se o estudante não for encontrado (pagamento externo)
+      const migmaSource = zellePayment.metadata?.source === 'migma';
+      const migmaStudentName = zellePayment.metadata?.migma_student_name;
+      const migmaStudentEmail = zellePayment.metadata?.migma_student_email;
+
       const studentName = student?.full_name && student.full_name !== student?.email
         ? student.full_name
-        : student?.email || 'Unknown User';
+        : student?.email || migmaStudentName || 'Unknown User';
 
       records.push({
         id: zellePayment.id,
-        student_id: student?.id || zellePayment.student_profile_id || '',
+        student_id: student?.id || zellePayment.student_profile_id || (migmaSource ? zellePayment.metadata?.migma_application_id : ''),
         user_id: zellePayment.user_id,
         student_name: studentName,
-        student_email: student?.email || 'Email not available',
+        student_email: student?.email || migmaStudentEmail || 'Email not available',
         university_id: student?.university_id || '',
-        university_name: 'N/A',
+        university_name: migmaSource ? 'Migma Inc.' : 'N/A',
         fee_type: (zellePayment.fee_type || 'selection_process') as PaymentRecord['fee_type'],
         fee_type_global: zellePayment.fee_type_global,
         amount: parseFloat(zellePayment.amount) || 0,

@@ -17,6 +17,7 @@ interface ZellePaymentReviewModalProps {
     payment_date?: string;
     screenshot_url?: string;
     created_at: string;
+    metadata?: any;
   };
   onSuccess: () => void;
   adminId: string;
@@ -134,7 +135,8 @@ export const ZellePaymentReviewModal: React.FC<ZellePaymentReviewModalProps> = (
       'scholarship_fee': 'Scholarship Fee',
       'i-20_control_fee': 'I-20 Control Fee',
       'ds160_package': 'DS-160 Package',
-      'i539_cos_package': 'I-539 COS Package'
+      'i539_cos_package': 'I-539 COS Package',
+      'application_fee_migma': 'Migma Application Fee'
     };
     return types[feeType] || feeType;
   };
@@ -227,6 +229,17 @@ export const ZellePaymentReviewModal: React.FC<ZellePaymentReviewModalProps> = (
                 </span>
               </div>
             </div>
+
+            {payment.metadata?.source === 'migma' && (
+              <div className="flex items-center gap-3">
+                <Layers className="w-5 h-5 text-purple-400" />
+                <div>
+                  <p className="text-sm text-gray-600">External System</p>
+                  <p className="font-medium text-purple-900">Migma Inc.</p>
+                  <p className="text-xs text-purple-500">Auto-verification bypassed</p>
+                </div>
+              </div>
+            )}
           </div>
         </div>
 

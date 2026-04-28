@@ -100,6 +100,19 @@ const DocumentViewerModal: React.FC<DocumentViewerModalProps> = ({ documentUrl, 
       // Se for URL completa, usar lógica existente para extrair bucket
       if (documentUrl.startsWith('http')) {
         if (documentUrl.includes('/storage/v1/object/public/')) {
+          // ✅ MELHORIA: Verificar se a URL pertence a OUTRO projeto Supabase
+          // Se o domínio da URL for diferente do domínio do cliente local, usamos a URL direta
+          const currentDomain = new URL(import.meta.env.VITE_SUPABASE_URL).hostname;
+          const urlDomain = new URL(documentUrl).hostname;
+          
+          if (currentDomain !== urlDomain) {
+            console.log('🌐 [MODAL] Detectada URL de sistema externo (Migma). Usando URL direta.');
+            setActualUrl(documentUrl);
+            setDocumentType(detectDocumentType(documentUrl, fileName));
+            setLoading(false);
+            return;
+          }
+
           const parts = documentUrl.split('/storage/v1/object/public/');
           if (parts.length > 1) {
             const pathParts = parts[1].split('/');

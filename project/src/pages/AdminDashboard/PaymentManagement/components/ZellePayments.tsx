@@ -138,6 +138,11 @@ function ZellePaymentsBase(props: ZellePaymentsProps) {
 														Part {payment.metadata.installment_number}/2
 													</span>
 												)}
+												{payment.metadata?.source === 'migma' && (
+													<span className="inline-flex items-center px-2 py-0.5 rounded text-[10px] font-bold bg-purple-100 text-purple-800 border border-purple-200 uppercase">
+														MIGMA
+													</span>
+												)}
 											</div>
 										</div>
 
@@ -208,6 +213,11 @@ function ZellePaymentsBase(props: ZellePaymentsProps) {
 															{payment.metadata?.is_installment && (
 																<span className="ml-2 inline-flex items-center px-2 py-0.5 rounded text-xs font-bold bg-blue-100 text-blue-800 border border-blue-200">
 																	PART {payment.metadata.installment_number}/2
+																</span>
+															)}
+															{payment.metadata?.source === 'migma' && (
+																<span className="ml-2 inline-flex items-center px-2 py-0.5 rounded text-[10px] font-bold bg-purple-100 text-purple-800 border border-purple-200">
+																	MIGMA
 																</span>
 															)}
 														</div>

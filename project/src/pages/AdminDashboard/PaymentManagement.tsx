@@ -1062,7 +1062,8 @@ const PaymentManagement = (): React.JSX.Element => {
             status: selectedZellePayment.zelle_status || 'pending_verification',
             payment_date: selectedZellePayment.payment_date,
             screenshot_url: selectedZellePayment.payment_proof_url,
-            created_at: selectedZellePayment.created_at
+            created_at: selectedZellePayment.created_at,
+            metadata: selectedZellePayment.metadata
           }}
           onSuccess={handleZelleReviewSuccess}
           adminId={user.id}
