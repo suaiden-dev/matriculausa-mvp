@@ -887,6 +887,51 @@ Deno.serve(async (req: Request) => {
         );
       }
     }
+
+    // Se a referência for do Migma, encaminhamos para o projeto Migma.
+    if (
+      reference.startsWith("MATRICULAUSA-AF-") ||
+      reference.startsWith("MGM-") ||
+      reference.startsWith("MIGMA-")
+    ) {
+      console.log(
+        `[router] Detectada ordem do Migma: ${reference}. Redirecionando...`,
+      );
+
+      const MIGMA_WEBHOOK_URL =
+        "https://ekxftwrjvxtpnqbraszv.supabase.co/functions/v1/parcelow-webhook";
+
+      try {
+        const response = await fetch(MIGMA_WEBHOOK_URL, {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+            "Authorization": req.headers.get("Authorization") || "",
+          },
+          body: JSON.stringify(payload),
+        });
+
+        const resultText = await response.text();
+        console.log(
+          `[router] Resposta do Migma (Status: ${response.status}):`,
+          resultText,
+        );
+
+        return new Response(resultText, {
+          status: response.status,
+          headers: { "Content-Type": "application/json" },
+        });
+      } catch (err) {
+        console.error(
+          "[router] ❌ Falha crítica de conexão ao repassar webhook para Migma:",
+          err,
+        );
+        return new Response(
+          JSON.stringify({ error: "Routing failed, but received" }),
+          { status: 200 },
+        );
+      }
+    }
     // =========================================================================
     // 🔀 FIM DO COMPONENTE DE ROTEAMENTO
     // =========================================================================

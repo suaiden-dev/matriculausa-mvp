@@ -346,12 +346,20 @@ const AdminStudentDetails: React.FC = () => {
         console.log(`[AdminStudentDetails] ✅ Usando valor real pago para application: ${realPaidAmounts.application}`);
       } else if (paymentFlags?.has_paid_application) {
         console.log(`[AdminStudentDetails] 💡 Pagamento legado detectado para application - calculando valor esperado`);
-        const enrolledApp: any = applications?.find((app: any) => app.status === 'enrolled' && app.is_application_fee_paid);
-        const paidApp: any = enrolledApp || applications?.find((app: any) => app.is_application_fee_paid);
-        const scholarship: any = paidApp?.scholarships ? (Array.isArray(paidApp.scholarships) ? paidApp.scholarships[0] : paidApp.scholarships) : null;
+        
+        // ✅ PRIORIDADE 1: Override (Migma/Manual)
+        if (feeOverrides?.application_fee !== undefined && feeOverrides?.application_fee !== null) {
+          normalized.application = feeOverrides.application_fee;
+          console.log(`[AdminStudentDetails] ✅ Usando override para aplicação paga: ${feeOverrides.application_fee}`);
+        } else {
+          // ✅ PRIORIDADE 2: Cálculo padrão baseado na scholarship
+          const enrolledApp: any = applications?.find((app: any) => app.status === 'enrolled' && app.is_application_fee_paid);
+          const paidApp: any = enrolledApp || applications?.find((app: any) => app.is_application_fee_paid);
+          const scholarship: any = paidApp?.scholarships ? (Array.isArray(paidApp.scholarships) ? paidApp.scholarships[0] : paidApp.scholarships) : null;
 
-        let expectedApplicationFee = scholarship?.application_fee_amount ? Number(scholarship.application_fee_amount) : feeAmountFn('application_fee');
-        normalized.application = expectedApplicationFee + (dependents * 100);
+          let expectedApplicationFee = scholarship?.application_fee_amount ? Number(scholarship.application_fee_amount) : feeAmountFn('application_fee');
+          normalized.application = expectedApplicationFee + (dependents * 100);
+        }
       }
 
       // Placement Fee
@@ -359,7 +367,13 @@ const AdminStudentDetails: React.FC = () => {
         normalized.placement = realPaidAmounts.placement;
         console.log(`[AdminStudentDetails] ✅ Usando valor real pago para placement: ${realPaidAmounts.placement}`);
       } else if (paymentFlags?.has_paid_placement) {
-        normalized.placement = Number(applications?.find((app: any) => app.is_placement_fee_paid)?.placement_fee_amount || 0);
+        // ✅ PRIORIDADE 1: Override (Migma/Manual)
+        if (feeOverrides?.placement_fee !== undefined && feeOverrides?.placement_fee !== null) {
+          normalized.placement = feeOverrides.placement_fee;
+          console.log(`[AdminStudentDetails] ✅ Usando override para placement pago: ${feeOverrides.placement_fee}`);
+        } else {
+          normalized.placement = Number(applications?.find((app: any) => app.is_placement_fee_paid)?.placement_fee_amount || 0);
+        }
       }
 
       // Reinstatement Fee
@@ -2899,6 +2913,7 @@ const AdminStudentDetails: React.FC = () => {
         .upsert({
           user_id: student.user_id,
           selection_process_fee: editingFees.selection_process,
+          application_fee: editingFees.application_fee,
           scholarship_fee: editingFees.scholarship,
           i20_control_fee: editingFees.i20_control,
           placement_fee: editingFees.placement,
@@ -3029,6 +3044,7 @@ const AdminStudentDetails: React.FC = () => {
     // Isso evita problemas de closure com o estado do hook
     let currentOverrides: {
       selection_process_fee?: number;
+      application_fee?: number;
       scholarship_fee?: number;
       i20_control_fee?: number;
       placement_fee?: number;
@@ -3040,7 +3056,7 @@ const AdminStudentDetails: React.FC = () => {
       // ✅ Forçar nova query sem cache adicionando timestamp
       const { data: overrideData, error: overrideError } = await supabase
         .from('user_fee_overrides')
-        .select('selection_process_fee, scholarship_fee, i20_control_fee, placement_fee, ds160_package_fee, i539_cos_package_fee, updated_at')
+        .select('selection_process_fee, application_fee, scholarship_fee, i20_control_fee, placement_fee, ds160_package_fee, i539_cos_package_fee, updated_at')
         .eq('user_id', student.user_id)
         .maybeSingle();
 
@@ -3051,6 +3067,7 @@ const AdminStudentDetails: React.FC = () => {
       if (!overrideError && overrideData) {
         currentOverrides = {
           selection_process_fee: overrideData.selection_process_fee != null ? Number(overrideData.selection_process_fee) : undefined,
+          application_fee: overrideData.application_fee != null ? Number(overrideData.application_fee) : undefined,
           scholarship_fee: overrideData.scholarship_fee != null ? Number(overrideData.scholarship_fee) : undefined,
           i20_control_fee: overrideData.i20_control_fee != null ? Number(overrideData.i20_control_fee) : undefined,
           placement_fee: overrideData.placement_fee != null ? Number(overrideData.placement_fee) : undefined,
@@ -3213,6 +3230,7 @@ const AdminStudentDetails: React.FC = () => {
 
     const finalFees = {
       selection_process: selectionProcessValue,
+      application_fee: currentOverrides?.application_fee,
       scholarship: scholarshipValue,
       i20_control: i20ControlValue,
       placement: placementValue,

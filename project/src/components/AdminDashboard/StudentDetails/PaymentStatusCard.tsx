@@ -80,6 +80,7 @@ const PaymentStatusCard: React.FC<PaymentStatusCardProps> = React.memo((props) =
   // ✅ Buscar overrides diretamente do banco para garantir valores atualizados (evita cache do hook)
   const [currentOverrides, setCurrentOverrides] = React.useState<{
     selection_process_fee?: number;
+    application_fee?: number;
     scholarship_fee?: number;
     i20_control_fee?: number;
     placement_fee?: number;
@@ -129,7 +130,7 @@ const PaymentStatusCard: React.FC<PaymentStatusCardProps> = React.memo((props) =
       try {
         const { data: overrideData, error: overrideError } = await supabase
           .from('user_fee_overrides')
-          .select('selection_process_fee, scholarship_fee, i20_control_fee, placement_fee, ds160_package_fee, i539_cos_package_fee, updated_at')
+          .select('selection_process_fee, application_fee, scholarship_fee, i20_control_fee, placement_fee, ds160_package_fee, i539_cos_package_fee, updated_at')
           .eq('user_id', student.user_id)
           .maybeSingle();
 
@@ -140,6 +141,7 @@ const PaymentStatusCard: React.FC<PaymentStatusCardProps> = React.memo((props) =
         if (!overrideError && overrideData) {
           setCurrentOverrides({
             selection_process_fee: overrideData.selection_process_fee != null ? Number(overrideData.selection_process_fee) : undefined,
+            application_fee: overrideData.application_fee != null ? Number(overrideData.application_fee) : undefined,
             scholarship_fee: overrideData.scholarship_fee != null ? Number(overrideData.scholarship_fee) : undefined,
             i20_control_fee: overrideData.i20_control_fee != null ? Number(overrideData.i20_control_fee) : undefined,
             placement_fee: overrideData.placement_fee != null ? Number(overrideData.placement_fee) : undefined,
@@ -424,8 +426,21 @@ const PaymentStatusCard: React.FC<PaymentStatusCardProps> = React.memo((props) =
                 </dd>
               ) : (
                 <div className="mt-1">
-                  <dd className="text-sm font-semibold text-slate-700">
+                  <dd className="text-sm font-semibold text-slate-700 flex items-center">
                     {(() => {
+                      if (loadingOverrides) {
+                        return (
+                          <div className="animate-pulse flex items-center gap-2">
+                            <div className="h-4 w-20 bg-slate-200 rounded"></div>
+                          </div>
+                        );
+                      }
+
+                      // ✅ PRIORIDADE 1: Override (Migma/Manual)
+                      if (currentOverrides?.application_fee !== undefined && currentOverrides?.application_fee !== null) {
+                        return formatFeeAmount(currentOverrides.application_fee, true);
+                      }
+
                       const activeApp = student.all_applications?.find((app: any) => app.status !== 'rejected');
                       const scholarship = activeApp?.scholarships ? (Array.isArray(activeApp.scholarships) ? activeApp.scholarships[0] : activeApp.scholarships) : null;
 
@@ -439,6 +454,9 @@ const PaymentStatusCard: React.FC<PaymentStatusCardProps> = React.memo((props) =
 
                       return 'Varies by scholarship';
                     })()}
+                    {currentOverrides?.application_fee !== undefined && (
+                      <span className="ml-2 text-xs text-blue-500 font-semibold">(custom)</span>
+                    )}
                   </dd>
                 </div>
               )}

@@ -30,6 +30,7 @@ interface Student {
 interface FeeOverride {
   user_id: string;
   selection_process_fee?: number;
+  application_fee?: number;
   scholarship_fee?: number;
   i20_control_fee?: number;
 }
@@ -107,7 +108,9 @@ const FeeManagement: React.FC = () => {
           feeOverrides: override || undefined,
           calculatedFees: {
             selection_process: override?.selection_process_fee || (baseSelectionFee + dependentsExtra),
-            application: baseApplicationFee + applicationDependentsExtra,
+            application: (override?.application_fee !== undefined && override?.application_fee !== null) 
+              ? override.application_fee 
+              : (baseApplicationFee + applicationDependentsExtra),
             scholarship: override?.scholarship_fee || baseScholarshipFee,
             i20_control: override?.i20_control_fee || baseI20Fee
           }
@@ -180,6 +183,7 @@ const FeeManagement: React.FC = () => {
     setEditingFees({
       user_id: student.user_id,
       selection_process_fee: student.calculatedFees.selection_process,
+      application_fee: student.feeOverrides?.application_fee,
       scholarship_fee: student.calculatedFees.scholarship,
       i20_control_fee: student.calculatedFees.i20_control
     });
@@ -209,6 +213,7 @@ const FeeManagement: React.FC = () => {
         .upsert({
           user_id: editingFees.user_id,
           selection_process_fee: editingFees.selection_process_fee,
+          application_fee: editingFees.application_fee,
           scholarship_fee: editingFees.scholarship_fee,
           i20_control_fee: editingFees.i20_control_fee,
           updated_at: new Date().toISOString()
@@ -473,12 +478,21 @@ const FeeManagement: React.FC = () => {
                   <td className="px-6 py-4">
                     <div className="flex flex-col">
                       <div className="flex items-center">
-                        <span className="text-sm font-medium text-gray-900">Varies by scholarship</span>
+                        <span className={`text-sm font-medium ${(student.feeOverrides as any)?.application_fee !== undefined ? 'text-blue-600' : 'text-gray-900'}`}>
+                          ${student.calculatedFees.application.toFixed(2)}
+                        </span>
+                        {(student.feeOverrides as any)?.application_fee !== undefined && (
+                          <span className="ml-1 text-xs text-blue-500">(custom)</span>
+                        )}
                         {student.is_application_fee_paid && (
                           <CheckCircle className="ml-2 h-4 w-4 text-green-500" />
                         )}
                       </div>
-                      <span className="text-xs text-slate-500">+ $100 per dependent (applied at checkout)</span>
+                      <span className="text-xs text-slate-500">
+                        {(student.feeOverrides as any)?.application_fee !== undefined 
+                          ? 'Set by integration' 
+                          : `Base: $${getFeeAmount('application_fee')} + $${(student.dependents || 0) * 100} (deps)`}
+                      </span>
                     </div>
                   </td>
 
