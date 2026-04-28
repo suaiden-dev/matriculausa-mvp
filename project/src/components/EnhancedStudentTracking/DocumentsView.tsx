@@ -158,6 +158,46 @@ const DocumentsView: React.FC<DocumentsViewProps> = ({
     return new Date(dateString).toLocaleDateString('en-US');
   };
 
+  // Notify Migma that acceptance letter is ready (non-fatal)
+  const notifyMigmaAcceptanceLetter = async (acceptanceLetterUrl: string) => {
+    try {
+      const MIGMA_URL = (import.meta as any).env.VITE_MIGMA_FUNCTIONS_URL as string;
+      const MIGMA_SECRET = (import.meta as any).env.VITE_MIGMA_WEBHOOK_SECRET as string;
+      if (!MIGMA_URL || !studentId) return;
+
+      // Get student email from user_profiles
+      let studentEmail: string | null = null;
+      const { data: profileByUser } = await supabase
+        .from('user_profiles')
+        .select('email')
+        .eq('user_id', studentId)
+        .maybeSingle();
+      if (profileByUser?.email) {
+        studentEmail = profileByUser.email;
+      } else {
+        const { data: profileById } = await supabase
+          .from('user_profiles')
+          .select('email')
+          .eq('id', studentId)
+          .maybeSingle();
+        if (profileById?.email) studentEmail = profileById.email;
+      }
+
+      if (!studentEmail) return;
+
+      await fetch(`${MIGMA_URL}/receive-matriculausa-letter`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'x-migma-webhook-secret': MIGMA_SECRET || '',
+        },
+        body: JSON.stringify({ student_email: studentEmail, acceptance_letter_url: acceptanceLetterUrl }),
+      });
+    } catch {
+      // Non-fatal: do not block the main flow
+    }
+  };
+
   // Função para buscar document requests internamente
   const fetchDocumentRequests = async (applicationId: string, universityId?: string) => {
     if (!applicationId) return;
@@ -988,6 +1028,8 @@ const DocumentsView: React.FC<DocumentsViewProps> = ({
                               }
                             } catch { /* ignore notify errors */ }
 
+                            await notifyMigmaAcceptanceLetter(publicUrl);
+
                             setAcceptanceLetterFile(null);
                           } catch (err) {
                             console.error('Error replacing acceptance letter:', err);
@@ -1146,6 +1188,8 @@ const DocumentsView: React.FC<DocumentsViewProps> = ({
                                 });
                               }
                             } catch { /* ignore notify errors */ }
+
+                            await notifyMigmaAcceptanceLetter(publicUrl);
 
                             setAcceptanceLetterFile(null);
                             setMarkSentSuccess('Acceptance letter sent successfully.');
