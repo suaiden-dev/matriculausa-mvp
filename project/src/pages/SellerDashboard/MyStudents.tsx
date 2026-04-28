@@ -87,8 +87,8 @@ interface MyStudentsProps {
 }
 
 const MyStudents: React.FC<MyStudentsProps> = ({ students, onRefresh, onViewStudent }) => {
-  console.log('🚨🚨🚨 [MYSTUDENTS_RENDER] MyStudents component rendered with students:', students.length);
-  console.log('🚨🚨🚨 [MYSTUDENTS_RENDER] Students emails:', students.map(s => s.email));
+  // ✅ CORREÇÃO: useFeeConfig deve ser chamado no top-level do componente, não dentro de funções
+  const { getFeeAmount } = useFeeConfig();
 
   const [currentPage, setCurrentPage] = useState(1);
   const [showAdvancedFilters, setShowAdvancedFilters] = useState(false);
@@ -639,7 +639,6 @@ const MyStudents: React.FC<MyStudentsProps> = ({ students, onRefresh, onViewStud
 
   // Função para determinar quais taxas estão faltando para um aluno
   const getMissingFees = (student: Student) => {
-    const { getFeeAmount } = useFeeConfig();
     const missingFees = [];
     const deps = studentDependents[student.id] || 0;
     const overrides = studentFeeOverrides[student.id];
@@ -720,7 +719,6 @@ const MyStudents: React.FC<MyStudentsProps> = ({ students, onRefresh, onViewStud
   // Estatísticas calculadas dinamicamente
   // Função para calcular o total pago por um aluno
   const calculateStudentTotalPaid = (student: Student): number => {
-    const { getFeeAmount } = useFeeConfig();
     let total = 0;
     // ✅ CORREÇÃO: Usar valores reais pagos quando disponíveis, senão calcular com fallback
     const realPaid = studentRealPaidAmounts[student.id] || {};
@@ -794,7 +792,6 @@ const MyStudents: React.FC<MyStudentsProps> = ({ students, onRefresh, onViewStud
 
   // Calcular total pago manualmente por um aluno (considera apenas taxas do seller: selection, scholarship, i20)
   const calculateStudentManualPaid = (student: Student): number => {
-    const { getFeeAmount } = useFeeConfig();
     let total = 0;
     const deps = studentDependents[student.id] || 0;
     const overrides = studentFeeOverrides[student.id];
@@ -976,7 +973,7 @@ const MyStudents: React.FC<MyStudentsProps> = ({ students, onRefresh, onViewStud
               <div className="flex items-center justify-between">
                 <div>
                   <p className="text-sm font-medium text-slate-600">Manual Paid (Outside)</p>
-                  {(Object.keys(studentPaymentMethods).length === 0 && Object.keys(studentDependents).length === 0 && Object.keys(studentFeeOverrides).length === 0) || loadingRealPaidAmounts ? (
+                  {loadingRealPaidAmounts ? (
                     <div className="h-8 w-40 bg-slate-200 rounded animate-pulse mt-1" />
                   ) : (
                     <p className="text-3xl font-bold text-orange-600 mt-1">{formatCurrency(stats.manualRevenue)}</p>
@@ -992,8 +989,7 @@ const MyStudents: React.FC<MyStudentsProps> = ({ students, onRefresh, onViewStud
               <div className="flex items-center justify-between">
                 <div>
                   <p className="text-sm font-medium text-slate-600">Total Revenue</p>
-                  {/* Skeleton enquanto dependents/fees/valores reais não carregaram completamente */}
-                  {(Object.keys(studentDependents).length === 0 && Object.keys(studentPackageFees).length === 0) || loadingRealPaidAmounts ? (
+                  {loadingRealPaidAmounts ? (
                     <div className="h-8 w-40 bg-slate-200 rounded animate-pulse mt-1" />
                   ) : (
                     <p className="text-3xl font-bold text-green-600 mt-1">{formatCurrency(stats.totalRevenue)}</p>
@@ -1009,7 +1005,7 @@ const MyStudents: React.FC<MyStudentsProps> = ({ students, onRefresh, onViewStud
               <div className="flex items-center justify-between">
                 <div>
                   <p className="text-sm font-medium text-slate-600">Avg. Revenue/Student</p>
-                  {(Object.keys(studentDependents).length === 0 && Object.keys(studentPackageFees).length === 0) || loadingRealPaidAmounts ? (
+                  {loadingRealPaidAmounts ? (
                     <div className="h-8 w-40 bg-slate-200 rounded animate-pulse mt-1" />
                   ) : (
                     <p className="text-3xl font-bold text-purple-600 mt-1">{formatCurrency(stats.avgRevenuePerStudent)}</p>
