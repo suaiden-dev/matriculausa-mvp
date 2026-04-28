@@ -363,11 +363,12 @@ const AdminStudentDetails: React.FC = () => {
       }
 
       // Reinstatement Fee
-      if (realPaidAmounts.reinstatement_fee !== undefined && realPaidAmounts.reinstatement_fee > 0) {
-        normalized.reinstatement_fee = realPaidAmounts.reinstatement_fee;
-        console.log(`[AdminStudentDetails] ✅ Usando valor real pago para reinstatement_fee: ${realPaidAmounts.reinstatement_fee}`);
+      if (realPaidAmounts.reinstatement_package !== undefined && realPaidAmounts.reinstatement_package > 0) {
+        normalized.reinstatement_package = realPaidAmounts.reinstatement_package;
+        console.log(`[AdminStudentDetails] ✅ Usando valor real pago para reinstatement_package: ${realPaidAmounts.reinstatement_package}`);
       } else if (paymentFlags?.has_paid_reinstatement) {
-        normalized.reinstatement_fee = 500;
+        normalized.reinstatement_package = 500;
+        console.log(`[AdminStudentDetails] 💡 Pagamento legado detectado para reinstatement_package - calculando valor esperado`);
       }
 
       return normalized;
@@ -746,7 +747,8 @@ const AdminStudentDetails: React.FC = () => {
             has_paid_application: student.is_application_fee_paid,
             has_paid_scholarship: student.is_scholarship_fee_paid,
             has_paid_i20: !!student.has_paid_i20_control_fee,
-            has_paid_placement: !!student.is_placement_fee_paid
+            has_paid_placement: !!student.is_placement_fee_paid,
+            has_paid_reinstatement: !!student.has_paid_reinstatement_package
           },
           student.all_applications
         );
@@ -1303,7 +1305,7 @@ const AdminStudentDetails: React.FC = () => {
     }
   }, [student, dependents, saveProfile, profileId, queryClient, user, logAction]);
 
-  const handleMarkAsPaid = useCallback((feeType: 'selection_process' | 'application' | 'scholarship' | 'i20_control' | 'placement' | 'ds160_package' | 'i539_cos_package' | 'reinstatement_fee') => {
+  const handleMarkAsPaid = useCallback((feeType: 'selection_process' | 'application' | 'scholarship' | 'i20_control' | 'placement' | 'ds160_package' | 'i539_cos_package' | 'reinstatement_package') => {
     setPendingPayment({ fee_type: feeType, payment_method: 'manual' });
     
     let amount = getFeeAmount(feeType);
@@ -1370,7 +1372,7 @@ const AdminStudentDetails: React.FC = () => {
   const handleConfirmPayment = useCallback(async () => {
     if (!student || !pendingPayment) return;
 
-    const feeType = pendingPayment.fee_type as 'selection_process' | 'application' | 'scholarship' | 'i20_control' | 'placement' | 'ds160_package' | 'i539_cos_package' | 'reinstatement_fee';
+    const feeType = pendingPayment.fee_type as 'selection_process' | 'application' | 'scholarship' | 'i20_control' | 'placement' | 'ds160_package' | 'i539_cos_package' | 'reinstatement_package';
     const paymentMethodValue = paymentMethod;
     const paymentDate = new Date().toISOString();
     let applicationId: string | undefined = undefined;
@@ -1443,7 +1445,7 @@ const AdminStudentDetails: React.FC = () => {
           feeTypeForZelle = 'i20_control_fee';
         } else if (feeType === 'placement') {
           feeTypeForZelle = 'placement_fee';
-        } else if (feeType === 'reinstatement_fee') {
+        } else if (feeType === 'reinstatement_package') {
           feeTypeForZelle = 'reinstatement_package';
         }
 
@@ -3519,11 +3521,32 @@ const AdminStudentDetails: React.FC = () => {
                       .in('id', applicationIds);
 
                     if (updateError) {
-                      console.error('❌ [onSaveProcessType] Erro ao atualizar:', updateError);
+                      console.error('❌ [onSaveProcessType] Erro ao atualizar scholarship_applications:', updateError);
                       throw updateError;
                     }
 
-                    console.log('✅ [onSaveProcessType] student_process_type atualizado com sucesso');
+                    // ✅ SINCRONIZAR TAMBÉM COM USER_PROFILES
+                    // Isso garante que campos como visa_transfer_active funcionem corretamente
+                    const profileUpdates: any = { 
+                      student_process_type: editingProcessType 
+                    };
+
+                    // Se mudar para transfer e não tiver info de visto, assume inativo para mostrar a taxa
+                    if (editingProcessType === 'transfer' && student.visa_transfer_active === null) {
+                      profileUpdates.visa_transfer_active = false;
+                    }
+
+                    const { error: profileUpdateError } = await supabase
+                      .from('user_profiles')
+                      .update(profileUpdates)
+                      .eq('id', student.student_id);
+
+                    if (profileUpdateError) {
+                      console.error('❌ [onSaveProcessType] Erro ao atualizar user_profiles:', profileUpdateError);
+                      // Não lançamos erro aqui para não travar o fluxo se o perfil falhar mas a app funcionar
+                    }
+
+                    console.log('✅ [onSaveProcessType] student_process_type e perfil atualizados com sucesso');
 
                     // Atualizar estado local imediatamente
                     setStudent((prev: any) => {
@@ -3698,6 +3721,25 @@ const AdminStudentDetails: React.FC = () => {
                 overridesRefreshKey={overridesRefreshKey}
                 onEnableInstallment={handleEnableInstallment}
                 onDisableInstallment={handleDisableInstallment}
+                onToggleVisaStatus={async () => {
+                  if (!student) return;
+                  const newValue = !student.visa_transfer_active;
+                  try {
+                    const { error } = await supabase
+                      .from('user_profiles')
+                      .update({ visa_transfer_active: newValue })
+                      .eq('id', student.student_id);
+
+                    if (error) throw error;
+
+                    setStudent((prev: any) => prev ? { ...prev, visa_transfer_active: newValue } : prev);
+                    queryClient.invalidateQueries({ queryKey: queryKeys.students.details(profileId) });
+                    toast.success(`Visa status updated to ${newValue ? 'Active' : 'Inactive'}`);
+                  } catch (error) {
+                    console.error('Error toggling visa status:', error);
+                    toast.error('Error updating visa status');
+                  }
+                }}
               />
             </Suspense>
 

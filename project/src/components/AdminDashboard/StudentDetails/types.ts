@@ -112,7 +112,7 @@ export interface PendingPayment {
     | "placement"
     | "ds160_package"
     | "i539_cos_package"
-    | "reinstatement_fee";
+    | "reinstatement_package";
   payment_method: "stripe" | "zelle" | "manual";
   amount?: number;
   scholarship_id?: string | null;

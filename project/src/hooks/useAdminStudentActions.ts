@@ -225,7 +225,7 @@ export const useAdminStudentActions = () => {
   // Update payment method
   const updatePaymentMethod = useCallback(async (
     userId: string,
-    feeType: 'selection_process' | 'i20_control' | 'ds160_package' | 'i539_cos_package' | 'reinstatement_fee',
+    feeType: 'selection_process' | 'i20_control' | 'ds160_package' | 'i539_cos_package' | 'reinstatement_fee' | 'reinstatement_package',
     method: string
   ) => {
     try {
@@ -238,7 +238,7 @@ export const useAdminStudentActions = () => {
         fieldName = 'i20_control_fee_payment_method';
       } else if (feeType === 'ds160_package') {
         fieldName = 'ds160_package_payment_method';
-      } else if (feeType === 'reinstatement_fee') {
+      } else if (feeType === 'reinstatement_fee' || feeType === 'reinstatement_package') {
         fieldName = 'reinstatement_package_payment_method';
       } else {
         fieldName = 'i539_cos_package_payment_method';
