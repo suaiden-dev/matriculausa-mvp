@@ -83,25 +83,25 @@
       "invalidLink": {
         "title": "Link Inválido",
         "message": "O link de cancelamento de inscrição não é válido ou está expirado.",
-        "button": "Voltar para Home"
+        "button": "Voltar para o Início"
       },
       "alreadyUnsubscribed": {
         "title": "Já Removido",
         "message": "Você já está removido da lista de newsletter do MatriculaUSA.",
-        "button": "Voltar para Home"
+        "button": "Voltar para o Início"
       },
       "success": {
         "title": "Inscrição Cancelada com Sucesso",
         "message": "Você foi removido da lista de newsletter com sucesso. Não receberá mais emails de campanha do MatriculaUSA.",
         "important": "<strong>Importante:</strong> Você ainda receberá emails importantes sobre sua conta, aplicações e confirmações de pagamento.",
         "reactivate": "Se mudar de ideia, você pode reativar sua inscrição entrando em contato conosco.",
-        "button": "Voltar para Home"
+        "button": "Voltar para o Início"
       },
       "error": {
         "title": "Erro",
         "message": "Ocorreu um erro ao processar sua solicitação. Por favor, tente novamente mais tarde.",
         "tryAgain": "Tentar Novamente",
-        "backToHome": "Voltar para Home"
+        "backToHome": "Voltar para o Início"
       },
       "form": {
         "title": "Cancelar Inscrição",

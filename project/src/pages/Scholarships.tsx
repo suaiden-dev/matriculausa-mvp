@@ -1,6 +1,7 @@
 import React, { useState, useEffect, useRef, useMemo } from 'react';
-import { Search, DollarSign, Award, GraduationCap, Star, CheckCircle, Building, Users, ArrowRight, AlertTriangle, Monitor, MapPin, Briefcase, Globe } from 'lucide-react';
+import { Search, DollarSign, Award, GraduationCap, Star, Building, Users, ArrowRight, AlertTriangle, Monitor, MapPin, Briefcase, Globe, ChevronLeft, ChevronRight, ArrowDown } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
+import { motion } from 'framer-motion';
 import { useAuth } from '../hooks/useAuth';
 import { useNavigate, useLocation } from 'react-router-dom';
 import { useScholarships } from '../hooks/useScholarships';
@@ -493,50 +494,69 @@ const Scholarships: React.FC = () => {
 
   return (
     <div className="bg-white min-h-screen">
-      {/* Header */}
-      <section className="bg-gradient-to-br from-[#05294E] via-slate-800 to-[#05294E] text-white py-8 relative overflow-hidden">
-        <div className="absolute inset-0">
-          <div className="absolute top-5 left-10 w-56 h-56 bg-[#D0151C]/10 rounded-full blur-3xl"></div>
-          <div className="absolute bottom-5 right-10 w-72 h-72 bg-white/5 rounded-full blur-3xl"></div>
+      {/* Hero Section */}
+      <section className="relative pt-32 pb-32 lg:pt-56 lg:pb-56 overflow-hidden bg-[#05294E] min-h-[700px] lg:min-h-[850px] flex items-center">
+        {/* Background Image Layer */}
+        <div className="absolute inset-0 z-0">
+          <div className="absolute inset-0 lg:right-0 lg:left-auto lg:w-[65%]">
+            <img 
+              src="https://fitpynguasqqutuhzifx.supabase.co/storage/v1/object/public/images/university-auditorium-crowded-lecture.webp" 
+              alt="University Library" 
+              className="w-full h-full object-cover lg:object-center"
+            />
+            {/* Mobile Overlay */}
+            <div className="absolute inset-0 bg-[#05294E]/30 lg:hidden"></div>
+            
+            {/* Desktop Transition: Solid blue on left to transparent on right */}
+            <div className="absolute inset-0 hidden lg:block bg-gradient-to-r from-[#05294E] via-[#05294E]/30 to-transparent"></div>
+          </div>
         </div>
 
-        <div className="relative max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="text-center">
-            <div className="inline-flex items-center bg-white/10 backdrop-blur-sm border border-white/20 rounded-full px-6 py-2 mb-4">
-              <Award className="h-4 w-4 mr-2 text-white" />
-              <span className="text-sm font-medium text-white">{t('home.features.exclusiveScholarships.title')}</span>
-            </div>
+        {/* Decorative Glows */}
+        <div className="absolute inset-0 overflow-hidden pointer-events-none">
+          <div className="absolute top-1/4 -right-24 w-[600px] h-[600px] bg-blue-500/10 rounded-full blur-[120px]"></div>
+          <div className="absolute bottom-1/4 -left-24 w-[600px] h-[600px] bg-[#D0151C]/5 rounded-full blur-[120px]"></div>
+        </div>
 
-            <h1 className="text-4xl md:text-5xl font-black mb-3 leading-tight">
-              <span className="text-white">{t('scholarships.title')}</span>
-            </h1>
+        <div className="relative z-10 max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 w-full">
+          <div className="max-w-4xl lg:mr-auto">
+            <motion.div
+              initial={{ opacity: 0, x: -50 }}
+              animate={{ opacity: 1, x: 0 }}
+              transition={{ duration: 0.8 }}
+              className="text-center lg:text-left"
+            >
+              <h1 className="text-5xl md:text-7xl lg:text-[100px] font-black text-white mb-8 tracking-tighter leading-[0.85] lg:pr-6">
+                <span className="block mb-2">{t('scholarships.title').split(' ')[0]}</span>
+                <span className="text-transparent bg-clip-text bg-gradient-to-r from-blue-400 via-white to-blue-200 block pb-2">
+                  {t('scholarships.title').split(' ').slice(1).join(' ')}
+                </span>
+              </h1>
+              
+              <p className="text-xl lg:text-2xl text-white mb-12 max-w-2xl mx-auto lg:mr-auto lg:ml-0 leading-relaxed font-medium drop-shadow-lg">
+                {t('scholarships.subtitle')}
+              </p>
 
-            <p className="text-lg text-slate-200 max-w-3xl mx-auto leading-relaxed mb-6">
-              {t('scholarships.subtitle')}
-            </p>
-
-            {/* Stats */}
-            <div className="flex flex-wrap justify-center items-center gap-6 text-slate-300">
-              <div className="flex items-center bg-white/10 backdrop-blur-sm rounded-xl px-4 py-2">
-                <DollarSign className="h-5 w-5 mr-2 text-green-400" />
-                <span className="text-sm font-medium">$50M+ {t('home.stats.scholarships')}</span>
+              <div className="flex flex-col sm:flex-row gap-6 justify-center lg:justify-start">
+                <button 
+                  onClick={() => document.getElementById('scholarships-filters')?.scrollIntoView({ behavior: 'smooth' })}
+                  className="group relative w-full sm:w-auto px-10 py-5 bg-[#D0151C] hover:bg-[#b01218] text-white rounded-2xl font-black text-xl transition-all duration-300 shadow-[0_20px_40px_rgba(208,21,28,0.3)] hover:shadow-[0_25px_50px_rgba(208,21,28,0.4)] hover:-translate-y-1 flex items-center justify-center gap-3 overflow-hidden"
+                >
+                  <span className="relative z-10">Explorar Bolsas</span>
+                  <span className="relative z-10 bg-white/20 p-1 rounded-lg">
+                    <ArrowDown className="w-6 h-6 group-hover:translate-y-1 transition-transform" />
+                  </span>
+                  <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/10 to-transparent -translate-x-full group-hover:translate-x-full transition-transform duration-1000"></div>
+                </button>
               </div>
-              <div className="flex items-center bg-white/10 backdrop-blur-sm rounded-xl px-4 py-2">
-                <Star className="h-5 w-5 mr-2 text-yellow-400" />
-                <span className="text-sm font-medium">{t('home.trustIndicators.successRate')}</span>
-              </div>
-              <div className="flex items-center bg-white/10 backdrop-blur-sm rounded-xl px-4 py-2">
-                <CheckCircle className="h-5 w-5 mr-2 text-blue-400" />
-                <span className="text-sm font-medium">150+ {t('universities.title')}</span>
-              </div>
-            </div>
+            </motion.div>
           </div>
         </div>
       </section>
 
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-12">
         {/* Modern Filter Bar */}
-        <div className="bg-white shadow-lg rounded-2xl border border-slate-200 p-6 mb-10 flex flex-col gap-4 md:flex-row md:items-center md:gap-6">
+        <div id="scholarships-filters" className="bg-white shadow-lg rounded-2xl border border-slate-200 p-6 mb-10 flex flex-col gap-4 md:flex-row md:items-center md:gap-6">
           {/* Search Input */}
           <div className="flex items-center flex-1 min-w-[220px] max-w-sm bg-slate-50 rounded-lg border border-slate-200 px-3 py-2 focus-within:ring-2 focus-within:ring-[#05294E]">
             <Search className="h-5 w-5 text-slate-400 mr-2" aria-hidden="true" />
@@ -1293,26 +1313,34 @@ const Scholarships: React.FC = () => {
 
         {/* Call to Action */}
 
-        {/* Paginação */}
-        <div className="flex justify-center items-center gap-4 mt-10">
-          <button
-            className="px-4 py-2 rounded bg-slate-200 text-slate-700 font-semibold disabled:opacity-50"
-            onClick={() => setPage((p) => Math.max(0, p - 1))}
-            disabled={page === 0}
-          >
-            {t('scholarshipsPage.pagination.previous')}
-          </button>
-          <span className="text-slate-600 font-medium">
-            {t('scholarshipsPage.pagination.page')} {page + 1} {t('scholarshipsPage.pagination.of')} {Math.ceil(totalCount / pageSize) || 1}
-          </span>
-          <button
-            className="px-4 py-2 rounded bg-[#05294E] text-white font-semibold disabled:opacity-50"
-            onClick={() => setPage((p) => p + 1)}
-            disabled={(page + 1) * pageSize >= totalCount}
-          >
-            {t('scholarshipsPage.pagination.next')}
-          </button>
-        </div>
+        {/* Paginação Premium */}
+        {totalCount > pageSize && (
+          <div className="flex justify-center items-center gap-16 sm:gap-24 mt-16 mb-8">
+            <button
+              className="group flex items-center justify-center gap-2 px-5 py-3 sm:px-6 rounded-2xl bg-white border border-slate-200 text-slate-600 font-bold hover:bg-[#05294E] hover:text-white hover:border-[#05294E] hover:shadow-lg transition-all duration-300 disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:bg-white disabled:hover:text-slate-600 disabled:hover:border-slate-200 disabled:hover:shadow-none"
+              onClick={() => setPage((p) => Math.max(0, p - 1))}
+              disabled={page === 0 || scholarshipsLoading}
+            >
+              <ChevronLeft className="w-5 h-5 group-hover:-translate-x-1 transition-transform" />
+              <span className="hidden sm:inline">{t('scholarshipsPage.pagination.previous')}</span>
+            </button>
+            
+            <div className="flex items-center">
+              <span className="text-slate-500 font-medium text-sm sm:text-base">
+                <span className="hidden sm:inline">{t('scholarshipsPage.pagination.page')}</span> <span className="text-[#05294E] font-black mx-1 text-base sm:text-lg">{page + 1}</span> <span className="hidden sm:inline">{t('scholarshipsPage.pagination.of')}</span><span className="sm:hidden">/</span> <span className="text-[#05294E] font-black ml-1 text-base sm:text-lg">{Math.ceil(totalCount / pageSize) || 1}</span>
+              </span>
+            </div>
+
+            <button
+              className="group flex items-center justify-center gap-2 px-5 py-3 sm:px-6 rounded-2xl bg-[#05294E] border border-[#05294E] text-white font-bold hover:bg-[#05294E]/90 hover:shadow-lg hover:shadow-[#05294E]/20 transition-all duration-300 disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:bg-[#05294E] disabled:hover:shadow-none"
+              onClick={() => setPage((p) => Math.min(Math.ceil(totalCount / pageSize) - 1, p + 1))}
+              disabled={(page + 1) * pageSize >= totalCount || scholarshipsLoading}
+            >
+              <span className="hidden sm:inline">{t('scholarshipsPage.pagination.next')}</span>
+              <ChevronRight className="w-5 h-5 group-hover:translate-x-1 transition-transform" />
+            </button>
+          </div>
+        )}
       </div>
 
       {/* Modal de Detalhes da Bolsa */}

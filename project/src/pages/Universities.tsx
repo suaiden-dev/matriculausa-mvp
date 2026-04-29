@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { Link, useNavigate, useLocation } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
-import { Search, MapPin, Building, GraduationCap, ArrowRight, Star, Lock, ArrowDown } from 'lucide-react';
+import { Search, MapPin, Building, GraduationCap, ArrowRight, Star, Lock, ArrowDown, ChevronLeft, ChevronRight } from 'lucide-react';
 import { motion } from 'framer-motion';
 import { supabase } from '../lib/supabase';
 import Header from '../components/Header';
@@ -11,7 +11,7 @@ import { slugify } from '../utils/slugify';
 import PaymentRequiredBlocker from '../components/PaymentRequiredBlocker';
 import { useAuth } from '../hooks/useAuth';
 
-const PAGE_SIZE = 20;
+const PAGE_SIZE = 21;
 
 const Universities: React.FC = () => {
   const { t } = useTranslation(['school', 'scholarships', 'common']);
@@ -192,13 +192,10 @@ const Universities: React.FC = () => {
                 className="w-full h-full object-cover lg:object-center"
               />
               {/* Mobile Overlay */}
-              <div className="absolute inset-0 bg-[#05294E]/70 lg:hidden"></div>
+              <div className="absolute inset-0 bg-[#05294E]/30 lg:hidden"></div>
               
               {/* Desktop Transition: Solid blue on right to transparent on left */}
               <div className="absolute inset-0 hidden lg:block bg-gradient-to-l from-[#05294E] via-[#05294E]/30 to-transparent"></div>
-              
-              {/* Bottom vignette */}
-              <div className="absolute inset-x-0 bottom-0 h-32 bg-gradient-to-t from-[#05294E] to-transparent"></div>
             </div>
           </div>
 
@@ -223,7 +220,7 @@ const Universities: React.FC = () => {
                   </span>
                 </h1>
                 
-                <p className="text-xl lg:text-2xl text-blue-100/80 mb-12 max-w-2xl mx-auto lg:ml-auto lg:mr-0 leading-relaxed font-medium">
+                <p className="text-xl lg:text-2xl text-white mb-12 max-w-2xl mx-auto lg:ml-auto lg:mr-0 leading-relaxed font-medium drop-shadow-lg">
                   {t('universitiesPage.header.subtitle')}
                 </p>
 
@@ -247,7 +244,7 @@ const Universities: React.FC = () => {
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
           {/* Search and Filters */}
           <div id="university-search" className="bg-slate-50 p-6 rounded-2xl mb-8 border border-slate-200">
-          <div className="grid grid-cols-1 md:grid-cols-4 gap-4 mb-4">
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-4">
             {/* Search */}
             <div className="relative">
               <Search className="absolute left-3 top-3 h-4 w-4 text-slate-400" />
@@ -287,17 +284,6 @@ const Universities: React.FC = () => {
               ))}
             </select>
 
-            {/* Results Count */}
-            <div className="flex items-center justify-center bg-white border border-slate-300 rounded-xl px-3 py-3">
-              <span className="text-sm text-slate-600">
-                <span className="font-semibold text-[#05294E]">{filteredSchools.length}</span> {t('universitiesPage.search.universitiesCount')}
-                {filteredFeaturedUniversities.length > 0 && (
-                  <span className="text-sm text-slate-500 ml-2">
-                    + {filteredFeaturedUniversities.length} {t('universitiesPage.search.featured')}
-                  </span>
-                )}
-              </span>
-            </div>
           </div>
         </div>
 
@@ -313,7 +299,7 @@ const Universities: React.FC = () => {
             
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3  gap-6 mb-8">
               {filteredFeaturedUniversities.map((school) => (
-                <div key={school.id} className="group bg-white rounded-3xl shadow-lg hover:shadow-2xl transition-all duration-500 overflow-hidden border border-slate-200 hover:-translate-y-2 flex flex-col h-full min-h-[480px] relative">
+                <div key={school.id} className="group bg-white rounded-3xl shadow-lg hover:shadow-2xl transition-all duration-500 overflow-hidden border border-slate-200 hover:-translate-y-2 flex flex-col h-[480px] relative">
                   {/* Overlay de blur quando não autenticado */}
                   {!isAuthenticated && (
                     <div className="absolute inset-0 bg-white/80 backdrop-blur-sm z-10 flex items-center justify-center rounded-3xl">
@@ -385,22 +371,22 @@ const Universities: React.FC = () => {
 
                   {/* University Info */}
                   <div className="flex flex-col flex-1 p-6">
-                    <h3 className={`text-xl font-bold text-slate-900 mb-3 leading-tight line-clamp-2 group-hover:text-[#05294E] transition-colors ${
+                    <h3 className={`text-xl font-bold text-slate-900 mb-3 leading-tight line-clamp-2 group-hover:text-[#05294E] transition-colors h-[56px] ${
                       !isAuthenticated ? 'blur-sm' : ''
                     }`}>
                       {school.name}
                     </h3>
                     
                     {/* Location */}
-                    <div className={`flex items-center text-slate-600 mb-4 ${
+                    <div className={`flex items-center text-slate-600 mb-4 h-6 ${
                       !isAuthenticated ? 'blur-sm' : ''
                     }`}>
-                      <MapPin className="h-4 w-4 mr-2 text-[#05294E]" />
-                      <span className="text-sm">{school.location}</span>
+                      <MapPin className="h-4 w-4 mr-2 text-[#05294E] shrink-0" />
+                      <span className="text-sm truncate">{school.location}</span>
                     </div>
 
                     {/* Programs Preview */}
-                    <div className="mb-6 flex-1">
+                    <div className="mb-6 h-[52px] overflow-hidden">
                       <div className={`flex flex-wrap gap-2 ${
                         !isAuthenticated ? 'blur-sm' : ''
                       }`}>
@@ -438,10 +424,10 @@ const Universities: React.FC = () => {
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
           {isLoadingUniversities ? (
             skeletonArray.map((_, idx) => (
-              <div key={idx} className="bg-slate-100 animate-pulse rounded-3xl h-80" />
+              <div key={idx} className="bg-slate-100 animate-pulse rounded-3xl h-[480px]" />
             ))
           ) : filteredSchools.map((school) => (
-            <div key={school.id} className="group bg-white rounded-3xl shadow-lg hover:shadow-2xl transition-all duration-500 overflow-hidden border border-slate-200 hover:-translate-y-2 flex flex-col h-full min-h-[480px] relative">
+            <div key={school.id} className="group bg-white rounded-3xl shadow-lg hover:shadow-2xl transition-all duration-500 overflow-hidden border border-slate-200 hover:-translate-y-2 flex flex-col h-[480px] relative">
               {/* Overlay de blur quando não autenticado */}
               {!isAuthenticated && (
                 <div className="absolute inset-0 bg-white/80 backdrop-blur-sm z-10 flex items-center justify-center rounded-3xl">
@@ -503,22 +489,22 @@ const Universities: React.FC = () => {
 
               {/* University Info */}
               <div className="flex flex-col flex-1 p-6">
-                <h3 className={`text-xl font-bold text-slate-900 mb-3 leading-tight line-clamp-2 group-hover:text-[#05294E] transition-colors ${
+                <h3 className={`text-xl font-bold text-slate-900 mb-3 leading-tight line-clamp-2 group-hover:text-[#05294E] transition-colors h-[56px] ${
                   !isAuthenticated ? 'blur-sm' : ''
                 }`}>
                   {school.name}
                 </h3>
                 
                 {/* Location */}
-                <div className={`flex items-center text-slate-600 mb-4 ${
+                <div className={`flex items-center text-slate-600 mb-4 h-6 ${
                   !isAuthenticated ? 'blur-sm' : ''
                 }`}>
-                  <MapPin className="h-4 w-4 mr-2 text-[#05294E]" />
-                  <span className="text-sm">{school.location}</span>
+                  <MapPin className="h-4 w-4 mr-2 text-[#05294E] shrink-0" />
+                  <span className="text-sm truncate">{school.location}</span>
                 </div>
 
                 {/* Programs Preview */}
-                <div className="mb-6 flex-1">
+                <div className="mb-6 h-[52px] overflow-hidden">
                   <div className={`flex flex-wrap gap-2 ${
                     !isAuthenticated ? 'blur-sm' : ''
                   }`}>
@@ -550,22 +536,30 @@ const Universities: React.FC = () => {
           ))}
         </div>
 
-        {/* Paginação */}
-        <div className="flex justify-center items-center gap-4 mt-8">
+        {/* Paginação Premium */}
+        <div className="flex justify-center items-center gap-16 sm:gap-24 mt-16 mb-8">
           <button
-            className="px-4 py-2 rounded-lg bg-slate-200 text-slate-700 font-bold disabled:opacity-50"
+            className="group flex items-center justify-center gap-2 px-5 py-3 sm:px-6 rounded-2xl bg-white border border-slate-200 text-slate-600 font-bold hover:bg-[#05294E] hover:text-white hover:border-[#05294E] hover:shadow-lg transition-all duration-300 disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:bg-white disabled:hover:text-slate-600 disabled:hover:border-slate-200 disabled:hover:shadow-none"
             onClick={() => setPage((p) => Math.max(0, p - 1))}
-                            disabled={page === 0 || isLoadingUniversities}
+            disabled={page === 0 || isLoadingUniversities}
           >
-            {t('universitiesPage.pagination.previous')}
+            <ChevronLeft className="w-5 h-5 group-hover:-translate-x-1 transition-transform" />
+            <span className="hidden sm:inline">{t('universitiesPage.pagination.previous')}</span>
           </button>
-          <span className="text-slate-600 font-medium">{t('universitiesPage.pagination.page')} {page + 1} {t('universitiesPage.pagination.of')} {Math.max(1, totalPages)}</span>
+          
+          <div className="flex items-center">
+            <span className="text-slate-500 font-medium text-sm sm:text-base">
+              <span className="hidden sm:inline">{t('universitiesPage.pagination.page')}</span> <span className="text-[#05294E] font-black mx-1 text-base sm:text-lg">{page + 1}</span> <span className="hidden sm:inline">{t('universitiesPage.pagination.of')}</span><span className="sm:hidden">/</span> <span className="text-[#05294E] font-black ml-1 text-base sm:text-lg">{Math.max(1, totalPages)}</span>
+            </span>
+          </div>
+
           <button
-            className="px-4 py-2 rounded-lg bg-slate-200 text-slate-700 font-bold disabled:opacity-50"
+            className="group flex items-center justify-center gap-2 px-5 py-3 sm:px-6 rounded-2xl bg-[#05294E] border border-[#05294E] text-white font-bold hover:bg-[#05294E]/90 hover:shadow-lg hover:shadow-[#05294E]/20 transition-all duration-300 disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:bg-[#05294E] disabled:hover:shadow-none"
             onClick={() => setPage((p) => Math.min(totalPages - 1, p + 1))}
-                            disabled={page >= totalPages - 1 || isLoadingUniversities}
+            disabled={page >= totalPages - 1 || isLoadingUniversities}
           >
-            {t('universitiesPage.pagination.next')}
+            <span className="hidden sm:inline">{t('universitiesPage.pagination.next')}</span>
+            <ChevronRight className="w-5 h-5 group-hover:translate-x-1 transition-transform" />
           </button>
         </div>
 
@@ -580,9 +574,9 @@ const Universities: React.FC = () => {
         )}
 
         {/* Call to Action */}
-        <div className="mt-20 bg-[#05294E] rounded-[3.5rem] overflow-hidden shadow-2xl flex flex-col lg:flex-row items-stretch relative group">
+        <div className="mt-20 bg-[#05294E] rounded-[3.5rem] overflow-hidden shadow-2xl flex flex-col-reverse lg:flex-row items-stretch relative group">
           {/* Content Side */}
-          <div className="flex-1 p-12 lg:p-16 flex flex-col justify-center text-left relative z-20 bg-[#05294E] rounded-t-[3.5rem] lg:rounded-tr-none lg:rounded-l-[3.5rem]">
+          <div className="flex-1 p-12 lg:p-16 flex flex-col justify-center text-left relative z-20 bg-[#05294E] -mt-12 lg:mt-0 rounded-b-[3.5rem] lg:rounded-br-none lg:rounded-l-[3.5rem]">
             <h2 className="text-3xl md:text-4xl lg:text-5xl font-black text-white mb-6 leading-tight">
               {t('universitiesPage.callToAction.title')} <span className="text-blue-400">{t('universitiesPage.callToAction.titleHighlight')}</span>
             </h2>
@@ -606,7 +600,7 @@ const Universities: React.FC = () => {
           </div>
 
           {/* Image Side */}
-          <div className="w-full lg:w-[40%] relative min-h-[350px] lg:min-h-full overflow-hidden -mt-12 lg:mt-0 z-10">
+          <div className="w-full lg:w-[40%] relative min-h-[350px] lg:min-h-full overflow-hidden lg:mt-0 z-10">
             <img 
               src="https://fitpynguasqqutuhzifx.supabase.co/storage/v1/object/public/images/students-walking-university-campus-autumn.webp" 
               alt="Estudantes no campus"
@@ -614,7 +608,7 @@ const Universities: React.FC = () => {
             />
             {/* Overlay gradient to blend with context */}
             <div className="absolute inset-0 bg-gradient-to-r from-[#05294E] via-[#05294E]/40 to-transparent lg:block hidden z-10"></div>
-            <div className="absolute top-0 left-0 right-0 h-32 bg-gradient-to-b from-[#05294E] via-[#05294E] to-transparent lg:hidden z-10"></div>
+            <div className="absolute bottom-0 left-0 right-0 h-32 bg-gradient-to-t from-[#05294E] via-[#05294E] to-transparent lg:hidden z-10"></div>
             <div className="absolute inset-0 bg-[#05294E]/10 lg:hidden z-10"></div>
           </div>
         </div>

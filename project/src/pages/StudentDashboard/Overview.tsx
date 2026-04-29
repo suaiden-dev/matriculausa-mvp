@@ -7,7 +7,6 @@ import {
   Clock,
   Search,
   Target,
-  BookOpen,
   ArrowUpRight,
   Calendar,
   Route,
@@ -333,15 +332,10 @@ const Overview: React.FC = () => {
       <div className="bg-gradient-to-r from-blue-600 to-indigo-700 rounded-2xl p-4 sm:p-6 md:p-6 pb-8 sm:pb-10 text-white relative overflow-hidden ring-1 ring-white/10 shadow-xl">
         <div className="absolute inset-0 bg-black/10"></div>
         <div className="relative z-10">
-          <div className="flex flex-row items-center space-x-3 sm:space-x-4 mb-3 sm:mb-4">
-            <div className="w-12 h-12 sm:w-14 sm:h-14 bg-white/15 backdrop-blur-sm rounded-2xl flex items-center justify-center border border-white/20">
-              <Award className="h-6 w-6 sm:h-7 sm:w-7 text-white" />
-            </div>
-            <div className="flex-1">
-              <h2 className="text-xl sm:text-2xl md:text-3xl font-bold">
-                {t('studentDashboard.welcome')}, {userProfile?.full_name || user?.email || t('studentDashboard.title').replace(' Dashboard', '')}!
-              </h2>
-            </div>
+          <div className="mb-3 sm:mb-4">
+            <h2 className="text-xl sm:text-2xl md:text-3xl font-bold">
+              {t('studentDashboard.welcome')}, {userProfile?.full_name || user?.email || t('studentDashboard.title').replace(' Dashboard', '')}!
+            </h2>
           </div>
 
           {/* Indicador de passo atual do onboarding - Seamless Style Vertical */}
@@ -761,7 +755,6 @@ const Overview: React.FC = () => {
           {/* Study Tips */}
           < div className="bg-gradient-to-br from-blue-500 to-indigo-600 rounded-2xl shadow-md text-white p-4 sm:p-6 ring-1 ring-white/10" >
             <h3 className="text-base sm:text-lg font-bold mb-3 sm:mb-4 flex items-center">
-              <BookOpen className="h-4 w-4 sm:h-5 sm:w-5 mr-2" />
               💡 {t('studentDashboard.successTips.title')}
             </h3>
             <div className="space-y-2.5 sm:space-y-3">

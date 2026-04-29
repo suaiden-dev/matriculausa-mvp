@@ -24,7 +24,7 @@ const LayoutContent: React.FC<LayoutProps> = ({ children }) => {
                      location.pathname === '/vsl-transfer' ||
                      location.pathname === '/vsl-cos';
   const hideFooter = hideHeader || location.pathname.startsWith('/checkout/zelle');
-  const isDashboard = hideHeader;
+
   const isAdmin = location.pathname.startsWith('/admin');
   const isStudentChatPage = location.pathname.startsWith('/student/dashboard/chat');
   
@@ -49,7 +49,7 @@ const LayoutContent: React.FC<LayoutProps> = ({ children }) => {
   return (
     <div className="min-h-screen bg-gray-50 flex flex-col w-full overflow-x-hidden">
       {!hideHeader && <Header />}
-      <main className={`flex-grow overflow-x-hidden ${isDashboard ? '' : 'overflow-y-auto'}`}>
+      <main className="flex-grow overflow-x-hidden">
         {children}
         {!isAdmin && !hideSmartChat && !isStudentChatPage && (
           <SmartChat />

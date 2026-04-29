@@ -185,47 +185,43 @@ const Home: React.FC = () => {
     <>
       <SEOHead />
       <div className="bg-white">
-        {/* Full-Width Hero Section with Background Image */}
-        <section className="relative min-h-[85vh] flex items-center pt-20 overflow-hidden text-white">
-          {/* Background Image & Overlays */}
-          <div className="absolute inset-0 z-0">
+        {/* Split Hero Section */}
+        <section className="relative pt-32 pb-32 lg:pt-48 lg:pb-48 overflow-hidden bg-white min-h-[700px] lg:min-h-[850px] flex items-center">
+          {/* Background Image Layer — right side only */}
+          <div className="absolute inset-0 z-0 flex justify-end">
             <img 
-              src="https://fitpynguasqqutuhzifx.supabase.co/storage/v1/object/public/images/aerial-view-university-campus-quad-stadium.webp" 
-              alt="University Campus"
-              className="w-full h-full object-cover scale-105"
+              src="/hero-student.png" 
+              alt="Estudante rumo aos EUA"
+              className="w-full h-full object-contain object-right"
             />
-            {/* Dark Overlay for Text Readability */}
-            <div className="absolute inset-0 bg-slate-950/40"></div>
-            {/* Main Gradient: From Dark Blue-ish top to Transparent */}
-            <div className="absolute inset-0 bg-gradient-to-b from-[#05294E]/60 via-transparent to-transparent"></div>
-            {/* Bottom Transition to Slate-50: Stronger fade to eliminate hard edges */}
-            <div className="absolute bottom-0 left-0 right-0 h-32 bg-gradient-to-t from-slate-50 via-slate-50/80 to-transparent"></div>
           </div>
-          
-          <div className="relative z-10 max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-20">
-            <div className="max-w-6xl mx-auto">
+
+
+
+
+          <div className="relative z-10 max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 w-full">
+            <div className="max-w-4xl lg:mr-auto">
               <motion.div
-                initial={{ opacity: 0, y: 30 }}
-                animate={{ opacity: 1, y: 0 }}
+                initial={{ opacity: 0, x: -50 }}
+                animate={{ opacity: 1, x: 0 }}
                 transition={{ duration: 0.8 }}
-                className="flex flex-col items-center text-center"
+                className="text-center lg:text-left"
               >
-                
-                <h1 className="text-6xl md:text-7xl lg:text-8xl font-black mb-8 leading-[1.1] drop-shadow-2xl max-w-5xl mx-auto">
+                <h1 className="text-4xl md:text-5xl lg:text-6xl font-black mb-6 leading-tight text-[#05294E] tracking-tight">
                   {t('home.hero.title')}
                 </h1>
                 
-                <p className="text-xl md:text-2xl mb-12 text-blue-50 leading-relaxed max-w-4xl mx-auto drop-shadow-lg font-medium">
+                <p className="text-xl lg:text-2xl mb-12 text-slate-600 leading-relaxed max-w-2xl mx-auto lg:mr-auto lg:ml-0 font-medium">
                   {t('home.hero.description')}
                 </p>
                 
-                <div className="flex flex-col items-center sm:flex-row gap-6 mb-12 w-full justify-center">
+                <div className="flex flex-col sm:flex-row gap-6 mb-12 justify-center lg:justify-start">
                   {/* Dynamic CTA Logic */}
                   {!isAuthenticated ? (
                     <>
                       <Link
                         to={`/register${location.search}`}
-                        className="group bg-[#D0151C] hover:bg-[#B01218] text-white px-10 py-5 rounded-2xl text-xl font-bold transition-all duration-300 shadow-2xl hover:shadow-red-500/20 flex items-center justify-center border-0"
+                        className="group bg-[#D0151C] hover:bg-[#b01218] text-white px-10 py-5 rounded-2xl text-xl font-bold transition-all duration-300 shadow-[0_20px_40px_rgba(208,21,28,0.3)] hover:shadow-[0_25px_50px_rgba(208,21,28,0.4)] hover:-translate-y-1 flex items-center justify-center border-0"
                       >
                         {t('home.hero.cta')}
                         <ArrowRight className="ml-2 h-6 w-6 group-hover:translate-x-1 transition-transform" />
@@ -312,7 +308,7 @@ const Home: React.FC = () => {
               >
                 <div className="overflow-hidden px-4 -mx-4 py-4" ref={sliderRef}>
                   <motion.div 
-                    className="flex gap-6 cursor-grab active:cursor-grabbing"
+                    className="flex gap-6"
                     animate={{ 
                       x: -(currentScholarshipIndex * (slideItemWidth + 24)) // 24px is gap-6
                     }}
@@ -833,7 +829,7 @@ const Home: React.FC = () => {
 
               {/* Card — Vídeo */}
               <div className="break-inside-avoid bg-white border border-slate-200 rounded-3xl overflow-hidden mb-5 hover:shadow-xl transition-all duration-300">
-                <div className="h-40 bg-rose-50 flex flex-col items-center justify-center gap-2 relative cursor-pointer">
+                <div className="h-40 bg-rose-50 flex flex-col items-center justify-center gap-2 relative">
                   <div className="w-14 h-14 bg-white rounded-full flex items-center justify-center shadow-md">
                     <svg className="w-5 h-5 text-[#D0151C] ml-1" fill="currentColor" viewBox="0 0 24 24">
                       <path d="M8 5v14l11-7z"/>
@@ -898,16 +894,16 @@ const Home: React.FC = () => {
         {/* How It Works Redirect Section (Replaces FAQ) */}
         <section className="py-24 bg-white relative overflow-hidden">
           <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 relative z-10">
-            <div className="bg-[#05294E] rounded-[3rem] overflow-hidden shadow-2xl flex flex-col lg:flex-row items-stretch">
+            <div className="bg-[#05294E] rounded-[3rem] overflow-hidden shadow-2xl flex flex-col-reverse lg:flex-row items-stretch">
               {/* Content Side */}
-              <div className="flex-1 p-12 lg:p-20 flex flex-col justify-center text-left relative z-20 bg-[#05294E] rounded-t-[3rem] lg:rounded-tr-none lg:rounded-l-[3rem]">
+              <div className="flex-1 p-12 lg:p-20 flex flex-col justify-center text-left relative z-20 bg-[#05294E] -mt-12 lg:mt-0 rounded-b-[3rem] lg:rounded-br-none lg:rounded-l-[3rem]">
                 
                 <h2 className="text-4xl md:text-5xl lg:text-6xl font-black text-white mb-8 leading-tight">
                   Ainda tem <span className="text-blue-400">dúvidas</span> sobre o processo?
                 </h2>
                 
                 <p className="text-xl text-blue-100 mb-12 leading-relaxed">
-                  Criamos um guia detalhado explicando cada etapa, desde a escolha da bolsa até o embarque para os Estados Unidos. Entenda como funciona o nosso suporte e para planejar seu futuro com segurança.
+                  Preparamos um guia completo com cada etapa do processo, da escolha da bolsa até a carta de aceite. Simples, claro e com suporte sempre que precisar.
                 </p>
                 
                 <Link
@@ -919,7 +915,7 @@ const Home: React.FC = () => {
               </div>
 
               {/* Image Side */}
-              <div className="lg:w-2/5 relative min-h-[400px] -mt-12 lg:mt-0 z-10">
+              <div className="lg:w-2/5 relative min-h-[400px] lg:mt-0 z-10">
                 <img 
                   src="https://fitpynguasqqutuhzifx.supabase.co/storage/v1/object/public/images/reading-room-library-green-lamps.webp" 
                   alt="Reading Room Library"
@@ -927,7 +923,7 @@ const Home: React.FC = () => {
                 />
                 {/* Overlay gradient to blend with context */}
                 <div className="absolute inset-0 bg-gradient-to-r from-[#05294E] via-transparent to-transparent lg:block hidden"></div>
-                <div className="absolute top-0 left-0 right-0 h-32 bg-gradient-to-b from-[#05294E] via-[#05294E] to-transparent lg:hidden block"></div>
+                <div className="absolute bottom-0 left-0 right-0 h-32 bg-gradient-to-t from-[#05294E] via-[#05294E] to-transparent lg:hidden block"></div>
                 <div className="absolute inset-0 bg-[#05294E]/10 lg:hidden block"></div>
               </div>
             </div>

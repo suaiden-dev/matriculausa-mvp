@@ -109,20 +109,17 @@ const HeroSection: React.FC<{ onCTAClick: () => void, t: any }> = ({ onCTAClick,
     <section ref={ref} className="relative pt-32 pb-32 lg:pt-56 lg:pb-56 overflow-hidden bg-[#05294E] min-h-[700px] lg:min-h-[850px] flex items-center">
       {/* Background Image Layer with Responsive Design */}
       <div className="absolute inset-0 z-0">
-        <div className="absolute inset-0 lg:left-auto lg:right-0 lg:w-[65%]">
+        <div className="absolute inset-0 lg:right-auto lg:left-0 lg:w-[65%]">
           <img 
             src="https://fitpynguasqqutuhzifx.supabase.co/storage/v1/object/public/images/library-facade-white-columns-students.webp" 
             alt="Elite University Campus" 
             className="w-full h-full object-cover object-[55.6%_center] lg:object-center"
           />
           {/* Overlay for Mobile: Simple dark overlay for text readability */}
-          <div className="absolute inset-0 bg-[#05294E]/70 lg:hidden"></div>
+          <div className="absolute inset-0 bg-[#05294E]/30 lg:hidden"></div>
           
-          {/* Desktop Transition Gradient: Solid blue on left to transparent on right */}
-          <div className="absolute inset-0 hidden lg:block bg-gradient-to-r from-[#05294E] via-[#05294E]/30 to-transparent"></div>
-          
-          {/* Bottom vignette for smoother transition to next section */}
-          <div className="absolute inset-x-0 bottom-0 h-32 bg-gradient-to-t from-[#05294E] to-transparent"></div>
+          {/* Desktop Transition Gradient: Solid blue on right to transparent on left */}
+          <div className="absolute inset-0 hidden lg:block bg-gradient-to-l from-[#05294E] via-[#05294E]/30 to-transparent"></div>
         </div>
       </div>
 
@@ -133,30 +130,30 @@ const HeroSection: React.FC<{ onCTAClick: () => void, t: any }> = ({ onCTAClick,
       </div>
 
       <div className="relative z-10 max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 w-full">
-        <div className="max-w-4xl">
+        <div className="max-w-4xl lg:ml-auto">
           <motion.div
              initial="hidden"
              animate={controls}
              variants={{
-               hidden: { opacity: 0, x: -50 },
+               hidden: { opacity: 0, x: 50 },
                visible: { opacity: 1, x: 0, transition: { duration: 0.8, ease: "easeOut" } }
              }}
-             className="text-center lg:text-left"
+             className="text-center lg:text-right"
           >
 
 
-            <h1 className="text-5xl md:text-7xl lg:text-[100px] font-black text-white mb-8 tracking-tighter leading-[0.85] pr-6">
+            <h1 className="text-5xl md:text-7xl lg:text-[100px] font-black text-white mb-8 tracking-tighter leading-[0.85] lg:pl-6">
               <span className="block mb-2">{t('howItWorks.title').split(' ')[0]}</span>
               <span className="text-transparent bg-clip-text bg-gradient-to-r from-blue-400 via-white to-blue-200 block pb-2">
                 {t('howItWorks.title').split(' ').slice(1).join(' ')}
               </span>
             </h1>
             
-            <p className="text-xl lg:text-2xl text-blue-100/80 mb-12 max-w-2xl mx-auto lg:mx-0 leading-relaxed font-medium">
+            <p className="text-xl lg:text-2xl text-white mb-12 max-w-2xl mx-auto lg:ml-auto lg:mr-0 leading-relaxed font-medium drop-shadow-lg">
               {t('howItWorks.subtitle')}
             </p>
 
-            <div className="flex flex-col sm:flex-row gap-6 justify-center lg:justify-start">
+            <div className="flex flex-col sm:flex-row gap-6 justify-center lg:justify-end">
               <button
                 onClick={onCTAClick}
                 className="group relative w-full sm:w-auto px-10 py-5 bg-[#D0151C] hover:bg-[#b01218] text-white rounded-2xl font-black text-xl transition-all duration-300 shadow-[0_20px_40px_rgba(208,21,28,0.3)] hover:shadow-[0_25px_50px_rgba(208,21,28,0.4)] hover:-translate-y-1 flex items-center justify-center gap-3 overflow-hidden"
@@ -696,12 +693,10 @@ const BottomCTASection: React.FC<{ onCTAClick: () => void, t: any }> = ({ onCTAC
   return (
     <section className="py-24 bg-white relative overflow-hidden">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 relative z-10">
-        <div className="bg-[#05294E] rounded-[3.5rem] shadow-2xl relative overflow-hidden flex flex-col lg:flex-row items-stretch min-h-[500px]">
+        <div className="bg-[#05294E] rounded-[3.5rem] shadow-2xl relative overflow-hidden flex flex-col-reverse lg:flex-row items-stretch min-h-[500px]">
           
           {/* Content side */}
-          <div className="flex-1 p-10 md:p-16 lg:p-20 flex flex-col justify-center relative z-20 bg-[#05294E] rounded-t-[3.5rem] lg:rounded-tr-none lg:rounded-l-[3.5rem]">
-            {/* Abstract Background Element */}
-            <div className="absolute top-0 left-0 w-full h-full bg-[radial-gradient(circle_at_0%_0%,rgba(59,130,246,0.15),transparent_50%)] pointer-events-none rounded-t-[3.5rem] lg:rounded-tr-none lg:rounded-l-[3.5rem]"></div>
+          <div className="flex-1 p-10 md:p-16 lg:p-20 flex flex-col justify-center relative z-20 bg-[#05294E] -mt-4 lg:mt-0 rounded-b-[3.5rem] lg:rounded-br-none lg:rounded-l-[3.5rem]">
             
             <div className="relative">
               <motion.div
@@ -730,7 +725,7 @@ const BottomCTASection: React.FC<{ onCTAClick: () => void, t: any }> = ({ onCTAC
           </div>
 
           {/* Image side with much better transition */}
-          <div className="w-full lg:w-[45%] relative min-h-[350px] lg:min-h-full overflow-hidden -mt-4 lg:mt-0 z-10">
+          <div className="w-full lg:w-[45%] relative min-h-[350px] lg:min-h-full overflow-hidden lg:mt-0 z-10">
             <img 
               src="https://fitpynguasqqutuhzifx.supabase.co/storage/v1/object/public/images/graduates-throwing-caps-blue-sky-graduation.webp" 
               alt="Graduation success" 
@@ -738,7 +733,7 @@ const BottomCTASection: React.FC<{ onCTAClick: () => void, t: any }> = ({ onCTAC
             />
             {/* The Smooth Transition Overlays */}
             {/* 1. Mobile transition: Stronger fade and solid top blend */}
-            <div className="absolute top-0 left-0 right-0 h-32 bg-gradient-to-b from-[#05294E] via-[#05294E] to-transparent lg:hidden z-10"></div>
+            <div className="absolute bottom-0 left-0 right-0 h-32 bg-gradient-to-t from-[#05294E] via-[#05294E] to-transparent lg:hidden z-10"></div>
             <div className="absolute inset-0 bg-[#05294E]/20 lg:hidden z-10"></div>
             
             {/* 2. Desktop fade (left to right) */}

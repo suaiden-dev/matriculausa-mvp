@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { useTranslation } from 'react-i18next';
-import { ChevronDown, Globe, RotateCcw, CheckCircle, AlertCircle } from 'lucide-react';
+import { ChevronDown, RotateCcw, CheckCircle, AlertCircle } from 'lucide-react';
 import { useLanguageDetection } from '../hooks/useLanguageDetection';
 
 interface Language {
@@ -84,8 +84,8 @@ const LanguageSelector: React.FC<LanguageSelectorProps> = ({
   const buttonClasses = {
     header: "inline-flex items-center px-3 py-2 border border-transparent text-sm font-medium rounded-md text-gray-700 bg-white hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-[#05294E] transition-colors",
     footer: "inline-flex items-center px-3 py-2 text-sm font-medium text-white hover:text-gray-200 transition-colors",
-    compact: "inline-flex items-center px-2 py-1 text-sm font-medium text-gray-700 hover:text-gray-900 transition-colors",
-    dashboard: "inline-flex items-center px-3 py-2 text-sm font-medium rounded-xl text-gray-600 hover:text-gray-900 bg-white hover:bg-gray-50 transition-colors border border-gray-100 hover:border-gray-200 h-[42px] shadow-sm"
+    compact: "inline-flex items-center px-2 py-1 text-base font-bold text-gray-700 hover:text-gray-900 transition-colors",
+    dashboard: "inline-flex items-center px-2 py-1 lg:px-3 lg:py-2 text-sm font-medium rounded-xl text-gray-600 hover:text-gray-900 bg-white hover:bg-gray-50 transition-colors border border-gray-100 hover:border-gray-200 h-[38px] lg:h-[42px] shadow-sm"
   };
 
   const dropdownClasses = {
@@ -108,9 +108,8 @@ const LanguageSelector: React.FC<LanguageSelectorProps> = ({
           aria-expanded="true"
           aria-haspopup="true"
         >
-          {(variant !== 'compact' && variant !== 'dashboard') && <Globe className="h-4 w-4 mr-2" />}
           <span className="flex items-center">
-            <span className="mr-2">{currentLanguage.flag}</span>
+            <span className="mr-1 lg:mr-2 text-lg lg:text-base">{currentLanguage.flag}</span>
             {showLabel && (
               <span className={variant === 'compact' ? 'hidden sm:inline' : variant === 'dashboard' ? 'hidden lg:inline' : ''}>
                 {currentLanguage.name}
@@ -127,7 +126,7 @@ const LanguageSelector: React.FC<LanguageSelectorProps> = ({
               </span>
             )}
           </span>
-          <ChevronDown className="h-4 w-4 ml-2" />
+          <ChevronDown className="h-4 w-4 ml-1 lg:ml-2" />
         </button>
       </div>
 

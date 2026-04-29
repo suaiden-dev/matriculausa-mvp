@@ -71,7 +71,7 @@
       "secure": "100% Seguro"
     },
     "faq": {
-      "title": "Perguntas Frecuentes",
+      "title": "Perguntas Frequentes",
       "mainTitle": "Tudo o que Você Precisa Saber",
       "subtitle": "Obtenha respostas para as perguntas mais comuns sobre taxas, pagamentos e o processo de candidatura no MatriculaUSA",
       "badge": "Perguntas e Respostas",
@@ -369,7 +369,7 @@
       },
       "q8": {
         "question": "Minhas informações de pagamento são seguras?",
-        "answer": "Sim. Todos os pagamentos são processados pelo Stripe, líder global em segurança de pagamentos. O MatriculaUSA não armazena os detalhes do seu cartão, e todas as transações son criptografadas para sua proteção."
+        "answer": "Sim. Todos os pagamentos são processados pelo Stripe, líder global em segurança de pagamentos. O MatriculaUSA não armazena os detalhes do seu cartão, e todas as transações são criptografadas para sua proteção."
       },
       "q9": {
         "question": "Posso obter reembolso?",

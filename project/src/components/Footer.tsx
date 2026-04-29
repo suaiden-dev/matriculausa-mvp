@@ -48,8 +48,7 @@ const Footer: React.FC = () => {
 
           {/* Platform */}
           <div className="space-y-6">
-            <h3 className="text-xl font-bold text-white flex items-center">
-              <Zap className="h-5 w-5 mr-2 text-[#D0151C]" />
+            <h3 className="text-xl font-bold text-white">
               {t('footer.company.title')}
             </h3>
             <ul className="space-y-3">
@@ -93,20 +92,20 @@ const Footer: React.FC = () => {
             <h3 className="text-xl font-bold text-white">{t('footer.company.contact')}</h3>
             <div className="space-y-4">
               <div className="flex items-center space-x-3 group">
-                <div className="bg-[#D0151C]/20 p-2 rounded-lg group-hover:bg-[#D0151C]/30 transition-colors">
-                  <Mail className="h-5 w-5 text-[#D0151C]" />
+                <div className="bg-white/10 p-2 rounded-lg group-hover:bg-white/20 transition-colors">
+                  <Mail className="h-5 w-5 text-white" />
                 </div>
                 <span className="text-slate-300">{t('footer.contact.email')}</span>
               </div>
               <div className="flex items-center space-x-3 group">
-                <div className="bg-green-600/20 p-2 rounded-lg group-hover:bg-green-600/30 transition-colors">
-                  <Phone className="h-5 w-5 text-green-400" />
+                <div className="bg-white/10 p-2 rounded-lg group-hover:bg-white/20 transition-colors">
+                  <Phone className="h-5 w-5 text-white" />
                 </div>
                 <span className="text-slate-300">{t('footer.contact.phone')}</span>
               </div>
               <div className="flex items-center space-x-3 group">
-                <div className="bg-[#D0151C]/20 p-2 rounded-lg group-hover:bg-[#D0151C]/30 transition-colors">
-                  <MapPin className="h-5 w-5 text-[#D0151C]" />
+                <div className="bg-white/10 p-2 rounded-lg group-hover:bg-white/20 transition-colors">
+                  <MapPin className="h-5 w-5 text-white" />
                 </div>
                 <span className="text-slate-300">{t('footer.contact.address')}</span>
               </div>

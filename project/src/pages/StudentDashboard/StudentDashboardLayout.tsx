@@ -7,7 +7,6 @@ import {
   Menu,
   X,
   LogOut,
-  ChevronDown,
   Gift,
   Bell,
   MessageSquare
@@ -30,12 +29,11 @@ interface StudentDashboardLayoutProps {
 
 const StudentDashboardLayout: React.FC<StudentDashboardLayoutProps> = ({ children }) => {
   const { user, userProfile: profile, loading } = useAuth();
-  const { t, i18n } = useTranslation(['dashboard', 'common']);
+  const { t } = useTranslation(['dashboard', 'common']);
   const location = useLocation();
   const navigate = useNavigate();
   const { logout } = useAuth();
   const [sidebarOpen, setSidebarOpen] = useState(false);
-  const [userMenuOpen, setUserMenuOpen] = useState(false);
   const [showNotif, setShowNotif] = useState(false);
   const [showNotificationsModal, setShowNotificationsModal] = useState(false);
   const scrollContainerRef = useRef<HTMLDivElement>(null);
@@ -222,7 +220,7 @@ const StudentDashboardLayout: React.FC<StudentDashboardLayoutProps> = ({ childre
                 />
               </Link>
               <button
-                onClick={() => { setSidebarOpen(false); setUserMenuOpen(false); }}
+                onClick={() => setSidebarOpen(false)}
                 className="lg:hidden absolute right-3 sm:right-4 p-2 rounded-lg text-slate-400 hover:text-slate-600 hover:bg-slate-100 transition-colors"
                 title="Fechar menu lateral"
               >
@@ -231,22 +229,33 @@ const StudentDashboardLayout: React.FC<StudentDashboardLayoutProps> = ({ childre
             </div>
 
             {/* User Profile */}
-            <div className="px-4 sm:px-6 py-3 sm:py-4 border-b border-slate-200">
-              <div className="flex items-center space-x-3">
-                <div className="w-12 h-12 sm:w-12 sm:h-12 bg-gradient-to-br from-blue-500 to-blue-600 rounded-xl flex items-center justify-center shadow-lg overflow-hidden flex-shrink-0">
-                  {user?.avatar_url ? (
-                    <img
-                      src={user.avatar_url}
-                      alt="Profile Avatar"
-                      className="w-full h-full object-cover"
-                    />
-                  ) : (
-                    <User className="h-5 w-5 sm:h-6 sm:w-6 text-white" />
-                  )}
+            <div className="px-4 py-8 sm:px-6 border-b border-slate-200">
+              <div className="flex flex-col items-center text-center">
+                {/* Avatar */}
+                <div className="relative mb-4 group cursor-pointer" onClick={() => navigate('/student/dashboard/profile')}>
+                  <div className="w-20 h-20 sm:w-24 sm:h-24 bg-gradient-to-br from-blue-500 via-blue-600 to-indigo-700 rounded-2xl flex items-center justify-center shadow-xl overflow-hidden ring-4 ring-white relative z-10 group-hover:scale-105 transition-transform duration-300">
+                    {user?.avatar_url ? (
+                      <img
+                        src={user.avatar_url}
+                        alt="Profile Avatar"
+                        className="w-full h-full object-cover"
+                      />
+                    ) : (
+                      <User className="h-8 w-8 sm:h-10 sm:w-10 text-white" />
+                    )}
+                  </div>
+                  {/* Subtle Glow behind avatar */}
+                  <div className="absolute inset-0 bg-blue-400 blur-2xl opacity-20 -z-0 rounded-full scale-150 group-hover:opacity-40 transition-opacity" />
                 </div>
-                <div className="flex-1 min-w-0">
-                  <h3 className="font-semibold text-slate-900 truncate text-sm sm:text-base">{profile?.full_name || user?.name}</h3>
-                  <p className="text-xs sm:text-sm text-slate-500 truncate">Painel do Estudante</p>
+                
+                {/* User Info */}
+                <div className="space-y-1">
+                  <h3 className="font-bold text-slate-900 text-lg sm:text-xl tracking-tight leading-tight">
+                    {profile?.full_name || user?.name}
+                  </h3>
+                  <p className="text-sm sm:text-base text-slate-600 font-medium truncate max-w-[240px] px-2" title={user?.email}>
+                    {user?.email}
+                  </p>
                 </div>
               </div>
             </div>
@@ -254,6 +263,11 @@ const StudentDashboardLayout: React.FC<StudentDashboardLayoutProps> = ({ childre
             {/* Navigation */}
             {/* Navigation */}
             <nav className="flex-1 px-3 sm:px-4 py-4 sm:py-6 space-y-2">
+              <div className="px-3 mb-4 text-center lg:hidden">
+                <p className="text-xs sm:text-sm font-bold text-slate-600 uppercase tracking-[0.2em]">
+                  {t('nav.studentDashboard')}
+                </p>
+              </div>
               {displayedSidebarItems.map((item) => {
                 const Icon = item.icon;
                 const isActive = activeTab === item.id;
@@ -265,7 +279,7 @@ const StudentDashboardLayout: React.FC<StudentDashboardLayoutProps> = ({ childre
                   <Link
                     key={item.id}
                     to={item.path}
-                    className={`group flex items-center justify-between px-3 sm:px-4 py-2.5 sm:py-3 rounded-xl font-medium transition-all duration-200 
+                    className={`group flex items-center justify-between px-3 sm:px-4 py-3 sm:py-3.5 rounded-xl font-semibold transition-all duration-200 
                       ${isActive
                         ? 'bg-blue-600 text-white shadow-lg'
                         : 'text-slate-600 hover:text-slate-900 hover:bg-slate-100'
@@ -282,7 +296,7 @@ const StudentDashboardLayout: React.FC<StudentDashboardLayoutProps> = ({ childre
                   >
                     <div className="flex items-center space-x-2 sm:space-x-3">
                       <div className="relative">
-                        <Icon className={`h-4 w-4 sm:h-5 sm:w-5 
+                        <Icon className={`h-5 w-5 sm:h-6 sm:w-6 
                             ${isActive ? 'text-white' : ''} 
                             ${!isActive ? 'text-slate-500' : ''}
                         `} />
@@ -294,12 +308,23 @@ const StudentDashboardLayout: React.FC<StudentDashboardLayoutProps> = ({ childre
                             }`}></div>
                         )}
                       </div>
-                      <span className="text-xs sm:text-sm">{item.label}</span>
+                      <span className="text-sm sm:text-base">{item.label}</span>
                     </div>
                   </Link>
                 );
               })}
             </nav>
+          </div>
+
+          {/* Sign Out - Bottom of Sidebar */}
+          <div className="px-3 sm:px-4 py-4 border-t border-slate-200">
+            <button
+              onClick={handleLogout}
+              className="group flex items-center w-full px-3 sm:px-4 py-3 sm:py-3.5 text-red-600 hover:bg-red-50 rounded-xl transition-all duration-200 font-semibold"
+            >
+              <LogOut className="h-5 w-5 sm:h-6 sm:w-6 mr-3 group-hover:translate-x-1 transition-transform" />
+              <span className="text-sm sm:text-base">{t('nav.signOut')}</span>
+            </button>
           </div>
         </div>
       </div >
@@ -309,10 +334,7 @@ const StudentDashboardLayout: React.FC<StudentDashboardLayoutProps> = ({ childre
         sidebarOpen && (
           <div
             className="fixed inset-0 bg-black bg-opacity-50 z-40 transition-opacity duration-300 lg:hidden"
-            onClick={() => {
-              setSidebarOpen(false);
-              setUserMenuOpen(false);
-            }}
+            onClick={() => setSidebarOpen(false)}
           />
         )
       }
@@ -324,8 +346,8 @@ const StudentDashboardLayout: React.FC<StudentDashboardLayoutProps> = ({ childre
         className={`flex-1 ml-0 overflow-x-hidden h-screen overflow-y-auto ${showSidebar ? 'lg:ml-72' : ''}`}
       >
         {/* Header */}
-        <header className="bg-white border-b border-slate-200 py-1 sticky top-0 z-50 pt-3 pl-3 pr-3 sm:px-6 lg:px-10">
-          <div className="flex items-center justify-between">
+        <header className="bg-white border-b border-slate-200 sticky top-0 z-50 px-4 sm:px-6 lg:px-10">
+          <div className="flex items-center justify-between h-20 relative">
             <div className="flex items-center space-x-3 sm:space-x-4">
               {showSidebar && (
                 <button
@@ -333,16 +355,26 @@ const StudentDashboardLayout: React.FC<StudentDashboardLayoutProps> = ({ childre
                   className="lg:hidden p-2 rounded-lg text-slate-400 hover:text-slate-600 hover:bg-slate-100 transition-colors flex-shrink-0"
                   aria-label="Open sidebar"
                 >
-                  <Menu className="h-5 w-5" />
+                  <Menu className="h-6 w-6 lg:h-5 lg:w-5" />
                 </button>
               )}
-              <div className="min-w-0 flex-1">
+              <div className="min-w-0 flex-1 hidden lg:block">
                 <h1 className="text-lg sm:text-xl lg:text-2xl font-bold text-slate-900 truncate">{t('studentDashboard.title')}</h1>
-                <p className="text-xs sm:text-sm text-slate-500 truncate">{t('studentDashboard.subtitle')}</p>
               </div>
             </div>
+            
+            {/* Logo Central (Mobile Only) */}
+            <div className="lg:hidden absolute left-1/2 transform -translate-x-1/2">
+              <Link to="/" className="flex items-center">
+                <img
+                  src="/logo.png.png"
+                  alt="Matrícula USA"
+                  className="h-10 w-auto lg:h-12"
+                />
+              </Link>
+            </div>
 
-            <div className="flex items-center space-x-2 sm:space-x-4">
+            <div className="flex items-center space-x-1 sm:space-x-4">
               {/* Notifications Bell */}
               <div className="relative notifications-container">
                 <button
@@ -357,9 +389,9 @@ const StudentDashboardLayout: React.FC<StudentDashboardLayoutProps> = ({ childre
                   className="relative p-2 rounded-xl hover:bg-slate-100 transition-colors"
                   title="Notifications"
                 >
-                  <Bell className="h-5 w-5 text-slate-600" />
+                  <Bell className="h-6 w-6 lg:h-5 lg:w-5 text-slate-600" />
                   {newNotificationCount > 0 && (
-                    <span className="absolute -top-0.5 -right-0.5 h-5 w-5 bg-red-500 rounded-full flex items-center justify-center text-white text-xs font-medium min-w-[20px]">
+                    <span className="absolute -top-0.5 -right-0.5 h-5 w-5 bg-red-500 rounded-full flex items-center justify-center text-white text-[10px] font-bold min-w-[20px] shadow-sm">
                       {newNotificationCount > 99 ? '99+' : newNotificationCount}
                     </span>
                   )}
@@ -398,97 +430,10 @@ const StudentDashboardLayout: React.FC<StudentDashboardLayoutProps> = ({ childre
 
 
 
-              {/* Language Selector - Desktop */}
-              <div className="hidden sm:block">
-                <LanguageSelector variant="dashboard" showLabel={true} />
-              </div>
+              {/* Language Selector */}
+              <LanguageSelector variant="dashboard" showLabel={true} />
 
-              {/* User Menu */}
-              <div className="relative flex items-center gap-1 sm:gap-2">
-                <button
-                  onClick={() => {
-                    setUserMenuOpen(!userMenuOpen);
-                    if (!userMenuOpen) setSidebarOpen(false);
-                  }}
-                  className="flex items-center space-x-2 sm:space-x-3 p-2 rounded-xl hover:bg-slate-100 transition-colors"
-                >
-                  <div className="w-10 h-10 sm:w-12 sm:h-12 bg-gradient-to-br from-blue-600 to-blue-700 rounded-lg flex items-center justify-center overflow-hidden flex-shrink-0">
-                    {user?.avatar_url ? (
-                      <img
-                        src={user?.avatar_url}
-                        alt="Profile Avatar"
-                        className="w-full h-full object-cover"
-                      />
-                    ) : (
-                      <User className="h-5 w-5 sm:h-4 sm:w-4 text-white" />
-                    )}
-                  </div>
-                  <div className="hidden sm:block text-left min-w-0">
-                    <p className="font-semibold text-slate-900 text-xs sm:text-sm truncate">{profile?.full_name || user?.name}</p>
-                    <p className="text-xs text-slate-500 truncate">Student</p>
-                  </div>
-                  <ChevronDown className="h-3 w-3 sm:h-4 sm:w-4 text-slate-400 flex-shrink-0" />
-                </button>
-                {/* User Dropdown */}
-                {userMenuOpen && (
-                  <div className="absolute right-0 top-full mt-2 w-56 sm:w-64 max-w-[90vw] bg-white rounded-xl shadow-xl border border-slate-200 py-2 z-50 overflow-visible">
-                    <div className="px-3 sm:px-4 py-3 border-b border-slate-100">
-                      <p className="font-semibold text-slate-900 text-sm sm:text-base truncate">{profile?.full_name || user?.name}</p>
-                      <p className="text-xs sm:text-sm text-slate-500 truncate max-w-[180px]" style={{ direction: 'ltr', textOverflow: 'ellipsis', overflow: 'hidden', whiteSpace: 'nowrap' }} title={user?.email}>{user?.email}</p>
-                    </div>
-
-                    <div className="py-2">
-                      <Link
-                        to="/student/dashboard/profile"
-                        className="flex items-center px-3 sm:px-4 py-2 text-xs sm:text-sm text-slate-700 hover:bg-slate-50"
-                        onClick={() => setUserMenuOpen(false)}
-                      >
-                        <User className="h-3 w-3 sm:h-4 sm:w-4 mr-2 sm:mr-3" />
-                        Profile Settings
-                      </Link>
-                      {/* Language selector inside user menu - Mobile optimized */}
-                      <div className="px-3 sm:px-4 py-2 sm:hidden border-t border-slate-100">
-                        <div className="space-y-2">
-                          <p className="text-xs font-medium text-slate-600 text-center">Language</p>
-
-                          {/* Language buttons in a row */}
-                          <div className="flex justify-center space-x-1">
-                            {[
-                              { code: 'en', flag: '🇺🇸' },
-                              { code: 'pt', flag: '🇧🇷' },
-                              { code: 'es', flag: '🇪🇸' }
-                            ].map((language) => (
-                              <button
-                                key={language.code}
-                                onClick={() => {
-                                  i18n.changeLanguage(language.code);
-                                  setUserMenuOpen(false);
-                                }}
-                                className={`w-10 h-10 rounded-lg flex items-center justify-center transition-all duration-200 ${i18n.language === language.code
-                                  ? 'bg-blue-600 text-white shadow-md scale-105'
-                                  : 'bg-slate-100 text-slate-600 hover:bg-slate-200'
-                                  }`}
-                              >
-                                <span className="text-lg">{language.flag}</span>
-                              </button>
-                            ))}
-                          </div>
-                        </div>
-                      </div>
-                    </div>
-
-                    <div className="border-t border-slate-100 pt-2">
-                      <button
-                        onClick={handleLogout}
-                        className="flex items-center w-full px-3 sm:px-4 py-2 text-xs sm:text-sm text-red-600 hover:bg-red-50"
-                      >
-                        <LogOut className="h-3 w-3 sm:h-4 sm:w-4 mr-2 sm:mr-3" />
-                        Sign Out
-                      </button>
-                    </div>
-                  </div>
-                )}
-              </div>
+              {/* User Menu removed as it was moved to sidebar */}
             </div>
           </div>
         </header>

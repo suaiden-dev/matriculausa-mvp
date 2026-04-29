@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { Link, useLocation } from 'react-router-dom';
-import { Menu, X, User, LogOut, BookOpen, ChevronDown } from 'lucide-react';
+import { Menu, X, User, LogOut, ChevronDown, Home as HomeIcon, GraduationCap, Award, HelpCircle, LogIn, ChevronRight } from 'lucide-react';
+import { motion, AnimatePresence } from 'framer-motion';
 import { useTranslation } from 'react-i18next';
 import { useAuth } from '../hooks/useAuth';
 import { usePageTranslationStatus } from '../hooks/usePageTranslationStatus';
@@ -91,19 +92,33 @@ const Header: React.FC = () => {
     }
   };
 
-  const getRoleColor = (role: string) => {
-    switch (role) {
-      case 'admin': return 'bg-purple-600';
-      case 'school': return 'bg-green-600';
-      case 'student': return 'bg-[#05294E]';
-      case 'affiliate_admin': return 'bg-orange-600';
-      case 'seller': return 'bg-blue-600';
-      default: return 'bg-[#05294E]';
-    }
-  };
+  const [isScrolled, setIsScrolled] = useState(false);
+
+  useEffect(() => {
+    const handleScroll = (e: Event) => {
+      // Pega o scroll do window, document.body, ou qualquer container principal que causou o scroll
+      const target = e.target as HTMLElement | Document;
+      const scrollY = window.scrollY || 
+                      document.documentElement.scrollTop || 
+                      document.body.scrollTop ||
+                      (target instanceof HTMLElement ? target.scrollTop : 0);
+      setIsScrolled(scrollY > 20);
+    };
+
+    // Use capture: true para interceptar eventos de scroll de qualquer container interno (ex: body)
+    window.addEventListener('scroll', handleScroll, true);
+    return () => window.removeEventListener('scroll', handleScroll, true);
+  }, []);
 
   return (
-    <header className="bg-white/95 backdrop-blur-lg shadow-lg border-b border-slate-200/50 sticky top-0 z-50">
+    <>
+    <header 
+      className={`fixed w-full top-0 z-50 transition-all duration-300 ${
+        isScrolled 
+          ? 'bg-white/70 backdrop-blur-md shadow-lg border-b border-slate-200/50' 
+          : 'bg-white border-b border-slate-200/50'
+      }`}
+    >
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
         <div className="flex justify-between items-center h-20">
           {/* Logo */}
@@ -187,7 +202,6 @@ const Header: React.FC = () => {
                         className="flex items-center px-4 py-2 text-sm text-slate-700 hover:bg-slate-50 font-semibold"
                         onClick={() => setIsUserMenuOpen(false)}
                       >
-                        <BookOpen className="h-4 w-4 mr-3 text-[#05294E]" />
                         {getDashboardLabel()}
                       </Link>
                     </div>
@@ -198,7 +212,6 @@ const Header: React.FC = () => {
                           className="flex items-center px-4 py-2 text-sm text-slate-700 hover:bg-slate-50"
                           onClick={() => setIsUserMenuOpen(false)}
                         >
-                          <User className="h-4 w-4 mr-3" />
                           {t('nav.profileSettings')}
                         </Link>
                       </div>
@@ -208,7 +221,6 @@ const Header: React.FC = () => {
                         onClick={handleLogout}
                         className="flex items-center w-full px-4 py-2 text-sm text-red-600 hover:bg-red-50"
                       >
-                        <LogOut className="h-4 w-4 mr-3" />
                         {t('nav.signOut')}
                       </button>
                     </div>
@@ -233,75 +245,131 @@ const Header: React.FC = () => {
             )}
           </div>
 
-          {/* Mobile menu button */}
-          <button
-            onClick={() => setIsMenuOpen(!isMenuOpen)}
-            className="lg:hidden p-2 rounded-xl text-slate-600 hover:text-slate-900 hover:bg-slate-100 transition-all duration-200"
-          >
-            {isMenuOpen ? <X className="h-6 w-6" /> : <Menu className="h-6 w-6" />}
-          </button>
-        </div>
-      </div>
-
-      {/* Mobile Navigation */}
-      {isMenuOpen && (
-        <div className="lg:hidden bg-white/95 backdrop-blur-lg border-t border-slate-200/50">
-          <div className="px-4 pt-4 pb-6 space-y-2">
-            {/* Language Selector for Mobile - Only show on pages with translations */}
+          {/* Mobile Actions */}
+          <div className="flex lg:hidden items-center gap-2">
             {hasTranslation && (
-              <div className="flex justify-center pb-4 border-b border-slate-200">
+              <div className="origin-right">
                 <LanguageSelector variant="compact" />
               </div>
             )}
-
-            <Link to="/" className="block px-4 py-3 text-slate-700 hover:bg-[#05294E]/5 rounded-xl font-medium transition-all duration-200" onClick={() => setIsMenuOpen(false)}>{t('nav.home')}</Link>
-            <Link
-              to="/schools"
-              className="block px-4 py-3 text-slate-700 hover:bg-[#05294E]/5 rounded-xl font-medium transition-all duration-200"
-              onClick={() => setIsMenuOpen(false)}
+            <button
+              onClick={() => setIsMenuOpen(!isMenuOpen)}
+              className="p-2 rounded-xl text-slate-600 hover:text-slate-900 hover:bg-slate-100 transition-all duration-200"
             >
-              {t('nav.universities')}
-            </Link>
-            {/* <Link
-              to="/eb3-jobs"
-              className="block px-4 py-3 text-slate-700 hover:bg-[#05294E]/5 rounded-xl font-medium transition-all duration-200"
-              onClick={() => setIsMenuOpen(false)}
-            >
-              {t('nav.eb3Jobs')}
-            </Link> */}
-            <Link to="/scholarships" className="px-4 py-3 text-slate-700 hover:bg-[#05294E]/5 rounded-xl font-medium transition-all duration-200 flex items-center" onClick={() => setIsMenuOpen(false)}>
-              {t('nav.scholarships')}
-            </Link>
-            <Link to="/how-it-works" className="block px-4 py-3 text-slate-700 hover:bg-[#05294E]/5 rounded-xl font-medium transition-all duration-200" onClick={() => setIsMenuOpen(false)}>{t('nav.howItWorks')}</Link>
-
-            {isAuthenticated && user ? (
-              <div className="border-t border-slate-200 pt-4 mt-4">
-                <div className="flex items-center px-4 py-3 mb-2">
-                  <div className={`w-8 h-8 rounded-xl flex items-center justify-center mr-3 ${getRoleColor(user.role)}`}>
-                    <User className="h-4 w-4 text-white" />
-                  </div>
-                  <div>
-                    <span className="font-bold text-slate-700 block">{userProfile?.full_name || user.email}</span>
-                    <span className="text-sm text-slate-500 capitalize">
-                      {user.role}
-                    </span>
-                  </div>
-                </div>
-
-                <Link to={getDashboardPath()} className="block px-4 py-3 text-slate-700 hover:bg-[#05294E]/5 rounded-xl font-medium transition-all duration-200" onClick={() => setIsMenuOpen(false)}>{getDashboardLabel()}</Link>
-
-                <button onClick={handleLogout} className="block w-full text-left px-4 py-3 text-slate-700 hover:bg-[#D0151C]/5 rounded-xl font-medium transition-all duration-200">{t('nav.signOut')}</button>
-              </div>
-            ) : (
-              <div className="border-t border-slate-200 pt-4 mt-4 space-y-2">
-                <Link to={`/login${location.search}`} className="block px-4 py-3 text-slate-700 hover:bg-[#05294E]/5 rounded-xl font-medium transition-all duration-200" onClick={() => setIsMenuOpen(false)}>{t('nav.login')}</Link>
-                <Link to={location.search.includes('seller') ? `/seller/register${location.search}` : `/register${location.search}`} className="block px-4 py-3 bg-[#D0151C] text-white hover:bg-[#B01218] rounded-xl font-bold transition-all duration-200 text-center" onClick={() => setIsMenuOpen(false)}>{t('nav.getStarted')}</Link>
-              </div>
-            )}
+              {isMenuOpen ? <X className="h-6 w-6" /> : <Menu className="h-6 w-6" />}
+            </button>
           </div>
         </div>
-      )}
+      </div>
+
+      {/* Mobile Navigation Overlay */}
+      <AnimatePresence>
+        {isMenuOpen && (
+          <motion.div
+            initial={{ opacity: 0, height: 0 }}
+            animate={{ opacity: 1, height: 'auto' }}
+            exit={{ opacity: 0, height: 0 }}
+            transition={{ duration: 0.3, ease: "easeInOut" }}
+            className="lg:hidden bg-white border-t border-slate-100 overflow-hidden shadow-2xl"
+          >
+            <div className="px-6 py-8 space-y-8 max-h-[calc(100vh-80px)] overflow-y-auto">
+              
+
+
+              {/* Main Navigation Links */}
+              <div className="grid gap-3">
+                {[
+                  { to: "/", icon: <HomeIcon className="w-5 h-5" />, label: t('nav.home') },
+                  { to: "/schools", icon: <GraduationCap className="w-5 h-5" />, label: t('nav.universities') },
+                  { to: "/scholarships", icon: <Award className="w-5 h-5" />, label: t('nav.scholarships') },
+                  { to: "/how-it-works", icon: <HelpCircle className="w-5 h-5" />, label: t('nav.howItWorks') },
+                ].map((item) => (
+                  <Link
+                    key={item.to}
+                    to={item.to}
+                    onClick={() => setIsMenuOpen(false)}
+                    className="flex items-center justify-between p-4 rounded-[1.5rem] bg-white border border-slate-100 hover:border-[#05294E]/20 hover:bg-[#05294E]/5 transition-all duration-300 group"
+                  >
+                    <div className="flex items-center gap-4">
+                      <div className="w-10 h-10 rounded-xl bg-slate-50 group-hover:bg-white shadow-sm flex items-center justify-center text-[#05294E] transition-all">
+                        {item.icon}
+                      </div>
+                      <span className="font-bold text-slate-700 text-lg">{item.label}</span>
+                    </div>
+                    <ChevronRight className="w-5 h-5 text-slate-300 group-hover:text-[#05294E] group-hover:translate-x-1 transition-all" />
+                  </Link>
+                ))}
+              </div>
+
+              {/* User / Auth Section */}
+              <div className="pt-4">
+                {isAuthenticated && user ? (
+                  <div className="space-y-4">
+                    {/* User Card */}
+                    <div className="bg-gradient-to-br from-[#05294E] to-slate-800 p-6 rounded-[2rem] text-white shadow-xl relative overflow-hidden group">
+                      <div className="absolute -top-12 -right-12 w-32 h-32 bg-white/10 rounded-full blur-2xl group-hover:scale-150 transition-transform duration-700"></div>
+                      
+                      <div className="flex items-center gap-4 relative z-10 mb-6">
+                        <div className="w-14 h-14 rounded-2xl bg-white/20 backdrop-blur-md flex items-center justify-center border border-white/20">
+                          {user?.avatar_url && user.role === 'student' ? (
+                            <img src={user.avatar_url} alt="" className="w-full h-full rounded-2xl object-cover" />
+                          ) : user?.role === 'school' && (user?.university_image || schoolImageUrl) ? (
+                            <img src={user.university_image || schoolImageUrl || ''} alt="" className="w-full h-full rounded-2xl object-cover" />
+                          ) : (
+                            <User className="h-6 w-6 text-white" />
+                          )}
+                        </div>
+                        <div>
+                          <p className="font-black text-xl leading-tight">{userProfile?.full_name || user.email.split('@')[0]}</p>
+                          <p className="text-blue-200 text-sm font-medium opacity-80 capitalize">{user.role}</p>
+                        </div>
+                      </div>
+
+                      <Link
+                        to={getDashboardPath()}
+                        onClick={() => setIsMenuOpen(false)}
+                        className="flex items-center justify-center w-full bg-white text-[#05294E] py-4 rounded-xl font-black transition-all hover:bg-blue-50 active:scale-95"
+                      >
+                        {getDashboardLabel()}
+                      </Link>
+                    </div>
+
+                    <button
+                      onClick={handleLogout}
+                      className="flex items-center justify-center w-full p-4 rounded-xl text-red-600 font-bold hover:bg-red-50 transition-all border border-red-100"
+                    >
+                      <LogOut className="w-5 h-5 mr-2" />
+                      {t('nav.signOut')}
+                    </button>
+                  </div>
+                ) : (
+                  <div className="grid gap-3">
+                    <Link
+                      to={`/login${location.search}`}
+                      onClick={() => setIsMenuOpen(false)}
+                      className="flex items-center justify-center gap-3 p-5 rounded-[1.5rem] bg-white border border-slate-200 text-[#05294E] font-black text-lg hover:bg-slate-50 transition-all"
+                    >
+                      <LogIn className="w-5 h-5" />
+                      {t('nav.login')}
+                    </Link>
+                    <Link
+                      to={location.search.includes('seller') ? `/seller/register${location.search}` : `/register${location.search}`}
+                      onClick={() => setIsMenuOpen(false)}
+                      className="flex items-center justify-center p-5 rounded-[1.5rem] bg-[#D0151C] text-white font-black text-lg shadow-lg shadow-red-500/20 hover:bg-[#B01218] transition-all"
+                    >
+                      {t('nav.getStarted')}
+                    </Link>
+                  </div>
+                )}
+              </div>
+            </div>
+          </motion.div>
+        )}
+      </AnimatePresence>
     </header>
+    {/* Spacer para impedir que o conteúdo da página fique sob o header fixed (h-20) */}
+    <div className="h-20" />
+    </>
   );
 };
 
