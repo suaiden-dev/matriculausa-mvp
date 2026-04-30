@@ -1,14 +1,15 @@
-import React, { useEffect } from 'react';
+import React, { useState, useRef, useEffect } from 'react';
 import { motion, useAnimation } from 'framer-motion';
 import { useInView } from 'react-intersection-observer';
-import { ChevronUp, ChevronDown } from 'lucide-react';
+import { Plus, Minus } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 
 const FAQSection: React.FC = () => {
   const { t } = useTranslation();
   const controls = useAnimation();
   const { ref, inView } = useInView({ triggerOnce: true });
-  const [openItems, setOpenItems] = React.useState<number[]>([]);
+  const [openItem, setOpenItem] = useState<number | null>(null);
+  const contentRefs = useRef<{ [key: number]: HTMLDivElement | null }>({});
 
   useEffect(() => {
     if (inView) {
@@ -39,11 +40,7 @@ const FAQSection: React.FC = () => {
   };
 
   const toggleItem = (index: number) => {
-    setOpenItems(prev => 
-      prev.includes(index) 
-        ? prev.filter(item => item !== index)
-        : [...prev, index]
-    );
+    setOpenItem((current) => (current === index ? null : index));
   };
 
   const faqs = t('forStudents.faq.items', { returnObjects: true }) as Array<{
@@ -52,7 +49,7 @@ const FAQSection: React.FC = () => {
   }>;
 
   return (
-    <section ref={ref} className="py-20 bg-slate-50">
+    <section ref={ref} className="py-24 bg-slate-50">
       <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8">
         <motion.div
           animate={controls}
@@ -68,34 +65,52 @@ const FAQSection: React.FC = () => {
             </p>
           </motion.div>
 
-          <motion.div variants={containerVariants} className="space-y-4">
-            {faqs.map((faq, index) => (
-              <motion.div
-                key={index}
-                variants={itemVariants}
-                className="bg-white rounded-xl shadow-sm hover:shadow-md transition-shadow duration-300"
-              >
-                <button
-                  onClick={() => toggleItem(index)}
-                  className="w-full flex items-center justify-between p-6 text-left"
+          <motion.div variants={containerVariants} className="w-full">
+            {faqs.map((faq, index) => {
+              const isOpen = openItem === index;
+
+              return (
+                <div
+                  key={index}
+                  className="border-b border-slate-200 last:border-b-0"
                 >
-                  <h3 className="text-lg font-bold text-[#05294E]">
-                    {faq.question}
-                  </h3>
-                  {openItems.includes(index) ? (
-                    <ChevronUp className="w-6 h-6 text-[#D0151C] flex-shrink-0" />
-                  ) : (
-                    <ChevronDown className="w-6 h-6 text-slate-400 flex-shrink-0" />
-                  )}
-                </button>
-                {openItems.includes(index) && (
-                  <div 
-                    className="px-6 pb-6 text-slate-600 leading-relaxed"
-                    dangerouslySetInnerHTML={{ __html: faq.answer }}
-                  />
-                )}
-              </motion.div>
-            ))}
+                  <button
+                    onClick={() => toggleItem(index)}
+                    aria-expanded={isOpen}
+                    className="flex items-center justify-between w-full py-6 text-left text-[#05294E] hover:text-[#D0151C] transition-colors duration-300 focus:outline-none"
+                  >
+                    <span className="text-xl font-bold pr-8">{faq.question}</span>
+
+                    <div className="relative w-6 h-6 flex-shrink-0">
+                      <Plus
+                        className={`absolute inset-0 text-[#05294E] transition-opacity duration-300 ${isOpen ? "opacity-0" : "opacity-100"}`}
+                        strokeWidth={2}
+                      />
+                      <Minus
+                        className={`absolute inset-0 text-[#D0151C] transition-opacity duration-300 ${isOpen ? "opacity-100" : "opacity-0"}`}
+                        strokeWidth={2}
+                      />
+                    </div>
+                  </button>
+
+                  {/* Content wrapper */}
+                  <motion.div
+                    initial={false}
+                    animate={{ height: isOpen ? "auto" : 0, opacity: isOpen ? 1 : 0 }}
+                    transition={{ duration: 0.4, ease: "easeInOut" }}
+                    style={{ overflow: "hidden" }}
+                  >
+                    <div
+                      ref={(el) => {
+                        contentRefs.current[index] = el;
+                      }}
+                      className="pb-6 text-slate-600 text-lg leading-relaxed select-text pr-12"
+                      dangerouslySetInnerHTML={{ __html: faq.answer }}
+                    />
+                  </motion.div>
+                </div>
+              );
+            })}
           </motion.div>
 
           <motion.div variants={itemVariants} className="text-center mt-12">

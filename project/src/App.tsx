@@ -56,6 +56,7 @@ const PrivacyPolicy = React.lazy(() => import('./pages/PrivacyPolicy'));
 const TermsOfService = React.lazy(() => import('./pages/TermsOfService'));
 const ForUniversities = React.lazy(() => import('./pages/ForUniversities'));
 const ForStudents = React.lazy(() => import('./pages/ForStudents'));
+const SelectionProcessLanding = React.lazy(() => import('./pages/SelectionProcessLanding'));
 // FASE 1 DESATIVAÇÃO: imports de email IA comentados
 // const EmailOAuthCallback = React.lazy(() => import('./pages/EmailOAuthCallback'));
 // const MicrosoftCallback = React.lazy(() => import('./pages/MicrosoftCallback'));
@@ -170,6 +171,7 @@ const AppContent = () => {
           <Route path="/terms-of-service" element={<TermsOfService />} />
           <Route path="/for-universities" element={<ForUniversities />} />
           <Route path="/for-students" element={<ForStudents />} />
+          <Route path="/selection-process" element={<SelectionProcessLanding />} />
           <Route path="/success" element={<SuccessPage />} />
           <Route path="/application-fee-cancel" element={<ApplicationFeeCancel />} />
           <Route path="/payment-error" element={<PaymentErrorPage />} />
