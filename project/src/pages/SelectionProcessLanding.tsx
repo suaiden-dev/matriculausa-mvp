@@ -55,6 +55,15 @@ const SelectionProcessLanding: React.FC = () => {
       
       {/* FAQ Section */}
       <FAQSection />
+
+      {/* Footer */}
+      <footer className="py-12 border-t border-slate-100">
+        <div className="max-w-7xl mx-auto px-4 text-center">
+          <p className="text-slate-400 text-sm font-medium">
+            © 2026 Matrícula USA. Todos os direitos reservados.
+          </p>
+        </div>
+      </footer>
     </div>
   );
 };
@@ -172,6 +181,8 @@ const scholarshipsData = [
       workAuth: ["CPT", "OPT"],
       originalPrice: "U$ 24.500/ano",
       discountedPrice: "U$ 8.500/ano",
+      monthlyPrice: "U$ 708/mês",
+      originalMonthlyPrice: "U$ 2.041/mês",
       image: "https://images.unsplash.com/photo-1562774053-701939374585?auto=format&fit=crop&q=80&w=800",
       discount: "-65%",
       tag: "VIP"
@@ -186,6 +197,8 @@ const scholarshipsData = [
       workAuth: ["CPT", "OPT"],
       originalPrice: "U$ 26.000/ano",
       discountedPrice: "U$ 9.800/ano",
+      monthlyPrice: "U$ 816/mês",
+      originalMonthlyPrice: "U$ 2.166/mês",
       image: "https://images.unsplash.com/photo-1517694712202-14dd9538aa97?auto=format&fit=crop&q=80&w=800",
       discount: "-62%",
       tag: "PREMIUM"
@@ -200,6 +213,8 @@ const scholarshipsData = [
       workAuth: ["CPT", "OPT"],
       originalPrice: "U$ 28.500/ano",
       discountedPrice: "U$ 11.200/ano",
+      monthlyPrice: "U$ 933/mês",
+      originalMonthlyPrice: "U$ 2.375/mês",
       image: "https://images.unsplash.com/photo-1541829070764-84a7d30dd3f3?auto=format&fit=crop&q=80&w=800",
       discount: "-60%",
       tag: "VIP"
@@ -214,6 +229,8 @@ const scholarshipsData = [
       workAuth: ["CPT"],
       originalPrice: "U$ 18.000/ano",
       discountedPrice: "U$ 7.500/ano",
+      monthlyPrice: "U$ 625/mês",
+      originalMonthlyPrice: "U$ 1.500/mês",
       image: "https://images.unsplash.com/photo-1564981797816-1043664bf78d?auto=format&fit=crop&q=80&w=800",
       discount: "-58%",
       tag: "PREMIUM"
@@ -228,6 +245,8 @@ const scholarshipsData = [
       workAuth: ["CPT", "OPT"],
       originalPrice: "U$ 16.500/ano",
       discountedPrice: "U$ 6.900/ano",
+      monthlyPrice: "U$ 575/mês",
+      originalMonthlyPrice: "U$ 1.375/mês",
       image: "https://images.unsplash.com/photo-1606761568499-6d2451b23c66?auto=format&fit=crop&q=80&w=800",
       discount: "-58%",
       tag: "VIP"
@@ -242,6 +261,8 @@ const scholarshipsData = [
       workAuth: ["CPT", "OPT"],
       originalPrice: "U$ 22.000/ano",
       discountedPrice: "U$ 10.500/ano",
+      monthlyPrice: "U$ 875/mês",
+      originalMonthlyPrice: "U$ 1.833/mês",
       image: "https://images.unsplash.com/photo-1523580494863-6f3031224c94?auto=format&fit=crop&q=80&w=800",
       discount: "-52%",
       tag: "PREMIUM"
@@ -256,6 +277,8 @@ const scholarshipsData = [
       workAuth: ["CPT"],
       originalPrice: "U$ 19.500/ano",
       discountedPrice: "U$ 8.200/ano",
+      monthlyPrice: "U$ 683/mês",
+      originalMonthlyPrice: "U$ 1.625/mês",
       image: "https://images.unsplash.com/photo-1509062522246-3755977927d7?auto=format&fit=crop&q=80&w=800",
       discount: "-58%",
       tag: "VIP"
@@ -270,6 +293,8 @@ const scholarshipsData = [
       workAuth: ["CPT", "OPT"],
       originalPrice: "U$ 25.000/ano",
       discountedPrice: "U$ 12.000/ano",
+      monthlyPrice: "U$ 1.000/mês",
+      originalMonthlyPrice: "U$ 2.083/mês",
       image: "https://images.unsplash.com/photo-1524178232363-1fb2b075b655?auto=format&fit=crop&q=80&w=800",
       discount: "-52%",
       tag: "PREMIUM"
@@ -284,6 +309,8 @@ const scholarshipsData = [
       workAuth: ["CPT", "OPT"],
       originalPrice: "U$ 14.000/ano",
       discountedPrice: "U$ 5.500/ano",
+      monthlyPrice: "U$ 458/mês",
+      originalMonthlyPrice: "U$ 1.166/mês",
       image: "https://images.unsplash.com/photo-1592280771190-3e2e4d571952?auto=format&fit=crop&q=80&w=800",
       discount: "-60%",
       tag: "VIP"
@@ -298,6 +325,8 @@ const scholarshipsData = [
       workAuth: ["CPT", "OPT"],
       originalPrice: "U$ 12.500/ano",
       discountedPrice: "U$ 4.800/ano",
+      monthlyPrice: "U$ 400/mês",
+      originalMonthlyPrice: "U$ 1.041/mês",
       image: "https://images.unsplash.com/photo-1501504905252-473c47e087f8?auto=format&fit=crop&q=80&w=800",
       discount: "-60%",
       tag: "PREMIUM"
@@ -460,9 +489,13 @@ const FeaturedScholarshipsSection: React.FC<{ onCTAClick: () => void }> = ({ onC
                     </div>
 
                     <div className="mt-auto flex items-end justify-between border-t border-slate-100 pt-4">
-                      <div>
-                        <p className="text-xs text-slate-400 line-through mb-1">{item.originalPrice}</p>
-                        <p className="text-xl font-black leading-none text-green-600">{item.discountedPrice}</p>
+                      <div className="flex flex-col gap-1">
+                        <p className="text-xs text-slate-400 line-through">{item.originalMonthlyPrice}</p>
+                        <div className="flex items-baseline gap-2">
+                          <p className="text-xl font-black leading-none text-green-600">{item.monthlyPrice}</p>
+                          <span className="text-sm font-bold text-slate-500">|</span>
+                          <p className="text-sm font-bold text-slate-500 whitespace-nowrap">{item.discountedPrice}</p>
+                        </div>
                       </div>
                     </div>
                   </div>
@@ -891,7 +924,7 @@ const ComparisonSection: React.FC<{ onCTAClick: () => void }> = ({ onCTAClick })
     };
   }, []);
 
-  const [isMonthly, setIsMonthly] = useState(false);
+  const [isMonthly, setIsMonthly] = useState(true);
 
   const plans = [
     {
@@ -960,16 +993,6 @@ const ComparisonSection: React.FC<{ onCTAClick: () => void }> = ({ onCTAClick })
           {/* Billing Toggle */}
           <div className="mt-8 flex items-center justify-center gap-2 bg-slate-200/50 backdrop-blur-sm p-1 rounded-2xl border border-slate-200">
             <button
-              onClick={() => setIsMonthly(false)}
-              className={`px-8 py-2.5 rounded-xl text-sm font-bold transition-all duration-300 ${
-                !isMonthly 
-                  ? "bg-[#05294E] text-white shadow-md scale-100" 
-                  : "text-slate-500 hover:text-[#05294E] hover:bg-slate-200/50"
-              }`}
-            >
-              Anual
-            </button>
-            <button
               onClick={() => setIsMonthly(true)}
               className={`px-8 py-2.5 rounded-xl text-sm font-bold transition-all duration-300 ${
                 isMonthly 
@@ -978,6 +1001,16 @@ const ComparisonSection: React.FC<{ onCTAClick: () => void }> = ({ onCTAClick })
               }`}
             >
               Mensal
+            </button>
+            <button
+              onClick={() => setIsMonthly(false)}
+              className={`px-8 py-2.5 rounded-xl text-sm font-bold transition-all duration-300 ${
+                !isMonthly 
+                  ? "bg-[#05294E] text-white shadow-md scale-100" 
+                  : "text-slate-500 hover:text-[#05294E] hover:bg-slate-200/50"
+              }`}
+            >
+              Anual
             </button>
           </div>
 

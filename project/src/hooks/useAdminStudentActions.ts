@@ -30,7 +30,7 @@ export const useAdminStudentActions = () => {
   // Mark fee as paid
   const markFeeAsPaid = useCallback(async (
     userId: string,
-    feeType: 'selection_process' | 'application' | 'scholarship' | 'i20_control' | 'placement' | 'ds160_package' | 'i539_cos_package' | 'reinstatement_fee',
+    feeType: 'selection_process' | 'application' | 'scholarship' | 'i20_control' | 'placement' | 'ds160_package' | 'i539_cos_package' | 'reinstatement_fee' | 'reinstatement_package',
     paymentMethod: string,
     applicationId?: string,
     placementFeePendingBalance?: number // When provided, explicitly sets placement_fee_pending_balance
@@ -42,7 +42,7 @@ export const useAdminStudentActions = () => {
       // to have access to all necessary data (paymentDate, etc.)
 
       // Update the appropriate fee status
-      if (feeType === 'selection_process' || feeType === 'i20_control' || feeType === 'ds160_package' || feeType === 'i539_cos_package' || feeType === 'reinstatement_fee' || feeType === 'placement') {
+      if (feeType === 'selection_process' || feeType === 'i20_control' || feeType === 'ds160_package' || feeType === 'i539_cos_package' || feeType === 'reinstatement_fee' || feeType === 'reinstatement_package' || feeType === 'placement') {
         let fieldName: string;
         let methodField: string;
 
@@ -55,7 +55,7 @@ export const useAdminStudentActions = () => {
         } else if (feeType === 'ds160_package') {
           fieldName = 'has_paid_ds160_package';
           methodField = 'ds160_package_payment_method';
-        } else if (feeType === 'reinstatement_fee') {
+        } else if (feeType === 'reinstatement_fee' || feeType === 'reinstatement_package') {
           fieldName = 'has_paid_reinstatement_package';
           methodField = 'reinstatement_package_payment_method';
         } else if (feeType === 'placement') {
