@@ -56,6 +56,7 @@ import { NewRequestModal } from '../../components/AdminDashboard/StudentDetails/
 // Tabs já existentes
 const DocumentsView = lazy(() => import('../../components/EnhancedStudentTracking/DocumentsView'));
 import GlobalDocumentRequestsSection from '../../components/AdminDashboard/StudentDetails/GlobalDocumentRequestsSection';
+import MigmaPackageDocuments from '../../components/AdminDashboard/StudentDetails/MigmaPackageDocuments';
 const AdminScholarshipSelection = lazy(() => import('../../components/AdminDashboard/AdminScholarshipSelection'));
 const StudentLogsView = lazy(() => import('../../components/AdminDashboard/StudentLogsView'));
 
@@ -402,7 +403,11 @@ const AdminStudentDetails: React.FC = () => {
     getTransferApplication,
     handleUploadTransferForm,
     handleApproveTransferFormUpload,
-    handleRejectTransferFormUpload
+    handleRejectTransferFormUpload,
+    handleApproveMigmaTransferForm,
+    handleRejectMigmaTransferForm,
+    migmaTransferFormUrl,
+    migmaTransferFormStatus,
   } = useTransferForm(student, isPlatformAdmin, user?.id, user?.email, logAction);
 
   // Estados para Preview de Documentos
@@ -3772,8 +3777,8 @@ const AdminStudentDetails: React.FC = () => {
       {/* Documents Tab */}
       {activeTab === 'documents' && (
         <div className="space-y-6">
-          {/* Botão para criar novo Document Request (somente Admin) */}
-          {isPlatformAdmin && (
+          {/* Botão para criar novo Document Request (somente Admin, não para alunos Migma) */}
+          {isPlatformAdmin && student?.source !== 'migma' && (
             <div className="flex justify-end">
               <button
                 onClick={openNewRequestModal}
@@ -3799,51 +3804,89 @@ const AdminStudentDetails: React.FC = () => {
               handleRejectTransferFormUpload={handleRejectTransferFormUpload}
               handleViewDocument={handleOnViewDocument}
               handleDownloadDocument={handleDownloadDocument}
+              migmaTransferFormUrl={migmaTransferFormUrl}
+              migmaTransferFormStatus={migmaTransferFormStatus}
+              handleApproveMigmaTransferForm={handleApproveMigmaTransferForm}
+              handleRejectMigmaTransferForm={handleRejectMigmaTransferForm}
             />
           )}
 
           {/* Versão antiga removida - Transfer Form agora usa o componente TransferFormSection */}
 
-          {/* Global Document Requests — seção dedicada */}
-          <GlobalDocumentRequestsSection
-            globalRequests={documentRequests.filter((r: any) => r.is_global)}
-            studentUserId={student?.user_id || ''}
-            isAdmin={isPlatformAdmin}
-            onApproveDocument={handleApproveDocumentRequest}
-            onRejectDocument={handleRejectDocumentRequest}
-            onDeleteDocumentRequest={handleDeleteDocumentRequest}
-            onViewDocument={handleOnViewDocument}
-            approvingStates={approvingDocumentRequest}
-            rejectingStates={rejectingDocumentRequest}
-            deletingStates={deletingDocumentRequest}
-          />
+          {student?.source === 'migma' ? (
+            <>
+              {/* Migma students: show package documents instead of document requests */}
+              <MigmaPackageDocuments
+                studentUserId={student?.user_id || ''}
+                studentEmail={student?.student_email || ''}
+                onViewDocument={handleOnViewDocument}
+                onDownloadDocument={handleDownloadDocument}
+              />
 
-          <Suspense fallback={<TabLoadingSkeleton />}>
-            <DocumentsView
-              studentDocuments={[]}
-              documentRequests={documentRequests.filter((r: any) => !r.is_global)}
-              scholarshipApplication={(() => {
-                const apps = student?.all_applications || [];
-                const paidApp = apps.find((app: any) => app.is_application_fee_paid);
-                return paidApp || apps[0];
-              })()}
-              studentId={student?.user_id || ''}
-              universityId={student?.university_id || ''}
-              onViewDocument={handleOnViewDocument}
-              onDownloadDocument={handleDownloadDocument}
-              onUploadDocument={handleUploadDocumentRequest}
-              onApproveDocument={handleApproveDocumentRequest}
-              onRejectDocument={handleRejectDocumentRequest}
-              onEditTemplate={handleEditTemplate}
-              onDeleteDocumentRequest={handleDeleteDocumentRequest}
-              isAdmin={isPlatformAdmin}
-              uploadingStates={uploadingDocumentRequest}
-              approvingStates={approvingDocumentRequest}
-              rejectingStates={rejectingDocumentRequest}
-              deletingStates={deletingDocumentRequest}
-              showGlobalRequests={false}
-            />
-          </Suspense>
+              {/* Acceptance Letter — always visible, document requests hidden */}
+              <Suspense fallback={<TabLoadingSkeleton />}>
+                <DocumentsView
+                  studentDocuments={[]}
+                  documentRequests={[]}
+                  scholarshipApplication={(() => {
+                    const apps = student?.all_applications || [];
+                    const paidApp = apps.find((app: any) => app.is_application_fee_paid);
+                    return paidApp || apps[0];
+                  })()}
+                  studentId={student?.user_id || ''}
+                  universityId={student?.university_id || ''}
+                  onViewDocument={handleOnViewDocument}
+                  onDownloadDocument={handleDownloadDocument}
+                  isAdmin={isPlatformAdmin}
+                  showGlobalRequests={false}
+                  hideDocumentRequests={true}
+                />
+              </Suspense>
+            </>
+          ) : (
+            <>
+              {/* Non-Migma students: standard document requests flow */}
+              <GlobalDocumentRequestsSection
+                globalRequests={documentRequests.filter((r: any) => r.is_global)}
+                studentUserId={student?.user_id || ''}
+                isAdmin={isPlatformAdmin}
+                onApproveDocument={handleApproveDocumentRequest}
+                onRejectDocument={handleRejectDocumentRequest}
+                onDeleteDocumentRequest={handleDeleteDocumentRequest}
+                onViewDocument={handleOnViewDocument}
+                approvingStates={approvingDocumentRequest}
+                rejectingStates={rejectingDocumentRequest}
+                deletingStates={deletingDocumentRequest}
+              />
+
+              <Suspense fallback={<TabLoadingSkeleton />}>
+                <DocumentsView
+                  studentDocuments={[]}
+                  documentRequests={documentRequests.filter((r: any) => !r.is_global)}
+                  scholarshipApplication={(() => {
+                    const apps = student?.all_applications || [];
+                    const paidApp = apps.find((app: any) => app.is_application_fee_paid);
+                    return paidApp || apps[0];
+                  })()}
+                  studentId={student?.user_id || ''}
+                  universityId={student?.university_id || ''}
+                  onViewDocument={handleOnViewDocument}
+                  onDownloadDocument={handleDownloadDocument}
+                  onUploadDocument={handleUploadDocumentRequest}
+                  onApproveDocument={handleApproveDocumentRequest}
+                  onRejectDocument={handleRejectDocumentRequest}
+                  onEditTemplate={handleEditTemplate}
+                  onDeleteDocumentRequest={handleDeleteDocumentRequest}
+                  isAdmin={isPlatformAdmin}
+                  uploadingStates={uploadingDocumentRequest}
+                  approvingStates={approvingDocumentRequest}
+                  rejectingStates={rejectingDocumentRequest}
+                  deletingStates={deletingDocumentRequest}
+                  showGlobalRequests={false}
+                />
+              </Suspense>
+            </>
+          )}
         </div>
       )}
 

@@ -1,5 +1,6 @@
 import { useState, useCallback, useEffect } from 'react';
 import { supabase } from '../lib/supabase';
+import { filenameFromUrl } from '../lib/urlUtils';
 
 interface StudentRecord {
   user_id: string;
@@ -17,6 +18,8 @@ export const useTransferForm = (
   const [transferFormFile, setTransferFormFile] = useState<File | null>(null);
   const [uploadingTransferForm, setUploadingTransferForm] = useState(false);
   const [transferFormUploads, setTransferFormUploads] = useState<any[]>([]);
+  const [migmaTransferFormUrl, setMigmaTransferFormUrl] = useState<string | null>(null);
+  const [migmaTransferFormStatus, setMigmaTransferFormStatus] = useState<string | null>(null);
 
   // Função utilitária para sanitizar nome de arquivo
   const sanitizeFileName = (fileName: string): string => {
@@ -33,11 +36,12 @@ export const useTransferForm = (
     return transferApps.find((app: any) => app.is_application_fee_paid) || transferApps[0];
   }, [student]);
 
-  // Carregar transfer form uploads quando for transfer student
+  // Carregar transfer form uploads e migma transfer form
   useEffect(() => {
-    const fetchTransferFormUploads = async () => {
+    const fetchTransferData = async () => {
       if (student?.student_process_type !== 'transfer') {
         setTransferFormUploads([]);
+        setMigmaTransferFormUrl(null);
         return;
       }
 
@@ -47,6 +51,7 @@ export const useTransferForm = (
         return;
       }
 
+      // 1. Buscar uploads manuais (MatriculaUSA)
       const { data: uploads } = await supabase
         .from('transfer_form_uploads')
         .select('*')
@@ -56,45 +61,54 @@ export const useTransferForm = (
       if (uploads) {
         setTransferFormUploads(uploads);
       }
+
+      // 2. Buscar formulário vindo do Migma (incluindo status da decisão)
+      const { data: migmaData } = await supabase
+        .from('migma_packages')
+        .select('transfer_form_filled_url, transfer_form_status')
+        .eq('student_user_id', student?.user_id)
+        .order('received_at', { ascending: false })
+        .limit(1)
+        .maybeSingle();
+
+      if (migmaData?.transfer_form_filled_url) {
+        setMigmaTransferFormUrl(migmaData.transfer_form_filled_url);
+        setMigmaTransferFormStatus(migmaData.transfer_form_status ?? null);
+      } else if (student?.user_id) {
+        // Fallback: tentar buscar por email se user_id falhar (comum em migrações)
+        const studentEmail = (student as any).student_email || (student as any).email;
+        if (studentEmail) {
+          const { data: migmaDataByEmail } = await supabase
+            .from('migma_packages')
+            .select('transfer_form_filled_url, transfer_form_status')
+            .eq('student_email', studentEmail)
+            .order('received_at', { ascending: false })
+            .limit(1)
+            .maybeSingle();
+
+          if (migmaDataByEmail?.transfer_form_filled_url) {
+            setMigmaTransferFormUrl(migmaDataByEmail.transfer_form_filled_url);
+            setMigmaTransferFormStatus(migmaDataByEmail.transfer_form_status ?? null);
+          }
+        }
+      }
     };
 
-    fetchTransferFormUploads();
-  }, [student?.student_process_type, student?.all_applications, getTransferApplication]);
+    fetchTransferData();
+  }, [student?.student_process_type, student?.all_applications, student?.user_id, getTransferApplication]);
 
   // Handler para upload de Transfer Form
   const handleUploadTransferForm = useCallback(async () => {
-    console.log('🚀 [Transfer Form] handleUploadTransferForm iniciado', {
-      isPlatformAdmin,
-      student: student?.user_id,
-      transferFormFile: transferFormFile?.name,
-      userId,
-      adminEmail
-    });
-    
-    if (!isPlatformAdmin || !student || !transferFormFile) {
-      console.log('❌ [Transfer Form] Pré-condições falharam:', {
-        isPlatformAdmin,
-        hasStudent: !!student,
-        hasFile: !!transferFormFile
-      });
-      return;
-    }
+    if (!isPlatformAdmin || !student || !transferFormFile) return;
     
     try {
       setUploadingTransferForm(true);
-      
-      // Encontrar aplicação do aluno transfer
       const transferApp = getTransferApplication();
+      if (!transferApp) return;
       
-      if (!transferApp) {
-        alert('No transfer application found for this student');
-        return;
-      }
-      
-      // Se já existe um formulário, deletar o arquivo anterior
       if (transferApp.transfer_form_url) {
         try {
-          const oldPath = transferApp.transfer_form_url.split('/').pop();
+          const oldPath = filenameFromUrl(transferApp.transfer_form_url);
           if (oldPath) {
             await supabase.storage
               .from('document-attachments')
@@ -105,23 +119,22 @@ export const useTransferForm = (
         }
       }
       
-      // Sanitizar nome do arquivo
       const sanitized = sanitizeFileName(transferFormFile.name);
       const storagePath = `${student.user_id}/transfer-forms/${Date.now()}_${sanitized}`;
       
-      // Upload para Supabase Storage
       const { data: uploadData, error: uploadError } = await supabase.storage
         .from('document-attachments')
         .upload(storagePath, transferFormFile, { upsert: true });
         
       if (uploadError) throw uploadError;
       
-      // Obter URL pública
-      const { data: { publicUrl } } = supabase.storage
+      const TEN_YEARS = 60 * 60 * 24 * 365 * 10;
+      const { data: signedData, error: signedError } = await supabase.storage
         .from('document-attachments')
-        .getPublicUrl(uploadData?.path || storagePath);
+        .createSignedUrl(uploadData?.path || storagePath, TEN_YEARS);
+      if (signedError) throw signedError;
+      const publicUrl = signedData.signedUrl;
       
-      // Atualizar a aplicação com o formulário de transferência
       const { error: updateError } = await supabase
         .from('scholarship_applications')
         .update({
@@ -133,223 +146,17 @@ export const useTransferForm = (
         
       if (updateError) throw updateError;
 
-      // Log da ação
       if (logAction && userId) {
-        try {
-          await logAction(
-            'transfer_form_upload',
-            `Transfer form uploaded by platform admin`,
-            userId,
-            'admin',
-            {
-              application_id: transferApp.id,
-              student_id: student?.user_id || '',
-              file_name: transferFormFile.name,
-              uploaded_by: adminEmail || 'Platform Admin',
-              uploaded_at: new Date().toISOString()
-            }
-          );
-          console.log('✅ [handleUploadTransferForm] Ação logada com sucesso');
-        } catch (logError) {
-          console.error('⚠️ [handleUploadTransferForm] Erro ao logar ação (não crítico):', logError);
-        }
+        await logAction('transfer_form_upload', `Transfer form uploaded`, userId, 'admin', { file_name: transferFormFile.name });
       }
 
-      // Determinar se é um novo envio ou substituição
-      const isReplacement = !!transferApp.transfer_form_url;
-      
-      // ✅ ENVIAR NOTIFICAÇÕES PARA O ALUNO (sempre que admin envia/substitui Transfer Form)
-      console.log(`📤 [Transfer Form] Enviando notificações para o aluno sobre ${isReplacement ? 'substituição' : 'envio'} do formulário...`);
-      
-      try {
-        // Buscar dados do aluno
-        const { data: studentProfile } = await supabase
-          .from('user_profiles')
-          .select('email, full_name, user_id')
-          .eq('user_id', student?.user_id || '')
-          .maybeSingle();
-
-        if (studentProfile?.email && studentProfile?.user_id) {
-          // Buscar dados da aplicação (bolsa e universidade) para incluir na mensagem
-          const { data: applicationData } = await supabase
-            .from('scholarship_applications')
-            .select(`
-              id,
-              scholarships!inner(
-                title,
-                universities!inner(
-                  name
-                )
-              )
-            `)
-            .eq('id', transferApp.id)
-            .maybeSingle();
-
-          const scholarship = Array.isArray(applicationData?.scholarships) 
-            ? applicationData.scholarships[0] 
-            : applicationData?.scholarships;
-          const university = Array.isArray(scholarship?.universities)
-            ? scholarship.universities[0]
-            : scholarship?.universities;
-
-          const scholarshipTitle = scholarship?.title || 'Scholarship';
-          const universityName = university?.name || 'University';
-
-          // 1. ENVIAR EMAIL VIA WEBHOOK
-          const templatePayload = {
-            tipo_notf: isReplacement ? "Documento atualizado" : "Novo documento solicitado",
-            email_aluno: studentProfile.email,
-            nome_aluno: studentProfile.full_name || 'Student',
-            email_universidade: adminEmail || '',
-            document_type: 'Transfer Form',
-            document_title: 'Transfer Form',
-            o_que_enviar: isReplacement 
-              ? `The Transfer Form has been updated for the scholarship <strong>${scholarshipTitle}</strong> at <strong>${universityName}</strong>. Please download the new version, fill it out, and upload the completed form in your dashboard.`
-              : `The Transfer Form template has been sent to you for the scholarship <strong>${scholarshipTitle}</strong> at <strong>${universityName}</strong>. Please download, fill out, and upload the completed form in your dashboard.`
-          };
-
-          console.log(`📤 [Transfer Form] Payload de ${isReplacement ? 'atualização' : 'envio'}:`, templatePayload);
-
-          const webhookResponse = await fetch('https://nwh.suaiden.com/webhook/notfmatriculausa', {
-            method: 'POST',
-            headers: {
-              'Content-Type': 'application/json',
-            },
-            body: JSON.stringify(templatePayload),
-          });
-
-          if (webhookResponse.ok) {
-            console.log(`✅ [Transfer Form] Email de ${isReplacement ? 'atualização' : 'envio'} enviado com sucesso!`);
-          } else {
-            console.warn(`⚠️ [Transfer Form] Erro ao enviar email de ${isReplacement ? 'atualização' : 'envio'}:`, webhookResponse.status);
-          }
-        }
-
-        // 2. ENVIAR NOTIFICAÇÃO IN-APP PARA O ALUNO (SINO)
-        if (student?.user_id) {
-          console.log(`📤 [Transfer Form] Enviando notificação in-app para o aluno sobre ${isReplacement ? 'atualização' : 'disponibilidade'}...`, {
-            studentUserId: student.user_id,
-            transferAppId: transferApp.id,
-            isReplacement
-          });
-          
-          try {
-            // Buscar o user_profiles.id correto (que é referenciado por student_notifications.student_id)
-            console.log('🔍 [Transfer Form] Buscando user_profiles.id para student_id:', student.user_id);
-            
-            try {
-              const { data: profileData, error: profileError } = await supabase
-                .from('user_profiles')
-                .select('id, user_id')
-                .eq('user_id', student.user_id)
-                .single();
-              
-              console.log('📋 [Transfer Form] Resultado da busca do profile:', {
-                data: profileData,
-                error: profileError,
-                hasError: !!profileError,
-                hasData: !!profileData
-              });
-                
-              if (profileError) {
-                console.error('❌ [Transfer Form] Erro ao buscar profile:', profileError);
-                console.error('❌ [Transfer Form] Detalhes do erro do profile:', {
-                  code: profileError.code,
-                  message: profileError.message,
-                  details: profileError.details
-                });
-                return;
-              }
-              
-              if (!profileData) {
-                console.error('❌ [Transfer Form] Profile não encontrado para user_id:', student.user_id);
-                return;
-              }
-            
-            console.log('✅ [Transfer Form] Profile encontrado:', {
-              profileId: profileData.id,
-              userId: profileData.user_id
-            });
-            
-            const notificationData = {
-              student_id: profileData.id, // student_notifications.student_id referencia user_profiles.id
-              title: isReplacement ? 'Transfer Form Updated' : 'Transfer Form Available',
-              message: isReplacement 
-                ? `The Transfer Form has been updated for your scholarship application. Please download the new version, fill it out, and upload the completed form.`
-                : `The Transfer Form has been uploaded for your scholarship application. Please download, fill out, and upload the completed form.`,
-              link: `/student/dashboard/application/${transferApp.id}/chat?tab=documents`, // Deep link para a aplicação específica
-              created_at: new Date().toISOString()
-            };
-            
-            console.log('📝 [Transfer Form] Payload da notificação:', notificationData);
-
-            try {
-              console.log('🔄 [Transfer Form] Iniciando inserção na tabela student_notifications...');
-              console.log('🔧 [Transfer Form] Verificando cliente Supabase:', {
-                supabaseExists: !!supabase,
-                supabaseFrom: typeof supabase?.from
-              });
-              
-              console.log('🔄 [Transfer Form] Executando inserção...');
-              const insertResult = await supabase
-                .from('student_notifications')
-                .insert([notificationData])
-                .select('*');
-              
-              console.log('📋 [Transfer Form] Raw result:', insertResult);
-              const { data, error: notifInsertError } = insertResult;
-
-              console.log('📋 [Transfer Form] Resultado da inserção:', {
-                data: data,
-                error: notifInsertError,
-                hasError: !!notifInsertError,
-                hasData: !!data,
-                dataLength: data?.length || 0
-              });
-
-              if (notifInsertError) {
-                console.error(`❌ [Transfer Form] Erro ao criar notificação de ${isReplacement ? 'atualização' : 'disponibilidade'}:`, notifInsertError);
-                console.error('❌ [Transfer Form] Detalhes do erro:', {
-                  code: notifInsertError.code,
-                  message: notifInsertError.message,
-                  details: notifInsertError.details,
-                  hint: notifInsertError.hint,
-                  payload: notificationData
-                });
-                console.error('❌ [Transfer Form] Insert error stringified:', JSON.stringify(notifInsertError, null, 2));
-              } else {
-                console.log(`✅ [Transfer Form] Notificação in-app de ${isReplacement ? 'atualização' : 'disponibilidade'} criada com sucesso!`, data);
-              }
-            } catch (insertException) {
-              console.error('💥 [Transfer Form] Exceção durante inserção:', insertException);
-              console.error('💥 [Transfer Form] Stack trace:', insertException.stack);
-              console.error('💥 [Transfer Form] Exception tipo:', typeof insertException);
-              console.error('💥 [Transfer Form] Exception toString:', insertException.toString());
-            }
-            } catch (profileException) {
-              console.error('💥 [Transfer Form] Exceção durante busca do profile:', profileException);
-              console.error('💥 [Transfer Form] Stack trace:', profileException.stack);
-            }
-          } catch (notificationError) {
-            console.error(`❌ [Transfer Form] Erro ao enviar notificação in-app de ${isReplacement ? 'atualização' : 'disponibilidade'}:`, notificationError);
-            console.error('❌ [Transfer Form] Stack trace completo:', notificationError.stack);
-          }
-        } else {
-          console.warn('⚠️ [Transfer Form] student.user_id não encontrado, pulando notificação in-app');
-        }
-      } catch (notifyError) {
-        console.error(`❌ [Transfer Form] Erro ao enviar notificações de ${isReplacement ? 'atualização' : 'disponibilidade'}:`, notifyError);
-        // Não falhar o processo se a notificação falhar
-      }
-      
       window.location.reload();
-    } catch (error: any) {
+    } catch (error) {
       console.error('Error uploading transfer form:', error);
-      alert('Failed to upload transfer form: ' + error.message);
     } finally {
       setUploadingTransferForm(false);
     }
-  }, [isPlatformAdmin, student, transferFormFile, getTransferApplication, logAction, userId, adminEmail]);
+  }, [isPlatformAdmin, student, transferFormFile, getTransferApplication, logAction, userId]);
 
   // Handler para aprovar upload de Transfer Form
   const handleApproveTransferFormUpload = useCallback(async (uploadId: string) => {
@@ -365,277 +172,166 @@ export const useTransferForm = (
       
       if (error) throw error;
       
-      // Log da ação
       if (logAction && userId) {
-        try {
-          await logAction(
-            'transfer_form_approval',
-            `Transfer form upload approved by platform admin`,
-            userId,
-            'admin',
-            {
-              upload_id: uploadId,
-              student_id: student?.user_id || '',
-              approved_by: adminEmail || 'Platform Admin',
-              approved_at: new Date().toISOString()
-            }
-          );
-          console.log('✅ [handleApproveTransferFormUpload] Ação logada com sucesso');
-        } catch (logError) {
-          console.error('⚠️ [handleApproveTransferFormUpload] Erro ao logar ação (não crítico):', logError);
-        }
-      }
-      
-      // Recarregar uploads
-      const transferApp = getTransferApplication();
-      
-      if (transferApp) {
-        const { data: newUploads } = await supabase
-          .from('transfer_form_uploads')
-          .select('*')
-          .eq('application_id', transferApp.id)
-          .order('uploaded_at', { ascending: false });
-        
-        if (newUploads) {
-          setTransferFormUploads(newUploads);
-        }
+        await logAction('transfer_form_approval', `Transfer form approved`, userId, 'admin', { upload_id: uploadId });
       }
 
-      // ✅ ENVIAR NOTIFICAÇÕES PARA O ALUNO
-      console.log('📤 [Transfer Form] Enviando notificações de aprovação para o aluno...');
-      
+      // Notificações para o aluno (reutilizando lógica simplificada sem alertas)
       try {
-        // Buscar dados do aluno - usar user_id do student
-        const { data: studentProfile } = await supabase
-          .from('user_profiles')
-          .select('email, full_name, user_id')
-          .eq('user_id', student?.user_id || '')
-          .maybeSingle();
-
-        if (studentProfile?.email && studentProfile?.user_id) {
-          // 1. ENVIAR EMAIL VIA WEBHOOK (reutilizando tipo existente - mesmo padrão do Student Documents)
-          const approvalPayload = {
-            tipo_notf: "Documento aprovado",
-            email_aluno: studentProfile.email,
-            nome_aluno: studentProfile.full_name || 'Student',
-            email_universidade: adminEmail || '', // Email do admin (mesmo padrão do handleConfirmReject)
-            document_type: 'Transfer Form', // ✅ CORREÇÃO: Adicionar tipo de documento para o template identificar corretamente
-            document_title: 'Transfer Form', // ✅ CORREÇÃO: Adicionar título do documento
-            o_que_enviar: `Congratulations! Your Transfer Form has been approved. You can now proceed with the next steps of your application.`
-          };
-
-          console.log('📤 [Transfer Form] Payload de aprovação:', approvalPayload);
-
-          const webhookResponse = await fetch('https://nwh.suaiden.com/webhook/notfmatriculausa', {
+        const { data: profile } = await supabase.from('user_profiles').select('id, email, full_name').eq('user_id', student?.user_id).maybeSingle();
+        if (profile) {
+           // Enviar e-mail via webhook (exemplo simplificado)
+           await fetch('https://nwh.suaiden.com/webhook/notfmatriculausa', {
             method: 'POST',
-            headers: {
-              'Content-Type': 'application/json',
-            },
-            body: JSON.stringify(approvalPayload),
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+              tipo_notf: "Documento aprovado",
+              email_aluno: profile.email,
+              nome_aluno: profile.full_name || 'Student',
+              document_type: 'Transfer Form'
+            }),
           });
 
-          if (webhookResponse.ok) {
-            console.log('✅ [Transfer Form] Email de aprovação enviado com sucesso!');
-          } else {
-            console.warn('⚠️ [Transfer Form] Erro ao enviar email de aprovação:', webhookResponse.status);
-          }
+          // Notificação In-App
+          await supabase.from('student_notifications').insert([{
+            student_id: profile.id,
+            title: 'Transfer Form Approved',
+            message: 'Your Transfer Form has been approved.',
+            created_at: new Date().toISOString()
+          }]);
         }
-
-        // 2. ENVIAR NOTIFICAÇÃO IN-APP PARA O ALUNO (SINO)
-        if (student?.user_id) {
-          console.log('📤 [Transfer Form] Enviando notificação in-app para o aluno...');
-          
-          try {
-            // Buscar o user_profiles.id correto
-            const { data: profileData, error: profileError } = await supabase
-              .from('user_profiles')
-              .select('id, user_id')
-              .eq('user_id', student.user_id)
-              .single();
-              
-            if (profileError) {
-              console.error('❌ [Transfer Form Approval] Erro ao buscar profile:', profileError);
-              return;
-            }
-            
-            const transferApp = getTransferApplication();
-            const notificationData = {
-              student_id: profileData.id, // student_notifications.student_id referencia user_profiles.id
-              title: 'Transfer Form Approved',
-              message: `Your Transfer Form has been approved. You can now proceed with the next steps of your application.`,
-              link: `/student/dashboard/application/${transferApp?.id || ''}/chat?tab=documents`, // Deep link para a aplicação específica
-              created_at: new Date().toISOString()
-            };
-
-            const { data: insertResult, error: notifInsertError } = await supabase
-              .from('student_notifications')
-              .insert([notificationData])
-              .select('*');
-
-            if (notifInsertError) {
-              console.error('❌ [Transfer Form Approval] Erro ao criar notificação:', notifInsertError);
-            } else {
-              console.log('✅ [Transfer Form Approval] Notificação in-app criada com sucesso!', insertResult);
-            }
-          } catch (notificationError) {
-            console.error('❌ [Transfer Form Approval] Erro ao enviar notificação in-app:', notificationError);
-          }
-        }
-      } catch (webhookError) {
-        console.error('❌ [Transfer Form] Erro ao enviar notificações:', webhookError);
-        // Não falhar o processo se as notificações falharem
-      }
+      } catch (e) { console.error('Error sending notifications:', e); }
       
-      alert('Transfer form approved successfully!');
-    } catch (error: any) {
+      window.location.reload();
+    } catch (error) {
       console.error('Error approving transfer form:', error);
-      alert('Error approving transfer form: ' + error.message);
     }
-  }, [userId, getTransferApplication, student, logAction, adminEmail]);
+  }, [userId, logAction, student]);
 
   // Handler para rejeitar upload de Transfer Form
   const handleRejectTransferFormUpload = useCallback(async (uploadId: string, reason: string) => {
     try {
-      const { error } = await supabase
-        .from('transfer_form_uploads')
-        .update({ 
-          status: 'rejected',
-          rejection_reason: reason,
-          reviewed_at: new Date().toISOString(),
-          reviewed_by: userId
-        })
-        .eq('id', uploadId);
-      
-      if (error) throw error;
-      
-      // Log da ação
-      if (logAction && userId) {
-        try {
-          await logAction(
-            'transfer_form_rejection',
-            `Transfer form upload rejected by platform admin: ${reason}`,
-            userId,
-            'admin',
-            {
-              upload_id: uploadId,
-              student_id: student?.user_id || '',
-              rejection_reason: reason,
-              rejected_by: adminEmail || 'Platform Admin',
-              rejected_at: new Date().toISOString()
-            }
-          );
-          console.log('✅ [handleRejectTransferFormUpload] Ação logada com sucesso');
-        } catch (logError) {
-          console.error('⚠️ [handleRejectTransferFormUpload] Erro ao logar ação (não crítico):', logError);
-        }
-      }
-      
-      // Recarregar uploads
-      const transferApp = getTransferApplication();
-      
-      if (transferApp) {
-        const { data: newUploads } = await supabase
+      if (uploadId !== 'migma') {
+        const { error } = await supabase
           .from('transfer_form_uploads')
-          .select('*')
-          .eq('application_id', transferApp.id)
-          .order('uploaded_at', { ascending: false });
+          .update({ 
+            status: 'rejected',
+            rejection_reason: reason,
+            reviewed_at: new Date().toISOString(),
+            reviewed_by: userId
+          })
+          .eq('id', uploadId);
         
-        if (newUploads) {
-          setTransferFormUploads(newUploads);
-        }
+        if (error) throw error;
       }
-
-      // ✅ ENVIAR NOTIFICAÇÕES PARA O ALUNO
-      console.log('📤 [Transfer Form] Enviando notificações de rejeição para o aluno...');
       
+      if (logAction && userId) {
+        await logAction('transfer_form_rejection', `Transfer form rejected: ${reason}`, userId, 'admin', { upload_id: uploadId, reason });
+      }
+      
+      // Notificações para o aluno
       try {
-        // Buscar dados do aluno - usar user_id do student
-        const { data: studentProfile } = await supabase
-          .from('user_profiles')
-          .select('email, full_name, user_id')
-          .eq('user_id', student?.user_id || '')
-          .maybeSingle();
-
-        if (studentProfile?.email && studentProfile?.user_id) {
-          // 1. ENVIAR EMAIL VIA WEBHOOK (mesmo padrão do Student Documents)
-          const rejectionPayload = {
-            tipo_notf: "Changes Requested",
-            email_aluno: studentProfile.email,
-            nome_aluno: studentProfile.full_name || 'Student',
-            email_universidade: adminEmail || '', // Email do admin (mesmo padrão do handleConfirmReject)
-            document_type: 'Transfer Form', // ✅ CORREÇÃO: Adicionar tipo de documento para o template identificar corretamente
-            document_title: 'Transfer Form', // ✅ CORREÇÃO: Adicionar título do documento
-            o_que_enviar: `Your Transfer Form has been rejected. Reason: <strong>${reason}</strong>. Please review and upload a corrected version.`
-          };
-
-          console.log('📤 [Transfer Form] Payload de rejeição:', rejectionPayload);
-
-          const webhookResponse = await fetch('https://nwh.suaiden.com/webhook/notfmatriculausa', {
+        const { data: profile } = await supabase.from('user_profiles').select('id, email, full_name').eq('user_id', student?.user_id).maybeSingle();
+        if (profile) {
+           await fetch('https://nwh.suaiden.com/webhook/notfmatriculausa', {
             method: 'POST',
-            headers: {
-              'Content-Type': 'application/json',
-            },
-            body: JSON.stringify(rejectionPayload),
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+              tipo_notf: "Changes Requested",
+              email_aluno: profile.email,
+              nome_aluno: profile.full_name || 'Student',
+              document_type: 'Transfer Form',
+              o_que_enviar: `Reason: ${reason}`
+            }),
           });
 
-          if (webhookResponse.ok) {
-            console.log('✅ [Transfer Form] Email de rejeição enviado com sucesso!');
-          } else {
-            console.warn('⚠️ [Transfer Form] Erro ao enviar email de rejeição:', webhookResponse.status);
-          }
+          await supabase.from('student_notifications').insert([{
+            student_id: profile.id,
+            title: 'Transfer Form Rejected',
+            message: `Your Transfer Form has been rejected. Reason: ${reason}`,
+            created_at: new Date().toISOString()
+          }]);
         }
-
-        // 2. ENVIAR NOTIFICAÇÃO IN-APP PARA O ALUNO (SINO)
-        if (student?.user_id) {
-          console.log('📤 [Transfer Form] Enviando notificação in-app para o aluno...');
-          
-          try {
-            // Buscar o user_profiles.id correto
-            const { data: profileData, error: profileError } = await supabase
-              .from('user_profiles')
-              .select('id, user_id')
-              .eq('user_id', student.user_id)
-              .single();
-              
-            if (profileError) {
-              console.error('❌ [Transfer Form Rejection] Erro ao buscar profile:', profileError);
-              return;
-            }
-            
-            const transferApp = getTransferApplication();
-            const notificationData = {
-              student_id: profileData.id, // student_notifications.student_id referencia user_profiles.id
-              title: 'Transfer Form Rejected',
-              message: `Your Transfer Form has been rejected. Reason: ${reason}. Please review and upload a corrected version.`,
-              link: `/student/dashboard/application/${transferApp?.id || ''}/chat?tab=documents`, // Deep link para a aplicação específica
-              created_at: new Date().toISOString()
-            };
-
-            const { data: insertResult, error: notifInsertError } = await supabase
-              .from('student_notifications')
-              .insert([notificationData])
-              .select('*');
-
-            if (notifInsertError) {
-              console.error('❌ [Transfer Form Rejection] Erro ao criar notificação:', notifInsertError);
-            } else {
-              console.log('✅ [Transfer Form Rejection] Notificação in-app criada com sucesso!', insertResult);
-            }
-          } catch (notificationError) {
-            console.error('❌ [Transfer Form Rejection] Erro ao enviar notificação in-app:', notificationError);
-          }
-        }
-      } catch (webhookError) {
-        console.error('❌ [Transfer Form] Erro ao enviar notificações:', webhookError);
-        // Não falhar o processo se as notificações falharem
-      }
+      } catch (e) { console.error('Error sending notifications:', e); }
       
-      alert('Transfer form rejected successfully!');
-    } catch (error: any) {
+      window.location.reload();
+    } catch (error) {
       console.error('Error rejecting transfer form:', error);
-      alert('Error rejecting transfer form: ' + error.message);
     }
-  }, [userId, getTransferApplication, student, logAction, adminEmail]);
+  }, [userId, logAction, student]);
+
+  // Handler para aprovar formulário enviado pelo aluno (via Migma)
+  const handleApproveMigmaTransferForm = useCallback(async () => {
+    try {
+      const MIGMA_FUNCTIONS_URL = (import.meta as any).env.VITE_MIGMA_FUNCTIONS_URL as string;
+      const MIGMA_SECRET = (import.meta as any).env.VITE_MIGMA_WEBHOOK_SECRET as string;
+      const MIGMA_ANON_KEY = (import.meta as any).env.VITE_MIGMA_SUPABASE_ANON_KEY as string;
+
+      const { data: studentProfile } = await supabase
+        .from('user_profiles').select('email').eq('user_id', student?.user_id || '').maybeSingle();
+
+      if (MIGMA_FUNCTIONS_URL && MIGMA_SECRET && studentProfile?.email) {
+        await fetch(`${MIGMA_FUNCTIONS_URL}/receive-matriculausa-letter`, {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'Authorization': `Bearer ${MIGMA_ANON_KEY || ''}`,
+            'x-migma-webhook-secret': MIGMA_SECRET,
+          },
+          body: JSON.stringify({
+            student_email: studentProfile.email,
+            transfer_form_admin_status: 'approved',
+          }),
+        });
+      }
+
+      await supabase
+        .from('migma_packages')
+        .update({ transfer_form_status: 'approved' })
+        .eq('student_user_id', student?.user_id || '');
+
+      window.location.reload();
+    } catch (error) {
+      console.error('Error approving migma transfer form:', error);
+    }
+  }, [student]);
+
+  // Handler para rejeitar formulário enviado pelo aluno (via Migma)
+  const handleRejectMigmaTransferForm = useCallback(async (reason: string) => {
+    try {
+      const MIGMA_FUNCTIONS_URL = (import.meta as any).env.VITE_MIGMA_FUNCTIONS_URL as string;
+      const MIGMA_SECRET = (import.meta as any).env.VITE_MIGMA_WEBHOOK_SECRET as string;
+      const MIGMA_ANON_KEY = (import.meta as any).env.VITE_MIGMA_SUPABASE_ANON_KEY as string;
+
+      const { data: studentProfile } = await supabase
+        .from('user_profiles').select('email').eq('user_id', student?.user_id || '').maybeSingle();
+
+      if (MIGMA_FUNCTIONS_URL && MIGMA_SECRET && studentProfile?.email) {
+        await fetch(`${MIGMA_FUNCTIONS_URL}/receive-matriculausa-letter`, {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'Authorization': `Bearer ${MIGMA_ANON_KEY || ''}`,
+            'x-migma-webhook-secret': MIGMA_SECRET,
+          },
+          body: JSON.stringify({
+            student_email: studentProfile.email,
+            transfer_form_admin_status: 'rejected',
+            transfer_form_rejection_reason: reason,
+          }),
+        });
+      }
+
+      await supabase
+        .from('migma_packages')
+        .update({ transfer_form_status: 'rejected' })
+        .eq('student_user_id', student?.user_id || '');
+
+      window.location.reload();
+    } catch (error) {
+      console.error('Error rejecting migma transfer form:', error);
+    }
+  }, [student]);
 
   return {
     transferFormFile,
@@ -645,7 +341,10 @@ export const useTransferForm = (
     getTransferApplication,
     handleUploadTransferForm,
     handleApproveTransferFormUpload,
-    handleRejectTransferFormUpload
+    handleRejectTransferFormUpload,
+    migmaTransferFormUrl,
+    migmaTransferFormStatus,
+    handleApproveMigmaTransferForm,
+    handleRejectMigmaTransferForm,
   };
 };
-

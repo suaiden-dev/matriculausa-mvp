@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { supabase } from '../../lib/supabase';
+import { filenameFromUrl } from '../../lib/urlUtils';
 
 interface DocumentsViewProps {
   studentDocuments: any[];
@@ -21,6 +22,8 @@ interface DocumentsViewProps {
   /** When false, skips fetching global requests (use when a dedicated GlobalDocumentRequestsSection is already shown) */
   showGlobalRequests?: boolean;
   universityId?: string;
+  /** When true, hides the Document Requests section entirely (use for Migma students) */
+  hideDocumentRequests?: boolean;
 }
 
 const DocumentsView: React.FC<DocumentsViewProps> = ({
@@ -42,6 +45,7 @@ const DocumentsView: React.FC<DocumentsViewProps> = ({
   rejectingStates = {},
   deletingStates = {},
   showGlobalRequests = true,
+  hideDocumentRequests = false,
 }) => {
   // ✅ OTIMIZAÇÃO: Removidos console.logs desnecessários
   const [realScholarshipApplication, setRealScholarshipApplication] = useState<any>(null);
@@ -163,6 +167,8 @@ const DocumentsView: React.FC<DocumentsViewProps> = ({
     try {
       const MIGMA_URL = (import.meta as any).env.VITE_MIGMA_FUNCTIONS_URL as string;
       const MIGMA_SECRET = (import.meta as any).env.VITE_MIGMA_WEBHOOK_SECRET as string;
+      const MIGMA_ANON_KEY = (import.meta as any).env.VITE_MIGMA_SUPABASE_ANON_KEY as string;
+
       if (!MIGMA_URL || !studentId) return;
 
       // Get student email from user_profiles
@@ -189,6 +195,7 @@ const DocumentsView: React.FC<DocumentsViewProps> = ({
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
+          'Authorization': `Bearer ${MIGMA_ANON_KEY || ''}`,
           'x-migma-webhook-secret': MIGMA_SECRET || '',
         },
         body: JSON.stringify({ student_email: studentEmail, acceptance_letter_url: acceptanceLetterUrl }),
@@ -522,7 +529,7 @@ const DocumentsView: React.FC<DocumentsViewProps> = ({
   return (
     <div className="space-y-8">
       {/* Document Requests from University */}
-      <div className="bg-white rounded-3xl shadow-sm border border-slate-200">
+      {!hideDocumentRequests && <div className="bg-white rounded-3xl shadow-sm border border-slate-200">
         <div className="bg-gradient-to-r from-slate-600 to-slate-700 px-6 py-5 rounded-t-3xl">
           <div className="flex flex-col sm:flex-row sm:items-center gap-4">
             <div className="flex items-start sm:items-center space-x-4 min-w-0">
@@ -868,8 +875,8 @@ const DocumentsView: React.FC<DocumentsViewProps> = ({
             </div>
           )}
         </div>
-      </div>
-      
+      </div>}
+
       {/* Acceptance Letter Section - Always visible */}
       <div className="bg-gradient-to-br from-blue-50 to-indigo-50 border border-blue-200 rounded-3xl shadow-sm relative overflow-hidden">
         <div className="bg-gradient-to-r from-[#05294E] to-[#041f38] px-6 py-5 rounded-t-3xl">
@@ -912,7 +919,7 @@ const DocumentsView: React.FC<DocumentsViewProps> = ({
                     <p className="font-medium text-slate-900 break-words">
                       {(() => {
                         const url = getAcceptanceLetterUrl(currentApplication);
-                        return url ? (url.split('/').pop() || 'Acceptance Letter') : 'Acceptance Letter';
+                        return filenameFromUrl(url, 'Acceptance Letter');
                       })()}
                     </p>
                     <span className="px-3 py-1 rounded-full text-sm font-medium bg-green-100 text-green-800 whitespace-nowrap">
@@ -930,7 +937,7 @@ const DocumentsView: React.FC<DocumentsViewProps> = ({
                     <button
                       onClick={() => onViewDocument({
                         file_url: getAcceptanceLetterUrl(currentApplication),
-                        filename: (getAcceptanceLetterUrl(currentApplication)?.split('/').pop() || 'Acceptance Letter')
+                        filename: (filenameFromUrl(getAcceptanceLetterUrl(currentApplication), 'Acceptance Letter'))
                       })}
                       className="bg-[#05294E] hover:bg-[#041f38] text-white px-4 py-2 rounded-xl text-sm font-medium transition-colors w-full sm:w-auto text-center"
                     >
@@ -940,7 +947,7 @@ const DocumentsView: React.FC<DocumentsViewProps> = ({
                     <button
                       onClick={() => onDownloadDocument({
                         file_url: getAcceptanceLetterUrl(currentApplication),
-                        filename: (getAcceptanceLetterUrl(currentApplication)?.split('/').pop() || 'Acceptance Letter')
+                        filename: (filenameFromUrl(getAcceptanceLetterUrl(currentApplication), 'Acceptance Letter'))
                       })}
                       className="bg-slate-200 hover:bg-slate-300 text-slate-700 px-4 py-2 rounded-xl text-sm font-medium transition-colors w-full sm:w-auto text-center"
                     >
@@ -975,9 +982,14 @@ const DocumentsView: React.FC<DocumentsViewProps> = ({
                                .from('document-attachments')
                                .upload(storageKey, acceptanceLetterFile);
                              if (uploadError) throw uploadError;
-                             const { data: { publicUrl } } = supabase.storage
+                             // Use long-lived signed URL (10 years) so external systems
+                             // (e.g. Migma students) can access without MatriculaUSA auth
+                             const TEN_YEARS = 60 * 60 * 24 * 365 * 10;
+                             const { data: signedData, error: signedError } = await supabase.storage
                                .from('document-attachments')
-                               .getPublicUrl(uploadData?.path || storageKey);
+                               .createSignedUrl(uploadData?.path || storageKey, TEN_YEARS);
+                             if (signedError) throw signedError;
+                             const publicUrl = signedData.signedUrl;
 
                             const { error: updateError } = await supabase
                               .from('scholarship_applications')
@@ -1097,9 +1109,14 @@ const DocumentsView: React.FC<DocumentsViewProps> = ({
                               .from('document-attachments')
                               .upload(storageKey, acceptanceLetterFile);
                             if (uploadError) throw uploadError;
-                            const { data: { publicUrl } } = supabase.storage
+                            // Use long-lived signed URL (10 years) so external systems
+                            // (e.g. Migma students) can access without MatriculaUSA auth
+                            const TEN_YEARS_2 = 60 * 60 * 24 * 365 * 10;
+                            const { data: signedData2, error: signedError2 } = await supabase.storage
                               .from('document-attachments')
-                              .getPublicUrl(uploadData?.path || storageKey);
+                              .createSignedUrl(uploadData?.path || storageKey, TEN_YEARS_2);
+                            if (signedError2) throw signedError2;
+                            const publicUrl = signedData2.signedUrl;
 
                             // Se não temos currentApplication ainda, tentar buscar o mais recente
                             let applicationId = currentApplication?.id;

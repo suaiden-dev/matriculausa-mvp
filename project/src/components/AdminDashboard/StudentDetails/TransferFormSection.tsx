@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
 import { CheckCircle } from 'lucide-react';
+import { filenameFromUrl } from '../../../lib/urlUtils';
 
 interface TransferFormSectionProps {
   student: any;
@@ -14,6 +15,10 @@ interface TransferFormSectionProps {
   handleRejectTransferFormUpload: (uploadId: string, reason: string) => Promise<void>;
   handleViewDocument: (doc: any) => void;
   handleDownloadDocument: (doc: any) => void;
+  migmaTransferFormUrl?: string | null;
+  migmaTransferFormStatus?: string | null;
+  handleApproveMigmaTransferForm: () => Promise<void>;
+  handleRejectMigmaTransferForm: (reason: string) => Promise<void>;
 }
 
 export const TransferFormSection: React.FC<TransferFormSectionProps> = React.memo(({
@@ -28,11 +33,17 @@ export const TransferFormSection: React.FC<TransferFormSectionProps> = React.mem
   handleApproveTransferFormUpload,
   handleRejectTransferFormUpload,
   handleViewDocument,
-  handleDownloadDocument
+  handleDownloadDocument,
+  migmaTransferFormUrl,
+  migmaTransferFormStatus,
+  handleApproveMigmaTransferForm,
+  handleRejectMigmaTransferForm,
 }) => {
   const [showRejectModal, setShowRejectModal] = useState(false);
   const [pendingRejectUploadId, setPendingRejectUploadId] = useState<string | null>(null);
   const [rejectNotes, setRejectNotes] = useState('');
+  const [showMigmaRejectModal, setShowMigmaRejectModal] = useState(false);
+  const [migmaRejectNotes, setMigmaRejectNotes] = useState('');
 
   const transferApp = getTransferApplication();
 
@@ -72,7 +83,7 @@ export const TransferFormSection: React.FC<TransferFormSectionProps> = React.mem
                 <div className="flex-1 min-w-0">
                   <div className="flex flex-wrap gap-2 mb-1">
                     <p className="font-medium text-slate-900 break-words">
-                      {transferApp.transfer_form_url.split('/').pop() || 'Transfer Form'}
+                      {filenameFromUrl(transferApp.transfer_form_url, 'Transfer Form')}
                     </p>
                     <span className="px-3 py-1 rounded-full text-sm font-medium bg-green-100 text-green-800 whitespace-nowrap">
                       {transferApp.transfer_form_status === 'sent' ? 'Sent' : 'Available'}
@@ -86,7 +97,7 @@ export const TransferFormSection: React.FC<TransferFormSectionProps> = React.mem
                     <button
                       onClick={() => handleViewDocument({
                         file_url: transferApp.transfer_form_url,
-                        filename: transferApp.transfer_form_url.split('/').pop() || 'Transfer Form'
+                        filename: filenameFromUrl(transferApp.transfer_form_url, 'Transfer Form')
                       })}
                       className="bg-[#05294E] hover:bg-[#041f38] text-white px-4 py-2 rounded-lg text-sm font-medium transition-colors w-full sm:w-auto text-center"
                     >
@@ -96,7 +107,7 @@ export const TransferFormSection: React.FC<TransferFormSectionProps> = React.mem
                     <button
                       onClick={() => handleDownloadDocument({
                         file_url: transferApp.transfer_form_url,
-                        filename: transferApp.transfer_form_url.split('/').pop() || 'Transfer Form'
+                        filename: filenameFromUrl(transferApp.transfer_form_url, 'Transfer Form')
                       })}
                       className="bg-slate-200 hover:bg-slate-300 text-slate-700 px-4 py-2 rounded-lg text-sm font-medium transition-colors w-full sm:w-auto text-center"
                     >
@@ -190,6 +201,64 @@ export const TransferFormSection: React.FC<TransferFormSectionProps> = React.mem
                 </div>
               )}
 
+              {/* Seção do formulário preenchido pelo aluno (via Migma) */}
+              {migmaTransferFormUrl && (
+                <div className="mt-6 pt-6 border-t border-slate-100">
+                  <h4 className="text-sm font-semibold text-slate-500 uppercase tracking-wider mb-4">
+                    Transfer Form (Filled by Student)
+                  </h4>
+                  <div className="flex items-center justify-between gap-3 p-4 bg-green-50 border border-green-200 rounded-2xl shadow-sm">
+                    <div className="flex items-center gap-3 min-w-0">
+                      <div className="w-10 h-10 bg-green-100 rounded-full flex items-center justify-center flex-shrink-0 shadow-sm">
+                        <svg className="w-5 h-5 text-green-600" fill="none" stroke="currentColor" strokeWidth={2} viewBox="0 0 24 24">
+                          <path strokeLinecap="round" strokeLinejoin="round" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
+                        </svg>
+                      </div>
+                      <div className="min-w-0">
+                        <p className="text-sm font-bold text-slate-900 truncate">Transfer Form — Student Submission</p>
+                        {migmaTransferFormStatus === 'approved' ? (
+                          <span className="text-xs font-bold text-green-700 bg-green-100 px-2 py-0.5 rounded-full">Approved</span>
+                        ) : migmaTransferFormStatus === 'rejected' ? (
+                          <span className="text-xs font-bold text-red-700 bg-red-100 px-2 py-0.5 rounded-full">Rejected</span>
+                        ) : (
+                          <p className="text-xs text-green-600 font-medium">Submitted — awaiting review</p>
+                        )}
+                      </div>
+                    </div>
+                    <div className="flex gap-2 flex-shrink-0 flex-wrap">
+                      <button
+                        onClick={() => handleViewDocument({ file_url: migmaTransferFormUrl, filename: 'transfer_form_filled.pdf' })}
+                        className="bg-[#05294E] hover:bg-[#041f38] text-white px-4 py-2 rounded-lg text-xs font-medium transition-colors"
+                      >
+                        View
+                      </button>
+                      <button
+                        onClick={() => handleDownloadDocument({ file_url: migmaTransferFormUrl, filename: 'transfer_form_filled.pdf' })}
+                        className="bg-white hover:bg-slate-50 text-slate-700 border border-slate-200 px-4 py-2 rounded-lg text-xs font-medium transition-colors"
+                      >
+                        Download
+                      </button>
+                      {isPlatformAdmin && migmaTransferFormStatus !== 'approved' && migmaTransferFormStatus !== 'rejected' && handleApproveMigmaTransferForm && (
+                        <button
+                          onClick={handleApproveMigmaTransferForm}
+                          className="bg-green-600 hover:bg-green-700 text-white px-4 py-2 rounded-lg text-xs font-medium transition-colors"
+                        >
+                          Approve
+                        </button>
+                      )}
+                      {isPlatformAdmin && migmaTransferFormStatus !== 'approved' && migmaTransferFormStatus !== 'rejected' && handleRejectMigmaTransferForm && (
+                        <button
+                          onClick={() => setShowMigmaRejectModal(true)}
+                          className="bg-red-600 hover:bg-red-700 text-white px-4 py-2 rounded-lg text-xs font-medium transition-colors"
+                        >
+                          Reject
+                        </button>
+                      )}
+                    </div>
+                  </div>
+                </div>
+              )}
+
               {/* Seção para gerenciar uploads do aluno */}
               {transferFormUploads.length > 0 && (
                 <div className="mt-6 bg-slate-50 border border-slate-200 rounded-2xl p-6">
@@ -217,7 +286,7 @@ export const TransferFormSection: React.FC<TransferFormSectionProps> = React.mem
                               </div>
                               <div>
                                 <p className="font-medium text-slate-900">
-                                  {upload.file_url.split('/').pop()}
+                                  {filenameFromUrl(upload.file_url)}
                                 </p>
                                 <p className="text-sm text-slate-500">
                                   Uploaded on {new Date(upload.uploaded_at).toLocaleDateString()}
@@ -242,7 +311,7 @@ export const TransferFormSection: React.FC<TransferFormSectionProps> = React.mem
                               onClick={() => {
                                 handleViewDocument({
                                   file_url: upload.file_url,
-                                  filename: upload.file_url.split('/').pop() || 'transfer_form.pdf'
+                                  filename: filenameFromUrl(upload.file_url, 'transfer_form.pdf')
                                 });
                               }}
                             >
@@ -253,7 +322,7 @@ export const TransferFormSection: React.FC<TransferFormSectionProps> = React.mem
                               onClick={() => {
                                 handleDownloadDocument({
                                   file_url: upload.file_url,
-                                  filename: upload.file_url.split('/').pop() || 'transfer_form.pdf'
+                                  filename: filenameFromUrl(upload.file_url, 'transfer_form.pdf')
                                 });
                               }}
                             >
@@ -348,6 +417,46 @@ export const TransferFormSection: React.FC<TransferFormSectionProps> = React.mem
           )}
         </div>
       </div>
+
+      {/* Modal de rejeição — formulário Migma */}
+      {showMigmaRejectModal && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
+          <div className="bg-white rounded-2xl shadow-xl max-w-md w-full p-6">
+            <h3 className="text-xl font-bold text-slate-900 mb-4">Reject Student Submission</h3>
+            <p className="text-slate-600 mb-4">
+              Provide a reason for rejecting the student's filled Transfer Form. They will be notified and asked to resubmit.
+            </p>
+            <textarea
+              value={migmaRejectNotes}
+              onChange={(e) => setMigmaRejectNotes(e.target.value)}
+              placeholder="Enter rejection reason..."
+              className="w-full border border-slate-300 rounded-lg p-3 text-slate-900 mb-4 min-h-[100px] focus:ring-2 focus:ring-red-500 focus:border-transparent"
+              autoFocus
+            />
+            <div className="flex gap-3">
+              <button
+                onClick={() => { setShowMigmaRejectModal(false); setMigmaRejectNotes(''); }}
+                className="flex-1 bg-slate-200 hover:bg-slate-300 text-slate-700 px-4 py-2 rounded-lg font-medium transition-colors"
+              >
+                Cancel
+              </button>
+              <button
+                onClick={async () => {
+                  if (migmaRejectNotes.trim() && handleRejectMigmaTransferForm) {
+                    await handleRejectMigmaTransferForm(migmaRejectNotes.trim());
+                    setShowMigmaRejectModal(false);
+                    setMigmaRejectNotes('');
+                  }
+                }}
+                disabled={!migmaRejectNotes.trim()}
+                className="flex-1 bg-red-600 hover:bg-red-700 text-white px-4 py-2 rounded-lg font-medium transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+              >
+                Reject
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* Modal de rejeição */}
       {showRejectModal && (

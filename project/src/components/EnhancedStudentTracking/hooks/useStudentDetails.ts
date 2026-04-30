@@ -1,5 +1,6 @@
 import { useState, useCallback, useEffect } from 'react';
 import { supabase } from '../../../lib/supabase';
+import { filenameFromUrl } from '../../../lib/urlUtils';
 import { useAuth } from '../../../hooks/useAuth';
 import { StudentInfo, ScholarshipApplication, FeePayment } from '../types';
 
@@ -525,7 +526,7 @@ export const useStudentDetails = () => {
             if (applicationData.acceptance_letter_url && applicationData.acceptance_letter_url.trim() !== '') {
               acceptanceLetterDoc = {
                 id: `acceptance_letter_${applicationData.id}`,
-                filename: applicationData.acceptance_letter_url?.split('/').pop() || 'Acceptance Letter',
+                filename: filenameFromUrl(applicationData.acceptance_letter_url, 'Acceptance Letter'),
                 file_url: applicationData.acceptance_letter_url,
                 status: applicationData.acceptance_letter_status || 'sent',
                 uploaded_at: applicationData.acceptance_letter_sent_at || new Date().toISOString(),
