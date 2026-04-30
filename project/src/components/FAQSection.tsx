@@ -57,12 +57,9 @@ const FAQSection: React.FC = () => {
           variants={containerVariants}
         >
           <motion.div variants={itemVariants} className="text-center mb-16">
-            <h2 className="text-4xl md:text-5xl font-black text-[#05294E] mb-6">
+            <h2 className="text-4xl md:text-5xl font-black text-[#05294E] tracking-tight">
               {t('forStudents.faq.title')}
             </h2>
-            <p className="text-xl text-slate-600 max-w-3xl mx-auto">
-              {t('forStudents.faq.subtitle')}
-            </p>
           </motion.div>
 
           <motion.div variants={containerVariants} className="w-full">
@@ -113,11 +110,7 @@ const FAQSection: React.FC = () => {
             })}
           </motion.div>
 
-          <motion.div variants={itemVariants} className="text-center mt-12">
-            <p className="text-lg text-slate-500">
-              {t('forStudents.faq.contact')}
-            </p>
-          </motion.div>
+
         </motion.div>
       </div>
     </section>
