@@ -1,22 +1,18 @@
-import React, { useEffect, useRef } from 'react';
-import { motion, useAnimation } from 'framer-motion';
+import React, { useEffect, useRef, useState } from 'react';
+import { motion, useScroll, useTransform } from 'framer-motion';
 import { useInView } from 'react-intersection-observer';
 import FAQSection from '../components/FAQSection';
 import '../styles/scrollbar.css';
 import { 
   GraduationCap, 
-  Sparkles, 
-  Zap,
   CheckCircle,
   Star,
   ChevronLeft,
   ChevronRight,
   Calendar,
-  Lock,
   BookOpen,
-  ArrowRight,
-  ShieldCheck,
-  X
+  X,
+  Briefcase
 } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 import { useAuth } from '../hooks/useAuth';
@@ -43,7 +39,7 @@ const SelectionProcessLanding: React.FC = () => {
       <HeroSection onCTAClick={handleCTAClick} />
       
       {/* Featured Scholarships Section */}
-      <FeaturedScholarshipsSection />
+      <FeaturedScholarshipsSection onCTAClick={handleCTAClick} />
 
       {/* How It Works Section */}
       <HowItWorksSection onCTAClick={handleCTAClick} />
@@ -59,9 +55,15 @@ const SelectionProcessLanding: React.FC = () => {
       
       {/* FAQ Section */}
       <FAQSection />
-      
-      {/* Special Offer Section - CTA FINAL */}
-      <SpecialOfferSection onCTAClick={handleCTAClick} />
+
+      {/* Footer */}
+      <footer className="py-12 border-t border-slate-100">
+        <div className="max-w-7xl mx-auto px-4 text-center">
+          <p className="text-slate-400 text-sm font-medium">
+            © 2026 Matrícula USA. Todos os direitos reservados.
+          </p>
+        </div>
+      </footer>
     </div>
   );
 };
@@ -70,6 +72,14 @@ const SelectionProcessLanding: React.FC = () => {
 const HeroSection: React.FC<{ onCTAClick: () => void }> = ({ onCTAClick }) => {
   const { t } = useTranslation(['home', 'common']);
   const { ref, inView } = useInView({ triggerOnce: true, threshold: 0.2 });
+  const [isMobile, setIsMobile] = useState(false);
+
+  useEffect(() => {
+    const handleResize = () => setIsMobile(window.innerWidth < 768);
+    handleResize();
+    window.addEventListener('resize', handleResize);
+    return () => window.removeEventListener('resize', handleResize);
+  }, []);
 
   const containerVariants = {
     hidden: { opacity: 0 },
@@ -97,7 +107,7 @@ const HeroSection: React.FC<{ onCTAClick: () => void }> = ({ onCTAClick }) => {
   return (
     <motion.section
       ref={ref}
-      className="relative flex w-full flex-col overflow-hidden bg-gradient-to-br from-[#05294E] via-[#05294E] to-[#0a3a62] text-white min-h-[90vh]"
+      className="relative flex w-full flex-col-reverse md:flex-col overflow-hidden bg-gradient-to-br from-[#05294E] via-[#05294E] to-[#0a3a62] text-white min-h-[90vh]"
       initial="hidden"
       animate={inView ? "visible" : "hidden"}
       variants={containerVariants}
@@ -110,23 +120,20 @@ const HeroSection: React.FC<{ onCTAClick: () => void }> = ({ onCTAClick }) => {
 
       <div className="relative z-10 mx-auto flex w-full max-w-7xl flex-col md:flex-row flex-1">
         {/* Left Side: Content */}
-        <div className="flex w-full flex-col justify-center px-6 py-16 md:w-1/2 lg:w-[55%] md:pr-12 lg:px-8 xl:px-12">
+        <div className="flex w-full flex-col justify-center items-center text-center md:items-start md:text-left px-6 py-16 md:w-1/2 lg:w-[55%] md:pr-12 lg:px-8 xl:px-12">
             <div>
                 <motion.main variants={containerVariants}>
-                    <motion.h1 className="text-5xl font-black leading-tight md:text-6xl lg:text-7xl" variants={itemVariants}>
+                    <motion.h1 className="text-5xl font-black leading-tight md:text-7xl tracking-tight text-center md:text-left" variants={itemVariants}>
                         <span className="block">{t("forStudents.hero.title")}</span>
                         <span className="block text-[#D0151C] mt-1">
                           {t("forStudents.hero.titleHighlight")}
                         </span>
-                        <span className="block text-3xl md:text-4xl lg:text-5xl mt-6 font-bold text-white/90">
-                          {t("forStudents.hero.subtitle")}
-                        </span>
                     </motion.h1>
                     
-                    <motion.div className="my-10 h-2 w-32 bg-[#D0151C] rounded-full" variants={itemVariants}></motion.div>
+                    <motion.div className="my-8 h-2 w-32 bg-[#D0151C] rounded-full mx-auto md:mx-0" variants={itemVariants}></motion.div>
                     
                     <motion.div 
-                      className="mb-12 max-w-2xl text-xl md:text-2xl text-slate-200 leading-relaxed font-medium" 
+                      className="mb-12 max-w-2xl text-xl md:text-2xl text-slate-200 leading-relaxed font-medium text-center md:text-left" 
                       variants={itemVariants}
                       dangerouslySetInnerHTML={{ __html: t("forStudents.hero.description") }}
                     />
@@ -136,11 +143,9 @@ const HeroSection: React.FC<{ onCTAClick: () => void }> = ({ onCTAClick }) => {
                         onClick={onCTAClick}
                         whileHover={{ scale: 1.05, boxShadow: "0 20px 40px rgba(208, 21, 28, 0.3)" }}
                         whileTap={{ scale: 0.95 }}
-                        className="inline-flex items-center justify-center w-full sm:w-auto px-10 py-6 bg-[#D0151C] text-white font-bold text-xl rounded-2xl shadow-xl hover:bg-red-600 transition-all duration-300 group"
+                        className="inline-flex items-center justify-center w-full sm:w-auto px-10 py-6 bg-[#D0151C] text-white font-bold text-lg rounded-2xl shadow-xl hover:bg-red-600 transition-all duration-300 group"
                       >
-                        <Sparkles className="w-6 h-6 mr-3 group-hover:animate-spin" />
                         {t("forStudents.hero.ctaButton")}
-                        <ArrowRight className="w-6 h-6 ml-3 group-hover:translate-x-1 transition-transform" />
                       </motion.button>
                     </motion.div>
                 </motion.main>
@@ -156,11 +161,10 @@ const HeroSection: React.FC<{ onCTAClick: () => void }> = ({ onCTAClick }) => {
         style={{ 
           backgroundImage: `url('pexels-tamhoang139-1007066.jpg')`,
         }}
-        initial={{ clipPath: 'polygon(100% 0, 100% 0, 100% 100%, 100% 100%)' }}
-        animate={inView ? { clipPath: 'polygon(15% 0, 100% 0, 100% 100%, 0% 100%)' } : {}}
+        initial={{ clipPath: isMobile ? 'polygon(0 0, 100% 0, 100% 100%, 0 100%)' : 'polygon(100% 0, 100% 0, 100% 100%, 100% 100%)' }}
+        animate={inView ? { clipPath: isMobile ? 'polygon(0 0, 100% 0, 100% 100%, 0 100%)' : 'polygon(15% 0, 100% 0, 100% 100%, 0% 100%)' } : {}}
         transition={{ duration: 1.2, ease: "circOut", delay: 0.3 }}
       >
-        <div className="absolute inset-0 bg-[#05294E]/20" />
       </motion.div>
     </motion.section>
   );
@@ -174,10 +178,13 @@ const scholarshipsData = [
       degree: "Bacharelado",
       duration: "4 anos",
       modality: "Presencial",
-      originalPrice: "U$ 55.000/ano",
-      discountedPrice: "U$ 12.500/ano",
+      workAuth: ["CPT", "OPT"],
+      originalPrice: "U$ 24.500/ano",
+      discountedPrice: "U$ 8.500/ano",
+      monthlyPrice: "U$ 708/mês",
+      originalMonthlyPrice: "U$ 2.041/mês",
       image: "https://images.unsplash.com/photo-1562774053-701939374585?auto=format&fit=crop&q=80&w=800",
-      discount: "-77%",
+      discount: "-65%",
       tag: "VIP"
     },
     {
@@ -187,10 +194,13 @@ const scholarshipsData = [
       degree: "Mestrado",
       duration: "2 anos",
       modality: "Presencial",
-      originalPrice: "U$ 60.000/ano",
-      discountedPrice: "U$ 18.000/ano",
+      workAuth: ["CPT", "OPT"],
+      originalPrice: "U$ 26.000/ano",
+      discountedPrice: "U$ 9.800/ano",
+      monthlyPrice: "U$ 816/mês",
+      originalMonthlyPrice: "U$ 2.166/mês",
       image: "https://images.unsplash.com/photo-1517694712202-14dd9538aa97?auto=format&fit=crop&q=80&w=800",
-      discount: "-70%",
+      discount: "-62%",
       tag: "PREMIUM"
     },
     {
@@ -200,10 +210,13 @@ const scholarshipsData = [
       degree: "Mestrado",
       duration: "2 anos",
       modality: "Presencial",
-      originalPrice: "U$ 75.000/ano",
-      discountedPrice: "U$ 25.000/ano",
+      workAuth: ["CPT", "OPT"],
+      originalPrice: "U$ 28.500/ano",
+      discountedPrice: "U$ 11.200/ano",
+      monthlyPrice: "U$ 933/mês",
+      originalMonthlyPrice: "U$ 2.375/mês",
       image: "https://images.unsplash.com/photo-1541829070764-84a7d30dd3f3?auto=format&fit=crop&q=80&w=800",
-      discount: "-66%",
+      discount: "-60%",
       tag: "VIP"
     },
     {
@@ -213,10 +226,13 @@ const scholarshipsData = [
       degree: "Bacharelado",
       duration: "3 anos",
       modality: "Híbrido",
-      originalPrice: "£ 35.000/ano",
-      discountedPrice: "£ 15.000/ano",
+      workAuth: ["CPT"],
+      originalPrice: "U$ 18.000/ano",
+      discountedPrice: "U$ 7.500/ano",
+      monthlyPrice: "U$ 625/mês",
+      originalMonthlyPrice: "U$ 1.500/mês",
       image: "https://images.unsplash.com/photo-1564981797816-1043664bf78d?auto=format&fit=crop&q=80&w=800",
-      discount: "-57%",
+      discount: "-58%",
       tag: "PREMIUM"
     },
     {
@@ -226,10 +242,13 @@ const scholarshipsData = [
       degree: "Bacharelado",
       duration: "4 anos",
       modality: "Presencial",
-      originalPrice: "C$ 60.000/ano",
-      discountedPrice: "C$ 20.000/ano",
+      workAuth: ["CPT", "OPT"],
+      originalPrice: "U$ 16.500/ano",
+      discountedPrice: "U$ 6.900/ano",
+      monthlyPrice: "U$ 575/mês",
+      originalMonthlyPrice: "U$ 1.375/mês",
       image: "https://images.unsplash.com/photo-1606761568499-6d2451b23c66?auto=format&fit=crop&q=80&w=800",
-      discount: "-66%",
+      discount: "-58%",
       tag: "VIP"
     },
     {
@@ -239,10 +258,13 @@ const scholarshipsData = [
       degree: "Bacharelado",
       duration: "4 anos",
       modality: "Presencial",
-      originalPrice: "U$ 65.000/ano",
-      discountedPrice: "U$ 16.500/ano",
+      workAuth: ["CPT", "OPT"],
+      originalPrice: "U$ 22.000/ano",
+      discountedPrice: "U$ 10.500/ano",
+      monthlyPrice: "U$ 875/mês",
+      originalMonthlyPrice: "U$ 1.833/mês",
       image: "https://images.unsplash.com/photo-1523580494863-6f3031224c94?auto=format&fit=crop&q=80&w=800",
-      discount: "-74%",
+      discount: "-52%",
       tag: "PREMIUM"
     },
     {
@@ -252,10 +274,13 @@ const scholarshipsData = [
       degree: "Mestrado",
       duration: "2 anos",
       modality: "Híbrido",
-      originalPrice: "£ 40.000/ano",
-      discountedPrice: "£ 18.000/ano",
+      workAuth: ["CPT"],
+      originalPrice: "U$ 19.500/ano",
+      discountedPrice: "U$ 8.200/ano",
+      monthlyPrice: "U$ 683/mês",
+      originalMonthlyPrice: "U$ 1.625/mês",
       image: "https://images.unsplash.com/photo-1509062522246-3755977927d7?auto=format&fit=crop&q=80&w=800",
-      discount: "-55%",
+      discount: "-58%",
       tag: "VIP"
     },
     {
@@ -265,10 +290,13 @@ const scholarshipsData = [
       degree: "Bacharelado",
       duration: "4 anos",
       modality: "Presencial",
-      originalPrice: "U$ 70.000/ano",
-      discountedPrice: "U$ 21.000/ano",
+      workAuth: ["CPT", "OPT"],
+      originalPrice: "U$ 25.000/ano",
+      discountedPrice: "U$ 12.000/ano",
+      monthlyPrice: "U$ 1.000/mês",
+      originalMonthlyPrice: "U$ 2.083/mês",
       image: "https://images.unsplash.com/photo-1524178232363-1fb2b075b655?auto=format&fit=crop&q=80&w=800",
-      discount: "-70%",
+      discount: "-52%",
       tag: "PREMIUM"
     },
     {
@@ -278,10 +306,13 @@ const scholarshipsData = [
       degree: "Bacharelado",
       duration: "3 anos",
       modality: "Presencial",
-      originalPrice: "A$ 45.000/ano",
-      discountedPrice: "A$ 15.000/ano",
+      workAuth: ["CPT", "OPT"],
+      originalPrice: "U$ 14.000/ano",
+      discountedPrice: "U$ 5.500/ano",
+      monthlyPrice: "U$ 458/mês",
+      originalMonthlyPrice: "U$ 1.166/mês",
       image: "https://images.unsplash.com/photo-1592280771190-3e2e4d571952?auto=format&fit=crop&q=80&w=800",
-      discount: "-66%",
+      discount: "-60%",
       tag: "VIP"
     },
     {
@@ -291,16 +322,19 @@ const scholarshipsData = [
       degree: "Mestrado",
       duration: "2 anos",
       modality: "Presencial",
-      originalPrice: "€ 25.000/ano",
-      discountedPrice: "€ 8.500/ano",
+      workAuth: ["CPT", "OPT"],
+      originalPrice: "U$ 12.500/ano",
+      discountedPrice: "U$ 4.800/ano",
+      monthlyPrice: "U$ 400/mês",
+      originalMonthlyPrice: "U$ 1.041/mês",
       image: "https://images.unsplash.com/photo-1501504905252-473c47e087f8?auto=format&fit=crop&q=80&w=800",
-      discount: "-66%",
+      discount: "-60%",
       tag: "PREMIUM"
     }
   ];
 
 // Featured Scholarships Section Component
-const FeaturedScholarshipsSection: React.FC = () => {
+const FeaturedScholarshipsSection: React.FC<{ onCTAClick: () => void }> = ({ onCTAClick }) => {
   const [currentIndex, setCurrentIndex] = React.useState(0);
   const [itemsPerView, setItemsPerView] = React.useState(1);
   const [isMobile, setIsMobile] = React.useState(false);
@@ -342,13 +376,19 @@ const FeaturedScholarshipsSection: React.FC = () => {
   return (
     <section className="bg-slate-50/50 py-20 relative">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-        <div className="mb-10">
-          <h2 className="font-display text-3xl font-bold text-[#05294E] md:text-4xl text-center md:text-left">
+        <div className="mb-10 flex flex-col md:flex-row items-center justify-between gap-6">
+          <h2 className="text-4xl md:text-5xl font-black tracking-tight text-[#05294E] text-center md:text-left">
             +154 Bolsas Exclusivas
           </h2>
+          <button 
+            onClick={onCTAClick}
+            className="hidden md:flex items-center gap-2 px-6 py-3 bg-[#05294E] text-white rounded-xl font-bold text-lg hover:bg-[#D0151C] transition-all group shadow-lg hover:shadow-xl active:scale-95"
+          >
+            Descobrir mais Bolsas
+          </button>
         </div>
 
-        <div className="relative group">
+        <div className="relative">
           {/* Navigation Buttons */}
           <button 
             onClick={() => scroll('left')}
@@ -385,7 +425,7 @@ const FeaturedScholarshipsSection: React.FC = () => {
                   <div className="relative h-48 overflow-hidden">
                     <img 
                       src={item.image} 
-                      alt={item.university} 
+                      alt={item.course} 
                       className="h-full w-full object-cover transition-transform duration-500 group-hover:scale-110" 
                     />
                     <div className="absolute inset-0 bg-gradient-to-t from-black/60 via-transparent to-transparent"></div>
@@ -397,39 +437,65 @@ const FeaturedScholarshipsSection: React.FC = () => {
                     </div>
                     
                     <div className="absolute bottom-3 left-3">
-                      <h3 className="font-display text-2xl font-bold text-white">{item.university}</h3>
+                      <h3 className="text-2xl font-bold text-white tracking-tight">{item.course}</h3>
                     </div>
                   </div>
 
                   <div className="flex flex-1 flex-col p-5">
-                    <div className="mb-4 flex items-center gap-2 text-sm text-slate-600">
-                      <GraduationCap className="h-4 w-4 text-slate-400" />
-                      <span className="font-semibold text-[#05294E]">{item.course}</span>
-                      <span className="ml-auto flex items-center gap-1.5 text-xs font-medium bg-slate-100 px-2 py-1 rounded-md">
+                    {/* Header Info: Degree Badge */}
+                    <div className="mb-4 flex items-center gap-2">
+                      <span className="px-2.5 py-1 rounded-lg text-xs font-bold bg-[#05294E]/5 text-[#05294E] border border-[#05294E]/10 flex items-center gap-1.5">
+                        <GraduationCap className="h-3.5 w-3.5 text-[#05294E]/60" />
                         {item.degree}
                       </span>
                     </div>
 
-                    <div className="mb-3 flex flex-wrap items-center gap-2 text-xs text-slate-500">
-                      <Calendar className="h-3.5 w-3.5" />
-                      <div className="flex flex-1 items-center gap-2">
-                        <span>Duração: {item.duration}</span>
-                        <span className="inline-flex items-center gap-1 rounded-full bg-blue-50 px-2 py-0.5 text-[10px] font-semibold text-blue-600">
-                          <Lock className="h-3 w-3" />
-                          Garantida
-                        </span>
+                    {/* Info Rows */}
+                    <div className="space-y-3.5 mb-6">
+                      {/* Duration */}
+                      <div className="flex items-center justify-between text-xs">
+                        <div className="flex items-center gap-2 text-slate-500">
+                          <Calendar className="h-3.5 w-3.5" />
+                          <span>Duração</span>
+                        </div>
+                        <span className="font-semibold text-[#05294E]">{item.duration}</span>
                       </div>
-                    </div>
 
-                    <div className="mb-4 flex flex-wrap items-center gap-2 text-xs text-slate-500">
-                      <BookOpen className="h-3.5 w-3.5" />
-                      <span>{item.modality}</span>
+                      {/* Modality */}
+                      <div className="flex items-center justify-between text-xs">
+                        <div className="flex items-center gap-2 text-slate-500">
+                          <BookOpen className="h-3.5 w-3.5" />
+                          <span>Modalidade</span>
+                        </div>
+                        <span className="font-semibold text-[#05294E]">{item.modality}</span>
+                      </div>
+
+                      {/* Work Authorization (CPT/OPT) */}
+                      {item.workAuth && (
+                        <div className="flex items-center justify-between text-xs">
+                          <div className="flex items-center gap-2 text-slate-500">
+                            <Briefcase className="h-3.5 w-3.5 text-slate-400" />
+                            <span>Permissão de Trabalho</span>
+                          </div>
+                          <div className="flex gap-1">
+                            {item.workAuth.map((auth, idx) => (
+                              <span key={idx} className="bg-slate-100 text-slate-700 px-1.5 py-0.5 rounded font-bold text-[10px]">
+                                {auth}
+                              </span>
+                            ))}
+                          </div>
+                        </div>
+                      )}
                     </div>
 
                     <div className="mt-auto flex items-end justify-between border-t border-slate-100 pt-4">
-                      <div>
-                        <p className="text-xs text-slate-400 line-through mb-1">{item.originalPrice}</p>
-                        <p className="text-xl font-black leading-none text-green-600">{item.discountedPrice}</p>
+                      <div className="flex flex-col gap-1">
+                        <p className="text-xs text-slate-400 line-through">{item.originalMonthlyPrice}</p>
+                        <div className="flex items-baseline gap-2">
+                          <p className="text-xl font-black leading-none text-green-600">{item.monthlyPrice}</p>
+                          <span className="text-sm font-bold text-slate-500">|</span>
+                          <p className="text-sm font-bold text-slate-500 whitespace-nowrap">{item.discountedPrice}</p>
+                        </div>
                       </div>
                     </div>
                   </div>
@@ -455,6 +521,16 @@ const FeaturedScholarshipsSection: React.FC = () => {
             />
           ))}
         </div>
+
+        {/* Mobile CTA */}
+        <div className="mt-14 flex md:hidden justify-center px-4">
+          <button 
+            onClick={onCTAClick}
+            className="w-full flex items-center justify-center gap-2 px-6 py-4 bg-[#05294E] text-white rounded-xl font-bold text-lg hover:bg-[#D0151C] transition-all group shadow-lg hover:shadow-xl active:scale-95"
+          >
+            Descobrir mais Bolsas
+          </button>
+        </div>
       </div>
     </section>
   );
@@ -468,7 +544,8 @@ const FeaturesSection: React.FC = () => {
     { 
       title: t("forStudents.benefits.benefits.economy.title"), 
       blurb: t("forStudents.benefits.benefits.economy.description"), 
-      meta: t("forStudents.benefits.benefits.economy.highlight") 
+      meta: t("forStudents.benefits.benefits.economy.highlight"),
+      image: "https://images.unsplash.com/photo-1554224155-6726b3ff858f?w=800&q=80"
     },
     { 
       title: t("forStudents.benefits.benefits.fastApproval.title"), 
@@ -509,16 +586,13 @@ const FeaturesSection: React.FC = () => {
   return (
     <div className="w-full relative overflow-hidden bg-white">
       <section className="relative mx-auto max-w-6xl px-6 py-24 z-10">
-        <header className="relative mb-10 border-b border-slate-200 pb-6">
-          <h2 className="text-4xl md:text-6xl font-black tracking-tight text-[#05294E]">{t("forStudents.benefits.title")}</h2>
-          <p className="mt-4 text-base md:text-lg text-slate-600 max-w-2xl leading-relaxed">
-            {t("forStudents.benefits.subtitle")}
-          </p>
+        <header className="relative mb-16 text-center">
+          <h2 className="text-4xl md:text-5xl font-black tracking-tight text-[#05294E]">{t("forStudents.benefits.title")}</h2>
         </header>
 
         <div className="relative grid grid-cols-1 gap-4 md:grid-cols-6 auto-rows-[minmax(120px,auto)]">
           {features.map((f, i) => (
-            <BentoCard key={i} span={spans[i]} title={f.title} blurb={f.blurb} meta={f.meta} />
+            <BentoCard key={i} span={spans[i]} title={f.title} blurb={f.blurb} meta={f.meta} image={(f as any).image} />
           ))}
         </div>
       </section>
@@ -526,25 +600,35 @@ const FeaturesSection: React.FC = () => {
   );
 }
 
-function BentoCard({ span = "", title, blurb, meta }: { span?: string, title: string, blurb: string, meta?: string }) {
+function BentoCard({ span = "", title, blurb, meta, image }: { span?: string, title: string, blurb: string, meta?: string, image?: string }) {
   return (
     <article
-      className={`group relative overflow-hidden rounded-2xl border border-slate-200 bg-slate-50/50 p-6 transition hover:border-slate-300 hover:shadow-md ${span}`}
+      className={`group relative overflow-hidden rounded-2xl border border-slate-200 bg-slate-50/50 transition hover:border-slate-300 hover:shadow-md flex flex-col ${span}`}
     >
-      <header className="mb-4 flex items-start justify-between gap-3">
-        <div className="flex items-center gap-3">
-          <span className="text-sm text-slate-400">&bull;</span>
-          <h3 className="text-xl md:text-2xl font-bold leading-tight text-[#05294E] group-hover:text-[#D0151C] transition-colors">
-            {title}
-          </h3>
+      {image && (
+        <div className="relative h-48 md:h-64 w-full overflow-hidden">
+          <img 
+            src={image} 
+            alt={title} 
+            className="h-full w-full object-cover transition-transform duration-500 group-hover:scale-110" 
+          />
         </div>
-        {meta && (
-          <span className="shrink-0 rounded-full border border-slate-200 px-3 py-1.5 text-xs uppercase tracking-wider text-slate-600 bg-white shadow-sm font-medium">
-            {meta}
-          </span>
-        )}
-      </header>
-      <p className="text-base md:text-lg text-slate-600 max-w-prose leading-relaxed mt-2">{blurb}</p>
+      )}
+      <div className="p-6 flex flex-col flex-1 items-center text-center md:items-start md:text-left">
+        <header className="mb-4 flex flex-col md:flex-row items-center md:items-start justify-between gap-3 w-full">
+          <div className="flex items-center justify-center md:justify-start gap-3">
+            <h3 className="text-2xl font-bold leading-tight text-[#05294E] group-hover:text-[#D0151C] transition-colors tracking-tight">
+              {title}
+            </h3>
+          </div>
+          {meta && (
+            <span className="shrink-0 rounded-full border border-slate-200 px-3 py-1.5 text-xs uppercase tracking-wider text-slate-600 bg-white shadow-sm font-medium">
+              {meta}
+            </span>
+          )}
+        </header>
+        <p className="text-base md:text-lg text-slate-600 max-w-prose leading-relaxed mt-2 text-center md:text-left">{blurb}</p>
+      </div>
 
       {/* Subtle background glow on hover */}
       <div className="absolute inset-0 bg-gradient-to-br from-slate-100/0 to-slate-100/0 group-hover:from-slate-100/50 group-hover:to-transparent transition-all duration-500 rounded-2xl -z-10" />
@@ -552,89 +636,211 @@ function BentoCard({ span = "", title, blurb, meta }: { span?: string, title: st
   );
 }
 
+// Timeline Component Internal
+interface TimelineEntry {
+  title: string;
+  content: React.ReactNode;
+}
+
+const Timeline = ({ data }: { data: TimelineEntry[] }) => {
+  const ref = useRef<HTMLDivElement>(null);
+  const containerRef = useRef<HTMLDivElement>(null);
+  const firstDotRef = useRef<HTMLDivElement>(null);
+  const lastDotRef = useRef<HTMLDivElement>(null);
+  const [height, setHeight] = useState(0);
+  const [lineBounds, setLineBounds] = useState({ top: 0, height: 0 });
+
+  useEffect(() => {
+    if (ref.current) {
+      const rect = ref.current.getBoundingClientRect();
+      setHeight(rect.height);
+    }
+  }, [ref, data]);
+
+  useEffect(() => {
+    if (firstDotRef.current && lastDotRef.current && containerRef.current) {
+      const containerRect = containerRef.current.getBoundingClientRect();
+      const firstRect = firstDotRef.current.getBoundingClientRect();
+      const lastRect = lastDotRef.current.getBoundingClientRect();
+      
+      const top = firstRect.top + firstRect.height / 2 - containerRect.top;
+      const bottom = lastRect.top + lastRect.height / 2 - containerRect.top;
+      
+      setLineBounds({ top, height: bottom - top });
+    }
+  }, [height, data]);
+
+  const { scrollYProgress } = useScroll({
+    target: containerRef,
+    offset: ["start 10%", "end 50%"],
+  });
+
+  const heightTransform = useTransform(scrollYProgress, [0, 1], [0, lineBounds.height]);
+  const opacityTransform = useTransform(scrollYProgress, [0, 0.1], [0, 1]);
+
+  return (
+    <div
+      className="w-full bg-white font-sans md:px-10"
+      ref={containerRef}
+    >
+      <div ref={ref} className="relative max-w-7xl mx-auto pb-20">
+        {data.map((item, index) => {
+          const itemRef = useRef(null);
+          const { scrollYProgress: itemProgress } = useScroll({
+            target: itemRef,
+            offset: ["start 80%", "start 20%"]
+          });
+          const titleOpacity = useTransform(itemProgress, [0, 0.5, 1], [0.5, 1, 0.5]);
+          const scale = useTransform(itemProgress, [0, 0.5, 1], [0.9, 1, 0.9]);
+
+          return (
+            <div
+              key={index}
+              ref={itemRef}
+              className={`flex justify-start ${index === 0 ? 'pt-10 md:pt-10' : 'pt-10 md:pt-40'} md:gap-6`}
+            >
+              <div className="sticky flex flex-col md:flex-row z-40 items-start md:items-center top-40 self-start max-w-xs lg:max-w-sm md:w-full">
+                <div 
+                  ref={index === 0 ? firstDotRef : index === data.length - 1 ? lastDotRef : null}
+                  className="h-10 absolute left-3 md:left-3 top-0 w-10 rounded-full bg-white flex items-center justify-center border border-slate-300 shadow-sm"
+                >
+                  <div className="h-4 w-4 rounded-full bg-[#05294E]/20 border border-[#05294E]/40 p-2" />
+                </div>
+                <motion.h3 
+                  style={{ opacity: titleOpacity, scale }}
+                  className="hidden md:block text-2xl md:pl-14 md:text-4xl font-black tracking-tight text-[#05294E]"
+                >
+                  {item.title}
+                </motion.h3>
+              </div>
+
+              <div className="relative pl-20 pr-4 md:pl-0 w-full">
+                <motion.h3 
+                  style={{ opacity: titleOpacity }}
+                  className="md:hidden block text-2xl mb-4 text-left font-black tracking-tight text-[#05294E] h-10 flex items-center"
+                >
+                  {item.title}
+                </motion.h3>
+                <motion.div
+                  initial={{ opacity: 0, x: 20 }}
+                  whileInView={{ opacity: 1, x: 0 }}
+                  transition={{ duration: 0.5, delay: 0.2 }}
+                  viewport={{ once: true }}
+                >
+                  {item.content}
+                </motion.div>
+              </div>
+            </div>
+          );
+        })}
+        <div
+          style={{
+            height: lineBounds.height + "px",
+            top: lineBounds.top + "px",
+          }}
+          className="absolute md:left-8 left-8 w-[2px] bg-slate-200 z-10"
+        >
+          <motion.div
+            style={{
+              height: heightTransform,
+              opacity: opacityTransform,
+            }}
+            className="absolute inset-x-0 top-0 w-full bg-gradient-to-t from-[#D0151C] via-[#05294E] to-transparent from-[0%] via-[10%] rounded-full shadow-[0_0_15px_rgba(208,21,28,0.8)]"
+          />
+        </div>
+      </div>
+    </div>
+  );
+};
+
 // How It Works Section Component
 const HowItWorksSection: React.FC<{ onCTAClick: () => void }> = ({ onCTAClick }) => {
-  const { ref } = useInView({ triggerOnce: true, threshold: 0.1 });
-
   const steps = [
     {
-      step: "01",
-      title: "Desbloqueie seu Acesso",
-      description: "Ao garantir sua vaga no processo seletivo, você destrava instantaneamente o acesso completo ao nosso catálogo de bolsas exclusivas."
+      title: "Passo 01",
+      content: (
+        <div className="bg-slate-50 p-6 md:p-8 rounded-3xl border border-slate-200 shadow-md mb-12 md:mb-0">
+          <h3 className="text-2xl md:text-3xl font-bold text-[#05294E] mb-4 tracking-tight">
+            Desbloqueie seu Acesso
+          </h3>
+          <p className="text-slate-600 text-lg md:text-xl leading-relaxed font-medium">
+            Ao garantir sua vaga no processo seletivo, você destrava instantaneamente o acesso completo ao nosso catálogo de bolsas exclusivas. É o primeiro passo para transformar seu sonho em realidade.
+          </p>
+        </div>
+      )
     },
     {
-      step: "02",
-      title: "O Poder de Escolha",
-      description: "Com o acesso liberado, você escolhe livremente a universidade e a bolsa de estudos que se alinham perfeitamente aos seus objetivos nos EUA."
+      title: "Passo 02",
+      content: (
+        <div className="bg-slate-50 p-6 md:p-8 rounded-3xl border border-slate-200 shadow-md mb-12 md:mb-0">
+          <h3 className="text-2xl md:text-3xl font-bold text-[#05294E] mb-4 tracking-tight">
+            O Poder de Escolha
+          </h3>
+          <p className="text-slate-600 text-lg md:text-xl leading-relaxed font-medium">
+            Com o acesso liberado, você escolhe livremente a universidade e a bolsa de estudos que se alinham perfeitamente aos seus objetivos nos EUA. Nosso filtro inteligente ajuda você a encontrar o match ideal.
+          </p>
+        </div>
+      )
     },
     {
-      step: "03",
-      title: "Matrícula Garantida",
-      description: "Após a sua escolha, nossa equipe especializada assume toda a burocracia e realiza a sua matrícula oficial na universidade americana."
+      title: "Passo 03",
+      content: (
+        <div className="bg-slate-50 p-6 md:p-8 rounded-3xl border border-slate-200 shadow-md mb-12 md:mb-0">
+          <h3 className="text-2xl md:text-3xl font-bold text-[#05294E] mb-4 tracking-tight">
+            Matrícula Garantida
+          </h3>
+          <p className="text-slate-600 text-lg md:text-xl leading-relaxed font-medium">
+            Após a sua escolha, nossa equipe especializada assume toda a burocracia e realiza a sua matrícula oficial na universidade americana. Você não se preocupa com formulários complexos ou processos exaustivos.
+          </p>
+        </div>
+      )
     },
     {
-      step: "04",
-      title: "Sua Carta de Aceite",
-      description: "O passaporte para o seu futuro. Você recebe a Acceptance Letter oficial, a garantia absoluta de que sua vaga e sua bolsa estão confirmadas."
+      title: "Passo 04",
+      content: (
+        <div className="bg-slate-50 p-6 md:p-8 rounded-3xl border border-slate-200 shadow-md">
+          <h3 className="text-2xl md:text-3xl font-bold text-[#05294E] mb-4 tracking-tight">
+            Sua Carta de Aceite
+          </h3>
+          <p className="text-slate-600 text-lg md:text-xl leading-relaxed font-medium">
+            O passaporte para o seu futuro. Você recebe a Acceptance Letter oficial, a garantia absoluta de que sua vaga e sua bolsa estão confirmadas. Agora é só preparar as malas!
+          </p>
+        </div>
+      )
     }
   ];
 
   return (
-    <section ref={ref} className="py-24 bg-white relative overflow-hidden">
+    <section className="py-24 bg-white relative overflow-hidden">
       {/* Decorative background blurs */}
       <div className="absolute top-0 left-0 w-full h-full overflow-hidden pointer-events-none">
-        <div className="absolute -top-[20%] -right-[10%] w-[50%] h-[50%] rounded-full bg-blue-50/50 blur-3xl" />
-        <div className="absolute -bottom-[20%] -left-[10%] w-[50%] h-[50%] rounded-full bg-red-50/50 blur-3xl" />
+        <div className="absolute -top-[20%] -right-[10%] w-[50%] h-[50%] rounded-full bg-blue-50/30 blur-3xl" />
+        <div className="absolute -bottom-[20%] -left-[10%] w-[50%] h-[50%] rounded-full bg-red-50/30 blur-3xl" />
       </div>
 
       <div className="relative z-10 max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
         {/* Section Header */}
-        <div className="text-center mb-16">
-          <h2 className="text-4xl md:text-5xl font-black text-[#05294E] mb-6 tracking-tight">
+        <div className="text-center mb-8 md:mb-12">
+          <h2 className="text-4xl md:text-5xl font-black text-[#05294E] tracking-tight">
             Como Funciona o <span className="text-[#D0151C]">Processo Seletivo</span>
           </h2>
-          <p className="text-xl text-slate-600 max-w-3xl mx-auto">
-            Uma trilha clara, rápida e sem burocracias. Entenda o que você desbloqueia ao garantir a sua vaga no processo.
-          </p>
         </div>
 
-        {/* Grid Layout */}
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-6 lg:gap-8 max-w-5xl mx-auto mt-12">
-          {steps.map((step, index) => (
-            <div 
-              key={index} 
-              className="relative bg-white rounded-[2rem] p-8 md:p-10 shadow-[0_8px_30px_rgb(0,0,0,0.04)] border border-slate-100 overflow-hidden group hover:shadow-[0_8px_30px_rgb(208,21,28,0.08)] hover:-translate-y-1 transition-all duration-300"
-            >
-              <div className="absolute -right-4 -top-6 text-[140px] leading-none font-black text-slate-50 group-hover:text-red-50/80 transition-colors duration-500 pointer-events-none select-none">
-                {step.step}
-              </div>
-              <div className="relative z-10">
-                <div className="inline-flex items-center px-4 py-1.5 rounded-full bg-slate-50 text-slate-500 font-bold text-sm mb-6 border border-slate-200 group-hover:bg-red-50 group-hover:text-[#D0151C] group-hover:border-red-100 transition-colors duration-300">
-                  Passo {step.step}
-                </div>
-                <h3 className="text-2xl md:text-3xl font-black text-[#05294E] mb-4 group-hover:text-[#D0151C] transition-colors duration-300">
-                  {step.title}
-                </h3>
-                <p className="text-slate-600 text-lg leading-relaxed">
-                  {step.description}
-                </p>
-              </div>
-            </div>
-          ))}
+        {/* Timeline Component */}
+        <div className="relative">
+          <Timeline data={steps} />
         </div>
 
         {/* Final CTA */}
-        <div className="text-center mt-20">
-          <button
+        <div className="text-center mt-10">
+          <motion.button
             onClick={onCTAClick}
-            className="inline-flex items-center px-12 py-6 bg-[#05294E] text-white font-bold text-xl rounded-2xl shadow-xl hover:bg-[#D0151C] hover:shadow-2xl hover:-translate-y-1 transition-all duration-300 group"
+            whileHover={{ scale: 1.05 }}
+            whileTap={{ scale: 0.95 }}
+            className="inline-flex items-center px-12 py-6 bg-[#05294E] text-white font-bold text-lg rounded-2xl shadow-xl hover:bg-[#D0151C] hover:shadow-2xl transition-all duration-300 group"
           >
             Começar Meu Processo Agora
-            <span className="ml-3 group-hover:translate-x-1 transition-transform">→</span>
-          </button>
-          <p className="mt-4 text-slate-500 font-medium">
-            Garantia de aprovação ou devolução da taxa.
-          </p>
+          </motion.button>
         </div>
       </div>
     </section>
@@ -718,12 +924,14 @@ const ComparisonSection: React.FC<{ onCTAClick: () => void }> = ({ onCTAClick })
     };
   }, []);
 
+  const [isMonthly, setIsMonthly] = useState(true);
+
   const plans = [
     {
       id: "alone",
       name: "Tentando Sozinho",
       description: "ou com Agências Tradicionais",
-      costLabel: "Gasto médio: U$ 40.000/ano",
+      costLabel: isMonthly ? "U$ 3.167/mês" : "U$ 38.000/ano",
       isHighlight: false,
       features: [
         { text: "Processos confusos e burocráticos" },
@@ -737,7 +945,7 @@ const ComparisonSection: React.FC<{ onCTAClick: () => void }> = ({ onCTAClick })
       id: "matriculausa",
       name: "Com a MatriculaUSA",
       description: "Aprovação e Economia Garantida",
-      costLabel: "Economia média: U$ 25.000/ano",
+      costLabel: isMonthly ? "U$ 1.000/mês" : "U$ 12.000/ano",
       isHighlight: true,
       features: [
         { text: "Processo 100% guiado e transparente" },
@@ -755,18 +963,6 @@ const ComparisonSection: React.FC<{ onCTAClick: () => void }> = ({ onCTAClick })
       className="relative py-24 md:py-32 bg-slate-50 text-[#05294E] overflow-hidden isolate"
     >
       <style>{`
-        .accent-lines{position:absolute;inset:0;pointer-events:none;opacity:.4}
-        .hline,.vline{position:absolute;background:#cbd5e1}
-        .hline{left:0;right:0;height:1px;transform:scaleX(0);transform-origin:50% 50%;animation:drawX .8s ease forwards}
-        .vline{top:0;bottom:0;width:1px;transform:scaleY(0);transform-origin:50% 0%;animation:drawY .9s ease forwards}
-        .hline:nth-child(1){top:18%;animation-delay:.08s}
-        .hline:nth-child(2){top:50%;animation-delay:.16s}
-        .hline:nth-child(3){top:82%;animation-delay:.24s}
-        .vline:nth-child(4){left:18%;animation-delay:.20s}
-        .vline:nth-child(5){left:50%;animation-delay:.28s}
-        .vline:nth-child(6){left:82%;animation-delay:.36s}
-        @keyframes drawX{to{transform:scaleX(1)}}
-        @keyframes drawY{to{transform:scaleY(1)}}
         .card-animate{opacity:0;transform:translateY(12px);animation:fadeUp .6s ease .25s forwards}
         @keyframes fadeUp{to{opacity:1;transform:translateY(0)}}
       `}</style>
@@ -774,15 +970,7 @@ const ComparisonSection: React.FC<{ onCTAClick: () => void }> = ({ onCTAClick })
       {/* Subtle vignette for light mode */}
       <div className="pointer-events-none absolute inset-0 [background:radial-gradient(80%_60%_at_50%_15%,rgba(255,255,255,0.8),transparent_60%)]" />
 
-      {/* Animated accent lines */}
-      <div aria-hidden="true" className="accent-lines">
-        <div className="hline" />
-        <div className="hline" />
-        <div className="hline" />
-        <div className="vline" />
-        <div className="vline" />
-        <div className="vline" />
-      </div>
+
 
       {/* Particles */}
       <canvas
@@ -792,19 +980,45 @@ const ComparisonSection: React.FC<{ onCTAClick: () => void }> = ({ onCTAClick })
 
       {/* Content */}
       <div className="relative z-10 max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-        <div className="mx-auto flex max-w-5xl flex-col items-center gap-6 text-center">
-          <h2 className="text-4xl md:text-5xl font-black tracking-tight text-[#05294E]">
-            De gasto alto e incerteza… para <span className="text-[#D0151C]">economia real</span> e aprovação garantida
+        <div className="mx-auto flex max-w-5xl flex-col items-center gap-6 text-center relative">
+          {/* Section Background Watermark */}
+          <div className="absolute -top-10 left-1/2 -translate-x-1/2 text-[10vw] font-black text-[#05294E]/[0.02] select-none pointer-events-none whitespace-nowrap uppercase tracking-tighter z-0">
+            Garantia
+          </div>
+          
+          <h2 className="text-4xl md:text-5xl font-black tracking-tight text-[#05294E] relative z-10">
+            Menos Gasto. <span className="text-[#D0151C]"> Mais Certeza.</span>
           </h2>
-          <p className="text-slate-600 md:text-xl max-w-3xl mx-auto">
-            Entenda por que o nosso processo seletivo é o atalho mais inteligente e seguro para o seu futuro acadêmico nos EUA.
-          </p>
 
-          <div className="mt-12 flex flex-col items-stretch gap-8 md:flex-row justify-center w-full max-w-4xl">
+          {/* Billing Toggle */}
+          <div className="mt-8 flex items-center justify-center gap-2 bg-slate-200/50 backdrop-blur-sm p-1 rounded-2xl border border-slate-200">
+            <button
+              onClick={() => setIsMonthly(true)}
+              className={`px-8 py-2.5 rounded-xl text-sm font-bold transition-all duration-300 ${
+                isMonthly 
+                  ? "bg-[#05294E] text-white shadow-md scale-100" 
+                  : "text-slate-500 hover:text-[#05294E] hover:bg-slate-200/50"
+              }`}
+            >
+              Mensal
+            </button>
+            <button
+              onClick={() => setIsMonthly(false)}
+              className={`px-8 py-2.5 rounded-xl text-sm font-bold transition-all duration-300 ${
+                !isMonthly 
+                  ? "bg-[#05294E] text-white shadow-md scale-100" 
+                  : "text-slate-500 hover:text-[#05294E] hover:bg-slate-200/50"
+              }`}
+            >
+              Anual
+            </button>
+          </div>
+
+          <div className="mt-8 flex flex-col items-stretch gap-8 md:flex-row justify-center w-full max-w-4xl">
             {plans.map((plan, i) => (
               <div
                 key={plan.id}
-                className={`card-animate flex w-full md:w-[420px] flex-col justify-between text-left rounded-3xl border p-8 backdrop-blur-md shadow-2xl transition-all duration-300 ${
+                className={`card-animate flex w-full md:w-[420px] flex-col justify-between text-center rounded-3xl border p-8 backdrop-blur-md shadow-2xl transition-all duration-300 ${
                   plan.isHighlight 
                     ? "border-red-200 bg-white/95 ring-2 ring-red-100 md:-translate-y-4 shadow-[0_20px_40px_rgb(208,21,28,0.1)]" 
                     : "border-slate-200 bg-white/60"
@@ -812,13 +1026,13 @@ const ComparisonSection: React.FC<{ onCTAClick: () => void }> = ({ onCTAClick })
                 style={{ animationDelay: `${0.25 + i * 0.15}s` }}
               >
                 <div>
-                  <h3 className={`text-2xl font-black ${plan.isHighlight ? 'text-[#05294E]' : 'text-slate-700'}`}>
+                  <h3 className={`text-2xl font-bold tracking-tight mb-6 ${plan.isHighlight ? 'text-[#05294E]' : 'text-slate-700'}`}>
                     {plan.name}
                   </h3>
-                  <p className="text-sm font-medium text-slate-500 mt-1 mb-6">{plan.description}</p>
+
                   
-                  <div className={`p-4 rounded-2xl mb-8 border ${plan.isHighlight ? 'bg-red-50 text-[#D0151C] border-red-100' : 'bg-slate-50 text-slate-600 border-slate-100'}`}>
-                    <span className="font-bold">{plan.costLabel}</span>
+                  <div className={`mb-8 ${plan.isHighlight ? 'text-[#D0151C]' : 'text-slate-600'}`}>
+                    <span className="text-4xl font-black tracking-tight">{plan.costLabel}</span>
                   </div>
 
                   <div className="h-px w-full bg-slate-200 mb-6" />
@@ -831,60 +1045,53 @@ const ComparisonSection: React.FC<{ onCTAClick: () => void }> = ({ onCTAClick })
                         ) : (
                           <X className="w-5 h-5 text-red-400 flex-shrink-0 mt-0.5" />
                         )}
-                        <span className="text-slate-700 font-medium leading-snug">{feature.text}</span>
+                        <span className="text-slate-600 font-medium leading-snug">{feature.text}</span>
                       </li>
                     ))}
                   </ul>
                 </div>
 
-                <div className="mt-auto">
-                  <button
-                    onClick={plan.isHighlight ? onCTAClick : undefined}
-                    className={`w-full flex items-center justify-center py-4 px-6 rounded-xl font-bold transition-all ${
-                      plan.isHighlight 
-                        ? "bg-[#D0151C] text-white hover:bg-red-600 shadow-lg hover:shadow-red-500/30 hover:-translate-y-0.5" 
-                        : "bg-slate-100 text-slate-400 cursor-not-allowed"
-                    }`}
-                  >
-                    {plan.buttonText}
-                    {plan.isHighlight && <ArrowRight className="ml-2 w-5 h-5" />}
-                  </button>
-                </div>
+                {plan.isHighlight && (
+                  <div className="mt-auto">
+                    <button
+                      onClick={onCTAClick}
+                      className="w-full flex items-center justify-center py-4 px-6 rounded-xl font-bold text-lg transition-all bg-[#D0151C] text-white hover:bg-red-600 shadow-lg hover:shadow-red-500/30 hover:-translate-y-0.5"
+                    >
+                      {plan.buttonText}
+                    </button>
+                  </div>
+                )}
               </div>
             ))}
           </div>
 
-          {/* Guarantee Element */}
-          <div className="mt-16 w-full max-w-5xl grid grid-cols-1 md:grid-cols-3 gap-6">
-            {(t("forStudents.guarantee.guarantees", { returnObjects: true }) as Array<{title: string, description: string}>).map((guarantee, index) => {
-              const icons = [ShieldCheck, CheckCircle, GraduationCap];
-              const IconComponent = icons[index] || ShieldCheck;
-
-              return (
+          {/* Guarantee Element - Now part of the background/footer of the section */}
+          <div className="mt-16 w-full max-w-5xl flex justify-center">
+            {(t("forStudents.guarantee.guarantees", { returnObjects: true }) as Array<{title: string, description: string}>)
+              .filter((_, index) => index === 0)
+              .map((guarantee, index) => (
                 <motion.div
                   key={index}
-                  initial={{ opacity: 0, y: 30 }}
-                  whileInView={{ opacity: 1, y: 0 }}
+                  initial={{ opacity: 0 }}
+                  whileInView={{ opacity: 1 }}
                   viewport={{ once: true }}
-                  transition={{ delay: index * 0.1 }}
-                  className="bg-white rounded-3xl p-8 shadow-xl border border-slate-100 hover:shadow-2xl hover:border-green-100 transition-all duration-300 relative overflow-hidden group text-left"
+                  className="relative z-10 flex flex-col items-center text-center max-w-3xl w-full mx-4"
                 >
-                  <div className="absolute top-0 right-0 w-32 h-32 bg-green-50 rounded-full blur-3xl -mr-16 -mt-16 group-hover:bg-green-100 transition-colors duration-500"></div>
+                  {/* Subtle Background Watermark */}
+                  <div className="absolute -top-12 left-1/2 -translate-x-1/2 text-7xl md:text-9xl font-black text-[#05294E]/[0.03] select-none pointer-events-none whitespace-nowrap uppercase tracking-tighter">
+                    {guarantee.title}
+                  </div>
                   
                   <div className="relative z-10">
-                    <div className="w-14 h-14 bg-green-50 rounded-2xl flex items-center justify-center mb-6 group-hover:scale-110 transition-transform duration-300">
-                      <IconComponent className="w-7 h-7 text-green-500" />
-                    </div>
-                    <h3 className="text-lg font-bold text-[#05294E] mb-3 leading-tight">
+                    <h3 className="text-2xl md:text-3xl font-bold text-[#05294E] mb-4 tracking-tight leading-tight">
                       {guarantee.title}
                     </h3>
-                    <p className="text-sm font-medium text-slate-500 leading-relaxed">
+                    <p className="text-base md:text-xl font-medium text-slate-500 leading-relaxed max-w-2xl">
                       {guarantee.description}
                     </p>
                   </div>
                 </motion.div>
-              );
-            })}
+              ))}
           </div>
         </div>
       </div>
@@ -892,145 +1099,7 @@ const ComparisonSection: React.FC<{ onCTAClick: () => void }> = ({ onCTAClick })
   );
 };
 
-// Special Offer Section Component
-const SpecialOfferSection: React.FC<{ onCTAClick: () => void }> = ({ onCTAClick }) => {
-  const { t } = useTranslation(['home', 'common']);
-  const controls = useAnimation();
-  const { ref, inView } = useInView({ triggerOnce: true, threshold: 0.1 });
 
-  useEffect(() => {
-    if (inView) {
-      controls.start('visible');
-    }
-  }, [controls, inView]);
-
-  const containerVariants = {
-    hidden: { opacity: 0 },
-    visible: {
-      opacity: 1,
-      transition: {
-        delayChildren: 0.2,
-        staggerChildren: 0.1
-      }
-    }
-  };
-
-  const itemVariants = {
-    hidden: { y: 30, opacity: 0 },
-    visible: { 
-      y: 0, 
-      opacity: 1,
-      transition: { 
-        duration: 0.6
-      }
-    }
-  };  const benefits = t("forStudents.specialOffer.benefits", { returnObjects: true }) as Array<{
-    title: string;
-    description: string;
-  }>;
-
-  return (
-    <section ref={ref} className="py-24 bg-gradient-to-br from-[#05294E] via-[#0a3a62] to-[#05294E] text-white relative overflow-hidden">
-      {/* Background Elements */}
-      <div className="absolute inset-0">
-        <div className="absolute top-10 left-10 w-32 h-32 bg-[#D0151C]/20 rounded-full blur-3xl animate-pulse"></div>
-        <div className="absolute bottom-10 right-10 w-48 h-48 bg-yellow-400/10 rounded-full blur-3xl"></div>
-        <div className="absolute top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2 w-96 h-96 bg-gradient-to-r from-blue-500/5 to-purple-500/5 rounded-full blur-3xl"></div>
-      </div>
-
-      <div className="relative z-10 max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-        <motion.div
-          animate={controls}
-          initial="hidden"
-          variants={containerVariants}
-        >
-          {/* Header */}
-          <motion.div variants={itemVariants} className="text-center mb-12">
-
-            <h2 className="text-4xl md:text-5xl font-black mb-6">
-              {t("forStudents.specialOffer.title")}
-            </h2>
-            <p className="text-xl text-slate-200 max-w-3xl mx-auto mb-8">
-              {t("forStudents.specialOffer.subtitle")}
-            </p>
-          </motion.div>
-
-          {/* Benefits Grid */}
-          <motion.div 
-            variants={containerVariants}
-            className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-12"
-          >
-            {benefits.map((benefit, index) => {
-              const icons = [Zap, Sparkles, CheckCircle, ShieldCheck];
-              const IconComponent = icons[index] || Zap;
-              
-              return (
-                <motion.div
-                  key={index}
-                  variants={itemVariants}
-                  whileHover={{ 
-                    y: -5,
-                    scale: 1.02
-                  }}
-                  className="bg-white/10 backdrop-blur-lg rounded-2xl p-6 border border-white/20 hover:bg-white/20 transition-all duration-300"
-                >
-                  <div className="w-12 h-12 bg-[#D0151C] rounded-xl flex items-center justify-center mb-4">
-                    <IconComponent className="w-6 h-6 text-white" />
-                  </div>
-                  <h3 className="text-lg font-bold mb-2">{benefit.title}</h3>
-                  <p className="text-slate-200 text-sm leading-relaxed">{benefit.description}</p>
-                </motion.div>
-              );
-            })}
-          </motion.div>
-
-          {/* Urgency Section */}
-          <motion.div 
-            variants={itemVariants}
-            className="bg-gradient-to-r from-[#D0151C]/20 to-red-500/20 backdrop-blur-lg rounded-3xl p-8 border border-[#D0151C]/30 mb-12"
-          >
-            <div className="flex items-center justify-center mb-4">
-              <Zap className="w-8 h-8 text-yellow-400 mr-3" />
-              <h3 className="text-2xl font-bold text-yellow-400">{t("forStudents.specialOffer.urgencyTitle")}</h3>
-            </div>
-            <p className="text-center text-lg leading-relaxed" dangerouslySetInnerHTML={{ __html: t("forStudents.specialOffer.urgencyDescription") }} />
-          </motion.div>
-
-          {/* CTA */}
-          <motion.div variants={itemVariants} className="text-center px-4 sm:px-0">
-            <motion.button
-              onClick={onCTAClick}
-              whileHover={{ 
-                scale: 1.05,
-                boxShadow: "0 25px 50px rgba(208, 21, 28, 0.5)"
-              }}
-              whileTap={{ scale: 0.95 }}
-              className="w-full sm:w-auto inline-flex items-center justify-center px-6 sm:px-12 md:px-16 py-4 sm:py-6 md:py-8 bg-[#D0151C] text-white font-black text-base sm:text-xl md:text-2xl rounded-2xl shadow-2xl hover:bg-red-600 transition-all duration-300 group relative overflow-hidden"
-            >
-              <div className="absolute inset-0 bg-gradient-to-r from-red-400 to-red-600 opacity-0 group-hover:opacity-100 transition-opacity duration-300"></div>
-              <div className="relative flex flex-col sm:flex-row items-center gap-2 sm:gap-3 md:gap-4">
-                <Sparkles className="hidden sm:block w-6 h-6 sm:w-7 sm:h-7 md:w-8 md:h-8 group-hover:animate-spin" />
-                <div className="flex items-center gap-2 sm:gap-3">
-                  <span className="whitespace-nowrap">{t("forStudents.specialOffer.ctaButton")}</span>
-                </div>
-                <motion.div
-                  animate={{ x: [0, 10, 0] }}
-                  transition={{ repeat: Infinity, duration: 1.2 }}
-                  className="text-xl sm:text-2xl md:text-3xl"
-                >
-                  🚀
-                </motion.div>
-              </div>
-            </motion.button>
-            <p className="mt-3 sm:mt-4 text-slate-300 text-xs sm:text-sm">
-              {t("forStudents.specialOffer.ctaDescription")}
-            </p>
-          </motion.div>
-        </motion.div>
-      </div>
-    </section>
-  );
-};
 
 
 // Social Proof Section Component - Prova Social
@@ -1092,12 +1161,9 @@ const SocialProofSection: React.FC<{ onCTAClick: () => void }> = ({ onCTAClick }
   return (
     <section className="bg-slate-50 py-24 md:py-32 overflow-hidden">
       <div className="max-w-7xl mx-auto px-4 text-center mb-16 md:mb-20">
-        <h2 className="font-display text-4xl md:text-5xl font-bold text-[#05294E] tracking-tight mb-6">
+        <h2 className="text-4xl md:text-5xl font-black text-[#05294E] tracking-tight">
           Relatos de quem já foi <span className="text-[#D0151C] italic">Aprovado.</span>
         </h2>
-        <p className="text-slate-600 font-medium text-lg md:text-xl max-w-2xl mx-auto">
-          Junte-se a milhares de estudantes que descobriram a estratégia certa para estudar no exterior.
-        </p>
       </div>
 
       <div className="w-full max-w-7xl mx-auto px-4 md:px-12 relative">
@@ -1127,7 +1193,7 @@ const SocialProofSection: React.FC<{ onCTAClick: () => void }> = ({ onCTAClick }
                           <Star key={i} className="h-4 w-4 fill-yellow-400 text-yellow-400" />
                         ))}
                       </div>
-                      <p className="text-[13px] md:text-sm font-medium leading-relaxed mb-6 italic opacity-90">
+                      <p className="text-base md:text-lg font-medium leading-relaxed mb-6 italic opacity-90">
                         "{testimonial.text}"
                       </p>
                       <div className="border-t border-white/20 pt-6">
@@ -1165,12 +1231,9 @@ const SocialProofSection: React.FC<{ onCTAClick: () => void }> = ({ onCTAClick }
       <div className="text-center mt-16 px-4">
         <button
           onClick={onCTAClick}
-          className="inline-flex items-center px-8 py-4 md:px-12 md:py-6 bg-[#D0151C] text-white font-bold text-lg md:text-xl rounded-2xl shadow-xl hover:bg-red-600 hover:scale-105 transition-all duration-300 group"
+          className="inline-flex items-center px-8 py-4 md:px-12 md:py-6 bg-[#D0151C] text-white font-bold text-lg rounded-2xl shadow-xl hover:bg-red-600 hover:scale-105 transition-all duration-300 group"
         >
           {t("forStudents.socialProof.ctaButton")}
-          <div className="ml-3 group-hover:translate-x-2 transition-transform">
-            →
-          </div>
         </button>
       </div>
     </section>

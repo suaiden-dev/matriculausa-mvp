@@ -55,6 +55,25 @@ const StudentInformationCard: React.FC<StudentInformationCardProps> = React.memo
   onCancelEditDependents,
   savingDependents,
 }) => {
+  const getDisplayValue = (type: string | null, visaTransferActive: boolean | null | undefined): string => {
+    if (type === 'transfer') {
+      return visaTransferActive === false ? 'transfer_reinstatement' : 'transfer_active';
+    }
+    return type || 'initial';
+  };
+
+  const getLabel = (value: string) => {
+    const labels: Record<string, string> = {
+      initial: 'Initial – F-1 Visa',
+      transfer_active: 'Transfer – Active F-1',
+      transfer_reinstatement: 'Transfer – Needs Reinstatement',
+      change_of_status: 'Change of Status',
+      resident: 'Resident',
+      enrolled: 'Enrolled'
+    };
+    return labels[value] || value.replace(/_/g, ' ').replace(/\b\w/g, c => c.toUpperCase());
+  };
+
   return (
     <div className="bg-white rounded-2xl shadow-sm border border-slate-200">
       <div className="bg-gradient-to-r rounded-t-2xl from-[#05294E] to-[#0a4a7a] px-6 py-4">
@@ -251,9 +270,11 @@ const StudentInformationCard: React.FC<StudentInformationCardProps> = React.memo
                       className="px-3 py-1 border border-slate-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
                       disabled={savingProcessType}
                     >
-                      <option value="initial">Initial</option>
-                      <option value="transfer">Transfer</option>
+                      <option value="initial">Initial – F-1 Visa</option>
+                      <option value="transfer_active">Transfer – Active F-1</option>
+                      <option value="transfer_reinstatement">Transfer – Needs Reinstatement</option>
                       <option value="change_of_status">Change of Status</option>
+                      <option value="resident">Resident</option>
                       <option value="enrolled">Enrolled</option>
                     </select>
                     <button
@@ -283,9 +304,7 @@ const StudentInformationCard: React.FC<StudentInformationCardProps> = React.memo
                 ) : (
                   <div className="flex items-center gap-2">
                     <span className="capitalize">
-                      {student.student_process_type 
-                        ? student.student_process_type.replace(/_/g, ' ')
-                        : 'Not defined'}
+                      {getLabel(getDisplayValue(student.student_process_type, student.visa_transfer_active))}
                     </span>
                     <button
                       onClick={onEditProcessType}

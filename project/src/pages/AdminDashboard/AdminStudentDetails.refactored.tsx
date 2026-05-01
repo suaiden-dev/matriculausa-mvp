@@ -508,6 +508,20 @@ const AdminStudentDetails: React.FC = () => {
   const [loadingMatriculaRewards, setLoadingMatriculaRewards] = useState(false);
   // termAcceptances e pendingZellePayments agora vêm dos React Query hooks (definidos acima)
 
+  // Helpers para mapeamento de Process Type granular
+  const getDisplayValue = (type: string | null, visaTransferActive: boolean | null | undefined): string => {
+    if (type === 'transfer') {
+      return visaTransferActive === false ? 'transfer_reinstatement' : 'transfer_active';
+    }
+    return type || 'initial';
+  };
+
+  const decomposeProcessType = (displayValue: string): { dbType: string; dbFlag: boolean } => {
+    if (displayValue === 'transfer_active') return { dbType: 'transfer', dbFlag: true };
+    if (displayValue === 'transfer_reinstatement') return { dbType: 'transfer', dbFlag: false };
+    return { dbType: displayValue, dbFlag: true };
+  };
+
   // Estados de edição
   const [isEditingProcessType, setIsEditingProcessType] = useState(false);
   const [editingProcessType, setEditingProcessType] = useState('');
@@ -3482,11 +3496,15 @@ const AdminStudentDetails: React.FC = () => {
                 onSaveProfile={handleSaveProfile}
                 onCancelEdit={() => setIsEditing(false)}
                 onEditProcessType={() => {
-                  const currentValue = student.student_process_type || 'initial';
+                  const currentDisplayValue = getDisplayValue(
+                    student.student_process_type || 'initial',
+                    student.visa_transfer_active
+                  );
                   // Garantir que o valor é válido (está nas opções do select)
-                  const validValues = ['initial', 'transfer', 'change_of_status', 'enrolled'];
-                  const validValue = validValues.includes(currentValue) ? currentValue : 'initial';
-                  console.log('🔍 [AdminStudentDetails] Editando Process Type:', { currentValue, validValue });
+                  const validValues = ['initial', 'transfer_active', 'transfer_reinstatement', 'change_of_status', 'resident', 'enrolled'];
+                  const validValue = validValues.includes(currentDisplayValue) ? currentDisplayValue : 'initial';
+                  
+                  console.log('🔍 [AdminStudentDetails] Editando Process Type (granular):', { currentDisplayValue, validValue });
                   setIsEditingProcessType(true);
                   setEditingProcessType(validValue);
                 }}
@@ -3494,47 +3512,38 @@ const AdminStudentDetails: React.FC = () => {
                   setSavingProcessType(true);
 
                   try {
+                    const { dbType, dbFlag } = decomposeProcessType(editingProcessType);
+                    console.log('🔄 [onSaveProcessType] Decompondo valores para salvamento:', { editingProcessType, dbType, dbFlag });
+
                     // student_process_type está na tabela scholarship_applications, não em user_profiles
                     // Precisamos atualizar todas as aplicações do estudante ou a aplicação ativa/locked
                     const applications = student.all_applications || [];
 
-                    if (applications.length === 0) {
-                      alert('Error: Student has no applications. Cannot update process type.');
-                      setSavingProcessType(false);
-                      return;
-                    }
-
                     // Atualizar todas as aplicações do estudante com o novo process type
                     const applicationIds = applications.map((app: any) => app.id).filter(Boolean);
 
-                    if (applicationIds.length === 0) {
-                      alert('Error: No valid application IDs found.');
-                      setSavingProcessType(false);
-                      return;
-                    }
+                    if (applicationIds.length > 0) {
+                      console.log('🔄 [onSaveProcessType] Atualizando student_process_type em aplicações:', applicationIds);
 
-                    console.log('🔄 [onSaveProcessType] Atualizando student_process_type em aplicações:', applicationIds);
+                      const { error: updateError } = await supabase
+                        .from('scholarship_applications')
+                        .update({ student_process_type: dbType })
+                        .in('id', applicationIds);
 
-                    const { error: updateError } = await supabase
-                      .from('scholarship_applications')
-                      .update({ student_process_type: editingProcessType })
-                      .in('id', applicationIds);
-
-                    if (updateError) {
-                      console.error('❌ [onSaveProcessType] Erro ao atualizar scholarship_applications:', updateError);
-                      throw updateError;
+                      if (updateError) {
+                        console.error('❌ [onSaveProcessType] Erro ao atualizar scholarship_applications:', updateError);
+                        throw updateError;
+                      }
+                    } else {
+                      console.log('ℹ️ [onSaveProcessType] Aluno sem aplicações, pulando atualização de scholarship_applications');
                     }
 
                     // ✅ SINCRONIZAR TAMBÉM COM USER_PROFILES
                     // Isso garante que campos como visa_transfer_active funcionem corretamente
                     const profileUpdates: any = { 
-                      student_process_type: editingProcessType 
+                      student_process_type: dbType,
+                      visa_transfer_active: dbFlag
                     };
-
-                    // Se mudar para transfer e não tiver info de visto, assume inativo para mostrar a taxa
-                    if (editingProcessType === 'transfer' && student.visa_transfer_active === null) {
-                      profileUpdates.visa_transfer_active = false;
-                    }
 
                     const { error: profileUpdateError } = await supabase
                       .from('user_profiles')
@@ -3554,11 +3563,12 @@ const AdminStudentDetails: React.FC = () => {
                       // Atualizar todas as aplicações no estado local
                       const updatedApps = (prev.all_applications || []).map((app: any) => ({
                         ...app,
-                        student_process_type: editingProcessType
+                        student_process_type: dbType
                       }));
                       return {
                         ...prev,
-                        student_process_type: editingProcessType,
+                        student_process_type: dbType,
+                        visa_transfer_active: dbFlag,
                         all_applications: updatedApps
                       } as any;
                     });
@@ -3598,7 +3608,7 @@ const AdminStudentDetails: React.FC = () => {
                 }}
                 onCancelProcessType={() => {
                   setIsEditingProcessType(false);
-                  setEditingProcessType(student.student_process_type || 'initial');
+                  setEditingProcessType(getDisplayValue(student.student_process_type || 'initial', student.visa_transfer_active));
                 }}
                 onProcessTypeChange={(value) => {
                   console.log('🔍 [AdminStudentDetails] Process Type mudou para:', value);

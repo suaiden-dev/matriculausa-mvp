@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { CreditCard, CheckCircle, XCircle, Edit3, Save, X, Layers, AlertCircle, ArrowRightLeft } from 'lucide-react';
+import { CreditCard, CheckCircle, XCircle, Edit3, Save, X, AlertCircle } from 'lucide-react';
 import { StudentRecord } from './types';
 import { supabase } from '../../../lib/supabase';
 import { getPlacementFee } from '../../../utils/placementFeeCalculator';
@@ -33,6 +33,7 @@ interface PaymentStatusCardProps {
   overridesRefreshKey?: number;
   onEnableInstallment?: () => Promise<void>;
   onDisableInstallment?: () => Promise<void>;
+  onToggleVisaStatus?: () => Promise<void>;
 }
 
 /**

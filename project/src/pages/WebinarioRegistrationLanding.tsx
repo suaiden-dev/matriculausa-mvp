@@ -707,11 +707,13 @@ const WebinárioRegistrationLanding: React.FC = () => {
           </div>
         </section>
 
-        {/* Footer Minimalista */}
-        <footer className="py-12 text-center relative z-10">
-          <p className="text-slate-500 text-sm">
-            © {new Date().getFullYear()} Matrícula USA. Todos os direitos reservados.
-          </p>
+        {/* Footer */}
+        <footer className="py-12 border-t border-white/5 relative z-10">
+          <div className="max-w-7xl mx-auto px-4 text-center">
+            <p className="text-slate-500 text-sm font-medium">
+              © 2026 Matrícula USA. Todos os direitos reservados.
+            </p>
+          </div>
         </footer>
       </div>
     </div>
