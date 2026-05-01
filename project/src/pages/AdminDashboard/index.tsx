@@ -242,7 +242,7 @@ const AdminDashboard: React.FC = () => {
         supabase.rpc('get_admin_dashboard_stats_v2'),
         // Busca consolidada de solicitações de pagamento (university e affiliate)
         supabase.from('university_payout_requests').select('status, amount_usd, request_type').eq('status', 'pending').in('request_type', ['university_payment', 'affiliate_payout']),
-        supabase.from('zelle_payments').select('amount').eq('status', 'pending_verification').gt('amount', 0)
+        supabase.from('zelle_payments').select('amount, metadata, user_profiles(email)').eq('status', 'pending_verification').gt('amount', 0)
       ]);
 
 
@@ -360,7 +360,11 @@ const AdminDashboard: React.FC = () => {
       const allPayoutRequests = universityPayoutsRes.data || [];
       const pendingUni = allPayoutRequests.filter(r => r.request_type === 'university_payment');
       const pendingAff = allPayoutRequests.filter(r => r.request_type === 'affiliate_payout');
-      const pendingZelle = zellePaymentsRes.data || [];
+       const pendingZelle = (zellePaymentsRes.data || []).filter(p => {
+         if (!shouldFilterTestEmails) return true;
+         const email = (p.user_profiles as any)?.email || (p.metadata as any)?.migma_student_email;
+         return !email?.toLowerCase().includes('@uorak.com');
+       });
 
       setPendingStats({
         universityRequestsCount: pendingUni.length,

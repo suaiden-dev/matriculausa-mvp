@@ -146,6 +146,33 @@ export const useTransferForm = (
         
       if (updateError) throw updateError;
 
+      // Notify Migma so the student can see the transfer form in their dashboard
+      try {
+        const MIGMA_FUNCTIONS_URL = (import.meta as any).env.VITE_MIGMA_FUNCTIONS_URL as string;
+        const MIGMA_SECRET = (import.meta as any).env.VITE_MIGMA_WEBHOOK_SECRET as string;
+        const MIGMA_ANON_KEY = (import.meta as any).env.VITE_MIGMA_SUPABASE_ANON_KEY as string;
+
+        const { data: studentProfile } = await supabase
+          .from('user_profiles').select('email').eq('user_id', student.user_id).maybeSingle();
+
+        if (MIGMA_FUNCTIONS_URL && MIGMA_SECRET && studentProfile?.email) {
+          await fetch(`${MIGMA_FUNCTIONS_URL}/receive-matriculausa-letter`, {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/json',
+              'Authorization': `Bearer ${MIGMA_ANON_KEY || ''}`,
+              'x-migma-webhook-secret': MIGMA_SECRET,
+            },
+            body: JSON.stringify({
+              student_email: studentProfile.email,
+              transfer_form_url: publicUrl,
+            }),
+          });
+        }
+      } catch (webhookErr) {
+        console.warn('Could not notify Migma of transfer form URL (non-fatal):', webhookErr);
+      }
+
       if (logAction && userId) {
         await logAction('transfer_form_upload', `Transfer form uploaded`, userId, 'admin', { file_name: transferFormFile.name });
       }

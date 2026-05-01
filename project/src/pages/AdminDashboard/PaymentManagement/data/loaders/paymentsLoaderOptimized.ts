@@ -208,7 +208,10 @@ export async function loadPaymentsBaseDataOptimized(supabase: SupabaseClient): P
     }));
 
     if (IS_PROD_OR_STAGING) {
-      zellePayments = zellePayments.filter(p => !shouldExcludeStudent(p.user_profiles?.email));
+      zellePayments = zellePayments.filter(p => {
+        const email = p.user_profiles?.email || p.metadata?.migma_student_email;
+        return !shouldExcludeStudent(email);
+      });
     }
 
     // Mapear System Types

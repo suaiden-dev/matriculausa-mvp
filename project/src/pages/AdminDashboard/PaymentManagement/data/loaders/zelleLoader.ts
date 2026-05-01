@@ -43,15 +43,17 @@ export async function loadZellePaymentsLoader(
     for (const zellePayment of zellePaymentsData) {
       const student = userProfiles?.find((p) => p.user_id === zellePayment.user_id);
       
-      // ✅ FILTRO NO SERVIDOR: Excluir @uorak.com apenas em produção
-      if (!isDevelopment && student?.email?.toLowerCase().includes('@uorak.com')) {
-        continue; // Pular este pagamento em produção
-      }
-      
       // Fallback para dados da Migma se o estudante não for encontrado (pagamento externo)
       const migmaSource = zellePayment.metadata?.source === 'migma';
       const migmaStudentName = zellePayment.metadata?.migma_student_name;
       const migmaStudentEmail = zellePayment.metadata?.migma_student_email;
+
+      // ✅ FILTRO NO SERVIDOR: Excluir @uorak.com apenas em produção
+      // Verifica tanto o e-mail do perfil quanto o e-mail dos metadados da Migma
+      const emailToFilter = student?.email || migmaStudentEmail;
+      if (!isDevelopment && emailToFilter?.toLowerCase().includes('@uorak.com')) {
+        continue; // Pular este pagamento em produção
+      }
 
       const studentName = student?.full_name && student.full_name !== student?.email
         ? student.full_name
