@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { CreditCard, CheckCircle, XCircle, Edit3, Save, X, Layers, AlertCircle } from 'lucide-react';
+import { CreditCard, CheckCircle, XCircle, Edit3, Save, X, AlertCircle } from 'lucide-react';
 import { StudentRecord } from './types';
 import { supabase } from '../../../lib/supabase';
 import { getPlacementFee } from '../../../utils/placementFeeCalculator';
@@ -23,16 +23,17 @@ interface PaymentStatusCardProps {
   onCancelEditFees: () => void;
   onResetFees: () => Promise<void>;
   onEditFeesChange: (fees: any) => void;
-  onMarkAsPaid: (feeType: 'selection_process' | 'application' | 'scholarship' | 'i20_control' | 'placement' | 'ds160_package' | 'i539_cos_package' | 'reinstatement_fee') => void;
+  onMarkAsPaid: (feeType: 'selection_process' | 'application' | 'scholarship' | 'i20_control' | 'placement' | 'ds160_package' | 'i539_cos_package' | 'reinstatement_package') => void;
   onEditPaymentMethod: (feeType: string) => void;
-  onUpdatePaymentMethod: (feeType: 'selection_process' | 'application' | 'scholarship' | 'i20_control' | 'placement' | 'ds160_package' | 'i539_cos_package' | 'reinstatement_fee' | string) => Promise<void>;
+  onUpdatePaymentMethod: (feeType: 'selection_process' | 'application' | 'scholarship' | 'i20_control' | 'placement' | 'ds160_package' | 'i539_cos_package' | 'reinstatement_package' | string) => Promise<void>;
   onCancelPaymentMethod: () => void;
   onPaymentMethodChange: (method: string) => void;
   formatFeeAmount: (amount: number | string, forceDollars?: boolean) => string;
   getFeeAmount: (feeType: string) => number;
-  overridesRefreshKey?: number; // ✅ Key para forçar recarregamento de overrides
+  overridesRefreshKey?: number;
   onEnableInstallment?: () => Promise<void>;
   onDisableInstallment?: () => Promise<void>;
+  onToggleVisaStatus?: () => Promise<void>;
 }
 
 /**
@@ -1053,7 +1054,7 @@ const PaymentStatusCard: React.FC<PaymentStatusCardProps> = React.memo((props) =
         })()}
 
         {/* Reinstatement Fee — apenas para alunos transfer com visto inativo */}
-        {student.student_process_type === 'transfer' && student.visa_transfer_active === false && (() => {
+        {student.student_process_type === 'transfer' && student.visa_transfer_active !== true && (() => {
           const isPaid = !!student.has_paid_reinstatement_package;
           return (
             <div className="bg-slate-50 rounded-xl p-4">
@@ -1062,8 +1063,8 @@ const PaymentStatusCard: React.FC<PaymentStatusCardProps> = React.memo((props) =
                   <dt className="text-sm font-medium text-slate-600">Reinstatement Fee</dt>
                   <dd className="text-sm text-slate-500 mt-1">Required for transfer students with inactive visa</dd>
                   <dd className="text-sm font-semibold text-slate-700 mt-1 flex items-center">
-                    {isPaid && realPaidAmounts?.reinstatement_fee !== undefined && realPaidAmounts?.reinstatement_fee !== null
-                      ? formatFeeAmount(realPaidAmounts.reinstatement_fee, true)
+                    {isPaid && realPaidAmounts?.reinstatement_package !== undefined && realPaidAmounts?.reinstatement_package !== null
+                      ? formatFeeAmount(realPaidAmounts.reinstatement_package, true)
                       : formatFeeAmount(500, true)}
                   </dd>
                 </div>
@@ -1076,7 +1077,7 @@ const PaymentStatusCard: React.FC<PaymentStatusCardProps> = React.memo((props) =
                       </div>
                       {isPlatformAdmin && (
                         <div className="flex flex-col gap-3">
-                          {editingPaymentMethod === 'reinstatement_fee' ? (
+                          {editingPaymentMethod === 'reinstatement_package' ? (
                             <div className="flex flex-col gap-3">
                               <select
                                 value={newPaymentMethod}
@@ -1091,7 +1092,7 @@ const PaymentStatusCard: React.FC<PaymentStatusCardProps> = React.memo((props) =
                               </select>
                               <div className="flex items-center gap-2">
                                 <button
-                                  onClick={() => onUpdatePaymentMethod('reinstatement_fee')}
+                                  onClick={() => onUpdatePaymentMethod('reinstatement_package')}
                                   disabled={savingPaymentMethod}
                                   className="px-4 py-2 bg-green-600 hover:bg-green-700 text-white text-sm rounded-lg flex items-center space-x-2"
                                 >
@@ -1110,7 +1111,7 @@ const PaymentStatusCard: React.FC<PaymentStatusCardProps> = React.memo((props) =
                           ) : (
                             <button
                               onClick={() => {
-                                onEditPaymentMethod('reinstatement_fee');
+                                onEditPaymentMethod('reinstatement_package');
                                 onPaymentMethodChange(student.reinstatement_package_payment_method || 'manual');
                               }}
                               className="px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white text-sm rounded-lg flex items-center space-x-2 w-fit"
@@ -1130,7 +1131,7 @@ const PaymentStatusCard: React.FC<PaymentStatusCardProps> = React.memo((props) =
                       </div>
                       {isPlatformAdmin && (
                         <button
-                          onClick={() => onMarkAsPaid('reinstatement_fee')}
+                          onClick={() => onMarkAsPaid('reinstatement_package')}
                           className="px-4 py-2 bg-[#05294E] hover:bg-[#05294E]/90 text-white text-sm rounded-lg flex items-center space-x-2 w-fit"
                         >
                           <CheckCircle className="w-4 h-4" />
@@ -1144,6 +1145,8 @@ const PaymentStatusCard: React.FC<PaymentStatusCardProps> = React.memo((props) =
             </div>
           );
         })()}
+
+
 
         {/* DS-160 Package — apenas para alunos initial (F-1 Visa Required) */}
         {student.student_process_type === 'initial' && (() => {

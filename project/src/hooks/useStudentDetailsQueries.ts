@@ -36,7 +36,7 @@ export function useStudentDetailsQuery(profileId: string | undefined) {
               const { data: extraProfile, error: extraError } = await supabase
                 .from("user_profiles")
                 .select(
-                  "placement_fee_flow, is_placement_fee_paid, selection_survey_passed, has_paid_i20_control_fee, system_type, placement_fee_installment_enabled, placement_fee_pending_balance, placement_fee_due_date, placement_fee_installment_number, source, identity_photo_path, identity_photo_status, identity_photo_rejection_reason",
+                  "placement_fee_flow, is_placement_fee_paid, selection_survey_passed, has_paid_i20_control_fee, system_type, placement_fee_installment_enabled, placement_fee_pending_balance, placement_fee_due_date, placement_fee_installment_number, source, identity_photo_path, identity_photo_status, identity_photo_rejection_reason, has_paid_reinstatement_package, visa_transfer_active, reinstatement_package_payment_method, has_paid_ds160_package, has_paid_i539_cos_package, ds160_package_payment_method, i539_cos_package_payment_method, student_process_type",
                 )
                 .eq("id", profileId)
                 .single();
@@ -71,6 +71,24 @@ export function useStudentDetailsQuery(profileId: string | undefined) {
                   identity_photo_rejection_reason:
                     (extraProfile as any).identity_photo_rejection_reason ??
                       null,
+                  identity_photo_reviewed_by:
+                    (extraProfile as any).identity_photo_reviewed_by ?? null,
+                  has_paid_reinstatement_package: s.has_paid_reinstatement_package ??
+                    extraProfile.has_paid_reinstatement_package,
+                  visa_transfer_active: s.visa_transfer_active ??
+                    extraProfile.visa_transfer_active,
+                  reinstatement_package_payment_method: s.reinstatement_package_payment_method ??
+                    extraProfile.reinstatement_package_payment_method,
+                  has_paid_ds160_package: s.has_paid_ds160_package ??
+                    extraProfile.has_paid_ds160_package,
+                  has_paid_i539_cos_package: s.has_paid_i539_cos_package ??
+                    extraProfile.has_paid_i539_cos_package,
+                  ds160_package_payment_method: s.ds160_package_payment_method ??
+                    extraProfile.ds160_package_payment_method,
+                  i539_cos_package_payment_method: s.i539_cos_package_payment_method ??
+                    extraProfile.i539_cos_package_payment_method,
+                  student_process_type: s.student_process_type ??
+                    (extraProfile as any).student_process_type,
                 };
               }
             } catch (extraErr) {
