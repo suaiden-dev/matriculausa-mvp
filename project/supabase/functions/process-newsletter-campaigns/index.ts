@@ -1,5 +1,5 @@
 import 'jsr:@supabase/functions-js/edge-runtime.d.ts';
-import { createClient } from 'npm:@supabase/supabase-js@2.49.1';
+import { createClient } from '@supabase/supabase-js';
 import { corsHeaders } from './constants.ts';
 import { processCampaign } from './campaign-processor.ts';
 
@@ -8,7 +8,7 @@ const supabase = createClient(
   Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!
 );
 
-Deno.serve(async (req) => {
+Deno.serve(async (req: Request) => {
   try {
     if (req.method === 'OPTIONS') {
       return new Response('ok', { headers: corsHeaders });
@@ -61,7 +61,7 @@ Deno.serve(async (req) => {
       }),
       { status: 200, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
     );
-  } catch (error) {
+  } catch (error: any) {
     console.error('[Newsletter] Erro crítico:', error);
     return new Response(
       JSON.stringify({ error: 'Internal server error', details: error.message }),

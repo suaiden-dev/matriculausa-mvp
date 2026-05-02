@@ -49,7 +49,7 @@ const Auth: React.FC<AuthProps> = ({ mode }) => {
   // Terms acceptance state
   const [termsAccepted, setTermsAccepted] = useState(false);
   // Newsletter consent state
-  const [newsletterConsent, setNewsletterConsent] = useState(false);
+  const [newsletterConsent, setNewsletterConsent] = useState(true);
   // Password visibility states
   const [showPassword, setShowPassword] = useState(false);
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);

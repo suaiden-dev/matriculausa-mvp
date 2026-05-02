@@ -5,8 +5,6 @@ import {
   CheckCircle2,
   Users,
   TrendingUp,
-  Phone,
-  Mail,
   Search,
   Filter,
   RefreshCw,
@@ -94,21 +92,6 @@ const LostLeadsView: React.FC = () => {
     return `${diffDays}d ago`;
   };
 
-  const openWhatsApp = (phone: string, name: string | null) => {
-    const cleanPhone = phone.replace(/\D/g, '');
-    const message = encodeURIComponent(
-      `Hi${name ? ' ' + name.split(' ')[0] : ''}! We noticed you started your registration at Matrícula USA but didn't finish. Do you have any questions? We're here to help! 😊`
-    );
-    window.open(`https://wa.me/${cleanPhone}?text=${message}`, '_blank');
-  };
-
-  const openEmail = (email: string, name: string | null) => {
-    const subject = encodeURIComponent('Matrícula USA — Your registration is waiting for you!');
-    const body = encodeURIComponent(
-      `Hi${name ? ' ' + name.split(' ')[0] : ''},\n\nWe noticed you started your registration at Matrícula USA but didn't finish.\n\nWe are here to help you with any questions!\n\nMatrícula USA Team`
-    );
-    window.open(`mailto:${email}?subject=${subject}&body=${body}`);
-  };
 
   return (
     <div className="space-y-6">
@@ -220,7 +203,6 @@ const LostLeadsView: React.FC = () => {
                   <th className="text-left px-4 py-3 text-xs font-bold text-gray-500 uppercase tracking-widest">Status</th>
                   <th className="text-left px-4 py-3 text-xs font-bold text-gray-500 uppercase tracking-widest">Captured</th>
                   <th className="text-left px-4 py-3 text-xs font-bold text-gray-500 uppercase tracking-widest text-center">Details</th>
-                  <th className="text-left px-4 py-3 text-xs font-bold text-gray-500 uppercase tracking-widest">Actions</th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-gray-100">
@@ -275,28 +257,6 @@ const LostLeadsView: React.FC = () => {
                       ) : (
                         <span className="text-xs text-gray-400 italic">No Answers</span>
                       )}
-                    </td>
-                    <td className="px-4 py-3">
-                      <div className="flex items-center space-x-2">
-                        {lead.phone && (
-                          <button
-                            onClick={() => openWhatsApp(lead.phone!, lead.full_name)}
-                            title="Contact via WhatsApp"
-                            className="p-1.5 rounded-lg bg-green-100 text-green-700 hover:bg-green-200 transition-colors"
-                          >
-                            <Phone className="h-4 w-4" />
-                          </button>
-                        )}
-                        {lead.email && (
-                          <button
-                            onClick={() => openEmail(lead.email!, lead.full_name)}
-                            title="Send Email"
-                            className="p-1.5 rounded-lg bg-blue-100 text-blue-700 hover:bg-blue-200 transition-colors"
-                          >
-                            <Mail className="h-4 w-4" />
-                          </button>
-                        )}
-                      </div>
                     </td>
                   </tr>
                 ))}

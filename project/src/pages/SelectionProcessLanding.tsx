@@ -6,12 +6,12 @@ import '../styles/scrollbar.css';
 import { 
   GraduationCap, 
   CheckCircle,
-  Star,
-  ChevronLeft,
-  ChevronRight,
-  Calendar,
-  BookOpen,
-  X,
+  Star, 
+  ChevronLeft, 
+  ChevronRight, 
+  Calendar, 
+  BookOpen, 
+  X, 
   Briefcase
 } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
@@ -26,7 +26,7 @@ const SelectionProcessLanding: React.FC = () => {
     if (user) {
       navigate('/student/dashboard/scholarships');
     } else {
-      navigate('/register');
+      navigate('/selection-fee-registration');
     }
   };
 
@@ -123,7 +123,14 @@ const HeroSection: React.FC<{ onCTAClick: () => void }> = ({ onCTAClick }) => {
         <div className="flex w-full flex-col justify-center items-center text-center md:items-start md:text-left px-6 py-16 md:w-1/2 lg:w-[55%] md:pr-12 lg:px-8 xl:px-12">
             <div>
                 <motion.main variants={containerVariants}>
-                    <motion.h1 className="text-5xl font-black leading-tight md:text-7xl tracking-tight text-center md:text-left" variants={itemVariants}>
+                    <motion.div variants={itemVariants} className="mb-12 flex justify-center w-full">
+                        <img 
+                          src="https://fitpynguasqqutuhzifx.supabase.co/storage/v1/object/public/images/logo_matricula_branco_semfundo.webp" 
+                          alt="Matrícula USA" 
+                          className="h-20 md:h-32 w-auto object-contain"
+                        />
+                    </motion.div>
+                    <motion.h1 className="text-4xl font-black leading-tight md:text-6xl tracking-tight text-center md:text-left" variants={itemVariants}>
                         <span className="block">{t("forStudents.hero.title")}</span>
                         <span className="block text-[#D0151C] mt-1">
                           {t("forStudents.hero.titleHighlight")}
@@ -137,6 +144,26 @@ const HeroSection: React.FC<{ onCTAClick: () => void }> = ({ onCTAClick }) => {
                       variants={itemVariants}
                       dangerouslySetInnerHTML={{ __html: t("forStudents.hero.description") }}
                     />
+
+                    {/* Trust Indicators - Success Stats */}
+                    <motion.div 
+                      variants={itemVariants}
+                      className="flex flex-wrap gap-4 mb-12 justify-center md:justify-start"
+                    >
+                      <div className="bg-white/10 backdrop-blur-xl border border-white/20 rounded-2xl p-5 shadow-2xl group hover:bg-white/20 transition-colors">
+                        <div className="text-left">
+                          <div className="font-black text-white text-2xl leading-none mb-1.5">96% Taxa de Sucesso</div>
+                          <div className="text-[11px] uppercase tracking-wider font-bold text-slate-300 opacity-80">Processos Aprovados</div>
+                        </div>
+                      </div>
+
+                      <div className="bg-white/10 backdrop-blur-xl border border-white/20 rounded-2xl p-5 shadow-2xl group hover:bg-white/20 transition-colors">
+                        <div className="text-left">
+                          <div className="font-black text-white text-2xl leading-none mb-1.5">US$ 50M+</div>
+                          <div className="text-[11px] uppercase tracking-wider font-bold text-slate-300 opacity-80">Total em Descontos</div>
+                        </div>
+                      </div>
+                    </motion.div>
                     
                     <motion.div variants={itemVariants}>
                       <motion.button
@@ -221,115 +248,131 @@ const scholarshipsData = [
     },
     {
       id: 4,
-      university: "Oxford University",
-      course: "Relações Internacionais",
-      degree: "Bacharelado",
-      duration: "3 anos",
+      university: "Dean's Scholarship Program",
+      course: "Master of Philosophy (MPhil)",
+      degree: "Mestrado",
+      duration: "2 anos",
       modality: "Híbrido",
-      workAuth: ["CPT"],
-      originalPrice: "U$ 18.000/ano",
-      discountedPrice: "U$ 7.500/ano",
-      monthlyPrice: "U$ 625/mês",
-      originalMonthlyPrice: "U$ 1.500/mês",
+      workAuth: ["CPT", "OPT"],
+      originalPrice: "U$ 10.000/ano",
+      discountedPrice: "U$ 4.200/ano",
+      monthlyPrice: "U$ 350/mês",
+      originalMonthlyPrice: "U$ 833/mês",
       image: "https://images.unsplash.com/photo-1564981797816-1043664bf78d?auto=format&fit=crop&q=80&w=800",
       discount: "-58%",
       tag: "PREMIUM"
     },
     {
       id: 5,
-      university: "University of Toronto",
-      course: "Engenharia Civil",
-      degree: "Bacharelado",
-      duration: "4 anos",
-      modality: "Presencial",
+      university: "Engineering Management Academy",
+      course: "Master of Science in Engineering Management",
+      degree: "Mestrado",
+      duration: "2 anos",
+      modality: "Híbrido",
       workAuth: ["CPT", "OPT"],
-      originalPrice: "U$ 16.500/ano",
-      discountedPrice: "U$ 6.900/ano",
-      monthlyPrice: "U$ 575/mês",
-      originalMonthlyPrice: "U$ 1.375/mês",
+      originalPrice: "U$ 24.150/ano",
+      discountedPrice: "U$ 17.150/ano",
+      monthlyPrice: "U$ 1.429/mês",
+      originalMonthlyPrice: "U$ 2.012/mês",
       image: "https://images.unsplash.com/photo-1606761568499-6d2451b23c66?auto=format&fit=crop&q=80&w=800",
-      discount: "-58%",
+      discount: "-29%",
       tag: "VIP"
     },
     {
       id: 6,
-      university: "UCLA",
-      course: "Cinema e Televisão",
+      university: "Oikos University",
+      course: "Bachelor of Arts in Biblical Studies",
       degree: "Bacharelado",
       duration: "4 anos",
-      modality: "Presencial",
+      modality: "Híbrido",
       workAuth: ["CPT", "OPT"],
-      originalPrice: "U$ 22.000/ano",
-      discountedPrice: "U$ 10.500/ano",
-      monthlyPrice: "U$ 875/mês",
-      originalMonthlyPrice: "U$ 1.833/mês",
+      originalPrice: "U$ 6.000/ano",
+      discountedPrice: "U$ 4.200/ano",
+      monthlyPrice: "U$ 350/mês",
+      originalMonthlyPrice: "U$ 500/mês",
       image: "https://images.unsplash.com/photo-1523580494863-6f3031224c94?auto=format&fit=crop&q=80&w=800",
-      discount: "-52%",
+      discount: "-30%",
       tag: "PREMIUM"
     },
     {
       id: 7,
-      university: "Cambridge University",
-      course: "Direito",
+      university: "Chaplain's Scholarship Program",
+      course: "Master of Divinity (MDiv)",
       degree: "Mestrado",
-      duration: "2 anos",
+      duration: "3 anos",
       modality: "Híbrido",
-      workAuth: ["CPT"],
-      originalPrice: "U$ 19.500/ano",
-      discountedPrice: "U$ 8.200/ano",
-      monthlyPrice: "U$ 683/mês",
-      originalMonthlyPrice: "U$ 1.625/mês",
+      workAuth: ["CPT", "OPT"],
+      originalPrice: "U$ 8.000/ano",
+      discountedPrice: "U$ 5.000/ano",
+      monthlyPrice: "U$ 416/mês",
+      originalMonthlyPrice: "U$ 666/mês",
       image: "https://images.unsplash.com/photo-1509062522246-3755977927d7?auto=format&fit=crop&q=80&w=800",
-      discount: "-58%",
+      discount: "-37%",
       tag: "VIP"
     },
     {
       id: 8,
-      university: "Yale University",
-      course: "Economia",
-      degree: "Bacharelado",
-      duration: "4 anos",
-      modality: "Presencial",
+      university: "Sacrificial Leadership Program",
+      course: "Doctor of Philosophy (PhD)",
+      degree: "Doutorado",
+      duration: "3 anos",
+      modality: "Híbrido",
       workAuth: ["CPT", "OPT"],
-      originalPrice: "U$ 25.000/ano",
-      discountedPrice: "U$ 12.000/ano",
-      monthlyPrice: "U$ 1.000/mês",
-      originalMonthlyPrice: "U$ 2.083/mês",
+      originalPrice: "U$ 10.000/ano",
+      discountedPrice: "U$ 4.500/ano",
+      monthlyPrice: "U$ 375/mês",
+      originalMonthlyPrice: "U$ 833/mês",
       image: "https://images.unsplash.com/photo-1524178232363-1fb2b075b655?auto=format&fit=crop&q=80&w=800",
-      discount: "-52%",
-      tag: "PREMIUM"
+      discount: "-55%",
+      tag: "DOCTORATE"
     },
     {
       id: 9,
-      university: "University of Melbourne",
-      course: "Ciências Biológicas",
+      university: "Special Scholarship Program",
+      course: "Bachelor of Business Administration (BBA)",
       degree: "Bacharelado",
-      duration: "3 anos",
-      modality: "Presencial",
+      duration: "4 anos",
+      modality: "Híbrido",
       workAuth: ["CPT", "OPT"],
-      originalPrice: "U$ 14.000/ano",
-      discountedPrice: "U$ 5.500/ano",
-      monthlyPrice: "U$ 458/mês",
-      originalMonthlyPrice: "U$ 1.166/mês",
+      originalPrice: "U$ 15.000/ano",
+      discountedPrice: "U$ 4.200/ano",
+      monthlyPrice: "U$ 350/mês",
+      originalMonthlyPrice: "U$ 1.250/mês",
       image: "https://images.unsplash.com/photo-1592280771190-3e2e4d571952?auto=format&fit=crop&q=80&w=800",
-      discount: "-60%",
-      tag: "VIP"
+      discount: "-72%",
+      tag: "SPECIAL"
     },
     {
       id: 10,
-      university: "ETH Zurich",
-      course: "Robótica",
+      university: "President's Scholarship Program",
+      course: "Master of Business Administration (MBA)",
       degree: "Mestrado",
       duration: "2 anos",
-      modality: "Presencial",
+      modality: "Híbrido",
       workAuth: ["CPT", "OPT"],
-      originalPrice: "U$ 12.500/ano",
-      discountedPrice: "U$ 4.800/ano",
-      monthlyPrice: "U$ 400/mês",
-      originalMonthlyPrice: "U$ 1.041/mês",
+      originalPrice: "U$ 15.000/ano",
+      discountedPrice: "U$ 4.200/ano",
+      monthlyPrice: "U$ 350/mês",
+      originalMonthlyPrice: "U$ 1.250/mês",
       image: "https://images.unsplash.com/photo-1501504905252-473c47e087f8?auto=format&fit=crop&q=80&w=800",
-      discount: "-60%",
-      tag: "PREMIUM"
+      discount: "-72%",
+      tag: "VIP"
+    },
+    {
+      id: 11,
+      university: "STEM Graduate School",
+      course: "Master of Computer Information Systems",
+      degree: "Mestrado",
+      duration: "2 anos",
+      modality: "Híbrido",
+      workAuth: ["CPT", "OPT"],
+      originalPrice: "U$ 15.000/ano",
+      discountedPrice: "U$ 4.200/ano",
+      monthlyPrice: "U$ 350/mês",
+      originalMonthlyPrice: "U$ 1.250/mês",
+      image: "https://images.unsplash.com/photo-1550751827-4bd374c3f58b?auto=format&fit=crop&q=80&w=800",
+      discount: "-72%",
+      tag: "STEM"
     }
   ];
 
@@ -338,6 +381,29 @@ const FeaturedScholarshipsSection: React.FC<{ onCTAClick: () => void }> = ({ onC
   const [currentIndex, setCurrentIndex] = React.useState(0);
   const [itemsPerView, setItemsPerView] = React.useState(1);
   const [isMobile, setIsMobile] = React.useState(false);
+  const [isAutoPlaying, setIsAutoPlaying] = React.useState(true);
+  const cardRef = useRef<HTMLDivElement>(null);
+  const [cardWidth, setCardWidth] = useState(0);
+  const autoplayTimeoutRef = useRef<NodeJS.Timeout | null>(null);
+
+  const resetAutoplay = () => {
+    setIsAutoPlaying(false);
+    if (autoplayTimeoutRef.current) clearTimeout(autoplayTimeoutRef.current);
+    autoplayTimeoutRef.current = setTimeout(() => {
+      setIsAutoPlaying(true);
+    }, 10000);
+  };
+
+  useEffect(() => {
+    const updateWidth = () => {
+      if (cardRef.current) {
+        setCardWidth(cardRef.current.offsetWidth);
+      }
+    };
+    updateWidth();
+    window.addEventListener('resize', updateWidth);
+    return () => window.removeEventListener('resize', updateWidth);
+  }, [isMobile]);
 
   useEffect(() => {
     const handleResize = () => {
@@ -355,6 +421,7 @@ const FeaturedScholarshipsSection: React.FC<{ onCTAClick: () => void }> = ({ onC
   const maxIndex = Math.max(0, scholarshipsData.length - itemsPerView);
 
   const scroll = (direction: 'left' | 'right') => {
+    resetAutoplay();
     if (direction === 'left') {
       setCurrentIndex((prev) => (prev > 0 ? prev - 1 : maxIndex));
     } else {
@@ -363,15 +430,18 @@ const FeaturedScholarshipsSection: React.FC<{ onCTAClick: () => void }> = ({ onC
   };
 
   const scrollTo = (index: number) => {
+    resetAutoplay();
     setCurrentIndex(Math.min(index, maxIndex));
   };
 
   React.useEffect(() => {
+    if (!isAutoPlaying) return;
+    
     const timer = setInterval(() => {
       setCurrentIndex((prev) => (prev < maxIndex ? prev + 1 : 0));
     }, 5000);
     return () => clearInterval(timer);
-  }, [maxIndex]);
+  }, [maxIndex, isAutoPlaying]);
 
   return (
     <section className="bg-slate-50/50 py-20 relative">
@@ -380,12 +450,14 @@ const FeaturedScholarshipsSection: React.FC<{ onCTAClick: () => void }> = ({ onC
           <h2 className="text-4xl md:text-5xl font-black tracking-tight text-[#05294E] text-center md:text-left">
             +154 Bolsas Exclusivas
           </h2>
-          <button 
+          <motion.button 
             onClick={onCTAClick}
-            className="hidden md:flex items-center gap-2 px-6 py-3 bg-[#05294E] text-white rounded-xl font-bold text-lg hover:bg-[#D0151C] transition-all group shadow-lg hover:shadow-xl active:scale-95"
+            whileHover={{ scale: 1.05 }}
+            whileTap={{ scale: 0.95 }}
+            className="hidden md:flex items-center gap-2 px-6 py-3 bg-[#D0151C] text-white rounded-xl font-bold text-lg hover:bg-red-600 transition-all group shadow-lg hover:shadow-xl active:scale-95"
           >
-            Descobrir mais Bolsas
-          </button>
+            Iniciar o Processo Seletivo
+          </motion.button>
         </div>
 
         <div className="relative">
@@ -406,18 +478,38 @@ const FeaturedScholarshipsSection: React.FC<{ onCTAClick: () => void }> = ({ onC
             <ChevronRight className="h-6 w-6" />
           </button>
           <div className="overflow-hidden px-4 md:px-0">
-            <div className="flex gap-4 md:gap-6 pt-4 pb-6">
+            <motion.div 
+              className="flex gap-4 md:gap-6 pt-4 pb-6"
+              animate={{ 
+                x: -currentIndex * (cardWidth + (isMobile ? 16 : 24)),
+              }}
+              transition={{ type: "spring", stiffness: 300, damping: 30 }}
+              drag={isMobile ? "x" : false}
+              dragConstraints={{ 
+                left: -maxIndex * (cardWidth + (isMobile ? 16 : 24)), 
+                right: 0 
+              }}
+              dragElastic={0.2}
+              onDragEnd={(_e, info) => {
+                resetAutoplay();
+                const swipeThreshold = 50;
+                const velocityThreshold = 500;
+                
+                if (info.offset.x < -swipeThreshold || info.velocity.x < -velocityThreshold) {
+                  setCurrentIndex(prev => (prev < maxIndex ? prev + 1 : 0));
+                } else if (info.offset.x > swipeThreshold || info.velocity.x > velocityThreshold) {
+                  setCurrentIndex(prev => (prev > 0 ? prev - 1 : maxIndex));
+                }
+              }}
+            >
             {scholarshipsData.map((item, index) => (
               <motion.div 
                 key={item.id} 
+                ref={index === 0 ? cardRef : null}
                 animate={{ 
-                  x: isMobile 
-                    ? `calc(-${currentIndex * 100}% - ${currentIndex * 16}px)`
-                    : `calc(-${currentIndex * 100}% - ${currentIndex * 24}px)`,
                   scale: currentIndex === index ? 1 : 0.95,
                   opacity: 1,
                 }}
-                transition={{ type: "spring", stiffness: 100, damping: 20 }}
                 className="flex-none w-full sm:w-[calc(50%-8px)] md:w-[calc(33.333%-16px)]"
               >
                 <div className="group relative flex h-full flex-col overflow-hidden rounded-xl border border-slate-200 bg-white shadow-sm transition-all duration-300 hover:shadow-xl hover:-translate-y-1">
@@ -490,11 +582,11 @@ const FeaturedScholarshipsSection: React.FC<{ onCTAClick: () => void }> = ({ onC
 
                     <div className="mt-auto flex items-end justify-between border-t border-slate-100 pt-4">
                       <div className="flex flex-col gap-1">
-                        <p className="text-xs text-slate-400 line-through">{item.originalMonthlyPrice}</p>
+                        <p className="text-xs text-slate-400 line-through">{item.originalPrice}</p>
                         <div className="flex items-baseline gap-2">
-                          <p className="text-xl font-black leading-none text-green-600">{item.monthlyPrice}</p>
-                          <span className="text-sm font-bold text-slate-500">|</span>
                           <p className="text-sm font-bold text-slate-500 whitespace-nowrap">{item.discountedPrice}</p>
+                          <span className="text-sm font-bold text-slate-500">|</span>
+                          <p className="text-xl font-black leading-none text-green-600">{item.monthlyPrice}</p>
                         </div>
                       </div>
                     </div>
@@ -502,7 +594,7 @@ const FeaturedScholarshipsSection: React.FC<{ onCTAClick: () => void }> = ({ onC
                 </div>
               </motion.div>
             ))}
-            </div>
+            </motion.div>
           </div>
       </div>
 
@@ -524,12 +616,14 @@ const FeaturedScholarshipsSection: React.FC<{ onCTAClick: () => void }> = ({ onC
 
         {/* Mobile CTA */}
         <div className="mt-14 flex md:hidden justify-center px-4">
-          <button 
+          <motion.button 
             onClick={onCTAClick}
-            className="w-full flex items-center justify-center gap-2 px-6 py-4 bg-[#05294E] text-white rounded-xl font-bold text-lg hover:bg-[#D0151C] transition-all group shadow-lg hover:shadow-xl active:scale-95"
+            whileHover={{ scale: 1.05 }}
+            whileTap={{ scale: 0.95 }}
+            className="w-full flex items-center justify-center gap-2 px-6 py-4 bg-[#D0151C] text-white rounded-xl font-bold text-lg hover:bg-red-600 transition-all group shadow-lg hover:shadow-xl active:scale-95"
           >
-            Descobrir mais Bolsas
-          </button>
+            Iniciar o Processo Seletivo
+          </motion.button>
         </div>
       </div>
     </section>
@@ -837,7 +931,7 @@ const HowItWorksSection: React.FC<{ onCTAClick: () => void }> = ({ onCTAClick })
             onClick={onCTAClick}
             whileHover={{ scale: 1.05 }}
             whileTap={{ scale: 0.95 }}
-            className="inline-flex items-center px-12 py-6 bg-[#05294E] text-white font-bold text-lg rounded-2xl shadow-xl hover:bg-[#D0151C] hover:shadow-2xl transition-all duration-300 group"
+            className="inline-flex items-center px-12 py-6 bg-[#D0151C] text-white font-bold text-lg rounded-2xl shadow-xl hover:bg-red-600 hover:shadow-2xl transition-all duration-300 group"
           >
             Começar Meu Processo Agora
           </motion.button>
@@ -924,14 +1018,14 @@ const ComparisonSection: React.FC<{ onCTAClick: () => void }> = ({ onCTAClick })
     };
   }, []);
 
-  const [isMonthly, setIsMonthly] = useState(true);
+
 
   const plans = [
     {
       id: "alone",
       name: "Tentando Sozinho",
       description: "ou com Agências Tradicionais",
-      costLabel: isMonthly ? "U$ 3.167/mês" : "U$ 38.000/ano",
+      costLabel: "US$ 1.200*",
       isHighlight: false,
       features: [
         { text: "Processos confusos e burocráticos" },
@@ -940,18 +1034,19 @@ const ComparisonSection: React.FC<{ onCTAClick: () => void }> = ({ onCTAClick })
         { text: "Suporte demorado ou inexistente" },
       ],
       buttonText: "Continuar Sozinho",
+      disclaimer: "Valor estimado com base em taxas cobradas por outros serviços do mercado. O MatriculaUSA não tem vínculo com esses programas.",
     },
     {
       id: "matriculausa",
-      name: "Com a MatriculaUSA",
+      name: "Processo Seletivo",
       description: "Aprovação e Economia Garantida",
-      costLabel: isMonthly ? "U$ 1.000/mês" : "U$ 12.000/ano",
+      costLabel: "US$ 400",
       isHighlight: true,
       features: [
-        { text: "Processo 100% guiado e transparente" },
+        { text: "Processos 100% guiado e transparente" },
         { text: "Match perfeito com seu perfil" },
         { text: "Garantia de bolsas exclusivas de até 70%" },
-        { text: "Suporte prioritário via WhatsApp" },
+        { text: "+154 bolsa exclusivas esperando por você" },
       ],
       buttonText: "Garantir Minha Vaga",
     },
@@ -990,31 +1085,7 @@ const ComparisonSection: React.FC<{ onCTAClick: () => void }> = ({ onCTAClick })
             Menos Gasto. <span className="text-[#D0151C]"> Mais Certeza.</span>
           </h2>
 
-          {/* Billing Toggle */}
-          <div className="mt-8 flex items-center justify-center gap-2 bg-slate-200/50 backdrop-blur-sm p-1 rounded-2xl border border-slate-200">
-            <button
-              onClick={() => setIsMonthly(true)}
-              className={`px-8 py-2.5 rounded-xl text-sm font-bold transition-all duration-300 ${
-                isMonthly 
-                  ? "bg-[#05294E] text-white shadow-md scale-100" 
-                  : "text-slate-500 hover:text-[#05294E] hover:bg-slate-200/50"
-              }`}
-            >
-              Mensal
-            </button>
-            <button
-              onClick={() => setIsMonthly(false)}
-              className={`px-8 py-2.5 rounded-xl text-sm font-bold transition-all duration-300 ${
-                !isMonthly 
-                  ? "bg-[#05294E] text-white shadow-md scale-100" 
-                  : "text-slate-500 hover:text-[#05294E] hover:bg-slate-200/50"
-              }`}
-            >
-              Anual
-            </button>
-          </div>
-
-          <div className="mt-8 flex flex-col items-stretch gap-8 md:flex-row justify-center w-full max-w-4xl">
+          <div className="mt-16 flex flex-col items-stretch gap-8 md:flex-row justify-center w-full max-w-4xl">
             {plans.map((plan, i) => (
               <div
                 key={plan.id}
@@ -1050,6 +1121,12 @@ const ComparisonSection: React.FC<{ onCTAClick: () => void }> = ({ onCTAClick })
                     ))}
                   </ul>
                 </div>
+
+                {plan.disclaimer && (
+                  <p className="mt-auto pt-4 text-xs text-slate-500 italic leading-snug text-left">
+                    {plan.disclaimer}
+                  </p>
+                )}
 
                 {plan.isHighlight && (
                   <div className="mt-auto">
