@@ -1,4 +1,4 @@
-import { SupabaseClient } from 'npm:@supabase/supabase-js@2.49.1';
+import { SupabaseClient } from '@supabase/supabase-js';
 import { EligibleUser, Campaign } from './types.ts';
 import { TEST_MODE, baseUrl } from './constants.ts';
 
@@ -67,6 +67,25 @@ export async function canSendCampaignToUser(
 
   if (emailError) {
     return { canSend: false, reason: `Error checking sent emails: ${emailError.message}` };
+  }
+
+  // GLOBAL RATE LIMIT: Check if user received ANY newsletter email in the last 24h
+  const { data: preferences } = await supabase
+    .from('newsletter_user_preferences')
+    .select('last_email_sent_at')
+    .eq('user_id', userId)
+    .maybeSingle();
+
+  if (!testMode && preferences?.last_email_sent_at) {
+    const lastGlobalSentDate = new Date(preferences.last_email_sent_at);
+    const hoursSinceLastGlobalEmail = (Date.now() - lastGlobalSentDate.getTime()) / (1000 * 60 * 60);
+    
+    if (hoursSinceLastGlobalEmail < 24) {
+      return { 
+        canSend: false, 
+        reason: `User is in global cooldown (max 1 email/24h). Last sent: ${preferences.last_email_sent_at}` 
+      };
+    }
   }
 
   if (!lastEmail?.sent_at) {
