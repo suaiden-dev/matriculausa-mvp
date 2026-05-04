@@ -129,7 +129,7 @@ const ParcelowIcon = ({ className }: { className?: string }) => (
 );
 
 const QuickRegistration: React.FC = () => {
-  const { t } = useTranslation(['registration', 'payment', 'common']);
+  const { t } = useTranslation(['registration', 'payment', 'common', 'auth']);
   const navigate = useNavigate();
   const location = useLocation();
   const { register, supabaseUser, userProfile, updateUserProfile } = useAuth();
@@ -200,7 +200,8 @@ const QuickRegistration: React.FC = () => {
         country: parsed?.country || '',
         field_of_interest: parsed?.field_of_interest || '',
         academic_level: parsed?.academic_level || '',
-        english_proficiency: parsed?.english_proficiency || ''
+        english_proficiency: parsed?.english_proficiency || '',
+        newsletter_consent: true
       };
     } catch {
       return {
@@ -211,6 +212,7 @@ const QuickRegistration: React.FC = () => {
         password: '',
         confirm_password: '',
         termsAccepted: false,
+        newsletter_consent: true,
         cpf: '',
         country: '',
         field_of_interest: '',
@@ -770,7 +772,8 @@ const QuickRegistration: React.FC = () => {
         phone: formData.phone,
         dependents: formData.dependents,
         role: 'student' as const,
-        cpf_document: formData.cpf // Include CPF in metadata
+        cpf_document: formData.cpf, // Include CPF in metadata
+        newsletter_consent: formData.newsletter_consent
       };
 
       if (codeApplied && couponCode && validationResult?.codeType) {
@@ -1478,6 +1481,35 @@ const QuickRegistration: React.FC = () => {
                         )}
                       </div>
                     </div>
+
+                    {/* Newsletter Consent Checkbox */}
+                    {!isRegistered && (
+                      <div className="flex items-start space-x-3 p-4 bg-slate-50/50 border border-slate-100 rounded-2xl group transition-all duration-300 hover:bg-white shadow-sm cursor-pointer" onClick={() => {
+                        setFormData((prev: any) => ({ ...prev, newsletter_consent: !prev.newsletter_consent }));
+                      }}>
+                        <div className="flex items-center h-5 mt-0.5">
+                          <input
+                            id="newsletter_consent"
+                            name="newsletter_consent"
+                            type="checkbox"
+                            checked={formData.newsletter_consent}
+                            onChange={(e) => {
+                              setFormData((prev: any) => ({ ...prev, newsletter_consent: e.target.checked }));
+                            }}
+                            onClick={(e) => e.stopPropagation()}
+                            className="h-5 w-5 text-[#05294E] border-gray-300 rounded focus:ring-[#05294E] cursor-pointer"
+                          />
+                        </div>
+                        <div className="flex-1">
+                          <label
+                            htmlFor="newsletter_consent"
+                            className="text-sm text-slate-700 font-medium leading-relaxed cursor-pointer block"
+                          >
+                            {t('authPage.register.newsletterConsent', { ns: 'auth' })}
+                          </label>
+                        </div>
+                      </div>
+                    )}
                   </div>
                 </div>
               </div>

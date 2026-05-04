@@ -853,6 +853,14 @@ const VslTransferLanding: React.FC = () => {
         .custom-scrollbar::-webkit-scrollbar-track { background: rgba(255,255,255,0.05); }
         .custom-scrollbar::-webkit-scrollbar-thumb { background: rgba(59, 130, 246, 0.5); border-radius: 4px; }
       `}</style>
+      {/* Footer */}
+      <footer className="py-12 border-t border-white/5 relative z-10">
+        <div className="max-w-7xl mx-auto px-4 text-center">
+          <p className="text-slate-500 text-sm font-medium">
+            © 2026 Matrícula USA. Todos os direitos reservados.
+          </p>
+        </div>
+      </footer>
     </div>
   );
 };

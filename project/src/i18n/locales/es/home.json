@@ -87,8 +87,8 @@
           "answer": "MatriculaUSA es gratuito para crear tu perfil y explorar universidades. Sin embargo, una vez que inicias el proceso de solicitud y eres aprobado para una beca, todas las tarifas asociadas con el flujo de admisión e inscripción se vuelven obligatorias. Se presentan claramente antes de cualquier pago."
         },
         "q2": {
-          "question": "¿Qué es la Cuota del Proceso de Selección?",
-          "answer": "La Cuota del Proceso de Selección $400 es el primer pago obligatorio en la plataforma MatriculaUSA. Desbloquea tu acceso completo para ver todas las becas e iniciar tu proceso de solicitud."
+          "question": "¿Qué es el Proceso de Selección?",
+          "answer": "El Proceso de Selección $400 es el primer pago obligatorio en la plataforma MatriculaUSA. Desbloquea tu acceso completo para ver todas las becas e iniciar tu proceso de solicitud."
         },
         "q3": {
           "question": "¿Qué es la Cuota de Colocación (Placement Fee)?",
@@ -116,7 +116,7 @@
         },
         "q9": {
           "question": "¿Puedo obtener un reembolso?",
-          "answer": "Tiene derecho a un reembolso total de las tarifas pagadas si su solicitud no tiene éxito o no es aprobado para una beca. Sin embargo, si se retira del proceso o cambia de opinión después de iniciar la solicitud, las tarifas pagadas no son reembolsables, ya que el procesamiento y el soporte ya habrán comenzado."
+          "answer": "Sí — si ninguna de las becas a las que postulaste resulta en aprobación, devolvemos el 100% del valor del Proceso de Selección. Si desistes o abandonas el proceso tras confirmar una beca aprobada, el valor no es reembolsable, ya que el procesamiento y el soporte ya estarán en marcha."
         },
         "q10": {
           "question": "¿Tengo que pagar todas las tarifas a la vez?",
@@ -345,7 +345,7 @@
       },
       "q2": {
         "question": "¿Qué es el Proceso de Selección?",
-        "answer": "El Proceso de Selección es el primer pago obligatorio en la plataforma MatriculaUSA. Desbloquea tu acceso completo para ver todas las becas e iniciar tu proceso de solicitud. Esta tarifa es final y no reembolsable."
+        "answer": "El Proceso de Selección $400 es el primer pago obligatorio en la plataforma MatriculaUSA. Desbloquea tu acceso completo para ver todas las becas e iniciar tu proceso de solicitud. Esta tarifa es final y no reembolsable."
       },
       "q3": {
         "question": "¿Qué es la Cuota de Colocación (Placement Fee)?",
@@ -357,7 +357,7 @@
       },
       "q5": {
         "question": "¿Cómo elijo mi beca?",
-        "answer": "Tras el pago del Proceso de Selección y el envío de los documentos, nuestra IA y el equipo de soporte apresentarán las mejores opciones de beca para su perfil. Podrá entonces elegir la que mejor se adapta a su presupuesto y objetivos."
+        "answer": "Al inscribirte en el Proceso de Selección, puedes solicitar hasta 4 becas. La plataforma muestra las opciones compatibles con tu perfil y tú decides a cuáles postularte. Si tienes dudas al elegir, nuestro equipo de soporte está listo para orientarte."
       },
       "q6": {
         "question": "¿Hay otras tarifas que deba conocer?",
@@ -373,7 +373,7 @@
       },
       "q9": {
         "question": "¿Puedo obtener un reembolso?",
-        "answer": "Tienes derecho a un reembolso total de las tarifas pagadas si tu solicitud no es exitosa o no eres aprobado para una beca. Sin embargo, si te retiras del proceso o cambias de opinión después de iniciar la solicitud, las tarifas pagadas no son reembolsables, ya que el procesamiento y soporte ya habrán comenzado. Todas las tarifas son finales y no reembolsables."
+        "answer": "Sí — si ninguna de las becas a las que postulaste resulta en aprobación, devolvemos el 100% del valor del Proceso de Selección. Si desistes o abandonas el proceso tras confirmar una beca aprobada, el valor no es reembolsable, ya que el procesamiento y el soporte ya estarán en marcha."
       },
       "q10": {
         "question": "¿Tengo que pagar todas las tarifas a la vez?",
@@ -557,32 +557,32 @@
       "contact": "¿Todavía tienes preguntas? Contacta con nuestro equipo de soporte",
       "items": [
         {
-          "question": "¿Qué está incluido en la cuota del proceso de selección?",
-          "answer": "$400 incluye un análisis completo del perfil, búsqueda personalizada de becas mediante IA, solicitudes a múltiples universidades, seguimiento del proceso y soporte hasta la aprobación."
-        },
-        {
-          "question": "¿Qué é la Cuota de Colocación (Placement Fee)?",
-          "answer": "La Cuota de Colocación cubre el soporte especializado para asegurar tu beca e inscripción. Se refiere al trabajo de análisis de perfil, identificación de mejores opciones, negociación de becas y soporte en tu viaje. Es variable y está directamente ligada al monto de la beca: cuanto mayor sea la cuota de colocación, menor será su matrícula anual."
-        },
-        {
-          "question": "¿Puedo solicitar tantas becas como quiera?",
-          "answer": "¡Sí! Con una sola cuota puedes solicitar todas las becas compatibles con tu perfil. Nuestra IA identifica las mejores oportunidades y tú eliges cuántas quieres probar."
-        },
-        {
-          "question": "¿Cómo funciona la garantía?",
-          "answer": "Si sigues nuestro proceso completo y no eres aprobado en ninguna universidad, te reembolsamos el 100% de la cuota del proceso de selección."
-        },
-        {
           "question": "¿Qué universidades participan?",
-          "answer": "Trabajamos con más de 45 universidades americanas acreditadas, incluidas la Universidad Estatal de Arizona, la Universidad Internacional de Florida, la Universidad de California y muchas otras."
+          "answer": "Para conocer la lista completa de universidades asociadas y las becas disponibles para su perfil, es necesario realizar el Proceso de Selección."
         },
         {
           "question": "¿Necesito hablar inglés?",
           "answer": "Sí, se requiere un nivel básico de inglés. Algunas universidades aceptan una prueba de competencia interna u ofrecen programas preparatorios para quienes necesitan mejorar el idioma."
         },
         {
+          "question": "¿Qué es el Proceso de Selección?",
+          "answer": "El Proceso de Selección $400 es el primer pago obligatorio en la plataforma MatriculaUSA. Desbloquea tu acceso completo para ver todas las becas e iniciar tu proceso de solicitud."
+        },
+        {
+          "question": "¿Cómo funciona la elección de las becas?",
+          "answer": "Al inscribirte en el Proceso de Selección, puedes solicitar hasta 4 becas. La plataforma muestra las opciones compatibles con tu perfil y tú decides a cuáles postularte. Si tienes dudas al elegir, nuestro equipo de soporte está listo para orientarte."
+        },
+        {
           "question": "¿Cuánto tiempo se tarda en saber si fui aprobado?",
-          "answer": "El proceso de análisis y respuesta de las universidades varía entre 2 y 8 semanas. Recibirás actualizaciones constantes sobre el estado de tu solicitud."
+          "answer": "El plazo de respuesta de las universidades es de hasta 1 semana, pero la mayoría de los candidatos reciben la respuesta antes de eso. Recibirás actualizaciones constantes sobre el estado de tu solicitud."
+        },
+        {
+          "question": "¿Puedo obtener un reembolso?",
+          "answer": "Sí — si ninguna de las becas a las que postulaste resulta en aprobación, devolvemos el 100% del valor del Proceso de Selección. Si desistes o abandonas el proceso tras confirmar una beca aprobada, el valor no es reembolsable, ya que el procesamiento y el soporte ya estarán en marcha."
+        },
+        {
+          "question": "¿Con quién posso contactar si tengo dudas?",
+          "answer": "Nuestro equipo de soporte está disponible a través de chat, correo electrónico o WhatsApp en cualquier momento para aclarar cualquier duda sobre tasas, pagos o su proceso de solicitud. ¡Estamos aquí para ayudarle en cada paso del camino!"
         }
       ]
     },
