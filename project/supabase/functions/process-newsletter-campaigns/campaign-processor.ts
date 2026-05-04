@@ -1,4 +1,4 @@
-import { SupabaseClient } from 'npm:@supabase/supabase-js@2.49.1';
+import { SupabaseClient } from '@supabase/supabase-js';
 import { EligibleUser, Campaign } from './types.ts';
 import { TEST_MODE, TEST_EMAIL } from './constants.ts';
 import { personalizeEmailTemplate, isUserEligibleForCampaign, canSendCampaignToUser } from './utils.ts';
@@ -101,7 +101,7 @@ export async function processCampaign(
       }, { onConflict: 'user_id' });
 
       sentSuccessfully ? sent++ : failed++;
-    } catch (error) {
+    } catch (error: any) {
       console.error(`[Newsletter] Erro ao processar usuário ${user.email}:`, error);
       failed++;
     }

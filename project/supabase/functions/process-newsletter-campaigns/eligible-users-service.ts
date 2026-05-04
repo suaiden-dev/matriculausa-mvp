@@ -1,4 +1,4 @@
-import { SupabaseClient } from 'npm:@supabase/supabase-js@2.49.1';
+import { SupabaseClient } from '@supabase/supabase-js';
 import { EligibleUser } from './types.ts';
 import { TEST_MODE } from './constants.ts';
 import { isUserEligibleForCampaign, canSendCampaignToUser, getStepStatus } from './utils.ts';
@@ -27,8 +27,8 @@ export async function getEligibleUsersForRegisteredNoPayment(
   const { data: authUsers } = await supabase.auth.admin.listUsers();
   
   const usersWithCreationDate = eligibleUsers
-    .map(profile => {
-      const authUser = authUsers?.users.find(u => u.id === profile.user_id);
+    .map((profile: any) => {
+      const authUser = authUsers?.users.find((u: any) => u.id === profile.user_id);
       if (!authUser) return null;
 
       const createdAt = new Date(authUser.created_at);
@@ -45,19 +45,14 @@ export async function getEligibleUsersForRegisteredNoPayment(
         user_profile_id: profile.id
       };
     })
-    .filter((u): u is EligibleUser => u !== null);
+    .filter((u: any): u is EligibleUser => u !== null);
 
   const finalEligibleUsers: EligibleUser[] = [];
   for (const user of usersWithCreationDate) {
     if (!(await isUserEligibleForCampaign(supabase, user.user_id, 'registered_no_payment'))) continue;
 
-    const { canSend } = await canSendCampaignToUser(supabase, user.user_id, campaignId, cooldownDays, TEST_MODE);
+    const { canSend } = await canSendCampaignToUser(supabase, user.user_id, campaignId, cooldownDays, TEST_MODE || ignoreRateLimit);
     if (!canSend) continue;
-
-    if (!TEST_MODE && !ignoreRateLimit) {
-      const { data: canReceive } = await supabase.rpc('check_user_can_receive_email', { p_user_id: user.user_id });
-      if (!canReceive) continue;
-    }
 
     finalEligibleUsers.push(user);
   }
@@ -115,13 +110,8 @@ export async function getEligibleUsersForPaidNoApplication(
 
     if (!(await isUserEligibleForCampaign(supabase, profile.user_id, 'paid_no_application'))) continue;
 
-    const { canSend } = await canSendCampaignToUser(supabase, profile.user_id, campaignId, cooldownDays, TEST_MODE);
+    const { canSend } = await canSendCampaignToUser(supabase, profile.user_id, campaignId, cooldownDays, TEST_MODE || ignoreRateLimit);
     if (!canSend) continue;
-
-    if (!TEST_MODE && !ignoreRateLimit) {
-      const { data: canReceive } = await supabase.rpc('check_user_can_receive_email', { p_user_id: profile.user_id });
-      if (!canReceive) continue;
-    }
 
     usersWithoutApplication.push({
       user_id: profile.user_id,
@@ -157,8 +147,8 @@ export async function getEligibleUsersForApplicationFlowStage(
 
   if (queryError || !students) return [];
 
-  const studentIds = students.map(s => s.id);
-  const userIds = students.map(s => s.user_id);
+  const studentIds = students.map((s: any) => s.id);
+  const userIds = students.map((s: any) => s.user_id);
   
   const { data: applications } = await supabase
     .from('scholarship_applications')
@@ -171,12 +161,12 @@ export async function getEligibleUsersForApplicationFlowStage(
     .in('user_id', userIds)
     .eq('status', 'succeeded');
 
-  const eligibleStudents = students.map(profile => {
-    const studentApps = applications?.filter(app => app.student_id === profile.id) || [];
-    const studentPayments = payments?.filter(p => p.user_id === profile.user_id) || [];
+  const eligibleStudents = students.map((profile: any) => {
+    const studentApps = applications?.filter((app: any) => app.student_id === profile.id) || [];
+    const studentPayments = payments?.filter((p: any) => p.user_id === profile.user_id) || [];
     
-    const hasPaidApplicationFee = studentApps.some(app => app.is_application_fee_paid) || studentPayments.some(p => p.fee_type === 'application_fee');
-    const hasPaidScholarshipFee = studentApps.some(app => app.is_scholarship_fee_paid) || studentPayments.some(p => p.fee_type === 'scholarship_fee');
+    const hasPaidApplicationFee = studentApps.some((app: any) => app.is_application_fee_paid) || studentPayments.some((p: any) => p.fee_type === 'application_fee');
+    const hasPaidScholarshipFee = studentApps.some((app: any) => app.is_scholarship_fee_paid) || studentPayments.some((p: any) => p.fee_type === 'scholarship_fee');
     
     const latestApp = studentApps[0];
     
@@ -187,14 +177,14 @@ export async function getEligibleUsersForApplicationFlowStage(
       is_application_fee_paid: hasPaidApplicationFee,
       is_scholarship_fee_paid: hasPaidScholarshipFee,
       has_paid_i20_control_fee: profile.has_paid_i20_control_fee || false,
-      has_approved_application: studentApps.some(app => ['approved', 'enrolled'].includes(app.status)),
-      has_enrolled_application: studentApps.some(app => app.status === 'enrolled'),
-      all_applications_pending: studentApps.length > 0 && studentApps.every(app => app.status === 'pending'),
-      all_applications_have_pending_acceptance: studentApps.length > 0 && studentApps.every(app => app.acceptance_letter_status === 'pending'),
-      all_applications_have_null_transfer_form: studentApps.length > 0 && studentApps.every(app => !app.transfer_form_status),
-      has_sent_acceptance_letter: studentApps.some(app => app.acceptance_letter_status === 'sent' && app.acceptance_letter_sent_at && app.acceptance_letter_url)
+      has_approved_application: studentApps.some((app: any) => ['approved', 'enrolled'].includes(app.status)),
+      has_enrolled_application: studentApps.some((app: any) => app.status === 'enrolled'),
+      all_applications_pending: studentApps.length > 0 && studentApps.every((app: any) => app.status === 'pending'),
+      all_applications_have_pending_acceptance: studentApps.length > 0 && studentApps.every((app: any) => app.acceptance_letter_status === 'pending'),
+      all_applications_have_null_transfer_form: studentApps.length > 0 && studentApps.every((app: any) => !app.transfer_form_status),
+      has_sent_acceptance_letter: studentApps.some((app: any) => app.acceptance_letter_status === 'sent' && app.acceptance_letter_sent_at && app.acceptance_letter_url)
     };
-  }).filter(student => {
+  }).filter((student: any) => {
     const status = getStepStatus(student, stage);
     if (stageStatus) {
       return status === stageStatus;
@@ -209,13 +199,8 @@ export async function getEligibleUsersForApplicationFlowStage(
     // Aqui usamos o stage como parte da key para identificar que é uma campanha de alto valor se for i20_fee
     if (!(await isUserEligibleForCampaign(supabase, student.user_id, `app_flow_stage_${stage}`))) continue;
 
-    const { canSend } = await canSendCampaignToUser(supabase, student.user_id, campaignId, cooldownDays, TEST_MODE);
+    const { canSend } = await canSendCampaignToUser(supabase, student.user_id, campaignId, cooldownDays, TEST_MODE || ignoreRateLimit);
     if (!canSend) continue;
-
-    if (!TEST_MODE && !ignoreRateLimit) {
-      const { data: canReceive } = await supabase.rpc('check_user_can_receive_email', { p_user_id: student.user_id });
-      if (!canReceive) continue;
-    }
 
     finalEligibleUsers.push({
       user_id: student.user_id,
@@ -249,12 +234,7 @@ export async function getEligibleUsersForAllUsers(
 
   const finalEligibleUsers: EligibleUser[] = [];
   for (const user of allUsers) {
-    if (!(await isUserEligibleForCampaign(supabase, user.user_id, 'all_users')) || !(await canSendCampaignToUser(supabase, user.user_id, campaignId, cooldownDays, TEST_MODE)).canSend) continue;
-
-    if (!TEST_MODE && !ignoreRateLimit) {
-      const { data: canReceive } = await supabase.rpc('check_user_can_receive_email', { p_user_id: user.user_id });
-      if (!canReceive) continue;
-    }
+    if (!(await isUserEligibleForCampaign(supabase, user.user_id, 'all_users')) || !(await canSendCampaignToUser(supabase, user.user_id, campaignId, cooldownDays, TEST_MODE || ignoreRateLimit)).canSend) continue;
 
     finalEligibleUsers.push({
       user_id: user.user_id,
@@ -286,7 +266,7 @@ async function attachAffiliateCodes(
 
   return users.map(user => ({
     ...user,
-    affiliate_code: codes?.find(c => c.user_id === user.user_id)?.code
+    affiliate_code: codes?.find((c: any) => c.user_id === user.user_id)?.code
   }));
 }
 

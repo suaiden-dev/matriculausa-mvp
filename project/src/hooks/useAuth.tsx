@@ -1324,9 +1324,36 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
       }
     }
 
-    // ✅ NOVO: Enviar mensagem automática de boas-vindas no chat para novos alunos (registro por staff)
-    // A mensagem de boas-vindas agora é enviada automaticamente pelo trigger do banco de dados
-    // Não é mais necessário enviar manualmente aqui
+    // ✅ NOVO: Notificar n8n para novos alunos
+    if (userData.role === 'student' && data?.user) {
+      const registrationPath = window.location.pathname;
+      
+      try {
+        // Buscar o ID do perfil (que é o que a student_action_logs espera)
+        const { data: profileData } = await supabase
+          .from('user_profiles')
+          .select('id')
+          .eq('user_id', data.user.id)
+          .single();
+
+        const profileId = profileData?.id || data.user.id;
+
+        // 1. Notificar n8n (Gatilho)
+        await supabase.functions.invoke('forward-notification-to-n8n', {
+          body: {
+            target: 'new_registration',
+            user_id: profileId, // Agora enviando o ID do Perfil correto
+            name: userData.full_name,
+            email: normalizedEmail,
+            phone: userData.phone,
+            registration_path: registrationPath
+          }
+        });
+        console.log('✅ [USEAUTH] n8n notificado com sucesso');
+      } catch (err) {
+        console.warn('⚠️ [USEAUTH] Erro ao notificar n8n:', err);
+      }
+    }
 
     return data;
   }, []);

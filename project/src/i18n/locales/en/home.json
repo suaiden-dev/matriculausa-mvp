@@ -75,8 +75,8 @@
           "answer": "MatriculaUSA is free to create your profile and explore universities. However, once you start the application process and are approved for a scholarship, all fees associated with the admission and enrollment flow become mandatory. They are clearly presented before any payment."
         },
         "q2": {
-          "question": "What is the Selection Process Fee?",
-          "answer": "The Selection Process Fee $400 is the first mandatory payment on the MatriculaUSA platform. It unlocks your full access to view all scholarships and start your application process."
+          "question": "What is the Selection Process?",
+          "answer": "The Selection Process $400 is the first mandatory payment on the MatriculaUSA platform. It unlocks your full access to view all scholarships and start your application process."
         },
         "q3": {
           "question": "What is the Placement Fee?",
@@ -104,7 +104,7 @@
         },
         "q9": {
           "question": "Can I get a refund?",
-          "answer": "You have the right to a full refund of the fees paid if your application is unsuccessful or you are not approved for a scholarship. However, if you withdraw from the process or change your mind after starting the application, the fees paid are non-refundable, as the processing and support will have already begun."
+          "answer": "Yes — if none of the scholarships you applied for result in approval, we refund 100% of the Selection Process value. If you withdraw or abandon the process after confirming an approved scholarship, the amount is non-refundable, as processing and support will already be in progress."
         },
         "q10": {
           "question": "Do I have to pay all fees at once?",
@@ -287,8 +287,8 @@
         "answer": "MatriculaUSA is free to create your profile and explore universities. However, once you start the application process and are approved for a scholarship, all fees associated with the admission and enrollment flow become mandatory. They are clearly presented before any payment. All fees are final and non-refundable."
       },
       "q2": {
-        "question": "What is the Selection Process Fee?",
-        "answer": "The Selection Process Fee $400 is the first mandatory payment on the MatriculaUSA platform. It unlocks your full access to view all scholarships and start your application process. This fee is final and non-refundable."
+        "question": "What is the Selection Process?",
+        "answer": "The Selection Process $400 is the first mandatory payment on the MatriculaUSA platform. It unlocks your full access to view all scholarships and start your application process. This fee is final and non-refundable."
       },
       "q3": {
         "question": "What is the Placement Fee?",
@@ -300,7 +300,7 @@
       },
       "q5": {
         "question": "How do I choose my scholarship?",
-        "answer": "After paying the Selection Process Fee and submitting your documents, our AI and support team will present the best scholarship options for your profile. You can then choose the one that best fits your budget and goals."
+        "answer": "By enrolling in the Selection Process, you can apply for up to 4 scholarships. The platform shows the options compatible with your profile and you decide which ones to apply for. If you have questions when choosing, our support team is ready to guide you."
       },
       "q6": {
         "question": "Are there other fees I should know about?",
@@ -316,7 +316,7 @@
       },
       "q9": {
         "question": "Can I get a refund?",
-        "answer": "You have the right to a full refund of the fees paid if your application is unsuccessful or you are not approved for a scholarship. However, if you withdraw from the process or change your mind after starting the application, the fees paid are non-refundable, as binary processing and support will have already begun. All fees are final and non-refundable."
+        "answer": "Yes — if none of the scholarships you applied for result in approval, we refund 100% of the Selection Process value. If you withdraw or abandon the process after confirming an approved scholarship, the amount is non-refundable, as processing and support will already be in progress."
       },
       "q10": {
         "question": "Do I have to pay all fees at once?",
@@ -501,27 +501,27 @@
       "items": [
         {
           "question": "Which universities participate?",
-          "answer": "We work with more than 45 accredited American universities, including Arizona State University, Florida International University, University of California, and many others. To see the complete list of partner universities and the scholarships available for your profile, it is necessary to complete the Selection Process."
+          "answer": "To see the complete list of partner universities and the scholarships available for your profile, it is necessary to complete the Selection Process."
         },
         {
           "question": "Do I need to speak English?",
           "answer": "Yes, a basic level of English is required. Some universities accept an internal proficiency test or offer preparatory programs for those who need to improve their language."
         },
         {
-          "question": "What is the Selection Process Fee?",
-          "answer": "The Selection Process Fee $400 is the first mandatory payment on the MatriculaUSA platform. It unlocks your full access to view all scholarships and start your application process."
+          "question": "What is the Selection Process?",
+          "answer": "The Selection Process $400 is the first mandatory payment on the MatriculaUSA platform. It unlocks your full access to view all scholarships and start your application process."
         },
         {
           "question": "How does the scholarship choice work?",
-          "answer": "With a single fee you can apply for up to 4 scholarships. The platform shows the options compatible with your profile and you choose which ones you want to try. If you have doubts when choosing, our support team is ready to guide you."
+          "answer": "By enrolling in the Selection Process, you can apply for up to 4 scholarships. The platform shows the options compatible with your profile and you decide which ones to apply for. If you have questions when choosing, our support team is ready to guide you."
         },
         {
           "question": "How long does it take to know if I was approved?",
-          "answer": "The analysis and response process from universities varies from 2 to 8 weeks. You will receive constant updates on your application status."
+          "answer": "The response time from universities is up to 1 week, but most candidates receive feedback before that. You will receive constant updates on your application status."
         },
         {
           "question": "Can I get a refund?",
-          "answer": "Yes — if you are rejected for all scholarships you applied for, we refund 100% of the Selection Process fee. If you withdraw or abandon the process after you have selected a scholarship, the fee is non-refundable, as processing and support will have already begun."
+          "answer": "Yes — if none of the scholarships you applied for result in approval, we refund 100% of the Selection Process value. If you withdraw or abandon the process after confirming an approved scholarship, the amount is non-refundable, as processing and support will already be in progress."
         },
         {
           "question": "Who can I contact if I have questions?",
