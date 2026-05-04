@@ -51,6 +51,7 @@ import RejectDocumentModal from '../../components/AdminDashboard/StudentDetails/
 
 // Novos componentes para Transfer Form e Document Requests
 import { TransferFormSection } from '../../components/AdminDashboard/StudentDetails/TransferFormSection';
+import { CosI20Section } from '../../components/AdminDashboard/StudentDetails/CosI20Section';
 import { NewRequestModal } from '../../components/AdminDashboard/StudentDetails/NewRequestModal';
 
 // Tabs já existentes
@@ -3816,6 +3817,17 @@ const AdminStudentDetails: React.FC = () => {
                 New Request
               </button>
             </div>
+          )}
+
+          {/* I-20 Document Section - Only for COS students */}
+          {student?.student_process_type === 'change_of_status' && (
+            <CosI20Section
+              student={student}
+              isPlatformAdmin={isPlatformAdmin}
+              onRefresh={() => studentDetailsQuery.refetch()}
+              handleViewDocument={handleOnViewDocument}
+              handleDownloadDocument={handleDownloadDocument}
+            />
           )}
 
           {/* Transfer Form Section - Only for transfer students */}
