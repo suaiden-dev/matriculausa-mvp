@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { CheckCircle } from 'lucide-react';
 import { supabase } from '../../../lib/supabase';
 
@@ -19,22 +19,40 @@ export const CosI20Section: React.FC<CosI20SectionProps> = React.memo(({
 }) => {
   const [i20File, setI20File] = useState<File | null>(null);
   const [uploading, setUploading] = useState(false);
+  const [cosAppData, setCosAppData] = useState<any>(null);
 
-  const getCosApplication = () => {
+  const getCosApplicationId = () => {
     const apps = student?.all_applications?.filter((app: any) =>
       app.student_process_type === 'change_of_status'
     ) || [];
-    return (
+    const found =
       apps.find((app: any) => app.status === 'enrolled') ||
-      apps.find((app: any) => app.i20_document_url) ||
       apps.find((app: any) => app.is_application_fee_paid) ||
-      apps[0]
-    );
+      apps[0];
+    return found?.id || null;
   };
 
-  const cosApp = getCosApplication();
+  const appId = getCosApplicationId();
 
-  if (!cosApp) return null;
+  useEffect(() => {
+    if (!appId) return;
+    supabase
+      .from('scholarship_applications')
+      .select('id, status, i20_document_url, i20_document_status, i20_document_sent_at, is_application_fee_paid')
+      .eq('id', appId)
+      .maybeSingle()
+      .then(({ data }) => { if (data) setCosAppData(data); });
+  }, [appId]);
+
+  const cosApp = cosAppData;
+
+  if (!appId) return null;
+  if (!cosApp) return (
+    <div className="bg-gradient-to-br from-blue-50 to-indigo-50 border border-blue-200 rounded-3xl shadow-sm p-6 animate-pulse">
+      <div className="h-6 w-40 bg-blue-200 rounded mb-2" />
+      <div className="h-4 w-64 bg-blue-100 rounded" />
+    </div>
+  );
 
   const sanitizeFileName = (name: string) => name.replace(/[^a-zA-Z0-9.-]/g, '_');
 
@@ -66,6 +84,12 @@ export const CosI20Section: React.FC<CosI20SectionProps> = React.memo(({
 
       if (updateError) throw updateError;
 
+      setCosAppData((prev: any) => ({
+        ...prev,
+        i20_document_url: publicUrl,
+        i20_document_status: 'sent',
+        i20_document_sent_at: new Date().toISOString(),
+      }));
       setI20File(null);
       onRefresh?.();
     } catch (err: any) {
